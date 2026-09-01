@@ -56,7 +56,7 @@
   return pfc::get_world(get_model(sim));
 }
 
-[[nodiscard]] inline fft::IFFT &get_fft(Simulator &sim) noexcept {
+[[nodiscard]] inline fft::IHostFFT &get_fft(Simulator &sim) noexcept {
   return pfc::get_fft(get_model(sim));
 }
 

@@ -18,9 +18,9 @@ API below.
 :no-link:
 ```
 
-## `pfc::fft::IFFT`
+## `pfc::fft::IHostFFT`
 
-```{doxygenstruct} pfc::fft::IFFT
+```{doxygenstruct} pfc::fft::IHostFFT
 :project: OpenPFC
 :members:
 :protected-members:

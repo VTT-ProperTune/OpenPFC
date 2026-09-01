@@ -62,7 +62,7 @@ public:
 
   void apply(const SimulationContext &ctx, Model &m, double time) override {
     (void)time;
-    const fft::IFFT &fft = get_fft(m);
+    const fft::IHostFFT &fft = get_fft(m);
     const auto &world = get_world(m);
     const auto world_size = get_size(world);
     const auto inbox_size = get_inbox(fft).size;

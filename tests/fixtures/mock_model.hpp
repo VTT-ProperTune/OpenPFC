@@ -47,7 +47,7 @@ public:
    *
    * @note v2.0: FFT is now required at construction
    */
-  explicit MockModel(fft::IFFT &fft, const World &world,
+  explicit MockModel(fft::IHostFFT &fft, const World &world,
                      MPI_Comm mpi_comm = MPI_COMM_WORLD)
       : Model(fft, world, mpi_comm) {}
 

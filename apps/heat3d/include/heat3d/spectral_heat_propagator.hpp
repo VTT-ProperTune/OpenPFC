@@ -20,12 +20,12 @@
  * the table from the FFT layout once; `step` is a fwd FFT, an
  * elementwise multiply, and an inv FFT.
  *
- * Backend-agnostic: holds a reference to the abstract `pfc::fft::IFFT`,
+ * Backend-agnostic: holds a reference to the abstract `pfc::fft::IHostFFT`,
  * so the same class works with CPU FFTW, cuFFT, ROCm — whatever
  * `fft::create` returns.
  *
  * Lifetime contract: the propagator borrows the FFT by reference, so the
- * `IFFT` instance must outlive the propagator (same pattern as
+ * `IHostFFT` instance must outlive the propagator (same pattern as
  * `pfc::field::SpectralGradient`).
  */
 
@@ -34,8 +34,8 @@
 #include <vector>
 
 #include <openpfc/kernel/data/constants.hpp>
-#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 
 namespace heat3d {
@@ -81,8 +81,8 @@ namespace heat3d {
  * - Memory: requires storage for complex-valued spectral representation of the field
  *
  * @par Contract for substituting alternative integrators
- * To implement a different time-integration scheme (e.g., explicit Euler, Runge-Kutta,
- *   Crank-Nicolson), subclasses must:
+ * To implement a different time-integration scheme (e.g., explicit Euler,
+ * Runge-Kutta, Crank-Nicolson), subclasses must:
  * - Override the step() method to implement the desired algorithm
  * - Preserve the constructor interface (FFT, field, diffusion coefficient, dt)
  * - Document the new scheme's stability constraints and accuracy order
@@ -109,9 +109,8 @@ public:
    * @param D   Diffusion coefficient (heat-equation parameter).
    * @param dt  Time-step size.
    */
-  SpectralHeatPropagator(pfc::fft::IFFT &fft,
-                         const pfc::data::Field<double> &u, double D,
-                         double dt)
+  SpectralHeatPropagator(pfc::fft::IHostFFT &fft, const pfc::data::Field<double> &u,
+                         double D, double dt)
       : m_fft(fft), m_psi_F(fft.size_outbox()), m_opL(fft.size_outbox()) {
     const auto size = u.global_size();
     const auto spacing = u.spacing();
@@ -150,7 +149,7 @@ public:
   }
 
 private:
-  pfc::fft::IFFT &m_fft;
+  pfc::fft::IHostFFT &m_fft;
   std::vector<std::complex<double>> m_psi_F;
   std::vector<double> m_opL;
 };

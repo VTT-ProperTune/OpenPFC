@@ -180,7 +180,7 @@ public:
   /**
    * @brief Construct TungstenCUDA directly from a World and set up CUDA FFT
    *
-   * Matches the base `pfc::Model(fft::IFFT&, const World&, MPI_Comm)`
+   * Matches the base `pfc::Model(fft::IHostFFT&, const World&, MPI_Comm)`
    * constructor signature so generic session-wiring code (which builds a
    * `World` rather than a `Domain`) can construct this model without going
    * through constructor inheritance (which would skip the CUDA event/FFT
@@ -189,7 +189,7 @@ public:
    * @param fft CPU FFT reference (used by base Model)
    * @param world Simulation world
    */
-  explicit TungstenCUDA(pfc::fft::IFFT &fft, const pfc::World &world,
+  explicit TungstenCUDA(pfc::fft::IHostFFT &fft, const pfc::World &world,
                         MPI_Comm mpi_comm = MPI_COMM_WORLD)
       : pfc::Model(fft, world, mpi_comm), m_cpu_buffer_valid(false) {
     init_cuda_();

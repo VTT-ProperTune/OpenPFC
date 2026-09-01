@@ -6,7 +6,7 @@
  * @brief Tests for runtime FFT backend selection
  *
  * Tests the ability to select different FFT backends (FFTW, CUDA) at runtime
- * through the IFFT interface and configuration parsing.
+ * through the IHostFFT interface and configuration parsing.
  */
 
 #include <complex>
@@ -26,10 +26,9 @@ using namespace Catch::Matchers;
 using namespace pfc;
 using json = nlohmann::json;
 
-static_assert(std::is_same_v<fft::IFFT, fft::IHostFFT>);
-
 TEST_CASE("FFT Backend - FFTW backend selection", "[fft][backend][unit]") {
-  auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}), GridSpacing({8.0, 8.0, 8.0}));
+  auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}),
+                               GridSpacing({8.0, 8.0, 8.0}));
   auto decomposition = decomposition::create(domain, 1);
 
   // Create FFT with FFTW backend explicitly
@@ -43,7 +42,8 @@ TEST_CASE("FFT Backend - FFTW backend selection", "[fft][backend][unit]") {
 
 TEST_CASE("FFT Backend - FFTW allocated memory equals one workspace",
           "[fft][backend][unit]") {
-  auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}), GridSpacing({8.0, 8.0, 8.0}));
+  auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}),
+                               GridSpacing({8.0, 8.0, 8.0}));
   auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create_with_backend(decomposition, 0, fft::Backend::FFTW);
 
@@ -53,7 +53,8 @@ TEST_CASE("FFT Backend - FFTW allocated memory equals one workspace",
 }
 
 TEST_CASE("FFT Backend - FFTW forward/backward transform", "[fft][backend][unit]") {
-  auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}), GridSpacing({8.0, 8.0, 8.0}));
+  auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}),
+                               GridSpacing({8.0, 8.0, 8.0}));
   auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create_with_backend(decomposition, 0, fft::Backend::FFTW);
 
@@ -79,19 +80,19 @@ TEST_CASE("FFT Backend - FFTW forward/backward transform", "[fft][backend][unit]
 }
 
 TEST_CASE("create_with_backend rejects CUDA as IHostFFT", "[fft][backend][unit]") {
-  auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}), GridSpacing({8.0, 8.0, 8.0}));
+  auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}),
+                               GridSpacing({8.0, 8.0, 8.0}));
   auto decomposition = decomposition::create(domain, 1);
-  REQUIRE_THROWS_WITH(
-      fft::create_with_backend(decomposition, 0, fft::Backend::CUDA),
-      ContainsSubstring("create_cuda"));
+  REQUIRE_THROWS_WITH(fft::create_with_backend(decomposition, 0, fft::Backend::CUDA),
+                      ContainsSubstring("create_cuda"));
 }
 
 TEST_CASE("create_with_backend rejects HIP as IHostFFT", "[fft][backend][unit]") {
-  auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}), GridSpacing({8.0, 8.0, 8.0}));
+  auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}),
+                               GridSpacing({8.0, 8.0, 8.0}));
   auto decomposition = decomposition::create(domain, 1);
-  REQUIRE_THROWS_WITH(
-      fft::create_with_backend(decomposition, 0, fft::Backend::HIP),
-      ContainsSubstring("create_hip"));
+  REQUIRE_THROWS_WITH(fft::create_with_backend(decomposition, 0, fft::Backend::HIP),
+                      ContainsSubstring("create_hip"));
 }
 
 TEST_CASE("FFT Backend - parse backend from JSON (FFTW)",
@@ -154,7 +155,8 @@ TEST_CASE("FFT Backend - HIP backend throws if not compiled",
 #endif
 
 TEST_CASE("FFT Backend - timing functions work", "[fft][backend][unit]") {
-  auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}), GridSpacing({8.0, 8.0, 8.0}));
+  auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}),
+                               GridSpacing({8.0, 8.0, 8.0}));
   auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create_with_backend(decomposition, 0, fft::Backend::FFTW);
 
@@ -180,7 +182,9 @@ TEST_CASE("FFT Backend - timing functions work", "[fft][backend][unit]") {
 
 TEST_CASE("FFT Backend - size queries work through interface",
           "[fft][backend][unit]") {
-  auto domain = domain::create(GridSize({16, 16, 16}), PhysicalOrigin({16.0, 16.0, 16.0}), GridSpacing({16.0, 16.0, 16.0}));
+  auto domain =
+      domain::create(GridSize({16, 16, 16}), PhysicalOrigin({16.0, 16.0, 16.0}),
+                     GridSpacing({16.0, 16.0, 16.0}));
   auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create_with_backend(decomposition, 0, fft::Backend::FFTW);
 

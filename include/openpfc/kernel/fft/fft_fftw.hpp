@@ -7,7 +7,8 @@
  *
  * @details
  * Pulls in HeFFTe. Prefer including only `<openpfc/kernel/fft/fft.hpp>` when you
- * only need `IFFT`, layout, or k-space helpers without HeFFTe on the include path.
+ * only need `IHostFFT`, layout, or k-space helpers without HeFFTe on the include
+ * path.
  */
 
 #pragma once

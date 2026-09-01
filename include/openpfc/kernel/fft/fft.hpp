@@ -6,14 +6,14 @@
  * @brief Fast Fourier Transform API for spectral methods (no HeFFTe headers)
  *
  * @details
- * Core layout and `IHostFFT` / `IDeviceFFT` / `IFFT` live in fft_interface.hpp /
- * fft_layout.hpp / kspace.hpp.
- * The default CPU backend `CPUFFT` (HeFFTe + FFTW) is declared here and defined in
- * fft_fftw.hpp — include that header (or openpfc.hpp / openpfc_minimal.hpp) when you
- * need the complete type, `pfc::FFT`, or `heffte::plan_options` values.
+ * Core layout and `IHostFFT` / `IDeviceFFT` / `IFFTQueries` live in
+ * fft_interface.hpp / fft_layout.hpp / kspace.hpp. The default CPU backend `CPUFFT`
+ * (HeFFTe + FFTW) is declared here and defined in fft_fftw.hpp — include that header
+ * (or openpfc.hpp / openpfc_minimal.hpp) when you need the complete type,
+ * `pfc::FFT`, or `heffte::plan_options` values.
  *
  * @see fft_fftw.hpp for CPUFFT, plan_options alias, and HeFFTe-backed factories
- * @see fft_interface.hpp for IHostFFT, IDeviceFFT, IFFT, and buffer aliases
+ * @see fft_interface.hpp for IHostFFT, IDeviceFFT, and buffer aliases
  */
 
 #pragma once
@@ -44,18 +44,17 @@ class CPUFFT;
                             MPI_Comm comm = MPI_COMM_WORLD);
 
 [[nodiscard]] CPUFFT create(const Decomposition &decomposition, int rank_id,
-                            MPI_Comm comm = MPI_COMM_WORLD,
-                            int r2c_direction = 0);
+                            MPI_Comm comm = MPI_COMM_WORLD, int r2c_direction = 0);
 
 [[nodiscard]] CPUFFT create(const Decomposition &decomposition,
                             MPI_Comm comm = MPI_COMM_WORLD);
 
-[[nodiscard]] std::unique_ptr<IFFT>
+[[nodiscard]] std::unique_ptr<IHostFFT>
 create_with_backend(const FFTLayout &fft_layout, int rank_id,
                     const heffte::plan_options &options, Backend backend,
                     MPI_Comm comm = MPI_COMM_WORLD);
 
-[[nodiscard]] std::unique_ptr<IFFT>
+[[nodiscard]] std::unique_ptr<IHostFFT>
 create_with_backend(const Decomposition &decomposition, int rank_id, Backend backend,
                     MPI_Comm comm = MPI_COMM_WORLD, int r2c_direction = 0);
 

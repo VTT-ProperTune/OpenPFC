@@ -127,7 +127,7 @@ using fft_r2c = heffte::fft3d_r2c<heffte::backend::fftw>;
   return create(fft_layout, rank_id, options, comm);
 }
 
-[[nodiscard]] std::unique_ptr<IFFT>
+[[nodiscard]] std::unique_ptr<IHostFFT>
 create_with_backend(const FFTLayout &fft_layout, int rank_id,
                     const heffte::plan_options &options, Backend backend,
                     MPI_Comm comm) {
@@ -154,7 +154,7 @@ create_with_backend(const FFTLayout &fft_layout, int rank_id,
   }
 }
 
-[[nodiscard]] std::unique_ptr<IFFT>
+[[nodiscard]] std::unique_ptr<IHostFFT>
 create_with_backend(const Decomposition &decomposition, int rank_id, Backend backend,
                     MPI_Comm comm, int r2c_direction) {
   auto fft_layout = layout::create(decomposition, r2c_direction);

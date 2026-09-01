@@ -15,7 +15,8 @@ namespace diffusion_example {
 
 /// One implicit-Euler spectral diffusion step: forward FFT, apply `opL`, backward
 /// FFT.
-inline void spectral_diffusion_step(pfc::fft::IFFT &fft, std::vector<double> &psi,
+inline void spectral_diffusion_step(pfc::fft::IHostFFT &fft,
+                                    std::vector<double> &psi,
                                     std::vector<std::complex<double>> &psi_F,
                                     const std::vector<double> &opL) {
   fft.forward(psi, psi_F);

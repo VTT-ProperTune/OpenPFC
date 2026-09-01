@@ -47,13 +47,13 @@
 #include <cstddef>
 #include <vector>
 
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/fft/box3i.hpp>
 #include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/fft/kspace.hpp>
 #include <openpfc/kernel/fft/kspace_iterator.hpp>
 #include <openpfc/kernel/field/grad_concepts.hpp>
 #include <openpfc/kernel/field/state_access.hpp>
-#include <openpfc/kernel/data/grid_field.hpp>
 
 namespace pfc::field {
 
@@ -71,15 +71,15 @@ public:
   /**
    * @param fft         FFT plan (caller-owned; must outlive this object).
    * @param u_in        Read-only view of the inbox-sized field.
-   * @param fft_src     IFFT host vector (same storage as `u_in.data()`).
+   * @param fft_src     IHostFFT host vector (same storage as `u_in.data()`).
    * @param global_size Global grid size `{Nx, Ny, Nz}`.
    * @param spacing     Grid spacing `{dx, dy, dz}`.
    * @param inbox       Local real-space box for this rank
-   *                    (from `IFFT::get_inbox_bounds()`).
+   *                    (from `IHostFFT::get_inbox_bounds()`).
    * @param outbox      Local Fourier-space box for this rank
-   *                    (from `IFFT::get_outbox_bounds()`).
+   *                    (from `IHostFFT::get_outbox_bounds()`).
    */
-  SpectralGradient(pfc::fft::IFFT &fft, FieldView<double> u_in,
+  SpectralGradient(pfc::fft::IHostFFT &fft, FieldView<double> u_in,
                    const pfc::fft::RealVector &fft_src,
                    std::array<int, 3> global_size, std::array<double, 3> spacing,
                    pfc::fft::Box3i inbox, pfc::fft::Box3i outbox)
@@ -113,20 +113,16 @@ public:
 
     pfc::fft::kspace::for_each_kpoint(
         outbox, global_size, spacing,
-        [&](std::size_t idx, double kx, double ky, double kz, int i, int j,
-            int k) {
+        [&](std::size_t idx, double kx, double ky, double kz, int i, int j, int k) {
           const double kx_odd =
               pfc::fft::kspace::is_nyquist_index(i, global_size[0]) ? 0.0 : kx;
           const double ky_odd =
               pfc::fft::kspace::is_nyquist_index(j, global_size[1]) ? 0.0 : ky;
           const double kz_odd =
               pfc::fft::kspace::is_nyquist_index(k, global_size[2]) ? 0.0 : kz;
-          if constexpr (has_x<G>)
-            m_op_x[idx] = std::complex<double>(0.0, kx_odd);
-          if constexpr (has_y<G>)
-            m_op_y[idx] = std::complex<double>(0.0, ky_odd);
-          if constexpr (has_z<G>)
-            m_op_z[idx] = std::complex<double>(0.0, kz_odd);
+          if constexpr (has_x<G>) m_op_x[idx] = std::complex<double>(0.0, kx_odd);
+          if constexpr (has_y<G>) m_op_y[idx] = std::complex<double>(0.0, ky_odd);
+          if constexpr (has_z<G>) m_op_z[idx] = std::complex<double>(0.0, kz_odd);
           if constexpr (has_xx<G>) m_op_xx[idx] = -kx * kx;
           if constexpr (has_yy<G>) m_op_yy[idx] = -ky * ky;
           if constexpr (has_zz<G>) m_op_zz[idx] = -kz * kz;
@@ -193,7 +189,7 @@ private:
     m_fft->backward(m_tmp_F, out);
   }
 
-  pfc::fft::IFFT *m_fft{nullptr};
+  pfc::fft::IHostFFT *m_fft{nullptr};
   FieldView<double> m_u_in{};
   const pfc::fft::RealVector *m_fft_src{nullptr};
   pfc::fft::Box3i m_inbox{};
@@ -243,7 +239,7 @@ private:
  */
 template <class G>
 [[nodiscard]] inline SpectralGradient<G> create(pfc::data::Field<double> &u,
-                                                pfc::fft::IFFT &fft) {
+                                                pfc::fft::IHostFFT &fft) {
   FieldView<double> view(u.data(), u.size(), u.local_size(), u.spacing(),
                          u.origin());
   return SpectralGradient<G>(fft, view, u.vec(), u.global_size(), u.spacing(),

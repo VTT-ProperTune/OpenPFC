@@ -79,7 +79,7 @@ using PointFnT = std::function<double(double, double, double, double)>;
  * @param fn    Coordinate-space function returning new value
  */
 template <typename Fn>
-inline void apply(RealField &field, const World &world, const fft::IFFT &fft,
+inline void apply(RealField &field, const World &world, const fft::IHostFFT &fft,
                   Fn &&fn) {
   const auto inbox = pfc::fft::get_inbox(fft);
   // Safety: ensure field size matches inbox voxel count
@@ -116,7 +116,7 @@ inline void apply(RealField &field, const World &world, const fft::IFFT &fft,
  */
 template <typename Fn>
 inline void apply_with_time(RealField &field, const World &world,
-                            const fft::IFFT &fft, double t, Fn &&fn) {
+                            const fft::IHostFFT &fft, double t, Fn &&fn) {
   const auto inbox = pfc::fft::get_inbox(fft);
   const auto nx = inbox.size[0];
   const auto ny = inbox.size[1];
@@ -153,8 +153,8 @@ inline void apply_with_time(RealField &field, const World &world,
  * @param fn    Coordinate-space function returning new value given (x, current)
  */
 template <typename Fn>
-inline void apply_inplace(RealField &field, const World &world, const fft::IFFT &fft,
-                          Fn &&fn) {
+inline void apply_inplace(RealField &field, const World &world,
+                          const fft::IHostFFT &fft, Fn &&fn) {
   const auto inbox = pfc::fft::get_inbox(fft);
   const auto nx = inbox.size[0];
   const auto ny = inbox.size[1];
@@ -185,7 +185,7 @@ inline void apply_inplace(RealField &field, const World &world, const fft::IFFT 
  */
 template <typename Fn>
 inline void apply_inplace_with_time(RealField &field, const World &world,
-                                    const fft::IFFT &fft, double t, Fn &&fn) {
+                                    const fft::IHostFFT &fft, double t, Fn &&fn) {
   const auto inbox = pfc::fft::get_inbox(fft);
   const auto nx = inbox.size[0];
   const auto ny = inbox.size[1];
@@ -214,7 +214,7 @@ inline void apply_inplace_with_time(RealField &field, const World &world,
  *        rank-owned **FD subdomain**.
  *
  * Companion to `apply()` for callers that work directly with a
- * `Decomposition` (no `IFFT` needed) — typically pure finite-difference apps
+ * `Decomposition` (no `IHostFFT` needed) — typically pure finite-difference apps
  * with their own halo exchange. Resizes `field` to `nx*ny*nz` and writes
  * `fn(x, y, z)` at every cell owned by `rank`, where `(x,y,z)` is the
  * physical coordinate computed from the global world's `origin/spacing`.

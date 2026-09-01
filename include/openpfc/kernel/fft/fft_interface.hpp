@@ -3,7 +3,7 @@
 
 /**
  * @file fft_interface.hpp
- * @brief FFT interface types (`IHostFFT` / `IDeviceFFT` / `IFFT`) without
+ * @brief FFT interface types (`IHostFFT` / `IDeviceFFT` / `IFFTQueries`) without
  *        HeFFTe headers.
  *
  * ADR 0005: host factories return `IHostFFT` only. Device factories
@@ -103,9 +103,6 @@ template <typename MemorySpace> struct IDeviceFFT : IFFTQueries {
   virtual void forward(const RealBuffer &in, ComplexBuffer &out) = 0;
   virtual void backward(const ComplexBuffer &in, RealBuffer &out) = 0;
 };
-
-/// Temporary alias until remaining `IFFT` call sites migrate to `IHostFFT`.
-using IFFT = IHostFFT;
 
 [[nodiscard]] inline Box3i get_inbox(const IFFTQueries &fft) noexcept {
   return fft.get_inbox_bounds();

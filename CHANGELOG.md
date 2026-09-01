@@ -31,6 +31,7 @@ source compatibility is explicitly not a goal.
 - `RandomSeeds` / `SeedGrid` use `std::numbers::pi` instead of `atan(1.0)` (k-space folding stays in `kspace.hpp`).
 - `HostPersistentFaces` marks unused `domain` / `patterns` so `-Wunused-parameter` is clean.
 - GPU FFT factories live in `runtime/gpu/fft_gpu.hpp` / `fft_gpu.cpp`. Vendor `fft_cuda.hpp` / `fft_hip.hpp` are thin includes; `fft_cuda.cpp` / `fft_hip.cpp` are deleted.
+- Host FFT call sites use `pfc::fft::IHostFFT`. The temporary `IFFT` alias is removed.
 - Device Faces `HaloExchange::exchange()` posts every bound field, one `MPI_Waitall`, then unpacks. Full stays sequential. CUDA 1-rank two-field wrap and 2-rank batch-equals-singles in `test_comm_halo_exchange_gpu.cpp`.
 
 ### Added
@@ -128,7 +129,7 @@ source compatibility is explicitly not a goal.
 - `pfc::fft::kspace::for_each_kpoint` walks a local FFT outbox with `(idx, kx, ky, kz, i, j, k)`. `SpectralGradient` builds its operator tables with it.
 - Convenience FFT factories (`create`, `create_with_backend`, `create_cuda`, `create_hip`) take an optional `r2c_direction` (default 0).
 - GPU FFT workspaces allocate each precision on first use (ADR 0006) instead of always owning both float and double buffers.
-- `pfc::fft::IHostFFT` and `pfc::fft::IDeviceFFT<MemorySpace>` (ADR 0005). `create_with_backend` rejects CUDA/HIP at construction; `create_cuda` / `create_hip` return `FFT_CUDA` / `FFT_HIP` which implement `IDeviceFFT`. `IFFT` remains a temporary alias of `IHostFFT`.
+- `pfc::fft::IHostFFT` and `pfc::fft::IDeviceFFT<MemorySpace>` (ADR 0005). `create_with_backend` rejects CUDA/HIP at construction; `create_cuda` / `create_hip` return `FFT_CUDA` / `FFT_HIP` which implement `IDeviceFFT`.
 - Removed unused `apps/kobayashi/src/cuda/kobayashi_batched_halo.hpp` after the CUDA driver moved onto `HaloExchange`.
 - FD MPI leftover tests (`test_fd_heat_mpi`, `test_fd_xy_mpi`, `test_halo_exchange_driver`) use `HaloExchange` instead of `HaloExchanger` / `PersistentHaloExchanger`. `test_sparse_halo_exchange` uses `SparseExchange`.
 - `HaloExchangeOptions::directions` — optional `HaloDirectionSet` (empty means `Axes3D()` for Faces, `Full3D()` for Full). Kobayashi CPU/HIP/CUDA pass `Axes2D()` so the `nz=1` slab skips ±Z.

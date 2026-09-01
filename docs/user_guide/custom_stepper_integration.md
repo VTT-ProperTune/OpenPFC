@@ -115,7 +115,7 @@ For spectral methods, use `pfc::field::SpectralGradient<G>`:
 #include <openpfc/kernel/fft/fft_interface.hpp>
 
 // Assume we have FFT plan and field
-pfc::fft::IFFT &fft = /* ... FFT plan ... */;
+pfc::fft::IHostFFT &fft = /* ... FFT plan ... */;
 std::vector<double> u = /* ... field data ... */;
 std::array<int, 3> global_size = {64, 64, 64};
 std::array<double, 3> spacing = {0.1, 0.1, 0.1};

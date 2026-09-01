@@ -189,9 +189,9 @@ public:
   /**
    * @brief Get the FFT object
    *
-   * @return fft::IFFT&
+   * @return fft::IHostFFT&
    */
-  fft::IFFT &get_fft() { return pfc::get_fft(m_model); }
+  fft::IHostFFT &get_fft() { return pfc::get_fft(m_model); }
 
   /**
    * @brief Get the time object

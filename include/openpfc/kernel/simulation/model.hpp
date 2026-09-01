@@ -106,7 +106,7 @@ private:
   ///          of the Model. Do not destroy the FFT while Model is still in use.
   ///
   /// @see get_fft() for access
-  fft::IFFT &m_fft;
+  fft::IHostFFT &m_fft;
   ModelFieldRegistry m_fields; ///< Named real/complex field references (not owned)
   World m_world; ///< A0 World, stored by value so Domain-converting ctors can pass a
                  ///< temporary
@@ -126,8 +126,8 @@ public:
    * Constructs a Model with the given FFT backend and simulation domain.
    * The FFT object must outlive the Model instance.
    *
-   * @param fft Reference to the FFT implementation (`IFFT`, e.g. `CPUFFT`) used by
-   * the model
+   * @param fft Reference to the FFT implementation (`IHostFFT`, e.g. `CPUFFT`) used
+   * by the model
    * @param world Reference to the World object
    * @param mpi_comm MPI communicator for `is_rank0()` (default `MPI_COMM_WORLD`).
    *        Use the same communicator as `Simulator` and FFT when running with a
@@ -149,7 +149,7 @@ public:
    *
    * @since v2.0 (breaking change - FFT now required)
    */
-  Model(fft::IFFT &fft, const World &world, MPI_Comm mpi_comm = MPI_COMM_WORLD)
+  Model(fft::IHostFFT &fft, const World &world, MPI_Comm mpi_comm = MPI_COMM_WORLD)
       : m_fft(fft), m_world(world), m_mpi_comm(mpi_comm),
         m_rank0(mpi_comm_rank_is_zero(mpi_comm)) {}
 
@@ -241,12 +241,12 @@ public:
    * }
    * ```
    *
-   * @see fft::IFFT::forward() for real-to-complex transforms
-   * @see fft::IFFT::backward() for complex-to-real transforms
+   * @see fft::IHostFFT::forward() for real-to-complex transforms
+   * @see fft::IHostFFT::backward() for complex-to-real transforms
    *
    * @since v2.0 - no longer throws (FFT always valid)
    */
-  [[nodiscard]] fft::IFFT &get_fft() noexcept { return m_fft; }
+  [[nodiscard]] fft::IHostFFT &get_fft() noexcept { return m_fft; }
 
   /**
    * @brief Hook run by the Simulator just before field modifiers (initial /

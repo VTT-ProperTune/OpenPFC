@@ -28,7 +28,7 @@
  * @brief FFT instance used by the model (free function; preferred over
  * Model::get_fft()).
  */
-[[nodiscard]] inline fft::IFFT &get_fft(Model &model) noexcept {
+[[nodiscard]] inline fft::IHostFFT &get_fft(Model &model) noexcept {
   return model.get_fft();
 }
 

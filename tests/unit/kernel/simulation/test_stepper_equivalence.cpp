@@ -5,6 +5,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <vector>
 
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_factory.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
@@ -13,7 +14,6 @@
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
-#include <openpfc/kernel/data/domain.hpp>
 
 using namespace pfc;
 using Catch::Approx;
@@ -26,7 +26,7 @@ struct DecayGrads {
 // Legacy pattern: Model::step(double t) override
 class LegacyDecayModel : public Model {
 public:
-  LegacyDecayModel(fft::IFFT &fft, const World &world)
+  LegacyDecayModel(fft::IHostFFT &fft, const World &world)
       : Model(fft, world),
         m_u(get_size(world)[0] * get_size(world)[1] * get_size(world)[2], 1.0) {
     m_nx = get_size(world)[0];
@@ -64,8 +64,8 @@ TEST_CASE("test_decay_single_step", "[stepper][equivalence]") {
   constexpr int nx = 8, ny = 8, nz = 8;
 
   // Legacy setup
-  const pfc::Domain domain = pfc::domain::create(GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}),
-                                                  GridSpacing({1, 1, 1}));
+  const pfc::Domain domain = pfc::domain::create(
+      GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}), GridSpacing({1, 1, 1}));
   const pfc::Int3 lower{0, 0, 0};
   const pfc::Int3 upper{nx - 1, ny - 1, nz - 1};
   pfc::World world(lower, upper, domain);
@@ -103,8 +103,8 @@ TEST_CASE("test_decay_multiple_steps", "[stepper][equivalence]") {
   constexpr int num_steps = 10;
 
   // Legacy setup
-  const pfc::Domain domain = pfc::domain::create(GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}),
-                                                  GridSpacing({1, 1, 1}));
+  const pfc::Domain domain = pfc::domain::create(
+      GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}), GridSpacing({1, 1, 1}));
   const pfc::Int3 lower{0, 0, 0};
   const pfc::Int3 upper{nx - 1, ny - 1, nz - 1};
   pfc::World world(lower, upper, domain);
@@ -145,8 +145,8 @@ TEST_CASE("test_decay_with_nonzero_initial_condition", "[stepper][equivalence]")
   };
 
   // Legacy setup
-  const pfc::Domain domain = pfc::domain::create(GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}),
-                                                  GridSpacing({1, 1, 1}));
+  const pfc::Domain domain = pfc::domain::create(
+      GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}), GridSpacing({1, 1, 1}));
   const pfc::Int3 lower{0, 0, 0};
   const pfc::Int3 upper{nx - 1, ny - 1, nz - 1};
   pfc::World world(lower, upper, domain);

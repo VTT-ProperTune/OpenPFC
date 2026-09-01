@@ -62,7 +62,7 @@ Purpose: validate a **single JSON document** driving either CPU or GPU spectral 
 
 - Build a throwaway or feature-flagged **“spectral session”** type that owns `World`, `Decomposition`, and an FFT handle produced either from `cpu_fft_from_json_and_decomposition` or from the GPU plan builders in `spectral_fft_stack_factory.hpp`, using **`merged_spectral_plan_options_json`** so root `backend` and `plan_options` behave like today’s CPU path.
 - Wire **`Time`** and a **minimal `Model` stub** (existing mock or smallest example model) through the same **`wire_simulator_and_runtime_from_json`** entry points to prove IC/BC/result wiring does not depend on `fft::CPUFFT` specifically.
-- Measure **what must become type-erased** at the session boundary (e.g. `IFFT &` vs concrete `CPUFFT`) and list **API breaks** for shipped apps if `SpectralSimulationSession` were templated on FFT type.
+- Measure **what must become type-erased** at the session boundary (e.g. `IHostFFT &` vs concrete `CPUFFT`) and list **API breaks** for shipped apps if `SpectralSimulationSession` were templated on FFT type.
 
 **Exit criteria for closing the spike (documentation-only deliverable is OK):**
 

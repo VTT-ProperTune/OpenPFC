@@ -124,11 +124,11 @@ public:
   /**
    * @brief Construct TungstenHIP directly from a World and set up HIP FFT.
    *
-   * Matches the base `pfc::Model(fft::IFFT&, const World&, MPI_Comm)`
+   * Matches the base `pfc::Model(fft::IHostFFT&, const World&, MPI_Comm)`
    * constructor signature so generic session-wiring code (which builds a
    * `World` rather than a `Domain`) can construct this model.
    */
-  explicit TungstenHIP(pfc::fft::IFFT &fft, const pfc::World &world,
+  explicit TungstenHIP(pfc::fft::IHostFFT &fft, const pfc::World &world,
                        MPI_Comm mpi_comm = MPI_COMM_WORLD)
       : pfc::Model(fft, world, mpi_comm), m_cpu_buffer_valid(false) {
     init_hip_();
