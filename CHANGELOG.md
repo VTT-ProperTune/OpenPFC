@@ -220,6 +220,7 @@ source compatibility is explicitly not a goal.
 
 ### Removed
 
+- Public `pfc::PersistentHaloExchanger`. Host persistent Faces exchange is `pfc::comm::HaloExchange` with `HaloExchangeOptions::persistent`. The implementation is `pfc::comm::detail::HostPersistentFaces` in `halo_persistent.hpp`.
 - Public `pfc::FullPaddedHaloExchanger` / `pfc::communication::FullPaddedHaloExchanger`. Host Full (26-direction) exchange is `pfc::comm::HaloExchange` with `HaloConnectivity::Full`. The implementation is `pfc::comm::detail::HostFullHalo` in `full_padded_halo_exchange.hpp`.
 - Public `pfc::PaddedHaloExchanger` / `pfc::communication::PaddedHaloExchanger`. Host Faces exchange is `pfc::comm::HaloExchange`. The implementation is `pfc::comm::detail::HostFacesHalo` in `padded_halo_exchange.hpp`.
 - Unpadded in-place `pfc::HaloExchanger` (`kernel/decomposition/halo_exchange.hpp`). It overwrote outermost owned cells and had no remaining callers. Use a padded `Field` + `pfc::comm::HaloExchange` (Faces) or `pfc::comm::SparseExchange` for separated cores.

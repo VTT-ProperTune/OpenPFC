@@ -106,7 +106,7 @@ Ghosts are not resolved by per-point MPI or maps in hot loops. The pattern (whic
 | Padded Field storage | `kernel/data/grid_field.hpp` | padded `pfc::data::Field<T>` — single contiguous owned + halo-ring buffer; `T &operator()(int i, int j, int k)` valid for any `i, j, k in [-hw, n+hw)` when `storage_halo == hw`. |
 | Brick iteration | `field/brick_iteration.hpp` | `for_each_owned`, `for_each_inner(field, r, fn)`, `for_each_border(field, r, fn)` over padded `pfc::data::Field` — drives the laboratory-style FD loop. `_omp` variants exist as serial wrappers today. |
 | Sparse driver | `sparse_halo_exchange.hpp` | `pfc::SparseHaloExchanger<T>`: fully sparse, grid-agnostic non-blocking exchanger. Accepts any `std::vector<halo::RemoteHalo<T>>` (peer + send/recv indices + tags). For structured exchanges use `pfc::halo::make_structured_halos<T>(decomp, rank, hw, dirs = Axes3D())` and `pfc::halo::copy_to_face_layout` to refill the array-of-six face buffers consumed by the templated periodic-separated FD Laplacians. |
-| Persistent halos | `halo_persistent.hpp` | `PersistentHaloExchanger` for in-place six-face path. `start_exchange` / `wait_exchange` fail closed on `MPI_Startall` / `MPI_Waitall` errors via `pfc::mpi::throw_on_mpi_error`. |
+| Persistent halos | `comm_halo_exchange.hpp` | `pfc::comm::HaloExchange` with `HaloExchangeOptions::persistent`: persistent MPI requests on the six-face path. Implementation is `comm::detail::HostPersistentFaces`. `start_exchange` / `wait_exchange` fail closed on `MPI_Startall` / `MPI_Waitall` errors via `pfc::mpi::throw_on_mpi_error`. |
 | FD primitives | `field/fd_apply.hpp`, `field/fd_stencils.hpp` | `apply_d1_along<Axis, Stencil>`, `apply_d2_along<Axis, Stencil>`, `apply_tensor_d<Mx, My, Mz, ...>`, `EvenCentralD1<Order>` (orders 2..14), `EvenCentralD2<Order>` (orders 2..20) |
 | Generic stencils (custom: Sobel, CNN, anisotropic) | `field/stencil_apply.hpp` | `apply_1d_along<Axis>(coeffs, half_width, ...)`, `apply_separable(cx, Hx, cy, Hy, cz, Hz, ...)`, `apply_dense<Nz, Ny, Nx>(weights, ...)` — runtime-coefficient primitives that accept arbitrary kernels (laboratory layer for custom evaluators built atop the same halo plumbing). |
 | FD bricks | `field/finite_difference.hpp` | `laplacian_interior<Order>`, `laplacian_periodic_separated<Order>`, `laplacian2d_xy_interior<Order>`, `laplacian2d_xy_periodic_separated<Order>`, runtime-order `laplacian_interior(int order, ...)` |
@@ -176,8 +176,8 @@ If `per_rank` is provided, the exchanger calls `per_rank(rank)` for its own rank
 For 2D slab apps (`apps/kobayashi/src/cuda/kobayashi_fd_cuda.cpp` is the canonical example), set `HaloExchangeOptions::directions` to `presets::Axes2D()` to remove all ±Z communication / self-pack work without changing the rest of the driver.
 
 > **Inter-rank consistency:** CPU exchangers that accept a `HaloDirectionSet` /
-> `HaloDirectionSelector` (`PaddedHaloExchanger`,
-> `PersistentHaloExchanger`) call
+> `HaloDirectionSelector` (`HostFacesHalo`,
+> `HostPersistentFaces`) call
 > `pfc::halo::validate_neighbour_direction_agreement` immediately after
 > `resolve_direction_set`. That helper `MPI_Allgather`s a canonical encoding of
 > each rank's resolved set and checks **paired-boundary** agreement: every
@@ -215,7 +215,7 @@ For 2D slab apps (`apps/kobayashi/src/cuda/kobayashi_fd_cuda.cpp` is the canonic
 
 ## 8. Gaps and limitations
 
-- Persistent separated exchanger not implemented yet (mirror `PersistentHaloExchanger`).
+- Persistent separated exchanger not implemented yet (mirror `HostPersistentFaces`).
 - Overlap API for separated exchanger: can add `start_` / `finish_` mirroring `PaddedHaloExchanger`.
 - Face-only vs full-26 on the **CPU** padded-brick path: `HaloExchange` Faces remains the axis-aligned 6-face default. Full corner/edge fill is `HaloConnectivity::Full` (3-pass widening, host twin of `FullPaddedDeviceHalo`). Wiring mixed seconds into `FDGradient` / `apply_tensor_d` is still a follow-up after corners are proven.
 - Orchestration: Optional thin `exchange_if_needed(HaloPolicy, …)` can be added when multiple call sites need it; policies are documented first.

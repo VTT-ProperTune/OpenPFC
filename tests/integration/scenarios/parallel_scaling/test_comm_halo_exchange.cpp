@@ -113,7 +113,7 @@ TEST_CASE("HaloExchange persistent Faces: single-rank wrap",
   int rank = 0, size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  // Multi-rank PersistentHaloExchanger is already red on LUMI (same as
+  // Multi-rank persistent HaloExchange is already red on LUMI (same as
   // test_fd_heat_mpi). Cover the facade's persistent path on one rank.
   if (size != 1) {
     return;

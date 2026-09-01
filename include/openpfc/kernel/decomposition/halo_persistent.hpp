@@ -3,19 +3,20 @@
 
 /**
  * @file halo_persistent.hpp
- * @brief Optional persistent MPI requests for 6-face zero-copy halo exchange
+ * @brief Internal persistent Faces backend for `pfc::comm::HaloExchange`.
  *
  * @details
- * Uses `MPI_Send_init` / `MPI_Recv_init` once, then `MPI_Startall` and
- * `MPI_Waitall` each step. Only valid when the decomposition exposes all six face
- * neighbors (same condition as the zero-copy Faces path).
+ * Not a public API. Callers bind a padded `pfc::data::Field` through
+ * `pfc::comm::HaloExchange` with `HaloExchangeOptions::persistent`. This
+ * header owns `MPI_Send_init` / `MPI_Recv_init` once, then `MPI_Startall`
+ * and `MPI_Waitall` each step. Only valid when the decomposition exposes
+ * all six face neighbors (same condition as the zero-copy Faces path).
  *
- * The field buffer pointer passed to the constructor must remain the storage used
- * for every `start_exchange()` / `wait_exchange()` pair (MPI persistent operations
- * are bound to that address). Do not destroy this object while a request epoch is
- * in progress; call `wait_exchange()` before destruction.
+ * The field buffer pointer passed to the constructor must remain the storage
+ * used for every `start_exchange()` / `wait_exchange()` pair (MPI persistent
+ * operations are bound to that address). Do not destroy this object while a
+ * request epoch is in progress; call `wait_exchange()` before destruction.
  *
- * @see docs/halo_exchange.md §4
  * @see comm_halo_exchange.hpp
  */
 
@@ -41,12 +42,15 @@
 #include <openpfc/kernel/profiling/context.hpp>
 #include <openpfc/kernel/profiling/names.hpp>
 
-namespace pfc {
+namespace pfc::comm::detail {
 
 /**
- * @brief Persistent 6-face halo exchange (CPU, MPI derived types, double default).
+ * @brief Persistent 6-face halo exchange (CPU, MPI derived types).
+ *
+ * Faces-only: corners/edges are not filled. Full connectivity has no
+ * persistent path; `HaloExchange` rejects `persistent && Full`.
  */
-template <typename T = double> class PersistentHaloExchanger {
+template <typename T = double> class HostPersistentFaces {
 public:
   using Int3 = pfc::types::Int3;
 
@@ -65,31 +69,12 @@ public:
    *                      lifetime.
    * @param base_tag      Base tag for messages (direction index added).
    */
-  PersistentHaloExchanger(const Box3i &subdomain_box, const Domain &domain,
-                          const decomposition::Decomposition &decomp, int rank,
-                          int halo_width, MPI_Comm comm, T *field_ptr,
-                          int base_tag = 0)
-      : PersistentHaloExchanger(subdomain_box, domain, decomp, rank, halo_width,
-                                comm, field_ptr, halo::presets::Axes3D(), base_tag,
-                                halo::HaloDirectionSelector{}) {}
-
-  /**
-   * @brief Construct with a user-selected halo direction set using explicit Box3i +
-   * Domain.
-   *
-   * @param subdomain_box Local subdomain box (bounds for this rank).
-   * @param domain        Global domain (for periodicity/spacing metadata).
-   * @param decomp        Decomposition for neighbor calculation (must outlive this
-   * object).
-   * @param rank          This MPI rank.
-   * @param halo_width    Number of halo layers.
-   * @param comm          MPI communicator.
-   * @param field_ptr     Base pointer of the local field; must be stable for object
-   *                      lifetime.
-   * @param dirs          Direction set (defaults to `Axes3D()` for back-compat).
-   * @param base_tag      Base tag for messages (direction index added).
-   * @param selector      Optional per-rank override of the direction set.
-   */
+  HostPersistentFaces(const Box3i &subdomain_box, const Domain &domain,
+                      const decomposition::Decomposition &decomp, int rank,
+                      int halo_width, MPI_Comm comm, T *field_ptr, int base_tag = 0)
+      : HostPersistentFaces(subdomain_box, domain, decomp, rank, halo_width, comm,
+                            field_ptr, halo::presets::Axes3D(), base_tag,
+                            halo::HaloDirectionSelector{}) {}
 
   /**
    * @brief Construct with the historical 6-face axis-aligned set (`Axes3D()`).
@@ -98,17 +83,16 @@ public:
    * lifetime.
    *
    * @deprecated Use explicit Box3i + Domain constructor:
-   * PersistentHaloExchanger(box, domain, decomp, rank, ...)
+   * HostPersistentFaces(box, domain, decomp, rank, ...)
    */
   [[deprecated("Use explicit Box3i + Domain constructor: "
-               "PersistentHaloExchanger(box, domain, decomp, rank, ...)")]]
-  PersistentHaloExchanger(const decomposition::Decomposition &decomp, int rank,
-                          int halo_width, MPI_Comm comm, T *field_ptr,
-                          int base_tag = 0)
-      : PersistentHaloExchanger(decomposition::local_box(decomp, rank),
-                                decomposition::domain(decomp), decomp, rank,
-                                halo_width, comm, field_ptr, halo::presets::Axes3D(),
-                                base_tag, halo::HaloDirectionSelector{}) {}
+               "HostPersistentFaces(box, domain, decomp, rank, ...)")]]
+  HostPersistentFaces(const decomposition::Decomposition &decomp, int rank,
+                      int halo_width, MPI_Comm comm, T *field_ptr, int base_tag = 0)
+      : HostPersistentFaces(decomposition::local_box(decomp, rank),
+                            decomposition::domain(decomp), decomp, rank, halo_width,
+                            comm, field_ptr, halo::presets::Axes3D(), base_tag,
+                            halo::HaloDirectionSelector{}) {}
 
   /**
    * @brief Construct a persistent exchange bound to the directions in `dirs`.
@@ -125,25 +109,24 @@ public:
    * @param selector Optional per-rank override of the direction set.
    *
    * @deprecated Use explicit Box3i + Domain constructor:
-   * PersistentHaloExchanger(box, domain, decomp, rank, ...)
+   * HostPersistentFaces(box, domain, decomp, rank, ...)
    */
   [[deprecated("Use explicit Box3i + Domain constructor: "
-               "PersistentHaloExchanger(box, domain, decomp, rank, ...)")]]
-  PersistentHaloExchanger(const decomposition::Decomposition &decomp, int rank,
-                          int halo_width, MPI_Comm comm, T *field_ptr,
-                          halo::HaloDirectionSet dirs, int base_tag = 0,
-                          halo::HaloDirectionSelector selector = {})
-      : PersistentHaloExchanger(
-            decomposition::local_box(decomp, rank), decomposition::domain(decomp),
-            decomp, rank, halo_width, comm, field_ptr, dirs, base_tag, selector) {}
+               "HostPersistentFaces(box, domain, decomp, rank, ...)")]]
+  HostPersistentFaces(const decomposition::Decomposition &decomp, int rank,
+                      int halo_width, MPI_Comm comm, T *field_ptr,
+                      halo::HaloDirectionSet dirs, int base_tag = 0,
+                      halo::HaloDirectionSelector selector = {})
+      : HostPersistentFaces(decomposition::local_box(decomp, rank),
+                            decomposition::domain(decomp), decomp, rank, halo_width,
+                            comm, field_ptr, dirs, base_tag, selector) {}
 
   // Main Box3i+Domain constructor implementation
-  PersistentHaloExchanger(const Box3i &subdomain_box, const Domain &domain,
-                          const decomposition::Decomposition &decomp, int rank,
-                          int halo_width, MPI_Comm comm, T *field_ptr,
-                          halo::HaloDirectionSet dirs = halo::presets::Axes3D(),
-                          int base_tag = 0,
-                          halo::HaloDirectionSelector selector = {})
+  HostPersistentFaces(const Box3i &subdomain_box, const Domain &domain,
+                      const decomposition::Decomposition &decomp, int rank,
+                      int halo_width, MPI_Comm comm, T *field_ptr,
+                      halo::HaloDirectionSet dirs = halo::presets::Axes3D(),
+                      int base_tag = 0, halo::HaloDirectionSelector selector = {})
       : m_comm(comm), m_base_tag(base_tag), m_buf(static_cast<void *>(field_ptr)),
         m_dirs(halo::resolve_direction_set(dirs, selector, rank)) {
     if (halo::neighbour_agreement_enabled()) {
@@ -176,8 +159,9 @@ public:
       if (a) ++n_active;
     }
     if (n_active == 0) {
-      throw std::runtime_error("PersistentHaloExchanger: empty direction set "
-                               "after filtering — nothing to exchange.");
+      throw std::runtime_error("pfc::comm::detail::HostPersistentFaces: empty "
+                               "direction set after filtering — nothing to "
+                               "exchange.");
     }
 
     m_requests.assign(2 * n_active, MPI_REQUEST_NULL);
@@ -195,7 +179,8 @@ public:
                               m_neighbors[i], recv_tag, m_comm, &m_requests[r]);
       if (err != MPI_SUCCESS) {
         free_all_requests();
-        throw std::runtime_error("MPI_Recv_init failed in PersistentHaloExchanger");
+        throw std::runtime_error(
+            "MPI_Recv_init failed in pfc::comm::detail::HostPersistentFaces");
       }
       ++r;
     }
@@ -208,16 +193,17 @@ public:
                               m_neighbors[i], send_tag, m_comm, &m_requests[r]);
       if (err != MPI_SUCCESS) {
         free_all_requests();
-        throw std::runtime_error("MPI_Send_init failed in PersistentHaloExchanger");
+        throw std::runtime_error(
+            "MPI_Send_init failed in pfc::comm::detail::HostPersistentFaces");
       }
       ++r;
     }
   }
 
-  PersistentHaloExchanger(const PersistentHaloExchanger &) = delete;
-  PersistentHaloExchanger &operator=(const PersistentHaloExchanger &) = delete;
+  HostPersistentFaces(const HostPersistentFaces &) = delete;
+  HostPersistentFaces &operator=(const HostPersistentFaces &) = delete;
 
-  PersistentHaloExchanger(PersistentHaloExchanger &&other) noexcept
+  HostPersistentFaces(HostPersistentFaces &&other) noexcept
       : m_comm(other.m_comm), m_base_tag(other.m_base_tag), m_buf(other.m_buf),
         m_dirs(std::move(other.m_dirs)), m_face_types(std::move(other.m_face_types)),
         m_active(other.m_active), m_neighbors(other.m_neighbors),
@@ -226,7 +212,7 @@ public:
     other.m_buf = nullptr;
   }
 
-  PersistentHaloExchanger &operator=(PersistentHaloExchanger &&other) noexcept {
+  HostPersistentFaces &operator=(HostPersistentFaces &&other) noexcept {
     if (this != &other) {
       free_all_requests();
       m_comm = other.m_comm;
@@ -243,7 +229,7 @@ public:
     return *this;
   }
 
-  ~PersistentHaloExchanger() { free_all_requests(); }
+  ~HostPersistentFaces() { free_all_requests(); }
 
   /**
    * @brief Start one halo exchange (`MPI_Startall` on persistent requests).
@@ -313,4 +299,4 @@ private:
   std::vector<MPI_Request> m_requests;
 };
 
-} // namespace pfc
+} // namespace pfc::comm::detail

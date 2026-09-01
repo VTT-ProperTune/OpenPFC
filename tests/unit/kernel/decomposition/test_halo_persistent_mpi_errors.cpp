@@ -3,7 +3,7 @@
 
 /**
  * @file test_halo_persistent_mpi_errors.cpp
- * @brief Contract tests: PersistentHaloExchanger start/wait propagate MPI errors.
+ * @brief Contract tests: HostPersistentFaces start/wait propagate MPI errors.
  */
 
 #include <catch2/catch_test_macros.hpp>
@@ -66,7 +66,7 @@ TEST_CASE("throw_on_mpi_error throws on non-success and no-ops on success",
   }
 }
 
-TEST_CASE("PersistentHaloExchanger start/wait propagate MPI errors (source "
+TEST_CASE("HostPersistentFaces start/wait propagate MPI errors (source "
           "contract)",
           "[halo][persistent][mpi_errors]") {
   const auto header =
