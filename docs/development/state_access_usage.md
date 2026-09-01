@@ -220,17 +220,16 @@ ctx.time = 0.0;  // Current simulation time
 ctx.dt = 0.01;   // Timestep being attempted
 ctx.stage_index = 0;  // RK stage index
 ctx.region_kind = StageContext::RegionKind::All;  // Field region needed
-ctx.needs_boundary_update = true;  // Pre-eval BC hook inside prepare
 ctx.needs_halo_exchange = true;  // Halo exchange needed before evaluation
 
 // Prefer the stage-preparation protocol over ad-hoc MPI at each site
 StagePreparationService<double> prep;
-prep.bind("u", padded_halo_u);  // brick-bound PaddedHaloExchanger
+prep.bind("u", padded_halo_u);  // brick-bound HaloExchange
 prep.set_boundary_hook([](std::string_view /*name*/) {
-    // Apply owned-face BCs before halo (default BoundaryThenHalo)
+    // FD: apply_dirichlet_ghosts; spectral: penalty on owned cells
 });
 const std::string_view fields[] = {"u"};
-prep.prepare(requirements_from(ctx), fields);
+prep.prepare(requirements_from(ctx, /*needs_boundary=*/true), fields);
 
 // Reject/retry: no halo rollback — re-prepare from accepted owned state
 // prep.prepare(requirements_from(ctx), fields);

@@ -9,8 +9,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
-#include "openpfc/kernel/simulation/spectral_diagonal_solver.hpp"
 #include "openpfc/kernel/simulation/solver_contract.hpp"
+#include "openpfc/kernel/simulation/spectral_diagonal_solver.hpp"
 
 #include <cmath>
 #include <complex>
@@ -25,7 +25,6 @@ namespace {
 class MockExecutionService : public ExecutionService {
 public:
   std::vector<std::string> last_halos;
-  std::vector<std::string> last_boundaries;
   std::vector<double> last_reduce_data;
   std::vector<double> last_reduce_result;
   MPI_Op last_op = MPI_OP_NULL;
@@ -34,11 +33,8 @@ public:
     last_halos = field_names;
   }
 
-  void prepare_boundaries(const std::vector<std::string> &field_names) override {
-    last_boundaries = field_names;
-  }
-
-  std::vector<double> global_reduce(const std::vector<double> &data, MPI_Op op) override {
+  std::vector<double> global_reduce(const std::vector<double> &data,
+                                    MPI_Op op) override {
     last_reduce_data = data;
     last_op = op;
     // By default, return a copy of input (serial behavior)
@@ -252,10 +248,8 @@ TEST_CASE("spectral diagonal complex regular divide",
                               std::vector<Complex>>);
 
   SpectralDiagonalSolver solver;
-  std::vector<Complex> diag{Complex{2.0, 0.0}, Complex{4.0, 0.0},
-                            Complex{5.0, 0.0}};
-  std::vector<Complex> rhs{Complex{2.0, 0.0}, Complex{8.0, 0.0},
-                           Complex{15.0, 0.0}};
+  std::vector<Complex> diag{Complex{2.0, 0.0}, Complex{4.0, 0.0}, Complex{5.0, 0.0}};
+  std::vector<Complex> rhs{Complex{2.0, 0.0}, Complex{8.0, 0.0}, Complex{15.0, 0.0}};
   std::vector<Complex> target{Complex{0.0, 0.0}, Complex{0.0, 0.0},
                               Complex{0.0, 0.0}};
 
@@ -269,9 +263,8 @@ TEST_CASE("spectral diagonal complex regular divide",
   REQUIRE(outcome.status == ConvergenceStatus::converged);
   REQUIRE(outcome.iteration_count == 1);
   REQUIRE_THAT(outcome.final_residual_norm, WithinAbs(0.0, 1e-14));
-  REQUIRE(target ==
-          std::vector<Complex>{Complex{1.0, 0.0}, Complex{2.0, 0.0},
-                               Complex{3.0, 0.0}});
+  REQUIRE(target == std::vector<Complex>{Complex{1.0, 0.0}, Complex{2.0, 0.0},
+                                         Complex{3.0, 0.0}});
   REQUIRE(outcome.solution == target);
   REQUIRE(service.last_op == MPI_SUM);
   REQUIRE(service.last_reduce_data.size() == 1);
@@ -285,10 +278,8 @@ TEST_CASE("spectral diagonal complex nullspace fail",
   config.singular_threshold = 1e-14;
   SpectralDiagonalSolver solver(config);
 
-  std::vector<Complex> diag{Complex{2.0, 0.0}, Complex{0.0, 0.0},
-                            Complex{5.0, 0.0}};
-  std::vector<Complex> rhs{Complex{2.0, 0.0}, Complex{1.0, 0.0},
-                           Complex{15.0, 0.0}};
+  std::vector<Complex> diag{Complex{2.0, 0.0}, Complex{0.0, 0.0}, Complex{5.0, 0.0}};
+  std::vector<Complex> rhs{Complex{2.0, 0.0}, Complex{1.0, 0.0}, Complex{15.0, 0.0}};
   std::vector<Complex> target{Complex{-1.0, 0.0}, Complex{-2.0, 0.0},
                               Complex{-3.0, 0.0}};
   const auto target_sentinel = target;
@@ -315,10 +306,8 @@ TEST_CASE("spectral diagonal complex nullspace project",
   SpectralDiagonalSolver solver(config);
 
   // Zero mode with compatible RHS (b=0) so residual stays ~0
-  std::vector<Complex> diag{Complex{2.0, 0.0}, Complex{0.0, 0.0},
-                            Complex{5.0, 0.0}};
-  std::vector<Complex> rhs{Complex{2.0, 0.0}, Complex{0.0, 0.0},
-                           Complex{15.0, 0.0}};
+  std::vector<Complex> diag{Complex{2.0, 0.0}, Complex{0.0, 0.0}, Complex{5.0, 0.0}};
+  std::vector<Complex> rhs{Complex{2.0, 0.0}, Complex{0.0, 0.0}, Complex{15.0, 0.0}};
   std::vector<Complex> target{Complex{9.0, 0.0}, Complex{9.0, 0.0},
                               Complex{9.0, 0.0}};
 
@@ -332,9 +321,8 @@ TEST_CASE("spectral diagonal complex nullspace project",
   REQUIRE(outcome.status == ConvergenceStatus::converged);
   REQUIRE(outcome.iteration_count == 1);
   REQUIRE_THAT(outcome.final_residual_norm, WithinAbs(0.0, 1e-14));
-  REQUIRE(target ==
-          std::vector<Complex>{Complex{1.0, 0.0}, Complex{0.0, 0.0},
-                               Complex{3.0, 0.0}});
+  REQUIRE(target == std::vector<Complex>{Complex{1.0, 0.0}, Complex{0.0, 0.0},
+                                         Complex{3.0, 0.0}});
 }
 
 TEST_CASE("spectral diagonal complex nullspace regularize",
@@ -345,10 +333,8 @@ TEST_CASE("spectral diagonal complex nullspace regularize",
   config.regularization = 1.0;
   SpectralDiagonalSolver solver(config);
 
-  std::vector<Complex> diag{Complex{1.0, 0.0}, Complex{2.0, 0.0},
-                            Complex{0.0, 0.0}};
-  std::vector<Complex> rhs{Complex{2.0, 0.0}, Complex{6.0, 0.0},
-                           Complex{4.0, 0.0}};
+  std::vector<Complex> diag{Complex{1.0, 0.0}, Complex{2.0, 0.0}, Complex{0.0, 0.0}};
+  std::vector<Complex> rhs{Complex{2.0, 0.0}, Complex{6.0, 0.0}, Complex{4.0, 0.0}};
   std::vector<Complex> target{Complex{0.0, 0.0}, Complex{0.0, 0.0},
                               Complex{0.0, 0.0}};
 
@@ -401,10 +387,8 @@ TEST_CASE("spectral diagonal complex inputs unchanged",
           "[spectral_diagonal][solver]") {
   using Complex = std::complex<double>;
   SpectralDiagonalSolver solver;
-  std::vector<Complex> diag{Complex{2.0, 0.0}, Complex{4.0, 0.0},
-                            Complex{5.0, 0.0}};
-  std::vector<Complex> rhs{Complex{2.0, 0.0}, Complex{8.0, 0.0},
-                           Complex{15.0, 0.0}};
+  std::vector<Complex> diag{Complex{2.0, 0.0}, Complex{4.0, 0.0}, Complex{5.0, 0.0}};
+  std::vector<Complex> rhs{Complex{2.0, 0.0}, Complex{8.0, 0.0}, Complex{15.0, 0.0}};
   const auto diag_copy = diag;
   const auto rhs_copy = rhs;
   std::vector<Complex> target{Complex{0.0, 0.0}, Complex{0.0, 0.0},
@@ -444,9 +428,9 @@ TEST_CASE("spectral diagonal injected reduced sum affects convergence",
     MPI_Op last_op = MPI_OP_NULL;
 
     void request_halo_exchange(const std::vector<std::string> &) override {}
-    void prepare_boundaries(const std::vector<std::string> &) override {}
 
-    std::vector<double> global_reduce(const std::vector<double> &data, MPI_Op op) override {
+    std::vector<double> global_reduce(const std::vector<double> &data,
+                                      MPI_Op op) override {
       last_reduce_data = data;
       last_op = op;
       // Simulate 2-rank MPI: input is local sum from one rank, return global sum
@@ -472,6 +456,5 @@ TEST_CASE("spectral diagonal injected reduced sum affects convergence",
   REQUIRE(service.last_reduce_data.size() == 1);
   // Local sum_sq from one rank is 25.0 (r = -5.0 on singular mode)
   REQUIRE_THAT(service.last_reduce_data[0], WithinAbs(25.0, 1e-10));
-  REQUIRE(target == sentinel);  // Target unchanged on convergence failure
+  REQUIRE(target == sentinel); // Target unchanged on convergence failure
 }
-

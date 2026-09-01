@@ -19,8 +19,8 @@
 
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/stage_preparation.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/integrator/stage_context.hpp>
@@ -332,10 +332,9 @@ TEST_CASE("StagePreparationService: boundary hook ordering vs halo",
         .dt = 0.01,
         .stage_index = 0,
         .region_kind = integrator::StageContext::RegionKind::Interior,
-        .needs_boundary_update = true,
         .needs_halo_exchange = false,
     };
-    auto mapped = integrator::requirements_from(ctx);
+    auto mapped = integrator::requirements_from(ctx, /*needs_boundary=*/true);
     REQUIRE(mapped.region_kind == communication::RegionKind::Interior);
     REQUIRE(mapped.needs_boundary_update);
     REQUIRE_FALSE(mapped.needs_halo_exchange);

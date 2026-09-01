@@ -239,8 +239,8 @@ auto& scratch = workspace.scratch();
 - **Timestep dt**: Attempted timestep size
 - **Stage index**: RK stage or method-specific stage identifier
 - **Field region requirements**: Interior vs boundary vs all
-- **Boundary condition requirements**: Whether BCs need updating
 - **Halo exchange requirements**: Whether halo exchange is needed
+- **Boundary conditions**: not on StageContext; drivers pass `needs_boundary` into `requirements_from` and `StagePreparationService`
 
 **Verification**: StageContext struct carries all required fields. Integrators populate StageContext before each evaluation. Drivers read StageContext to coordinate MPI operations.
 
@@ -251,7 +251,6 @@ ctx.time = t;
 ctx.dt = dt;
 ctx.stage_index = stage;
 ctx.region_kind = StageContext::RegionKind::Interior;
-ctx.needs_boundary_update = false;
 ctx.needs_halo_exchange = true;
 
 // Driver uses context to coordinate MPI

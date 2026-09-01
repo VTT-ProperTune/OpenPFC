@@ -16,4 +16,5 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_state_access.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_state_concepts.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/field_from_subdomain_tests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_dirichlet_ghosts.cpp
 )

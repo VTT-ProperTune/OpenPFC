@@ -9,12 +9,13 @@
  *
  * @details
  * `pfc::comm::HaloExchange` is **transport**: it moves ghost faces given a
- * bound Field. `StagePreparationService` is the **protocol** that
- * interprets stage requirements (`needs_halo_exchange`,
+ * bound Field. `StagePreparationService` is the **single pre-stage BC
+ * protocol** (M10): it interprets stage requirements (`needs_halo_exchange`,
  * `needs_boundary_update`, region kind, boundary/halo ordering) and drives
- * those exchangers plus an injectable boundary hook — without inventing a
- * new MPI transport and without embedding ad-hoc MPI in method/operator
- * layers.
+ * those exchangers plus an injectable boundary hook — FD Dirichlet ghosts
+ * (`apply_dirichlet_ghosts`) or spectral penalty writes on owned cells.
+ * There is no parallel `ExecutionService::prepare_boundaries` path and no
+ * BC flag on `StageContext`.
  *
  * Drivers typically obtain requirements from
  * `pfc::integrator::requirements_from(StageContext)` (defined in
@@ -31,6 +32,7 @@
  *       ghost rings are recomputed from owned state.
  *
  * @see comm_halo_exchange.hpp
+ * @see dirichlet_ghosts.hpp
  * @see openpfc/kernel/integrator/stage_context.hpp
  */
 

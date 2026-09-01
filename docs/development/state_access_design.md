@@ -185,7 +185,7 @@ for (int step = 0; step < n_steps; ++step) {
 `pfc::sim::StageContext` is a `using` alias of `pfc::integrator::StageContext`
 (`include/openpfc/kernel/integrator/stage_context.hpp`). Fields:
 
-- Integrator: `time`, `dt`, `stage_index`, `region_kind`, `needs_boundary_update`, `needs_halo_exchange`
+- Integrator: `time`, `dt`, `stage_index`, `region_kind`, `needs_halo_exchange`
 - Solver: optional `execution_service` (`ExecutionService*`; use `service()` when a solve needs it)
 
 Solvers historically named `time` as `evaluation_time`. Construct solver
@@ -391,7 +391,7 @@ Mapped to the current work-item acceptance criteria (not legacy numeric ids):
 - `FieldOutput<T>` provides mutable caller-owned output storage with `validate_no_alias` (`state_access.hpp`; unit cases `FieldOutput mutable access`, `Field aliasing detection`).
 - `FieldBundle<Fields...>` groups fields with `get<I>()` and `validate_shapes()` (`state_access.hpp`; unit case `FieldBundle multi-field`).
 - `pfc::integrator::Workspace<T>` provides integrator-owned stage and scratch storage (unit cases `Workspace stage storage and scratch`, `Workspace clear resets buffers`). `StageWorkspace<T>` is the same type.
-- `pfc::integrator::StageContext` carries `time`, `dt`, `stage_index`, `region_kind`, `needs_boundary_update`, `needs_halo_exchange`, and optional `execution_service` (unit case `StageContext MPI coordination fields`). `pfc::sim::StageContext` is the same type.
+- `pfc::integrator::StageContext` carries `time`, `dt`, `stage_index`, `region_kind`, `needs_halo_exchange`, and optional `execution_service` (unit case `StageContext MPI coordination fields`). BC requests are `requirements_from(ctx, needs_boundary)`. `pfc::sim::StageContext` is the same type.
 - Validation free functions cover shape, aliasing, and backend-tag checks (`validation.hpp`; unit cases `Shape compatibility validation`, `Backend compatibility validation`). Backend mismatch is a compile-time `static_assert`, not a runtime throw.
 - Unit tests in `tests/unit/kernel/field/test_state_access.cpp` exercise the contracts without CUDA/HIP dependencies (including the documented ScaledField in-place exception).
 - Integration evidence: `test_heat3d_state_access.cpp` (scalar) and `test_wave2d_state_access.cpp` (multi-field).

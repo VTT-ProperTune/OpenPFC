@@ -86,9 +86,11 @@ namespace pfc::sim {
  * - Is already a std::tuple specialization
  * - Is a scalar type (treated as single-field bundle)
  */
-template<typename T>
-concept tuple_protocol = requires(T& t) {
-    { pfc::field::detail::to_tuple(t) } -> std::same_as<decltype(pfc::field::detail::to_tuple(t))>;
+template <typename T>
+concept tuple_protocol = requires(T &t) {
+  {
+    pfc::field::detail::to_tuple(t)
+  } -> std::same_as<decltype(pfc::field::detail::to_tuple(t))>;
 };
 
 /**
@@ -100,17 +102,17 @@ concept tuple_protocol = requires(T& t) {
  * coefficients, or opaque handles.
  */
 struct LinearOperatorDesc {
-    /// Operator identifier (e.g., "spectral_diagonal", "finite_difference_stencil")
-    std::string operator_identifier;
+  /// Operator identifier (e.g., "spectral_diagonal", "finite_difference_stencil")
+  std::string operator_identifier;
 
-    /// Optional preconditioner identifier
-    std::optional<std::string> preconditioner_identifier;
+  /// Optional preconditioner identifier
+  std::optional<std::string> preconditioner_identifier;
 
-    /// Operator-specific context (spectral propagator — real or complex —
-    /// stencil coeffs, or opaque handle)
-    std::variant<std::monostate, std::vector<double>,
-                 std::vector<std::complex<double>>, std::string>
-        operator_context;
+  /// Operator-specific context (spectral propagator — real or complex —
+  /// stencil coeffs, or opaque handle)
+  std::variant<std::monostate, std::vector<double>,
+               std::vector<std::complex<double>>, std::string>
+      operator_context;
 };
 
 /**
@@ -120,17 +122,17 @@ struct LinearOperatorDesc {
  * relative to the initial residual norm unless absolute_tolerance is set.
  */
 struct SolveOptions {
-    /// Maximum number of solver iterations
-    int max_iterations = 1000;
+  /// Maximum number of solver iterations
+  int max_iterations = 1000;
 
-    /// Relative tolerance on residual norm (default 1e-6)
-    double tolerance = 1e-6;
+  /// Relative tolerance on residual norm (default 1e-6)
+  double tolerance = 1e-6;
 
-    /// Optional absolute tolerance (disables pure relative tolerance if set)
-    std::optional<double> absolute_tolerance;
+  /// Optional absolute tolerance (disables pure relative tolerance if set)
+  std::optional<double> absolute_tolerance;
 
-    /// Optional caller-selected preconditioning descriptor
-    std::optional<LinearOperatorDesc> preconditioner_desc;
+  /// Optional caller-selected preconditioning descriptor
+  std::optional<LinearOperatorDesc> preconditioner_desc;
 };
 
 /**
@@ -140,12 +142,12 @@ struct SolveOptions {
  * convergence and various failure modes.
  */
 enum class ConvergenceStatus {
-    converged,                 ///< Solver converged within tolerance
-    max_iterations_reached,    ///< Stopping criteria met without convergence
-    stagnation_detected,       ///< Residual stopped decreasing
-    ill_conditioned,           ///< System is numerically ill-conditioned
-    cancelled,                 ///< Solve was cancelled (collective for MPI)
-    unknown_failure            ///< Uncategorized failure occurred
+  converged,              ///< Solver converged within tolerance
+  max_iterations_reached, ///< Stopping criteria met without convergence
+  stagnation_detected,    ///< Residual stopped decreasing
+  ill_conditioned,        ///< System is numerically ill-conditioned
+  cancelled,              ///< Solve was cancelled (collective for MPI)
+  unknown_failure         ///< Uncategorized failure occurred
 };
 
 /**
@@ -166,73 +168,68 @@ enum class ConvergenceStatus {
  *
  * @tparam Fields Field bundle type satisfying tuple_protocol
  */
-template<typename Fields>
-struct SolveOutcome {
-    /// Solution state: reference to target_out or view into internal buffer
-    Fields solution;
+template <typename Fields> struct SolveOutcome {
+  /// Solution state: reference to target_out or view into internal buffer
+  Fields solution;
 
-    /// Convergence status of the solve attempt
-    ConvergenceStatus status;
+  /// Convergence status of the solve attempt
+  ConvergenceStatus status;
 
-    /// Number of iterations performed
-    int iteration_count;
+  /// Number of iterations performed
+  int iteration_count;
 
-    /// Final residual norm
-    double final_residual_norm;
+  /// Final residual norm
+  double final_residual_norm;
 
-    /// Optional failure cause description
-    std::optional<std::string> failure_cause;
+  /// Optional failure cause description
+  std::optional<std::string> failure_cause;
 };
 
 /**
  * @brief Type trait to detect if a type is a SolveOutcome specialization
  */
-template<typename T>
-struct is_solve_outcome : std::false_type {};
+template <typename T> struct is_solve_outcome : std::false_type {};
 
-template<typename Fields>
+template <typename Fields>
 struct is_solve_outcome<SolveOutcome<Fields>> : std::true_type {};
 
-template<typename T>
+template <typename T>
 concept solve_outcome_type = is_solve_outcome<T>::value;
 
 /**
  * @brief Interface for driver-provided distributed operations
  *
- * Implemented by simulation driver (e.g., adapts SimulationContext) to provide
- * halo exchange, boundary preparation, and global reduction capabilities for
- * solver iterations and operator evaluations.
+ * Implemented by the simulation driver to provide halo exchange and global
+ * reductions for solver iterations. Boundary conditions are not part of this
+ * interface: drivers run `StagePreparationService::prepare` (FD Dirichlet
+ * ghosts or spectral penalty modifiers on the injectable hook) before
+ * evaluation.
  */
 class ExecutionService {
 public:
-    virtual ~ExecutionService() = default;
+  virtual ~ExecutionService() = default;
 
-    /**
-     * @brief Request halo exchange for specified fields before operator evaluation
-     *
-     * @param field_names Names of fields requiring halo exchange
-     */
-    virtual void request_halo_exchange(const std::vector<std::string>& field_names) = 0;
+  /**
+   * @brief Request halo exchange for specified fields before operator evaluation
+   *
+   * @param field_names Names of fields requiring halo exchange
+   */
+  virtual void
+  request_halo_exchange(const std::vector<std::string> &field_names) = 0;
 
-    /**
-     * @brief Apply boundary conditions to specified fields
-     *
-     * @param field_names Names of fields requiring boundary preparation
-     */
-    virtual void prepare_boundaries(const std::vector<std::string>& field_names) = 0;
-
-    /**
-     * @brief Perform global reduction of scalar values across all ranks
-     *
-     * Returns a vector of reduced values with the same size as the input.
-     * For MPI runs, this performs an Allreduce operation across all ranks.
-     * For serial runs, this returns a copy of the input values.
-     *
-     * @param data Data values to reduce (local values from a single rank)
-     * @param op MPI reduction operation (e.g., MPI_SUM, MPI_MAX)
-     * @return std::vector<double> Reduced values across all ranks
-     */
-    virtual std::vector<double> global_reduce(const std::vector<double>& data, MPI_Op op) = 0;
+  /**
+   * @brief Perform global reduction of scalar values across all ranks
+   *
+   * Returns a vector of reduced values with the same size as the input.
+   * For MPI runs, this performs an Allreduce operation across all ranks.
+   * For serial runs, this returns a copy of the input values.
+   *
+   * @param data Data values to reduce (local values from a single rank)
+   * @param op MPI reduction operation (e.g., MPI_SUM, MPI_MAX)
+   * @return std::vector<double> Reduced values across all ranks
+   */
+  virtual std::vector<double> global_reduce(const std::vector<double> &data,
+                                            MPI_Op op) = 0;
 };
 
 /**
@@ -258,21 +255,19 @@ using StageContext = pfc::integrator::StageContext;
  * @tparam RHSFields Right-hand-side field bundle type
  * @tparam TargetFields Target output field bundle type
  */
-template<typename Func, typename RHSFields, typename TargetFields>
-concept SolveFunction = requires(Func solver,
-                                    const LinearOperatorDesc& op_desc,
-                                    const RHSFields& rhs,
-                                    TargetFields& target_out,
-                                    const SolveOptions& options,
-                                    const StageContext& ctx) {
-    // Both RHS and Target must satisfy tuple_protocol
-    requires tuple_protocol<RHSFields>;
-    requires tuple_protocol<TargetFields>;
+template <typename Func, typename RHSFields, typename TargetFields>
+concept SolveFunction =
+    requires(Func solver, const LinearOperatorDesc &op_desc, const RHSFields &rhs,
+             TargetFields &target_out, const SolveOptions &options,
+             const StageContext &ctx) {
+      // Both RHS and Target must satisfy tuple_protocol
+      requires tuple_protocol<RHSFields>;
+      requires tuple_protocol<TargetFields>;
 
-    // Solver must be callable with specified signature
-    // and return a SolveOutcome (solution field type may differ from TargetFields)
-    { solver(op_desc, rhs, target_out, options, ctx) } -> solve_outcome_type;
-};
+      // Solver must be callable with specified signature
+      // and return a SolveOutcome (solution field type may differ from TargetFields)
+      { solver(op_desc, rhs, target_out, options, ctx) } -> solve_outcome_type;
+    };
 
 } // namespace pfc::sim
 

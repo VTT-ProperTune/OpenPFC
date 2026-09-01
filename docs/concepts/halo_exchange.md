@@ -51,9 +51,9 @@ Use an unpadded `pfc::data::Field<T>` (`storage_halo == 0`) + `pfc::SparseHaloEx
 
 `pfc::communication::StagePreparationService` ([`stage_preparation.hpp`](../../include/openpfc/kernel/decomposition/stage_preparation.hpp)) is the **protocol** layered on that transport for CPU/MPI padded bricks:
 
-- Consumes `StagePreparationRequirements` (`needs_halo_exchange`, `needs_boundary_update`, `region_kind`, `BoundaryHaloOrder`), typically via `pfc::integrator::requirements_from(StageContext)`.
-- When halo is required, calls existing `pfc::communication::exchange` on named, bound `PaddedHaloExchanger`s.
-- When boundary update is required, runs an injectable boundary hook. Default order is **boundary then halo** so updated owned faces are published to neighbors before evaluation.
+- Consumes `StagePreparationRequirements` (`needs_halo_exchange`, `needs_boundary_update`, `region_kind`, `BoundaryHaloOrder`), typically via `pfc::integrator::requirements_from(StageContext, needs_boundary)`. `StageContext` has no BC flag; the driver passes `needs_boundary`.
+- When halo is required, calls `HaloExchange` on named, bound fields.
+- When boundary update is required, runs an injectable boundary hook (FD: `apply_dirichlet_ghosts`; spectral: penalty write on owned cells). Default order is **boundary then halo** so updated owned faces are published to neighbors before evaluation. Use **halo then boundary** when overwriting a periodic wrap on a physical face.
 - `prepare` is **pre-evaluation** only. Post-evaluation BC enforcement after writing new owned values stays a separate driver responsibility outside `prepare`.
 - Rejection / retry does not roll back halo buffers: re-prepare from the accepted owned core.
 

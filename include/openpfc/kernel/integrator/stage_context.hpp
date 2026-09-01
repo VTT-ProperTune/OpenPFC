@@ -9,13 +9,14 @@
  *
  * @details
  * `pfc::integrator::StageContext` is the one stage-context type. Integrators
- * fill timing and region/halo/BC flags; solvers bind an `ExecutionService`
+ * fill timing, region, and halo flags; solvers bind an `ExecutionService`
  * for distributed reductions. `pfc::sim::StageContext` is an alias of this
  * type (`solver_contract.hpp`).
  *
- * Drivers should map the context through `requirements_from` and call
- * `pfc::communication::StagePreparationService::prepare` rather than embedding
- * ad-hoc MPI calls at each evaluation site.
+ * Boundary conditions are **not** flags on this struct. Drivers map the
+ * context through `requirements_from(ctx, needs_boundary)` and call
+ * `pfc::communication::StagePreparationService::prepare` (FD Dirichlet
+ * ghosts or spectral penalty modifiers on the injectable hook).
  *
  * @see kernel/integrator/workspace.hpp for integrator-owned storage
  * @see openpfc/kernel/decomposition/stage_preparation.hpp for the executable
@@ -43,13 +44,13 @@ namespace pfc::integrator {
  *   `dt`). Solvers historically called `time` `evaluation_time`.
  * - Stage index: RK stage index or method-specific stage identifier
  * - Region requirements: Interior vs boundary vs all cells (`region_kind`)
- * - Boundary conditions: Whether BCs need to be applied (`needs_boundary_update`)
  * - Halo exchange: Whether halo exchange is needed (`needs_halo_exchange`)
  * - Execution service: optional driver hook for distributed solver work
  *
- * Prefer `requirements_from(*this)` + `StagePreparationService::prepare` for
- * CPU/MPI padded-brick stages. Post-evaluation BC enforcement (after writing
- * new owned values) remains a separate driver responsibility outside `prepare`.
+ * Prefer `requirements_from(*this, needs_boundary)` +
+ * `StagePreparationService::prepare` for CPU/MPI padded-brick stages.
+ * Post-evaluation BC enforcement (after writing new owned values) remains a
+ * separate driver responsibility outside `prepare`.
  *
  * @see pfc::communication::StagePreparationService
  * @see requirements_from
@@ -87,17 +88,6 @@ struct StageContext {
   } region_kind = RegionKind::All;
 
   /**
-   * @brief Whether boundary conditions need preparation for this stage
-   *
-   * When drivers use `StagePreparationService`, a true value means: run the
-   * injectable boundary hook inside `prepare` (pre-evaluation), ordered vs
-   * halo exchange according to `BoundaryHaloOrder` (default:
-   * boundary then halo). Post-evaluation BC enforcement after writing new
-   * owned values remains a separate driver responsibility outside `prepare`.
-   */
-  bool needs_boundary_update = false;
-
-  /**
    * @brief Whether halo exchange is needed
    *
    * If true, ghost layers must be consistent with neighbor owned cores
@@ -129,12 +119,13 @@ struct StageContext {
 /**
  * @brief Map integrator `StageContext` flags to stage-preparation requirements.
  *
- * Copies `needs_halo_exchange` / `needs_boundary_update` and maps
- * `RegionKind` onto `pfc::communication::RegionKind`. Ordering defaults to
- * `BoundaryThenHalo`.
+ * Copies `needs_halo_exchange` and maps `RegionKind` onto
+ * `pfc::communication::RegionKind`. @p needs_boundary_update is a driver
+ * argument (the injectable `StagePreparationService` hook), not a
+ * StageContext field. Ordering defaults to `BoundaryThenHalo`.
  */
 inline pfc::communication::StagePreparationRequirements
-requirements_from(const StageContext &ctx) {
+requirements_from(const StageContext &ctx, bool needs_boundary_update = false) {
   pfc::communication::StagePreparationRequirements req;
   switch (ctx.region_kind) {
   case StageContext::RegionKind::Interior:
@@ -148,7 +139,7 @@ requirements_from(const StageContext &ctx) {
     break;
   }
   req.needs_halo_exchange = ctx.needs_halo_exchange;
-  req.needs_boundary_update = ctx.needs_boundary_update;
+  req.needs_boundary_update = needs_boundary_update;
   return req;
 }
 

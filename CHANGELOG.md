@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- M10 `StagePreparationService` is the single pre-stage BC protocol: FD `apply_dirichlet_ghosts` (node-centered odd reflection on a non-periodic axis) and spectral penalty writes share the injectable hook. `ExecutionService::prepare_boundaries` and `StageContext::needs_boundary_update` are removed; drivers pass `needs_boundary` to `requirements_from`. Dirichlet sine on a non-periodic x-axis is a discrete Laplacian eigenmode; wave2d mixed BC uses the same service.
 - M10 JSON `"writer": "hdf5"` (`HDF5Writer`, `OpenPFC_ENABLE_HDF5`) writes a 3D `/field` dataset and an XDMF sidecar. Serial (`nproc=1`) only; complex fields fail closed.
 - M10 `apply_writer_domain` maps `Domain` + owned `Box3i` (or a `Field`) onto `ResultsWriter::set_domain`. Simulator and ETD I/O use it; Gen-1 still supplies the FFT real-space box as the owned box.
 - M10 App path names drop `spectral_`: `JsonAppRun` (`app_json_run.hpp`) and `configure_json_driver_hooks`. Gen-1 `SpectralSimulationSession` is unchanged.

@@ -103,12 +103,11 @@ public:
     virtual ~ExecutionService() = default;
 
     virtual void request_halo_exchange(const std::vector<std::string>& field_names) = 0;
-    virtual void prepare_boundaries(const std::vector<std::string>& field_names) = 0;
     virtual std::vector<double> global_reduce(const std::vector<double>& data, MPI_Op op) = 0;
 };
 ```
 
-Implemented by the simulation driver (adapting `SimulationContext`) to coordinate halo exchange, boundary preparation, and global reductions during solver iterations.
+Implemented by the simulation driver to coordinate halo exchange and global reductions during solver iterations. Boundary conditions are applied through `StagePreparationService` (FD Dirichlet ghosts or spectral penalty modifiers), not this interface.
 
 **Important:** `global_reduce` returns a vector containing the reduced values across all ranks. For MPI runs, this performs an Allreduce operation. For serial runs, this returns a copy of the input values. The returned vector has the same size as the input. Always use the returned reduced values for convergence calculations.
 
@@ -124,7 +123,6 @@ struct StageContext {
     double dt = 0.0;
     int stage_index = 0;
     enum class RegionKind { Interior, Boundary, All } region_kind = RegionKind::All;
-    bool needs_boundary_update = false;
     bool needs_halo_exchange = false;
     ExecutionService* execution_service = nullptr;
     ExecutionService& service() const; // throws if unbound
@@ -240,7 +238,6 @@ auto iterative_solver = [](const LinearOperatorDesc& desc,
     for (int iter = 0; iter < opts.max_iterations; ++iter) {
         // Request halo exchange before operator application
         ctx.execution_service.request_halo_exchange({"solution"});
-        ctx.execution_service.prepare_boundaries({"solution"});
 
         // Apply operator: residual = rhs - A * x
         apply_operator(desc, internal_buffer, residual);
@@ -328,7 +325,7 @@ No `Preconditioner` inheritance hierarchy is required; descriptors are solver-sp
 During solver iterations or operator evaluations:
 
 1. Solver requests halo exchange via `ExecutionService::request_halo_exchange`
-2. Solver requests boundary preparation via `ExecutionService::prepare_boundaries`
+2. Drivers apply BCs via `StagePreparationService::prepare` (not `ExecutionService`)
 3. Solver performs global reductions via `ExecutionService::global_reduce`
 
 The driver implements `ExecutionService` and coordinates requests without understanding solver iteration structure. Requests occur per-iteration or per-operator-evaluation as needed.

@@ -11,16 +11,18 @@
 #include <iostream>
 #include <mpi.h>
 #include <stdexcept>
+#include <string_view>
 #include <vector>
 
-#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
-#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
-#include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/field/field_factory.hpp>
+#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
+#include <openpfc/kernel/decomposition/stage_preparation.hpp>
 #include <openpfc/kernel/field/brick_iteration.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 
 #include <wave2d/cli.hpp>
 #include <wave2d/state_capture.hpp>
@@ -94,8 +96,8 @@ TEST_CASE("fill_y_physical_ghosts_padded Dirichlet mirrors", "[wave2d][bc]") {
   constexpr int Nx = 8;
   constexpr int Ny = 8;
   auto domain = pfc::domain::create(pfc::GridSize({Nx, Ny, 1}),
-                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                     pfc::GridSpacing({1.0, 1.0, 1.0}));
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = pfc::decomposition::create(domain, 1);
   constexpr int hw = 1;
   auto u = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
@@ -105,6 +107,38 @@ TEST_CASE("fill_y_physical_ghosts_padded Dirichlet mirrors", "[wave2d][bc]") {
   halo.exchange();
   wave2d::fill_y_physical_ghosts_padded(u, wave2d::YBoundaryKind::Dirichlet, Ny,
                                         0.0);
+  REQUIRE_THAT(u(0, -1, 0), WithinAbs(-1.25, 1e-12));
+}
+
+TEST_CASE("wave2d mixed BC runs on StagePreparationService", "[wave2d][bc]") {
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  REQUIRE(rank == 0);
+
+  constexpr int Nx = 8;
+  constexpr int Ny = 8;
+  auto domain = pfc::domain::create(pfc::GridSize({Nx, Ny, 1}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = pfc::decomposition::create(domain, 1);
+  constexpr int hw = 1;
+  auto u = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+  u.apply([&](double, double, double) { return 0.0; });
+  u(0, 0, 0) = 1.25;
+  comm::HaloExchange<HostSpace, double> halo(u, decomp, rank, MPI_COMM_WORLD);
+  pfc::communication::StagePreparationService<double> prep;
+  prep.bind("u", halo);
+  prep.set_boundary_hook([&](std::string_view) {
+    wave2d::fill_y_physical_ghosts_padded(u, wave2d::YBoundaryKind::Dirichlet, Ny,
+                                          0.0);
+  });
+  pfc::communication::StagePreparationRequirements req{
+      .needs_halo_exchange = true,
+      .needs_boundary_update = true,
+      .ordering = pfc::communication::BoundaryHaloOrder::HaloThenBoundary,
+  };
+  const std::string_view fields[] = {"u"};
+  prep.prepare(req, fields);
   REQUIRE_THAT(u(0, -1, 0), WithinAbs(-1.25, 1e-12));
 }
 
@@ -122,8 +156,8 @@ TEST_CASE("step_wave_separated_order2_cpu short vs padded manual single rank",
   const int n_steps = 3;
 
   auto domain = pfc::domain::create(pfc::GridSize({Nx, Ny, 1}),
-                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                     pfc::GridSpacing({1.0, 1.0, 1.0}));
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = pfc::decomposition::create(domain, 1);
 
   constexpr int hw = 1;
@@ -195,8 +229,8 @@ TEST_CASE("step_wave_separated_order2_cpu short vs padded manual single rank",
     }
   }
   auto face_halos = pfc::halo::allocate_face_halos<double>(decomp, rank, 1);
-  comm::SparseExchange<HostSpace, double> exch(
-      u_sep.data(), u_sep.size(), decomp, rank, MPI_COMM_WORLD, 1);
+  comm::SparseExchange<HostSpace, double> exch(u_sep.data(), u_sep.size(), decomp,
+                                               rank, MPI_COMM_WORLD, 1);
   for (int s = 0; s < n_steps; ++s) {
     wave2d::step_wave_separated_order2_cpu(u_sep, v_sep, lap_sep, face_halos, exch,
                                            nx, ny, nz, decomp, rank, dt,
@@ -234,8 +268,8 @@ TEST_CASE("fill_y_physical_ghosts_padded throws on insufficient local extent",
   const double u_wall_dirichlet = 1.5; // non-zero for Dirichlet
 
   auto domain = pfc::domain::create(pfc::GridSize({Nx, Ny, Nz}),
-                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                     pfc::GridSpacing({1.0, 1.0, 1.0}));
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = pfc::decomposition::create(domain, 2);
   auto u = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
   u.apply([&](double, double, double) { return 0.0; });
