@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Project setup and version configuration
@@ -8,6 +8,8 @@
 # MPI must be resolved before Dependencies.cmake (HeFFTe, tests, summary).
 option(OpenPFC_ENABLE_MPI
        "Enable MPI (required for supported builds; OFF is unsupported — see INSTALL.md)" ON)
+option(OpenPFC_ENABLE_HEFFTE
+       "Enable HeFFTe FFT support (OFF = finite-difference / kernel-only, no HeFFTe)" ON)
 
 # Define an option for development mode
 option(OpenPFC_DEVELOPMENT "Enable development build settings" OFF)

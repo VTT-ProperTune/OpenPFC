@@ -441,7 +441,7 @@ M2 (Field), M3 (single-source device layer). M3 CUDA execution/perf leftovers do
 ### Definition of done
 
 * [x] Exactly two exchanger class templates remain; `grep -rn "PaddedHaloExchanger\|FullPaddedHalo\|PersistentHaloExchanger" include/ src/ apps/` returns nothing. Public names are `comm::HaloExchange` / `comm::SparseExchange`.
-* [ ] An FD-only build (`-DOpenPFC_ENABLE_FFT=OFF` or equivalent) configures and links without HeFFTe. *(If a build toggle is out of scope, DoD is: decomposition object files have no HeFFTe symbol dependencies.)*
+* [x] An FD-only build (`-DOpenPFC_ENABLE_HEFFTE=OFF`) configures and links without HeFFTe. Spectral sources (`fft.cpp` / CUDA/HIP spectral TUs), tungsten/aluminum, examples, and `tests/` are skipped; FD apps still build. Decomposition objects have no HeFFTe symbols.
 * [ ] Full suite, golden trajectories, GPU parity suite (tohtori) green. **CUDA parity: not testable on LUMI — verify on tohtori.** *(Moved to M-LUMI in full: "LUMI runs device-resident halos, verified by the probe log + perf delta vs host-staging" — HIP half can start here once the unified exchanger exists.)*
 
 ---

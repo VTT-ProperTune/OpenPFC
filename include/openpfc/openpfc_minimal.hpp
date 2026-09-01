@@ -24,7 +24,9 @@
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
+#ifdef OpenPFC_ENABLE_HEFFTE
 #include <openpfc/kernel/fft/fft_fftw.hpp>
+#endif
 #include <openpfc/kernel/mpi/mpi.hpp>
 #include <openpfc/kernel/simulation/binary_reader.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>

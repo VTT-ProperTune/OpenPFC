@@ -27,6 +27,7 @@ endif()
 # Always find it: FetchContent copies used to build OpenPFC are not installed.
 find_dependency(nlohmann_json)
 
+if(@OpenPFC_ENABLE_HEFFTE@)
 if (NOT TARGET Heffte::Heffte)
     set(_OpenPFC_CONFIGURED_HEFFTE_DIR "@Heffte_DIR@")
     if (_OpenPFC_CONFIGURED_HEFFTE_DIR AND
@@ -36,6 +37,7 @@ if (NOT TARGET Heffte::Heffte)
         find_package(Heffte REQUIRED CONFIG)
     endif()
     unset(_OpenPFC_CONFIGURED_HEFFTE_DIR)
+endif()
 endif()
 
 include ( "${CMAKE_CURRENT_LIST_DIR}/OpenPFCTargets.cmake" )

@@ -40,7 +40,9 @@
 #include <openpfc/frontend/ui/from_json_fft_backend.hpp>
 #include <openpfc/frontend/ui/from_json_field_modifiers.hpp>
 #include <openpfc/frontend/ui/from_json_fwd.hpp>
+#ifdef OpenPFC_ENABLE_HEFFTE
 #include <openpfc/frontend/ui/from_json_heffte.hpp>
+#endif
 #include <openpfc/frontend/ui/from_json_integrator_method.hpp>
 #include <openpfc/frontend/ui/from_json_log.hpp>
 #include <openpfc/frontend/ui/from_json_session_selection.hpp>

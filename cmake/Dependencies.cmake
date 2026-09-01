@@ -26,12 +26,24 @@ if(OpenPFC_ENABLE_HDF5)
   endif()
 endif()
 
-# HeFFTe (required). Prefer CMAKE_PREFIX_PATH / Heffte_DIR; then well-known prefixes
+# HeFFTe (required for spectral FFT; optional for FD-only). Prefer
+# CMAKE_PREFIX_PATH / Heffte_DIR; then well-known prefixes
 # (see cmake/OpenPFCHeffteHints.cmake); optionally FetchContent when still missing.
 option(OpenPFC_FETCH_HEFFTE
   "If no HeFFTe is found, download and build v2.4.1 with FetchContent (needs FFTW)"
   OFF)
 
+set(OpenPFC_CUDA_SPECTRAL_AVAILABLE FALSE CACHE BOOL
+  "CUDA HeFFTe/cuFFT backend is available for spectral solvers" FORCE)
+set(OpenPFC_ENABLE_CUDA_SPECTRAL FALSE CACHE BOOL
+  "Build CUDA spectral FFT/runtime paths (requires CUDA HeFFTe)" FORCE)
+
+set(OpenPFC_HIP_SPECTRAL_AVAILABLE FALSE CACHE BOOL
+  "ROCm HeFFTe/rocFFT backend is available for spectral solvers" FORCE)
+set(OpenPFC_ENABLE_HIP_SPECTRAL FALSE CACHE BOOL
+  "Build HIP spectral FFT/runtime paths (requires ROCm HeFFTe)" FORCE)
+
+if(OpenPFC_ENABLE_HEFFTE)
 find_package(Heffte CONFIG QUIET)
 
 if(NOT Heffte_FOUND AND NOT TARGET Heffte::Heffte AND NOT TARGET Heffte AND NOT TARGET heffte)
@@ -48,16 +60,6 @@ if(NOT Heffte_FOUND AND NOT TARGET Heffte::Heffte AND NOT TARGET Heffte AND NOT 
 endif()
 
 find_package(Heffte CONFIG QUIET)
-
-set(OpenPFC_CUDA_SPECTRAL_AVAILABLE FALSE CACHE BOOL
-  "CUDA HeFFTe/cuFFT backend is available for spectral solvers" FORCE)
-set(OpenPFC_ENABLE_CUDA_SPECTRAL FALSE CACHE BOOL
-  "Build CUDA spectral FFT/runtime paths (requires CUDA HeFFTe)" FORCE)
-
-set(OpenPFC_HIP_SPECTRAL_AVAILABLE FALSE CACHE BOOL
-  "ROCm HeFFTe/rocFFT backend is available for spectral solvers" FORCE)
-set(OpenPFC_ENABLE_HIP_SPECTRAL FALSE CACHE BOOL
-  "Build HIP spectral FFT/runtime paths (requires ROCm HeFFTe)" FORCE)
 
 if(Heffte_FOUND)
   message(STATUS "✅ HeFFTe v${Heffte_VERSION} found at ${Heffte_DIR}")
@@ -149,7 +151,13 @@ else()
     "build/_deps only — see INSTALL.md).\n"
     "\n"
     "  → INSTALL.md §5.1 lists common configure failures (stale CMake cache, wrong MPI).\n"
+    "\n"
+    "Finite-difference / kernel-only (no FFT): reconfigure with -DOpenPFC_ENABLE_HEFFTE=OFF.\n"
   )
+endif()
+else()
+  message(STATUS
+    "OpenPFC_ENABLE_HEFFTE=OFF: finite-difference / kernel-only build (HeFFTe not required)")
 endif()
 
 # nlohmann_json (required)

@@ -22,8 +22,10 @@ find_package(OpenMP COMPONENTS CXX)
 #                                FDGradient + for_each, decoupled in main)
 #   heat3d_spectral_pointwise  — point-wise spectral RHS + explicit Euler
 #   heat3d_spectral            — implicit-Euler spectral
-set(_heat3d_binaries heat3d_fd_scratch heat3d_fd_manual heat3d_fd
-                     heat3d_spectral_pointwise heat3d_spectral)
+set(_heat3d_binaries heat3d_fd_scratch heat3d_fd_manual heat3d_fd)
+if(OpenPFC_ENABLE_HEFFTE)
+  list(APPEND _heat3d_binaries heat3d_spectral_pointwise heat3d_spectral)
+endif()
 foreach(_target IN LISTS _heat3d_binaries)
   add_executable(${_target} src/cpu/${_target}.cpp)
   target_include_directories(${_target} PRIVATE ${HEAT3D_INCLUDE_DIR})
