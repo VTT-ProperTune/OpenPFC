@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #ifndef SEEDGRIDFCC_HPP
@@ -7,6 +7,7 @@
 #include "SeedFCC.hpp"
 #include <array>
 #include <iostream>
+#include <numbers>
 #include <openpfc/frontend/ui/ui.hpp>
 #include <openpfc/openpfc.hpp>
 #include <random>
@@ -103,7 +104,7 @@ public:
 
     std::mt19937_64 re(rseed);
     std::uniform_real_distribution<double> rt(-0.2 * radius, 0.2 * radius);
-    std::uniform_real_distribution<double> rr(0.0, 8.0 * atan(1.0));
+    std::uniform_real_distribution<double> rr(0.0, 2.0 * std::numbers::pi);
 
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nz; k++) {

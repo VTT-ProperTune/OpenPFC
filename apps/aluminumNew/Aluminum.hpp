@@ -5,7 +5,9 @@
 #define ALUMINUM_HPP
 
 #include "SeedGridFCC.hpp"
+#include <cmath>
 #include <iostream>
+#include <openpfc/kernel/fft/kspace_iterator.hpp>
 #include <openpfc/openpfc.hpp>
 #include <openpfc_apps/moving_bc.hpp>
 
@@ -186,63 +188,39 @@ public:
   void prepare_operators(double dt) {
     auto &fft = get_fft();
     auto world = get_world();
-    auto [dx, dy, dz] = pfc::domain::get_spacing(world.domain_);
-    auto [Lx, Ly, Lz] = pfc::domain::get_size(world.domain_);
-    auto low = pfc::fft::get_outbox(fft).low;
-    auto high = pfc::fft::get_outbox(fft).high;
+    pfc::fft::kspace::for_each_kpoint(
+        pfc::fft::get_outbox(fft), world.domain_,
+        [&](std::size_t idx, double ki, double kj, double kk, int, int, int) {
+          const double kLap = -(ki * ki + kj * kj + kk * kk);
 
-    int idx = 0;
-    double pi = std::atan(1.0) * 4.0;
-    double fx = 2.0 * pi / (dx * Lx);
-    double fy = 2.0 * pi / (dy * Ly);
-    double fz = 2.0 * pi / (dz * Lz);
+          const double alpha2 = 2.0 * params.alpha * params.alpha;
+          const double lambda2 = 2.0 * params.lambda * params.lambda;
+          const double fMF = std::exp(kLap / lambda2);
+          const double k_wave = std::sqrt(-kLap) - 1.0;
+          const double k2 = k_wave * k_wave;
 
-    for (int k = low[2]; k <= high[2]; k++) {
-      for (int j = low[1]; j <= high[1]; j++) {
-        for (int i = low[0]; i <= high[0]; i++) {
+          const double kp = std::sqrt(-kLap) - 2.0 / std::sqrt(3.0);
+          const double kp2 = kp * kp;
 
-          // laplacian operator -k^2
-          double ki = (i <= Lx / 2) ? i * fx : (i - Lx) * fx;
-          double kj = (j <= Ly / 2) ? j * fy : (j - Ly) * fy;
-          double kk = (k <= Lz / 2) ? k * fz : (k - Lz) * fz;
-          double kLap = -(ki * ki + kj * kj + kk * kk);
+          const double g1 = std::exp(-k2 / alpha2);
+          const double gp1 = std::exp(-kp2 / alpha2);
+          const double peak = (g1 > gp1) ? g1 : gp1;
 
-          // mean-field filtering operator (chi) make a C2 that's quasi-gaussian
-          // on the left, and ken-style on the right
-          double alpha2 = 2.0 * params.alpha * params.alpha;
-          double lambda2 = 2.0 * params.lambda * params.lambda;
-          double fMF = exp(kLap / lambda2);
-          double k_wave = sqrt(-kLap) - 1.0;
-          double k2 = k_wave * k_wave;
+          P_F[idx] = params.Bx * std::exp(-params.tau_const) * peak;
 
-          double kp = sqrt(-kLap) - 2.0 / sqrt(3.0);
-          double kp2 = kp * kp;
-
-          double g1 = exp(-k2 / alpha2);
-          double gp1 = exp(-kp2 / alpha2);
-          double peak = (g1 > gp1) ? g1 : gp1;
-
-          P_F[idx] = params.Bx * exp(-params.tau_const) * peak;
-
-          double opCk =
+          const double opCk =
               params.stabP + params.p2_bar - P_F[idx] + params.q2_bar_L * fMF;
 
           filterMF[idx] = fMF;
-          opL[idx] = exp(kLap * opCk * dt);
+          opL[idx] = std::exp(kLap * opCk * dt);
           opN[idx] = (opCk == 0.0) ? kLap * dt : (opL[idx] - 1.0) / opCk;
 
-          double alpha2new = 2.0 * params.alpha * params.alpha / 10.0;
-          double g1new = exp(-k2 / alpha2new);
-          double gp1new = exp(-kp2 / alpha2new);
-
-          double peaknew = (g1new > gp1new) ? g1new : gp1new;
-
+          const double alpha2new = 2.0 * params.alpha * params.alpha / 10.0;
+          const double g1new = std::exp(-k2 / alpha2new);
+          const double gp1new = std::exp(-kp2 / alpha2new);
+          const double peaknew = (g1new > gp1new) ? g1new : gp1new;
           opEps[idx] = peaknew;
-
-          idx += 1;
-        }
-      }
-    }
+        });
   }
 
   void initialize(double dt) override {

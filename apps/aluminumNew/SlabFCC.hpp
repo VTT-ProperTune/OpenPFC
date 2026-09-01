@@ -8,6 +8,7 @@
 #include <array>
 #include <cmath>
 #include <iostream>
+#include <numbers>
 #include <openpfc/frontend/ui/ui.hpp>
 #include <openpfc/openpfc.hpp>
 #include <random>
@@ -113,7 +114,7 @@ public:
     std::mt19937_64 rng(static_cast<std::mt19937_64::result_type>(rseed));
     std::uniform_real_distribution<double> dist_position_jitter(-0.2 * radius,
                                                                 0.2 * radius);
-    const double two_pi = 8.0 * std::atan(1.0);
+    const double two_pi = 2.0 * std::numbers::pi;
     std::uniform_real_distribution<double> dist_orientation_component(0.0, two_pi);
     std::uniform_real_distribution<double> dist_slab_front_jitter(-fluctuation,
                                                                   fluctuation);
