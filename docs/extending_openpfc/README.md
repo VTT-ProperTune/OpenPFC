@@ -26,6 +26,8 @@ out-of-tree executable, follow the
 | Add custom spatial interpretation | Domain and coordinate helper functions | `examples/17_custom_coordinate_system.cpp` |
 | Build a JSON/TOML-driven binary | `pfc::ui::App<Model>` | [Minimal custom application](../tutorials/custom_app_minimal.md) |
 | Add point-wise gradients or finite-difference physics | Field/gradient primitives and halo policies | [Per-point gradients](per_point_grads.md), [Halo exchange](../concepts/halo_exchange.md) |
+| Couple an external solver | `pfc::coupling::FieldHandle` + `Time::clip_attempt_dt` | [External coupling](external_coupling.md), `examples/22_external_coupling.cpp` |
+| Restart from a checkpoint bundle | `CheckpointService` / `restart_from` | [Checkpoint publication](../development/checkpoint_publish.md) |
 
 The [Examples catalog](../reference/examples_catalog.md) is the authoritative
 inventory of runnable examples.

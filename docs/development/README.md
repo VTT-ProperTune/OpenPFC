@@ -30,8 +30,9 @@ General contribution and commit rules are in
 | Recorded architecture decisions | [ADR index](../adr/README.md) |
 | Refactoring direction | [Refactoring roadmap](refactoring_roadmap.md) |
 | Relate the publication to runnable software | [From paper to run](from_paper_to_run.md) |
-| Checkpoint publication contract | [Checkpoint publication](checkpoint_publish.md) |
+| Checkpoint publication contract | [Checkpoint publication](checkpoint_publish.md) (`CheckpointService` restart) |
 | Checkpoint state capture | [Checkpoint state capture](checkpoint_state_capture.md) |
+| External coupling | [External coupling](../extending_openpfc/external_coupling.md) |
 
 ## Documentation products
 

@@ -116,3 +116,6 @@ target_link_libraries(20_explicit_stepper_spectral PRIVATE OpenPFC ${_heffte_tgt
 
 add_executable(21_adaptive_stepping 21_adaptive_stepping.cpp)
 target_link_libraries(21_adaptive_stepping PRIVATE OpenPFC ${_heffte_tgt})
+
+add_executable(22_external_coupling 22_external_coupling.cpp)
+target_link_libraries(22_external_coupling PRIVATE OpenPFC ${_heffte_tgt})
