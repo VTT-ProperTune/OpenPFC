@@ -154,6 +154,50 @@ TEST_CASE("HaloExchange HIPSpace Faces: two fields wrap", "[halo_exchange][hip]"
   REQUIRE(halo::field_tag_base(0, 1) == halo::kCanonicalTagCount);
 }
 
+TEST_CASE("HaloExchange HIPSpace Faces: 2-rank multi-field batch equals two singles",
+          "[MPI][halo_exchange][hip]") {
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 2 || !device_runtime_available<HIPSpace>()) {
+    return;
+  }
+
+  auto domain = domain::create({16, 8, 4});
+  auto decomp = decomposition::create(domain, {2, 1, 1});
+  auto u_batch = make_padded_field<HIPSpace>(decomp, rank, /*halo=*/1);
+  auto v_batch = make_padded_field<HIPSpace>(decomp, rank, /*halo=*/1);
+  auto u_one = make_padded_field<HIPSpace>(decomp, rank, /*halo=*/1);
+  auto v_one = make_padded_field<HIPSpace>(decomp, rank, /*halo=*/1);
+  const double u_mine = static_cast<double>(rank);
+  const double v_mine = static_cast<double>(rank) + 10.0;
+  fill_owned_host(u_batch, u_mine);
+  fill_owned_host(v_batch, v_mine);
+  fill_owned_host(u_one, u_mine);
+  fill_owned_host(v_one, v_mine);
+
+  comm::HaloExchange<HIPSpace, double> batched({&u_batch, &v_batch}, decomp, rank,
+                                               MPI_COMM_WORLD);
+  comm::HaloExchange<HIPSpace, double> only_u(u_one, decomp, rank, MPI_COMM_WORLD);
+  comm::HaloExchangeOptions v_opt;
+  v_opt.exchange_base = 1;
+  comm::HaloExchange<HIPSpace, double> only_v(v_one, decomp, rank, MPI_COMM_WORLD,
+                                              v_opt);
+  batched.exchange();
+  only_u.exchange();
+  only_v.exchange();
+
+  const auto n = u_batch.local_size();
+  const double other_u = static_cast<double>(1 - rank);
+  const double other_v = static_cast<double>(1 - rank) + 10.0;
+  REQUIRE(halo_x_matches(u_batch, -1, other_u));
+  REQUIRE(halo_x_matches(v_batch, -1, other_v));
+  REQUIRE(halo_x_matches(u_one, -1, other_u));
+  REQUIRE(halo_x_matches(v_one, -1, other_v));
+  REQUIRE(halo_x_matches(u_batch, n[0], other_u));
+  REQUIRE(halo_x_matches(v_batch, n[0], other_v));
+}
+
 TEST_CASE("HaloExchange HIPSpace Faces: 2-rank X-neighbor pack+device MPI",
           "[MPI][halo_exchange][hip]") {
   int rank = 0, size = 1;
@@ -293,6 +337,73 @@ TEST_CASE("HaloExchange CUDASpace Faces: single-rank periodic wrap",
   comm::HaloExchange<CUDASpace, double> halo(u, decomp, rank, MPI_COMM_WORLD);
   halo.exchange();
   REQUIRE(halo_x_matches(u, -1, 7.0));
+}
+
+TEST_CASE("HaloExchange CUDASpace Faces: two fields wrap", "[halo_exchange][cuda]") {
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 1 || !device_runtime_available<CUDASpace>()) {
+    return;
+  }
+
+  auto domain = domain::create({8, 6, 4});
+  auto decomp = decomposition::create(domain, 1);
+  auto u = make_padded_field<CUDASpace>(decomp, rank, /*halo=*/1);
+  auto v = make_padded_field<CUDASpace>(decomp, rank, /*halo=*/1);
+  fill_owned_host(u, 3.0);
+  fill_owned_host(v, 5.0);
+
+  comm::HaloExchange<CUDASpace, double> halo({&u, &v}, decomp, rank, MPI_COMM_WORLD);
+  REQUIRE(halo.num_fields() == 2);
+  halo.exchange();
+  REQUIRE(halo_x_matches(u, -1, 3.0));
+  REQUIRE(halo_x_matches(v, -1, 5.0));
+}
+
+TEST_CASE(
+    "HaloExchange CUDASpace Faces: 2-rank multi-field batch equals two singles",
+    "[MPI][halo_exchange][cuda]") {
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 2 || !device_runtime_available<CUDASpace>()) {
+    return;
+  }
+
+  auto domain = domain::create({16, 8, 4});
+  auto decomp = decomposition::create(domain, {2, 1, 1});
+  auto u_batch = make_padded_field<CUDASpace>(decomp, rank, /*halo=*/1);
+  auto v_batch = make_padded_field<CUDASpace>(decomp, rank, /*halo=*/1);
+  auto u_one = make_padded_field<CUDASpace>(decomp, rank, /*halo=*/1);
+  auto v_one = make_padded_field<CUDASpace>(decomp, rank, /*halo=*/1);
+  const double u_mine = static_cast<double>(rank);
+  const double v_mine = static_cast<double>(rank) + 10.0;
+  fill_owned_host(u_batch, u_mine);
+  fill_owned_host(v_batch, v_mine);
+  fill_owned_host(u_one, u_mine);
+  fill_owned_host(v_one, v_mine);
+
+  comm::HaloExchange<CUDASpace, double> batched({&u_batch, &v_batch}, decomp, rank,
+                                                MPI_COMM_WORLD);
+  comm::HaloExchange<CUDASpace, double> only_u(u_one, decomp, rank, MPI_COMM_WORLD);
+  comm::HaloExchangeOptions v_opt;
+  v_opt.exchange_base = 1;
+  comm::HaloExchange<CUDASpace, double> only_v(v_one, decomp, rank, MPI_COMM_WORLD,
+                                               v_opt);
+  batched.exchange();
+  only_u.exchange();
+  only_v.exchange();
+
+  const auto n = u_batch.local_size();
+  const double other_u = static_cast<double>(1 - rank);
+  const double other_v = static_cast<double>(1 - rank) + 10.0;
+  REQUIRE(halo_x_matches(u_batch, -1, other_u));
+  REQUIRE(halo_x_matches(v_batch, -1, other_v));
+  REQUIRE(halo_x_matches(u_one, -1, other_u));
+  REQUIRE(halo_x_matches(v_one, -1, other_v));
+  REQUIRE(halo_x_matches(u_batch, n[0], other_u));
+  REQUIRE(halo_x_matches(v_batch, n[0], other_v));
 }
 
 TEST_CASE("HaloExchange CUDASpace Faces: 4-rank X/Y neighbors",

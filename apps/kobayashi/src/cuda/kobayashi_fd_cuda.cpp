@@ -20,8 +20,8 @@
  *
  * **`KOBAYASHI_HALO_EXTENDED=1`** grows the halo to `hw=2` so stage_a writes
  * the aux 1-cell ring locally and the second exchange is skipped. The old
- * `KOBAYASHI_HALO_BATCH` env is ignored: each `HaloExchange` already posts
- * its bound fields sequentially (two groups per step).
+ * `KOBAYASHI_HALO_BATCH` env is ignored: each `HaloExchange` posts its
+ * bound fields then one `MPI_Waitall` (two groups per step).
  */
 
 #if !defined(OpenPFC_ENABLE_CUDA)

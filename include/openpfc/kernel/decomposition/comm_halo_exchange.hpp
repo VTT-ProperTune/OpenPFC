@@ -74,6 +74,33 @@ resolved_halo_directions(const HaloExchangeOptions &opt) {
                                                     : halo::presets::Axes3D();
 }
 
+namespace detail {
+
+/// Wait on every outstanding Faces request in one `MPI_Waitall`.
+template <typename Ex>
+void wait_concatenated(std::vector<std::unique_ptr<Ex>> &exs) {
+  std::vector<MPI_Request> all;
+  for (auto &e : exs) {
+    const int n = e->outstanding_count();
+    if (n > 0) {
+      MPI_Request *r = e->outstanding();
+      all.insert(all.end(), r, r + n);
+    }
+  }
+  const double t0 = MPI_Wtime();
+  exchange::wait_all(all.empty() ? nullptr : all.data(),
+                     static_cast<int>(all.size()));
+  profiling::record_time(profiling::kProfilingRegionCommunication, MPI_Wtime() - t0);
+  std::size_t off = 0;
+  for (auto &e : exs) {
+    const int n = e->outstanding_count();
+    e->take_waitall_result(n > 0 ? all.data() + off : nullptr, n);
+    off += static_cast<std::size_t>(n);
+  }
+}
+
+} // namespace detail
+
 /**
  * @brief Primary template: `HostSpace` is specialized below.
  *
@@ -175,7 +202,7 @@ public:
     for (auto &h : m_faces) {
       h->start();
     }
-    wait_concatenated_(m_faces);
+    detail::wait_concatenated(m_faces);
   }
 
   /**
@@ -213,7 +240,7 @@ public:
       }
       return;
     }
-    wait_concatenated_(m_faces);
+    detail::wait_concatenated(m_faces);
   }
 
   [[nodiscard]] HaloConnectivity connectivity() const noexcept {
@@ -223,29 +250,6 @@ public:
   [[nodiscard]] std::size_t num_fields() const noexcept { return m_fields.size(); }
 
 private:
-  template <typename Ex>
-  static void wait_concatenated_(std::vector<std::unique_ptr<Ex>> &exs) {
-    std::vector<MPI_Request> all;
-    for (auto &e : exs) {
-      const int n = e->outstanding_count();
-      if (n > 0) {
-        MPI_Request *r = e->outstanding();
-        all.insert(all.end(), r, r + n);
-      }
-    }
-    const double t0 = MPI_Wtime();
-    exchange::wait_all(all.empty() ? nullptr : all.data(),
-                       static_cast<int>(all.size()));
-    profiling::record_time(profiling::kProfilingRegionCommunication,
-                           MPI_Wtime() - t0);
-    std::size_t off = 0;
-    for (auto &e : exs) {
-      const int n = e->outstanding_count();
-      e->take_waitall_result(n > 0 ? all.data() + off : nullptr, n);
-      off += static_cast<std::size_t>(n);
-    }
-  }
-
   HaloExchangeOptions m_opt{};
   std::vector<FieldT *> m_fields;
   std::vector<std::unique_ptr<detail::HostFacesHalo<T>>> m_faces;

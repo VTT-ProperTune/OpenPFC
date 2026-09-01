@@ -595,6 +595,20 @@ public:
     return m_dirs;
   }
 
+  /// Outstanding MPI requests from the last `start_halos_device`.
+  [[nodiscard]] int outstanding_count() const noexcept { return m_request_count; }
+  [[nodiscard]] MPI_Request *outstanding() noexcept { return m_requests.data(); }
+
+  /// Copy back the Waitall result (combined multi-field Waitall).
+  void take_waitall_result(const MPI_Request *completed, int n) {
+    if (completed != nullptr && n > 0) {
+      for (int i = 0; i < n; ++i) {
+        m_requests[static_cast<std::size_t>(i)] = completed[i];
+      }
+    }
+    m_request_count = 0;
+  }
+
   template <typename T>
   void exchange_halos_device(pfc::data::Field<T, typename Ops::space> &field,
                              stream_t stream = nullptr) {
@@ -606,9 +620,41 @@ public:
     exchange_halos_device_impl(d_padded, padded_size, stream);
   }
 
+  template <typename T>
+  void start_halos_device(pfc::data::Field<T, typename Ops::space> &field,
+                          stream_t stream = nullptr) {
+    start_halos_device_impl(field.data(), field.size(), stream);
+  }
+
+  template <typename T>
+  void complete_halos_device(pfc::data::Field<T, typename Ops::space> &field,
+                             stream_t stream = nullptr) {
+    complete_halos_device_impl(field.data(), stream);
+  }
+
 private:
   void exchange_halos_device_impl(double *d_padded, std::size_t padded_size,
                                   stream_t stream) {
+    const bool perf = Ops::perf_enabled();
+    auto &H = Ops::timers();
+    const double t0 = MPI_Wtime();
+    start_halos_device_impl(d_padded, padded_size, stream);
+    const double t_mpi = MPI_Wtime();
+    exchange::wait_all(m_requests.data(), m_request_count);
+    m_request_count = 0;
+    if (perf && !m_use_gpu_aware) {
+      H.packed_mpi_waitall += MPI_Wtime() - t_mpi;
+    }
+    if (perf && m_use_gpu_aware) {
+      H.gpu_aware_mpi += MPI_Wtime() - t0;
+    }
+    complete_halos_device_impl(d_padded, stream);
+    profiling::record_time(profiling::kProfilingRegionCommunication,
+                           MPI_Wtime() - t0);
+  }
+
+  void start_halos_device_impl(double *d_padded, std::size_t padded_size,
+                               stream_t stream) {
     (void)padded_size;
     const bool perf = Ops::perf_enabled();
     auto &H = Ops::timers();
@@ -620,62 +666,68 @@ private:
       ++H.n_calls;
     }
 
-    const double t0 = MPI_Wtime();
     if (m_use_gpu_aware) {
-      t_mark = MPI_Wtime();
-      exchange_gpu_aware_(d_padded, stream);
-      if (perf) {
-        H.gpu_aware_mpi += MPI_Wtime() - t_mark;
+      copy_self_neighbor_faces_(d_padded, stream, Ops::sync_self);
+      if (m_use_contiguous) {
+        post_gpu_aware_contiguous_(d_padded, stream);
+      } else {
+        post_gpu_aware_subarray_(static_cast<void *>(d_padded));
       }
-      t_mark = MPI_Wtime();
+    } else {
+      copy_self_neighbor_faces_(d_padded, stream, Ops::sync_self_packed);
+      post_packed_fallback_(d_padded, stream);
+    }
+  }
+
+  void complete_halos_device_impl(double *d_padded, stream_t stream) {
+    const bool perf = Ops::perf_enabled();
+    auto &H = Ops::timers();
+    if (m_use_gpu_aware) {
+      if (m_use_contiguous) {
+        unpack_gpu_aware_contiguous_(d_padded, stream);
+      }
+      const double t_mark = MPI_Wtime();
       Ops::stream_sync(stream, Ops::sync_post_aware);
       if (perf) {
         Ops::post_sync(H) += MPI_Wtime() - t_mark;
       }
     } else {
-      exchange_packed_fallback_(d_padded, stream);
-      t_mark = MPI_Wtime();
+      unpack_packed_fallback_(d_padded, stream);
+      const double t_mark = MPI_Wtime();
       Ops::stream_sync(stream, Ops::sync_post_packed);
       if (perf) {
         Ops::post_sync(H) += MPI_Wtime() - t_mark;
       }
     }
-    profiling::record_time(profiling::kProfilingRegionCommunication,
-                           MPI_Wtime() - t0);
   }
 
-  void exchange_gpu_aware_(double *d_padded, stream_t stream) {
-    void *buf = static_cast<void *>(d_padded);
-    if (m_any_self_neighbor) {
-      if (m_d_scratch == nullptr || m_scratch_elems == 0) {
-        throw std::runtime_error("DeviceFacesHalo: self-neighbor halo "
-                                 "needs non-zero device scratch");
-      }
-      for (std::size_t i = 0; i < 6; ++i) {
-        if (!m_active[i] || m_neighbors[i] != m_rank) {
-          continue;
-        }
-        const auto &send = m_face_specs[i].first;
-        const auto &recv =
-            m_face_specs[static_cast<std::size_t>(
-                             pfc::halo::opposite_slot(static_cast<int>(i)))]
-                .second;
-        Ops::pack_face(m_d_scratch, d_padded, send.ox, send.oy, send.oz, send.sx,
-                       send.sy, send.sz, m_nxp, m_nyp, m_nzp, stream);
-        Ops::unpack_face(d_padded, m_d_scratch, recv.ox, recv.oy, recv.oz, recv.sx,
-                         recv.sy, recv.sz, m_nxp, m_nyp, m_nzp, stream);
-      }
-      Ops::stream_sync(stream, Ops::sync_self);
+  void copy_self_neighbor_faces_(double *d_padded, stream_t stream,
+                                 const char *sync_kind) {
+    if (!m_any_self_neighbor) {
+      return;
     }
-
-    if (m_use_contiguous) {
-      exchange_gpu_aware_contiguous_(d_padded, stream);
-    } else {
-      exchange_gpu_aware_subarray_(buf);
+    if (m_d_scratch == nullptr || m_scratch_elems == 0) {
+      throw std::runtime_error("DeviceFacesHalo: self-neighbor halo "
+                               "needs non-zero device scratch");
     }
+    for (std::size_t i = 0; i < 6; ++i) {
+      if (!m_active[i] || m_neighbors[i] != m_rank) {
+        continue;
+      }
+      const auto &send = m_face_specs[i].first;
+      const auto &recv =
+          m_face_specs[static_cast<std::size_t>(
+                           pfc::halo::opposite_slot(static_cast<int>(i)))]
+              .second;
+      Ops::pack_face(m_d_scratch, d_padded, send.ox, send.oy, send.oz, send.sx,
+                     send.sy, send.sz, m_nxp, m_nyp, m_nzp, stream);
+      Ops::unpack_face(d_padded, m_d_scratch, recv.ox, recv.oy, recv.oz, recv.sx,
+                       recv.sy, recv.sz, m_nxp, m_nyp, m_nzp, stream);
+    }
+    Ops::stream_sync(stream, sync_kind);
   }
 
-  void exchange_gpu_aware_subarray_(void *buf) {
+  void post_gpu_aware_subarray_(void *buf) {
     std::size_t req_count = 0;
     for (std::size_t i = 0; i < 6; ++i) {
       if (!m_active[i] || m_neighbors[i] == m_rank) {
@@ -695,10 +747,10 @@ private:
                            m_comm, &m_requests[req_count], tag);
       ++req_count;
     }
-    exchange::wait_all(m_requests.data(), static_cast<int>(req_count));
+    m_request_count = static_cast<int>(req_count);
   }
 
-  void exchange_gpu_aware_contiguous_(double *d_padded, stream_t stream) {
+  void post_gpu_aware_contiguous_(double *d_padded, stream_t stream) {
     std::size_t req_count = 0;
     for (std::size_t i = 0; i < 6; ++i) {
       if (!m_active[i] || m_neighbors[i] == m_rank) {
@@ -737,8 +789,10 @@ private:
                                    "DeviceFacesHalo contig MPI_Isend");
       ++req_count;
     }
-    exchange::wait_all(m_requests.data(), static_cast<int>(req_count));
+    m_request_count = static_cast<int>(req_count);
+  }
 
+  void unpack_gpu_aware_contiguous_(double *d_padded, stream_t stream) {
     for (std::size_t i = 0; i < 6; ++i) {
       if (!m_active[i] || m_neighbors[i] == m_rank) {
         continue;
@@ -749,31 +803,9 @@ private:
     }
   }
 
-  void exchange_packed_fallback_(double *d_padded, stream_t stream) {
+  void post_packed_fallback_(double *d_padded, stream_t stream) {
     const bool perf = Ops::perf_enabled();
     auto &H = Ops::timers();
-
-    if (m_any_self_neighbor) {
-      if (m_d_scratch == nullptr || m_scratch_elems == 0) {
-        throw std::runtime_error("DeviceFacesHalo: packed self-neighbor "
-                                 "halo needs non-zero device scratch");
-      }
-      for (std::size_t i = 0; i < 6; ++i) {
-        if (!m_active[i] || m_neighbors[i] != m_rank) {
-          continue;
-        }
-        const auto &send = m_face_specs[i].first;
-        const auto &recv =
-            m_face_specs[static_cast<std::size_t>(
-                             pfc::halo::opposite_slot(static_cast<int>(i)))]
-                .second;
-        Ops::pack_face(m_d_scratch, d_padded, send.ox, send.oy, send.oz, send.sx,
-                       send.sy, send.sz, m_nxp, m_nyp, m_nzp, stream);
-        Ops::unpack_face(d_padded, m_d_scratch, recv.ox, recv.oy, recv.oz, recv.sx,
-                         recv.sy, recv.sz, m_nxp, m_nyp, m_nzp, stream);
-      }
-      Ops::stream_sync(stream, Ops::sync_self_packed);
-    }
 
     std::size_t req_count = 0;
     for (std::size_t i = 0; i < 6; ++i) {
@@ -815,13 +847,12 @@ private:
                                    "DeviceFacesHalo packed-fallback MPI_Isend");
       ++req_count;
     }
+    m_request_count = static_cast<int>(req_count);
+  }
 
-    const double t_mpi = perf ? MPI_Wtime() : 0.0;
-    exchange::wait_all(m_requests.data(), static_cast<int>(req_count));
-    if (perf) {
-      H.packed_mpi_waitall += MPI_Wtime() - t_mpi;
-    }
-
+  void unpack_packed_fallback_(double *d_padded, stream_t stream) {
+    const bool perf = Ops::perf_enabled();
+    auto &H = Ops::timers();
     for (std::size_t i = 0; i < 6; ++i) {
       if (!m_active[i] || m_neighbors[i] == m_rank) {
         continue;
@@ -890,6 +921,7 @@ private:
   std::array<bool, 6> m_active{};
   std::vector<int> m_neighbors;
   std::vector<MPI_Request> m_requests;
+  int m_request_count = 0;
 
   std::array<std::size_t, 6> m_face_elems{};
   std::size_t m_scratch_elems = 0;

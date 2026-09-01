@@ -11,7 +11,8 @@
  * Composes the Faces backend (`gpu::DeviceFacesHalo`) and the Full
  * backend (`gpu::DeviceFullHalo`) so the unified name matches the host
  * facade. Device exchangers are blocking-only: `start()` / `finish()`
- * and `persistent` fail closed. Pack kernels are double-only.
+ * and `persistent` fail closed. Faces `exchange()` posts every bound
+ * field then one `MPI_Waitall`. Pack kernels are double-only.
  *
  * Include this header for device fields. The host header stays free of
  * runtime/gpu includes (kernel must not depend on runtime).
@@ -95,6 +96,10 @@ public:
   }
 
   /// Blocking exchange of every bound field (default device stream).
+  ///
+  /// Faces posts every field first, then one `MPI_Waitall`, then unpacks.
+  /// Full stays sequential because each axis pass must complete before the
+  /// next.
   void exchange() {
     for (auto *f : m_fields) {
       f->sync_to_device();
@@ -106,7 +111,11 @@ public:
       }
     } else {
       for (std::size_t i = 0; i < m_faces.size(); ++i) {
-        m_faces[i]->exchange_halos_device(*m_fields[i]);
+        m_faces[i]->start_halos_device(*m_fields[i]);
+      }
+      wait_concatenated(m_faces);
+      for (std::size_t i = 0; i < m_faces.size(); ++i) {
+        m_faces[i]->complete_halos_device(*m_fields[i]);
       }
     }
     for (auto *f : m_fields) {

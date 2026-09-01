@@ -21,6 +21,7 @@ source compatibility is explicitly not a goal.
 - Device `SparseExchange` host-stages send/recv slabs when GPU-aware MPI is off (gather/scatter stay on device). Allen-Cahn and wave2d CPU-vs-HIP run on Tohtori HIP (job 1618762).
 - `HaloExchangeOptions::selector` applies a per-rank `HaloDirectionSelector` on the host and device facades. Device Faces/Full use `pfc::halo::opposite_slot` instead of a local copy.
 - Host Faces `HaloExchange::exchange()` / `finish()` posts every bound field, then one `MPI_Waitall`. Full stays sequential (each axis pass must complete before the next). Persistent stays per-field `exchange_halos()` (self-wrap persistent is MPI-implementation-sensitive on this Open MPI). 4-rank multi-field batch still equals two singles.
+- Device Faces `HaloExchange::exchange()` posts every bound field, one `MPI_Waitall`, then unpacks. Full stays sequential. CUDA 1-rank two-field wrap and 2-rank batch-equals-singles in `test_comm_halo_exchange_gpu.cpp`.
 
 ### Added
 
