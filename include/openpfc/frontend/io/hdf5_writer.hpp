@@ -8,9 +8,12 @@
  * @brief Optional HDF5 + XDMF field writer (OpenPFC_ENABLE_HDF5)
  *
  * @details
- * Serial (nproc=1) writer of a 3D double dataset `/field` plus a sibling
- * `.xdmf` sidecar for ParaView. Multi-rank jobs fail closed until parallel
- * HDF5 is wired. Complex fields fail closed.
+ * Writes a 3D double dataset `/field` plus a sibling `.xdmf` sidecar for
+ * ParaView. Multi-rank jobs use parallel HDF5 (`H5_HAVE_PARALLEL`,
+ * collective MPI-IO hyperslabs) when the linked HDF5 was built with MPI;
+ * otherwise every rank gathers its brick to rank 0, which writes with
+ * serial HDF5. That gather path is for interoperability, not hot-path
+ * I/O — use `BinaryWriter` at scale. Complex fields fail closed.
  *
  * Dataset layout is C-order `(nz, ny, nx)` so the last index is x-fastest,
  * matching OpenPFC owned-brick linearization.

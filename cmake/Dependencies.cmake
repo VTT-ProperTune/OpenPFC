@@ -19,7 +19,11 @@ option(OpenPFC_ENABLE_HDF5
   "Enable HDF5 (profiling dumps and JSON writer key hdf5 / XDMF sidecar)" OFF)
 if(OpenPFC_ENABLE_HDF5)
   find_package(HDF5 REQUIRED COMPONENTS C)
-  message(STATUS "✅ HDF5 enabled for profiling")
+  if(HDF5_IS_PARALLEL)
+    message(STATUS "✅ HDF5 enabled (parallel / MPI-IO)")
+  else()
+    message(STATUS "✅ HDF5 enabled (serial; multi-rank HDF5Writer gathers to rank 0)")
+  endif()
 endif()
 
 # HeFFTe (required). Prefer CMAKE_PREFIX_PATH / Heffte_DIR; then well-known prefixes
