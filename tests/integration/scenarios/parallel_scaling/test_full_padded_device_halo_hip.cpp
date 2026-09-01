@@ -23,7 +23,6 @@
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/runtime/gpu/comm_halo_exchange_gpu.hpp>
-#include <openpfc/runtime/gpu/gpu_aware_mpi.hpp>>
 
 namespace {
 
@@ -145,10 +144,6 @@ TEST_CASE("HaloExchange HIPSpace Full: 2-rank 2x1x1 fill (X real, Y/Z self)",
   if (!hip_runtime_available()) {
     SKIP("No HIP runtime / device available on this host");
   }
-  if (!pfc::gpu::runtime_mpi_gpu_aware()) {
-    SKIP("HIP Full multi-rank halo is GPU-aware MPI only; host-staged "
-         "DeviceFullHalo 2-rank is not yet green (MPI_HIP_AWARE=OFF)");
-  }
 
   auto domain = pfc::domain::create({8, 6, 4});
   auto decomp = pfc::decomposition::create(domain, {2, 1, 1});
@@ -165,10 +160,6 @@ TEST_CASE("HaloExchange HIPSpace Full: 4-rank 2x2x1 fill (X+Y real, Z self)",
   }
   if (!hip_runtime_available()) {
     SKIP("No HIP runtime / device available on this host");
-  }
-  if (!pfc::gpu::runtime_mpi_gpu_aware()) {
-    SKIP("HIP Full multi-rank halo is GPU-aware MPI only; host-staged "
-         "DeviceFullHalo 4-rank is not yet green (MPI_HIP_AWARE=OFF)");
   }
 
   auto domain = pfc::domain::create({8, 6, 4});

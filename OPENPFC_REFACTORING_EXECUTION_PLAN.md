@@ -36,8 +36,9 @@ custom Open MPI, and `OpenPFC_ENABLE_CUDA_SPECTRAL=ON`. HIP execution on
 Tohtori `amdgpu` (`g0004`, 2× MI210 `gfx90a`) is **green**: job 1618727,
 47/47 CTest batches, `OpenPFC_ENABLE_HIP_SPECTRAL=ON`, `MPI_HIP_AWARE=OFF`,
 HeFFTe `$HOME/opt/heffte/2.4.1-rocm-ompi5` (Open MPI 5 + ROCm 7). LUMI /
-M-LUMI still owns Cray GPU-aware MPI. Multi-rank HIP Full halo and
-allen_cahn/wave2d CPU-vs-HIP stay skipped unless GPU-aware MPI is on.
+M-LUMI still owns Cray GPU-aware MPI. Multi-rank HIP Full halo host-stages
+when `MPI_HIP_AWARE=OFF` (job 1618752). allen_cahn/wave2d CPU-vs-HIP still
+need GPU-aware MPI for their device-exchange path.
 
 CUDA-gated suites now run here (all passed this session): `GPU_FFT`,
 `CUDA_SpectralETD`, `CUDA_SpectralMeanFieldETD`, `CUDA_GPUSpectralStack`,

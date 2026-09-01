@@ -44,8 +44,7 @@ void fill_owned_host(data::Field<double, Space> &u, double val) {
     const auto n = u.size3();
     for (int k = 0; k < n[2]; ++k)
       for (int j = 0; j < n[1]; ++j)
-        for (int i = 0; i < n[0]; ++i)
-          data[u.idx(i, j, k)] = val;
+        for (int i = 0; i < n[0]; ++i) data[u.idx(i, j, k)] = val;
   });
 }
 
@@ -55,8 +54,7 @@ bool halo_x_matches(data::Field<double, Space> &u, int i, double expected) {
   u.with_host_view([&](double *data, std::size_t) {
     const auto n = u.size3();
     for (int k = 0; k < n[2]; ++k)
-      for (int j = 0; j < n[1]; ++j)
-        matches &= data[u.idx(i, j, k)] == expected;
+      for (int j = 0; j < n[1]; ++j) matches &= data[u.idx(i, j, k)] == expected;
   });
   return matches;
 }
@@ -70,8 +68,9 @@ bool cray_path_should_be_aware() {
   return cray != nullptr && cray[0] == '1';
 }
 
-template <typename Space> data::Field<double, Space> make_padded_field(
-    const decomposition::Decomposition &decomp, int rank, int halo) {
+template <typename Space>
+data::Field<double, Space>
+make_padded_field(const decomposition::Decomposition &decomp, int rank, int halo) {
   return data::Field<double, Space>(decomposition::domain(decomp),
                                     decomposition::local_box(decomp, rank), halo);
 }
@@ -132,8 +131,7 @@ TEST_CASE("HaloExchange HIPSpace: start() and persistent are rejected",
       std::invalid_argument);
 }
 
-TEST_CASE("HaloExchange HIPSpace Faces: two fields wrap",
-          "[halo_exchange][hip]") {
+TEST_CASE("HaloExchange HIPSpace Faces: two fields wrap", "[halo_exchange][hip]") {
   int rank = 0, size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -227,9 +225,6 @@ TEST_CASE("HaloExchange HIPSpace 4-rank Full: corner hash wrap",
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   if (size != 4 || !device_runtime_available<HIPSpace>()) {
-    return;
-  }
-  if (!pfc::gpu::runtime_mpi_gpu_aware()) {
     return;
   }
 
