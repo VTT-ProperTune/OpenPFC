@@ -554,8 +554,8 @@ M5, M6.
 ### Required tests
 
 * [x] A toy PFC model (Swift–Hohenberg-like, single field) written three ways — Gen‑1 `Model`, point-wise `rhs`, spectral-ETD descriptors — produces matching trajectories within declared tolerance (CPU); the descriptor variant additionally runs on CUDA and HIP with parity ≤1e-10 (`HIP_SpectralETD` / `CUDA_SpectralETD`).
-* [ ] A1 parity test (above) green.
-* [ ] `ParameterSchema` round-trip: schema → JSON parse → validation errors for missing/invalid keys match the current `format_config_error` quality (message snapshot tests).
+* [x] A1 parity test (above) green. **`[a1]` 2 cases (Tohtori `g0005` CUDA Debug), including diffusion fixture Gen-1 `Simulator` vs `LegacyModelPhysics` bitwise.**
+* [x] `ParameterSchema` round-trip: schema → JSON parse → validation errors for missing/invalid keys match the current `format_config_error` quality (message snapshot tests). **`[parameter_schema]` 9 cases.**
 * [x] Observable-reduction test: known Gaussian integral to 1e-12, 1 and 4 ranks, host and device.
 
 ### Deletions
@@ -566,7 +566,7 @@ M5, M6.
 
 * [x] The three-way toy-model equivalence test is green on CPU; descriptor HIP path is `HIP_SpectralETD` (CUDA twin `CUDA_SpectralETD`, run on tohtori).
 * [x] A new physics model requires: one header (fields + schema + `rhs` or descriptors), zero backend-specific classes, zero hand-written k-loops — demonstrated by the toy model's line count (80 < 200).
-* [ ] A1/A2 adapters registered in `0.2_migration_map.md` with removal milestone M12 and green parity tests.
+* [x] A1/A2 adapters registered in `0.2_migration_map.md` with removal milestone M12 and green parity tests. **A1 `[a1]` / A2 `[a2]` on g0005 CUDA Debug.**
 * [ ] Full suite + golden trajectories green.
 
 ---
