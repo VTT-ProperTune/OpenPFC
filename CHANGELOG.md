@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- M10 JSON FD CPU session (`json_fd_session.hpp`): `SimulationSession<FDCPUStack>` + RK composer from `Time::method()`, Laplacian heat RHS via `stack.du()`. Session-matrix FD JSON runs two Euler steps on a sine eigenmode (amplitude decays).
 - M10 `compose_etd1` / `compose_imex_euler` construct `ETD1Stepper` / `ImexEulerStepper`. JSON `"etd1"` / `"imex_euler"` remain identity on `Time`; `compose_scalar` fail-closes and names those entry points. `compose_etd1` matches the closed-form diagonal update; `compose_imex_euler` runs a diagonal implicit step.
 - M10 JSON `App` session owns `SimulationSession<SpectralCPUStack>` (`make_simulation_session` overlays HeFFTe `plan_options`). The frontend `spectral_cpu_stack.hpp` / `_detail.hpp` twin is deleted. `SpectralSimulationSession` remains as the Gen-1 Model/Simulator owner (`World` by value).
 - M10 `StagePreparationService` is the single pre-stage BC protocol: FD `apply_dirichlet_ghosts` (node-centered odd reflection on a non-periodic axis) and spectral penalty writes share the injectable hook. `ExecutionService::prepare_boundaries` and `StageContext::needs_boundary_update` are removed; drivers pass `needs_boundary` to `requirements_from`. Dirichlet sine on a non-periodic x-axis is a discrete Laplacian eigenmode; wave2d mixed BC uses the same service.
