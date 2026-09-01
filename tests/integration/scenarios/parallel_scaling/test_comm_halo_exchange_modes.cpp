@@ -51,8 +51,7 @@ void copy_field(const data::Field<double, HostSpace> &src,
 
 bool fields_equal(const data::Field<double, HostSpace> &a,
                   const data::Field<double, HostSpace> &b) {
-  return a.size() == b.size() &&
-         std::equal(a.data(), a.data() + a.size(), b.data());
+  return a.size() == b.size() && std::equal(a.data(), a.data() + a.size(), b.data());
 }
 
 void require_full_periodic_hash(const data::Field<double, HostSpace> &u, int field) {
@@ -63,13 +62,23 @@ void require_full_periodic_hash(const data::Field<double, HostSpace> &u, int fie
     for (int j = -hw; j < n[1] + hw; ++j) {
       for (int i = -hw; i < n[0] + hw; ++i) {
         const auto g = u.global(i, j, k);
-        const double expect =
-            cell_hash(field, wrap(g[0], gsz[0]), wrap(g[1], gsz[1]),
-                      wrap(g[2], gsz[2]));
+        const double expect = cell_hash(field, wrap(g[0], gsz[0]),
+                                        wrap(g[1], gsz[1]), wrap(g[2], gsz[2]));
         REQUIRE(u(i, j, k) == expect);
       }
     }
   }
+}
+
+void run_full_periodic_hash(const decomposition::Decomposition &decomp, int rank,
+                            int hw) {
+  auto u = data::field_from_subdomain<double>(decomp, rank, hw);
+  fill_owned_hash(u, /*field=*/0);
+  comm::HaloExchangeOptions opt;
+  opt.connectivity = comm::HaloConnectivity::Full;
+  comm::HaloExchange<HostSpace, double> halo(u, decomp, rank, MPI_COMM_WORLD, opt);
+  halo.exchange();
+  require_full_periodic_hash(u, /*field=*/0);
 }
 
 } // namespace
@@ -154,4 +163,46 @@ TEST_CASE("HaloExchange 4-rank Full: corners and edges match periodic hash",
   REQUIRE(halo.connectivity() == comm::HaloConnectivity::Full);
   halo.exchange();
   require_full_periodic_hash(u, /*field=*/0);
+}
+
+TEST_CASE("HaloExchange Full: 1-rank periodic fill (all 26 halos)",
+          "[MPI][halo_exchange][full_halo]") {
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 1) {
+    return;
+  }
+
+  auto domain = domain::create({8, 6, 4});
+  auto decomp = decomposition::create(domain, 1);
+  run_full_periodic_hash(decomp, rank, /*hw=*/1);
+}
+
+TEST_CASE("HaloExchange Full: 2-rank 2x1x1 fill (X real, Y/Z self)",
+          "[MPI][halo_exchange][full_halo]") {
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 2) {
+    return;
+  }
+
+  auto domain = domain::create({8, 6, 4});
+  auto decomp = decomposition::create(domain, {2, 1, 1});
+  run_full_periodic_hash(decomp, rank, /*hw=*/1);
+}
+
+TEST_CASE("HaloExchange Full: hw=2 1-rank widened halo correctness",
+          "[MPI][halo_exchange][full_halo]") {
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 1) {
+    return;
+  }
+
+  auto domain = domain::create({6, 6, 4});
+  auto decomp = decomposition::create(domain, 1);
+  run_full_periodic_hash(decomp, rank, /*hw=*/2);
 }
