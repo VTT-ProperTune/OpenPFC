@@ -13,7 +13,7 @@
  *
  * The problem: Every spectral method example contains the same 30-line pattern:
  * @code
- * // Duplicated in 04_diffusion_model.cpp, 12_cahn_hilliard.cpp, etc.
+ * // Historical duplication (examples 04/05/12 now use for_each_kpoint):
  * double pi = std::atan(1.0) * 4.0;
  * double fx = 2.0 * pi / (spacing[0] * size[0]);
  * double fy = 2.0 * pi / (spacing[1] * size[1]);
@@ -182,8 +182,7 @@ OPENPFC_INLINE_HD bool is_nyquist_index(int index, int size) noexcept {
  */
 OPENPFC_INLINE_HD double k_component_odd(int index, int size,
                                          double freq_scale) noexcept {
-  return is_nyquist_index(index, size) ? 0.0
-                                       : k_component(index, size, freq_scale);
+  return is_nyquist_index(index, size) ? 0.0 : k_component(index, size, freq_scale);
 }
 
 /**

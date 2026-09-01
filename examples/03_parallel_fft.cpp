@@ -1,7 +1,9 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#include <cmath>
 #include <iostream>
+#include <numbers>
 #include <vector>
 
 #include <openpfc/kernel/data/domain.hpp>
@@ -24,7 +26,7 @@ template <typename T> void print_vec(const vector<T> &v) {
 
 /* A naive DFT implementation */
 void dft_forward(const vector<double> x, vector<complex<double>> &X) {
-  const double pi = 4.0 * atan(1.0);
+  const double pi = std::numbers::pi;
   fill(X.begin(), X.end(), 0.0);
   for (int n = 0, N = x.size(); n < N; n++) {
     for (int k = 0; k < N / 2 + 1; k++) {
@@ -134,7 +136,7 @@ int main(int argc, char *argv[]) {
   vector<double> in(fft.size_inbox());
   vector<complex<double>> out(fft.size_outbox());
   for (int i = 0, N = in.size(); i < N; i++) {
-    in[i] = i * atan(1.0);
+    in[i] = i * (std::numbers::pi / 4.0);
   }
 
   // Perform FFT for input data using parallel FFT

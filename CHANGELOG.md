@@ -40,6 +40,7 @@ source compatibility is explicitly not a goal.
 - Shared `test_step_protocol` covers all seven leaves: EmbeddedRKStepper extra-`dt` and ImexEulerStepper extra-`StageContext` attempt isolation/commit. CTest `test_step_protocol`.
 - Examples `04_diffusion_model`, `05_simulator`, and `12_cahn_hilliard` build spectral operators with `for_each_kpoint` instead of a hand-rolled Nyquist fold.
 - CTest `aluminum-golden-4rank`: 4-rank 16³/20-step `AluminumETDSession` vs Gen-1 ≤1e-10 (local max) / 1e-12 relative Σψ².
+- Example `03_parallel_fft` uses `std::numbers::pi` instead of `atan(1.0)`.
 - `JsonWiringSession` constructor parameters no longer shadow the catalog members (`-Wshadow`).
 - `scripts/build.sh --no-heffte` configures an FD-only / kernel-only tree (`-DOpenPFC_ENABLE_HEFFTE=OFF`).
 - `scripts/compare_perf_baseline.py` compares profiling JSON (schema v2/v3) `wall_step` means against a stored baseline (pass ≤5% regression, warn >5%, fail >15%). Canary input: `tests/baselines/perf/inputs/tungsten_canary.json`.
