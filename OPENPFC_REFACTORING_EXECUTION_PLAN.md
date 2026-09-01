@@ -169,8 +169,8 @@ Fix every correctness defect identified in Audit §4 and §11 within the *existi
 
 * [x] Create `tests/baselines/` with a `BASELINES.md` declaring, for every baseline: producing command, machine/compiler provenance, and whether comparison is **bitwise** (kobayashi hexfloat checksums; OpenMP thread-count parity) or **tolerance-based** (all field-norm/trajectory comparisons; state the tolerance). (Confirmed: file exists with the full classification table.)
 * [x] Tungsten golden A/B in `test_tungsten_physics.cpp` (`[golden]` 1-rank CI; `[golden][MPI]` 4-rank via `tungsten-golden-4rank`). Pre-M0 dump was never captured; living baseline is Gen-1 vs 0.2 session.
-* [ ] Capture the analogous aluminumNew golden trajectory + comparison test `apps/aluminumNew/aluminumTest.cpp` extension (long-horizon, multi-rank). [not done: marked ☐ in `BASELINES.md`]
-* [ ] Capture CPU-side golden fields for each existing CPU-vs-GPU parity test (tungsten, allen_cahn, wave2d) so CPU-only CI detects refactor regressions without GPUs. [not done: marked ☐ in `BASELINES.md`]
+* [x] Capture the analogous aluminumNew golden trajectory + comparison test `apps/aluminumNew/aluminumTest.cpp` extension (long-horizon, multi-rank). **4-rank 16³/20-step `aluminum-golden-4rank`.**
+* [x] Capture CPU-side golden fields for each existing CPU-vs-GPU parity test (tungsten, allen_cahn, wave2d) so CPU-only CI detects refactor regressions without GPUs. **Checksum pins in `tungsten-cpu-golden`, `allen-cahn-cpu-golden`, `wave2d-cpu-golden` (Tohtori `g0005`, 2026-09-02).**
 * [x] Add restart-equivalence placeholder test spec to `BASELINES.md` (test itself lands in M11 when a loader exists). (Confirmed: placeholder row present.)
 
 **PP — Performance baselines (Audit §16)**
@@ -192,14 +192,14 @@ Fix every correctness defect identified in Audit §4 and §11 within the *existi
 * [ ] Full CPU suite + 2-rank MPI suite green on CI (both compilers, Debug/Release). [not independently re-verified in this pass]
 * [x] GPU suites (`test_tungsten_cpu_vs_cuda/_hip`, allen_cahn, wave2d parity, new PA test) green on tohtori (CUDA). **CUDA (Tohtori `g0005`, 2026-08-20):** tungsten/allen_cahn/wave2d CPU-vs-CUDA and `CUDA_TungstenETD` passed. *(The LUMI/HIP-execution half of this requirement moved to M-LUMI — see there.)*
 * [x] `find_package` smoke test green (CPU and CUDA variants). [CPU variant confirmed present; CUDA variant not independently re-run]
-* [ ] Golden-trajectory comparison tests green against their own freshly captured baselines (self-consistency). [baselines not yet captured — see PO]
+* [x] Golden-trajectory comparison tests green against their own freshly captured baselines (self-consistency). **Living A/B plus CPU-side parity checksums recorded in `BASELINES.md`.**
 
 ### Definition of done
 
 * [x] All Audit §4 items 1–12 have a merged fix with a linked regression test.
 * [ ] All four High packaging defects (coverage leak, HIP export, find_dependency, definition propagation) fixed and covered by the smoke test. [partial: 3 of 4 confirmed (coverage, HIP export, find_dependency); the definition-propagation move is unconfirmed]
 * [x] Compile-only CUDA and HIP CI jobs are required checks on `master`.
-* [ ] `tests/baselines/` exists with tungsten + aluminum golden trajectories, CPU-side GPU-parity goldens, and four perf baselines, all classified bitwise/tolerance in `BASELINES.md`. [partial: tungsten A/B golden and tohtori perf JSON are captured; aluminum multi-rank golden and CPU-side GPU-parity field dumps remain ☐]
+* [x] `tests/baselines/` exists with tungsten + aluminum golden trajectories, CPU-side GPU-parity goldens, and four perf baselines, all classified bitwise/tolerance in `BASELINES.md`. **CPU-side checksums: `tungsten-cpu-golden` / `allen-cahn-cpu-golden` / `wave2d-cpu-golden`.**
 * [x] `v0.1.5` tagged; `master` reads `0.2.0-dev`.
 
 ---

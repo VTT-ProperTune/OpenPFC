@@ -66,6 +66,7 @@ if(WAVE2D_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
                                              ${_wave2d_heffte_tgt} Catch2::Catch2)
     include(CTest)
     add_test(NAME wave2d-all-tests COMMAND test_wave2d)
+    add_test(NAME wave2d-cpu-golden COMMAND test_wave2d "[cpu_golden]")
 
     # Operator-evaluation contract tests
     add_executable(test_wave2d_operator_evaluation tests/test_wave2d_operator_evaluation.cpp)

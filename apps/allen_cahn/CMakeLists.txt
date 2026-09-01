@@ -88,6 +88,17 @@ option(ALLEN_CAHN_ENABLE_TESTS "Build Allen–Cahn CPU vs GPU comparison tests" 
 if(ALLEN_CAHN_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
   find_package(Catch2 REQUIRED)
   if(TARGET Catch2::Catch2)
+    add_executable(test_allen_cahn_cpu_golden tests/test_allen_cahn_cpu_golden.cpp)
+    target_include_directories(test_allen_cahn_cpu_golden PRIVATE
+      ${ALLEN_CAHN_INCLUDE_DIR})
+    target_link_libraries(test_allen_cahn_cpu_golden PRIVATE
+      OpenPFC openpfc_apps_common Catch2::Catch2 ${_allen_cahn_heffte_tgt})
+    allen_cahn_link_libstdcxx(test_allen_cahn_cpu_golden)
+    include(CTest)
+    add_test(NAME allen-cahn-cpu-golden COMMAND test_allen_cahn_cpu_golden)
+    set_tests_properties(allen-cahn-cpu-golden PROPERTIES
+      ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+
     if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
       add_executable(test_allen_cahn_cpu_vs_cuda
         tests/test_allen_cahn_cpu_vs_cuda.cpp

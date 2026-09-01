@@ -71,7 +71,7 @@ Minimal new-test walkthrough: [`tutorials/add_catch2_test.md`](../tutorials/add_
 | `find_package(OpenPFC)` packaging smoke | yes (`packaging-smoke` job) | `tests/packaging/consumer` |
 | CUDA/HIP **compile** (no GPU) | best-effort `cuda-compile` / `hip-compile` jobs (`continue-on-error` until validated) | `build.sh --with-cuda --no-test`, `build.sh --with-rocm --no-test` |
 | CUDA/HIP **run** (parity, VTK, IC residency) | not possible (no GPU) | tohtori (CUDA), LUMI (HIP) |
-| Golden trajectories / performance baselines | no | yes (see `tests/baselines/`) |
+| Golden trajectories / performance baselines | CPU checksum pins (`tungsten-cpu-golden`, `allen-cahn-cpu-golden`, `wave2d-cpu-golden`) | GPU parity and perf JSON (see `tests/baselines/`) |
 
 The authoritative GPU compile check today is `scripts/build.sh --with-cuda --no-test`
 (and `--with-rocm`) on a machine with the toolchain; the GPU-run checks

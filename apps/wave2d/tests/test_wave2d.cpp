@@ -7,8 +7,10 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <filesystem>
+#include <iomanip>
 #include <iostream>
 #include <mpi.h>
 #include <stdexcept>
@@ -21,7 +23,9 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
+#include <openpfc/kernel/decomposition/halo_face_layout.hpp>
 #include <openpfc/kernel/decomposition/stage_preparation.hpp>
 #include <openpfc/kernel/field/brick_iteration.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
@@ -35,6 +39,7 @@
 #include <wave2d/wave_step_separated.hpp>
 
 using Catch::Matchers::WithinAbs;
+using Catch::Matchers::WithinRel;
 using namespace pfc;
 
 TEST_CASE("wave2d::kC is 1.0", "[wave2d]") {
@@ -378,6 +383,93 @@ TEST_CASE("wave2d CheckpointService saves and restores u and v",
     }
   }
   std::filesystem::remove_all(ckpt_root, ec);
+}
+
+TEST_CASE("wave2d CPU golden matches CPU-vs-CUDA config",
+          "[wave2d][cpu_golden][parity]") {
+  int rank = 0;
+  int nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  REQUIRE(nproc == 1);
+
+  constexpr int Nx = 24;
+  constexpr int Ny = 24;
+  constexpr int n_steps = 8;
+  const double dt = 0.01;
+
+  auto domain = pfc::domain::create(pfc::GridSize({Nx, Ny, 1}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = pfc::decomposition::create(domain, 1);
+  const auto &local_box = pfc::decomposition::local_box(decomp, rank);
+  auto local_size = local_box.size;
+  const auto lower = local_box.low;
+  const int nx = local_size[0];
+  const int ny = local_size[1];
+  const int nz = local_size[2];
+  const std::size_t nlocal = static_cast<std::size_t>(nx) *
+                             static_cast<std::size_t>(ny) *
+                             static_cast<std::size_t>(nz);
+
+  std::vector<double> u(nlocal);
+  std::vector<double> v(nlocal, 0.0);
+  const double xc = 0.5 * static_cast<double>(Nx - 1);
+  const double yc = 0.5 * static_cast<double>(Ny - 1);
+  const double sigma = 3.0;
+  for (int iz = 0; iz < nz; ++iz) {
+    for (int iy = 0; iy < ny; ++iy) {
+      for (int ix = 0; ix < nx; ++ix) {
+        const int gx = lower[0] + ix;
+        const int gy = lower[1] + iy;
+        const double dx = static_cast<double>(gx) - xc;
+        const double dy = static_cast<double>(gy) - yc;
+        const std::size_t idx =
+            static_cast<std::size_t>(ix) +
+            static_cast<std::size_t>(iy) * static_cast<std::size_t>(nx) +
+            static_cast<std::size_t>(iz) * static_cast<std::size_t>(nx * ny);
+        u[idx] = std::exp(-(dx * dx + dy * dy) / (2.0 * sigma * sigma));
+      }
+    }
+  }
+
+  std::vector<double> lap(nlocal);
+  constexpr int halo_width = 1;
+  auto face = pfc::halo::allocate_face_halos<double>(decomp, rank, halo_width);
+  pfc::comm::SparseExchange<pfc::HostSpace, double> exch(
+      u.data(), u.size(), decomp, rank, MPI_COMM_WORLD, halo_width);
+  for (int s = 0; s < n_steps; ++s) {
+    (void)s;
+    wave2d::step_wave_separated_order2_cpu(u, v, lap, face, exch, nx, ny, nz, decomp,
+                                           rank, dt, wave2d::YBoundaryKind::Neumann,
+                                           Ny, 0.0);
+  }
+
+  double sum_u = 0.0;
+  double sumsq_u = 0.0;
+  double sum_v = 0.0;
+  double sumsq_v = 0.0;
+  for (std::size_t i = 0; i < nlocal; ++i) {
+    sum_u += u[i];
+    sumsq_u += u[i] * u[i];
+    sum_v += v[i];
+    sumsq_v += v[i] * v[i];
+  }
+  if (rank == 0) {
+    std::cout << std::setprecision(17) << "CPU_GOLDEN wave2d n=" << nlocal
+              << " sum_u=" << sum_u << " sumsq_u=" << sumsq_u << " sum_v=" << sum_v
+              << " sumsq_v=" << sumsq_v << '\n';
+  }
+  REQUIRE(nlocal == 576);
+  REQUIRE(std::isfinite(sum_u));
+  REQUIRE(std::isfinite(sumsq_u));
+  REQUIRE(std::isfinite(sum_v));
+  REQUIRE(std::isfinite(sumsq_v));
+  // Tohtori g0005, gcc 15.2 Debug, same config as test_wave2d_cpu_vs_cuda.
+  REQUIRE_THAT(sum_u, WithinRel(56.542106624911966, 1e-10));
+  REQUIRE_THAT(sumsq_u, WithinRel(28.256988690744471, 1e-10));
+  REQUIRE_THAT(sum_v, WithinAbs(0.0018563899833072017, 1e-12));
+  REQUIRE_THAT(sumsq_v, WithinAbs(0.0042855033181676445, 1e-12));
 }
 
 int main(int argc, char *argv[]) {

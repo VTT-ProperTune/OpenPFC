@@ -204,6 +204,7 @@ if(TUNGSTEN_ENABLE_TESTS)
         include(CTest)
         # Run all tungsten tests in a single invocation to avoid per-test MPI overhead
         add_test(NAME tungsten-all-tests COMMAND test_tungsten)
+        add_test(NAME tungsten-cpu-golden COMMAND test_tungsten "[cpu_golden]")
         if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
           add_test(NAME tungsten-golden-4rank
             COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4

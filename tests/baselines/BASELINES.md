@@ -11,7 +11,7 @@ classified **bitwise** (must reproduce exactly) or **tolerance** (must reproduce
 within a stated numeric tolerance, per backend).
 
 > Status: tohtori CUDA/host goldens and perf JSON are captured (see tables).
-> Remaining ☐ items are CPU-side GPU-parity field dumps and LUMI HIP perf.
+> Remaining ☐ items are LUMI HIP perf.
 
 ## Classification
 
@@ -29,7 +29,7 @@ within a stated numeric tolerance, per backend).
 | Spectral first derivative of a Nyquist mode (`test_spectral_gradient`) | tolerance | ≤ 1e-12 (must be ~0) | CI (CPU) |
 | Tungsten 0.2 vs Gen-1 trajectory (`test_tungsten` `[golden]`) | tolerance | ≤1e-10 local; Σψ² 1e-12 relative | CI 1-rank 8³/100 steps; MPI 4-rank 16³/20 steps (`tungsten-golden-4rank`). Pre-M0 field dump was never captured — this is the living A/B golden. |
 | Aluminum 0.2 vs Gen-1 4-rank trajectory (`aluminumTest` `[golden][MPI]`) | tolerance | ≤1e-10 local; Σψ² 1e-12 relative | MPI 4-rank 16³/20 steps (`aluminum-golden-4rank`) |
-| ☐ CPU-side goldens for each CPU-vs-GPU parity test | tolerance | 1e-10 | CI (CPU) |
+| CPU-side goldens for CPU-vs-GPU parity configs | tolerance | 1e-10 relative (checksum) | CI (CPU): `tungsten-cpu-golden`, `allen-cahn-cpu-golden`, `wave2d-cpu-golden` |
 | Restart-equivalence (`CheckpointService`) | bitwise (1 rank) | exact owned cells | CI: kernel `[checkpoint][service]`; heat3d FD Euler; tungsten ETD JSON session. 2-rank kernel `[checkpoint][MPI]`. |
 
 ## Performance baselines
@@ -66,6 +66,22 @@ mpiexec -n 4 ./apps/tungsten/test_tungsten "[golden][MPI]"
 ```
 
 A 4-rank / 100-step capture of `tungsten_etd` on tohtori is still optional for archival binaries under `tests/baselines/`; the Catch2 A/B is the gate.
+
+CPU-side checksums of the CPU-vs-GPU parity configs (Tohtori `g0005`, gcc 15.2
+Debug, 2026-09-02). CI can run these without a GPU:
+
+```
+ctest -R 'tungsten-cpu-golden|allen-cahn-cpu-golden|wave2d-cpu-golden'
+```
+
+Captured `sum` / `sumsq` (and wave2d `u`/`v`):
+
+```
+tungsten  32³ / 10 steps / dt=0.01   n=32768  sum=-13107.200000000043  sumsq=5406.3450894885682
+allen_cahn 32² / 20 steps / dt=0.002 n=1024   sum=-967.34722270794146  sumsq=961.14566882919667
+wave2d    24² / 8 steps / dt=0.01    n=576    sum_u=56.542106624911966 sumsq_u=28.256988690744471
+                                              sum_v=0.0018563899833072017 sumsq_v=0.0042855033181676445
+```
 
 GPU compile + run parity (cluster only):
 
