@@ -16,7 +16,7 @@ flowchart LR
   subgraph load [Load]
     A[config.json / .toml]
   end
-  subgraph stack [SpectralCPUStack]
+  subgraph stack [SimulationSession SpectralCPUStack]
     W[Domain]
     D[Decomposition]
     F[CPUFFT / HeFFTe]
@@ -40,9 +40,9 @@ flowchart LR
   wire --> S
 ```
 
-- `SpectralCPUStack` reads world, time, and `plan_options` (FFT) from the parsed document and constructs Domain → Decomposition → CPUFFT → Time in a fixed order. CPU plan options and `fft::create` are factored through `spectral_cpu_stack_detail.hpp` (`cpu_spectral_plan_options_from_json`, `cpu_fft_from_json_and_decomposition`) so a future GPU JSON stack can reuse the same parsing surface. If `plan_options` omits `backend` but the document has a root-level `backend` string (same key as `from_json<fft::Backend>`), that value is merged into the plan slice for parsing; `backend: "cuda"` is rejected on this CPU-only path.
+- `make_simulation_session<SpectralCPUStack>` reads domain, time, `method`/`backend`, and `plan_options` (FFT) from the parsed document and constructs `pfc::sim::stacks::SpectralCPUStack` (Domain → Decomposition → CPUFFT). CPU plan options live in `spectral_fft_stack_factory.hpp` (`cpu_spectral_plan_options_from_json`, `cpu_fft_from_json_and_decomposition`). If `plan_options` omits `backend` but the document has a root-level `backend` string (same key as `from_json<fft::Backend>`), that value is merged into the plan slice for parsing; `backend: "cuda"` is rejected on this CPU-only path.
 - GPU drivers that still need a host `pfc::FFT` for `Model` but build HeFFTe with cuFFT / ROCm should use `spectral_fft_stack_factory.hpp`: `merged_spectral_plan_options_json`, `cuda_spectral_plan_options_from_json`, or `hip_spectral_plan_options_from_json` so `plan_options` overlays match the CPU JSON surface without silently re-basing onto FFTW defaults. Reuse this path’s single `SpectralCPUStack` `CPUFFT` for the `Model` reference; avoid constructing a second throwaway CPU FFT in app code (see Doxygen on `spectral_fft_stack_factory.hpp`).
-- `SpectralSimulationSession` owns the stack, constructs `ConcreteModel(fft, world, comm)` (same `MPI_Comm` as the stack and simulator), then `Simulator(model, time, comm)`. The FFT object and world are referenced by the model; do not reorder or move these after construction. Custom models should forward the optional third `MPI_Comm` argument in their constructor (default `MPI_COMM_WORLD` keeps two-argument construction valid).
+- `SpectralSimulationSession` owns `SimulationSession<SpectralCPUStack>`, constructs `ConcreteModel(fft, world, comm)` (same `MPI_Comm` as the stack and simulator), then `Simulator(model, time, comm)`. `World` is stored by value so `Model`’s reference does not dangle. Custom models should forward the optional third `MPI_Comm` argument in their constructor (default `MPI_COMM_WORLD` keeps two-argument construction valid).
 - `wire_simulator_from_settings` (on the session) calls `wire_simulator_and_runtime_from_json`, which attaches writers, `ICs`, `BCs`, and optional `simulator` subsection keys. The wiring APIs require **explicit** `FieldModifierCatalog` and `ResultsWriterCatalog` references (no default parameters). `App` passes `default_field_modifier_catalog()` when no override is set, and always passes `default_results_writer_catalog()` for the stock binary writers unless you change the call path.
 
 ## `App<ConcreteModel>::main()` order of operations
@@ -70,14 +70,16 @@ Exact keys vary slightly by app and schema version; always treat `apps/tungsten/
 
 | Section / keys | Handled by | Role |
 |----------------|------------|------|
-| `Lx`, `Ly`, `Lz`, `dx`, `dy`, `dz`, `origin`, … | `SpectralCPUStack` / `from_json` for `Domain` | Grid and physical extent. |
+| `Lx`, `Ly`, `Lz`, `dx`, `dy`, `dz`, `origin`, … | `from_json` for `Domain` / `make_simulation_session` | Grid and physical extent. |
 | `t0`, `t1`, `dt`, `saveat` | `Time` | Integration interval and output cadence. |
 | `plan_options` | HeFFTe `plan_options` | FFT backend (`backend`), `use_gpu_aware`, `reshape_algorithm`, etc. Root `backend` is merged when `plan_options` omits it (CPU `App` path only; `cuda` is rejected there). |
 | `model.name`, `model.params` | Your `ConcreteModel` + `from_json` into params in `JsonAppRun::apply_model_params_` (step 3) | Physics coefficients; optional `ParameterValidator` in your `main` targets the same subtree—see [`parameter_validation.md`](parameter_validation.md). |
 | `fields`, `saveat` | `add_result_writers_from_json` | If `saveat > 0`, each `fields[]` entry with `name` and `data` path gets a writer from `ResultsWriterCatalog` (default `writer`: `"binary"` → `BinaryWriter`, MPI-IO). |
 | `initial_conditions[]` | `add_initial_conditions_from_json` | Each entry has `type`, optional `target`, type-specific fields. |
 | `boundary_conditions[]` | `add_boundary_conditions_from_json` | Same pattern: `type`, `target`, … |
-| `simulator` | `apply_simulator_section_from_json` | Optional `result_counter`, `increment`. |
+| `simulator` | `apply_simulator_section_from_json` | Gen-1 overlay: optional `result_counter`, `increment`, `integrator.method`. |
+| `checkpoint`, `restart_from` | `checkpoint_config_from_json` / `CheckpointService` | 0.2 restart: `checkpoint.every`, `checkpoint.directory`, `restart_from: <dir>`. See [`checkpoint_publish.md`](../development/checkpoint_publish.md). |
+| `method`, `backend`, `fd_order` | `SessionSelection` / `make_simulation_session` | Stack pick (`spectral`/`fd` × `cpu`/`cuda`/`hip`). FD CPU JSON sessions: `json_fd_session.hpp`. |
 | `profiling` | `AppProfilingController` | Export paths and regions; see [`performance_profiling.md`](../hpc/performance_profiling.md). |
 
 TOML uses the same logical sections (e.g. `[plan_options]`).

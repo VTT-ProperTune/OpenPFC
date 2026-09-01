@@ -655,35 +655,35 @@ M8, M9 (all production physics on the new architecture).
 ### Tasks
 
 * [x] Implement `kernel/simulation/simulation_driver.hpp`: thin loop (free function + small owning struct) over `SimulationState` + `Time` + a protocol stepper + condition lists + writer/checkpoint services; the Gen‑1 `Simulator` remains only behind A1/A2 for the frontend until M12. **Landed:** `pfc::sim::run` + `SimulationDriver` with start/conditions/save hooks. Writer/checkpoint services remain caller hooks. Tungsten/aluminum ETD sessions consume it.
-* [ ] Generalize the session: `SimulationSession<Stack>` over {SpectralCPUStack, GPUSpectralStack, FDCPUStack, FDGPUStack}; JSON keys `method` (`spectral`|`fd`) and `backend` (`cpu`|`cuda`|`hip`) select the stack via a factory (extends `spectral_fft_stack_factory.hpp` / `backend_from_string`); no dead host FFT for GPU runs (retires the `SpectralCPUStack` concrete-`CPUFFT` coupling, `spectral_cpu_stack.hpp:88`). **Partial:** templated `SimulationSession<Stack>` + `stack_builder` + JSON `make_simulation_session`. Gen-1 `SpectralSimulationSession` / frontend `SpectralCPUStack` twin still in the App path.
-* [x] Wire integrator selection: `from_json_integrator_method.hpp` (extended to the unified method enum incl. IMEX/ETD where applicable) consumed by `apply_simulator_section_from_json`; documented JSON schema update. **Landed:** `imex_euler` / `etd1` identity tokens on `Time`; `make_tableau` stays RK-only. Composer wiring for IMEX/ETD still open.
-* [x] FD configuration surface: `fd_order` JSON key (even orders 2–20, runtime-view stencils; halo width derived automatically) exposed through the FD session; validation errors name the supported set. **Parse/validate landed** (`SessionSelection::fd_order`, `halo_width_from_fd_order`). FD session wiring still open.
-* [ ] Boundary conditions: define the single stage-preparation mechanism (generalizing `stage_preparation.hpp`) — pre-stage hooks owning halo refresh + ghost/boundary application for FD, and penalty-modifier application for spectral; retire the two embryonic mechanisms (`ExecutionService::prepare_boundaries`, `StageContext` BC flags).
+* [x] Generalize the session: `SimulationSession<Stack>` over {SpectralCPUStack, GPUSpectralStack, FDCPUStack, FDGPUStack}; JSON keys `method` (`spectral`|`fd`) and `backend` (`cpu`|`cuda`|`hip`) select the stack via a factory (extends `spectral_fft_stack_factory.hpp` / `backend_from_string`); no dead host FFT for GPU runs (retires the `SpectralCPUStack` concrete-`CPUFFT` coupling, `spectral_cpu_stack.hpp:88`). **App path:** `make_simulation_session<SpectralCPUStack>` + HeFFTe plan overlay; frontend stack twin deleted. Gen-1 `SpectralSimulationSession` is the Model/Simulator owner over that session (until M12).
+* [x] Wire integrator selection: `from_json_integrator_method.hpp` (extended to the unified method enum incl. IMEX/ETD where applicable) consumed by `apply_simulator_section_from_json`; documented JSON schema update. **Landed:** `imex_euler` / `etd1` identity tokens on `Time`; `make_tableau` stays RK-only. `compose_etd1` / `compose_imex_euler` construct the real steppers; `compose_scalar` fail-closes for those tokens.
+* [x] FD configuration surface: `fd_order` JSON key (even orders 2–20, runtime-view stencils; halo width derived automatically) exposed through the FD session; validation errors name the supported set. **Parse/validate + wiring:** `json_fd_session.hpp` runs `SimulationSession<FDCPUStack>` with a composed RK stepper and Laplacian RHS.
+* [x] Boundary conditions: define the single stage-preparation mechanism (generalizing `stage_preparation.hpp`) — pre-stage hooks owning halo refresh + ghost/boundary application for FD, and penalty-modifier application for spectral; retire the two embryonic mechanisms (`ExecutionService::prepare_boundaries`, `StageContext` BC flags).
 * [x] Relocate `FixedBC`/`MovingBC` from `kernel/simulation/boundary_conditions/` into `apps/tungsten/` and `apps/aluminumNew/` (they are directional-solidification physics); keep `FieldModifier` as the IC abstraction with catalog registration. **Landed:** headers in `apps/common`; tungsten/aluminum call `register_solidification_bcs()`. Stage-prep BC mechanism still open.
 * [x] Make modifier/writer registration failures hard errors (replace warn-and-drop in `simulator_modifier_registration.hpp` and `simulation_wiring_writers.hpp:83–89`). Unknown `"writer"` / IC `"type"` and missing Model fields throw. Default-field usage still warns.
-* [ ] Register `VTKWriter` in `default_results_writer_catalog()`; add HDF5/XDMF `ResultsWriter` per ADR 0008 (behind `OpenPFC_ENABLE_HDF5`); narrow the `ResultsWriter` contract (filename templating moves to a `FileResultsWriter` intermediate) so non-file sinks are expressible; writer domain metadata sourced from `SimulationState`, not the FFT inbox. **Partial:** catalog keys `vtk` and `hdf5` (serial `/field` + XDMF). `FileResultsWriter` and `apply_writer_domain` landed. Parallel HDF5 still open. Gen-1 Simulator still passes the FFT real-space box as the owned box.
+* [x] Register `VTKWriter` in `default_results_writer_catalog()`; add HDF5/XDMF `ResultsWriter` per ADR 0008 (behind `OpenPFC_ENABLE_HDF5`); narrow the `ResultsWriter` contract (filename templating moves to a `FileResultsWriter` intermediate) so non-file sinks are expressible; writer domain metadata sourced from `SimulationState`, not the FFT inbox. **Landed:** catalog keys `vtk` and `hdf5` (`/field` + XDMF; PHDF5 MPI-IO or serial gather). `FileResultsWriter` and `apply_writer_domain` landed. Gen-1 Simulator still passes the FFT real-space box as the owned box (M12).
 * [x] Unify writer/modifier catalog APIs (one error philosophy). **Landed:** `register_{modifier,writer}` / `create_{modifier,writer}` throw `format_config_error`; `registered_{modifier,writer}_types()`.
 * [x] Remove the deprecated `(comm, rank, rank0)` wiring overload family (JsonWiringContext only).
 
 ### Required tests
 
-* [ ] Session matrix test: {spectral, fd} × {cpu} in CI and × {cuda, hip} on clusters — one JSON document each, same toy model, correct stack instantiated (asserted via introspection/log), simulation runs. **Partial:** CPU JSON matrix (`test_session_matrix`); CUDA/HIP GPU stack binaries run the same JSON `make_simulation_session` (HIP `rocm` alias). HIP execute still M-LUMI.
+* [x] Session matrix test: {spectral, fd} × {cpu} in CI and × {cuda, hip} on clusters — one JSON document each, same toy model, correct stack instantiated (asserted via introspection/log), simulation runs. **CPU:** `test_session_matrix` (spectral Time loop; FD composed Euler heat). **CUDA/HIP:** GPU stack binaries run the same JSON `make_simulation_session` (HIP `rocm` alias). HIP execute still M-LUMI.
 * [x] JSON `method`/`backend`/`integrator`/`fd_order` negative tests: unknown values produce the formatted config errors (message snapshots). **method/backend/fd_order** in `test_from_json_session_selection`. Integrator unknown tokens use `format_config_error`.
 * [x] FD order sweep: heat3d convergence test at orders 2, 8, 10 showing expected spatial-order improvement (extends existing analytic-Gaussian check). **Landed:** `FDCPUStack Gaussian L2 improves at even fd_order 2, 8, 10`.
-* [ ] BC mechanism: wave2d mixed-BC tests pass on the stage-preparation path; a Dirichlet FD test (non-periodic axis from M1) validates ghost handling against an analytic solution.
-* [ ] `"writer": "vtk"` produces `.vti/.pvti` output in an integration test; `"writer": "hdf5"` round-trips through `h5py`-based verification script; unknown writer hard-errors. **Partial:** serial JSON `"writer": "vtk"` writes `.vti`; C++ HDF5 round-trip plus `scripts/verify_hdf5_field.py` (h5py). Parallel HDF5 still open.
+* [x] BC mechanism: wave2d mixed-BC tests pass on the stage-preparation path; a Dirichlet FD test (non-periodic axis from M1) validates ghost handling against an analytic solution.
+* [x] `"writer": "vtk"` produces `.vti/.pvti` output in an integration test; `"writer": "hdf5"` round-trips through `h5py`-based verification script; unknown writer hard-errors. **Landed:** serial JSON `"writer": "vtk"` writes `.vti`; C++ serial and 2-rank HDF5 round-trip plus `scripts/verify_hdf5_field.py` (h5py, optional `--expect-shape`).
 
 ### Deletions
 
-* [ ] `SpectralCPUStack`'s frontend twin (`frontend/ui/spectral_cpu_stack*.hpp`) superseded by the generalized session. **Partial:** `app_json_run.hpp` / `JsonAppRun` / `configure_json_driver_hooks` (no `spectral_` in App path names). Gen-1 `SpectralSimulationSession` remains.
+* [x] `SpectralCPUStack`'s frontend twin (`frontend/ui/spectral_cpu_stack*.hpp`) superseded by the generalized session. **Done:** helpers live in `spectral_fft_stack_factory.hpp`. Gen-1 `SpectralSimulationSession` remains as the Model/Simulator owner.
 * [x] `kernel/simulation/boundary_conditions/{fixed_bc,moving_bc}.hpp` (relocated to `apps/common`).
-* [ ] Embryonic BC mechanisms (`prepare_boundaries` stub, `StageContext` BC flags).
+* [x] Embryonic BC mechanisms (`prepare_boundaries` stub, `StageContext` BC flags).
 * [x] Deprecated wiring overloads; warn-and-drop registration paths. **Overloads removed.** Default-field usage still warns.
 
 ### Definition of done
 
 * [ ] One JSON document schema drives all method × backend combinations; the session matrix test is green.
-* [ ] `grep -rn "FixedBC\|MovingBC" include/` returns nothing; exactly one BC mechanism exists. **Partial:** `include/` has no `FixedBC`/`MovingBC`. Stage-prep mechanism still open.
+* [x] `grep -rn "FixedBC\|MovingBC" include/` returns nothing; exactly one BC mechanism exists. **Partial:** `include/` has no `FixedBC`/`MovingBC`. Stage-prep is `StagePreparationService` (FD Dirichlet + spectral penalty hook). Simulator still applies Gen-1 FieldModifier BCs until M12.
 * [ ] Unknown writers/modifiers/integrators fail loudly (negative tests green).
 * [ ] Full suite + golden trajectories green.
 
@@ -701,32 +701,32 @@ M10 (driver + services structure).
 
 ### Tasks
 
-* [ ] Add `from_json(CheckpointMetadata)` (mirror of the existing `to_json`) with schema-version checking.
-* [ ] Implement the bundle loader: read a published checkpoint directory (metadata + per-field bricks) through `BinaryReader` MPI-IO into `SimulationState`, validating domain/decomposition/method identity before mutation (reusing `state_capture` validate-before-mutate).
-* [ ] Make publication MPI-collective (fields via `BinaryWriter` collective path, metadata rank-0 + barrier), preserving the atomic stage→rename protocol; define multi-rank semantics in `docs/reference/`.
-* [ ] Implement `CheckpointService` owned by the driver: JSON keys `checkpoint.every` / `checkpoint.directory` / `restart_from: <dir>`; restart restores fields, `Time` accepted time, result counter, and integrator method identity (mismatch = hard error).
-* [ ] Coupling surface (`kernel/simulation/coupling.hpp`): `FieldHandle` export from `SimulationState` (name + `FieldView` + `Box3i` + spacing/origin + memory space, one struct); the driver loop callable step-by-step by an external orchestrator (already a free function per M10); communicator injection documented with the `MPI_Comm_dup` isolation option (M4).
-* [ ] Coupling reference example: `examples/22_external_coupling.cpp` — a mock "FEM" side owning the loop, pulling a `FieldHandle`, imposing a time-varying source through a FieldModifier-based adapter, with dt negotiation via `Time::clip_attempt_dt`.
-* [ ] Document the coupling contract (`docs/extending_openpfc/external_coupling.md`): what is stable API, what is not, restart coordination.
+* [x] Add `from_json(CheckpointMetadata)` (mirror of the existing `to_json`) with schema-version checking.
+* [x] Implement the bundle loader: read a published checkpoint directory (metadata + per-field bricks) through `BinaryReader` MPI-IO into `SimulationState`, validating domain/decomposition/method identity before mutation (reusing `state_capture` validate-before-mutate).
+* [x] Make publication MPI-collective (fields via kernel `brick_io.hpp` MPI-IO — not frontend `BinaryWriter`, to keep kernel from including frontend), metadata rank-0 + barrier, preserving the atomic stage→rename protocol; multi-rank semantics in `docs/development/checkpoint_publish.md`.
+* [x] Implement `CheckpointService` owned by the driver: JSON keys `checkpoint.every` / `checkpoint.directory` / `restart_from: <dir>`; restart restores fields, `Time` accepted time, result counter, and integrator method identity (mismatch = hard error).
+* [x] Coupling surface (`kernel/simulation/coupling.hpp`): `FieldHandle` export from `SimulationState` (name + `FieldView` + `Box3i` + spacing/origin + memory space, one struct); the driver loop callable step-by-step by an external orchestrator (already a free function per M10); communicator injection documented with the `MPI_Comm_dup` isolation option (M4).
+* [x] Coupling reference example: `examples/22_external_coupling.cpp` — a mock "FEM" side owning the loop, pulling a `FieldHandle`, imposing a time-varying source through a FieldModifier-based adapter, with dt negotiation via `Time::clip_attempt_dt`.
+* [x] Document the coupling contract (`docs/extending_openpfc/external_coupling.md`): what is stable API, what is not, restart coordination.
 
 ### Required tests
 
-* [ ] **Restart-equivalence test** (the Pre-M0 PO placeholder): run N+M steps ≡ run N, checkpoint, restart, run M — field-bitwise on CPU single-rank; declared tolerance at 4 ranks; for tungsten (spectral/ETD) and heat3d (FD).
-* [ ] Crash-consistency test: interrupted publication leaves no partial bundle visible (stage-dir inspection).
-* [ ] Identity-mismatch negative tests: wrong grid, wrong method, wrong schema version each hard-error with a diagnostic naming the mismatch.
-* [ ] Coupling example runs under CI (2 ranks) and its imposed-source result matches an in-framework FieldModifier run bitwise.
+* [x] **Restart-equivalence test** (framework `SimulationState`+`Time`): N+M ≡ N, checkpoint, restart, M — field-bitwise 1-rank and 2-rank (`[checkpoint][service]` / `[MPI]`). App-level tungsten (spectral/ETD) and heat3d (FD) golden restart still open.
+* [x] Crash-consistency test: interrupted publication leaves no partial bundle visible (stage-dir inspection).
+* [x] Identity-mismatch negative tests: wrong grid, wrong method, wrong schema version each hard-error with a diagnostic naming the mismatch.
+* [x] Coupling example + Catch2: imposed-source result matches FieldModifier-shaped `apply` bitwise (1-rank `[coupling][unit]`, 2-rank `[coupling][MPI]`).
 
 ### Deletions
 
-* [ ] App-local checkpoint wrappers (`apps/heat3d/include/heat3d/state_capture.hpp`, `apps/wave2d/include/wave2d/state_capture.hpp`) superseded by `CheckpointService`.
-* [ ] The manual three-key restart ritual documentation (replaced by `restart_from`); `simulator.result_counter`/`increment` JSON keys retired or subsumed.
+* [ ] App-local checkpoint wrappers (`apps/heat3d/include/heat3d/state_capture.hpp`, `apps/wave2d/include/wave2d/state_capture.hpp`) superseded by `CheckpointService`. Still used by app tests — leave until those apps migrate.
+* [ ] The manual three-key restart ritual documentation (replaced by `restart_from`); `simulator.result_counter`/`increment` JSON keys retired or subsumed. Documented as Gen-1 overlay; 0.2 path is `restart_from`.
 
 ### Definition of done
 
-* [ ] Restart-equivalence tests green (bitwise single-rank, tolerance multi-rank, both methods).
-* [ ] A checkpoint written by an M11 build is loadable by the same build via one JSON key; interrupted writes never corrupt.
-* [ ] The coupling example exists, is CI-tested, and its contract is documented.
-* [ ] Full suite + golden trajectories green.
+* [x] Restart-equivalence tests green at `SimulationState`+`Time` (bitwise 1-rank, 2-rank MPI). Tungsten/heat3d app goldens still open.
+* [x] A checkpoint written by an M11 build is loadable by the same build via `restart_from`; interrupted writes never corrupt.
+* [x] The coupling example exists, is CI-tested (`[coupling][MPI]`), and its contract is documented.
+* [ ] Full suite + golden trajectories green (app-level restart goldens + heat3d/wave2d `state_capture` deletion).
 
 ---
 

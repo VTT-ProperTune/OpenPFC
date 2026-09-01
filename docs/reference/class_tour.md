@@ -50,8 +50,9 @@ The shortest useful mental model is:
 | `ResultsWriter` | Stable interface for persisted simulation fields | `openpfc/kernel/simulation/results_writer.hpp` | `examples/11_write_results.cpp` |
 | `FileResultsWriter` | File sink with increment path templating | `openpfc/frontend/io/file_results_writer.hpp` | `BinaryWriter`, `VTKWriter` |
 | `pfc::ui::App<Model>` | Loads JSON/TOML and runs a configured application | `openpfc/frontend/ui/app.hpp` | `apps/` and `tutorials/custom_app_minimal.md` |
-| `SpectralCPUStack` | Owns the CPU domain, decomposition, FFT, fields, and time stack | `openpfc/frontend/ui/spectral_cpu_stack.hpp` | `user_guide/app_pipeline.md` |
-| `SpectralSimulationSession` | Owns model and simulator state around a spectral stack | `openpfc/frontend/ui/spectral_simulation_session.hpp` | `user_guide/app_pipeline.md` |
+| `SpectralCPUStack` | Owns the CPU domain, decomposition, FFT, and field stack | `openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp` | `user_guide/app_pipeline.md` |
+| `SimulationSession<Stack>` | Method × backend session: selection, Time, and a stack | `openpfc/kernel/simulation/simulation_session.hpp` | `user_guide/app_pipeline.md` |
+| `SpectralSimulationSession` | Gen-1 App owner: `SimulationSession<SpectralCPUStack>` + Model + Simulator | `openpfc/frontend/ui/spectral_simulation_session.hpp` | `user_guide/app_pipeline.md` |
 
 Use the [integrated C++ API reference](../api/index.md) for exact constructors,
 overloads, namespaces, and member documentation.
@@ -114,7 +115,8 @@ their focused documentation rather than from one expanding type table.
 |-----------|------|
 | time integration and adaptive stepping | simulation stepper headers and generated API reference |
 | solver contracts and spectral diagonal solves | solver headers under `kernel/simulation` and unit tests |
-| checkpoint state and atomic publication | `docs/development/checkpoint_state_capture.md` and `checkpoint_publish.md` |
+| checkpoint state and atomic publication | `docs/development/checkpoint_state_capture.md` and `checkpoint_publish.md` (`CheckpointService` loader) |
+| external coupling | [`../extending_openpfc/external_coupling.md`](../extending_openpfc/external_coupling.md) |
 | profiling sessions and export | [`../hpc/performance_profiling.md`](../hpc/performance_profiling.md) |
 | profiling file schema | [`../hpc/profiling_export_schema.md`](../hpc/profiling_export_schema.md) |
 | result formats | [`../user_guide/io_results.md`](../user_guide/io_results.md) |

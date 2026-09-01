@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Spectral `App` configuration reference (JSON / TOML)
 
-This page lists the **JSON / TOML surface** consumed by the default **CPU spectral** stack (`SpectralCPUStack` → `SpectralSimulationSession` → `Simulator`) when you use `pfc::ui::App<Model>` (e.g. `apps/tungsten`, `apps/aluminumNew`). **Apps may add keys** or nest objects; treat shipped inputs as ground truth when in doubt.
+This page lists the **JSON / TOML surface** consumed by the default **CPU spectral** stack (`SimulationSession<SpectralCPUStack>` → `SpectralSimulationSession` → `Simulator`) when you use `pfc::ui::App<Model>` (e.g. `apps/tungsten`, `apps/aluminumNew`). **Apps may add keys** or nest objects; treat shipped inputs as ground truth when in doubt.
 
 **Pipeline order:** [`app_pipeline.md`](../user_guide/app_pipeline.md). **Mental model:** [`configuration.md`](../user_guide/configuration.md).
 
@@ -55,7 +55,7 @@ When `saveat > 0` and `fields` is present, `add_result_writers_from_json` regist
 |-----|------|---------|
 | `fields[].name` | string | Field identifier known to the simulator / model |
 | `fields[].data` | string | Filename template; if it contains `%`, `printf`-style formatting with the simulator’s output **increment** is applied (see [`binary_field_io_spec.md`](binary_field_io_spec.md)) |
-| `fields[].writer` | string | Catalog key: `"binary"` (default), `"vtk"`, or `"hdf5"` when built with `OpenPFC_ENABLE_HDF5`. Unknown keys are a hard error. `"hdf5"` is serial (`nproc=1`) and writes `/field` plus a `.xdmf` sidecar. |
+| `fields[].writer` | string | Catalog key: `"binary"` (default), `"vtk"`, or `"hdf5"` when built with `OpenPFC_ENABLE_HDF5`. Unknown keys are a hard error. `"hdf5"` writes `/field` plus a `.xdmf` sidecar (parallel HDF5 MPI-IO, or gather-to-rank-0 when HDF5 is serial). |
 
 ## Initial / boundary conditions
 
@@ -70,7 +70,10 @@ Modifier types must be **registered** in `main` before `App` runs (`register_fie
 
 | Key | Handled by | Notes |
 |-----|------------|--------|
-| `simulator` | `apply_simulator_section_from_json` | `result_counter`, `increment`, optional `integrator.method` overlay (same tokens as `timestepping.integrator.method`) |
+| `simulator` | `apply_simulator_section_from_json` | Gen-1 overlay: `result_counter`, `increment`, optional `integrator.method` (same tokens as `timestepping.integrator.method`). Prefer `restart_from` for 0.2 sessions. |
+| `checkpoint.every` | `CheckpointService` | Save accepted state every N increments (`0` disables). Bundles go to `checkpoint.directory/step_<increment>/`. |
+| `checkpoint.directory` | `CheckpointService` | Parent directory for published checkpoint bundles. |
+| `restart_from` | `CheckpointService::restore_from_config` | Path to a published bundle (`…/step_N`). Restores fields, `Time` increment/time, result counter, and method identity. Grid or method mismatch is a hard error. |
 | `profiling` | `AppProfilingController` | [`performance_profiling.md`](../hpc/performance_profiling.md) |
 
 ## TOML vs JSON
