@@ -20,6 +20,7 @@ source compatibility is explicitly not a goal.
 - `DeviceFullHalo` keeps the 26-direction widening passes when GPU-aware MPI is off. Real-neighbor axes pack on device, MPI on host, and unpack; `*_FORCE_PACKED_HALO=1` remains 6-face-only. Tohtori HIP job 1618752: 47/47 including 2- and 4-rank Full hash tests.
 - Device `SparseExchange` host-stages send/recv slabs when GPU-aware MPI is off (gather/scatter stay on device). Allen-Cahn and wave2d CPU-vs-HIP run on Tohtori HIP (job 1618762).
 - `HaloExchangeOptions::selector` applies a per-rank `HaloDirectionSelector` on the host and device facades. Device Faces/Full use `pfc::halo::opposite_slot` instead of a local copy.
+- Host Faces `HaloExchange::exchange()` / `finish()` posts every bound field, then one `MPI_Waitall`. Full stays sequential (each axis pass must complete before the next). Persistent stays per-field `exchange_halos()` (self-wrap persistent is MPI-implementation-sensitive on this Open MPI). 4-rank multi-field batch still equals two singles.
 
 ### Added
 

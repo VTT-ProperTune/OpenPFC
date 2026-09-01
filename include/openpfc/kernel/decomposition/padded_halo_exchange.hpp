@@ -272,6 +272,21 @@ public:
     finish_halo_exchange();
   }
 
+  /// Outstanding MPI requests from the last `start()` (for a combined Waitall).
+  [[nodiscard]] int outstanding_count() const noexcept { return m_request_count; }
+  [[nodiscard]] MPI_Request *outstanding() noexcept { return m_requests.data(); }
+
+  /// Copy back the Waitall result and clear the in-flight buffer pointer.
+  void take_waitall_result(const MPI_Request *completed, int n) {
+    if (completed != nullptr && n > 0) {
+      for (int i = 0; i < n; ++i) {
+        m_requests[static_cast<std::size_t>(i)] = completed[i];
+      }
+    }
+    m_pending_field = nullptr;
+    m_request_count = 0;
+  }
+
   /// `true` once the exchanger has captured a Field buffer.
   [[nodiscard]] bool is_bound() const noexcept { return m_bound_buf != nullptr; }
 

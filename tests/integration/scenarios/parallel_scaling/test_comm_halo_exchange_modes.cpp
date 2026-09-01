@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// 4-rank HaloExchange mode comparison (M4 required test). Host blocking,
-// split-phase, and multi-field batching must agree bitwise. Persistent
+// 4-rank HaloExchange mode comparison (M4 required test). Host blocking
+// (one Waitall across fields), split-phase, and multi-field batching must
+// agree bitwise. Persistent
 // multi-rank remains red on LUMI (same as test_fd_heat_mpi); that path is
 // still covered on one rank in test_comm_halo_exchange.cpp. Full 26-direction
 // fill is checked on a corner-dependent periodic hash. HIP 4-rank cases live
