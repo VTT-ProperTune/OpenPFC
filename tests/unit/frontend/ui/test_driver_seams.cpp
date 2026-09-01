@@ -124,6 +124,11 @@ TEST_CASE("apply_simulator_section_from_json overlays integrator method",
   const nlohmann::json bad = {{"simulator", {{"integrator", {{"method", "imex"}}}}}};
   REQUIRE_THROWS_AS(pfc::ui::apply_simulator_section_from_json(sim, time, bad),
                     std::invalid_argument);
+
+  const nlohmann::json mixed = {{"restart_from", "/tmp/ckpt/step_1"},
+                                {"simulator", {{"increment", 4}}}};
+  REQUIRE_THROWS_AS(pfc::ui::apply_simulator_section_from_json(sim, time, mixed),
+                    std::invalid_argument);
 }
 
 TEST_CASE("JSON writer vtk writes a VTI file", "[ui][writers][vtk]") {

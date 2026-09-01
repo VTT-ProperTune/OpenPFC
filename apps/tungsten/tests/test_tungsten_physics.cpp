@@ -19,7 +19,6 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/integrator/spectral_exp_coefficients.hpp>
-#include <openpfc/kernel/simulation/checkpoint_service.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/simulation/spectral_mean_field_etd.hpp>
 #include <tungsten/common/tungsten_spectral.hpp>
@@ -397,15 +396,14 @@ TEST_CASE("TungstenETDSession checkpoint restart matches continuous run",
   std::filesystem::remove_all(ckpt_root, ec);
   std::filesystem::create_directories(ckpt_root);
 
+  first["checkpoint"] = json{{"every", 2}, {"directory", ckpt_root.string()}};
   tungsten::TungstenETDSession head(first, 0, 1, MPI_COMM_WORLD);
   head.run();
-  pfc::sim::CheckpointService svc({.every = 0, .directory = ckpt_root},
-                                  MPI_COMM_WORLD);
-  svc.save(head.state(), head.time());
   REQUIRE(head.time().get_increment() == 2);
+  REQUIRE(std::filesystem::exists(ckpt_root / "step_2" / "metadata.json"));
 
+  full["restart_from"] = (ckpt_root / "step_2").string();
   tungsten::TungstenETDSession tail(full, 0, 1, MPI_COMM_WORLD);
-  svc.load(tail.state(), tail.time(), svc.step_dir(2));
   REQUIRE(tail.time().get_increment() == 2);
   tail.run();
 

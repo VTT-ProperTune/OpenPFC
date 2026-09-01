@@ -77,7 +77,7 @@ Exact keys vary slightly by app and schema version; always treat `apps/tungsten/
 | `fields`, `saveat` | `add_result_writers_from_json` | If `saveat > 0`, each `fields[]` entry with `name` and `data` path gets a writer from `ResultsWriterCatalog` (default `writer`: `"binary"` → `BinaryWriter`, MPI-IO). |
 | `initial_conditions[]` | `add_initial_conditions_from_json` | Each entry has `type`, optional `target`, type-specific fields. |
 | `boundary_conditions[]` | `add_boundary_conditions_from_json` | Same pattern: `type`, `target`, … |
-| `simulator` | `apply_simulator_section_from_json` | Gen-1 overlay: optional `result_counter`, `increment`, `integrator.method`. |
+| `simulator` | `apply_simulator_section_from_json` | Gen-1 overlay: optional `result_counter`, `increment`, `integrator.method`. Mutually exclusive with `restart_from`. |
 | `checkpoint`, `restart_from` | `checkpoint_config_from_json` / `CheckpointService` | 0.2 restart: `checkpoint.every`, `checkpoint.directory`, `restart_from: <dir>`. See [`checkpoint_publish.md`](../development/checkpoint_publish.md). |
 | `method`, `backend`, `fd_order` | `SessionSelection` / `make_simulation_session` | Stack pick (`spectral`/`fd` × `cpu`/`cuda`/`hip`). FD CPU JSON sessions: `json_fd_session.hpp`. |
 | `profiling` | `AppProfilingController` | Export paths and regions; see [`performance_profiling.md`](../hpc/performance_profiling.md). |

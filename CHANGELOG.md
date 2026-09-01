@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- M11 JSON `restart_from` is exclusive of Gen-1 `simulator.increment` / `result_counter`. `tungsten_etd` / `aluminum_etd` honor `checkpoint.every` and `restart_from` via `CheckpointService`. Gen-1 App restores Time, result counter, and real Model fields from the bundle.
 - M11 heat3d FD and tungsten ETD restart-equivalence tests use `CheckpointService`. App-local `heat3d`/`wave2d` `state_capture.hpp` adapters are deleted.
 - M11 coupling surface `pfc::coupling::FieldHandle` (`kernel/simulation/coupling.hpp`): host export of name + `FieldView` + owned box + spacing/origin. Example `22_external_coupling` is a mock FEM loop with `Time::clip_attempt_dt` and a FieldModifier-shaped source adapter. Docs: `docs/extending_openpfc/external_coupling.md`.
 - M11 `CheckpointService` (`kernel/simulation/checkpoint_service.hpp`) owns filesystem restart: JSON `checkpoint.every` / `checkpoint.directory` / `restart_from`. Bundles are `<directory>/step_<increment>/` with versioned `metadata.json` and collective MPI-IO `fields/<name>.bin` (kernel `brick_io.hpp`, not frontend `BinaryWriter`). `from_json(CheckpointMetadata)` rejects schema-version mismatch. Load restores owned fields, `Time` increment/time, result counter, and method identity; grid or method mismatch is a hard error. Interrupted writes never leave a loadable `final_dir`.

@@ -70,7 +70,7 @@ Modifier types must be **registered** in `main` before `App` runs (`register_fie
 
 | Key | Handled by | Notes |
 |-----|------------|--------|
-| `simulator` | `apply_simulator_section_from_json` | Gen-1 overlay: `result_counter`, `increment`, optional `integrator.method` (same tokens as `timestepping.integrator.method`). Prefer `restart_from` for 0.2 sessions. |
+| `simulator` | `apply_simulator_section_from_json` | Gen-1 overlay: `result_counter`, `increment`, optional `integrator.method` (same tokens as `timestepping.integrator.method`). Cannot be combined with `restart_from`. |
 | `checkpoint.every` | `CheckpointService` | Save accepted state every N increments (`0` disables). Bundles go to `checkpoint.directory/step_<increment>/`. |
 | `checkpoint.directory` | `CheckpointService` | Parent directory for published checkpoint bundles. |
 | `restart_from` | `CheckpointService::restore_from_config` | Path to a published bundle (`…/step_N`). Restores fields, `Time` increment/time, result counter, and method identity. Grid or method mismatch is a hard error. |

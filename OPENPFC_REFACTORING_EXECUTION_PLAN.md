@@ -719,7 +719,7 @@ M10 (driver + services structure).
 ### Deletions
 
 * [x] App-local checkpoint wrappers (`apps/heat3d/include/heat3d/state_capture.hpp`, `apps/wave2d/include/wave2d/state_capture.hpp`) superseded by `CheckpointService`.
-* [ ] The manual three-key restart ritual documentation (replaced by `restart_from`); `simulator.result_counter`/`increment` JSON keys retired or subsumed. Documented as Gen-1 overlay; 0.2 path is `restart_from`.
+* [x] The manual three-key restart ritual documentation (replaced by `restart_from`); `simulator.result_counter`/`increment` cannot mix with `restart_from`. Gen-1 App restores Time, result counter, and real Model fields from the bundle; 0.2 ETD sessions use `CheckpointService` (`checkpoint.every` / `restart_from`).
 
 ### Definition of done
 

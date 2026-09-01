@@ -8,7 +8,7 @@
  * @details
  * Shared helpers used by `App::main()` (and available for other drivers) to
  * register result writers, field modifiers, and optional `simulator`
- * subsection keys (`result_counter`, `increment`).
+ * subsection keys (`result_counter`, `increment`) and JSON `restart_from`.
  *
  * Implementation is split across `simulation_wiring_*.hpp` for readability;
  * including this header pulls in all public APIs.

@@ -13,6 +13,7 @@
 
 #include <nlohmann/json.hpp>
 #include <openpfc/frontend/ui/from_json_integrator_method.hpp>
+#include <openpfc/frontend/ui/json_checkpoint.hpp>
 #include <openpfc/kernel/simulation/simulator.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
 
@@ -25,33 +26,39 @@ namespace pfc::ui {
  * `result_counter` in JSON is treated as the last completed index; the simulator
  * counter is set to that value plus one (same as previous `App` behavior).
  * `integrator.method` overlays `Time::method()` after `from_json<Time>`.
+ * `restart_from` restores Time, result counter, and real Model fields from a
+ * published bundle and cannot be combined with `increment` / `result_counter`.
  */
 inline void apply_simulator_section_from_json(Simulator &sim, Time &time,
                                               const nlohmann::json &settings) {
-  if (!settings.contains("simulator")) {
-    return;
-  }
-  const nlohmann::json &j = settings["simulator"];
-  if (j.contains("result_counter")) {
-    if (!j["result_counter"].is_number_integer()) {
-      throw std::invalid_argument(
-          "Invalid JSON input: missing or invalid 'result_counter' field.");
+  reject_mixed_restart_keys(settings);
+  if (settings.contains("simulator")) {
+    const nlohmann::json &j = settings["simulator"];
+    if (j.contains("result_counter")) {
+      if (!j["result_counter"].is_number_integer()) {
+        throw std::invalid_argument(
+            "Invalid JSON input: missing or invalid 'result_counter' field.");
+      }
+      const int result_counter = static_cast<int>(j["result_counter"]) + 1;
+      pfc::set_result_counter(sim, result_counter);
     }
-    const int result_counter = static_cast<int>(j["result_counter"]) + 1;
-    pfc::set_result_counter(sim, result_counter);
-  }
-  if (j.contains("increment")) {
-    if (!j["increment"].is_number_integer()) {
-      throw std::invalid_argument(
-          "Invalid JSON input: missing or invalid 'increment' field.");
+    if (j.contains("increment")) {
+      if (!j["increment"].is_number_integer()) {
+        throw std::invalid_argument(
+            "Invalid JSON input: missing or invalid 'increment' field.");
+      }
+      const int increment = static_cast<int>(j["increment"]);
+      time.set_increment(increment);
     }
-    const int increment = static_cast<int>(j["increment"]);
-    time.set_increment(increment);
+    if (j.contains("integrator") && j["integrator"].is_object() &&
+        j["integrator"].contains("method")) {
+      time.set_method(from_json<pfc::sim::steppers::RKIntegratorMethod>(
+          j["integrator"]["method"]));
+    }
   }
-  if (j.contains("integrator") && j["integrator"].is_object() &&
-      j["integrator"].contains("method")) {
-    time.set_method(from_json<pfc::sim::steppers::RKIntegratorMethod>(
-        j["integrator"]["method"]));
+  const auto cfg = pfc::sim::checkpoint_config_from_json(settings);
+  if (!cfg.restart_from.empty()) {
+    restore_gen1_from_checkpoint(sim, time, cfg.restart_from);
   }
 }
 

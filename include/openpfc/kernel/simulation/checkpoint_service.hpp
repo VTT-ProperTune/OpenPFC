@@ -250,7 +250,8 @@ public:
     pfc::mpi::throw_on_mpi_error(MPI_Barrier(m_comm), "MPI_Barrier ckpt rename");
   }
 
-  void load(SimulationState &state, Time &time, const std::filesystem::path &dir) {
+  [[nodiscard]] checkpoint::CheckpointMetadata
+  read_metadata(const std::filesystem::path &dir) const {
     int rank = 0;
     pfc::mpi::throw_on_mpi_error(MPI_Comm_rank(m_comm, &rank), "MPI_Comm_rank");
 
@@ -285,7 +286,11 @@ public:
     }
     pfc::mpi::throw_on_mpi_error(MPI_Bcast(buf.data(), n, MPI_CHAR, 0, m_comm),
                                  "MPI_Bcast metadata");
-    const auto meta = checkpoint::from_json(nlohmann::json::parse(buf));
+    return checkpoint::from_json(nlohmann::json::parse(buf));
+  }
+
+  void load(SimulationState &state, Time &time, const std::filesystem::path &dir) {
+    const auto meta = read_metadata(dir);
 
     std::vector<std::string> names = meta.fields;
     if (names.empty()) {

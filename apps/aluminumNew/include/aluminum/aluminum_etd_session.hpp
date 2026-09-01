@@ -23,8 +23,10 @@
 #include <aluminum/aluminum_field_modifiers.hpp>
 #include <aluminum/aluminum_physics.hpp>
 #include <openpfc/frontend/ui/from_json.hpp>
+#include <openpfc/frontend/ui/json_checkpoint.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/simulation/checkpoint_service.hpp>
 #include <openpfc/kernel/simulation/moving_frame_mean_field_etd.hpp>
 #include <openpfc/kernel/simulation/session_stack_factory.hpp>
 #include <openpfc/kernel/simulation/simulation_driver.hpp>
@@ -46,7 +48,8 @@ public:
         m_time(pfc::ui::from_json<pfc::Time>(settings)),
         m_stack(pfc::sim::make_spectral_cpu_stack(
             pfc::ui::from_json<pfc::sim::SessionSelection>(settings), m_domain, rank,
-            nproc, comm)) {
+            nproc, comm)),
+        m_ckpt(pfc::ui::make_checkpoint_service(settings, comm)) {
     AluminumPhysics<> phys;
     phys.domain = m_domain;
     phys.box = m_stack.fft().get_inbox_bounds();
@@ -65,14 +68,19 @@ public:
         std::make_unique<pfc::sim::MovingFrameMeanFieldETDSystem<AluminumPhysics<>>>(
             std::move(phys), m_stack.fft(), m_state, pfc::time::dt(m_time),
             std::move(opt));
+    m_ckpt.restore_from_config(m_state, m_time);
   }
 
   void run() {
     pfc::sim::SimulationDriver driver(m_time, &m_state);
-    driver.run([&](double t) { m_sys->step(t); },
-               [&](pfc::Time &) { apply_fixed_bc(); },
-               [&](pfc::Time &) { apply_fixed_bc(); },
-               [&](const pfc::Time &tm) { m_writers.maybe_write(tm, psi().vec()); });
+    driver.run(
+        [&](double t) {
+          m_sys->step(t);
+          m_ckpt.maybe_save(m_state, m_time);
+        },
+        [&](pfc::Time &) { apply_fixed_bc(); },
+        [&](pfc::Time &) { apply_fixed_bc(); },
+        [&](const pfc::Time &tm) { m_writers.maybe_write(tm, psi().vec()); });
   }
 
   [[nodiscard]] pfc::data::Field<double> &psi() {
@@ -105,6 +113,7 @@ private:
   pfc::Time m_time;
   pfc::sim::stacks::SpectralCPUStack m_stack;
   pfc::SimulationState m_state;
+  pfc::sim::CheckpointService m_ckpt;
   std::optional<FixedBc> m_bc{};
   AluminumETDWriters m_writers{};
   std::unique_ptr<pfc::sim::MovingFrameMeanFieldETDSystem<AluminumPhysics<>>> m_sys;
