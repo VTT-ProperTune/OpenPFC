@@ -44,6 +44,8 @@ source compatibility is explicitly not a goal.
 - Named CTest `session-matrix` (CPU JSON session) and `session-matrix-cuda` (GPU spectral stack JSON, same `method`/`backend` keys). HIP twin `session-matrix-hip` is wired for amdgpu/LUMI.
 - CTest `tungsten-etd-cpu-golden` and `tungsten-etd-cpu-vs-cuda`: 0.2 `TungstenETDSession` vs `TungstenETDCUDASession` on the Gen-1 CPU-vs-CUDA 32³/10-step sine IC, max abs ≤1e-10. CPU checksum matches Gen-1 `tungsten-cpu-golden` on g0005.
 - Production `tungsten` / `tungsten_cuda` / `tungsten_hip` binaries drive 0.2 ETD sessions (same JSON/TOML CLI). `TungstenETDSession` accepts `seed_grid` IC, moving BC, VTK via `.vti`/`.vtk` paths, and JSON `profiling` (`wall_step` compatible with Gen-1). `tungsten_scalability` uses the same sessions (double only). Gen-1 `Tungsten` / `TungstenCUDA` sources remain for A/B tests until deletion.
+- Device mean-field ETD evaluates `N(ψ,ψ_MF)` with a GPU polynomial kernel when physics exposes `nonlinearity_poly()` (tungsten). Host-view fallback remains for other physics.
+- 0.2 ETD Release perf JSON on tohtori `g0005` vs Gen-1: CUDA 1-rank 256³ **faster** (`wall_step` 0.00659 s vs 0.0253 s); CPU 1-rank 64³ +35%; CUDA 8-rank 256³ slower (no HeFFTe `plan_options` overlay on `GPUSpectralStack`). Table in `tests/baselines/BASELINES.md`.
 - Gen-1 aluminum `prepare_operators` uses `for_each_kpoint`. SeedGridFCC/SlabFCC use `std::numbers::pi`.
 - Example `03_parallel_fft` uses `std::numbers::pi` instead of `atan(1.0)`.
 - `JsonWiringSession` constructor parameters no longer shadow the catalog members (`-Wshadow`).
