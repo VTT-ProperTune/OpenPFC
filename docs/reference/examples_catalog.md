@@ -38,6 +38,7 @@ flowchart LR
     L[20_explicit_stepper_spectral]
     N[21_adaptive_stepping]
     O[22_external_coupling]
+    P[23_halo_microtiming]
     M[fft_backend_benchmark]
   end
   A --> B --> C --> D
@@ -47,6 +48,7 @@ flowchart LR
   D --> H --> J
   D --> I
   H --> K
+  H --> P
   D --> L
   K --> N
   N --> O
@@ -58,7 +60,7 @@ flowchart LR
 | **1 — Core stack** | `02_domain_decomposition`, `03_parallel_fft`, `05_simulator`, `12_cahn_hilliard` | `Domain`, HeFFTe FFT, `Simulator`, spectral model |
 | **2 — Wiring** | `10_ui_register_ic`, `11_write_results`, `14_custom_field_initializer`, `diffusion_model_with_custom_initial_condition` | Registration, writers, custom initial conditions |
 | **3 — Fields and space** | `15_finite_difference_heat`, `17_custom_coordinate_system`, `18_sobel_edge_detection` | Halos, coordinate interpretation, stencil-like field operations |
-| **4 — Stepping and tools** | `19_explicit_stepper_fd`, `20_explicit_stepper_spectral`, `21_adaptive_stepping`, `22_external_coupling`, `fft_backend_benchmark`, `profiling_timer_report` | Explicit/adaptive steppers, external coupling, backend comparison, profiling |
+| **4 — Stepping and tools** | `19_explicit_stepper_fd`, `20_explicit_stepper_spectral`, `21_adaptive_stepping`, `22_external_coupling`, `23_halo_microtiming`, `fft_backend_benchmark`, `profiling_timer_report` | Explicit/adaptive steppers, external coupling, halo microtiming, backend comparison, profiling |
 
 Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/01-basics/README.md). Ordered source examples: [`api_examples_walkthrough.md`](api_examples_walkthrough.md).
 
@@ -98,6 +100,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `20_explicit_stepper_spectral` | `20_explicit_stepper_spectral.cpp` | Explicit stepping with spectral operators |
 | `21_adaptive_stepping` | `21_adaptive_stepping.cpp` | Adaptive Bogacki–Shampine 3(2) with `Time` attempt transactions |
 | `22_external_coupling` | `22_external_coupling.cpp` | Mock FEM loop: `FieldHandle` export, `clip_attempt_dt`, FieldModifier-shaped source |
+| `23_halo_microtiming` | `23_halo_microtiming.cpp` | Timed `HaloExchange` loop; schema-v2 JSON (`--cuda` / `--hip` / `--full`) |
 
 ## Sources not built by default
 

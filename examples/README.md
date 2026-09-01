@@ -28,6 +28,7 @@ mpirun -n 4 ./examples/02_domain_decomposition
 mpirun -n 4 ./examples/03_parallel_fft
 mpirun -n 4 ./examples/05_simulator
 mpirun -n 4 ./examples/12_cahn_hilliard
+mpirun -n 2 ./examples/23_halo_microtiming --nx 16 --iters 4 --output /tmp/halo.json
 ```
 
 These cover decomposition, distributed FFT, the simulator stack, and a richer spectral model.

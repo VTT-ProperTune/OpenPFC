@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 # FFT Backend Benchmark (requires MPI)
@@ -119,3 +119,22 @@ target_link_libraries(21_adaptive_stepping PRIVATE OpenPFC ${_heffte_tgt})
 
 add_executable(22_external_coupling 22_external_coupling.cpp)
 target_link_libraries(22_external_coupling PRIVATE OpenPFC ${_heffte_tgt})
+
+add_executable(23_halo_microtiming 23_halo_microtiming.cpp)
+target_link_libraries(23_halo_microtiming PRIVATE OpenPFC nlohmann_json::nlohmann_json
+                                                  ${_heffte_tgt})
+if(OpenPFC_ENABLE_CUDA)
+  target_compile_definitions(23_halo_microtiming PRIVATE OpenPFC_ENABLE_CUDA)
+endif()
+if(OpenPFC_ENABLE_HIP)
+  target_compile_definitions(23_halo_microtiming PRIVATE OpenPFC_ENABLE_HIP)
+endif()
+if(OpenPFC_BUILD_TESTS AND MPIEXEC_EXECUTABLE)
+  add_test(NAME halo-microtiming-host-2rank
+           COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                   $<TARGET_FILE:23_halo_microtiming> --nx 16 --iters 4 --warmup 1
+                   --output ${CMAKE_CURRENT_BINARY_DIR}/halo_microtiming_smoke.json)
+  set_tests_properties(halo-microtiming-host-2rank PROPERTIES
+                       ENVIRONMENT
+                       "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+endif()
