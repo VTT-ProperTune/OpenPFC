@@ -1,0 +1,1155 @@
+{
+  "frame_metric_names": [
+    "step",
+    "mpi_rank",
+    "wall_step",
+    "rss_bytes",
+    "model_heap_bytes",
+    "heap_secondary_bytes"
+  ],
+  "n_mpi_ranks": 1,
+  "openpfc_version": "0.2.0",
+  "ranks": [
+    {
+      "frames": [
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              }
+            }
+          },
+          "scalars": [
+            1.0,
+            0.0,
+            0.10672126100000012,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              }
+            }
+          },
+          "scalars": [
+            2.0,
+            0.0,
+            0.0010092329999999983,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              }
+            }
+          },
+          "scalars": [
+            3.0,
+            0.0,
+            0.0010791079999998843,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              }
+            }
+          },
+          "scalars": [
+            4.0,
+            0.0,
+            0.0010780509999999133,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              }
+            }
+          },
+          "scalars": [
+            5.0,
+            0.0,
+            0.0010864309999996102,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              }
+            }
+          },
+          "scalars": [
+            6.0,
+            0.0,
+            0.0010772069999998024,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              }
+            }
+          },
+          "scalars": [
+            7.0,
+            0.0,
+            0.0010784230000000505,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              }
+            }
+          },
+          "scalars": [
+            8.0,
+            0.0,
+            0.0011004690000002704,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              }
+            }
+          },
+          "scalars": [
+            9.0,
+            0.0,
+            0.0014232269999996383,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              }
+            }
+          },
+          "scalars": [
+            10.0,
+            0.0,
+            0.0019562039999998504,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              }
+            }
+          },
+          "scalars": [
+            11.0,
+            0.0,
+            0.002220549000000016,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              }
+            }
+          },
+          "scalars": [
+            12.0,
+            0.0,
+            0.0019252870000001643,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              }
+            }
+          },
+          "scalars": [
+            13.0,
+            0.0,
+            0.0019586650000000816,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              }
+            }
+          },
+          "scalars": [
+            14.0,
+            0.0,
+            0.0019308310000001327,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              }
+            }
+          },
+          "scalars": [
+            15.0,
+            0.0,
+            0.001968213000000052,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              }
+            }
+          },
+          "scalars": [
+            16.0,
+            0.0,
+            0.0019519749999998837,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              }
+            }
+          },
+          "scalars": [
+            17.0,
+            0.0,
+            0.0019664090000000023,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              }
+            }
+          },
+          "scalars": [
+            18.0,
+            0.0,
+            0.00168737299999977,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              }
+            }
+          },
+          "scalars": [
+            19.0,
+            0.0,
+            0.001049910999999959,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "exclusive": 0.0,
+                "forward": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                },
+                "inclusive": 0.0,
+                "multiply": {
+                  "exclusive": 0.0,
+                  "inclusive": 0.0
+                }
+              }
+            }
+          },
+          "scalars": [
+            20.0,
+            0.0,
+            0.0010745140000003595,
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "mpi_rank": 0,
+      "n_frames": 20
+    }
+  ],
+  "region_paths": [
+    "communication",
+    "fft",
+    "gradient",
+    "gradient/evolve",
+    "gradient/evolve/backward",
+    "gradient/evolve/forward",
+    "gradient/evolve/multiply",
+    "gradient/mean_field",
+    "gradient/mean_field/backward",
+    "gradient/mean_field/forward",
+    "gradient/mean_field/multiply"
+  ],
+  "schema_version": 2,
+  "total_frames": 20
+}

@@ -37,12 +37,24 @@ within a stated numeric tolerance, per backend).
 
 ## Performance baselines (☐ — capture on the reference machines)
 
-Capture machine-tagged JSON via the profiling schema-v2 exporter into
+Capture machine-tagged JSON via the profiling schema-v2/v3 exporter into
 `tests/baselines/perf/` and compare with `scripts/compare_perf_baseline.py`
-(pass/warn >5% / fail >15%):
+(pass ≤5% regression / warn >5% / fail >15%; speedups pass):
 
-- ☐ Tungsten strong scaling, CPU, 1/4/16 ranks (tohtori)
-- ☐ Tungsten CUDA single node (tohtori GPU)
+```
+python3 scripts/compare_perf_baseline.py \
+  tests/baselines/perf/<baseline>.json path/to/new_profile.json
+```
+
+Canary input: `tests/baselines/perf/inputs/tungsten_canary.json` (64³, 20 steps,
+`saveat=-1`, profiling JSON). Capture on tohtori with `tungsten` / `tungsten_cuda`
+from a Release or Debug tree; copy the exported `*.json` next to this file with a
+machine tag in the name (`tohtori-g0005-tungsten-cuda-1rank.json`).
+
+- ☐ Tungsten strong scaling, CPU, 1/4/16 ranks (tohtori; 1-rank Debug canary exists)
+- ☑ Tungsten CUDA 1-rank Debug canary (tohtori `g0005`, 64³ / 20 steps, `tungsten_cuda`, 2026-09-01): `tests/baselines/perf/tohtori-g0005-tungsten-cuda-1rank-debug-canary.json`. Compare with `--warmup-frames=1` (first step includes CUDA context setup). This is a plumbing pin, not a production scaling number.
+- ☑ Tungsten CPU 1-rank Debug canary (same grid/steps, `tungsten`): `tests/baselines/perf/tohtori-g0005-tungsten-cpu-1rank-debug-canary.json`.
+- ☐ Tungsten CUDA single node Release (tohtori GPU)
 - ☐ Kobayashi HIP single node (LUMI)
 - ☐ Halo-exchange microtimings, host and device, 2–8 ranks
 
