@@ -48,7 +48,7 @@
  *
  * @see kernel/decomposition/halo_face_layout.hpp for `make_structured_halos`,
  *      `copy_to_face_layout`, `allocate_face_halos`.
- * @see kernel/decomposition/padded_halo_exchange.hpp for the classical
+ * @see kernel/decomposition/comm_halo_exchange.hpp for the classical
  *      halo exchanger alternative.
  * @see docs/concepts/halo_exchange.md for "which exchanger when".
  */

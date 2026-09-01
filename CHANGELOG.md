@@ -23,6 +23,7 @@ source compatibility is explicitly not a goal.
 - Host Faces `HaloExchange::exchange()` / `finish()` posts every bound field, then one `MPI_Waitall`. Full stays sequential (each axis pass must complete before the next). Persistent stays per-field `exchange_halos()` (self-wrap persistent is MPI-implementation-sensitive on this Open MPI). 4-rank multi-field batch still equals two singles.
 - `make_structured_halos` and device `SparseExchange` copy already-sorted host indices into the target `SparseVector` instead of `get_index` plus a second sort.
 - Unused vendor thin includes `runtime/{cuda,hip}/padded_device_halo_exchange.hpp` and `full_padded_device_halo.hpp` are deleted. Device Faces/Full live in `runtime/gpu/`.
+- Host Faces MPI (`HostFacesHalo`) is inlined into `comm_halo_exchange.hpp`. `padded_halo_exchange.hpp` is deleted.
 - Device Faces `HaloExchange::exchange()` posts every bound field, one `MPI_Waitall`, then unpacks. Full stays sequential. CUDA 1-rank two-field wrap and 2-rank batch-equals-singles in `test_comm_halo_exchange_gpu.cpp`.
 
 ### Added

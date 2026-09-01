@@ -20,7 +20,7 @@
  * derived-type path; `*_FORCE_PACKED_HALO=1` host-stages.
  *
  * @see comm_halo_exchange_gpu.hpp
- * @see kernel/decomposition/padded_halo_exchange.hpp (host Faces)
+ * @see kernel/decomposition/comm_halo_exchange.hpp (host Faces)
  */
 
 #if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
