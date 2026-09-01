@@ -34,6 +34,7 @@
 #ifndef PFC_INITIAL_CONDITIONS_SEED_GRID_HPP
 #define PFC_INITIAL_CONDITIONS_SEED_GRID_HPP
 
+#include <numbers>
 #include <random>
 #include <sstream>
 
@@ -107,7 +108,7 @@ public:
     const double Z0 = Dz / 2.0;
     std::mt19937_64 re(42);
     std::uniform_real_distribution<double> rt(-0.2 * radius, 0.2 * radius);
-    std::uniform_real_distribution<double> rr(0.0, 8.0 * atan(1.0));
+    std::uniform_real_distribution<double> rr(0.0, 2.0 * std::numbers::pi);
 
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nz; k++) {
@@ -120,16 +121,15 @@ public:
       }
     }
 
-    pfc::field::apply(pfc::get_real_field(m, get_field_name()),
-                      pfc::get_world(m), pfc::get_fft(m),
-                      [seeds](const pfc::Real3 &X) {
-      for (const auto &seed : seeds) {
-        if (seed.is_inside(X)) {
-          return seed.get_value(X);
-        }
-      }
-      return 0.0; // Outside all seeds
-    });
+    pfc::field::apply(pfc::get_real_field(m, get_field_name()), pfc::get_world(m),
+                      pfc::get_fft(m), [seeds](const pfc::Real3 &X) {
+                        for (const auto &seed : seeds) {
+                          if (seed.is_inside(X)) {
+                            return seed.get_value(X);
+                          }
+                        }
+                        return 0.0; // Outside all seeds
+                      });
   }
 };
 

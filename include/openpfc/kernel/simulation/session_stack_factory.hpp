@@ -26,16 +26,20 @@
 #include <openpfc/kernel/simulation/session_selection.hpp>
 #include <openpfc/kernel/simulation/stacks/fd_cpu_stack.hpp>
 #include <openpfc/kernel/simulation/stacks/fd_padded_cpu_stack.hpp>
+#ifdef OpenPFC_ENABLE_HEFFTE
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
+#endif
 
 namespace pfc::sim {
 
+#ifdef OpenPFC_ENABLE_HEFFTE
 [[nodiscard]] inline stacks::SpectralCPUStack
 make_spectral_cpu_stack(const SessionSelection &s, pfc::Domain domain, int rank,
                         int nproc, MPI_Comm comm = MPI_COMM_WORLD) {
   require_session_for_stack(s, SimulationMethod::Spectral, SimulationBackend::Cpu);
   return stacks::SpectralCPUStack(std::move(domain), rank, nproc, comm);
 }
+#endif
 
 [[nodiscard]] inline stacks::FDCPUStack
 make_fd_cpu_stack(const SessionSelection &s, pfc::Domain domain, int rank, int nproc,
@@ -54,6 +58,7 @@ make_fd_padded_cpu_stack(const SessionSelection &s, pfc::Domain domain, int rank
                                   comm, opt);
 }
 
+#ifdef OpenPFC_ENABLE_HEFFTE
 template <> struct stack_builder<stacks::SpectralCPUStack> {
   static constexpr const char *name = "SpectralCPUStack";
   [[nodiscard]] static stacks::SpectralCPUStack make(const SessionSelection &s,
@@ -62,6 +67,7 @@ template <> struct stack_builder<stacks::SpectralCPUStack> {
     return make_spectral_cpu_stack(s, std::move(domain), rank, nproc, comm);
   }
 };
+#endif
 
 template <> struct stack_builder<stacks::FDCPUStack> {
   static constexpr const char *name = "FDCPUStack";

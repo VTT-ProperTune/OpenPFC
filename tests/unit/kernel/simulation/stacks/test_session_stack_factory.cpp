@@ -25,6 +25,7 @@ pfc::Domain tiny_domain() {
 
 } // namespace
 
+#ifdef OpenPFC_ENABLE_HEFFTE
 TEST_CASE("make_spectral_cpu_stack from default SessionSelection",
           "[session_stack_factory][unit]") {
   SessionSelection s{};
@@ -34,6 +35,7 @@ TEST_CASE("make_spectral_cpu_stack from default SessionSelection",
   REQUIRE(stack.fft().size_inbox() > 0);
   REQUIRE(std::string(pfc::sim::intended_stack_name(s)) == "SpectralCPUStack");
 }
+#endif
 
 TEST_CASE("make_fd_cpu_stack uses fd_order for halo width",
           "[session_stack_factory][unit]") {
@@ -50,6 +52,7 @@ TEST_CASE("make_fd_padded_cpu_stack uses fd_order/2 storage halo",
   REQUIRE(stack.halo_width() == 3);
 }
 
+#ifdef OpenPFC_ENABLE_HEFFTE
 TEST_CASE("CPU stack factory rejects a mismatched method",
           "[session_stack_factory][unit]") {
   SessionSelection fd{SimulationMethod::Fd, SimulationBackend::Cpu, 2};
@@ -68,6 +71,7 @@ TEST_CASE("CPU stack factory rejects cuda SessionSelection",
   REQUIRE_THROWS_AS(pfc::sim::make_spectral_cpu_stack(cuda, tiny_domain(), 0, 1),
                     std::invalid_argument);
 }
+#endif
 
 TEST_CASE("require_session_for_stack rejects odd fd_order",
           "[session_stack_factory][unit]") {

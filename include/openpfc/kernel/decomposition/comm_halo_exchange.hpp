@@ -859,7 +859,8 @@ public:
                             comm, field_ptr, dirs, base_tag, selector) {}
 
   // Main Box3i+Domain constructor implementation
-  HostPersistentFaces(const Box3i &subdomain_box, const Domain &domain,
+  HostPersistentFaces(const Box3i &subdomain_box,
+                      [[maybe_unused]] const Domain &domain,
                       const decomposition::Decomposition &decomp, int rank,
                       int halo_width, MPI_Comm comm, T *field_ptr,
                       halo::HaloDirectionSet dirs = halo::presets::Axes3D(),
@@ -870,7 +871,7 @@ public:
       halo::validate_neighbour_direction_agreement(comm, decomp, rank, m_dirs);
     }
 
-    auto patterns = halo::create_halo_patterns<backend::CPUTag>(
+    [[maybe_unused]] auto patterns = halo::create_halo_patterns<backend::CPUTag>(
         decomp, rank, halo::Connectivity::Faces, halo_width);
 
     auto local_size = subdomain_box.size;

@@ -33,6 +33,7 @@
 #ifndef PFC_INITIAL_CONDITIONS_RANDOM_SEEDS_HPP
 #define PFC_INITIAL_CONDITIONS_RANDOM_SEEDS_HPP
 
+#include <numbers>
 #include <random>
 
 #include <openpfc/kernel/field/operations.hpp>
@@ -68,7 +69,7 @@ public:
     std::uniform_real_distribution<double> rx(lower_x, upper_x);
     std::uniform_real_distribution<double> ry(lower_y, upper_y);
     std::uniform_real_distribution<double> rz(lower_z, upper_z);
-    std::uniform_real_distribution<double> ro(0.0, 8.0 * atan(1.0));
+    std::uniform_real_distribution<double> ro(0.0, 2.0 * std::numbers::pi);
     using vec3 = std::array<double, 3>;
     auto random_location = [&re, &rx, &ry, &rz]() {
       return vec3({rx(re), ry(re), rz(re)});
@@ -84,16 +85,15 @@ public:
       seeds.push_back(seed);
     }
 
-    pfc::field::apply(pfc::get_real_field(m, get_field_name()),
-                      pfc::get_world(m), pfc::get_fft(m),
-                      [seeds](const pfc::Real3 &X) {
-      for (const auto &seed : seeds) {
-        if (seed.is_inside(X)) {
-          return seed.get_value(X);
-        }
-      }
-      return 0.0; // Outside seeds
-    });
+    pfc::field::apply(pfc::get_real_field(m, get_field_name()), pfc::get_world(m),
+                      pfc::get_fft(m), [seeds](const pfc::Real3 &X) {
+                        for (const auto &seed : seeds) {
+                          if (seed.is_inside(X)) {
+                            return seed.get_value(X);
+                          }
+                        }
+                        return 0.0; // Outside seeds
+                      });
   }
 };
 
