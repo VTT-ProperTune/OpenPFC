@@ -74,8 +74,7 @@
  * @see runtime/gpu/full_padded_device_halo_gpu.hpp for the device corner-filled
  *      halo policy required by `apply_separable` / `apply_dense` cases that
  *      span more than one axis.
- * @see full_padded_halo_exchange.hpp for the host twin
- *      (`pfc::communication::FullPaddedHaloExchanger`).
+ * @see comm_halo_exchange.hpp for host Full (`HaloConnectivity::Full`).
  */
 
 #include <cstddef>
@@ -170,7 +169,7 @@ inline T apply_1d_along(const T *coeffs, int half_width, const T *core,
  *
  * **Halo requirement**: the union of stencil supports along non-trivial
  * axes generally extends into corner halos. Use a corner-filled exchanger
- * (`pfc::communication::FullPaddedHaloExchanger` on the host, or
+ * (`pfc::comm::HaloExchange` Full on the host, or
  * `pfc::cuda::FullPaddedDeviceHalo` on the GPU) before iterating;
  * `pfc::comm::HaloExchange` Faces (axis-aligned only) is **not** sufficient
  * when more than one of `Hi` is non-zero.

@@ -311,7 +311,7 @@ private:
                       !pfc::field::has_yz<G>,
                   "FDGradient: mixed second derivatives (xy/xz/yz) need "
                   "corner-filled halos. Host 26-fill exists via "
-                  "`pfc::communication::FullPaddedHaloExchanger`, but "
+                  "`pfc::comm::HaloExchange` Full, but "
                   "FDGradient still rejects has_xy/has_xz/has_yz until a "
                   "follow-up enables those members after Catch2 proves "
                   "corners. Use `SpectralGradient<G>` or the GPU path "

@@ -52,7 +52,7 @@
  * for pure-axis stencils by iterating over `[hw, n - hw)` after a halo
  * exchange with `halo_width >= half_width`. Mixed-second tensor
  * products additionally need **corner-filled** halos --
- * `pfc::communication::FullPaddedHaloExchanger` on the host and
+ * `pfc::comm::HaloExchange` Full on the host and
  * `pfc::cuda::FullPaddedDeviceHalo` on the GPU. Enabling the
  * mixed-second evaluator path (`Mi = 1` / `FDGradient` `xy/xz/yz`)
  * remains a follow-up after corners are proven.
@@ -280,7 +280,7 @@ struct IdentityStencil1d {
  * @pre Every load `core[c + a*sx + b*sy + c*sz]` for
  *      `(a,b,c) in [-Hx,Hx] x [-Hy,Hy] x [-Hz,Hz]` is in-bounds. For
  *      mixed-second cases (>= 2 non-zero `Mi`), this requires
- *      **corner-filled** halos — `pfc::communication::FullPaddedHaloExchanger`
+ *      **corner-filled** halos — `pfc::comm::HaloExchange` Full
  *      on the host and `pfc::cuda::FullPaddedDeviceHalo` on the GPU.
  *      Enabling the mixed-second evaluator path (`Mi = 1` /
  *      `FDGradient` `xy/xz/yz`) remains a follow-up after corners are

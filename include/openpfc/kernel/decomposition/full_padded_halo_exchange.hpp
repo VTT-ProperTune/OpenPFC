@@ -5,37 +5,15 @@
 
 /**
  * @file full_padded_halo_exchange.hpp
- * @brief Full **26-direction** host halo exchange (faces + edges + corners)
- *        for a padded buffer.
+ * @brief Internal Full (26-direction) backend for `pfc::comm::HaloExchange`.
  *
  * @details
- * Host Faces `HaloExchange` performs a **single-pass 6-face**
- * exchange. After it returns, only the **6 axis-aligned face halos** are
- * populated — corners and edges are left untouched. That is sufficient for
- * 7-point Laplacians and other axis-aligned stencils.
+ * Not a public API. Callers bind a padded `pfc::data::Field` through
+ * `pfc::comm::HaloExchange` with `HaloConnectivity::Full`. This header
+ * owns the 3-pass widening host path (faces + edges + corners).
  *
- * It is **not** sufficient for stencils that read diagonal neighbours
- * `(i±1, j±1, k)` or `(i±1, j±1, k±1)` — i.e. anything that needs the
- * **mixed second derivatives** `u_xy`, `u_xz`, `u_yz`.
- *
- * `FullPaddedHaloExchanger` populates **all 26 neighbour halo cells** in 3
- * **widening passes** along the canonical X → Y → Z axis order. After it
- * returns, every cell of the halo ring `[-hw, 0)` and `[n, n+hw)` on every
- * axis (faces, edges, corners) carries the periodic-equivalent value of the
- * corresponding interior cell on the appropriate neighbour rank.
- *
- * This is the host twin of `pfc::cuda::FullPaddedDeviceHalo` (same slab
- * geometry and tag/slot conventions). Kernel headers must not include the
- * CUDA runtime header; the algorithm is duplicated here for G3 layering.
- *
- * **Per-axis self-handling:** if the process grid has extent **1** along
- * axis `a`, the ±a neighbours are the **same MPI rank**. Those passes use
- * a **host pack/unpack** of the widened slabs instead of MPI send/recv to
- * self. The periodic direction is correct: the source slab for the +a halo
- * is the rank's **first** `hw` owned cells along `a`.
- *
- * @see padded_halo_exchange.hpp — single-pass 6-face host exchanger
- * @see runtime/gpu/full_padded_device_halo_gpu.hpp — device twin (CUDA/HIP)
+ * @see comm_halo_exchange.hpp
+ * @see runtime/gpu/full_padded_device_halo_gpu.hpp — device twin
  */
 
 #include <array>
@@ -58,9 +36,7 @@
 #include <openpfc/kernel/profiling/context.hpp>
 #include <openpfc/kernel/profiling/names.hpp>
 
-namespace pfc::communication {
-
-namespace detail {
+namespace pfc::comm::detail {
 
 /// Private slab POD (mirrors CUDA `FaceSlabSpec`; not vendored from runtime).
 struct FullPaddedSlabSpec {
@@ -72,8 +48,6 @@ struct FullPaddedSlabSpec {
   int sz = 0;
 };
 
-} // namespace detail
-
 /**
  * @brief 26-direction host halo exchanger for a padded buffer.
  *
@@ -84,7 +58,7 @@ struct FullPaddedSlabSpec {
  * Non-copyable; use `exchange_halos(buf, size)` to perform exchanges on
  * user-provided buffers.
  */
-template <typename T = double> class FullPaddedHaloExchanger {
+template <typename T = double> class HostFullHalo {
 public:
   using Int3 = pfc::types::Int3;
 
@@ -101,12 +75,12 @@ public:
    * @param comm          MPI communicator for the exchange.
    * @param base_tag      Starting MPI tag (uses `[base, base + 6)`).
    */
-  FullPaddedHaloExchanger(const Box3i &subdomain_box, const Domain &domain,
-                          const decomposition::Decomposition &decomp, int rank,
-                          int halo_width, MPI_Comm comm, int base_tag = 0)
-      : FullPaddedHaloExchanger(subdomain_box, domain, decomp, rank, halo_width,
-                                comm, halo::presets::Full3D(), base_tag,
-                                halo::HaloDirectionSelector{}) {}
+  HostFullHalo(const Box3i &subdomain_box, const Domain &domain,
+               const decomposition::Decomposition &decomp, int rank, int halo_width,
+               MPI_Comm comm, int base_tag = 0)
+      : HostFullHalo(subdomain_box, domain, decomp, rank, halo_width, comm,
+                     halo::presets::Full3D(), base_tag,
+                     halo::HaloDirectionSelector{}) {}
 
   /**
    * @brief Construct with the historical 26-direction default (`Full3D()`).
@@ -120,12 +94,11 @@ public:
    * @deprecated Use explicit Box3i + Domain constructor instead.
    */
   [[deprecated("Use explicit Box3i + Domain constructor: "
-               "FullPaddedHaloExchanger(box, domain, rank, ...)")]]
-  FullPaddedHaloExchanger(const decomposition::Decomposition &decomp, int rank,
-                          int halo_width, MPI_Comm comm, int base_tag = 0)
-      : FullPaddedHaloExchanger(decomp, rank, halo_width, comm,
-                                halo::presets::Full3D(), base_tag,
-                                halo::HaloDirectionSelector{}) {}
+               "HostFullHalo(box, domain, rank, ...)")]]
+  HostFullHalo(const decomposition::Decomposition &decomp, int rank, int halo_width,
+               MPI_Comm comm, int base_tag = 0)
+      : HostFullHalo(decomp, rank, halo_width, comm, halo::presets::Full3D(),
+                     base_tag, halo::HaloDirectionSelector{}) {}
 
   /**
    * @brief Construct with a user-selected halo direction set.
@@ -145,28 +118,26 @@ public:
    * @deprecated Use explicit Box3i + Domain constructor instead.
    */
   [[deprecated("Use explicit Box3i + Domain constructor: "
-               "FullPaddedHaloExchanger(box, domain, rank, ...)")]]
-  FullPaddedHaloExchanger(const decomposition::Decomposition &decomp, int rank,
-                          int halo_width, MPI_Comm comm, halo::HaloDirectionSet dirs,
-                          int base_tag = 0,
-                          halo::HaloDirectionSelector selector = {})
-      : FullPaddedHaloExchanger(decomposition::local_box(decomp, rank),
-                                decomposition::domain(decomp), decomp, rank,
-                                halo_width, comm, dirs, base_tag, selector) {}
+               "HostFullHalo(box, domain, rank, ...)")]]
+  HostFullHalo(const decomposition::Decomposition &decomp, int rank, int halo_width,
+               MPI_Comm comm, halo::HaloDirectionSet dirs, int base_tag = 0,
+               halo::HaloDirectionSelector selector = {})
+      : HostFullHalo(decomposition::local_box(decomp, rank),
+                     decomposition::domain(decomp), decomp, rank, halo_width, comm,
+                     dirs, base_tag, selector) {}
 
   // Box3i + Domain constructor implementation
-  FullPaddedHaloExchanger(const Box3i &subdomain_box, const Domain &domain,
-                          const decomposition::Decomposition &decomp, int rank,
-                          int halo_width, MPI_Comm comm, halo::HaloDirectionSet dirs,
-                          int base_tag = 0,
-                          halo::HaloDirectionSelector selector = {})
+  HostFullHalo(const Box3i &subdomain_box, const Domain &domain,
+               const decomposition::Decomposition &decomp, int rank, int halo_width,
+               MPI_Comm comm, halo::HaloDirectionSet dirs, int base_tag = 0,
+               halo::HaloDirectionSelector selector = {})
       : m_subdomain_box(subdomain_box), m_domain(domain), m_rank(rank),
         m_halo_width(halo_width), m_comm(comm), m_base_tag(base_tag),
         m_dirs(halo::resolve_direction_set(dirs, selector, rank)),
         m_use_decomp(false) {
     if (halo_width < 1) {
       throw std::invalid_argument(
-          "FullPaddedHaloExchanger: halo_width must be >= 1");
+          "pfc::comm::detail::HostFullHalo: halo_width must be >= 1");
     }
 
     // Extract local size from explicit Box3i bounds
@@ -238,8 +209,8 @@ public:
     m_requests.assign(4, MPI_REQUEST_NULL);
   }
 
-  FullPaddedHaloExchanger(const FullPaddedHaloExchanger &) = delete;
-  FullPaddedHaloExchanger &operator=(const FullPaddedHaloExchanger &) = delete;
+  HostFullHalo(const HostFullHalo &) = delete;
+  HostFullHalo &operator=(const HostFullHalo &) = delete;
 
   /**
    * @brief Blocking 3-pass exchange on an explicit padded buffer.
@@ -272,7 +243,7 @@ public:
   }
 
 private:
-  using SlabSpec = detail::FullPaddedSlabSpec;
+  using SlabSpec = FullPaddedSlabSpec;
   using FaceTypes = halo::FaceTypes;
 
   static int opposite_face_slot_(int slot) noexcept { return slot ^ 1; }
@@ -362,7 +333,7 @@ private:
   void run_self_pass_(int axis, T *padded_buf) {
     if (m_scratch.empty()) {
       throw std::runtime_error(
-          "FullPaddedHaloExchanger: self-axis pass needs host scratch");
+          "pfc::comm::detail::HostFullHalo: self-axis pass needs host scratch");
     }
     for (int f = 0; f < 2; ++f) {
       const auto &send = m_slabs[axis][f].first;
@@ -423,8 +394,4 @@ private:
   std::vector<T> m_scratch;
 };
 
-} // namespace pfc::communication
-
-namespace pfc {
-using communication::FullPaddedHaloExchanger;
-} // namespace pfc
+} // namespace pfc::comm::detail

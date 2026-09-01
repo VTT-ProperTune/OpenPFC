@@ -13,9 +13,8 @@
  * persistent requests, and multi-field tag blocks from `halo_geometry.hpp`.
  *
  * The host specialization composes the Faces backend (`HostFacesHalo`),
- * `FullPaddedHaloExchanger`, and `PersistentHaloExchanger` so Full and
- * persistent modes still share those implementations until they are
- * inlined.
+ * the Full backend (`HostFullHalo`), and `PersistentHaloExchanger` so
+ * persistent mode still shares that implementation until it is inlined.
  * Device `HaloExchange<CUDASpace/HIPSpace>` lives in
  * `runtime/gpu/comm_halo_exchange_gpu.hpp`. CUDA execution of that half is
  * not available on LUMI.
@@ -137,7 +136,7 @@ public:
             f->box(), f->domain(), decomp, rank, f->storage_halo(), comm, f->data(),
             dirs, tag0));
       } else if (m_opt.connectivity == HaloConnectivity::Full) {
-        m_full.push_back(std::make_unique<communication::FullPaddedHaloExchanger<T>>(
+        m_full.push_back(std::make_unique<detail::HostFullHalo<T>>(
             f->box(), f->domain(), decomp, rank, f->storage_halo(), comm, dirs,
             tag0));
       } else {
@@ -217,7 +216,7 @@ private:
   HaloExchangeOptions m_opt{};
   std::vector<FieldT *> m_fields;
   std::vector<std::unique_ptr<detail::HostFacesHalo<T>>> m_faces;
-  std::vector<std::unique_ptr<communication::FullPaddedHaloExchanger<T>>> m_full;
+  std::vector<std::unique_ptr<detail::HostFullHalo<T>>> m_full;
   std::vector<std::unique_ptr<PersistentHaloExchanger<T>>> m_persist;
 };
 
