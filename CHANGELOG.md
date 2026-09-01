@@ -31,6 +31,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- `scripts/build.sh --no-heffte` configures an FD-only / kernel-only tree (`-DOpenPFC_ENABLE_HEFFTE=OFF`).
 - `scripts/compare_perf_baseline.py` compares profiling JSON (schema v2/v3) `wall_step` means against a stored baseline (pass ≤5% regression, warn >5%, fail >15%). Canary input: `tests/baselines/perf/inputs/tungsten_canary.json`.
 - Tungsten CUDA Release 256³/20-step perf JSON on tohtori `g0005`: 1-rank and 8-rank (`tests/baselines/perf/tohtori-g0005-tungsten-cuda-*-release-256.json`). Input: `tests/baselines/perf/inputs/tungsten_release_256.json`. Compare with `--warmup-frames=1`.
 - Tungsten CPU Release 64³/20-step strong-scaling JSON on tohtori `g0005`: 1/4/16 ranks (`tests/baselines/perf/tohtori-g0005-tungsten-cpu-*-release-64.json`). Compare with `--warmup-frames=1`.

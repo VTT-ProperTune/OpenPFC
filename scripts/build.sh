@@ -21,6 +21,7 @@ BUILD_DIR="${BUILD_DIR:-}"
 ADD_TIMESTAMP="${ADD_TIMESTAMP:-0}"
 WITH_CUDA="${WITH_CUDA:-0}"
 WITH_ROCM="${WITH_ROCM:-0}"
+ENABLE_HEFFTE="${ENABLE_HEFFTE:-1}"
 BACKEND_EXPLICIT=0
 RUN_TESTS="${RUN_TESTS:-1}"
 RUN_MPI_TESTS="${RUN_MPI_TESTS:-1}"
@@ -91,6 +92,8 @@ Options:
   --with-cuda             Enable CUDA (Tohtori only; not available on LUMI)
   --with-rocm             Enable HIP/ROCm (LUMI default)
   --cpu                   Disable CUDA and ROCm
+  --no-heffte             FD-only / kernel-only: -DOpenPFC_ENABLE_HEFFTE=OFF
+                          (no HeFFTe find; skip spectral apps/examples/tests/)
   --test                  Run Python tests and CTest after building (default)
   --no-test               Configure and build without running tests
   --mpi-tests             Register the 2-, 3-, and 4-rank MPI suites (default)
@@ -109,7 +112,7 @@ Options:
 
 Environment variables mirror the CLI:
   MACHINE, BUILD_TYPE, BUILD_DIR, ADD_TIMESTAMP, WITH_CUDA, WITH_ROCM,
-  RUN_TESTS, RUN_MPI_TESTS, JOBS, CLEAN_BUILD, SUBMIT,
+  ENABLE_HEFFTE, RUN_TESTS, RUN_MPI_TESTS, JOBS, CLEAN_BUILD, SUBMIT,
   LUMI_ACCOUNT, LUMI_PARTITION, LUMI_GPUS, LUMI_TIME, LUMI_STACK,
   HEFFTE_MODULE, HEFFTE_PREFIX
 
@@ -149,6 +152,7 @@ Examples:
   ./scripts/build.sh
   ./scripts/build.sh --build-type=Debug --with-timestamp
   ./scripts/build.sh --machine=tohtori --with-cuda --with-timestamp --test
+  ./scripts/build.sh --cpu --no-heffte --build-type=Debug --no-test
   ./scripts/build.sh --machine=lumi --with-rocm
   ./scripts/build.sh --machine=lumi --partition=standard-g --wait
   WITH_ROCM=1 ADD_TIMESTAMP=1 JOBS=32 ./scripts/build.sh
@@ -215,6 +219,7 @@ while [[ $# -gt 0 ]]; do
     --with-cuda) WITH_CUDA=1; WITH_ROCM=0; BACKEND_EXPLICIT=1 ;;
     --with-rocm) WITH_ROCM=1; WITH_CUDA=0; BACKEND_EXPLICIT=1 ;;
     --cpu) WITH_CUDA=0; WITH_ROCM=0; BACKEND_EXPLICIT=1 ;;
+    --no-heffte) ENABLE_HEFFTE=0 ;;
     --test) RUN_TESTS=1 ;;
     --no-test) RUN_TESTS=0 ;;
     --mpi-tests) RUN_MPI_TESTS=1 ;;
@@ -263,6 +268,7 @@ done
 ADD_TIMESTAMP="$(as_bool "${ADD_TIMESTAMP}")"
 WITH_CUDA="$(as_bool "${WITH_CUDA}")"
 WITH_ROCM="$(as_bool "${WITH_ROCM}")"
+ENABLE_HEFFTE="$(as_bool "${ENABLE_HEFFTE}")"
 RUN_TESTS="$(as_bool "${RUN_TESTS}")"
 RUN_MPI_TESTS="$(as_bool "${RUN_MPI_TESTS}")"
 CLEAN_BUILD="$(as_bool "${CLEAN_BUILD}")"
@@ -360,11 +366,17 @@ elif (( WITH_ROCM )); then
   fi
 fi
 
+if (( ! ENABLE_HEFFTE )); then
+  HEFFTE_MODULE=""
+fi
+
 if [[ -z "${BUILD_DIR}" ]]; then
   if [[ "${MACHINE}" == "lumi" ]]; then
     BUILD_DIR="${LUMI_FLASH_ROOT}/openpfc-lumi-${BACKEND}-${BUILD_FLAVOR}"
-  else
+  elif (( ENABLE_HEFFTE )); then
     BUILD_DIR="builds/${BUILD_FLAVOR}"
+  else
+    BUILD_DIR="builds/fd-only-${BUILD_FLAVOR}"
   fi
 fi
 if (( ADD_TIMESTAMP )); then
@@ -595,20 +607,26 @@ fi
 [[ -f "${TOOLCHAIN}" ]] || die "missing toolchain ${TOOLCHAIN}"
 
 HEFFTE_DIR_ENV="${HEFFTE_DIR:-}"
-resolve_heffte_dir
-[[ -n "${HEFFTE_DIR}" ]] ||
-  die "HeFFTe ${BACKEND} package not found (prefix ${HEFFTE_PREFIX}; module '${HEFFTE_MODULE:-none}')"
+if (( ENABLE_HEFFTE )); then
+  resolve_heffte_dir
+  [[ -n "${HEFFTE_DIR}" ]] ||
+    die "HeFFTe ${BACKEND} package not found (prefix ${HEFFTE_PREFIX}; module '${HEFFTE_MODULE:-none}')"
 
-if [[ -z "${HEFFTE_MODULE}" ]]; then
-  # No module loaded to set HeFFTe's runtime LD_LIBRARY_PATH / build-time CPATH
-  # (custom-MPI CUDA path skips the module deliberately, see above) — replicate
-  # both by hand. CPATH matters because some CUDA test targets #include
-  # <heffte.h> directly while only linking `openpfc` (which links Heffte
-  # PRIVATE, so its include dir doesn't propagate via CMake target visibility;
-  # the site heffte module's own CPATH prepend is what actually made that
-  # compile before — see heffte/2.4.1-cuda-openmpi5.lua).
-  export LD_LIBRARY_PATH="${HEFFTE_PREFIX}/lib64:${HEFFTE_PREFIX}/lib:${LD_LIBRARY_PATH:-}"
-  export CPATH="${HEFFTE_PREFIX}/include:${CPATH:-}"
+  if [[ -z "${HEFFTE_MODULE}" ]]; then
+    # No module loaded to set HeFFTe's runtime LD_LIBRARY_PATH / build-time CPATH
+    # (custom-MPI CUDA path skips the module deliberately, see above) — replicate
+    # both by hand. CPATH matters because some CUDA test targets #include
+    # <heffte.h> directly while only linking `openpfc` (which links Heffte
+    # PRIVATE, so its include dir doesn't propagate via CMake target visibility;
+    # the site heffte module's own CPATH prepend is what actually made that
+    # compile before — see heffte/2.4.1-cuda-openmpi5.lua).
+    export LD_LIBRARY_PATH="${HEFFTE_PREFIX}/lib64:${HEFFTE_PREFIX}/lib:${LD_LIBRARY_PATH:-}"
+    export CPATH="${HEFFTE_PREFIX}/include:${CPATH:-}"
+  fi
+  export CMAKE_PREFIX_PATH="${HEFFTE_PREFIX}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
+else
+  HEFFTE_DIR=""
+  echo "OpenPFC_ENABLE_HEFFTE=OFF (FD-only / kernel-only; HeFFTe not required)"
 fi
 
 if (( CLEAN_BUILD )) && [[ -e "${BUILD_DIR}" ]]; then
@@ -616,8 +634,6 @@ if (( CLEAN_BUILD )) && [[ -e "${BUILD_DIR}" ]]; then
   rm -rf "${BUILD_DIR}"
 fi
 mkdir -p "${BUILD_DIR}"
-
-export CMAKE_PREFIX_PATH="${HEFFTE_PREFIX}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
 
 if [[ -z "${CMAKE_GENERATOR}" ]]; then
   if command -v ninja >/dev/null 2>&1; then
@@ -633,18 +649,21 @@ declare -a CMAKE_ARGS=(
   -G "${CMAKE_GENERATOR}"
   -DCMAKE_BUILD_TYPE="${BUILD_TYPE}"
   -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}"
-  -DHeffte_DIR="${HEFFTE_DIR}"
+  -DOpenPFC_ENABLE_HEFFTE=$([[ ${ENABLE_HEFFTE} -eq 1 ]] && echo ON || echo OFF)
   -DOpenPFC_BUILD_TESTS=$([[ ${RUN_TESTS} -eq 1 ]] && echo ON || echo OFF)
   -DOpenPFC_RUN_MPI_SUITES=$([[ ${RUN_MPI_TESTS} -eq 1 ]] && echo ON || echo OFF)
   -DOpenPFC_MPI_TEST_REGISTER_HIGH_RANK_ALWAYS=$([[ ${RUN_MPI_TESTS} -eq 1 ]] && echo ON || echo OFF)
   -DOpenPFC_BUILD_APPS=ON
-  -DOpenPFC_BUILD_EXAMPLES=ON
+  -DOpenPFC_BUILD_EXAMPLES=$([[ ${ENABLE_HEFFTE} -eq 1 ]] && echo ON || echo OFF)
   -DOpenPFC_BUILD_DOCUMENTATION=OFF
   -DOpenPFC_ENABLE_CODE_COVERAGE=OFF
   -DOpenPFC_ENABLE_HDF5=$([[ ${ENABLE_HDF5} -eq 1 ]] && echo ON || echo OFF)
   -DOpenPFC_ENABLE_CUDA=$([[ ${WITH_CUDA} -eq 1 ]] && echo ON || echo OFF)
   -DOpenPFC_ENABLE_HIP=$([[ ${WITH_ROCM} -eq 1 ]] && echo ON || echo OFF)
 )
+if (( ENABLE_HEFFTE )); then
+  CMAKE_ARGS+=("-DHeffte_DIR=${HEFFTE_DIR}")
+fi
 
 if [[ -n "${CUDA_ARCHITECTURES}" ]]; then
   CMAKE_ARGS+=("-DCMAKE_CUDA_ARCHITECTURES=${CUDA_ARCHITECTURES}")
@@ -687,6 +706,7 @@ echo "  build dir:  ${BUILD_DIR}"
 echo "  generator:  ${CMAKE_GENERATOR}"
 echo "  jobs:       ${JOBS}"
 echo "  tests:      $([[ ${RUN_TESTS} -eq 1 ]] && echo enabled || echo disabled)"
+echo "  heffte:     $([[ ${ENABLE_HEFFTE} -eq 1 ]] && echo ON || echo OFF)"
 echo "  MPI suites: $([[ ${RUN_MPI_TESTS} -eq 1 ]] && echo enabled || echo disabled)"
 echo "  compiler:   ${CXX} ($(command -v "${CXX}"))"
 if [[ "${MACHINE}" == "tohtori" ]]; then
