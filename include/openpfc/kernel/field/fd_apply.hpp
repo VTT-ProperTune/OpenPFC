@@ -60,8 +60,8 @@
  * @see fd_stencils.hpp for the stencil tables consumed here
  * @see fd_gradient.hpp for the per-point evaluator that uses these
  *      primitives via the runtime overloads
- * @see full_padded_halo_exchange.hpp for the host corner-filled
- *      26-direction exchanger
+ * @see comm_halo_exchange.hpp for the host corner-filled 26-direction
+ *      exchanger (`HaloConnectivity::Full`)
  * @see runtime/gpu/full_padded_device_halo_gpu.hpp for the device twin
  */
 

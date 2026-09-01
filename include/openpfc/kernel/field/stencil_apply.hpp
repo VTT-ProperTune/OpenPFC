@@ -46,8 +46,8 @@
  * for_each_border` lambdas in `apps/heat3d/src/cpu/heat3d_fd_manual.cpp`
  * achieve this by iterating over `[hw, n - hw)` after a halo exchange of
  * matching width (axis-aligned for `apply_1d_along`; **corner-filled** —
- * see [`full_padded_halo_exchange.hpp`](
- * ../decomposition/full_padded_halo_exchange.hpp) on the host or
+ * see [`comm_halo_exchange.hpp`](
+ * ../decomposition/comm_halo_exchange.hpp) (`HaloConnectivity::Full`) on the host or
  * [`runtime/gpu/full_padded_device_halo_gpu.hpp`](
  * ../runtime/gpu/full_padded_device_halo_gpu.hpp) on device — for any
  * `apply_separable` or `apply_dense` call whose support extends in more

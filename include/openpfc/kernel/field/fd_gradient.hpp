@@ -72,8 +72,9 @@
  * @see openpfc/kernel/simulation/for_each_interior.hpp for the driver loop
  * @see fd_apply.hpp for the per-axis apply primitives
  * @see fd_stencils.hpp for the underlying stencil tables
- * @see full_padded_halo_exchange.hpp for the host 26-direction exchanger
- *      (corners proven; `xy/xz/yz` member enablement is a follow-up)
+ * @see comm_halo_exchange.hpp for the host 26-direction exchanger
+ *      (`HaloConnectivity::Full`; corners proven; `xy/xz/yz` member
+ *      enablement is a follow-up)
  * @see runtime/gpu/full_padded_device_halo_gpu.hpp for the device twin
  */
 
