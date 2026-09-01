@@ -122,9 +122,8 @@ openpfc_gpu_public_definitions(openpfc_kernel_obj)
 openpfc_gpu_public_definitions(openpfc_frontend_obj)
 
 # Shared device-kernel TUs under src/openpfc/runtime/gpu/. CUDA and HIP compile
-# the same basenames with vendor extensions. CUDA padded_halo_faces.cu stays
-# linked per executable (separable-compilation / __cudaRegisterLinkedBinary_*);
-# HIP padded_halo_faces.hip is an extra source on openpfc_hip_kernels.
+# the same basenames with vendor extensions. Both vendors add padded_halo_faces
+# as an extra source (CUDA via CUDA_RESOLVE_DEVICE_SYMBOLS on the archive).
 # openpfc_add_gpu_kernel_library(<tgt> <ext> <runtime_lib> [extra sources...])
 function(openpfc_add_gpu_kernel_library tgt ext runtime_lib)
   add_library(${tgt}
@@ -279,10 +278,10 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
 endif()
 
 # GPU kernel libraries. Shared TUs: sparse_vector_ops, fill, elementwise_ops.
-# CUDA padded_halo_faces.cu stays per-executable (see tests/integration and
-# apps/kobayashi). HIP includes padded_halo_faces.hip in the kernel lib.
+# Both vendors compile padded_halo_faces into the kernel lib (not per executable).
 if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
-    openpfc_add_gpu_kernel_library(openpfc_gpu_kernels cu CUDA::cudart)
+    openpfc_add_gpu_kernel_library(openpfc_gpu_kernels cu CUDA::cudart
+        src/openpfc/runtime/gpu/padded_halo_faces.cu)
     # Pin CUDA language standard: project C++20 would otherwise map to "CUDA20" on
     # some CMake versions that do not know the matching nvcc flags (e.g. CMake 3.22).
     # Device-link the static archive. Without this, nvcc relocatable objects

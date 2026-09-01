@@ -40,9 +40,8 @@ CUDA-gated suites now run here (all passed this session): `GPU_FFT`,
 `CUDA_ObservableReduce`, `CUDA_ETD1Apply`, `CUDA_SparseVector`,
 `CUDA_DeepCopyFill`, `CUDA_TungstenETD`, `tungsten-cpu-vs-cuda-tests`,
 `allen-cahn-cpu-vs-cuda`, `wave2d-cpu-vs-cuda`, `tungsten-golden-4rank`.
-Still open on CUDA: perf JSON baselines, folding `padded_halo_faces.cu` into
-the kernel library, CUDA+HIP co-enabled configure, Kobayashi CUDA hex
-checksums (app-printed, not CTest).
+Still open on CUDA: perf JSON baselines, CUDA+HIP co-enabled configure,
+Kobayashi CUDA hex checksums (app-printed, not CTest).
 
 **Pre-M0 is complete and released** (`v0.1.5` tagged; `CHANGELOG.md`'s `[0.1.5]` section documents every audit §4/§11 fix landing with a regression test, and `master` is on `0.2.0` per `CMakeLists.txt`, with an `OpenPFC_DEVELOPMENT` option supplying the `-dev` suffix). The scientific baseline *framework* exists (`tests/baselines/BASELINES.md`, `tests/packaging/consumer/`, CUDA/HIP compile-only CI jobs), but the actual golden-trajectory **data** (multi-rank tungsten/aluminum captures, perf JSON) is still marked ☐/uncaptured in `BASELINES.md` — this is the one Pre-M0 gap that could still bite M3+.
 
@@ -52,7 +51,7 @@ checksums (app-printed, not CTest).
 
 **M2 (canonical field/view/state) is done on the container axis.** `pfc::data::Field<T, MemorySpace>` lives in `kernel/data/grid_field.hpp` (not the path the original task named). `LocalField`, `PaddedBrick`, `DiscreteField`, `Array`, functional `field::Field<T>`, `MultiIndex`, and `legacy_adapter.hpp` are **deleted**. `ScaledField` wraps `FieldView`. `SimulationState` exists and is not wired to `ModelFieldRegistry` (M12). `kernel/data` no longer includes decomposition/fft. Type names survive only in comments. `ModelFieldRegistry` and Gen‑1 `World` in `operations.hpp` stay until later milestones.
 
-**M3 (single-source GPU runtime) code work is substantially complete.** `include/openpfc/runtime/gpu/` is the implementation; `runtime/cuda/` and `runtime/hip/` are thin includes / namespace re-exports + FFT alias headers (FFT honesty is M5); Kokkos facsimile above `DataBuffer` is deleted; device TUs and `.inc` files live under `src/openpfc/runtime/gpu/`; HIP twins exist for FFT, Laplacian, multi-field device, FullPadded halo; `scripts/check_gpu_memcpy_single_source.sh` is CI-enforced. CUDA execution on Tohtori `g0005` is green (see status above). Remaining M3 items: perf JSON baselines, CUDA+HIP co-enabled configure, folding `padded_halo_faces.cu` into the kernel library (device-link of `openpfc_gpu_kernels` now works via `CUDA_RESOLVE_DEVICE_SYMBOLS`).
+**M3 (single-source GPU runtime) code work is substantially complete.** `include/openpfc/runtime/gpu/` is the implementation; `runtime/cuda/` and `runtime/hip/` are thin includes / namespace re-exports + FFT alias headers (FFT honesty is M5); Kokkos facsimile above `DataBuffer` is deleted; device TUs and `.inc` files live under `src/openpfc/runtime/gpu/`; HIP twins exist for FFT, Laplacian, multi-field device, FullPadded halo; `scripts/check_gpu_memcpy_single_source.sh` is CI-enforced. CUDA execution on Tohtori `g0005` is green (see status above). Remaining M3 items: perf JSON baselines, CUDA+HIP co-enabled configure. `padded_halo_faces.cu` is in `openpfc_gpu_kernels` (device-link via `CUDA_RESOLVE_DEVICE_SYMBOLS`).
 
 **M4 leftovers remain** (old exchanger public names). **M5 is complete** for the planned FFT utilities. **M6 stepper-protocol port is done** for the seven leaves (Euler, RK2 Heun, RK3 Heun, ExplicitRK, EmbeddedRK, ImexEuler, ETD1) onto `StepAttemptResult`. Remaining M6: Field-based state / N-field packs. `StageContext` and workspace are each one type; method enum is `RKIntegratorMethod`; AdaptiveTimeController and the non-diagonal SolveFunction mock are in.
 
@@ -356,8 +355,8 @@ M2 (Field/DataBuffer surface stable). Executes ADR 0004.
 * [x] `SimulationState` device-field compile coverage includes `HIPSpace` (CUDA twin already existed); GPU includes go through `runtime/gpu/`.
 * [x] SparseVector `on_host` covers `HIPTag` (CUDA twin already existed); GPU includes go through `runtime/gpu/`.
 * [x] Move all device sources out of `include/`: `kernels_simple.cu` (deleted, see below), `sparse_vector_ops.cu/.hip`, `padded_halo_faces.hip` → `src/openpfc/runtime/gpu/`. Device TUs and kernel `.inc` files live under `src/openpfc/runtime/gpu/`.
-* [ ] Fold CUDA `padded_halo_faces.cu` into the GPU kernel library so it is never recompiled per consumer (`tests/integration/CMakeLists.txt` / `apps/kobayashi/CMakeLists.txt` still list the TU per executable). Blocked on separable-compilation device-link. **CUDA: not testable on LUMI — verify the fold on tohtori.**
-* [x] CMake: one shared kernel source list compiled as `openpfc_gpu_kernels` (nvcc) and/or `openpfc_hip_kernels` (hipcc); both vendor libs buildable in a CUDA+HIP co-enabled configuration; install/export both (Pre-M0 PM already exports HIP). CUDA `padded_halo_faces.cu` remains per-executable (separable compilation).
+* [x] Fold CUDA `padded_halo_faces.cu` into the GPU kernel library so it is never recompiled per consumer. `openpfc_gpu_kernels` compiles the TU; `openpfc-tests` / `kobayashi_fd_cuda` / `test_fd_gpu_stack_cuda` link the library. Device-link via `CUDA_RESOLVE_DEVICE_SYMBOLS`.
+* [x] CMake: one shared kernel source list compiled as `openpfc_gpu_kernels` (nvcc) and/or `openpfc_hip_kernels` (hipcc); both vendor libs buildable in a CUDA+HIP co-enabled configuration; install/export both (Pre-M0 PM already exports HIP). CUDA `padded_halo_faces.cu` is an extra source on `openpfc_gpu_kernels` (HIP already added `.hip`).
 * [x] Add `Backend::HIP` to `fft_interface.hpp:34–37` and `"hip"`/`"rocm"` mappings to `runtime/common/backend_from_string.hpp` (factory honesty itself is M5).
 * [x] Extend GPU autotuning to the single-sourced `for_each_interior` and gather/scatter on both vendors; prune demo kernel keys. Autotune hook is in `for_each_interior_device_gpu.hpp` and `sparse_vector_ops_gpu.inc`; demo keys `add_scalar` / `multiply_scalar` deleted. `OpenPFC_ENABLE_GPU_AUTOTUNING` is PUBLIC on `openpfc` / kernel libs (not directory-scope).
 * [x] Add generic elementwise device ops to `runtime/gpu/` (complex×real multiply, two-term diagonal combine, axpy-style fill) — the mislabeled "Tungsten-specific" kernels, promoted (used by M7's ETD skeleton).
@@ -388,7 +387,7 @@ M2 (Field/DataBuffer surface stable). Executes ADR 0004.
 
 * [ ] `diff -r` between generated CUDA and HIP object lists shows a single source set. `grep -rn "hipMemcpy\|cudaMemcpy" include/ src/ | grep -v runtime/gpu` is now CI-enforced (`scripts/check_gpu_memcpy_single_source.sh`); `include/` and `src/` currently pass. **Full CUDA-vs-HIP object-list `diff -r` is not testable on LUMI (no CUDA toolchain run here); HIP object list can be inspected locally.**
 * [x] No `.cu`/`.hip` files under `include/`; kernel `.inc` files live under `src/openpfc/runtime/gpu/`; installed header set contains only `.hpp`.
-* [x] Full suite + golden trajectories green; GPU parity suite green on tohtori (CUDA). **CUDA (Tohtori `g0005`, 2026-08-20):** `scripts/build.sh --machine=tohtori --with-cuda` 44/44 CTest batches passed (1 expected skip). Perf JSON and `padded_halo_faces.cu` fold remain. *(HIP multi-field/composite device execution is M-LUMI.)*
+* [x] Full suite + golden trajectories green; GPU parity suite green on tohtori (CUDA). **CUDA (Tohtori `g0005`, 2026-08-20):** `scripts/build.sh --machine=tohtori --with-cuda` 44/44 CTest batches passed (1 expected skip). Perf JSON remains. *(HIP multi-field/composite device execution is M-LUMI.)*
 
 ---
 

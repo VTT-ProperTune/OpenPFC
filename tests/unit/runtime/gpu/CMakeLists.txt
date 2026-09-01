@@ -72,8 +72,7 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
         OPENPFC_TEST_GPU_STACK_CUDA)
     add_test(NAME CUDA_GPUSpectralStack COMMAND test_gpu_spectral_stack_cuda)
 
-    add_executable(test_fd_gpu_stack_cuda test_fd_gpu_stack.cpp
-        ${CMAKE_SOURCE_DIR}/src/openpfc/runtime/gpu/padded_halo_faces.cu)
+    add_executable(test_fd_gpu_stack_cuda test_fd_gpu_stack.cpp)
     target_include_directories(test_fd_gpu_stack_cuda PRIVATE
         ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
         ${CMAKE_SOURCE_DIR}/include

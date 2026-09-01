@@ -59,8 +59,8 @@ get_target_property(_catch2_include_dirs Catch2::Catch2 INTERFACE_INCLUDE_DIRECT
 message(STATUS "Catch2 includes: ${_catch2_include_dirs}")
 target_include_directories(openpfc-tests PRIVATE ${_catch2_include_dirs})
 # Suppress Catch2 warnings via `-isystem` for the host compiler. Gate on
-# CXX so that CUDA sources added to `openpfc-tests` (e.g. the device pack/unpack
-# kernels for `FullPaddedDeviceHalo`) are not handed unrecognised flags by nvcc
+# CXX so that CUDA sources added to `openpfc-tests` (e.g. gpu_validation `.cu`
+# kernels) are not handed unrecognised flags by nvcc
 # — without this, nvcc fails with "A single input file is required for a
 # non-link phase when an outputfile is specified".
 foreach(dir IN LISTS _catch2_include_dirs)
