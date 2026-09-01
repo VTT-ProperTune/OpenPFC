@@ -35,12 +35,12 @@ using ComplexDataBuffer = core::DataBuffer<backend::CPUTag, std::complex<double>
  * @brief FFT backend selection
  *
  * FFTW is in kernel; GPU backends are selected via runtime (include
- * `openpfc/runtime/cuda/fft_cuda.hpp` or `openpfc/runtime/hip/fft_hip.hpp`).
+ * `openpfc/runtime/gpu/fft_gpu.hpp`; vendor headers re-export it).
  */
 enum class Backend : std::uint8_t {
   FFTW, ///< CPU-based FFT using FFTW (default, always available)
-  CUDA, ///< GPU-based FFT using cuFFT (include runtime/cuda/fft_cuda.hpp)
-  HIP   ///< GPU-based FFT using rocFFT (include runtime/hip/fft_hip.hpp)
+  CUDA, ///< GPU-based FFT using cuFFT (include runtime/gpu/fft_gpu.hpp)
+  HIP   ///< GPU-based FFT using rocFFT (include runtime/gpu/fft_gpu.hpp)
 };
 
 /// Size, bounds, and timing queries shared by host and device FFT interfaces.
@@ -118,7 +118,8 @@ using IFFT = IHostFFT;
 /** @brief Clear accumulated FFT timing (preferred over `reset_fft_time()`). */
 inline void reset_fft_time(IFFTQueries &fft) noexcept { fft.reset_fft_time(); }
 
-/** @brief Accumulated FFT time since last reset (preferred over `get_fft_time()`). */
+/** @brief Accumulated FFT time since last reset (preferred over `get_fft_time()`).
+ */
 [[nodiscard]] inline double get_fft_time(const IFFTQueries &fft) noexcept {
   return fft.get_fft_time();
 }

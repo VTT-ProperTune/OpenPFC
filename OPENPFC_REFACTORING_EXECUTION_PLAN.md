@@ -388,7 +388,7 @@ M2 (Field/DataBuffer surface stable). Executes ADR 0004.
 
 ### Deletions
 
-* [x] `include/openpfc/runtime/cuda/` and `include/openpfc/runtime/hip/` duplicated implementations (each directory reduced to the vendor shim inclusion + FFT alias headers until M5). (Confirmed: non-FFT vendor headers are thin `#include` / `using` re-exports of `runtime/gpu/`; `fft_cuda.hpp` / `fft_hip.hpp` stay until M5.)
+* [x] `include/openpfc/runtime/cuda/` and `include/openpfc/runtime/hip/` duplicated implementations (each directory reduced to vendor shim inclusion of `runtime/gpu/`). GPU FFT factories are `runtime/gpu/fft_gpu.hpp`; `fft_cuda.hpp` / `fft_hip.hpp` are thin includes.
 * [x] Kokkos facsimile above `DataBuffer` per ADR 0004: `kernel/execution/{view,parallel,policy,layout,execution_space,deep_copy}.hpp` and `tests/unit/kernel/execution/test_kokkos_like.cpp` deleted. Memory-space tags, `DataBuffer`, `memory_traits`, and `deep_copy` buffer overloads survive.
 * [x] `runtime/cuda/gpu_vector.hpp`, `kernels_simple.{cu,hpp}`, and their unit tests. Deleted; state-access docs now describe `DataBuffer` instead of `GPUVector`.
 * [x] The Pre-M0 PB `static_assert` tombstones (the API they guarded is gone). Device `parallel_for` is no longer a header you can include; host `parallel_for` fail-closes on non-Serial/OpenMP policies.

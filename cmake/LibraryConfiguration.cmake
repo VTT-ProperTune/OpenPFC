@@ -31,11 +31,8 @@ set(_openpfc_kernel_obj_sources
 if(OpenPFC_ENABLE_HEFFTE)
   list(APPEND _openpfc_kernel_obj_sources src/openpfc/runtime/cpu/fft.cpp)
 endif()
-if(OpenPFC_ENABLE_CUDA_SPECTRAL)
-  list(APPEND _openpfc_kernel_obj_sources src/openpfc/runtime/cuda/fft_cuda.cpp)
-endif()
-if(OpenPFC_ENABLE_HIP_SPECTRAL)
-  list(APPEND _openpfc_kernel_obj_sources src/openpfc/runtime/hip/fft_hip.cpp)
+if(OpenPFC_ENABLE_CUDA_SPECTRAL OR OpenPFC_ENABLE_HIP_SPECTRAL)
+  list(APPEND _openpfc_kernel_obj_sources src/openpfc/runtime/gpu/fft_gpu.cpp)
 endif()
 
 add_library(openpfc_kernel_obj OBJECT ${_openpfc_kernel_obj_sources})
@@ -233,8 +230,8 @@ if(OpenPFC_ENABLE_HDF5)
   target_compile_definitions(openpfc_frontend_obj PRIVATE OPENPFC_HAS_HDF5=1)
 endif()
 
-# HeFFTe is optional. Spectral FFT sources (cpu/fft.cpp, fft_cuda.cpp,
-# fft_hip.cpp) are added only when ON. Decomposition no longer depends on it.
+# HeFFTe is optional. Spectral FFT sources (cpu/fft.cpp, gpu/fft_gpu.cpp)
+# are added only when ON. Decomposition no longer depends on it.
 if(OpenPFC_ENABLE_HEFFTE)
   target_compile_definitions(openpfc PUBLIC OpenPFC_ENABLE_HEFFTE)
   target_compile_definitions(openpfc_kernel_obj PUBLIC OpenPFC_ENABLE_HEFFTE)

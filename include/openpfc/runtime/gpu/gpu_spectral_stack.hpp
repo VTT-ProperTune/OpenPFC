@@ -30,12 +30,7 @@
 #include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/runtime/gpu/memory_space_gpu.hpp>
 
-#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
-#include <openpfc/runtime/cuda/fft_cuda.hpp>
-#endif
-#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
-#include <openpfc/runtime/hip/fft_hip.hpp>
-#endif
+#include <openpfc/runtime/gpu/fft_gpu.hpp>
 
 namespace pfc::sim::stacks {
 
@@ -92,9 +87,7 @@ public:
     return m_decomp;
   }
 
-  [[nodiscard]] pfc::fft::IDeviceFFT<MemorySpace> &fft() noexcept {
-    return m_fft;
-  }
+  [[nodiscard]] pfc::fft::IDeviceFFT<MemorySpace> &fft() noexcept { return m_fft; }
   [[nodiscard]] const pfc::fft::IDeviceFFT<MemorySpace> &fft() const noexcept {
     return m_fft;
   }
