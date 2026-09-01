@@ -15,9 +15,13 @@ source compatibility is explicitly not a goal.
 ### Fixed
 
 - Gen-1 `Model` stores `World` by value. Tungsten/aluminum Domain constructors were passing a temporary `World` into a dangling reference, so Debug NaN checks aborted `tungsten-all-tests`, `tungsten-golden-4rank`, and `tungsten-cpu-vs-cuda-tests` on garbage k-space (`k_lap = -inf`).
+- `OpenPFC_ENABLE_HIP=ON` is fail-closed: configure stops if HIP is not found instead of silently building a CPU tree. `scripts/build.sh --with-rocm` locates `ROCM_PATH` (Tohtori `rocm/7.2.1` does not set `CMAKE_PREFIX_PATH`; `hipcc` may be `/usr/bin/hipcc`) and refuses to continue if the CMake summary does not report HIP available. CMake 3.21–3.24 uses ROCm Clang as `CMAKE_HIP_COMPILER`, not the `hipcc` wrapper.
+- `strong_types.hpp` skips `<compare>` / defaulted `operator<=>` on HIP device TUs (`__HIPCC__` / `__HIP__`) as well as CUDA. HIP clang (`-x hip`) cannot find `<compare>`.
 
 ### Added
 
+- `scripts/compare_perf_baseline.py` compares profiling JSON (schema v2/v3) `wall_step` means against a stored baseline (pass ≤5% regression, warn >5%, fail >15%). Canary input: `tests/baselines/perf/inputs/tungsten_canary.json`.
+- `scripts/sbatch_openpfc_hip_amdgpu.sbatch` builds HeFFTe-ROCm (Open MPI 5 + ROCm 7) if needed and runs the HIP Debug suite on Tohtori `amdgpu` with four MPI slots. Tohtori `g0004` job 1618727: 47/47 CTest batches (`HIP_SPECTRAL=ON`, `MPI_HIP_AWARE=OFF`).
 - Kobayashi CUDA `KOBAYASHI_VERIFY_HEX` 32²/4-step smoke is CTest (`kobayashi-cuda-hex-smoke`, and `kobayashi-cuda-hex-2rank` when MPI suites are on). Pin matches CPU HEX except `sum_T` (1 ULP), recorded in `tests/baselines/BASELINES.md`.
 - CUDA `padded_halo_faces.cu` is compiled into `openpfc_gpu_kernels` (same as HIP `padded_halo_faces.hip` in `openpfc_hip_kernels`). `openpfc-tests`, `kobayashi_fd_cuda`, and `test_fd_gpu_stack_cuda` no longer recompile the TU.
 - M4 leftover device-halo tests use `pfc::comm::HaloExchange<CUDASpace/HIPSpace>` instead of `PaddedDeviceHaloExchanger` / `FullPaddedDeviceHalo`. Unique 26-direction hash fill (1/2/4 ranks, hw=2, two fields), Full+Axes3D face-only, and Faces self-wrap (hw=1 and packed hw=2) live in `test_full_padded_device_halo*.cpp` / `test_padded_device_halo_self_wrap*`. CUDA execute on tohtori; HIP execute is M-LUMI.

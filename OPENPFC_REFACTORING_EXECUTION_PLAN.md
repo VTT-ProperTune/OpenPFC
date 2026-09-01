@@ -32,8 +32,12 @@ This checkout is **on Tohtori (`g0005`, 8× H100)**. CUDA configure/build/test v
 `scripts/build.sh --machine=tohtori --with-cuda --build-type=Debug --build-dir=builds/cuda-debug`
 is **green**: 49/49 CTest batches passed (1 skip: `CUDA_ExchangeFailClosed`,
 expected with `OpenPFC_MPI_CUDA_AWARE=ON`). CUDA spectral HeFFTe, GPU-aware
-custom Open MPI, and `OpenPFC_ENABLE_CUDA_SPECTRAL=ON`. HIP execution remains
-LUMI / M-LUMI.
+custom Open MPI, and `OpenPFC_ENABLE_CUDA_SPECTRAL=ON`. HIP execution on
+Tohtori `amdgpu` (`g0004`, 2× MI210 `gfx90a`) is **green**: job 1618727,
+47/47 CTest batches, `OpenPFC_ENABLE_HIP_SPECTRAL=ON`, `MPI_HIP_AWARE=OFF`,
+HeFFTe `$HOME/opt/heffte/2.4.1-rocm-ompi5` (Open MPI 5 + ROCm 7). LUMI /
+M-LUMI still owns Cray GPU-aware MPI. Multi-rank HIP Full halo and
+allen_cahn/wave2d CPU-vs-HIP stay skipped unless GPU-aware MPI is on.
 
 CUDA-gated suites now run here (all passed this session): `GPU_FFT`,
 `CUDA_SpectralETD`, `CUDA_SpectralMeanFieldETD`, `CUDA_GPUSpectralStack`,
@@ -41,7 +45,10 @@ CUDA-gated suites now run here (all passed this session): `GPU_FFT`,
 `CUDA_DeepCopyFill`, `CUDA_TungstenETD`, `tungsten-cpu-vs-cuda-tests`,
 `allen-cahn-cpu-vs-cuda`, `wave2d-cpu-vs-cuda`, `tungsten-golden-4rank`,
 `kobayashi-cuda-hex-smoke`, `kobayashi-cuda-hex-2rank`.
-Still open on CUDA: perf JSON baselines, CUDA+HIP co-enabled configure.
+Still open on CUDA: capturing machine-tagged perf JSON into `tests/baselines/perf/`
+(`scripts/compare_perf_baseline.py` exists), CUDA+HIP co-enabled configure
+(needs both toolkits on one node; `build.sh` keeps `--with-cuda` / `--with-rocm`
+exclusive).
 
 **Pre-M0 is complete and released** (`v0.1.5` tagged; `CHANGELOG.md`'s `[0.1.5]` section documents every audit §4/§11 fix landing with a regression test, and `master` is on `0.2.0` per `CMakeLists.txt`, with an `OpenPFC_DEVELOPMENT` option supplying the `-dev` suffix). The scientific baseline *framework* exists (`tests/baselines/BASELINES.md`, `tests/packaging/consumer/`, CUDA/HIP compile-only CI jobs), but the actual golden-trajectory **data** (multi-rank tungsten/aluminum captures, perf JSON) is still marked ☐/uncaptured in `BASELINES.md` — this is the one Pre-M0 gap that could still bite M3+.
 
