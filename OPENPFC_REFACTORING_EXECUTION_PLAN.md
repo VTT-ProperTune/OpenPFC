@@ -691,9 +691,9 @@ M8, M9 (all production physics on the new architecture).
 
 ### Definition of done
 
-* [ ] One JSON document schema drives all method × backend combinations; the session matrix test is green.
+* [x] One JSON document schema drives all method × backend combinations; the session matrix test is green. **`[session_matrix]` 5 CPU cases (Tohtori `g0005` CUDA Debug). CUDA/HIP stack binaries remain cluster-gated.**
 * [x] `grep -rn "FixedBC\|MovingBC" include/` returns nothing; exactly one BC mechanism exists. **Partial:** `include/` has no `FixedBC`/`MovingBC`. Stage-prep is `StagePreparationService` (FD Dirichlet + spectral penalty hook). Simulator still applies Gen-1 FieldModifier BCs until M12.
-* [ ] Unknown writers/modifiers/integrators fail loudly (negative tests green).
+* [x] Unknown writers/modifiers/integrators fail loudly (negative tests green). **`[ui][results_writer]`, `[ui][writers]`, `[ui][modifiers]`, and `from_json<Time>` unknown integrator token.**
 * [ ] Full suite + golden trajectories green.
 
 ---
