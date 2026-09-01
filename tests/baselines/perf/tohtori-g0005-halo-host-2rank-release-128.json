@@ -1,0 +1,2433 @@
+{
+  "frame_metric_names": [
+    "step",
+    "mpi_rank",
+    "wall_step",
+    "rss_bytes",
+    "model_heap_bytes",
+    "heap_secondary_bytes"
+  ],
+  "n_mpi_ranks": 2,
+  "openpfc_version": "0.2.0",
+  "ranks": [
+    {
+      "frames": [
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0001532179999998995,
+              "inclusive": 0.0001532179999998995
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            0.0,
+            0.0,
+            0.00020294500000006543,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.00013554099999990576,
+              "inclusive": 0.00013554099999990576
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            1.0,
+            0.0,
+            0.0001876729999998883,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 4.988099999980733e-05,
+              "inclusive": 4.988099999980733e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            2.0,
+            0.0,
+            9.373400000001197e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 5.132699999998991e-05,
+              "inclusive": 5.132699999998991e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            3.0,
+            0.0,
+            9.414900000015436e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 6.0137999999820835e-05,
+              "inclusive": 6.0137999999820835e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            4.0,
+            0.0,
+            0.00010193400000013675,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 5.149000000015391e-05,
+              "inclusive": 5.149000000015391e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            5.0,
+            0.0,
+            9.434500000016222e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 5.531799999980436e-05,
+              "inclusive": 5.531799999980436e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            6.0,
+            0.0,
+            9.758600000009388e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 5.518400000004142e-05,
+              "inclusive": 5.518400000004142e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            7.0,
+            0.0,
+            0.00010020800000010155,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 4.980300000001492e-05,
+              "inclusive": 4.980300000001492e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            8.0,
+            0.0,
+            9.35929999998919e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 4.790799999998541e-05,
+              "inclusive": 4.790799999998541e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            9.0,
+            0.0,
+            9.245599999996301e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.597399999999418e-05,
+              "inclusive": 3.597399999999418e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            10.0,
+            0.0,
+            8.072700000005817e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.686600000007978e-05,
+              "inclusive": 3.686600000007978e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            11.0,
+            0.0,
+            7.823499999992656e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.543400000016739e-05,
+              "inclusive": 3.543400000016739e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            12.0,
+            0.0,
+            7.724199999992187e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.475199999991574e-05,
+              "inclusive": 3.475199999991574e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            13.0,
+            0.0,
+            7.800899999987898e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.4628999999952725e-05,
+              "inclusive": 3.4628999999952725e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            14.0,
+            0.0,
+            7.633900000003635e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.5513999999903234e-05,
+              "inclusive": 3.5513999999903234e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            15.0,
+            0.0,
+            7.665600000006378e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.406399999983378e-05,
+              "inclusive": 3.406399999983378e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            16.0,
+            0.0,
+            7.479900000006978e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.394899999986656e-05,
+              "inclusive": 3.394899999986656e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            17.0,
+            0.0,
+            7.595699999995986e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.4386000000052874e-05,
+              "inclusive": 3.4386000000052874e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            18.0,
+            0.0,
+            7.603100000008745e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.399700000006334e-05,
+              "inclusive": 3.399700000006334e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            19.0,
+            0.0,
+            7.495899999998556e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.338699999999584e-05,
+              "inclusive": 3.338699999999584e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            20.0,
+            0.0,
+            7.516100000004577e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.4530000000199124e-05,
+              "inclusive": 3.4530000000199124e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            21.0,
+            0.0,
+            7.627599999993073e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.4291000000186145e-05,
+              "inclusive": 3.4291000000186145e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            22.0,
+            0.0,
+            8.662999999997645e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.419600000009737e-05,
+              "inclusive": 3.419600000009737e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            23.0,
+            0.0,
+            7.518100000014627e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.387100000007415e-05,
+              "inclusive": 3.387100000007415e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            24.0,
+            0.0,
+            7.524599999997328e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.306199999997261e-05,
+              "inclusive": 3.306199999997261e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            25.0,
+            0.0,
+            7.501199999992991e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.380299999999892e-05,
+              "inclusive": 3.380299999999892e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            26.0,
+            0.0,
+            7.50060000000996e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.330099999976355e-05,
+              "inclusive": 3.330099999976355e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            27.0,
+            0.0,
+            7.603900000008323e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.387600000004376e-05,
+              "inclusive": 3.387600000004376e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            28.0,
+            0.0,
+            7.537000000001903e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.421799999991926e-05,
+              "inclusive": 3.421799999991926e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            29.0,
+            0.0,
+            7.484599999996178e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.401000000002874e-05,
+              "inclusive": 3.401000000002874e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            30.0,
+            0.0,
+            7.523799999997749e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.44880000000547e-05,
+              "inclusive": 3.44880000000547e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            31.0,
+            0.0,
+            7.546200000008163e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.435100000004354e-05,
+              "inclusive": 3.435100000004354e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            32.0,
+            0.0,
+            7.4914000000037e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.481099999991244e-05,
+              "inclusive": 3.481099999991244e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            33.0,
+            0.0,
+            7.566899999988941e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.4601000000078486e-05,
+              "inclusive": 3.4601000000078486e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            34.0,
+            0.0,
+            7.574600000004317e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.544400000010661e-05,
+              "inclusive": 3.544400000010661e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            35.0,
+            0.0,
+            7.980900000004176e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.343700000013605e-05,
+              "inclusive": 3.343700000013605e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            36.0,
+            0.0,
+            7.546299999994233e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.3561000000181807e-05,
+              "inclusive": 3.3561000000181807e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            37.0,
+            0.0,
+            7.528599999995222e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.509999999984359e-05,
+              "inclusive": 3.509999999984359e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            38.0,
+            0.0,
+            7.622100000004295e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.392599999996193e-05,
+              "inclusive": 3.392599999996193e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            39.0,
+            0.0,
+            7.486400000011884e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.3493000000106576e-05,
+              "inclusive": 3.3493000000106576e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            40.0,
+            0.0,
+            7.457099999985672e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.3794999999781083e-05,
+              "inclusive": 3.3794999999781083e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            41.0,
+            0.0,
+            7.53220000000443e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.319899999998377e-05,
+              "inclusive": 3.319899999998377e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            42.0,
+            0.0,
+            7.490799999998465e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.297400000001893e-05,
+              "inclusive": 3.297400000001893e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            43.0,
+            0.0,
+            7.466099999997589e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.405399999989456e-05,
+              "inclusive": 3.405399999989456e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            44.0,
+            0.0,
+            7.56309999998539e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.44880000000547e-05,
+              "inclusive": 3.44880000000547e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            45.0,
+            0.0,
+            7.574999999993004e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.480500000008213e-05,
+              "inclusive": 3.480500000008213e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            46.0,
+            0.0,
+            7.572500000008198e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.3762000000159276e-05,
+              "inclusive": 3.3762000000159276e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            47.0,
+            0.0,
+            7.469400000004178e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.4979000000046057e-05,
+              "inclusive": 3.4979000000046057e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            48.0,
+            0.0,
+            8.067100000008764e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.493900000006711e-05,
+              "inclusive": 3.493900000006711e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            49.0,
+            0.0,
+            7.596300000001222e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "mpi_rank": 0,
+      "n_frames": 50
+    },
+    {
+      "frames": [
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.00015090900000003238,
+              "inclusive": 0.00015090900000003238
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            0.0,
+            1.0,
+            0.00020286799999991167,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.00014065100000015818,
+              "inclusive": 0.00014065100000015818
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            1.0,
+            1.0,
+            0.00018754799999998184,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 4.5512999999886006e-05,
+              "inclusive": 4.5512999999886006e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            2.0,
+            1.0,
+            9.389000000004089e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 5.0454000000144106e-05,
+              "inclusive": 5.0454000000144106e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            3.0,
+            1.0,
+            9.413900000021513e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 5.0585999999963605e-05,
+              "inclusive": 5.0585999999963605e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            4.0,
+            1.0,
+            0.00010223499999995056,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 5.0926999999978406e-05,
+              "inclusive": 5.0926999999978406e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            5.0,
+            1.0,
+            9.451299999985174e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 5.499900000005553e-05,
+              "inclusive": 5.499900000005553e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            6.0,
+            1.0,
+            9.770799999997415e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 5.791300000002053e-05,
+              "inclusive": 5.791300000002053e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            7.0,
+            1.0,
+            0.00010009599999993846,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 5.028499999992775e-05,
+              "inclusive": 5.028499999992775e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            8.0,
+            1.0,
+            9.37109999998853e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 4.982500000005885e-05,
+              "inclusive": 4.982500000005885e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            9.0,
+            1.0,
+            9.242100000017572e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.7557999999826563e-05,
+              "inclusive": 3.7557999999826563e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            10.0,
+            1.0,
+            8.042799999996575e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.466200000001862e-05,
+              "inclusive": 3.466200000001862e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            11.0,
+            1.0,
+            7.838499999990312e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.534300000018753e-05,
+              "inclusive": 3.534300000018753e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            12.0,
+            1.0,
+            7.745999999997366e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.654199999991725e-05,
+              "inclusive": 3.654199999991725e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            13.0,
+            1.0,
+            7.79070000000992e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.3799000000112045e-05,
+              "inclusive": 3.3799000000112045e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            14.0,
+            1.0,
+            7.637500000012842e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.407999999982536e-05,
+              "inclusive": 3.407999999982536e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            15.0,
+            1.0,
+            7.690199999998981e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.400700000000256e-05,
+              "inclusive": 3.400700000000256e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            16.0,
+            1.0,
+            7.499000000010803e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.3729999999954074e-05,
+              "inclusive": 3.3729999999954074e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            17.0,
+            1.0,
+            7.609299999988828e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.367800000009247e-05,
+              "inclusive": 3.367800000009247e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            18.0,
+            1.0,
+            7.619899999999902e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.3654999999965796e-05,
+              "inclusive": 3.3654999999965796e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            19.0,
+            1.0,
+            7.508900000008367e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.401900000010727e-05,
+              "inclusive": 3.401900000010727e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            20.0,
+            1.0,
+            7.501299999979061e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.392099999999232e-05,
+              "inclusive": 3.392099999999232e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            21.0,
+            1.0,
+            7.625999999993915e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.393800000006664e-05,
+              "inclusive": 3.393800000006664e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            22.0,
+            1.0,
+            8.684299999983658e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.282599999998581e-05,
+              "inclusive": 3.282599999998581e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            23.0,
+            1.0,
+            7.539899999997601e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.326999999986313e-05,
+              "inclusive": 3.326999999986313e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            24.0,
+            1.0,
+            7.535400000002745e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.421100000000621e-05,
+              "inclusive": 3.421100000000621e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            25.0,
+            1.0,
+            7.498299999997293e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.3700999999997094e-05,
+              "inclusive": 3.3700999999997094e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            26.0,
+            1.0,
+            7.49349999999982e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.439499999990936e-05,
+              "inclusive": 3.439499999990936e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            27.0,
+            1.0,
+            7.602800000006127e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.312700000002167e-05,
+              "inclusive": 3.312700000002167e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            28.0,
+            1.0,
+            7.551099999991706e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.30379999997632e-05,
+              "inclusive": 3.30379999997632e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            29.0,
+            1.0,
+            7.514399999997146e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.3960999999971264e-05,
+              "inclusive": 3.3960999999971264e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            30.0,
+            1.0,
+            7.542300000018543e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.3143000000013245e-05,
+              "inclusive": 3.3143000000013245e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            31.0,
+            1.0,
+            7.571399999983797e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.342200000000517e-05,
+              "inclusive": 3.342200000000517e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            32.0,
+            1.0,
+            7.515000000002381e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.355700000007289e-05,
+              "inclusive": 3.355700000007289e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            33.0,
+            1.0,
+            7.575100000001278e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.3661999999878844e-05,
+              "inclusive": 3.3661999999878844e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            34.0,
+            1.0,
+            7.587200000003236e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.402499999993758e-05,
+              "inclusive": 3.402499999993758e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            35.0,
+            1.0,
+            7.998400000008843e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.401200000019422e-05,
+              "inclusive": 3.401200000019422e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            36.0,
+            1.0,
+            7.542100000001994e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.3516000000011203e-05,
+              "inclusive": 3.3516000000011203e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            37.0,
+            1.0,
+            7.529399999994801e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.378299999989842e-05,
+              "inclusive": 3.378299999989842e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            38.0,
+            1.0,
+            7.646500000002554e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.338699999999584e-05,
+              "inclusive": 3.338699999999584e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            39.0,
+            1.0,
+            7.50270000000608e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.333199999988601e-05,
+              "inclusive": 3.333199999988601e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            40.0,
+            1.0,
+            7.459099999995722e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.370799999991014e-05,
+              "inclusive": 3.370799999991014e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            41.0,
+            1.0,
+            7.531699999985264e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.38770000001265e-05,
+              "inclusive": 3.38770000001265e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            42.0,
+            1.0,
+            7.485899999992718e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.3694000000084046e-05,
+              "inclusive": 3.3694000000084046e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            43.0,
+            1.0,
+            7.454399999984318e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.340399999984811e-05,
+              "inclusive": 3.340399999984811e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            44.0,
+            1.0,
+            7.54539999998638e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.407299999991231e-05,
+              "inclusive": 3.407299999991231e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            45.0,
+            1.0,
+            7.559700000014935e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.326400000003282e-05,
+              "inclusive": 3.326400000003282e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            46.0,
+            1.0,
+            7.589700000010247e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.340100000004398e-05,
+              "inclusive": 3.340100000004398e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            47.0,
+            1.0,
+            7.472199999991602e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.327399999997205e-05,
+              "inclusive": 3.327399999997205e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            48.0,
+            1.0,
+            8.076300000015024e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 3.3163999999974436e-05,
+              "inclusive": 3.3163999999974436e-05
+            },
+            "fft": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "gradient": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            }
+          },
+          "scalars": [
+            49.0,
+            1.0,
+            7.620699999977276e-05,
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "mpi_rank": 1,
+      "n_frames": 50
+    }
+  ],
+  "region_paths": [
+    "communication",
+    "fft",
+    "gradient"
+  ],
+  "schema_version": 2,
+  "total_frames": 100
+}

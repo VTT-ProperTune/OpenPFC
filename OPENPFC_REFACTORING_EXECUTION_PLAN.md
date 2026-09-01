@@ -48,9 +48,10 @@ CUDA-gated suites now run here (all passed this session): `GPU_FFT`,
 `kobayashi-cuda-hex-smoke`, `kobayashi-cuda-hex-2rank`.
 CUDA Release 256³/20-step tungsten perf JSON is captured on `g0005` (1-rank and
 8-rank). CPU Release 64³ strong scaling (1/4/16 ranks) is captured on the same
-node. Still open: halo microtiming JSON, CUDA+HIP co-enabled configure (needs
-both toolkits on one node; `build.sh` keeps `--with-cuda` / `--with-rocm`
-exclusive).
+node. Host and CUDA halo microtiming JSON (128³ Faces, 2/4/8 ranks) is captured
+via `examples/23_halo_microtiming`. Still open: CUDA+HIP co-enabled configure
+(needs both toolkits on one node; `build.sh` keeps `--with-cuda` / `--with-rocm`
+exclusive). Leftover halo-header inlining.
 
 **Pre-M0 is complete and released** (`v0.1.5` tagged; `CHANGELOG.md`'s `[0.1.5]` section documents every audit §4/§11 fix landing with a regression test, and `master` is on `0.2.0` per `CMakeLists.txt`, with an `OpenPFC_DEVELOPMENT` option supplying the `-dev` suffix). The scientific baseline *framework* exists (`tests/baselines/BASELINES.md`, `tests/packaging/consumer/`, CUDA/HIP compile-only CI jobs), but the actual golden-trajectory **data** (multi-rank tungsten/aluminum captures, perf JSON) is still marked ☐/uncaptured in `BASELINES.md` — this is the one Pre-M0 gap that could still bite M3+.
 
@@ -428,7 +429,7 @@ M2 (Field), M3 (single-source device layer). M3 CUDA execution/perf leftovers do
 * [x] Splitter equivalence test: in-repo splitter boxes == recorded `heffte::split_world` boxes for ≥12 (grid, ranks) combinations. (`test_brick_split.cpp` compares live HeFFTe output)
 * [x] 4-rank MPI: `HaloExchange` blocking == split-phase == persistent == batched results, bitwise, host and device; 26-direction mode validated on corner-dependent stencil. **Host:** `test_comm_halo_exchange_modes.cpp` (blocking == start/finish == two-field batch; Full corners). Persistent multi-rank is still red on LUMI (1-rank persistent remains in `test_comm_halo_exchange.cpp`). **HIP:** 4-rank Faces + Full in `test_comm_halo_exchange_gpu.cpp`. **CUDA 4-rank Faces:** compiles here, execute on tohtori.
 * [x] Kobayashi CUDA golden checksums (bitwise class) unchanged on library batching; kobayashi HIP now matches CPU within declared tolerance using the device path. **CUDA (Tohtori `g0005`):** CTest `kobayashi-cuda-hex-smoke` / `kobayashi-cuda-hex-2rank` pin 32²/4-step HEX; `sum_T` is 1 ULP vs CPU. HIP execute is M-LUMI.
-* [ ] Perf: halo microtiming baseline within 5% (tohtori). **CUDA: not testable on LUMI — verify on tohtori.** *(The LUMI device-MPI probe check — demonstrating it selects the GPU-aware path, log-asserted in the cluster test script — moved to M-LUMI.)*
+* [x] Perf: halo microtiming baseline within 5% (tohtori). **Host and CUDA (Tohtori `g0005`, 2026-09-01):** `examples/23_halo_microtiming` 128³ Faces, 2/4/8 ranks, JSON in `tests/baselines/perf/tohtori-g0005-halo-{host,cuda}-*rank-release-128.json`. Compare with `--warmup-frames=5`. HIP execute is M-LUMI. *(The LUMI device-MPI probe check — demonstrating it selects the GPU-aware path, log-asserted in the cluster test script — moved to M-LUMI.)*
 
 ### Deletions
 
