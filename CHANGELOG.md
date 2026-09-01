@@ -18,6 +18,7 @@ source compatibility is explicitly not a goal.
 - `OpenPFC_ENABLE_HIP=ON` is fail-closed: configure stops if HIP is not found instead of silently building a CPU tree. `scripts/build.sh --with-rocm` locates `ROCM_PATH` (Tohtori `rocm/7.2.1` does not set `CMAKE_PREFIX_PATH`; `hipcc` may be `/usr/bin/hipcc`) and refuses to continue if the CMake summary does not report HIP available. CMake 3.21–3.24 uses ROCm Clang as `CMAKE_HIP_COMPILER`, not the `hipcc` wrapper.
 - `strong_types.hpp` skips `<compare>` / defaulted `operator<=>` on HIP device TUs (`__HIPCC__` / `__HIP__`) as well as CUDA. HIP clang (`-x hip`) cannot find `<compare>`.
 - `DeviceFullHalo` keeps the 26-direction widening passes when GPU-aware MPI is off. Real-neighbor axes pack on device, MPI on host, and unpack; `*_FORCE_PACKED_HALO=1` remains 6-face-only. Tohtori HIP job 1618752: 47/47 including 2- and 4-rank Full hash tests.
+- Device `SparseExchange` host-stages send/recv slabs when GPU-aware MPI is off (gather/scatter stay on device). Allen-Cahn and wave2d CPU-vs-HIP run on Tohtori HIP (job 1618762).
 
 ### Added
 

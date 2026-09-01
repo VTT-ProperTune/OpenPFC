@@ -9,9 +9,9 @@
  *
  * @details
  * Builds device SparseVectors from the same structured index lists as the
- * host facade, then gather → device-pointer MPI → optional scatter. The
- * field never leaves the device. Non-blocking device MPI requires
- * GPU-aware MPI (see `gpu_aware_mpi.hpp`).
+ * host facade, then gather → MPI → optional scatter. With GPU-aware MPI the
+ * field never leaves the device. Without it, send/recv slabs host-stage
+ * (D2H / MPI / H2D); gather and scatter stay on device.
  *
  * CUDA execution is not available on LUMI; HIP can run here.
  *
@@ -33,6 +33,7 @@
 #include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>
+#include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <openpfc/runtime/gpu/databuffer_gpu.hpp>
 #include <openpfc/runtime/gpu/exchange_gpu.hpp>
 #include <openpfc/runtime/gpu/gpu_aware_mpi.hpp>
@@ -81,13 +82,14 @@ public:
       d.recv_tag = h.recv_tag;
       d.scatter_after_recv = opt.scatter_after_recv;
       d.direction = h.direction;
-      d.send_values = core::SparseVector<Tag, T>(
-          pfc::sparsevector::get_index(h.send_values));
-      d.recv_values = core::SparseVector<Tag, T>(
-          pfc::sparsevector::get_index(h.recv_values));
+      d.send_values =
+          core::SparseVector<Tag, T>(pfc::sparsevector::get_index(h.send_values));
+      d.recv_values =
+          core::SparseVector<Tag, T>(pfc::sparsevector::get_index(h.recv_values));
       m_halos.push_back(std::move(d));
     }
     m_requests.assign(2 * m_halos.size(), MPI_REQUEST_NULL);
+    allocate_host_stage_();
   }
 
   DeviceSparseExchange(FieldT &field, std::vector<halo::RemoteHalo<T>> host_halos,
@@ -101,19 +103,19 @@ public:
       d.recv_tag = h.recv_tag;
       d.scatter_after_recv = h.scatter_after_recv;
       d.direction = h.direction;
-      d.send_values = core::SparseVector<Tag, T>(
-          pfc::sparsevector::get_index(h.send_values));
-      d.recv_values = core::SparseVector<Tag, T>(
-          pfc::sparsevector::get_index(h.recv_values));
+      d.send_values =
+          core::SparseVector<Tag, T>(pfc::sparsevector::get_index(h.send_values));
+      d.recv_values =
+          core::SparseVector<Tag, T>(pfc::sparsevector::get_index(h.recv_values));
       m_halos.push_back(std::move(d));
     }
     m_requests.assign(2 * m_halos.size(), MPI_REQUEST_NULL);
+    allocate_host_stage_();
   }
 
   void exchange() {
     if (m_field == nullptr) {
-      throw std::logic_error(
-          "pfc::comm::SparseExchange::exchange: no field bound");
+      throw std::logic_error("pfc::comm::SparseExchange::exchange: no field bound");
     }
     m_field->sync_to_device();
     start_device_(m_field->data(), m_field->size());
@@ -158,26 +160,107 @@ public:
   }
 
 private:
-  void start_device_(T *field_ptr, std::size_t field_size) {
-    if (!pfc::gpu::runtime_mpi_gpu_aware()) {
-      throw std::runtime_error(
-          "pfc::comm::SparseExchange: GPU-aware MPI is required for device "
-          "index-set exchange. Enable it or use the host SparseExchange.");
+  void allocate_host_stage_() {
+    if (pfc::gpu::runtime_mpi_gpu_aware()) {
+      return;
     }
+    m_host_send.resize(m_halos.size());
+    m_host_recv.resize(m_halos.size());
+    for (std::size_t i = 0; i < m_halos.size(); ++i) {
+      m_host_send[i].resize(m_halos[i].send_values.size());
+      m_host_recv[i].resize(m_halos[i].recv_values.size());
+    }
+  }
+
+  void copy_d2h_(void *dst, const void *src, std::size_t bytes, const char *what) {
+#if defined(OpenPFC_ENABLE_CUDA)
+    if constexpr (std::is_same_v<Space, CUDASpace>) {
+      pfc::exchange::detail::CUDAXchg::memcpy_d2h(dst, src, bytes, what);
+      return;
+    }
+#endif
+#if defined(OpenPFC_ENABLE_HIP)
+    if constexpr (std::is_same_v<Space, HIPSpace>) {
+      pfc::exchange::detail::HIPXchg::memcpy_d2h(dst, src, bytes, what);
+      return;
+    }
+#endif
+    (void)dst;
+    (void)src;
+    (void)bytes;
+    throw std::logic_error(std::string(what) + ": no GPU memcpy backend");
+  }
+
+  void copy_h2d_(void *dst, const void *src, std::size_t bytes, const char *what) {
+#if defined(OpenPFC_ENABLE_CUDA)
+    if constexpr (std::is_same_v<Space, CUDASpace>) {
+      pfc::exchange::detail::CUDAXchg::memcpy_h2d(dst, src, bytes, what);
+      return;
+    }
+#endif
+#if defined(OpenPFC_ENABLE_HIP)
+    if constexpr (std::is_same_v<Space, HIPSpace>) {
+      pfc::exchange::detail::HIPXchg::memcpy_h2d(dst, src, bytes, what);
+      return;
+    }
+#endif
+    (void)dst;
+    (void)src;
+    (void)bytes;
+    throw std::logic_error(std::string(what) + ": no GPU memcpy backend");
+  }
+
+  void start_device_(T *field_ptr, std::size_t field_size) {
     for (auto &h : m_halos) {
       if (!h.send_values.empty()) {
         core::gather(h.send_values, field_ptr, field_size);
       }
     }
+    const bool aware = pfc::gpu::runtime_mpi_gpu_aware();
+    if (!aware) {
+      for (std::size_t i = 0; i < m_halos.size(); ++i) {
+        auto &h = m_halos[i];
+        if (h.send_values.empty()) {
+          continue;
+        }
+        copy_d2h_(m_host_send[i].data(), h.send_values.data().data(),
+                  h.send_values.size() * sizeof(T),
+                  "SparseExchange host-stage send D2H");
+      }
+    }
     std::size_t req = 0;
-    for (auto &h : m_halos) {
-      exchange::irecv_data(h.recv_values, h.peer_rank, m_rank, m_comm,
-                           &m_requests[req], h.recv_tag);
+    for (std::size_t i = 0; i < m_halos.size(); ++i) {
+      auto &h = m_halos[i];
+      if (aware) {
+        exchange::irecv_data(h.recv_values, h.peer_rank, m_rank, m_comm,
+                             &m_requests[req], h.recv_tag);
+      } else if (h.recv_values.empty()) {
+        m_requests[req] = MPI_REQUEST_NULL;
+      } else {
+        const int count = pfc::mpi::ensure_mpi_int_count(
+            h.recv_values.size(), "SparseExchange host-stage recv");
+        pfc::mpi::throw_on_mpi_error(MPI_Irecv(m_host_recv[i].data(), count,
+                                               MPI_DOUBLE, h.peer_rank, h.recv_tag,
+                                               m_comm, &m_requests[req]),
+                                     "SparseExchange host-stage MPI_Irecv");
+      }
       ++req;
     }
-    for (auto &h : m_halos) {
-      exchange::isend_data(h.send_values, m_rank, h.peer_rank, m_comm,
-                           &m_requests[req], h.send_tag);
+    for (std::size_t i = 0; i < m_halos.size(); ++i) {
+      auto &h = m_halos[i];
+      if (aware) {
+        exchange::isend_data(h.send_values, m_rank, h.peer_rank, m_comm,
+                             &m_requests[req], h.send_tag);
+      } else if (h.send_values.empty()) {
+        m_requests[req] = MPI_REQUEST_NULL;
+      } else {
+        const int count = pfc::mpi::ensure_mpi_int_count(
+            h.send_values.size(), "SparseExchange host-stage send");
+        pfc::mpi::throw_on_mpi_error(MPI_Isend(m_host_send[i].data(), count,
+                                               MPI_DOUBLE, h.peer_rank, h.send_tag,
+                                               m_comm, &m_requests[req]),
+                                     "SparseExchange host-stage MPI_Isend");
+      }
       ++req;
     }
     m_request_count = static_cast<int>(req);
@@ -185,7 +268,14 @@ private:
 
   void finish_device_(T *field_ptr, std::size_t field_size) {
     exchange::wait_all(m_requests.data(), m_request_count);
-    for (auto &h : m_halos) {
+    const bool aware = pfc::gpu::runtime_mpi_gpu_aware();
+    for (std::size_t i = 0; i < m_halos.size(); ++i) {
+      auto &h = m_halos[i];
+      if (!aware && !h.recv_values.empty()) {
+        copy_h2d_(h.recv_values.data().data(), m_host_recv[i].data(),
+                  h.recv_values.size() * sizeof(T),
+                  "SparseExchange host-stage recv H2D");
+      }
       if (h.scatter_after_recv && !h.recv_values.empty()) {
         core::scatter(h.recv_values, field_ptr, field_size);
       }
@@ -197,6 +287,8 @@ private:
   MPI_Comm m_comm = MPI_COMM_NULL;
   int m_rank = 0;
   std::vector<halo_type> m_halos;
+  std::vector<std::vector<T>> m_host_send;
+  std::vector<std::vector<T>> m_host_recv;
   std::vector<MPI_Request> m_requests;
   int m_request_count = 0;
 };

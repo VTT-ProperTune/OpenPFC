@@ -44,12 +44,6 @@ TEST_CASE("Allen–Cahn CPU vs HIP agreement (single rank)", "[AllenCahn][HIP]")
   if (hipGetDeviceCount(&n_dev) != hipSuccess || n_dev < 1) {
     SKIP("No HIP device");
   }
-  if (!pfc::gpu::runtime_mpi_gpu_aware()) {
-    // Catch2 3.3 treats a single-case SKIP as a non-zero process exit, which
-    // CTest records as Failed. SUCCEED+return keeps the batch green.
-    SUCCEED("skipped: GPU-aware MPI off (Tohtori MPI_HIP_AWARE=OFF)");
-    return;
-  }
 
   allen_cahn::RunConfig cfg;
   cfg.nx_glob = 32;

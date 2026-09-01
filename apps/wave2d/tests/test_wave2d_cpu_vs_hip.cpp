@@ -45,10 +45,6 @@ TEST_CASE("wave2d CPU vs HIP (Neumann y, single rank)", "[wave2d][HIP]") {
   if (hipGetDeviceCount(&n_dev) != hipSuccess || n_dev < 1) {
     SKIP("No HIP device");
   }
-  if (!pfc::gpu::runtime_mpi_gpu_aware()) {
-    SUCCEED("skipped: GPU-aware MPI off (Tohtori MPI_HIP_AWARE=OFF)");
-    return;
-  }
 
   constexpr int Nx = 24;
   constexpr int Ny = 24;
