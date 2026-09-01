@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #ifndef TUNGSTEN_INPUT_HPP
@@ -7,18 +7,7 @@
 #include <nlohmann/json.hpp>
 #include <openpfc/frontend/ui/parameter_validator.hpp>
 #include <tungsten/common/tungsten_params.hpp>
-#include <tungsten/cpu/tungsten_model.hpp>
 #include <tungsten/tungsten_physics.hpp>
-
-// Forward declaration for CUDA version (if available)
-#if defined(OpenPFC_ENABLE_CUDA)
-template <typename RealType> class TungstenCUDA;
-#endif
-
-// Forward declaration for HIP version (if available)
-#if defined(OpenPFC_ENABLE_HIP)
-template <typename RealType> class TungstenHIP;
-#endif
 
 using json = nlohmann::json;
 using pfc::ui::ParameterMetadata;
@@ -267,46 +256,9 @@ inline pfc::ui::ValidationResult validate_tungsten_params(const json &j) {
  * @param m model
  * @throws std::invalid_argument if validation fails
  */
-void from_json(const json &j, Tungsten &m) {
+void from_json(const json &j, TungstenParams &p) {
   validate_tungsten_params(j);
-  tungsten::apply_tungsten_json(j, m.params);
+  tungsten::apply_tungsten_json(j, p);
 }
-
-#if defined(OpenPFC_ENABLE_CUDA)
-/**
- * @brief Read model configuration from json file for CUDA version
- *
- * Uses the same comprehensive validation as the CPU version.
- * Prints validation summary for reproducibility.
- *
- * @tparam RealType Real number type (float or double)
- * @param j json file
- * @param m CUDA model
- * @throws std::invalid_argument if validation fails
- */
-template <typename RealType>
-void from_json(const json &j, TungstenCUDA<RealType> &m) {
-  validate_tungsten_params(j);
-  tungsten::apply_tungsten_json(j, m.params);
-}
-#endif // OpenPFC_ENABLE_CUDA
-
-#if defined(OpenPFC_ENABLE_HIP)
-/**
- * @brief Read model configuration from json file for HIP version
- *
- * Uses the same comprehensive validation as the CPU version.
- *
- * @tparam RealType Real number type (float or double)
- * @param j json file
- * @param m HIP model
- * @throws std::invalid_argument if validation fails
- */
-template <typename RealType>
-void from_json(const json &j, TungstenHIP<RealType> &m) {
-  validate_tungsten_params(j);
-  tungsten::apply_tungsten_json(j, m.params);
-}
-#endif // OpenPFC_ENABLE_HIP
 
 #endif // TUNGSTEN_INPUT_HPP

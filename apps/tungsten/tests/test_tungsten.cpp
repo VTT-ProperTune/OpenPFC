@@ -8,19 +8,18 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <cmath>
-#include <iomanip>
+#include <iostream>
 #include <limits>
 #include <mpi.h>
-#include <numbers>
-#include <openpfc/domain/create.hpp>
-#include <openpfc/kernel/fft/fft_fftw.hpp>
+#include <nlohmann/json.hpp>
 #include <openpfc/kernel/integrator/spectral_exp_coefficients.hpp>
-#include <openpfc/openpfc.hpp>
-#include <tungsten/common/tungsten_etd_workspace.hpp>
+#include <stdexcept>
+#include <tungsten/common/tungsten_input.hpp>
+#include <tungsten/common/tungsten_params.hpp>
 #include <tungsten/common/tungsten_spectral.hpp>
-#include <tungsten/cpu/tungsten.hpp>
 
 using namespace Catch::Matchers;
+using json = nlohmann::json;
 
 /* Parameters from tungsten_single_seed.json:
 {
@@ -62,26 +61,19 @@ TEST_CASE("Tungsten JSON parsing", "[Tungsten][JSON]") {
               {"q30", -12.4567},    {"q31", 20.0},
               {"q40", 45.0}};
 
-    pfc::MPI_Worker worker(0, nullptr);
-    auto world = pfc::domain::create_world_uniform(32);
-    auto decomp = pfc::decomposition::create(world, 1);
-    auto fft = pfc::fft::create(decomp);
-    Tungsten tungsten(fft, world);
-    from_json(j, tungsten);
+    TungstenParams params;
+    from_json(j, params);
 
-    // Check basic parameters
-    REQUIRE_THAT(tungsten.params.get_n0(), WithinAbs(-0.10, 1e-10));
-    REQUIRE_THAT(tungsten.params.get_n_sol(), WithinAbs(-0.047, 1e-10));
-    REQUIRE_THAT(tungsten.params.get_n_vap(), WithinAbs(-0.464, 1e-10));
-    REQUIRE_THAT(tungsten.params.get_T(), WithinAbs(3300.0, 1e-10));
-    REQUIRE_THAT(tungsten.params.get_T0(), WithinAbs(156000.0, 1e-10));
-    REQUIRE_THAT(tungsten.params.get_Bx(), WithinAbs(0.8582, 1e-10));
-
-    // Check derived parameters
-    REQUIRE_THAT(tungsten.params.get_tau(), WithinAbs(3300.0 / 156000.0, 1e-10));
-    REQUIRE(tungsten.params.get_p2_bar() > 0.0);
-    REQUIRE(tungsten.params.get_q2_bar() != 0.0);
-    REQUIRE(tungsten.params.get_q3_bar() != 0.0);
+    REQUIRE_THAT(params.get_n0(), WithinAbs(-0.10, 1e-10));
+    REQUIRE_THAT(params.get_n_sol(), WithinAbs(-0.047, 1e-10));
+    REQUIRE_THAT(params.get_n_vap(), WithinAbs(-0.464, 1e-10));
+    REQUIRE_THAT(params.get_T(), WithinAbs(3300.0, 1e-10));
+    REQUIRE_THAT(params.get_T0(), WithinAbs(156000.0, 1e-10));
+    REQUIRE_THAT(params.get_Bx(), WithinAbs(0.8582, 1e-10));
+    REQUIRE_THAT(params.get_tau(), WithinAbs(3300.0 / 156000.0, 1e-10));
+    REQUIRE(params.get_p2_bar() > 0.0);
+    REQUIRE(params.get_q2_bar() != 0.0);
+    REQUIRE(params.get_q3_bar() != 0.0);
   }
 
   SECTION("Reject invalid JSON - missing field") {
@@ -90,13 +82,8 @@ TEST_CASE("Tungsten JSON parsing", "[Tungsten][JSON]") {
               // Missing n_vap
               {"T", 3300.0}};
 
-    pfc::MPI_Worker worker(0, nullptr);
-    auto world = pfc::domain::create_world_uniform(32);
-    auto decomp = pfc::decomposition::create(world, 1);
-    auto fft = pfc::fft::create(decomp);
-    Tungsten tungsten(fft, world);
-
-    REQUIRE_THROWS_AS(from_json(j, tungsten), std::invalid_argument);
+    TungstenParams params;
+    REQUIRE_THROWS_AS(from_json(j, params), std::invalid_argument);
   }
 
   SECTION("Reject invalid JSON - wrong type") {
@@ -122,277 +109,44 @@ TEST_CASE("Tungsten JSON parsing", "[Tungsten][JSON]") {
               {"q31", 20.0},
               {"q40", 45.0}};
 
-    pfc::MPI_Worker worker(0, nullptr);
-    auto world = pfc::domain::create_world_uniform(32);
-    auto decomp = pfc::decomposition::create(world, 1);
-    auto fft = pfc::fft::create(decomp);
-    Tungsten tungsten(fft, world);
-
-    REQUIRE_THROWS_AS(from_json(j, tungsten), std::invalid_argument);
+    TungstenParams params;
+    REQUIRE_THROWS_AS(from_json(j, params), std::invalid_argument);
   }
 }
 
 TEST_CASE("Tungsten parameter setters", "[Tungsten][Setters]") {
-  pfc::MPI_Worker worker(0, nullptr);
-  auto world = pfc::domain::create(pfc::GridSize(pfc::Int3{32, 32, 32}),
-                                   pfc::PhysicalOrigin(pfc::Real3{0, 0, 0}),
-                                   pfc::GridSpacing(pfc::Real3{1, 1, 1}));
-  auto decomp = pfc::decomposition::create(world, 1);
-  auto fft = pfc::fft::create(decomp);
-  Tungsten tungsten(fft, world);
+  TungstenParams params;
 
   SECTION("Set basic parameters") {
-    tungsten.params.set_n0(-0.10);
-    tungsten.params.set_n_sol(-0.047);
-    tungsten.params.set_n_vap(-0.464);
-    tungsten.params.set_T(3300.0);
-    tungsten.params.set_T0(156000.0);
-    tungsten.params.set_Bx(0.8582);
+    params.set_n0(-0.10);
+    params.set_n_sol(-0.047);
+    params.set_n_vap(-0.464);
+    params.set_T(3300.0);
+    params.set_T0(156000.0);
+    params.set_Bx(0.8582);
 
-    REQUIRE_THAT(tungsten.params.get_n0(), WithinAbs(-0.10, 1e-10));
-    REQUIRE_THAT(tungsten.params.get_n_sol(), WithinAbs(-0.047, 1e-10));
-    REQUIRE_THAT(tungsten.params.get_n_vap(), WithinAbs(-0.464, 1e-10));
-    REQUIRE_THAT(tungsten.params.get_T(), WithinAbs(3300.0, 1e-10));
-    REQUIRE_THAT(tungsten.params.get_T0(), WithinAbs(156000.0, 1e-10));
-    REQUIRE_THAT(tungsten.params.get_Bx(), WithinAbs(0.8582, 1e-10));
+    REQUIRE_THAT(params.get_n0(), WithinAbs(-0.10, 1e-10));
+    REQUIRE_THAT(params.get_n_sol(), WithinAbs(-0.047, 1e-10));
+    REQUIRE_THAT(params.get_n_vap(), WithinAbs(-0.464, 1e-10));
+    REQUIRE_THAT(params.get_T(), WithinAbs(3300.0, 1e-10));
+    REQUIRE_THAT(params.get_T0(), WithinAbs(156000.0, 1e-10));
+    REQUIRE_THAT(params.get_Bx(), WithinAbs(0.8582, 1e-10));
   }
 
   SECTION("Set parameters with derived values") {
-    tungsten.params.set_T(3300.0);
-    tungsten.params.set_T0(156000.0);
-    REQUIRE_THAT(tungsten.params.get_tau(), WithinAbs(3300.0 / 156000.0, 1e-10));
+    params.set_T(3300.0);
+    params.set_T0(156000.0);
+    REQUIRE_THAT(params.get_tau(), WithinAbs(3300.0 / 156000.0, 1e-10));
 
-    tungsten.params.set_shift_u(0.3341);
-    tungsten.params.set_shift_s(0.1898);
-    tungsten.params.set_p2(1.0);
-    tungsten.params.set_p3(-0.5);
-    tungsten.params.set_p4(0.333333333);
+    params.set_shift_u(0.3341);
+    params.set_shift_s(0.1898);
+    params.set_p2(1.0);
+    params.set_p3(-0.5);
+    params.set_p4(0.333333333);
 
-    // Check that derived parameters are calculated
     double expected_p2_bar =
         1.0 + 2 * 0.1898 * (-0.5) + 3 * pow(0.1898, 2) * 0.333333333;
-    REQUIRE_THAT(tungsten.params.get_p2_bar(), WithinAbs(expected_p2_bar, 1e-8));
-  }
-}
-
-TEST_CASE("Tungsten functionality", "[Tungsten]") {
-  SECTION("Step model and calculate norm of the result") {
-    pfc::MPI_Worker worker(0, nullptr);
-    // Create world with exact parameters from tungsten_single_seed.json
-    // Grid: 32x32x32, spacing: 1.1107207345395915, origin: center
-    // When origo="center", origin is at -0.5 * dx * Lx
-    double grid_spacing = 1.1107207345395915;
-    int Lx = 32;
-    int Ly = 32;
-    int Lz = 32;
-    double x0 = -0.5 * grid_spacing * Lx;
-    double y0 = -0.5 * grid_spacing * Ly;
-    double z0 = -0.5 * grid_spacing * Lz;
-    auto world = pfc::domain::create(
-        pfc::GridSize({Lx, Ly, Lz}), pfc::PhysicalOrigin({x0, y0, z0}),
-        pfc::GridSpacing({grid_spacing, grid_spacing, grid_spacing}));
-    auto decomp = pfc::decomposition::create(world, 1);
-    auto fft = pfc::fft::create(decomp);
-
-    Tungsten tungsten(fft, world);
-    // Set parameters from tungsten_single_seed.json (exact values)
-    // Order doesn't matter - derived parameters are calculated on-the-fly
-    tungsten.params.set_n0(-0.10);
-    tungsten.params.set_alpha(0.50);
-    tungsten.params.set_n_sol(-0.047);
-    tungsten.params.set_n_vap(-0.464);
-    tungsten.params.set_T0(156000.0);
-    tungsten.params.set_T(3300.0);
-    tungsten.params.set_Bx(0.8582);
-    tungsten.params.set_alpha_farTol(0.001);
-    tungsten.params.set_alpha_highOrd(4);
-    tungsten.params.set_lambda(0.22);
-    tungsten.params.set_stabP(0.2);
-    tungsten.params.set_shift_s(0.1898);
-    tungsten.params.set_shift_u(0.3341);
-    tungsten.params.set_p2(1.0);
-    tungsten.params.set_p3(-0.5);
-    tungsten.params.set_p4(0.333333333);
-    tungsten.params.set_q20(-0.0037);
-    tungsten.params.set_q21(1.0);
-    tungsten.params.set_q30(-12.4567);
-    tungsten.params.set_q31(20.0);
-    tungsten.params.set_q40(45.0);
-    double dt = 1.0;
-    tungsten.initialize(dt);
-
-    // Manually replicate the initial condition logic from the UI
-    // This matches exactly what happens when initial conditions are applied
-    std::vector<double> &psi = tungsten.get_real_field("psi");
-    // Get the domain from the world
-    const pfc::Domain &w = pfc::get_world(tungsten).domain_;
-    const auto &fft_ref = pfc::get_fft(tungsten);
-
-    // 1. Constant initial condition: fill entire field with -0.4
-    std::fill(psi.begin(), psi.end(), -0.4);
-
-    // 2. Single seed initial condition: apply seed formula to points within
-    // radius 64.0 Replicate the exact logic from SingleSeed::apply()
-    pfc::types::Int3 low = pfc::fft::get_inbox(fft_ref).low;
-    pfc::types::Int3 high = pfc::fft::get_inbox(fft_ref).high;
-
-    auto spacing = pfc::domain::get_spacing(w);
-    auto origin = pfc::domain::get_origin(w);
-    double dx_ic = spacing[0];
-    double dy_ic = spacing[1];
-    double dz_ic = spacing[2];
-    double x0_ic = origin[0];
-    double y0_ic = origin[1];
-    double z0_ic = origin[2];
-
-    double s = 1.0 / sqrt(2.0);
-    std::array<double, 3> q1 = {s, s, 0};
-    std::array<double, 3> q2 = {s, 0, s};
-    std::array<double, 3> q3 = {0, s, s};
-    std::array<double, 3> q4 = {s, 0, -s};
-    std::array<double, 3> q5 = {s, -s, 0};
-    std::array<double, 3> q6 = {0, s, -s};
-    std::array<std::array<double, 3>, 6> q = {q1, q2, q3, q4, q5, q6};
-
-    double rho_seed = -0.047;
-    double amp_eq = 0.215936;
-    // Use seed radius of ~18.0 (about 50% of domain size, which is ~35.5 units)
-    // Domain spans from -17.77 to +17.77, so radius 18 covers about half the domain
-    double seed_radius = 18.0;
-    double r2 = pow(seed_radius, 2);
-
-    long int idx = 0;
-    for (int k = low[2]; k <= high[2]; k++) {
-      for (int j = low[1]; j <= high[1]; j++) {
-        for (int i = low[0]; i <= high[0]; i++) {
-          double x = x0_ic + i * dx_ic;
-          double y = y0_ic + j * dy_ic;
-          double z = z0_ic + k * dz_ic;
-          if (x * x + y * y + z * z < r2) {
-            double u = rho_seed;
-            for (int qi = 0; qi < 6; qi++) {
-              u += 2.0 * amp_eq * cos(q[qi][0] * x + q[qi][1] * y + q[qi][2] * z);
-            }
-            psi[idx] = u;
-          }
-          idx += 1;
-        }
-      }
-    }
-
-    // Expected norms after each step (regression test values)
-    // Grid: 32x32x32, spacing: 1.1107207345395915, dt=1.0
-    // Initial conditions: constant(-0.4) + single_seed(amp_eq=0.215936,
-    // rho_seed=-0.047, radius=18.0)
-    // Updated after refactoring to use getters for derived parameters
-    // (derived parameters now calculated on-the-fly, fixing parameter order bug)
-    std::array<double, 11> expected_norms{
-        11965.0889218507, // Initial state (after ICs applied)
-        11259.9705028338, // After step 1
-        11050.6245088282, // After step 2
-        10903.2783913748, // After step 3
-        10782.9029639299, // After step 4
-        10678.0834708269, // After step 5
-        10583.6114287826, // After step 6
-        10496.5733807390, // After step 7
-        10415.1258360383, // After step 8
-        10338.0182669812, // After step 9
-        10264.3672697202  // After step 10
-    };
-
-    // Verify initial norm (before any steps) - print for debugging
-    double initial_norm = 0.0;
-    double min_val = std::numeric_limits<double>::max();
-    double max_val = std::numeric_limits<double>::lowest();
-    for (auto &x : psi) {
-      initial_norm += x * x;
-      min_val = std::min(min_val, x);
-      max_val = std::max(max_val, x);
-    }
-    std::cout << "Initial norm: " << std::fixed << std::setprecision(10)
-              << initial_norm << '\n';
-    std::cout << "Initial field range: [" << min_val << ", " << max_val << "]"
-              << '\n';
-    std::cout << "Expected: constant -0.4 everywhere, then seed applied in center"
-              << '\n';
-
-    // Run 10 time steps and verify norms match expected values exactly
-    // Expected norms are from actual simulation run with these exact parameters
-    std::vector<double> actual_norms;
-    for (int i = 0; i < 10; ++i) {
-      tungsten.step(1.0);
-      double norm2 = 0.0;
-      for (auto &x : psi) {
-        norm2 += x * x;
-      }
-      actual_norms.push_back(norm2);
-      std::cout << "Step " << (i + 1) << " norm: " << std::fixed
-                << std::setprecision(10) << norm2 << '\n';
-    }
-
-    // Print summary
-    std::cout << "\nNorm changes:" << '\n';
-    for (size_t i = 0; i < actual_norms.size(); ++i) {
-      if (i == 0) {
-        double change = actual_norms[i] - initial_norm;
-        std::cout << "  Step " << (i + 1) << ": " << change << " (from initial)"
-                  << '\n';
-      } else {
-        double change = actual_norms[i] - actual_norms[i - 1];
-        std::cout << "  Step " << (i + 1) << ": " << change << " (from step " << i
-                  << ")" << '\n';
-      }
-    }
-
-    // Verify initial norm matches expected value
-    REQUIRE_THAT(initial_norm, WithinAbs(expected_norms[0], 0.1));
-
-    // Verify norms match expected values (tight tolerance for regression testing)
-    REQUIRE(actual_norms.size() == 10);
-    bool norms_match = true;
-    for (int i = 0; i < 10; ++i) {
-      norms_match &= std::abs(actual_norms[i] - expected_norms[i + 1]) <= 0.1;
-    }
-    REQUIRE(norms_match);
-  }
-
-  SECTION("Model initialization and allocation") {
-    pfc::MPI_Worker worker(0, nullptr);
-    auto world = pfc::domain::create_world_uniform(32);
-    auto decomp = pfc::decomposition::create(world, 1);
-    auto fft = pfc::fft::create(decomp);
-
-    Tungsten tungsten(fft, world);
-    tungsten.params.set_n0(-0.10);
-    tungsten.params.set_alpha(0.50);
-    tungsten.params.set_T(3300.0);
-    tungsten.params.set_T0(156000.0);
-    tungsten.params.set_Bx(0.8582);
-    tungsten.params.set_alpha_farTol(0.001);
-    tungsten.params.set_alpha_highOrd(4);
-    tungsten.params.set_lambda(0.22);
-    tungsten.params.set_stabP(0.2);
-    tungsten.params.set_shift_u(0.3341);
-    tungsten.params.set_shift_s(0.1898);
-    tungsten.params.set_p2(1.0);
-    tungsten.params.set_p3(-0.5);
-    tungsten.params.set_p4(0.333333333);
-    tungsten.params.set_q20(-0.0037);
-    tungsten.params.set_q21(1.0);
-    tungsten.params.set_q30(-12.4567);
-    tungsten.params.set_q31(20.0);
-    tungsten.params.set_q40(45.0);
-
-    double dt = 1.0;
-    tungsten.initialize(dt);
-
-    // Check that fields are allocated
-    REQUIRE(tungsten.has_real_field("psi"));
-    REQUIRE(tungsten.has_real_field("psiMF"));
-    REQUIRE(tungsten.has_real_field("default")); // backward compatibility
-
-    std::vector<double> &psi = tungsten.get_real_field("psi");
-    REQUIRE(!psi.empty());
+    REQUIRE_THAT(params.get_p2_bar(), WithinAbs(expected_p2_bar, 1e-8));
   }
 }
 
@@ -601,57 +355,13 @@ TEST_CASE("spectral_exp_cache_matches_legacy_etd_weights",
   std::array<double, 1> L_arr{L};
   cache.ensure(L_arr, dt, pfc::integrator::SpectralExpOperatorId{.value = 1},
                pfc::integrator::SpectralExpDtId::from_bits(dt),
-               tungsten::etd::k_tungsten_etd_config_id);
+               pfc::integrator::SpectralExpConfigId{.value = 1});
 
   REQUIRE(cache.exp_Ldt().size() == 1);
   REQUIRE(cache.phi1_L().size() == 1);
   CHECK(cache.exp_Ldt()[0] == Catch::Approx(legacy.opL).epsilon(1e-14));
   CHECK((k_laplacian * cache.phi1_L()[0]) ==
         Catch::Approx(legacy.opN).epsilon(1e-14));
-}
-
-TEST_CASE("Tungsten CPU golden matches CPU-vs-CUDA config",
-          "[tungsten][cpu_golden][parity]") {
-  int rank = 0;
-  int nproc = 1;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
-  REQUIRE(nproc == 1);
-
-  auto domain = pfc::domain::create(pfc::GridSize({32, 32, 32}),
-                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = pfc::decomposition::create(domain, nproc);
-  auto fft = pfc::fft::create(decomp, rank, MPI_COMM_WORLD);
-  Tungsten model(fft, domain);
-  model.params.set_n0(-0.4);
-  model.params.set_T(0.5);
-  constexpr double dt = 0.01;
-  model.initialize(dt);
-  auto &psi = model.get_real_field("psi");
-  for (size_t i = 0; i < psi.size(); ++i) {
-    psi[i] = -0.4 + 0.1 * std::sin(2.0 * std::numbers::pi * i / psi.size());
-  }
-  for (int step = 0; step < 10; ++step) {
-    model.step(0.0);
-  }
-
-  double sum = 0.0;
-  double sumsq = 0.0;
-  for (double x : psi) {
-    sum += x;
-    sumsq += x * x;
-  }
-  if (rank == 0) {
-    std::cout << std::setprecision(17) << "CPU_GOLDEN tungsten n=" << psi.size()
-              << " sum=" << sum << " sumsq=" << sumsq << '\n';
-  }
-  REQUIRE(psi.size() == 32768);
-  REQUIRE(std::isfinite(sum));
-  REQUIRE(std::isfinite(sumsq));
-  // Tohtori g0005, gcc 15.2 Debug, same config as test_tungsten_cpu_vs_cuda.
-  REQUIRE_THAT(sum, WithinRel(-13107.200000000043, 1e-10));
-  REQUIRE_THAT(sumsq, WithinRel(5406.3450894885682, 1e-10));
 }
 
 int main(int argc, char *argv[]) {

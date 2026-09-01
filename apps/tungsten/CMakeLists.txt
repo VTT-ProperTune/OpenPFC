@@ -180,7 +180,7 @@ if(TUNGSTEN_ENABLE_TESTS)
         include(CTest)
         # Run all tungsten tests in a single invocation to avoid per-test MPI overhead
         add_test(NAME tungsten-all-tests COMMAND test_tungsten)
-        add_test(NAME tungsten-cpu-golden COMMAND test_tungsten "[cpu_golden]")
+        add_test(NAME tungsten-cpu-golden COMMAND test_tungsten "[etd_cpu_golden]")
         add_test(NAME tungsten-etd-cpu-golden COMMAND test_tungsten "[etd_cpu_golden]")
         if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
           add_test(NAME tungsten-golden-4rank
@@ -191,31 +191,7 @@ if(TUNGSTEN_ENABLE_TESTS)
             RUN_SERIAL TRUE)
         endif()
 
-        # CPU vs CUDA comparison test (only if CUDA spectral support is enabled)
         if(OpenPFC_ENABLE_CUDA_SPECTRAL)
-            add_executable(test_tungsten_cpu_vs_cuda tests/test_tungsten_cpu_vs_cuda.cpp)
-            target_include_directories(test_tungsten_cpu_vs_cuda PRIVATE ${TUNGSTEN_INCLUDE_DIR})
-            target_link_libraries(test_tungsten_cpu_vs_cuda PRIVATE
-              OpenPFC
-              nlohmann_json::nlohmann_json
-              $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
-              Catch2::Catch2
-              CUDA::cudart
-              openpfc_gpu_kernels
-            )
-            target_sources(test_tungsten_cpu_vs_cuda PRIVATE
-                src/cuda/tungsten_ops_kernels.cu
-            )
-            set_target_properties(test_tungsten_cpu_vs_cuda PROPERTIES
-                CUDA_STANDARD 20
-                CUDA_STANDARD_REQUIRED ON
-                CUDA_SEPARABLE_COMPILATION ON
-            )
-            include(CTest)
-            # Run all CPU vs CUDA tests in a single invocation
-            add_test(NAME tungsten-cpu-vs-cuda-tests COMMAND test_tungsten_cpu_vs_cuda)
-            message(STATUS "Tungsten CPU vs CUDA comparison test enabled")
-
             add_executable(test_tungsten_etd_cuda tests/test_tungsten_etd_gpu.cpp)
             target_include_directories(test_tungsten_etd_cuda PRIVATE
               ${TUNGSTEN_INCLUDE_DIR}
@@ -234,31 +210,11 @@ if(TUNGSTEN_ENABLE_TESTS)
             add_test(NAME CUDA_TungstenETD COMMAND test_tungsten_etd_cuda)
             add_test(NAME tungsten-etd-cpu-vs-cuda COMMAND test_tungsten_etd_cuda
                 "[parity32]")
+            add_test(NAME tungsten-cpu-vs-cuda-tests COMMAND test_tungsten_etd_cuda
+                "[parity32]")
         endif()
 
-        # CPU vs HIP comparison test (HIP spectral + rocFFT HeFFTe)
         if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
-            add_executable(test_tungsten_cpu_vs_hip tests/test_tungsten_cpu_vs_hip.cpp)
-            target_include_directories(test_tungsten_cpu_vs_hip PRIVATE ${TUNGSTEN_INCLUDE_DIR})
-            target_link_libraries(test_tungsten_cpu_vs_hip PRIVATE
-              OpenPFC
-              nlohmann_json::nlohmann_json
-              $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
-              Catch2::Catch2
-              hip::host
-              openpfc_hip_kernels
-            )
-            target_sources(test_tungsten_cpu_vs_hip PRIVATE
-                src/hip/tungsten_ops_kernels.hip
-            )
-            set_target_properties(test_tungsten_cpu_vs_hip PROPERTIES
-                HIP_STANDARD 20
-                HIP_STANDARD_REQUIRED ON
-            )
-            include(CTest)
-            add_test(NAME tungsten-cpu-vs-hip-tests COMMAND test_tungsten_cpu_vs_hip)
-            message(STATUS "Tungsten CPU vs HIP comparison test enabled")
-
             add_executable(test_tungsten_etd_hip tests/test_tungsten_etd_gpu.cpp)
             target_include_directories(test_tungsten_etd_hip PRIVATE
               ${TUNGSTEN_INCLUDE_DIR}
