@@ -110,13 +110,11 @@ std::size_t total_size = u.size();
 Fields integrate seamlessly with halo exchangers for MPI communication:
 
 ```cpp
-#include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 
-// Create halo exchanger from field and decomposition
-PaddedHaloExchanger<double> halo_u(u, decomp, rank, MPI_COMM_WORLD);
-
-// Perform halo exchange
-pfc::communication::exchange(halo_u);
+pfc::comm::HaloExchange<pfc::HostSpace, double> halo_u(u, decomp, rank,
+                                                       MPI_COMM_WORLD);
+halo_u.exchange();
 ```
 
 ### Field checkpointing

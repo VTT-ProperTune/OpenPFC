@@ -5,56 +5,25 @@
 
 /**
  * @file padded_halo_exchange.hpp
- * @brief Non-blocking face halo exchange for the padded brick layout.
+ * @brief Internal Faces backend for `pfc::comm::HaloExchange` (host).
  *
  * @details
- * Complements `pfc::SparseHaloExchanger` (sparse, separate face
- * vectors). `pfc::communication::PaddedHaloExchanger<T>` is the in-place
- * exchanger
- * that targets a `(nx+2hw)*(ny+2hw)*(nz+2hw)` padded
- * `pfc::data::Field<T, HostSpace>` buffer:
+ * Not a public API. Callers bind a padded `pfc::data::Field` through
+ * `pfc::comm::HaloExchange` with `HaloConnectivity::Faces`. This header
+ * owns the 6-face MPI subarray path (`create_padded_face_types_6`).
  *
- *   - It builds the **padded** face MPI subarrays from
- *     `pfc::halo::create_padded_face_types_6` so each direction's `recv`
- *     subarray writes into the dedicated halo ring rather than over the
- *     outermost owned cells.
- *   - It exposes the same non-blocking
- *     `start_halo_exchange(T*, std::size_t)` /
- *     `finish_halo_exchange()` pair as the existing exchangers, plus a
- *     blocking `exchange_halos(...)` convenience wrapper.
- *   - The **preferred** entry point is the Field-binding constructor
- *     `communication::PaddedHaloExchanger(field, decomp, rank, comm)`:
- *     it pulls box / domain / halo width from `u` and captures the
- *     buffer pointer once, so the time loop can read
+ * Face-only: corners/edges are not filled. Full 26-direction fill is
+ * `HaloConnectivity::Full`.
  *
- *       pfc::communication::PaddedHaloExchanger<double> halo(
- *           u, decomp, rank, MPI_COMM_WORLD);
- *       pfc::communication::exchange(halo);   // blocking; one call
- *       // Pro overlap: pfc::communication::start_exchange(halo); …
- *       //               pfc::communication::finish_exchange(halo);
- *
- *     with no chance of drift between the field layout and the
- *     exchanger arguments.
- *
- * Periodic boundaries are handled by the underlying decomposition: in
- * a single-rank run every direction wraps to self, and `MPI_Isend` /
- * `MPI_Irecv` to self complete locally.
- *
- * The exchange is **face-only** — corner halo cells (e.g. `u(-1, -1, k)`)
- * are not filled. That matches the needs of the 7-point Laplacian and
- * any face-only stencil; mixed derivatives that read corners need a
- * 26-neighbor exchanger — use `pfc::communication::FullPaddedHaloExchanger`
- * on the host, or `pfc::cuda::FullPaddedDeviceHalo` on device.
- *
- * @see pfc::data::Field
+ * @see comm_halo_exchange.hpp
  * @see pfc::halo::create_padded_face_types_6
- * @see full_padded_halo_exchange.hpp — host 26-direction twin
  */
 
 #include <array>
 #include <cstddef>
 #include <mpi.h>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 #include <openpfc/kernel/data/box3i.hpp>
@@ -72,11 +41,7 @@
 #include <openpfc/kernel/profiling/context.hpp>
 #include <openpfc/kernel/profiling/names.hpp>
 
-// `pfc::exchange` is already a namespace (`exchange.hpp`). The blocking
-// one-shot helper therefore lives only as `pfc::communication::exchange`
-// and is not re-exported into `pfc::`.
-
-namespace pfc::communication {
+namespace pfc::comm::detail {
 
 /**
  * @brief In-place non-blocking face halo exchange for a padded brick.
@@ -87,7 +52,7 @@ namespace pfc::communication {
  * the field's halo ring, so the user's per-cell stencil can index
  * `u(i +/- hw, j, k)` after `finish_halo_exchange()` returns.
  */
-template <typename T = double> class PaddedHaloExchanger {
+template <typename T = double> class HostFacesHalo {
 public:
   using Int3 = pfc::types::Int3;
 
@@ -105,12 +70,12 @@ public:
    * @param comm          MPI communicator.
    * @param base_tag      Base tag for messages (direction index added).
    */
-  PaddedHaloExchanger(const Box3i &subdomain_box, const Domain &domain,
-                      const decomposition::Decomposition &decomp, int rank,
-                      int halo_width, MPI_Comm comm, int base_tag = 0)
-      : PaddedHaloExchanger(subdomain_box, domain, decomp, rank, halo_width, comm,
-                            halo::presets::Axes3D(), base_tag,
-                            halo::HaloDirectionSelector{}) {}
+  HostFacesHalo(const Box3i &subdomain_box, const Domain &domain,
+                const decomposition::Decomposition &decomp, int rank, int halo_width,
+                MPI_Comm comm, int base_tag = 0)
+      : HostFacesHalo(subdomain_box, domain, decomp, rank, halo_width, comm,
+                      halo::presets::Axes3D(), base_tag,
+                      halo::HaloDirectionSelector{}) {}
 
   /**
    * @brief Construct the exchanger and pre-build the 6 face MPI types
@@ -126,14 +91,14 @@ public:
    *
    * @deprecated Use explicit Box3i + Domain constructor instead.
    */
-  [[deprecated("Use explicit Box3i + Domain constructor: PaddedHaloExchanger(box, "
+  [[deprecated("Use explicit Box3i + Domain constructor: HostFacesHalo(box, "
                "domain, decomp, rank, ...)")]]
-  PaddedHaloExchanger(const decomposition::Decomposition &decomp, int rank,
-                      int halo_width, MPI_Comm comm, int base_tag = 0)
-      : PaddedHaloExchanger(decomposition::local_box(decomp, rank),
-                            decomposition::domain(decomp), decomp, rank, halo_width,
-                            comm, halo::presets::Axes3D(), base_tag,
-                            halo::HaloDirectionSelector{}) {}
+  HostFacesHalo(const decomposition::Decomposition &decomp, int rank, int halo_width,
+                MPI_Comm comm, int base_tag = 0)
+      : HostFacesHalo(decomposition::local_box(decomp, rank),
+                      decomposition::domain(decomp), decomp, rank, halo_width, comm,
+                      halo::presets::Axes3D(), base_tag,
+                      halo::HaloDirectionSelector{}) {}
 
   /**
    * @brief Construct with a user-selected halo direction set.
@@ -141,8 +106,7 @@ public:
    * Restricts the active face slots to those listed in `dirs`. Non-face
    * directions (edges, corners) are tolerated but ignored — this exchanger
    * is face-only. For full 26-direction fills use
-   * `pfc::communication::FullPaddedHaloExchanger` (host) or
-   * `pfc::cuda::FullPaddedDeviceHalo` (CUDA).
+   * `pfc::comm::HaloExchange` with `HaloConnectivity::Full`.
    *
    * If `selector` is provided the active set for this rank is
    * `selector(rank)`; otherwise the uniform `dirs` is used.
@@ -157,20 +121,20 @@ public:
    *
    * @deprecated Use explicit Box3i + Domain constructor instead.
    */
-  [[deprecated("Use explicit Box3i + Domain constructor: PaddedHaloExchanger(box, "
+  [[deprecated("Use explicit Box3i + Domain constructor: HostFacesHalo(box, "
                "domain, decomp, rank, ...)")]]
-  PaddedHaloExchanger(const decomposition::Decomposition &decomp, int rank,
-                      int halo_width, MPI_Comm comm, halo::HaloDirectionSet dirs,
-                      int base_tag = 0, halo::HaloDirectionSelector selector = {})
-      : PaddedHaloExchanger(decomposition::local_box(decomp, rank),
-                            decomposition::domain(decomp), decomp, rank, halo_width,
-                            comm, dirs, base_tag, selector) {}
+  HostFacesHalo(const decomposition::Decomposition &decomp, int rank, int halo_width,
+                MPI_Comm comm, halo::HaloDirectionSet dirs, int base_tag = 0,
+                halo::HaloDirectionSelector selector = {})
+      : HostFacesHalo(decomposition::local_box(decomp, rank),
+                      decomposition::domain(decomp), decomp, rank, halo_width, comm,
+                      dirs, base_tag, selector) {}
 
   // Box3i + Domain constructor implementation
-  PaddedHaloExchanger(const Box3i &subdomain_box, const Domain &domain,
-                      const decomposition::Decomposition &decomp, int rank,
-                      int halo_width, MPI_Comm comm, halo::HaloDirectionSet dirs,
-                      int base_tag = 0, halo::HaloDirectionSelector selector = {})
+  HostFacesHalo(const Box3i &subdomain_box, const Domain &domain,
+                const decomposition::Decomposition &decomp, int rank, int halo_width,
+                MPI_Comm comm, halo::HaloDirectionSet dirs, int base_tag = 0,
+                halo::HaloDirectionSelector selector = {})
       : m_subdomain_box(subdomain_box), m_domain(domain), m_decomp(decomp),
         m_rank(rank), m_halo_width(halo_width), m_comm(comm), m_base_tag(base_tag),
         m_dirs(halo::resolve_direction_set(dirs, selector, rank)),
@@ -208,22 +172,22 @@ public:
    * @throws std::invalid_argument if `u.storage_halo() <= 0` (unpadded Fields
    *         use `SparseHaloExchanger` / face buffers, not this layout).
    */
-  PaddedHaloExchanger(data::Field<T, HostSpace> &u,
-                      const decomposition::Decomposition &decomp, int rank,
-                      MPI_Comm comm, int base_tag = 0)
-      : PaddedHaloExchanger(u.box(), u.domain(), decomp, rank, u.storage_halo(),
-                            comm, halo::presets::Axes3D(), base_tag,
-                            halo::HaloDirectionSelector{}) {
+  HostFacesHalo(data::Field<T, HostSpace> &u,
+                const decomposition::Decomposition &decomp, int rank, MPI_Comm comm,
+                int base_tag = 0)
+      : HostFacesHalo(u.box(), u.domain(), decomp, rank, u.storage_halo(), comm,
+                      halo::presets::Axes3D(), base_tag,
+                      halo::HaloDirectionSelector{}) {
     bind_field_(u);
   }
 
   /// Same as the Field-binding constructor, with a custom direction set.
-  PaddedHaloExchanger(data::Field<T, HostSpace> &u,
-                      const decomposition::Decomposition &decomp, int rank,
-                      MPI_Comm comm, halo::HaloDirectionSet dirs, int base_tag = 0,
-                      halo::HaloDirectionSelector selector = {})
-      : PaddedHaloExchanger(u.box(), u.domain(), decomp, rank, u.storage_halo(),
-                            comm, dirs, base_tag, selector) {
+  HostFacesHalo(data::Field<T, HostSpace> &u,
+                const decomposition::Decomposition &decomp, int rank, MPI_Comm comm,
+                halo::HaloDirectionSet dirs, int base_tag = 0,
+                halo::HaloDirectionSelector selector = {})
+      : HostFacesHalo(u.box(), u.domain(), decomp, rank, u.storage_halo(), comm,
+                      dirs, base_tag, selector) {
     bind_field_(u);
   }
 
@@ -329,9 +293,9 @@ private:
   void bind_field_(data::Field<T, HostSpace> &u) {
     if (u.storage_halo() <= 0) {
       throw std::invalid_argument(
-          "pfc::communication::PaddedHaloExchanger: Field binding requires "
+          "pfc::comm::detail::HostFacesHalo: Field binding requires "
           "storage_halo > 0 (padded layout). Unpadded Fields use "
-          "SparseHaloExchanger / face buffers.");
+          "SparseExchange / face buffers.");
     }
     m_bound_buf = u.data();
     m_bound_size = u.size();
@@ -339,11 +303,11 @@ private:
 
   void require_bound_(const char *what) const {
     if (m_bound_buf == nullptr) {
-      throw std::logic_error(
-          std::string("pfc::communication::PaddedHaloExchanger::") + what +
-          ": exchanger is not bound to a padded Field. "
-          "Use a Field-binding constructor or call "
-          "start_halo_exchange(buf, size) directly.");
+      throw std::logic_error(std::string("pfc::comm::detail::HostFacesHalo::") +
+                             what +
+                             ": exchanger is not bound to a padded Field. "
+                             "Use a Field-binding constructor or call "
+                             "start_halo_exchange(buf, size) directly.");
     }
   }
 
@@ -375,7 +339,7 @@ private:
 };
 
 /**
- * @name Free helpers for `PaddedHaloExchanger`
+ * @name Free helpers for `HostFacesHalo`
  *
  * `exchange(halo)` runs a full non-blocking exchange (start then finish)
  * with no overlap — the usual choice in compact drivers.
@@ -388,24 +352,14 @@ private:
  * `pfc::data::Field<T, HostSpace>` (see the Field-binding constructors).
  * @{
  */
-template <typename T> inline void start_exchange(PaddedHaloExchanger<T> &h) {
-  h.start();
-}
-template <typename T> inline void finish_exchange(PaddedHaloExchanger<T> &h) {
+template <typename T> inline void start_exchange(HostFacesHalo<T> &h) { h.start(); }
+template <typename T> inline void finish_exchange(HostFacesHalo<T> &h) {
   h.finish();
 }
-template <typename T> inline void exchange(PaddedHaloExchanger<T> &h) {
+template <typename T> inline void exchange(HostFacesHalo<T> &h) {
   start_exchange(h);
   finish_exchange(h);
 }
 /// @}
 
-} // namespace pfc::communication
-
-namespace pfc {
-using communication::finish_exchange;
-using communication::PaddedHaloExchanger;
-using communication::start_exchange;
-// Note: `communication::exchange` is not brought into `pfc::` — it would
-// collide with the existing `pfc::exchange` namespace from `exchange.hpp`.
-} // namespace pfc
+} // namespace pfc::comm::detail

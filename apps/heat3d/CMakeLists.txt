@@ -16,7 +16,7 @@ find_package(OpenMP COMPONENTS CXX)
 
 # Per-method binaries (model hierarchy, primitive -> compact):
 #   heat3d_fd_scratch          — version 0; bare triple loops, raw pointers,
-#                                only PaddedHaloExchanger from openpfc
+#                                only HaloExchange from openpfc
 #   heat3d_fd_manual           — laboratory-style explicit-stencil FD driver
 #   heat3d_fd                  — compact FD (pfc::data::Field + PaddedHalo +
 #                                FDGradient + for_each, decoupled in main)

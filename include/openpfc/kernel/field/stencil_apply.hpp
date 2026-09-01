@@ -51,7 +51,7 @@
  * [`runtime/gpu/full_padded_device_halo_gpu.hpp`](
  * ../runtime/gpu/full_padded_device_halo_gpu.hpp) on device — for any
  * `apply_separable` or `apply_dense` call whose support extends in more
- * than one axis at once). Face-only `PaddedHaloExchanger` is not
+ * than one axis at once). Face-only `HaloExchange` is not
  * sufficient for multi-axis support.
  *
  * **Coefficient layout**: every weight array is **full**, including
@@ -172,7 +172,7 @@ inline T apply_1d_along(const T *coeffs, int half_width, const T *core,
  * axes generally extends into corner halos. Use a corner-filled exchanger
  * (`pfc::communication::FullPaddedHaloExchanger` on the host, or
  * `pfc::cuda::FullPaddedDeviceHalo` on the GPU) before iterating;
- * `pfc::PaddedHaloExchanger` (axis-aligned only) is **not** sufficient
+ * `pfc::comm::HaloExchange` Faces (axis-aligned only) is **not** sufficient
  * when more than one of `Hi` is non-zero.
  *
  * @tparam T   Field value type.

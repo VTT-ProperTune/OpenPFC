@@ -35,7 +35,7 @@
  *
  * **Decoupled vs bundled.** For the new lab-style FD driver
  * (`apps/heat3d/src/cpu/heat3d_fd.cpp`) the separate primitives
- * `pfc::communication::PaddedHaloExchanger` + `pfc::communication::exchange`
+ * `pfc::comm::HaloExchange` Faces + `exchange()`
  * (or `start_exchange` / `finish_exchange` for overlap),
  * `pfc::gradient::FDGradient<G>` + `pfc::gradient::evaluate(grad, idx)`, and
  * `pfc::field::for_each(field, fn)` are the recommended path — they keep halo,
@@ -163,12 +163,10 @@ public:
    */
   friend pfc::field::ScaledField operator*(double alpha,
                                            const DuField &du) noexcept {
-    pfc::field::FieldView<double> view(
-        du.m_data.data(),
-        du.m_data.size(),
-        {},  // zero extents
-        {},  // zero spacing
-        {}   // zero origin
+    pfc::field::FieldView<double> view(du.m_data.data(), du.m_data.size(),
+                                       {}, // zero extents
+                                       {}, // zero spacing
+                                       {}  // zero origin
     );
     return pfc::field::ScaledField{alpha, std::move(view)};
   }

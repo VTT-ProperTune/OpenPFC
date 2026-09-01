@@ -8,7 +8,7 @@
  * @details
  * Uses `MPI_Send_init` / `MPI_Recv_init` once, then `MPI_Startall` and
  * `MPI_Waitall` each step. Only valid when the decomposition exposes all six face
- * neighbors (same condition as the zero-copy path in `PaddedHaloExchanger`).
+ * neighbors (same condition as the zero-copy Faces path).
  *
  * The field buffer pointer passed to the constructor must remain the storage used
  * for every `start_exchange()` / `wait_exchange()` pair (MPI persistent operations

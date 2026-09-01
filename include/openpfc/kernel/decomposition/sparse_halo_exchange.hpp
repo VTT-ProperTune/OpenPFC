@@ -9,11 +9,11 @@
  *
  * @details
  * `pfc::SparseHaloExchanger<T>` is the **flexible** half of OpenPFC's halo
- * story. It complements `pfc::PaddedHaloExchanger<T>` (the **classical**
- * halo exchanger):
+ * story. It complements `pfc::comm::HaloExchange` (the **classical**
+ * padded-brick exchanger):
  *
- *   - Use `pfc::data::Field<T>` + `pfc::PaddedHaloExchanger<T>` (or
- *     the CUDA `pfc::cuda::PaddedDeviceHaloExchanger`) for **pure FD** with
+ *   - Use `pfc::data::Field<T>` + `pfc::comm::HaloExchange` (or
+ *     the device `HaloExchange<CUDASpace/HIPSpace>`) for **pure FD** with
  *     halo communication maintaining in-bounds indexing. This is the
  *     **default** for FD-only apps.
  *   - Use `pfc::data::Field<T>` (unpadded `nx*ny*nz`) +

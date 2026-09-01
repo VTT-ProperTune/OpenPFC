@@ -12,9 +12,10 @@
  * connectivity, blocking `exchange()`, split `start()`/`finish()`, optional
  * persistent requests, and multi-field tag blocks from `halo_geometry.hpp`.
  *
- * The host specialization composes the existing `PaddedHaloExchanger` /
- * `FullPaddedHaloExchanger` / `PersistentHaloExchanger` implementations so
- * consumers can move onto the new name before those classes are deleted.
+ * The host specialization composes the Faces backend (`HostFacesHalo`),
+ * `FullPaddedHaloExchanger`, and `PersistentHaloExchanger` so Full and
+ * persistent modes still share those implementations until they are
+ * inlined.
  * Device `HaloExchange<CUDASpace/HIPSpace>` lives in
  * `runtime/gpu/comm_halo_exchange_gpu.hpp`. CUDA execution of that half is
  * not available on LUMI.
@@ -128,7 +129,8 @@ public:
         throw std::invalid_argument(
             "pfc::comm::HaloExchange: Field binding requires storage_halo > 0");
       }
-      const int tag0 = halo::field_tag_base(m_opt.exchange_base, static_cast<int>(i));
+      const int tag0 =
+          halo::field_tag_base(m_opt.exchange_base, static_cast<int>(i));
       const auto dirs = resolved_halo_directions(m_opt);
       if (m_opt.persistent) {
         m_persist.push_back(std::make_unique<PersistentHaloExchanger<T>>(
@@ -139,7 +141,7 @@ public:
             f->box(), f->domain(), decomp, rank, f->storage_halo(), comm, dirs,
             tag0));
       } else {
-        m_faces.push_back(std::make_unique<communication::PaddedHaloExchanger<T>>(
+        m_faces.push_back(std::make_unique<detail::HostFacesHalo<T>>(
             *f, decomp, rank, comm, dirs, tag0));
       }
     }
@@ -160,7 +162,8 @@ public:
       return;
     }
     for (auto &h : m_faces) {
-      communication::exchange(*h);
+      h->start();
+      h->finish();
     }
   }
 
@@ -182,7 +185,7 @@ public:
       return;
     }
     for (auto &h : m_faces) {
-      communication::start_exchange(*h);
+      h->start();
     }
   }
 
@@ -200,7 +203,7 @@ public:
       return;
     }
     for (auto &h : m_faces) {
-      communication::finish_exchange(*h);
+      h->finish();
     }
   }
 
@@ -213,7 +216,7 @@ public:
 private:
   HaloExchangeOptions m_opt{};
   std::vector<FieldT *> m_fields;
-  std::vector<std::unique_ptr<communication::PaddedHaloExchanger<T>>> m_faces;
+  std::vector<std::unique_ptr<detail::HostFacesHalo<T>>> m_faces;
   std::vector<std::unique_ptr<communication::FullPaddedHaloExchanger<T>>> m_full;
   std::vector<std::unique_ptr<PersistentHaloExchanger<T>>> m_persist;
 };

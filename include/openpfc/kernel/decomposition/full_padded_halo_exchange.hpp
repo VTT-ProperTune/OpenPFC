@@ -9,7 +9,7 @@
  *        for a padded buffer.
  *
  * @details
- * `pfc::communication::PaddedHaloExchanger` performs a **single-pass 6-face**
+ * Host Faces `HaloExchange` performs a **single-pass 6-face**
  * exchange. After it returns, only the **6 axis-aligned face halos** are
  * populated — corners and edges are left untouched. That is sufficient for
  * 7-point Laplacians and other axis-aligned stencils.
@@ -94,7 +94,8 @@ public:
    *
    * @param subdomain_box Local subdomain box (bounds for this rank).
    * @param domain        Global domain (for periodicity/spacing metadata).
-   * @param decomp        Decomposition for neighbor calculation (must outlive this object).
+   * @param decomp        Decomposition for neighbor calculation (must outlive this
+   * object).
    * @param rank          MPI rank of the caller.
    * @param halo_width    Halo ring thickness `hw` on every side; must be `>=1`.
    * @param comm          MPI communicator for the exchange.
@@ -103,8 +104,8 @@ public:
   FullPaddedHaloExchanger(const Box3i &subdomain_box, const Domain &domain,
                           const decomposition::Decomposition &decomp, int rank,
                           int halo_width, MPI_Comm comm, int base_tag = 0)
-      : FullPaddedHaloExchanger(subdomain_box, domain, decomp, rank, halo_width, comm,
-                                halo::presets::Full3D(), base_tag,
+      : FullPaddedHaloExchanger(subdomain_box, domain, decomp, rank, halo_width,
+                                comm, halo::presets::Full3D(), base_tag,
                                 halo::HaloDirectionSelector{}) {}
 
   /**
@@ -118,7 +119,8 @@ public:
    *
    * @deprecated Use explicit Box3i + Domain constructor instead.
    */
-  [[deprecated("Use explicit Box3i + Domain constructor: FullPaddedHaloExchanger(box, domain, rank, ...)")]]
+  [[deprecated("Use explicit Box3i + Domain constructor: "
+               "FullPaddedHaloExchanger(box, domain, rank, ...)")]]
   FullPaddedHaloExchanger(const decomposition::Decomposition &decomp, int rank,
                           int halo_width, MPI_Comm comm, int base_tag = 0)
       : FullPaddedHaloExchanger(decomp, rank, halo_width, comm,
@@ -142,15 +144,17 @@ public:
    *
    * @deprecated Use explicit Box3i + Domain constructor instead.
    */
-  [[deprecated("Use explicit Box3i + Domain constructor: FullPaddedHaloExchanger(box, domain, rank, ...)")]]
+  [[deprecated("Use explicit Box3i + Domain constructor: "
+               "FullPaddedHaloExchanger(box, domain, rank, ...)")]]
   FullPaddedHaloExchanger(const decomposition::Decomposition &decomp, int rank,
                           int halo_width, MPI_Comm comm, halo::HaloDirectionSet dirs,
                           int base_tag = 0,
                           halo::HaloDirectionSelector selector = {})
-      : FullPaddedHaloExchanger(decomposition::local_box(decomp, rank), decomposition::domain(decomp),
-                                decomp, rank, halo_width, comm, dirs, base_tag, selector) {}
+      : FullPaddedHaloExchanger(decomposition::local_box(decomp, rank),
+                                decomposition::domain(decomp), decomp, rank,
+                                halo_width, comm, dirs, base_tag, selector) {}
 
-// Box3i + Domain constructor implementation
+  // Box3i + Domain constructor implementation
   FullPaddedHaloExchanger(const Box3i &subdomain_box, const Domain &domain,
                           const decomposition::Decomposition &decomp, int rank,
                           int halo_width, MPI_Comm comm, halo::HaloDirectionSet dirs,
@@ -158,7 +162,8 @@ public:
                           halo::HaloDirectionSelector selector = {})
       : m_subdomain_box(subdomain_box), m_domain(domain), m_rank(rank),
         m_halo_width(halo_width), m_comm(comm), m_base_tag(base_tag),
-        m_dirs(halo::resolve_direction_set(dirs, selector, rank)), m_use_decomp(false) {
+        m_dirs(halo::resolve_direction_set(dirs, selector, rank)),
+        m_use_decomp(false) {
     if (halo_width < 1) {
       throw std::invalid_argument(
           "FullPaddedHaloExchanger: halo_width must be >= 1");
@@ -201,7 +206,7 @@ public:
       // Compute neighbors from decomposition
       for (int f = 0; f < 2; ++f) {
         m_neighbors[a][f] =
-          decomposition::get_neighbor_rank(decomp, m_rank, kAxisDirs[a][f]);
+            decomposition::get_neighbor_rank(decomp, m_rank, kAxisDirs[a][f]);
       }
       m_axis_is_self[a] = (m_neighbors[a][0] == m_rank);
     }
@@ -399,7 +404,8 @@ private:
   MPI_Comm m_comm = MPI_COMM_NULL;
   int m_base_tag = 0;
   halo::HaloDirectionSet m_dirs;
-  bool m_use_decomp = false; // True when constructed via deprecated Decomposition path
+  bool m_use_decomp =
+      false; // True when constructed via deprecated Decomposition path
 
   int m_nx = 0, m_ny = 0, m_nz = 0;
   int m_nxp = 0, m_nyp = 0, m_nzp = 0;
