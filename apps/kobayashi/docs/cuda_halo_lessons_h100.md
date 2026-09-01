@@ -70,7 +70,7 @@ So the **“~32 KiB halo”** mental model applies only to the **four** small 
 
 **`exchange_packed_fallback_`** used to **`MPI_Irecv` / `MPI_Isend` every face**, including **`m_neighbors[i] == m_rank`**. For periodic **±Z** that meant **MPI to self** moving **~128 MiB** **four times per `exchange_halos_device` call** (two Z faces × recv/send); **×1200** calls × **2** ranks ⇒ **9600** rows at **128 MiB** in **`MPI_P2P_EVENTS`**. **`KOBAYASHI_PERF_LOOP`** showed **`exchange_per_step_avg ≈ 0.319 s`** largely because of **those self moves + waits**, not because **32 KiB** peer halos are hard.
 
-**GPU-aware** mode already skipped MPI for same-rank faces (device pack/unpack first); **packed** mode did **not**, until **`DeviceFacesHalo`** was aligned with the same rule ([`padded_device_halo_exchange.hpp`](../../../include/openpfc/runtime/cuda/padded_device_halo_exchange.hpp)).
+**GPU-aware** mode already skipped MPI for same-rank faces (device pack/unpack first); **packed** mode did **not**, until **`DeviceFacesHalo`** was aligned with the same rule ([`padded_device_halo_exchange_gpu.hpp`](../../../include/openpfc/runtime/gpu/padded_device_halo_exchange_gpu.hpp)).
 
 After rebuilding with that fix, re-run [`kobayashi_fd_cuda_h100_np2_nsys_halo_path_compare.sbatch`](../slurm/kobayashi_fd_cuda_h100_np2_nsys_halo_path_compare.sbatch): **`MPI_P2P_EVENTS`** should show **only 32 KiB** sizes for **true inter-rank** faces, and **`packed_mpi_waitall`** should drop sharply.
 
@@ -129,7 +129,7 @@ On **512²**, the same **`gpu_aware_mpi`** mode sometimes shows **sub-millisecon
 
 ## Why **±Z** halos run at all on a **2D** Kobayashi slab (`nz = 1`)
 
-The world is still a **3D** Field with halo width `hw`: [`kobayashi_fd_cuda.cpp`](../src/cuda/kobayashi_fd_cuda.cpp) builds `GridSize({Nx, Ny, 1})`, so **local `nz = 1`** with padding **`nzp = 1 + 2·hw`**. Generic six-face machinery ([`padded_halo_mpi_types.hpp`](../../../include/openpfc/kernel/decomposition/padded_halo_mpi_types.hpp), [`DeviceFacesHalo`](../../../include/openpfc/runtime/cuda/padded_device_halo_exchange.hpp)) always defines **±Z** faces with cross-section **nx×ny** — those “faces” are **entire XY planes**, not thin **O(perimeter)** strips.
+The world is still a **3D** Field with halo width `hw`: [`kobayashi_fd_cuda.cpp`](../src/cuda/kobayashi_fd_cuda.cpp) builds `GridSize({Nx, Ny, 1})`, so **local `nz = 1`** with padding **`nzp = 1 + 2·hw`**. Generic six-face machinery ([`padded_halo_mpi_types.hpp`](../../../include/openpfc/kernel/decomposition/padded_halo_mpi_types.hpp), [`DeviceFacesHalo`](../../../include/openpfc/runtime/gpu/padded_device_halo_exchange_gpu.hpp)) always defines **±Z** faces with cross-section **nx×ny** — those “faces” are **entire XY planes**, not thin **O(perimeter)** strips.
 
 The CUDA physics kernels ([`kobayashi_fd_cuda_kernels.cu`](../src/cuda/kobayashi_fd_cuda_kernels.cu)) use **`constexpr int iz = 0`** and only index **ix±1, iy±1** at fixed **k**. They **never read ghost cells at `k±1`**. So **±Z halo data is not needed for the stencil** — it exists because the **storage layout is 3D** and the exchanger is **axis-aligned 6-face**, not because the equations use **z** neighbours.
 
@@ -149,7 +149,7 @@ The change is opt-in via the new ctor: callers that want the old behaviour pass 
 
 ### Should we use **`DeviceFullHalo`** (26 neighbours / corner-filled)?
 
-**No** for current Kobayashi FD: [`full_padded_device_halo.hpp`](../../../include/openpfc/runtime/cuda/full_padded_device_halo.hpp) exists for stencils that need **corners** (mixed **∂²/∂x∂y**, 27-point neighbours, etc.). Kobayashi’s kernels are **axis-aligned five-point in x/y only**; [`docs/concepts/halo_exchange.md`](../../../docs/concepts/halo_exchange.md) states six-face exchange is **sufficient**. **`DeviceFullHalo`** would add **three passes** with extra **`cudaDeviceSynchronize`** between passes and **still** treat **z** as a full axis — it does **not** replace a dedicated **“2D MPI + local z wrap”** optimization.
+**No** for current Kobayashi FD: [`full_padded_device_halo_gpu.hpp`](../../../include/openpfc/runtime/gpu/full_padded_device_halo_gpu.hpp) exists for stencils that need **corners** (mixed **∂²/∂x∂y**, 27-point neighbours, etc.). Kobayashi’s kernels are **axis-aligned five-point in x/y only**; [`docs/concepts/halo_exchange.md`](../../../docs/concepts/halo_exchange.md) states six-face exchange is **sufficient**. **`DeviceFullHalo`** would add **three passes** with extra **`cudaDeviceSynchronize`** between passes and **still** treat **z** as a full axis — it does **not** replace a dedicated **“2D MPI + local z wrap”** optimization.
 
 The **“8 vs 26”** ghost regions are a **topological** count (2D perimeter pieces vs 3D shell); OpenPFC’s CUDA path implements **faces** (6 or widened passes), not **8 separate MPI buffers** for 2D.
 
