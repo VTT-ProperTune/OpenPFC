@@ -42,6 +42,7 @@ source compatibility is explicitly not a goal.
 - CTest `aluminum-golden-4rank`: 4-rank 16³/20-step `AluminumETDSession` vs Gen-1 ≤1e-10 (local max) / 1e-12 relative Σψ².
 - CPU-only checksum goldens for the CPU-vs-GPU parity configs: CTest `tungsten-cpu-golden`, `allen-cahn-cpu-golden`, `wave2d-cpu-golden` (1e-10 relative). Capture on tohtori `g0005` is in `tests/baselines/BASELINES.md`.
 - Named CTest `session-matrix` (CPU JSON session) and `session-matrix-cuda` (GPU spectral stack JSON, same `method`/`backend` keys). HIP twin `session-matrix-hip` is wired for amdgpu/LUMI.
+- CTest `tungsten-etd-cpu-golden` and `tungsten-etd-cpu-vs-cuda`: 0.2 `TungstenETDSession` vs `TungstenETDCUDASession` on the Gen-1 CPU-vs-CUDA 32³/10-step sine IC, max abs ≤1e-10. CPU checksum matches Gen-1 `tungsten-cpu-golden` on g0005.
 - Gen-1 aluminum `prepare_operators` uses `for_each_kpoint`. SeedGridFCC/SlabFCC use `std::numbers::pi`.
 - Example `03_parallel_fft` uses `std::numbers::pi` instead of `atan(1.0)`.
 - `JsonWiringSession` constructor parameters no longer shadow the catalog members (`-Wshadow`).

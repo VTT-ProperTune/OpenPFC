@@ -205,6 +205,7 @@ if(TUNGSTEN_ENABLE_TESTS)
         # Run all tungsten tests in a single invocation to avoid per-test MPI overhead
         add_test(NAME tungsten-all-tests COMMAND test_tungsten)
         add_test(NAME tungsten-cpu-golden COMMAND test_tungsten "[cpu_golden]")
+        add_test(NAME tungsten-etd-cpu-golden COMMAND test_tungsten "[etd_cpu_golden]")
         if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
           add_test(NAME tungsten-golden-4rank
             COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
@@ -255,6 +256,8 @@ if(TUNGSTEN_ENABLE_TESTS)
             target_compile_definitions(test_tungsten_etd_cuda PRIVATE
               OPENPFC_TEST_TUNGSTEN_ETD_CUDA)
             add_test(NAME CUDA_TungstenETD COMMAND test_tungsten_etd_cuda)
+            add_test(NAME tungsten-etd-cpu-vs-cuda COMMAND test_tungsten_etd_cuda
+                "[parity32]")
         endif()
 
         # CPU vs HIP comparison test (HIP spectral + rocFFT HeFFTe)

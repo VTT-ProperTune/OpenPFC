@@ -4,13 +4,17 @@
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
+#include <iomanip>
+#include <iostream>
 #include <nlohmann/json.hpp>
+#include <numbers>
 #include <system_error>
 #include <unistd.h>
 #include <vector>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <mpi.h>
 #include <openpfc/kernel/data/constants.hpp>
@@ -28,6 +32,7 @@
 #include <tungsten/tungsten_physics.hpp>
 
 using Catch::Approx;
+using Catch::Matchers::WithinRel;
 using nlohmann::json;
 
 namespace {
@@ -481,4 +486,42 @@ TEST_CASE("TungstenETDSession 4-rank golden vs Gen-1", "[tungsten][golden][MPI]"
   MPI_Allreduce(&s_new, &g_new, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(&s_old, &g_old, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   REQUIRE(std::abs(g_new - g_old) < 1e-12 * (1.0 + std::abs(g_old)));
+}
+
+TEST_CASE("TungstenETDSession 32^3/10-step sine IC CPU checksum",
+          "[tungsten][etd_cpu_golden][parity]") {
+  int nproc = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  REQUIRE(nproc == 1);
+
+  json settings = golden_settings(32, 0.1, 0.01);
+  settings["model"]["params"]["n0"] = -0.4;
+  settings["model"]["params"]["T"] = 0.5;
+  settings["timestepping"]["saveat"] = 0.05;
+  settings["initial_conditions"] =
+      json::array({{{"target", "psi"}, {"type", "constant"}, {"n0", -0.4}}});
+
+  tungsten::TungstenETDSession session(settings, 0, 1, MPI_COMM_WORLD);
+  auto &psi = session.psi().vec();
+  for (std::size_t i = 0; i < psi.size(); ++i) {
+    psi[i] = -0.4 + 0.1 * std::sin(2.0 * std::numbers::pi * static_cast<double>(i) /
+                                   static_cast<double>(psi.size()));
+  }
+  session.run();
+
+  double sum = 0.0;
+  double sumsq_v = 0.0;
+  for (double x : psi) {
+    sum += x;
+    sumsq_v += x * x;
+  }
+  std::cout << std::setprecision(17) << "CPU_GOLDEN tungsten_etd n=" << psi.size()
+            << " sum=" << sum << " sumsq=" << sumsq_v << '\n';
+  REQUIRE(psi.size() == 32768);
+  REQUIRE(std::isfinite(sum));
+  REQUIRE(std::isfinite(sumsq_v));
+  // Tohtori g0005, gcc 15.2 Debug. Same 32³/10-step sine IC as Gen-1
+  // tungsten-cpu-golden; checksums match that pin bitwise on this capture.
+  REQUIRE_THAT(sum, WithinRel(-13107.200000000043, 1e-10));
+  REQUIRE_THAT(sumsq_v, WithinRel(5406.3450894885682, 1e-10));
 }
