@@ -345,7 +345,9 @@ private:
   using SlabSpec = pfc::gpu::detail::FaceSlabSpec;
   using FaceTypes = pfc::halo::FaceTypes;
 
-  static int opposite_face_slot_(int slot) noexcept { return slot ^ 1; }
+  static int opposite_face_slot_(int slot) noexcept {
+    return pfc::halo::opposite_slot(slot);
+  }
 
   void build_slabs_(int nx, int ny, int nz, int hw) {
     const int X = nx + 2 * hw;

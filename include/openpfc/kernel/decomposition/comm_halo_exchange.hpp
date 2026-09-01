@@ -57,6 +57,8 @@ struct HaloExchangeOptions {
   int exchange_base = 0;
   /// Empty: Faces → `Axes3D()`, Full → `Full3D()`. Set `Axes2D()` for 2D slabs.
   halo::HaloDirectionSet directions{};
+  /// If set, `selector(rank)` replaces `directions` / the Faces/Full default.
+  halo::HaloDirectionSelector selector{};
 };
 
 /// Resolve the direction set actually used by a `HaloExchange` construction.
@@ -131,7 +133,8 @@ public:
       }
       const int tag0 =
           halo::field_tag_base(m_opt.exchange_base, static_cast<int>(i));
-      const auto dirs = resolved_halo_directions(m_opt);
+      const auto dirs = halo::resolve_direction_set(resolved_halo_directions(m_opt),
+                                                    m_opt.selector, rank);
       if (m_opt.persistent) {
         m_persist.push_back(std::make_unique<detail::HostPersistentFaces<T>>(
             f->box(), f->domain(), decomp, rank, f->storage_halo(), comm, f->data(),

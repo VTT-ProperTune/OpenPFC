@@ -18,8 +18,7 @@
  *   6. Neighbour agreement: mismatched direction sets that disagree on a
  *      shared face throw `std::runtime_error`; uniform Axes2D still
  *      constructs Faces and persistent `HaloExchange`.
- *   Per-rank `HaloDirectionSelector` remains old-API-only until the
- *   facade grows a selector knob.
+ *   Per-rank `HaloDirectionSelector` is `HaloExchangeOptions::selector`.
  */
 
 #include <catch2/catch_test_macros.hpp>
@@ -205,6 +204,69 @@ TEST_CASE("HaloExchange Axes2D leaves ±Z halos untouched on nz=1 slab",
     }
   }
   REQUIRE(halos_match);
+}
+
+TEST_CASE("HaloExchange selector overrides fallback directions on nz=1 slab",
+          "[MPI][halo_directions][padded][selector]") {
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 1) return;
+
+  auto global_domain = pfc::domain::create({8, 8, 1});
+  auto decomp = pfc::decomposition::create(global_domain, 1);
+
+  const int hw = 1;
+  auto u = data::field_from_subdomain<double>(decomp, rank, hw);
+  const double sentinel = -999.0;
+  clear_halo(u, sentinel);
+  fill_owned(u, 7.0);
+
+  comm::HaloExchangeOptions opt;
+  opt.directions = halo::presets::Axes3D();
+  opt.selector = [](int) { return halo::presets::Axes2D(); };
+  comm::HaloExchange<HostSpace, double> halo(u, decomp, rank, MPI_COMM_WORLD, opt);
+  halo.exchange();
+
+  bool halos_match = true;
+  const auto n = u.size3();
+  for (int k = 0; k < n[2]; ++k) {
+    for (int j = 0; j < n[1]; ++j) {
+      halos_match &= u(-1, j, k) == 7.0 && u(n[0], j, k) == 7.0;
+    }
+    for (int i = 0; i < n[0]; ++i) {
+      halos_match &= u(i, -1, k) == 7.0 && u(i, n[1], k) == 7.0;
+    }
+  }
+  for (int j = 0; j < n[1]; ++j) {
+    for (int i = 0; i < n[0]; ++i) {
+      halos_match &= u(i, j, -1) == sentinel && u(i, j, n[2]) == sentinel;
+    }
+  }
+  REQUIRE(halos_match);
+}
+
+TEST_CASE("HaloExchange selector mismatch throws at neighbour agreement",
+          "[MPI][halo_directions][selector][agreement]") {
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 2) return;
+
+  auto global_domain = pfc::domain::create({16, 8, 1});
+  auto decomp = pfc::decomposition::create(global_domain, {2, 1, 1});
+  const int hw = 1;
+  auto u = data::field_from_subdomain<double>(decomp, rank, hw);
+
+  comm::HaloExchangeOptions opt;
+  opt.selector = [](int r) {
+    return (r == 0)
+               ? halo::presets::Axes2D()
+               : HaloDirectionSet(std::vector<Int3>{Int3{0, 1, 0}, Int3{0, -1, 0}});
+  };
+  REQUIRE_THROWS_AS(
+      (comm::HaloExchange<HostSpace, double>(u, decomp, rank, MPI_COMM_WORLD, opt)),
+      std::runtime_error);
 }
 
 TEST_CASE("HaloExchange Axes2D matches Axes3D in XY (two-rank X-split)",

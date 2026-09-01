@@ -82,7 +82,8 @@ public:
       }
       const int tag0 =
           halo::field_tag_base(m_opt.exchange_base, static_cast<int>(i));
-      const auto dirs = resolved_halo_directions(m_opt);
+      const auto dirs = halo::resolve_direction_set(resolved_halo_directions(m_opt),
+                                                    m_opt.selector, rank);
       if (m_opt.connectivity == HaloConnectivity::Full) {
         m_full.push_back(std::make_unique<FullEx>(decomp, rank, f->storage_halo(),
                                                   comm, /*n_fields=*/1, dirs, tag0));

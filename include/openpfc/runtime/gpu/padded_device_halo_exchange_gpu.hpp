@@ -644,18 +644,6 @@ private:
                            MPI_Wtime() - t0);
   }
 
-  static int opposite_slot(int slot) {
-    switch (slot) {
-    case 0: return 1;
-    case 1: return 0;
-    case 2: return 3;
-    case 3: return 2;
-    case 4: return 5;
-    case 5: return 4;
-    default: return -1;
-    }
-  }
-
   void exchange_gpu_aware_(double *d_padded, stream_t stream) {
     void *buf = static_cast<void *>(d_padded);
     if (m_any_self_neighbor) {
@@ -668,9 +656,10 @@ private:
           continue;
         }
         const auto &send = m_face_specs[i].first;
-        const auto &recv = m_face_specs[static_cast<std::size_t>(
-                                            opposite_slot(static_cast<int>(i)))]
-                               .second;
+        const auto &recv =
+            m_face_specs[static_cast<std::size_t>(
+                             pfc::halo::opposite_slot(static_cast<int>(i)))]
+                .second;
         Ops::pack_face(m_d_scratch, d_padded, send.ox, send.oy, send.oz, send.sx,
                        send.sy, send.sz, m_nxp, m_nyp, m_nzp, stream);
         Ops::unpack_face(d_padded, m_d_scratch, recv.ox, recv.oy, recv.oz, recv.sx,
@@ -692,7 +681,7 @@ private:
       if (!m_active[i] || m_neighbors[i] == m_rank) {
         continue;
       }
-      const int tag = m_base_tag + opposite_slot(static_cast<int>(i));
+      const int tag = m_base_tag + pfc::halo::opposite_slot(static_cast<int>(i));
       exchange::irecv_face(buf, m_face_types[i].recv_type.get(), m_neighbors[i],
                            m_comm, &m_requests[req_count], tag);
       ++req_count;
@@ -715,7 +704,7 @@ private:
       if (!m_active[i] || m_neighbors[i] == m_rank) {
         continue;
       }
-      const int tag = m_base_tag + opposite_slot(static_cast<int>(i));
+      const int tag = m_base_tag + pfc::halo::opposite_slot(static_cast<int>(i));
       const int face_count = pfc::mpi::ensure_mpi_int_count(
           m_face_elems[i], "DeviceFacesHalo contig face");
       pfc::mpi::throw_on_mpi_error(MPI_Irecv(m_d_recv[i], face_count, MPI_DOUBLE,
@@ -774,9 +763,10 @@ private:
           continue;
         }
         const auto &send = m_face_specs[i].first;
-        const auto &recv = m_face_specs[static_cast<std::size_t>(
-                                            opposite_slot(static_cast<int>(i)))]
-                               .second;
+        const auto &recv =
+            m_face_specs[static_cast<std::size_t>(
+                             pfc::halo::opposite_slot(static_cast<int>(i)))]
+                .second;
         Ops::pack_face(m_d_scratch, d_padded, send.ox, send.oy, send.oz, send.sx,
                        send.sy, send.sz, m_nxp, m_nyp, m_nzp, stream);
         Ops::unpack_face(d_padded, m_d_scratch, recv.ox, recv.oy, recv.oz, recv.sx,
@@ -790,7 +780,7 @@ private:
       if (!m_active[i] || m_neighbors[i] == m_rank) {
         continue;
       }
-      const int tag = m_base_tag + opposite_slot(static_cast<int>(i));
+      const int tag = m_base_tag + pfc::halo::opposite_slot(static_cast<int>(i));
       const int face_count = pfc::mpi::ensure_mpi_int_count(
           m_face_elems[i], "DeviceFacesHalo packed face");
       pfc::mpi::throw_on_mpi_error(MPI_Irecv(m_h_recv[i], face_count, MPI_DOUBLE,
