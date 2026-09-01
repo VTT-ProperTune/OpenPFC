@@ -26,11 +26,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ---
 
-## Current status (last verified against `refactor-0.2` @ `c8be8d7f` + Tohtori CUDA suite, 2026-08-20)
+## Current status (last verified against `refactor-0.2` + Tohtori CUDA suite, 2026-09-01)
 
 This checkout is **on Tohtori (`g0005`, 8× H100)**. CUDA configure/build/test via
-`scripts/build.sh --machine=tohtori --with-cuda --build-dir=builds/cuda-release`
-is **green**: 44/44 CTest batches passed (1 skip: `CUDA_ExchangeFailClosed`,
+`scripts/build.sh --machine=tohtori --with-cuda --build-type=Debug --build-dir=builds/cuda-debug`
+is **green**: 49/49 CTest batches passed (1 skip: `CUDA_ExchangeFailClosed`,
 expected with `OpenPFC_MPI_CUDA_AWARE=ON`). CUDA spectral HeFFTe, GPU-aware
 custom Open MPI, and `OpenPFC_ENABLE_CUDA_SPECTRAL=ON`. HIP execution remains
 LUMI / M-LUMI.
@@ -39,7 +39,8 @@ CUDA-gated suites now run here (all passed this session): `GPU_FFT`,
 `CUDA_SpectralETD`, `CUDA_SpectralMeanFieldETD`, `CUDA_GPUSpectralStack`,
 `CUDA_ObservableReduce`, `CUDA_ETD1Apply`, `CUDA_SparseVector`,
 `CUDA_DeepCopyFill`, `CUDA_TungstenETD`, `tungsten-cpu-vs-cuda-tests`,
-`allen-cahn-cpu-vs-cuda`, `wave2d-cpu-vs-cuda`, `tungsten-golden-4rank`.
+`allen-cahn-cpu-vs-cuda`, `wave2d-cpu-vs-cuda`, `tungsten-golden-4rank`,
+`kobayashi-cuda-hex-smoke`, `kobayashi-cuda-hex-2rank`.
 Still open on CUDA: perf JSON baselines, CUDA+HIP co-enabled configure.
 
 **Pre-M0 is complete and released** (`v0.1.5` tagged; `CHANGELOG.md`'s `[0.1.5]` section documents every audit §4/§11 fix landing with a regression test, and `master` is on `0.2.0` per `CMakeLists.txt`, with an `OpenPFC_DEVELOPMENT` option supplying the `-dev` suffix). The scientific baseline *framework* exists (`tests/baselines/BASELINES.md`, `tests/packaging/consumer/`, CUDA/HIP compile-only CI jobs), but the actual golden-trajectory **data** (multi-rank tungsten/aluminum captures, perf JSON) is still marked ☐/uncaptured in `BASELINES.md` — this is the one Pre-M0 gap that could still bite M3+.
