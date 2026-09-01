@@ -1,0 +1,4533 @@
+{
+  "frame_metric_names": [
+    "step",
+    "mpi_rank",
+    "wall_step",
+    "rss_bytes",
+    "model_heap_bytes",
+    "heap_secondary_bytes"
+  ],
+  "n_mpi_ranks": 4,
+  "openpfc_version": "0.2.0",
+  "ranks": [
+    {
+      "frames": [
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.003490715999999505,
+              "inclusive": 0.003490715999999505
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000519539,
+                  "inclusive": 0.000519539
+                },
+                "exclusive": 8.510000000000635e-07,
+                "forward": {
+                  "exclusive": 0.00047257,
+                  "inclusive": 0.00047257
+                },
+                "inclusive": 0.001046399,
+                "multiply": {
+                  "exclusive": 5.3439e-05,
+                  "inclusive": 5.3439e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000613089,
+                  "inclusive": 0.000613089
+                },
+                "exclusive": 1.4149999999998365e-06,
+                "forward": {
+                  "exclusive": 0.001887238,
+                  "inclusive": 0.001887238
+                },
+                "inclusive": 0.002555941,
+                "multiply": {
+                  "exclusive": 5.4199e-05,
+                  "inclusive": 5.4199e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            1.0,
+            0.0,
+            0.0037183389999999594,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.00204070799999978,
+              "inclusive": 0.00204070799999978
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000507634,
+                  "inclusive": 0.000507634
+                },
+                "exclusive": 6.340000000000078e-07,
+                "forward": {
+                  "exclusive": 0.000466242,
+                  "inclusive": 0.000466242
+                },
+                "inclusive": 0.001018135,
+                "multiply": {
+                  "exclusive": 4.3625e-05,
+                  "inclusive": 4.3625e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000645976,
+                  "inclusive": 0.000645976
+                },
+                "exclusive": 5.339999999999512e-07,
+                "forward": {
+                  "exclusive": 0.000421946,
+                  "inclusive": 0.000421946
+                },
+                "inclusive": 0.001111968,
+                "multiply": {
+                  "exclusive": 4.3512e-05,
+                  "inclusive": 4.3512e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            2.0,
+            0.0,
+            0.002209559000000194,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0018474979999998364,
+              "inclusive": 0.0018474979999998364
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000408706,
+                  "inclusive": 0.000408706
+                },
+                "exclusive": 5.600000000000353e-07,
+                "forward": {
+                  "exclusive": 0.00047351,
+                  "inclusive": 0.00047351
+                },
+                "inclusive": 0.000923841,
+                "multiply": {
+                  "exclusive": 4.1065e-05,
+                  "inclusive": 4.1065e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.00053588,
+                  "inclusive": 0.00053588
+                },
+                "exclusive": 4.300000000000484e-07,
+                "forward": {
+                  "exclusive": 0.000430498,
+                  "inclusive": 0.000430498
+                },
+                "inclusive": 0.001007328,
+                "multiply": {
+                  "exclusive": 4.052e-05,
+                  "inclusive": 4.052e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            3.0,
+            0.0,
+            0.002003909000000137,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0016001239999998695,
+              "inclusive": 0.0016001239999998695
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000422356,
+                  "inclusive": 0.000422356
+                },
+                "exclusive": 5.660000000000213e-07,
+                "forward": {
+                  "exclusive": 0.000390743,
+                  "inclusive": 0.000390743
+                },
+                "inclusive": 0.000852111,
+                "multiply": {
+                  "exclusive": 3.8446e-05,
+                  "inclusive": 3.8446e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000421195,
+                  "inclusive": 0.000421195
+                },
+                "exclusive": 4.879999999999858e-07,
+                "forward": {
+                  "exclusive": 0.000367057,
+                  "inclusive": 0.000367057
+                },
+                "inclusive": 0.000827033,
+                "multiply": {
+                  "exclusive": 3.8293e-05,
+                  "inclusive": 3.8293e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            4.0,
+            0.0,
+            0.0017498719999999857,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015918360000000131,
+              "inclusive": 0.0015918360000000131
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000410611,
+                  "inclusive": 0.000410611
+                },
+                "exclusive": 6.990000000000555e-07,
+                "forward": {
+                  "exclusive": 0.000386332,
+                  "inclusive": 0.000386332
+                },
+                "inclusive": 0.0008349,
+                "multiply": {
+                  "exclusive": 3.7258e-05,
+                  "inclusive": 3.7258e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000425232,
+                  "inclusive": 0.000425232
+                },
+                "exclusive": 4.3599999999992603e-07,
+                "forward": {
+                  "exclusive": 0.00037055,
+                  "inclusive": 0.00037055
+                },
+                "inclusive": 0.00083523,
+                "multiply": {
+                  "exclusive": 3.9012e-05,
+                  "inclusive": 3.9012e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            5.0,
+            0.0,
+            0.0017397369999998524,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015684699999996,
+              "inclusive": 0.0015684699999996
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000403347,
+                  "inclusive": 0.000403347
+                },
+                "exclusive": 6.419999999999169e-07,
+                "forward": {
+                  "exclusive": 0.000388472,
+                  "inclusive": 0.000388472
+                },
+                "inclusive": 0.000830407,
+                "multiply": {
+                  "exclusive": 3.7946e-05,
+                  "inclusive": 3.7946e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.00040689,
+                  "inclusive": 0.00040689
+                },
+                "exclusive": 4.189999999999836e-07,
+                "forward": {
+                  "exclusive": 0.000370632,
+                  "inclusive": 0.000370632
+                },
+                "inclusive": 0.000815648,
+                "multiply": {
+                  "exclusive": 3.7707e-05,
+                  "inclusive": 3.7707e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            6.0,
+            0.0,
+            0.0017193699999999978,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015806850000004147,
+              "inclusive": 0.0015806850000004147
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000410249,
+                  "inclusive": 0.000410249
+                },
+                "exclusive": 5.830000000000722e-07,
+                "forward": {
+                  "exclusive": 0.000388541,
+                  "inclusive": 0.000388541
+                },
+                "inclusive": 0.000836964,
+                "multiply": {
+                  "exclusive": 3.7591e-05,
+                  "inclusive": 3.7591e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000408328,
+                  "inclusive": 0.000408328
+                },
+                "exclusive": 3.870000000000219e-07,
+                "forward": {
+                  "exclusive": 0.000374608,
+                  "inclusive": 0.000374608
+                },
+                "inclusive": 0.000821464,
+                "multiply": {
+                  "exclusive": 3.8141e-05,
+                  "inclusive": 3.8141e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            7.0,
+            0.0,
+            0.0017262270000000246,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015821420000001751,
+              "inclusive": 0.0015821420000001751
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000412819,
+                  "inclusive": 0.000412819
+                },
+                "exclusive": 5.489999999999705e-07,
+                "forward": {
+                  "exclusive": 0.000382189,
+                  "inclusive": 0.000382189
+                },
+                "inclusive": 0.000831613,
+                "multiply": {
+                  "exclusive": 3.6056e-05,
+                  "inclusive": 3.6056e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000414873,
+                  "inclusive": 0.000414873
+                },
+                "exclusive": 4.070000000000115e-07,
+                "forward": {
+                  "exclusive": 0.000373109,
+                  "inclusive": 0.000373109
+                },
+                "inclusive": 0.000826551,
+                "multiply": {
+                  "exclusive": 3.8162e-05,
+                  "inclusive": 3.8162e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            8.0,
+            0.0,
+            0.0017275130000000694,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.001570058999999846,
+              "inclusive": 0.001570058999999846
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000404364,
+                  "inclusive": 0.000404364
+                },
+                "exclusive": 6.319999999999763e-07,
+                "forward": {
+                  "exclusive": 0.000386424,
+                  "inclusive": 0.000386424
+                },
+                "inclusive": 0.000828778,
+                "multiply": {
+                  "exclusive": 3.7358e-05,
+                  "inclusive": 3.7358e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000413224,
+                  "inclusive": 0.000413224
+                },
+                "exclusive": 3.930000000000079e-07,
+                "forward": {
+                  "exclusive": 0.000367025,
+                  "inclusive": 0.000367025
+                },
+                "inclusive": 0.000820492,
+                "multiply": {
+                  "exclusive": 3.985e-05,
+                  "inclusive": 3.985e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            9.0,
+            0.0,
+            0.0017207939999999144,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015846170000000104,
+              "inclusive": 0.0015846170000000104
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000411077,
+                  "inclusive": 0.000411077
+                },
+                "exclusive": 6.140000000000182e-07,
+                "forward": {
+                  "exclusive": 0.000389101,
+                  "inclusive": 0.000389101
+                },
+                "inclusive": 0.000837519,
+                "multiply": {
+                  "exclusive": 3.6727e-05,
+                  "inclusive": 3.6727e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000415382,
+                  "inclusive": 0.000415382
+                },
+                "exclusive": 6.379999999999624e-07,
+                "forward": {
+                  "exclusive": 0.000369965,
+                  "inclusive": 0.000369965
+                },
+                "inclusive": 0.000824302,
+                "multiply": {
+                  "exclusive": 3.8317e-05,
+                  "inclusive": 3.8317e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            10.0,
+            0.0,
+            0.0017245490000001862,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015767719999999485,
+              "inclusive": 0.0015767719999999485
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000403303,
+                  "inclusive": 0.000403303
+                },
+                "exclusive": 6.690000000001252e-07,
+                "forward": {
+                  "exclusive": 0.000390022,
+                  "inclusive": 0.000390022
+                },
+                "inclusive": 0.000832013,
+                "multiply": {
+                  "exclusive": 3.8019e-05,
+                  "inclusive": 3.8019e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000408468,
+                  "inclusive": 0.000408468
+                },
+                "exclusive": 4.2700000000000116e-07,
+                "forward": {
+                  "exclusive": 0.000375939,
+                  "inclusive": 0.000375939
+                },
+                "inclusive": 0.000825156,
+                "multiply": {
+                  "exclusive": 4.0322e-05,
+                  "inclusive": 4.0322e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            11.0,
+            0.0,
+            0.0017231420000001219,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015911210000001397,
+              "inclusive": 0.0015911210000001397
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000419411,
+                  "inclusive": 0.000419411
+                },
+                "exclusive": 5.859999999999026e-07,
+                "forward": {
+                  "exclusive": 0.000388025,
+                  "inclusive": 0.000388025
+                },
+                "inclusive": 0.000844617,
+                "multiply": {
+                  "exclusive": 3.6595e-05,
+                  "inclusive": 3.6595e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000419161,
+                  "inclusive": 0.000419161
+                },
+                "exclusive": 4.110000000000745e-07,
+                "forward": {
+                  "exclusive": 0.000365644,
+                  "inclusive": 0.000365644
+                },
+                "inclusive": 0.000823786,
+                "multiply": {
+                  "exclusive": 3.857e-05,
+                  "inclusive": 3.857e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            12.0,
+            0.0,
+            0.001731589999999894,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.001576100999999941,
+              "inclusive": 0.001576100999999941
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000408022,
+                  "inclusive": 0.000408022
+                },
+                "exclusive": 5.799999999999165e-07,
+                "forward": {
+                  "exclusive": 0.000376278,
+                  "inclusive": 0.000376278
+                },
+                "inclusive": 0.000822095,
+                "multiply": {
+                  "exclusive": 3.7215e-05,
+                  "inclusive": 3.7215e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000422011,
+                  "inclusive": 0.000422011
+                },
+                "exclusive": 5.079999999999755e-07,
+                "forward": {
+                  "exclusive": 0.000370952,
+                  "inclusive": 0.000370952
+                },
+                "inclusive": 0.000833184,
+                "multiply": {
+                  "exclusive": 3.9713e-05,
+                  "inclusive": 3.9713e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            13.0,
+            0.0,
+            0.0017200660000000756,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015753119999997178,
+              "inclusive": 0.0015753119999997178
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000407788,
+                  "inclusive": 0.000407788
+                },
+                "exclusive": 6.440000000000569e-07,
+                "forward": {
+                  "exclusive": 0.000382253,
+                  "inclusive": 0.000382253
+                },
+                "inclusive": 0.000828604,
+                "multiply": {
+                  "exclusive": 3.7919e-05,
+                  "inclusive": 3.7919e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.00040801,
+                  "inclusive": 0.00040801
+                },
+                "exclusive": 4.179999999999679e-07,
+                "forward": {
+                  "exclusive": 0.000378179,
+                  "inclusive": 0.000378179
+                },
+                "inclusive": 0.000825311,
+                "multiply": {
+                  "exclusive": 3.8704e-05,
+                  "inclusive": 3.8704e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            14.0,
+            0.0,
+            0.001720885999999755,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015749260000001986,
+              "inclusive": 0.0015749260000001986
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000404579,
+                  "inclusive": 0.000404579
+                },
+                "exclusive": 6.099999999999552e-07,
+                "forward": {
+                  "exclusive": 0.000384199,
+                  "inclusive": 0.000384199
+                },
+                "inclusive": 0.000830955,
+                "multiply": {
+                  "exclusive": 4.1567e-05,
+                  "inclusive": 4.1567e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000412106,
+                  "inclusive": 0.000412106
+                },
+                "exclusive": 3.990000000001024e-07,
+                "forward": {
+                  "exclusive": 0.000374919,
+                  "inclusive": 0.000374919
+                },
+                "inclusive": 0.000827722,
+                "multiply": {
+                  "exclusive": 4.0298e-05,
+                  "inclusive": 4.0298e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            15.0,
+            0.0,
+            0.0017259220000001019,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015668489999995927,
+              "inclusive": 0.0015668489999995927
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000411159,
+                  "inclusive": 0.000411159
+                },
+                "exclusive": 7.059999999999489e-07,
+                "forward": {
+                  "exclusive": 0.000379556,
+                  "inclusive": 0.000379556
+                },
+                "inclusive": 0.000827704,
+                "multiply": {
+                  "exclusive": 3.6283e-05,
+                  "inclusive": 3.6283e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000411759,
+                  "inclusive": 0.000411759
+                },
+                "exclusive": 3.7500000000004977e-07,
+                "forward": {
+                  "exclusive": 0.000365459,
+                  "inclusive": 0.000365459
+                },
+                "inclusive": 0.000815857,
+                "multiply": {
+                  "exclusive": 3.8264e-05,
+                  "inclusive": 3.8264e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            16.0,
+            0.0,
+            0.0017103779999998459,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015868319999996494,
+              "inclusive": 0.0015868319999996494
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000417216,
+                  "inclusive": 0.000417216
+                },
+                "exclusive": 6.550000000001216e-07,
+                "forward": {
+                  "exclusive": 0.000391781,
+                  "inclusive": 0.000391781
+                },
+                "inclusive": 0.000847217,
+                "multiply": {
+                  "exclusive": 3.7565e-05,
+                  "inclusive": 3.7565e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000409419,
+                  "inclusive": 0.000409419
+                },
+                "exclusive": 3.8400000000008306e-07,
+                "forward": {
+                  "exclusive": 0.000369373,
+                  "inclusive": 0.000369373
+                },
+                "inclusive": 0.000818604,
+                "multiply": {
+                  "exclusive": 3.9428e-05,
+                  "inclusive": 3.9428e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            17.0,
+            0.0,
+            0.001736065000000231,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.001579289999999789,
+              "inclusive": 0.001579289999999789
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000408193,
+                  "inclusive": 0.000408193
+                },
+                "exclusive": 6.509999999999502e-07,
+                "forward": {
+                  "exclusive": 0.000383402,
+                  "inclusive": 0.000383402
+                },
+                "inclusive": 0.000829556,
+                "multiply": {
+                  "exclusive": 3.731e-05,
+                  "inclusive": 3.731e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.00040983,
+                  "inclusive": 0.00040983
+                },
+                "exclusive": 4.119999999999818e-07,
+                "forward": {
+                  "exclusive": 0.000378782,
+                  "inclusive": 0.000378782
+                },
+                "inclusive": 0.000828064,
+                "multiply": {
+                  "exclusive": 3.904e-05,
+                  "inclusive": 3.904e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            18.0,
+            0.0,
+            0.0017239139999998265,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015660830000001624,
+              "inclusive": 0.0015660830000001624
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000406816,
+                  "inclusive": 0.000406816
+                },
+                "exclusive": 5.770000000000861e-07,
+                "forward": {
+                  "exclusive": 0.000381207,
+                  "inclusive": 0.000381207
+                },
+                "inclusive": 0.000826649,
+                "multiply": {
+                  "exclusive": 3.8049e-05,
+                  "inclusive": 3.8049e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000407927,
+                  "inclusive": 0.000407927
+                },
+                "exclusive": 4.329999999999872e-07,
+                "forward": {
+                  "exclusive": 0.000370971,
+                  "inclusive": 0.000370971
+                },
+                "inclusive": 0.000818731,
+                "multiply": {
+                  "exclusive": 3.94e-05,
+                  "inclusive": 3.94e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            19.0,
+            0.0,
+            0.0017124669999999398,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015911199999996128,
+              "inclusive": 0.0015911199999996128
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000412563,
+                  "inclusive": 0.000412563
+                },
+                "exclusive": 6.739999999999871e-07,
+                "forward": {
+                  "exclusive": 0.000381203,
+                  "inclusive": 0.000381203
+                },
+                "inclusive": 0.000831608,
+                "multiply": {
+                  "exclusive": 3.7168e-05,
+                  "inclusive": 3.7168e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000426703,
+                  "inclusive": 0.000426703
+                },
+                "exclusive": 4.779999999999368e-07,
+                "forward": {
+                  "exclusive": 0.000371436,
+                  "inclusive": 0.000371436
+                },
+                "inclusive": 0.000836596,
+                "multiply": {
+                  "exclusive": 3.7979e-05,
+                  "inclusive": 3.7979e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            20.0,
+            0.0,
+            0.001735379999999953,
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "mpi_rank": 0,
+      "n_frames": 20
+    },
+    {
+      "frames": [
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.003493508000000256,
+              "inclusive": 0.003493508000000256
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000562158,
+                  "inclusive": 0.000562158
+                },
+                "exclusive": 6.629999999999223e-07,
+                "forward": {
+                  "exclusive": 0.000419803,
+                  "inclusive": 0.000419803
+                },
+                "inclusive": 0.001038998,
+                "multiply": {
+                  "exclusive": 5.6374e-05,
+                  "inclusive": 5.6374e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000570764,
+                  "inclusive": 0.000570764
+                },
+                "exclusive": 1.0679999999999024e-06,
+                "forward": {
+                  "exclusive": 0.001942278,
+                  "inclusive": 0.001942278
+                },
+                "inclusive": 0.002565693,
+                "multiply": {
+                  "exclusive": 5.1583e-05,
+                  "inclusive": 5.1583e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            1.0,
+            1.0,
+            0.0037222980000000128,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.002032582000000005,
+              "inclusive": 0.002032582000000005
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000546831,
+                  "inclusive": 0.000546831
+                },
+                "exclusive": 5.930000000001212e-07,
+                "forward": {
+                  "exclusive": 0.000560118,
+                  "inclusive": 0.000560118
+                },
+                "inclusive": 0.001151216,
+                "multiply": {
+                  "exclusive": 4.3674e-05,
+                  "inclusive": 4.3674e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000540733,
+                  "inclusive": 0.000540733
+                },
+                "exclusive": 5.359999999999827e-07,
+                "forward": {
+                  "exclusive": 0.000385715,
+                  "inclusive": 0.000385715
+                },
+                "inclusive": 0.000968514,
+                "multiply": {
+                  "exclusive": 4.153e-05,
+                  "inclusive": 4.153e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            2.0,
+            1.0,
+            0.0022112370000000325,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.001841533999999978,
+              "inclusive": 0.001841533999999978
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000418433,
+                  "inclusive": 0.000418433
+                },
+                "exclusive": 4.909999999999247e-07,
+                "forward": {
+                  "exclusive": 0.000470089,
+                  "inclusive": 0.000470089
+                },
+                "inclusive": 0.000929167,
+                "multiply": {
+                  "exclusive": 4.0154e-05,
+                  "inclusive": 4.0154e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000560678,
+                  "inclusive": 0.000560678
+                },
+                "exclusive": 4.160000000000448e-07,
+                "forward": {
+                  "exclusive": 0.000393166,
+                  "inclusive": 0.000393166
+                },
+                "inclusive": 0.000992805,
+                "multiply": {
+                  "exclusive": 3.8545e-05,
+                  "inclusive": 3.8545e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            3.0,
+            1.0,
+            0.0020011630000000835,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0016012070000002154,
+              "inclusive": 0.0016012070000002154
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000420299,
+                  "inclusive": 0.000420299
+                },
+                "exclusive": 4.800000000000767e-07,
+                "forward": {
+                  "exclusive": 0.000390373,
+                  "inclusive": 0.000390373
+                },
+                "inclusive": 0.000848925,
+                "multiply": {
+                  "exclusive": 3.7773e-05,
+                  "inclusive": 3.7773e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000404016,
+                  "inclusive": 0.000404016
+                },
+                "exclusive": 3.690000000000637e-07,
+                "forward": {
+                  "exclusive": 0.000387276,
+                  "inclusive": 0.000387276
+                },
+                "inclusive": 0.000826433,
+                "multiply": {
+                  "exclusive": 3.4772e-05,
+                  "inclusive": 3.4772e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            4.0,
+            1.0,
+            0.00174743799999999,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015937760000004353,
+              "inclusive": 0.0015937760000004353
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000408516,
+                  "inclusive": 0.000408516
+                },
+                "exclusive": 5.749999999999462e-07,
+                "forward": {
+                  "exclusive": 0.000396498,
+                  "inclusive": 0.000396498
+                },
+                "inclusive": 0.000843247,
+                "multiply": {
+                  "exclusive": 3.7658e-05,
+                  "inclusive": 3.7658e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000408824,
+                  "inclusive": 0.000408824
+                },
+                "exclusive": 4.209999999999067e-07,
+                "forward": {
+                  "exclusive": 0.000380661,
+                  "inclusive": 0.000380661
+                },
+                "inclusive": 0.000822367,
+                "multiply": {
+                  "exclusive": 3.2461e-05,
+                  "inclusive": 3.2461e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            5.0,
+            1.0,
+            0.001737435999999981,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015686710000002435,
+              "inclusive": 0.0015686710000002435
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000400055,
+                  "inclusive": 0.000400055
+                },
+                "exclusive": 5.679999999999444e-07,
+                "forward": {
+                  "exclusive": 0.000390767,
+                  "inclusive": 0.000390767
+                },
+                "inclusive": 0.000829253,
+                "multiply": {
+                  "exclusive": 3.7863e-05,
+                  "inclusive": 3.7863e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000402596,
+                  "inclusive": 0.000402596
+                },
+                "exclusive": 3.98999999999994e-07,
+                "forward": {
+                  "exclusive": 0.000375999,
+                  "inclusive": 0.000375999
+                },
+                "inclusive": 0.000811941,
+                "multiply": {
+                  "exclusive": 3.2947e-05,
+                  "inclusive": 3.2947e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            6.0,
+            1.0,
+            0.0017171030000000531,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015819749999999022,
+              "inclusive": 0.0015819749999999022
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.00040819,
+                  "inclusive": 0.00040819
+                },
+                "exclusive": 5.160000000001014e-07,
+                "forward": {
+                  "exclusive": 0.000392014,
+                  "inclusive": 0.000392014
+                },
+                "inclusive": 0.000838271,
+                "multiply": {
+                  "exclusive": 3.7551e-05,
+                  "inclusive": 3.7551e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000400555,
+                  "inclusive": 0.000400555
+                },
+                "exclusive": 4.7100000000004343e-07,
+                "forward": {
+                  "exclusive": 0.000381921,
+                  "inclusive": 0.000381921
+                },
+                "inclusive": 0.000816354,
+                "multiply": {
+                  "exclusive": 3.3407e-05,
+                  "inclusive": 3.3407e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            7.0,
+            1.0,
+            0.0017266140000000707,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015873229999996408,
+              "inclusive": 0.0015873229999996408
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000402495,
+                  "inclusive": 0.000402495
+                },
+                "exclusive": 4.730000000000749e-07,
+                "forward": {
+                  "exclusive": 0.000390435,
+                  "inclusive": 0.000390435
+                },
+                "inclusive": 0.000830717,
+                "multiply": {
+                  "exclusive": 3.7314e-05,
+                  "inclusive": 3.7314e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000414085,
+                  "inclusive": 0.000414085
+                },
+                "exclusive": 4.5299999999997686e-07,
+                "forward": {
+                  "exclusive": 0.000381142,
+                  "inclusive": 0.000381142
+                },
+                "inclusive": 0.000828836,
+                "multiply": {
+                  "exclusive": 3.3156e-05,
+                  "inclusive": 3.3156e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            8.0,
+            1.0,
+            0.0017248130000000472,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015792160000001054,
+              "inclusive": 0.0015792160000001054
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.00039624,
+                  "inclusive": 0.00039624
+                },
+                "exclusive": 4.589999999999629e-07,
+                "forward": {
+                  "exclusive": 0.000392487,
+                  "inclusive": 0.000392487
+                },
+                "inclusive": 0.000825473,
+                "multiply": {
+                  "exclusive": 3.6287e-05,
+                  "inclusive": 3.6287e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000410758,
+                  "inclusive": 0.000410758
+                },
+                "exclusive": 4.369999999999418e-07,
+                "forward": {
+                  "exclusive": 0.00038059,
+                  "inclusive": 0.00038059
+                },
+                "inclusive": 0.000825364,
+                "multiply": {
+                  "exclusive": 3.3579e-05,
+                  "inclusive": 3.3579e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            9.0,
+            1.0,
+            0.0017185339999998828,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015923740000001185,
+              "inclusive": 0.0015923740000001185
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000394734,
+                  "inclusive": 0.000394734
+                },
+                "exclusive": 4.6699999999998045e-07,
+                "forward": {
+                  "exclusive": 0.000408489,
+                  "inclusive": 0.000408489
+                },
+                "inclusive": 0.000841328,
+                "multiply": {
+                  "exclusive": 3.7638e-05,
+                  "inclusive": 3.7638e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000411594,
+                  "inclusive": 0.000411594
+                },
+                "exclusive": 3.689999999999553e-07,
+                "forward": {
+                  "exclusive": 0.000378327,
+                  "inclusive": 0.000378327
+                },
+                "inclusive": 0.000823134,
+                "multiply": {
+                  "exclusive": 3.2844e-05,
+                  "inclusive": 3.2844e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            10.0,
+            1.0,
+            0.001724437000000023,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015792160000001054,
+              "inclusive": 0.0015792160000001054
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000407594,
+                  "inclusive": 0.000407594
+                },
+                "exclusive": 5.269999999999494e-07,
+                "forward": {
+                  "exclusive": 0.000387607,
+                  "inclusive": 0.000387607
+                },
+                "inclusive": 0.000833414,
+                "multiply": {
+                  "exclusive": 3.7686e-05,
+                  "inclusive": 3.7686e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000400013,
+                  "inclusive": 0.000400013
+                },
+                "exclusive": 4.4599999999997506e-07,
+                "forward": {
+                  "exclusive": 0.000384809,
+                  "inclusive": 0.000384809
+                },
+                "inclusive": 0.000821191,
+                "multiply": {
+                  "exclusive": 3.5923e-05,
+                  "inclusive": 3.5923e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            11.0,
+            1.0,
+            0.0017229839999999275,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.00158582400000018,
+              "inclusive": 0.00158582400000018
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000403575,
+                  "inclusive": 0.000403575
+                },
+                "exclusive": 4.840000000000313e-07,
+                "forward": {
+                  "exclusive": 0.000390795,
+                  "inclusive": 0.000390795
+                },
+                "inclusive": 0.000831175,
+                "multiply": {
+                  "exclusive": 3.6321e-05,
+                  "inclusive": 3.6321e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000409137,
+                  "inclusive": 0.000409137
+                },
+                "exclusive": 3.9800000000008665e-07,
+                "forward": {
+                  "exclusive": 0.000383066,
+                  "inclusive": 0.000383066
+                },
+                "inclusive": 0.000826414,
+                "multiply": {
+                  "exclusive": 3.3813e-05,
+                  "inclusive": 3.3813e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            12.0,
+            1.0,
+            0.001731565000000046,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.001578791000000468,
+              "inclusive": 0.001578791000000468
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000395898,
+                  "inclusive": 0.000395898
+                },
+                "exclusive": 4.770000000000295e-07,
+                "forward": {
+                  "exclusive": 0.000390901,
+                  "inclusive": 0.000390901
+                },
+                "inclusive": 0.000824588,
+                "multiply": {
+                  "exclusive": 3.7312e-05,
+                  "inclusive": 3.7312e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000407862,
+                  "inclusive": 0.000407862
+                },
+                "exclusive": 4.4800000000000655e-07,
+                "forward": {
+                  "exclusive": 0.000384869,
+                  "inclusive": 0.000384869
+                },
+                "inclusive": 0.000827217,
+                "multiply": {
+                  "exclusive": 3.4038e-05,
+                  "inclusive": 3.4038e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            13.0,
+            1.0,
+            0.0017199510000001084,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015821719999999928,
+              "inclusive": 0.0015821719999999928
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000398167,
+                  "inclusive": 0.000398167
+                },
+                "exclusive": 5.179999999999161e-07,
+                "forward": {
+                  "exclusive": 0.000402851,
+                  "inclusive": 0.000402851
+                },
+                "inclusive": 0.000838206,
+                "multiply": {
+                  "exclusive": 3.667e-05,
+                  "inclusive": 3.667e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000405758,
+                  "inclusive": 0.000405758
+                },
+                "exclusive": 4.2700000000000116e-07,
+                "forward": {
+                  "exclusive": 0.000376168,
+                  "inclusive": 0.000376168
+                },
+                "inclusive": 0.000817583,
+                "multiply": {
+                  "exclusive": 3.523e-05,
+                  "inclusive": 3.523e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            14.0,
+            1.0,
+            0.001720850000000107,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015798699999998167,
+              "inclusive": 0.0015798699999998167
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000409526,
+                  "inclusive": 0.000409526
+                },
+                "exclusive": 5.359999999999827e-07,
+                "forward": {
+                  "exclusive": 0.000386513,
+                  "inclusive": 0.000386513
+                },
+                "inclusive": 0.000833192,
+                "multiply": {
+                  "exclusive": 3.6617e-05,
+                  "inclusive": 3.6617e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000401982,
+                  "inclusive": 0.000401982
+                },
+                "exclusive": 3.849999999999904e-07,
+                "forward": {
+                  "exclusive": 0.000382571,
+                  "inclusive": 0.000382571
+                },
+                "inclusive": 0.00081927,
+                "multiply": {
+                  "exclusive": 3.4332e-05,
+                  "inclusive": 3.4332e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            15.0,
+            1.0,
+            0.0017257099999998804,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.001568208999999987,
+              "inclusive": 0.001568208999999987
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000397713,
+                  "inclusive": 0.000397713
+                },
+                "exclusive": 4.7399999999998225e-07,
+                "forward": {
+                  "exclusive": 0.000388783,
+                  "inclusive": 0.000388783
+                },
+                "inclusive": 0.000823962,
+                "multiply": {
+                  "exclusive": 3.6992e-05,
+                  "inclusive": 3.6992e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000399264,
+                  "inclusive": 0.000399264
+                },
+                "exclusive": 3.5399999999993596e-07,
+                "forward": {
+                  "exclusive": 0.000383171,
+                  "inclusive": 0.000383171
+                },
+                "inclusive": 0.000816497,
+                "multiply": {
+                  "exclusive": 3.3708e-05,
+                  "inclusive": 3.3708e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            16.0,
+            1.0,
+            0.0017110009999998788,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015969889999998266,
+              "inclusive": 0.0015969889999998266
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000406045,
+                  "inclusive": 0.000406045
+                },
+                "exclusive": 5.489999999999705e-07,
+                "forward": {
+                  "exclusive": 0.000403287,
+                  "inclusive": 0.000403287
+                },
+                "inclusive": 0.000848158,
+                "multiply": {
+                  "exclusive": 3.8277e-05,
+                  "inclusive": 3.8277e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000401509,
+                  "inclusive": 0.000401509
+                },
+                "exclusive": 4.5999999999997866e-07,
+                "forward": {
+                  "exclusive": 0.000386858,
+                  "inclusive": 0.000386858
+                },
+                "inclusive": 0.000822436,
+                "multiply": {
+                  "exclusive": 3.3609e-05,
+                  "inclusive": 3.3609e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            17.0,
+            1.0,
+            0.001736466000000103,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015829469999999457,
+              "inclusive": 0.0015829469999999457
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000395609,
+                  "inclusive": 0.000395609
+                },
+                "exclusive": 4.349999999999103e-07,
+                "forward": {
+                  "exclusive": 0.000391718,
+                  "inclusive": 0.000391718
+                },
+                "inclusive": 0.000824901,
+                "multiply": {
+                  "exclusive": 3.7139e-05,
+                  "inclusive": 3.7139e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.00040428,
+                  "inclusive": 0.00040428
+                },
+                "exclusive": 4.7399999999998225e-07,
+                "forward": {
+                  "exclusive": 0.00039207,
+                  "inclusive": 0.00039207
+                },
+                "inclusive": 0.000829365,
+                "multiply": {
+                  "exclusive": 3.2541e-05,
+                  "inclusive": 3.2541e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            18.0,
+            1.0,
+            0.0017238849999998695,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.001572690999999793,
+              "inclusive": 0.001572690999999793
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000400628,
+                  "inclusive": 0.000400628
+                },
+                "exclusive": 5.389999999999215e-07,
+                "forward": {
+                  "exclusive": 0.000389172,
+                  "inclusive": 0.000389172
+                },
+                "inclusive": 0.000827803,
+                "multiply": {
+                  "exclusive": 3.7464e-05,
+                  "inclusive": 3.7464e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000396089,
+                  "inclusive": 0.000396089
+                },
+                "exclusive": 4.25999999999877e-07,
+                "forward": {
+                  "exclusive": 0.000387585,
+                  "inclusive": 0.000387585
+                },
+                "inclusive": 0.000817528,
+                "multiply": {
+                  "exclusive": 3.3428e-05,
+                  "inclusive": 3.3428e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            19.0,
+            1.0,
+            0.0017123739999997944,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015957490000000352,
+              "inclusive": 0.0015957490000000352
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000401112,
+                  "inclusive": 0.000401112
+                },
+                "exclusive": 4.630000000000259e-07,
+                "forward": {
+                  "exclusive": 0.000393326,
+                  "inclusive": 0.000393326
+                },
+                "inclusive": 0.000831524,
+                "multiply": {
+                  "exclusive": 3.6623e-05,
+                  "inclusive": 3.6623e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000417642,
+                  "inclusive": 0.000417642
+                },
+                "exclusive": 3.4199999999996386e-07,
+                "forward": {
+                  "exclusive": 0.000384521,
+                  "inclusive": 0.000384521
+                },
+                "inclusive": 0.000835667,
+                "multiply": {
+                  "exclusive": 3.3162e-05,
+                  "inclusive": 3.3162e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            20.0,
+            1.0,
+            0.00173534799999997,
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "mpi_rank": 1,
+      "n_frames": 20
+    },
+    {
+      "frames": [
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0035096150000000215,
+              "inclusive": 0.0035096150000000215
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000506396,
+                  "inclusive": 0.000506396
+                },
+                "exclusive": 9.85000000000005e-07,
+                "forward": {
+                  "exclusive": 0.000497539,
+                  "inclusive": 0.000497539
+                },
+                "inclusive": 0.001059717,
+                "multiply": {
+                  "exclusive": 5.4797e-05,
+                  "inclusive": 5.4797e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000587049,
+                  "inclusive": 0.000587049
+                },
+                "exclusive": 9.400000000000554e-07,
+                "forward": {
+                  "exclusive": 0.001920106,
+                  "inclusive": 0.001920106
+                },
+                "inclusive": 0.002556538,
+                "multiply": {
+                  "exclusive": 4.8443e-05,
+                  "inclusive": 4.8443e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            1.0,
+            2.0,
+            0.003718235000000014,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.002059676999999649,
+              "inclusive": 0.002059676999999649
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000499117,
+                  "inclusive": 0.000499117
+                },
+                "exclusive": 7.989999999998953e-07,
+                "forward": {
+                  "exclusive": 0.000470404,
+                  "inclusive": 0.000470404
+                },
+                "inclusive": 0.001013461,
+                "multiply": {
+                  "exclusive": 4.3141e-05,
+                  "inclusive": 4.3141e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000647171,
+                  "inclusive": 0.000647171
+                },
+                "exclusive": 6.360000000000393e-07,
+                "forward": {
+                  "exclusive": 0.000443796,
+                  "inclusive": 0.000443796
+                },
+                "inclusive": 0.001131159,
+                "multiply": {
+                  "exclusive": 3.9556e-05,
+                  "inclusive": 3.9556e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            2.0,
+            2.0,
+            0.002211283000000064,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0018633269999999147,
+              "inclusive": 0.0018633269999999147
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000403466,
+                  "inclusive": 0.000403466
+                },
+                "exclusive": 8.170000000000703e-07,
+                "forward": {
+                  "exclusive": 0.000479237,
+                  "inclusive": 0.000479237
+                },
+                "inclusive": 0.000921977,
+                "multiply": {
+                  "exclusive": 3.8457e-05,
+                  "inclusive": 3.8457e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000531527,
+                  "inclusive": 0.000531527
+                },
+                "exclusive": 5.030000000000052e-07,
+                "forward": {
+                  "exclusive": 0.000450041,
+                  "inclusive": 0.000450041
+                },
+                "inclusive": 0.001022604,
+                "multiply": {
+                  "exclusive": 4.0533e-05,
+                  "inclusive": 4.0533e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            3.0,
+            2.0,
+            0.0020013479999998474,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0016188849999998478,
+              "inclusive": 0.0016188849999998478
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.00041594,
+                  "inclusive": 0.00041594
+                },
+                "exclusive": 7.149999999999821e-07,
+                "forward": {
+                  "exclusive": 0.000398612,
+                  "inclusive": 0.000398612
+                },
+                "inclusive": 0.000852746,
+                "multiply": {
+                  "exclusive": 3.7479e-05,
+                  "inclusive": 3.7479e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000419561,
+                  "inclusive": 0.000419561
+                },
+                "exclusive": 4.5900000000007133e-07,
+                "forward": {
+                  "exclusive": 0.000385499,
+                  "inclusive": 0.000385499
+                },
+                "inclusive": 0.00084009,
+                "multiply": {
+                  "exclusive": 3.4571e-05,
+                  "inclusive": 3.4571e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            4.0,
+            2.0,
+            0.0017476130000000367,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0016114810000000812,
+              "inclusive": 0.0016114810000000812
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000404318,
+                  "inclusive": 0.000404318
+                },
+                "exclusive": 5.390000000000299e-07,
+                "forward": {
+                  "exclusive": 0.000401716,
+                  "inclusive": 0.000401716
+                },
+                "inclusive": 0.00084239,
+                "multiply": {
+                  "exclusive": 3.5817e-05,
+                  "inclusive": 3.5817e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000417868,
+                  "inclusive": 0.000417868
+                },
+                "exclusive": 6.049999999999849e-07,
+                "forward": {
+                  "exclusive": 0.000388335,
+                  "inclusive": 0.000388335
+                },
+                "inclusive": 0.00084037,
+                "multiply": {
+                  "exclusive": 3.3562e-05,
+                  "inclusive": 3.3562e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            5.0,
+            2.0,
+            0.0017375299999999871,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015914400000005546,
+              "inclusive": 0.0015914400000005546
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000402916,
+                  "inclusive": 0.000402916
+                },
+                "exclusive": 6.249999999999745e-07,
+                "forward": {
+                  "exclusive": 0.000398132,
+                  "inclusive": 0.000398132
+                },
+                "inclusive": 0.000838227,
+                "multiply": {
+                  "exclusive": 3.6554e-05,
+                  "inclusive": 3.6554e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000402558,
+                  "inclusive": 0.000402558
+                },
+                "exclusive": 4.539999999998842e-07,
+                "forward": {
+                  "exclusive": 0.000388531,
+                  "inclusive": 0.000388531
+                },
+                "inclusive": 0.000824737,
+                "multiply": {
+                  "exclusive": 3.3194e-05,
+                  "inclusive": 3.3194e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            6.0,
+            2.0,
+            0.0017173509999999226,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015982050000002967,
+              "inclusive": 0.0015982050000002967
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000405161,
+                  "inclusive": 0.000405161
+                },
+                "exclusive": 6.000000000000146e-07,
+                "forward": {
+                  "exclusive": 0.000400209,
+                  "inclusive": 0.000400209
+                },
+                "inclusive": 0.000843336,
+                "multiply": {
+                  "exclusive": 3.7366e-05,
+                  "inclusive": 3.7366e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000401089,
+                  "inclusive": 0.000401089
+                },
+                "exclusive": 4.4399999999994357e-07,
+                "forward": {
+                  "exclusive": 0.000392556,
+                  "inclusive": 0.000392556
+                },
+                "inclusive": 0.000828993,
+                "multiply": {
+                  "exclusive": 3.4904e-05,
+                  "inclusive": 3.4904e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            7.0,
+            2.0,
+            0.0017264349999999151,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015996469999999263,
+              "inclusive": 0.0015996469999999263
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.00040527,
+                  "inclusive": 0.00040527
+                },
+                "exclusive": 5.75999999999962e-07,
+                "forward": {
+                  "exclusive": 0.000393063,
+                  "inclusive": 0.000393063
+                },
+                "inclusive": 0.000835569,
+                "multiply": {
+                  "exclusive": 3.666e-05,
+                  "inclusive": 3.666e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000411037,
+                  "inclusive": 0.000411037
+                },
+                "exclusive": 4.229999999999382e-07,
+                "forward": {
+                  "exclusive": 0.000391058,
+                  "inclusive": 0.000391058
+                },
+                "inclusive": 0.000835727,
+                "multiply": {
+                  "exclusive": 3.3209e-05,
+                  "inclusive": 3.3209e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            8.0,
+            2.0,
+            0.001724918999999936,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015950379999998265,
+              "inclusive": 0.0015950379999998265
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000401453,
+                  "inclusive": 0.000401453
+                },
+                "exclusive": 5.979999999999831e-07,
+                "forward": {
+                  "exclusive": 0.000393667,
+                  "inclusive": 0.000393667
+                },
+                "inclusive": 0.000831624,
+                "multiply": {
+                  "exclusive": 3.5906e-05,
+                  "inclusive": 3.5906e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000415658,
+                  "inclusive": 0.000415658
+                },
+                "exclusive": 4.4800000000000655e-07,
+                "forward": {
+                  "exclusive": 0.000384954,
+                  "inclusive": 0.000384954
+                },
+                "inclusive": 0.000833155,
+                "multiply": {
+                  "exclusive": 3.2095e-05,
+                  "inclusive": 3.2095e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            9.0,
+            2.0,
+            0.0017186879999999682,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015980679999998415,
+              "inclusive": 0.0015980679999998415
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.00040073,
+                  "inclusive": 0.00040073
+                },
+                "exclusive": 5.989999999999988e-07,
+                "forward": {
+                  "exclusive": 0.000399534,
+                  "inclusive": 0.000399534
+                },
+                "inclusive": 0.000837588,
+                "multiply": {
+                  "exclusive": 3.6725e-05,
+                  "inclusive": 3.6725e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.00041078,
+                  "inclusive": 0.00041078
+                },
+                "exclusive": 4.639999999999332e-07,
+                "forward": {
+                  "exclusive": 0.000387825,
+                  "inclusive": 0.000387825
+                },
+                "inclusive": 0.000832689,
+                "multiply": {
+                  "exclusive": 3.362e-05,
+                  "inclusive": 3.362e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            10.0,
+            2.0,
+            0.001724534999999916,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.001594418000000264,
+              "inclusive": 0.001594418000000264
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000397732,
+                  "inclusive": 0.000397732
+                },
+                "exclusive": 6.429999999999327e-07,
+                "forward": {
+                  "exclusive": 0.000395545,
+                  "inclusive": 0.000395545
+                },
+                "inclusive": 0.000829959,
+                "multiply": {
+                  "exclusive": 3.6039e-05,
+                  "inclusive": 3.6039e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000408175,
+                  "inclusive": 0.000408175
+                },
+                "exclusive": 4.7199999999995076e-07,
+                "forward": {
+                  "exclusive": 0.000393753,
+                  "inclusive": 0.000393753
+                },
+                "inclusive": 0.00083948,
+                "multiply": {
+                  "exclusive": 3.708e-05,
+                  "inclusive": 3.708e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            11.0,
+            2.0,
+            0.0017230740000000466,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0016060240000002057,
+              "inclusive": 0.0016060240000002057
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000409546,
+                  "inclusive": 0.000409546
+                },
+                "exclusive": 6.049999999999849e-07,
+                "forward": {
+                  "exclusive": 0.000398093,
+                  "inclusive": 0.000398093
+                },
+                "inclusive": 0.000844847,
+                "multiply": {
+                  "exclusive": 3.6603e-05,
+                  "inclusive": 3.6603e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000416109,
+                  "inclusive": 0.000416109
+                },
+                "exclusive": 4.7199999999995076e-07,
+                "forward": {
+                  "exclusive": 0.000383116,
+                  "inclusive": 0.000383116
+                },
+                "inclusive": 0.000832584,
+                "multiply": {
+                  "exclusive": 3.2887e-05,
+                  "inclusive": 3.2887e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            12.0,
+            2.0,
+            0.0017316049999998029,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015948330000001842,
+              "inclusive": 0.0015948330000001842
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000400304,
+                  "inclusive": 0.000400304
+                },
+                "exclusive": 5.91999999999997e-07,
+                "forward": {
+                  "exclusive": 0.000391911,
+                  "inclusive": 0.000391911
+                },
+                "inclusive": 0.000829682,
+                "multiply": {
+                  "exclusive": 3.6875e-05,
+                  "inclusive": 3.6875e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000415522,
+                  "inclusive": 0.000415522
+                },
+                "exclusive": 4.4100000000000476e-07,
+                "forward": {
+                  "exclusive": 0.00038777,
+                  "inclusive": 0.00038777
+                },
+                "inclusive": 0.000836679,
+                "multiply": {
+                  "exclusive": 3.2946e-05,
+                  "inclusive": 3.2946e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            13.0,
+            2.0,
+            0.0017200889999999802,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.001596050000000071,
+              "inclusive": 0.001596050000000071
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000403359,
+                  "inclusive": 0.000403359
+                },
+                "exclusive": 5.560000000000807e-07,
+                "forward": {
+                  "exclusive": 0.00039255,
+                  "inclusive": 0.00039255
+                },
+                "inclusive": 0.00083238,
+                "multiply": {
+                  "exclusive": 3.5915e-05,
+                  "inclusive": 3.5915e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000405372,
+                  "inclusive": 0.000405372
+                },
+                "exclusive": 4.089999999999346e-07,
+                "forward": {
+                  "exclusive": 0.000395636,
+                  "inclusive": 0.000395636
+                },
+                "inclusive": 0.000834796,
+                "multiply": {
+                  "exclusive": 3.3379e-05,
+                  "inclusive": 3.3379e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            14.0,
+            2.0,
+            0.001720930000000065,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015947450000002306,
+              "inclusive": 0.0015947450000002306
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000399714,
+                  "inclusive": 0.000399714
+                },
+                "exclusive": 5.849999999999952e-07,
+                "forward": {
+                  "exclusive": 0.000391934,
+                  "inclusive": 0.000391934
+                },
+                "inclusive": 0.000832927,
+                "multiply": {
+                  "exclusive": 4.0694e-05,
+                  "inclusive": 4.0694e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.00041122,
+                  "inclusive": 0.00041122
+                },
+                "exclusive": 3.94999999999931e-07,
+                "forward": {
+                  "exclusive": 0.000392668,
+                  "inclusive": 0.000392668
+                },
+                "inclusive": 0.000839143,
+                "multiply": {
+                  "exclusive": 3.486e-05,
+                  "inclusive": 3.486e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            15.0,
+            2.0,
+            0.0017259680000001332,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.001584378999999858,
+              "inclusive": 0.001584378999999858
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000403593,
+                  "inclusive": 0.000403593
+                },
+                "exclusive": 5.400000000000457e-07,
+                "forward": {
+                  "exclusive": 0.000392535,
+                  "inclusive": 0.000392535
+                },
+                "inclusive": 0.000833709,
+                "multiply": {
+                  "exclusive": 3.7041e-05,
+                  "inclusive": 3.7041e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000405433,
+                  "inclusive": 0.000405433
+                },
+                "exclusive": 4.469999999999908e-07,
+                "forward": {
+                  "exclusive": 0.000383639,
+                  "inclusive": 0.000383639
+                },
+                "inclusive": 0.000823655,
+                "multiply": {
+                  "exclusive": 3.4136e-05,
+                  "inclusive": 3.4136e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            16.0,
+            2.0,
+            0.0017107020000000084,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0016054190000001078,
+              "inclusive": 0.0016054190000001078
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000410842,
+                  "inclusive": 0.000410842
+                },
+                "exclusive": 5.75999999999962e-07,
+                "forward": {
+                  "exclusive": 0.000400621,
+                  "inclusive": 0.000400621
+                },
+                "inclusive": 0.000848547,
+                "multiply": {
+                  "exclusive": 3.6508e-05,
+                  "inclusive": 3.6508e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000407678,
+                  "inclusive": 0.000407678
+                },
+                "exclusive": 4.2700000000000116e-07,
+                "forward": {
+                  "exclusive": 0.000387206,
+                  "inclusive": 0.000387206
+                },
+                "inclusive": 0.000829926,
+                "multiply": {
+                  "exclusive": 3.4615e-05,
+                  "inclusive": 3.4615e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            17.0,
+            2.0,
+            0.0017362990000000522,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015942479999999648,
+              "inclusive": 0.0015942479999999648
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000398364,
+                  "inclusive": 0.000398364
+                },
+                "exclusive": 5.629999999999741e-07,
+                "forward": {
+                  "exclusive": 0.000395325,
+                  "inclusive": 0.000395325
+                },
+                "inclusive": 0.000834634,
+                "multiply": {
+                  "exclusive": 4.0382e-05,
+                  "inclusive": 4.0382e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000404795,
+                  "inclusive": 0.000404795
+                },
+                "exclusive": 3.999999999999013e-07,
+                "forward": {
+                  "exclusive": 0.000396626,
+                  "inclusive": 0.000396626
+                },
+                "inclusive": 0.000835574,
+                "multiply": {
+                  "exclusive": 3.3753e-05,
+                  "inclusive": 3.3753e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            18.0,
+            2.0,
+            0.0017239950000000892,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015853590000001194,
+              "inclusive": 0.0015853590000001194
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000402392,
+                  "inclusive": 0.000402392
+                },
+                "exclusive": 5.539999999999408e-07,
+                "forward": {
+                  "exclusive": 0.000392576,
+                  "inclusive": 0.000392576
+                },
+                "inclusive": 0.000832566,
+                "multiply": {
+                  "exclusive": 3.7044e-05,
+                  "inclusive": 3.7044e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.0004024,
+                  "inclusive": 0.0004024
+                },
+                "exclusive": 4.489999999999139e-07,
+                "forward": {
+                  "exclusive": 0.000388991,
+                  "inclusive": 0.000388991
+                },
+                "inclusive": 0.000826265,
+                "multiply": {
+                  "exclusive": 3.4425e-05,
+                  "inclusive": 3.4425e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            19.0,
+            2.0,
+            0.0017124689999998832,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0016085840000001905,
+              "inclusive": 0.0016085840000001905
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000406935,
+                  "inclusive": 0.000406935
+                },
+                "exclusive": 5.889999999999498e-07,
+                "forward": {
+                  "exclusive": 0.000397728,
+                  "inclusive": 0.000397728
+                },
+                "inclusive": 0.000841951,
+                "multiply": {
+                  "exclusive": 3.6699e-05,
+                  "inclusive": 3.6699e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000415408,
+                  "inclusive": 0.000415408
+                },
+                "exclusive": 4.4800000000000655e-07,
+                "forward": {
+                  "exclusive": 0.000389384,
+                  "inclusive": 0.000389384
+                },
+                "inclusive": 0.000839641,
+                "multiply": {
+                  "exclusive": 3.4401e-05,
+                  "inclusive": 3.4401e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            20.0,
+            2.0,
+            0.0017354079999998273,
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "mpi_rank": 2,
+      "n_frames": 20
+    },
+    {
+      "frames": [
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0034878730000000857,
+              "inclusive": 0.0034878730000000857
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000594895,
+                  "inclusive": 0.000594895
+                },
+                "exclusive": 8.200000000001175e-07,
+                "forward": {
+                  "exclusive": 0.000400114,
+                  "inclusive": 0.000400114
+                },
+                "inclusive": 0.001048253,
+                "multiply": {
+                  "exclusive": 5.2424e-05,
+                  "inclusive": 5.2424e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000681461,
+                  "inclusive": 0.000681461
+                },
+                "exclusive": 1.3390000000003746e-06,
+                "forward": {
+                  "exclusive": 0.00181318,
+                  "inclusive": 0.00181318
+                },
+                "inclusive": 0.002553955,
+                "multiply": {
+                  "exclusive": 5.7975e-05,
+                  "inclusive": 5.7975e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            1.0,
+            3.0,
+            0.0037196100000000953,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.002039365999999765,
+              "inclusive": 0.002039365999999765
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000592504,
+                  "inclusive": 0.000592504
+                },
+                "exclusive": 7.32000000000033e-07,
+                "forward": {
+                  "exclusive": 0.000375798,
+                  "inclusive": 0.000375798
+                },
+                "inclusive": 0.001011168,
+                "multiply": {
+                  "exclusive": 4.2134e-05,
+                  "inclusive": 4.2134e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000715625,
+                  "inclusive": 0.000715625
+                },
+                "exclusive": 5.050000000000367e-07,
+                "forward": {
+                  "exclusive": 0.00035641,
+                  "inclusive": 0.00035641
+                },
+                "inclusive": 0.001115888,
+                "multiply": {
+                  "exclusive": 4.3348e-05,
+                  "inclusive": 4.3348e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            2.0,
+            3.0,
+            0.0022096480000000085,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0018487859999993805,
+              "inclusive": 0.0018487859999993805
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000484389,
+                  "inclusive": 0.000484389
+                },
+                "exclusive": 7.280000000000784e-07,
+                "forward": {
+                  "exclusive": 0.000393013,
+                  "inclusive": 0.000393013
+                },
+                "inclusive": 0.000921239,
+                "multiply": {
+                  "exclusive": 4.3109e-05,
+                  "inclusive": 4.3109e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000615517,
+                  "inclusive": 0.000615517
+                },
+                "exclusive": 4.720000000000592e-07,
+                "forward": {
+                  "exclusive": 0.000356752,
+                  "inclusive": 0.000356752
+                },
+                "inclusive": 0.001011888,
+                "multiply": {
+                  "exclusive": 3.9147e-05,
+                  "inclusive": 3.9147e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            3.0,
+            3.0,
+            0.002004107999999949,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0016001089999999607,
+              "inclusive": 0.0016001089999999607
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000445308,
+                  "inclusive": 0.000445308
+                },
+                "exclusive": 5.890000000000582e-07,
+                "forward": {
+                  "exclusive": 0.000366037,
+                  "inclusive": 0.000366037
+                },
+                "inclusive": 0.00085017,
+                "multiply": {
+                  "exclusive": 3.8236e-05,
+                  "inclusive": 3.8236e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000423754,
+                  "inclusive": 0.000423754
+                },
+                "exclusive": 4.410000000001132e-07,
+                "forward": {
+                  "exclusive": 0.000365857,
+                  "inclusive": 0.000365857
+                },
+                "inclusive": 0.000826062,
+                "multiply": {
+                  "exclusive": 3.601e-05,
+                  "inclusive": 3.601e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            4.0,
+            3.0,
+            0.00175004099999998,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.001592049999999956,
+              "inclusive": 0.001592049999999956
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000429751,
+                  "inclusive": 0.000429751
+                },
+                "exclusive": 4.929999999999561e-07,
+                "forward": {
+                  "exclusive": 0.000364624,
+                  "inclusive": 0.000364624
+                },
+                "inclusive": 0.000833593,
+                "multiply": {
+                  "exclusive": 3.8725e-05,
+                  "inclusive": 3.8725e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000441932,
+                  "inclusive": 0.000441932
+                },
+                "exclusive": 4.5299999999997686e-07,
+                "forward": {
+                  "exclusive": 0.000356525,
+                  "inclusive": 0.000356525
+                },
+                "inclusive": 0.000833277,
+                "multiply": {
+                  "exclusive": 3.4367e-05,
+                  "inclusive": 3.4367e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            5.0,
+            3.0,
+            0.001739940999999856,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015729379999998017,
+              "inclusive": 0.0015729379999998017
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.00042866,
+                  "inclusive": 0.00042866
+                },
+                "exclusive": 6.550000000000132e-07,
+                "forward": {
+                  "exclusive": 0.000367085,
+                  "inclusive": 0.000367085
+                },
+                "inclusive": 0.000834085,
+                "multiply": {
+                  "exclusive": 3.7685e-05,
+                  "inclusive": 3.7685e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000421896,
+                  "inclusive": 0.000421896
+                },
+                "exclusive": 4.930000000000646e-07,
+                "forward": {
+                  "exclusive": 0.000356101,
+                  "inclusive": 0.000356101
+                },
+                "inclusive": 0.000814667,
+                "multiply": {
+                  "exclusive": 3.6177e-05,
+                  "inclusive": 3.6177e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            6.0,
+            3.0,
+            0.0017195200000001964,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.001575576000000023,
+              "inclusive": 0.001575576000000023
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000423872,
+                  "inclusive": 0.000423872
+                },
+                "exclusive": 6.290000000000375e-07,
+                "forward": {
+                  "exclusive": 0.000368803,
+                  "inclusive": 0.000368803
+                },
+                "inclusive": 0.000832059,
+                "multiply": {
+                  "exclusive": 3.8755e-05,
+                  "inclusive": 3.8755e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000420007,
+                  "inclusive": 0.000420007
+                },
+                "exclusive": 4.639999999999332e-07,
+                "forward": {
+                  "exclusive": 0.000363751,
+                  "inclusive": 0.000363751
+                },
+                "inclusive": 0.000820136,
+                "multiply": {
+                  "exclusive": 3.5914e-05,
+                  "inclusive": 3.5914e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            7.0,
+            3.0,
+            0.0017263880000000231,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015783879999999861,
+              "inclusive": 0.0015783879999999861
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000422043,
+                  "inclusive": 0.000422043
+                },
+                "exclusive": 6.220000000000357e-07,
+                "forward": {
+                  "exclusive": 0.000371204,
+                  "inclusive": 0.000371204
+                },
+                "inclusive": 0.000832078,
+                "multiply": {
+                  "exclusive": 3.8209e-05,
+                  "inclusive": 3.8209e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000423277,
+                  "inclusive": 0.000423277
+                },
+                "exclusive": 3.930000000000079e-07,
+                "forward": {
+                  "exclusive": 0.000362668,
+                  "inclusive": 0.000362668
+                },
+                "inclusive": 0.000822296,
+                "multiply": {
+                  "exclusive": 3.5958e-05,
+                  "inclusive": 3.5958e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            8.0,
+            3.0,
+            0.0017276399999999192,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015735250000001866,
+              "inclusive": 0.0015735250000001866
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000418343,
+                  "inclusive": 0.000418343
+                },
+                "exclusive": 5.1199999999993e-07,
+                "forward": {
+                  "exclusive": 0.000367925,
+                  "inclusive": 0.000367925
+                },
+                "inclusive": 0.000824636,
+                "multiply": {
+                  "exclusive": 3.7856e-05,
+                  "inclusive": 3.7856e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000427778,
+                  "inclusive": 0.000427778
+                },
+                "exclusive": 4.1299999999988915e-07,
+                "forward": {
+                  "exclusive": 0.000360311,
+                  "inclusive": 0.000360311
+                },
+                "inclusive": 0.000823091,
+                "multiply": {
+                  "exclusive": 3.4589e-05,
+                  "inclusive": 3.4589e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            9.0,
+            3.0,
+            0.0017208779999999813,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.001579022000000041,
+              "inclusive": 0.001579022000000041
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000410142,
+                  "inclusive": 0.000410142
+                },
+                "exclusive": 5.669999999999287e-07,
+                "forward": {
+                  "exclusive": 0.000387604,
+                  "inclusive": 0.000387604
+                },
+                "inclusive": 0.000836531,
+                "multiply": {
+                  "exclusive": 3.8218e-05,
+                  "inclusive": 3.8218e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000422663,
+                  "inclusive": 0.000422663
+                },
+                "exclusive": 3.9599999999994674e-07,
+                "forward": {
+                  "exclusive": 0.000359453,
+                  "inclusive": 0.000359453
+                },
+                "inclusive": 0.000819469,
+                "multiply": {
+                  "exclusive": 3.6957e-05,
+                  "inclusive": 3.6957e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            10.0,
+            3.0,
+            0.001724647000000079,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015729170000000625,
+              "inclusive": 0.0015729170000000625
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000422653,
+                  "inclusive": 0.000422653
+                },
+                "exclusive": 6.160000000000497e-07,
+                "forward": {
+                  "exclusive": 0.000361157,
+                  "inclusive": 0.000361157
+                },
+                "inclusive": 0.000826174,
+                "multiply": {
+                  "exclusive": 4.1748e-05,
+                  "inclusive": 4.1748e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000422161,
+                  "inclusive": 0.000422161
+                },
+                "exclusive": 4.2700000000000116e-07,
+                "forward": {
+                  "exclusive": 0.000367758,
+                  "inclusive": 0.000367758
+                },
+                "inclusive": 0.000829509,
+                "multiply": {
+                  "exclusive": 3.9163e-05,
+                  "inclusive": 3.9163e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            11.0,
+            3.0,
+            0.0017232340000001845,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.001586478999999974,
+              "inclusive": 0.001586478999999974
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000430781,
+                  "inclusive": 0.000430781
+                },
+                "exclusive": 5.149999999999773e-07,
+                "forward": {
+                  "exclusive": 0.000369213,
+                  "inclusive": 0.000369213
+                },
+                "inclusive": 0.000836658,
+                "multiply": {
+                  "exclusive": 3.6149e-05,
+                  "inclusive": 3.6149e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000424305,
+                  "inclusive": 0.000424305
+                },
+                "exclusive": 5.079999999999755e-07,
+                "forward": {
+                  "exclusive": 0.00036302,
+                  "inclusive": 0.00036302
+                },
+                "inclusive": 0.000823372,
+                "multiply": {
+                  "exclusive": 3.5539e-05,
+                  "inclusive": 3.5539e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            12.0,
+            3.0,
+            0.001731695000000144,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015773669999996631,
+              "inclusive": 0.0015773669999996631
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000419855,
+                  "inclusive": 0.000419855
+                },
+                "exclusive": 5.030000000000052e-07,
+                "forward": {
+                  "exclusive": 0.000367496,
+                  "inclusive": 0.000367496
+                },
+                "inclusive": 0.000825182,
+                "multiply": {
+                  "exclusive": 3.7328e-05,
+                  "inclusive": 3.7328e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000426559,
+                  "inclusive": 0.000426559
+                },
+                "exclusive": 5.049999999999282e-07,
+                "forward": {
+                  "exclusive": 0.000364359,
+                  "inclusive": 0.000364359
+                },
+                "inclusive": 0.000826403,
+                "multiply": {
+                  "exclusive": 3.498e-05,
+                  "inclusive": 3.498e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            13.0,
+            3.0,
+            0.0017201490000000597,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.001573081999999948,
+              "inclusive": 0.001573081999999948
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000414419,
+                  "inclusive": 0.000414419
+                },
+                "exclusive": 4.980000000000349e-07,
+                "forward": {
+                  "exclusive": 0.000371266,
+                  "inclusive": 0.000371266
+                },
+                "inclusive": 0.000825327,
+                "multiply": {
+                  "exclusive": 3.9144e-05,
+                  "inclusive": 3.9144e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000426327,
+                  "inclusive": 0.000426327
+                },
+                "exclusive": 4.329999999999872e-07,
+                "forward": {
+                  "exclusive": 0.000361846,
+                  "inclusive": 0.000361846
+                },
+                "inclusive": 0.00082429,
+                "multiply": {
+                  "exclusive": 3.5684e-05,
+                  "inclusive": 3.5684e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            14.0,
+            3.0,
+            0.0017209579999999391,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.001580389999999987,
+              "inclusive": 0.001580389999999987
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000426068,
+                  "inclusive": 0.000426068
+                },
+                "exclusive": 4.4599999999997506e-07,
+                "forward": {
+                  "exclusive": 0.000363459,
+                  "inclusive": 0.000363459
+                },
+                "inclusive": 0.000827151,
+                "multiply": {
+                  "exclusive": 3.7178e-05,
+                  "inclusive": 3.7178e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000426943,
+                  "inclusive": 0.000426943
+                },
+                "exclusive": 4.039999999999643e-07,
+                "forward": {
+                  "exclusive": 0.000364749,
+                  "inclusive": 0.000364749
+                },
+                "inclusive": 0.00082893,
+                "multiply": {
+                  "exclusive": 3.6834e-05,
+                  "inclusive": 3.6834e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            15.0,
+            3.0,
+            0.0017260350000001257,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.001566235999999499,
+              "inclusive": 0.001566235999999499
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000423337,
+                  "inclusive": 0.000423337
+                },
+                "exclusive": 4.840000000000313e-07,
+                "forward": {
+                  "exclusive": 0.00036652,
+                  "inclusive": 0.00036652
+                },
+                "inclusive": 0.000827984,
+                "multiply": {
+                  "exclusive": 3.7643e-05,
+                  "inclusive": 3.7643e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000415198,
+                  "inclusive": 0.000415198
+                },
+                "exclusive": 4.70999999999935e-07,
+                "forward": {
+                  "exclusive": 0.00036199,
+                  "inclusive": 0.00036199
+                },
+                "inclusive": 0.000813032,
+                "multiply": {
+                  "exclusive": 3.5373e-05,
+                  "inclusive": 3.5373e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            16.0,
+            3.0,
+            0.0017104450000000604,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.001581776999999951,
+              "inclusive": 0.001581776999999951
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000420874,
+                  "inclusive": 0.000420874
+                },
+                "exclusive": 5.250000000000263e-07,
+                "forward": {
+                  "exclusive": 0.000379029,
+                  "inclusive": 0.000379029
+                },
+                "inclusive": 0.000838282,
+                "multiply": {
+                  "exclusive": 3.7854e-05,
+                  "inclusive": 3.7854e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000417906,
+                  "inclusive": 0.000417906
+                },
+                "exclusive": 4.949999999999876e-07,
+                "forward": {
+                  "exclusive": 0.000364754,
+                  "inclusive": 0.000364754
+                },
+                "inclusive": 0.000819248,
+                "multiply": {
+                  "exclusive": 3.6093e-05,
+                  "inclusive": 3.6093e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            17.0,
+            3.0,
+            0.0017361579999999321,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.0015831259999998792,
+              "inclusive": 0.0015831259999998792
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000421882,
+                  "inclusive": 0.000421882
+                },
+                "exclusive": 5.219999999999791e-07,
+                "forward": {
+                  "exclusive": 0.00037297,
+                  "inclusive": 0.00037297
+                },
+                "inclusive": 0.00083296,
+                "multiply": {
+                  "exclusive": 3.7586e-05,
+                  "inclusive": 3.7586e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000417337,
+                  "inclusive": 0.000417337
+                },
+                "exclusive": 4.979999999999265e-07,
+                "forward": {
+                  "exclusive": 0.000371685,
+                  "inclusive": 0.000371685
+                },
+                "inclusive": 0.000824526,
+                "multiply": {
+                  "exclusive": 3.5006e-05,
+                  "inclusive": 3.5006e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            18.0,
+            3.0,
+            0.0017240379999998723,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.001567962999999839,
+              "inclusive": 0.001567962999999839
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000420494,
+                  "inclusive": 0.000420494
+                },
+                "exclusive": 4.980000000000349e-07,
+                "forward": {
+                  "exclusive": 0.000367752,
+                  "inclusive": 0.000367752
+                },
+                "inclusive": 0.000827047,
+                "multiply": {
+                  "exclusive": 3.8303e-05,
+                  "inclusive": 3.8303e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000415436,
+                  "inclusive": 0.000415436
+                },
+                "exclusive": 4.1400000000012174e-07,
+                "forward": {
+                  "exclusive": 0.000365104,
+                  "inclusive": 0.000365104
+                },
+                "inclusive": 0.000817752,
+                "multiply": {
+                  "exclusive": 3.6798e-05,
+                  "inclusive": 3.6798e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            19.0,
+            3.0,
+            0.0017125679999998589,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "regions": {
+            "communication": {
+              "exclusive": 0.0,
+              "inclusive": 0.0
+            },
+            "fft": {
+              "exclusive": 0.001592060999999756,
+              "inclusive": 0.001592060999999756
+            },
+            "gradient": {
+              "evolve": {
+                "backward": {
+                  "exclusive": 0.000429747,
+                  "inclusive": 0.000429747
+                },
+                "exclusive": 5.20000000000056e-07,
+                "forward": {
+                  "exclusive": 0.000370436,
+                  "inclusive": 0.000370436
+                },
+                "inclusive": 0.000838469,
+                "multiply": {
+                  "exclusive": 3.7766e-05,
+                  "inclusive": 3.7766e-05
+                }
+              },
+              "exclusive": 0.0,
+              "inclusive": 0.0,
+              "mean_field": {
+                "backward": {
+                  "exclusive": 0.000430475,
+                  "inclusive": 0.000430475
+                },
+                "exclusive": 4.879999999999858e-07,
+                "forward": {
+                  "exclusive": 0.000362155,
+                  "inclusive": 0.000362155
+                },
+                "inclusive": 0.000828297,
+                "multiply": {
+                  "exclusive": 3.5179e-05,
+                  "inclusive": 3.5179e-05
+                }
+              }
+            }
+          },
+          "scalars": [
+            20.0,
+            3.0,
+            0.0017354120000001583,
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "mpi_rank": 3,
+      "n_frames": 20
+    }
+  ],
+  "region_paths": [
+    "communication",
+    "fft",
+    "gradient",
+    "gradient/evolve",
+    "gradient/evolve/backward",
+    "gradient/evolve/forward",
+    "gradient/evolve/multiply",
+    "gradient/mean_field",
+    "gradient/mean_field/backward",
+    "gradient/mean_field/forward",
+    "gradient/mean_field/multiply"
+  ],
+  "schema_version": 2,
+  "total_frames": 80
+}

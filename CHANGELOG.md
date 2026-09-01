@@ -27,6 +27,7 @@ source compatibility is explicitly not a goal.
 
 - `scripts/compare_perf_baseline.py` compares profiling JSON (schema v2/v3) `wall_step` means against a stored baseline (pass ≤5% regression, warn >5%, fail >15%). Canary input: `tests/baselines/perf/inputs/tungsten_canary.json`.
 - Tungsten CUDA Release 256³/20-step perf JSON on tohtori `g0005`: 1-rank and 8-rank (`tests/baselines/perf/tohtori-g0005-tungsten-cuda-*-release-256.json`). Input: `tests/baselines/perf/inputs/tungsten_release_256.json`. Compare with `--warmup-frames=1`.
+- Tungsten CPU Release 64³/20-step strong-scaling JSON on tohtori `g0005`: 1/4/16 ranks (`tests/baselines/perf/tohtori-g0005-tungsten-cpu-*-release-64.json`). Compare with `--warmup-frames=1`.
 - `scripts/sbatch_openpfc_hip_amdgpu.sbatch` builds HeFFTe-ROCm (Open MPI 5 + ROCm 7) if needed and runs the HIP Debug suite on Tohtori `amdgpu` with four MPI slots. Tohtori `g0004` job 1618727: 47/47 CTest batches (`HIP_SPECTRAL=ON`, `MPI_HIP_AWARE=OFF`).
 - Kobayashi CUDA `KOBAYASHI_VERIFY_HEX` 32²/4-step smoke is CTest (`kobayashi-cuda-hex-smoke`, and `kobayashi-cuda-hex-2rank` when MPI suites are on). Pin matches CPU HEX except `sum_T` (1 ULP), recorded in `tests/baselines/BASELINES.md`.
 - CUDA `padded_halo_faces.cu` is compiled into `openpfc_gpu_kernels` (same as HIP `padded_halo_faces.hip` in `openpfc_hip_kernels`). `openpfc-tests`, `kobayashi_fd_cuda`, and `test_fd_gpu_stack_cuda` no longer recompile the TU.

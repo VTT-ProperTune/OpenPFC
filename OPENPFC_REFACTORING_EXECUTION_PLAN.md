@@ -47,9 +47,10 @@ CUDA-gated suites now run here (all passed this session): `GPU_FFT`,
 `allen-cahn-cpu-vs-cuda`, `wave2d-cpu-vs-cuda`, `tungsten-golden-4rank`,
 `kobayashi-cuda-hex-smoke`, `kobayashi-cuda-hex-2rank`.
 CUDA Release 256³/20-step tungsten perf JSON is captured on `g0005` (1-rank and
-8-rank). Still open on CUDA: CPU strong-scaling JSON, halo microtiming JSON,
-CUDA+HIP co-enabled configure (needs both toolkits on one node; `build.sh`
-keeps `--with-cuda` / `--with-rocm` exclusive).
+8-rank). CPU Release 64³ strong scaling (1/4/16 ranks) is captured on the same
+node. Still open: halo microtiming JSON, CUDA+HIP co-enabled configure (needs
+both toolkits on one node; `build.sh` keeps `--with-cuda` / `--with-rocm`
+exclusive).
 
 **Pre-M0 is complete and released** (`v0.1.5` tagged; `CHANGELOG.md`'s `[0.1.5]` section documents every audit §4/§11 fix landing with a regression test, and `master` is on `0.2.0` per `CMakeLists.txt`, with an `OpenPFC_DEVELOPMENT` option supplying the `-dev` suffix). The scientific baseline *framework* exists (`tests/baselines/BASELINES.md`, `tests/packaging/consumer/`, CUDA/HIP compile-only CI jobs), but the actual golden-trajectory **data** (multi-rank tungsten/aluminum captures, perf JSON) is still marked ☐/uncaptured in `BASELINES.md` — this is the one Pre-M0 gap that could still bite M3+.
 
