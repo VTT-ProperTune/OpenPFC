@@ -67,10 +67,21 @@ inline void apply_omitted_gpu_backend(SessionSelection &s,
 template <class MemorySpace>
 [[nodiscard]] inline stacks::GPUSpectralStack<MemorySpace>
 make_gpu_spectral_stack(const SessionSelection &s, pfc::Domain domain, int rank,
-                        int nproc, MPI_Comm comm = MPI_COMM_WORLD) {
+                        int nproc, MPI_Comm comm,
+                        const heffte::plan_options &options) {
   require_session_for_stack(s, SimulationMethod::Spectral,
                             gpu_session_backend<MemorySpace>::value);
-  return stacks::GPUSpectralStack<MemorySpace>(std::move(domain), rank, nproc, comm);
+  return stacks::GPUSpectralStack<MemorySpace>(std::move(domain), rank, nproc, comm,
+                                               options);
+}
+
+template <class MemorySpace>
+[[nodiscard]] inline stacks::GPUSpectralStack<MemorySpace>
+make_gpu_spectral_stack(const SessionSelection &s, pfc::Domain domain, int rank,
+                        int nproc, MPI_Comm comm = MPI_COMM_WORLD) {
+  return make_gpu_spectral_stack<MemorySpace>(
+      s, std::move(domain), rank, nproc, comm,
+      stacks::gpu_fft_for<MemorySpace>::default_plan_options());
 }
 
 #endif

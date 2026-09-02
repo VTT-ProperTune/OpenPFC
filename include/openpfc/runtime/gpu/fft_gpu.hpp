@@ -38,6 +38,10 @@ using fft_r2c_cuda = heffte::fft3d_r2c<heffte::backend::cufft>;
 using FFT_CUDA = FFT_Impl<heffte::backend::cufft, IDeviceFFT<pfc::CUDASpace>>;
 
 [[nodiscard]] FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id,
+                                   MPI_Comm comm, int r2c_direction,
+                                   const heffte::plan_options &options);
+
+[[nodiscard]] FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id,
                                    MPI_Comm comm = MPI_COMM_WORLD,
                                    int r2c_direction = 0);
 
@@ -52,6 +56,10 @@ using RealDataBufferHIP = core::DataBuffer<backend::HIPTag, double>;
 using ComplexDataBufferHIP = core::DataBuffer<backend::HIPTag, std::complex<double>>;
 using fft_r2c_hip = heffte::fft3d_r2c<heffte::backend::rocfft>;
 using FFT_HIP = FFT_Impl<heffte::backend::rocfft, IDeviceFFT<pfc::HIPSpace>>;
+
+[[nodiscard]] FFT_HIP create_hip(const Decomposition &decomposition, int rank_id,
+                                 MPI_Comm comm, int r2c_direction,
+                                 const heffte::plan_options &options);
 
 [[nodiscard]] FFT_HIP create_hip(const Decomposition &decomposition, int rank_id,
                                  MPI_Comm comm = MPI_COMM_WORLD,

@@ -25,6 +25,7 @@
 #include <aluminum/aluminum_field_modifiers.hpp>
 #include <aluminum/aluminum_physics.hpp>
 #include <openpfc/frontend/ui/from_json.hpp>
+#include <openpfc/frontend/ui/spectral_fft_stack_factory.hpp>
 #include <openpfc/kernel/simulation/simulation_driver.hpp>
 #include <openpfc/kernel/simulation/simulation_state.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
@@ -50,8 +51,9 @@ public:
           auto sel = pfc::ui::from_json<pfc::sim::SessionSelection>(settings);
           pfc::sim::apply_omitted_gpu_backend<MemorySpace>(
               sel, settings.contains("backend"));
-          return pfc::sim::make_gpu_spectral_stack<MemorySpace>(sel, m_domain, rank,
-                                                                nproc, comm);
+          return pfc::sim::make_gpu_spectral_stack<MemorySpace>(
+              sel, m_domain, rank, nproc, comm,
+              pfc::ui::gpu_spectral_plan_options_from_json<MemorySpace>(settings));
         }()) {
     Physics phys;
     phys.domain = m_domain;

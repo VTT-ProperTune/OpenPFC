@@ -44,8 +44,8 @@ TEST_CASE("GPU FFT: Forward transform", "[gpu][fft]") {
 
   // Create a simple world and decomposition
   auto world = pfc::domain::create_world(pfc::GridSize({64, 64, 64}),
-                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                  pfc::GridSpacing({1.0, 1.0, 1.0}));
+                                         pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                         pfc::GridSpacing({1.0, 1.0, 1.0}));
   int mpi_size;
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
   auto decomp = pfc::decomposition::create(world, mpi_size);
@@ -81,6 +81,35 @@ TEST_CASE("GPU FFT: Forward transform", "[gpu][fft]") {
   }
 }
 
+TEST_CASE("GPU FFT: create_cuda honors plan_options", "[gpu][fft]") {
+  if (!pfc::gpu::test::is_cuda_available()) {
+    SKIP("CUDA not available");
+  }
+
+  int mpi_initialized = 0;
+  MPI_Initialized(&mpi_initialized);
+  if (mpi_initialized == 0) {
+    MPI_Init(nullptr, nullptr);
+  }
+
+  auto world = pfc::domain::create_world(pfc::GridSize({16, 16, 16}),
+                                         pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                         pfc::GridSpacing({1.0, 1.0, 1.0}));
+  int mpi_size = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+  auto decomp = pfc::decomposition::create(world, mpi_size);
+  int rank_id = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank_id);
+
+  auto options = heffte::default_options<heffte::backend::cufft>();
+  options.use_pencils = true;
+  options.use_gpu_aware = true;
+  options.algorithm = heffte::reshape_algorithm::p2p_plined;
+  auto gpu_fft = pfc::fft::create_cuda(decomp, rank_id, MPI_COMM_WORLD, 0, options);
+  REQUIRE(gpu_fft.size_inbox() > 0);
+  REQUIRE(gpu_fft.size_outbox() > 0);
+}
+
 TEST_CASE("GPU FFT: Backward transform", "[gpu][fft]") {
   if (!pfc::gpu::test::is_cuda_available()) {
     SKIP("CUDA not available");
@@ -95,8 +124,8 @@ TEST_CASE("GPU FFT: Backward transform", "[gpu][fft]") {
 
   // Create a simple world and decomposition
   auto world = pfc::domain::create_world(pfc::GridSize({64, 64, 64}),
-                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                  pfc::GridSpacing({1.0, 1.0, 1.0}));
+                                         pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                         pfc::GridSpacing({1.0, 1.0, 1.0}));
   int mpi_size;
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
   auto decomp = pfc::decomposition::create(world, mpi_size);
@@ -149,8 +178,8 @@ TEST_CASE("GPU FFT: Round-trip (forward then backward)", "[gpu][fft]") {
 
   // Create a simple world and decomposition
   auto world = pfc::domain::create_world(pfc::GridSize({32, 32, 32}),
-                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                  pfc::GridSpacing({1.0, 1.0, 1.0}));
+                                         pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                         pfc::GridSpacing({1.0, 1.0, 1.0}));
   int mpi_size;
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
   auto decomp = pfc::decomposition::create(world, mpi_size);

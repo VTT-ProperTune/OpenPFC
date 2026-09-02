@@ -63,6 +63,11 @@ TEST_CASE("GPUSpectralStack inbox field matches device FFT",
   pfc::sim::stacks::GPUSpectralStack<Space> stack(domain, rank, mpi_size,
                                                   MPI_COMM_WORLD);
   REQUIRE(stack.fft().size_inbox() == stack.u().size());
+  auto opts = pfc::sim::stacks::gpu_fft_for<Space>::default_plan_options();
+  opts.use_pencils = true;
+  pfc::sim::stacks::GPUSpectralStack<Space> stacked(domain, rank, mpi_size,
+                                                    MPI_COMM_WORLD, opts);
+  REQUIRE(stacked.fft().size_inbox() == stacked.u().size());
   REQUIRE(stack.fft().size_outbox() > 0);
   REQUIRE(stack.rank() == rank);
   REQUIRE(stack.nproc() == mpi_size);
@@ -177,7 +182,11 @@ TEST_CASE("session matrix spectral GPU from JSON",
       {"dy", 1.0},
       {"dz", 1.0},
       {"origin", "corner"},
-      {"timestepping", {{"t0", 0.0}, {"t1", 0.2}, {"dt", 0.1}, {"saveat", 0.1}}}};
+      {"timestepping", {{"t0", 0.0}, {"t1", 0.2}, {"dt", 0.1}, {"saveat", 0.1}}},
+      {"plan_options",
+       {{"use_pencils", true},
+        {"use_gpu_aware", true},
+        {"reshape_algorithm", "p2p_plined"}}}};
   auto session =
       pfc::ui::make_simulation_session<pfc::sim::stacks::GPUSpectralStack<Space>>(
           doc, rank, mpi_size);

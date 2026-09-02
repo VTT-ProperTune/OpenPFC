@@ -14,8 +14,9 @@
  *     Domain → Decomposition → device FFT → Field<double, MemorySpace>
  *
  * Non-copyable / non-movable: sub-objects would dangle after a move.
- * JSON HeFFTe plan-option overlay stays in `spectral_fft_stack_factory.hpp`;
- * this stack uses the factory-default rocFFT / cuFFT plan.
+ * Optional `heffte::plan_options` overlay matches `SpectralCPUStack`. JSON
+ * overlay stays in `spectral_fft_stack_factory.hpp`
+ * (`cuda_spectral_plan_options_from_json` / `hip_spectral_plan_options_from_json`).
  */
 
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL) || defined(OpenPFC_ENABLE_HIP_SPECTRAL)
@@ -39,9 +40,12 @@ template <class MemorySpace> struct gpu_fft_for;
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
 template <> struct gpu_fft_for<CUDASpace> {
   using type = fft::FFT_CUDA;
+  static heffte::plan_options default_plan_options() {
+    return heffte::default_options<heffte::backend::cufft>();
+  }
   static type create(const pfc::decomposition::Decomposition &decomp, int rank,
-                     MPI_Comm comm) {
-    return pfc::fft::create_cuda(decomp, rank, comm);
+                     MPI_Comm comm, const heffte::plan_options &options) {
+    return pfc::fft::create_cuda(decomp, rank, comm, 0, options);
   }
 };
 #endif
@@ -49,9 +53,12 @@ template <> struct gpu_fft_for<CUDASpace> {
 #if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
 template <> struct gpu_fft_for<HIPSpace> {
   using type = fft::FFT_HIP;
+  static heffte::plan_options default_plan_options() {
+    return heffte::default_options<heffte::backend::rocfft>();
+  }
   static type create(const pfc::decomposition::Decomposition &decomp, int rank,
-                     MPI_Comm comm) {
-    return pfc::fft::create_hip(decomp, rank, comm);
+                     MPI_Comm comm, const heffte::plan_options &options) {
+    return pfc::fft::create_hip(decomp, rank, comm, 0, options);
   }
 };
 #endif
@@ -70,13 +77,18 @@ public:
   GPUSpectralStack(GPUSpectralStack &&) = delete;
   GPUSpectralStack &operator=(GPUSpectralStack &&) = delete;
 
-  explicit GPUSpectralStack(pfc::Domain domain, int rank, int nproc,
-                            MPI_Comm comm = MPI_COMM_WORLD)
+  explicit GPUSpectralStack(pfc::Domain domain, int rank, int nproc, MPI_Comm comm,
+                            const heffte::plan_options &options)
       : m_domain(std::move(domain)),
         m_decomp(pfc::decomposition::create(m_domain, nproc)),
-        m_fft(gpu_fft_for<MemorySpace>::create(m_decomp, rank, comm)),
+        m_fft(gpu_fft_for<MemorySpace>::create(m_decomp, rank, comm, options)),
         m_u(m_domain, m_fft.get_inbox_bounds(), 0), m_rank(rank), m_nproc(nproc),
         m_comm(comm) {}
+
+  explicit GPUSpectralStack(pfc::Domain domain, int rank, int nproc,
+                            MPI_Comm comm = MPI_COMM_WORLD)
+      : GPUSpectralStack(std::move(domain), rank, nproc, comm,
+                         gpu_fft_for<MemorySpace>::default_plan_options()) {}
 
   [[nodiscard]] const pfc::Domain &domain() const noexcept { return m_domain; }
   [[nodiscard]] pfc::decomposition::Decomposition &decomposition() noexcept {

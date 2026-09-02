@@ -11,15 +11,8 @@
  * GPU entry points start from cuFFT / ROCm HeFFTe defaults and overlay the same
  * reshape / pencil / GPU-aware keys as the CPU `from_json<heffte::plan_options>`
  * path (`detail::apply_heffte_plan_options_json_overrides` in
- * `from_json_heffte.hpp`).
- *
- * **Avoid a second dummy CPU FFT:** GPU models still take `pfc::FFT&` from the
- * base `Model` constructor. Reuse the single `fft::CPUFFT` owned by
- * `pfc::sim::stacks::SpectralCPUStack` / `SpectralSimulationSession::fft()` for
- * that reference, and build cuFFT / ROCm HeFFTe
- * (`cuda_spectral_plan_options_from_json`, etc.) only for the device path—do
- * not construct another throwaway `CPUFFT` in app code solely to satisfy the
- * `Model` wiring.
+ * `from_json_heffte.hpp`). `make_simulation_session<GPUSpectralStack<…>>` and
+ * GPU ETD sessions pass those options into `create_cuda` / `create_hip`.
  *
  * @see from_json_heffte.hpp for `detail::apply_heffte_plan_options_json_overrides`
  */
@@ -38,6 +31,10 @@
 #include <openpfc/frontend/ui/from_json_heffte.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
+
+#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL) || defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+#include <openpfc/runtime/gpu/memory_space_gpu.hpp>
+#endif
 
 namespace pfc::ui {
 
@@ -128,9 +125,8 @@ cpu_fft_from_json_and_decomposition(const nlohmann::json &settings,
  * @brief HeFFTe plan options for a cuFFT-backed spectral driver from app JSON
  *
  * Starts from `heffte::default_options<heffte::backend::cufft>()` and overlays
- * keys from `merged_spectral_plan_options_json(settings)`. Use when constructing
- * `fft::create(...)` for GPU models that still take a host `pfc::FFT` reference
- * for the base `Model` (e.g. Tungsten CUDA integration tests).
+ * keys from `merged_spectral_plan_options_json(settings)`. Used by
+ * `make_simulation_session<GPUSpectralStack<CUDASpace>>` and GPU ETD sessions.
  */
 [[nodiscard]] inline heffte::plan_options
 cuda_spectral_plan_options_from_json(const nlohmann::json &settings) {
@@ -165,6 +161,36 @@ hip_spectral_plan_options_from_json(const nlohmann::json &settings) {
 }
 
 #endif // OpenPFC_ENABLE_HIP_SPECTRAL
+
+#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL) || defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+
+/**
+ * @brief HeFFTe plan options for `GPUSpectralStack<MemorySpace>` from app JSON.
+ *
+ * Specializations dispatch to `cuda_spectral_plan_options_from_json` /
+ * `hip_spectral_plan_options_from_json`.
+ */
+template <class MemorySpace>
+[[nodiscard]] heffte::plan_options
+gpu_spectral_plan_options_from_json(const nlohmann::json &settings);
+
+#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
+template <>
+[[nodiscard]] inline heffte::plan_options
+gpu_spectral_plan_options_from_json<pfc::CUDASpace>(const nlohmann::json &settings) {
+  return cuda_spectral_plan_options_from_json(settings);
+}
+#endif
+
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+template <>
+[[nodiscard]] inline heffte::plan_options
+gpu_spectral_plan_options_from_json<pfc::HIPSpace>(const nlohmann::json &settings) {
+  return hip_spectral_plan_options_from_json(settings);
+}
+#endif
+
+#endif // OpenPFC_ENABLE_CUDA_SPECTRAL || OpenPFC_ENABLE_HIP_SPECTRAL
 
 } // namespace pfc::ui
 

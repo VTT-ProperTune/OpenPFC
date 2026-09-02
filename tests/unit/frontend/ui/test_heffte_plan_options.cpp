@@ -54,9 +54,22 @@ TEST_CASE("merged_spectral_plan_options_json merges root backend",
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
 TEST_CASE("cuda_spectral_plan_options_from_json overlays plan_options",
           "[ui][heffte][spectral_gpu]") {
-  const json settings = {{"plan_options", {{"use_pencils", true}}}};
+  const json settings = {{"plan_options",
+                          {{"use_pencils", true},
+                           {"use_gpu_aware", true},
+                           {"reshape_algorithm", "p2p_plined"}}}};
   const auto opts = pfc::ui::cuda_spectral_plan_options_from_json(settings);
   REQUIRE(opts.use_pencils == true);
+  REQUIRE(opts.use_gpu_aware == true);
+  using AlgorithmType = std::underlying_type_t<heffte::reshape_algorithm>;
+  REQUIRE(static_cast<AlgorithmType>(opts.algorithm) ==
+          static_cast<AlgorithmType>(heffte::reshape_algorithm::p2p_plined));
+  const auto via_space =
+      pfc::ui::gpu_spectral_plan_options_from_json<pfc::CUDASpace>(settings);
+  REQUIRE(via_space.use_pencils == opts.use_pencils);
+  REQUIRE(via_space.use_gpu_aware == opts.use_gpu_aware);
+  REQUIRE(static_cast<AlgorithmType>(via_space.algorithm) ==
+          static_cast<AlgorithmType>(opts.algorithm));
 }
 #endif
 

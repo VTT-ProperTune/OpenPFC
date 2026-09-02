@@ -17,8 +17,8 @@ using Decomposition = pfc::decomposition::Decomposition;
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
 
 [[nodiscard]] FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id,
-                                   MPI_Comm comm, int r2c_direction) {
-  auto options = heffte::default_options<heffte::backend::cufft>();
+                                   MPI_Comm comm, int r2c_direction,
+                                   const heffte::plan_options &options) {
   auto boxes = pfc::runtime::heffte_gpu::make_default_r2c_boxes(
       decomposition, rank_id, r2c_direction);
 
@@ -27,6 +27,12 @@ using Decomposition = pfc::decomposition::Decomposition;
                              boxes.r2c_direction, comm, options);
 
   return FFT_CUDA(std::move(fft_cuda));
+}
+
+[[nodiscard]] FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id,
+                                   MPI_Comm comm, int r2c_direction) {
+  return create_cuda(decomposition, rank_id, comm, r2c_direction,
+                     heffte::default_options<heffte::backend::cufft>());
 }
 
 [[nodiscard]] FFT_CUDA create_cuda(const Decomposition &decomposition,
@@ -42,8 +48,8 @@ using Decomposition = pfc::decomposition::Decomposition;
 #if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
 
 [[nodiscard]] FFT_HIP create_hip(const Decomposition &decomposition, int rank_id,
-                                 MPI_Comm comm, int r2c_direction) {
-  auto options = heffte::default_options<heffte::backend::rocfft>();
+                                 MPI_Comm comm, int r2c_direction,
+                                 const heffte::plan_options &options) {
   auto boxes = pfc::runtime::heffte_gpu::make_default_r2c_boxes(
       decomposition, rank_id, r2c_direction);
 
@@ -52,6 +58,12 @@ using Decomposition = pfc::decomposition::Decomposition;
                            boxes.r2c_direction, comm, options);
 
   return FFT_HIP(std::move(fft_hip));
+}
+
+[[nodiscard]] FFT_HIP create_hip(const Decomposition &decomposition, int rank_id,
+                                 MPI_Comm comm, int r2c_direction) {
+  return create_hip(decomposition, rank_id, comm, r2c_direction,
+                    heffte::default_options<heffte::backend::rocfft>());
 }
 
 [[nodiscard]] FFT_HIP create_hip(const Decomposition &decomposition, MPI_Comm comm) {
