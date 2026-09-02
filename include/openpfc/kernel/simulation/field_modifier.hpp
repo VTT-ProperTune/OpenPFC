@@ -64,18 +64,14 @@ namespace pfc {
  * conditions (applied repeatedly during time integration).
  *
  * **Core Concept:**
- * Field modifiers operate by implementing the pure virtual `apply(Model&, double)`
- * method, which receives direct access to the model and current time. This allows
- * modifiers to read/write field data, access FFT transforms, query decomposition,
- * and implement arbitrary modification logic.
+ * Field modifiers implement `apply(RealField&, const Domain&, const Box3i&, double)`
+ * over the local owned box. Sessions apply ICs once at start and BCs from the
+ * `pfc::sim::run` apply hook.
  *
  * **Design Philosophy:**
  * - **Extensibility**: Users can create custom modifiers without touching OpenPFC
  * - **Composition**: Multiple modifiers can be applied in sequence
- * - **Transparency**: Direct model access allows full inspection and control
- * - **Context**: `SimulationContext` supplies the MPI communicator, rank-0
- *   flag in that communicator, and room for more execution metadata when the
- *   simulator applies modifiers
+ * - **Context**: `SimulationContext` supplies the MPI communicator and rank-0 flag
  * - **Single Responsibility**: Each modifier does one thing well
  *
  * @example Creating a custom initial condition
@@ -88,17 +84,13 @@ namespace pfc {
  *   GaussianIC(Real3 center, double amp, double width)
  *     : m_center(center), m_amplitude(amp), m_width(width) {}
  *
- *   void apply(pfc::Model& model, double time) override {
- *     auto& field = get_real_field(model, get_field_name());
- *     const auto& world = pfc::get_world(model);
- *     const auto& fft = pfc::get_fft(model);
- *     auto inbox = pfc::fft::get_inbox(fft);
- *
+ *   void apply(pfc::RealField &field, const pfc::Domain &domain,
+ *              const pfc::Box3i &box, double) override {
  *     int idx = 0;
- *     for (int k = inbox.low[2]; k <= inbox.high[2]; k++) {
- *       for (int j = inbox.low[1]; j <= inbox.high[1]; j++) {
- *         for (int i = inbox.low[0]; i <= inbox.high[0]; i++) {
- *           auto pos = pfc::world::to_coords(world, Int3{i, j, k});
+ *     for (int k = box.low[2]; k <= box.high[2]; k++) {
+ *       for (int j = box.low[1]; j <= box.high[1]; j++) {
+ *         for (int i = box.low[0]; i <= box.high[0]; i++) {
+ *           auto pos = pfc::domain::to_coords(domain, Int3{i, j, k});
  *           double dx = pos[0] - m_center[0];
  *           double dy = pos[1] - m_center[1];
  *           double dz = pos[2] - m_center[2];
@@ -215,12 +207,10 @@ namespace pfc {
  * };
  * @endcode
  *
- * **Usage in Simulator:**
- * - Initial conditions: Applied once before time integration via
- *   `Simulator::add_initial_conditions()`
- * - Boundary conditions: Applied every time step (or at intervals) via
- *   `Simulator::add_boundary_conditions()`
- * - Application order: ICs first, then BCs, in the order added
+ * **Usage with `pfc::sim::run`:**
+ * - Initial conditions: applied once before the time loop
+ * - Boundary conditions: applied from the `apply` hook each step
+ * - Application order: ICs first, then BCs, in the order listed
  *
  * **Performance Considerations:**
  * - Boundary conditions are in the hot path (applied every step)
@@ -238,12 +228,8 @@ namespace pfc {
  *          `apply()` implementation maintains physical correctness and doesn't
  *          violate model invariants.
  *
- * @see Model::get_real_field() for field access
- * @see Model::get_complex_field() for k-space operations
- * @see Simulator::add_initial_conditions() for IC registration
- * @see Simulator::add_boundary_conditions() for BC registration
+ * @see simulation_driver.hpp for `pfc::sim::run`
  * @see initial_conditions/ for built-in IC implementations
- * @see boundary_conditions/ for built-in BC implementations
  */
 class FieldModifier {
 
@@ -358,21 +344,9 @@ public:
   /**
    * @brief Apply the field modification with explicit simulation context
    *
-   * The simulator invokes this overload so modifiers can use `simulation_context`
-   * (e.g. `mpi_comm()`) without relying solely on `set_mpi_comm()`. The default
-   * implementation ignores the context and calls `apply(Model&, double)`.
-   *
-   * Modifiers that need MPI collectives should override this method and use
-   * `simulation_context.mpi_comm()`. They may still override `apply(Model&, double)`
-   * to wrap a default `SimulationContext` for direct/test calls.
-   *
-   * @note **Contract (substitutability):** Production runs use this overload. Prefer
-   *       implementing **one** core body (e.g. a private `apply_impl(...)`) and
-   *       having both `apply(SimulationContext,...)` and `apply(Model&,double)`
-   *       forward to it so direct unit tests and the simulator stay consistent.
-   *       If you override only `apply(Model&,double)`, the context overload’s
-   *       default still delegates there—ensure any MPI-aware logic is reachable
-   *       from that path or override the context overload as well.
+   * The default implementation ignores the context and calls
+   * `apply(field, domain, box, time)`. Override this when the modifier needs
+   * `simulation_context.mpi_comm()`.
    */
   virtual void apply(const SimulationContext &simulation_context, RealField &field,
                      const Domain &domain, const Box3i &box, double time) {
@@ -381,62 +355,12 @@ public:
   }
 
   /**
-   * @brief Apply the field modification to the model (pure virtual)
+   * @brief Apply the modification to a host field over @p box (pure virtual)
    *
-   * This is the main interface method that derived classes must implement to
-   * define their modification logic. The method receives full mutable access
-   * to the Model and current simulation time, allowing arbitrary modifications.
-   *
-   * **Implementation Responsibilities:**
-   * - Retrieve field(s) via `get_real_field(model, name)` or
-   * `get_complex_field(model, name)`
-   * - Access geometry via `pfc::get_world(model)` and `pfc::get_fft(model)`
-   * - Modify field values according to modifier's purpose
-   * - Handle MPI parallelism (operate on local subdomain)
-   *
-   * **Typical Implementation Pattern:**
-   * @code
-   * void apply(pfc::Model& model, double time) override {
-   *   // 1. Get field to modify
-   *   auto& field = get_real_field(model, get_field_name());
-   *
-   *   // 2. Get geometry information
-   *   const auto& world = pfc::get_world(model);
-   *   const auto& fft = pfc::get_fft(model);
-   *   auto inbox = pfc::fft::get_inbox(fft);
-   *
-   *   // 3. Loop over local subdomain
-   *   int idx = 0;
-   *   for (int k = inbox.low[2]; k <= inbox.high[2]; k++) {
-   *     for (int j = inbox.low[1]; j <= inbox.high[1]; j++) {
-   *       for (int i = inbox.low[0]; i <= inbox.high[0]; i++) {
-   *         // Compute modification based on position and/or time
-   *         auto pos = pfc::world::to_coords(world, Int3{i, j, k});
-   *         field[idx++] = compute_value(pos, time);
-   *       }
-   *     }
-   *   }
-   * }
-   * @endcode
-   *
-   * @param model Mutable reference to the Model containing fields to modify
-   * @param time Current simulation time (useful for time-dependent BCs)
-   *
-   * @pre Model must have the field specified by get_field_name() registered
-   * @post Field values are modified according to modifier's logic
-   *
-   * @note For initial conditions, `time` is typically 0.0
-   * @note For boundary conditions, `time` reflects current simulation time
-   * @note Method is called on every MPI rank; each rank operates on its subdomain
-   * @note The simulator’s entry point is `apply(SimulationContext,...)`; see its
-   *       documentation for how to keep this overload and that one equivalent.
-   *
-   * @warning Ensure modifications maintain physical correctness and don't violate
-   *          model invariants (e.g., mass conservation if required)
-   *
-   * @see Model::get_real_field() for field access
-   * @see get_world(const Model&) for domain geometry
-   * @see get_fft(Model&) for subdomain bounds
+   * @param field Host buffer with `box` voxel count (x-fastest)
+   * @param domain Global geometry (origin, spacing, size)
+   * @param box Local owned index box
+   * @param time Current simulation time (typically 0 for ICs)
    */
   virtual void apply(RealField &field, const Domain &domain, const Box3i &box,
                      double time = 0.0) = 0;
