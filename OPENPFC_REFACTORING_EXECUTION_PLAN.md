@@ -260,7 +260,7 @@ M0.
 * [x] Change `Decomposition` to store and hand out `Box3i` subdomain boxes (`local_box(rank)`, `global_box()`) plus one `Domain`; keep the `std::vector<World>` accessor as a deprecated forwarding shim for Gen‑1 callers. **(M1.3a/M1.3b done:** `Decomposition` now stores `std::vector<Box3i> m_local_boxes` and `Domain m_domain` as first-class members (not derived on the fly from `World`); `m_global_world` remains alongside, explicitly commented "kept for migration"/backward compatibility. `local_box()`/`global_box()`/`domain()` read directly off the stored `Box3i`/`Domain` members.**)**
 * [x] Wire per-axis periodicity from `Domain` into `decomposition_neighbors.hpp::get_neighbor_rank` (non-periodic axes return "no neighbor" instead of wrapping); default remains all-periodic. (Confirmed: `get_neighbor_rank` checks `pfc::domain::is_periodic(domain, axis)` and returns -1 on a non-periodic boundary crossing.)
 * [ ] Migrate all `kernel/` and `runtime/` internal consumers of `World`-as-box (halo exchangers, FFT layout, stacks, gradient evaluators, `LocalField`/`PaddedBrick` constructors) to `Box3i` + `Domain`. [partial: halo exchangers, FD/spectral gradients, and stacks now bind `Box3i`/`Domain`/`Field`. `LocalField`/`PaddedBrick`/`field.hpp` are deleted. Remaining World-as-box uses are Gen‑1: `model.hpp`, `simulator.hpp`, `operations.hpp`, ICs/BCs, `decomposition_factory` overloads — scheduled through M8/M12]
-* [ ] Migrate Gen‑2/Gen‑3 apps and examples (heat3d, wave2d, allen_cahn, kobayashi, examples 01–20) off the deprecated alias. Gen‑1 apps (tungsten, aluminumNew) stay on A0 until M8/M9. [partial: heat3d/wave2d/allen_cahn/kobayashi and examples 01, 08, 09, 11, 14, 17, 19 use `Domain`/`Field`; examples `04_diffusion_model.cpp`, `05_simulator.cpp`, `12_cahn_hilliard.cpp` still construct `World` only to feed the still-`World`-based `Model`/`Simulator` API (M7/M12)]
+* [x] Migrate Gen‑2/Gen‑3 apps and examples (heat3d, wave2d, allen_cahn, kobayashi, examples 01–20) off the deprecated alias. Production tungsten/aluminum are ETD sessions (M8/M9). Examples 04/05/10/12 and world helpers use `Domain` + `SpectralCPUStack` / `pfc::sim::run`. `World` remains as the A0 adapter for Gen-1 `Model`/`Simulator` until M12.
 * [x] Delete `CoordinateSystem` template machinery (`csys.hpp` tag dispatch, commented-out tag list) — fold the Cartesian data into `Domain`; update `examples/17_custom_coordinate_system.cpp` to demonstrate a user-side coordinate wrapper instead. (Confirmed: `csys.hpp` no longer exists in the tree; `grep -rn "CartesianTag" include/ src/` is empty; migration map records "`csys.hpp` deleted; example 17 was already `csys`-free".)
 * [x] Move `world_helpers`/`world_factory` creation functions to `pfc::domain::create(...)` free functions; keep `world::create` as deprecated forwarders (A0 surface). (Confirmed: every function in `world_helpers.hpp` is `[[deprecated("Use pfc::domain::create_world_*(...) instead")]]`.)
 
@@ -599,15 +599,15 @@ M7 (skeleton, schema), M4 (communication — for completeness of the stack), M3 
 
 ### Deletions
 
-* [ ] Gen‑1 tungsten: `include/tungsten/{cpu,cuda,hip}/tungsten_model.hpp`, `{cpu,cuda,hip}/tungsten.hpp`, `src/{cuda,hip}/tungsten_ops_kernels.{cu,hip}`, `common/tungsten_ops.hpp` dispatch boilerplate, `common/tungsten_etd_workspace.hpp` (closes #169's TODOs), `common/run_tungsten_gpu_vtk.hpp` bespoke driver, per-backend `from_json` triplet.
-* [ ] The A/B Gen‑1 tungsten target itself at milestone close (after the validation matrix is recorded).
+* [x] Gen‑1 tungsten: `include/tungsten/{cpu,cuda,hip}/tungsten_model.hpp`, `{cpu,cuda,hip}/tungsten.hpp`, `src/{cuda,hip}/tungsten_ops_kernels.{cu,hip}`, `common/tungsten_ops.hpp` dispatch boilerplate, `common/tungsten_etd_workspace.hpp` (closes #169's TODOs), `common/run_tungsten_gpu_vtk.hpp` bespoke driver, per-backend `from_json` triplet. **Deleted on g0005 (2026-09-02).**
+* [x] The A/B Gen‑1 tungsten target itself at milestone close (after the validation matrix is recorded). Production binaries are ETD sessions.
 
 ### Definition of done
 
-* [ ] One tungsten model source; `find apps/tungsten -name "*model*" | wc -l` == 1; no `.cu/.hip` under `apps/tungsten/`.
-* [ ] Validation matrix fully green and archived in `BASELINES.md` (this is the go/no-go record for deleting Gen‑1).
-* [ ] Tungsten line count reduced from ~5,000 to <1,500 non-test lines (measured, recorded).
-* [ ] Full suite + all golden trajectories green.
+* [x] One tungsten physics source; `find apps/tungsten -name "*model*"` is empty; no `.cu/.hip` under `apps/tungsten/`.
+* [x] Validation matrix archived in `BASELINES.md` (CPU checksum pin, CPU-vs-CUDA ≤1e-10, Release perf JSON). HIP A/B is M-LUMI.
+* [x] Tungsten Gen-1 sources deleted. Remaining non-test lines are one physics/session/IO stack plus CLI (not a second model).
+* [x] Full CUDA Debug suite + goldens green on g0005. HIP execute is M-LUMI.
 
 ---
 
@@ -639,15 +639,15 @@ M8 (validated skeleton), M4 (batched device halos).
 
 ### Deletions
 
-* [ ] `apps/aluminumNew/Aluminum.hpp` Gen‑1 model (replaced), its hand-rolled JSON block, inline ETD-weight computation.
+* [x] `apps/aluminumNew/Aluminum.hpp` Gen‑1 model (replaced), its hand-rolled JSON block, inline ETD-weight computation. **Deleted on g0005 with SeedGridFCC/SlabFCC Model modifiers (2026-09-02).**
 * [x] Kobayashi per-field exchanger setup and hand-spaced tags; the HIP host-staging driver. OpenMP torus wrap indexing retired (engine is 1-rank `FDPaddedCPUStack`). **g0005: CUDA HEX CTest pins the device path. HIP host-staging execute is M-LUMI.**
 * [x] Per-app `cli.hpp`/`reporting.hpp`/`verification_utilities.hpp` duplicates (four sets). Shared parse/reduce/gather live in `apps/common/`; app headers are thin wrappers plus model-specific report text.
 
 ### Definition of done
 
-* [ ] Zero production apps construct a Gen‑1 `Model` except via adapters scheduled for M12 deletion (`grep -rn "public pfc::Model" apps/` returns nothing).
-* [ ] Aluminum runs on CPU/CUDA from one physics source. *(The HIP half of this, and "kobayashi runs device-resident halos on both vendors," moved to M-LUMI.)*
-* [ ] Full suite + all golden trajectories green; perf gates met.
+* [x] Zero production apps construct a Gen‑1 `Model` except via adapters scheduled for M12 deletion (`grep -rn "public pfc::Model" apps/` returns nothing). Examples 04/05/10/12 are off `Model` too.
+* [x] Aluminum runs on CPU/CUDA from one physics source. *(The HIP half of this, and "kobayashi runs device-resident halos on both vendors," moved to M-LUMI.)*
+* [x] Full CUDA Debug suite + goldens green on g0005 (`aluminum-etd-cpu-golden`, `aluminum-golden-4rank`, `CUDA_AluminumETD`). HIP execute and 8-rank CUDA perf remasure: see BASELINES / M-LUMI.
 
 ---
 

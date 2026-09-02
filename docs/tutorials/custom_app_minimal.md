@@ -5,9 +5,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Build a minimal config-driven application
 
-This tutorial creates an OpenPFC executable in a separate CMake project. The
-application uses `pfc::ui::App<MyModel>` so a JSON or TOML file drives the
-domain, time integration, FFT setup, modifiers, and result writers.
+This tutorial creates an OpenPFC executable in a separate CMake project using
+the remaining Gen-1 `pfc::ui::App<MyModel>` adapter (deleted at M12). Shipped
+0.2 apps (tungsten, aluminumNew) drive JSON/TOML through ETD sessions instead.
+The JSON keys (domain, time, `plan_options`, modifiers, writers) are the same.
 
 Use this path when the simulation belongs in its own repository. Do not fork
 OpenPFC merely to add an application `main`.
@@ -77,6 +78,7 @@ thin and place reusable mechanics in ordinary functions and data types.
 #include <mpi.h>
 #include <openpfc/kernel/simulation/model.hpp>
 
+// Gen-1 App<Model> adapter (M12 delete). Production apps use ETD sessions.
 class MyModel : public pfc::Model {
 public:
   explicit MyModel(pfc::FFT &fft, const pfc::Domain &domain,

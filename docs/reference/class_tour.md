@@ -19,11 +19,11 @@ application wiring, read
 ```mermaid
 flowchart LR
   Domain --> Decomposition --> FFT
-  FFT --> Model --> Simulator
-  Time --> Simulator
-  FieldModifier --> Simulator
-  Simulator --> ResultsWriter
-  Configuration --> App --> SpectralSimulationSession --> Simulator
+  FFT --> Physics
+  Time --> Driver
+  Physics --> Driver
+  Driver --> ResultsWriter
+  Configuration --> Session --> Driver
 ```
 
 The shortest useful mental model is:
@@ -31,9 +31,11 @@ The shortest useful mental model is:
 1. `Domain` describes the global grid.
 2. `Decomposition` partitions it across MPI ranks.
 3. an FFT implementation transforms local field data;
-4. `Model` defines the physics update;
-5. `Simulator` coordinates time, modifiers, model steps, and writers;
-6. `App` and `SpectralSimulationSession` build that stack from configuration.
+4. physics callables / ETD systems define the update;
+5. `pfc::sim::run` / `SimulationDriver` (or an ETD session) advances `Time` and writers;
+6. JSON sessions (`TungstenETDSession`, `AluminumETDSession`, `make_simulation_session`) build that stack from configuration.
+
+`World`, virtual `Model`, `Simulator`, and `App<Model>` remain as M12 adapters. Production apps and examples 04/05/10/12 do not subclass `Model`.
 
 ## Stable concepts at a glance
 
@@ -43,16 +45,18 @@ The shortest useful mental model is:
 | `Box3i` | Inclusive integer bounds for local or transformed regions | `openpfc/kernel/data/box.hpp` | `examples/02_domain_decomposition.cpp` |
 | `Decomposition` | MPI partition and per-rank inbox/outbox geometry | `openpfc/kernel/decomposition/decomposition.hpp` | `examples/03_parallel_fft.cpp` |
 | `IHostFFT` / `CPUFFT` | Distributed host forward/backward transforms through HeFFTe | `openpfc/kernel/fft/fft.hpp` | `examples/03_parallel_fft.cpp` |
-| `Model` | Physics fields, initialization, and time-step update | `openpfc/kernel/simulation/model.hpp` | `examples/04_diffusion_model.cpp` |
+| Physics / ETD system | Fields and the time-step update (no `Model` base) | `tungsten_physics.hpp`, `aluminum_physics.hpp`, `spectral_mean_field_etd.hpp` | `examples/04_diffusion_model.cpp` |
 | `Time` | Start, stop, step size, current time, and save cadence | `openpfc/kernel/simulation/time.hpp` | `examples/time.cpp` |
-| `Simulator` | Coordinates modifiers, model steps, time, and result output | `openpfc/kernel/simulation/simulator.hpp` | `examples/05_simulator.cpp` |
-| `FieldModifier` | Initial conditions and boundary-condition-style updates | `openpfc/kernel/simulation/field_modifier.hpp` | `examples/10_ui_register_ic.cpp` |
+| `pfc::sim::run` / `SimulationDriver` | Time loop over physics `step` plus optional IC/BC/save hooks | `openpfc/kernel/simulation/simulation_driver.hpp` | `examples/05_simulator.cpp` |
+| Host-buffer IC | Initial conditions written onto `Field` (JSON or a callable) | app `*_field_modifiers.hpp` | `examples/10_ui_register_ic.cpp` |
 | `ResultsWriter` | Stable interface for persisted simulation fields | `openpfc/kernel/simulation/results_writer.hpp` | `examples/11_write_results.cpp` |
 | `FileResultsWriter` | File sink with increment path templating | `openpfc/frontend/io/file_results_writer.hpp` | `BinaryWriter`, `VTKWriter` |
-| `pfc::ui::App<Model>` | Loads JSON/TOML and runs a configured application | `openpfc/frontend/ui/app.hpp` | `apps/` and `tutorials/custom_app_minimal.md` |
+| `World` | Deprecated A0 adapter around `Domain` (M12 delete) | `openpfc/kernel/data/world.hpp` | `examples/world_strong_types_example.cpp` uses `Domain` |
+| `Model` / `Simulator` / `App<Model>` | Gen-1 adapters until M12 | `model.hpp`, `simulator.hpp`, `app.hpp` | not used by production apps |
 | `SpectralCPUStack` | Owns the CPU domain, decomposition, FFT, and field stack | `openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp` | `user_guide/app_pipeline.md` |
+| `GPUSpectralStack` | Device FFT stack; JSON `plan_options` overlay like CPU | `openpfc/runtime/gpu/gpu_spectral_stack.hpp` | `tungsten_cuda`, session-matrix-cuda |
 | `SimulationSession<Stack>` | Method × backend session: selection, Time, and a stack | `openpfc/kernel/simulation/simulation_session.hpp` | `user_guide/app_pipeline.md` |
-| `SpectralSimulationSession` | Gen-1 App owner: `SimulationSession<SpectralCPUStack>` + Model + Simulator | `openpfc/frontend/ui/spectral_simulation_session.hpp` | `user_guide/app_pipeline.md` |
+| `SpectralSimulationSession` | Gen-1 App owner: `SimulationSession<SpectralCPUStack>` + Model + Simulator | `openpfc/frontend/ui/spectral_simulation_session.hpp` | adapter until M12 |
 
 Use the [integrated C++ API reference](../api/index.md) for exact constructors,
 overloads, namespaces, and member documentation.

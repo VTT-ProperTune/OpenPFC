@@ -5,7 +5,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Custom stepper integration
 
-This guide shows how to integrate custom time steppers with OpenPFC's `Simulator::step_with_physics()` method. The migration path from the legacy `Model::step(double t)` pattern to explicit stepper composition enables replaceable time integration methods (Euler, RK2, RK4, IMEX) without rewriting model physics code.
+This guide shows how to integrate custom time steppers with OpenPFC's
+explicit stepper composition (heat3d / wave2d / example 19–21). Production
+spectral apps (tungsten, aluminum) use ETD sessions and `pfc::sim::run`,
+not `Model::step`. The Gen-1 `Simulator::step_with_physics()` path remains
+as an M12 adapter.
 
 ## Prerequisites
 
