@@ -90,6 +90,7 @@ Captured `sum` / `sumsq` (and wave2d `u`/`v`):
 ```
 tungsten  32³ / 10 steps / dt=0.01   n=32768  sum=-13107.200000000043  sumsq=5406.3450894885682
 tungsten_etd (0.2 session, same IC)  n=32768  sum=-13107.200000000043  sumsq=5406.3450894885682  (g0005 Debug; CTest tungsten-etd-cpu-golden / tungsten-etd-cpu-vs-cuda)
+aluminum_etd 32³ / 5-step SeedGridFCC (rseed=42)  n=32768  sum=-263.63079658808601  sumsq=1111.6016268617182  (g0005 Debug; CTest aluminum-etd-cpu-golden)
 allen_cahn 32² / 20 steps / dt=0.002 n=1024   sum=-967.34722270794146  sumsq=961.14566882919667
 wave2d    24² / 8 steps / dt=0.01    n=576    sum_u=56.542106624911966 sumsq_u=28.256988690744471
                                               sum_v=0.0018563899833072017 sumsq_v=0.0042855033181676445

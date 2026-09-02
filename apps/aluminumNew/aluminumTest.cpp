@@ -5,11 +5,14 @@
 #include "SeedGridFCC.hpp"
 #include <algorithm>
 #include <aluminum/aluminum_etd_session.hpp>
+#include <aluminum/aluminum_field_modifiers.hpp>
 #include <aluminum/aluminum_physics.hpp>
 #include <array>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <cmath>
+#include <iomanip>
+#include <iostream>
 #include <nlohmann/json.hpp>
 #include <openpfc/kernel/data/constants.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
@@ -17,6 +20,7 @@
 #include <openpfc/openpfc.hpp>
 
 using namespace Catch::Matchers;
+using json = nlohmann::json;
 
 namespace {
 // Keep MPI alive for the whole binary. The Gen-1 test constructs MPI_Worker
@@ -422,4 +426,106 @@ TEST_CASE("AluminumETDSession 4-rank golden vs Gen-1", "[aluminum][golden][MPI]"
   MPI_Allreduce(&s_new, &g_new, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(&s_old, &g_old, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   REQUIRE(std::abs(g_new - g_old) < 1e-12 * (1.0 + std::abs(g_old)));
+}
+
+TEST_CASE("host-buffer seed_grid_fcc matches Gen-1 SeedGridFCC",
+          "[aluminum][etd][seed_grid_fcc]") {
+  constexpr int N = 32;
+  auto domain = pfc::domain::create(pfc::GridSize({N, N, N}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = pfc::decomposition::create(domain, 1);
+  auto fft = pfc::fft::create(decomp);
+  Aluminum legacy(fft, domain);
+  from_json(aluminum_params_json(), legacy);
+  pfc::initialize(legacy, 0.01);
+  std::fill(legacy.get_real_field("psi").begin(), legacy.get_real_field("psi").end(),
+            -0.0060);
+  SeedGridFCC ic;
+  ic.set_Ny(2);
+  ic.set_Nz(2);
+  ic.set_X0(8.0);
+  ic.set_radius(4.0);
+  ic.set_amplitude(0.4);
+  ic.set_rho(-0.036);
+  ic.set_rseed(42);
+  ic.apply(legacy, 0.0);
+
+  const auto box = fft.get_inbox_bounds();
+  std::vector<double> host(
+      static_cast<std::size_t>(box.size[0] * box.size[1] * box.size[2]), -0.0060);
+  aluminum::fill_seed_grid_fcc(domain, box, host.data(), 2, 2, 8.0, 4.0, 0.4, -0.036,
+                               42.0);
+  REQUIRE(max_abs_diff(legacy.get_real_field("psi"), host) < 1e-15);
+}
+
+TEST_CASE("AluminumETDSession seed_grid_fcc 5-step vs Gen-1",
+          "[aluminum][etd][seed_grid_fcc][session]") {
+  constexpr int N = 32;
+  constexpr double dt = 0.01;
+  nlohmann::json settings = {
+      {"model", {{"name", "aluminum"}, {"params", aluminum_params_json()}}},
+      {"domain",
+       {{"Lx", N},
+        {"Ly", N},
+        {"Lz", N},
+        {"dx", 1.0},
+        {"dy", 1.0},
+        {"dz", 1.0},
+        {"origin", "corner"}}},
+      {"timestepping", {{"t0", 0.0}, {"t1", 0.05}, {"dt", dt}, {"saveat", 0.05}}},
+      {"initial_conditions",
+       json::array({{{"target", "psi"}, {"type", "constant"}, {"n0", -0.0060}},
+                    {{"target", "psi"},
+                     {"type", "seed_grid_fcc"},
+                     {"X0", 8.0},
+                     {"Ny", 2},
+                     {"Nz", 2},
+                     {"radius", 4.0},
+                     {"amplitude", 0.4},
+                     {"rho", -0.036},
+                     {"rseed", 42}}})}};
+  aluminum::AluminumETDSession session(settings, 0, 1, MPI_COMM_WORLD);
+
+  auto domain = pfc::domain::create(pfc::GridSize({N, N, N}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = pfc::decomposition::create(domain, 1);
+  auto fft = pfc::fft::create(decomp);
+  Aluminum legacy(fft, domain);
+  from_json(aluminum_params_json(), legacy);
+  pfc::initialize(legacy, dt);
+  std::fill(legacy.get_real_field("psi").begin(), legacy.get_real_field("psi").end(),
+            -0.0060);
+  SeedGridFCC ic;
+  ic.set_Ny(2);
+  ic.set_Nz(2);
+  ic.set_X0(8.0);
+  ic.set_radius(4.0);
+  ic.set_amplitude(0.4);
+  ic.set_rho(-0.036);
+  ic.set_rseed(42);
+  ic.apply(legacy, 0.0);
+
+  session.run();
+  for (int i = 0; i < 5; ++i) {
+    legacy.step(1.0);
+  }
+  REQUIRE(max_abs_diff(legacy.get_real_field("psi"), session.psi().vec()) < 1e-10);
+
+  double sum = 0.0;
+  double sumsq_v = 0.0;
+  for (double x : session.psi().vec()) {
+    sum += x;
+    sumsq_v += x * x;
+  }
+  std::cout << std::setprecision(17)
+            << "CPU_GOLDEN aluminum_etd n=" << session.psi().vec().size()
+            << " sum=" << sum << " sumsq=" << sumsq_v << '\n';
+  REQUIRE(session.psi().vec().size() == 32768);
+  REQUIRE(std::isfinite(sum));
+  REQUIRE(std::isfinite(sumsq_v));
+  // Tohtori g0005, gcc 15.2 Debug. 32³ / 5-step SeedGridFCC (rseed=42).
+  REQUIRE_THAT(sum, WithinRel(-263.63079658808601, 1e-10));
+  REQUIRE_THAT(sumsq_v, WithinRel(1111.6016268617182, 1e-10));
 }

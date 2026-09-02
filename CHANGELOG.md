@@ -47,6 +47,7 @@ source compatibility is explicitly not a goal.
 - Deleted Gen-1 tungsten `Model` triplet (`cpu`/`cuda`/`hip` `tungsten_model.hpp`, vendor kernels, `tungsten_ops.hpp`, `tungsten_etd_workspace.hpp`, `run_tungsten_gpu_vtk.hpp`). CPU-vs-CUDA CTest names now run the 0.2 ETD session.
 - Device mean-field ETD evaluates `N(ψ,ψ_MF)` with a GPU polynomial kernel when physics exposes `nonlinearity_poly()` (tungsten). Host-view fallback remains for other physics.
 - 0.2 ETD Release perf JSON on tohtori `g0005` vs Gen-1: CUDA 1-rank 256³ **faster** (`wall_step` 0.00659 s vs 0.0253 s); CPU 1-rank 64³ +35%; CUDA 8-rank 256³ slower (no HeFFTe `plan_options` overlay on `GPUSpectralStack`). Table in `tests/baselines/BASELINES.md`.
+- CTest `aluminum-etd-cpu-golden`: 0.2 `AluminumETDSession` 32³/5-step `seed_grid_fcc` matches Gen-1 ≤1e-10; CPU checksum pin on g0005. Host-buffer `fill_seed_grid_fcc` matches `SeedGridFCC::apply`.
 - Gen-1 aluminum `prepare_operators` uses `for_each_kpoint`. SeedGridFCC/SlabFCC use `std::numbers::pi`.
 - Example `03_parallel_fft` uses `std::numbers::pi` instead of `atan(1.0)`.
 - `JsonWiringSession` constructor parameters no longer shadow the catalog members (`-Wshadow`).

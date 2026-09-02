@@ -28,7 +28,9 @@ endif()
 
 # M9 A/B CPU driver: MovingFrameMeanFieldETDSystem (Gen-1 aluminumNew stays).
 add_executable(aluminum_etd aluminum_etd.cpp)
-target_include_directories(aluminum_etd PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(aluminum_etd PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include)
 if(TARGET Heffte::Heffte)
     target_link_libraries(aluminum_etd OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte)
 elseif(TARGET Heffte)
@@ -43,6 +45,7 @@ install(TARGETS aluminum_etd DESTINATION bin)
 if(OpenPFC_ENABLE_CUDA_SPECTRAL)
   add_executable(aluminum_etd_cuda aluminum_etd_cuda.cpp)
   target_include_directories(aluminum_etd_cuda PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}
       ${CMAKE_CURRENT_SOURCE_DIR}/include)
   target_link_libraries(aluminum_etd_cuda PRIVATE
       OpenPFC
@@ -57,6 +60,7 @@ endif()
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
   add_executable(aluminum_etd_hip aluminum_etd_hip.cpp)
   target_include_directories(aluminum_etd_hip PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}
       ${CMAKE_CURRENT_SOURCE_DIR}/include)
   target_link_libraries(aluminum_etd_hip PRIVATE
       OpenPFC
@@ -93,6 +97,8 @@ if(ALUMINUM_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
         include(CTest)
         # Run all aluminum tests in a single invocation to avoid per-test MPI overhead
         add_test(NAME aluminum-all-tests COMMAND aluminumTest)
+        add_test(NAME aluminum-etd-cpu-golden COMMAND aluminumTest
+            "[seed_grid_fcc][session]")
         if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
           add_test(NAME aluminum-golden-4rank
             COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
@@ -105,6 +111,7 @@ if(ALUMINUM_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
         if(OpenPFC_ENABLE_CUDA_SPECTRAL)
             add_executable(test_aluminum_etd_cuda tests/test_aluminum_etd_gpu.cpp)
             target_include_directories(test_aluminum_etd_cuda PRIVATE
+                ${CMAKE_CURRENT_SOURCE_DIR}
                 ${CMAKE_CURRENT_SOURCE_DIR}/include
                 ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu)
             target_link_libraries(test_aluminum_etd_cuda PRIVATE
@@ -123,6 +130,7 @@ if(ALUMINUM_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
         if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
             add_executable(test_aluminum_etd_hip tests/test_aluminum_etd_gpu.cpp)
             target_include_directories(test_aluminum_etd_hip PRIVATE
+                ${CMAKE_CURRENT_SOURCE_DIR}
                 ${CMAKE_CURRENT_SOURCE_DIR}/include
                 ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu)
             target_link_libraries(test_aluminum_etd_hip PRIVATE
