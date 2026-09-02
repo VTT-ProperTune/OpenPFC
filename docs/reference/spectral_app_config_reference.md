@@ -49,7 +49,7 @@ Validation is **model-dependent** (see [`parameter_validation.md`](../user_guide
 
 ## Result writers
 
-When `saveat > 0` and `fields` is present, `add_result_writers_from_json` registers a catalog writer per entry (default `"binary"` → `BinaryWriter`):
+When `saveat > 0` and `fields` is present, `parse_result_writers_from_json` constructs a catalog writer per entry (default `"binary"` → `BinaryWriter`):
 
 | Key | Type | Meaning |
 |-----|------|---------|

@@ -49,7 +49,7 @@ mpirun -n 4 ./examples/12_cahn_hilliard
 
 - **Paths:** Run from `build/` so outputs land where you expect; or use a job script that `cd`s to a known directory before `mpirun`.  
 - **MPI ranks:** Decomposition affects how data are split across ranks; the sample sources show a simple pattern—if you change ranks or grid, re-check where files appear and that all ranks still participate where the writer requires collective behavior.  
-- **Production JSON runs:** To get VTK from `tungsten`-style configs, add a `VTKWriter` in your model or wiring (same header as the examples); there is no VTK branch inside `add_result_writers_from_json` today.
+- **Production JSON runs:** To get VTK from `tungsten`-style configs, set `fields[].writer` to `"vtk"` (catalog key) or attach a `VTKWriter` in the session save hook.
 
 ## See also
 
