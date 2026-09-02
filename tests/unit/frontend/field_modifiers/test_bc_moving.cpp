@@ -8,39 +8,18 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/data/types.hpp>
-#include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/fft/fft_fftw.hpp>
-#include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc_apps/moving_bc.hpp>
 
 using namespace pfc;
 using Catch::Approx;
-using pfc::types::Int3;
-
-// Mock model class for testing
-class ModelWithMovingBC : public Model {
-public:
-  ModelWithMovingBC(FFT &fft, const pfc::World &world) : pfc::Model(fft, world) {}
-
-  void step(double /*t*/) override {}
-  void initialize(double /*dt*/) override {}
-};
 
 TEST_CASE("MovingBC - Parameter Access", "[bc_moving]") {
   MovingBC bc;
 
-  SECTION("Set and get rho_low") {
-    bc.set_rho_low(0.1);
-    // No getter for rho_low, but set should not throw
-  }
-
-  SECTION("Set and get rho_high") {
-    bc.set_rho_high(0.9);
-    // No getter for rho_high, but set should not throw
-  }
+  SECTION("Set and get rho_low") { bc.set_rho_low(0.1); }
+  SECTION("Set and get rho_high") { bc.set_rho_high(0.9); }
 
   SECTION("Set and get xpos") {
     bc.set_xpos(50.0);
@@ -52,26 +31,18 @@ TEST_CASE("MovingBC - Parameter Access", "[bc_moving]") {
     REQUIRE(bc.get_xwidth() == Approx(20.0));
   }
 
-  SECTION("Set and get alpha") {
-    bc.set_alpha(2.0);
-    // No getter for alpha
-  }
+  SECTION("Set and get alpha") { bc.set_alpha(2.0); }
 
   SECTION("Set and get threshold") {
     bc.set_threshold(0.2);
     REQUIRE(bc.get_threshold() == Approx(0.2));
   }
 
-  SECTION("Set and get disp") {
-    bc.set_disp(30.0);
-    // No getter for disp
-  }
+  SECTION("Set and get disp") { bc.set_disp(30.0); }
 }
 
 TEST_CASE("MovingBC - Constructor with Parameters", "[bc_moving]") {
   MovingBC bc(0.2, 0.8);
-  // Constructor sets rho_low and rho_high
-  // Can't verify directly without getters, but should not throw
 }
 
 TEST_CASE("MovingBC - Modifier Name", "[bc_moving]") {
@@ -80,19 +51,12 @@ TEST_CASE("MovingBC - Modifier Name", "[bc_moving]") {
 }
 
 TEST_CASE("MovingBC - Field Application", "[bc_moving]") {
-  // Small grid: behavior is local; avoid thousands of Catch REQUIREs (very slow).
   auto domain = pfc::domain::create(pfc::GridSize({16, 4, 4}),
                                     pfc::PhysicalOrigin({-64.0, -16.0, -16.0}),
                                     pfc::GridSpacing({8.0, 8.0, 8.0}));
   auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
-  auto fft = fft::create(decomposition);
-  ModelWithMovingBC m(fft, world);
-
-  const size_t field_size = fft.size_inbox();
+  const size_t field_size = static_cast<size_t>(box.count());
   std::vector<double> psi(field_size, 0.0);
-  add_real_field(m, "default", psi);
 
   MovingBC bc(0.0, 1.0);
   bc.set_xwidth(15.0);
@@ -100,65 +64,42 @@ TEST_CASE("MovingBC - Field Application", "[bc_moving]") {
   bc.set_threshold(0.1);
 
   SECTION("Apply boundary condition") {
-    REQUIRE_NOTHROW(bc.apply(m, 0.0));
-
-    const Field &field = m.get_real_field("default");
-
-    // Check that field has been modified
+    REQUIRE_NOTHROW(bc.apply(psi, domain, box));
     bool has_nonzero = false;
-    for (const auto &value : field) {
+    for (const auto &value : psi) {
       if (value != 0.0) {
         has_nonzero = true;
         break;
       }
     }
-    // MovingBC modifies field in boundary region
     REQUIRE(has_nonzero);
   }
 
   SECTION("Field values in range") {
-    bc.apply(m, 0.0);
-    const Field &field = m.get_real_field("default");
-
-    double vmin = field[0];
-    double vmax = field[0];
-    for (const auto &value : field) {
+    bc.apply(psi, domain, box);
+    double vmin = psi[0];
+    double vmax = psi[0];
+    for (const auto &value : psi) {
       vmin = std::min(vmin, value);
       vmax = std::max(vmax, value);
     }
-    REQUIRE(vmin >= -0.1); // rho_low with small tolerance
-    REQUIRE(vmax <= 1.1);  // rho_high with small tolerance
+    REQUIRE(vmin >= -0.1);
+    REQUIRE(vmax <= 1.1);
   }
 
   SECTION("Multiple applications") {
-    // First application
-    bc.apply(m, 0.0);
+    bc.apply(psi, domain, box);
     double xpos1 = bc.get_xpos();
-
-    // Fill field with values that would trigger movement
-    Field &field = m.get_real_field("default");
-    std::fill(field.begin(), field.end(), 0.5); // Above threshold
-
-    // Second application - boundary should move
-    bc.apply(m, 0.0);
-    double xpos2 = bc.get_xpos();
-
-    // Position should have moved (or stayed same if no interface detected)
-    REQUIRE(xpos2 >= xpos1);
+    std::fill(psi.begin(), psi.end(), 0.5);
+    bc.apply(psi, domain, box);
+    REQUIRE(bc.get_xpos() >= xpos1);
   }
 }
 
-TEST_CASE("MovingBC - Integration with Model", "[bc_moving]") {
+TEST_CASE("MovingBC - Apply on named density field", "[bc_moving]") {
   auto domain = pfc::domain::create(pfc::Int3{16, 8, 8});
   auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
-  auto fft = fft::create(decomposition);
-  ModelWithMovingBC model(fft, world);
-
-  const size_t field_size = fft.size_inbox();
-  std::vector<double> psi(field_size, 0.0);
-  add_real_field(model, "density", psi);
+  std::vector<double> psi(static_cast<size_t>(box.count()), 0.0);
 
   MovingBC bc;
   bc.set_field_name("density");
@@ -166,10 +107,8 @@ TEST_CASE("MovingBC - Integration with Model", "[bc_moving]") {
   bc.set_rho_high(0.9);
   bc.set_xwidth(10.0);
 
-  REQUIRE_NOTHROW(bc.apply(model, 0.0));
-
-  const Field &field = model.get_real_field("density");
-  REQUIRE(field.size() == field_size);
+  REQUIRE_NOTHROW(bc.apply(psi, domain, box));
+  REQUIRE(psi.size() == static_cast<size_t>(box.count()));
 }
 
 TEST_CASE("MovingBC - Field Name Assignment", "[bc_moving]") {
@@ -183,14 +122,7 @@ TEST_CASE("MovingBC - Boundary Position Tracking", "[bc_moving]") {
                                     pfc::PhysicalOrigin({-64.0, -16.0, -16.0}),
                                     pfc::GridSpacing({8.0, 8.0, 8.0}));
   auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
-  auto fft = fft::create(decomposition);
-  ModelWithMovingBC m(fft, world);
-
-  const size_t field_size = fft.size_inbox();
-  std::vector<double> psi(field_size, 0.0);
-  add_real_field(m, "default", psi);
+  std::vector<double> psi(static_cast<size_t>(box.count()), 0.0);
 
   MovingBC bc(0.0, 1.0);
   bc.set_xpos(100.0);
@@ -198,37 +130,23 @@ TEST_CASE("MovingBC - Boundary Position Tracking", "[bc_moving]") {
 
   SECTION("Position persists") {
     REQUIRE(bc.get_xpos() == Approx(100.0));
-    bc.apply(m, 0.0);
-    // Position may change after apply, but should remain valid
-    REQUIRE(bc.get_xpos() >= 100.0); // Monotonic movement expected
+    bc.apply(psi, domain, box);
+    REQUIRE(bc.get_xpos() >= 100.0);
   }
 }
 
 TEST_CASE("MovingBC - MPI collectives fail closed", "[bc_moving]") {
-  // Contract: MovingBC::apply must check MPI_Reduce and MPI_Bcast via
-  // pfc::mpi::throw_on_mpi_error before mutating m_idx (after Reduce) and
-  // before fill_bc (after Bcast). A failed collective must throw
-  // std::runtime_error rather than apply a divergent m_xpos.
-  // Verified by code inspection of moving_bc.hpp (no MPI mock framework);
-  // this case locks the success-path apply still works under that contract.
   auto domain = pfc::domain::create(pfc::GridSize({16, 4, 4}),
                                     pfc::PhysicalOrigin({-64.0, -16.0, -16.0}),
                                     pfc::GridSpacing({8.0, 8.0, 8.0}));
   auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
-  auto fft = fft::create(decomposition);
-  ModelWithMovingBC m(fft, world);
-
-  const size_t field_size = fft.size_inbox();
-  std::vector<double> psi(field_size, 0.0);
-  add_real_field(m, "default", psi);
+  std::vector<double> psi(static_cast<size_t>(box.count()), 0.0);
 
   MovingBC bc(0.0, 1.0);
   bc.set_xwidth(15.0);
   bc.set_xpos(0.0);
   bc.set_threshold(0.1);
 
-  REQUIRE_NOTHROW(bc.apply(m, 0.0));
+  REQUIRE_NOTHROW(bc.apply(psi, domain, box));
   REQUIRE(bc.get_xpos() >= 0.0);
 }

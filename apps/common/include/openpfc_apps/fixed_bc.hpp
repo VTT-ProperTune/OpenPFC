@@ -35,7 +35,9 @@
 
 #include <cmath>
 
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/types.hpp>
+#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
@@ -63,23 +65,26 @@ public:
 
   const std::string &get_modifier_name() const override { return m_name; }
 
-  void apply(Model &m, double time) override {
-    (void)time;
-    const World &w = get_world(m);
-    const double Lx = get_size(w, 0);
-    const double dx = get_spacing(w, 0);
+  void apply(RealField &field, const Domain &domain, const Box3i &box) const {
+    const double Lx = pfc::domain::get_size(domain, 0);
+    const double dx = pfc::domain::get_spacing(domain, 0);
     const double xpos = (Lx * dx) - xwidth;
 
     pfc::field::apply_inplace(
-        pfc::get_real_field(m, get_field_name()), pfc::get_world(m), pfc::get_fft(m),
-        [=, this](const pfc::Real3 &X, double current) {
+        field, domain, box, [=, this](const pfc::Real3 &X, double current) {
           const double x = X[0];
           if (std::abs(x - xpos) < xwidth) {
             const double S = 1.0 / (1.0 + std::exp(-alpha * (x - xpos)));
             return (m_rho_low * S) + (m_rho_high * (1.0 - S));
           }
-          return current; // outside transition band, keep value
+          return current;
         });
+  }
+
+  void apply(Model &m, double time) override {
+    (void)time;
+    apply(pfc::get_real_field(m, get_field_name()), pfc::get_world(m).domain_,
+          pfc::fft::get_inbox(pfc::get_fft(m)));
   }
 };
 

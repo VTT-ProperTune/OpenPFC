@@ -43,6 +43,8 @@
 #include <sstream>
 #include <stdexcept>
 
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
@@ -98,17 +100,13 @@ public:
     size = mpi::get_comm_size(comm);
   }
 
-  void apply(Model &m, double time) override {
-    (void)time;
-    const fft::IHostFFT &fft = get_fft(m);
-    Field &field = get_real_field(m, get_field_name());
-    const World &w = get_world(m);
-    Int3 low = get_inbox(fft).low;
-    Int3 high = get_inbox(fft).high;
+  void apply(RealField &field, const Domain &domain, const Box3i &box) {
+    const Int3 low = box.low;
+    const Int3 high = box.high;
 
-    auto Lx = get_size(w, 0);
-    auto dx = get_spacing(w, 0);
-    auto x0 = get_origin(w, 0);
+    const auto Lx = pfc::domain::get_size(domain, 0);
+    const auto dx = pfc::domain::get_spacing(domain, 0);
+    const auto x0 = pfc::domain::get_origin(domain, 0);
 
     if (m_first) {
       xline.resize(Lx);
@@ -177,21 +175,25 @@ public:
       log_debug(lg, oss.str());
     }
 
-    fill_bc(m);
+    fill_bc(field, domain, box);
   }
 
-  void fill_bc(Model &m) {
-    const World &w = get_world(m);
-    const double Lx = get_size(w, 0);
-    const double dx = get_spacing(w, 0);
+  void apply(Model &m, double time) override {
+    (void)time;
+    apply(get_real_field(m, get_field_name()), get_world(m).domain_,
+          pfc::fft::get_inbox(pfc::get_fft(m)));
+  }
+
+  void fill_bc(RealField &field, const Domain &domain, const Box3i &box) {
+    const double Lx = pfc::domain::get_size(domain, 0);
+    const double dx = pfc::domain::get_spacing(domain, 0);
     const double l = Lx * dx;
     const double xpos = std::fmod(m_xpos, l);
     const double xwidth = m_xwidth;
     const double alpha = m_alpha;
 
     pfc::field::apply_inplace(
-        pfc::get_real_field(m, get_field_name()), pfc::get_world(m), pfc::get_fft(m),
-        [=, this](const pfc::Real3 &X, double current) {
+        field, domain, box, [=, this](const pfc::Real3 &X, double current) {
           const double x = X[0];
           const double dist = x - xpos;
           auto blend = [&](double d) {
