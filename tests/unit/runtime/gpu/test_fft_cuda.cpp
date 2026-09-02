@@ -43,12 +43,12 @@ TEST_CASE("GPU FFT: Forward transform", "[gpu][fft]") {
   }
 
   // Create a simple world and decomposition
-  auto world = pfc::domain::create_world(pfc::GridSize({64, 64, 64}),
+  auto domain = pfc::domain::create(pfc::GridSize({64, 64, 64}),
                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                          pfc::GridSpacing({1.0, 1.0, 1.0}));
   int mpi_size;
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
-  auto decomp = pfc::decomposition::create(world, mpi_size);
+  auto decomp = pfc::decomposition::create(domain, mpi_size);
 
   // Create GPU FFT
   int rank_id;
@@ -92,12 +92,12 @@ TEST_CASE("GPU FFT: create_cuda honors plan_options", "[gpu][fft]") {
     MPI_Init(nullptr, nullptr);
   }
 
-  auto world = pfc::domain::create_world(pfc::GridSize({16, 16, 16}),
+  auto domain = pfc::domain::create(pfc::GridSize({16, 16, 16}),
                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                          pfc::GridSpacing({1.0, 1.0, 1.0}));
   int mpi_size = 1;
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
-  auto decomp = pfc::decomposition::create(world, mpi_size);
+  auto decomp = pfc::decomposition::create(domain, mpi_size);
   int rank_id = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank_id);
 
@@ -123,12 +123,12 @@ TEST_CASE("GPU FFT: Backward transform", "[gpu][fft]") {
   }
 
   // Create a simple world and decomposition
-  auto world = pfc::domain::create_world(pfc::GridSize({64, 64, 64}),
+  auto domain = pfc::domain::create(pfc::GridSize({64, 64, 64}),
                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                          pfc::GridSpacing({1.0, 1.0, 1.0}));
   int mpi_size;
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
-  auto decomp = pfc::decomposition::create(world, mpi_size);
+  auto decomp = pfc::decomposition::create(domain, mpi_size);
 
   // Create GPU FFT
   int rank_id;
@@ -177,12 +177,12 @@ TEST_CASE("GPU FFT: Round-trip (forward then backward)", "[gpu][fft]") {
   }
 
   // Create a simple world and decomposition
-  auto world = pfc::domain::create_world(pfc::GridSize({32, 32, 32}),
+  auto domain = pfc::domain::create(pfc::GridSize({32, 32, 32}),
                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                          pfc::GridSpacing({1.0, 1.0, 1.0}));
   int mpi_size;
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
-  auto decomp = pfc::decomposition::create(world, mpi_size);
+  auto decomp = pfc::decomposition::create(domain, mpi_size);
 
   // Create GPU FFT
   int rank_id;

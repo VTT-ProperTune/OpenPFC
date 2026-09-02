@@ -38,7 +38,7 @@
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
 #include <openpfc/kernel/decomposition/halo_pattern.hpp>
 #include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
-#include <openpfc/kernel/data/world_queries.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 
 using namespace pfc;
 using Int3 = pfc::types::Int3;
@@ -247,9 +247,9 @@ TEST_CASE("SparseExchange: Axes3D X-split on np=2 delivers neighbour data",
                              GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(global_domain, {2, 1, 1});
 
-  const auto &local_world = decomposition::get_subworld(decomp, rank);
-  auto local_lower = world::get_lower(local_world);
-  auto local_size = world::get_size(local_world);
+  const auto local_world = decomposition::local_box(decomp, rank);
+  auto local_lower = local_world.low;
+  auto local_size = local_world.size;
   const int nx = local_size[0];
   const int ny = local_size[1];
   const int nz = local_size[2];

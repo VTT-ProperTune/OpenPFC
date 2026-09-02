@@ -3,7 +3,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/field/operations.hpp>
@@ -17,10 +17,7 @@ TEST_CASE("Field operations - comprehensive (stub)",
   pfc::Domain domain = pfc::domain::create(pfc::GridSize(size),
                                            pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                            pfc::GridSpacing({1.0, 1.0, 1.0}));
-  pfc::Int3 lower{0, 0, 0};
-  pfc::Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1};
-  pfc::World world(lower, upper, domain);
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
   REQUIRE(fft.size_inbox() > 0);
 }

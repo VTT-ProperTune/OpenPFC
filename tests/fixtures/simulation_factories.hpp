@@ -11,7 +11,6 @@
 
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 
@@ -129,39 +128,10 @@ protected:
 // Helper functions
 // =============================================================================
 
-/**
- * @brief Construct World from Domain reference
- *
- * Creates a World object that spans the entire domain (subdomain == global domain).
- * This is the canonical way to construct World objects in M1, replacing
- * the deprecated world::create() function.
- *
- * @param domain Reference to the domain object
- * @return World object with subdomain covering the entire global domain
- */
-inline World world_from_domain(const Domain& domain) {
-  using namespace pfc::types;
-  const Int3 size = domain.size;
-  const Int3 lower = {0, 0, 0};
-  const Int3 upper = {size[0] - 1, size[1] - 1, size[2] - 1};
-  return World(lower, upper, domain);
-}
-
-// =============================================================================
-// Legacy helper functions (for backward compatibility during migration)
-// =============================================================================
-
-/** @brief Uniform 8³ grid world (common in unit tests) - DEPRECATED */
-[[nodiscard]] [[deprecated("Use DomainFactory and world_from_domain instead")]]
-inline World make_world_cube_8() {
-  auto domain = DomainFactory::create_default_domain(8, 8, 8);
-  return world_from_domain(domain);
-}
-
-/** @brief Single-domain decomposition for @p world (one MPI rank owns all) */
+/** @brief Single-domain decomposition (one MPI rank owns all) */
 [[nodiscard]] inline pfc::decomposition::Decomposition
-make_serial_decomposition(const World &world) {
-  return pfc::decomposition::create(world, 1);
+make_serial_decomposition(const Domain &domain) {
+  return pfc::decomposition::create(domain, 1);
 }
 
 } // namespace pfc::test

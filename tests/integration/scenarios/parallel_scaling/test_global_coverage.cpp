@@ -3,7 +3,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <mpi.h>
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 
 using namespace pfc;
@@ -15,11 +15,11 @@ TEST_CASE("Global coverage equals sum of local coverage",
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  auto world = world::uniform(24, 1.0);
-  auto decomp = decomposition::create(world, size);
+  auto domain = domain::create(GridSize({24, 24, 24}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(domain, size);
 
-  const auto &local_world = decomposition::get_subworld(decomp, rank);
-  auto local_size = world::get_size(local_world);
+  const auto local_world = decomposition::local_box(decomp, rank);
+  auto local_size = local_world.size;
   long long local_cells = static_cast<long long>(local_size[0]) *
                           static_cast<long long>(local_size[1]) *
                           static_cast<long long>(local_size[2]);
@@ -28,7 +28,7 @@ TEST_CASE("Global coverage equals sum of local coverage",
   MPI_Allreduce(&local_cells, &global_sum, 1, MPI_LONG_LONG, MPI_SUM,
                 MPI_COMM_WORLD);
 
-  auto global_size = world::get_size(world);
+  auto global_size = domain::get_size(domain);
   long long global_cells = static_cast<long long>(global_size[0]) *
                            static_cast<long long>(global_size[1]) *
                            static_cast<long long>(global_size[2]);

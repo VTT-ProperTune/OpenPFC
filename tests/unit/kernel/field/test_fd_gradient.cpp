@@ -370,12 +370,12 @@ TEST_CASE("test_fd_gradient_box3i_domain",
           "[kernel][field][fd_gradient][box3i_domain]") {
   using namespace pfc;
   Box3i region = Box3i::from_bounds({0, 0, 0}, {7, 7, 7});
-  auto world = world::create(GridSize({8, 8, 8}),
+  auto domain = domain::create(GridSize({8, 8, 8}),
                               PhysicalOrigin({0.0, 0.0, 0.0}),
                               GridSpacing({2.0, 3.0, 4.0}));
-  auto decomp = decomposition::create(world, 1);
-  Domain domain = decomposition::domain(decomp);
-  
+  auto decomp = decomposition::create(domain, 1);
+  (void)decomp;
+
   auto evaluator = pfc::gradient::make_fd_gradient<OnlyX>(region, domain);
   
   REQUIRE(evaluator != nullptr);
@@ -391,11 +391,11 @@ TEST_CASE("test_fd_gradient_box3i_domain_spacing",
           "[kernel][field][fd_gradient][box3i_domain]") {
   using namespace pfc;
   Box3i region = Box3i::from_bounds({0, 0, 0}, {11, 11, 11});
-  auto world = world::create(GridSize({12, 12, 12}),
+  auto domain = domain::create(GridSize({12, 12, 12}),
                               PhysicalOrigin({0.0, 0.0, 0.0}),
                               GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(world, 1);
-  Domain domain = decomposition::domain(decomp);
+  auto decomp = decomposition::create(domain, 1);
+  (void)decomp;
   std::array<double, 3> custom_spacing{1.5, 2.0, 2.5};
   
   auto evaluator = pfc::gradient::make_fd_gradient<OnlyXX>(region, domain, custom_spacing);

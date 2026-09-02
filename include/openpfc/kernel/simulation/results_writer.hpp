@@ -112,13 +112,13 @@ namespace pfc {
  * using namespace pfc;
  *
  * // Create decomposed domain
- * auto world = world::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0,
- * 0.0}), GridSpacing({1.0, 1.0, 1.0})); auto decomp = decomposition::create(world,
+ * auto domain = domain::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0,
+ * 0.0}), GridSpacing({1.0, 1.0, 1.0})); auto decomp = decomposition::create(domain,
  * mpi::get_size()); auto fft = fft::create(decomp); auto local_world =
- * decomposition::get_subworld(decomp, mpi::get_rank());
+ * decomposition::local_box(decomp, mpi::get_rank());
  *
- * auto global_size = world::get_size(world);
- * auto local_size = world::get_size(local_world);
+ * auto global_size = domain::get_size(domain);
+ * auto local_size = local_world.size;
  * auto inbox = fft::get_inbox(fft);
  * std::array<int, 3> local_offset = {inbox.low[0], inbox.low[1], inbox.low[2]};
  *

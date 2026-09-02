@@ -42,7 +42,6 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/data/model_types.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
-#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
@@ -113,24 +112,6 @@ public:
   SpectralCPUStack &operator=(const SpectralCPUStack &) = delete;
   SpectralCPUStack(SpectralCPUStack &&) = delete;
   SpectralCPUStack &operator=(SpectralCPUStack &&) = delete;
-
-  /**
-   * @brief Get a World adapter constructed from the stored Domain geometry.
-   *
-   * @note This accessor is provided for backward compatibility during the M1
-   * migration. Returns a newly constructed World each call; prefer using geometry()
-   * or accessing the decomposition directly in new code.
-   */
-  [[nodiscard]] pfc::World world() const noexcept {
-    const pfc::Int3 global_upper{m_geometry.size[0] - 1, m_geometry.size[1] - 1,
-                                 m_geometry.size[2] - 1};
-    return pfc::World(
-        pfc::Int3{0, 0, 0}, global_upper,
-        pfc::domain::create(::pfc::GridSize::from_vector3(m_geometry.size),
-                            pfc::PhysicalOrigin::from_vector3(m_geometry.origin),
-                            pfc::GridSpacing::from_vector3(m_geometry.spacing),
-                            m_geometry.periodic));
-  }
 
   [[nodiscard]] const SpectralGeometry &geometry() const noexcept {
     return m_geometry;

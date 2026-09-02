@@ -4,7 +4,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
@@ -15,8 +15,8 @@ using Catch::Approx;
 
 TEST_CASE("Field: storage size matches (n+2hw)^3 and idx round-trip",
           "[field][grid_field]") {
-  auto world = world::create(GridSize({8, 6, 4}).to_vector3());
-  auto decomp = decomposition::create(world, 1);
+  auto domain = domain::create(GridSize({8, 6, 4}).to_vector3());
+  auto decomp = decomposition::create(domain, 1);
 
   const int hw = 2;
   Field<double> u = field_from_subdomain<double>(decomp, /*rank=*/0, hw);
@@ -47,8 +47,8 @@ TEST_CASE("Field: storage size matches (n+2hw)^3 and idx round-trip",
 }
 
 TEST_CASE("Field: zero-initialized on construction", "[field][grid_field]") {
-  auto world = world::create(GridSize({4, 4, 4}).to_vector3());
-  auto decomp = decomposition::create(world, 1);
+  auto domain = domain::create(GridSize({4, 4, 4}).to_vector3());
+  auto decomp = decomposition::create(domain, 1);
 
   Field<double> u = field_from_subdomain<double>(decomp, 0, /*hw=*/1);
   bool values_are_zero = true;
@@ -60,8 +60,8 @@ TEST_CASE("Field: zero-initialized on construction", "[field][grid_field]") {
 
 TEST_CASE("Field: operator() reaches halo cells in [-hw, n+hw)",
           "[field][grid_field]") {
-  auto world = world::create(GridSize({4, 4, 4}).to_vector3());
-  auto decomp = decomposition::create(world, 1);
+  auto domain = domain::create(GridSize({4, 4, 4}).to_vector3());
+  auto decomp = decomposition::create(domain, 1);
 
   const int hw = 1;
   Field<int> u = field_from_subdomain<int>(decomp, 0, hw);
@@ -87,8 +87,8 @@ TEST_CASE("Field: operator() reaches halo cells in [-hw, n+hw)",
 
 TEST_CASE("Field: apply fills only owned cells, halos stay zero",
           "[field][grid_field]") {
-  auto world = world::create(GridSize({4, 4, 4}).to_vector3());
-  auto decomp = decomposition::create(world, 1);
+  auto domain = domain::create(GridSize({4, 4, 4}).to_vector3());
+  auto decomp = decomposition::create(domain, 1);
 
   const int hw = 1;
   Field<double> u = field_from_subdomain<double>(decomp, 0, hw);
@@ -121,8 +121,8 @@ TEST_CASE("Field: apply fills only owned cells, halos stay zero",
 
 TEST_CASE("Field: coords extrapolates across the halo ring",
           "[field][grid_field]") {
-  auto world = world::create(GridSize({4, 4, 4}).to_vector3());
-  auto decomp = decomposition::create(world, 1);
+  auto domain = domain::create(GridSize({4, 4, 4}).to_vector3());
+  auto decomp = decomposition::create(domain, 1);
 
   const int hw = 2;
   Field<double> u = field_from_subdomain<double>(decomp, 0, hw);
@@ -138,8 +138,8 @@ TEST_CASE("Field: coords extrapolates across the halo ring",
 
 TEST_CASE("Field: hw=0 reduces to plain owned-only buffer",
           "[field][grid_field]") {
-  auto world = world::create(GridSize({3, 3, 3}).to_vector3());
-  auto decomp = decomposition::create(world, 1);
+  auto domain = domain::create(GridSize({3, 3, 3}).to_vector3());
+  auto decomp = decomposition::create(domain, 1);
 
   Field<double> u = field_from_subdomain<double>(decomp, 0, /*hw=*/0);
   REQUIRE(u.padded_extent(0) == u.local_size()[0]);
@@ -149,8 +149,8 @@ TEST_CASE("Field: hw=0 reduces to plain owned-only buffer",
 }
 
 TEST_CASE("Field: rejects negative halo width", "[field][grid_field]") {
-  auto world = world::create(GridSize({4, 4, 4}).to_vector3());
-  auto decomp = decomposition::create(world, 1);
+  auto domain = domain::create(GridSize({4, 4, 4}).to_vector3());
+  auto decomp = decomposition::create(domain, 1);
   REQUIRE_THROWS_AS(field_from_subdomain<double>(decomp, 0, -1),
                     std::invalid_argument);
 }
@@ -163,8 +163,8 @@ TEST_CASE("Field: rejects negative halo width", "[field][grid_field]") {
 
 TEST_CASE("Field: Int3 overloads of idx/operator() match scalar form",
           "[field][grid_field]") {
-  auto world = world::create(GridSize({3, 3, 3}).to_vector3());
-  auto decomp = decomposition::create(world, 1);
+  auto domain = domain::create(GridSize({3, 3, 3}).to_vector3());
+  auto decomp = decomposition::create(domain, 1);
 
   Field<int> u = field_from_subdomain<int>(decomp, /*rank=*/0, /*hw=*/1);
 
@@ -194,8 +194,8 @@ TEST_CASE("Field: Int3 overloads of idx/operator() match scalar form",
 // Replaces with Field's natural overflow behavior test.
 TEST_CASE("Field: verified basic overflow behavior matches expectations",
           "[field][grid_field]") {
-  auto world = world::create(GridSize({4, 5, 6}).to_vector3());
-  auto decomp = decomposition::create(world, 1);
+  auto domain = domain::create(GridSize({4, 5, 6}).to_vector3());
+  auto decomp = decomposition::create(domain, 1);
 
   Field<double> u = field_from_subdomain<double>(decomp, 0, /*hw=*/0);
   REQUIRE(u.size() == std::size_t{120});

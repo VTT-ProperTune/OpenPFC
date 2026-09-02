@@ -4,8 +4,8 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <mpi.h>
-#include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/data/world_queries.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
@@ -79,10 +79,10 @@ TEST_CASE("Manual explicit Euler with spectral gradients",
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // Setup: world, decomposition, FFT, field
-  auto world = world::uniform(32, 1.0);
-  auto decomp = decomposition::create(world, size);
+  auto domain = domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(domain, size);
   auto fft = fft::create(decomp);
-  auto u = pfc::data::field_from_inbox<double>(pfc::world::get_coordinate_system(world), fft.get_inbox_bounds());
+  auto u = pfc::data::field_from_inbox<double>(pfc::domain, fft.get_inbox_bounds());
 
   // Parameters
   const double D = 1.0;
@@ -140,10 +140,10 @@ TEST_CASE("EulerStepper infrastructure with spectral gradients",
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // Setup: world, decomposition, FFT, field
-  auto world = world::uniform(32, 1.0);
-  auto decomp = decomposition::create(world, size);
+  auto domain = domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(domain, size);
   auto fft = fft::create(decomp);
-  auto u = pfc::data::field_from_inbox<double>(pfc::world::get_coordinate_system(world), fft.get_inbox_bounds());
+  auto u = pfc::data::field_from_inbox<double>(pfc::domain, fft.get_inbox_bounds());
 
   // Parameters
   const double D = 1.0;
@@ -198,8 +198,8 @@ TEST_CASE("Stepper contract equivalence: manual vs infrastructure",
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // Common setup
-  auto world = world::uniform(32, 1.0);
-  auto decomp = decomposition::create(world, size);
+  auto domain = domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(domain, size);
   auto fft = fft::create(decomp);
   
   const double D = 1.0;
@@ -207,7 +207,7 @@ TEST_CASE("Stepper contract equivalence: manual vs infrastructure",
   const int steps = 10;
 
   // Manual implementation
-  auto u_manual = pfc::data::field_from_inbox<double>(pfc::world::get_coordinate_system(world), fft.get_inbox_bounds());
+  auto u_manual = pfc::data::field_from_inbox<double>(pfc::domain, fft.get_inbox_bounds());
   apply_gaussian_initial_condition(u_manual, D);
   auto grad_manual = field::create<DiffusionGrads>(u_manual, fft);
   std::vector<double> du_manual(u_manual.size(), 0.0);
@@ -222,7 +222,7 @@ TEST_CASE("Stepper contract equivalence: manual vs infrastructure",
   }
 
   // Infrastructure implementation
-  auto u_infra = pfc::data::field_from_inbox<double>(pfc::world::get_coordinate_system(world), fft.get_inbox_bounds());
+  auto u_infra = pfc::data::field_from_inbox<double>(pfc::domain, fft.get_inbox_bounds());
   apply_gaussian_initial_condition(u_infra, D);
   auto grad_infra = field::create<DiffusionGrads>(u_infra, fft);
   auto stepper = pfc::sim::steppers::create(u_infra, grad_infra, model, dt);

@@ -8,8 +8,8 @@
 #include <numbers>
 #include <vector>
 
-#include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/data/world_queries.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
@@ -34,8 +34,8 @@ TEST_CASE("Laplacian of constant field is zero after halo exchange", "[MPI][fd]"
     return;
   }
 
-  auto world = world::uniform(24, 1.0);
-  auto decomp = decomposition::create(world, {2, 1, 1});
+  auto domain = domain::create(GridSize({24, 24, 24}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(domain, {2, 1, 1});
 
   constexpr int halo_width = 1;
   auto u = data::field_from_subdomain<double>(decomp, rank, halo_width);
@@ -66,8 +66,8 @@ TEST_CASE("HaloExchange start/finish matches blocking face sync",
     return;
   }
 
-  auto world = world::uniform(16, 1.0);
-  auto decomp = decomposition::create(world, {1, 1, 2});
+  auto domain = domain::create(GridSize({16, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(domain, {1, 1, 2});
 
   constexpr int halo_width = 1;
   auto a = data::field_from_subdomain<double>(decomp, rank, halo_width);
@@ -114,12 +114,12 @@ TEST_CASE("laplacian_periodic_separated<2> matches analytic Laplacian on every "
   const double dx = 2.0 * std::numbers::pi / static_cast<double>(N);
   const double inv_dx2 = 1.0 / (dx * dx);
 
-  auto world = world::uniform(N, dx);
-  auto decomp = decomposition::create(world, {2, 1, 1});
+  auto domain = domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({dx, dx, dx}));
+  auto decomp = decomposition::create(domain, {2, 1, 1});
 
-  const auto &local_world = decomposition::get_subworld(decomp, rank);
-  auto local_size = world::get_size(local_world);
-  auto local_lower = world::get_lower(local_world);
+  const auto local_world = decomposition::local_box(decomp, rank);
+  auto local_size = local_world.size;
+  auto local_lower = local_world.low;
   const int nx = local_size[0];
   const int ny = local_size[1];
   const int nz = local_size[2];

@@ -23,8 +23,8 @@
 using namespace pfc;
 using namespace pfc::fft::kspace;
 
-static inline World make_world(int nx, int ny, int nz) {
-  return domain::create_world(GridSize({nx, ny, nz}), PhysicalOrigin({0.0, 0.0, 0.0}),
+static inline Domain make_world(int nx, int ny, int nz) {
+  return domain::create(GridSize({nx, ny, nz}), PhysicalOrigin({0.0, 0.0, 0.0}),
                        GridSpacing({1.0, 1.0, 1.0}));
 }
 
@@ -37,8 +37,8 @@ TEST_CASE("CPU vs CUDA Laplacian equivalence (multi-rank) [integration][gpu][mpi
 
   // If single-rank, still run (works fine). If multi-rank, exercises distributed
   // path.
-  auto world = make_world(32, 24, 20);
-  auto decomp = decomposition::create(world, size);
+  auto domain = make_world(32, 24, 20);
+  auto decomp = decomposition::create(domain, size);
 
   // CPU and CUDA FFT
   auto fft_cpu = fft::create(decomp, rank, MPI_COMM_WORLD);
@@ -49,7 +49,7 @@ TEST_CASE("CPU vs CUDA Laplacian equivalence (multi-rank) [integration][gpu][mpi
 
   // Use global indices from inbox to construct a smooth periodic field
   const auto inbox = fft::get_inbox(fft_cpu);
-  const auto [Lx, Ly, Lz] = world::get_size(world);
+  const auto [Lx, Ly, Lz] = domain::get_size(domain);
 
   std::vector<double> real_in_cpu(n_in);
   {
@@ -74,7 +74,7 @@ TEST_CASE("CPU vs CUDA Laplacian equivalence (multi-rank) [integration][gpu][mpi
   fft_cpu.forward(real_in_cpu, freq_cpu);
 
   const auto outbox = fft::get_outbox(fft_cpu);
-  const auto [fx, fy, fz] = k_frequency_scaling(world);
+  const auto [fx, fy, fz] = k_frequency_scaling(domain);
   {
     size_t idx = 0;
     for (int k = outbox.low[2]; k <= outbox.high[2]; ++k) {

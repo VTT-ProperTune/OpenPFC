@@ -104,10 +104,10 @@ void scenario_manual_grid() {
 
   // Each rank queries its local subdomain
   if (rank < decomposition::get_num_domains(decomp)) {
-    auto local_domain = decomposition::get_subworld(decomp, rank);
-    auto local_size = domain::get_size(local_domain.domain_);
-    auto local_origin = domain::get_origin(local_domain.domain_);
-    auto local_bounds = domain::get_upper_bounds(local_domain.domain_);
+    auto local_domain = decomposition::local_box(decomp, rank);
+    auto local_size = local_domain.size;
+    auto local_origin = domain::get_origin(decomposition::domain(decomp));
+    auto local_bounds = domain::to_coords(decomposition::domain(decomp), Int3{local_domain.high[0], local_domain.high[1], local_domain.high[2]});
 
     std::ostringstream oss;
     oss << rank_prefix(rank) << "Local subdomain:\n";
@@ -176,9 +176,9 @@ void scenario_automatic_grid() {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Each rank gets its local domain
-  auto local_domain = decomposition::get_subworld(decomp, rank);
-  auto local_size = domain::get_size(local_domain.domain_);
-  auto local_vol = domain::physical_volume(local_domain.domain_);
+  auto local_domain = decomposition::local_box(decomp, rank);
+  auto local_size = local_domain.size;
+  auto local_vol = (static_cast<double>(local_domain.size[0])*local_domain.size[1]*local_domain.size[2]*domain::get_spacing(decomposition::domain(decomp),0)*domain::get_spacing(decomposition::domain(decomp),1)*domain::get_spacing(decomposition::domain(decomp),2));
 
   std::ostringstream oss;
   oss << rank_prefix(rank) << "Size: [" << local_size[0] << ", " << local_size[1]
@@ -212,17 +212,17 @@ void scenario_coordinate_mapping() {
       domain::create(GridSize({100, 100, 100}), PhysicalOrigin({0.0, 0.0, 0.0}),
                      GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, size);
-  auto local_domain = decomposition::get_subworld(decomp, rank);
+  auto local_domain = decomposition::local_box(decomp, rank);
 
   // Compute center point coordinates
-  auto local_size = domain::get_size(local_domain.domain_);
+  auto local_size = local_domain.size;
   Int3 local_center = {local_size[0] / 2, local_size[1] / 2, local_size[2] / 2};
 
   // Local coordinates (within subdomain)
-  auto local_coords = domain::to_coords(local_domain.domain_, local_center);
+  auto local_coords = domain::to_coords(decomposition::domain(decomp), local_center);
 
   // Global coordinates (within full domain)
-  auto global_origin = domain::get_origin(local_domain.domain_);
+  auto global_origin = domain::get_origin(decomposition::domain(decomp));
   Real3 global_coords = {global_origin[0] + local_coords[0],
                          global_origin[1] + local_coords[1],
                          global_origin[2] + local_coords[2]};
@@ -281,8 +281,8 @@ void scenario_properties() {
       std::cout << "  Total domains: " << num << "\n";
 
       // Show first subdomain as example
-      auto subworld_0 = decomposition::get_subworld(decomp, 0);
-      auto sz = domain::get_size(subworld_0.domain_);
+      auto subworld_0 = decomposition::local_box(decomp, 0);
+      auto sz = subworld_0.size;
       std::cout << "  Example subdomain (rank 0): [" << sz[0] << ", " << sz[1]
                 << ", " << sz[2] << "]\n\n";
     }
@@ -291,11 +291,11 @@ void scenario_properties() {
 
   // Each rank queries its configuration
   auto decomp = decomposition::create(domain, size);
-  auto local = decomposition::get_subworld(decomp, rank);
+  auto local = decomposition::local_box(decomp, rank);
   auto grid = decomposition::get_grid(decomp);
 
-  auto local_size = domain::get_size(local.domain_);
-  auto local_spacing = domain::get_spacing(local.domain_);
+  auto local_size = local.size;
+  auto local_spacing = domain::get_spacing(decomposition::domain(decomp));
   int local_points = local_size[0] * local_size[1] * local_size[2];
 
   std::ostringstream oss;
@@ -331,10 +331,10 @@ void scenario_load_balance() {
       domain::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0, 0.0}),
                      GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, size);
-  auto local = decomposition::get_subworld(decomp, rank);
+  auto local = decomposition::local_box(decomp, rank);
 
   // Count local grid points
-  auto local_size = domain::get_size(local.domain_);
+  auto local_size = local.size;
   int local_points = local_size[0] * local_size[1] * local_size[2];
 
   // Gather all point counts to rank 0

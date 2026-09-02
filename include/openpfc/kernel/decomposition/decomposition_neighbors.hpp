@@ -10,7 +10,7 @@
  * Used for halo exchange patterns in finite difference methods.
  *
  * @code
- * auto decomp = decomposition::create(world, {2, 2, 2}); // 2×2×2 grid
+ * auto decomp = decomposition::create(domain, {2, 2, 2}); // 2×2×2 grid
  * auto domain = decomposition::domain(decomp);
  * int rank = 0;
  *
@@ -53,7 +53,7 @@ namespace pfc::decomposition {
  *
  * @example
  * ```cpp
- * auto decomp = decomposition::create(world, {2, 2, 2}); // 8 ranks in 2×2×2 grid
+ * auto decomp = decomposition::create(domain, {2, 2, 2}); // 8 ranks in 2×2×2 grid
  * auto domain = decomposition::domain(decomp);
  *
  * // Rank 0 in 2×2×2 grid: neighbors are 1 (+X), 2 (+Y), 4 (+Z)
@@ -126,7 +126,7 @@ inline int get_neighbor_rank(const Decomposition &decomp, int rank,
  *
  * @example
  * ```cpp
- * auto decomp = decomposition::create(world, {2, 2, 2});
+ * auto decomp = decomposition::create(domain, {2, 2, 2});
  * auto neighbors = find_face_neighbors(decomp, 0);
  *
  * // neighbors[{1,0,0}] = 1  (neighbor in +X)
@@ -169,7 +169,7 @@ inline std::map<Int3, int> find_face_neighbors(const Decomposition &decomp,
  *
  * @example
  * ```cpp
- * auto decomp = decomposition::create(world, {3, 3, 3});
+ * auto decomp = decomposition::create(domain, {3, 3, 3});
  * auto all_neighbors = find_all_neighbors(decomp, 13); // Center rank
  *
  * // Returns all 26 neighbors (faces + edges + corners)

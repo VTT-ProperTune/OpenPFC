@@ -18,8 +18,6 @@ endif()
 # clearer layering and faster incremental rebuilds; link as one `openpfc` for
 # install/export (see docs/refactoring_roadmap.md Phase D).
 set(_openpfc_kernel_obj_sources
-    src/openpfc/kernel/data/world.cpp
-    src/openpfc/kernel/data/world_factory.cpp
     src/openpfc/kernel/decomposition/decomposition.cpp
     src/openpfc/kernel/decomposition/decomposition_factory.cpp
     src/openpfc/kernel/profiling/session.cpp

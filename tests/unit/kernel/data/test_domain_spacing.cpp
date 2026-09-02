@@ -5,7 +5,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 
 using pfc::Bool3;
 using pfc::Int3;

@@ -8,12 +8,11 @@
 #include <vector>
 #include <openpfc/kernel/simulation/time.hpp>
 
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
-#include <openpfc/kernel/data/domain.hpp>
 
 using namespace pfc::sim::steppers;
 using Catch::Approx;
@@ -303,9 +302,6 @@ TEST_CASE("ExplicitRKStepper factory with Field", "[stepper][unit]") {
   const pfc::Domain domain = pfc::domain::create(pfc::GridSize({static_cast<int>(n), 1, 1}),
                                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                                  pfc::GridSpacing({1.0, 1.0, 1.0}));
-  const pfc::Int3 lower{0, 0, 0};
-  const pfc::Int3 upper{static_cast<int>(n) - 1, 0, 0};
-  pfc::World world(lower, upper, domain);
   auto decomp = pfc::decomposition::create(domain, /*nparts=*/1);
   pfc::data::Field<double> u = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, /*halo=*/0);
 
@@ -354,9 +350,6 @@ TEST_CASE("MultiExplicitRKStepper factory with tuple", "[stepper][unit]") {
   const pfc::Domain domain = pfc::domain::create(pfc::GridSize({static_cast<int>(n), 1, 1}),
                                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                                  pfc::GridSpacing({1.0, 1.0, 1.0}));
-  const pfc::Int3 lower{0, 0, 0};
-  const pfc::Int3 upper{static_cast<int>(n) - 1, 0, 0};
-  pfc::World world(lower, upper, domain);
   auto decomp = pfc::decomposition::create(domain, /*nparts=*/1);
   pfc::data::Field<double> u1 = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, /*halo=*/0);
   pfc::data::Field<double> u2 = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, /*halo=*/0);

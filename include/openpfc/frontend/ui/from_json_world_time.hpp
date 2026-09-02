@@ -3,7 +3,7 @@
 
 /**
  * @file from_json_world_time.hpp
- * @brief `from_json` specializations for `World` and `Time`
+ * @brief `from_json` specializations for `Domain` and `Time`
  */
 
 #ifndef PFC_UI_FROM_JSON_WORLD_TIME_HPP
@@ -17,13 +17,13 @@
 #include <openpfc/frontend/ui/from_json_fwd.hpp>
 #include <openpfc/frontend/ui/from_json_integrator_method.hpp>
 #include <openpfc/frontend/ui/json_helpers.hpp>
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
 
 namespace pfc::ui {
 
 /**
- * Creates a World object from a JSON input.
+ * Creates a Domain object from a JSON input.
  *
  * @param j A JSON object containing the following fields:
  *   - Lx (int): The number of grid points in the x direction.
@@ -35,12 +35,12 @@ namespace pfc::ui {
  *   - origin (string): The origin of the coordinate system. Must be one of
  *     "center" or "corner".
  *
- * @return A World object.
+ * @return A Domain object.
  *
  * @throws std::invalid_argument if any of the required fields are missing
  *         or have an invalid value.
  */
-template <> [[nodiscard]] inline World from_json<World>(const json &j) {
+template <> [[nodiscard]] inline Domain from_json<Domain>(const json &j) {
   int Lx = 0;
   int Ly = 0;
   int Lz = 0;
@@ -184,25 +184,8 @@ template <> [[nodiscard]] inline World from_json<World>(const json &j) {
     z0 = -0.5 * dz * Lz;
   }
 
-  World world =
-      pfc::domain::create_world(GridSize({Lx, Ly, Lz}), PhysicalOrigin({x0, y0, z0}),
-                                GridSpacing({dx, dy, dz}));
-
-  return world;
-}
-
-/**
- * Creates a Domain object from a JSON input.
- *
- * Same JSON schema as `from_json<World>` (Lx/Ly/Lz, dx/dy/dz, origin) — this
- * just extracts the `Domain` (origin/spacing/periodicity) embedded in the
- * parsed `World`, for callers that only need the coordinate system and not
- * the subdomain bookkeeping `World` carries.
- *
- * @return A Domain object.
- */
-template <> [[nodiscard]] inline Domain from_json<Domain>(const json &j) {
-  return pfc::world::get_coordinate_system(from_json<World>(j));
+  return pfc::domain::create(GridSize({Lx, Ly, Lz}), PhysicalOrigin({x0, y0, z0}),
+                             GridSpacing({dx, dy, dz}));
 }
 
 template <> [[nodiscard]] inline Time from_json<Time>(const json &j) {

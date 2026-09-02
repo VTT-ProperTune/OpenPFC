@@ -3,7 +3,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <mpi.h>
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 
@@ -18,10 +18,10 @@ using namespace pfc;
 using namespace pfc::fft;
 
 TEST_CASE("CUDA backend instantiation smoke", "[integration][gpu][cuda]") {
-  auto world = world::uniform(16, 1.0);
+  auto domain = domain::create(GridSize({16, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
   int size = 1;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  auto decomp = decomposition::create(world, size);
+  auto decomp = decomposition::create(domain, size);
 
 #if defined(OpenPFC_ENABLE_CUDA)
   auto cpu_fft = create_with_backend(decomp, /*rank*/ 0, Backend::FFTW);
@@ -36,11 +36,11 @@ TEST_CASE("CUDA backend instantiation smoke", "[integration][gpu][cuda]") {
 }
 
 TEST_CASE("HIP backend instantiation smoke", "[integration][gpu][hip]") {
-  auto world = world::uniform(16, 1.0);
+  auto domain = domain::create(GridSize({16, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
   int size = 1, rank = 0;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  auto decomp = decomposition::create(world, size);
+  auto decomp = decomposition::create(domain, size);
 
 #if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
   auto cpu_fft = create(decomp);

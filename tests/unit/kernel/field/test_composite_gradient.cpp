@@ -107,11 +107,10 @@ TEST_CASE("test_composite_gradient_box3i_domain",
   constexpr int N = 8;
   const int order = 2;
   
-  auto world = world::create(GridSize({N, N, N}),
+  auto domain = domain::create(GridSize({N, N, N}),
                               PhysicalOrigin({0.0, 0.0, 0.0}),
                               GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(world, /*nparts=*/1);
-  Domain domain = decomposition::domain(decomp);
+  auto decomp = decomposition::create(domain, /*nparts=*/1);
   auto u = data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0,
                                                        /*halo_width=*/1);
   u.apply([](double x, double y, double z) { return x * x + y * y + z * z; });
@@ -146,11 +145,10 @@ TEST_CASE("test_composite_gradient_box3i_domain_spacing",
   constexpr int N = 8;
   const int order = 2;
   
-  auto world = world::create(GridSize({N, N, N}),
+  auto domain = domain::create(GridSize({N, N, N}),
                               PhysicalOrigin({0.0, 0.0, 0.0}),
                               GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(world, /*nparts=*/1);
-  Domain domain = decomposition::domain(decomp);
+  auto decomp = decomposition::create(domain, /*nparts=*/1);
   auto u = data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0,
                                                        /*halo_width=*/1);
   u.apply([](double x, double y, double z) { return x * x + y * y + z * z; });

@@ -20,8 +20,8 @@
  * Example:
  * @code
  * using namespace pfc;
- * auto world = world::create(GridSize({64,64,64}));
- * auto decomp = decomposition::create(world, 1);
+ * auto domain = domain::create(GridSize({64,64,64}));
+ * auto decomp = decomposition::create(domain, 1);
  * auto fft = fft::create(decomp);
  * std::vector<double> u(fft.size_inbox());
  *
@@ -43,8 +43,6 @@
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/model_types.hpp>
-#include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_interface.hpp>
 // Local iteration implemented inline to work with HeFFTe inbox type
@@ -161,9 +159,9 @@ using PointFnT = std::function<double(double, double, double, double)>;
  * @param fn    Coordinate-space function returning new value
  */
 template <typename Fn>
-inline void apply(RealField &field, const World &world, const fft::IHostFFT &fft,
+inline void apply(RealField &field, const Domain &domain, const fft::IHostFFT &fft,
                   Fn &&fn) {
-  apply(field, world.domain_, pfc::fft::get_inbox(fft), std::forward<Fn>(fn));
+  apply(field, domain, pfc::fft::get_inbox(fft), std::forward<Fn>(fn));
 }
 
 /**
@@ -177,10 +175,9 @@ inline void apply(RealField &field, const World &world, const fft::IHostFFT &fft
  * @param fn    Space-time function returning new value
  */
 template <typename Fn>
-inline void apply_with_time(RealField &field, const World &world,
+inline void apply_with_time(RealField &field, const Domain &domain,
                             const fft::IHostFFT &fft, double t, Fn &&fn) {
-  apply_with_time(field, world.domain_, pfc::fft::get_inbox(fft), t,
-                  std::forward<Fn>(fn));
+  apply_with_time(field, domain, pfc::fft::get_inbox(fft), t, std::forward<Fn>(fn));
 }
 
 /**
@@ -197,10 +194,9 @@ inline void apply_with_time(RealField &field, const World &world,
  * @param fn    Coordinate-space function returning new value given (x, current)
  */
 template <typename Fn>
-inline void apply_inplace(RealField &field, const World &world,
+inline void apply_inplace(RealField &field, const Domain &domain,
                           const fft::IHostFFT &fft, Fn &&fn) {
-  apply_inplace(field, world.domain_, pfc::fft::get_inbox(fft),
-                std::forward<Fn>(fn));
+  apply_inplace(field, domain, pfc::fft::get_inbox(fft), std::forward<Fn>(fn));
 }
 
 /**
@@ -209,9 +205,9 @@ inline void apply_inplace(RealField &field, const World &world,
  * @tparam Fn Callable: double(const Real3&, double current, double t)
  */
 template <typename Fn>
-inline void apply_inplace_with_time(RealField &field, const World &world,
+inline void apply_inplace_with_time(RealField &field, const Domain &domain,
                                     const fft::IHostFFT &fft, double t, Fn &&fn) {
-  apply_inplace_with_time(field, world.domain_, pfc::fft::get_inbox(fft), t,
+  apply_inplace_with_time(field, domain, pfc::fft::get_inbox(fft), t,
                           std::forward<Fn>(fn));
 }
 
@@ -238,17 +234,17 @@ template <typename Fn>
 inline void apply_subdomain(std::vector<double> &field,
                             const pfc::decomposition::Decomposition &decomp,
                             int rank, Fn &&fn) {
-  const auto &gw = pfc::decomposition::get_world(decomp);
-  const auto &local = pfc::decomposition::get_subworld(decomp, rank);
-  const auto lo = pfc::world::get_lower(local);
-  const auto sz = pfc::world::get_size(local);
+  const auto gw = pfc::decomposition::domain(decomp);
+  const auto local = pfc::decomposition::local_box(decomp, rank);
+  const auto lo = local.low;
+  const auto sz = local.size;
   const int nx = sz[0];
   const int ny = sz[1];
   const int nz = sz[2];
   const std::size_t sxy =
       static_cast<std::size_t>(nx) * static_cast<std::size_t>(ny);
-  const auto origin = pfc::world::get_origin(gw);
-  const auto spacing = pfc::world::get_spacing(gw);
+  const auto origin = pfc::domain::get_origin(gw);
+  const auto spacing = pfc::domain::get_spacing(gw);
   field.assign(sxy * static_cast<std::size_t>(nz), 0.0);
   for (int iz = 0; iz < nz; ++iz) {
     for (int iy = 0; iy < ny; ++iy) {
@@ -299,10 +295,10 @@ inline void
 for_each_interior_with_coords(const std::vector<double> &field,
                               const pfc::decomposition::Decomposition &decomp,
                               int rank, int halo_width, Fn &&fn) {
-  const auto &gw = pfc::decomposition::get_world(decomp);
-  const auto &local = pfc::decomposition::get_subworld(decomp, rank);
-  const auto lo = pfc::world::get_lower(local);
-  const auto sz = pfc::world::get_size(local);
+  const auto gw = pfc::decomposition::domain(decomp);
+  const auto local = pfc::decomposition::local_box(decomp, rank);
+  const auto lo = local.low;
+  const auto sz = local.size;
   const int nx = sz[0];
   const int ny = sz[1];
   const int nz = sz[2];
@@ -318,8 +314,8 @@ for_each_interior_with_coords(const std::vector<double> &field,
   }
   const std::size_t sxy =
       static_cast<std::size_t>(nx) * static_cast<std::size_t>(ny);
-  const auto origin = pfc::world::get_origin(gw);
-  const auto spacing = pfc::world::get_spacing(gw);
+  const auto origin = pfc::domain::get_origin(gw);
+  const auto spacing = pfc::domain::get_spacing(gw);
   for (int iz = kmin; iz < kmax; ++iz) {
     for (int iy = jmin; iy < jmax; ++iy) {
       for (int ix = imin; ix < imax; ++ix) {

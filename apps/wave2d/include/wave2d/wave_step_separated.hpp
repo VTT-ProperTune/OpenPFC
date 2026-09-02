@@ -14,7 +14,7 @@
 #include <cstddef>
 #include <vector>
 
-#include <openpfc/kernel/data/world_queries.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
 #include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
@@ -105,8 +105,8 @@ inline void step_wave_separated_order2_cpu(
   exchanger.exchange(u.data(), u.size());
   pfc::halo::copy_to_face_layout(exchanger.halos(), face_halos);
 
-  const auto &local = pfc::decomposition::get_subworld(decomp, rank);
-  const auto lower = pfc::world::get_lower(local);
+  const auto local = pfc::decomposition::local_box(decomp, rank);
+  const pfc::Int3 lower{local.low[0], local.low[1], local.low[2]};
 
   if (y_bc == YBoundaryKind::Dirichlet) {
     patch_y_face_halos_dirichlet_order2(u.data(), nx, ny, face_halos, lower,

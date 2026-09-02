@@ -4,7 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <nlohmann/json.hpp>
 #include <openpfc/frontend/ui/ui.hpp>
-#include <openpfc/kernel/data/world_queries.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 
 using json = nlohmann::json;
 using namespace pfc;
@@ -16,7 +16,7 @@ TEST_CASE("World validation with wrong type for Lx",
             {"dy", 1.0},   {"dz", 1.0}, {"origo", "center"}};
 
   try {
-    [[maybe_unused]] auto world = ui::from_json<World>(j);
+    [[maybe_unused]] auto world = ui::from_json<Domain>(j);
     FAIL("Should have thrown exception");
   } catch (const std::invalid_argument &e) {
     std::string msg(e.what());
@@ -38,7 +38,7 @@ TEST_CASE("World validation with invalid origo value",
   };
 
   try {
-    [[maybe_unused]] auto world = ui::from_json<World>(j);
+    [[maybe_unused]] auto world = ui::from_json<Domain>(j);
     FAIL("Should have thrown exception");
   } catch (const std::invalid_argument &e) {
     std::string msg(e.what());
@@ -61,7 +61,7 @@ TEST_CASE("World validation with missing Ly field",
             {"origo", "center"}};
 
   try {
-    [[maybe_unused]] auto world = ui::from_json<World>(j);
+    [[maybe_unused]] auto world = ui::from_json<Domain>(j);
     FAIL("Should have thrown exception");
   } catch (const std::invalid_argument &e) {
     std::string msg(e.what());
@@ -78,7 +78,7 @@ TEST_CASE("World validation with wrong type for dx",
             {"dy", 1.0},   {"dz", 1.0}, {"origo", "center"}};
 
   try {
-    [[maybe_unused]] auto world = ui::from_json<World>(j);
+    [[maybe_unused]] auto world = ui::from_json<Domain>(j);
     FAIL("Should have thrown exception");
   } catch (const std::invalid_argument &e) {
     std::string msg(e.what());
@@ -112,7 +112,7 @@ TEST_CASE("Error messages are concise", "[ui][integration][validation]") {
             {"dy", 1.0},   {"dz", 1.0}, {"origo", "center"}};
 
   try {
-    [[maybe_unused]] auto world = ui::from_json<World>(j);
+    [[maybe_unused]] auto world = ui::from_json<Domain>(j);
     FAIL("Should have thrown exception");
   } catch (const std::invalid_argument &e) {
     std::string msg(e.what());
@@ -127,25 +127,25 @@ TEST_CASE("World validation accepts integer dx", "[ui][integration][validation]"
   json j = {{"Lx", 256}, {"Ly", 256}, {"Lz", 256},
             {"dx", 1}, // integer literal
             {"dy", 1.0}, {"dz", 1.0}, {"origin", "center"}};
-  REQUIRE_NOTHROW(ui::from_json<World>(j));
-  World world = ui::from_json<World>(j);
-  REQUIRE(world::get_spacing(world, 0) == 1.0);
+  REQUIRE_NOTHROW(ui::from_json<Domain>(j));
+  Domain domain = ui::from_json<Domain>(j);
+  REQUIRE(domain::get_spacing(domain, 0) == 1.0);
 }
 
 TEST_CASE("World validation accepts integer dy", "[ui][integration][validation]") {
   json j = {{"Lx", 256}, {"Ly", 256},         {"Lz", 256},
             {"dx", 1.0}, {"dy", 1}, // integer literal
             {"dz", 1.0}, {"origin", "center"}};
-  REQUIRE_NOTHROW(ui::from_json<World>(j));
-  World world = ui::from_json<World>(j);
-  REQUIRE(world::get_spacing(world, 1) == 1.0);
+  REQUIRE_NOTHROW(ui::from_json<Domain>(j));
+  Domain domain = ui::from_json<Domain>(j);
+  REQUIRE(domain::get_spacing(domain, 1) == 1.0);
 }
 
 TEST_CASE("World validation accepts integer dz", "[ui][integration][validation]") {
   json j = {{"Lx", 256},         {"Ly", 256}, {"Lz", 256},
             {"dx", 1.0},         {"dy", 1.0}, {"dz", 1}, // integer literal
             {"origin", "center"}};
-  REQUIRE_NOTHROW(ui::from_json<World>(j));
-  World world = ui::from_json<World>(j);
-  REQUIRE(world::get_spacing(world, 2) == 1.0);
+  REQUIRE_NOTHROW(ui::from_json<Domain>(j));
+  Domain domain = ui::from_json<Domain>(j);
+  REQUIRE(domain::get_spacing(domain, 2) == 1.0);
 }

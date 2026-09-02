@@ -13,7 +13,7 @@
  *
  *     // Buggy under the old reference-storing implementation.
  *     pfc::decomposition::Decomposition make_decomp(int N) {
- *       auto w = pfc::world::create(pfc::GridSize({N, N, N}), ...);
+ *       auto w = pfc::domain::create(pfc::GridSize({N, N, N}), ...);
  *       return pfc::decomposition::create(w, /\*nproc=\*\/1);
  *     }
  *     auto decomp = make_decomp(16);
@@ -32,7 +32,6 @@
 
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
-#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 

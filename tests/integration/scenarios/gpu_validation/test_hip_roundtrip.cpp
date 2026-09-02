@@ -22,8 +22,8 @@
 
 using namespace pfc;
 
-static inline World make_world(int nx, int ny, int nz) {
-  return domain::create_world(GridSize({nx, ny, nz}), PhysicalOrigin({0.0, 0.0, 0.0}),
+static inline Domain make_world(int nx, int ny, int nz) {
+  return domain::create(GridSize({nx, ny, nz}), PhysicalOrigin({0.0, 0.0, 0.0}),
                        GridSpacing({1.0, 1.0, 1.0}));
 }
 
@@ -33,8 +33,8 @@ TEST_CASE("HIP FFT roundtrip (double) [integration][gpu][hip]", "[gpu][hip]") {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  auto world = make_world(16, 16, 16);
-  auto decomp = decomposition::create(world, size);
+  auto domain = make_world(16, 16, 16);
+  auto decomp = decomposition::create(domain, size);
 
   // Cray MPICH types MPI_Comm as int, so the two-arg overload is ambiguous.
   auto fft = fft::create_hip(decomp, rank, MPI_COMM_WORLD);
@@ -69,8 +69,8 @@ TEST_CASE("HIP FFT roundtrip (float) [integration][gpu][hip]", "[gpu][hip]") {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  auto world = make_world(16, 16, 16);
-  auto decomp = decomposition::create(world, size);
+  auto domain = make_world(16, 16, 16);
+  auto decomp = decomposition::create(domain, size);
 
   auto fft = fft::create_hip(decomp, rank, MPI_COMM_WORLD);
 

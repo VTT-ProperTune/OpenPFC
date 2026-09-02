@@ -18,7 +18,7 @@
 #include <cmath>
 #include <iostream>
 #include <openpfc/kernel/data/constants.hpp>
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/fft/kspace.hpp>
 #include <vector>
 
@@ -28,9 +28,9 @@ void example_old_way() {
   std::cout << "\n=== OLD WAY (Manual Calculation - 30 lines) ===\n\n";
 
   // Setup domain (typical example parameters)
-  auto world = world::uniform(64, two_pi / 8.0);
-  auto size = world::get_size(world);
-  auto spacing = world::get_spacing(world);
+  auto domain = domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({two_pi / 8.0, two_pi / 8.0, two_pi / 8.0}));
+  auto size = domain::get_size(domain);
+  auto spacing = domain::get_spacing(domain);
 
   // Simulate FFT outbox bounds
   int o_low[3] = {0, 0, 0};
@@ -94,8 +94,8 @@ void example_new_way() {
   std::cout << "\n=== NEW WAY (K-Space Helpers - Clean & Clear) ===\n\n";
 
   // Setup domain (same as above)
-  auto world = world::uniform(64, two_pi / 8.0);
-  auto size = world::get_size(world);
+  auto domain = domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({two_pi / 8.0, two_pi / 8.0, two_pi / 8.0}));
+  auto size = domain::get_size(domain);
 
   // Simulate FFT outbox bounds
   int o_low[3] = {0, 0, 0};
@@ -109,7 +109,7 @@ void example_new_way() {
   std::cout << "Computing diffusion operator the NEW way:\n";
   std::cout << "```cpp\n";
   std::cout << "// Clean, readable, no duplication!\n";
-  std::cout << "auto [fx, fy, fz] = fft::kspace::k_frequency_scaling(world);\n";
+  std::cout << "auto [fx, fy, fz] = fft::kspace::k_frequency_scaling(domain);\n";
   std::cout << "int idx = 0;\n";
   std::cout << "for (int k = o_low[2]; k <= o_high[2]; k++) {\n";
   std::cout << "  for (int j = o_low[1]; j <= o_high[1]; j++) {\n";
@@ -125,7 +125,7 @@ void example_new_way() {
   std::cout << "```\n\n";
 
   // Actually execute it
-  auto [fx, fy, fz] = fft::kspace::k_frequency_scaling(world);
+  auto [fx, fy, fz] = fft::kspace::k_frequency_scaling(domain);
   int idx = 0;
   double dt = 0.01;
   for (int k = o_low[2]; k <= o_high[2]; k++) {
@@ -179,9 +179,9 @@ void example_benefits() {
 void example_higher_order_operators() {
   std::cout << "\n=== HIGHER-ORDER OPERATORS ===\n\n";
 
-  auto world = world::uniform(32, 0.1);
-  auto size = world::get_size(world);
-  auto [fx, fy, fz] = fft::kspace::k_frequency_scaling(world);
+  auto domain = domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({0.1, 0.1, 0.1}));
+  auto size = domain::get_size(domain);
+  auto [fx, fy, fz] = fft::kspace::k_frequency_scaling(domain);
 
   std::cout << "The helpers also simplify higher-order operators:\n\n";
 

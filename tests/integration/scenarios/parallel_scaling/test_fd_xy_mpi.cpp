@@ -13,7 +13,7 @@
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/data/world_queries.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
@@ -104,9 +104,9 @@ TEST_CASE("laplacian2d_xy_periodic_separated<2> matches analytic 2D Laplacian on
                              pfc::GridSpacing({dx, dx, dx}));
   auto decomp = decomposition::create(global_domain, {2, 1, 1});
 
-  const auto &local_world = decomposition::get_subworld(decomp, rank);
-  auto local_size = world::get_size(local_world);
-  auto local_lower = world::get_lower(local_world);
+  const auto local_world = decomposition::local_box(decomp, rank);
+  auto local_size = local_world.size;
+  auto local_lower = local_world.low;
   const int nx = local_size[0];
   const int ny = local_size[1];
   const int nz = local_size[2];
@@ -173,9 +173,9 @@ TEST_CASE("Separated face halos contain opposite periodic neighbor faces (XY)",
                     pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(global_domain, {3, 1, 1});
 
-  const auto &local_world = decomposition::get_subworld(decomp, rank);
-  auto local_size = world::get_size(local_world);
-  auto local_lower = world::get_lower(local_world);
+  const auto local_world = decomposition::local_box(decomp, rank);
+  auto local_size = local_world.size;
+  auto local_lower = local_world.low;
   const int nx = local_size[0];
   const int ny = local_size[1];
   const int nz = local_size[2];
@@ -232,9 +232,9 @@ TEST_CASE("5-point XY separated periodic Laplacian matches serial global formula
   auto decomp = (size == 2) ? decomposition::create(global_domain, {2, 1, 1})
                             : decomposition::create(global_domain, {2, 2, 1});
 
-  const auto &local_world = decomposition::get_subworld(decomp, rank);
-  auto local_size = world::get_size(local_world);
-  auto local_lower = world::get_lower(local_world);
+  const auto local_world = decomposition::local_box(decomp, rank);
+  auto local_size = local_world.size;
+  auto local_lower = local_world.low;
   const int nx = local_size[0];
   const int ny = local_size[1];
   const int nz = local_size[2];

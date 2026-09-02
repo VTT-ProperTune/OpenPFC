@@ -252,11 +252,11 @@ int main(int argc, char *argv[]) {
   }
 
   try {
-    auto world =
-        domain::create_world_from_bounds({GRID_SIZE, GRID_SIZE, GRID_SIZE},
+    auto domain =
+        domain::from_bounds({GRID_SIZE, GRID_SIZE, GRID_SIZE},
                                           {1.0, 1.0, 1.0}, {128.0, 128.0, 128.0});
 
-    auto decomp = decomposition::create(world, size);
+    auto decomp = decomposition::create(domain, size);
 
     if (rank == 0) {
       std::cout << "Domain: " << GRID_SIZE << " × " << GRID_SIZE << " × "
@@ -266,7 +266,7 @@ int main(int argc, char *argv[]) {
 
     double cpu_time_ms = 0.0;
     if (rank == 0) {
-      cpu_time_ms = benchmark_fft(fft::Backend::FFTW, world.domain_, decomp, rank);
+      cpu_time_ms = benchmark_fft(fft::Backend::FFTW, domain, decomp, rank);
     }
 
     bool ran_gpu = false;
@@ -274,7 +274,7 @@ int main(int argc, char *argv[]) {
 #if defined(OpenPFC_ENABLE_CUDA)
     if (rank == 0) {
       const double cuda_time_ms =
-          benchmark_fft(fft::Backend::CUDA, world.domain_, decomp, rank);
+          benchmark_fft(fft::Backend::CUDA, domain, decomp, rank);
       print_gpu_summary("CUDA", "cuda", cpu_time_ms, cuda_time_ms);
       ran_gpu = true;
     }
@@ -282,7 +282,7 @@ int main(int argc, char *argv[]) {
 #if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
     if (rank == 0) {
       const double hip_time_ms =
-          benchmark_fft(fft::Backend::HIP, world.domain_, decomp, rank);
+          benchmark_fft(fft::Backend::HIP, domain, decomp, rank);
       print_gpu_summary("HIP", "hip", cpu_time_ms, hip_time_ms);
       ran_gpu = true;
     }

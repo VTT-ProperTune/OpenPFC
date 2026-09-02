@@ -131,14 +131,14 @@ void scenario_basic_binary() {
   auto domain = domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
                                GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, size);
-  auto local_domain = decomposition::get_subworld(decomp, rank);
+  auto local_domain = decomposition::local_box(decomp, rank);
 
   // Setup writer
   auto writer = std::make_unique<BinaryWriter>("output/field_%04d.bin");
 
   auto global_size = domain::get_size(domain);
-  auto local_size = domain::get_size(local_domain.domain_);
-  auto local_origin = domain::get_origin(local_domain.domain_);
+  auto local_size = local_domain.size;
+  auto local_origin = domain::get_origin(decomposition::domain(decomp));
   auto spacing = domain::get_spacing(domain);
 
   // Compute offset in grid points
@@ -188,14 +188,14 @@ void scenario_multiple_writers() {
       domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
                      GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, size);
-  auto local_domain = decomposition::get_subworld(decomp, rank);
+  auto local_domain = decomposition::local_box(decomp, rank);
 
   // Binary writer (full field, save every 10 steps)
   auto binary_writer = std::make_unique<BinaryWriter>("output/checkpoint_%04d.bin");
 
   auto global_size = domain::get_size(domain);
-  auto local_size = domain::get_size(local_domain.domain_);
-  auto local_origin = domain::get_origin(local_domain.domain_);
+  auto local_size = local_domain.size;
+  auto local_origin = domain::get_origin(decomposition::domain(decomp));
   auto spacing = domain::get_spacing(domain);
 
   std::array<int, 3> offset = {static_cast<int>(local_origin[0] / spacing[0]),
@@ -257,14 +257,14 @@ void scenario_checkpoint_restart() {
   auto domain = domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
                                GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, size);
-  auto local_domain = decomposition::get_subworld(decomp, rank);
+  auto local_domain = decomposition::local_box(decomp, rank);
 
   // Setup checkpoint writer
   auto checkpoint = std::make_unique<BinaryWriter>("output/restart_%04d.bin");
 
   auto global_size = domain::get_size(domain);
-  auto local_size = domain::get_size(local_domain.domain_);
-  auto local_origin = domain::get_origin(local_domain.domain_);
+  auto local_size = local_domain.size;
+  auto local_origin = domain::get_origin(decomposition::domain(decomp));
   auto spacing = domain::get_spacing(domain);
 
   std::array<int, 3> offset = {static_cast<int>(local_origin[0] / spacing[0]),

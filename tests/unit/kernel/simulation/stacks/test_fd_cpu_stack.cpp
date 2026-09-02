@@ -4,7 +4,6 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/simulation/stacks/fd_cpu_stack.hpp>
 
 using pfc::Int3;
@@ -33,11 +32,10 @@ TEST_CASE("FDCPUStack constructs from Domain", "[cpu_stack][stacks][unit]") {
     REQUIRE(geom.periodic == pfc::Bool3{true, true, true});
   }
 
-  SECTION("world() returns valid adapter") {
-    const auto &world = stack.world();
-    REQUIRE(pfc::world::get_size(world) == size);
-    REQUIRE(pfc::world::get_spacing(world) == spacing);
-    REQUIRE(pfc::world::get_origin(world) == origin);
+  SECTION("geometry matches Domain") {
+    REQUIRE(pfc::domain::get_size(domain) == size);
+    REQUIRE(pfc::domain::get_spacing(domain) == spacing);
+    REQUIRE(pfc::domain::get_origin(domain) == origin);
   }
 
   SECTION("fd_order() returns correct value") {
@@ -124,11 +122,9 @@ TEST_CASE("FDCPUStack with non-periodic Domain", "[cpu_stack][stacks][unit]") {
   const auto &geom = stack.geometry();
   REQUIRE(geom.periodic == periodic);
 
-  // Validate world() adapter returns consistent geometry
-  const auto &world = stack.world();
-  REQUIRE(pfc::world::get_size(world) == size);
-  REQUIRE(pfc::world::get_origin(world) == origin);
-  REQUIRE(pfc::world::get_periodic(world) == periodic);
+  REQUIRE(pfc::domain::get_size(domain) == size);
+  REQUIRE(pfc::domain::get_origin(domain) == origin);
+  REQUIRE(pfc::domain::get_periodic(domain) == periodic);
 }
 
 TEST_CASE("FDCPUStack is non-copyable and non-movable", "[cpu_stack][stacks][unit]") {

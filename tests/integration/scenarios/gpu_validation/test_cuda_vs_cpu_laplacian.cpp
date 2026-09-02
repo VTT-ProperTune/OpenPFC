@@ -23,8 +23,8 @@
 using namespace pfc;
 using namespace pfc::fft::kspace;
 
-static inline World make_world(int nx, int ny, int nz) {
-  return domain::create_world(GridSize({nx, ny, nz}), PhysicalOrigin({0.0, 0.0, 0.0}),
+static inline Domain make_world(int nx, int ny, int nz) {
+  return domain::create(GridSize({nx, ny, nz}), PhysicalOrigin({0.0, 0.0, 0.0}),
                        GridSpacing({1.0, 1.0, 1.0}));
 }
 
@@ -34,8 +34,8 @@ TEST_CASE("CPU vs CUDA Laplacian equivalence (double) [integration][gpu]", "[gpu
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  auto world = make_world(24, 20, 16);
-  auto decomp = decomposition::create(world, size);
+  auto domain = make_world(24, 20, 16);
+  auto decomp = decomposition::create(domain, size);
 
   // CPU FFT
   auto fft_cpu = fft::create(decomp, rank, MPI_COMM_WORLD);
@@ -60,11 +60,11 @@ TEST_CASE("CPU vs CUDA Laplacian equivalence (double) [integration][gpu]", "[gpu
   fft_cpu.forward(real_in_cpu, freq_cpu);
 
   // Build Laplacian multiplier in-place on CPU spectrum
-  const auto [Lx, Ly, Lz] = world::get_size(world);
+  const auto [Lx, Ly, Lz] = domain::get_size(domain);
   const auto outbox = fft::get_outbox(fft_cpu);
   auto low = outbox.low;
   auto high = outbox.high;
-  const auto [fx, fy, fz] = k_frequency_scaling(world);
+  const auto [fx, fy, fz] = k_frequency_scaling(domain);
 
   {
     size_t idx = 0;

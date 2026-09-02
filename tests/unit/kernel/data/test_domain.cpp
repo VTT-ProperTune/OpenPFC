@@ -6,7 +6,6 @@
 #include <sstream>
 
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/world.hpp> // cross-check numerical parity with World
 
 using pfc::Bool3;
 using pfc::Box3i;

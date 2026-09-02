@@ -7,8 +7,8 @@
 #include <mpi.h>
 #include <vector>
 
-#include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/data/world_queries.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/field/finite_difference.hpp>
 
@@ -32,11 +32,11 @@ TEST_CASE("even-order (2..20) interior Laplacian of constant field is zero",
     return;
   }
 
-  auto world = world::uniform(128, 1.0);
-  auto decomp = decomposition::create(world, {2, 1, 1});
+  auto domain = domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(domain, {2, 1, 1});
 
-  const auto &local_world = decomposition::get_subworld(decomp, rank);
-  auto local_size = world::get_size(local_world);
+  const auto local_world = decomposition::local_box(decomp, rank);
+  auto local_size = local_world.size;
   const int nx = local_size[0];
   const int ny = local_size[1];
   const int nz = local_size[2];
@@ -96,12 +96,12 @@ TEST_CASE("even-order (2..20) Laplacian of global quadratic is exact (6)",
     return;
   }
 
-  auto world = world::uniform(128, 1.0);
-  auto decomp = decomposition::create(world, {2, 1, 1});
+  auto domain = domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(domain, {2, 1, 1});
 
-  const auto &local_world = decomposition::get_subworld(decomp, rank);
-  auto local_size = world::get_size(local_world);
-  auto local_lower = world::get_lower(local_world);
+  const auto local_world = decomposition::local_box(decomp, rank);
+  auto local_size = local_world.size;
+  auto local_lower = local_world.low;
   const int nx = local_size[0];
   const int ny = local_size[1];
   const int nz = local_size[2];

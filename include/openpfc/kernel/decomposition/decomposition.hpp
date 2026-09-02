@@ -19,10 +19,9 @@
  *
  * Typical usage:
  * @code
- * pfc::World global_world = pfc::world::create({128, 128, 128});
- * auto decomp = pfc::decomposition::create(global_world, pfc::mpi::get_size());
- * const pfc::World &local_world =
- *     pfc::decomposition::get_subworld(decomp, pfc::mpi::get_rank());
+ * pfc::Domain domain = pfc::domain::create({128, 128, 128});
+ * auto decomp = pfc::decomposition::create(domain, pfc::mpi::get_size());
+ * const pfc::Box3i local = pfc::decomposition::local_box(decomp, pfc::mpi::get_rank());
  * @endcode
  *
  * This file is part of the Core Infrastructure module, providing parallel
@@ -39,7 +38,6 @@
 #include <array>
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/world.hpp>
 #include <ostream>
 #include <stdexcept>
 #include <vector>
@@ -56,7 +54,6 @@ using pfc::types::Bool3;
 using pfc::types::Int3;
 using pfc::types::Real3;
 
-using World = pfc::world::World;
 using Int3 = pfc::types::Int3;
 
 /**
@@ -111,7 +108,7 @@ using Int3 = pfc::types::Int3;
  * This request is passed to the decomposition builder:
  *
  * ```cpp
- * Decomposition decomp = pfc::decomposition::create(world, rank, size,
+ * Decomposition decomp = pfc::decomposition::create(domain, rank, size,
  * backend.decomposition_request());
  * ```
  *
@@ -158,16 +155,15 @@ struct Decomposition {
    * pattern — see
    * `tests/unit/kernel/decomposition/test_decomposition_lifetime.cpp`.)
    */
-  pfc::World m_global_world; ///< Backward compatibility: kept for migration.
   const std::array<int, 3> m_grid; ///< The number of parts in each dimension.
-  std::vector<pfc::Box3i> m_local_boxes; ///< Local subdomain boxes (M1.3).
-  pfc::Domain m_domain; ///< Global domain extracted from World (M1.3).
+  std::vector<pfc::Box3i> m_local_boxes; ///< Local subdomain boxes.
+  pfc::Domain m_domain;                  ///< Global Domain this partitions.
 
-  Decomposition(const World &world, const Int3 &grid);
+  Decomposition(const Domain &domain, const Int3 &grid);
 
   friend std::ostream &operator<<(std::ostream &os, const Decomposition &d) {
     os << "Decomposition:\n";
-    os << "  Global World: " << d.m_global_world << "\n";
+    os << "  Domain: " << d.m_domain << "\n";
     os << "  Grid: [" << d.m_grid.at(0) << ", " << d.m_grid.at(1) << ", "
        << d.m_grid.at(2) << "]\n";
     os << "  Local boxes: " << d.m_local_boxes.size() << " subdomains\n";
@@ -188,11 +184,11 @@ struct Decomposition {
  * ```cpp
  * using namespace pfc;
  *
- * auto world = world::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0,
- * 0.0}), GridSpacing({1.0, 1.0, 1.0})); auto decomp = decomposition::create(world,
+ * auto domain = domain::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0,
+ * 0.0}), GridSpacing({1.0, 1.0, 1.0})); auto decomp = decomposition::create(domain,
  * {2, 2, 1});
  *
- * auto global = decomposition::get_global_world(decomp);
+ * auto global = decomposition::domain(decomp);
  * std::cout << "Global domain: " << world::get_size(global) << "\n";  // [256, 256,
  * 256]
  * ```
@@ -200,20 +196,8 @@ struct Decomposition {
  * @see get_world() - alias for this function
  * @see get_subworld() - get a specific subdomain
  */
-inline const auto &get_global_world(const Decomposition &decomposition) noexcept {
-  return decomposition.m_global_world;
-}
-
-/**
- * @brief Alias for get_global_world()
- *
- * @param[in] decomposition The decomposition to query
- * @return Reference to the global World object
- *
- * @see get_global_world() - the function this aliases
- */
-inline const auto &get_world(const Decomposition &decomposition) noexcept {
-  return get_global_world(decomposition);
+inline const Domain &get_global_domain(const Decomposition &decomposition) noexcept {
+  return decomposition.m_domain;
 }
 
 /**
@@ -229,8 +213,8 @@ inline const auto &get_world(const Decomposition &decomposition) noexcept {
  * ```cpp
  * using namespace pfc;
  *
- * auto world = world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0,
- * 0.0}), GridSpacing({1.0, 1.0, 1.0})); auto decomp = decomposition::create(world,
+ * auto domain = domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0,
+ * 0.0}), GridSpacing({1.0, 1.0, 1.0})); auto decomp = decomposition::create(domain,
  * {4, 2, 1});
  *
  * auto grid = decomposition::get_grid(decomp);
@@ -266,8 +250,8 @@ inline const auto &get_grid(const Decomposition &decomposition) noexcept {
  * ```cpp
  * using namespace pfc;
  *
- * auto world = world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0,
- * 0.0}), GridSpacing({1.0, 1.0, 1.0})); auto decomp = decomposition::create(world,
+ * auto domain = domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0,
+ * 0.0}), GridSpacing({1.0, 1.0, 1.0})); auto decomp = decomposition::create(domain,
  * {2, 2, 1});
  *
  * // Each rank gets 64×64×128 subdomain
@@ -280,8 +264,8 @@ inline const auto &get_grid(const Decomposition &decomposition) noexcept {
  * ```cpp
  * using namespace pfc;
  *
- * auto world = world::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0,
- * 0.0}), GridSpacing({1.0, 1.0, 1.0})); auto decomp = decomposition::create(world,
+ * auto domain = domain::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0,
+ * 0.0}), GridSpacing({1.0, 1.0, 1.0})); auto decomp = decomposition::create(domain,
  * {1, 1, 8});  // Split only in Z
  *
  * // Each rank gets 256×256×32 slab
@@ -295,63 +279,6 @@ inline const auto &get_grid(const Decomposition &decomposition) noexcept {
  * @see create(world, nparts) - automatic grid selection
  * @see proc_setup_min_surface() - algorithm for optimal grid
  */
-[[nodiscard]] Decomposition create(const World &world, const Int3 &grid);
-
-/**
- * @brief Create decomposition with automatic grid selection
- *
- * Partitions the global World into the specified number of subdomains,
- * automatically choosing a grid pattern that minimizes communication surface
- * area (uses HeFFTe's proc_setup_min_surface algorithm).
- *
- * @param[in] world The global computational domain to partition
- * @param[in] nparts Number of subdomains (typically MPI size)
- * @return Decomposition with optimally chosen grid pattern
- *
- * @example
- * **Automatic Grid for 16 MPI Ranks**
- * ```cpp
- * using namespace pfc;
- *
- * int size;
- * MPI_Comm_size(MPI_COMM_WORLD, &size);  // e.g., size = 16
- *
- * auto world = world::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0,
- * 0.0}), GridSpacing({1.0, 1.0, 1.0})); auto decomp = decomposition::create(world,
- * size);
- *
- * auto grid = decomposition::get_grid(decomp);
- * // Likely chooses 4×4×1 or 4×2×2 (minimizes surface area)
- * std::cout << "Auto-selected grid: [" << grid[0] << ", "
- *           << grid[1] << ", " << grid[2] << "]\n";
- * ```
- *
- * @example
- * **Query Selected Grid**
- * ```cpp
- * using namespace pfc;
- *
- * auto world = world::create(GridSize({200, 100, 50}), PhysicalOrigin({0.0, 0.0,
- * 0.0}), GridSpacing({1.0, 1.0, 1.0})); auto decomp = decomposition::create(world,
- * 8);
- *
- * auto grid = decomposition::get_grid(decomp);
- * std::cout << "For 8 ranks with domain [200, 100, 50]:\n";
- * std::cout << "  Chose grid [" << grid[0] << ", " << grid[1] << ", " << grid[2] <<
- * "]\n";
- * // Adapts to domain aspect ratio
- * ```
- *
- * @note This is the **recommended** method for most applications - let the
- *       algorithm choose the optimal grid.
- * @note The algorithm considers domain dimensions and communication patterns.
- * @note For manual control, use create(world, grid) instead.
- *
- * @see create(world, grid) - manual grid specification
- * @see proc_setup_min_surface() - HeFFTe's grid selection algorithm
- */
-[[nodiscard]] Decomposition create(const World &world, const int &nparts);
-
 /**
  * @brief Domain-based decomposition creation with manual grid specification
  *
@@ -420,8 +347,8 @@ inline const auto &get_grid(const Decomposition &decomposition) noexcept {
  * ```cpp
  * using namespace pfc;
  *
- * auto world = world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0,
- * 0.0}), GridSpacing({1.0, 1.0, 1.0})); auto decomp = decomposition::create(world,
+ * auto domain = domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0,
+ * 0.0}), GridSpacing({1.0, 1.0, 1.0})); auto decomp = decomposition::create(domain,
  * {2, 2, 1});
  *
  * int num = decomposition::get_num_domains(decomp);
@@ -439,8 +366,8 @@ inline const auto &get_grid(const Decomposition &decomposition) noexcept {
  * int mpi_size;
  * MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
  *
- * auto world = world::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0,
- * 0.0}), GridSpacing({1.0, 1.0, 1.0})); auto decomp = decomposition::create(world,
+ * auto domain = domain::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0,
+ * 0.0}), GridSpacing({1.0, 1.0, 1.0})); auto decomp = decomposition::create(domain,
  * mpi_size);
  *
  * int num_domains = decomposition::get_num_domains(decomp);
@@ -494,53 +421,6 @@ inline int get_num_domains(const Decomposition &decomposition) noexcept {
 /// @throws std::out_of_range if `i` is not a valid subdomain index.
 [[nodiscard]] inline Box3i local_box(const Decomposition &decomposition, int i) {
   return decomposition.m_local_boxes.at(i);
-}
-
-// ---------------------------------------------------------------------------
-// Backward compatibility accessor (M1.3b): get_subworld implemented using
-// stored Box3i+Domain for legacy code that still expects World objects.
-// Note: get_subworlds() (vector accessor) was removed per M1.3b - use
-// local_box()/domain() accessors instead.
-// ---------------------------------------------------------------------------
-
-/**
- * @brief Get a specific subdomain as World (backward compatibility)
- *
- * Returns a World object for the specified rank, constructed from the stored
- * Box3i local box and Domain. This provides backward compatibility for code
- * that expects World objects from decomposition.
- *
- * @param[in] decomposition The decomposition to query
- * @param[in] rank The rank/subdomain index (0 to get_num_domains()-1)
- * @return World object representing the subdomain's index space and coordinate system
- * @throws std::out_of_range if rank is out of range
- *
- * @deprecated This compatibility function provides World objects for legacy code.
- *             New code should use Box3i/Domain accessors: local_box() / domain().
- *
- * @see local_box() - direct Box3i access (preferred for new code)
- * @see domain() - coordinate system access
- *
- * @example
- * ```cpp
- * using namespace pfc;
- *
- * auto world = world::create(GridSize({128, 128, 128}));
- * auto decomp = decomposition::create(world, {2, 2, 1});
- *
- * // Legacy usage (still supported for compatibility)
- * const World &subworld = decomposition::get_subworld(decomp, 0);
- *
- * // Preferred new usage (faster, no deprecated World)
- * Box3i local_box = decomposition::local_box(decomp, 0);
- * Domain coord_sys = decomposition::domain(decomp);
- * ```
- */
-[[nodiscard]] inline World
-get_subworld(const Decomposition &decomp, int rank) {
-  const Box3i &box = local_box(decomp, rank);
-  const Domain &dom = domain(decomp);
-  return World(box.low, box.high, dom);
 }
 
 } // namespace decomposition

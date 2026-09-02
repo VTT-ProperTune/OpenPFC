@@ -8,7 +8,7 @@
 
 #include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/field/scaled_field.hpp>
@@ -416,10 +416,7 @@ TEST_CASE("Aliasing allows documented ScaledField pattern",
   pfc::Domain domain =
       pfc::domain::create(pfc::GridSize(size), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                           pfc::GridSpacing({1.0, 1.0, 1.0}));
-  pfc::Int3 lower{0, 0, 0};
-  pfc::Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1};
-  pfc::World world(lower, upper, domain);
-  auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
+  auto decomp = pfc::decomposition::create(domain, /*nparts=*/1);
   auto u = pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/0);
   auto du = pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/0);
 

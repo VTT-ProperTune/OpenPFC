@@ -75,32 +75,35 @@
  * the OpenPFC framework is not limited to this setup and will evolve toward
  * greater flexibility in geometry and boundary treatments.
  */
-void example1_basic_cartesian_world() {
+void example1_basic_cartesian_domain() {
 
-  cout << "=== Example 1: Basic Cartesian Domain ===\n";
+  std::cout << "=== Example 1: Basic Cartesian Domain ===\n";
 
   std::array<int, 3> dimensions = {10, 20, 30};
   std::array<double, 3> origin = {0.0, 0.0, 0.0};
   std::array<double, 3> discretization = {0.1, 0.1, 0.1};
 
-  pfc::Domain d =
-      pfc::domain::create_domain(pfc::GridSize(dimensions), pfc::PhysicalOrigin(origin),
-                         pfc::GridSpacing(discretization));
+  pfc::Domain d = pfc::domain::create(pfc::GridSize(dimensions),
+                                      pfc::PhysicalOrigin(origin),
+                                      pfc::GridSpacing(discretization));
 
-  std::cout << "Domain created:\n" << d << endl;
+  std::cout << "Domain created:\n" << d << std::endl;
 
-  std::cout << "Size: " << get_size(d)[0] << ", " << get_size(d)[1] << ", "
-            << get_size(d)[2] << endl;
-  std::cout << "Origin: (" << get_origin(d)[0] << ", " << get_origin(d)[1] << ", "
-            << get_origin(d)[2] << ")\n";
-  std::cout << "Spacing: " << get_spacing(d)[0] << ", " << get_spacing(d)[1] << ", "
-            << get_spacing(d)[2] << endl;
-  std::cout << "Coordinate System: Cartesian" << endl;
+  std::cout << "Size: " << pfc::domain::get_size(d)[0] << ", "
+            << pfc::domain::get_size(d)[1] << ", " << pfc::domain::get_size(d)[2]
+            << std::endl;
+  std::cout << "Origin: (" << pfc::domain::get_origin(d)[0] << ", "
+            << pfc::domain::get_origin(d)[1] << ", " << pfc::domain::get_origin(d)[2]
+            << ")\n";
+  std::cout << "Spacing: " << pfc::domain::get_spacing(d)[0] << ", "
+            << pfc::domain::get_spacing(d)[1] << ", "
+            << pfc::domain::get_spacing(d)[2] << std::endl;
+  std::cout << "Coordinate System: Cartesian" << std::endl;
 
   std::cout << "Periodicity in dimensions (x, y, z):\n";
   for (int i = 0; i < 3; ++i) {
     std::cout << "  Dimension " << i << ": "
-              << (is_periodic(d, i) ? "true" : "false") << std::endl;
+              << (pfc::domain::is_periodic(d, i) ? "true" : "false") << std::endl;
   }
 }
 
@@ -117,10 +120,10 @@ void example2_minimal_domain() {
    * equal to the number of grid points in each direction.
    */
 
-  cout << "\n=== Example 2: Minimal Definition ===\n";
+  std::cout << "\n=== Example 2: Minimal Definition ===\n";
 
-  pfc::Domain d = pfc::domain::create_domain({64, 64, 64});
-  cout << d << endl;
+  pfc::Domain d = pfc::domain::create({64, 64, 64});
+  std::cout << d << std::endl;
 }
 
 void example3_strong_typedef_construction() {
@@ -136,14 +139,14 @@ void example3_strong_typedef_construction() {
    * of code by documenting intent explicitly.
    */
 
-  cout << "\n=== Example 3: Strong Typedefs ===\n";
+  std::cout << "\n=== Example 3: Strong Typedefs ===\n";
 
   // The type-safe creation API takes GridSize / PhysicalOrigin / GridSpacing
   // strong types (parameter order cannot be confused) plus per-axis periodicity.
-  Domain d =
-      domain::create(GridSize({16, 16, 1}), PhysicalOrigin({-1.0, -1.0, 0.0}),
-                    GridSpacing({0.125, 0.125, 1.0}), Bool3{true, true, false});
-  cout << d << endl;
+  pfc::Domain d = pfc::domain::create(
+      pfc::GridSize({16, 16, 1}), pfc::PhysicalOrigin({-1.0, -1.0, 0.0}),
+      pfc::GridSpacing({0.125, 0.125, 1.0}), pfc::Bool3{true, true, false});
+  std::cout << d << std::endl;
 }
 
 void example4_coordinate_conversion() {
@@ -174,20 +177,20 @@ void example4_coordinate_conversion() {
    * simplicity of structured grid indexing.
    */
 
-  cout << "\n=== Example 4: Grid ↔ Coordinates ===\n";
+  std::cout << "\n=== Example 4: Grid ↔ Coordinates ===\n";
 
-  Domain d = domain::create({10, 10, 1});
+  pfc::Domain d = pfc::domain::create({10, 10, 1});
 
-  Int3 idx = {3, 7, 0};
-  Real3 coords = to_coords(d, idx);
+  pfc::Int3 idx = {3, 7, 0};
+  pfc::Real3 coords = pfc::domain::to_coords(d, idx);
 
-  cout << "Grid index: (" << idx[0] << ", " << idx[1] << ", " << idx[2]
-       << ") maps to: ";
-  cout << "(" << coords[0] << ", " << coords[1] << ", " << coords[2] << ")\n";
+  std::cout << "Grid index: (" << idx[0] << ", " << idx[1] << ", " << idx[2]
+            << ") maps to: ";
+  std::cout << "(" << coords[0] << ", " << coords[1] << ", " << coords[2] << ")\n";
 
-  Int3 roundtrip = to_indices(d, coords);
-  cout << "Back to index: (" << roundtrip[0] << ", " << roundtrip[1] << ", "
-       << roundtrip[2] << ")\n";
+  pfc::Int3 roundtrip = pfc::domain::to_indices(d, coords);
+  std::cout << "Back to index: (" << roundtrip[0] << ", " << roundtrip[1] << ", "
+            << roundtrip[2] << ")\n";
 }
 
 int main() {

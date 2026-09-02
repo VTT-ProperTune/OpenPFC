@@ -26,7 +26,7 @@
 #include <catch2/benchmark/catch_benchmark.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 
 using namespace pfc;
 using namespace pfc::types;
@@ -291,7 +291,8 @@ TEST_CASE("World cache and memory access patterns", "[world][memory][benchmark]"
 
   SECTION("World copy performance") {
     const pfc::Domain domain1 =
-        pfc::domain::create(GridSize({128}), PhysicalOrigin({128}), GridSpacing({128}));
+        pfc::domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                            GridSpacing({1.0, 1.0, 1.0}));
 
     BENCHMARK("Copy World object") {
       auto domain2 = domain1; // Copy constructor

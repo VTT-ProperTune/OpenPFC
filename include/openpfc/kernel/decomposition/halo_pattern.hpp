@@ -15,7 +15,7 @@
  * - Multiple halo widths
  *
  * @code
- * auto decomp = decomposition::create(world, {2, 2, 2});
+ * auto decomp = decomposition::create(domain, {2, 2, 2});
  * int rank = 0;
  * int halo_width = 1;
  *
@@ -47,7 +47,7 @@
 #include <cstdint>
 #include <map>
 #include <openpfc/kernel/data/types.hpp>
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_neighbors.hpp>
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>
@@ -242,8 +242,6 @@ core::SparseVector<BackendTag, size_t>
 create_recv_halo(const decomposition::Decomposition &decomp, int rank,
                  const Int3 &direction, int halo_width) {
   const auto owned_box = decomposition::local_box(decomp, rank);
-  [[maybe_unused]] const auto &global_world =
-      decomposition::get_global_world(decomp);
   [[maybe_unused]] const auto &grid = decomposition::get_grid(decomp);
 
   auto local_size = owned_box.size;

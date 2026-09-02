@@ -3,7 +3,7 @@
 
 #include <openpfc/frontend/io/png_writer.hpp>
 
-#include <openpfc/kernel/data/world_queries.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -78,8 +78,8 @@ void write_mpi_scalar_field_png_xy(MPI_Comm comm,
   int nproc = 1;
   MPI_Comm_size(comm, &nproc);
 
-  const auto &gw = pfc::decomposition::get_world(decomp);
-  auto gsz = pfc::world::get_size(gw);
+  const auto &gw = pfc::decomposition::domain(decomp);
+  auto gsz = pfc::domain::get_size(gw);
   if (gsz[2] != 1) {
     throw std::invalid_argument(
         "write_mpi_scalar_field_png_xy: global nz must be 1");
@@ -88,8 +88,8 @@ void write_mpi_scalar_field_png_xy(MPI_Comm comm,
   const int ny_glob = gsz[1];
 
   for (int r = 0; r < nproc; ++r) {
-    const auto &sw = pfc::decomposition::get_subworld(decomp, r);
-    auto sz = pfc::world::get_size(sw);
+    const auto sw = pfc::decomposition::local_box(decomp, r);
+    auto sz = sw.size;
     if (sz[2] != 1) {
       throw std::invalid_argument(
           "write_mpi_scalar_field_png_xy: each rank must have nz==1");
@@ -98,8 +98,8 @@ void write_mpi_scalar_field_png_xy(MPI_Comm comm,
 
 
   // Collective size agreement: all ranks must agree on size mismatches
-  const auto &my_subworld = pfc::decomposition::get_subworld(decomp, rank);
-  auto my_sz = pfc::world::get_size(my_subworld);
+  const auto my_subworld = pfc::decomposition::local_box(decomp, rank);
+  auto my_sz = my_subworld.size;
   int expected_count = my_sz[0] * my_sz[1] * my_sz[2];
 
   int local_ok = 1;
@@ -161,9 +161,9 @@ void write_mpi_scalar_field_png_xy(MPI_Comm comm,
 
   std::size_t offset = 0;
   for (int r = 0; r < nproc; ++r) {
-    const auto &sw = pfc::decomposition::get_subworld(decomp, r);
-    auto lo = pfc::world::get_lower(sw);
-    auto sz = pfc::world::get_size(sw);
+    const auto sw = pfc::decomposition::local_box(decomp, r);
+    auto lo = sw.low;
+    auto sz = sw.size;
     const int nx = sz[0];
     const int ny = sz[1];
     const int nz = sz[2];

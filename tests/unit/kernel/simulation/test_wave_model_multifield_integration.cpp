@@ -5,7 +5,7 @@
 #include <cmath>
 #include <tuple>
 
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/field/composite_gradient.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
@@ -123,8 +123,7 @@ TEST_CASE_METHOD(WaveModelMultifieldFixture, "WaveModel multi-field Gaussian pul
     pfc::types::Real3 origin{0.0, 0.0, 0.0};
     SetUpCustomDomainWithSpacing(size, spacing);
   }
-  auto world = pfc::test::world_from_domain(domain());
-  auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
+  auto decomp = pfc::decomposition::create(domain(), /*nparts=*/1);
 
   auto run_with_dt = [&](double dt) -> double {
     auto u_field = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, halo_width);
@@ -182,8 +181,7 @@ TEST_CASE_METHOD(WaveModelMultifieldFixture, "WaveModel multi-field factory work
     pfc::types::Real3 origin{0.0, 0.0, 0.0};
     SetUpCustomDomainWithSpacing(size, spacing);
   }
-  auto world = pfc::test::world_from_domain(domain());
-  auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
+  auto decomp = pfc::decomposition::create(domain(), /*nparts=*/1);
 
   auto u_field = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, halo_width);
   auto v_field = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, halo_width);

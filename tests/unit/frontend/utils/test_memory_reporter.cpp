@@ -5,7 +5,6 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 #include <mpi.h>
 #include <openpfc/frontend/utils/memory_reporter.hpp>
-#include <openpfc/kernel/data/world_factory.hpp>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <openpfc/kernel/utils/logging.hpp>
 #include <filesystem>

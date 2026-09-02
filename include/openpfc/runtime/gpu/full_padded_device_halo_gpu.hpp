@@ -41,7 +41,7 @@
 
 #include <mpi.h>
 
-#include <openpfc/kernel/data/world_queries.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_neighbors.hpp>
 #include <openpfc/kernel/decomposition/exchange.hpp>
@@ -133,8 +133,8 @@ public:
       throw std::invalid_argument("DeviceFullHalo: n_fields must be > 0");
     }
 
-    const auto &local_world = pfc::decomposition::get_subworld(decomp, m_rank);
-    const auto local_size = pfc::world::get_size(local_world);
+    const auto local_box = pfc::decomposition::local_box(decomp, m_rank);
+    const auto local_size = local_box.size;
     m_nx = local_size[0];
     m_ny = local_size[1];
     m_nz = local_size[2];

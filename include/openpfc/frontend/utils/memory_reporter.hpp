@@ -31,7 +31,7 @@
  * size_t fft_mem = fft.get_allocated_memory_bytes();
  *
  * pfc::utils::MemoryUsage usage{model_mem, fft_mem};
- * pfc::utils::report_memory_usage(usage, world, logger, MPI_COMM_WORLD);
+ * pfc::utils::report_memory_usage(usage, domain, logger, MPI_COMM_WORLD);
  * @endcode
  *
  * @author OpenPFC Development Team
@@ -46,8 +46,7 @@
 #include <iomanip>
 #include <mpi.h>
 #include <openpfc/frontend/utils/utils.hpp>
-#include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/data/world_queries.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
 #include <openpfc/kernel/profiling/format.hpp>
 #include <openpfc/kernel/utils/logging.hpp>
@@ -118,7 +117,7 @@ inline size_t get_system_memory_bytes() noexcept {
  * Only rank 0 performs logging after MPI reduction of memory data.
  *
  * @param usage Memory usage for this rank
- * @param world Simulation domain (for voxel count)
+ * @param domain Simulation domain (for voxel count)
  * @param logger OpenPFC logger instance
  * @param comm MPI communicator for global reduction
  *
@@ -128,7 +127,7 @@ inline size_t get_system_memory_bytes() noexcept {
  * ```cpp
  * pfc::Logger logger{pfc::LogLevel::Info, rank};
  * pfc::utils::MemoryUsage usage{model_memory, fft_memory};
- * pfc::utils::report_memory_usage(usage, world, logger, MPI_COMM_WORLD);
+ * pfc::utils::report_memory_usage(usage, domain, logger, MPI_COMM_WORLD);
  * ```
  *
  * Example output:
@@ -140,8 +139,7 @@ inline size_t get_system_memory_bytes() noexcept {
  * [INFO]   System Memory: 64.00 GB, Usage: 10.5%
  * ```
  */
-template <typename WorldType>
-inline void report_memory_usage(const MemoryUsage &usage, const WorldType &world,
+inline void report_memory_usage(const MemoryUsage &usage, const Domain &domain,
                                 const Logger &logger,
                                 MPI_Comm comm = MPI_COMM_WORLD) {
   int rank = pfc::mpi::get_comm_rank(comm);
@@ -177,7 +175,7 @@ inline void report_memory_usage(const MemoryUsage &usage, const WorldType &world
     log_info(logger, global_msg.str());
 
     // Per-voxel memory
-    auto [Nx, Ny, Nz] = get_size(world);
+    auto [Nx, Ny, Nz] = pfc::domain::get_size(domain);
     const size_t total_voxels =
         static_cast<size_t>(Nx) * static_cast<size_t>(Ny) * static_cast<size_t>(Nz);
     const size_t bytes_per_voxel =

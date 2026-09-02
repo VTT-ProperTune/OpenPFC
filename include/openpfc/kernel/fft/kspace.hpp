@@ -33,7 +33,7 @@
  *
  * The solution: Extract reusable helpers:
  * @code
- * auto [fx, fy, fz] = k_frequency_scaling(world);
+ * auto [fx, fy, fz] = k_frequency_scaling(domain);
  * for (int k = o_low[2]; k <= o_high[2]; k++) {
  *   for (int j = o_low[1]; j <= o_high[1]; j++) {
  *     for (int i = o_low[0]; i <= o_high[0]; i++) {
@@ -65,7 +65,6 @@
 #include <openpfc/kernel/data/constants.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/host_device.hpp>
-#include <openpfc/kernel/data/world.hpp>
 
 namespace pfc::fft::kspace {
 
@@ -87,36 +86,7 @@ namespace pfc::fft::kspace {
  * @note Replaces: `double fx = 2.0 * pi / (spacing[0] * size[0]);`
  *
  * @code
- * auto world = world::uniform(128, 0.1);
- * auto [fx, fy, fz] = k_frequency_scaling(world);
- * // fx = fy = fz = 2π / (0.1 * 128) ≈ 0.490873...
- * @endcode
- *
- * Time complexity: O(1)
- * Space complexity: O(1)
- */
-inline std::array<double, 3>
-k_frequency_scaling(const world::World &world) noexcept {
-  const auto spacing = world::get_spacing(world);
-  const auto size = world::get_size(world);
-  return {two_pi / (spacing[0] * size[0]), two_pi / (spacing[1] * size[1]),
-          two_pi / (spacing[2] * size[2])};
-}
-
-/**
- * @brief Compute frequency scaling factors for each dimension (Domain overload).
- *
- * Domain-based overload of `k_frequency_scaling` for M1 migration. Computes
- * f = 2π / (spacing * size) for each dimension.
- *
- * @param domain Simulation domain containing grid size and spacing
- * @return Array of frequency scaling factors [fx, fy, fz] in rad/unit_length
- *
- * @note This is a zero-cost abstraction (inline, noexcept)
- * @note Numerically identical to the World-based overload
- *
- * @code
- * auto domain = domain::create({128, 128, 128}, {0.1, 0.1, 0.1});
+ * auto domain = domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({0.1, 0.1, 0.1}));
  * auto [fx, fy, fz] = k_frequency_scaling(domain);
  * // fx = fy = fz = 2π / (0.1 * 128) ≈ 0.490873...
  * @endcode
