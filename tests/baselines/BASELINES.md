@@ -52,15 +52,15 @@ machine tag in the name (`tohtori-g0005-tungsten-cuda-1rank.json`).
 - ☑ Tungsten CUDA 1-rank Debug canary (tohtori `g0005`, 64³ / 20 steps, `tungsten_cuda`, 2026-09-01): `tests/baselines/perf/tohtori-g0005-tungsten-cuda-1rank-debug-canary.json`. Compare with `--warmup-frames=1` (first step includes CUDA context setup). This is a plumbing pin, not a production scaling number.
 - ☑ Tungsten CPU 1-rank Debug canary (same grid/steps, `tungsten`): `tests/baselines/perf/tohtori-g0005-tungsten-cpu-1rank-debug-canary.json`.
 - ☑ Tungsten CUDA single node Release (tohtori `g0005`, 256³ / 20 steps, `tungsten_cuda`, 2026-09-01): `tests/baselines/perf/tohtori-g0005-tungsten-cuda-1rank-release-256.json` (mean `wall_step` 0.0253 s after `--warmup-frames=1`) and 8-rank `tohtori-g0005-tungsten-cuda-8rank-release-256.json` (0.0240 s, 8×H100, one GPU per rank). Input: `tests/baselines/perf/inputs/tungsten_release_256.json`. 8-rank step 1 is ~6 s of setup; compare with `--warmup-frames=1`. This size is still latency-bound on H100 (8-rank does not speed up vs 1-rank).
-- ☑ 0.2 ETD vs Gen-1 (tohtori `g0005` Release, 2026-09-02, after device `N(ψ,ψ_MF)`). Compare with `--warmup-frames=1`.
+- ☑ 0.2 ETD vs Gen-1 (tohtori `g0005` Release). Compare with `--warmup-frames=1`. Remeasured 2026-09-02 after JSON HeFFTe `plan_options` overlay on `GPUSpectralStack` and per-rank `cudaSetDevice`.
 
 | Case | Gen-1 `wall_step` | 0.2 ETD | vs Gen-1 | JSON |
 |------|-------------------|---------|----------|------|
 | CPU 1-rank 64³ / 20 | 0.00630 s | 0.00850 s | +35% | `tohtori-g0005-tungsten-etd-cpu-1rank-release-64.json` |
-| CUDA 1-rank 256³ / 20 | 0.0253 s | 0.00659 s | −74% (faster) | `tohtori-g0005-tungsten-etd-cuda-1rank-release-256.json` |
-| CUDA 8-rank 256³ / 20 | 0.0240 s | 0.0864 s | +260% | `tohtori-g0005-tungsten-etd-cuda-8rank-release-256.json` |
+| CUDA 1-rank 256³ / 20 | 0.0253 s | 0.00543 s | −79% (faster) | `tohtori-g0005-tungsten-etd-cuda-1rank-release-256.json` |
+| CUDA 8-rank 256³ / 20 | 0.0240 s | 0.00253 s | −89% (faster) | `tohtori-g0005-tungsten-etd-cuda-8rank-release-256.json` |
 
-Science A/B (32³/10-step sine) holds. CPU 64³ is a tiny grid; the extra session/profiling frame cost is ~2 ms/step. CUDA 1-rank is the production H100 number and is faster than Gen-1. CUDA 8-rank is slower because `GPUSpectralStack` does not overlay JSON HeFFTe `plan_options` (`use_gpu_aware`, `p2p_plined`); 256³ remains latency-bound either way. Deletion of Gen-1 is allowed with this table archived.
+Science A/B (32³/10-step sine) holds. CPU 64³ is a tiny grid; the extra session/profiling frame cost is ~2 ms/step. CUDA 1-rank and 8-rank are both faster than Gen-1. Before this remasure, 8-rank was 0.0864 s/step because every rank used GPU 0 and HeFFTe defaults (no `use_gpu_aware` / `p2p_plined`). Input: `tests/baselines/perf/inputs/tungsten_release_256.json`.
 
 Gen-1 tungsten sources deleted on g0005 (2026-09-02). DoD greps: no `public pfc::Model` under `apps/tungsten`, no `*model*` headers, no app `.cu`/`.hip`, no `dummy_fft`. Non-test line count under `apps/tungsten/` (exclude `tests/`, `inputs_*`) is 2335 — above the 1500 sketch; leftover is one physics/session/IO stack plus CLI, not a second model.
 - ☐ Kobayashi HIP single node (LUMI)
