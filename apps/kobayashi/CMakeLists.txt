@@ -168,4 +168,28 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
   kobayashi_link_libstdcxx(kobayashi_fd_hip)
   install(TARGETS kobayashi_fd_hip DESTINATION bin)
   message(STATUS "kobayashi_fd_hip (MPI + HIP) enabled")
+
+  if(OpenPFC_BUILD_TESTS)
+    include(CTest)
+    # Pinned on LUMI-G MI250X (job 21682844, 1-rank and 2-rank identical).
+    # phi matches CPU/CUDA bitwise; T checksums differ by a few ULP.
+    set(_kob_hip_hex
+        "KOBAYASHI_VERIFY_HEX sum_phi=0x1\\.b96bf451009d9p\\+3 sumsq_phi=0x1\\.4e770b1504ae4p\\+3 sum_T=0x1\\.6e128af4d5ac8p\\+0 sumsq_T=0x1\\.6546ee0a021efp-2")
+    add_test(NAME kobayashi-hip-hex-smoke
+             COMMAND $<TARGET_FILE:kobayashi_fd_hip> 32 32 4 1e-4 0.03
+                     ${CMAKE_CURRENT_BINARY_DIR}/kobayashi_hip_hex_smoke)
+    set_tests_properties(kobayashi-hip-hex-smoke PROPERTIES
+      PASS_REGULAR_EXPRESSION "${_kob_hip_hex}"
+      TIMEOUT 120)
+    if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
+      add_test(NAME kobayashi-hip-hex-2rank
+               COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                       $<TARGET_FILE:kobayashi_fd_hip> 32 32 4 1e-4 0.03
+                       ${CMAKE_CURRENT_BINARY_DIR}/kobayashi_hip_hex_2rank)
+      set_tests_properties(kobayashi-hip-hex-2rank PROPERTIES
+        PASS_REGULAR_EXPRESSION "${_kob_hip_hex}"
+        TIMEOUT 180
+        RUN_SERIAL TRUE)
+    endif()
+  endif()
 endif()
