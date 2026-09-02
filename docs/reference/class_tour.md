@@ -35,7 +35,7 @@ The shortest useful mental model is:
 5. `pfc::sim::run` / `SimulationDriver` (or an ETD session) advances `Time` and writers;
 6. JSON sessions (`TungstenETDSession`, `AluminumETDSession`, `make_simulation_session`) build that stack from configuration.
 
-`World`, virtual `Model`, `Simulator`, and `App<Model>` remain as M12 adapters. Production apps and examples 04/05/10/12 do not subclass `Model`.
+`World` remains as the deprecated A0 wrapper over `Domain` + `Box3i`. Virtual `Model`, `Simulator`, and `App<Model>` are deleted. Production apps and examples 04/05/10/12 do not subclass `Model`.
 
 ## Stable concepts at a glance
 
@@ -51,12 +51,11 @@ The shortest useful mental model is:
 | Host-buffer IC | Initial conditions written onto `Field` (JSON or a callable) | app `*_field_modifiers.hpp` | `examples/10_ui_register_ic.cpp` |
 | `ResultsWriter` | Stable interface for persisted simulation fields | `openpfc/kernel/simulation/results_writer.hpp` | `examples/11_write_results.cpp` |
 | `FileResultsWriter` | File sink with increment path templating | `openpfc/frontend/io/file_results_writer.hpp` | `BinaryWriter`, `VTKWriter` |
-| `World` | Deprecated A0 adapter around `Domain` (M12 delete) | `openpfc/kernel/data/world.hpp` | `examples/world_strong_types_example.cpp` uses `Domain` |
-| `Model` / `Simulator` / `App<Model>` | Gen-1 adapters until M12 | `model.hpp`, `simulator.hpp`, `app.hpp` | not used by production apps |
+| `World` | Deprecated A0 adapter around `Domain` | `openpfc/kernel/data/world.hpp` | `examples/world_strong_types_example.cpp` uses `Domain` |
 | `SpectralCPUStack` | Owns the CPU domain, decomposition, FFT, and field stack | `openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp` | `user_guide/app_pipeline.md` |
 | `GPUSpectralStack` | Device FFT stack; JSON `plan_options` overlay like CPU | `openpfc/runtime/gpu/gpu_spectral_stack.hpp` | `tungsten_cuda`, session-matrix-cuda |
 | `SimulationSession<Stack>` | Method × backend session: selection, Time, and a stack | `openpfc/kernel/simulation/simulation_session.hpp` | `user_guide/app_pipeline.md` |
-| `SpectralSimulationSession` | Gen-1 App owner: `SimulationSession<SpectralCPUStack>` + Model + Simulator | `openpfc/frontend/ui/spectral_simulation_session.hpp` | adapter until M12 |
+| JSON session factory | `make_simulation_session<Stack>` from `method`/`backend` JSON | `openpfc/frontend/ui/from_json_simulation_session.hpp` | `user_guide/app_pipeline.md` |
 
 Use the [integrated C++ API reference](../api/index.md) for exact constructors,
 overloads, namespaces, and member documentation.

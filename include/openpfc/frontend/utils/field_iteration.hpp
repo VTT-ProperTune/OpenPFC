@@ -14,14 +14,10 @@
  * @code
  * #include <openpfc/frontend/utils/field_iteration.hpp>
  *
- * void apply(pfc::Model& model, double time) override {
- *   auto& field = get_real_field(model, get_field_name());
- *   const auto& fft = pfc::get_fft(model);
- *   auto inbox = pfc::fft::get_inbox(fft);
- *
- *   // Use helper instead of nested loops
- *   pfc::utils::iterate_inbox(inbox, [&](const pfc::Int3& idx, int linear_idx) {
- *     auto pos = pfc::world::to_coords(pfc::get_world(model), idx);
+ * void apply(pfc::RealField &field, const pfc::Domain &domain,
+ *            const pfc::Box3i &box, double time) override {
+ *   pfc::utils::iterate_inbox(box, [&](const pfc::Int3& idx, int linear_idx) {
+ *     auto pos = pfc::domain::to_coords(domain, idx);
  *     field[linear_idx] = compute_value(pos, time);
  *   });
  * }
