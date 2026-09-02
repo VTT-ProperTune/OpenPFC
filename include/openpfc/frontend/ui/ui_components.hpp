@@ -11,8 +11,11 @@
  * - JSON helpers for configuration parsing
  * - JSON deserialization functions
  * - Field modifier registry
- * - Application class
  * - Error handling utilities
+ *
+ * JSON apps construct a `SimulationSession` and `pfc::sim::run` (see
+ * `from_json_simulation_session.hpp`). The Gen-1 `App` / `JsonAppRun`
+ * headers remain until M12 deletes them; they are not part of this umbrella.
  *
  * This header maintains backward compatibility with the original ui.hpp
  * by including all the split components.
@@ -24,7 +27,6 @@
 #ifndef PFC_UI_UI_HPP
 #define PFC_UI_UI_HPP
 
-#include <openpfc/frontend/ui/app.hpp>
 #include <openpfc/frontend/ui/errors.hpp>
 #include <openpfc/frontend/ui/field_modifier_registry.hpp>
 #include <openpfc/frontend/ui/from_json.hpp>

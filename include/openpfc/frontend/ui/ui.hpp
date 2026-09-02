@@ -13,8 +13,8 @@
  * @note For new code, consider including specific headers from ui/ directly:
  * - ui/json_helpers.hpp - JSON utility functions
  * - ui/from_json.hpp - JSON deserialization
+ * - ui/from_json_simulation_session.hpp - JSON → SimulationSession
  * - ui/field_modifier_registry.hpp - Field modifier registry
- * - ui/app.hpp - Application class
  * - ui/errors.hpp - Error handling utilities
  *
  * @author OpenPFC Development Team
