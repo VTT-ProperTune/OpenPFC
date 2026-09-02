@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Performance profiling
 
-OpenPFC records per-step frames in memory during a run and performs a single MPI collective export at the end (no per-step disk I/O). The API lives under `include/openpfc/kernel/profiling/`; the JSON-driven `pfc::ui::App` reads a `profiling` configuration block.
+OpenPFC records per-step frames in memory during a run and performs a single MPI collective export at the end (no per-step disk I/O). The API lives under `include/openpfc/kernel/profiling/`; JSON-driven ETD sessions read a `profiling` configuration block.
 
 ## Configuration (`App` JSON / TOML)
 

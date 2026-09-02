@@ -23,7 +23,7 @@ OpenPFC separates the kernel interface `ResultsWriter` from frontend implementat
 
 ### JSON-driven `App` path
 
-[`simulation_wiring.hpp`](../../include/openpfc/frontend/ui/simulation_wiring.hpp) `add_result_writers_from_json` takes a **`ResultsWriterCatalog`** at the call site (e.g. `default_results_writer_catalog()` for built-in `binary`). It registers `BinaryWriter` only: for each `fields[]` entry it uses `field["data"]` as the path template. There is no VTK branch in that helper today—VTK is attached in code (see below).
+[`simulation_wiring.hpp`](../../include/openpfc/frontend/ui/simulation_wiring.hpp) `parse_result_writers_from_json` takes a **`ResultsWriterCatalog`** at the call site (e.g. `default_results_writer_catalog()` for built-in `binary`). It returns named `BinaryWriter`s (or catalog `vtk`/`hdf5`): for each `fields[]` entry it uses `field["data"]` as the path template. Sessions attach those writers on the `on_save` hook.
 
 Requirements in settings: `saveat > 0`, `fields` array with `name` and `data`.
 
@@ -49,7 +49,7 @@ Requirements in settings: `saveat > 0`, `fields` array with `name` and `data`.
 
 - [`binary_field_io_spec.md`](../reference/binary_field_io_spec.md) — normative binary field file description  
 - [`postprocess_binary_fields.md`](postprocess_binary_fields.md) — offline analysis of raw binary fields  
-- [`app_pipeline.md`](app_pipeline.md) — where `add_result_writers_from_json` runs  
+- [`app_pipeline.md`](app_pipeline.md) — where `parse_result_writers_from_json` runs  
 - [`configuration.md`](configuration.md) — config file overview  
 - [`tutorials/end_to_end_visualization.md`](../tutorials/end_to_end_visualization.md) — run once, inspect binary or PNG output  
 - [`tutorials/vtk_paraview_workflow.md`](../tutorials/vtk_paraview_workflow.md) — `11_write_results` / `12_cahn_hilliard` + ParaView  

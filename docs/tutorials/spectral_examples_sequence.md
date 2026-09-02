@@ -14,7 +14,7 @@ model with output.
 | Step | Executable | New idea |
 |------|------------|----------|
 | 1 | `04_diffusion_model` | Subclass `Model`, implement `initialize` and `step`, and apply a Fourier-space operator |
-| 2 | `05_simulator` | Add `Simulator`, `Time`, field modifiers, and lifecycle orchestration |
+| 2 | `05_simulator` | Add `pfc::sim::run`, `Time`, host ICs, and lifecycle orchestration |
 | 3 | `12_cahn_hilliard` | Add a nonlinear operator split, initial data, and VTK output |
 
 Together they mirror how a research application usually grows: first verify the
@@ -45,7 +45,7 @@ The programs do not share one mandatory success message; see
 | File | Look for |
 |------|----------|
 | [`examples/04_diffusion_model.cpp`](../../examples/04_diffusion_model.cpp) | Field allocation, Fourier-space operator construction, and forward/backward transforms |
-| [`examples/05_simulator.cpp`](../../examples/05_simulator.cpp) | Simulator construction, modifiers, time control, and ownership |
+| [`examples/05_simulator.cpp`](../../examples/05_simulator.cpp) | `pfc::sim::run`, host IC callable, time control |
 | [`examples/12_cahn_hilliard.cpp`](../../examples/12_cahn_hilliard.cpp) | Nonlinear split, initial state, and VTK write cadence |
 
 Treat these compiled examples as the code-level source of truth. This page

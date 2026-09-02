@@ -24,7 +24,7 @@ Short definitions for OpenPFC and PFC simulation vocabulary. Deeper design detai
 | Simulator | Orchestrates Model, Time, FieldModifier (IC/BC), ResultsWriter. |
 | FieldModifier | Applies initial or boundary updates each step or at startup. |
 | SimulationContext | Small bundle (MPI comm, rank-0) passed with `Model` to modifiers for rank-aware I/O; see `simulation_context.hpp` and [`app_pipeline.md`](../user_guide/app_pipeline.md). |
-| App&lt;Model&gt; | Frontend entry point that loads JSON/TOML and builds a session (`pfc::ui::App`). |
+| Simulation session | JSON/TOML → `make_simulation_session` / ETD session + `pfc::sim::run`. |
 | `plan_options` | HeFFTe FFT planner settings (backend, reshape algorithm, pencils, GPU-aware MPI, …), usually a JSON object or TOML `[plan_options]` — see [`tutorials/fft_heffte_plan_options.md`](../tutorials/fft_heffte_plan_options.md). |
 | `saveat` | Time between periodic result writes in the spectral `Time` object; `≤ 0` disables the default JSON binary-writer path ([`spectral_app_config_reference.md`](spectral_app_config_reference.md)). |
 | `BinaryWriter` / binary field files | MPI-IO raw output per timestep; no file header — see [`binary_field_io_spec.md`](binary_field_io_spec.md). |

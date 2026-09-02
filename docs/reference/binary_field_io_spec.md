@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Binary field I/O specification (MPI-IO)
 
-This document describes the **raw binary** files produced by `pfc::BinaryWriter` (including the JSON-driven path in `add_result_writers_from_json`). Those headerless MPI-IO bricks remain the scheduled **`ResultsWriter` / `BinaryWriter` format** for periodic field dumps and **post-processing** when you are not using VTK or PNG.
+This document describes the **raw binary** files produced by `pfc::BinaryWriter` (including the JSON-driven path in `parse_result_writers_from_json`). Those headerless MPI-IO bricks remain the scheduled **`ResultsWriter` / `BinaryWriter` format** for periodic field dumps and **post-processing** when you are not using VTK or PNG.
 
 **Durable versioned restart bundles** use
 `pfc::checkpoint::publish_checkpoint_directory` instead — a directory with
@@ -63,7 +63,7 @@ The `increment` value is advanced by the simulator according to configuration (s
 
 ## JSON configuration surface
 
-When `saveat > 0` and `fields` is present, `add_result_writers_from_json` registers one `BinaryWriter` per `fields[]` entry:
+When `saveat > 0` and `fields` is present, `parse_result_writers_from_json` constructs one `BinaryWriter` per `fields[]` entry:
 
 - **`name`** — field label used by the simulator when dispatching the writer.  
 - **`data`** — filename template as above.

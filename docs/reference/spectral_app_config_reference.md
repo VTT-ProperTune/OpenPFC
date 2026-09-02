@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Spectral `App` configuration reference (JSON / TOML)
 
-This page lists the **JSON / TOML surface** consumed by the default **CPU spectral** stack (`SimulationSession<SpectralCPUStack>` → `SpectralSimulationSession` → `Simulator`) when you use `pfc::ui::App<Model>` (e.g. `apps/tungsten`, `apps/aluminumNew`). **Apps may add keys** or nest objects; treat shipped inputs as ground truth when in doubt.
+This page lists the **JSON / TOML surface** consumed by the default **CPU spectral** stack (`SimulationSession<SpectralCPUStack>` / ETD sessions) for shipped apps (`apps/tungsten`, `apps/aluminumNew`). **Apps may add keys** or nest objects; treat shipped inputs as ground truth when in doubt.
 
 **Pipeline order:** [`app_pipeline.md`](../user_guide/app_pipeline.md). **Mental model:** [`configuration.md`](../user_guide/configuration.md).
 

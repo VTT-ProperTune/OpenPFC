@@ -6,12 +6,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 # Build a minimal config-driven application
 
 This tutorial creates an OpenPFC executable in a separate CMake project using
-the remaining Gen-1 `pfc::ui::App<MyModel>` adapter (deleted at M12). Shipped
-0.2 apps (tungsten, aluminumNew) drive JSON/TOML through ETD sessions instead.
-The JSON keys (domain, time, `plan_options`, modifiers, writers) are the same.
+`pfc::ui::make_simulation_session` and `pfc::sim::run`. Shipped 0.2 apps
+(tungsten, aluminumNew) drive JSON/TOML through ETD sessions instead. The JSON
+keys (domain, time, `plan_options`, modifiers, writers) are the same.
 
 Use this path when the simulation belongs in its own repository. Do not fork
-OpenPFC merely to add an application `main`.
+OpenPFC merely to add an application `main`. Porting 0.1 `App<Model>` code:
+[`MIGRATION_0.1_to_0.2.md`](../MIGRATION_0.1_to_0.2.md).
 
 ## Prerequisites
 
@@ -33,8 +34,6 @@ Create a new directory with this layout:
 my-openpfc-app/
 ├── CMakeLists.txt
 ├── main.cpp
-├── my_model.cpp
-├── my_model.hpp
 └── settings.json
 ```
 
@@ -53,7 +52,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(OpenPFC REQUIRED)
 find_package(nlohmann_json REQUIRED)
 
-add_executable(my_app main.cpp my_model.cpp)
+add_executable(my_app main.cpp)
 target_link_libraries(
   my_app
   PRIVATE
@@ -66,129 +65,81 @@ The C language is enabled because the installed package resolves MPI components
 that include an MPI C target. `OpenPFC::openpfc` is the supported installed
 target; un-namespaced in-tree aliases are not a downstream contract.
 
-## Define the model seam
+## Drive a spectral session
 
-`MyModel` owns the application-specific fields and physics. Keep the subclass
-thin and place reusable mechanics in ordinary functions and data types.
-
-```cpp
-// my_model.hpp
-#pragma once
-
-#include <mpi.h>
-#include <openpfc/kernel/simulation/model.hpp>
-
-// Gen-1 App<Model> adapter (M12 delete). Production apps use ETD sessions.
-class MyModel : public pfc::Model {
-public:
-  explicit MyModel(pfc::FFT &fft, const pfc::Domain &domain,
-                   MPI_Comm comm = MPI_COMM_WORLD)
-      : pfc::Model(fft, domain, comm) {}
-
-  void initialize(double dt) override;
-  void step(double time) override;
-};
-```
-
-```cpp
-// my_model.cpp
-#include "my_model.hpp"
-
-void MyModel::initialize(double dt) {
-  (void)dt;
-  // Allocate fields and precompute operators here.
-}
-
-void MyModel::step(double time) {
-  (void)time;
-  // Advance the model by one step here.
-}
-```
-
-The empty bodies deliberately isolate the integration shell from the physics.
-For spectral model implementations, read
-[Spectral examples sequence](spectral_examples_sequence.md) and inspect
-`examples/04_diffusion_model.cpp` and `examples/12_cahn_hilliard.cpp`.
-
-## Hand control to `App`
+Physics is a callable `step(t)`, not a `pfc::Model` subclass. Keep the driver
+thin and place reusable mechanics in ordinary functions.
 
 ```cpp
 // main.cpp
-#include "my_model.hpp"
-
 #include <exception>
 #include <iostream>
-#include <openpfc/frontend/ui/app.hpp>
+
+#include <mpi.h>
+#include <nlohmann/json.hpp>
+
+#include <openpfc/frontend/ui/from_json.hpp>
+#include <openpfc/frontend/ui/from_json_simulation_session.hpp>
+#include <openpfc/frontend/ui/settings_loader.hpp>
+#include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 
 int main(int argc, char **argv) {
   try {
-    pfc::ui::App<MyModel> app(argc, argv);
-    return app.main();
+    MPI_Init(&argc, &argv);
+    int rank = 0;
+    int nproc = 1;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+
+    if (argc < 2) {
+      if (rank == 0) {
+        std::cerr << "usage: my_app settings.json\n";
+      }
+      MPI_Finalize();
+      return 1;
+    }
+
+    const auto settings = pfc::ui::load_settings_file(argv[1]);
+    auto session =
+        pfc::ui::make_simulation_session<pfc::sim::stacks::SpectralCPUStack>(
+            settings, rank, nproc);
+    auto &psi = session.stack().u();
+    for (auto &v : psi.vec()) {
+      v = 0.0;
+    }
+    session.run([&](double /*t*/) {
+      // Advance psi by one step (FFT / stepper / ETD).
+    });
+    MPI_Finalize();
+    return 0;
   } catch (const std::exception &error) {
     std::cerr << error.what() << '\n';
-    return 1;
+    MPI_Abort(MPI_COMM_WORLD, 1);
   }
 }
 ```
 
-`App` reads the configuration path from `argv[1]`, initializes MPI-facing
-runtime state, builds the spectral stack and simulator, and executes the time
-loop.
+`make_simulation_session` reads domain, time, `method`/`backend`, and
+`plan_options` from the document. `session.run` is `pfc::sim::run` over
+`Time`. For a full spectral implicit-Euler example see
+`examples/04_diffusion_model.cpp`. Production tungsten/aluminum sessions add
+ICs, BCs, writers, and `CheckpointService` around the same loop.
 
 ## Add a configuration
 
-Start from a shipped input that uses the same frontend path, then reduce it to
-the fields required by your model. The exact supported keys and nesting belong
-in the
+Start from a shipped input, then reduce it to the fields required by your
+physics. The exact supported keys belong in the
 [Spectral App configuration reference](../reference/spectral_app_config_reference.md).
 The conversion from configuration to runtime objects is described in
 [Application pipeline](../user_guide/app_pipeline.md).
 
-A model that consumes `model.params` can provide an ADL-visible conversion
-function:
+A document that consumes `model.params` should parse that subtree in the
+driver (tungsten uses `apply_tungsten_json`). Optional
+[`ParameterValidator`](../user_guide/parameter_validation.md) can run on the
+same subtree before construction.
 
-```cpp
-void from_json(const pfc::ui::json &input, MyModel &model);
-```
+## Next steps
 
-Add that function only when the model has parameters to read. Parameter ranges,
-required keys, units, and diagnostic reports are covered in
-[Parameter validation](../user_guide/parameter_validation.md).
-
-## Build and run
-
-```bash
-cmake -S . -B build \
-  -DCMAKE_PREFIX_PATH=/path/to/openpfc/install
-cmake --build build -j"$(nproc)"
-mpirun -n 1 ./build/my_app ./settings.json
-```
-
-Begin with one MPI rank. Increase the rank count only after the application
-works and the launcher has the required slots or scheduler allocation.
-
-## Optional: custom field modifiers
-
-A configuration-selectable initial or boundary condition uses a
-`FieldModifier` implementation registered in a catalog before the application
-runs. The smallest example is `examples/10_ui_register_ic.cpp`; the extension
-choices and catalog lifetime guidance are in
-[Extending OpenPFC](../extending_openpfc/README.md).
-
-Prefer an explicit local catalog in tests and reusable libraries. Process-wide
-registration is appropriate only when shared mutable registration state is
-acceptable for the executable.
-
-## Verify the integration
-
-Before adding substantial physics, verify that:
-
-1. CMake finds the intended OpenPFC installation;
-2. the consumer and OpenPFC use compatible MPI and HeFFTe installations;
-3. the executable starts with one rank and reads `settings.json`;
-4. invalid or missing configuration values fail before time integration;
-5. a configured writer creates the expected output artifact.
-
-For build and runtime failures, use [Troubleshooting](../troubleshooting.md).
-For the roles of `Domain`, `Model`, `Simulator`, and `App`, use the
-[Tour of main types](../reference/class_tour.md).
+- Register JSON ICs with a catalog: `examples/10_ui_register_ic.cpp`.
+- Attach writers on the `on_save` hook: `examples/11_write_results.cpp`.
+- Extension checklist: [`extending_openpfc/README.md`](../extending_openpfc/README.md).

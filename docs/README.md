@@ -58,6 +58,7 @@ Documentation is easier to maintain when each fact has one primary home:
 |-------------|--------------------|
 | Supported dependency and toolchain setup | [INSTALL.md](https://github.com/VTT-ProperTune/OpenPFC/blob/master/INSTALL.md) |
 | First successful build and run | [`start_here_15_minutes.md`](start_here_15_minutes.md) |
+| 0.1 → 0.2 API replacement list | [`MIGRATION_0.1_to_0.2.md`](MIGRATION_0.1_to_0.2.md) |
 | Broad build/run/integration overview | [`quickstart.md`](quickstart.md) |
 | Exact CMake option defaults | [`reference/build_options.md`](reference/build_options.md) |
 | JSON/TOML configuration keys | [`reference/spectral_app_config_reference.md`](reference/spectral_app_config_reference.md) |

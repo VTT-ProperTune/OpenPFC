@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Configuration files (JSON / TOML)
 
-Many programs use `pfc::ui::App<Model>` and accept a single configuration file (JSON or TOML) on the command line. The exact keys depend on the model and how validation is set up, but the same structural ideas recur across apps.
+Shipped 0.2 programs (tungsten, aluminumNew) accept a single configuration file (JSON or TOML) on the command line. The exact keys depend on the physics and how validation is set up, but the same structural ideas recur across apps.
 
 Use this page when you are trying to read an input file and understand what kind of thing each section controls. It is not the normative key reference; that lives in [the spectral App configuration reference](../reference/spectral_app_config_reference.md). This page is the bridge between a real JSON or TOML file and the runtime objects OpenPFC builds from it.
 

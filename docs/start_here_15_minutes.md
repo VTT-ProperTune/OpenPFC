@@ -94,7 +94,7 @@ mpirun -n 4 ./examples/05_simulator
 ## What you exercised
 
 `05_simulator` walks the spectral stack at library level: `Domain`,
-`Decomposition`, a HeFFTe-backed FFT, `Simulator`, and time integration. Read
+`SpectralCPUStack`, a HeFFTe-backed FFT, and `pfc::sim::run`. Read
 [`concepts/spectral_stack.md`](concepts/spectral_stack.md) for the data flow and
 [`concepts/architecture.md`](concepts/architecture.md) for layer boundaries.
 

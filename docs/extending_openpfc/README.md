@@ -19,12 +19,12 @@ out-of-tree executable, follow the
 
 | Goal | Primary extension point | Starting point |
 |------|-------------------------|----------------|
-| Add a PDE or phase-field model | `pfc::Model` | `examples/04_diffusion_model.cpp`, `examples/12_cahn_hilliard.cpp` |
+| Add a PDE or phase-field model | physics `step(t)` on a stack / `SimulationState` | `examples/04_diffusion_model.cpp`, `examples/12_cahn_hilliard.cpp` |
 | Add a config-selected initial or boundary condition | `pfc::FieldModifier` and a modifier catalog | `examples/10_ui_register_ic.cpp`, `examples/14_custom_field_initializer.cpp` |
 | Apply programmatic field operations | Namespace free functions and field iteration helpers | [Functional field operations](../getting_started/functional_field_ops.md) |
 | Add an output format | `pfc::ResultsWriter` or a writer catalog | `examples/11_write_results.cpp` |
 | Add custom spatial interpretation | Domain and coordinate helper functions | `examples/17_custom_coordinate_system.cpp` |
-| Build a JSON/TOML-driven binary | `pfc::ui::App<Model>` | [Minimal custom application](../tutorials/custom_app_minimal.md) |
+| Build a JSON/TOML-driven binary | `make_simulation_session` / `pfc::sim::run` | [Minimal custom application](../tutorials/custom_app_minimal.md) |
 | Add point-wise gradients or finite-difference physics | Field/gradient primitives and halo policies | [Per-point gradients](per_point_grads.md), [Halo exchange](../concepts/halo_exchange.md) |
 | Couple an external solver | `pfc::coupling::FieldHandle` + `Time::clip_attempt_dt` | [External coupling](external_coupling.md), `examples/22_external_coupling.cpp` |
 | Restart from a checkpoint bundle | `CheckpointService` / `restart_from` | [Checkpoint publication](../development/checkpoint_publish.md) |
@@ -35,9 +35,9 @@ inventory of runnable examples.
 ## API style
 
 OpenPFC favors data-centric types and namespace free functions. Use inheritance
-where the framework needs a runtime extension seam, such as `Model`,
-`FieldModifier`, or `ResultsWriter`; keep the implementation behind that seam in
-ordinary functions and small data types.
+where the framework needs a runtime extension seam, such as `FieldModifier` or
+`ResultsWriter`; keep the implementation behind that seam in ordinary functions
+and small data types.
 
 This keeps physics code testable and avoids deep class hierarchies. The complete
 conventions are in the [Style guide](../development/styleguide.md).
@@ -48,8 +48,8 @@ A downstream application commonly contains:
 
 | File | Responsibility |
 |------|----------------|
-| `your_model.hpp` and implementation files | Define the model fields, initialization, and time step |
-| `main.cpp` | Construct `pfc::ui::App<YourModel>` and register optional extension catalogs |
+| `your_physics.hpp` and implementation files | Define fields, initialization, and the time step |
+| `main.cpp` | Build a session or stack and call `pfc::sim::run`; register optional catalogs |
 | `CMakeLists.txt` | Find OpenPFC and link `OpenPFC::openpfc` |
 | JSON or TOML input | Define domain, time integration, planner options, modifiers, and writers |
 

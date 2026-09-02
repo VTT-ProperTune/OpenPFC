@@ -128,8 +128,10 @@ cmake --build build
 
 A longer walkthrough is in
 [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md).
-For a config-driven `pfc::ui::App<YourModel>`, use
-[`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md).
+For a config-driven 0.2 session (`make_simulation_session` + `pfc::sim::run`),
+use [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md).
+Migrating from 0.1 `Model`/`Simulator`/`App`:
+[`MIGRATION_0.1_to_0.2.md`](MIGRATION_0.1_to_0.2.md).
 
 ## Where to go next
 

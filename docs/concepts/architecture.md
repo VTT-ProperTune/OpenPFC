@@ -72,7 +72,7 @@ selected compute backend.
 | `kernel/execution` | execution spaces, memory spaces, views, buffers, and copy abstractions |
 | `kernel/field` | field operations, finite-difference primitives, and iteration helpers |
 | `kernel/fft` | FFT interfaces, layouts, and wave-number helpers |
-| `kernel/simulation` | `Model`, `Simulator`, time integration, modifiers, writers, and solver contracts |
+| `kernel/simulation` | `Time`, `SimulationDriver`, stacks, modifiers, writers, and solver contracts |
 | `kernel/checkpoint` | backend-independent persistent-state and checkpoint contracts |
 | `kernel/profiling` | metric catalogs, scopes, sessions, and export contracts |
 | `kernel/mpi` | small MPI environment and communicator helpers |
@@ -111,7 +111,7 @@ Frontend code turns the lower layers into deployable applications.
 
 | Area | Responsibility |
 |------|----------------|
-| `frontend/ui` | JSON/TOML loading, parameter validation, `App` wiring, catalogs, and simulation sessions |
+| `frontend/ui` | JSON/TOML loading, parameter validation, catalogs, and simulation sessions |
 | `frontend/io` | concrete binary, VTK, PNG, and related result writers |
 | `frontend/utils` | application-facing logging, diagnostics, and convenience utilities |
 
@@ -128,9 +128,9 @@ The spectral stack is the primary end-to-end path:
 ```mermaid
 flowchart LR
   Domain --> Decomposition --> FFT
-  FFT --> Model --> Simulator
-  Configuration --> App --> Simulator
-  Simulator --> Writers
+  FFT --> Stack --> Driver
+  Configuration --> Session --> Driver
+  Driver --> Writers
 ```
 
 HeFFTe performs distributed FFT work. Real-space fields are transformed to
@@ -230,7 +230,8 @@ Use instead:
 - [`spectral_stack.md`](spectral_stack.md) — spectral data flow
 - [`halo_exchange.md`](halo_exchange.md) — distributed halo layouts
 - [`../user_guide/app_pipeline.md`](../user_guide/app_pipeline.md) — JSON/TOML
-  to `Simulator`
+  to a 0.2 session
+- [`../MIGRATION_0.1_to_0.2.md`](../MIGRATION_0.1_to_0.2.md) — 0.1 → 0.2 replacements
 - [`../hpc/performance_profiling.md`](../hpc/performance_profiling.md) — runtime
   profiling
 - [`../hpc/profiling_export_schema.md`](../hpc/profiling_export_schema.md) —

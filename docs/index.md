@@ -22,6 +22,7 @@ learning_paths
 
 start_here_15_minutes
 quickstart
+MIGRATION_0.1_to_0.2
 getting_started/README
 getting_started/01-basics/README
 getting_started/functional_field_ops

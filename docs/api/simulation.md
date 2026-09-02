@@ -6,27 +6,15 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 # Simulation contracts
 
 These interfaces define the reusable simulation lifecycle. Read the
-[architecture](../concepts/architecture.md) and
-[application pipeline](../user_guide/app_pipeline.md) for ownership and control
+[architecture](../concepts/architecture.md),
+[application pipeline](../user_guide/app_pipeline.md), and
+[0.1 → 0.2 migration](../MIGRATION_0.1_to_0.2.md) for ownership and control
 flow before using the exact declarations.
 
-## `pfc::Model`
+## `pfc::sim::SimulationDriver`
 
-```{doxygenclass} pfc::Model
-:project: OpenPFC
-:members:
-:protected-members:
-:no-link:
-```
-
-## `pfc::Simulator`
-
-```{doxygenclass} pfc::Simulator
-:project: OpenPFC
-:members:
-:protected-members:
-:no-link:
-```
+Thin time loop over `Time` plus a physics `step`. See
+`include/openpfc/kernel/simulation/simulation_driver.hpp` (`pfc::sim::run`).
 
 ## `pfc::Time`
 
