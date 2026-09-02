@@ -31,6 +31,7 @@
 #include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/runtime/gpu/memory_space_gpu.hpp>
 
+#include <openpfc/runtime/gpu/bind_local_device.hpp>
 #include <openpfc/runtime/gpu/fft_gpu.hpp>
 
 namespace pfc::sim::stacks {
@@ -79,8 +80,10 @@ public:
 
   explicit GPUSpectralStack(pfc::Domain domain, int rank, int nproc, MPI_Comm comm,
                             const heffte::plan_options &options)
-      : m_domain(std::move(domain)),
-        m_decomp(pfc::decomposition::create(m_domain, nproc)),
+      : m_domain(std::move(domain)), m_decomp([&] {
+          pfc::runtime::gpu::bind_local_device(comm);
+          return pfc::decomposition::create(m_domain, nproc);
+        }()),
         m_fft(gpu_fft_for<MemorySpace>::create(m_decomp, rank, comm, options)),
         m_u(m_domain, m_fft.get_inbox_bounds(), 0), m_rank(rank), m_nproc(nproc),
         m_comm(comm) {}
