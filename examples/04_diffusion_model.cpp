@@ -1,52 +1,29 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#include <iostream>
-
 #include "diffusion_spectral_helpers.hpp"
+
+#include <cmath>
+#include <iostream>
+#include <vector>
+
+#include <mpi.h>
+
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
-#include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/fft/kspace_iterator.hpp>
-#include <openpfc/kernel/simulation/model.hpp>
+#include <openpfc/kernel/simulation/simulation_driver.hpp>
+#include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
+#include <openpfc/kernel/simulation/time.hpp>
 
 using namespace std;
 using namespace pfc;
 
 /** \example 04_diffusion_model.cpp
  *
- * Let's embark on the journey of physics modeling. Together, we will construct
- * a captivating diffusion model and unleash its mysteries using OpenPFC. This
- * example implements a simple diffusion model using the OpenPFC library. The
- * code demonstrates a low-level implementation of the model, where the
- * simulation is manually stepped and the initial conditions are defined inside
- * the model. It also shows how to perform local and global reductions using MPI
- * to calculate global properties of the field variable.
- *
- * The Diffusion class is derived from the base class Model provided by the
- * OpenPFC library. It overrides two class methods:
- *
- * 1. `initialize(double dt)`: This method is called once to initialize the
- *    necessary parameters and data structures for the simulation. It allocates
- *    memory for the main variable, psi, and its Fourier transform, psi_F. It
- *    also constructs the linear operator L, which is used to solve the
- *    diffusion equation.
- *
- * 2. `step(double dt)`: This method is called to step the model forward in time
- *    by one time increment, dt. It applies the linear operator L to the Fourier
- *    transform of psi, psi_F, and then performs an inverse Fourier transform to
- *    obtain the updated psi values. It also calculates the minimum and maximum
- *    values of psi locally for each MPI rank and performs reduction operations
- *    to obtain the global minimum and maximum values.
- *
- * The `run()` function defines the domain dimensions and discretization
- * parameters, constructs the Domain, Decomposition, FFT, and Diffusion objects,
- * and initializes the simulation. It then enters a loop where the model is
- * stepped forward in time until a specified stopping time is reached. During
- * each iteration, the current time, the iteration number, and the minimum and
- * maximum values of psi are printed.
+ * Spectral implicit-Euler diffusion on a `SpectralCPUStack` (Domain +
+ * Decomposition + `IHostFFT` + host field). Physics is a linear operator in
+ * k-space; the time loop is `pfc::sim::run`. No `Model` / `World`.
  *
  * Expected output is:
  *
@@ -60,190 +37,79 @@ using namespace pfc;
  *      n = 40, t = 0.559429573303, psi[133152] = 0.516585236400
  *      n = 41, t = 0.573415312636, psi[133152] = 0.509734461852
  *      n = 42, t = 0.587401051968, psi[133152] = 0.503032957135
+ *
+ * The live print is global min/max (the midpoint index in the comment is from
+ * an older single-rank dump). Rank 0 checks `psi_max` against 0.5.
  */
-class Diffusion : public Model {
-  using Model::Model; // "Inherit" the default constructor of base class
+int main(int argc, char *argv[]) {
+  cout << std::fixed;
+  cout.precision(12);
+  MPI_Init(&argc, &argv);
+  int rank = 0;
+  int nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
-private:
-  vector<double> opL, psi;       // Define linear operator opL and unknown (real) psi
-  vector<complex<double>> psi_F; // Define (complex) psi
-
-public:
-  double psi_min, psi_max; // minimum and maximum values of psi for this rank
-
-  /**
-   * @brief Initialize the diffusion model
-   *
-   * This function is called before the actual time stepping starts. This is the
-   * right place to allocate memory for simulation as well as pre-calculate
-   * operators and other things needed in order to start the simulation.
-   *
-   * @param dt Time step interval
-   */
-  void initialize(double dt) override {
-    if (pfc::is_rank0(*this)) cout << "Allocate space" << endl;
-
-    // Get references to the simulation world (required by Model), FFT, and domain
-    // decomposition Note: World is retained for Model compatibility; Domain is used
-    // for geometry
-    auto &world = pfc::get_world(*this);
-    auto &fft = pfc::get_fft(*this);
-
-    // Allocate space for the main variable and it's fourier transform
-    psi.resize(fft.size_inbox());
-    psi_F.resize(fft.size_outbox());
-
-    /*
-    Construct linear operator L
-
-    Because we are doing FFT between real and complex using symmetry,
-    it's enough to define only a half of the operator. Thus, the operator size
-    matches with the outbox.
-    */
-    opL.resize(fft.size_outbox());
-
-    /*
-    Domain is defining the global dimensions of the problem as well as origin and
-    chosen discretization parameters.
-    */
-    // Print domain geometry information (domain extracted from world for Model
-    // compatibility)
-    if (pfc::is_rank0(*this)) {
-      const auto &world = pfc::get_world(*this);
-      const auto &domain = pfc::world::get_coordinate_system(world);
-      cout << "Domain: " << domain << endl;
-    }
-
-    /*
-    Upper and lower limits for this particular MPI rank, in both inbox and
-    outbox, are given by fft object
-    */
-    auto i_low = get_inbox(fft).low;
-    auto i_high = get_inbox(fft).high;
-
-    /*
-    Typically initial conditions are constructed elsewhere. However, to keep
-    things as simple as possible, the initial condition can be also constructed
-    here.
-    */
-    if (pfc::is_rank0(*this)) cout << "Create initial condition" << endl;
-
-    const auto &domain = pfc::world::get_coordinate_system(world);
-    auto origin = pfc::domain::get_origin(domain);
-    auto spacing = pfc::domain::get_spacing(domain);
-
-    int idx = 0;
-    double D = 1.0;
-    for (int k = i_low[2]; k <= i_high[2]; k++) {
-      for (int j = i_low[1]; j <= i_high[1]; j++) {
-        for (int i = i_low[0]; i <= i_high[0]; i++) {
-          double x = origin[0] + i * spacing[0];
-          double y = origin[1] + j * spacing[1];
-          double z = origin[2] + k * spacing[2];
-          psi[idx] = exp(-(x * x + y * y + z * z) / (4.0 * D));
-          idx += 1;
-        }
-      }
-    }
-
-    /*
-    The main thing along with allocating workspace for simulation is to prepare
-    operators, thus making the actual time stepping as fast as possible.
-    */
-    if (pfc::is_rank0(*this)) cout << "Prepare operators" << endl;
-    pfc::fft::kspace::for_each_kpoint(
-        get_outbox(fft), domain,
-        [&](std::size_t idx, double ki, double kj, double kk, int, int, int) {
-          const double kLap = -(ki * ki + kj * kj + kk * kk);
-          opL[idx] = 1.0 / (1.0 - dt * kLap);
-        });
-  }
-
-  /**
-   * @brief The actual time stepping function.
-   *
-   * In this particular case, with a simple linear model, is basically
-   *
-   *    u(t+Δt) = ifft(opL*fft(u(t)))
-   *
-   */
-  void step(double) override {
-    diffusion_example::spectral_diffusion_step(pfc::get_fft(*this), psi, psi_F, opL);
-    find_minmax();
-  }
-
-  /**
-   * @brief A simple MPI communication example.
-   *
-   * We find minimum and maximum of psi locally, and then communicate them
-   * between different MPI ranks.
-   */
-  void find_minmax() {
-    diffusion_example::reduce_psi_min_max_mpi(psi, psi_min, psi_max);
-  }
-};
-
-void run() {
-  // Define domain parameters
-  int Lx = 64;
-  int Ly = Lx;
-  int Lz = Lx;
+  constexpr int L = 64;
   const double pi = 3;
-  double dx = 2.0 * pi / 8.0;
-  double dy = dx;
-  double dz = dx;
-  double x0 = -0.5 * Lx * dx;
-  double y0 = -0.5 * Ly * dy;
-  double z0 = -0.5 * Lz * dz;
+  const double dx = 2.0 * pi / 8.0;
+  const double x0 = -0.5 * L * dx;
+  Domain domain = domain::create(GridSize{{L, L, L}}, PhysicalOrigin{{x0, x0, x0}},
+                                 GridSpacing{{dx, dx, dx}});
 
-  // Construct domain, decomposition, fft and model
-  // Using strong types for clarity and type safety
-  Domain domain =
-      domain::create(GridSize{{Lx, Ly, Lz}}, PhysicalOrigin{{x0, y0, z0}},
-                     GridSpacing{{dx, dy, dz}});
-  auto decomp = decomposition::create(domain, 1);
-  auto fft = fft::create(decomp);
-  // Create simulation world for Model constructor (World retained for Model
-  // compatibility)
-  auto world = domain::create_world_from_bounds(
-      {Lx, Ly, Lz}, {x0, y0, z0},
-      {x0 + (Lx - 1) * dx, y0 + (Ly - 1) * dy, z0 + (Lz - 1) * dz});
-  Diffusion model(fft, world);
-
-  // Define time
-  double t = 0.0;
-  double t_stop = 0.5874010519681994;
-  double dt = (t_stop - t) / 42;
-  int n = 0; // increment counter
-
-  // Initialize the model before starting time stepping
-  model.initialize(dt);
-
-  // Loop until we are in t_stop
-  if (pfc::is_rank0(model)) cout << "n = 0, t = 0, min = 0.0, max = 1.0" << endl;
-  while (t <= t_stop) {
-    t += dt;
-    n += 1;
-    model.step(dt);
-    if (pfc::is_rank0(model))
-      cout << "n = " << n << ", t = " << t << ", min = " << model.psi_min
-           << ", max = " << model.psi_max << endl;
+  sim::stacks::SpectralCPUStack stack(std::move(domain), rank, nproc);
+  auto &fft = stack.fft();
+  auto &psi = stack.u();
+  if (rank == 0) {
+    cout << "Allocate space" << endl;
+    cout << "Domain: " << psi.domain() << endl;
+    cout << "Create initial condition" << endl;
   }
+  constexpr double D = 1.0;
+  psi.apply([&](double x, double y, double z) {
+    return exp(-(x * x + y * y + z * z) / (4.0 * D));
+  });
 
-  // Check the result, we should be very close to 0.5
-  if (pfc::is_rank0(model)) {
-    if (abs(model.psi_max - 0.5) < 0.01) {
+  const double t0 = 0.0;
+  const double t_stop = 0.5874010519681994;
+  const double dt = (t_stop - t0) / 42;
+  if (rank == 0) cout << "Prepare operators" << endl;
+  std::vector<double> opL(fft.size_outbox());
+  std::vector<complex<double>> psi_F(fft.size_outbox());
+  pfc::fft::kspace::for_each_kpoint(
+      get_outbox(fft), psi.domain(),
+      [&](std::size_t idx, double ki, double kj, double kk, int, int, int) {
+        const double kLap = -(ki * ki + kj * kj + kk * kk);
+        opL[idx] = 1.0 / (1.0 - dt * kLap);
+      });
+
+  Time time({t0, t_stop, dt}, dt);
+
+  double psi_min = 0.0;
+  double psi_max = 1.0;
+  auto print_line = [&](const Time &clock) {
+    if (rank != 0) return;
+    cout << "n = " << time::increment(clock) << ", t = " << time::current(clock)
+         << ", min = " << psi_min << ", max = " << psi_max << endl;
+  };
+
+  if (rank == 0) cout << "n = 0, t = 0, min = 0.0, max = 1.0" << endl;
+  pfc::sim::run(
+      time,
+      [&](double) {
+        diffusion_example::spectral_diffusion_step(fft, psi.vec(), psi_F, opL);
+        diffusion_example::reduce_psi_min_max_mpi(psi.vec(), psi_min, psi_max);
+      },
+      {}, {}, print_line);
+
+  if (rank == 0) {
+    if (abs(psi_max - 0.5) < 0.01) {
       cout << "Test pass!" << endl;
     } else {
       cerr << "Test failed!" << endl;
     }
   }
-}
 
-int main(int argc, char *argv[]) {
-  cout << std::fixed;
-  cout.precision(12);
-  MPI_Init(&argc, &argv);
-  run();
   MPI_Finalize();
+  return 0;
 }

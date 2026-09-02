@@ -2,128 +2,82 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include "diffusion_model.hpp"
+#include "diffusion_spectral_helpers.hpp"
+
+#include <cmath>
 #include <iostream>
-#include <memory>
+#include <vector>
+
+#include <mpi.h>
+
 #include <openpfc/kernel/data/constants.hpp>
-#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/fft/fft_fftw.hpp>
-#include <openpfc/kernel/simulation/field_modifier.hpp>
-#include <openpfc/kernel/simulation/results_writer.hpp>
-#include <openpfc/kernel/simulation/simulator.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/strong_types.hpp>
+#include <openpfc/kernel/simulation/simulation_driver.hpp>
+#include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
 
 using namespace std;
-using pfc::get_fft;
-using pfc::get_model;
-using pfc::get_real_field;
-using pfc::get_world;
 
-void print_stats(Simulator &simulator) {
-  // we can still access the model:
-  auto &model = dynamic_cast<Diffusion &>(get_model(simulator));
-  auto &clock = pfc::get_time(simulator);
-  int idx = model.get_midpoint_idx();
-  if (idx == -1) return;
-  auto &field = model.density();
+void print_stats(const pfc::Time &clock, const pfc::data::Field<double> &field,
+                 int midpoint_idx, int rank) {
+  if (rank != 0 || midpoint_idx < 0) return;
   cout << "n = " << pfc::time::increment(clock)
-       << ", t = " << pfc::time::current(clock) << ", psi[" << idx
-       << "] = " << field[idx] << endl;
-}
-
-void run_test(Simulator &simulator) {
-  auto &model = dynamic_cast<Diffusion &>(get_model(simulator));
-  auto idx = model.get_midpoint_idx();
-  if (idx != -1) {
-    auto &field = model.density();
-    if (abs(field[idx] - 0.5) < 0.01) {
-      cout << "Test pass!" << endl;
-    } else {
-      cerr << "Test failed!" << endl;
-    }
-  }
-}
-
-class Gaussian : public FieldModifier {
-
-private:
-  double m_D;
-
-public:
-  Gaussian(double D) : m_D(D) {}
-
-  void apply(Model &m, double t) override {
-    if (m.is_rank0()) {
-      cout << "Applying custom initial condition at time " << t << endl;
-    }
-    auto &world = get_world(m);
-    auto &field = get_real_field(m, "density");
-    auto &fft = get_fft(m);
-    auto origin = get_origin(world);
-    auto spacing = get_spacing(world);
-
-    auto low = get_inbox(fft).low;
-    auto high = get_inbox(fft).high;
-    long int idx = 0;
-
-    for (int k = low[2]; k <= high[2]; k++) {
-      for (int j = low[1]; j <= high[1]; j++) {
-        for (int i = low[0]; i <= high[0]; i++) {
-          double x = origin[0] + i * spacing[0];
-          double y = origin[1] + j * spacing[1];
-          double z = origin[2] + k * spacing[2];
-          field[idx] = exp(-(x * x + y * y + z * z) / (4.0 * m_D));
-          idx += 1;
-        }
-      }
-    }
-  }
-};
-
-void run() {
-
-  int Lx = 64, Ly = Lx, Lz = Lx;
-  double dx = 2.0 * constants::pi / 8.0, dy = dx, dz = dx;
-  double x0 = -0.5 * Lx * dx;
-  double y0 = -0.5 * Ly * dy;
-  double z0 = -0.5 * Lz * dz;
-  Vec3<int> dimensions{Lx, Ly, Lz};
-  Vec3<double> origo{x0, y0, z0};
-  Vec3<double> discretization{dx, dy, dz};
-  Domain domain = domain::create(GridSize(dimensions), PhysicalOrigin(origo),
-                                 GridSpacing(discretization));
-
-  double t0 = 0.0;
-  double t1 = 0.5874010519681994;
-  double dt = (t1 - t0) / 42;
-  double saveat = 1.0;
-  Vec3<double> tspan{t0, t1, dt};
-  Time time(tspan, saveat);
-
-  MPI_Comm comm = MPI_COMM_WORLD;
-  int size;
-  MPI_Comm_size(comm, &size);
-  auto decomposition = decomposition::create(domain, size);
-  auto fft = fft::create(decomposition);
-  auto world = domain::create_world_from_bounds({Lx, Ly, Lz}, {x0, y0, z0},
-                                                {x0 + (Lx - 1) * dx, y0 + (Ly - 1) * dy, z0 + (Lz - 1) * dz});
-  Diffusion model(fft, world);
-  model.initialize(dt);
-  Simulator simulator(model, time);
-
-  print_stats(simulator);
-  while (!pfc::done(simulator)) {
-    pfc::step(simulator);
-    print_stats(simulator);
-  }
-
-  run_test(simulator);
+       << ", t = " << pfc::time::current(clock) << ", psi[" << midpoint_idx
+       << "] = " << field.vec()[static_cast<size_t>(midpoint_idx)] << endl;
 }
 
 int main(int argc, char *argv[]) {
   cout << std::fixed;
   cout.precision(12);
   MPI_Init(&argc, &argv);
-  run();
+  int rank = 0;
+  int nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+
+  constexpr int L = 64;
+  const double dx = 2.0 * pfc::constants::pi / 8.0;
+  const double x0 = -0.5 * L * dx;
+  pfc::Domain domain = pfc::domain::create(pfc::GridSize{{L, L, L}},
+                                           pfc::PhysicalOrigin{{x0, x0, x0}},
+                                           pfc::GridSpacing{{dx, dx, dx}});
+  pfc::sim::stacks::SpectralCPUStack stack(std::move(domain), rank, nproc);
+  auto &fft = stack.fft();
+  auto &psi = stack.u();
+
+  if (rank == 0) {
+    cout << "Applying custom initial condition at time 0" << endl;
+  }
+  diffusion_example::fill_gaussian(psi, 1.0);
+  const int midpoint_idx = diffusion_example::find_midpoint_idx(psi);
+
+  const double t0 = 0.0;
+  const double t1 = 0.5874010519681994;
+  const double dt = (t1 - t0) / 42;
+  std::vector<double> opL;
+  std::vector<complex<double>> psi_F(fft.size_outbox());
+  diffusion_example::prepare_implicit_euler_opL(fft, psi.domain(), dt, opL);
+
+  pfc::Time time({t0, t1, dt}, dt);
+  print_stats(time, psi, midpoint_idx, rank);
+  pfc::sim::run(
+      time,
+      [&](double) {
+        diffusion_example::spectral_diffusion_step(fft, psi.vec(), psi_F, opL);
+      },
+      {}, {},
+      [&](const pfc::Time &clock) { print_stats(clock, psi, midpoint_idx, rank); });
+
+  if (rank == 0 && midpoint_idx >= 0) {
+    const double v = psi.vec()[static_cast<size_t>(midpoint_idx)];
+    if (abs(v - 0.5) < 0.01) {
+      cout << "Test pass!" << endl;
+    } else {
+      cerr << "Test failed!" << endl;
+    }
+  }
+
   MPI_Finalize();
   return 0;
 }

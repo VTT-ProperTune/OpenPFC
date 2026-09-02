@@ -107,6 +107,9 @@ target_link_libraries(18_sobel_edge_detection PRIVATE OpenPFC ${_heffte_tgt})
 add_executable(world_strong_types_example world_strong_types_example.cpp)
 target_link_libraries(world_strong_types_example PRIVATE OpenPFC ${_heffte_tgt})
 
+add_executable(world_query_helpers_example world_query_helpers_example.cpp)
+target_link_libraries(world_query_helpers_example PRIVATE OpenPFC ${_heffte_tgt})
+
 # Explicit Euler stepper examples (FD and spectral backends)
 add_executable(19_explicit_stepper_fd 19_explicit_stepper_fd.cpp)
 target_link_libraries(19_explicit_stepper_fd PRIVATE OpenPFC ${_heffte_tgt})

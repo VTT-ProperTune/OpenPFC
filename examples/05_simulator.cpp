@@ -1,218 +1,99 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#include <array>
+#include "diffusion_spectral_helpers.hpp"
+
+#include <cmath>
 #include <iostream>
-#include <limits>
-#include <memory>
+#include <vector>
+
+#include <mpi.h>
+
 #include <openpfc/kernel/data/constants.hpp>
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/fft/fft_fftw.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/fft/kspace_iterator.hpp>
-#include <openpfc/kernel/simulation/field_modifier.hpp>
-#include <openpfc/kernel/simulation/model.hpp>
-#include <openpfc/kernel/simulation/simulator.hpp>
-#include <vector>
+#include <openpfc/kernel/simulation/simulation_driver.hpp>
+#include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
+#include <openpfc/kernel/simulation/time.hpp>
 
 /**
  * \example 05_simulator.cpp
  *
- * In the previous example, a simple diffusion model was implemented. The
- * implementation was done at a rather low level for demonstration reasons and
- * it had a few flaws. First, time stepping should be performed at a higher
- * level. Hard-coding the initial condition inside the model also does not
- * follow the good implementation practices of modular code. Later, we also
- * want, for example, boundary conditions or to write the results of the
- * simulation to the hard disk. These are all examples of things that basically
- * should not be implemented in the model, because the model mainly includes
- * physics. We want to use initial conditions and boundary conditions more
- * widely in more different models.
- *
- * This example introduces a few new classes: Time, Simulator, and
- * FieldModifier. The responsibility of the Time object is to take care of the
- * time step and to tell when the results of the calculation should be saved.
- * The Simulator class combines model, time, initial conditions, and boundary
- * conditions, being a higher-level abstraction of computation. The initial
- * condition is implemented by inheriting the class FieldModifier. Initial
- * conditions and boundary conditions can be implemented in the same class,
- * therefore a slightly more generic name for the initial condition class.
+ * Same spectral implicit-Euler diffusion as example 04, but the initial
+ * condition is a host-buffer callable (not baked into the physics) and the
+ * time loop is `pfc::sim::run` over `Time`. No `Model`, `Simulator`, or
+ * `FieldModifier`.
  */
 
 using namespace pfc;
 
-class GaussianIC : public FieldModifier {
-private:
-  double D = 1.0;
-
-public:
-  void apply(Model &m, double t) override {
-    (void)t; // suppress compiler warning about unused parameter
-    // Get world (required by Model for compatibility) and domain from model
-    const auto &world = pfc::get_world(m);
-    const auto &domain = pfc::world::get_coordinate_system(world);
-    const auto &fft = pfc::get_fft(m);
-    std::vector<double> &field = m.get_real_field("psi");
-    Int3 low = get_inbox(fft).low;
-    Int3 high = get_inbox(fft).high;
-
-    if (pfc::is_rank0(m)) std::cout << "Create initial condition" << std::endl;
-    size_t idx = 0;
-    for (int k = low[2]; k <= high[2]; k++) {
-      for (int j = low[1]; j <= high[1]; j++) {
-        for (int i = low[0]; i <= high[0]; i++) {
-          auto origin = pfc::domain::get_origin(domain);
-          auto spacing = pfc::domain::get_spacing(domain);
-          double x = origin[0] + i * spacing[0];
-          double y = origin[1] + j * spacing[1];
-          double z = origin[2] + k * spacing[2];
-          field[idx] = exp(-(x * x + y * y + z * z) / (4.0 * D));
-          idx += 1;
-        }
-      }
-    }
-  }
-};
-
-class Diffusion : public Model {
-  using Model::Model;
-
-private:
-  std::vector<double> opL, psi;
-  std::vector<std::complex<double>> psi_F;
-  double psi_min = 0.0, psi_max = 1.0;
-
-public:
-  double get_psi_min() const { return psi_min; }
-  double get_psi_max() const { return psi_max; }
-
-  void allocate() {
-    if (pfc::is_rank0(*this)) std::cout << "Allocate space" << std::endl;
-    auto &fft = pfc::get_fft(*this);
-    psi.resize(fft.size_inbox());
-    psi_F.resize(fft.size_outbox());
-    opL.resize(fft.size_outbox());
-
-    // "Register" real field psi with a name "psi" so that we can access it from
-    // initial condition.
-    pfc::add_real_field(*this, "psi", psi);
-  }
-
-  void prepare_operators(double dt) {
-    // Get world (required by Model for compatibility) and domain from model
-    auto &w = pfc::get_world(*this);
-    const auto &domain = pfc::world::get_coordinate_system(w);
-    auto &fft = pfc::get_fft(*this);
-
-    if (pfc::is_rank0(*this)) std::cout << "Prepare operators" << std::endl;
-    pfc::fft::kspace::for_each_kpoint(
-        get_outbox(fft), domain,
-        [&](std::size_t idx, double ki, double kj, double kk, int, int, int) {
-          const double kLap = -(ki * ki + kj * kj + kk * kk);
-          opL[idx] = 1.0 / (1.0 - dt * kLap);
-        });
-  }
-
-  void initialize(double dt) override {
-    allocate();
-    prepare_operators(dt);
-  }
-
-  void step(double) override {
-    auto &fft = pfc::get_fft(*this);
-    fft.forward(psi, psi_F);
-    for (int k = 0, N = psi_F.size(); k < N; k++) psi_F[k] = opL[k] * psi_F[k];
-    fft.backward(psi_F, psi);
-    find_minmax();
-  }
-
-  void find_minmax() {
-    double local_min = std::numeric_limits<double>::max();
-    double local_max = std::numeric_limits<double>::min();
-    auto min_max_finder = [&local_min, &local_max](const double &value) {
-      local_min = std::min(local_min, value);
-      local_max = std::max(local_max, value);
-    };
-    std::for_each(psi.begin(), psi.end(), min_max_finder);
-    MPI_Reduce(&local_min, &psi_min, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
-    MPI_Reduce(&local_max, &psi_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-  }
-};
-
-void print_statline(Simulator &s) {
-  if (!pfc::is_rank0(s)) return;
-  int n = pfc::time::increment(pfc::get_time(s));
-  double t = pfc::time::current(pfc::get_time(s));
-  Model &model = pfc::get_model(s);
-  Diffusion &diffusion_model = dynamic_cast<Diffusion &>(model);
-  double min = diffusion_model.get_psi_min();
-  double max = diffusion_model.get_psi_max();
-  std::cout << "n = " << n << ", t = " << t << ", min = " << min << ", max = " << max
-            << std::endl;
-}
-
-void run_simulator(Simulator &s) {
-  // Initialize the simulator before starting time stepping.
-  // This also initializes model.
-  pfc::initialize(s);
-
-  // Run the simulator until we are done
-  print_statline(s);
-  while (!pfc::done(s)) {
-    pfc::step(s);
-    print_statline(s);
-  }
-}
-
-void run() {
-  // Construct domain, decomposition, fft and model
-  int L = 64;
-  double h = 2.0 * constants::pi / 8.0;
-  double o = -0.5 * L * h;
-  std::array<int, 3> dimensions = {L, L, L};
-  std::array<double, 3> discretization = {h, h, h};
-  std::array<double, 3> origin = {o, o, o};
-  Domain domain = domain::create(GridSize(dimensions), PhysicalOrigin(origin),
-                                 GridSpacing(discretization));
-  auto decomp = decomposition::create(domain, 1);
-  auto fft = fft::create(decomp);
-  // Create simulation world for Model constructor (World retained for Model
-  // compatibility)
-  auto world = domain::create_world_from_bounds(
-      {L, L, L}, {o, o, o}, {o + (L - 1) * h, o + (L - 1) * h, o + (L - 1) * h});
-  Diffusion model(fft, world);
-
-  // Define time
-  double t0 = 0.0;
-  double t1 = 0.5874010519681994;
-  double dt = (t1 - t0) / 42;
-  double saveat = dt; // when to save results
-  std::array<double, 3> tspan{t0, t1, dt};
-  Time time(tspan, saveat);
-
-  // Define simulator
-  Simulator simulator(model, time);
-
-  // Define initial condition and add it to simulator
-  simulator.add_initial_conditions(std::make_unique<GaussianIC>());
-
-  run_simulator(simulator);
-
-  // Check the result, we should be very close to 0.5
-  if (model.is_rank0()) {
-    if (std::abs(model.get_psi_max() - 0.5) < 0.01) {
-      std::cout << "Test pass!" << std::endl;
-    } else {
-      std::cerr << "Test failed!" << std::endl;
-    }
-  }
+void apply_gaussian_ic(data::Field<double> &field, double D) {
+  field.apply([&](double x, double y, double z) {
+    return std::exp(-(x * x + y * y + z * z) / (4.0 * D));
+  });
 }
 
 int main(int argc, char *argv[]) {
   std::cout << std::fixed;
   std::cout.precision(12);
   MPI_Init(&argc, &argv);
-  run();
+  int rank = 0;
+  int nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+
+  constexpr int L = 64;
+  const double h = 2.0 * constants::pi / 8.0;
+  const double o = -0.5 * L * h;
+  Domain domain = domain::create(GridSize{{L, L, L}}, PhysicalOrigin{{o, o, o}},
+                                 GridSpacing{{h, h, h}});
+  sim::stacks::SpectralCPUStack stack(std::move(domain), rank, nproc);
+  auto &fft = stack.fft();
+  auto &psi = stack.u();
+
+  if (rank == 0) std::cout << "Create initial condition" << std::endl;
+  apply_gaussian_ic(psi, 1.0);
+
+  const double t0 = 0.0;
+  const double t1 = 0.5874010519681994;
+  const double dt = (t1 - t0) / 42;
+  if (rank == 0) std::cout << "Prepare operators" << std::endl;
+  std::vector<double> opL(fft.size_outbox());
+  std::vector<std::complex<double>> psi_F(fft.size_outbox());
+  pfc::fft::kspace::for_each_kpoint(
+      get_outbox(fft), psi.domain(),
+      [&](std::size_t idx, double ki, double kj, double kk, int, int, int) {
+        const double kLap = -(ki * ki + kj * kj + kk * kk);
+        opL[idx] = 1.0 / (1.0 - dt * kLap);
+      });
+
+  Time time({t0, t1, dt}, dt);
+  double psi_min = 0.0;
+  double psi_max = 1.0;
+  auto print_statline = [&](const Time &clock) {
+    if (rank != 0) return;
+    std::cout << "n = " << time::increment(clock) << ", t = " << time::current(clock)
+              << ", min = " << psi_min << ", max = " << psi_max << std::endl;
+  };
+
+  pfc::sim::run(
+      time,
+      [&](double) {
+        diffusion_example::spectral_diffusion_step(fft, psi.vec(), psi_F, opL);
+        diffusion_example::reduce_psi_min_max_mpi(psi.vec(), psi_min, psi_max);
+      },
+      {}, {}, print_statline);
+
+  if (rank == 0) {
+    if (std::abs(psi_max - 0.5) < 0.01) {
+      std::cout << "Test pass!" << std::endl;
+    } else {
+      std::cerr << "Test failed!" << std::endl;
+    }
+  }
+
   MPI_Finalize();
+  return 0;
 }

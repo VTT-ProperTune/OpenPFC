@@ -3,135 +3,113 @@
 
 /**
  * @file world_query_helpers_example.cpp
- * @brief Example: Using World query convenience functions
- *
- * Demonstrates the helper functions for querying World properties:
- * - physical_volume(): Calculate domain volume
- * - is_1d/is_2d/is_3d(): Check dimensionality
- * - dimensionality(): Get dimensionality as integer
- * - get_lower_bounds/get_upper_bounds(): Domain bounds
+ * @brief Domain query helpers (volume, dimensionality, bounds)
  */
 
+#include <cmath>
 #include <iomanip>
 #include <iostream>
-#include <openpfc/domain/create.hpp>
-#include <openpfc/kernel/data/world.hpp>
+#include <string>
+
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/strong_types.hpp>
 
 using namespace pfc;
 
-void print_world_info(const World &world, const std::string &name) {
+void print_domain_info(const Domain &domain, const std::string &name) {
   std::cout << "\n" << name << ":\n";
   std::cout << std::string(60, '=') << "\n";
 
-  // Size information
-  auto size = world::get_size(world);
+  auto size = domain::get_size(domain);
   std::cout << "  Grid size:        " << size[0] << " × " << size[1] << " × "
             << size[2] << "\n";
-  std::cout << "  Total points:     " << world::get_total_size(world) << "\n";
+  std::cout << "  Total points:     " << domain::get_total_size(domain) << "\n";
 
-  // Spacing and origin
-  auto spacing = world::get_spacing(world);
-  auto origin = world::get_origin(world);
+  auto spacing = domain::get_spacing(domain);
+  auto origin = domain::get_origin(domain);
   std::cout << "  Spacing:          (" << spacing[0] << ", " << spacing[1] << ", "
             << spacing[2] << ")\n";
   std::cout << "  Origin:           (" << origin[0] << ", " << origin[1] << ", "
             << origin[2] << ")\n";
 
-  // NEW: Physical volume
   std::cout << "\n  Physical volume:  " << std::fixed << std::setprecision(6)
-            << world::physical_volume(world) << "\n";
+            << domain::physical_volume(domain) << "\n";
 
-  // NEW: Dimensionality checks
-  std::cout << "  Dimensionality:   " << world::dimensionality(world) << "D\n";
-  std::cout << "    is_1d():        " << (world::is_1d(world) ? "true" : "false")
+  std::cout << "  Dimensionality:   " << domain::dimensionality(domain) << "D\n";
+  std::cout << "    is_1d():        " << (domain::is_1d(domain) ? "true" : "false")
             << "\n";
-  std::cout << "    is_2d():        " << (world::is_2d(world) ? "true" : "false")
+  std::cout << "    is_2d():        " << (domain::is_2d(domain) ? "true" : "false")
             << "\n";
-  std::cout << "    is_3d():        " << (world::is_3d(world) ? "true" : "false")
+  std::cout << "    is_3d():        " << (domain::is_3d(domain) ? "true" : "false")
             << "\n";
 
-  // NEW: Domain bounds
-  auto lower = world::get_lower_bounds(world);
-  auto upper = world::get_upper_bounds(world);
+  auto lower = domain::get_lower_bounds(domain);
+  auto upper = domain::get_upper_bounds(domain);
   std::cout << "\n  Lower bounds:     (" << lower[0] << ", " << lower[1] << ", "
             << lower[2] << ")\n";
   std::cout << "  Upper bounds:     (" << upper[0] << ", " << upper[1] << ", "
             << upper[2] << ")\n";
 
-  // Calculate physical extents
   std::cout << "  Physical extent:  (" << upper[0] - lower[0] << " × "
             << upper[1] - lower[1] << " × " << upper[2] - lower[2] << ")\n";
 }
 
 int main() {
   std::cout << "=============================================================\n";
-  std::cout << "OpenPFC Example: World Query Convenience Functions\n";
+  std::cout << "OpenPFC Example: Domain Query Convenience Functions\n";
   std::cout << "=============================================================\n";
 
-  // Example 1: 3D cubic domain
   std::cout << "\nExample 1: Standard 3D simulation domain\n";
-  auto world3d =
-      domain::create_world(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                    GridSpacing({0.1, 0.1, 0.1}));
-  print_world_info(world3d, "3D Cubic Domain (64³, dx=0.1)");
+  auto d3 = domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                           GridSpacing({0.1, 0.1, 0.1}));
+  print_domain_info(d3, "3D Cubic Domain (64³, dx=0.1)");
 
-  // Example 2: 2D domain (quasi-2D simulation)
   std::cout << "\n\nExample 2: 2D simulation (thin film)\n";
-  auto world2d =
-      domain::create_world(GridSize({128, 128, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                    GridSpacing({0.01, 0.01, 1.0}));
-  print_world_info(world2d, "2D Domain (128² × 1, dx=0.01)");
+  auto d2 = domain::create(GridSize({128, 128, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                           GridSpacing({0.01, 0.01, 1.0}));
+  print_domain_info(d2, "2D Domain (128² × 1, dx=0.01)");
 
-  // Example 3: 1D domain
   std::cout << "\n\nExample 3: 1D simulation (line)\n";
-  auto world1d =
-      domain::create_world(GridSize({256, 1, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                    GridSpacing({0.05, 1.0, 1.0}));
-  print_world_info(world1d, "1D Domain (256 × 1 × 1, dx=0.05)");
+  auto d1 = domain::create(GridSize({256, 1, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                           GridSpacing({0.05, 1.0, 1.0}));
+  print_domain_info(d1, "1D Domain (256 × 1 × 1, dx=0.05)");
 
-  // Example 4: Non-cubic 3D domain with offset origin
   std::cout << "\n\nExample 4: Non-cubic domain with custom origin\n";
-  auto world_offset =
-      domain::create_world(GridSize({100, 100, 50}), PhysicalOrigin({-5.0, -5.0, 0.0}),
-                    GridSpacing({0.1, 0.1, 0.2}));
-  print_world_info(world_offset, "Offset Domain (100×100×50, origin at (-5,-5,0))");
+  auto offset =
+      domain::create(GridSize({100, 100, 50}), PhysicalOrigin({-5.0, -5.0, 0.0}),
+                     GridSpacing({0.1, 0.1, 0.2}));
+  print_domain_info(offset, "Offset Domain (100×100×50, origin at (-5,-5,0))");
 
-  // Example 5: Using convenience functions without world:: prefix (ADL)
   std::cout << "\n\nExample 5: Using ADL (no namespace prefix needed)\n";
   std::cout << std::string(60, '=') << "\n";
   {
-    using namespace pfc::world; // Enable ADL
+    using namespace pfc::domain;
 
-    auto w = domain::create_world(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+    auto d = create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
                     GridSpacing({1.0, 1.0, 1.0}));
 
-    // All these work without world:: prefix via ADL!
-    std::cout << "  Volume:           " << physical_volume(w) << "\n";
-    std::cout << "  Is 3D:            " << (is_3d(w) ? "yes" : "no") << "\n";
-    std::cout << "  Dimensionality:   " << dimensionality(w) << "D\n";
+    std::cout << "  Volume:           " << physical_volume(d) << "\n";
+    std::cout << "  Is 3D:            " << (is_3d(d) ? "yes" : "no") << "\n";
+    std::cout << "  Dimensionality:   " << dimensionality(d) << "D\n";
 
-    auto lower = get_lower_bounds(w);
-    auto upper = get_upper_bounds(w);
+    auto lower = get_lower_bounds(d);
+    auto upper = get_upper_bounds(d);
     std::cout << "  Bounds:           [" << lower[0] << ", " << upper[0] << "] × "
               << "[" << lower[1] << ", " << upper[1] << "] × "
               << "[" << lower[2] << ", " << upper[2] << "]\n";
   }
 
-  // Example 6: Comparing manual calculation with convenience function
   std::cout << "\n\nExample 6: Manual vs. convenience function\n";
   std::cout << std::string(60, '=') << "\n";
   {
-    auto w = domain::create_world(GridSize({50, 50, 50}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                           GridSpacing({0.2, 0.2, 0.2}));
+    auto d = domain::create(GridSize({50, 50, 50}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                            GridSpacing({0.2, 0.2, 0.2}));
 
-    // Manual calculation
-    auto spacing = world::get_spacing(w);
-    auto size = world::get_size(w);
+    auto spacing = domain::get_spacing(d);
+    auto size = domain::get_size(d);
     double manual_vol =
         spacing[0] * spacing[1] * spacing[2] * size[0] * size[1] * size[2];
-
-    // Using convenience function
-    double conv_vol = world::physical_volume(w);
+    double conv_vol = domain::physical_volume(d);
 
     std::cout << "  Manual calculation:   " << std::fixed << std::setprecision(6)
               << manual_vol << "\n";
@@ -143,20 +121,14 @@ int main() {
   std::cout << "\n\n=============================================================\n";
   std::cout << "Summary:\n";
   std::cout << "=============================================================\n";
-  std::cout << "New convenience functions added to pfc::world namespace:\n\n";
-  std::cout << "  physical_volume(world)     - Calculate domain volume\n";
-  std::cout << "  is_1d(world)               - Check if 1D (nx>1, ny=1, nz=1)\n";
-  std::cout << "  is_2d(world)               - Check if 2D (nx>1, ny>1, nz=1)\n";
-  std::cout << "  is_3d(world)               - Check if 3D (all > 1)\n";
-  std::cout << "  dimensionality(world)      - Get 1, 2, or 3\n";
-  std::cout << "  get_lower_bounds(world)    - Physical coords at (0,0,0)\n";
-  std::cout << "  get_upper_bounds(world)    - Physical coords at max indices\n";
-  std::cout << "\nThese functions:\n";
-  std::cout << "  ✓ Are inline (zero runtime cost)\n";
-  std::cout << "  ✓ Are noexcept (no exceptions)\n";
-  std::cout << "  ✓ Work via ADL (no namespace prefix needed)\n";
-  std::cout << "  ✓ Improve code readability\n";
-  std::cout << "  ✓ Follow OpenPFC's functional design philosophy\n";
+  std::cout << "Convenience functions in pfc::domain:\n\n";
+  std::cout << "  physical_volume(domain)     - Calculate domain volume\n";
+  std::cout << "  is_1d(domain)               - Check if 1D (nx>1, ny=1, nz=1)\n";
+  std::cout << "  is_2d(domain)               - Check if 2D (nx>1, ny>1, nz=1)\n";
+  std::cout << "  is_3d(domain)               - Check if 3D (all > 1)\n";
+  std::cout << "  dimensionality(domain)      - Get 1, 2, or 3\n";
+  std::cout << "  get_lower_bounds(domain)    - Physical coords at (0,0,0)\n";
+  std::cout << "  get_upper_bounds(domain)    - Physical coords at max indices\n";
   std::cout << "=============================================================\n\n";
 
   return 0;
