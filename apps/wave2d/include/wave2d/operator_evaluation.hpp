@@ -33,8 +33,8 @@
  *      propagation contract.
  */
 
-#include <wave2d/wave_model.hpp>
 #include <openpfc/kernel/simulation/operator_result.hpp>
+#include <wave2d/wave_model.hpp>
 
 namespace wave2d {
 
@@ -99,7 +99,7 @@ struct WaveOperator {
    *       underlying `WaveModel` during each evaluation.
    */
   WaveOperator(double inv_dx2, double inv_dy2) noexcept
-    : model_{.inv_dx2 = inv_dx2, .inv_dy2 = inv_dy2} {}
+      : model_{.inv_dx2 = inv_dx2, .inv_dy2 = inv_dy2} {}
 
   /**
    * @brief Evaluate RHS: \f$du = v\f$, \f$dv = c^2 \Delta u\f$ at time t.
@@ -115,7 +115,7 @@ struct WaveOperator {
    *       stack-allocated.
    * @note This function is `noexcept` for optimal inlining in hot loops.
    */
-  [[nodiscard]] WaveOperatorResult evaluate(const WaveLaplacian& lap, double v_val,
+  [[nodiscard]] WaveOperatorResult evaluate(const WaveLaplacian &lap, double v_val,
                                             double t) const noexcept {
     // Call legacy WaveModel::rhs semantics (const-correct)
     return WaveOperatorResult{model_.rhs(t, v_val, lap)};
@@ -127,23 +127,8 @@ private:
 };
 
 /*
- * Legacy Model::step() call sites (excluded from migration scope):
- *
- * aluminumNew:
- *   - m.step(t) in apps/aluminumNew/Aluminum.hpp (via free function step())
- *   - aluminum.step(1.0) in apps/aluminumNew/aluminumTest.cpp
- *
- * tungsten:
- *   - model.step(t) in apps/tungsten/include/tungsten/cpu/tungsten.hpp (via step())
- *   - model.step(t) in apps/tungsten/include/tungsten/cuda/tungsten.hpp (via step())
- *   - model.step(t) in apps/tungsten/include/tungsten/hip/tungsten.hpp (via step())
- *   - model.step(t) in apps/tungsten/include/tungsten/common/run_tungsten_gpu_vtk.hpp
- *   - model.step(0.0) multiple times in apps/tungsten/src/tungsten_scalability.cpp
- *   - tungsten.step(1.0) in apps/tungsten/tests/test_tungsten.cpp
- *   - model_cpu.step(0.0), model_cuda.step(0.0) in apps/tungsten/tests/test_tungsten_cpu_vs_cuda.cpp
- *   - model_cpu.step(0.0), model_hip.step(0.0) in apps/tungsten/tests/test_tungsten_cpu_vs_hip.cpp
- *
- * Note: Heat3D and Wave2D use explicit-Euler stepper.step(), not Model::step().
+ * Production aluminum/tungsten binaries drive 0.2 ETD sessions, not Model::step().
+ * Heat3D and Wave2D use explicit-Euler stepper.step().
  */
 
 } // namespace wave2d

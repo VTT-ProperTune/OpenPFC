@@ -7,7 +7,7 @@
  * @file aluminum_etd_session.hpp
  * @brief JSON-driven CPU session: stack + AluminumPhysics + moving-frame ETD.
  *
- * M9 A/B driver. Gen-1 `aluminumNew` (`App<Aluminum>`) stays. This session
+ * Production `aluminumNew` driver. This session
  * owns `SpectralCPUStack`, `SimulationState`, and
  * `MovingFrameMeanFieldETDSystem` — no model-owned FFT.
  */

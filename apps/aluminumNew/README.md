@@ -38,8 +38,8 @@ A matching `aluminumNew.toml` is provided for TOML workflows. Adjust `results`, 
 | `aluminum_etd.cpp` | alias of `aluminumNew` |
 | `aluminum_etd_cuda.cpp` / `aluminum_etd_hip.cpp` | GPU sessions on `GPUSpectralStack` |
 | `include/aluminum/aluminum_physics.hpp` | Schema + moving-frame mean-field ETD descriptors |
-| `Aluminum.hpp` | Gen-1 Aluminum Model (still built) |
-| `SeedGridFCC.hpp`, `SlabFCC.hpp`, `SeedFCC.hpp` | Registered FieldModifier / IC helpers |
+| `include/aluminum/aluminum_field_modifiers.hpp` | Host-buffer ICs (`constant`, `seed_grid_fcc`) |
+| `SeedFCC.hpp` | FCC seed helper used by the host-buffer IC |
 
 ## See also
 

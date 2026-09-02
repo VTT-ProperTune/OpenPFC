@@ -80,7 +80,8 @@ struct HeatOperator {
    *       stack-allocated.
    * @note This function is `noexcept` for optimal inlining in hot loops.
    */
-  [[nodiscard]] HeatOperatorResult evaluate(const HeatGrads& g, double t) const noexcept {
+  [[nodiscard]] HeatOperatorResult evaluate(const HeatGrads &g,
+                                            double t) const noexcept {
     // Call legacy HeatModel::rhs semantics (const-correct)
     HeatModel model; // Stateless: kD is compile-time constant
     return HeatOperatorResult{model.rhs(t, g)};
@@ -88,23 +89,8 @@ struct HeatOperator {
 };
 
 /*
- * Legacy Model::step() call sites (excluded from migration scope):
- *
- * aluminumNew:
- *   - m.step(t) in apps/aluminumNew/Aluminum.hpp (via free function step())
- *   - aluminum.step(1.0) in apps/aluminumNew/aluminumTest.cpp
- *
- * tungsten:
- *   - model.step(t) in apps/tungsten/include/tungsten/cpu/tungsten.hpp (via step())
- *   - model.step(t) in apps/tungsten/include/tungsten/cuda/tungsten.hpp (via step())
- *   - model.step(t) in apps/tungsten/include/tungsten/hip/tungsten.hpp (via step())
- *   - model.step(t) in apps/tungsten/include/tungsten/common/run_tungsten_gpu_vtk.hpp
- *   - model.step(0.0) multiple times in apps/tungsten/src/tungsten_scalability.cpp
- *   - tungsten.step(1.0) in apps/tungsten/tests/test_tungsten.cpp
- *   - model_cpu.step(0.0), model_cuda.step(0.0) in apps/tungsten/tests/test_tungsten_cpu_vs_cuda.cpp
- *   - model_cpu.step(0.0), model_hip.step(0.0) in apps/tungsten/tests/test_tungsten_cpu_vs_hip.cpp
- *
- * Note: Heat3D and Wave2D use explicit-Euler stepper.step(), not Model::step().
+ * Production aluminum/tungsten binaries drive 0.2 ETD sessions, not Model::step().
+ * Heat3D and Wave2D use explicit-Euler stepper.step().
  */
 
 } // namespace heat3d

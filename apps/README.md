@@ -15,8 +15,8 @@ CMake wires subdirectories from [`apps/CMakeLists.txt`](CMakeLists.txt) in this 
 
 | Directory | Role | Config | Typical stack |
 |-----------|------|--------|----------------|
-| [**`tungsten/`**](tungsten/README.md) | Production-style **3D phase-field crystal** (tungsten); JSON/TOML, validated params, field I/O | JSON / TOML (`inputs_json/`, `inputs_toml/`) | `App<TungstenModel>`, spectral / HeFFTe, CPU + optional CUDA/HIP |
-| [**`aluminumNew/`**](aluminumNew/README.md) | Compact **`App<Model>`** sample with custom field modifiers (FCC seed/slab) | JSON / TOML | Spectral session, good template for JSON-driven apps |
+| [**`tungsten/`**](tungsten/README.md) | Production-style **3D phase-field crystal** (tungsten); JSON/TOML, validated params, field I/O | JSON / TOML (`inputs_json/`, `inputs_toml/`) | `TungstenETDSession`, spectral / HeFFTe, CPU + optional CUDA/HIP |
+| [**`aluminumNew/`**](aluminumNew/README.md) | Compact aluminum PFC sample (`seed_grid_fcc`) | JSON / TOML | `AluminumETDSession`, moving-frame ETD |
 | [**`allen_cahn/`**](allen_cahn/README.md) | **2D Allen–Cahn** demo; quick visual check | CLI only (no `App` JSON) | FD, separated halos, optional PNG; CPU + optional CUDA/HIP |
 | [**`heat3d/`**](heat3d/README.md) | **3D heat equation** \(\partial_t u = D\Delta u\); five drivers from scratch → spectral implicit | CLI per binary | FD (orders 2–20), spectral pointwise RHS, spectral implicit Euler; OpenMP where enabled |
 | [**`wave2d/`**](wave2d/README.md) | **2D acoustic wave** as **coupled first-order** system; mixed periodic / physical **y** boundaries | CLI (+ optional `--vtk` on all variants) | FD (manual 2nd order or orders 2–20); CPU + optional CUDA/HIP |

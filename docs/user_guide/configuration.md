@@ -30,7 +30,7 @@ Copy patterns from that file into your own TOML or translate key names to JSON a
 | App | Sample configs | Notes |
 |-----|------------------|--------|
 | Tungsten | [`apps/tungsten/inputs_json/`](../../apps/tungsten/inputs_json/README.md), `inputs_toml/` | Large validated parameter sets; JSON and TOML mirrors. |
-| AluminumNew | [`apps/aluminumNew/aluminumNew.json`](../../apps/aluminumNew/aluminumNew.json), `aluminumNew.toml` | `App<Aluminum>` + registered modifiers. |
+| AluminumNew | [`apps/aluminumNew/aluminumNew.json`](../../apps/aluminumNew/aluminumNew.json), `aluminumNew.toml` | `AluminumETDSession` (`constant` + `seed_grid_fcc`). |
 
 Examples that use JSON for demonstration include `examples/12_cahn_hilliard.cpp` and `examples/10_ui_register_ic.cpp` — inspect the source for the expected file shape.
 
