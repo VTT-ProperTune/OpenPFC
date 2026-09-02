@@ -16,6 +16,9 @@ endif()
 include_directories(${CMAKE_SOURCE_DIR}/apps/common/include)
 
 add_executable(aluminumNew aluminumNew.cpp)
+target_include_directories(aluminumNew PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include)
 if(TARGET Heffte::Heffte)
     target_link_libraries(aluminumNew OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte)
 elseif(TARGET Heffte)
@@ -26,7 +29,7 @@ else()
     target_link_libraries(aluminumNew OpenPFC nlohmann_json::nlohmann_json)
 endif()
 
-# M9 A/B CPU driver: MovingFrameMeanFieldETDSystem (Gen-1 aluminumNew stays).
+# Alias of production `aluminumNew` (0.2 ETD session).
 add_executable(aluminum_etd aluminum_etd.cpp)
 target_include_directories(aluminum_etd PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}

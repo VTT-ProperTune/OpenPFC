@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # AluminumNew
 
-Sample phase field application built on `pfc::ui::App<Aluminum>`. It loads JSON or TOML from the command line, registers custom field modifiers (`SeedGridFCC`, `SlabFCC`), and runs the standard spectral simulation session.
+Production aluminum binary: JSON/TOML → `AluminumETDSession` (moving-frame mean-field ETD on `SimulationState`). Initial conditions include `constant` and `seed_grid_fcc`.
 
 ## Build
 
@@ -17,8 +17,7 @@ cmake --build build -j"$(nproc)"
 ```
 
 The executable is `build/apps/aluminumNew/aluminumNew` (path may vary with the generator).
-The M9 A/B CPU binary is `aluminum_etd` (Gen-1 `aluminumNew` remains).
-GPU A/B binaries are `aluminum_etd_cuda` / `aluminum_etd_hip` when those backends are enabled.
+`aluminum_etd` is an alias of `aluminumNew`. GPU binaries are `aluminum_etd_cuda` / `aluminum_etd_hip` when those backends are enabled.
 
 ## Run
 
@@ -35,8 +34,8 @@ A matching `aluminumNew.toml` is provided for TOML workflows. Adjust `results`, 
 
 | File | Role |
 |------|------|
-| `aluminumNew.cpp` | `main`: registers modifiers, constructs `App<Aluminum>` |
-| `aluminum_etd.cpp` | M9 A/B CPU session (`AluminumPhysics` + moving-frame ETD) |
+| `aluminumNew.cpp` | `main`: JSON → `AluminumETDSession` |
+| `aluminum_etd.cpp` | alias of `aluminumNew` |
 | `aluminum_etd_cuda.cpp` / `aluminum_etd_hip.cpp` | GPU sessions on `GPUSpectralStack` |
 | `include/aluminum/aluminum_physics.hpp` | Schema + moving-frame mean-field ETD descriptors |
 | `Aluminum.hpp` | Gen-1 Aluminum Model (still built) |

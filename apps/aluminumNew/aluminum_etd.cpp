@@ -3,9 +3,7 @@
 
 /**
  * @file aluminum_etd.cpp
- * @brief M9 A/B CPU binary: JSON → AluminumETDSession (moving-frame ETD).
- *
- * Gen-1 `aluminumNew` (`App<Aluminum>`) remains.
+ * @brief Alias of production `aluminumNew`: JSON → AluminumETDSession.
  */
 
 #include <cstdlib>
