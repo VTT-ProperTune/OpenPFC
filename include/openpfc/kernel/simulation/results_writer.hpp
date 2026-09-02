@@ -36,8 +36,7 @@
  * This file is part of the I/O module, providing output capabilities for
  * simulation results. BinaryWriter dumps are not a restart loader.
  *
- * @see simulator.hpp for I/O orchestration; `ResultsWriterMap` for the type
- * `Simulator` stores
+ * @see `ResultsWriterMap` for a field-name → writer map used by sessions
  * @see types.hpp for RealField and ComplexField definitions
  * @see binary_reader.hpp for input counterpart
  *
@@ -274,10 +273,9 @@ public:
 };
 
 /**
- * @brief Map of field name → owned `ResultsWriter` (used by `Simulator`)
+ * @brief Map of field name → owned `ResultsWriter`
  *
- * Named type so tests and tools can depend on the same shape as
- * `Simulator::results_writers()` without repeating the template parameters.
+ * Named type so sessions and tests share one field-name → writer map.
  */
 using ResultsWriterMap =
     std::unordered_map<std::string, std::unique_ptr<ResultsWriter>>;

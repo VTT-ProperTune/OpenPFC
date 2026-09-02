@@ -14,8 +14,7 @@
  * - Error handling utilities
  *
  * JSON apps construct a `SimulationSession` and `pfc::sim::run` (see
- * `from_json_simulation_session.hpp`). The Gen-1 `App` / `JsonAppRun`
- * headers remain until M12 deletes them; they are not part of this umbrella.
+ * `from_json_simulation_session.hpp`).
  *
  * This header maintains backward compatibility with the original ui.hpp
  * by including all the split components.

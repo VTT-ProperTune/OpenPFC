@@ -20,28 +20,23 @@
  *
  * Typical usage:
  * @code
- * // Define initial condition
  * class MyInitialCondition : public pfc::FieldModifier {
  * public:
- *     void apply(pfc::Model& model, double time) override {
- *         auto& field = get_real_field(model, get_field_name());
+ *     void apply(pfc::RealField &field, const pfc::Domain &domain,
+ *                const pfc::Box3i &box, double time) override {
+ *         (void)domain; (void)box; (void)time;
  *         // Modify field values
  *     }
  * };
  *
- * // Use in simulator
- * simulator.add_initial_conditions(std::make_unique<MyInitialCondition>());
+ * ic.apply(field, domain, box, 0.0);
  * @endcode
  *
  * This file is part of the Field Operations module, providing mechanisms
  * for setting initial states and enforcing boundary constraints.
  *
- * @see model.hpp for field access methods
- * @see simulator.hpp for modifier application orchestration
- * @see simulator_field_modifiers_dispatch.hpp (`apply_field_modifier_list`) for the
- *      simulator path that invokes `FieldModifier::apply(SimulationContext&,...)`
+ * @see simulation_driver.hpp for `pfc::sim::run` orchestration
  * @see initial_conditions/ for IC implementations
- * @see boundary_conditions/ for BC implementations
  */
 
 #ifndef PFC_FIELD_MODIFIER_HPP

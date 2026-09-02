@@ -3,24 +3,22 @@
 
 /**
  * @file simulation_wiring.hpp
- * @brief Connect JSON settings to Simulator and Time (writers, ICs, BCs, options)
+ * @brief Connect JSON settings to Time, FieldModifiers, and ResultsWriters
  *
  * @details
- * Shared helpers used by `App::main()` (and available for other drivers) to
- * register result writers, field modifiers, and optional `simulator`
- * subsection keys (`result_counter`, `increment`) and JSON `restart_from`.
+ * Shared helpers used by 0.2 sessions and drivers to parse result writers,
+ * field modifiers, and optional `simulator` subsection keys (`increment`,
+ * `integrator.method`) plus JSON `restart_from` exclusivity.
  *
  * Implementation is split across `simulation_wiring_*.hpp` for readability;
  * including this header pulls in all public APIs.
  *
- * Drivers that do not use `SpectralSimulationSession` (the Gen-1 App
- * owner over `SimulationSession<SpectralCPUStack>`) can call
- * `add_result_writers_from_json` / `add_initial_conditions_from_json` /
- * `add_boundary_conditions_from_json` and `apply_simulator_section_from_json`
- * individually on an existing `Simulator` and `Time`. Pass a `JsonWiringContext`
+ * Drivers call `parse_result_writers_from_json` /
+ * `parse_initial_conditions_from_json` / `parse_boundary_conditions_from_json`
+ * and `apply_simulator_section_from_json` on `Time`. Pass a `JsonWiringContext`
  * for communicator and rank metadata (see `simulation_wiring_context.hpp`), or a
  * `JsonWiringSession` to bundle context with modifier and results-writer catalogs
- * (`json_wiring_session.hpp`). There is no `(comm, rank, rank0)` overload.
+ * (`json_wiring_session.hpp`).
  *
  * Initial-condition and boundary-condition JSON share the same `target`
  * parsing (`configure_field_modifier_targets_from_json`) and the same array
@@ -40,14 +38,23 @@
 namespace pfc::ui {
 
 /**
+ * @brief Parsed JSON writers, ICs, and BCs (Time overlays applied separately)
+ */
+struct JsonRuntimeWiring {
+  std::vector<std::unique_ptr<FieldModifier>> initial_conditions;
+  std::vector<std::unique_ptr<FieldModifier>> boundary_conditions;
+  std::vector<NamedResultsWriter> writers;
+};
+
+/**
  * @brief Writers, ICs, BCs, then optional `simulator` JSON subsection
  *
  * @details
  * This is a convenience wrapper around four steps (same order). For **partial**
  * wiring or custom ordering, call the underlying functions directly:
- * 1. `add_result_writers_from_json`
- * 2. `add_initial_conditions_from_json`
- * 3. `add_boundary_conditions_from_json`
+ * 1. `parse_result_writers_from_json`
+ * 2. `parse_initial_conditions_from_json`
+ * 3. `parse_boundary_conditions_from_json`
  * 4. `apply_simulator_section_from_json`
  *
  * @param modifier_catalog Modifier factories for JSON `type` strings.
@@ -59,26 +66,29 @@ namespace pfc::ui {
  *       `default_results_writer_catalog()` at the call site when you intend the
  *       process-wide registries.
  */
-inline void wire_simulator_and_runtime_from_json(
-    Simulator &sim, Time &time, const nlohmann::json &settings,
-    const JsonWiringContext &ctx, const FieldModifierCatalog &modifier_catalog,
+inline JsonRuntimeWiring parse_runtime_from_json(
+    Time &time, const nlohmann::json &settings, const JsonWiringContext &ctx,
+    const FieldModifierCatalog &modifier_catalog,
     const ResultsWriterCatalog &writer_catalog) {
-  add_result_writers_from_json(sim, settings, ctx, writer_catalog);
-  add_initial_conditions_from_json(sim, settings, ctx, modifier_catalog);
-  add_boundary_conditions_from_json(sim, settings, ctx, modifier_catalog);
-  apply_simulator_section_from_json(sim, time, settings);
+  JsonRuntimeWiring wiring;
+  wiring.writers = parse_result_writers_from_json(settings, ctx, writer_catalog);
+  wiring.initial_conditions =
+      parse_initial_conditions_from_json(settings, ctx, modifier_catalog);
+  wiring.boundary_conditions =
+      parse_boundary_conditions_from_json(settings, ctx, modifier_catalog);
+  apply_simulator_section_from_json(time, settings);
+  return wiring;
 }
 
 /**
- * @brief Same as `wire_simulator_and_runtime_from_json(sim, time, settings, ctx,
- *        catalog)` with `ctx` and `catalog` taken from `session`
+ * @brief Same as `parse_runtime_from_json(time, settings, ctx, catalogs)` with
+ *        `ctx` and catalogs taken from `session`
  */
-inline void wire_simulator_and_runtime_from_json(Simulator &sim, Time &time,
+inline JsonRuntimeWiring parse_runtime_from_json(Time &time,
                                                  const nlohmann::json &settings,
                                                  const JsonWiringSession &session) {
-  wire_simulator_and_runtime_from_json(sim, time, settings, session.ctx,
-                                       session.modifier_catalog,
-                                       session.writer_catalog);
+  return parse_runtime_from_json(time, settings, session.ctx,
+                                 session.modifier_catalog, session.writer_catalog);
 }
 
 } // namespace pfc::ui

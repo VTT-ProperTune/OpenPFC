@@ -3,134 +3,48 @@
 
 /**
  * @example 03_simulator_workflow.cpp
- * @brief Demonstrates Simulator API for running complete simulations
+ * @brief Demonstrates `pfc::sim::run` for a complete spectral simulation
  *
  * This example shows:
- * - Setting up a complete simulation workflow
- * - Registering initial conditions
- * - Adding results writers
- * - Running the main simulation loop
- * - Using Simulator callbacks
- *
- * Expected output:
- * - Simulation progress messages
- * - Time stepping information
- * - Results file creation
+ * - Domain + `SpectralCPUStack` setup
+ * - Applying a `FieldModifier` initial condition
+ * - Time integration with `pfc::sim::run`
+ * - Writing statistics on `Time::do_save()`
  *
  * Time to run: < 5 seconds
  */
 
 #include <array>
 #include <cmath>
+#include <complex>
 #include <iomanip>
 #include <iostream>
 #include <limits>
 #include <numbers>
+#include <vector>
+
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/fft/fft_fftw.hpp>
+#include <openpfc/kernel/fft/kspace_iterator.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
-#include <openpfc/kernel/simulation/model.hpp>
-#include <openpfc/kernel/simulation/simulator.hpp>
+#include <openpfc/kernel/simulation/field_modifier.hpp>
+#include <openpfc/kernel/simulation/results_writer.hpp>
+#include <openpfc/kernel/simulation/simulation_driver.hpp>
+#include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
 
 using namespace pfc;
-
-/**
- * @brief Simple diffusion model for demonstration
- *
- * Implements: ∂u/∂t = D∇²u
- * Semi-implicit: u(t+dt) = u(t) / (1 - D*dt*k²)
- */
-class DiffusionModel : public Model {
-private:
-  double m_diffusion_coeff = 0.1;
-  std::vector<double> m_propagator; // Precomputed (1 - D*dt*k²)^{-1}
-
-public:
-  DiffusionModel(FFT &fft, const Domain &domain) : Model(fft, domain) {}
-
-  void initialize(double dt) override {
-    if (is_rank0()) {
-      std::cout << "Initializing diffusion model with D = " << m_diffusion_coeff
-                << "\n";
-    }
-
-    // Register fields
-    auto &fft = pfc::get_fft(*this);
-    m_real_field.resize(fft.size_inbox(), 0.0);
-    m_complex_field.resize(fft.size_outbox());
-
-    pfc::add_real_field(*this, "concentration", m_real_field);
-    pfc::add_complex_field(*this, "concentration_k", m_complex_field);
-
-    // Precompute propagator in k-space
-    auto outbox = fft::get_outbox(fft);
-    const auto &w = pfc::get_domain(*this);
-    auto size = domain::get_size(w);
-    auto spacing = domain::get_spacing(w);
-
-    m_propagator.resize(fft.size_outbox());
-
-    for (int i = outbox.low[0]; i <= outbox.high[0]; ++i) {
-      for (int j = outbox.low[1]; j <= outbox.high[1]; ++j) {
-        for (int k = outbox.low[2]; k <= outbox.high[2]; ++k) {
-          size_t idx = (i - outbox.low[0]) * (outbox.high[1] - outbox.low[1] + 1) *
-                           (outbox.high[2] - outbox.low[2] + 1) +
-                       (j - outbox.low[1]) * (outbox.high[2] - outbox.low[2] + 1) +
-                       (k - outbox.low[2]);
-
-          // Wavenumbers
-          double kx = (i < size[0] / 2) ? i : i - size[0];
-          double ky = (j < size[1] / 2) ? j : j - size[1];
-          double kz = k;
-
-          kx *= 2.0 * std::numbers::pi / (size[0] * spacing[0]);
-          ky *= 2.0 * std::numbers::pi / (size[1] * spacing[1]);
-          kz *= 2.0 * std::numbers::pi / (size[2] * spacing[2]);
-
-          double k2 = kx * kx + ky * ky + kz * kz;
-
-          // Semi-implicit operator
-          m_propagator[idx] = 1.0 / (1.0 + m_diffusion_coeff * dt * k2);
-        }
-      }
-    }
-  }
-
-  void step(double /*t*/) override {
-    auto &u = pfc::get_real_field(*this, "concentration");
-    auto &u_k = pfc::get_complex_field(*this, "concentration_k");
-    auto &fft = pfc::get_fft(*this);
-
-    // Transform to k-space
-    fft.forward(u, u_k);
-
-    // Apply diffusion operator (semi-implicit)
-    for (size_t i = 0; i < u_k.size(); ++i) {
-      u_k[i] *= m_propagator[i];
-    }
-
-    // Transform back
-    fft.backward(u_k, u);
-  }
-
-private:
-  std::vector<double> m_real_field;
-  std::vector<std::complex<double>> m_complex_field;
-};
 
 /**
  * @brief Custom field modifier: Gaussian initial condition
  */
 class GaussianIC : public FieldModifier {
 private:
-  types::Real3 m_center;
+  Real3 m_center;
   double m_amplitude;
   double m_sigma;
 
 public:
-  GaussianIC(const std::string &field_name, const types::Real3 &center,
+  GaussianIC(const std::string &field_name, const Real3 &center,
              double amplitude = 1.0, double sigma = 1.0)
       : m_center(center), m_amplitude(amplitude), m_sigma(sigma) {
     set_field_name(field_name);
@@ -139,24 +53,15 @@ public:
   void apply(RealField &field, const Domain &domain, const Box3i &box,
              double /*t*/) override {
     auto spacing = domain::get_spacing(domain);
-    const auto &inbox = box;
-
-    for (int i = inbox.low[0]; i <= inbox.high[0]; ++i) {
-      for (int j = inbox.low[1]; j <= inbox.high[1]; ++j) {
-        for (int k = inbox.low[2]; k <= inbox.high[2]; ++k) {
-          size_t idx = (i - inbox.low[0]) * (inbox.high[1] - inbox.low[1] + 1) *
-                           (inbox.high[2] - inbox.low[2] + 1) +
-                       (j - inbox.low[1]) * (inbox.high[2] - inbox.low[2] + 1) +
-                       (k - inbox.low[2]);
-
-          // Position
+    int idx = 0;
+    for (int k = box.low[2]; k <= box.high[2]; ++k) {
+      for (int j = box.low[1]; j <= box.high[1]; ++j) {
+        for (int i = box.low[0]; i <= box.high[0]; ++i) {
           double x = i * spacing[0] - m_center[0];
           double y = j * spacing[1] - m_center[1];
           double z = k * spacing[2] - m_center[2];
           double r2 = x * x + y * y + z * z;
-
-          // Gaussian profile
-          field[idx] = m_amplitude * std::exp(-r2 / (2.0 * m_sigma * m_sigma));
+          field[idx++] = m_amplitude * std::exp(-r2 / (2.0 * m_sigma * m_sigma));
         }
       }
     }
@@ -168,14 +73,11 @@ public:
  */
 class StatsWriter : public ResultsWriter {
 public:
-  StatsWriter() = default;
-
   void set_domain(const std::array<int, 3> & /*arr_global*/,
                   const std::array<int, 3> & /*arr_local*/,
                   const std::array<int, 3> & /*arr_offset*/) override {}
 
   MPI_Status write(int iteration, const RealField &field) override {
-    // Compute statistics
     double sum = 0.0, sum2 = 0.0;
     double min_val = std::numeric_limits<double>::max();
     double max_val = std::numeric_limits<double>::lowest();
@@ -187,7 +89,6 @@ public:
       max_val = std::max(max_val, val);
     }
 
-    // Global reduction
     double global_sum, global_sum2, global_min, global_max;
     MPI_Allreduce(&sum, &global_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(&sum2, &global_sum2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -195,10 +96,10 @@ public:
     MPI_Allreduce(&max_val, &global_max, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
     if (mpi::get_rank() == 0) {
-      size_t total_points = field.size() * mpi::get_size();
-      double mean = global_sum / total_points;
-      double variance = global_sum2 / total_points - mean * mean;
-      double stddev = std::sqrt(variance);
+      size_t total_points = field.size() * static_cast<size_t>(mpi::get_size());
+      double mean = global_sum / static_cast<double>(total_points);
+      double variance = global_sum2 / static_cast<double>(total_points) - mean * mean;
+      double stddev = std::sqrt(std::max(0.0, variance));
 
       std::cout << "Iteration " << std::setw(4) << iteration << ": "
                 << "mean=" << std::fixed << std::setprecision(6) << mean
@@ -220,7 +121,6 @@ void example_complete_simulation() {
   std::cout << "  Complete Simulation Workflow\n";
   std::cout << std::string(60, '=') << "\n\n";
 
-  // 1. Create computational domain
   auto domain =
       domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
                      GridSpacing({0.1, 0.1, 0.1}));
@@ -230,72 +130,69 @@ void example_complete_simulation() {
     std::cout << "  Physical size: 6.4 × 6.4 × 6.4\n\n";
   }
 
-  // 2. Set up FFT
-  auto decomp = decomposition::create(domain, mpi::get_size());
-  auto fft = fft::create(decomp);
+  sim::stacks::SpectralCPUStack stack(std::move(domain), mpi::get_rank(),
+                                      mpi::get_size());
+  auto &fft = stack.fft();
+  auto &psi = stack.u();
 
   if (mpi::get_rank() == 0) {
-    std::cout << "Step 2: Initialized FFT\n";
+    std::cout << "Step 2: Built SpectralCPUStack (decomposition + FFT + field)\n";
     std::cout << "  MPI ranks: " << mpi::get_size() << "\n\n";
   }
 
-  // 3. Create model
-  DiffusionModel model(fft, domain);
-
-  if (mpi::get_rank() == 0) {
-    std::cout << "Step 3: Created diffusion model\n\n";
-  }
-
-  // 4. Set up time integration
-  // Simulate from t=0 to t=10 with dt=0.01, save every 1.0 time units
   Time time({0.0, 10.0, 0.01}, 1.0);
-
   if (mpi::get_rank() == 0) {
-    std::cout << "Step 4: Configured time integration\n";
+    std::cout << "Step 3: Configured time integration\n";
     std::cout << "  Duration: " << pfc::time::t1(time) << " time units\n";
     std::cout << "  Time step: " << pfc::time::dt(time) << "\n";
     std::cout << "  Save interval: " << pfc::time::saveat(time) << "\n\n";
   }
 
-  // 5. Create simulator
-  Simulator sim(model, time);
-  pfc::initialize(
-      sim); // Orchestrates pfc::initialize(model, dt) on the wrapped Model
+  GaussianIC ic("concentration", Real3{3.2, 3.2, 3.2}, 1.0, 0.5);
+  ic.apply(psi.vec(), psi.domain(), psi.box(), 0.0);
+  if (mpi::get_rank() == 0) {
+    std::cout << "Step 4: Applied Gaussian initial condition\n";
+    std::cout << "  Center: (3.2, 3.2, 3.2), σ = 0.5\n\n";
+  }
+
+  StatsWriter writer;
+  writer.set_domain(domain::get_size(psi.domain()), get_inbox(fft).size,
+                    get_inbox(fft).low);
+
+  constexpr double D = 0.1;
+  const double dt = pfc::time::dt(time);
+  std::vector<double> propagator(fft.size_outbox());
+  std::vector<std::complex<double>> psi_F(fft.size_outbox());
+  pfc::fft::kspace::for_each_kpoint(
+      get_outbox(fft), psi.domain(),
+      [&](std::size_t idx, double ki, double kj, double kk, int, int, int) {
+        const double k2 = ki * ki + kj * kj + kk * kk;
+        propagator[idx] = 1.0 / (1.0 + D * dt * k2);
+      });
 
   if (mpi::get_rank() == 0) {
-    std::cout << "Step 5: Created simulator\n\n";
+    std::cout << "Step 5: Prepared implicit-Euler diffusion operator\n\n";
+    std::cout << "Step 6: Running simulation...\n\n";
   }
 
-  // 6. Add initial condition
-  types::Real3 center = {3.2, 3.2, 3.2}; // Center of domain
-  sim.add_initial_conditions(
-      std::make_unique<GaussianIC>("concentration", center, 1.0, 0.5));
-
-  if (mpi::get_rank() == 0) {
-    std::cout << "Step 6: Added Gaussian initial condition\n";
-    std::cout << "  Center: (" << center[0] << ", " << center[1] << ", " << center[2]
-              << ")\n";
-    std::cout << "  σ = 0.5\n\n";
-  }
-
-  // 7. Add results writer
-  sim.add_results_writer("concentration", std::make_unique<StatsWriter>());
-
-  if (mpi::get_rank() == 0) {
-    std::cout << "Step 7: Added statistics writer\n\n";
-    std::cout << "Step 8: Running simulation...\n\n";
-  }
-
-  // 8. Run simulation loop
-  while (!pfc::done(sim)) {
-    pfc::step(sim);
-  }
+  pfc::sim::run(
+      time,
+      [&](double) {
+        fft.forward(psi.vec(), psi_F);
+        for (std::size_t i = 0; i < psi_F.size(); ++i) {
+          psi_F[i] *= propagator[i];
+        }
+        fft.backward(psi_F, psi.vec());
+      },
+      {}, {},
+      [&](const Time &clock) {
+        writer.write(pfc::time::increment(clock), psi.vec());
+      });
 
   if (mpi::get_rank() == 0) {
     std::cout << "\n✓ Simulation completed successfully!\n";
-    std::cout << "  Final time: " << pfc::time::current(pfc::get_time(sim)) << "\n";
-    std::cout << "  Total steps: " << pfc::time::increment(pfc::get_time(sim))
-              << "\n";
+    std::cout << "  Final time: " << pfc::time::current(time) << "\n";
+    std::cout << "  Total steps: " << pfc::time::increment(time) << "\n";
   }
 }
 
@@ -303,13 +200,13 @@ int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
 
   if (mpi::get_rank() == 0) {
-    std::cout << "OpenPFC Simulator API Example\n";
-    std::cout << "==============================\n";
+    std::cout << "OpenPFC SimulationDriver API Example\n";
+    std::cout << "====================================\n";
     std::cout << "\nThis example demonstrates a complete simulation workflow:\n";
-    std::cout << "  - Model setup and initialization\n";
-    std::cout << "  - Initial conditions\n";
-    std::cout << "  - Time integration loop\n";
-    std::cout << "  - Results output\n";
+    std::cout << "  - SpectralCPUStack setup\n";
+    std::cout << "  - Initial conditions via FieldModifier\n";
+    std::cout << "  - Time integration loop (`pfc::sim::run`)\n";
+    std::cout << "  - Results output on save ticks\n";
   }
 
   try {
@@ -320,11 +217,10 @@ int main(int argc, char **argv) {
       std::cout << "  Summary\n";
       std::cout << std::string(60, '=') << "\n\n";
       std::cout << "Key takeaways:\n";
-      std::cout << "  ✓ Simulator orchestrates the entire workflow\n";
-      std::cout << "  ✓ Initial conditions applied automatically at t=0\n";
-      std::cout << "  ✓ Results writers called at specified intervals\n";
-      std::cout << "  ✓ Main loop: while (!pfc::done(sim)) { pfc::step(sim); }\n";
-      std::cout << "\nSee include/openpfc/simulator.hpp for complete API.\n";
+      std::cout << "  ✓ SpectralCPUStack owns domain, FFT, and the host field\n";
+      std::cout << "  ✓ FieldModifier::apply takes RealField + Domain + Box3i\n";
+      std::cout << "  ✓ pfc::sim::run drives Time and optional save hooks\n";
+      std::cout << "\nSee include/openpfc/kernel/simulation/simulation_driver.hpp.\n";
     }
 
   } catch (const std::exception &e) {

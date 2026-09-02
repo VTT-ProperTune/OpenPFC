@@ -22,31 +22,34 @@
 #include <memory>
 #include <mpi.h>
 #include <numbers>
+#include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 #include <openpfc/openpfc.hpp>
 
 using namespace pfc;
 
-inline void apply_to_model(FieldModifier &mod, Model &model, double t = 0.0) {
-  auto &field = get_real_field(model, mod.get_field_name());
-  mod.apply(field, get_world(model).domain_, fft::get_inbox(get_fft(model)), t);
+inline int mpi_rank() {
+  int r = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &r);
+  return r;
+}
+inline int mpi_nproc() {
+  int n = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &n);
+  return n;
 }
 
-//==============================================================================
-// Minimal concrete Model (base Model is abstract)
-//==============================================================================
-
-class DemoModel : public Model {
-  Field m_density;
-
-public:
-  DemoModel(FFT &fft, const Domain &domain) : Model(fft, domain) {
-    m_density.resize(fft.size_inbox());
-    pfc::add_real_field(*this, "density", m_density);
-  }
-
-  void initialize(double /*dt*/) override {}
-  void step(double /*t*/) override {}
+struct DemoHost {
+  sim::stacks::SpectralCPUStack stack;
+  explicit DemoHost(Domain domain)
+      : stack(std::move(domain), mpi_rank(), mpi_nproc()) {}
+  RealField &field() { return stack.u().vec(); }
+  const Domain &domain() const { return stack.u().domain(); }
+  const Box3i &box() const { return stack.u().box(); }
 };
+
+inline void apply_mod(FieldModifier &mod, DemoHost &host, double t = 0.0) {
+  mod.apply(host.field(), host.domain(), host.box(), t);
+}
 
 //==============================================================================
 // Helper function for synchronized output
@@ -124,11 +127,7 @@ void demo_custom_initial_condition() {
                                GridSpacing({1.0, 1.0, 1.0}));
 
   // Create FFT with decomposition
-  auto decomp = decomposition::create(domain, 4);
-  auto fft = fft::create(decomp);
-
-  // Create a simple model with one field
-  DemoModel model(fft, domain);
+  DemoHost host(domain);
 
   // Create and apply Gaussian IC
   GaussianIC gaussian_ic(Real3{16.0, 16.0, 16.0}, // Center at domain middle
@@ -137,11 +136,11 @@ void demo_custom_initial_condition() {
                          0.5                      // Background value
   );
   gaussian_ic.set_field_name("density");
-  apply_to_model(gaussian_ic, model, 0.0);
+  apply_mod(gaussian_ic, host, 0.0);
 
   // Verify field values at a few points
-  const auto &field = get_real_field(model, "density");
-  auto inbox = fft::get_inbox(get_fft(model));
+  const auto &field = host.field();
+  auto inbox = host.box();
 
   if (rank == 0) {
     std::cout << "Applied Gaussian IC:\n";
@@ -221,12 +220,10 @@ void demo_boundary_condition() {
   // Create domain and model
   auto domain = domain::create(GridSize({64, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}),
                                GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(domain, 4);
-  auto fft = fft::create(decomp);
-  DemoModel model(fft, domain);
+  DemoHost host(domain);
 
   // Initialize with constant value
-  auto &field = get_real_field(model, "density");
+  auto &field = host.field();
   std::fill(field.begin(), field.end(), 0.5);
 
   if (rank == 0) {
@@ -238,12 +235,12 @@ void demo_boundary_condition() {
   // Create and apply Dirichlet BC
   DirichletBC bc(1.0, 5.0);
   bc.set_field_name("density");
-  apply_to_model(bc, model, 0.0);
+  apply_mod(bc, host, 0.0);
 
   // Sample field values along x-axis
-  auto inbox = fft::get_inbox(get_fft(model));
-  double dx = domain::get_spacing(domain.domain_, 0);
-  double x0 = domain::get_origin(domain.domain_, 0);
+  auto inbox = host.box();
+  double dx = domain::get_spacing(domain, 0);
+  double x0 = domain::get_origin(domain, 0);
 
   if (rank == 0) {
     std::cout << "Field values after BC application:\n";
@@ -324,12 +321,10 @@ void demo_space_time_bc() {
   // Create domain and model
   auto domain = domain::create(GridSize({32, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}),
                                GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(domain, 4);
-  auto fft = fft::create(decomp);
-  DemoModel model(fft, domain);
+  DemoHost host(domain);
 
   // Initialize field
-  auto &field = get_real_field(model, "density");
+  auto &field = host.field();
   std::fill(field.begin(), field.end(), 0.5);
 
   // Create oscillating BC
@@ -349,10 +344,10 @@ void demo_space_time_bc() {
   // Apply BC at different times
   std::vector<double> times = {0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0};
   for (double t : times) {
-    apply_to_model(bc, model, t);
+    apply_mod(bc, host, t);
 
     // Check value at i=0 (if this rank owns it)
-    auto inbox = fft::get_inbox(get_fft(model));
+    auto inbox = host.box();
     if (inbox.low[0] == 0) {
       double bc_val = field[0]; // First point in local subdomain
       if (rank == 0) {
@@ -391,9 +386,7 @@ void demo_composition() {
   // Create domain and model
   auto domain = domain::create(GridSize({64, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
                                GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(domain, 4);
-  auto fft = fft::create(decomp);
-  DemoModel model(fft, domain);
+  DemoHost host(domain);
 
   if (rank == 0) {
     std::cout << "Building complex initial state via composition:\n\n";
@@ -405,7 +398,7 @@ void demo_composition() {
   }
   Constant background(0.5);
   background.set_field_name("density");
-  apply_to_model(background, model, 0.0);
+  apply_mod(background, host, 0.0);
 
   // Step 2: Add Gaussian perturbation
   if (rank == 0) {
@@ -414,7 +407,7 @@ void demo_composition() {
   }
   GaussianIC perturbation(Real3{32.0, 16.0, 16.0}, 0.2, 8.0, 0.0);
   perturbation.set_field_name("density");
-  apply_to_model(perturbation, model, 0.0);
+  apply_mod(perturbation, host, 0.0);
 
   // Step 3: Add second perturbation at different location
   if (rank == 0) {
@@ -423,7 +416,7 @@ void demo_composition() {
   }
   GaussianIC perturbation2(Real3{48.0, 16.0, 16.0}, -0.15, 6.0, 0.0);
   perturbation2.set_field_name("density");
-  apply_to_model(perturbation2, model, 0.0);
+  apply_mod(perturbation2, host, 0.0);
 
   // Step 4: Apply boundary conditions
   if (rank == 0) {
@@ -431,10 +424,10 @@ void demo_composition() {
   }
   DirichletBC bc_right(0.3, 5.0);
   bc_right.set_field_name("density");
-  apply_to_model(bc_right, model, 0.0);
+  apply_mod(bc_right, host, 0.0);
 
   // Analyze resulting field
-  const auto &field = get_real_field(model, "density");
+  const auto &field = host.field();
   double min_val = *std::min_element(field.begin(), field.end());
   double max_val = *std::max_element(field.begin(), field.end());
   double sum = std::accumulate(field.begin(), field.end(), 0.0);
@@ -446,8 +439,8 @@ void demo_composition() {
   MPI_Reduce(&sum, &global_sum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
   if (rank == 0) {
-    int total_points = domain::get_size(domain.domain_, 0) * domain::get_size(domain.domain_, 1) *
-                       domain::get_size(domain.domain_, 2);
+    int total_points = domain::get_size(domain, 0) * domain::get_size(domain, 1) *
+                       domain::get_size(domain, 2);
     double mean = global_sum / total_points;
 
     std::cout << "\nResulting field statistics:\n";

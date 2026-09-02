@@ -10,7 +10,7 @@
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 
-#include "fixtures/mock_model.hpp"
+#include "fixtures/mock_field_modifier.hpp"
 
 using namespace pfc;
 

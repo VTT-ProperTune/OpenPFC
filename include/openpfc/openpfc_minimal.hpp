@@ -36,10 +36,9 @@
 #include <openpfc/kernel/simulation/initial_conditions/seed.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/seed_grid.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/single_seed.hpp>
-#include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/simulation/results_writer.hpp>
 #include <openpfc/kernel/simulation/simulation_context.hpp>
-#include <openpfc/kernel/simulation/simulator.hpp>
+#include <openpfc/kernel/simulation/simulation_driver.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
 
 // Minimal runtime (CPU FFT uses HeFFTe; adapter shared by decomposition/FFT)

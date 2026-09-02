@@ -6,13 +6,7 @@
 #include <vector>
 
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/data/world_factory.hpp>
-#include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
-#include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
 
 using namespace pfc;
@@ -23,25 +17,13 @@ struct DecayGrads {
   double value{};
 };
 
-// Legacy pattern: Model::step(double t) override
-class LegacyDecayModel : public Model {
+class ExplicitEulerDecay {
 public:
-  LegacyDecayModel(fft::IHostFFT &fft, const World &world)
-      : Model(fft, world),
-        m_u(get_size(world)[0] * get_size(world)[1] * get_size(world)[2], 1.0) {
-    m_nx = get_size(world)[0];
-    m_ny = get_size(world)[1];
-    m_nz = get_size(world)[2];
-  }
+  explicit ExplicitEulerDecay(std::size_t n, double dt) : m_u(n, 1.0), m_dt(dt) {}
 
-  void initialize(double dt) override {
-    m_dt = dt;
-    // Field already initialized to 1.0 in constructor
-  }
-
-  void step(double /*t*/) override {
-    for (size_t i = 0; i < m_u.size(); ++i) {
-      m_u[i] += m_dt * (-m_u[i]);
+  void step() {
+    for (double &v : m_u) {
+      v += m_dt * (-v);
     }
   }
 
@@ -63,16 +45,7 @@ TEST_CASE("test_decay_single_step", "[stepper][equivalence]") {
   constexpr double dt = 0.1;
   constexpr int nx = 8, ny = 8, nz = 8;
 
-  // Legacy setup
-  const pfc::Domain domain = pfc::domain::create(
-      GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}), GridSpacing({1, 1, 1}));
-  const pfc::Int3 lower{0, 0, 0};
-  const pfc::Int3 upper{nx - 1, ny - 1, nz - 1};
-  pfc::World world(lower, upper, domain);
-  auto decomposition = pfc::decomposition::create(domain, 1);
-  auto fft = fft::create(decomposition);
-  LegacyDecayModel legacy_model(fft, world);
-  legacy_model.initialize(dt);
+  ExplicitEulerDecay legacy_model(static_cast<std::size_t>(nx * ny * nz), dt);
 
   // New setup
   std::vector<double> new_field(nx * ny * nz, 1.0);
@@ -87,7 +60,7 @@ TEST_CASE("test_decay_single_step", "[stepper][equivalence]") {
 
   // Run one step
   double t = 0.0;
-  legacy_model.step(t);
+  legacy_model.step();
   t = stepper.step(t, new_field);
 
   // Verify equivalence
@@ -102,16 +75,7 @@ TEST_CASE("test_decay_multiple_steps", "[stepper][equivalence]") {
   constexpr int nx = 8, ny = 8, nz = 8;
   constexpr int num_steps = 10;
 
-  // Legacy setup
-  const pfc::Domain domain = pfc::domain::create(
-      GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}), GridSpacing({1, 1, 1}));
-  const pfc::Int3 lower{0, 0, 0};
-  const pfc::Int3 upper{nx - 1, ny - 1, nz - 1};
-  pfc::World world(lower, upper, domain);
-  auto decomposition = pfc::decomposition::create(domain, 1);
-  auto fft = fft::create(decomposition);
-  LegacyDecayModel legacy_model(fft, world);
-  legacy_model.initialize(dt);
+  ExplicitEulerDecay legacy_model(static_cast<std::size_t>(nx * ny * nz), dt);
 
   // New setup
   std::vector<double> new_field(nx * ny * nz, 1.0);
@@ -124,7 +88,7 @@ TEST_CASE("test_decay_multiple_steps", "[stepper][equivalence]") {
   // Run multiple steps
   double t = 0.0;
   for (int step = 0; step < num_steps; ++step) {
-    legacy_model.step(t);
+    legacy_model.step();
     t = stepper.step(t, new_field);
   }
 
@@ -144,16 +108,7 @@ TEST_CASE("test_decay_with_nonzero_initial_condition", "[stepper][equivalence]")
     return 1.0 + 0.1 * (ix + iy + iz);
   };
 
-  // Legacy setup
-  const pfc::Domain domain = pfc::domain::create(
-      GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}), GridSpacing({1, 1, 1}));
-  const pfc::Int3 lower{0, 0, 0};
-  const pfc::Int3 upper{nx - 1, ny - 1, nz - 1};
-  pfc::World world(lower, upper, domain);
-  auto decomposition = pfc::decomposition::create(domain, 1);
-  auto fft = fft::create(decomposition);
-  LegacyDecayModel legacy_model(fft, world);
-  legacy_model.initialize(dt);
+  ExplicitEulerDecay legacy_model(static_cast<std::size_t>(nx * ny * nz), dt);
 
   // Apply non-uniform initial condition to legacy field
   auto &legacy_field = legacy_model.get_field();
@@ -187,7 +142,7 @@ TEST_CASE("test_decay_with_nonzero_initial_condition", "[stepper][equivalence]")
   double t = 0.0;
   constexpr int num_steps = 5;
   for (int step = 0; step < num_steps; ++step) {
-    legacy_model.step(t);
+    legacy_model.step();
     t = stepper.step(t, new_field);
   }
 

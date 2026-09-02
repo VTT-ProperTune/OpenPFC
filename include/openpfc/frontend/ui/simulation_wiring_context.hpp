@@ -7,7 +7,7 @@
  *
  * @details
  * Bundles the communicator and rank attributes passed to every
- * `add_*_from_json` and `wire_simulator_and_runtime_from_json` entry point so
+ * `parse_*_from_json` and `parse_runtime_from_json` entry point so
  * drivers do not repeat five parameters (and tests can construct one object).
  * There is no unpacked `(comm, rank, rank0)` overload.
  */
@@ -20,7 +20,7 @@
 namespace pfc::ui {
 
 /**
- * @brief Communicator and rank metadata for JSON → `Simulator` wiring
+ * @brief Communicator and rank metadata for JSON runtime wiring
  */
 struct JsonWiringContext {
   MPI_Comm comm = MPI_COMM_WORLD;

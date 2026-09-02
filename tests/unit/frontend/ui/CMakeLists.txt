@@ -21,7 +21,6 @@ target_sources(openpfc-tests PRIVATE
 if(OpenPFC_ENABLE_HEFFTE)
   target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_driver_seams.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_json_wiring_context.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_heffte_plan_options.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_app_integrator_loop.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_session_matrix.cpp

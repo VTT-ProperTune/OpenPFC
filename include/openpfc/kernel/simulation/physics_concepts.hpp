@@ -164,11 +164,10 @@ template <class Physics>
 concept HasParameters = requires { typename Physics::parameters_type; };
 
 /**
- * @brief Physics that advances by `step(t)` (Gen-1 `Model` and A1).
+ * @brief Physics that advances by `step(t)`.
  *
  * Distinct from `PointwiseRhs` / `SpectralDiagonalPhysics`: the callable
- * owns the whole update. `pfc::compat::LegacyModelPhysics` models this
- * by delegating to `Model::step`.
+ * owns the whole update (ETD sessions, `pfc::sim::run` steppers).
  */
 template <class Physics>
 concept SteppablePhysics = requires(Physics &physics, double t) { physics.step(t); };

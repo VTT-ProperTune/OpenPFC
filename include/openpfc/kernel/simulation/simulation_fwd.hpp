@@ -6,8 +6,7 @@
  * @brief Forward declarations for simulation types (lighter includes)
  *
  * Use this header when you only need pointers/references to simulation types
- * (e.g. UI JSON stubs, field modifiers). For `Model` implementation details,
- * field registries, or `FFT` access, include `model.hpp` (or `openpfc.hpp`).
+ * (e.g. UI JSON stubs, field modifiers).
  */
 
 #pragma once
@@ -15,9 +14,7 @@
 namespace pfc {
 
 class FieldModifier;
-class Model;
 class ResultsWriter;
-class Simulator;
 class Time;
 
 } // namespace pfc

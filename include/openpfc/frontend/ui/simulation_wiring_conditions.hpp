@@ -14,6 +14,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <mpi.h>
 #include <nlohmann/json.hpp>
@@ -21,7 +22,7 @@
 #include <openpfc/frontend/ui/field_modifier_registry.hpp>
 #include <openpfc/frontend/ui/simulation_wiring_context.hpp>
 #include <openpfc/frontend/ui/simulation_wiring_detail.hpp>
-#include <openpfc/kernel/simulation/simulator.hpp>
+#include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/utils/logging.hpp>
 
 namespace pfc::ui {
@@ -31,16 +32,15 @@ namespace detail {
  * @brief Shared loop for JSON `initial_conditions` / `boundary_conditions` arrays
  *
  * Keeps logging strings, type checks, factory call, and target wiring in one
- * place (DRY); `RegisterFn` injects `Simulator::add_initial_conditions` vs
- * `add_boundary_conditions` (dependency inversion at the call site).
+ * place (DRY); `RegisterFn` receives each constructed `FieldModifier`.
  */
 template <typename RegisterFn>
 void wire_field_modifiers_from_json_array(
-    Simulator &sim, const nlohmann::json &settings, const JsonWiringContext &ctx,
+    const nlohmann::json &settings, const JsonWiringContext &ctx,
     const FieldModifierCatalog &modifier_catalog, const char *json_array_key,
     std::string_view empty_section_warning, std::string_view section_header_log,
     std::string_view creating_log_prefix, std::string_view modifier_kind_label,
-    RegisterFn &&register_on_simulator) {
+    RegisterFn &&register_modifier) {
   const pfc::Logger lg{pfc::LogLevel::Info, ctx.mpi_rank};
   if (!settings.contains(json_array_key)) {
     if (ctx.rank0) {
@@ -68,36 +68,36 @@ void wire_field_modifiers_from_json_array(
     configure_field_modifier_targets_from_json(*field_modifier, params, lg,
                                                ctx.rank0, modifier_kind_label);
     field_modifier->set_mpi_comm(ctx.comm);
-    register_on_simulator(sim, std::move(field_modifier));
+    register_modifier(std::move(field_modifier));
   }
 }
 
 } // namespace detail
 
-inline void
-add_initial_conditions_from_json(Simulator &sim, const nlohmann::json &settings,
-                                 const JsonWiringContext &ctx,
-                                 const FieldModifierCatalog &modifier_catalog) {
+[[nodiscard]] inline std::vector<std::unique_ptr<FieldModifier>>
+parse_initial_conditions_from_json(const nlohmann::json &settings,
+                                   const JsonWiringContext &ctx,
+                                   const FieldModifierCatalog &modifier_catalog) {
+  std::vector<std::unique_ptr<FieldModifier>> out;
   detail::wire_field_modifiers_from_json_array(
-      sim, settings, ctx, modifier_catalog, "initial_conditions",
+      settings, ctx, modifier_catalog, "initial_conditions",
       "no initial conditions are set!", "Adding initial conditions",
       "Creating initial condition from data ", "initial condition",
-      [](Simulator &s, std::unique_ptr<FieldModifier> m) {
-        s.add_initial_conditions(std::move(m));
-      });
+      [&](std::unique_ptr<FieldModifier> m) { out.push_back(std::move(m)); });
+  return out;
 }
 
-inline void
-add_boundary_conditions_from_json(Simulator &sim, const nlohmann::json &settings,
-                                  const JsonWiringContext &ctx,
-                                  const FieldModifierCatalog &modifier_catalog) {
+[[nodiscard]] inline std::vector<std::unique_ptr<FieldModifier>>
+parse_boundary_conditions_from_json(const nlohmann::json &settings,
+                                    const JsonWiringContext &ctx,
+                                    const FieldModifierCatalog &modifier_catalog) {
+  std::vector<std::unique_ptr<FieldModifier>> out;
   detail::wire_field_modifiers_from_json_array(
-      sim, settings, ctx, modifier_catalog, "boundary_conditions",
+      settings, ctx, modifier_catalog, "boundary_conditions",
       "no boundary conditions are set!", "Adding boundary conditions",
       "Creating boundary condition from data ", "boundary condition",
-      [](Simulator &s, std::unique_ptr<FieldModifier> m) {
-        s.add_boundary_conditions(std::move(m));
-      });
+      [&](std::unique_ptr<FieldModifier> m) { out.push_back(std::move(m)); });
+  return out;
 }
 
 } // namespace pfc::ui

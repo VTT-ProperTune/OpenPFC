@@ -3,7 +3,7 @@
 
 /**
  * @file from_json_field_modifiers.hpp
- * @brief JSON hooks for built-in IC/BC types and base `Model` params stub
+ * @brief JSON hooks for built-in IC/BC types
  */
 
 #ifndef PFC_UI_FROM_JSON_FIELD_MODIFIERS_HPP
@@ -13,13 +13,11 @@
 #include <string_view>
 
 #include <openpfc/frontend/ui/from_json_fwd.hpp>
-#include <openpfc/frontend/ui/from_json_log.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/constant.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/file_reader.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/random_seeds.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/seed_grid.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/single_seed.hpp>
-#include <openpfc/kernel/simulation/simulation_fwd.hpp>
 
 namespace pfc::ui {
 namespace detail {
@@ -132,16 +130,6 @@ inline void from_json(const json &j, FileReader &ic) {
   }
 
   ic.set_filename(j["filename"]);
-}
-
-inline void from_json(const json &j, Model &model) {
-  (void)j;
-  (void)model;
-  pfc::log_warning(
-      from_json_info_logger(),
-      "This model does not implement reading parameters from a JSON file. "
-      "Implement 'void from_json(const json &, Model &)' on your model type "
-      "to support JSON parameters.");
 }
 
 } // namespace pfc::ui

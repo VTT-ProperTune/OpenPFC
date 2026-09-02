@@ -16,9 +16,8 @@
  * frontend/.
  *
  * @see docs/architecture.md for package structure (kernel / runtime / frontend)
- * @see kernel/data/world.hpp for computational domain setup
- * @see kernel/simulation/model.hpp for physics model implementation
- * @see kernel/simulation/simulator.hpp for running simulations
+ * @see kernel/data/domain.hpp for computational domain setup
+ * @see kernel/simulation/simulation_driver.hpp for running simulations
  *
  * @author OpenPFC Development Team
  * @date 2025
@@ -47,10 +46,9 @@
 #include <openpfc/kernel/simulation/initial_conditions/seed.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/seed_grid.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/single_seed.hpp>
-#include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/simulation/results_writer.hpp>
 #include <openpfc/kernel/simulation/simulation_context.hpp>
-#include <openpfc/kernel/simulation/simulator.hpp>
+#include <openpfc/kernel/simulation/simulation_driver.hpp>
 #include <openpfc/kernel/simulation/steppers/butcher_tableau.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
 

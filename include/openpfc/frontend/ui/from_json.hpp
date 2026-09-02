@@ -19,16 +19,15 @@
  *   `backend` / `fd_order`)
  * - `from_json_simulation_session.hpp` — JSON → `SimulationSession<Stack>`
  *   (include directly; not part of this umbrella to avoid pulling stacks)
- * - `from_json_field_modifiers.hpp` — built-in IC/BC `from_json` overloads and
- *   base `Model` params stub
+ * - `from_json_field_modifiers.hpp` — built-in IC/BC `from_json` overloads
  *
  * Include this header for the full surface area (same as before the split).
  * GPU stack helpers that only need the HeFFTe overlay may include
  * `from_json_heffte.hpp` directly.
  *
  * Logging from these parsers uses `set_from_json_log_rank` /
- * `get_from_json_log_rank` so messages can include an MPI rank prefix; `App::main`
- * sets the rank at startup.
+ * `get_from_json_log_rank` so messages can include an MPI rank prefix; drivers
+ * call `configure_json_driver_hooks` once rank is known.
  *
  * @author OpenPFC Development Team
  * @date 2025

@@ -3,20 +3,10 @@
 
 #pragma once
 
-#include <openpfc/kernel/simulation/model.hpp>
 #include <vector>
 
 namespace pfc {
 namespace test {
-
-struct SimulationRunner {
-  Model &model;
-  explicit SimulationRunner(Model &m) : model(m) {}
-
-  void run_steps(int steps, double t = 0.0) {
-    for (int s = 0; s < steps; ++s) model.step(t);
-  }
-};
 
 inline double compute_mean(const std::vector<double> &field) {
   if (field.empty()) return 0.0;

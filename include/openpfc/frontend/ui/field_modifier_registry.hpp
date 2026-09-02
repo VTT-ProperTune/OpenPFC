@@ -18,10 +18,8 @@
  * (required parameter—no default). Pass `default_field_modifier_catalog()` when
  * you intend the process-wide singleton, or a dedicated catalog (e.g. from
  * `make_builtin_field_modifier_catalog()` with extra `register_modifier` calls)
- * for tests and isolated drivers. JSON `App` drivers can call
- * `App::set_field_modifier_catalog` before `main()` so `JsonAppRun`
- * forwards that catalog into `wire_simulator_from_settings` alongside
- * `default_results_writer_catalog()`.
+ * for tests and isolated drivers. JSON sessions pass the catalog into
+ * `parse_runtime_from_json` / `parse_initial_conditions_from_json`.
  *
  * The historical name `FieldModifierRegistry` is a type alias for
  * `FieldModifierCatalog`.

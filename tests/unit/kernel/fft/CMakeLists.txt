@@ -9,7 +9,6 @@ target_sources(openpfc-tests PRIVATE
 if(OpenPFC_ENABLE_HEFFTE)
   target_sources(openpfc-tests PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}/test_fft.cpp
-      ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_setting.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_backend_selection.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_dealias.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_comprehensive.cpp

@@ -29,31 +29,34 @@
 #include <openpfc/kernel/simulation/initial_conditions/seed_grid.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/single_seed.hpp>
 #include <openpfc/kernel/simulation/results_writer.hpp>
+#include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 #include <openpfc/openpfc.hpp>
 
 using namespace pfc;
 
-inline void apply_to_model(FieldModifier &mod, Model &model, double t = 0.0) {
-  auto &field = get_real_field(model, mod.get_field_name());
-  mod.apply(field, get_world(model).domain_, fft::get_inbox(get_fft(model)), t);
+inline int mpi_rank() {
+  int r = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &r);
+  return r;
+}
+inline int mpi_nproc() {
+  int n = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &n);
+  return n;
 }
 
-//==============================================================================
-// Minimal concrete Model (base Model is abstract)
-//==============================================================================
-
-class DemoModel : public Model {
-  Field m_density;
-
-public:
-  DemoModel(FFT &fft, const Domain &domain) : Model(fft, domain) {
-    m_density.resize(fft.size_inbox());
-    pfc::add_real_field(*this, "density", m_density);
-  }
-
-  void initialize(double /*dt*/) override {}
-  void step(double /*t*/) override {}
+struct DemoHost {
+  sim::stacks::SpectralCPUStack stack;
+  explicit DemoHost(Domain domain)
+      : stack(std::move(domain), mpi_rank(), mpi_nproc()) {}
+  RealField &field() { return stack.u().vec(); }
+  const Domain &domain() const { return stack.u().domain(); }
+  const Box3i &box() const { return stack.u().box(); }
 };
+
+inline void apply_mod(FieldModifier &mod, DemoHost &host, double t = 0.0) {
+  mod.apply(host.field(), host.domain(), host.box(), t);
+}
 
 //==============================================================================
 // Helper function for synchronized output
@@ -117,9 +120,7 @@ void demo_constant_ic() {
   // Create domain and model
   auto domain = domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
                                GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(domain, 4);
-  auto fft = fft::create(decomp);
-  DemoModel model(fft, domain);
+  DemoHost host(domain);
 
   if (rank == 0) {
     std::cout << "Constant IC sets uniform value throughout domain\n";
@@ -129,14 +130,14 @@ void demo_constant_ic() {
   // Create and apply Constant IC
   Constant ic(0.5); // Density = 0.5
   ic.set_field_name("density");
-  apply_to_model(ic, model, 0.0);
+  apply_mod(ic, host, 0.0);
 
   if (rank == 0) {
     std::cout << "Applied Constant IC with value = 0.5\n\n";
   }
 
   // Verify uniformity
-  const auto &field = get_real_field(model, "density");
+  const auto &field = host.field();
   print_field_stats(field, "Field after Constant IC", MPI_COMM_WORLD);
 
   // Demonstrate setter methods
@@ -163,9 +164,7 @@ void demo_single_seed() {
   auto domain =
       domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
                      GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(domain, 4);
-  auto fft = fft::create(decomp);
-  DemoModel model(fft, domain);
+  DemoHost host(domain);
 
   if (rank == 0) {
     std::cout << "SingleSeed IC creates spherical crystalline seed at origin\n";
@@ -175,14 +174,14 @@ void demo_single_seed() {
   // First apply background
   Constant background(0.285); // Liquid phase density
   background.set_field_name("density");
-  apply_to_model(background, model, 0.0);
+  apply_mod(background, host, 0.0);
 
   // Add crystalline seed
   SingleSeed seed;
   seed.set_field_name("density");
   seed.set_density(0.285);  // Base density
   seed.set_amplitude(0.15); // Crystal amplitude
-  apply_to_model(seed, model, 0.0);
+  apply_mod(seed, host, 0.0);
 
   if (rank == 0) {
     std::cout << "Configuration:\n";
@@ -193,7 +192,7 @@ void demo_single_seed() {
     std::cout << "  Seed radius: 64.0 (hardcoded)\n\n";
   }
 
-  const auto &field = get_real_field(model, "density");
+  const auto &field = host.field();
   print_field_stats(field, "Field with single seed", MPI_COMM_WORLD);
 
   if (rank == 0) {
@@ -221,9 +220,7 @@ void demo_seed_grid() {
   auto domain =
       domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
                      GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(domain, 4);
-  auto fft = fft::create(decomp);
-  DemoModel model(fft, domain);
+  DemoHost host(domain);
 
   if (rank == 0) {
     std::cout << "SeedGrid IC creates regular array of crystalline seeds\n";
@@ -233,7 +230,7 @@ void demo_seed_grid() {
   // Apply background
   Constant background(0.285);
   background.set_field_name("density");
-  apply_to_model(background, model, 0.0);
+  apply_mod(background, host, 0.0);
 
   // Create seed grid
   SeedGrid grid;
@@ -245,7 +242,7 @@ void demo_seed_grid() {
   grid.set_radius(15.0);    // Seed radius
   grid.set_density(0.285);  // Base density
   grid.set_amplitude(0.15); // Crystal amplitude
-  apply_to_model(grid, model, 0.0);
+  apply_mod(grid, host, 0.0);
 
   if (rank == 0) {
     std::cout << "Configuration:\n";
@@ -259,7 +256,7 @@ void demo_seed_grid() {
         << "  Random orientation: each seed has unique crystal orientation\n\n";
   }
 
-  const auto &field = get_real_field(model, "density");
+  const auto &field = host.field();
   print_field_stats(field, "Field with seed grid", MPI_COMM_WORLD);
 
   if (rank == 0) {
@@ -289,9 +286,7 @@ void demo_random_seeds() {
                                PhysicalOrigin({-128.0, -128.0, -128.0}),
                                GridSpacing({1.0, 1.0, 1.0}));
 
-  auto decomp = decomposition::create(domain, 4);
-  auto fft = fft::create(decomp);
-  DemoModel model(fft, domain);
+  DemoHost host(domain);
 
   if (rank == 0) {
     std::cout << "RandomSeeds IC places seeds at random locations\n";
@@ -302,14 +297,14 @@ void demo_random_seeds() {
   // Apply background
   Constant background(0.285);
   background.set_field_name("density");
-  apply_to_model(background, model, 0.0);
+  apply_mod(background, host, 0.0);
 
   // Apply random seeds
   RandomSeeds seeds;
   seeds.set_field_name("density");
   seeds.set_density(0.285);
   seeds.set_amplitude(0.15);
-  apply_to_model(seeds, model, 0.0);
+  apply_mod(seeds, host, 0.0);
 
   if (rank == 0) {
     std::cout << "Configuration:\n";
@@ -322,7 +317,7 @@ void demo_random_seeds() {
     std::cout << "  RNG seed: 42 (reproducible)\n\n";
   }
 
-  const auto &field = get_real_field(model, "density");
+  const auto &field = host.field();
   print_field_stats(field, "Field with random seeds", MPI_COMM_WORLD);
 
   if (rank == 0) {
@@ -350,9 +345,7 @@ void demo_file_reader() {
   // Create domain and model
   auto domain = domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
                                GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(domain, 4);
-  auto fft = fft::create(decomp);
-  DemoModel model(fft, domain);
+  DemoHost host(domain);
 
   if (rank == 0) {
     std::cout << "FileReader IC loads field from binary checkpoint file\n";
@@ -366,27 +359,27 @@ void demo_file_reader() {
 
   Constant background(0.3);
   background.set_field_name("density");
-  apply_to_model(background, model, 0.0);
+  apply_mod(background, host, 0.0);
 
   SingleSeed seed;
   seed.set_field_name("density");
   seed.set_density(0.3);
   seed.set_amplitude(0.1);
-  apply_to_model(seed, model, 0.0);
+  apply_mod(seed, host, 0.0);
 
   // Save to file
   std::string checkpoint_file = "checkpoint_test.bin";
   BinaryWriter writer(checkpoint_file);
-  writer.set_domain(domain::get_size(domain), fft::get_inbox(get_fft(model)).size,
-                    fft::get_inbox(get_fft(model)).low);
-  writer.write(0, get_real_field(model, "density"));
+  writer.set_domain(domain::get_size(domain), host.box().size,
+                    host.box().low);
+  writer.write(0, host.field());
 
   if (rank == 0) {
     std::cout << "  Saved checkpoint to: " << checkpoint_file << "\n\n";
   }
 
   // Compute stats before clearing
-  const auto &field_before = get_real_field(model, "density");
+  const auto &field_before = host.field();
   double sum_before = 0.0;
   for (const auto &val : field_before) sum_before += val;
 
@@ -394,7 +387,7 @@ void demo_file_reader() {
   if (rank == 0) {
     std::cout << "Step 2: Clearing field (simulating restart)...\n";
   }
-  auto &field = get_real_field(model, "density");
+  auto &field = host.field();
   std::fill(field.begin(), field.end(), 0.0);
 
   if (rank == 0) {
@@ -408,14 +401,14 @@ void demo_file_reader() {
 
   FileReader reader(checkpoint_file);
   reader.set_field_name("density");
-  apply_to_model(reader, model, 0.0);
+  apply_mod(reader, host, 0.0);
 
   if (rank == 0) {
     std::cout << "  Loaded checkpoint from: " << checkpoint_file << "\n\n";
   }
 
   // Verify restoration
-  const auto &field_after = get_real_field(model, "density");
+  const auto &field_after = host.field();
   double sum_after = 0.0;
   for (const auto &val : field_after) sum_after += val;
 
@@ -458,9 +451,7 @@ void demo_composition() {
   auto domain =
       domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
                      GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(domain, 4);
-  auto fft = fft::create(decomp);
-  DemoModel model(fft, domain);
+  DemoHost host(domain);
 
   if (rank == 0) {
     std::cout << "Demonstrating composition of multiple initial conditions\n";
@@ -473,8 +464,8 @@ void demo_composition() {
   }
   Constant background(0.285);
   background.set_field_name("density");
-  apply_to_model(background, model, 0.0);
-  print_field_stats(get_real_field(model, "density"), "  After background",
+  apply_mod(background, host, 0.0);
+  print_field_stats(host.field(), "  After background",
                     MPI_COMM_WORLD);
 
   // Step 2: Add single seed at center
@@ -485,8 +476,8 @@ void demo_composition() {
   central_seed.set_field_name("density");
   central_seed.set_density(0.285);
   central_seed.set_amplitude(0.15);
-  apply_to_model(central_seed, model, 0.0);
-  print_field_stats(get_real_field(model, "density"), "  After central seed",
+  apply_mod(central_seed, host, 0.0);
+  print_field_stats(host.field(), "  After central seed",
                     MPI_COMM_WORLD);
 
   // Step 3: Add smaller grid of seeds around it
@@ -503,8 +494,8 @@ void demo_composition() {
   secondary_grid.set_radius(10.0);
   secondary_grid.set_density(0.285);
   secondary_grid.set_amplitude(0.12); // Slightly different amplitude
-  apply_to_model(secondary_grid, model, 0.0);
-  print_field_stats(get_real_field(model, "density"), "  After secondary grid",
+  apply_mod(secondary_grid, host, 0.0);
+  print_field_stats(host.field(), "  After secondary grid",
                     MPI_COMM_WORLD);
 
   if (rank == 0) {

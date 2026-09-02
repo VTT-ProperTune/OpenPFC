@@ -22,7 +22,7 @@
  * used directly (Audit §13.3; the previous attempt was rejected for inventing a
  * colliding duplicate `pfc::data::Field`).
  *
- * Not wired to the Gen-1 `ModelFieldRegistry`; that stays untouched until M12.
+ * Owns named fields for 0.2 sessions (`TungstenETDSession`, `AluminumETDSession`).
  */
 
 #include <algorithm>

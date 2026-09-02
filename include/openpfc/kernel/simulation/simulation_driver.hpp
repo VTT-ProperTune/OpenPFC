@@ -8,7 +8,7 @@
  * @brief Thin time loop over `Time` plus a physics `step` (M10).
  *
  * @details
- * Same ordering as `Simulator::step` / ETD session `run()`:
+ * Same ordering as ETD session `run()`:
  *
  * 1. while not done
  * 2. if increment is 0: `on_start`, then `on_save` when `do_save()`
@@ -17,8 +17,7 @@
  * 5. `step(current time)`
  * 6. `on_save` when `do_save()`
  *
- * Gen-1 `Simulator` stays for A1/A2 until M12. This driver does not own
- * writers or checkpoints; callers pass those as hooks.
+ * This driver does not own writers or checkpoints; callers pass those as hooks.
  */
 
 #include <utility>
