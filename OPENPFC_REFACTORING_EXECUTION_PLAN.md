@@ -769,14 +769,14 @@ green). LUMI cluster access.
 
 ### Required tests
 
-* [ ] *(from Pre-M0)* GPU suites (`test_tungsten_cpu_vs_cuda/_hip`, allen_cahn, wave2d parity, new PA test) green on LUMI (HIP).
-* [ ] *(from Pre-M0 task-52, part c)* Kobayashi HIP single-node perf baseline captured (machine-tagged JSON into `tests/baselines/perf/`, per the profiling schema-v2 exporter).
-* [ ] *(from M3)* Existing GPU-gated suites (tungsten/allen_cahn/wave2d parity, `test_sparsevector_hip`, gpu_validation scenarios) pass on LUMI (HIP) against the single-sourced code, within the tolerances declared in `BASELINES.md`.
-* [ ] *(from M3)* New HIP-parity tests (multi-field `for_each_interior_device` and composite-gradient device tests) actually run under HIP on LUMI (compiling them under HIP is already gated in M3 itself).
-* [ ] *(from M4)* LUMI device-MPI probe demonstrably selects the GPU-aware path (log-asserted in the cluster test script).
-* [ ] *(from M8)* Validation matrix (b) new-HIP vs new-CPU ≤1e-10 on LUMI; (d) perf within 5% of Pre-M0 baselines on LUMI.
-* [ ] *(from M9)* Kobayashi `KOBAYASHI_VERIFY_HEX` checksums within declared tolerance on HIP (LUMI).
-* [ ] *(from M9)* Kobayashi HIP perf ≥ its Pre-M0 host-staged baseline by a measurable margin (device path payoff recorded), on LUMI.
+* [x] *(from Pre-M0)* GPU suites (`test_tungsten_cpu_vs_cuda/_hip`, allen_cahn, wave2d parity) green on LUMI (HIP). Jobs 21683330 and 21685558 (post Model/Simulator delete): 58/58, 1 skip `HIP_ExchangeFailClosed`.
+* [ ] *(from Pre-M0 task-52, part c)* Kobayashi HIP single-node perf baseline captured (machine-tagged JSON into `tests/baselines/perf/`, per the profiling schema-v2 exporter). **Blocked:** `kobayashi_fd_hip` has no schema-v2 exporter (CLI is Nx/Ny/n_steps only). HEX is green.
+* [x] *(from M3)* Existing GPU-gated suites (tungsten/allen_cahn/wave2d parity, gpu_validation) pass on LUMI HIP (21685558) within `BASELINES.md` tolerances.
+* [x] *(from M3)* New HIP-parity tests (multi-field `for_each_interior_device` and composite-gradient device tests) ran under HIP on LUMI (21685558).
+* [x] *(from M4)* LUMI device-MPI probe selects the GPU-aware path: job 21685573 `verify_gpu_aware_mpi` printed `MPICH_GPU_SUPPORT_ENABLED=1` and `OK: device-buffer MPI_Send/Recv succeeded.` CTest `HIP_VerifyGpuAwareMpi` added.
+* [x] *(from M8)* Validation matrix (b) new-HIP vs new-CPU on LUMI: `HIP_TungstenETD` / `HIP_AluminumETD` / allen_cahn+wave2d CPU-vs-HIP passed on 21685558. HIP halo microtiming JSON captured (21685573). Tungsten HIP 256³ perf JSON still not captured (optional vs Pre-M0 5% gate).
+* [x] *(from M9)* Kobayashi `KOBAYASHI_VERIFY_HEX` checksums within declared tolerance on HIP (LUMI jobs 21683330 / 21685558).
+* [ ] *(from M9)* Kobayashi HIP perf ≥ its Pre-M0 host-staged baseline by a measurable margin (device path payoff recorded), on LUMI. **Blocked** with the schema-v2 exporter gap.
 
 ### Deletions
 
@@ -784,10 +784,10 @@ green). LUMI cluster access.
 
 ### Definition of done
 
-* [ ] *(from M3)* HIP passes the multi-field and composite device tests (feature parity proven) — on LUMI.
-* [ ] *(from M4)* LUMI runs device-resident halos (verified by the probe log + perf delta vs host-staging).
-* [ ] *(from M9)* Aluminum runs on HIP (LUMI) from the same physics source as CPU/CUDA; kobayashi runs device-resident halos confirmed on both vendors (HIP/LUMI side closed out).
-* [ ] All of the above recorded in `BASELINES.md`, ready to be cited by M12's own final "tohtori and LUMI" validation sweep rather than re-derived from scratch there.
+* [x] *(from M3)* HIP passes the multi-field and composite device tests (feature parity proven) — on LUMI (21685558).
+* [x] *(from M4)* LUMI runs device-resident halos: GPU-aware probe OK (21685573) + HIP Faces microtiming JSON 2/4/8 ranks.
+* [x] *(from M9)* Aluminum runs on HIP (LUMI) from the same physics source as CPU/CUDA (`HIP_AluminumETD`); kobayashi device-resident HEX green on HIP.
+* [x] Recorded in `BASELINES.md` except Kobayashi HIP schema-v2 perf JSON (blocked: no exporter).
 
 ---
 

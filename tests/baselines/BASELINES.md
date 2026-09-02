@@ -17,8 +17,11 @@ within a stated numeric tolerance, per backend).
 > `OpenPFC_MPI_HIP_AWARE=ON`). Includes `HIP_TungstenETD`, `HIP_AluminumETD`,
 > `session-matrix-hip`, allen_cahn/wave2d CPU-vs-HIP, `kobayashi-hip-hex-smoke`
 > / `kobayashi-hip-hex-2rank`, and OpenMP HEX with 2 ULP on T checksums.
-> Remaining ☐: Kobayashi HIP perf JSON (driver has no schema-v2 exporter),
-> halo HIP microtiming JSON, Cray GPU-aware MPI log-assert (`HIP_VerifyGpuAwareMpi`).
+> Remaining ☐: Kobayashi HIP perf JSON (driver has no schema-v2 exporter).
+> Halo HIP microtiming JSON captured (job 21685573). Cray GPU-aware MPI
+> log-assert: job 21685573 `MPICH_GPU_SUPPORT_ENABLED=1` and
+> `[verify_gpu_aware_mpi] OK: device-buffer MPI_Send/Recv succeeded.`
+> CTest `HIP_VerifyGpuAwareMpi` added (needs a follow-up HIP rebuild).
 
 ## Classification
 
@@ -70,8 +73,10 @@ machine tag in the name (`tohtori-g0005-tungsten-cuda-1rank.json`).
 Science A/B (32³/10-step sine) holds. CPU 64³ is a tiny grid; the extra session/profiling frame cost is ~2 ms/step. CUDA 1-rank and 8-rank are both faster than Gen-1. Before this remasure, 8-rank was 0.0864 s/step because every rank used GPU 0 and HeFFTe defaults (no `use_gpu_aware` / `p2p_plined`). Input: `tests/baselines/perf/inputs/tungsten_release_256.json`.
 
 Gen-1 tungsten sources deleted on g0005 (2026-09-02). DoD greps: no `public pfc::Model` under `apps/tungsten`, no `*model*` headers, no app `.cu`/`.hip`, no `dummy_fft`. Non-test line count under `apps/tungsten/` (exclude `tests/`, `inputs_*`) is 2335 — above the 1500 sketch; leftover is one physics/session/IO stack plus CLI, not a second model.
-- ☐ Kobayashi HIP single node (LUMI)
-- ☑ Halo-exchange microtimings, host and CUDA, 2/4/8 ranks (tohtori `g0005` Release, 128³ Faces, 50 timed exchanges, `examples/23_halo_microtiming`, 2026-09-01): `tests/baselines/perf/tohtori-g0005-halo-{host,cuda}-{2,4,8}rank-release-128.json`. Mean `wall_step` after `--warmup-frames=5`: host 78.4 / 118 / 67.9 µs; CUDA 5.78 / 7.13 / 3.93 ms (GPU-aware MPI). HIP capture is LUMI.
+- ☑ Halo-exchange microtimings, host and CUDA, 2/4/8 ranks (tohtori `g0005` Release, 128³ Faces, 50 timed exchanges, `examples/23_halo_microtiming`, 2026-09-01): `tests/baselines/perf/tohtori-g0005-halo-{host,cuda}-{2,4,8}rank-release-128.json`. Mean `wall_step` after `--warmup-frames=5`: host 78.4 / 118 / 67.9 µs; CUDA 5.78 / 7.13 / 3.93 ms (GPU-aware MPI).
+- ☑ Halo-exchange microtimings, HIP, 2/4/8 ranks (LUMI `dev-g` nid005008, job 21685573, 2026-09-03, 128³ Faces, 50 timed exchanges, `examples/23_halo_microtiming --hip`): `tests/baselines/perf/lumi-dev-g-halo-hip-{2,4,8}rank-release-128.json`. Mean `wall_step` after warmup 5: 105 / 127 / 132 µs (`OpenPFC_MPI_HIP_AWARE=ON`, `MPICH_GPU_SUPPORT_ENABLED=1`).
+- ☑ Cray GPU-aware MPI log-assert (LUMI `dev-g` job 21685573): `verify_gpu_aware_mpi` 2-rank device-buffer `MPI_Send`/`MPI_Recv` printed `MPICH_GPU_SUPPORT_ENABLED=1` and `OK: device-buffer MPI_Send/Recv succeeded.`
+- ☐ Kobayashi HIP single-node perf JSON: `kobayashi_fd_hip` has no schema-v2 profiling exporter (CLI is Nx/Ny/n_steps only). HEX checksums are green (`kobayashi-hip-hex-smoke` / `-2rank` on 21685558). Perf JSON blocked until a profiling hook exists.
 
 ## How to capture (reference commands)
 
