@@ -287,8 +287,7 @@ TEST_CASE("Helper functions are noexcept", "[fft][kspace][static]") {
   STATIC_REQUIRE(noexcept(k_laplacian_value(1.0, 1.0, 1.0)));
   STATIC_REQUIRE(noexcept(k_squared_value(1.0, 1.0, 1.0)));
 
-  // k_frequency_scaling is noexcept for all world types
   auto domain = domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({0.1, 0.1, 0.1}));
   STATIC_REQUIRE(noexcept(k_frequency_scaling(domain)));
-  static_cast<void>(world);
+  static_cast<void>(domain);
 }
