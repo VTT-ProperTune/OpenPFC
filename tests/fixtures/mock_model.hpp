@@ -166,9 +166,10 @@ public:
    * @param m Model to modify (must be MockModelWithModificationFlag)
    * @param time Current simulation time (unused)
    */
-  void apply(Model &m, double /*time*/) override {
-    auto &mock_model = dynamic_cast<MockModelWithModificationFlag &>(m);
-    mock_model.is_modified = true;
+  bool applied = false;
+  void apply(RealField & /*field*/, const Domain & /*domain*/, const Box3i & /*box*/,
+             double /*time*/) override {
+    applied = true;
   }
 };
 
@@ -192,8 +193,8 @@ public:
    * @param m Model containing the field
    * @param time Current simulation time (unused)
    */
-  void apply(Model &m, double /*time*/) override {
-    std::vector<double> &field = m.get_real_field(get_field_name());
+  void apply(RealField &field, const Domain & /*domain*/, const Box3i & /*box*/,
+             double /*time*/) override {
     std::fill(field.begin(), field.end(), 1.0);
   }
 };
@@ -201,11 +202,9 @@ public:
 /** Fills every field listed in get_field_names() with 2.0 (multi-field tests). */
 class MockICMulti : public FieldModifier {
 public:
-  void apply(Model &m, double /*time*/) override {
-    for (const std::string &n : get_field_names()) {
-      std::vector<double> &field = m.get_real_field(n);
-      std::fill(field.begin(), field.end(), 2.0);
-    }
+  void apply(RealField &field, const Domain & /*domain*/, const Box3i & /*box*/,
+             double /*time*/) override {
+    std::fill(field.begin(), field.end(), 2.0);
   }
 };
 

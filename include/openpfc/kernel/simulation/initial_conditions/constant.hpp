@@ -29,10 +29,8 @@
 #ifndef PFC_INITIAL_CONDITIONS_CONSTANT_HPP
 #define PFC_INITIAL_CONDITIONS_CONSTANT_HPP
 
-#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
-#include <openpfc/kernel/simulation/model.hpp>
 
 namespace pfc {
 
@@ -77,23 +75,11 @@ public:
    *
    * 0.2 path: no Model / FFT. @p field must have `box` voxel count.
    */
-  void apply(RealField &field, const Domain &domain, const Box3i &box) const {
+  void apply(RealField &field, const Domain &domain, const Box3i &box,
+             double time = 0.0) override {
+    (void)time;
     pfc::field::apply(field, domain, box,
                       [n0 = m_n0](const pfc::Real3 &) { return n0; });
-  }
-
-  /**
-   * @brief Apply the constant field modifier to the given model.
-   *
-   * This method sets the field in the model to the constant density value.
-   *
-   * @param m The model to apply the field modifier to.
-   * @param t The current time (unused in this implementation).
-   */
-  void apply(Model &m, double t_unused) override {
-    (void)t_unused;
-    apply(pfc::get_real_field(m, get_field_name()), pfc::get_world(m).domain_,
-          pfc::fft::get_inbox(pfc::get_fft(m)));
   }
 };
 

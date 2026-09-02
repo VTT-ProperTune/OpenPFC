@@ -41,6 +41,11 @@
 
 using namespace pfc;
 
+inline void apply_to_model(FieldModifier &mod, Model &model, double t = 0.0) {
+  auto &field = get_real_field(model, mod.get_field_name());
+  mod.apply(field, get_world(model).domain_, fft::get_inbox(get_fft(model)), t);
+}
+
 //==============================================================================
 // PFC Model Implementation
 //==============================================================================
@@ -333,7 +338,7 @@ int main(int argc, char **argv) {
     // Background: uniform liquid phase
     Constant background(0.0); // ψ = 0 corresponds to liquid
     background.set_field_name("density");
-    background.apply(model, 0.0);
+    apply_to_model(background, model, 0.0);
 
     if (rank == 0) {
       std::cout << "    Applied Constant IC: ψ = 0.0 (liquid phase)\n";
@@ -344,7 +349,7 @@ int main(int argc, char **argv) {
     seed.set_field_name("density");
     seed.set_density(0.0);   // Background density
     seed.set_amplitude(0.3); // Crystal amplitude
-    seed.apply(model, 0.0);
+    apply_to_model(seed, model, 0.0);
 
     if (rank == 0) {
       std::cout << "    Applied SingleSeed IC: BCC crystal at origin\n";

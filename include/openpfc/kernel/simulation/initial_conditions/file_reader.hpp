@@ -39,10 +39,8 @@
 #include <utility>
 
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/simulation/binary_reader.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
-#include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/utils/logging.hpp>
 
 namespace pfc {
@@ -62,8 +60,14 @@ public:
 
   void set_mpi_comm(MPI_Comm comm) noexcept override { m_io_comm = comm; }
 
+  void apply(RealField &field, const Domain &domain, const Box3i &box,
+             double time = 0.0) override {
+    apply(SimulationContext{m_io_comm}, field, domain, box, time);
+  }
+
   void apply(const SimulationContext &ctx, RealField &field, const Domain &domain,
-             const Box3i &inbox) const {
+             const Box3i &inbox, double time = 0.0) override {
+    (void)time;
     if (ctx.is_rank0()) {
       const pfc::Logger lg{pfc::LogLevel::Info, 0};
       pfc::log_info(lg, std::string("Reading initial condition from file: ") +
@@ -81,15 +85,7 @@ public:
     }
   }
 
-  void apply(const SimulationContext &ctx, Model &m, double time) override {
-    (void)time;
-    apply(ctx, get_real_field(m, get_field_name()), get_world(m).domain_,
-          get_inbox(get_fft(m)));
-  }
 
-  void apply(Model &m, double time) override {
-    apply(SimulationContext{m_io_comm}, m, time);
-  }
 };
 
 } // namespace pfc

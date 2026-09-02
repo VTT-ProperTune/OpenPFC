@@ -33,6 +33,11 @@
 
 using namespace pfc;
 
+inline void apply_to_model(FieldModifier &mod, Model &model, double t = 0.0) {
+  auto &field = get_real_field(model, mod.get_field_name());
+  mod.apply(field, get_world(model).domain_, fft::get_inbox(get_fft(model)), t);
+}
+
 //==============================================================================
 // Minimal concrete Model (base Model is abstract)
 //==============================================================================
@@ -124,7 +129,7 @@ void demo_constant_ic() {
   // Create and apply Constant IC
   Constant ic(0.5); // Density = 0.5
   ic.set_field_name("density");
-  ic.apply(model, 0.0);
+  apply_to_model(ic, model, 0.0);
 
   if (rank == 0) {
     std::cout << "Applied Constant IC with value = 0.5\n\n";
@@ -170,14 +175,14 @@ void demo_single_seed() {
   // First apply background
   Constant background(0.285); // Liquid phase density
   background.set_field_name("density");
-  background.apply(model, 0.0);
+  apply_to_model(background, model, 0.0);
 
   // Add crystalline seed
   SingleSeed seed;
   seed.set_field_name("density");
   seed.set_density(0.285);  // Base density
   seed.set_amplitude(0.15); // Crystal amplitude
-  seed.apply(model, 0.0);
+  apply_to_model(seed, model, 0.0);
 
   if (rank == 0) {
     std::cout << "Configuration:\n";
@@ -228,7 +233,7 @@ void demo_seed_grid() {
   // Apply background
   Constant background(0.285);
   background.set_field_name("density");
-  background.apply(model, 0.0);
+  apply_to_model(background, model, 0.0);
 
   // Create seed grid
   SeedGrid grid;
@@ -240,7 +245,7 @@ void demo_seed_grid() {
   grid.set_radius(15.0);    // Seed radius
   grid.set_density(0.285);  // Base density
   grid.set_amplitude(0.15); // Crystal amplitude
-  grid.apply(model, 0.0);
+  apply_to_model(grid, model, 0.0);
 
   if (rank == 0) {
     std::cout << "Configuration:\n";
@@ -297,14 +302,14 @@ void demo_random_seeds() {
   // Apply background
   Constant background(0.285);
   background.set_field_name("density");
-  background.apply(model, 0.0);
+  apply_to_model(background, model, 0.0);
 
   // Apply random seeds
   RandomSeeds seeds;
   seeds.set_field_name("density");
   seeds.set_density(0.285);
   seeds.set_amplitude(0.15);
-  seeds.apply(model, 0.0);
+  apply_to_model(seeds, model, 0.0);
 
   if (rank == 0) {
     std::cout << "Configuration:\n";
@@ -361,13 +366,13 @@ void demo_file_reader() {
 
   Constant background(0.3);
   background.set_field_name("density");
-  background.apply(model, 0.0);
+  apply_to_model(background, model, 0.0);
 
   SingleSeed seed;
   seed.set_field_name("density");
   seed.set_density(0.3);
   seed.set_amplitude(0.1);
-  seed.apply(model, 0.0);
+  apply_to_model(seed, model, 0.0);
 
   // Save to file
   std::string checkpoint_file = "checkpoint_test.bin";
@@ -403,7 +408,7 @@ void demo_file_reader() {
 
   FileReader reader(checkpoint_file);
   reader.set_field_name("density");
-  reader.apply(model, 0.0);
+  apply_to_model(reader, model, 0.0);
 
   if (rank == 0) {
     std::cout << "  Loaded checkpoint from: " << checkpoint_file << "\n\n";
@@ -468,7 +473,7 @@ void demo_composition() {
   }
   Constant background(0.285);
   background.set_field_name("density");
-  background.apply(model, 0.0);
+  apply_to_model(background, model, 0.0);
   print_field_stats(get_real_field(model, "density"), "  After background",
                     MPI_COMM_WORLD);
 
@@ -480,7 +485,7 @@ void demo_composition() {
   central_seed.set_field_name("density");
   central_seed.set_density(0.285);
   central_seed.set_amplitude(0.15);
-  central_seed.apply(model, 0.0);
+  apply_to_model(central_seed, model, 0.0);
   print_field_stats(get_real_field(model, "density"), "  After central seed",
                     MPI_COMM_WORLD);
 
@@ -498,7 +503,7 @@ void demo_composition() {
   secondary_grid.set_radius(10.0);
   secondary_grid.set_density(0.285);
   secondary_grid.set_amplitude(0.12); // Slightly different amplitude
-  secondary_grid.apply(model, 0.0);
+  apply_to_model(secondary_grid, model, 0.0);
   print_field_stats(get_real_field(model, "density"), "  After secondary grid",
                     MPI_COMM_WORLD);
 

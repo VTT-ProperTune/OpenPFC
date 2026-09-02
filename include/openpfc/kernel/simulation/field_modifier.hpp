@@ -49,7 +49,10 @@
 
 #include <mpi.h>
 
+#include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/constants.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/model_types.hpp>
 #include <openpfc/kernel/simulation/simulation_context.hpp>
 
 #include <stdexcept>
@@ -57,8 +60,6 @@
 #include <vector>
 
 namespace pfc {
-
-class Model;
 
 /**
  * @brief Abstract base class for field modifiers in OpenPFC
@@ -378,10 +379,10 @@ public:
    *       default still delegates there—ensure any MPI-aware logic is reachable
    *       from that path or override the context overload as well.
    */
-  virtual void apply(const SimulationContext &simulation_context, Model &model,
-                     double time) {
+  virtual void apply(const SimulationContext &simulation_context, RealField &field,
+                     const Domain &domain, const Box3i &box, double time) {
     (void)simulation_context;
-    apply(model, time);
+    apply(field, domain, box, time);
   }
 
   /**
@@ -442,7 +443,8 @@ public:
    * @see get_world(const Model&) for domain geometry
    * @see get_fft(Model&) for subdomain bounds
    */
-  virtual void apply(Model &model, double time) = 0;
+  virtual void apply(RealField &field, const Domain &domain, const Box3i &box,
+                     double time = 0.0) = 0;
 
   /**
    * @brief Destructor for the FieldModifier class.

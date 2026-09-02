@@ -37,10 +37,8 @@
 
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/types.hpp>
-#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
-#include <openpfc/kernel/simulation/model.hpp>
 
 namespace pfc {
 
@@ -65,7 +63,9 @@ public:
 
   const std::string &get_modifier_name() const override { return m_name; }
 
-  void apply(RealField &field, const Domain &domain, const Box3i &box) const {
+  void apply(RealField &field, const Domain &domain, const Box3i &box,
+             double time = 0.0) override {
+    (void)time;
     const double Lx = pfc::domain::get_size(domain, 0);
     const double dx = pfc::domain::get_spacing(domain, 0);
     const double xpos = (Lx * dx) - xwidth;
@@ -81,11 +81,7 @@ public:
         });
   }
 
-  void apply(Model &m, double time) override {
-    (void)time;
-    apply(pfc::get_real_field(m, get_field_name()), pfc::get_world(m).domain_,
-          pfc::fft::get_inbox(pfc::get_fft(m)));
-  }
+
 };
 
 } // namespace pfc

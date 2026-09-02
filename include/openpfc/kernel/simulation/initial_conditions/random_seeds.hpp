@@ -36,11 +36,9 @@
 #include <numbers>
 #include <random>
 
-#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/seed.hpp>
-#include <openpfc/kernel/simulation/model.hpp>
 
 namespace pfc {
 
@@ -53,7 +51,9 @@ public:
   void set_density(double density) { m_density = density; }
   double get_density() const { return m_density; }
 
-  void apply(RealField &field, const Domain &domain, const Box3i &box) const {
+  void apply(RealField &field, const Domain &domain, const Box3i &box,
+             double time = 0.0) override {
+    (void)time;
     std::vector<Seed> seeds;
     const int nseeds = 150;
     const double radius = 20.0;
@@ -94,11 +94,7 @@ public:
     });
   }
 
-  void apply(Model &m, double time) override {
-    (void)time;
-    apply(pfc::get_real_field(m, get_field_name()), pfc::get_world(m).domain_,
-          pfc::fft::get_inbox(pfc::get_fft(m)));
-  }
+
 };
 
 } // namespace pfc

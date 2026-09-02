@@ -44,12 +44,10 @@
 #include <stdexcept>
 
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
-#include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/utils/logging.hpp>
 
 namespace pfc {
@@ -100,7 +98,9 @@ public:
     size = mpi::get_comm_size(comm);
   }
 
-  void apply(RealField &field, const Domain &domain, const Box3i &box) {
+  void apply(RealField &field, const Domain &domain, const Box3i &box,
+             double time = 0.0) override {
+    (void)time;
     const Int3 low = box.low;
     const Int3 high = box.high;
 
@@ -178,11 +178,7 @@ public:
     fill_bc(field, domain, box);
   }
 
-  void apply(Model &m, double time) override {
-    (void)time;
-    apply(get_real_field(m, get_field_name()), get_world(m).domain_,
-          pfc::fft::get_inbox(pfc::get_fft(m)));
-  }
+
 
   void fill_bc(RealField &field, const Domain &domain, const Box3i &box) {
     const double Lx = pfc::domain::get_size(domain, 0);

@@ -136,12 +136,10 @@ public:
     set_field_name(field_name);
   }
 
-  void apply(Model &model, double /*t*/) override {
-    auto &field = get_real_field(model, get_field_name());
-    auto &fft = get_fft(model);
-    auto inbox = fft::get_inbox(fft);
-    const auto &w = get_domain(model);
-    auto spacing = domain::get_spacing(w);
+  void apply(RealField &field, const Domain &domain, const Box3i &box,
+             double /*t*/) override {
+    auto spacing = domain::get_spacing(domain);
+    const auto &inbox = box;
 
     for (int i = inbox.low[0]; i <= inbox.high[0]; ++i) {
       for (int j = inbox.low[1]; j <= inbox.high[1]; ++j) {

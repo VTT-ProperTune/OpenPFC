@@ -35,10 +35,8 @@
 #include <array>
 #include <cmath>
 
-#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
-#include <openpfc/kernel/simulation/model.hpp>
 
 namespace pfc {
 
@@ -52,7 +50,9 @@ public:
   void set_density(double density) { rho_seed = density; }
   double get_density() const { return rho_seed; }
 
-  void apply(RealField &field, const Domain &domain, const Box3i &box) const {
+  void apply(RealField &field, const Domain &domain, const Box3i &box,
+             double time = 0.0) override {
+    (void)time;
     const double s = 1.0 / sqrt(2.0);
     const std::array<double, 3> q1 = {s, s, 0};
     const std::array<double, 3> q2 = {s, 0, s};
@@ -82,11 +82,7 @@ public:
     });
   }
 
-  void apply(Model &m, double time) override {
-    (void)time;
-    apply(pfc::get_real_field(m, get_field_name()), pfc::get_world(m).domain_,
-          pfc::fft::get_inbox(pfc::get_fft(m)));
-  }
+
 };
 
 } // namespace pfc

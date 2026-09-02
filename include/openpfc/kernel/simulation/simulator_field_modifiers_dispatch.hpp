@@ -23,8 +23,10 @@
 #include <memory>
 #include <vector>
 
+#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
+#include <openpfc/kernel/simulation/model_free_functions.hpp>
 #include <openpfc/kernel/simulation/simulation_context.hpp>
 
 namespace pfc {
@@ -45,8 +47,11 @@ inline void apply_field_modifier_list(
   // before modifiers read/write the registered host fields, and host -> device
   // afterwards. No-op for host-only models.
   model.prepare_for_field_modifiers();
+  const auto &world = pfc::get_world(model);
+  const auto box = pfc::fft::get_inbox(pfc::get_fft(model));
   for (const auto &mod : modifiers) {
-    mod->apply(sim_ctx, model, t);
+    auto &field = pfc::get_real_field(model, mod->get_field_name());
+    mod->apply(sim_ctx, field, world.domain_, box, t);
   }
   model.finalize_after_field_modifiers();
 }

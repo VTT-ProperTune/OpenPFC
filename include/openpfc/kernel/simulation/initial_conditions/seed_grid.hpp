@@ -38,11 +38,9 @@
 #include <random>
 #include <sstream>
 
-#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/seed.hpp>
-#include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/utils/logging.hpp>
 
 namespace pfc {
@@ -78,7 +76,8 @@ public:
       : m_Ny(Ny), m_Nz(Nz), m_X0(X0), m_radius(radius), m_rho(0.0),
         m_amplitude(0.0) {}
 
-  void apply(const SimulationContext &ctx, Model &m, double time) override {
+  void apply(const SimulationContext &ctx, RealField &field, const Domain &domain,
+             const Box3i &box, double time) override {
     const int nseeds = m_Nx * m_Ny * m_Nz;
     if (ctx.is_rank0()) {
       const Logger lg{LogLevel::Info, 0};
@@ -87,10 +86,12 @@ public:
           << get_radius();
       log_info(lg, oss.str());
     }
-    apply(m, time);
+    apply(field, domain, box, time);
   }
 
-  void apply(RealField &field, const Domain &domain, const Box3i &box) const {
+  void apply(RealField &field, const Domain &domain, const Box3i &box,
+             double time = 0.0) override {
+    (void)time;
     const auto &size = pfc::domain::get_size(domain);
     const auto &spacing = pfc::domain::get_spacing(domain);
 
@@ -129,11 +130,7 @@ public:
     });
   }
 
-  void apply(Model &m, double time) override {
-    (void)time;
-    apply(pfc::get_real_field(m, get_field_name()), pfc::get_world(m).domain_,
-          pfc::fft::get_inbox(pfc::get_fft(m)));
-  }
+
 };
 
 } // namespace pfc

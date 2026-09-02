@@ -26,6 +26,11 @@
 
 using namespace pfc;
 
+inline void apply_to_model(FieldModifier &mod, Model &model, double t = 0.0) {
+  auto &field = get_real_field(model, mod.get_field_name());
+  mod.apply(field, get_world(model).domain_, fft::get_inbox(get_fft(model)), t);
+}
+
 //==============================================================================
 // Minimal concrete Model (base Model is abstract)
 //==============================================================================
@@ -83,22 +88,13 @@ public:
       : m_center(center), m_amplitude(amplitude), m_width(width),
         m_background(background) {}
 
-  void apply(Model &model, double /*time*/) override {
-    // 1. Get the field to modify
-    auto &field = get_real_field(model, get_field_name());
-
-    // 2. Get geometry information
-    const auto &domain = get_domain(model);
-    const auto &fft = get_fft(model);
-    auto inbox = fft::get_inbox(fft);
-
-    // 3. Loop over local subdomain and set Gaussian profile
+  void apply(RealField &field, const Domain &domain, const Box3i &box,
+             double /*time*/) override {
     int idx = 0;
-    for (int k = inbox.low[2]; k <= inbox.high[2]; k++) {
-      for (int j = inbox.low[1]; j <= inbox.high[1]; j++) {
-        for (int i = inbox.low[0]; i <= inbox.high[0]; i++) {
-          // Convert grid indices to physical coordinates
-          auto pos = domain::to_coords(domain.domain_, Int3{i, j, k});
+    for (int k = box.low[2]; k <= box.high[2]; k++) {
+      for (int j = box.low[1]; j <= box.high[1]; j++) {
+        for (int i = box.low[0]; i <= box.high[0]; i++) {
+          auto pos = domain::to_coords(domain, Int3{i, j, k});
 
           // Compute distance from center
           double dx = pos[0] - m_center[0];
@@ -141,7 +137,7 @@ void demo_custom_initial_condition() {
                          0.5                      // Background value
   );
   gaussian_ic.set_field_name("density");
-  gaussian_ic.apply(model, 0.0); // Apply at t=0
+  apply_to_model(gaussian_ic, model, 0.0);
 
   // Verify field values at a few points
   const auto &field = get_real_field(model, "density");
@@ -190,22 +186,16 @@ public:
 
   const std::string &get_modifier_name() const override { return m_name; }
 
-  void apply(Model &model, double /*time*/) override {
-    auto &field = get_real_field(model, get_field_name());
-    const auto &domain = get_domain(model);
-    const auto &fft = get_fft(model);
-    auto inbox = fft::get_inbox(fft);
+  void apply(RealField &field, const Domain &domain, const Box3i &box,
+             double /*time*/) override {
+    double Lx = domain::get_size(domain, 0) * domain::get_spacing(domain, 0);
+    double dx = domain::get_spacing(domain, 0);
+    double x0 = domain::get_origin(domain, 0);
 
-    // Get domain size in x-direction
-    double Lx = domain::get_size(domain.domain_, 0) * domain::get_spacing(domain.domain_, 0);
-    double dx = domain::get_spacing(domain.domain_, 0);
-    double x0 = domain::get_origin(domain.domain_, 0);
-
-    // Apply BC at right boundary with smooth transition
     int idx = 0;
-    for (int k = inbox.low[2]; k <= inbox.high[2]; k++) {
-      for (int j = inbox.low[1]; j <= inbox.high[1]; j++) {
-        for (int i = inbox.low[0]; i <= inbox.high[0]; i++) {
+    for (int k = box.low[2]; k <= box.high[2]; k++) {
+      for (int j = box.low[1]; j <= box.high[1]; j++) {
+        for (int i = box.low[0]; i <= box.high[0]; i++) {
           double x = x0 + i * dx;
 
           // Only modify near right boundary
@@ -248,7 +238,7 @@ void demo_boundary_condition() {
   // Create and apply Dirichlet BC
   DirichletBC bc(1.0, 5.0);
   bc.set_field_name("density");
-  bc.apply(model, 0.0); // Time is irrelevant for this BC
+  apply_to_model(bc, model, 0.0);
 
   // Sample field values along x-axis
   auto inbox = fft::get_inbox(get_fft(model));
@@ -303,10 +293,8 @@ public:
 
   const std::string &get_modifier_name() const override { return m_name; }
 
-  void apply(Model &model, double time) override {
-    auto &field = get_real_field(model, get_field_name());
-    const auto &fft = get_fft(model);
-    auto inbox = fft::get_inbox(fft);
+  void apply(RealField &field, const Domain & /*domain*/, const Box3i &box,
+             double time) override {
 
     // Time-varying amplitude (sinusoidal)
     double bc_value =
@@ -314,9 +302,9 @@ public:
 
     // Apply at left boundary (i=0)
     int idx = 0;
-    for (int k = inbox.low[2]; k <= inbox.high[2]; k++) {
-      for (int j = inbox.low[1]; j <= inbox.high[1]; j++) {
-        for (int i = inbox.low[0]; i <= inbox.high[0]; i++) {
+    for (int k = box.low[2]; k <= box.high[2]; k++) {
+      for (int j = box.low[1]; j <= box.high[1]; j++) {
+        for (int i = box.low[0]; i <= box.high[0]; i++) {
           if (i == 0) {
             field[idx] = bc_value;
           }
@@ -361,7 +349,7 @@ void demo_space_time_bc() {
   // Apply BC at different times
   std::vector<double> times = {0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0};
   for (double t : times) {
-    bc.apply(model, t);
+    apply_to_model(bc, model, t);
 
     // Check value at i=0 (if this rank owns it)
     auto inbox = fft::get_inbox(get_fft(model));
@@ -417,7 +405,7 @@ void demo_composition() {
   }
   Constant background(0.5);
   background.set_field_name("density");
-  background.apply(model, 0.0);
+  apply_to_model(background, model, 0.0);
 
   // Step 2: Add Gaussian perturbation
   if (rank == 0) {
@@ -426,7 +414,7 @@ void demo_composition() {
   }
   GaussianIC perturbation(Real3{32.0, 16.0, 16.0}, 0.2, 8.0, 0.0);
   perturbation.set_field_name("density");
-  perturbation.apply(model, 0.0);
+  apply_to_model(perturbation, model, 0.0);
 
   // Step 3: Add second perturbation at different location
   if (rank == 0) {
@@ -435,7 +423,7 @@ void demo_composition() {
   }
   GaussianIC perturbation2(Real3{48.0, 16.0, 16.0}, -0.15, 6.0, 0.0);
   perturbation2.set_field_name("density");
-  perturbation2.apply(model, 0.0);
+  apply_to_model(perturbation2, model, 0.0);
 
   // Step 4: Apply boundary conditions
   if (rank == 0) {
@@ -443,7 +431,7 @@ void demo_composition() {
   }
   DirichletBC bc_right(0.3, 5.0);
   bc_right.set_field_name("density");
-  bc_right.apply(model, 0.0);
+  apply_to_model(bc_right, model, 0.0);
 
   // Analyze resulting field
   const auto &field = get_real_field(model, "density");

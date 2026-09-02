@@ -8,6 +8,7 @@
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
+#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 
 using namespace pfc;
@@ -20,8 +21,8 @@ public:
     set_field_name(field_name);
   }
 
-  void apply(Model &m, double /*t*/) override {
-    auto &field = m.get_real_field(get_field_name());
+  void apply(RealField &field, const Domain & /*domain*/, const Box3i & /*box*/,
+             double /*t*/) override {
     for (double &elem : field) {
       elem = value_;
     }
@@ -42,12 +43,9 @@ TEST_CASE("FieldModifier integration: constant IC",
   DiffusionModel model(fft, world);
   model.initialize(1.0);
 
-  // Apply constant IC to density
   ConstantIC ic("density", 0.25);
-  ic.apply(model, 0.0);
-
-  // Check the field was set
   auto &psi = model.get_real_field("density");
+  ic.apply(psi, world.domain_, pfc::fft::get_inbox(fft), 0.0);
   REQUIRE_FALSE(psi.empty());
   bool values_match = true;
   for (const auto &v : psi) {
