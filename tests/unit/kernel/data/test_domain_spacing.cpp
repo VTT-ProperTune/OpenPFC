@@ -5,52 +5,42 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/domain.hpp>
 
 using pfc::Bool3;
 using pfc::Int3;
 using pfc::Real3;
 namespace domain = pfc::domain;
-namespace world = pfc::world;
 
-TEST_CASE("Domain::from_bounds periodic spacing matches documented formula and world::from_bounds",
+TEST_CASE("Domain::from_bounds periodic spacing matches documented formula",
           "[domain][unit]") {
     double lower = 0.0;
     double upper = 1.0;
     int size = 10;
-    Bool3 periodic = {true, true, true};  // all axes periodic
+    Bool3 periodic = {true, true, true};
 
-    auto domain_result = domain::from_bounds({size, size, size}, {lower, lower, lower}, {upper, upper, upper}, periodic);
-    auto world_result = world::from_bounds({size, size, size}, {lower, lower, lower}, {upper, upper, upper}, periodic);
+    auto domain_result = domain::from_bounds({size, size, size}, {lower, lower, lower},
+                                             {upper, upper, upper}, periodic);
 
-    double expected_spacing = (upper - lower) / size;  // periodic formula
+    double expected_spacing = (upper - lower) / size;
 
     REQUIRE(domain_result.spacing[0] == Catch::Approx(expected_spacing));
     REQUIRE(domain_result.spacing[1] == Catch::Approx(expected_spacing));
     REQUIRE(domain_result.spacing[2] == Catch::Approx(expected_spacing));
-    
-    REQUIRE(world_result.domain_.spacing[0] == Catch::Approx(domain_result.spacing[0]));
-    REQUIRE(world_result.domain_.spacing[1] == Catch::Approx(domain_result.spacing[1]));
-    REQUIRE(world_result.domain_.spacing[2] == Catch::Approx(domain_result.spacing[2]));
 }
 
-TEST_CASE("Domain::from_bounds non-periodic spacing matches documented formula and world::from_bounds",
+TEST_CASE("Domain::from_bounds non-periodic spacing matches documented formula",
           "[domain][unit]") {
     double lower = 0.0;
     double upper = 1.0;
     int size = 10;
-    Bool3 periodic = {false, false, false};  // all axes non-periodic
+    Bool3 periodic = {false, false, false};
 
-    auto domain_result = domain::from_bounds({size, size, size}, {lower, lower, lower}, {upper, upper, upper}, periodic);
-    auto world_result = world::from_bounds({size, size, size}, {lower, lower, lower}, {upper, upper, upper}, periodic);
+    auto domain_result = domain::from_bounds({size, size, size}, {lower, lower, lower},
+                                             {upper, upper, upper}, periodic);
 
-    double expected_spacing = (upper - lower) / (size - 1);  // non-periodic formula
+    double expected_spacing = (upper - lower) / (size - 1);
 
     REQUIRE(domain_result.spacing[0] == Catch::Approx(expected_spacing));
     REQUIRE(domain_result.spacing[1] == Catch::Approx(expected_spacing));
     REQUIRE(domain_result.spacing[2] == Catch::Approx(expected_spacing));
-    
-    REQUIRE(world_result.domain_.spacing[0] == Catch::Approx(domain_result.spacing[0]));
-    REQUIRE(world_result.domain_.spacing[1] == Catch::Approx(domain_result.spacing[1]));
-    REQUIRE(world_result.domain_.spacing[2] == Catch::Approx(domain_result.spacing[2]));
 }

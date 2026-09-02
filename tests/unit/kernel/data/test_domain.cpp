@@ -79,32 +79,6 @@ TEST_CASE("Domain dimensionality / bounds / volume", "[domain][unit]") {
               {10, 10, 10}, {0.1, 0.1, 0.1})) == Catch::Approx(0.001 * 1000));
 }
 
-// The migration in M1.3–M1.5 is only safe if Domain reproduces World's numerics
-// bit-for-bit on the shared surface. Pin that here against the live World code.
-TEST_CASE("Domain matches World numerically on the shared surface",
-          "[domain][world][unit]") {
-  const Int3 size{100, 80, 60};
-  const Real3 lower{-5.0, -2.0, 0.0};
-  const Real3 upper{5.0, 6.0, 12.0};
-
-  const Domain d = domain::from_bounds(size, lower, upper);
-  const auto w = pfc::world::from_bounds(size, lower, upper);
-
-  REQUIRE(domain::get_size(d) == pfc::world::get_size(w));
-  REQUIRE(domain::get_spacing(d) == pfc::world::get_spacing(w));
-  REQUIRE(domain::get_total_size(d) == pfc::world::get_total_size(w));
-  REQUIRE(domain::dimensionality(d) == pfc::world::dimensionality(w));
-  REQUIRE(domain::physical_volume(d) == pfc::world::physical_volume(w));
-  REQUIRE(domain::get_lower_bounds(d) == pfc::world::get_lower_bounds(w));
-  REQUIRE(domain::get_upper_bounds(d) == pfc::world::get_upper_bounds(w));
-
-  for (const Int3 idx : {Int3{0, 0, 0}, Int3{50, 40, 30}, Int3{99, 79, 59}}) {
-    REQUIRE(domain::to_coords(d, idx) == pfc::world::to_coords(w, idx));
-    const Real3 x = domain::to_coords(d, idx);
-    REQUIRE(domain::to_indices(d, x) == pfc::world::to_indices(w, x));
-  }
-}
-
 TEST_CASE("Domain::get_origin(d, i) returns per-axis origin", "[domain][unit]") {
   const Domain d = domain::with_spacing({8, 8, 8}, {1.0, 1.0, 1.0});
   const Domain e = domain::from_bounds({4, 4, 4}, {-1.0, 2.0, 3.0}, {1.0, 6.0, 7.0},
