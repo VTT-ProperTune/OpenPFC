@@ -11,7 +11,13 @@ classified **bitwise** (must reproduce exactly) or **tolerance** (must reproduce
 within a stated numeric tolerance, per backend).
 
 > Status: tohtori CUDA/host goldens and perf JSON are captured (see tables).
-> Remaining ☐ items are LUMI HIP perf.
+> LUMI HIP execution is green (job 21683330, `standard-g`, 2026-09-02): 58/58
+> CTest batches passed (1 skip: `HIP_ExchangeFailClosed` with
+> `OpenPFC_MPI_HIP_AWARE=ON`). Includes `HIP_TungstenETD`, `HIP_AluminumETD`,
+> `session-matrix-hip`, allen_cahn/wave2d CPU-vs-HIP, `kobayashi-hip-hex-smoke`
+> / `kobayashi-hip-hex-2rank`, and OpenMP HEX with 2 ULP on T checksums.
+> Remaining ☐: Kobayashi HIP perf JSON, halo HIP microtiming, Cray GPU-aware
+> MPI log-assert.
 
 ## Classification
 
@@ -114,8 +120,16 @@ KOBAYASHI_VERIFY_HEX sum_phi=0x1.b96bf451009d9p+3 sumsq_phi=0x1.4e770b1504ae4p+3
 ```
 
 CPU OpenMP/MPI pin for the same `(Nx, Ny, steps, dt, dx)` has `sum_T=0x1.6e128af4d5ac6p+0`
-(1 ULP). Cross-backend last-bit drift is expected; the CUDA pin is bitwise for the
-CUDA driver so library-halo changes fail closed.
+on Tohtori gcc. LUMI Cray GNU OpenMP (job 21683102) matches phi bitwise and is
+2 ULP on `sumsq_T` (1 ULP on `sum_T`). The OpenMP Catch2 case allows 2 ULP on
+those two. Cross-backend last-bit drift is expected; CUDA and HIP pins are bitwise for
+their own drivers so library-halo changes fail closed.
+
+Kobayashi HIP HEX (LUMI-G MI250X, job 21682844, 1-rank and 2-rank identical):
+
+```
+KOBAYASHI_VERIFY_HEX sum_phi=0x1.b96bf451009d9p+3 sumsq_phi=0x1.4e770b1504ae4p+3 sum_T=0x1.6e128af4d5ac8p+0 sumsq_T=0x1.6546ee0a021efp-2
+```
 
 ## Why bitwise vs tolerance
 
