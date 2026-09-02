@@ -101,6 +101,16 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
   )
   install(TARGETS verify_gpu_aware_mpi DESTINATION bin)
   message(STATUS "verify_gpu_aware_mpi enabled (HIP + MPI device buffer test)")
+  if(OpenPFC_BUILD_TESTS AND OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
+    add_test(NAME HIP_VerifyGpuAwareMpi
+             COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                     $<TARGET_FILE:verify_gpu_aware_mpi>)
+    set_tests_properties(HIP_VerifyGpuAwareMpi PROPERTIES
+      PASS_REGULAR_EXPRESSION
+      "OK: device-buffer MPI_Send/Recv succeeded"
+      ENVIRONMENT
+      "MPICH_GPU_SUPPORT_ENABLED=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+  endif()
 endif()
 
 # HIP spectral Tungsten (requires ROCm-enabled HeFFTe — same rule as CUDA spectral).

@@ -11,13 +11,14 @@ classified **bitwise** (must reproduce exactly) or **tolerance** (must reproduce
 within a stated numeric tolerance, per backend).
 
 > Status: tohtori CUDA/host goldens and perf JSON are captured (see tables).
-> LUMI HIP execution is green (job 21683330, `standard-g`, 2026-09-02): 58/58
-> CTest batches passed (1 skip: `HIP_ExchangeFailClosed` with
+> LUMI HIP execution is green: job 21683330 (`standard-g`, 2026-09-02) and
+> job 21685558 (`dev-g`, 2026-09-03, after Gen-1 Model/Simulator deletion):
+> 58/58 CTest batches passed (1 skip: `HIP_ExchangeFailClosed` with
 > `OpenPFC_MPI_HIP_AWARE=ON`). Includes `HIP_TungstenETD`, `HIP_AluminumETD`,
 > `session-matrix-hip`, allen_cahn/wave2d CPU-vs-HIP, `kobayashi-hip-hex-smoke`
 > / `kobayashi-hip-hex-2rank`, and OpenMP HEX with 2 ULP on T checksums.
-> Remaining ☐: Kobayashi HIP perf JSON, halo HIP microtiming, Cray GPU-aware
-> MPI log-assert.
+> Remaining ☐: Kobayashi HIP perf JSON (driver has no schema-v2 exporter),
+> halo HIP microtiming JSON, Cray GPU-aware MPI log-assert (`HIP_VerifyGpuAwareMpi`).
 
 ## Classification
 
