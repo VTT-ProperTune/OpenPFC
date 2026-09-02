@@ -36,6 +36,7 @@
 #include <numbers>
 #include <random>
 
+#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/seed.hpp>
@@ -52,9 +53,7 @@ public:
   void set_density(double density) { m_density = density; }
   double get_density() const { return m_density; }
 
-  void apply(Model &m, double time) override {
-    (void)time;
-    // Functional coordinate-space implementation using field::apply
+  void apply(RealField &field, const Domain &domain, const Box3i &box) const {
     std::vector<Seed> seeds;
     const int nseeds = 150;
     const double radius = 20.0;
@@ -85,15 +84,20 @@ public:
       seeds.push_back(seed);
     }
 
-    pfc::field::apply(pfc::get_real_field(m, get_field_name()), pfc::get_world(m),
-                      pfc::get_fft(m), [seeds](const pfc::Real3 &X) {
-                        for (const auto &seed : seeds) {
-                          if (seed.is_inside(X)) {
-                            return seed.get_value(X);
-                          }
-                        }
-                        return 0.0; // Outside seeds
-                      });
+    pfc::field::apply(field, domain, box, [seeds](const pfc::Real3 &X) {
+      for (const auto &seed : seeds) {
+        if (seed.is_inside(X)) {
+          return seed.get_value(X);
+        }
+      }
+      return 0.0;
+    });
+  }
+
+  void apply(Model &m, double time) override {
+    (void)time;
+    apply(pfc::get_real_field(m, get_field_name()), pfc::get_world(m).domain_,
+          pfc::fft::get_inbox(pfc::get_fft(m)));
   }
 };
 

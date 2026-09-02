@@ -1,34 +1,18 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#include <cstdio>
 #include <fstream>
-#include <iostream>
 #include <stdexcept>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/types.hpp>
-#include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/file_reader.hpp>
-#include <openpfc/kernel/simulation/model.hpp>
+#include <openpfc/kernel/simulation/simulation_context.hpp>
 
 using namespace pfc;
-using pfc::types::Int3;
-
-// Mock model class for testing
-class ModelWithFileReaderIC : public Model {
-public:
-  ModelWithFileReaderIC(FFT &fft, const pfc::World &world)
-      : pfc::Model(fft, world) {}
-
-  void step(double /*t*/) override {}
-  void initialize(double /*dt*/) override {}
-};
 
 TEST_CASE("FileReader - Parameter Access", "[ic_file_reader]") {
   FileReader reader;
@@ -58,23 +42,16 @@ TEST_CASE("FileReader - Field Name Assignment", "[ic_file_reader]") {
 TEST_CASE("FileReader - Invalid File Handling", "[ic_file_reader]") {
   auto domain = pfc::domain::create(pfc::Int3{8, 8, 8});
   auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
-  auto fft = fft::create(decomposition);
-  ModelWithFileReaderIC m(fft, world);
-
-  const size_t field_size = fft.size_inbox();
-  std::vector<double> psi(field_size, 0.0);
-  add_real_field(m, "default", psi);
+  std::vector<double> psi(static_cast<size_t>(box.count()), 0.0);
 
   FileReader reader("nonexistent_file.bin");
+  SimulationContext ctx(MPI_COMM_WORLD);
 
   SECTION("Apply with nonexistent file") {
-    REQUIRE_THROWS_AS(reader.apply(m, 0.0), std::runtime_error);
+    REQUIRE_THROWS_AS(reader.apply(ctx, psi, domain, box), std::runtime_error);
   }
 }
 
-// Helper function to create a simple binary file for testing
 void create_test_binary_file(const std::string &filename,
                              const std::vector<double> &data) {
   std::ofstream file(filename, std::ios::binary);
@@ -89,57 +66,29 @@ void create_test_binary_file(const std::string &filename,
 TEST_CASE("FileReader - Read Valid File", "[ic_file_reader]") {
   auto domain = pfc::domain::create(pfc::Int3{4, 4, 4});
   auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
-  auto fft = fft::create(decomposition);
-  ModelWithFileReaderIC m(fft, world);
+  std::vector<double> psi(static_cast<size_t>(box.count()), 0.0);
 
-  const size_t field_size = fft.size_inbox();
-  std::vector<double> psi(field_size, 0.0);
-  add_real_field(m, "default", psi);
-
-  // Create test data with known pattern
-  std::vector<double> test_data(64, 0.0); // 4x4x4 = 64 points
+  std::vector<double> test_data(64, 0.0);
   for (size_t i = 0; i < test_data.size(); ++i) {
     test_data[i] = static_cast<double>(i);
   }
 
   const std::string test_filename = "test_field_reader.bin";
+  SimulationContext ctx(MPI_COMM_WORLD);
 
   SECTION("Read file and verify data") {
-    // Create test file
     create_test_binary_file(test_filename, test_data);
-
     FileReader reader(test_filename);
     reader.set_field_name("default");
-
-    // Note: BinaryReader expects specific format with domain info
-    // This test may fail if BinaryReader has strict format requirements
-    // In production code, we'd use actual output format
-    REQUIRE_NOTHROW(reader.apply(m, 0.0));
-
-    // Cleanup
+    REQUIRE_NOTHROW(reader.apply(ctx, psi, domain, box));
     std::remove(test_filename.c_str());
   }
 }
 
-TEST_CASE("FileReader - Integration with Model", "[ic_file_reader]") {
-  auto domain = pfc::domain::create(pfc::Int3{8, 8, 8});
-  auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
-  auto fft = fft::create(decomposition);
-  ModelWithFileReaderIC model(fft, world);
-
-  const size_t field_size = fft.size_inbox();
-  std::vector<double> psi(field_size, 0.0);
-  add_real_field(model, "density", psi);
-
+TEST_CASE("FileReader - Named field interface", "[ic_file_reader]") {
   FileReader reader;
   reader.set_filename("restart.bin");
   reader.set_field_name("density");
-
-  // Just verify interface works
   REQUIRE(reader.get_field_name() == "density");
   REQUIRE(reader.get_filename() == "restart.bin");
 }

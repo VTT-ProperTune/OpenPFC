@@ -15,7 +15,7 @@
  * - Work in coordinate space: Fn(Real3) -> double, or Fn(Real3, t)
  * - Operate over the local inbox only (distributed-memory friendly)
  * - Header-only, zero-cost abstractions
- * - Operate on a field buffer plus World/FFT (or Decomposition) accessors
+ * - Operate on a field buffer plus Domain/Box3i (World/FFT overloads forward)
  *
  * Example:
  * @code
@@ -40,6 +40,8 @@
 #include <stdexcept>
 #include <type_traits>
 
+#include <openpfc/kernel/data/box3i.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/model_types.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
@@ -48,6 +50,86 @@
 // Local iteration implemented inline to work with HeFFTe inbox type
 
 namespace pfc::field {
+
+namespace detail {
+
+template <typename Body>
+inline void for_each_box_voxel(RealField &field, const Domain &domain,
+                               const Box3i &box, Body &&body) {
+  const auto expected = static_cast<size_t>(box.size[0]) *
+                        static_cast<size_t>(box.size[1]) *
+                        static_cast<size_t>(box.size[2]);
+  if (field.size() != expected) {
+    throw std::invalid_argument(
+        "field::apply: field size does not match box voxel count");
+  }
+  size_t linear_idx = 0;
+  for (int k = box.low[2]; k <= box.high[2]; ++k) {
+    for (int j = box.low[1]; j <= box.high[1]; ++j) {
+      for (int i = box.low[0]; i <= box.high[0]; ++i) {
+        const pfc::Int3 idx{i, j, k};
+        body(linear_idx, pfc::domain::to_coords(domain, idx));
+        ++linear_idx;
+      }
+    }
+  }
+}
+
+} // namespace detail
+
+/**
+ * @brief Apply a coordinate-space function over a real field (owned box)
+ *
+ * Canonical 0.2 path: Domain + Box3i, no World or FFT.
+ *
+ * @tparam Fn Callable: double(const Real3&) or double(Real3)
+ */
+template <typename Fn>
+inline void apply(RealField &field, const Domain &domain, const Box3i &box,
+                  Fn &&fn) {
+  detail::for_each_box_voxel(field, domain, box, [&](size_t i, const Real3 &x) {
+    field[i] = static_cast<double>(fn(x));
+  });
+}
+
+/**
+ * @brief Apply a space-time function over a real field (owned box)
+ *
+ * @tparam Fn Callable: double(const Real3&, double) or double(Real3, double)
+ */
+template <typename Fn>
+inline void apply_with_time(RealField &field, const Domain &domain,
+                            const Box3i &box, double t, Fn &&fn) {
+  detail::for_each_box_voxel(field, domain, box, [&](size_t i, const Real3 &x) {
+    field[i] = static_cast<double>(fn(x, t));
+  });
+}
+
+/**
+ * @brief Apply a coordinate-space function in-place over a real field (owned box)
+ *
+ * @tparam Fn Callable: double(const Real3&, double current)
+ */
+template <typename Fn>
+inline void apply_inplace(RealField &field, const Domain &domain, const Box3i &box,
+                          Fn &&fn) {
+  detail::for_each_box_voxel(field, domain, box, [&](size_t i, const Real3 &x) {
+    field[i] = static_cast<double>(fn(x, field[i]));
+  });
+}
+
+/**
+ * @brief Apply a space-time function in-place over a real field (owned box)
+ *
+ * @tparam Fn Callable: double(const Real3&, double current, double t)
+ */
+template <typename Fn>
+inline void apply_inplace_with_time(RealField &field, const Domain &domain,
+                                    const Box3i &box, double t, Fn &&fn) {
+  detail::for_each_box_voxel(field, domain, box, [&](size_t i, const Real3 &x) {
+    field[i] = static_cast<double>(fn(x, field[i], t));
+  });
+}
 
 /**
  * @brief Spatial coordinate function \f$f(x,y,z)\f$.
@@ -81,27 +163,7 @@ using PointFnT = std::function<double(double, double, double, double)>;
 template <typename Fn>
 inline void apply(RealField &field, const World &world, const fft::IHostFFT &fft,
                   Fn &&fn) {
-  const auto inbox = pfc::fft::get_inbox(fft);
-  // Safety: ensure field size matches inbox voxel count
-  const auto nx = inbox.size[0];
-  const auto ny = inbox.size[1];
-  const auto nz = inbox.size[2];
-  const auto expected = static_cast<size_t>(nx) * ny * nz;
-  if (field.size() != expected) {
-    throw std::invalid_argument(
-        "field::apply: field size does not match FFT inbox size");
-  }
-
-  size_t linear_idx = 0;
-  for (int k = inbox.low[2]; k <= inbox.high[2]; ++k) {
-    for (int j = inbox.low[1]; j <= inbox.high[1]; ++j) {
-      for (int i = inbox.low[0]; i <= inbox.high[0]; ++i) {
-        const pfc::Int3 idx{i, j, k};
-        const auto x = pfc::world::to_coords(world, idx);
-        field[linear_idx++] = static_cast<double>(fn(x));
-      }
-    }
-  }
+  apply(field, world.domain_, pfc::fft::get_inbox(fft), std::forward<Fn>(fn));
 }
 
 /**
@@ -117,26 +179,8 @@ inline void apply(RealField &field, const World &world, const fft::IHostFFT &fft
 template <typename Fn>
 inline void apply_with_time(RealField &field, const World &world,
                             const fft::IHostFFT &fft, double t, Fn &&fn) {
-  const auto inbox = pfc::fft::get_inbox(fft);
-  const auto nx = inbox.size[0];
-  const auto ny = inbox.size[1];
-  const auto nz = inbox.size[2];
-  const auto expected = static_cast<size_t>(nx) * ny * nz;
-  if (field.size() != expected) {
-    throw std::invalid_argument(
-        "field::apply_with_time: field size does not match FFT inbox size");
-  }
-
-  size_t linear_idx = 0;
-  for (int k = inbox.low[2]; k <= inbox.high[2]; ++k) {
-    for (int j = inbox.low[1]; j <= inbox.high[1]; ++j) {
-      for (int i = inbox.low[0]; i <= inbox.high[0]; ++i) {
-        const pfc::Int3 idx{i, j, k};
-        const auto x = pfc::world::to_coords(world, idx);
-        field[linear_idx++] = static_cast<double>(fn(x, t));
-      }
-    }
-  }
+  apply_with_time(field, world.domain_, pfc::fft::get_inbox(fft), t,
+                  std::forward<Fn>(fn));
 }
 
 /**
@@ -155,27 +199,8 @@ inline void apply_with_time(RealField &field, const World &world,
 template <typename Fn>
 inline void apply_inplace(RealField &field, const World &world,
                           const fft::IHostFFT &fft, Fn &&fn) {
-  const auto inbox = pfc::fft::get_inbox(fft);
-  const auto nx = inbox.size[0];
-  const auto ny = inbox.size[1];
-  const auto nz = inbox.size[2];
-  const auto expected = static_cast<size_t>(nx) * ny * nz;
-  if (field.size() != expected) {
-    throw std::invalid_argument(
-        "field::apply_inplace: field size does not match FFT inbox size");
-  }
-
-  size_t linear_idx = 0;
-  for (int k = inbox.low[2]; k <= inbox.high[2]; ++k) {
-    for (int j = inbox.low[1]; j <= inbox.high[1]; ++j) {
-      for (int i = inbox.low[0]; i <= inbox.high[0]; ++i) {
-        const pfc::Int3 idx{i, j, k};
-        const auto x = pfc::world::to_coords(world, idx);
-        field[linear_idx] = static_cast<double>(fn(x, field[linear_idx]));
-        ++linear_idx;
-      }
-    }
-  }
+  apply_inplace(field, world.domain_, pfc::fft::get_inbox(fft),
+                std::forward<Fn>(fn));
 }
 
 /**
@@ -186,27 +211,8 @@ inline void apply_inplace(RealField &field, const World &world,
 template <typename Fn>
 inline void apply_inplace_with_time(RealField &field, const World &world,
                                     const fft::IHostFFT &fft, double t, Fn &&fn) {
-  const auto inbox = pfc::fft::get_inbox(fft);
-  const auto nx = inbox.size[0];
-  const auto ny = inbox.size[1];
-  const auto nz = inbox.size[2];
-  const auto expected = static_cast<size_t>(nx) * ny * nz;
-  if (field.size() != expected) {
-    throw std::invalid_argument(
-        "field::apply_inplace_with_time: field size does not match FFT inbox size");
-  }
-
-  size_t linear_idx = 0;
-  for (int k = inbox.low[2]; k <= inbox.high[2]; ++k) {
-    for (int j = inbox.low[1]; j <= inbox.high[1]; ++j) {
-      for (int i = inbox.low[0]; i <= inbox.high[0]; ++i) {
-        const pfc::Int3 idx{i, j, k};
-        const auto x = pfc::world::to_coords(world, idx);
-        field[linear_idx] = static_cast<double>(fn(x, field[linear_idx], t));
-        ++linear_idx;
-      }
-    }
-  }
+  apply_inplace_with_time(field, world.domain_, pfc::fft::get_inbox(fft), t,
+                          std::forward<Fn>(fn));
 }
 
 /**

@@ -32,6 +32,10 @@
 #ifndef PFC_INITIAL_CONDITIONS_SINGLE_SEED_HPP
 #define PFC_INITIAL_CONDITIONS_SINGLE_SEED_HPP
 
+#include <array>
+#include <cmath>
+
+#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
@@ -48,9 +52,7 @@ public:
   void set_density(double density) { rho_seed = density; }
   double get_density() const { return rho_seed; }
 
-  void apply(Model &m, double time) override {
-    (void)time;
-    // Functional coordinate-space implementation using field::apply
+  void apply(RealField &field, const Domain &domain, const Box3i &box) const {
     const double s = 1.0 / sqrt(2.0);
     const std::array<double, 3> q1 = {s, s, 0};
     const std::array<double, 3> q2 = {s, 0, s};
@@ -64,14 +66,12 @@ public:
     const double amplitude = amp_eq;
     const double rho = rho_seed;
 
-    pfc::field::apply(pfc::get_real_field(m, get_field_name()),
-                      pfc::get_world(m), pfc::get_fft(m),
-                      [=](const pfc::Real3 &X) {
+    pfc::field::apply(field, domain, box, [=](const pfc::Real3 &X) {
       const double x = X[0];
       const double y = X[1];
       const double z = X[2];
       if (x * x + y * y + z * z >= r2) {
-        return 0.0; // Outside seed: leave as zero
+        return 0.0;
       }
       double u = rho;
       for (int qi = 0; qi < 6; ++qi) {
@@ -80,6 +80,12 @@ public:
       }
       return u;
     });
+  }
+
+  void apply(Model &m, double time) override {
+    (void)time;
+    apply(pfc::get_real_field(m, get_field_name()), pfc::get_world(m).domain_,
+          pfc::fft::get_inbox(pfc::get_fft(m)));
   }
 };
 

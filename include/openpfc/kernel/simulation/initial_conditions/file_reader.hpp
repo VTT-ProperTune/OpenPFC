@@ -38,6 +38,8 @@
 #include <string>
 #include <utility>
 
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/simulation/binary_reader.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
@@ -60,15 +62,8 @@ public:
 
   void set_mpi_comm(MPI_Comm comm) noexcept override { m_io_comm = comm; }
 
-  void apply(const SimulationContext &ctx, Model &m, double time) override {
-    (void)time;
-    const fft::IHostFFT &fft = get_fft(m);
-    const auto &world = get_world(m);
-    const auto world_size = get_size(world);
-    const auto inbox_size = get_inbox(fft).size;
-    const auto inbox_offset = get_inbox(fft).low;
-
-    Field &f = get_real_field(m, get_field_name());
+  void apply(const SimulationContext &ctx, RealField &field, const Domain &domain,
+             const Box3i &inbox) const {
     if (ctx.is_rank0()) {
       const pfc::Logger lg{pfc::LogLevel::Info, 0};
       pfc::log_info(lg, std::string("Reading initial condition from file: ") +
@@ -76,14 +71,20 @@ public:
     }
     try {
       BinaryReader reader{ctx.mpi_comm()};
-      reader.set_domain(world_size, inbox_size, inbox_offset);
-      reader.read(get_filename(), f);
+      reader.set_domain(pfc::domain::get_size(domain), inbox.size, inbox.low);
+      reader.read(get_filename(), field);
     } catch (const std::exception &ex) {
       std::ostringstream oss;
       oss << "FileReader failed to read \"" << get_filename() << "\" into field \""
           << get_field_name() << "\": " << ex.what();
       throw std::runtime_error(oss.str());
     }
+  }
+
+  void apply(const SimulationContext &ctx, Model &m, double time) override {
+    (void)time;
+    apply(ctx, get_real_field(m, get_field_name()), get_world(m).domain_,
+          get_inbox(get_fft(m)));
   }
 
   void apply(Model &m, double time) override {

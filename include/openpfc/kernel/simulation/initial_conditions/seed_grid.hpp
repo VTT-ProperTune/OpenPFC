@@ -38,6 +38,7 @@
 #include <random>
 #include <sstream>
 
+#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/seed.hpp>
@@ -89,12 +90,9 @@ public:
     apply(m, time);
   }
 
-  void apply(Model &m, double time) override {
-    (void)time;
-    // Functional coordinate-space implementation using field::apply
-    const World &w = get_world(m);
-    const auto size = get_size(w);
-    const auto spacing = get_spacing(w);
+  void apply(RealField &field, const Domain &domain, const Box3i &box) const {
+    const auto &size = pfc::domain::get_size(domain);
+    const auto &spacing = pfc::domain::get_spacing(domain);
 
     std::vector<Seed> seeds;
     const int Ny = m_Ny;
@@ -121,15 +119,20 @@ public:
       }
     }
 
-    pfc::field::apply(pfc::get_real_field(m, get_field_name()), pfc::get_world(m),
-                      pfc::get_fft(m), [seeds](const pfc::Real3 &X) {
-                        for (const auto &seed : seeds) {
-                          if (seed.is_inside(X)) {
-                            return seed.get_value(X);
-                          }
-                        }
-                        return 0.0; // Outside all seeds
-                      });
+    pfc::field::apply(field, domain, box, [seeds](const pfc::Real3 &X) {
+      for (const auto &seed : seeds) {
+        if (seed.is_inside(X)) {
+          return seed.get_value(X);
+        }
+      }
+      return 0.0;
+    });
+  }
+
+  void apply(Model &m, double time) override {
+    (void)time;
+    apply(pfc::get_real_field(m, get_field_name()), pfc::get_world(m).domain_,
+          pfc::fft::get_inbox(pfc::get_fft(m)));
   }
 };
 

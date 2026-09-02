@@ -1,34 +1,17 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#include <iostream>
 #include <vector>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/types.hpp>
-#include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/fft/fft_fftw.hpp>
+#include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/random_seeds.hpp>
-#include <openpfc/kernel/simulation/model.hpp>
 
 using namespace pfc;
 using Catch::Approx;
-using pfc::types::Int3;
-
-// Mock model class for testing
-class ModelWithRandomSeedsIC : public Model {
-public:
-  ModelWithRandomSeedsIC(FFT &fft, const pfc::World &world)
-      : pfc::Model(fft, world) {}
-
-  void step(double /*t*/) override {}
-  void initialize(double /*dt*/) override {}
-};
 
 TEST_CASE("RandomSeeds - Parameter Access", "[ic_random_seeds]") {
   RandomSeeds seeds;
@@ -45,30 +28,21 @@ TEST_CASE("RandomSeeds - Parameter Access", "[ic_random_seeds]") {
 }
 
 TEST_CASE("RandomSeeds - Field Application", "[ic_random_seeds]") {
-  // Create domain matching hardcoded values in RandomSeeds
-  auto domain = pfc::domain::create(pfc::GridSize({32, 32, 32}), pfc::PhysicalOrigin({-128.0, -128.0, -128.0}),
+  auto domain = pfc::domain::create(pfc::GridSize({32, 32, 32}),
+                                    pfc::PhysicalOrigin({-128.0, -128.0, -128.0}),
                                     pfc::GridSpacing({8.0, 8.0, 8.0}));
   auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
-  auto fft = fft::create(decomposition);
-  ModelWithRandomSeedsIC m(fft, world);
-
-  const size_t field_size = fft.size_inbox();
+  const size_t field_size = static_cast<size_t>(box.count());
   std::vector<double> psi(field_size, 0.0);
-  add_real_field(m, "default", psi);
 
   RandomSeeds seeds;
   seeds.set_amplitude(0.2);
   seeds.set_density(0.5);
 
   SECTION("Apply to field") {
-    seeds.apply(m, 0.0);
-    const Field &field = m.get_real_field("default");
-
-    // Check that field has been modified (some seeds should be present)
+    seeds.apply(psi, domain, box);
     bool has_nonzero = false;
-    for (const auto &value : field) {
+    for (const auto &value : psi) {
       if (value != 0.0) {
         has_nonzero = true;
         break;
@@ -78,16 +52,12 @@ TEST_CASE("RandomSeeds - Field Application", "[ic_random_seeds]") {
   }
 
   SECTION("Field values in range") {
-    seeds.apply(m, 0.0);
-    const Field &field = m.get_real_field("default");
-
-    // Seeds use same formula as SingleSeed: rho + 2*amp*sum(cos(q_i . r))
+    seeds.apply(psi, domain, box);
     double max_expected = seeds.get_density() + 12.0 * seeds.get_amplitude();
     double min_expected = seeds.get_density() - 12.0 * seeds.get_amplitude();
-
     bool values_in_range = true;
-    for (const auto &value : field) {
-      if (value != 0.0) { // Inside a seed
+    for (const auto &value : psi) {
+      if (value != 0.0) {
         values_in_range &= value >= min_expected - 0.1;
         values_in_range &= value <= max_expected + 0.1;
       }
@@ -96,49 +66,26 @@ TEST_CASE("RandomSeeds - Field Application", "[ic_random_seeds]") {
   }
 
   SECTION("Deterministic with fixed seed") {
-    // RandomSeeds uses fixed random seed (42), so results should be deterministic
-    seeds.apply(m, 0.0);
-    Field field1 = m.get_real_field("default");
-
-    // Reset field to zero
+    seeds.apply(psi, domain, box);
+    Field field1 = psi;
     std::vector<double> psi2(field_size, 0.0);
-    add_real_field(m, "default", psi2);
-
-    // Apply again
-    seeds.apply(m, 0.0);
-    Field field2 = m.get_real_field("default");
-
-    // Results should be identical
-    REQUIRE(field1 == field2);
+    seeds.apply(psi2, domain, box);
+    REQUIRE(field1 == psi2);
   }
 }
 
-TEST_CASE("RandomSeeds - Integration with Model", "[ic_random_seeds]") {
-  auto domain = pfc::domain::create(pfc::GridSize({16, 16, 16}), pfc::PhysicalOrigin({-128.0, -128.0, -128.0}),
+TEST_CASE("RandomSeeds - Apply on named density field", "[ic_random_seeds]") {
+  auto domain = pfc::domain::create(pfc::GridSize({16, 16, 16}),
+                                    pfc::PhysicalOrigin({-128.0, -128.0, -128.0}),
                                     pfc::GridSpacing({16.0, 16.0, 16.0}));
   auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
-  auto fft = fft::create(decomposition);
-  ModelWithRandomSeedsIC model(fft, world);
-
-  const size_t field_size = fft.size_inbox();
-  std::vector<double> psi(field_size, 0.0);
-  add_real_field(model, "density", psi);
+  std::vector<double> psi(static_cast<size_t>(box.count()), 0.0);
 
   RandomSeeds seeds;
   seeds.set_field_name("density");
   seeds.set_amplitude(0.15);
   seeds.set_density(0.65);
 
-  REQUIRE_NOTHROW(seeds.apply(model, 0.0));
-
-  const Field &field = model.get_real_field("density");
-  REQUIRE(field.size() == field_size);
-}
-
-TEST_CASE("RandomSeeds - Field Name Assignment", "[ic_random_seeds]") {
-  RandomSeeds seeds;
-  seeds.set_field_name("crystalline_phase");
-  REQUIRE(seeds.get_field_name() == "crystalline_phase");
+  REQUIRE_NOTHROW(seeds.apply(psi, domain, box));
+  REQUIRE(psi.size() == static_cast<size_t>(box.count()));
 }
