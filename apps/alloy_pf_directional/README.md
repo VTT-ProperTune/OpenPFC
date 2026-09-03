@@ -44,8 +44,8 @@ Always go through `./scripts/build.sh` at the repo root (see `AGENTS.md`).
 | Binary | When | Role |
 |--------|------|------|
 | `alloy_pf_directional_openmp` | OpenMP found | Laptop / LUMI-C single-node baseline (2D or 3D) |
-| `alloy_pf_directional_mpi` | always (MPI) | Multi-rank CPU, `Field` + 26-neighbor host halo |
-| `alloy_pf_directional_hip` | `OpenPFC_ENABLE_HIP` | Multi-GCD LUMI-G; device-resident + `FullPaddedDeviceHalo` |
+| `alloy_pf_directional_mpi` | always (MPI) | Multi-rank CPU, `Field` + `HaloExchange` Full2D/Full3D |
+| `alloy_pf_directional_hip` | `OpenPFC_ENABLE_HIP` | Multi-GCD LUMI-G; device-resident + `DeviceFullHalo` |
 
 ```bash
 ./scripts/build.sh                         # local / Tohtori CPU
@@ -99,7 +99,7 @@ Memory in 3D is dominated by full bricks. Default persistent auxiliaries are \(e
 | Anisotropy face fluxes \(j_x,j_y,j_z\) | From \(\nabla\phi\) on the face (`STORE_AUX=1` to persist) |
 | \(\nabla\phi\), \(\lvert\nabla\phi\rvert^2\), Ji stencils | Read \(\phi/\psi\) or nodal \(\alpha,\beta\) |
 
-Halo width is **1**. Ji \(\bar S_{1,2,0}\) needs corners, so MPI uses `FullPaddedHaloExchanger` / HIP `FullPaddedDeviceHalo`. 2D CPU MPI selects `Full2D` (8 in-plane dirs); 3D keeps `Full3D`.
+Halo width is **1**. Ji \(\bar S_{1,2,0}\) needs corners, so MPI uses `pfc::comm::HaloExchange` with `HaloConnectivity::Full` and HIP `pfc::gpu::DeviceFullHalo`. 2D selects `Full2D` (8 in-plane dirs); 3D keeps `Full3D`.
 
 ## Correctness before 3D production
 
@@ -176,7 +176,7 @@ Classic octree / hanging-node AMR is **deferred**. Use the moving window and opt
 
 ## HIP / LUMI-G risks
 
-- Halos go through `pfc::hip::FullPaddedDeviceHalo` (device buffers). GPU-aware MPI with derived types can still storm on some stacks — try `OPENPFC_HIP_FORCE_PACKED_HALO=1` (packed faces; corners may be incomplete on that fallback).
+- Halos go through `pfc::gpu::DeviceFullHalo` (device buffers). GPU-aware MPI with derived types can still storm on some stacks — try `OPENPFC_HIP_FORCE_PACKED_HALO=1` (packed faces; corners may be incomplete on that fallback).
 - HIP window shift uses the device kernel on `np=1`. Multi-rank x-decomp copies to host and uses the same `shift_left_one` plane exchange as MPI CPU (correct, not fast).
 - Block skip is honored on OpenMP/MPI; HIP kernels still visit every cell.
 - Anisotropy face fluxes are `__device__` helpers (no device lambdas).

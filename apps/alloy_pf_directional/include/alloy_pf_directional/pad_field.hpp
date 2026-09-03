@@ -56,7 +56,7 @@ inline double z_of(int k, double dx) noexcept {
 /**
  * Ghosts: no-flux in x. y/z are periodic or no-flux.
  * Sequential x → y → z so edges and corners pick up the widened values
- * (same idea as FullPaddedHaloExchanger).
+ * (same idea as Full-connectivity `pfc::comm::HaloExchange`).
  *
  * `Nz == 1` is the 2D path: Ji \(\bar S_{2,1}\) and 2D `div(α∇β)` never read
  * `k±1`, so the k = 0 and k = 2 planes are not filled. Those copies are a

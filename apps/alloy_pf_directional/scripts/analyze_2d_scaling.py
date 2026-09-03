@@ -163,7 +163,7 @@ def verdict(rows: list[dict]) -> str:
         )
         lines.append(
             "How to interpret later: halo_pct ≥ 40% at 8 GCDs → halo-bound "
-            "(fix FullPaddedDeviceHalo / packed fallback). "
+            "(fix DeviceFullHalo / packed fallback). "
             "halo_pct < 25% at 8–16 GCDs → kernel-bound (proceed to 3D GPU)."
         )
     if cpu:
