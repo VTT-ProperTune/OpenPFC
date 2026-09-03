@@ -45,9 +45,8 @@ composed stepper). JSON still describes domain, time, `method`/`backend`,
 | `DiscreteField` / `Array` / `LocalField` / `PaddedBrick` | `pfc::data::Field<T, MemorySpace>` |
 | `IFFT` | `IHostFFT` / `IDeviceFFT<MemorySpace>` |
 | `HaloExchanger` family | `comm::HaloExchange<MemorySpace>` / `comm::SparseExchange<MemorySpace>` |
+| `pfc::World` / `world::create` / `from_json<World>` / stack `world()` | `pfc::Domain` + `pfc::Box3i` (`domain::create`, `decomposition::local_box`, `decomposition::domain`); JSON is `from_json<Domain>` only |
 
-`pfc::World` is still present as the deprecated A0 wrapper over `Domain` +
-`Box3i`. New code should construct `Domain` and pass `Box3i` explicitly.
 `from_json<Domain>` shares the `Lx`/`Ly`/`Lz`/`dx`/`dy`/`dz`/`origin` schema
 with the old `from_json<World>`.
 
@@ -152,4 +151,4 @@ no Gen-1 `restore_gen1_from_checkpoint`.
 |----|----------------|
 | A1 `LegacyModelPhysics` | **Deleted** |
 | A2 `step_with_physics` | **Deleted** |
-| A0 `pfc::World` | **Deprecated**; still wraps `Domain` + `Box3i` for leftover tests and stack `world()` accessors. Prefer `Domain`. |
+| A0 `pfc::World` | **Deleted** — use `Domain` + `Box3i` |

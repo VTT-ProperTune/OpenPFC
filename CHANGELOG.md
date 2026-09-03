@@ -38,6 +38,8 @@ source compatibility is explicitly not a goal.
 ### Added
 
 - M12: deleted Gen-1 `pfc::Model` / `pfc::Simulator` / A1 `LegacyModelPhysics` and their tests. JSON wiring returns FieldModifier and writer lists; checkpoints restore only through `CheckpointService`. API examples 03/07/09/10 use `SpectralCPUStack` + `pfc::sim::run`. Migration guide: `docs/MIGRATION_0.1_to_0.2.md`.
+- M12 A0: deleted `pfc::World` (`world.hpp` / `world::create` / `from_json<World>` / stack `world()` / decomposition subworld shim). Callers use `Domain` + `Box3i`. LUMI HIP job 21686027: 59/59 CTest (1 skip `HIP_ExchangeFailClosed`).
+- `kobayashi_fd_hip` writes schema-v2 profiling JSON with `--output PATH.json` (`--warmup N` untimed steps). Positional HEX CLI is unchanged.
 - Shared `test_step_protocol` covers all seven leaves: EmbeddedRKStepper extra-`dt` and ImexEulerStepper extra-`StageContext` attempt isolation/commit. CTest `test_step_protocol`.
 - Examples `04_diffusion_model`, `05_simulator`, and `12_cahn_hilliard` build spectral operators with `for_each_kpoint` instead of a hand-rolled Nyquist fold.
 - CTest `aluminum-golden-4rank`: 4-rank 16³/20-step `AluminumETDSession` vs Gen-1 ≤1e-10 (local max) / 1e-12 relative Σψ².

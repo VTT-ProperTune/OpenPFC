@@ -803,12 +803,12 @@ M8–M11 all complete (no production consumer of Gen‑1 or adapters remains).
 
 ### Tasks
 
-* [x] Verify zero non-adapter consumers of Gen-1 `Model` / `Simulator` / A1 / A2: headers and tests deleted (`fb0d2889`). Remaining `pfc::World` hits are A0 (`world.hpp`, stacks `world()`, `from_json<World>`, some tests) — still scheduled for A0 removal.
+* [x] Verify zero non-adapter consumers of Gen-1 `Model` / `Simulator` / A1 / A2: headers and tests deleted (`fb0d2889`). A0 `pfc::World` deleted (`490193d8`).
 * [x] Migrate remaining Gen‑1 examples/fixtures (`examples/04,05,10,12`, API examples 03/07/09/10, `diffusion_model*`, `tests/fixtures/{diffusion_model,mock_model}.hpp`) off `Model`.
 * [x] Migrate the frontend App path off A1/A2 onto `SimulationDriver` natively (`App` / `JsonAppRun` / `SpectralSimulationSession` deleted; JSON wiring returns modifier/writer lists).
 * [x] Update public docs: `docs/MIGRATION_0.1_to_0.2.md`, quickstart, tutorials, `extending_openpfc/`, learning paths, API examples, `app_pipeline.md` — 0.2 path only. Doxygen examples catalog / docs-consistency CI still to re-run.
-* [x] Write `docs/MIGRATION_0.1_to_0.2.md` from `0.2_migration_map.md` (removed symbol → replacement). A0 `World` still listed as deprecated.
-* [ ] Make clang-tidy blocking in CI for the new-architecture directories; keep the bidirectional layering check; add the installed-package smoke test to the release checklist.
+* [x] Write `docs/MIGRATION_0.1_to_0.2.md` from `0.2_migration_map.md` (removed symbol → replacement). A0 `World` listed as deleted.
+* [x] Make clang-tidy blocking in CI for the new-architecture directories; keep the bidirectional layering check; add the installed-package smoke test to the release checklist. **clang-tidy job added to `ci.yml` (Unit Tests). `packaging-smoke` (`find_package` consumer) already in `ci.yml`. Layering: `scripts/check_kernel_no_frontend_includes.sh`.**
 * [ ] Final `CHANGELOG.md` for 0.2.0; version set to 0.2.0; tag `v0.2.0`; release notes summarizing the architecture change and the migration guide.
 
 ### Required tests
@@ -821,7 +821,7 @@ M8–M11 all complete (no production consumer of Gen‑1 or adapters remains).
 
 * [x] `kernel/simulation/model.hpp` (virtual `Model`), `model_free_functions.hpp`, `model_field_registry.hpp`. `model_types.hpp` (`RealField` host-buffer alias) remains for FieldModifier apply.
 * [x] Gen‑1 `Simulator` internals superseded by `SimulationDriver` (`simulator.hpp` and satellite dispatch headers deleted).
-* [ ] Adapter **A0** (`pfc::World` alias + `world::create` forwarders + `Decomposition` subworld shim). **A1** (`compat/legacy_model_physics`) and **A2** (`step_with_physics`) deleted with their tests.
+* [x] Adapter **A0** (`pfc::World` alias + `world::create` forwarders + `Decomposition` subworld shim). **A1** (`compat/legacy_model_physics`) and **A2** (`step_with_physics`) deleted with their tests.
 * [ ] Any remaining `[[deprecated]]` symbols, `OPENPFC_SUPPRESS_LEGACY_WARNINGS`, and migration-only CMake toggles.
 * [ ] Stale docs pages superseded by the 0.2 set (tracked via the migration map).
 
