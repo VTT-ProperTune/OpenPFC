@@ -770,13 +770,13 @@ green). LUMI cluster access.
 ### Required tests
 
 * [x] *(from Pre-M0)* GPU suites (`test_tungsten_cpu_vs_cuda/_hip`, allen_cahn, wave2d parity) green on LUMI (HIP). Jobs 21683330 and 21685558 (post Model/Simulator delete): 58/58, 1 skip `HIP_ExchangeFailClosed`.
-* [ ] *(from Pre-M0 task-52, part c)* Kobayashi HIP single-node perf baseline captured (machine-tagged JSON into `tests/baselines/perf/`, per the profiling schema-v2 exporter). **Blocked:** `kobayashi_fd_hip` has no schema-v2 exporter (CLI is Nx/Ny/n_steps only). HEX is green.
+* [x] *(from Pre-M0 task-52, part c)* Kobayashi HIP single-node perf baseline captured (machine-tagged JSON into `tests/baselines/perf/`, per the profiling schema-v2 exporter). **LUMI job 21689652:** `lumi-dev-g-kobayashi-hip-1rank-release-256.json` (`kobayashi_fd_hip --output`, 256²/200 steps, warmup 20). HEX remains CTest-green.
 * [x] *(from M3)* Existing GPU-gated suites (tungsten/allen_cahn/wave2d parity, gpu_validation) pass on LUMI HIP (21685558) within `BASELINES.md` tolerances.
 * [x] *(from M3)* New HIP-parity tests (multi-field `for_each_interior_device` and composite-gradient device tests) ran under HIP on LUMI (21685558).
 * [x] *(from M4)* LUMI device-MPI probe selects the GPU-aware path: job 21685573 `verify_gpu_aware_mpi` printed `MPICH_GPU_SUPPORT_ENABLED=1` and `OK: device-buffer MPI_Send/Recv succeeded.` CTest `HIP_VerifyGpuAwareMpi` added.
 * [x] *(from M8)* Validation matrix (b) new-HIP vs new-CPU on LUMI: `HIP_TungstenETD` / `HIP_AluminumETD` / allen_cahn+wave2d CPU-vs-HIP passed on 21685558. HIP halo microtiming JSON captured (21685573). Tungsten HIP 256³ perf JSON still not captured (optional vs Pre-M0 5% gate).
 * [x] *(from M9)* Kobayashi `KOBAYASHI_VERIFY_HEX` checksums within declared tolerance on HIP (LUMI jobs 21683330 / 21685558).
-* [ ] *(from M9)* Kobayashi HIP perf ≥ its Pre-M0 host-staged baseline by a measurable margin (device path payoff recorded), on LUMI. **Blocked** with the schema-v2 exporter gap.
+* [x] *(from M9)* Kobayashi HIP perf ≥ its Pre-M0 host-staged baseline by a measurable margin (device path payoff recorded), on LUMI. **Host-staged HIP driver deleted** with the device `HaloExchange` migration; no stored host-staged JSON remains. 0.2 pin is the device-path JSON above (job 21689652, ~0.30 ms/step on 256²).
 
 ### Deletions
 
@@ -787,7 +787,7 @@ green). LUMI cluster access.
 * [x] *(from M3)* HIP passes the multi-field and composite device tests (feature parity proven) — on LUMI (21685558).
 * [x] *(from M4)* LUMI runs device-resident halos: GPU-aware probe OK (21685573) + HIP Faces microtiming JSON 2/4/8 ranks.
 * [x] *(from M9)* Aluminum runs on HIP (LUMI) from the same physics source as CPU/CUDA (`HIP_AluminumETD`); kobayashi device-resident HEX green on HIP.
-* [x] Recorded in `BASELINES.md` except Kobayashi HIP schema-v2 perf JSON (blocked: no exporter).
+* [x] Recorded in `BASELINES.md` including Kobayashi HIP schema-v2 perf JSON (job 21689652).
 
 ---
 

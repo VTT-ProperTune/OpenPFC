@@ -17,7 +17,9 @@ within a stated numeric tolerance, per backend).
 > `OpenPFC_MPI_HIP_AWARE=ON`). Includes `HIP_TungstenETD`, `HIP_AluminumETD`,
 > `session-matrix-hip`, allen_cahn/wave2d CPU-vs-HIP, `kobayashi-hip-hex-smoke`
 > / `kobayashi-hip-hex-2rank`, and OpenMP HEX with 2 ULP on T checksums.
-> Remaining ☐: Kobayashi HIP perf JSON (driver has no schema-v2 exporter).
+> Remaining ☐: none for LUMI HIP science/perf JSON pins (Kobayashi HIP
+> schema-v2 captured on job 21689652). Host-staged Kobayashi HIP driver is
+> gone; the JSON is the 0.2 device-path pin, not a vs-host-staged delta.
 > Halo HIP microtiming JSON captured (job 21685573). Cray GPU-aware MPI
 > log-assert: job 21685573 `MPICH_GPU_SUPPORT_ENABLED=1` and
 > `[verify_gpu_aware_mpi] OK: device-buffer MPI_Send/Recv succeeded.`
@@ -76,7 +78,7 @@ Gen-1 tungsten sources deleted on g0005 (2026-09-02). DoD greps: no `public pfc:
 - ☑ Halo-exchange microtimings, host and CUDA, 2/4/8 ranks (tohtori `g0005` Release, 128³ Faces, 50 timed exchanges, `examples/23_halo_microtiming`, 2026-09-01): `tests/baselines/perf/tohtori-g0005-halo-{host,cuda}-{2,4,8}rank-release-128.json`. Mean `wall_step` after `--warmup-frames=5`: host 78.4 / 118 / 67.9 µs; CUDA 5.78 / 7.13 / 3.93 ms (GPU-aware MPI).
 - ☑ Halo-exchange microtimings, HIP, 2/4/8 ranks (LUMI `dev-g` nid005008, job 21685573, 2026-09-03, 128³ Faces, 50 timed exchanges, `examples/23_halo_microtiming --hip`): `tests/baselines/perf/lumi-dev-g-halo-hip-{2,4,8}rank-release-128.json`. Mean `wall_step` after warmup 5: 105 / 127 / 132 µs (`OpenPFC_MPI_HIP_AWARE=ON`, `MPICH_GPU_SUPPORT_ENABLED=1`).
 - ☑ Cray GPU-aware MPI log-assert (LUMI `dev-g` job 21685573): `verify_gpu_aware_mpi` 2-rank device-buffer `MPI_Send`/`MPI_Recv` printed `MPICH_GPU_SUPPORT_ENABLED=1` and `OK: device-buffer MPI_Send/Recv succeeded.`
-- ☐ Kobayashi HIP single-node perf JSON: `kobayashi_fd_hip` has no schema-v2 profiling exporter (CLI is Nx/Ny/n_steps only). HEX checksums are green (`kobayashi-hip-hex-smoke` / `-2rank` on 21685558). Perf JSON blocked until a profiling hook exists.
+- ☑ Kobayashi HIP single-node perf JSON (LUMI `dev-g` job 21689652, 2026-09-03, `kobayashi_fd_hip` device path, GPU-aware MPI, 1 rank, 256×256 / 200 steps, `--warmup 20`): `tests/baselines/perf/lumi-dev-g-kobayashi-hip-1rank-release-256.json`. Mean `wall_step` ~0.30 ms (180 timed frames). Whole-loop `wall_loop_max_s=0.0623`. HEX CTest still pins 32²/4-step (`kobayashi-hip-hex-smoke` / `-2rank`). The Pre-M0 host-staged HIP driver no longer exists, so this is the 0.2 device-path pin rather than a vs-host-staged speedup table.
 
 ## How to capture (reference commands)
 
