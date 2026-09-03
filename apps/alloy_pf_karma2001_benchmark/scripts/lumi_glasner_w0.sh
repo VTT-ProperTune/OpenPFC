@@ -2,8 +2,9 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Isothermal Ω=0.55 Glasner dendrite at one d0/W. KARMA_TRAP=1 uses trapping
-# kinetics (VD, β0; default β0=4 s/m); KARMA_TRAP=0 is A=β0=0.
+# Extra: isothermal trapping dendrite at one d0/W. KARMA_TRAP=1 (default here)
+# uses magnified V_D and β₀; KARMA_TRAP=0 is the PRL present model (A=β0=εk=0).
+# The advertised paper suite is lumi_paper.sh, not this script.
 #
 #   sbatch --export=ALL,KARMA_D0W=1.217,KARMA_TRAP=1,KARMA_DT=0.1,KARMA_BETA0=4 \
 #     apps/alloy_pf_karma2001_benchmark/scripts/lumi_glasner_w0.sh
@@ -36,17 +37,15 @@ PHI1="${KARMA_PHI1:-45}"
 BIN="${KARMA_BIN:-${LUMI_KARMA_BIN}}"
 TAG=""
 if [[ "${TRAP}" == "0" ]]; then
-  TAG="_notrap"
-  export OPENPFC_KARMA_VD=0 OPENPFC_KARMA_BETA0=0
+  TAG="_present"
+  export OPENPFC_KARMA_VD=0 OPENPFC_KARMA_BETA0=0 OPENPFC_KARMA_EPSK=0
 else
-  unset OPENPFC_KARMA_VD || true
-  if [[ -n "${KARMA_BETA0:-}" ]]; then
-    export OPENPFC_KARMA_BETA0="${KARMA_BETA0}"
-  else
-    unset OPENPFC_KARMA_BETA0 || true
-  fi
+  TAG=""
+  export OPENPFC_KARMA_VD="${KARMA_VD:-0.15}"
+  export OPENPFC_KARMA_BETA0="${KARMA_BETA0:-4}"
+  export OPENPFC_KARMA_EPSK="${KARMA_EPSK:-0.12}"
 fi
-OUT="${KARMA_OUT:-${LUMI_KARMA_RUNS}/trap_eq7/d0W_${D0W}_th${PHI1}${TAG}}"
+OUT="${KARMA_OUT:-${LUMI_KARMA_RUNS}/glasner/d0W_${D0W}_th${PHI1}${TAG}}"
 mkdir -p "${OUT}" "${LUMI_KARMA_LOGS}"
 
 export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-32}"

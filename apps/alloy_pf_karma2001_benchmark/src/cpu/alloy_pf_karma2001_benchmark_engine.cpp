@@ -5,7 +5,8 @@
  * @file alloy_pf_karma2001_benchmark_engine.cpp
  * @brief Explicit Euler FD for Karma (2001) present model, 2D or 3D, Neumann BCs.
  *
- * Cubic a_s(n), a_k(n); τ from Pinomaa (2020) eq. (7) at W_s, β_k. Optional Glasner ψ.
+ * Cubic a_s(n), a_k(n); local τ from Pinomaa (2020) with the e^u a2 factor.
+ * Optional Glasner ψ.
  */
 
 #include <alloy_pf_karma2001_benchmark/engine.hpp>
@@ -52,6 +53,13 @@ struct PadField {
   double operator()(int i, int j) const noexcept { return (*this)(i, j, 1); }
 };
 
+struct Grid {
+  double dx = 1.0;
+  double ox = 0.0;
+  double oy = 0.0;
+  double oz = 0.0;
+} g_grid;
+
 void fill_neumann(PadField &f) {
   const int Nx = f.Nx;
   const int Ny = f.Ny;
@@ -76,9 +84,12 @@ void fill_neumann(PadField &f) {
   }
 }
 
-inline double x_of(int i, double dx) noexcept { return (static_cast<double>(i) - 0.5) * dx; }
-inline double y_of(int j, double dx) noexcept { return (static_cast<double>(j) - 0.5) * dx; }
-inline double z_of(int k, double dx) noexcept { return (static_cast<double>(k) - 0.5) * dx; }
+inline double x_of(int i, double dx) noexcept { return (static_cast<double>(i) - 0.5) * dx + g_grid.ox; }
+inline double y_of(int j, double dx) noexcept { return (static_cast<double>(j) - 0.5) * dx + g_grid.oy; }
+inline double z_of(int k, double dx) noexcept { return (static_cast<double>(k) - 0.5) * dx + g_grid.oz; }
+
+inline bool x_symmetry_plane() noexcept { return g_grid.ox > -0.25 * g_grid.dx; }
+inline bool y_symmetry_plane() noexcept { return g_grid.oy > -0.25 * g_grid.dx; }
 
 alloy_pf_karma2001_benchmark::Vec3 growth_ray(const alloy_pf_karma2001_benchmark::Mat3 &R) {
   alloy_pf_karma2001_benchmark::Vec3 best{1.0, 0.0, 0.0};
@@ -107,9 +118,9 @@ alloy_pf_karma2001_benchmark::Vec3 growth_ray(const alloy_pf_karma2001_benchmark
 }
 
 double sample_field(const PadField &f, double x, double y, double z, double dx) {
-  const double fi = x / dx + 0.5;
-  const double fj = y / dx + 0.5;
-  const double fk = z / dx + 0.5;
+  const double fi = (x - g_grid.ox) / dx + 0.5;
+  const double fj = (y - g_grid.oy) / dx + 0.5;
+  const double fk = (z - g_grid.oz) / dx + 0.5;
   int i0 = std::max(0, std::min(f.Nx, static_cast<int>(std::floor(fi))));
   int j0 = std::max(0, std::min(f.Ny, static_cast<int>(std::floor(fj))));
   int k0 = std::max(0, std::min(f.Nz, static_cast<int>(std::floor(fk))));
@@ -301,18 +312,28 @@ double interior_sum(const PadField &f) {
   return s;
 }
 
-/** Mean concentration on the far Neumann faces (x = L and y = L). */
+/** Mean concentration on far Neumann faces (not the quarter-seed symmetry planes). */
 double mean_far_wall_c(const PadField &c) {
   double s = 0.0;
   int n = 0;
+  const bool x_sym = x_symmetry_plane();
+  const bool y_sym = y_symmetry_plane();
   for (int k = 1; k <= c.Nz; ++k) {
     for (int j = 1; j <= c.Ny; ++j) {
       s += c(c.Nx, j, k);
       ++n;
+      if (!x_sym) {
+        s += c(1, j, k);
+        ++n;
+      }
     }
     for (int i = 1; i <= c.Nx; ++i) {
       s += c(i, c.Ny, k);
       ++n;
+      if (!y_sym) {
+        s += c(i, 1, k);
+        ++n;
+      }
     }
   }
   return (n > 0) ? s / static_cast<double>(n) : 0.0;
@@ -324,8 +345,8 @@ struct BcHit {
 };
 
 /**
- * Origin faces are the quarter-seed symmetry planes. Stop on the far walls:
- * solid past stop_frac of L, diffuse φ on a far face, or solute departing c_∞.
+ * Origin faces are the quarter-seed symmetry planes (when origin is 0).
+ * Stop on far walls: solid past stop_frac of the half-extent, diffuse φ, or c≠c_∞.
  */
 BcHit detect_bc_hit(const PadField &phi, const PadField &c, double dx, double stop_frac,
                     double c_inf, double Lx, double Ly, double Lz, bool dim3) {
@@ -334,6 +355,9 @@ BcHit detect_bc_hit(const PadField &phi, const PadField &c, double dx, double st
   }
   const double c_tol = alloy_pf_karma2001_benchmark::kWallCRel * std::max(std::abs(c_inf), 1.0e-12);
   auto face = [&](double ph, double cc) -> BcHit {
+    if (!std::isfinite(ph) || !std::isfinite(cc)) {
+      return {"nan", ph};
+    }
     if (ph > alloy_pf_karma2001_benchmark::kWallPhiLiq) {
       return {"wall_phi", ph};
     }
@@ -342,15 +366,27 @@ BcHit detect_bc_hit(const PadField &phi, const PadField &c, double dx, double st
     }
     return {};
   };
+  const bool x_sym = x_symmetry_plane();
+  const bool y_sym = y_symmetry_plane();
   for (int k = 1; k <= phi.Nz; ++k) {
     for (int j = 1; j <= phi.Ny; ++j) {
       if (const auto h = face(phi(phi.Nx, j, k), c(c.Nx, j, k)); h.reason) {
         return h;
       }
+      if (!x_sym) {
+        if (const auto h = face(phi(1, j, k), c(1, j, k)); h.reason) {
+          return h;
+        }
+      }
     }
     for (int i = 1; i <= phi.Nx; ++i) {
       if (const auto h = face(phi(i, phi.Ny, k), c(i, c.Ny, k)); h.reason) {
         return h;
+      }
+      if (!y_sym) {
+        if (const auto h = face(phi(i, 1, k), c(i, 1, k)); h.reason) {
+          return h;
+        }
       }
     }
   }
@@ -363,22 +399,29 @@ BcHit detect_bc_hit(const PadField &phi, const PadField &c, double dx, double st
       }
     }
   }
-  const double x_lim = stop_frac * Lx;
-  const double y_lim = stop_frac * Ly;
-  const double z_lim = stop_frac * Lz;
+  const double x_stop = stop_frac * std::max(std::abs(x_of(1, dx)), std::abs(x_of(phi.Nx, dx)));
+  const double y_stop = stop_frac * std::max(std::abs(y_of(1, dx)), std::abs(y_of(phi.Ny, dx)));
+  const double z_stop =
+      dim3 ? (stop_frac * std::max(std::abs(z_of(1, dx)), std::abs(z_of(phi.Nz, dx)))) : 0.0;
+  (void)Lx;
+  (void)Ly;
+  (void)Lz;
   for (int k = 1; k <= phi.Nz; ++k) {
     const double z = dim3 ? z_of(k, dx) : 0.0;
     for (int j = 1; j <= phi.Ny; ++j) {
       const double y = y_of(j, dx);
       for (int i = 1; i <= phi.Nx; ++i) {
+        if (!std::isfinite(phi(i, j, k))) {
+          return {"nan", 0.0};
+        }
         if (phi(i, j, k) < 0.0) {
           continue;
         }
         const double x = x_of(i, dx);
-        if (x > x_lim || y > y_lim || (dim3 && z > z_lim)) {
-          const double fx = x / Lx;
-          const double fy = y / Ly;
-          const double fz = dim3 ? z / Lz : 0.0;
+        if (std::abs(x) > x_stop || std::abs(y) > y_stop || (dim3 && std::abs(z) > z_stop)) {
+          const double fx = (x_stop > 0.0) ? (std::abs(x) / (x_stop / stop_frac)) : 0.0;
+          const double fy = (y_stop > 0.0) ? (std::abs(y) / (y_stop / stop_frac)) : 0.0;
+          const double fz = (dim3 && z_stop > 0.0) ? (std::abs(z) / (z_stop / stop_frac)) : 0.0;
           return {"wall", std::max(fx, std::max(fy, fz))};
         }
       }
@@ -523,7 +566,15 @@ void write_axis_profile(const std::string &path, const PadField &phi, const PadF
   std::ofstream os(path);
   os << std::setprecision(16);
   os << "# x x_over_d0 phi c c_over_cl0\n";
-  const int j = 1;
+  int j = 1;
+  double best = std::abs(y_of(1, phys.dx));
+  for (int jj = 2; jj <= phi.Ny; ++jj) {
+    const double ay = std::abs(y_of(jj, phys.dx));
+    if (ay < best) {
+      best = ay;
+      j = jj;
+    }
+  }
   const int kk = 1;
   for (int i = 1; i <= phi.Nx; ++i) {
     const double x = x_of(i, phys.dx);
@@ -574,6 +625,10 @@ RunResult run(const RunConfig &cfg, bool skip_png, bool quiet) {
   const int Ny = cfg.Ny;
   const int Nz = std::max(1, cfg.Nz);
   const double dx = phys.dx;
+  g_grid.dx = dx;
+  g_grid.ox = cfg.origin_x;
+  g_grid.oy = cfg.origin_y;
+  g_grid.oz = cfg.origin_z;
   const double dt = phys.dt;
   const double inv_dx = 1.0 / dx;
   const double k = phys.k;
@@ -632,6 +687,7 @@ RunResult run(const RunConfig &cfg, bool skip_png, bool quiet) {
   if (use_glasner) {
     fill_neumann(psi);
   }
+  write_ray_profile(cfg.output_dir + "/ic_profile.tsv", phi, c, phys, ray);
 
   const double dV = dim3 ? (dx * dx * dx) : (dx * dx);
   const int n_dim = dim3 ? 3 : 2;
@@ -653,6 +709,7 @@ RunResult run(const RunConfig &cfg, bool skip_png, bool quiet) {
     meta << "W0 " << phys.W0 << "\n";
     meta << "tau0 " << phys.tau0 << "\n";
     meta << "dx " << dx << "\n";
+    meta << "dx_over_W " << (phys.W0 > 0.0 ? dx / phys.W0 : 0.0) << "\n";
     meta << "dt " << dt << "\n";
     meta << "dt_over_tau " << alloy_pf_karma2001_benchmark::dt_over_tau_of(phys) << "\n";
     meta << "fourier " << (phys.D * dt / (dx * dx)) << "\n";
@@ -676,6 +733,9 @@ RunResult run(const RunConfig &cfg, bool skip_png, bool quiet) {
     meta << "W0_nm " << (phys.W0 * 1.0e9) << "\n";
     meta << "d0_nm " << (phys.d0 * 1.0e9) << "\n";
     meta << "r_seed " << phys.r_seed << "\n";
+    meta << "r_seed_over_d0 "
+         << (phys.d0 > 0.0 ? phys.r_seed / phys.d0 : 0.0) << "\n";
+    meta << "tau_eu_local " << (phys.tau_eu_local ? 1 : 0) << "\n";
     meta << "Tdot " << phys.Tdot << "\n";
     meta << "t_decay " << phys.t_decay << "\n";
     meta << "dT_sat " << (phys.t_decay > 0.0 ? phys.Tdot * phys.t_decay : 0.0) << "\n";
@@ -688,6 +748,10 @@ RunResult run(const RunConfig &cfg, bool skip_png, bool quiet) {
     meta << "theta0 " << phys.phi1 << "\n";
     meta << "use_glasner " << (use_glasner ? 1 : 0) << "\n";
     meta << "use_isotropic " << (cfg.use_isotropic ? 1 : 0) << "\n";
+    meta << "fd_order " << cfg.fd_order << "\n";
+    meta << "n_halves " << cfg.n_halves << "\n";
+    meta << "origin_x " << cfg.origin_x << "\n";
+    meta << "origin_y " << cfg.origin_y << "\n";
     meta << "Nx " << Nx << "\n";
     meta << "Ny " << Ny << "\n";
     meta << "Nz " << Nz << "\n";
@@ -845,14 +909,19 @@ RunResult run(const RunConfig &cfg, bool skip_png, bool quiet) {
               cubic_aniso_from_grad(gx, gy, gz, phys.eps_c, phys.eps_k, phys.W0, R);
           const double W_s = phys.W0 * an.a_s;
           const double beta_k = phys.beta0 * an.a_k;
-          const double tau = tau_aniso(phys, W_s, beta_k, eu(i, j, kk));
+          const double eu_tau = phys.tau_eu_local ? eu(i, j, kk) : 1.0;
+          const double tau = tau_aniso(phys, W_s, beta_k, eu_tau);
           double aniso =
               (jx(i, j, kk) - jx(i - 1, j, kk)) * inv_dx + (jy(i, j, kk) - jy(i, j - 1, kk)) * inv_dx;
           if (dim3) {
             aniso += (jz(i, j, kk) - jz(i, j, kk - 1)) * inv_dx;
           }
           double mag2 = gx * gx + gy * gy + gz * gz;
-          if (cfg.use_isotropic) {
+          if (cfg.fd_order == 4) {
+            const double L4 = iso::laplacian_4th(pf, i, j, kk, dx, dim3);
+            const double L_std = iso::laplacian_std(pf, i, j, kk, dx, dim3);
+            aniso += W_s * W_s * (L4 - L_std);
+          } else if (cfg.use_isotropic) {
             const double L_iso = iso::laplacian_iso(pf, i, j, kk, dx, dim3);
             const double L_std = iso::laplacian_std(pf, i, j, kk, dx, dim3);
             mag2 = iso::grad2_iso(pf, i, j, kk, dx, dim3);

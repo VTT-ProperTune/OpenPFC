@@ -2,8 +2,8 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# From the laptop: sync, then submit isothermal Ω=0.55 W0=10 nm and 5 nm
-# (trap + no-trap). Reuses an already-running karma-build if present.
+# From the laptop: sync, then submit extra isothermal trapping W0=10 nm and 5 nm
+# (trap + no-trap). Not the PRL paper suite — that is lumi_submit_paper.sh.
 #
 #   ./apps/alloy_pf_karma2001_benchmark/scripts/lumi_submit_glasner_w0.sh
 set -euo pipefail
@@ -46,7 +46,7 @@ submit_gl() {
     --time="\${time}" \\
     --cpus-per-task="\${cpus}" \\
     "\${DEP[@]}" \\
-    --export=ALL,KARMA_D0W=\${d0w},KARMA_TRAP=\${trap},KARMA_OUT=\${out} \\
+    --export=ALL,KARMA_D0W=\${d0w},KARMA_TRAP=\${trap},KARMA_PHI1=45,KARMA_OUT=\${out} \\
     apps/alloy_pf_karma2001_benchmark/scripts/lumi_glasner_w0.sh
 }
 
