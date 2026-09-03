@@ -30,8 +30,10 @@ int main(int argc, char **argv) {
             << " s/m  tau0=" << p.tau0 << " s  Nx=" << cfg->Nx << " Ny=" << cfg->Ny
             << " steps=" << cfg->n_steps << " dx=" << p.dx << " dt=" << p.dt
             << " glasner=" << (cfg->use_glasner ? 1 : 0) << " iso=" << (cfg->use_isotropic ? 1 : 0)
+            << " fd=" << cfg->fd_order << " halves=" << cfg->n_halves
             << " noise_F0=" << cfg->noise_F0 << " noise_seed=" << cfg->noise_seed
             << " Tdot=" << p.Tdot << " Omega=" << p.Omega << " dT_gt=" << p.dT_gt
+            << " tau_eu=" << (p.tau_eu_local ? 1 : 0)
             << " Nz=" << cfg->Nz << " phi1_deg="
             << (p.phi1 * 180.0 / std::acos(-1.0)) << " r_seed=" << p.r_seed
             << " out=" << cfg->output_dir << "\n";

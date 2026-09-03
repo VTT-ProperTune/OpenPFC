@@ -11,7 +11,7 @@ For realistic runs, assume MPI is involved. Use the same compiler, MPI and HeFFT
 
 ## Which application should I run?
 
-Start with tungsten if you want the production-style PFC path. It reads JSON or TOML, uses the `App` pipeline, writes configured fields, and has CPU, CUDA and HIP variants when the build enables them. Start with Allen–Cahn if you want a small visual sanity check with optional PNG output and fewer moving pieces. Use Heat3D when your question is about finite-difference orders, the spectral heat-equation path, timings or scaling comparisons. Use **wave2d** for a minimal **coupled first-order** wave-equation demo (displacement + velocity) with mixed periodic / physical y-boundaries. Use **kobayashi** for a **coupled phase-field + temperature** dendritic-growth-style demo (periodic torus, manual FD, PNG of \(\phi\)). AluminumNew is mostly useful as a compact example of an `App<Model>` program wired through JSON.
+Start with tungsten if you want the production-style PFC path. It reads JSON or TOML, uses the `App` pipeline, writes configured fields, and has CPU, CUDA and HIP variants when the build enables them. Start with Allen–Cahn if you want a small visual sanity check with optional PNG output and fewer moving pieces. Use Heat3D when your question is about finite-difference orders, the spectral heat-equation path, timings or scaling comparisons. Use **wave2d** for a minimal **coupled first-order** wave-equation demo (displacement + velocity) with mixed periodic / physical y-boundaries. Use **kobayashi** for a **coupled phase-field + temperature** dendritic-growth-style demo (periodic torus, manual FD, PNG of \(\phi\)). Use **alloy_pf_karma2001_benchmark** for the isothermal Karma 2001 present-model dendrite (PRL Figs. 1–2). AluminumNew is mostly useful as a compact example of an `App<Model>` program wired through JSON.
 
 If you want declarative configuration, read [`app_pipeline.md`](app_pipeline.md) before writing your own input files. If your immediate question is “what file did this run write?”, read [`io_results.md`](io_results.md).
 
@@ -52,6 +52,10 @@ For visible motion on the grid, use moderate ε and large M; shrinking ε alone 
 ## kobayashi
 
 `kobayashi_fd_manual` evolves the Kobayashi phase-field / temperature pair on a periodic **x–y** slab (`nz = 1`) with explicit Euler and the same finite-difference splitting as the historical Julia `kobayashi_v1` script (anisotropic \(\epsilon(\theta)\), Biner-style cross-flux terms, latent heat coupling). It writes grayscale PNG snapshots of \(\phi\). **`kobayashi_fd_openmp`** is the **single-node, OpenMP-only** variant (periodic torus via index wrapping — no MPI halos); verification lines match the **`nproc=1`** MPI reference for the same grid and step count. **`kobayashi_fd_cuda`** is the **MPI + CUDA** variant (host-staged halos, one GPU per MPI rank via shared-memory local rank). **`kobayashi_fd_hip`** is the **MPI + HIP** variant (`HaloExchange<HIPSpace>` on device Fields). See [`apps/kobayashi/README.md`](../../apps/kobayashi/README.md).
+
+## Karma 2001 present-model benchmark
+
+`alloy_pf_karma2001_benchmark_openmp` is a **finite-difference** isothermal dendrite (not the spectral / HeFFTe path). The advertised product is the three-case present-model suite of [Karma, PRL 87, 115701 (2001)](https://doi.org/10.1103/PhysRevLett.87.115701) (\(A=\beta_0=\varepsilon_k=0\), \(k=0.15\), \(\Omega=0.55\), \(L/d_0=1000\), \(t^*=10^4\)). Run it with [`apps/alloy_pf_karma2001_benchmark/scripts/run_karma2001_benchmark.sh`](../../apps/alloy_pf_karma2001_benchmark/scripts/run_karma2001_benchmark.sh); `QUICK=1` is the short pipeline check. See [`apps/alloy_pf_karma2001_benchmark/README.md`](../../apps/alloy_pf_karma2001_benchmark/README.md).
 
 ## Building your own application
 

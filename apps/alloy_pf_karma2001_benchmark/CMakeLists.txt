@@ -1,5 +1,8 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Independent of apps/alloy_pf_directional. OpenMP CPU binary for the
+# Karma 2001 present-model isothermal dendrite (PRL 87, 115701).
 
 set(ALLOY_PF_KARMA2001_BENCHMARK_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
