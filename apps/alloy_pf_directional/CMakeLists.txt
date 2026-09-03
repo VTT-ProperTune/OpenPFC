@@ -22,6 +22,16 @@ if(OpenMP_CXX_FOUND)
     ${ALLOY_PF_DIRECTIONAL_INCLUDE_DIR})
   target_link_libraries(alloy_pf_directional_openmp PRIVATE OpenPFC ${_dir_heffte_tgt} OpenMP::OpenMP_CXX)
   install(TARGETS alloy_pf_directional_openmp DESTINATION bin)
+  if(OpenPFC_BUILD_TESTS)
+    add_test(NAME alloy-pf-directional-repro
+             COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_repro.sh"
+                     "$<TARGET_FILE:alloy_pf_directional_openmp>"
+                     "${CMAKE_CURRENT_BINARY_DIR}/repro"
+                     1)
+    set_tests_properties(alloy-pf-directional-repro PROPERTIES
+      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+      TIMEOUT 120)
+  endif()
 else()
   message(STATUS "alloy_pf_directional_openmp skipped: OpenMP CXX not found")
 endif()

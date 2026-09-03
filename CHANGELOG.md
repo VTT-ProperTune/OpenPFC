@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- `alloy_pf_directional` starting point is the locked \(12\times 3.2\,\mu\mathrm{m}\), \(W_0=10\,\mathrm{nm}\) bicrystal (default CLI / `start` / `benchmark`); last-bit CI is `repro` / `alloy-pf-directional-repro`
 - `pfc::Domain` — canonical coordinate/geometry type replacing the templated `World`
 - `pfc::Box3i` — single canonical inclusive integer index box
 - `pfc::data::Field<T, MemorySpace>` — canonical owning field container unifying LocalField/PaddedBrick
