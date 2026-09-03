@@ -4,7 +4,7 @@
 /**
  * @file alloy_pf_directional_hip.cpp
  * @brief MPI + HIP Al-Cu FTA. One rank per GCD. Device-resident fields;
- *        FullPaddedDeviceHalo (GPU-aware or packed faces). Persistent: φ/ψ, c, ∂tφ.
+ *        DeviceFullHalo / Full2D–Full3D (GPU-aware or packed faces). Persistent: φ/ψ, c, ∂tφ.
  *
  * Nz=1 + n_dim=2 is the 2D-equivalent check path. Classic AMR is not implemented.
  */
@@ -25,9 +25,10 @@
 #include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
-#include <openpfc/runtime/hip/full_padded_device_halo.hpp>
+#include <openpfc/runtime/gpu/full_padded_device_halo_gpu.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -171,8 +172,13 @@ void run_hip(const alloy_pf_directional::RunConfig &cfg, int rank, int nproc) {
   h2d(dphi1, d_d1.p);
   h2d(dphi2, d_d2.p);
 
-  // Device 26-neighbor halo (GPU-aware MPI, or packed faces if OPENPFC_HIP_FORCE_PACKED_HALO=1).
-  pfc::hip::FullPaddedDeviceHalo halo(decomp, rank, hw, MPI_COMM_WORLD, /*n_fields=*/7, 0);
+  // Device Full halo on raw buffers (GPU-aware MPI, or packed faces if
+  // OPENPFC_HIP_FORCE_PACKED_HALO=1). HIP Fields + HaloExchange<HIPSpace> would
+  // need residency notes after every kernel write; kernels still take double*.
+  const auto halo_dirs =
+      dim3 ? pfc::halo::presets::Full3D() : pfc::halo::presets::Full2D();
+  pfc::gpu::DeviceFullHalo<pfc::hip::HIPHaloOps> halo(
+      decomp, rank, hw, MPI_COMM_WORLD, /*n_fields=*/7, halo_dirs, 0);
 
   const int nx = phi1.local_size()[0];
   const int ny = phi1.local_size()[1];

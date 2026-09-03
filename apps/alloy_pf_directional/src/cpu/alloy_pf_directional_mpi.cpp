@@ -22,8 +22,8 @@
 
 #include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/decomposition/full_padded_halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
@@ -48,10 +48,10 @@ using alloy_pf_directional::mpi_util::owns_hi;
 using alloy_pf_directional::mpi_util::owns_lo;
 using alloy_pf_directional::mpi_util::shift_left_one;
 
-void exchange_and_bc(pfc::communication::FullPaddedHaloExchanger<double> &halo, Field &f,
+void exchange_and_bc(pfc::comm::HaloExchange<pfc::HostSpace, double> &halo, Field &f,
                      bool noflux_x, bool noflux_y, bool noflux_z, int Nx, int Ny, int Nz,
                      bool dim3) {
-  halo.exchange_halos(f.data(), f.size());
+  halo.exchange();
   apply_noflux(f, noflux_x, noflux_y, noflux_z, Nx, Ny, Nz, dim3);
 }
 
@@ -120,23 +120,22 @@ void run_mpi(const alloy_pf_directional::RunConfig &cfg, int rank, int nproc) {
   Field beta_at = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
   const bool store_eu = cfg.store_eu;
 
-  const auto box = pfc::decomposition::local_box(decomp, rank);
-  const auto halo_dirs =
-      dim3 ? pfc::halo::presets::Full3D() : pfc::halo::presets::Full2D();
-  pfc::communication::FullPaddedHaloExchanger<double> h_phi1(
-      box, domain, decomp, rank, hw, MPI_COMM_WORLD, halo_dirs, 0);
-  pfc::communication::FullPaddedHaloExchanger<double> h_phi2(
-      box, domain, decomp, rank, hw, MPI_COMM_WORLD, halo_dirs, 30);
-  pfc::communication::FullPaddedHaloExchanger<double> h_psi1(
-      box, domain, decomp, rank, hw, MPI_COMM_WORLD, halo_dirs, 60);
-  pfc::communication::FullPaddedHaloExchanger<double> h_psi2(
-      box, domain, decomp, rank, hw, MPI_COMM_WORLD, halo_dirs, 90);
-  pfc::communication::FullPaddedHaloExchanger<double> h_c(box, domain, decomp, rank, hw,
-                                                           MPI_COMM_WORLD, halo_dirs, 120);
-  pfc::communication::FullPaddedHaloExchanger<double> h_d1(box, domain, decomp, rank, hw,
-                                                            MPI_COMM_WORLD, halo_dirs, 150);
-  pfc::communication::FullPaddedHaloExchanger<double> h_d2(box, domain, decomp, rank, hw,
-                                                            MPI_COMM_WORLD, halo_dirs, 180);
+  pfc::comm::HaloExchangeOptions halo_opt;
+  halo_opt.connectivity = pfc::comm::HaloConnectivity::Full;
+  halo_opt.directions = dim3 ? pfc::halo::presets::Full3D() : pfc::halo::presets::Full2D();
+  auto make_halo = [&](Field &f, int exchange_base) {
+    pfc::comm::HaloExchangeOptions opt = halo_opt;
+    opt.exchange_base = exchange_base;
+    return pfc::comm::HaloExchange<pfc::HostSpace, double>(f, decomp, rank, MPI_COMM_WORLD,
+                                                            opt);
+  };
+  auto h_phi1 = make_halo(phi1, 0);
+  auto h_phi2 = make_halo(phi2, 30);
+  auto h_psi1 = make_halo(psi1, 60);
+  auto h_psi2 = make_halo(psi2, 90);
+  auto h_c = make_halo(c, 120);
+  auto h_d1 = make_halo(dphi1, 150);
+  auto h_d2 = make_halo(dphi2, 180);
 
   init_fields(phi1, phi2, psi1, psi2, c, cfg, use_glasner, dim3);
 
