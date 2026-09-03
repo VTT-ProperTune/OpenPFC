@@ -26,6 +26,7 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <memory>
 #include <mpi.h>
 #include <stdexcept>
 #include <string>
@@ -42,6 +43,7 @@
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
+#include <openpfc/kernel/profiling/profiling.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
 #include <openpfc/runtime/gpu/comm_halo_exchange_gpu.hpp>
 #include <openpfc/runtime/gpu/fd_gpu_stack.hpp>
@@ -228,7 +230,25 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   MPI_Barrier(MPI_COMM_WORLD);
   const double t_loop0 = MPI_Wtime();
 
+  std::unique_ptr<pfc::profiling::ProfilingSession> prof;
+  if (!cfg.profile_json.empty()) {
+    using pfc::profiling::ProfilingMetricCatalog;
+    using pfc::profiling::ProfilingSession;
+    prof = std::make_unique<ProfilingSession>(
+        ProfilingMetricCatalog::with_defaults_and_extras({}),
+        ProfilingSession::openpfc_default_frame_metrics());
+  }
+  pfc::profiling::ProfilingContextScope prof_ctx(prof.get());
+
   for (int istep = 1; istep <= cfg.n_steps; ++istep) {
+    const bool record = prof && istep > cfg.warmup;
+    if (record) {
+      pfc::profiling::openpfc_begin_frame_with_step_and_rank(*prof, istep - 1, rank);
+      hip_check(hipDeviceSynchronize(), "hipDeviceSynchronize");
+      MPI_Barrier(MPI_COMM_WORLD);
+    }
+    const double t_step0 = MPI_Wtime();
+
     halo_state.exchange();
 
     kobayashi::kobayashi_stage_a_hip(phi.data(), tempr.data(), lap_phi.data(),
@@ -248,6 +268,13 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
         inv_dy, cfg.dt);
     phi.note_device_write();
     tempr.note_device_write();
+
+    if (record) {
+      hip_check(hipDeviceSynchronize(), "hipDeviceSynchronize");
+      MPI_Barrier(MPI_COMM_WORLD);
+      pfc::profiling::openpfc_end_frame_step_wall_and_memory(
+          *prof, MPI_Wtime() - t_step0, 0, 0, 0);
+    }
 
     if (nprint_eff > 0 && istep % nprint_eff == 0 && rank == 0) {
       std::cout << "step " << istep << "/" << cfg.n_steps << " done\n";
@@ -272,6 +299,17 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   const double wall_local = t_loop1 - t_loop0;
   double wall_max = 0.0;
   MPI_Reduce(&wall_local, &wall_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
+  if (prof) {
+    pfc::profiling::ProfilingExportOptions exp;
+    exp.write_json = true;
+    exp.json_path = cfg.profile_json;
+    prof->finalize_and_export(MPI_COMM_WORLD, exp);
+    if (rank == 0) {
+      std::cout << "KOBAYASHI_PROFILE wrote " << cfg.profile_json
+                << " warmup=" << cfg.warmup << " steps=" << cfg.n_steps << "\n";
+    }
+  }
 
   copy_device_to_host(phi, phi_h);
   copy_device_to_host(tempr, tempr_h);

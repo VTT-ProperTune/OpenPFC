@@ -12,6 +12,8 @@
 #include <iostream>
 #include <optional>
 #include <string>
+#include <string_view>
+#include <vector>
 
 #include <kobayashi/defaults.hpp>
 #include <openpfc_apps/cli.hpp>
@@ -27,6 +29,10 @@ struct RunConfig {
   std::string output_dir = "results/kobayashi_v1";
   int nprint = kNprint;
   int nsave = kNsave;
+  /// Schema-v2 profiling JSON path (empty = do not export).
+  std::string profile_json;
+  /// Untimed steps discarded before JSON frames (HIP/CUDA perf capture).
+  int warmup = 0;
 };
 
 /** Same workload keys as @ref RunConfig plus optional OpenMP thread override (0 =
@@ -36,10 +42,14 @@ struct RunConfigOpenMP : RunConfig {
 };
 
 inline void print_usage(std::ostream &os, const char *exe) {
-  os << "Usage:\n  " << exe << " [<Nx> <Ny> <n_steps> <dt> <dx> [output_dir]]\n"
-     << "All arguments optional; defaults match Julia kobayashi_v1:\n"
+  os << "Usage:\n  " << exe
+     << " [<Nx> <Ny> <n_steps> <dt> <dx> [output_dir]] "
+        "[--output PATH.json] [--warmup N]\n"
+     << "All positional arguments optional; defaults match Julia kobayashi_v1:\n"
      << "  Nx Ny n_steps dt dx  →  256 256 2000 1e-4 0.03\n"
      << "  output_dir           →  results/kobayashi_v1\n"
+     << "  --output PATH.json   →  schema-v2 profiling JSON (optional)\n"
+     << "  --warmup N           →  untimed steps before JSON frames (default 0)\n"
      << "PNG snapshots: initial + every nsave steps (" << kNsave << ").\n"
      << "Progress print every nprint steps (" << kNprint << ").\n";
 }
@@ -51,23 +61,82 @@ inline void print_usage_openmp(std::ostream &os, const char *exe) {
      << "  … <output_dir> <num_threads>\n";
 }
 
-inline std::optional<RunConfig> parse_args(int argc, char **argv) {
-  RunConfig c;
-  if (argc == 1) {
-    return c;
+namespace detail {
+
+struct SplitArgv {
+  std::vector<std::string> positional;
+  std::string profile_json;
+  int warmup = 0;
+  bool help = false;
+  bool error = false;
+};
+
+inline SplitArgv split_argv(int argc, char **argv) {
+  SplitArgv out;
+  for (int i = 1; i < argc; ++i) {
+    const std::string_view a{argv[i]};
+    if (a == "--help" || a == "-h") {
+      out.help = true;
+      return out;
+    }
+    if (a == "--output") {
+      if (i + 1 >= argc) {
+        out.error = true;
+        return out;
+      }
+      out.profile_json = argv[++i];
+      continue;
+    }
+    if (a == "--warmup") {
+      if (i + 1 >= argc) {
+        out.error = true;
+        return out;
+      }
+      out.warmup = std::atoi(argv[++i]);
+      if (out.warmup < 0) {
+        out.error = true;
+        return out;
+      }
+      continue;
+    }
+    if (!a.empty() && a.front() == '-') {
+      out.error = true;
+      return out;
+    }
+    out.positional.emplace_back(argv[i]);
   }
-  if (argc != 6 && argc != 7) {
+  return out;
+}
+
+inline bool apply_positionals(RunConfig &c, const std::vector<std::string> &pos) {
+  if (pos.empty()) {
+    return true;
+  }
+  if (pos.size() != 5 && pos.size() != 6) {
+    return false;
+  }
+  c.Nx = std::atoi(pos[0].c_str());
+  c.Ny = std::atoi(pos[1].c_str());
+  c.n_steps = std::atoi(pos[2].c_str());
+  c.dt = std::atof(pos[3].c_str());
+  c.dx = std::atof(pos[4].c_str());
+  if (pos.size() == 6) {
+    c.output_dir = pos[5];
+  }
+  return c.Nx >= 4 && c.Ny >= 4 && c.n_steps >= 1 && c.dt > 0.0 && c.dx > 0.0;
+}
+
+} // namespace detail
+
+inline std::optional<RunConfig> parse_args(int argc, char **argv) {
+  const auto split = detail::split_argv(argc, argv);
+  if (split.help || split.error) {
     return std::nullopt;
   }
-  c.Nx = std::atoi(argv[1]);
-  c.Ny = std::atoi(argv[2]);
-  c.n_steps = std::atoi(argv[3]);
-  c.dt = std::atof(argv[4]);
-  c.dx = std::atof(argv[5]);
-  if (argc == 7) {
-    c.output_dir = argv[6];
-  }
-  if (c.Nx < 4 || c.Ny < 4 || c.n_steps < 1 || !(c.dt > 0.0) || !(c.dx > 0.0)) {
+  RunConfig c;
+  c.profile_json = split.profile_json;
+  c.warmup = split.warmup;
+  if (!detail::apply_positionals(c, split.positional)) {
     return std::nullopt;
   }
   return c;
@@ -83,28 +152,22 @@ inline std::optional<RunConfig> parse_or_print_usage(int argc, char **argv,
  * count (requires explicit `output_dir` as argv[6]).
  */
 inline std::optional<RunConfigOpenMP> parse_args_openmp(int argc, char **argv) {
-  RunConfigOpenMP c;
-  if (argc == 1) {
-    return c;
-  }
-  if (argc != 6 && argc != 7 && argc != 8) {
+  const auto split = detail::split_argv(argc, argv);
+  if (split.help || split.error) {
     return std::nullopt;
   }
-  c.Nx = std::atoi(argv[1]);
-  c.Ny = std::atoi(argv[2]);
-  c.n_steps = std::atoi(argv[3]);
-  c.dt = std::atof(argv[4]);
-  c.dx = std::atof(argv[5]);
-  if (argc >= 7) {
-    c.output_dir = argv[6];
-  }
-  if (argc == 8) {
-    c.num_threads = std::atoi(argv[7]);
+  RunConfigOpenMP c;
+  c.profile_json = split.profile_json;
+  c.warmup = split.warmup;
+  auto pos = split.positional;
+  if (!pos.empty() && pos.size() == 7) {
+    c.num_threads = std::atoi(pos.back().c_str());
     if (c.num_threads < 1) {
       return std::nullopt;
     }
+    pos.pop_back();
   }
-  if (c.Nx < 4 || c.Ny < 4 || c.n_steps < 1 || !(c.dt > 0.0) || !(c.dx > 0.0)) {
+  if (!detail::apply_positionals(c, pos)) {
     return std::nullopt;
   }
   return c;
