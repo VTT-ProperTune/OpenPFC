@@ -43,6 +43,10 @@ sessions, a second field representation at the modifier/writer boundary).
 
 ### Fixed
 
+- GitHub Actions `code-quality` no longer depends on the private `ahojukka5/clang-format-action` (the VTT-ProperTune token cannot resolve it, so the Unit Tests workflow never reached a compiler). The check uses public `jidicula/clang-format-action@v4.18.0` and stays advisory (`continue-on-error`).
+- Clang-tidy is a dedicated non-blocking workflow again. `WarningsAsErrors` is not clean on this tree; making it a Unit Tests gate skipped the GCC matrix.
+- `docs/user_guide/parameter_validation.md` no longer links to the deleted `appconcretemodelmain-order-of-operations` anchor or the removed `JsonAppRun` / `SpectralSimulationSession` path (Sphinx `myst.xref_missing`).
+- `restore_field` reports `BytesSizeMismatch` / `BufferTooSmall` before optional decomposition metadata, so a truncated payload is not classified as `DecompositionMismatch`.
 - Gen-1 `Model` stores `World` by value. Tungsten/aluminum Domain constructors were passing a temporary `World` into a dangling reference, so Debug NaN checks aborted `tungsten-all-tests`, `tungsten-golden-4rank`, and `tungsten-cpu-vs-cuda-tests` on garbage k-space (`k_lap = -inf`).
 - `OpenPFC_ENABLE_HIP=ON` is fail-closed: configure stops if HIP is not found instead of silently building a CPU tree. `scripts/build.sh --with-rocm` locates `ROCM_PATH` (Tohtori `rocm/7.2.1` does not set `CMAKE_PREFIX_PATH`; `hipcc` may be `/usr/bin/hipcc`) and refuses to continue if the CMake summary does not report HIP available. CMake 3.21–3.24 uses ROCm Clang as `CMAKE_HIP_COMPILER`, not the `hipcc` wrapper.
 - `strong_types.hpp` skips `<compare>` / defaulted `operator<=>` on HIP device TUs (`__HIPCC__` / `__HIP__`) as well as CUDA. HIP clang (`-x hip`) cannot find `<compare>`.

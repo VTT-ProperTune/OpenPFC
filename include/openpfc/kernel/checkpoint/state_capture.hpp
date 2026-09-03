@@ -26,6 +26,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <openpfc/kernel/checkpoint/payloads.hpp>
 
@@ -133,9 +134,9 @@ capture_field(std::string_view field_id, pfc::types::Int3 extents,
 /**
  * @brief Restore a field payload into @p destination after full validation.
  *
- * Validates version, id, dtype, extents, coordinate order, optional
- * decomposition, exact @c payload.bytes.size() == expected nbytes, and
- * destination capacity — **before** any write. On failure the destination
+ * Validates version, id, dtype, extents, coordinate order, exact
+ * @c payload.bytes.size() == expected nbytes, destination capacity, then
+ * optional decomposition — **before** any write. On failure the destination
  * is left unchanged.
  */
 [[nodiscard]] inline RestoreOutcome restore_field(
@@ -158,12 +159,6 @@ capture_field(std::string_view field_id, pfc::types::Int3 extents,
   if (payload.coordinate_order != CoordinateOrder::XFastest) {
     return make_restore_rejected(RestoreError::CoordinateOrderMismatch);
   }
-  if (expected_decomposition.has_value()) {
-    if (!payload.decomposition.has_value() ||
-        *payload.decomposition != *expected_decomposition) {
-      return make_restore_rejected(RestoreError::DecompositionMismatch);
-    }
-  }
 
   const std::size_t expected_nbytes =
       field_expected_nbytes(expected_dtype, expected_extents);
@@ -173,11 +168,27 @@ capture_field(std::string_view field_id, pfc::types::Int3 extents,
   if (destination.size() < expected_nbytes) {
     return make_restore_rejected(RestoreError::BufferTooSmall);
   }
+  if (expected_decomposition.has_value()) {
+    if (!payload.decomposition.has_value() ||
+        *payload.decomposition != *expected_decomposition) {
+      return make_restore_rejected(RestoreError::DecompositionMismatch);
+    }
+  }
 
   if (expected_nbytes > 0) {
     std::memcpy(destination.data(), payload.bytes.data(), expected_nbytes);
   }
   return make_restore_ok();
+}
+
+/// @overload
+[[nodiscard]] inline RestoreOutcome restore_field(
+    const FieldPayload &payload, std::string_view expected_field_id,
+    FieldDtype expected_dtype, pfc::types::Int3 expected_extents,
+    std::vector<std::byte> &destination,
+    std::optional<DecompositionMeta> expected_decomposition = std::nullopt) {
+  return restore_field(payload, expected_field_id, expected_dtype, expected_extents,
+                       std::span<std::byte>(destination), expected_decomposition);
 }
 
 /**
@@ -228,6 +239,15 @@ restore_component(const ComponentPayload &payload, std::string_view expected_id,
     std::memcpy(destination.data(), payload.bytes.data(), expected_nbytes);
   }
   return make_restore_ok();
+}
+
+/// @overload
+[[nodiscard]] inline RestoreOutcome
+restore_component(const ComponentPayload &payload, std::string_view expected_id,
+                  std::size_t expected_nbytes, std::vector<std::byte> &destination,
+                  std::uint32_t expected_version = kComponentPayloadFormatVersion) {
+  return restore_component(payload, expected_id, expected_nbytes,
+                           std::span<std::byte>(destination), expected_version);
 }
 
 } // namespace pfc::checkpoint

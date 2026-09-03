@@ -51,10 +51,10 @@ destination write:
 3. dtype (fields)
 4. extents / shape (fields)
 5. coordinate order (fields; must be `XFastest`)
-6. optional decomposition equality when the caller supplies expected metadata
-7. **exact** `payload.bytes.size() == expected_nbytes` (`BytesSizeMismatch`
+6. **exact** `payload.bytes.size() == expected_nbytes` (`BytesSizeMismatch`
    otherwise — truncated or oversized bytes with matching metadata still reject)
-8. destination capacity (`BufferTooSmall` if too small)
+7. destination capacity (`BufferTooSmall` if too small)
+8. optional decomposition equality when the caller supplies expected metadata
 
 On any failure the destination buffer is left unchanged. Multi-field adapters
 (Wave2D `restore_uv`) validate every field fully before mutating any buffer.

@@ -10,6 +10,7 @@
 
 #include <cstddef>
 #include <cstring>
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
@@ -46,6 +47,10 @@ bool all_equal_bytes(std::span<const std::byte> a, std::byte sentinel) {
     }
   }
   return true;
+}
+
+std::span<std::byte> as_bytes(std::vector<std::byte> &v) {
+  return {v.data(), v.size()};
 }
 
 } // namespace
@@ -105,16 +110,16 @@ TEST_CASE("restore rejects metadata mismatch without mutating destination",
 
   SECTION("wrong version") {
     payload.version = 99;
-    const auto outcome =
-        restore_field(payload, "field.a", FieldDtype::Float64, extents, dest);
+    const auto outcome = restore_field(payload, "field.a", FieldDtype::Float64,
+                                       extents, as_bytes(dest));
     REQUIRE_FALSE(outcome.ok);
     REQUIRE(outcome.error == RestoreError::VersionMismatch);
     REQUIRE(all_equal_bytes(dest, sentinel));
   }
 
   SECTION("wrong field id") {
-    const auto outcome =
-        restore_field(payload, "field.other", FieldDtype::Float64, extents, dest);
+    const auto outcome = restore_field(payload, "field.other", FieldDtype::Float64,
+                                       extents, as_bytes(dest));
     REQUIRE_FALSE(outcome.ok);
     REQUIRE(outcome.error == RestoreError::FieldIdMismatch);
     REQUIRE(all_equal_bytes(dest, sentinel));
@@ -124,7 +129,7 @@ TEST_CASE("restore rejects metadata mismatch without mutating destination",
     const pfc::types::Int3 wrong{3, 2, 1};
     std::vector<std::byte> big(3 * 2 * 1 * sizeof(double), sentinel);
     const auto outcome =
-        restore_field(payload, "field.a", FieldDtype::Float64, wrong, big);
+        restore_field(payload, "field.a", FieldDtype::Float64, wrong, as_bytes(big));
     REQUIRE_FALSE(outcome.ok);
     REQUIRE(outcome.error == RestoreError::ShapeMismatch);
     REQUIRE(all_equal_bytes(big, sentinel));
@@ -141,7 +146,7 @@ TEST_CASE("restore rejects metadata mismatch without mutating destination",
     DecompositionMeta expected = *payload.decomposition;
     expected.rank = 1;
     const auto outcome = restore_field(payload, "field.a", FieldDtype::Float64,
-                                       extents, dest, expected);
+                                       extents, as_bytes(dest), expected);
     REQUIRE_FALSE(outcome.ok);
     REQUIRE(outcome.error == RestoreError::DecompositionMismatch);
     REQUIRE(all_equal_bytes(dest, sentinel));
@@ -162,8 +167,9 @@ TEST_CASE("restore rejects bytes.size mismatch without mutating destination",
 
   SECTION("truncated bytes") {
     payload.bytes.resize(expected / 2);
-    const auto outcome =
-        restore_field(payload, "field.b", FieldDtype::Float64, extents, dest);
+    REQUIRE_FALSE(payload.decomposition.has_value());
+    const auto outcome = restore_field(payload, "field.b", FieldDtype::Float64,
+                                       extents, as_bytes(dest), std::nullopt);
     REQUIRE_FALSE(outcome.ok);
     REQUIRE(outcome.error == RestoreError::BytesSizeMismatch);
     REQUIRE(all_equal_bytes(dest, sentinel));
@@ -171,8 +177,9 @@ TEST_CASE("restore rejects bytes.size mismatch without mutating destination",
 
   SECTION("oversized bytes") {
     payload.bytes.push_back(std::byte{0});
-    const auto outcome =
-        restore_field(payload, "field.b", FieldDtype::Float64, extents, dest);
+    REQUIRE_FALSE(payload.decomposition.has_value());
+    const auto outcome = restore_field(payload, "field.b", FieldDtype::Float64,
+                                       extents, as_bytes(dest), std::nullopt);
     REQUIRE_FALSE(outcome.ok);
     REQUIRE(outcome.error == RestoreError::BytesSizeMismatch);
     REQUIRE(all_equal_bytes(dest, sentinel));
@@ -195,7 +202,7 @@ TEST_CASE("empty component round-trip and reject", "[checkpoint][state_capture]"
     bad.bytes.push_back(std::byte{1});
     const std::byte sentinel{0x11};
     std::vector<std::byte> dest(4, sentinel);
-    const auto outcome = restore_component(bad, "euler", 0, dest);
+    const auto outcome = restore_component(bad, "euler", 0, as_bytes(dest));
     REQUIRE_FALSE(outcome.ok);
     REQUIRE(outcome.error == RestoreError::BytesSizeMismatch);
     REQUIRE(all_equal_bytes(dest, sentinel));
@@ -205,7 +212,7 @@ TEST_CASE("empty component round-trip and reject", "[checkpoint][state_capture]"
     const std::byte raw[] = {std::byte{1}, std::byte{2}, std::byte{3}};
     const auto payload = capture_component("ctrl", raw);
     std::vector<std::byte> dest(3, std::byte{0});
-    REQUIRE(restore_component(payload, "ctrl", 3, dest).ok);
+    REQUIRE(restore_component(payload, "ctrl", 3, as_bytes(dest)).ok);
     REQUIRE(dest[0] == std::byte{1});
     REQUIRE(dest[1] == std::byte{2});
     REQUIRE(dest[2] == std::byte{3});

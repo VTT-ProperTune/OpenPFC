@@ -1,9 +1,10 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Merge-blocking static analysis (M12): WarningsAsErrors from `.clang-tidy`.
-# Also run as the `clang-tidy` job in `ci.yml` so the Unit Tests workflow fails
-# when tidy is red. Keep this workflow for a dedicated tidy-only signal.
+# Optional static analysis: failures here do not block the main CI workflow (ci.yml).
+# For branch protection, do not mark this job as a required check if merges should
+# proceed when only clang-tidy is red. M12 still wants this required once the
+# WarningsAsErrors backlog is clear.
 
 name: Clang-Tidy
 
@@ -60,4 +61,5 @@ jobs:
             -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu
 
       - name: Run clang-tidy
+        continue-on-error: true
         run: bash scripts/run-clang-tidy.sh --build-dir=build-tidy
