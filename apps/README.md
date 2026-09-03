@@ -9,7 +9,7 @@ Full programs built when **`OpenPFC_BUILD_APPS=ON`** (default). They install und
 
 User-facing overview and example commands: [`docs/user_guide/applications.md`](../docs/user_guide/applications.md).
 
-CMake wires subdirectories from [`apps/CMakeLists.txt`](CMakeLists.txt) in this order: `tungsten`, `aluminumNew`, `allen_cahn`, `heat3d`, `wave2d`, `kobayashi`, `alloy_pf_karma2001_benchmark`.
+CMake wires subdirectories from [`apps/CMakeLists.txt`](CMakeLists.txt): `common`, then HeFFTe-gated `tungsten` / `aluminumNew`, then `allen_cahn`, `heat3d`, `wave2d`, `kobayashi`, `alloy_pf_karma2001_benchmark`.
 
 ## Catalog
 
