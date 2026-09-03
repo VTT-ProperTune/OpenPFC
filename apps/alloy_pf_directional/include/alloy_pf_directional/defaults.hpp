@@ -65,6 +65,20 @@ inline constexpr double kSeedRadiusOverW0 = 20.0;
 /** Laptop directional-solidification box (single grain, left → right). */
 inline constexpr double kDsLx = 6.40e-6;           // m
 inline constexpr double kDsLy = 0.80e-6;           // m
+/** LOCKED app starting point: two-grain strip (LUMI g3e6_V04_Ly3.2 … w0_10nm).
+ *  Do not retune FTA / Zhong / IC without recording a new gold. */
+inline constexpr double kBenchW0 = 10.0e-9;
+inline constexpr double kBenchLx = 12.0e-6;
+inline constexpr double kBenchLy = 3.20e-6;
+inline constexpr double kBenchTend = 120.0e-6;
+inline constexpr double kBenchG = 3.0e6;
+inline constexpr double kBenchVp = 0.4;
+inline constexpr double kBenchDtOverTau = 0.2;
+inline constexpr const char kBenchOutputDir[] =
+    "results/alloy_pf_directional/benchmark/ly3.2_w10nm_bicrystal";
+inline constexpr int kReproNxW0 = 128;
+inline constexpr int kReproNyW0 = 64;
+inline constexpr int kReproSteps = 40;
 /** 0 = 2D (Nz=1). Set Lz > 0 or OPENPFC_ALCU_NDIM=3 for a 3D brick. */
 inline constexpr double kDsLz = 0.0;               // m
 inline constexpr double kDsTend = 80.0e-6;         // s  safety cap; stop at right wall
