@@ -9,7 +9,7 @@
  *
  * @details
  * Free functions copy accepted field/component state into
- * @ref FieldPayload / @ref ComponentPayload and restore into caller-owned
+ * `FieldPayload` / `ComponentPayload` and restore into caller-owned
  * buffers only after all metadata and byte-length checks succeed.
  *
  * **Exclusions:** stage buffers (@c Workspace stages), FFT plans, operator

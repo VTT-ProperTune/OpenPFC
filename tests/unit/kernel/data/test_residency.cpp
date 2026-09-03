@@ -1,3 +1,4 @@
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // Host-only unit tests for the M2.2 residency state machine. These pin the

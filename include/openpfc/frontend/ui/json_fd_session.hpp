@@ -12,8 +12,8 @@
  * `FDCPUStack`. `timestepping.integrator.method` (and optional
  * `simulator.integrator.method` overlay) selects a registered RK composer.
  * IMEX/ETD tokens fail closed — those need `compose_imex_euler` /
- * `compose_etd1`. The default RHS is periodic heat, \(\partial_t u =
- * \Delta u\), via `stack.du()`.
+ * `compose_etd1`. The default RHS is periodic heat, du/dt = Laplacian(u),
+ * via `stack.du()`.
  */
 
 #include <algorithm>

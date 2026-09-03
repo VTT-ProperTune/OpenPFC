@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # wave2d — 2D acoustic wave (coupled first-order system)
 
 This application integrates the 2D wave equation

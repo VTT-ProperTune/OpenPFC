@@ -65,9 +65,7 @@ jobs:
             -GNinja \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu \
-            -DCMAKE_CXX_FLAGS="--coverage -fprofile-arcs -ftest-coverage" \
-            -DCMAKE_C_FLAGS="--coverage -fprofile-arcs -ftest-coverage" \
-            -DCMAKE_EXE_LINKER_FLAGS="--coverage" \
+            -DOpenPFC_ENABLE_CODE_COVERAGE=ON \
             -DOpenPFC_BUILD_TESTS=ON \
             -DOpenPFC_BUILD_EXAMPLES=OFF \
             -DOpenPFC_BUILD_APPS=OFF \

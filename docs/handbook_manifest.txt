@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
 # Ordered list of markdown files for scripts/build_handbook.sh (paths relative to repo root)
 # Lines starting with # are ignored; blank lines ignored.
 

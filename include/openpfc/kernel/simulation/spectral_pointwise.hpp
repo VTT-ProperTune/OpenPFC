@@ -18,7 +18,7 @@
  *   step, on the host or inside a GPU kernel, so it must be device-callable
  *   (`OPENPFC_HD`) and must carry every constant it needs by value.
  *
- * The functor receives a @ref SpectralCell holding the primary field value
+ * The functor receives a `SpectralCell` holding the primary field value
  * and, when the physics declares the corresponding k-space operator, the
  * mean-field filtered value and the correlation-kernel convolution, plus the
  * cell coordinates and time. This header is deliberately light so a device
@@ -121,7 +121,7 @@ concept HasFreeEnergyDensity = requires(const F &f, const SpectralCell &c) {
  * @param p_star  Correlation convolution or `nullptr`.
  * @param n_out   Nonlinearity output (length `g.volume()`).
  * @param fe_out  Free-energy density output, or `nullptr`; written only when
- *                `F` models @ref HasFreeEnergyDensity.
+ *                `F` models `HasFreeEnergyDensity`.
  */
 template <class F>
   requires SpectralPointwise<F>

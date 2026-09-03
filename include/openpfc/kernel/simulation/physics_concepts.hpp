@@ -22,7 +22,7 @@
  * 3. **Spectral-ETD descriptors** — the single contract consumed by
  *    `SpectralETDSystem` for every memory space:
  *      - `linear_symbol(k_laplacian)` — real diagonal symbol \f$L(k)\f$;
- *      - `pointwise()` — a device-capable functor (@ref SpectralPointwise)
+ *      - `pointwise()` — a device-capable functor (`SpectralPointwise`)
  *        evaluating the real-space nonlinearity per cell;
  *      - optional `nonlinear_symbol(k_laplacian)` — real multiplier
  *        \f$M(k)\f$ applied to \f$\hat N\f$ (defaults to 1; PFC models use

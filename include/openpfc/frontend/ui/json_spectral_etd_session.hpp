@@ -100,7 +100,7 @@ concept JsonConstructiblePhysics =
  * @brief JSON → spectral ETD run for one physics on one stack.
  *
  * @tparam Physics Models `pfc::sim::SpectralETDPhysics` and
- *                 @ref JsonConstructiblePhysics.
+ *                 `JsonConstructiblePhysics`.
  * @tparam Stack   `pfc::sim::stacks::SpectralCPUStack` or
  *                 `pfc::sim::stacks::GPUSpectralStack<MemorySpace>`.
  */

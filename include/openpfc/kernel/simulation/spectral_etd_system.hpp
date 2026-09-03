@@ -104,7 +104,7 @@ struct SpectralStepAttempt {
 /**
  * @brief Pseudo-spectral ETD1 system for one real field and its Fourier hat.
  *
- * @tparam Physics     Models @ref SpectralETDPhysics.
+ * @tparam Physics     Models `SpectralETDPhysics`.
  * @tparam MemorySpace `HostSpace`, `CUDASpace`, or `HIPSpace`.
  */
 template <class Physics, class MemorySpace = pfc::HostSpace>
