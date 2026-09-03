@@ -60,14 +60,20 @@ struct RunConfig {
   bool store_eu = true;
   /** 1: also persist jx/jy[/jz]. Implies store_eu. Default off (fluxes ~5% of 2D). */
   bool store_aux = false;
+  /** CLI `repro`: 128×64, 40-step last-bit check (not the morphology product). */
+  bool frozen_repro = false;
+  /** LOCKED starting point: 12×3.2 µm W=10 nm two-grain strip. */
+  bool frozen_benchmark = false;
 };
 
 inline void print_usage(std::ostream &os, const char *exe) {
   os << "Al-Cu FTA dilute alloy. T = Tl + G(x − xs − Vp t); xs = initial solidus (Bridgman).\n"
-     << "Usage:\n  " << exe << " [output_dir] [nthreads]     two-grain, 256 W0 × 128 W0 (2D)\n"
+     << "Usage:\n  " << exe << " [output_dir] [nthreads]     LOCKED 12×3.2 µm W=10 nm bicrystal (start here)\n"
+     << "  " << exe << " start|benchmark [output_dir] [nthreads]   same locked case\n"
      << "  " << exe << " smoke [output_dir] [nthreads]\n"
      << "  " << exe << " ds [output_dir] [nthreads] [--save-every N] [--log-every N]\n"
-     << "  " << exe << " bicrystal [output_dir] [nthreads]   directional, two grains\n"
+     << "  " << exe << " bicrystal [output_dir] [nthreads]   two-grain research CLI (env; not locked)\n"
+     << "  " << exe << " repro [output_dir] [nthreads]       128×64, 40 steps, last-bit CI check\n"
      << "Env:\n"
      << "  OPENPFC_ALCU_SKIP_PNG=1  OPENPFC_ALCU_SKIP_VTK=1  OPENPFC_ALCU_QUIET=1\n"
      << "  OPENPFC_ALCU_MAX_STEPS=N  OPENPFC_ALCU_SAVE_EVERY=k  (PNG+VTK; ds default from W0)\n"
@@ -194,6 +200,22 @@ inline void set_io_cadence(RunConfig &c) {
   c.nprint = snap;
 }
 
+inline void apply_pos_outdir_nthreads(RunConfig &c, int argc, char **argv, int start) {
+  std::string pos[2];
+  int npos = 0;
+  for (int i = start; i < argc && npos < 2; ++i) {
+    pos[npos++] = argv[i];
+  }
+  if (npos >= 1 && pos[0].find_first_not_of("+-0123456789") != std::string::npos) {
+    c.output_dir = pos[0];
+    if (npos >= 2) {
+      c.num_threads = std::atoi(pos[1].c_str());
+    }
+  } else if (npos >= 1) {
+    c.num_threads = std::atoi(pos[0].c_str());
+  }
+}
+
 inline RunConfig sized(Physics phys, double t_end, double Lx, double Ly, double Lz = 0.0) {
   RunConfig c;
   c.phys = phys;
@@ -207,6 +229,31 @@ inline RunConfig sized(Physics phys, double t_end, double Lx, double Ly, double 
     c.Nz = 1;
   }
   c.n_steps = std::max(1, static_cast<int>(std::ceil(t_end / phys.dt)));
+  return c;
+}
+
+/** LOCKED 2D gold. Physics is re-applied after env in parse_or_print_usage. */
+inline RunConfig make_locked_bicrystal() {
+  const double W0 = kBenchW0;
+  Physics phys = make_physics(W0, 1.0, 2);
+  phys.G = kBenchG;
+  phys.Vp = kBenchVp;
+  apply_dt_limits(phys);
+  RunConfig c = sized(phys, kBenchTend, kBenchLx, kBenchLy);
+  c.n_grains = 2;
+  set_symmetric_misorientation(c.phys, kThetaDeg);
+  c.noise_F0 = 0.0;
+  c.noise_seed = kNoiseSeed;
+  c.stop_on_right = false;
+  c.stop_on_far_c = true;
+  c.periodic_y = true;
+  c.periodic_z = false;
+  c.seed_depth = kDsSeedDepth;
+  c.phys.x_tl = c.seed_depth;
+  c.phys.r_seed = two_grain_seed_radius(c.seed_depth, c.Ny, c.phys.dx, c.phys.W0);
+  c.output_dir = kBenchOutputDir;
+  c.frozen_benchmark = true;
+  set_io_cadence(c);
   return c;
 }
 
@@ -368,6 +415,38 @@ inline std::optional<RunConfig> parse_args(int argc, char **argv) {
     }
     return c;
   }
+  if (argc >= 2 && std::string(argv[1]) == "repro") {
+    const double W0 = kBenchW0;
+    Physics phys = make_physics(W0, 1.0, 2);
+    phys.G = kBenchG;
+    phys.Vp = kBenchVp;
+    apply_dt_limits(phys);
+    RunConfig c = sized(phys, 1.0e-6, double(kReproNxW0) * W0, double(kReproNyW0) * W0);
+    c.n_grains = 2;
+    set_symmetric_misorientation(c.phys, kThetaDeg);
+    c.noise_F0 = kNoiseF0;
+    c.noise_seed = kNoiseSeed;
+    c.stop_on_right = false;
+    c.stop_on_far_c = false;
+    c.periodic_y = true;
+    c.periodic_z = true;
+    c.seed_depth = kDsSeedDepth;
+    c.phys.x_tl = c.seed_depth;
+    c.phys.r_seed = two_grain_seed_radius(c.seed_depth, c.Ny, c.phys.dx, c.phys.W0);
+    c.output_dir = "results/alloy_pf_directional/repro";
+    c.frozen_repro = true;
+    c.nprint = kReproSteps;
+    c.nsave = 10000;
+    c.vtk_every = 10000;
+    c.n_hist = kReproSteps;
+    apply_pos_outdir_nthreads(c, argc, argv, 2);
+    return c;
+  }
+  if (argc >= 2 && (std::string(argv[1]) == "benchmark" || std::string(argv[1]) == "start")) {
+    RunConfig c = make_locked_bicrystal();
+    apply_pos_outdir_nthreads(c, argc, argv, 2);
+    return c;
+  }
   if (argc >= 2 && (std::string(argv[1]) == "ds" || std::string(argv[1]) == "bicrystal")) {
     const bool bicrystal = std::string(argv[1]) == "bicrystal";
     const double W0 = env_d("OPENPFC_ALCU_W0", kW0);
@@ -405,8 +484,8 @@ inline std::optional<RunConfig> parse_args(int argc, char **argv) {
     c.stop_on_far_c = true;
     c.periodic_y = true;
     c.periodic_z = true;
-    c.output_dir = bicrystal ? "/Users/tptatu/Data/OpenPFC/alloy_pf_directional_ds/bicrystal"
-                             : "/Users/tptatu/Data/OpenPFC/alloy_pf_directional_ds/default";
+    c.output_dir = bicrystal ? "results/alloy_pf_directional/bicrystal"
+                             : "results/alloy_pf_directional/ds";
     apply_ds_env(c);
     c.phys.x_tl = c.seed_depth;
     if (c.n_grains == 2) {
@@ -436,16 +515,8 @@ inline std::optional<RunConfig> parse_args(int argc, char **argv) {
     return c;
   }
 
-  Physics phys = make_physics();
-  RunConfig c = sized(phys, 2.0e-6, 256.0 * phys.W0, 128.0 * phys.W0);
-  if (argc >= 2 && std::string(argv[1]).find_first_not_of("+-0123456789") != std::string::npos) {
-    c.output_dir = argv[1];
-    if (argc >= 3) {
-      c.num_threads = std::atoi(argv[2]);
-    }
-  } else if (argc >= 2) {
-    c.num_threads = std::atoi(argv[1]);
-  }
+  RunConfig c = make_locked_bicrystal();
+  apply_pos_outdir_nthreads(c, argc, argv, 1);
   return c;
 }
 
@@ -472,6 +543,59 @@ inline std::optional<RunConfig> parse_or_print_usage(int argc, char **argv) {
   cfg->store_eu = env_on("OPENPFC_ALCU_STORE_EU", cfg->store_eu);
   if (cfg->store_aux) {
     cfg->store_eu = true;
+  }
+  if (cfg->frozen_repro) {
+    apply_dt_limits(cfg->phys);
+    const double want = kBenchDtOverTau * cfg->phys.tau0;
+    cfg->phys.dt_tau = want;
+    cfg->phys.dt = want;
+    cfg->phys.G = kBenchG;
+    cfg->phys.Vp = kBenchVp;
+    cfg->Nx = kReproNxW0;
+    cfg->Ny = kReproNyW0;
+    cfg->Nz = 1;
+    cfg->phys.n_dim = 2;
+    cfg->n_steps = kReproSteps;
+    cfg->n_grains = 2;
+    cfg->noise_F0 = kNoiseF0;
+    cfg->noise_seed = kNoiseSeed;
+    set_symmetric_misorientation(cfg->phys, kThetaDeg);
+    cfg->stop_on_right = false;
+    cfg->stop_on_far_c = false;
+    cfg->window_enable = false;
+    cfg->periodic_y = true;
+    cfg->periodic_z = true;
+    cfg->seed_depth = kDsSeedDepth;
+    cfg->phys.x_tl = cfg->seed_depth;
+    cfg->phys.r_seed =
+        two_grain_seed_radius(cfg->seed_depth, cfg->Ny, cfg->phys.dx, cfg->phys.W0);
+  }
+  if (cfg->frozen_benchmark) {
+    apply_dt_limits(cfg->phys);
+    const double want = kBenchDtOverTau * cfg->phys.tau0;
+    cfg->phys.dt_tau = want;
+    cfg->phys.dt = want;
+    cfg->phys.G = kBenchG;
+    cfg->phys.Vp = kBenchVp;
+    cfg->Nx = std::max(8, static_cast<int>(std::ceil(kBenchLx / cfg->phys.dx)));
+    cfg->Ny = std::max(1, static_cast<int>(std::ceil(kBenchLy / cfg->phys.dx)));
+    cfg->Nz = 1;
+    cfg->phys.n_dim = 2;
+    cfg->n_steps = std::max(1, static_cast<int>(std::ceil(kBenchTend / cfg->phys.dt)));
+    cfg->n_grains = 2;
+    cfg->noise_F0 = 0.0;
+    cfg->noise_seed = kNoiseSeed;
+    set_symmetric_misorientation(cfg->phys, kThetaDeg);
+    cfg->stop_on_right = false;
+    cfg->stop_on_far_c = true;
+    cfg->window_enable = false;
+    cfg->periodic_y = true;
+    cfg->periodic_z = false;
+    cfg->seed_depth = kDsSeedDepth;
+    cfg->phys.x_tl = cfg->seed_depth;
+    cfg->phys.r_seed =
+        two_grain_seed_radius(cfg->seed_depth, cfg->Ny, cfg->phys.dx, cfg->phys.W0);
+    apply_step_cap(*cfg);
   }
   return cfg;
 }

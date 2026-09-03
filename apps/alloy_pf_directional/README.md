@@ -9,6 +9,23 @@ Al-Cu FTA on a regular grid (FD). This is the main directional phase-field appli
 
 Dilute Al-Cu frozen-temperature alloy solver ([Pinomaa et al., J. Crystal Growth 2020](https://doi.org/10.1016/j.jcrysgro.2019.125412); please verify volume/page before citing). Explicit Euler, Ji isotropic operators, Glasner \(\psi\), cubic anisotropy. **This is not the spectral / HeFFTe path.**
 
+## Start here (locked bicrystal)
+
+The app starting point is the **locked** two-grain strip [`benchmark/ly3.2_w10nm_bicrystal/`](benchmark/ly3.2_w10nm_bicrystal/): \(L=12\times 3.2\,\mu\mathrm{m}\), \(W_0=10\,\mathrm{nm}\), \(G=3\times 10^6\,\mathrm{K/m}\), \(V_p=0.4\,\mathrm{m/s}\), \(\pm 30^\circ\), \(\Delta t=0.2\,\tau_0\), **noise off**. LUMI-C gold: \(n=33457\), \(t=72.9\,\mu\mathrm{s}\), \(x_\mathrm{tip}=11.94\,\mu\mathrm{m}\), stop `wall_c`.
+
+Do not retune FTA physics, the Zhong mapping, or the two-grain IC until a full-length rerun still matches the strip/front figures and that stop. New features (MPI/HIP, window, 3D) fork from this case; they do not replace it.
+
+```bash
+./apps/alloy_pf_directional/scripts/run_benchmark.sh          # full length
+QUICK=1 ./apps/alloy_pf_directional/scripts/run_benchmark.sh # 400 steps (seeds only)
+./apps/alloy_pf_directional/scripts/run_benchmark.sh --plot-only
+# same locked physics:
+builds/macos-cpu-release/apps/alloy_pf_directional/alloy_pf_directional_openmp
+builds/macos-cpu-release/apps/alloy_pf_directional/alloy_pf_directional_openmp start
+```
+
+CLI `repro` / `ctest -R alloy-pf-directional-repro` is a **40-step last-bit** check on a \(128\times 64\) noisy slice. It is not the product figure. `ds` / `bicrystal` remain env-driven research CLIs (LUMI campaigns). The 2× noisy ensemble is a separate campaign.
+
 ## Two grains and grain–grain coupling
 
 Each grain has its own order parameter \(\phi_\alpha\in[-1,1]\) (\(\alpha=1,2\)). The combined solid–liquid field is the Zhong mapping
@@ -19,12 +36,6 @@ Where two grains overlap, a repulsive term
 \(\omega=(32/5)\,\lambda\,\mathrm{therm}/(1-k_e)\), with \(\mathrm{therm}=(T-T_l)/(m_l c_\infty)>0\) in the solid. Default: this local \(\omega(x,t)\). Override with a constant via `OPENPFC_ALCU_OMEGA`.
 
 Two-grain IC: independent semicircles (2D) / hemispheres (3D) on the left wall \(x=0\) at \(y=0.25 L_y\) and \(0.75 L_y\). No exclusive Voronoi cut (that inserted a \(\psi\) jump along the midline). Radius is `OPENPFC_ALCU_SEED`, shrunk if needed so the \(\phi=0\) contours stay at least \(16 W_0\) apart. Orientations \(\phi_1=\pm\theta\) (default \(30^\circ\); `OPENPFC_ALCU_THETA`).
-
-```bash
-# Two-grain directional strip (periodic y, grains at ±30°)
-builds/release/apps/alloy_pf_directional/alloy_pf_directional_openmp bicrystal results/alloy_pf_directional_bicrystal
-# or: OPENPFC_ALCU_NGRANS=2 OPENPFC_ALCU_THETA=30 … alloy_pf_directional_openmp ds …
-```
 
 ## Build
 
@@ -47,9 +58,14 @@ Targets after configure: `alloy_pf_directional_openmp`, `alloy_pf_directional_mp
 ## Run
 
 ```bash
-# 2D OpenMP (Nz=1, n_dim=2) — laptop / LUMI-C baseline
+# Locked starting point (same as `start` / `benchmark`)
+./apps/alloy_pf_directional/scripts/run_benchmark.sh
+# or: alloy_pf_directional_openmp results/alloy_pf_directional/benchmark/ly3.2_w10nm_bicrystal
+
+# Research CLI (env; 1-grain `ds` or 2-grain `bicrystal`)
 builds/release/apps/alloy_pf_directional/alloy_pf_directional_openmp smoke
-builds/release/apps/alloy_pf_directional/alloy_pf_directional_openmp ds results/alloy_pf_directional_ds
+builds/release/apps/alloy_pf_directional/alloy_pf_directional_openmp ds results/alloy_pf_directional/ds
+
 
 # MPI CPU (same CLI/env)
 mpirun -np 4 builds/release/apps/alloy_pf_directional/alloy_pf_directional_mpi ds results/alloy_pf_directional_mpi
@@ -99,7 +115,23 @@ BUILD=builds/macos-cpu-release ./apps/alloy_pf_directional/scripts/check_nz1_vs_
 
 Documented tolerances in that script: relative mass \(\sim 10^{-9}\), tip \(\sim 10^{-10}\,\mathrm{m}\), checksums \(\sim 10^{-8}\). Do **not** set `OPENPFC_ALCU_NDIM=3` with `Nz=1` if you want a 2D match (`n_dim` changes the CFL \(\mathrm{d}t\)). The two-grain `smoke` IC (no-flux \(y\)) is stiffer and is not this check.
 
-**2. Light 3D smoke**
+**2. Last-bit OpenMP (tiny noisy slice)**
+
+```bash
+BUILD=builds/macos-cpu-release ./apps/alloy_pf_directional/scripts/check_repro.sh
+# or: ctest -R alloy-pf-directional-repro
+```
+
+Optional: same **box** as the gold, noise on, capped steps (still seeds at 400):
+
+```bash
+BUILD=builds/macos-cpu-release STEPS=400 NTHREADS=8 \
+  ./apps/alloy_pf_directional/scripts/check_bicrystal_repro.sh
+```
+
+Do not expect last-bit identity vs LUMI (Cray vs AppleClang). Last-bit is the same binary, same thread count, twice.
+
+**3. Light 3D smoke**
 
 Tiny brick, coarse vs \(\mathrm{d}x/2\), a few tens of steps — mass bounded, \(\phi\) in range, no NaNs:
 
@@ -108,6 +140,16 @@ BUILD=builds/release ./apps/alloy_pf_directional/scripts/check_3d_smoke.sh
 ```
 
 This is not a journal convergence study.
+
+## After this 2D baseline is nailed
+
+Treat `ly3.2_w10nm_bicrystal` as the **locked starting point**: do not “improve” FTA physics, the Zhong mapping, or the two-grain IC until a full-length rerun still looks like the strip/front figures and still stops on `wall_c` near \(x_\mathrm{tip}=11.94\,\mu\mathrm{m}\). Then add features in this order:
+
+1. **Backends on the frozen cases, not a new box.** MPI `np=1` vs OpenMP on `repro` (fields), then a capped strip. HIP vs CPU on LUMI-G (`check_hip_vs_cpu.sh`) with looser tolerances, not last-bit. Same \(G,V_p,W_0,\theta\).
+2. **Honor the 2D scaling gate.** [`docs/lumi_2d_scaling.md`](docs/lumi_2d_scaling.md) says do not start 3D production until kernel vs halo says kernel-bound. Moving window and block skip stay 2D tools until that gate.
+3. **3D is already in the engine** (`Nz>1`, hemispheres, `Full3D` MPI/HIP). Do not start with a \(1200\times 320\times 320\) brick (\(\sim 10^8\) cells). First science case: same \(G,V_p,W_0,\theta\), **one grain**, thin \(L_z\) (8–16 \(W_0\)), periodic \(y,z\). Gate: \(N_z=1\) with `n_dim=2` matches the 2D gold path; then a thin slab whose mid-plane resembles the 2D cells (not identical). Then two grains. Use the moving window before a full 3D strip.
+4. **Memory.** Persist \(e^u,u\); do not store anisotropy fluxes; AMR stays deferred. Window + block skip first.
+5. **Noise-on full-strip / 2× ensemble** is a separate 2D campaign, not a 3D prerequisite.
 
 ## Scaling scripts (2D campaign)
 

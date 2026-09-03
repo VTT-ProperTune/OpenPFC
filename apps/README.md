@@ -9,7 +9,7 @@ Full programs built when **`OpenPFC_BUILD_APPS=ON`** (default). They install und
 
 User-facing overview and example commands: [`docs/user_guide/applications.md`](../docs/user_guide/applications.md).
 
-CMake wires subdirectories from [`apps/CMakeLists.txt`](CMakeLists.txt) in this order: `tungsten`, `aluminumNew`, `allen_cahn`, `heat3d`, `wave2d`, `kobayashi`.
+CMake wires subdirectories from [`apps/CMakeLists.txt`](CMakeLists.txt): `common`, then HeFFTe-gated `tungsten` / `aluminumNew`, then `allen_cahn`, `heat3d`, `wave2d`, `kobayashi`, `alloy_pf_directional`.
 
 ## Catalog
 
@@ -21,6 +21,7 @@ CMake wires subdirectories from [`apps/CMakeLists.txt`](CMakeLists.txt) in this 
 | [**`heat3d/`**](heat3d/README.md) | **3D heat equation** \(\partial_t u = D\Delta u\); five drivers from scratch → spectral implicit | CLI per binary | FD (orders 2–20), spectral pointwise RHS, spectral implicit Euler; OpenMP where enabled |
 | [**`wave2d/`**](wave2d/README.md) | **2D acoustic wave** as **coupled first-order** system; mixed periodic / physical **y** boundaries | CLI (+ optional `--vtk` on all variants) | FD (manual 2nd order or orders 2–20); CPU + optional CUDA/HIP |
 | [**`kobayashi/`**](kobayashi/README.md) | **Kobayashi** dendritic **phase field + temperature** (periodic **x,y**); Julia `kobayashi_v1`-style FD | CLI; PNG snapshots of \(\phi\) | **`kobayashi_fd_manual`** (MPI halos); **`kobayashi_fd_openmp`** (torus wrap + OpenMP); CPU |
+| [**`alloy_pf_directional/`**](alloy_pf_directional/README.md) | **Al–Cu FTA** directional solidification (regular-grid FD, two-grain). Starting point is a locked 12×3.2 µm, \(W_0=10\,\mathrm{nm}\) bicrystal | CLI + `OPENPFC_ALCU_*`; locked case ignores leftover env | OpenMP / MPI / HIP; **not** spectral / HeFFTe |
 
 Shared JSON vocabulary for spectral apps is summarized near the repo root in [`schema.json`](schema.json) (see docs for normative references).
 

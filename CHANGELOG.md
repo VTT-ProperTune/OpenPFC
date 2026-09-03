@@ -70,6 +70,7 @@ sessions, a second field representation at the modifier/writer boundary).
 
 ### Added
 
+- `alloy_pf_directional` starting point is the locked \(12\times 3.2\,\mu\mathrm{m}\), \(W_0=10\,\mathrm{nm}\) bicrystal (default CLI / `start` / `benchmark`); last-bit CI is `repro` / `alloy-pf-directional-repro`
 - M12: deleted Gen-1 `pfc::Model` / `pfc::Simulator` / A1 `LegacyModelPhysics` and their tests. JSON wiring returns FieldModifier and writer lists; checkpoints restore only through `CheckpointService`. API examples 03/07/09/10 use `SpectralCPUStack` + `pfc::sim::run`. Migration guide: `docs/MIGRATION_0.1_to_0.2.md`.
 - M12 A0: deleted `pfc::World` (`world.hpp` / `world::create` / `from_json<World>` / stack `world()` / decomposition subworld shim). Callers use `Domain` + `Box3i`. LUMI HIP job 21686027: 59/59 CTest (1 skip `HIP_ExchangeFailClosed`).
 - `kobayashi_fd_hip` writes schema-v2 profiling JSON with `--output PATH.json` (`--warmup N` untimed steps). Positional HEX CLI is unchanged. LUMI `dev-g` job 21689652: `tests/baselines/perf/lumi-dev-g-kobayashi-hip-1rank-release-256.json` (1 rank, 256²/200 steps, warmup 20, mean `wall_step` ~0.30 ms).
