@@ -37,10 +37,10 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 
+using pfc::Field;
 using Catch::Approx;
 using pfc::field::CompositeGradient;
 using pfc::field::FDGradient;
-using pfc::data::Field;
 
 namespace {
 

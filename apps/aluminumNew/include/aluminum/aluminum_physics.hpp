@@ -7,10 +7,18 @@
  * @file aluminum_physics.hpp
  * @brief One aluminum model: params + schema + moving-frame mean-field ETD.
  *
- * Linear symbol, mean-field filter, and correlation kernel @f$P(k)@f$ match
- * Gen-1 `Aluminum::prepare_operators`. Real-space
- * @f$N(\psi,\psi_{\mathrm{MF}},P*\psi,T_{\mathrm{var}})@f$ includes the
- * temperature gradient / moving frame. No backend classes and no k-loops.
+ * @details
+ * Consumed by `pfc::sim::SpectralETDSystem<AluminumPhysics, MemorySpace>` on
+ * every backend:
+ *
+ * - `linear_symbol`, `filter_mf`, `correlation_kernel` @f$P(k)@f$ match Gen-1
+ *   `Aluminum::prepare_operators`;
+ * - `nonlinear_symbol(k) = k` (conserved PFC dynamics);
+ * - `pointwise()` returns the device-capable `AluminumPointwise`
+ *   (`aluminum_pointwise.hpp`): @f$N(\psi,\psi_{\mathrm{MF}},P*\psi,
+ *   T_{\mathrm{var}}(x,t))@f$ plus the free-energy density observable.
+ *
+ * No backend classes, no k-loops, no hand-written kernels.
  */
 
 #include <cmath>
@@ -21,6 +29,8 @@
 #include <openpfc/kernel/simulation/parameter_schema.hpp>
 #include <openpfc/kernel/simulation/physics_concepts.hpp>
 #include <openpfc/kernel/simulation/simulation_state.hpp>
+
+#include <aluminum/aluminum_pointwise.hpp>
 
 namespace aluminum {
 
@@ -129,12 +139,13 @@ inline void apply_aluminum_json(const nlohmann::json &j, AluminumParams &p) {
 }
 
 /**
- * @tparam RealType   Field element type (default double).
+ * @tparam RealType    Field element type (default double).
  * @tparam MemorySpace Host or device space for `declare_fields`.
  */
 template <class RealType = double, class MemorySpace = pfc::HostSpace>
 struct AluminumPhysics {
   using parameters_type = AluminumParams;
+  using pointwise_type = AluminumPointwise;
 
   pfc::Domain domain{};
   pfc::Box3i box{};
@@ -142,6 +153,19 @@ struct AluminumPhysics {
 
   static pfc::sim::ParameterSchema<AluminumSchemaValues> schema() {
     return make_aluminum_schema();
+  }
+
+  /// JSON `model.params` + geometry → physics (used by `SpectralETDSession`).
+  static AluminumPhysics from_json(const nlohmann::json &params_json,
+                                   const pfc::Domain &domain_in,
+                                   const pfc::Box3i &box_in) {
+    AluminumPhysics p;
+    p.domain = domain_in;
+    p.box = box_in;
+    if (!params_json.is_null() && !params_json.empty()) {
+      apply_aluminum_json(params_json, p.params);
+    }
+    return p;
   }
 
   void declare_fields(pfc::SimulationState &state) const {
@@ -166,56 +190,50 @@ struct AluminumPhysics {
     return k_laplacian * op_ck;
   }
 
-  [[nodiscard]] double temperature_variation(double x, double t) const {
+  /// PFC dynamics are conserved: \f$\hat N\f$ enters as \f$k_{\mathrm{lap}}\hat N\f$.
+  [[nodiscard]] double nonlinear_symbol(double k_laplacian) const {
+    return k_laplacian;
+  }
+
+  [[nodiscard]] AluminumPointwise pointwise() const {
     const auto size = pfc::domain::get_size(domain);
     const auto spacing = pfc::domain::get_spacing(domain);
-    const double length = static_cast<double>(size[0]) * spacing[0];
-    const double fullruns = std::floor(params.m_xpos / length) * length;
-    const double steppoint = std::fmod(params.m_xpos, length);
-    const double dist = x + fullruns - (x > steppoint) * length;
-    return params.G_grid *
-           (dist - params.x_initial - params.V_grid * t);
+    return {.p3_bar = params.p3_bar,
+            .p4_bar = params.p4_bar,
+            .p2_bar = params.p2_bar,
+            .q2_bar = params.q2_bar,
+            .q21_bar = params.q21_bar,
+            .q30_bar = params.q30_bar,
+            .q31_bar = params.q31_bar,
+            .q4_bar = params.q4_bar,
+            .T0 = params.T0,
+            .T_const = params.T_const,
+            .stabP = params.stabP,
+            .G_grid = params.G_grid,
+            .V_grid = params.V_grid,
+            .x_initial = params.x_initial,
+            .front_x = params.m_xpos,
+            .length_x = static_cast<double>(size[0]) * spacing[0]};
   }
 
+  // ---- host conveniences (same math as the pointwise functor) -------------
+  [[nodiscard]] double temperature_variation(double x, double t) const {
+    return pointwise().temperature_variation(x, t);
+  }
   [[nodiscard]] double nonlinearity(double psi, double psi_mf, double p_star,
                                     double T_var) const {
-    const double q2_bar_n = params.q21_bar * T_var / params.T0;
-    const double q3_bar_n =
-        params.q31_bar * (params.T_const + T_var) / params.T0 +
-        params.q30_bar;
-    const double kernel_term =
-        -(1.0 - std::exp(-T_var / params.T0)) * p_star;
-    const double u2 = psi * psi;
-    const double v2 = psi_mf * psi_mf;
-    double n = params.p3_bar * u2 + params.p4_bar * u2 * psi +
-               q2_bar_n * psi_mf + q3_bar_n * v2 +
-               params.q4_bar * v2 * psi_mf - kernel_term;
-    if (params.stabP != 0.0) {
-      n -= params.stabP * psi;
-    }
-    return n;
+    return pointwise().nonlinearity(psi, psi_mf, p_star, T_var);
   }
-
   [[nodiscard]] double free_energy_density(double psi, double psi_mf,
                                            double p_star, double T_var) const {
-    const double q2_bar_n = params.q21_bar * T_var / params.T0;
-    const double q3_bar_n =
-        params.q31_bar * (params.T_const + T_var) / params.T0 +
-        params.q30_bar;
-    const double kernel_term =
-        -(1.0 - std::exp(-T_var / params.T0)) * p_star;
-    const double u = psi;
-    const double v = psi_mf;
-    return params.p3_bar * u * u * u / 3.0 +
-           params.p4_bar * u * u * u * u / 4.0 + q2_bar_n * u * v / 2.0 +
-           q3_bar_n * u * v * v / 3.0 +
-           params.q4_bar * u * v * v * v / 4.0 -
-           u * kernel_term * u / 2.0 - u * p_star / 2.0 +
-           params.p2_bar * u * u / 2.0 + params.q2_bar * u * v / 2.0;
+    return pointwise().free_energy_density(psi, psi_mf, p_star, T_var);
   }
 };
 
-static_assert(pfc::sim::MovingFrameMeanFieldETDPhysics<AluminumPhysics<>>);
+static_assert(pfc::sim::SpectralETDPhysics<AluminumPhysics<>>);
+static_assert(pfc::sim::HasMeanFieldFilter<AluminumPhysics<>>);
+static_assert(pfc::sim::HasCorrelationKernel<AluminumPhysics<>>);
+static_assert(pfc::sim::HasNonlinearSymbol<AluminumPhysics<>>);
 static_assert(pfc::sim::HasParameters<AluminumPhysics<>>);
 
 } // namespace aluminum

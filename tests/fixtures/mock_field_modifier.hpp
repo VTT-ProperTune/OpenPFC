@@ -14,7 +14,8 @@ namespace testing {
 class MockFieldModifier : public FieldModifier {
 public:
   bool applied = false;
-  void apply(RealField & /*field*/, const Domain & /*domain*/, const Box3i & /*box*/,
+  void apply(pfc::field::FieldOutput<double> /*field*/, const Domain & /*domain*/,
+             const Box3i & /*box*/,
              double /*time*/) override {
     applied = true;
   }
@@ -22,7 +23,7 @@ public:
 
 class MockIC : public FieldModifier {
 public:
-  void apply(RealField &field, const Domain & /*domain*/, const Box3i & /*box*/,
+  void apply(pfc::field::FieldOutput<double> field, const Domain & /*domain*/, const Box3i & /*box*/,
              double /*time*/) override {
     std::fill(field.begin(), field.end(), 1.0);
   }

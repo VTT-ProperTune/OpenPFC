@@ -22,7 +22,7 @@
  * @code
  * class MyInitialCondition : public pfc::FieldModifier {
  * public:
- *     void apply(pfc::RealField &field, const pfc::Domain &domain,
+ *     void apply(pfc::field::FieldOutput<double> field, const pfc::Domain &domain,
  *                const pfc::Box3i &box, double time) override {
  *         (void)domain; (void)box; (void)time;
  *         // Modify field values
@@ -47,7 +47,7 @@
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/constants.hpp>
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/model_types.hpp>
+#include <openpfc/kernel/field/state_access.hpp>
 #include <openpfc/kernel/simulation/simulation_context.hpp>
 
 #include <stdexcept>
@@ -64,9 +64,12 @@ namespace pfc {
  * conditions (applied repeatedly during time integration).
  *
  * **Core Concept:**
- * Field modifiers implement `apply(RealField&, const Domain&, const Box3i&, double)`
- * over the local owned box. Sessions apply ICs once at start and BCs from the
- * `pfc::sim::run` apply hook.
+ * Field modifiers implement
+ * `apply(field::FieldOutput<double>, const Domain&, const Box3i&, double)` over
+ * the local owned box (x-fastest, halo 0). Sessions apply ICs once at start and
+ * BCs from the `pfc::sim::run` apply hook, through `apply_field_modifier`
+ * (kernel/simulation/apply_field_modifier.hpp), which handles host and device
+ * `Field`s alike.
  *
  * **Design Philosophy:**
  * - **Extensibility**: Users can create custom modifiers without touching OpenPFC
@@ -84,26 +87,19 @@ namespace pfc {
  *   GaussianIC(Real3 center, double amp, double width)
  *     : m_center(center), m_amplitude(amp), m_width(width) {}
  *
- *   void apply(pfc::RealField &field, const pfc::Domain &domain,
+ *   void apply(pfc::field::FieldOutput<double> field, const pfc::Domain &domain,
  *              const pfc::Box3i &box, double) override {
- *     int idx = 0;
- *     for (int k = box.low[2]; k <= box.high[2]; k++) {
- *       for (int j = box.low[1]; j <= box.high[1]; j++) {
- *         for (int i = box.low[0]; i <= box.high[0]; i++) {
- *           auto pos = pfc::domain::to_coords(domain, Int3{i, j, k});
- *           double dx = pos[0] - m_center[0];
- *           double dy = pos[1] - m_center[1];
- *           double dz = pos[2] - m_center[2];
- *           double r2 = dx*dx + dy*dy + dz*dz;
- *           field[idx++] = m_amplitude * std::exp(-r2 / (m_width*m_width));
- *         }
- *       }
- *     }
+ *     pfc::field::apply(field, domain, box, [&](const pfc::Real3 &pos) {
+ *       double dx = pos[0] - m_center[0];
+ *       double dy = pos[1] - m_center[1];
+ *       double dz = pos[2] - m_center[2];
+ *       return m_amplitude * std::exp(-(dx*dx + dy*dy + dz*dz) / (m_width*m_width));
+ *     });
  *   }
  * };
  * @endcode
  *
- * @example Creating a custom boundary condition
+ * @example Creating a time-dependent boundary condition
  * @code
  * class DirichletBC : public pfc::FieldModifier {
  *   double m_value;
@@ -112,99 +108,29 @@ namespace pfc {
  *   DirichletBC(double value, double width = 5.0)
  *     : m_value(value), m_width(width) {}
  *
- *   void apply(pfc::Model& model, double time) override {
- *     auto& field = get_real_field(model, get_field_name());
- *     const auto& world = pfc::get_world(model);
- *     const auto& fft = pfc::get_fft(model);
- *     auto inbox = pfc::fft::get_inbox(fft);
- *
- *     double Lx = pfc::world::get_size(world, 0);
- *     double dx = pfc::world::get_spacing(world, 0);
- *
- *     int idx = 0;
- *     for (int k = inbox.low[2]; k <= inbox.high[2]; k++) {
- *       for (int j = inbox.low[1]; j <= inbox.high[1]; j++) {
- *         for (int i = inbox.low[0]; i <= inbox.high[0]; i++) {
- *           double x = i * dx;
- *           // Apply at right boundary with smooth transition
- *           if (x > Lx - m_width) {
- *             double s = (x - (Lx - m_width)) / m_width;
- *             field[idx] = field[idx] * (1.0 - s) + m_value * s;
+ *   void apply(pfc::field::FieldOutput<double> field, const pfc::Domain &domain,
+ *              const pfc::Box3i &box, double time) override {
+ *     const double Lx = pfc::domain::get_size(domain, 0) *
+ *                       pfc::domain::get_spacing(domain, 0);
+ *     pfc::field::apply_inplace_with_time(
+ *         field, domain, box, time, [&](const pfc::Real3 &X, double cur, double t) {
+ *           if (X[0] > Lx - m_width) {
+ *             double s = (X[0] - (Lx - m_width)) / m_width;
+ *             return cur * (1.0 - s) + m_value * std::sin(t) * s;
  *           }
- *           idx++;
- *         }
- *       }
- *     }
+ *           return cur;
+ *         });
  *   }
  * };
  * @endcode
  *
- * @example Space-time varying boundary condition
+ * @example Applying to a canonical Field (host or device)
  * @code
- * class TimeVaryingBC : public pfc::FieldModifier {
- *   double m_frequency;
- * public:
- *   TimeVaryingBC(double freq) : m_frequency(freq) {}
- *
- *   void apply(pfc::Model& model, double time) override {
- *     auto& field = get_real_field(model, get_field_name());
- *     const auto& world = pfc::get_world(model);
- *     const auto& fft = pfc::get_fft(model);
- *     auto inbox = pfc::fft::get_inbox(fft);
- *
- *     // Time-varying amplitude
- *     double amplitude = std::sin(pfc::two_pi * m_frequency * time);
- *
- *     double dx = pfc::world::get_spacing(world, 0);
- *     int idx = 0;
- *     for (int k = inbox.low[2]; k <= inbox.high[2]; k++) {
- *       for (int j = inbox.low[1]; j <= inbox.high[1]; j++) {
- *         for (int i = inbox.low[0]; i <= inbox.high[0]; i++) {
- *           if (i == 0) {  // Left boundary
- *             field[idx] = amplitude;
- *           }
- *           idx++;
- *         }
- *       }
- *     }
- *   }
- * };
- * @endcode
- *
- * @example Composing multiple modifiers
- * @code
- * // Set uniform background
- * auto constant = std::make_unique<pfc::Constant>(0.5);
- * constant->set_field_name("density");
- * simulator.add_initial_conditions(std::move(constant));
- *
- * // Add localized perturbation
- * auto gaussian = std::make_unique<GaussianIC>(
- *   Real3{10.0, 10.0, 10.0}, 0.1, 2.0);
- * gaussian->set_field_name("density");
- * simulator.add_initial_conditions(std::move(gaussian));
- *
- * // Enforce boundary condition every step
- * auto bc = std::make_unique<DirichletBC>(0.0, 5.0);
- * bc->set_field_name("density");
- * simulator.add_boundary_conditions(std::move(bc));
- * @endcode
- *
- * @example Accessing multiple fields (for future multi-field support)
- * @code
- * class CoupledIC : public pfc::FieldModifier {
- * public:
- *   void apply(pfc::Model& model, double time) override {
- *     // Current: single field via get_field_name()
- *     auto& density = get_real_field(model, get_field_name());
- *
- *     // Future: access multiple fields
- *     // auto& temperature = get_real_field(model, "temperature");
- *
- *     // Set coupled initial state
- *     std::fill(density.begin(), density.end(), 0.5);
- *   }
- * };
+ * pfc::Field<double> psi(domain, box, 0);
+ * GaussianIC ic({10, 10, 10}, 0.1, 2.0);
+ * pfc::apply_field_modifier(ic, psi, 0.0);     // host: wraps psi.output()
+ * pfc::Field<double, pfc::HIPSpace> d_psi(domain, box, 0);
+ * pfc::apply_field_modifier(ic, d_psi, 0.0);   // device: brackets with_host_view
  * @endcode
  *
  * **Usage with `pfc::sim::run`:**
@@ -215,19 +141,12 @@ namespace pfc {
  * **Performance Considerations:**
  * - Boundary conditions are in the hot path (applied every step)
  * - Minimize allocations in `apply()`
- * - Consider caching computed values if expensive
- * - Use direct indexing (avoid coordinate transformations when possible)
- *
- * **Known Limitations:**
- * - No built-in support for parallel reduction operations
+ * - On device fields every application is a host round-trip of the owned box
  *
  * @note The `time` parameter allows implementing time-dependent boundary
  *       conditions, but most initial conditions ignore it (t=0 at IC application)
  *
- * @warning Modifiers have direct mutable access to model state. Ensure your
- *          `apply()` implementation maintains physical correctness and doesn't
- *          violate model invariants.
- *
+ * @see apply_field_modifier.hpp
  * @see simulation_driver.hpp for `pfc::sim::run`
  * @see initial_conditions/ for built-in IC implementations
  */
@@ -259,8 +178,7 @@ public:
   /**
    * @brief Set the field name this modifier should operate on
    *
-   * Specifies which field in the Model this modifier will access via
-   * `Model::get_real_field()` or `Model::get_complex_field()`. This allows
+   * Names the `SimulationState` field the session hands to `apply`. This allows
    * the same modifier implementation to be reused for different fields.
    *
    * @param field_name Name of the field to modify (e.g., "density", "temperature")
@@ -271,7 +189,7 @@ public:
    * @code
    * auto ic = std::make_unique<pfc::Constant>(0.5);
    * ic->set_field_name("density");
-   * simulator.add_initial_conditions(std::move(ic));
+   * session.add_initial_condition(std::move(ic));
    * @endcode
    *
    * @example Multiple fields with same modifier type
@@ -279,20 +197,19 @@ public:
    * // Apply constant IC to density field
    * auto density_ic = std::make_unique<pfc::Constant>(0.5);
    * density_ic->set_field_name("density");
-   * simulator.add_initial_conditions(std::move(density_ic));
+   * session.add_initial_condition(std::move(density_ic));
    *
    * // Apply constant IC to temperature field
    * auto temp_ic = std::make_unique<pfc::Constant>(300.0);
    * temp_ic->set_field_name("temperature");
-   * simulator.add_initial_conditions(std::move(temp_ic));
+   * session.add_initial_condition(std::move(temp_ic));
    * @endcode
    *
-   * @note The field name must match a field registered in the Model,
-   *       otherwise `Model::get_real_field()` will throw
+   * @note The field name must match a field declared on the `SimulationState`;
+   *       JSON wiring fails closed on unknown targets
    * @note Default field name is "default" if not explicitly set
    *
    * @see get_field_name()
-   * @see Model::get_real_field()
    */
   void set_field_name(const std::string &field_name) {
     if (field_name.empty()) {
@@ -306,25 +223,10 @@ public:
   /**
    * @brief Get the name of the field this modifier operates on
    *
-   * Returns the field name set via `set_field_name()`, which is used to
-   * retrieve the appropriate field from the Model in the `apply()` method.
-   *
-   * @return Reference to the field name string
-   *
-   * @example Using in custom modifier
-   * @code
-   * class MyModifier : public pfc::FieldModifier {
-   * public:
-   *   void apply(pfc::Model& model, double time) override {
-   *     // Retrieve the field this modifier should act on
-   *     auto& field = get_real_field(model, get_field_name());
-   *     // Modify field...
-   *   }
-   * };
-   * @endcode
+   * Returns the (first) field name set via `set_field_name()`; sessions use it
+   * to look up the target field on `SimulationState` before calling `apply()`.
    *
    * @note Returns "default" if field name was never explicitly set
-   *
    * @see set_field_name()
    */
   const std::string &get_field_name() const { return m_field_names.front(); }
@@ -348,8 +250,9 @@ public:
    * `apply(field, domain, box, time)`. Override this when the modifier needs
    * `simulation_context.mpi_comm()`.
    */
-  virtual void apply(const SimulationContext &simulation_context, RealField &field,
-                     const Domain &domain, const Box3i &box, double time) {
+  virtual void apply(const SimulationContext &simulation_context,
+                     pfc::field::FieldOutput<double> field, const Domain &domain,
+                     const Box3i &box, double time) {
     (void)simulation_context;
     apply(field, domain, box, time);
   }
@@ -357,13 +260,17 @@ public:
   /**
    * @brief Apply the modification to a host field over @p box (pure virtual)
    *
-   * @param field Host buffer with `box` voxel count (x-fastest)
+   * @param field Mutable host view with `box` voxel count (x-fastest, halo 0).
+   *              A `std::vector<double>` lvalue or `Field::output()` converts
+   *              implicitly; for a device `Field` use `apply_field_modifier`
+   *              (kernel/simulation/apply_field_modifier.hpp), which brackets
+   *              the host mirror.
    * @param domain Global geometry (origin, spacing, size)
    * @param box Local owned index box
    * @param time Current simulation time (typically 0 for ICs)
    */
-  virtual void apply(RealField &field, const Domain &domain, const Box3i &box,
-                     double time = 0.0) = 0;
+  virtual void apply(pfc::field::FieldOutput<double> field, const Domain &domain,
+                     const Box3i &box, double time = 0.0) = 0;
 
   /**
    * @brief Destructor for the FieldModifier class.

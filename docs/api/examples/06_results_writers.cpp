@@ -30,13 +30,13 @@
 using namespace pfc;
 
 // Helper: Create test field data (sine wave)
-RealField create_test_field(const Domain &domain, double time) {
+std::vector<double> create_test_field(const Domain &domain, double time) {
   auto size = domain::get_size(domain);
   auto spacing = domain::get_spacing(domain);
   auto origin = domain::get_origin(domain);
 
   int total = size[0] * size[1] * size[2];
-  RealField field(total);
+  std::vector<double> field(total);
 
   for (int k = 0; k < size[2]; ++k) {
     for (int j = 0; j < size[1]; ++j) {
@@ -75,7 +75,7 @@ public:
     }
   }
 
-  void write_statistics(int step, double time, const RealField &local_data) {
+  void write_statistics(int step, double time, pfc::field::FieldView<double> local_data) {
     // Compute local statistics
     double local_min = *std::min_element(local_data.begin(), local_data.end());
     double local_max = *std::max_element(local_data.begin(), local_data.end());

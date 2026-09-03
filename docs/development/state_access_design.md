@@ -105,7 +105,7 @@ pfc::data::Field<double, pfc::HostSpace> v =
 **Source**: Spectral method implementations
 
 **Pattern**:
-- ComplexField = std::vector<std::complex<double>>
+- Complex hats are `pfc::Field<std::complex<double>>` (or `FieldView<std::complex<double>>` at I/O)
 - Same access patterns as real fields
 - Used in Fourier space computations
 

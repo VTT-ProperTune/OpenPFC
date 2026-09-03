@@ -5,8 +5,9 @@
  * @file json_read.cpp
  * @brief Minimal nlohmann::json stream parsing example.
  *
- * Production OpenPFC applications should use pfc::ui::App with a
- * `<config.json|config.toml>` file argument. This standalone example only
+ * Production OpenPFC applications load settings with
+ * `pfc::ui::load_settings_file(<config.json|config.toml>)` and build a session
+ * from the parsed document. This standalone example only
  * demonstrates how raw JSON can be read from a file or stdin.
  */
 

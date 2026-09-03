@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 # Time integration architecture
 
 This guide explains OpenPFC's time-integration architecture for **model authors**:
-how legacy `Model::step` physics differs from the replaceable
+how the framework-owned spectral ETD path differs from the replaceable
 `rhs(t, g)` + stepper composition path, which factory signatures to call, who
 owns scratch memory, and how to migrate. It bridges the architectural contracts
 in [ADR 0003](../adr/0003-time-integrator-interface.md) with the grads-aggregate
@@ -18,37 +18,20 @@ This document is the architecture reference those steps assume.
 
 ## 1. Two RHS evaluation patterns
 
-### Legacy pattern
+### Spectral ETD system pattern
 
-Spectral (and older) apps still implement time advance inside a virtual
-`Model::step` override. The pure virtual declaration lives in
-[`include/openpfc/kernel/simulation/model.hpp`](../../include/openpfc/kernel/simulation/model.hpp):
-
-```cpp
-class Model {
-public:
-  virtual void step(double t) = 0;
-  virtual void initialize(double dt) = 0;
-  // ...
-};
-```
-
-A typical override owns the whole update (FFT, operators, field mutation):
-
-```cpp
-class Diffusion : public Model {
-  void step(double t) override {
-    fft.forward(psi, psi_F);
-    for (auto &v : psi_F) v = opL[v_index] * v;   // implicit-Fourier operator
-    fft.backward(psi_F, psi);
-  }
-};
-```
-
-`Simulator::step()` calls `model.step(t)` between `begin_integrator_step()` and
-`end_integrator_step()`. This path remains supported and is efficient for
-constant-coefficient implicit-Fourier updates, but it is **not** swappable:
-changing Euler to RK4 means rewriting the model's `step()` body.
+Stiff spectral apps (tungsten, aluminumNew) do not write a time loop or a
+`step()` method. Physics exposes k-space symbols (`linear_symbol(k)`, optional
+`nonlinear_symbol(k)`, `filter_mf(k)`, `correlation_kernel(k)`) plus a
+device-capable pointwise functor (`pointwise()`), and the one framework-owned
+`pfc::sim::SpectralETDSystem<Physics, MemorySpace>`
+(`include/openpfc/kernel/simulation/spectral_etd_system.hpp`) owns the transform
+choreography, the pointwise evaluation (host loop or GPU kernel through
+`SpectralETDOps<MemorySpace>`), and the ETD1 combine. Sessions pass
+`system.step(t)` (attempt + commit) as the `step` hook of `pfc::sim::run`; an
+adaptive controller can instead drive `attempt` / `commit` / `reject` and
+`set_dt`. This path is efficient for stiff diagonal linear operators; the method
+(ETD1) is fixed by the system, not by the physics.
 
 ### Gradient-access pattern
 
@@ -270,14 +253,12 @@ That construction lives in
   or `SpectralExpConfigId` (or mode count) changes.
 
 Coefficients are transient/recomputable and are **not** checkpointed.
-Tungsten no longer builds physics-specific `opN = expm1(arg)/opCk` inside
-`Model` members. The app maps `L = k_laplacian * opCk` and owns method weights
-in [`TungstenETDWorkspace`](../../apps/tungsten/include/tungsten/common/tungsten_etd_workspace.hpp)
-(`n_weight = k_laplacian * phi1_L`) over `SpectralExpCoefficientCache`.
-`Model::step` delegates the exponential combine to that workspace (CPU) or to
-`tungsten::ops::apply_time_integration` with workspace device buffers
-(CUDA/HIP). Temporary adapter removal:
-`TODO(remove-tungsten-etd-workspace): replace with ETD1Stepper after #169`.
+Tungsten and aluminum physics expose `linear_symbol(k_laplacian)` (i.e.
+`L = k_laplacian * opCk`) and `nonlinear_symbol(k_laplacian) = k_laplacian`;
+`SpectralETDSystem` builds `n_weight = nonlinear_symbol * phi1_L` over
+`SpectralExpCoefficientCache` (default multiplier 1 when the physics has no
+`nonlinear_symbol`) and applies the exponential combine on host or device
+buffers. No app-owned ETD workspace remains.
 Coverage:
 [`test_spectral_exp_coefficients.cpp`](../../tests/unit/kernel/integrator/test_spectral_exp_coefficients.cpp)
 (`[integrator][spectral_exp]`) and Tungsten
@@ -409,9 +390,9 @@ Recommended pattern:
 3. Prefer a `create(Eval&, Model&, ...)` free function that closes over
    `pfc::sim::for_each_interior(model, eval, du, t)` so model authors keep
    writing only `rhs(t, g)`.
-4. Plug into
-   [`Simulator::step_with_physics`](../../include/openpfc/kernel/simulation/simulator.hpp)
-   between `begin_integrator_step()` / `end_integrator_step()`.
+4. Plug into the `step` hook of
+   [`pfc::sim::run`](../../include/openpfc/kernel/simulation/simulation_driver.hpp);
+   the driver's `apply` / `on_save` hooks bracket the full step.
 
 Embedded pair evidence already exists under `steppers/`
 (`EmbeddedRKStepper::attempt`, `make_embedded_rk45` / `make_embedded_rk23`).
@@ -447,12 +428,11 @@ apps and unit tests), not a hypothetical API:
 3. **Replace hand-rolled advance** with
    `pfc::sim::steppers::create(...)` from `euler.hpp` or `explicit_rk.hpp`
    (pass a `ButcherTableau` for RK).
-4. **Drive the stepper** from `Simulator::step_with_physics`: call
-   `stack.exchange_halos()` (FD) then `stepper.step(t, u)` inside the lambda
-   instead of `sim.step()` / `model.step(t)`.
-5. **Remove the legacy `step()` override** once the app no longer needs the
-   implicit-Fourier path; keep `Model::step` only when that spectral update is
-   intentional.
+4. **Drive the stepper** from the `step` hook of `pfc::sim::run`: call
+   `stack.exchange_halos()` (FD) then `stepper.step(t, u)` inside the lambda.
+5. **Drop any model-owned time loop.** Stiff spectral physics that wants the
+   implicit/exponential path expresses `linear_symbol` + a `pointwise()`
+   functor and lets `SpectralETDSystem` own the update.
 
 Before/after references in the repository:
 
@@ -460,8 +440,8 @@ Before/after references in the repository:
   [`apps/heat3d/tests/test_heat3d.cpp`](../../apps/heat3d/tests/test_heat3d.cpp)
 - After (multi-field):
   [`tests/unit/kernel/simulation/test_wave_model_multifield_integration.cpp`](../../tests/unit/kernel/simulation/test_wave_model_multifield_integration.cpp)
-- Legacy `Model::step` surface:
-  [`include/openpfc/kernel/simulation/model.hpp`](../../include/openpfc/kernel/simulation/model.hpp)
+- Framework spectral ETD path:
+  [`include/openpfc/kernel/simulation/spectral_etd_system.hpp`](../../include/openpfc/kernel/simulation/spectral_etd_system.hpp)
 - Narrative before/after in
   [Custom stepper integration](../user_guide/custom_stepper_integration.md)
 
@@ -513,8 +493,7 @@ Source pattern from the same heat3d test (with
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
 
 pfc::sim::stacks::FDCPUStack stack(
-    pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-    pfc::GridSpacing({1.0, 1.0, 1.0}), order, /*rank=*/0, /*nproc=*/1,
+    pfc::domain::create(pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}), pfc::GridSpacing({1.0, 1.0, 1.0})), order, /*rank=*/0, /*nproc=*/1,
     MPI_COMM_WORLD);
 
 heat3d::HeatModel model;
@@ -529,8 +508,8 @@ for (int step = 0; step < 5; ++step) {
 }
 ```
 
-With a `Simulator`, wrap the advance in `step_with_physics` instead of calling
-`sim.step()` (which hardcodes legacy `Model::step`).
+Inside a session, the same two lines form the `step` hook passed to
+`pfc::sim::run` (see [time_integration_contract.md](../concepts/time_integration_contract.md)).
 
 ## 8. Connections to existing documentation
 
@@ -545,7 +524,8 @@ With a `Simulator`, wrap the advance in `step_with_physics` instead of calling
 
 Primary headers cited in this guide:
 
-- [`include/openpfc/kernel/simulation/model.hpp`](../../include/openpfc/kernel/simulation/model.hpp)
+- [`include/openpfc/kernel/simulation/physics_concepts.hpp`](../../include/openpfc/kernel/simulation/physics_concepts.hpp)
+- [`include/openpfc/kernel/simulation/spectral_etd_system.hpp`](../../include/openpfc/kernel/simulation/spectral_etd_system.hpp)
 - [`include/openpfc/kernel/simulation/steppers/`](../../include/openpfc/kernel/simulation/steppers/)
 - [`include/openpfc/kernel/field/fd_gradient.hpp`](../../include/openpfc/kernel/field/fd_gradient.hpp)
 - [`apps/heat3d/include/heat3d/heat_model.hpp`](../../apps/heat3d/include/heat3d/heat_model.hpp)

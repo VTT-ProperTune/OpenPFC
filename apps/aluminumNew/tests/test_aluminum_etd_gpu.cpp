@@ -21,8 +21,7 @@ int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
 #include <mpi.h>
 #include <nlohmann/json.hpp>
 
-#include <aluminum/aluminum_etd_gpu_session.hpp>
-#include <aluminum/aluminum_etd_session.hpp>
+#include <aluminum/aluminum_session.hpp>
 
 using nlohmann::json;
 
@@ -95,24 +94,24 @@ void run_host_vs_device(const json &settings) {
 
 } // namespace
 
-TEST_CASE("AluminumETDGPUSession matches host AluminumETDSession within 1e-10",
+TEST_CASE("AluminumGPUSession matches host AluminumSession within 1e-10",
           "[aluminum][gpu][session]") {
 #if defined(OPENPFC_TEST_ALUMINUM_ETD_HIP)
   if (!pfc::gpu::test::is_hip_available()) {
     SKIP("HIP not available");
   }
-  run_host_vs_device<aluminum::AluminumETDSession, aluminum::AluminumETDHIPSession>(
+  run_host_vs_device<aluminum::AluminumSession, aluminum::AluminumHIPSession>(
       mini_settings());
 #else
   if (!pfc::gpu::test::is_cuda_available()) {
     SKIP("CUDA not available");
   }
-  run_host_vs_device<aluminum::AluminumETDSession, aluminum::AluminumETDCUDASession>(
+  run_host_vs_device<aluminum::AluminumSession, aluminum::AluminumCUDASession>(
       mini_settings());
 #endif
 }
 
-TEST_CASE("AluminumETDGPUSession matches host with G_grid",
+TEST_CASE("AluminumGPUSession matches host with G_grid",
           "[aluminum][gpu][session][temperature]") {
   json s = mini_settings();
   s["model"]["params"]["G_grid"] = 0.5;
@@ -121,13 +120,13 @@ TEST_CASE("AluminumETDGPUSession matches host with G_grid",
   if (!pfc::gpu::test::is_hip_available()) {
     SKIP("HIP not available");
   }
-  run_host_vs_device<aluminum::AluminumETDSession, aluminum::AluminumETDHIPSession>(
+  run_host_vs_device<aluminum::AluminumSession, aluminum::AluminumHIPSession>(
       s);
 #else
   if (!pfc::gpu::test::is_cuda_available()) {
     SKIP("CUDA not available");
   }
-  run_host_vs_device<aluminum::AluminumETDSession, aluminum::AluminumETDCUDASession>(
+  run_host_vs_device<aluminum::AluminumSession, aluminum::AluminumCUDASession>(
       s);
 #endif
 }

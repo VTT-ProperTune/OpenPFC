@@ -106,7 +106,7 @@ TEST_CASE("SeedGrid - Field Application", "[ic_seed_grid]") {
 
   SECTION("Deterministic with fixed seed") {
     grid.apply(psi, domain, box);
-    Field field1 = psi;
+    std::vector<double> field1 = psi;
     std::vector<double> psi2(field_size, 0.0);
     grid.apply(psi2, domain, box);
     REQUIRE(field1 == psi2);

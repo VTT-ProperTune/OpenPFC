@@ -22,8 +22,7 @@ int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
 #include <mpi.h>
 #include <nlohmann/json.hpp>
 
-#include <tungsten/tungsten_etd_gpu_session.hpp>
-#include <tungsten/tungsten_etd_session.hpp>
+#include <tungsten/tungsten_session.hpp>
 
 using nlohmann::json;
 
@@ -114,19 +113,19 @@ void run_host_vs_device(const json &settings, bool require_variation) {
 
 } // namespace
 
-TEST_CASE("TungstenETDGPUSession matches host TungstenETDSession within 1e-10",
+TEST_CASE("TungstenGPUSession matches host TungstenSession within 1e-10",
           "[tungsten][gpu][session]") {
 #if defined(OPENPFC_TEST_TUNGSTEN_ETD_HIP)
   if (!pfc::gpu::test::is_hip_available()) {
     SKIP("HIP not available");
   }
-  run_host_vs_device<tungsten::TungstenETDSession, tungsten::TungstenETDHIPSession>(
+  run_host_vs_device<tungsten::TungstenSession, tungsten::TungstenHIPSession>(
       mini_settings(), false);
 #else
   if (!pfc::gpu::test::is_cuda_available()) {
     SKIP("CUDA not available");
   }
-  run_host_vs_device<tungsten::TungstenETDSession, tungsten::TungstenETDCUDASession>(
+  run_host_vs_device<tungsten::TungstenSession, tungsten::TungstenCUDASession>(
       mini_settings(), false);
 #endif
 }
@@ -148,12 +147,12 @@ TEST_CASE("TungstenETD 32^3/10-step sine IC host vs device within 1e-10",
   if (!pfc::gpu::test::is_hip_available()) {
     SKIP("HIP not available");
   }
-  using Dev = tungsten::TungstenETDHIPSession;
+  using Dev = tungsten::TungstenHIPSession;
 #else
   if (!pfc::gpu::test::is_cuda_available()) {
     SKIP("CUDA not available");
   }
-  using Dev = tungsten::TungstenETDCUDASession;
+  using Dev = tungsten::TungstenCUDASession;
 #endif
 
   int mpi_initialized = 0;
@@ -173,7 +172,7 @@ TEST_CASE("TungstenETD 32^3/10-step sine IC host vs device within 1e-10",
     }
   };
 
-  tungsten::TungstenETDSession host(settings, rank, nproc, MPI_COMM_WORLD);
+  tungsten::TungstenSession host(settings, rank, nproc, MPI_COMM_WORLD);
   fill_sine(host.psi().vec().data(), host.psi().vec().size());
   host.run();
 
@@ -188,19 +187,19 @@ TEST_CASE("TungstenETD 32^3/10-step sine IC host vs device within 1e-10",
   });
 }
 
-TEST_CASE("TungstenETDGPUSession single_seed IC matches host within 1e-10",
+TEST_CASE("TungstenGPUSession single_seed IC matches host within 1e-10",
           "[tungsten][gpu][session][ic]") {
 #if defined(OPENPFC_TEST_TUNGSTEN_ETD_HIP)
   if (!pfc::gpu::test::is_hip_available()) {
     SKIP("HIP not available");
   }
-  run_host_vs_device<tungsten::TungstenETDSession, tungsten::TungstenETDHIPSession>(
+  run_host_vs_device<tungsten::TungstenSession, tungsten::TungstenHIPSession>(
       single_seed_settings(), true);
 #else
   if (!pfc::gpu::test::is_cuda_available()) {
     SKIP("CUDA not available");
   }
-  run_host_vs_device<tungsten::TungstenETDSession, tungsten::TungstenETDCUDASession>(
+  run_host_vs_device<tungsten::TungstenSession, tungsten::TungstenCUDASession>(
       single_seed_settings(), true);
 #endif
 }

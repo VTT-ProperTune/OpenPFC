@@ -50,7 +50,6 @@
 
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/data/model_types.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
@@ -97,26 +96,6 @@ public:
             pfc::halo::allocate_face_halos<double>(m_decomp, rank, fd_order / 2)),
         m_exchanger(m_u, m_decomp, rank, comm), m_fd_order(fd_order), m_rank(rank),
         m_nproc(nproc), m_comm(comm) {}
-
-  /**
-   * @param size      Global grid size `{Nx, Ny, Nz}`.
-   * @param origin    World origin in physical coordinates.
-   * @param spacing   Grid spacing in physical coordinates.
-   * @param fd_order  Even FD order (2, 4, …, 20). Halo width is
-   *                  `fd_order / 2`.
-   * @param rank      Caller's MPI rank on `comm`.
-   * @param nproc     Total number of ranks on `comm`.
-   * @param comm      MPI communicator passed to the halo exchanger.
-   *
-   * @deprecated Use the Domain-based constructor for new code. This constructor
-   *             exists for backward compatibility with existing code.
-   */
-  [[deprecated("Use FDCPUStack(const Domain&, int, int, int, MPI_Comm) instead")]]
-  FDCPUStack(const pfc::GridSize &size, const pfc::PhysicalOrigin &origin,
-             const pfc::GridSpacing &spacing, int fd_order, int rank, int nproc,
-             MPI_Comm comm = MPI_COMM_WORLD)
-      : FDCPUStack(pfc::domain::create(size, origin, spacing), fd_order, rank, nproc,
-                   comm) {}
 
   FDCPUStack(const FDCPUStack &) = delete;
   FDCPUStack &operator=(const FDCPUStack &) = delete;

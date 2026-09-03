@@ -37,8 +37,9 @@ void run_spectral(const RunConfig &cfg, int rank, int nproc) {
   HeatModel model;
 
   sim::stacks::SpectralCPUStack stack(
-      GridSize({cfg.N, cfg.N, cfg.N}), PhysicalOrigin({0.0, 0.0, 0.0}),
-      GridSpacing({1.0, 1.0, 1.0}), rank, nproc, MPI_COMM_WORLD);
+      pfc::domain::create(GridSize({cfg.N, cfg.N, cfg.N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                          GridSpacing({1.0, 1.0, 1.0})),
+      rank, nproc, MPI_COMM_WORLD);
   stack.u().apply(model.initial_condition);
 
   heat3d::SpectralHeatPropagator prop(stack.fft(), stack.u(), heat3d::kD, cfg.dt);

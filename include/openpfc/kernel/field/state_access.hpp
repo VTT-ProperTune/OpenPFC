@@ -35,6 +35,7 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include <openpfc/kernel/data/types.hpp>
 
@@ -91,6 +92,20 @@ public:
         , m_extents(extents)
         , m_spacing(spacing)
         , m_origin(origin)
+    {}
+
+    /**
+     * @brief View a contiguous host buffer with no geometry (extents/spacing/origin zero)
+     *
+     * Implicit so a `std::vector<T>` can be handed to a `FieldView<T>` parameter
+     * (writers, I/O). The vector must outlive the view.
+     */
+    FieldView(const std::vector<T>& data) noexcept  // NOLINT(google-explicit-constructor)
+        : m_data(data.data())
+        , m_size(data.size())
+        , m_extents{}
+        , m_spacing{}
+        , m_origin{}
     {}
 
     /**
@@ -180,11 +195,24 @@ public:
     {}
 
     /**
+     * @brief Mutable view over a contiguous host buffer
+     *
+     * Implicit so a `std::vector<T>` lvalue can be handed to a `FieldOutput<T>`
+     * parameter (`FieldModifier::apply`, `BinaryReader::read`). The vector must
+     * outlive the output view and must not be resized while viewed.
+     */
+    FieldOutput(std::vector<T>& data) noexcept  // NOLINT(google-explicit-constructor)
+        : m_data(data.data())
+        , m_size(data.size())
+    {}
+
+    /**
      * @brief Get mutable pointer to output storage
      *
      * @return T* Pointer to output storage
      */
     T* data() noexcept { return m_data; }
+    const T* data() const noexcept { return m_data; }
 
     /**
      * @brief Get number of elements in the output storage
@@ -192,6 +220,12 @@ public:
      * @return std::size_t Number of elements
      */
     std::size_t size() const noexcept { return m_size; }
+
+    /// Element access (no bounds check).
+    T& operator[](std::size_t i) noexcept { return m_data[i]; }
+    const T& operator[](std::size_t i) const noexcept { return m_data[i]; }
+    T* begin() noexcept { return m_data; }
+    T* end() noexcept { return m_data + m_size; }
 
     /**
      * @brief Validate that output storage does not alias input view

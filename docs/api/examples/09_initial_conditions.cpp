@@ -49,7 +49,7 @@ struct DemoHost {
   sim::stacks::SpectralCPUStack stack;
   explicit DemoHost(Domain domain)
       : stack(std::move(domain), mpi_rank(), mpi_nproc()) {}
-  RealField &field() { return stack.u().vec(); }
+  std::vector<double> &field() { return stack.u().vec(); }
   const Domain &domain() const { return stack.u().domain(); }
   const Box3i &box() const { return stack.u().box(); }
 };
@@ -74,7 +74,8 @@ void print_section(const std::string &title) {
 }
 
 // Helper to compute field statistics
-void print_field_stats(const Field &field, const std::string &name, MPI_Comm comm) {
+void print_field_stats(const std::vector<double> &field, const std::string &name,
+                       MPI_Comm comm) {
   int rank;
   MPI_Comm_rank(comm, &rank);
 

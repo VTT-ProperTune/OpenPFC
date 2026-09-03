@@ -3,10 +3,10 @@
 
 /**
  * @file json_driver_hooks.hpp
- * @brief One-call setup for JSON `App` diagnostics (log rank + NaN checks)
+ * @brief One-call setup for JSON driver diagnostics (log rank + NaN checks)
  *
  * @details
- * `App::main` and custom drivers that parse FFT / HeFFTe options should align
+ * JSON session drivers that parse FFT / HeFFTe options should align
  * `from_json` log prefixes with the MPI rank and ensure NaN-check macros use the
  * same communicator as the application. Call `configure_json_driver_hooks`
  * once the rank and `MPI_Comm` are known.

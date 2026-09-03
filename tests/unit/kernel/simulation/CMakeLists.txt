@@ -27,7 +27,6 @@ if(OpenPFC_ENABLE_HEFFTE)
   target_sources(openpfc-tests PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}/test_stepper_equivalence.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_spectral_etd_system.cpp
-      ${CMAKE_CURRENT_SOURCE_DIR}/test_moving_frame_mean_field_etd.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_swift_hohenberg_three_way.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_simulation_session.cpp
   )

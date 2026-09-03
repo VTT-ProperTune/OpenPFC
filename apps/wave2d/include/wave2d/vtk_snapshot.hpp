@@ -15,7 +15,7 @@
 
 #include <openpfc/frontend/io/vtk_writer.hpp>
 #include <openpfc/frontend/utils/utils.hpp>
-#include <openpfc/kernel/data/model_types.hpp>
+#include <vector>
 #include <openpfc/kernel/data/grid_field.hpp>
 
 namespace wave2d {
@@ -34,7 +34,7 @@ inline void mkdir_vtk_parent_rank0(const std::string &pattern, int rank) {
 
 /** @brief Owned cells only, x fastest (matches VTK Piece layout). */
 inline void pack_brick_owned(const pfc::data::Field<double, pfc::HostSpace> &u,
-                             pfc::RealField &out) {
+                             std::vector<double> &out) {
   const auto sz = u.local_size();
   out.resize(static_cast<std::size_t>(sz[0]) * static_cast<std::size_t>(sz[1]) *
              static_cast<std::size_t>(sz[2]));
@@ -64,7 +64,7 @@ inline void vtk_configure_writer(pfc::VTKWriter &w,
 
 inline void vtk_write_increment(pfc::VTKWriter &w, int increment,
                                 const pfc::data::Field<double, pfc::HostSpace> &u,
-                                pfc::RealField &buf) {
+                                std::vector<double> &buf) {
   pack_brick_owned(u, buf);
   (void)w.write(increment, buf);
 }
@@ -91,7 +91,7 @@ inline void vtk_configure_writer_owned_slab(pfc::VTKWriter &w,
  * above). */
 inline void vtk_write_u_owned_buffer(pfc::VTKWriter &w, int increment,
                                      const double *u, int nx, int ny, int nz,
-                                     pfc::RealField &buf) {
+                                     std::vector<double> &buf) {
   const std::size_t n = static_cast<std::size_t>(nx) * static_cast<std::size_t>(ny) *
                         static_cast<std::size_t>(nz);
   buf.assign(u, u + n);

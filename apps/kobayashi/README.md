@@ -25,7 +25,7 @@ Material constants and output cadence (`nprint`, `nsave`) live in [`include/koba
 
 ## Field Migration
 
-**CPU Fields:** The preferred field type for CPU computation is `pfc::data::Field<double, pfc::HostSpace>` (defined in [`grid_field.hpp`](../../../include/openpfc/kernel/data/grid_field.hpp)). This is the modern Field API used throughout the OpenPFC kernel and should be used for new CPU code:
+**CPU Fields:** The preferred field type for CPU computation is `pfc::data::Field<double, pfc::HostSpace>` (defined in [`grid_field.hpp`](../../include/openpfc/kernel/data/grid_field.hpp)). This is the modern Field API used throughout the OpenPFC kernel and should be used for new CPU code:
 
 ```cpp
 #include <openpfc/kernel/data/grid_field.hpp>

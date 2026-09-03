@@ -20,7 +20,6 @@
 #define PFC_OPENPFC_MINIMAL_HPP
 
 #include <openpfc/kernel/data/constants.hpp>
-#include <openpfc/kernel/data/model_types.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>

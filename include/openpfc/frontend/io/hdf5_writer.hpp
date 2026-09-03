@@ -46,8 +46,8 @@ public:
                   const std::array<int, 3> &arr_local,
                   const std::array<int, 3> &arr_offset) override;
 
-  MPI_Status write(int increment, const RealField &data) override;
-  MPI_Status write(int increment, const ComplexField &data) override;
+  MPI_Status write(int increment, pfc::field::FieldView<double> data) override;
+  MPI_Status write(int increment, pfc::field::FieldView<std::complex<double>> data) override;
 };
 
 #endif // OPENPFC_HAS_HDF5

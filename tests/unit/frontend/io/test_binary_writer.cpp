@@ -68,9 +68,9 @@ std::filesystem::path test_dir() {
   return dir;
 }
 
-RealField make_real(const DomainBrick &d, int rank) {
+std::vector<double> make_real(const DomainBrick &d, int rank) {
   const auto n = local_count(d);
-  RealField data(n);
+  std::vector<double> data(n);
   for (std::size_t i = 0; i < n; ++i) {
     data[i] = static_cast<double>(i) + 1000.0 * static_cast<double>(rank) +
               0.25 * static_cast<double>(d.offset[0]);
@@ -78,9 +78,9 @@ RealField make_real(const DomainBrick &d, int rank) {
   return data;
 }
 
-ComplexField make_complex(const DomainBrick &d, int rank) {
+std::vector<std::complex<double>> make_complex(const DomainBrick &d, int rank) {
   const auto n = local_count(d);
-  ComplexField data(n);
+  std::vector<std::complex<double>> data(n);
   for (std::size_t i = 0; i < n; ++i) {
     const double re = static_cast<double>(i) + 10.0 * static_cast<double>(rank);
     const double im =
@@ -105,8 +105,8 @@ TEST_CASE("ResultsWriter default-constructs without a filename",
   public:
     void set_domain(const std::array<int, 3> &, const std::array<int, 3> &,
                     const std::array<int, 3> &) override {}
-    MPI_Status write(int, const RealField &) override { return MPI_Status{}; }
-    MPI_Status write(int, const ComplexField &) override { return MPI_Status{}; }
+    MPI_Status write(int, pfc::field::FieldView<double>) override { return MPI_Status{}; }
+    MPI_Status write(int, pfc::field::FieldView<std::complex<double>>) override { return MPI_Status{}; }
   };
   REQUIRE_NOTHROW(StdoutSink{});
 }
@@ -128,7 +128,7 @@ int main(int argc, char *argv[]) {
   return result;
 }
 
-TEST_CASE("BinaryWriter RealField round-trip via BinaryReader",
+TEST_CASE("BinaryWriter std::vector<double> round-trip via BinaryReader",
           "[binary_writer][io]") {
   const int rank = mpi::get_rank();
   const int size = mpi::get_size();
@@ -141,7 +141,7 @@ TEST_CASE("BinaryWriter RealField round-trip via BinaryReader",
   const std::string template_path = (out_dir / "real_%d.bin").string();
   const std::string path = (out_dir / "real_0.bin").string();
 
-  const RealField written = make_real(domain, rank);
+  const std::vector<double> written = make_real(domain, rank);
 
   {
     BinaryWriter writer(template_path);
@@ -149,7 +149,7 @@ TEST_CASE("BinaryWriter RealField round-trip via BinaryReader",
     REQUIRE_NOTHROW(writer.write(0, written));
   }
 
-  RealField read_back(local_count(domain));
+  std::vector<double> read_back(local_count(domain));
   {
     BinaryReader reader;
     reader.set_domain(domain.global, domain.local, domain.offset);
@@ -168,7 +168,7 @@ TEST_CASE("BinaryWriter RealField round-trip via BinaryReader",
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST_CASE("BinaryWriter ComplexField round-trip via BinaryReader",
+TEST_CASE("BinaryWriter std::vector<std::complex<double>> round-trip via BinaryReader",
           "[binary_writer][io]") {
   const int rank = mpi::get_rank();
   const int size = mpi::get_size();
@@ -181,7 +181,7 @@ TEST_CASE("BinaryWriter ComplexField round-trip via BinaryReader",
   const std::string template_path = (out_dir / "complex_%d.bin").string();
   const std::string path = (out_dir / "complex_0.bin").string();
 
-  const ComplexField written = make_complex(domain, rank);
+  const std::vector<std::complex<double>> written = make_complex(domain, rank);
 
   {
     BinaryWriter writer(template_path);
@@ -189,7 +189,7 @@ TEST_CASE("BinaryWriter ComplexField round-trip via BinaryReader",
     REQUIRE_NOTHROW(writer.write(0, written));
   }
 
-  ComplexField read_back(local_count(domain));
+  std::vector<std::complex<double>> read_back(local_count(domain));
   {
     BinaryReader reader;
     reader.set_domain(domain.global, domain.local, domain.offset);
@@ -223,8 +223,8 @@ TEST_CASE("BinaryWriter rebuilds filetype when switching real then complex",
   const std::string real_path = (out_dir / "shared_0.bin").string();
   const std::string cplx_path = (out_dir / "shared_1.bin").string();
 
-  const RealField real_data = make_real(domain, rank);
-  const ComplexField cplx_data = make_complex(domain, rank);
+  const std::vector<double> real_data = make_real(domain, rank);
+  const std::vector<std::complex<double>> cplx_data = make_complex(domain, rank);
 
   // Same writer + domain; ensure_filetype rebuilds when etype changes.
   BinaryWriter writer(shared_tmpl);
@@ -232,8 +232,8 @@ TEST_CASE("BinaryWriter rebuilds filetype when switching real then complex",
   REQUIRE_NOTHROW(writer.write(0, real_data));
   REQUIRE_NOTHROW(writer.write(1, cplx_data));
 
-  RealField real_back(local_count(domain));
-  ComplexField cplx_back(local_count(domain));
+  std::vector<double> real_back(local_count(domain));
+  std::vector<std::complex<double>> cplx_back(local_count(domain));
   BinaryReader reader;
   reader.set_domain(domain.global, domain.local, domain.offset);
   REQUIRE_NOTHROW(reader.read(real_path, real_back));
@@ -290,7 +290,7 @@ TEST_CASE("BinaryWriter and BinaryReader reject invalid domain geometry",
                       std::invalid_argument);
     // Domain members stay default (non-positive); write fails closed before
     // MPI-IO (checked_local_extent_product), not via a successful configure.
-    REQUIRE_THROWS_AS(writer.write(0, RealField(1)), std::invalid_argument);
+    REQUIRE_THROWS_AS(writer.write(0, std::vector<double>(1)), std::invalid_argument);
   }
 }
 
@@ -305,7 +305,7 @@ TEST_CASE("BinaryWriter does not leak an MPI_File handle when MPI_File_open fail
   // MPI_File_open itself fails here (nonexistent directory), so no MPI_File
   // handle is ever produced to leak -- the property under test is simply
   // that the failure propagates as a clean exception rather than hanging.
-  REQUIRE_THROWS_AS(writer.write(1, RealField(4, 1.0)), std::runtime_error);
+  REQUIRE_THROWS_AS(writer.write(1, std::vector<double>(4, 1.0)), std::runtime_error);
 }
 
 TEST_CASE("checked_local_extent_product rejects overflow and non-positive extents",
@@ -336,8 +336,8 @@ TEST_CASE("BinaryWriter::write fails closed on buffer size mismatch",
   BinaryWriter writer(template_path);
   writer.set_domain(domain.global, domain.local, domain.offset);
 
-  REQUIRE_THROWS_AS(writer.write(0, RealField(n - 1, 0.0)), std::runtime_error);
-  REQUIRE_THROWS_AS(writer.write(0, RealField(n + 1, 0.0)), std::runtime_error);
+  REQUIRE_THROWS_AS(writer.write(0, std::vector<double>(n - 1, 0.0)), std::runtime_error);
+  REQUIRE_THROWS_AS(writer.write(0, std::vector<double>(n + 1, 0.0)), std::runtime_error);
 }
 
 TEST_CASE("BinaryReader::read fails closed on buffer size mismatch",
@@ -354,7 +354,7 @@ TEST_CASE("BinaryReader::read fails closed on buffer size mismatch",
   const std::string template_path = (out_dir / "mismatch_read_%d.bin").string();
   const std::string path = (out_dir / "mismatch_read_0.bin").string();
 
-  const RealField written = make_real(domain, rank);
+  const std::vector<double> written = make_real(domain, rank);
   {
     BinaryWriter writer(template_path);
     writer.set_domain(domain.global, domain.local, domain.offset);
@@ -364,8 +364,8 @@ TEST_CASE("BinaryReader::read fails closed on buffer size mismatch",
   BinaryReader reader;
   reader.set_domain(domain.global, domain.local, domain.offset);
 
-  RealField too_small(n - 1);
-  RealField too_large(n + 1);
+  std::vector<double> too_small(n - 1);
+  std::vector<double> too_large(n + 1);
   REQUIRE_THROWS_AS(reader.read(path, too_small), std::runtime_error);
   REQUIRE_THROWS_AS(reader.read(path, too_large), std::runtime_error);
 
@@ -395,7 +395,7 @@ TEST_CASE("BinaryWriter buffer mismatch on one rank fails closed for all ranks",
 
   // Rank 0 posts a wrong-sized buffer; rank 1 is correctly sized. Allreduce
   // must make every rank throw before MPI_File_open.
-  RealField data = (rank == 0) ? RealField(n + 1, 0.0) : make_real(domain, rank);
+  std::vector<double> data = (rank == 0) ? std::vector<double>(n + 1, 0.0) : make_real(domain, rank);
   REQUIRE_THROWS_AS(writer.write(0, data), std::runtime_error);
 }
 
@@ -422,7 +422,7 @@ TEST_CASE("BinaryReader buffer mismatch on one rank fails closed for all ranks",
   BinaryReader reader;
   reader.set_domain(domain.global, domain.local, domain.offset);
 
-  RealField data = (rank == 0) ? RealField(n - 1) : RealField(n);
+  std::vector<double> data = (rank == 0) ? std::vector<double>(n - 1) : std::vector<double>(n);
   REQUIRE_THROWS_AS(reader.read(path, data), std::runtime_error);
 
   MPI_Barrier(MPI_COMM_WORLD);

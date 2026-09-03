@@ -8,29 +8,38 @@
  * @brief C++20 concepts for method-independent physics on `SimulationState`.
  *
  * @details
- * A 0.2 physics model is data plus concept-conforming callables, not a
- * `Model` base class (Audit §13.7). This header names the three surfaces
- * M7 requires:
+ * A 0.2 physics model is data plus concept-conforming callables, not a base
+ * class (Audit §13.7). This header names the surfaces the framework drivers
+ * consume:
  *
  * 1. **Field declaration** — `declare_fields(SimulationState&)` registers
  *    named fields. `add_declared_field` constructs a canonical
  *    `pfc::data::Field` from domain + owned box + halo so physics does
  *    not hand-roll allocation.
- * 2. **Point-wise RHS** — `rhs(t, G)` as used by `for_each_interior` and
- *    Gen-3 models (`HeatModel::rhs`). `G` is the model's grads aggregate.
- * 3. **Spectral-diagonal descriptors** — real linear symbol `L(k)` from
- *    the OpenPFC Laplacian `k_laplacian` (`-|k|^2`) plus a real-space
- *    nonlinearity `N(psi)`. Matches the `physics_for_mode` / `linear_symbol`
- *    split already factored in tungsten.
- * 4. **Steppable physics** — `step(t)` for Gen-1 `Model` and adapter A1.
+ * 2. **Point-wise RHS** — `rhs(t, G)` as used by `for_each_interior`
+ *    (explicit FD / spectral gradient path). `G` is the model's grads
+ *    aggregate.
+ * 3. **Spectral-ETD descriptors** — the single contract consumed by
+ *    `SpectralETDSystem` for every memory space:
+ *      - `linear_symbol(k_laplacian)` — real diagonal symbol \f$L(k)\f$;
+ *      - `pointwise()` — a device-capable functor (@ref SpectralPointwise)
+ *        evaluating the real-space nonlinearity per cell;
+ *      - optional `nonlinear_symbol(k_laplacian)` — real multiplier
+ *        \f$M(k)\f$ applied to \f$\hat N\f$ (defaults to 1; PFC models use
+ *        \f$k_{\mathrm{lap}}\f$ so that
+ *        \f$\partial_t\hat\psi = L\hat\psi + M\hat N\f$);
+ *      - optional `filter_mf(k_laplacian)` — mean-field filter
+ *        \f$\chi(k)\f$; the driver then supplies `cell.psi_mf`;
+ *      - optional `correlation_kernel(k_laplacian)` — \f$P(k)\f$; the driver
+ *        then supplies `cell.p_star`.
+ *    The driver detects the optional capabilities at compile time, so one
+ *    system class serves plain Swift–Hohenberg-like models, mean-field PFC
+ *    (tungsten), and moving-frame mean-field PFC (aluminum).
+ * 4. **Steppable physics** — `step(t)` for objects that own their whole
+ *    update (e.g. a `SpectralETDSystem` driven by `pfc::sim::run`).
  *
- * Parameter schema (`ParameterSchema`) is a sibling M7 header; physics
- * that expose a nested `parameters_type` model `HasParameters`.
- *
- * A model may satisfy the point-wise surface, the spectral-diagonal
- * surface, or both. `DeclaresFields` is required for the combined
- * `PointwisePhysics` / `SpectralETDPhysics` concepts used by the
- * forthcoming `SpectralETDSystem` driver.
+ * Parameter schema (`ParameterSchema`) is a sibling header; physics that
+ * expose a nested `parameters_type` model `HasParameters`.
  */
 
 #include <complex>
@@ -43,19 +52,9 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/execution/memory_space.hpp>
 #include <openpfc/kernel/simulation/simulation_state.hpp>
+#include <openpfc/kernel/simulation/spectral_pointwise.hpp>
 
 namespace pfc::sim {
-
-/** Device-side N(psi, psi_MF) polynomial: c1 psi + c2 psi^2 + c3 psi^3 + same in MF.
- */
-struct MeanFieldNonlinearityPoly {
-  double c_psi{};
-  double c_psi2{};
-  double c_psi3{};
-  double c_mf{};
-  double c_mf2{};
-  double c_mf3{};
-};
 
 /**
  * @brief Element kind for a declared field (real density vs complex hat).
@@ -119,7 +118,7 @@ concept DeclaresFields = requires(const Physics &physics, SimulationState &state
 };
 
 /**
- * @brief Point-wise right-hand side `rhs(t, G)` (Gen-3 / `for_each_interior`).
+ * @brief Point-wise right-hand side `rhs(t, G)` (`for_each_interior` path).
  *
  * Return type is unconstrained: single-field models return a scalar;
  * multi-field models return an increments aggregate.
@@ -131,8 +130,7 @@ concept PointwiseRhs = requires(const Physics &physics, double t,
 /**
  * @brief Diagonal linear symbol @f$L(k)@f$ from the Laplacian multiplier.
  *
- * @p k_laplacian is OpenPFC's spectral Laplacian (`-|k|^2`), the same
- * argument tungsten's `physics_for_mode` / `linear_symbol` take.
+ * @p k_laplacian is OpenPFC's spectral Laplacian (`-|k|^2`).
  */
 template <class Physics>
 concept SpectralLinearSymbol = requires(const Physics &physics, double k_laplacian) {
@@ -140,25 +138,40 @@ concept SpectralLinearSymbol = requires(const Physics &physics, double k_laplaci
 };
 
 /**
- * @brief Real-space nonlinearity @f$N(\psi)@f$ for spectral ETD.
- *
- * The forthcoming `SpectralETDSystem` evaluates this per cell, then
- * transforms; physics does not own the FFT.
+ * @brief Optional multiplier @f$M(k)@f$ on @f$\hat N@f$ (default 1).
  */
 template <class Physics>
-concept SpectralNonlinearity = requires(const Physics &physics, double psi) {
-  { physics.nonlinearity(psi) } -> std::convertible_to<double>;
+concept HasNonlinearSymbol = requires(const Physics &physics, double k_laplacian) {
+  { physics.nonlinear_symbol(k_laplacian) } -> std::convertible_to<double>;
 };
 
 /**
- * @brief Spectral-diagonal descriptors: @f$L(k)@f$ plus @f$N(\psi)@f$.
+ * @brief Optional mean-field filter @f$\chi(k)@f$; enables `cell.psi_mf`.
  */
 template <class Physics>
-concept SpectralDiagonalPhysics =
-    SpectralLinearSymbol<Physics> && SpectralNonlinearity<Physics>;
+concept HasMeanFieldFilter = requires(const Physics &physics, double k_laplacian) {
+  { physics.filter_mf(k_laplacian) } -> std::convertible_to<double>;
+};
 
 /**
- * @brief Nested `parameters_type` for the forthcoming `ParameterSchema`.
+ * @brief Optional correlation kernel @f$P(k)@f$; enables `cell.p_star`.
+ */
+template <class Physics>
+concept HasCorrelationKernel =
+    requires(const Physics &physics, double k_laplacian) {
+      { physics.correlation_kernel(k_laplacian) } -> std::convertible_to<double>;
+    };
+
+/**
+ * @brief Physics that provides a device-capable pointwise nonlinearity.
+ */
+template <class Physics>
+concept HasSpectralPointwise = requires(const Physics &physics) {
+  { physics.pointwise() } -> SpectralPointwise;
+};
+
+/**
+ * @brief Nested `parameters_type` for `ParameterSchema`.
  */
 template <class Physics>
 concept HasParameters = requires { typename Physics::parameters_type; };
@@ -166,8 +179,8 @@ concept HasParameters = requires { typename Physics::parameters_type; };
 /**
  * @brief Physics that advances by `step(t)`.
  *
- * Distinct from `PointwiseRhs` / `SpectralDiagonalPhysics`: the callable
- * owns the whole update (ETD sessions, `pfc::sim::run` steppers).
+ * Distinct from `PointwiseRhs` / `SpectralETDPhysics`: the callable owns
+ * the whole update (ETD systems, `pfc::sim::run` steppers).
  */
 template <class Physics>
 concept SteppablePhysics = requires(Physics &physics, double t) { physics.step(t); };
@@ -180,49 +193,20 @@ concept PointwisePhysics = DeclaresFields<Physics> && PointwiseRhs<Physics, Grad
 
 /**
  * @brief Field-declaring spectral-ETD physics (stiff PFC path).
- */
-template <class Physics>
-concept SpectralETDPhysics =
-    DeclaresFields<Physics> && SpectralDiagonalPhysics<Physics>;
-
-/**
- * @brief Mean-field spectral ETD: @f$L(k)@f$, filter @f$\chi(k)@f$, and
- *        @f$N(\psi,\psi_{\mathrm{MF}})@f$ (tungsten / aluminum).
  *
- * The driver FFTs @f$\psi@f$, applies @f$\chi@f$ to form @f$\psi_{\mathrm{MF}}@f$,
- * evaluates the two-argument nonlinearity, then ETD-combines with
- * @f$n_{\mathrm{weight}} = k_{\mathrm{lap}}\,\phi_1(L\,\mathrm{d}t)@f$.
+ * Required: `declare_fields`, `linear_symbol(k)`, `pointwise()`.
+ * Optional, detected by the driver: `nonlinear_symbol(k)`, `filter_mf(k)`,
+ * `correlation_kernel(k)`, and `free_energy_density(cell)` on the functor.
  */
 template <class Physics>
-concept MeanFieldETDPhysics =
-    DeclaresFields<Physics> && SpectralLinearSymbol<Physics> &&
-    requires(const Physics &physics, double k_laplacian, double psi, double psi_mf) {
-      { physics.filter_mf(k_laplacian) } -> std::convertible_to<double>;
-      { physics.nonlinearity(psi, psi_mf) } -> std::convertible_to<double>;
-    };
+concept SpectralETDPhysics = DeclaresFields<Physics> &&
+                             SpectralLinearSymbol<Physics> &&
+                             HasSpectralPointwise<Physics>;
 
-/**
- * @brief Mean-field ETD with a correlation kernel @f$P(k)@f$ and a
- *        temperature-dependent @f$N@f$ (aluminum moving frame).
- *
- * The driver FFTs @f$\psi@f$, applies @f$\chi@f$ and @f$P(k)@f$, then
- * evaluates @f$N(\psi,\psi_{\mathrm{MF}},P*\psi,T_{\mathrm{var}})@f$.
- * Free-energy density is the M7 observable hook.
- */
+/// Functor type returned by `physics.pointwise()`.
 template <class Physics>
-concept MovingFrameMeanFieldETDPhysics =
-    DeclaresFields<Physics> && SpectralLinearSymbol<Physics> &&
-    requires(const Physics &physics, double k_laplacian, double psi, double psi_mf,
-             double p_star, double T_var, double x, double t) {
-      { physics.filter_mf(k_laplacian) } -> std::convertible_to<double>;
-      { physics.correlation_kernel(k_laplacian) } -> std::convertible_to<double>;
-      { physics.temperature_variation(x, t) } -> std::convertible_to<double>;
-      {
-        physics.nonlinearity(psi, psi_mf, p_star, T_var)
-      } -> std::convertible_to<double>;
-      {
-        physics.free_energy_density(psi, psi_mf, p_star, T_var)
-      } -> std::convertible_to<double>;
-    };
+  requires HasSpectralPointwise<Physics>
+using spectral_pointwise_t =
+    std::remove_cvref_t<decltype(std::declval<const Physics &>().pointwise())>;
 
 } // namespace pfc::sim

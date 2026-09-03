@@ -9,11 +9,16 @@ OpenPFC separates the kernel interface `ResultsWriter` from frontend implementat
 
 ## `ResultsWriter` (kernel)
 
-[`include/openpfc/kernel/simulation/results_writer.hpp`](../../include/openpfc/kernel/simulation/results_writer.hpp) — abstract hook the `Simulator` calls when it is time to persist fields. Implementations live in the frontend (binary/VTK) or in your app.
+[`include/openpfc/kernel/simulation/results_writer.hpp`](../../include/openpfc/kernel/simulation/results_writer.hpp) — abstract writer that sessions call from the `on_save` hook of `pfc::sim::run` when `pfc::time::do_save` is true. Implementations live in the frontend (binary/VTK) or in your app.
 
-### Narrow dispatch seam (tests)
+### Session wiring
 
-[`simulator_results_dispatch.hpp`](../../include/openpfc/kernel/simulation/simulator_results_dispatch.hpp) defines `pfc::write_results_for_registered_fields(Model&, const ResultsWriterMap&, int file_num)` — the same loop `Simulator::write_results()` uses after reading the counter. Prefer this free function in unit tests with a small `Model` and mock writers when you do not need the full integrator stack. `Simulator::results_writers()` exposes the live map for inspection-only tests on a constructed simulator. The kernel also provides `pfc::write_scheduled_simulator_results(Simulator&)` — the same counter bump + dispatch as `Simulator::write_results()` for callables that should not use member syntax.
+Sessions build named writers from JSON `fields[]` with
+`pfc::ui::parse_result_writers_from_json` (below), call
+`pfc::apply_writer_domain(writer, field)` so global size / local box come from
+the `Field`, and write each field on the `on_save` hook while bumping their own
+result counter. Unit tests can drive a writer directly with a small `Field` and
+a mock writer; no simulator object is needed.
 
 ## Binary output (MPI-IO)
 
@@ -23,7 +28,7 @@ OpenPFC separates the kernel interface `ResultsWriter` from frontend implementat
 
 ### JSON-driven `App` path
 
-[`simulation_wiring.hpp`](../../include/openpfc/frontend/ui/simulation_wiring.hpp) `parse_result_writers_from_json` takes a **`ResultsWriterCatalog`** at the call site (e.g. `default_results_writer_catalog()` for built-in `binary`). It returns named `BinaryWriter`s (or catalog `vtk`/`hdf5`): for each `fields[]` entry it uses `field["data"]` as the path template. Sessions attach those writers on the `on_save` hook.
+[`simulation_wiring_writers.hpp`](../../include/openpfc/frontend/ui/simulation_wiring_writers.hpp) `parse_result_writers_from_json` takes a **`ResultsWriterCatalog`** at the call site (e.g. `default_results_writer_catalog()` for built-in `binary`). It returns named `BinaryWriter`s (or catalog `vtk`/`hdf5`): for each `fields[]` entry it uses `field["data"]` as the path template. Sessions attach those writers on the `on_save` hook.
 
 Requirements in settings: `saveat > 0`, `fields` array with `name` and `data`.
 

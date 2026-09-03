@@ -18,7 +18,7 @@ Done:
 - Shipped / example models updated (`Aluminum`, `Tungsten` CPU/CUDA/HIP, `examples/10_ui_register_ic.cpp`).
 - CUDA/HIP Tungsten: HeFFTe GPU FFT and rank/size queries use `Model::mpi_comm()` (no hardcoded `MPI_COMM_WORLD` in `set_cuda_fft` / `set_hip_fft` or constructors).
 - Tungsten CPU/CUDA/HIP: NaN check macros use `CHECK_AND_ABORT_IF_NANS_MPI(..., mpi_comm())` so `MPI_Abort` and rank reporting match the model’s communicator.
-- `CHECK_AND_ABORT_IF_NAN` / `CHECK_AND_ABORT_IF_NANS` use `default_nan_check_mpi_comm()`; `App::main` calls `set_default_nan_check_mpi_comm(m_comm)` so the default matches non-world app communicators. `pfc::mpi::get_rank()` / `get_size()` without a communicator are documented as deprecated (world-only).
+- `CHECK_AND_ABORT_IF_NAN` / `CHECK_AND_ABORT_IF_NANS` use `default_nan_check_mpi_comm()`; JSON session drivers call `set_default_nan_check_mpi_comm` (via `configure_json_driver_hooks`) so the default matches non-world app communicators. `pfc::mpi::get_rank()` / `get_size()` without a communicator are documented as deprecated (world-only).
 
 ## Phase B — Simulator decomposition
 
@@ -30,7 +30,7 @@ Done:
 - `try_push_field_modifier_with_model_check` and message constants in `simulator_modifier_registration.hpp` — IC/BC registration rules and warning strings in one place; `Simulator` uses them instead of a private duplicate loop.
 - `simulation_wiring_conditions.hpp`: `detail::wire_field_modifiers_from_json_array` — one implementation for parsing `initial_conditions` / `boundary_conditions` JSON arrays (inject `add_initial_conditions` vs `add_boundary_conditions` via callback).
 - Tungsten CUDA/HIP VTK integration tests call `add_initial_conditions_from_json` / `add_boundary_conditions_from_json` instead of duplicating factory loops; removed accidental double `apply_initial_conditions()` before the first step.
-- `from_json.hpp`: `set_from_json_log_rank` / `get_from_json_log_rank` replace static loggers fixed at rank `-1`; `App::main` sets the rank so FFT / HeFFTe parse diagnostics align with other MPI-aware logs. Split into `from_json_*` headers under the same umbrella; GPU stack factory includes `from_json_heffte.hpp` only.
+- `from_json.hpp`: `set_from_json_log_rank` / `get_from_json_log_rank` replace static loggers fixed at rank `-1`; JSON session drivers set the rank so FFT / HeFFTe parse diagnostics align with other MPI-aware logs. Split into `from_json_*` headers under the same umbrella; GPU stack factory includes `from_json_heffte.hpp` only.
 - `ResultsWriterMap` alias in `results_writer.hpp`; `Simulator::results_writers()` const accessor; `write_results_for_registered_fields` takes `ResultsWriterMap` (named type for tests / tooling). Doxygen on `write_results` / dispatch + [`io_results.md`](../user_guide/io_results.md) call out the narrow test seam.
 - Deprecated `pfc::get_field(Model&)` and `Simulator::get_field()` / `pfc::get_field(Simulator&)` removed; diffusion fixtures register `"default"` alongside `"density"` and drop `get_field()` overrides. `Model::get_field()` remains deprecated for out-of-tree subclasses.
 - Field modifier catalog: header + [`extending_openpfc/README.md`](../extending_openpfc/README.md) document singleton vs explicit-catalog DI; `App::set_field_modifier_catalog` forwards an explicit catalog into `wire_simulator_from_settings` ([`app_pipeline.md`](../user_guide/app_pipeline.md)).
@@ -78,7 +78,7 @@ Goal: Fewer repeated parameters at JSON → `Simulator` boundaries; clearer seam
 Done:
 
 - `JsonWiringContext` (`simulation_wiring_context.hpp`): bundles `MPI_Comm`, `mpi_rank`, and `rank0` for `add_result_writers_from_json`, `add_initial_conditions_from_json`, `add_boundary_conditions_from_json`, and `wire_simulator_and_runtime_from_json`. The `(comm, rank, rank0)` overload family is removed; `SpectralSimulationSession` uses the context form.
-- `configure_json_driver_hooks` (`json_driver_hooks.hpp`): one call sets `from_json` log rank and default NaN-check communicator; `App::main` uses it instead of duplicating globals.
+- `configure_json_driver_hooks` (`json_driver_hooks.hpp`): one call sets `from_json` log rank and default NaN-check communicator for JSON session drivers instead of duplicating globals.
 - `write_scheduled_simulator_results(Simulator&)` in `simulator.hpp`: extracted from `Simulator::write_results()` so scheduled writes + counter bump live in one free-function seam ([`io_results.md`](../user_guide/io_results.md)).
 - `results_writer_catalog.hpp` + optional `fields[].writer` string: `add_result_writers_from_json` resolves writers through `ResultsWriterCatalog` (default `binary`); inject a custom catalog at the wiring call site for tests and app-specific formats ([`app_pipeline.md`](../user_guide/app_pipeline.md)).
 - **`errors.hpp` split:** `errors_config_format.hpp` (JSON field messages + `get_json_value_string`) and `errors_field_modifiers.hpp` (unknown modifier type + `list_valid_field_modifiers`); `errors.hpp` remains an umbrella include. `from_json_world_time.hpp` includes only the format header; `field_modifier_registry.hpp` includes only the modifier header.

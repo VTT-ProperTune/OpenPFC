@@ -51,7 +51,7 @@ public:
   void set_density(double density) { m_density = density; }
   double get_density() const { return m_density; }
 
-  void apply(RealField &field, const Domain &domain, const Box3i &box,
+  void apply(pfc::field::FieldOutput<double> field, const Domain &domain, const Box3i &box,
              double time = 0.0) override {
     (void)time;
     std::vector<Seed> seeds;

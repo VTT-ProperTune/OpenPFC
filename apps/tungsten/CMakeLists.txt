@@ -1,89 +1,62 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
+# Tungsten: one physics header (`tungsten_physics.hpp`), one generic session
+# (`pfc::ui::SpectralETDSession`), three backends. The only device code is the
+# instantiation of the pointwise nonlinearity in `src/gpu/tungsten_pointwise.inc`
+# (stamped into `.cu` / `.hip`), compiled into every GPU target that runs the
+# device `SpectralETDSystem`.
+
 set(TUNGSTEN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_SOURCE_DIR}/apps/common/include)
 
-option(TUNGSTEN_REUSE_ARRAYS "Reuse Tungsten work arrays to reduce memory use" OFF)
+set(_tungsten_heffte_tgt $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>)
+if(NOT TARGET Heffte::Heffte AND NOT TARGET heffte)
+  find_package(Heffte REQUIRED)
+endif()
 
-function(tungsten_apply_options target_name)
-  if(TUNGSTEN_REUSE_ARRAYS)
-    target_compile_definitions(${target_name} PUBLIC TUNGSTEN_REUSE_ARRAYS)
-  endif()
+function(tungsten_cpu_executable target)
+  add_executable(${target} ${ARGN})
+  target_include_directories(${target} PRIVATE ${TUNGSTEN_INCLUDE_DIR})
+  target_link_libraries(${target} PRIVATE OpenPFC openpfc_apps_common
+                        nlohmann_json::nlohmann_json ${_tungsten_heffte_tgt})
 endfunction()
 
-add_executable(tungsten src/cpu/tungsten.cpp)
-target_include_directories(tungsten PRIVATE ${TUNGSTEN_INCLUDE_DIR})
-# Link HeFFTe if available; fallback to find_package
-if(TARGET Heffte::Heffte)
-  target_link_libraries(tungsten PRIVATE OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte)
-elseif(TARGET heffte)
-  target_link_libraries(tungsten PRIVATE OpenPFC nlohmann_json::nlohmann_json heffte)
-else()
-  find_package(Heffte REQUIRED)
-  target_link_libraries(tungsten PRIVATE OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte)
-endif()
+function(tungsten_cuda_executable target)
+  add_executable(${target} ${ARGN} src/gpu/tungsten_pointwise.cu)
+  target_include_directories(${target} PRIVATE ${TUNGSTEN_INCLUDE_DIR})
+  target_link_libraries(${target} PRIVATE OpenPFC openpfc_apps_common
+                        nlohmann_json::nlohmann_json ${_tungsten_heffte_tgt}
+                        CUDA::cudart openpfc_gpu_kernels)
+  set_target_properties(${target} PROPERTIES
+    CUDA_STANDARD 20
+    CUDA_STANDARD_REQUIRED ON)
+endfunction()
 
-if(TUNGSTEN_REUSE_ARRAYS)
-  message(STATUS "Tungsten: reusing arrays")
-endif()
-tungsten_apply_options(tungsten)
+function(tungsten_hip_executable target)
+  add_executable(${target} ${ARGN} src/gpu/tungsten_pointwise.hip)
+  target_include_directories(${target} PRIVATE ${TUNGSTEN_INCLUDE_DIR})
+  target_link_libraries(${target} PRIVATE OpenPFC openpfc_apps_common
+                        nlohmann_json::nlohmann_json ${_tungsten_heffte_tgt}
+                        hip::host openpfc_hip_kernels)
+  set_target_properties(${target} PROPERTIES
+    HIP_STANDARD 20
+    HIP_STANDARD_REQUIRED ON)
+endfunction()
 
+# ---- production binaries ---------------------------------------------------
+tungsten_cpu_executable(tungsten src/cpu/tungsten.cpp)
 install(TARGETS tungsten DESTINATION bin)
-
-# Alias of production `tungsten` (0.2 ETD session).
-add_executable(tungsten_etd src/cpu/tungsten_etd.cpp)
-target_include_directories(tungsten_etd PRIVATE ${TUNGSTEN_INCLUDE_DIR})
-if(TARGET Heffte::Heffte)
-  target_link_libraries(tungsten_etd PRIVATE OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte)
-elseif(TARGET heffte)
-  target_link_libraries(tungsten_etd PRIVATE OpenPFC nlohmann_json::nlohmann_json heffte)
-else()
-  find_package(Heffte REQUIRED)
-  target_link_libraries(tungsten_etd PRIVATE OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte)
-endif()
+# `tungsten_etd` is the historical name of the 0.2 binary; same source.
+tungsten_cpu_executable(tungsten_etd src/cpu/tungsten.cpp)
 install(TARGETS tungsten_etd DESTINATION bin)
 
-# CUDA spectral version (requires CUDA toolkit and CUDA-enabled HeFFTe)
 if(OpenPFC_ENABLE_CUDA_SPECTRAL)
-  add_executable(tungsten_cuda src/cuda/tungsten.cpp)
-  target_include_directories(tungsten_cuda PRIVATE ${TUNGSTEN_INCLUDE_DIR})
-
-  target_link_libraries(tungsten_cuda PRIVATE
-    OpenPFC
-    nlohmann_json::nlohmann_json
-    $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
-    CUDA::cudart
-    openpfc_gpu_kernels
-  )
-
-  tungsten_apply_options(tungsten_cuda)
-
+  tungsten_cuda_executable(tungsten_cuda src/cuda/tungsten.cpp)
   install(TARGETS tungsten_cuda DESTINATION bin)
-  message(STATUS "Tungsten CUDA version enabled")
-
-  add_executable(tungsten_etd_cuda src/cuda/tungsten_etd.cpp)
-  target_include_directories(tungsten_etd_cuda PRIVATE ${TUNGSTEN_INCLUDE_DIR})
-  target_link_libraries(tungsten_etd_cuda PRIVATE
-    OpenPFC
-    nlohmann_json::nlohmann_json
-    $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
-    CUDA::cudart
-    openpfc_gpu_kernels
-  )
+  tungsten_cuda_executable(tungsten_etd_cuda src/cuda/tungsten.cpp)
   install(TARGETS tungsten_etd_cuda DESTINATION bin)
-
-  # Test program for CUDA with VTK output
-  add_executable(test_tungsten_cuda_vtk tests/test_tungsten_cuda_vtk.cpp)
-  target_include_directories(test_tungsten_cuda_vtk PRIVATE ${TUNGSTEN_INCLUDE_DIR})
-  target_link_libraries(test_tungsten_cuda_vtk PRIVATE
-    OpenPFC
-    nlohmann_json::nlohmann_json
-    $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
-    CUDA::cudart
-    openpfc_gpu_kernels
-  )
-  message(STATUS "Tungsten CUDA VTK test program enabled")
+  message(STATUS "Tungsten CUDA version enabled")
 endif()
 if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE AND NOT OpenPFC_ENABLE_CUDA_SPECTRAL)
   message(STATUS
@@ -113,165 +86,80 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
   endif()
 endif()
 
-# HIP spectral Tungsten (requires ROCm-enabled HeFFTe — same rule as CUDA spectral).
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
-  add_executable(tungsten_hip src/hip/tungsten.cpp)
-  target_include_directories(tungsten_hip PRIVATE ${TUNGSTEN_INCLUDE_DIR})
-
-  target_link_libraries(tungsten_hip PRIVATE
-    OpenPFC
-    nlohmann_json::nlohmann_json
-    $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
-    hip::host
-    openpfc_hip_kernels
-  )
-
-  set_target_properties(tungsten_hip PROPERTIES
-    HIP_STANDARD 20
-    HIP_STANDARD_REQUIRED ON
-  )
-
-  tungsten_apply_options(tungsten_hip)
-
+  tungsten_hip_executable(tungsten_hip src/hip/tungsten.cpp)
   install(TARGETS tungsten_hip DESTINATION bin)
-  message(STATUS "Tungsten HIP version enabled")
-
-  add_executable(tungsten_etd_hip src/hip/tungsten_etd.cpp)
-  target_include_directories(tungsten_etd_hip PRIVATE ${TUNGSTEN_INCLUDE_DIR})
-  target_link_libraries(tungsten_etd_hip PRIVATE
-    OpenPFC
-    nlohmann_json::nlohmann_json
-    $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
-    hip::host
-    openpfc_hip_kernels
-  )
-  set_target_properties(tungsten_etd_hip PROPERTIES
-    HIP_STANDARD 20
-    HIP_STANDARD_REQUIRED ON
-  )
+  tungsten_hip_executable(tungsten_etd_hip src/hip/tungsten.cpp)
   install(TARGETS tungsten_etd_hip DESTINATION bin)
-  message(STATUS "tungsten_etd_hip enabled")
-
-  add_executable(test_tungsten_hip_vtk tests/test_tungsten_hip_vtk.cpp)
-  target_include_directories(test_tungsten_hip_vtk PRIVATE ${TUNGSTEN_INCLUDE_DIR})
-  target_link_libraries(test_tungsten_hip_vtk PRIVATE
-    OpenPFC
-    nlohmann_json::nlohmann_json
-    $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
-    hip::host
-    openpfc_hip_kernels
-  )
-  set_target_properties(test_tungsten_hip_vtk PROPERTIES
-    HIP_STANDARD 20
-    HIP_STANDARD_REQUIRED ON
-  )
-  message(STATUS "Tungsten HIP VTK test program enabled")
+  message(STATUS "Tungsten HIP version enabled")
 elseif(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND NOT OpenPFC_ENABLE_HIP_SPECTRAL)
   message(STATUS
     "Tungsten HIP spectral targets disabled: ROCm HeFFTe (rocFFT) missing (HIP spectral support OFF).")
 endif()
 
+# ---- tests -----------------------------------------------------------------
 option(TUNGSTEN_ENABLE_TESTS "Enable building Tungsten tests" ON)
 
 if(TUNGSTEN_ENABLE_TESTS)
-    find_package(Catch2 REQUIRED)
-    if(TARGET Catch2::Catch2)
-        add_executable(test_tungsten tests/test_tungsten.cpp
-                                    tests/test_tungsten_physics.cpp)
-        target_include_directories(test_tungsten PRIVATE ${TUNGSTEN_INCLUDE_DIR})
-        if(TARGET Heffte::Heffte)
-          target_link_libraries(test_tungsten PRIVATE OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte Catch2::Catch2)
-        elseif(TARGET heffte)
-          target_link_libraries(test_tungsten PRIVATE OpenPFC nlohmann_json::nlohmann_json heffte Catch2::Catch2)
-        else()
-          find_package(Heffte REQUIRED)
-          target_link_libraries(test_tungsten PRIVATE OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte Catch2::Catch2)
-        endif()
-        include(CTest)
-        # Run all tungsten tests in a single invocation to avoid per-test MPI overhead
-        add_test(NAME tungsten-all-tests COMMAND test_tungsten)
-        add_test(NAME tungsten-cpu-golden COMMAND test_tungsten "[etd_cpu_golden]")
-        add_test(NAME tungsten-etd-cpu-golden COMMAND test_tungsten "[etd_cpu_golden]")
-        if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
-          add_test(NAME tungsten-golden-4rank
-            COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
-                    $<TARGET_FILE:test_tungsten> "[golden][MPI]")
-          set_tests_properties(tungsten-golden-4rank PROPERTIES
-            TIMEOUT 180
-            RUN_SERIAL TRUE)
-        endif()
-
-        if(OpenPFC_ENABLE_CUDA_SPECTRAL)
-            add_executable(test_tungsten_etd_cuda tests/test_tungsten_etd_gpu.cpp)
-            target_include_directories(test_tungsten_etd_cuda PRIVATE
-              ${TUNGSTEN_INCLUDE_DIR}
-              ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu)
-            target_link_libraries(test_tungsten_etd_cuda PRIVATE
-              OpenPFC
-              nlohmann_json::nlohmann_json
-              $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
-              Catch2::Catch2
-              CUDA::cudart
-              openpfc_gpu_kernels
-              MPI::MPI_CXX
-            )
-            target_compile_definitions(test_tungsten_etd_cuda PRIVATE
-              OPENPFC_TEST_TUNGSTEN_ETD_CUDA)
-            add_test(NAME CUDA_TungstenETD COMMAND test_tungsten_etd_cuda)
-            add_test(NAME tungsten-etd-cpu-vs-cuda COMMAND test_tungsten_etd_cuda
-                "[parity32]")
-            add_test(NAME tungsten-cpu-vs-cuda-tests COMMAND test_tungsten_etd_cuda
-                "[parity32]")
-        endif()
-
-        if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
-            add_executable(test_tungsten_etd_hip tests/test_tungsten_etd_gpu.cpp)
-            target_include_directories(test_tungsten_etd_hip PRIVATE
-              ${TUNGSTEN_INCLUDE_DIR}
-              ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu)
-            target_link_libraries(test_tungsten_etd_hip PRIVATE
-              OpenPFC
-              nlohmann_json::nlohmann_json
-              $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
-              Catch2::Catch2
-              hip::host
-              openpfc_hip_kernels
-              MPI::MPI_CXX
-            )
-            target_compile_definitions(test_tungsten_etd_hip PRIVATE
-              OPENPFC_TEST_TUNGSTEN_ETD_HIP)
-            set_target_properties(test_tungsten_etd_hip PROPERTIES
-              HIP_STANDARD 20
-              HIP_STANDARD_REQUIRED ON
-            )
-            add_test(NAME HIP_TungstenETD COMMAND test_tungsten_etd_hip)
-        endif()
-    else()
-        message(WARNING "Tungsten: Catch2 not found, not building tests")
+  find_package(Catch2 REQUIRED)
+  if(TARGET Catch2::Catch2)
+    tungsten_cpu_executable(test_tungsten tests/test_tungsten.cpp
+                                          tests/test_tungsten_physics.cpp)
+    target_link_libraries(test_tungsten PRIVATE Catch2::Catch2)
+    include(CTest)
+    # Run all tungsten tests in a single invocation to avoid per-test MPI overhead
+    add_test(NAME tungsten-all-tests COMMAND test_tungsten)
+    add_test(NAME tungsten-cpu-golden COMMAND test_tungsten "[etd_cpu_golden]")
+    add_test(NAME tungsten-etd-cpu-golden COMMAND test_tungsten "[etd_cpu_golden]")
+    if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
+      add_test(NAME tungsten-golden-4rank
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                $<TARGET_FILE:test_tungsten> "[golden][MPI]")
+      set_tests_properties(tungsten-golden-4rank PROPERTIES
+        TIMEOUT 180
+        RUN_SERIAL TRUE)
     endif()
+
+    if(OpenPFC_ENABLE_CUDA_SPECTRAL)
+      tungsten_cuda_executable(test_tungsten_etd_cuda tests/test_tungsten_etd_gpu.cpp)
+      target_include_directories(test_tungsten_etd_cuda PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu)
+      target_link_libraries(test_tungsten_etd_cuda PRIVATE Catch2::Catch2 MPI::MPI_CXX)
+      target_compile_definitions(test_tungsten_etd_cuda PRIVATE
+        OPENPFC_TEST_TUNGSTEN_ETD_CUDA)
+      add_test(NAME CUDA_TungstenETD COMMAND test_tungsten_etd_cuda)
+      add_test(NAME tungsten-etd-cpu-vs-cuda COMMAND test_tungsten_etd_cuda "[parity32]")
+      add_test(NAME tungsten-cpu-vs-cuda-tests COMMAND test_tungsten_etd_cuda "[parity32]")
+
+      tungsten_cuda_executable(test_tungsten_cuda_vtk tests/test_tungsten_cuda_vtk.cpp)
+      message(STATUS "Tungsten CUDA VTK test program enabled")
+    endif()
+
+    if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
+      tungsten_hip_executable(test_tungsten_etd_hip tests/test_tungsten_etd_gpu.cpp)
+      target_include_directories(test_tungsten_etd_hip PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu)
+      target_link_libraries(test_tungsten_etd_hip PRIVATE Catch2::Catch2 MPI::MPI_CXX)
+      target_compile_definitions(test_tungsten_etd_hip PRIVATE
+        OPENPFC_TEST_TUNGSTEN_ETD_HIP)
+      add_test(NAME HIP_TungstenETD COMMAND test_tungsten_etd_hip)
+
+      tungsten_hip_executable(test_tungsten_hip_vtk tests/test_tungsten_hip_vtk.cpp)
+      message(STATUS "Tungsten HIP VTK test program enabled")
+    endif()
+  else()
+    message(WARNING "Tungsten: Catch2 not found, not building tests")
+  endif()
 endif()
 
-# Scalability study application
-add_executable(tungsten_scalability src/tungsten_scalability.cpp)
-target_include_directories(tungsten_scalability PRIVATE ${TUNGSTEN_INCLUDE_DIR})
-target_link_libraries(tungsten_scalability PRIVATE
-  OpenPFC
-  nlohmann_json::nlohmann_json
-  $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
-  MPI::MPI_CXX
-)
-
+# ---- scalability study -----------------------------------------------------
 if(OpenPFC_ENABLE_CUDA_SPECTRAL)
-    target_link_libraries(tungsten_scalability PRIVATE CUDA::cudart openpfc_gpu_kernels)
+  tungsten_cuda_executable(tungsten_scalability src/tungsten_scalability.cpp)
+elseif(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
+  tungsten_hip_executable(tungsten_scalability src/tungsten_scalability.cpp)
+  target_compile_definitions(tungsten_scalability PRIVATE OpenPFC_ENABLE_HIP_SPECTRAL)
+else()
+  tungsten_cpu_executable(tungsten_scalability src/tungsten_scalability.cpp)
 endif()
-
-if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
-    target_link_libraries(tungsten_scalability PRIVATE hip::host openpfc_hip_kernels)
-    set_target_properties(tungsten_scalability PROPERTIES
-        HIP_STANDARD 20
-        HIP_STANDARD_REQUIRED ON
-    )
-    target_compile_definitions(tungsten_scalability PRIVATE OpenPFC_ENABLE_HIP_SPECTRAL)
-endif()
-
+target_link_libraries(tungsten_scalability PRIVATE MPI::MPI_CXX)
 install(TARGETS tungsten_scalability DESTINATION bin)

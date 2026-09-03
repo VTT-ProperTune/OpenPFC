@@ -30,7 +30,6 @@
  */
 
 using namespace pfc;
-using namespace pfc::data;
 
 template <typename T> struct SecondOrderTensor {
   std::array<T, 9> data;

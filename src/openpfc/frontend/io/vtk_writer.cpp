@@ -96,7 +96,7 @@ void VTKWriter::write_vti_header(std::ofstream &file,
   file << "_"; // Marker for data start
 }
 
-void VTKWriter::write_vti_data(std::ofstream &file, const RealField &data) {
+void VTKWriter::write_vti_data(std::ofstream &file, pfc::field::FieldView<double> data) {
   // VTK header_type="UInt64": length prefix is always 8 bytes (see
   // write_vti_header).
   const std::uint64_t appended_bytes =
@@ -170,7 +170,7 @@ void VTKWriter::write_pvti_file(int increment) const {
   }
 }
 
-MPI_Status VTKWriter::write(int increment, const RealField &data) {
+MPI_Status VTKWriter::write(int increment, pfc::field::FieldView<double> data) {
   const std::size_t expected_pts =
       io::vtk_validate::expect_local_point_count(m_local_size);
 
@@ -259,7 +259,7 @@ MPI_Status VTKWriter::write(int increment, const RealField &data) {
   return status;
 }
 
-MPI_Status VTKWriter::write(int increment, const ComplexField &data) {
+MPI_Status VTKWriter::write(int increment, pfc::field::FieldView<std::complex<double>> data) {
   const std::size_t expected_pts =
       io::vtk_validate::expect_local_point_count(m_local_size);
 
@@ -293,11 +293,11 @@ MPI_Status VTKWriter::write(int increment, const ComplexField &data) {
   }
 
   // 5. Convert complex to real (magnitude) - only happens if all ranks passed
-  RealField magnitude(data.size());
-  std::transform(data.begin(), data.end(), magnitude.begin(),
+  std::vector<double> magnitude(data.size());
+  std::transform(data.data(), data.data() + data.size(), magnitude.begin(),
                  [](const std::complex<double> &c) { return std::abs(c); });
 
-  // 6. Delegate to RealField overload which has its own collective error agreements
+  // 6. Delegate to the real FieldView overload which has its own collective error agreements
   return write(increment, magnitude);
 }
 

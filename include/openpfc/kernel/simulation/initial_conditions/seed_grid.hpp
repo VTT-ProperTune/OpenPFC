@@ -76,7 +76,7 @@ public:
       : m_Ny(Ny), m_Nz(Nz), m_X0(X0), m_radius(radius), m_rho(0.0),
         m_amplitude(0.0) {}
 
-  void apply(const SimulationContext &ctx, RealField &field, const Domain &domain,
+  void apply(const SimulationContext &ctx, pfc::field::FieldOutput<double> field, const Domain &domain,
              const Box3i &box, double time) override {
     const int nseeds = m_Nx * m_Ny * m_Nz;
     if (ctx.is_rank0()) {
@@ -89,7 +89,7 @@ public:
     apply(field, domain, box, time);
   }
 
-  void apply(RealField &field, const Domain &domain, const Box3i &box,
+  void apply(pfc::field::FieldOutput<double> field, const Domain &domain, const Box3i &box,
              double time = 0.0) override {
     (void)time;
     const auto &size = pfc::domain::get_size(domain);

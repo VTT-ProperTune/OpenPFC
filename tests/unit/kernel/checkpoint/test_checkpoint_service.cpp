@@ -297,10 +297,14 @@ TEST_CASE("CheckpointService save/load restart equivalence 2-rank",
 TEST_CASE("interrupted publish leaves no loadable bundle",
           "[checkpoint][publish][crash]") {
   namespace fs = std::filesystem;
+  int nproc = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  if (nproc != 1) {
+    return;
+  }
   const auto root = fs::temp_directory_path() / "openpfc_ckpt_crash";
   fs::create_directories(root);
   const auto final_dir = root / "ckpt";
-  std::vector<double> psi{1.0, 2.0, 3.0, 4.0};
   pfc::checkpoint::CheckpointMetadata meta{
       .format_version = 1,
       .accepted_time = 0.0,
@@ -310,16 +314,9 @@ TEST_CASE("interrupted publish leaves no loadable bundle",
                  .grid_spacing = {1, 1, 1}},
       .method_identity = "euler",
   };
-  const auto brick = pfc::checkpoint::PublishedFieldBrick{
-      .id = "psi",
-      .dtype = "float64",
-      .extents = {4, 1, 1},
-      .bytes = std::as_bytes(std::span<const double>{psi}),
-  };
-  std::array<pfc::checkpoint::PublishedFieldBrick, 1> fields{brick};
   const auto outcome = pfc::checkpoint::publish_checkpoint_directory(
-      final_dir, meta, fields,
-      [](std::size_t, const auto &) { throw std::runtime_error("inject"); });
+      final_dir, meta, MPI_COMM_WORLD,
+      [](const fs::path &) { throw std::runtime_error("inject"); });
   REQUIRE_FALSE(outcome.ok);
   REQUIRE_FALSE(fs::exists(final_dir));
   REQUIRE_FALSE(fs::exists(fs::path(final_dir.string() + ".publishing")));

@@ -17,7 +17,7 @@ OpenPFC encourages fail-fast configuration: invalid or missing parameters should
 
 Value-returning helpers (`ParameterValidator::validate`, `ValidationResult::{is_valid,format_errors,format_summary}`, `ParameterMetadata::validate` / `format_info`, and `ParameterMetadata::Builder::build`) are marked `[[nodiscard]]` so ignoring validation output is typically a compile-time error.
 
-Validation is typically invoked from application `main` or a thin wrapper before the expensive `App::main()` path, or integrated inside your app’s settings loader if you have one.
+Validation is typically invoked from application `main` right after `load_settings_file`, before the session is constructed, or integrated inside your app’s settings loader if you have one.
 
 ## Validation vs. App parsing order
 
@@ -70,7 +70,7 @@ void validate_my_params(const pfc::ui::json &root) {
 }
 ```
 
-Call this from `main` after loading the config file and before `App::main()` if you want validation outside the library; many apps instead fold validation into the same code path that parses `model.params`.
+Call this from `main` after loading the config file and before constructing the session if you want validation outside the library; many apps instead fold validation into the same code path that parses `model.params`.
 
 ## Reference implementation
 
@@ -81,7 +81,7 @@ Smaller programs may only validate 3–5 critical scalars; you can still use the
 ## Documentation elsewhere
 
 - Root [`README.md`](../../README.md) — user-facing description of validation output and benefits.
-- [`app_pipeline.md`](app_pipeline.md) — when `model.params` is applied relative to `App::main()`.
+- [`app_pipeline.md`](app_pipeline.md) — when `model.params` is applied in the session pipeline.
 
 ## See also
 

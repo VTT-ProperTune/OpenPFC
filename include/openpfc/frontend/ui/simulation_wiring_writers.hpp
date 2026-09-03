@@ -75,8 +75,21 @@ parse_result_writers_from_json(const nlohmann::json &settings,
     pfc::log_info(lg, "Adding results writers");
   }
   std::vector<NamedResultsWriter> writers;
-  if (settings.contains("saveat") && settings.contains("fields") &&
-      settings["saveat"] > 0) {
+  // `saveat` may live at the root (legacy flat schema) or under `timestepping`
+  // (0.2 schema). Writers are created whenever `fields[]` is present; whether
+  // a frame is written is decided by `Time::do_save()` at run time.
+  const bool has_fields = settings.contains("fields") && settings["fields"].is_array();
+  const nlohmann::json *saveat = nullptr;
+  if (settings.contains("saveat")) {
+    saveat = &settings["saveat"];
+  } else if (settings.contains("timestepping") &&
+             settings["timestepping"].is_object() &&
+             settings["timestepping"].contains("saveat")) {
+    saveat = &settings["timestepping"]["saveat"];
+  }
+  const bool saves = saveat == nullptr || !saveat->is_number() ||
+                     saveat->get<double>() > 0;
+  if (has_fields && saves) {
     for (const auto &field : settings["fields"]) {
       std::string name = field["name"];
       std::string data = field["data"];

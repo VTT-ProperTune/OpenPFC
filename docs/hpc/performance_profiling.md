@@ -41,12 +41,7 @@ HDF5 export requires configuring CMake with `OpenPFC_ENABLE_HDF5=ON` and a syste
 
 ## Tungsten CPU (spectral pipelines)
 
-The CPU Tungsten model ([`apps/tungsten/include/tungsten/cpu/tungsten_model.hpp`](../../apps/tungsten/include/tungsten/cpu/tungsten_model.hpp)) uses `OPENPFC_PROFILE` with nested paths:
-
-- `gradient/mean_field` — mean-field filter: `gradient/mean_field/forward`, `gradient/mean_field/multiply`, `gradient/mean_field/backward`
-- `gradient/evolve` — exponential integration step: `gradient/evolve/forward`, `gradient/evolve/multiply`, `gradient/evolve/backward`
-
-List these under `profiling.regions` in the input file if you want a fixed catalog from step one. `format` values `hdf5` and `both` require `OpenPFC_ENABLE_HDF5=ON` at build time.
+The tungsten binaries drive `pfc::sim::SpectralETDSystem` through `pfc::ui::SpectralETDSession` ([`apps/tungsten/include/tungsten/tungsten_session.hpp`](../../apps/tungsten/include/tungsten/tungsten_session.hpp)). The JSON `profiling` section is handled by `pfc::ui::JsonStepProfiler` ([`include/openpfc/frontend/ui/json_step_profiler.hpp`](../../include/openpfc/frontend/ui/json_step_profiler.hpp)): every step is one barriered `wall_step` frame with the FFT time taken from the stack's `IFFTQueries`, in the same schema-v2 layout the perf baselines in `tests/baselines/perf/` use. The Gen-1 nested `gradient/mean_field/*` and `gradient/evolve/*` regions no longer exist. `format` values `hdf5` and `both` require `OpenPFC_ENABLE_HDF5=ON` at build time.
 
 ## What each frame stores (export schema)
 

@@ -38,8 +38,8 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 
+using pfc::Field;
 using Catch::Approx;
-using pfc::data::Field;
 
 namespace {
 

@@ -98,7 +98,7 @@ public:
     size = mpi::get_comm_size(comm);
   }
 
-  void apply(RealField &field, const Domain &domain, const Box3i &box,
+  void apply(pfc::field::FieldOutput<double> field, const Domain &domain, const Box3i &box,
              double time = 0.0) override {
     (void)time;
     const Int3 low = box.low;
@@ -180,7 +180,7 @@ public:
 
 
 
-  void fill_bc(RealField &field, const Domain &domain, const Box3i &box) {
+  void fill_bc(pfc::field::FieldOutput<double> field, const Domain &domain, const Box3i &box) {
     const double Lx = pfc::domain::get_size(domain, 0);
     const double dx = pfc::domain::get_spacing(domain, 0);
     const double l = Lx * dx;

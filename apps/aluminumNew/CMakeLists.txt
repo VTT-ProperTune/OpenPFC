@@ -1,8 +1,13 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-cmake_minimum_required(VERSION 3.15)
-project(Aluminum VERSION 0.1.0 LANGUAGES CXX)
+# Aluminum: one physics header (`aluminum_physics.hpp`), one generic session
+# (`pfc::ui::SpectralETDSession`), three backends. The only device code is the
+# instantiation of the pointwise nonlinearity in `src/gpu/aluminum_pointwise.inc`
+# (stamped into `.cu` / `.hip`), compiled into every GPU target.
+
+cmake_minimum_required(VERSION 3.21)
+project(Aluminum VERSION 0.2.0 LANGUAGES CXX)
 
 # Only do these if this is the main project, and not if it is included through
 # add_subdirectory
@@ -13,147 +18,109 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     set(CMAKE_CXX_STANDARD 20)
 endif()
 
+set(ALUMINUM_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_SOURCE_DIR}/apps/common/include)
 
-add_executable(aluminumNew aluminumNew.cpp)
-target_include_directories(aluminumNew PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/include)
 if(TARGET Heffte::Heffte)
-    target_link_libraries(aluminumNew OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte)
+  set(_aluminum_heffte_tgt Heffte::Heffte)
 elseif(TARGET Heffte)
-    target_link_libraries(aluminumNew OpenPFC nlohmann_json::nlohmann_json Heffte)
+  set(_aluminum_heffte_tgt Heffte)
 elseif(TARGET heffte)
-    target_link_libraries(aluminumNew OpenPFC nlohmann_json::nlohmann_json heffte)
+  set(_aluminum_heffte_tgt heffte)
 else()
-    target_link_libraries(aluminumNew OpenPFC nlohmann_json::nlohmann_json)
+  set(_aluminum_heffte_tgt "")
 endif()
 
-# Alias of production `aluminumNew` (0.2 ETD session).
-add_executable(aluminum_etd aluminum_etd.cpp)
-target_include_directories(aluminum_etd PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/include)
-if(TARGET Heffte::Heffte)
-    target_link_libraries(aluminum_etd OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte)
-elseif(TARGET Heffte)
-    target_link_libraries(aluminum_etd OpenPFC nlohmann_json::nlohmann_json Heffte)
-elseif(TARGET heffte)
-    target_link_libraries(aluminum_etd OpenPFC nlohmann_json::nlohmann_json heffte)
-else()
-    target_link_libraries(aluminum_etd OpenPFC nlohmann_json::nlohmann_json)
-endif()
+function(aluminum_cpu_executable target)
+  add_executable(${target} ${ARGN})
+  target_include_directories(${target} PRIVATE ${ALUMINUM_INCLUDE_DIRS})
+  target_link_libraries(${target} PRIVATE OpenPFC openpfc_apps_common
+                        nlohmann_json::nlohmann_json ${_aluminum_heffte_tgt})
+endfunction()
+
+function(aluminum_cuda_executable target)
+  add_executable(${target} ${ARGN} src/gpu/aluminum_pointwise.cu)
+  target_include_directories(${target} PRIVATE ${ALUMINUM_INCLUDE_DIRS})
+  target_link_libraries(${target} PRIVATE OpenPFC openpfc_apps_common
+                        nlohmann_json::nlohmann_json ${_aluminum_heffte_tgt}
+                        CUDA::cudart openpfc_gpu_kernels)
+  set_target_properties(${target} PROPERTIES
+    CUDA_STANDARD 20
+    CUDA_STANDARD_REQUIRED ON)
+endfunction()
+
+function(aluminum_hip_executable target)
+  add_executable(${target} ${ARGN} src/gpu/aluminum_pointwise.hip)
+  target_include_directories(${target} PRIVATE ${ALUMINUM_INCLUDE_DIRS})
+  target_link_libraries(${target} PRIVATE OpenPFC openpfc_apps_common
+                        nlohmann_json::nlohmann_json ${_aluminum_heffte_tgt}
+                        hip::host openpfc_hip_kernels)
+  set_target_properties(${target} PROPERTIES
+    HIP_STANDARD 20
+    HIP_STANDARD_REQUIRED ON)
+endfunction()
+
+# ---- production binaries ---------------------------------------------------
+aluminum_cpu_executable(aluminumNew src/aluminum.cpp)
+install(TARGETS aluminumNew DESTINATION bin)
+# `aluminum_etd` is the historical name of the 0.2 binary; same source.
+aluminum_cpu_executable(aluminum_etd src/aluminum.cpp)
 install(TARGETS aluminum_etd DESTINATION bin)
 
 if(OpenPFC_ENABLE_CUDA_SPECTRAL)
-  add_executable(aluminum_etd_cuda aluminum_etd_cuda.cpp)
-  target_include_directories(aluminum_etd_cuda PRIVATE
-      ${CMAKE_CURRENT_SOURCE_DIR}
-      ${CMAKE_CURRENT_SOURCE_DIR}/include)
-  target_link_libraries(aluminum_etd_cuda PRIVATE
-      OpenPFC
-      nlohmann_json::nlohmann_json
-      $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
-      CUDA::cudart
-      openpfc_gpu_kernels)
+  aluminum_cuda_executable(aluminum_etd_cuda src/aluminum_cuda.cpp)
   install(TARGETS aluminum_etd_cuda DESTINATION bin)
   message(STATUS "aluminum_etd_cuda enabled")
 endif()
 
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
-  add_executable(aluminum_etd_hip aluminum_etd_hip.cpp)
-  target_include_directories(aluminum_etd_hip PRIVATE
-      ${CMAKE_CURRENT_SOURCE_DIR}
-      ${CMAKE_CURRENT_SOURCE_DIR}/include)
-  target_link_libraries(aluminum_etd_hip PRIVATE
-      OpenPFC
-      nlohmann_json::nlohmann_json
-      $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
-      hip::host
-      openpfc_hip_kernels)
-  set_target_properties(aluminum_etd_hip PROPERTIES
-      HIP_STANDARD 20
-      HIP_STANDARD_REQUIRED ON)
+  aluminum_hip_executable(aluminum_etd_hip src/aluminum_hip.cpp)
   install(TARGETS aluminum_etd_hip DESTINATION bin)
   message(STATUS "aluminum_etd_hip enabled")
 endif()
 
-# Only build tests if tests are enabled for the parent project
+# ---- tests -----------------------------------------------------------------
 option(ALUMINUM_ENABLE_TESTS "Enable building Aluminum tests" ON)
 
 if(ALUMINUM_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
-    find_package(Catch2 QUIET)
-    if(TARGET Catch2::Catch2WithMain)
-        add_executable(aluminumTest aluminumTest.cpp tests/test_aluminum_physics.cpp)
-        target_include_directories(aluminumTest PRIVATE
-            ${CMAKE_CURRENT_SOURCE_DIR}
-            ${CMAKE_CURRENT_SOURCE_DIR}/include)
-                if(TARGET Heffte::Heffte)
-                    target_link_libraries(aluminumTest OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte Catch2::Catch2WithMain)
-                elseif(TARGET Heffte)
-                    target_link_libraries(aluminumTest OpenPFC nlohmann_json::nlohmann_json Heffte Catch2::Catch2WithMain)
-                elseif(TARGET heffte)
-                    target_link_libraries(aluminumTest OpenPFC nlohmann_json::nlohmann_json heffte Catch2::Catch2WithMain)
-                else()
-                    target_link_libraries(aluminumTest OpenPFC nlohmann_json::nlohmann_json Catch2::Catch2WithMain)
-                endif()
-        include(CTest)
-        # Run all aluminum tests in a single invocation to avoid per-test MPI overhead
-        add_test(NAME aluminum-all-tests COMMAND aluminumTest)
-        add_test(NAME aluminum-etd-cpu-golden COMMAND aluminumTest
-            "[seed_grid_fcc][session]")
-        if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
-          add_test(NAME aluminum-golden-4rank
-            COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
-                    $<TARGET_FILE:aluminumTest> "[golden][MPI]")
-          set_tests_properties(aluminum-golden-4rank PROPERTIES
-            TIMEOUT 180
-            RUN_SERIAL TRUE)
-        endif()
-
-        if(OpenPFC_ENABLE_CUDA_SPECTRAL)
-            add_executable(test_aluminum_etd_cuda tests/test_aluminum_etd_gpu.cpp)
-            target_include_directories(test_aluminum_etd_cuda PRIVATE
-                ${CMAKE_CURRENT_SOURCE_DIR}
-                ${CMAKE_CURRENT_SOURCE_DIR}/include
-                ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu)
-            target_link_libraries(test_aluminum_etd_cuda PRIVATE
-                OpenPFC
-                nlohmann_json::nlohmann_json
-                $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
-                Catch2::Catch2
-                CUDA::cudart
-                openpfc_gpu_kernels
-                MPI::MPI_CXX)
-            target_compile_definitions(test_aluminum_etd_cuda PRIVATE
-                OPENPFC_TEST_ALUMINUM_ETD_CUDA)
-            add_test(NAME CUDA_AluminumETD COMMAND test_aluminum_etd_cuda)
-        endif()
-
-        if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
-            add_executable(test_aluminum_etd_hip tests/test_aluminum_etd_gpu.cpp)
-            target_include_directories(test_aluminum_etd_hip PRIVATE
-                ${CMAKE_CURRENT_SOURCE_DIR}
-                ${CMAKE_CURRENT_SOURCE_DIR}/include
-                ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu)
-            target_link_libraries(test_aluminum_etd_hip PRIVATE
-                OpenPFC
-                nlohmann_json::nlohmann_json
-                $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
-                Catch2::Catch2
-                hip::host
-                openpfc_hip_kernels
-                MPI::MPI_CXX)
-            target_compile_definitions(test_aluminum_etd_hip PRIVATE
-                OPENPFC_TEST_ALUMINUM_ETD_HIP)
-            set_target_properties(test_aluminum_etd_hip PROPERTIES
-                HIP_STANDARD 20
-                HIP_STANDARD_REQUIRED ON)
-            add_test(NAME HIP_AluminumETD COMMAND test_aluminum_etd_hip)
-        endif()
-    else()
-        message(STATUS "Aluminum: Catch2 not found, not building tests")
+  find_package(Catch2 QUIET)
+  if(TARGET Catch2::Catch2WithMain)
+    aluminum_cpu_executable(aluminumTest aluminumTest.cpp tests/test_aluminum_physics.cpp)
+    target_link_libraries(aluminumTest PRIVATE Catch2::Catch2WithMain)
+    include(CTest)
+    # Run all aluminum tests in a single invocation to avoid per-test MPI overhead
+    add_test(NAME aluminum-all-tests COMMAND aluminumTest)
+    add_test(NAME aluminum-etd-cpu-golden COMMAND aluminumTest
+        "[seed_grid_fcc][session]")
+    if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
+      add_test(NAME aluminum-golden-4rank
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                $<TARGET_FILE:aluminumTest> "[golden][MPI]")
+      set_tests_properties(aluminum-golden-4rank PROPERTIES
+        TIMEOUT 180
+        RUN_SERIAL TRUE)
     endif()
-endif()
 
-install(TARGETS aluminumNew DESTINATION bin)
+    if(OpenPFC_ENABLE_CUDA_SPECTRAL)
+      aluminum_cuda_executable(test_aluminum_etd_cuda tests/test_aluminum_etd_gpu.cpp)
+      target_include_directories(test_aluminum_etd_cuda PRIVATE
+          ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu)
+      target_link_libraries(test_aluminum_etd_cuda PRIVATE Catch2::Catch2 MPI::MPI_CXX)
+      target_compile_definitions(test_aluminum_etd_cuda PRIVATE
+          OPENPFC_TEST_ALUMINUM_ETD_CUDA)
+      add_test(NAME CUDA_AluminumETD COMMAND test_aluminum_etd_cuda)
+    endif()
+
+    if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
+      aluminum_hip_executable(test_aluminum_etd_hip tests/test_aluminum_etd_gpu.cpp)
+      target_include_directories(test_aluminum_etd_hip PRIVATE
+          ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu)
+      target_link_libraries(test_aluminum_etd_hip PRIVATE Catch2::Catch2 MPI::MPI_CXX)
+      target_compile_definitions(test_aluminum_etd_hip PRIVATE
+          OPENPFC_TEST_ALUMINUM_ETD_HIP)
+      add_test(NAME HIP_AluminumETD COMMAND test_aluminum_etd_hip)
+    endif()
+  else()
+    message(STATUS "Aluminum: Catch2 not found, not building tests")
+  endif()
+endif()

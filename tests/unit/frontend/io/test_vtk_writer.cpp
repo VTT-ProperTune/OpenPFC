@@ -65,8 +65,8 @@ public:
   /**
    * @brief Create test data with known pattern
    */
-  RealField create_test_data(size_t size) const {
-    RealField data(size);
+  std::vector<double> create_test_data(size_t size) const {
+    std::vector<double> data(size);
     for (size_t i = 0; i < size; ++i) {
       data[i] = static_cast<double>(i) + m_rank * 1000.0;
     }
@@ -76,8 +76,8 @@ public:
   /**
    * @brief Create complex test data
    */
-  static ComplexField create_complex_test_data(size_t size) {
-    ComplexField data(size);
+  static std::vector<std::complex<double>> create_complex_test_data(size_t size) {
+    std::vector<std::complex<double>> data(size);
     for (size_t i = 0; i < size; ++i) {
       auto real = static_cast<double>(i);
       double imag = static_cast<double>(i) * 2.0;
@@ -446,7 +446,7 @@ TEST_CASE("VTKWriter - Complex field handling", "[vtk_writer][io][complex]") {
     writer.set_domain(size, size, {0, 0, 0});
 
     // Create simple complex data: (3, 4) -> magnitude 5
-    ComplexField data(8);
+    std::vector<std::complex<double>> data(8);
     for (size_t i = 0; i < 8; ++i) {
       data[i] = std::complex<double>(3.0, 4.0);
     }
@@ -858,7 +858,7 @@ TEST_CASE("test_vtk_writer_collective_error_field_size_mismatch",
                              static_cast<std::size_t>(4) *
                              static_cast<std::size_t>(4);
 
-  RealField data;
+  std::vector<double> data;
   if (fixture.m_rank == 0) {
     // Rank 0: create data with wrong size (one less than expected)
     data = fixture.create_test_data(expected_pts - 1);
@@ -995,7 +995,7 @@ TEST_CASE("test_vtk_writer_complexfield_collective_error_agreement",
                              static_cast<std::size_t>(4) *
                              static_cast<std::size_t>(4);
 
-  ComplexField data;
+  std::vector<std::complex<double>> data;
   if (fixture.m_rank == 0) {
     // Rank 0: create data with wrong size (one less than expected)
     data = VTKWriterTestFixture::create_complex_test_data(expected_pts - 1);

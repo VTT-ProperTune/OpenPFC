@@ -16,7 +16,7 @@
 #include <openpfc/frontend/io/vtk_writer.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/data/model_types.hpp>
+#include <vector>
 #include <openpfc/kernel/data/types.hpp>
 #include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
@@ -96,7 +96,7 @@ int run_fd(const RunConfig &cfg, int rank, int nproc) {
                                             static_cast<double>(cfg.u_wall));
   }
 
-  pfc::RealField vtk_buf;
+  std::vector<double> vtk_buf;
   std::unique_ptr<pfc::VTKWriter> vtk_writer;
   if (!cfg.vtk_pattern.empty()) {
     vtk_writer = std::make_unique<pfc::VTKWriter>(cfg.vtk_pattern);

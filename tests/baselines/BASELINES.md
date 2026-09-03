@@ -82,7 +82,9 @@ Gen-1 tungsten sources deleted on g0005 (2026-09-02). DoD greps: no `public pfc:
 
 ## How to capture (reference commands)
 
-CPU golden trajectory (Gen-1 `Tungsten` vs `tungsten_etd` / `TungstenETDSession`):
+CPU golden trajectory (Gen-1 `Tungsten` vs `tungsten_etd` / `TungstenSession`, i.e. `pfc::ui::SpectralETDSession<TungstenPhysics, SpectralCPUStack>`):
+
+> **2026-09-03 consolidation:** the six ETD drivers and four app sessions were folded into `SpectralETDSystem` + `SpectralETDSession`. Re-confirmed on the consolidated tree (LUMI, Cray CC): `tungsten-etd-cpu-golden` 32³/10-step sine IC `sum=-13107.200000000043`, `sumsq=5406.3450894885691` (pin 5406.3450894885682, within 1e-10 rel); `aluminum-etd-cpu-golden` seed_grid_fcc 32³/5-step `sum=-263.63079658808613`, `sumsq=1111.6016268617182` (pins within 1e-10 rel). CPU Debug job 21690851: 39/39 CTest incl. `tungsten-golden-4rank`, `aluminum-golden-4rank`. HIP Release job 21690849: 57/57 CTest incl. `HIP_SpectralETD` (plain, mean-field, moving-frame toys device vs host ≤1e-10), `HIP_TungstenETD`, `HIP_AluminumETD` (device nonlinearity, G_grid case). CUDA not re-run (Tohtori).
 
 ```
 # 1-rank (CI): ctest -R tungsten-all-tests
@@ -116,7 +118,7 @@ GPU compile + run parity (cluster only):
 scripts/build.sh --with-cuda  --build-dir=/WRK/<user>/openpfc/builds/cuda-release   # tohtori
 scripts/build.sh --with-rocm  --build-dir=/WRK/<user>/openpfc/builds/rocm-release   # LUMI
 # then run test_tungsten_cpu_vs_cuda / _hip and HIP_TungstenETD / CUDA_TungstenETD
-# (App-GPU-IC is the [ic] case on TungstenETDGPUSession)
+# (App-GPU-IC is the [ic] case on TungstenCUDASession / TungstenHIPSession)
 # Kobayashi CUDA HEX smoke (32² / 4 steps): ctest -R kobayashi-cuda-hex
 ```
 

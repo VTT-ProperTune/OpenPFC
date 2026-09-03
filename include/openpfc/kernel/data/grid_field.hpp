@@ -21,10 +21,11 @@
  * `idx()` serves the padded and unpadded cases; `apply(f(x,y,z))` is defined
  * once.
  *
- * Lives in `pfc::data` because the final name `pfc::Field` is still occupied
- * by a Gen-1 `std::vector<double>` alias (`kernel/data/model_types.hpp`). The
- * legacy `field::Field<T>` type is gone; once that alias is deleted this
- * collapses into `pfc::Field`.
+ * `pfc::data::Field` is the definition; `pfc::Field<T, MemorySpace>` (alias at
+ * the end of this header) is the public name. The Gen-1 `std::vector<double>`
+ * alias that used to occupy `pfc::Field` is deleted; conditions, writers, and
+ * checkpoints take the non-owning `field::FieldOutput<T>` / `field::FieldView<T>`
+ * (`view()` / `output()` below) instead of bare vectors.
  *
  * Residency tracking (M2.2): a device-backed field (device `MemorySpace`) also
  * owns a host mirror and a `Residency` (residency.hpp) recording which side is
@@ -48,6 +49,7 @@
 #include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/execution/databuffer.hpp>
 #include <openpfc/kernel/execution/memory_space.hpp>
+#include <openpfc/kernel/field/state_access.hpp>
 
 namespace pfc::data {
 
@@ -137,6 +139,24 @@ public:
   }
 
   // ---- geometry ---------------------------------------------------------
+  /**
+   * @brief Read-only non-owning view (host space only): data + local extents +
+   *        spacing + origin of the local box's low corner.
+   */
+  [[nodiscard]] pfc::field::FieldView<T> view() const noexcept
+    requires is_host_space
+  {
+    return pfc::field::FieldView<T>(m_buffer.data(), m_buffer.size(), padded_extents_(),
+                                    spacing(), local_origin_());
+  }
+
+  /** @brief Mutable non-owning view over the storage (host space only). */
+  [[nodiscard]] pfc::field::FieldOutput<T> output() noexcept
+    requires is_host_space
+  {
+    return pfc::field::FieldOutput<T>(m_buffer.data(), m_buffer.size());
+  }
+
   const pfc::Domain &domain() const noexcept { return m_domain; }
   /// Owned (interior) index box, in global index coordinates.
   const pfc::Box3i &box() const noexcept { return m_box; }
@@ -334,6 +354,18 @@ public:
   }
 
 private:
+  pfc::Int3 padded_extents_() const noexcept {
+    return {m_box.size[0] + 2 * m_halo, m_box.size[1] + 2 * m_halo,
+            m_box.size[2] + 2 * m_halo};
+  }
+  pfc::Real3 local_origin_() const noexcept {
+    const auto &o = origin();
+    const auto &s = spacing();
+    return {o[0] + static_cast<double>(m_box.low[0] - m_halo) * s[0],
+            o[1] + static_cast<double>(m_box.low[1] - m_halo) * s[1],
+            o[2] + static_cast<double>(m_box.low[2] - m_halo) * s[2]};
+  }
+
   static std::size_t padded_volume_(const pfc::Box3i &box, int halo) {
     if (halo < 0) throw std::invalid_argument("Field: halo width must be >= 0");
     if (!box.is_consistent())
@@ -355,5 +387,11 @@ private:
 };
 
 } // namespace pfc::data
+
+namespace pfc {
+/// Public name of the canonical owning field (`pfc::data::Field` is the definition).
+template <class T, class MemorySpace = pfc::HostSpace>
+using Field = data::Field<T, MemorySpace>;
+} // namespace pfc
 
 #endif // PFC_KERNEL_DATA_GRID_FIELD_HPP

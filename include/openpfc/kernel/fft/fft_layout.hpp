@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include <openpfc/kernel/data/model_types.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/box3i.hpp>
 

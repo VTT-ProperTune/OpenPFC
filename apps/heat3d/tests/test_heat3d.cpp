@@ -140,9 +140,9 @@ TEST_CASE("HeatModel + FDCPUStack: u.apply samples the model IC",
   // subworld coordinates. For nproc=1 the local subworld == global world,
   // so u(ix, iy, iz) samples the IC at global (ix, iy, iz).
   pfc::sim::stacks::FDCPUStack stack(
-      pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-      pfc::GridSpacing({1.0, 1.0, 1.0}), /*fd_order=*/2, /*rank=*/0, /*nproc=*/1,
-      MPI_COMM_WORLD);
+      pfc::domain::create(pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                          pfc::GridSpacing({1.0, 1.0, 1.0})),
+      /*fd_order=*/2, /*rank=*/0, /*nproc=*/1, MPI_COMM_WORLD);
   stack.u().apply(model.initial_condition);
 
   SECTION("origin cell evaluates to exp(0) = 1") {
@@ -173,10 +173,10 @@ TEST_CASE("HeatModel + FDCPUStack + EulerStepper: explicit-Euler FD steps "
   constexpr int N = 16;
   const int order = 2;
 
-  pfc::sim::stacks::FDCPUStack stack(pfc::GridSize({N, N, N}),
-                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                     pfc::GridSpacing({1.0, 1.0, 1.0}), order,
-                                     /*rank=*/0, /*nproc=*/1, MPI_COMM_WORLD);
+  pfc::sim::stacks::FDCPUStack stack(
+      pfc::domain::create(pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                          pfc::GridSpacing({1.0, 1.0, 1.0})),
+      order, /*rank=*/0, /*nproc=*/1, MPI_COMM_WORLD);
 
   HeatModel model;
   stack.u().apply(model.initial_condition);
@@ -210,10 +210,10 @@ namespace {
   constexpr int N = 32;
   constexpr double dt = 5.0e-4;
   constexpr int n_steps = 10;
-  pfc::sim::stacks::FDCPUStack stack(pfc::GridSize({N, N, N}),
-                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                     pfc::GridSpacing({1.0, 1.0, 1.0}), order,
-                                     /*rank=*/0, /*nproc=*/1, MPI_COMM_WORLD);
+  pfc::sim::stacks::FDCPUStack stack(
+      pfc::domain::create(pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                          pfc::GridSpacing({1.0, 1.0, 1.0})),
+      order, /*rank=*/0, /*nproc=*/1, MPI_COMM_WORLD);
   HeatModel model;
   stack.u().apply(model.initial_condition);
   auto grad = pfc::field::create<heat3d::HeatGrads>(stack.u(), order);
@@ -276,10 +276,10 @@ TEST_CASE("FDGradient<G> + EulerStepper compile and run with a pruned grads "
   constexpr int N = 12;
   const int order = 2;
 
-  pfc::sim::stacks::FDCPUStack stack(pfc::GridSize({N, N, N}),
-                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                     pfc::GridSpacing({1.0, 1.0, 1.0}), order,
-                                     /*rank=*/0, /*nproc=*/1, MPI_COMM_WORLD);
+  pfc::sim::stacks::FDCPUStack stack(
+      pfc::domain::create(pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                          pfc::GridSpacing({1.0, 1.0, 1.0})),
+      order, /*rank=*/0, /*nproc=*/1, MPI_COMM_WORLD);
 
   PartialHeatModel model;
   model.D = 1.0;
@@ -455,9 +455,10 @@ TEST_CASE("Manual FD driver: produces same interior L2 as compact FDCPUStack pat
 
   HeatModel model;
 
-  sim::stacks::FDCPUStack stack(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                                GridSpacing({1.0, 1.0, 1.0}), order, 0, 1,
-                                MPI_COMM_WORLD);
+  sim::stacks::FDCPUStack stack(
+      pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                          GridSpacing({1.0, 1.0, 1.0})),
+      order, 0, 1, MPI_COMM_WORLD);
   stack.u().apply(model.initial_condition);
   auto grad = field::create<heat3d::HeatGrads>(stack.u(), order);
   auto stepper = sim::steppers::create(stack.u(), grad, model, dt);
@@ -744,9 +745,10 @@ TEST_CASE("Scratch FD driver: produces same interior L2 as compact FDCPUStack "
 
   HeatModel model;
 
-  sim::stacks::FDCPUStack stack(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                                GridSpacing({1.0, 1.0, 1.0}), order, 0, 1,
-                                MPI_COMM_WORLD);
+  sim::stacks::FDCPUStack stack(
+      pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                          GridSpacing({1.0, 1.0, 1.0})),
+      order, 0, 1, MPI_COMM_WORLD);
   stack.u().apply(model.initial_condition);
   auto grad = field::create<heat3d::HeatGrads>(stack.u(), order);
   auto stepper = sim::steppers::create(stack.u(), grad, model, dt);
@@ -1016,14 +1018,12 @@ TEST_CASE("heat3d CheckpointService N+M restart matches continuous Euler",
   HeatModel model;
 
   pfc::sim::stacks::FDCPUStack continuous(
-      pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-      pfc::GridSpacing({1.0, 1.0, 1.0}), 2, 0, 1, MPI_COMM_WORLD);
+      pfc::domain::create(pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}), pfc::GridSpacing({1.0, 1.0, 1.0})), 2, 0, 1, MPI_COMM_WORLD);
   continuous.u().apply(model.initial_condition);
   heat_euler_steps(continuous, model, n_head + n_tail, dt);
 
   pfc::sim::stacks::FDCPUStack head(
-      pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-      pfc::GridSpacing({1.0, 1.0, 1.0}), 2, 0, 1, MPI_COMM_WORLD);
+      pfc::domain::create(pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}), pfc::GridSpacing({1.0, 1.0, 1.0})), 2, 0, 1, MPI_COMM_WORLD);
   head.u().apply(model.initial_condition);
   heat_euler_steps(head, model, n_head, dt);
 
@@ -1044,8 +1044,7 @@ TEST_CASE("heat3d CheckpointService N+M restart matches continuous Euler",
   svc.save(snap, time);
 
   pfc::sim::stacks::FDCPUStack tail(
-      pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-      pfc::GridSpacing({1.0, 1.0, 1.0}), 2, 0, 1, MPI_COMM_WORLD);
+      pfc::domain::create(pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}), pfc::GridSpacing({1.0, 1.0, 1.0})), 2, 0, 1, MPI_COMM_WORLD);
   pfc::SimulationState restored;
   restored.add_field("u", tail.u());
   pfc::Time time2({0.0, 1.0, dt}, 0.0);

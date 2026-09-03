@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 OpenPFC’s **tungsten** application solves a **phase field crystal (PFC)** formulation suited to **body-centered cubic (BCC)**-like order and elasticity on diffusive time scales. It is the main **production-style** demo for JSON-driven runs, validated parameters, and large-scale HPC ([`applications.md`](../user_guide/applications.md), [`apps/tungsten/README.md`](../../apps/tungsten/README.md)).
 
-Production binaries `tungsten` / `tungsten_cuda` / `tungsten_hip` drive `TungstenPhysics` + mean-field ETD on `SimulationState` (`TungstenETDSession` / `TungstenETDGPUSession`). `tungsten_etd` / `_cuda` / `_hip` are aliases. Gen-1 `App<Tungsten>` sources remain for A/B tests until deletion.
+Production binaries `tungsten` / `tungsten_cuda` / `tungsten_hip` drive `TungstenPhysics` on the shared `pfc::sim::SpectralETDSystem` through `pfc::ui::SpectralETDSession` (`TungstenSession` / `TungstenCUDASession` / `TungstenHIPSession`). `tungsten_etd` / `_cuda` / `_hip` are aliases. The Gen-1 `App<Tungsten>` sources are deleted.
 
 ## What a minimal run demonstrates
 

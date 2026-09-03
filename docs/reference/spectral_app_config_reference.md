@@ -82,7 +82,7 @@ Same logical keys; TOML uses tables such as `[domain]`, `[timestepping]`, `[plan
 
 ## See also
 
-- [`app_pipeline.md`](../user_guide/app_pipeline.md) — `App::main` order  
+- [`app_pipeline.md`](../user_guide/app_pipeline.md) — session construction order  
 - [`binary_field_io_spec.md`](binary_field_io_spec.md) — binary file layout  
 - [`io_results.md`](../user_guide/io_results.md) — writers overview  
 - [`learning_paths.md`](../learning_paths.md) — guided tracks  

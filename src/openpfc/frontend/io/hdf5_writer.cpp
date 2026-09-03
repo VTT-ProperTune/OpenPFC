@@ -146,7 +146,7 @@ void HDF5Writer::set_domain(const std::array<int, 3> &arr_global,
   m_domain_valid = true;
 }
 
-MPI_Status HDF5Writer::write(int increment, const RealField &data) {
+MPI_Status HDF5Writer::write(int increment, pfc::field::FieldView<double> data) {
   int local_ok = 1;
   std::string error_msg;
   std::size_t expected = 0;
@@ -274,7 +274,7 @@ MPI_Status HDF5Writer::write(int increment, const RealField &data) {
   return MPI_Status{};
 }
 
-MPI_Status HDF5Writer::write(int, const ComplexField &) {
+MPI_Status HDF5Writer::write(int, pfc::field::FieldView<std::complex<double>>) {
   throw std::invalid_argument("HDF5Writer does not support complex fields");
 }
 

@@ -67,7 +67,7 @@ TEST_CASE("RandomSeeds - Field Application", "[ic_random_seeds]") {
 
   SECTION("Deterministic with fixed seed") {
     seeds.apply(psi, domain, box);
-    Field field1 = psi;
+    std::vector<double> field1 = psi;
     std::vector<double> psi2(field_size, 0.0);
     seeds.apply(psi2, domain, box);
     REQUIRE(field1 == psi2);

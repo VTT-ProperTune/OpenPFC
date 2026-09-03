@@ -16,6 +16,9 @@
  *      compile (the LUMI contract; Open MPI's query is absent here).
  *   4. Optional `OPENPFC_PROBE_GPU_AWARE_MPI=1` — device-pointer Sendrecv
  *      smoke test (can crash if MPI is not actually device-aware).
+ *   5. Otherwise **off** with `GPUAwareMPIHow::Undetermined` (compiled aware,
+ *      nothing decided). A build without `OpenPFC_MPI_*_AWARE` reports
+ *      `CompileTimeOff` before any rule runs.
  *
  * CUDA execution of the probe is not available on LUMI; HIP is.
  */
@@ -56,7 +59,8 @@ enum class GPUAwareMPIHow {
   CrayMpichEnv,
   ProbeOn,
   ProbeOff,
-  CompileTimeOff,
+  CompileTimeOff, ///< Not compiled GPU-aware (no OpenPFC_MPI_*_AWARE).
+  Undetermined,   ///< Compiled GPU-aware, but no rule above decided; off.
 };
 
 struct GPUAwareMPIDecision {
@@ -79,6 +83,9 @@ inline const char *gpu_aware_how_cstr(GPUAwareMPIHow how) {
   case GPUAwareMPIHow::ProbeOn: return "OPENPFC_PROBE_GPU_AWARE_MPI ok";
   case GPUAwareMPIHow::ProbeOff: return "OPENPFC_PROBE_GPU_AWARE_MPI failed";
   case GPUAwareMPIHow::CompileTimeOff: return "not compiled GPU-aware";
+  case GPUAwareMPIHow::Undetermined:
+    return "compiled GPU-aware, runtime detection inconclusive (set "
+           "OPENPFC_ASSUME_GPU_AWARE_MPI=1 or OPENPFC_PROBE_GPU_AWARE_MPI=1)";
   }
   return "unknown";
 }
@@ -177,7 +184,7 @@ inline GPUAwareMPIDecision decide_gpu_aware_mpi() {
     d.how = d.enabled ? GPUAwareMPIHow::ProbeOn : GPUAwareMPIHow::ProbeOff;
     return d;
   }
-  d.how = GPUAwareMPIHow::CompileTimeOff;
+  d.how = GPUAwareMPIHow::Undetermined;
   return d;
 }
 

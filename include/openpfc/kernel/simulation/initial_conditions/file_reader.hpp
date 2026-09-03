@@ -60,12 +60,12 @@ public:
 
   void set_mpi_comm(MPI_Comm comm) noexcept override { m_io_comm = comm; }
 
-  void apply(RealField &field, const Domain &domain, const Box3i &box,
+  void apply(pfc::field::FieldOutput<double> field, const Domain &domain, const Box3i &box,
              double time = 0.0) override {
     apply(SimulationContext{m_io_comm}, field, domain, box, time);
   }
 
-  void apply(const SimulationContext &ctx, RealField &field, const Domain &domain,
+  void apply(const SimulationContext &ctx, pfc::field::FieldOutput<double> field, const Domain &domain,
              const Box3i &inbox, double time = 0.0) override {
     (void)time;
     if (ctx.is_rank0()) {

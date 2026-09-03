@@ -23,10 +23,11 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/integrator/spectral_exp_coefficients.hpp>
-#include <openpfc/kernel/simulation/spectral_mean_field_etd.hpp>
+#include <openpfc/kernel/simulation/apply_field_modifier.hpp>
+#include <openpfc/kernel/simulation/initial_conditions/seed_grid.hpp>
+#include <openpfc/kernel/simulation/spectral_etd_system.hpp>
 #include <tungsten/common/tungsten_spectral.hpp>
-#include <tungsten/tungsten_etd_session.hpp>
-#include <tungsten/tungsten_field_modifiers.hpp>
+#include <tungsten/tungsten_session.hpp>
 #include <tungsten/tungsten_physics.hpp>
 
 using Catch::Approx;
@@ -173,7 +174,7 @@ TEST_CASE("TungstenPhysics linear_symbol matches physics_for_mode",
   REQUIRE(phys.filter_mf(k_lap) == Approx(mode.filterMF));
 }
 
-TEST_CASE("TungstenETDSession writes psi binary dumps on saveat",
+TEST_CASE("TungstenSession writes psi binary dumps on saveat",
           "[tungsten][physics][io]") {
   const auto dir = std::filesystem::temp_directory_path() /
                    ("openpfc_tungsten_etd_" + std::to_string(::getpid()));
@@ -206,7 +207,7 @@ TEST_CASE("TungstenETDSession writes psi binary dumps on saveat",
        {{{"target", "psi"}, {"type", "constant"}, {"n0", -0.10}}}},
       {"fields", {{{"name", "psi"}, {"data", pattern}}}}};
 
-  tungsten::TungstenETDSession session(settings, 0, 1, MPI_COMM_WORLD);
+  tungsten::TungstenSession session(settings, 0, 1, MPI_COMM_WORLD);
   session.run();
   REQUIRE(session.dumps() == 3);
   REQUIRE(std::filesystem::exists(dir / "psi_0.bin"));
@@ -217,7 +218,7 @@ TEST_CASE("TungstenETDSession writes psi binary dumps on saveat",
   std::filesystem::remove_all(dir);
 }
 
-TEST_CASE("TungstenETDSession checkpoint restart matches continuous run",
+TEST_CASE("TungstenSession checkpoint restart matches continuous run",
           "[tungsten][checkpoint][restart]") {
   int nproc = 1;
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
@@ -232,7 +233,7 @@ TEST_CASE("TungstenETDSession checkpoint restart matches continuous run",
   json full = golden_settings(N, 0.04, dt);
   full["timestepping"]["integrator"] = json{{"method", "etd1"}};
 
-  tungsten::TungstenETDSession continuous(full, 0, 1, MPI_COMM_WORLD);
+  tungsten::TungstenSession continuous(full, 0, 1, MPI_COMM_WORLD);
   continuous.run();
 
   const auto ckpt_root =
@@ -242,13 +243,13 @@ TEST_CASE("TungstenETDSession checkpoint restart matches continuous run",
   std::filesystem::create_directories(ckpt_root);
 
   first["checkpoint"] = json{{"every", 2}, {"directory", ckpt_root.string()}};
-  tungsten::TungstenETDSession head(first, 0, 1, MPI_COMM_WORLD);
+  tungsten::TungstenSession head(first, 0, 1, MPI_COMM_WORLD);
   head.run();
   REQUIRE(head.time().get_increment() == 2);
   REQUIRE(std::filesystem::exists(ckpt_root / "step_2" / "metadata.json"));
 
   full["restart_from"] = (ckpt_root / "step_2").string();
-  tungsten::TungstenETDSession tail(full, 0, 1, MPI_COMM_WORLD);
+  tungsten::TungstenSession tail(full, 0, 1, MPI_COMM_WORLD);
   REQUIRE(tail.time().get_increment() == 2);
   tail.run();
 
@@ -256,16 +257,16 @@ TEST_CASE("TungstenETDSession checkpoint restart matches continuous run",
   std::filesystem::remove_all(ckpt_root, ec);
 }
 
-TEST_CASE("TungstenETDSession 1-rank 100-step run", "[tungsten][golden]") {
+TEST_CASE("TungstenSession 1-rank 100-step run", "[tungsten][golden]") {
   const json settings = golden_settings(8, 1.0, 0.01);
-  tungsten::TungstenETDSession session(settings, 0, 1, MPI_COMM_WORLD);
+  tungsten::TungstenSession session(settings, 0, 1, MPI_COMM_WORLD);
   session.run();
   const double s = sumsq(session.psi().vec());
   REQUIRE(std::isfinite(s));
   REQUIRE(s > 0.0);
 }
 
-TEST_CASE("TungstenETDSession 4-rank 16^3/20-step run", "[tungsten][golden][MPI]") {
+TEST_CASE("TungstenSession 4-rank 16^3/20-step run", "[tungsten][golden][MPI]") {
   int nproc = 1;
   int rank = 0;
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
@@ -274,7 +275,7 @@ TEST_CASE("TungstenETDSession 4-rank 16^3/20-step run", "[tungsten][golden][MPI]
     SKIP("requires exactly 4 MPI ranks");
   }
   const json settings = golden_settings(16, 0.20, 0.01);
-  tungsten::TungstenETDSession session(settings, rank, nproc, MPI_COMM_WORLD);
+  tungsten::TungstenSession session(settings, rank, nproc, MPI_COMM_WORLD);
   session.run();
   double s = sumsq(session.psi().vec());
   double g = 0.0;
@@ -283,7 +284,7 @@ TEST_CASE("TungstenETDSession 4-rank 16^3/20-step run", "[tungsten][golden][MPI]
   REQUIRE(g > 0.0);
 }
 
-TEST_CASE("TungstenETDSession 32^3/10-step sine IC CPU checksum",
+TEST_CASE("TungstenSession 32^3/10-step sine IC CPU checksum",
           "[tungsten][etd_cpu_golden][parity]") {
   int nproc = 1;
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
@@ -296,7 +297,7 @@ TEST_CASE("TungstenETDSession 32^3/10-step sine IC CPU checksum",
   settings["initial_conditions"] =
       json::array({{{"target", "psi"}, {"type", "constant"}, {"n0", -0.4}}});
 
-  tungsten::TungstenETDSession session(settings, 0, 1, MPI_COMM_WORLD);
+  tungsten::TungstenSession session(settings, 0, 1, MPI_COMM_WORLD);
   auto &psi = session.psi().vec();
   for (std::size_t i = 0; i < psi.size(); ++i) {
     psi[i] = -0.4 + 0.1 * std::sin(2.0 * std::numbers::pi * static_cast<double>(i) /
@@ -327,20 +328,24 @@ TEST_CASE("Tungsten seed_grid IC writes crystalline seeds",
                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                     pfc::GridSpacing({1.0, 1.0, 1.0}));
   const auto box = pfc::Box3i::from_bounds({0, 0, 0}, {15, 15, 15});
-  std::vector<double> data(16 * 16 * 16, 0.0);
-  tungsten::fill_seed_grid(domain, box, data.data(), 2, 2, 4.0, 3.0, 0.2, -0.047);
+  pfc::data::Field<double> psi(domain, box, 0);
+  pfc::SeedGrid ic(2, 2, 4.0, 3.0);
+  ic.set_amplitude(0.2);
+  ic.set_density(-0.047);
+  pfc::apply_field_modifier(ic, psi, 0.0);
   double span = 0.0;
-  for (double x : data) {
+  for (double x : psi.vec()) {
     span = std::max(span, std::abs(x));
   }
   REQUIRE(span > 1e-6);
 }
 
-TEST_CASE("TungstenETDSession runs with moving BC JSON",
+TEST_CASE("TungstenSession runs with moving BC JSON",
           "[tungsten][etd][moving_bc]") {
   int nproc = 1;
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
   REQUIRE(nproc == 1);
+  tungsten::register_catalog();
   json settings = golden_settings(8, 0.02, 0.01);
   settings["boundary_conditions"] = json::array({{{"target", "psi"},
                                                   {"type", "moving"},
@@ -350,12 +355,12 @@ TEST_CASE("TungstenETDSession runs with moving BC JSON",
                                                   {"alpha", 1.0},
                                                   {"disp", 1.0},
                                                   {"xpos", 4.0}}});
-  tungsten::TungstenETDSession session(settings, 0, 1, MPI_COMM_WORLD);
+  tungsten::TungstenSession session(settings, 0, 1, MPI_COMM_WORLD);
   session.run();
   REQUIRE(session.psi().vec().size() == 512);
 }
 
-TEST_CASE("TungstenETDSession writes profiling JSON", "[tungsten][etd][profiling]") {
+TEST_CASE("TungstenSession writes profiling JSON", "[tungsten][etd][profiling]") {
   int nproc = 1;
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
   REQUIRE(nproc == 1);
@@ -369,14 +374,14 @@ TEST_CASE("TungstenETDSession writes profiling JSON", "[tungsten][etd][profiling
                            {"format", "json"},
                            {"output", stem},
                            {"print_report", false}};
-  tungsten::TungstenETDSession session(settings, 0, 1, MPI_COMM_WORLD);
+  tungsten::TungstenSession session(settings, 0, 1, MPI_COMM_WORLD);
   session.run();
   REQUIRE(std::filesystem::exists(stem + ".json"));
   std::error_code ec;
   std::filesystem::remove_all(dir, ec);
 }
 
-TEST_CASE("TungstenETDWriters infers vtk from .vti path", "[tungsten][etd][vtk]") {
+TEST_CASE("SpectralETDSession infers vtk from .vti path", "[tungsten][etd][vtk]") {
   int nproc = 1;
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
   REQUIRE(nproc == 1);
@@ -387,7 +392,7 @@ TEST_CASE("TungstenETDWriters infers vtk from .vti path", "[tungsten][etd][vtk]"
   std::filesystem::create_directories(dir);
   settings["fields"] =
       json::array({{{"name", "psi"}, {"data", (dir / "psi_%04d.vti").string()}}});
-  tungsten::TungstenETDSession session(settings, 0, 1, MPI_COMM_WORLD);
+  tungsten::TungstenSession session(settings, 0, 1, MPI_COMM_WORLD);
   session.run();
   REQUIRE(session.dumps() >= 1);
   bool found = false;

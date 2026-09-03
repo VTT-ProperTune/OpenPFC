@@ -5,426 +5,336 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Time Integration Architecture Contract
 
-This document defines the formal contract between time integrators and the OpenPFC simulator framework. It specifies the responsibilities of integrator implementations, state access patterns, boundary preparation ordering, and output scheduling guarantees. All integrator implementations must adhere to this contract to ensure correct behavior across CPU and accelerator backends.
+This document defines the formal contract between time integrators (steppers) and
+the OpenPFC simulation driver. It specifies the responsibilities of stepper
+implementations, state access patterns, boundary preparation ordering, and output
+scheduling guarantees. All stepper implementations must adhere to this contract to
+ensure correct behavior across CPU and accelerator backends.
 
 ## 1. Contract scope and responsibilities
 
-### Integrator role
+### Stepper role
 
-A time integrator is responsible for managing the advancement of simulation time through one or more computational stages. The integrator coordinates physics evaluation with boundary condition application and respects output scheduling. It acts as the orchestration layer between the temporal evolution logic and the spatial discretization implemented by the model.
+A time stepper advances the simulation state through one or more computational
+stages. It coordinates physics evaluation with boundary preparation and respects
+output scheduling. It is the orchestration layer between the temporal evolution
+logic and the spatial discretization implemented by the gradient evaluator or the
+spectral system.
 
-The formal contract boundary is defined by two hooks in the `Simulator` class:
+### Driver hooks
 
-- `Simulator::begin_integrator_step()` — prologue called before physics evaluation
-- `Simulator::end_integrator_step()` — epilogue called after physics evaluation
-
-These hooks are implemented in [`simulator_integrator::begin_integrator_step()`](../../include/openpfc/kernel/simulation/simulator_integrator.hpp) and [`simulator_integrator::end_integrator_step()`](../../include/openpfc/kernel/simulation/simulator_integrator.hpp).
-
-### When to use `step_with_physics()` vs direct hooks
-
-For simple single-stage integrators, use `Simulator::step_with_physics()` which internally calls the begin/end hooks:
-
-```cpp
-simulator.step_with_physics([&]() {
-    model.step(time.get_current());
-});
-```
-
-For multi-stage integrators or custom orchestration, call the hooks explicitly to maintain control over intermediate computations:
+The formal contract boundary is the hook sequence of the free-function loop
+[`pfc::sim::run`](../../include/openpfc/kernel/simulation/simulation_driver.hpp)
+(also reachable through the thin `pfc::sim::SimulationDriver` bundle):
 
 ```cpp
-simulator.begin_integrator_step();
-// Perform multi-stage computations here
-simulator.end_integrator_step();
+pfc::sim::run(time, step, on_start, apply, on_save);
 ```
 
-The `step_with_physics()` method is equivalent to `begin_integrator_step(); physics_fn(); end_integrator_step()` and should be preferred when the physics body is a single function call.
+- `on_start(Time&)` — called once, when `pfc::time::increment(time) == 0`,
+  before the first step (initial conditions, first boundary application).
+- `apply(Time&)` — called after `pfc::time::next(time)` and before `step`
+  (boundary conditions at the new time).
+- `step(double t)` — the physics advance; receives the accepted time after
+  `next()`.
+- `on_save(const Time&)` — called whenever `pfc::time::do_save(time)` is true:
+  after `on_start` on the first iteration and after every `step`.
 
-## 2. Simulator hook semantics
+There is no `Simulator` class and no virtual `Model::step`; sessions compose the
+hooks from a `SimulationState`, a stepper (or a spectral ETD system), condition
+lists, writers, and a `CheckpointService`.
+
+## 2. Driver hook semantics
 
 ### Full ordering contract
 
-The `simulator_integrator::begin_integrator_step()` function implements the following ordering contract:
+`pfc::sim::run` implements the following ordering, per iteration:
 
-1. **Initial condition path** (when `pfc::time::increment(time) == 0`):
-   - Apply initial conditions via `Simulator::apply_initial_conditions()`
-   - Apply boundary conditions via `Simulator::apply_boundary_conditions()`
-   - Optionally write results if `pfc::time::do_save(time)` returns true
-   - Advance time via `pfc::time::next(time)`
-   - Apply boundary conditions again at the new time
+1. **Initial path** (when `pfc::time::increment(time) == 0`):
+   - `on_start(time)` — apply initial conditions and boundary conditions
+   - `on_save(time)` if `pfc::time::do_save(time)`
+2. **Every iteration**:
+   - `pfc::time::next(time)` — advance increment and current time
+   - `apply(time)` — boundary conditions at the new time
+   - `step(pfc::time::current(time))` — physics advance
+   - `on_save(time)` if `pfc::time::do_save(time)`
 
-2. **Steady-state path** (when `pfc::time::increment(time) > 0`):
-   - Advance time via `pfc::time::next(time)`
-   - Apply boundary conditions at the new time
-
-The `simulator_integrator::end_integrator_step()` function:
-
-- Optionally writes results if `pfc::time::do_save(time)` returns true
+The loop terminates when `pfc::time::done(time)` is true.
 
 ### State access patterns
 
-Integrators may read and write model fields through the `Model` API:
+Steppers operate on fields owned by `pfc::SimulationState`
+(`include/openpfc/kernel/simulation/simulation_state.hpp`):
 
-- `Model::get_real_field(std::string_view name)` — access real-valued fields
-- `Model::get_complex_field(std::string_view name)` — access complex-valued fields
+- `state.get_field<double>(name)` — host real field (`pfc::data::Field`)
+- `state.get_field<std::complex<double>>(name)` — host complex field
+- `state.get_field<T, MemorySpace>(name)` — device-resident field
 
-These methods return references to field storage that can be modified directly by the integrator. All field access must respect the halo exchange requirements specified in [Section 4](#4-boundary-and-halo-preparation).
+The raw stepper leaves in
+[`steppers/`](../../include/openpfc/kernel/simulation/steppers/) take the field's
+contiguous storage (`field.vec()` on host) or `HostFieldState` wrappers. All field
+access must respect the halo exchange requirements in
+[Section 4](#4-boundary-and-halo-preparation).
 
-The `Time` object provides temporal state queries:
+The `Time` object provides temporal state through free functions in
+`pfc::time`:
 
-- `Time::get_current()` — current physical time
-- `Time::get_increment()` — current step counter (0-based)
-- `Time::do_save()` — whether output should be written at this time
-- `Time::next()` — advance to next time step
+- `pfc::time::current(time)` — current physical time
+- `pfc::time::increment(time)` — current step counter (0-based)
+- `pfc::time::do_save(time)` — whether output should be written at this time
+- `pfc::time::next(time)` — advance to the next time step
+- `pfc::time::done(time)` — whether `t1` has been reached
 
 ## 3. Physics evaluation patterns
 
-### Single-stage integrators
+### Single-stage steppers
 
-Single-stage integrators (e.g., explicit Euler) call `Model::step(double t)` exactly once per `begin_integrator_step()`/`end_integrator_step()` pair:
+Single-stage steppers (e.g. explicit Euler) perform exactly one advance per
+`step` hook:
 
 ```cpp
-simulator.begin_integrator_step();
-model.step(time.get_current());
-simulator.end_integrator_step();
+pfc::sim::run(time, [&](double t) {
+  stack.exchange_halos();
+  (void)stepper.step(t, stack.u().vec());
+});
 ```
 
-The existing [`pfc::sim::steppers::EulerStepper`](../../include/openpfc/kernel/simulation/steppers/euler.hpp) provides a reference implementation for single-stage integration with the signature:
+[`pfc::sim::steppers::EulerStepper`](../../include/openpfc/kernel/simulation/steppers/euler.hpp)
+is the reference single-stage implementation with the signature:
 
 ```cpp
 double step(double t, std::vector<double>& u);
 ```
 
-### Multi-stage integrators
+### Multi-stage steppers
 
-**Critical contract requirement:** `begin_integrator_step()` and `end_integrator_step()` hooks bracket the **full timestep**, not each substage. All intermediate substage computations occur between these two calls with no additional hook invocations.
+**Critical contract requirement:** the `apply` / `on_save` hooks bracket the
+**full timestep**, not each substage. All intermediate substage computations occur
+inside the `step` hook with no additional hook invocations.
 
-For example, a 4th-order Runge-Kutta integrator performs all four slope evaluations between `begin_integrator_step()` and `end_integrator_step()`:
+For example, an explicit RK4 stepper performs all four slope evaluations inside one
+`step` call:
 
 ```cpp
-simulator.begin_integrator_step();
+auto tableau = pfc::sim::steppers::make_rk4_classical<double>();
+auto rk4 = pfc::sim::steppers::create(stack.u(), grad, model, dt, tableau);
 
-// All RK4 substages occur here, with no hook calls
-double t = time.get_current();
-auto& u = model.get_real_field("density");
-
-auto k1 = compute_rhs(t, u);
-auto k2 = compute_rhs(t + 0.5*dt, u + 0.5*dt*k1);
-auto k3 = compute_rhs(t + 0.5*dt, u + 0.5*dt*k2);
-auto k4 = compute_rhs(t + dt, u + dt*k3);
-
-u += (dt/6.0) * (k1 + 2*k2 + 2*k3 + k4);
-
-simulator.end_integrator_step();
+pfc::sim::run(time, [&](double t) {
+  stack.exchange_halos();
+  (void)rk4.step(t, stack.u().vec());   // k1..k4 inside; no hook calls
+});
 ```
 
-This design ensures that boundary conditions and output scheduling are applied only at the physical time level, not at intermediate substage times that may not correspond to meaningful physical states.
+This design ensures that boundary conditions and output scheduling are applied
+only at the physical time level, not at intermediate substage times that may not
+correspond to meaningful physical states.
+
+### Attempt / commit protocol
+
+All stepper leaves implement the attempt/commit protocol
+(`StepAttemptResult` in
+[`steppers/step_attempt.hpp`](../../include/openpfc/kernel/simulation/steppers/step_attempt.hpp),
+see [ADR 0003](../adr/0003-time-integrator-interface.md)): `attempt(t, u)`
+computes an isolated candidate without mutating `u`; `commit_step_attempt`
+publishes it. In-place `step()` is attempt followed by commit. Adaptive control
+(`AdaptiveTimeController`) rejects an attempt by simply not committing it and
+shrinking `dt` through `Time`'s attempt transaction.
 
 ### Physics evaluation API
 
-The physics evaluation is performed through the `Model::step(double t)` method:
-
-```cpp
-virtual void step(double t) = 0;
-```
-
-This pure virtual method must be implemented by concrete model classes. It receives the current physical time and is responsible for evolving the model state by one time step. The implementation typically involves:
-
-1. Computing spatial derivatives (spectral or finite difference)
-2. Applying nonlinear terms
-3. Updating field values using the chosen time integration scheme
+Point-wise physics is a callable `rhs(double t, const Grads&)` consumed by
+`pfc::sim::for_each_interior` through a gradient evaluator. Stiff spectral physics
+is described by k-space symbols (`linear_symbol(k)`, optional
+`nonlinear_symbol(k)` / `filter_mf(k)` / `correlation_kernel(k)`) plus a
+device-capable pointwise functor (`pointwise()` returning an `OPENPFC_HD`
+`nonlinearity(const SpectralCell&)`), consumed by the one framework-owned
+`pfc::sim::SpectralETDSystem<Physics, MemorySpace>` on `SimulationState`. The
+system itself follows the attempt/commit shape (`attempt(t)` forms the
+candidate in system-owned scratch, `commit()` publishes it, `reject()` is free,
+`set_dt` rebuilds the coefficients). Neither physics kind owns the time loop.
+See [Extending OpenPFC](../extending_openpfc/README.md#add-a-spectral-etd-physics).
 
 ## 4. Boundary and halo preparation
 
 ### Halo exchange architecture
 
-The halo exchange architecture is specified in [`docs/concepts/halo_exchange.md`](halo_exchange.md). Integrators must respect the halo exchange requirements when using real-space stencils on distributed domains.
+The halo exchange architecture is specified in
+[`docs/concepts/halo_exchange.md`](halo_exchange.md). Steppers must respect the
+halo exchange requirements when using real-space stencils on distributed domains.
 
-### Finite difference integrators
+### Finite difference steppers
 
-Finite difference integrators **must** exchange halos before physics evaluation when using real-space stencils. The halo exchange synchronizes ghost cells between neighboring ranks to ensure stencil operations have access to valid neighbor data:
+Finite difference steppers **must** exchange halos before physics evaluation when
+using real-space stencils. `FDCPUStack::exchange_halos()` (or
+`comm::HaloExchange::exchange()` on a padded `Field`) synchronizes ghost cells
+between neighboring ranks so that stencils see valid neighbor data:
 
 ```cpp
-// Example: FD integrator with halo exchange
-auto& u = model.get_real_field("density");
-auto& lap = model.get_real_field("laplacian");
-
-// Exchange halos before physics evaluation
-exchanger.exchange_halos(u.data(), u.size());
-halo::copy_to_face_layout(exchanger, face_halos);
-
-// Compute physics with valid ghost data
-field::fd::laplacian_periodic_separated<2>(
-    u.data(), face_ptrs, lap.data(),
-    nx, ny, nz, inv_dx2, inv_dx2, inv_dx2, halo_width
-);
+pfc::sim::run(time, [&](double t) {
+  stack.exchange_halos();                 // ghost cells valid
+  (void)stepper.step(t, stack.u().vec()); // stencils read them
+});
 ```
 
-### Spectral integrators
+### Spectral steppers
 
-Spectral integrators typically skip halo exchange because the FFT-based operations operate on global k-space representations where neighbor communication is handled implicitly by the FFT decomposition.
+Spectral steppers skip halo exchange because FFT-based operations act on the global
+k-space representation; neighbor communication is handled by the FFT
+decomposition.
 
 ### Boundary condition application
 
 Boundary conditions are applied in two places:
 
-1. **In `begin_integrator_step()`** — at `increment==0` (after ICs) and after `time.next()`
-2. **Post-physics** — required for multi-stage schemes where intermediate states violate boundary constraints
+1. **In the driver hooks** — `on_start` (after ICs) and `apply` (after
+   `time.next()`), typically by `FieldModifier` objects or a
+   `StagePreparationService`.
+2. **Post-physics** — required only for multi-stage schemes where intermediate
+   states violate boundary constraints; the stepper applies them inside `step`.
 
-**Single-stage integrators** generally do not require post-physics BC reapplication because the physics update preserves boundary-enforced values.
+**Single-stage steppers** generally do not require post-physics BC reapplication.
 
-**Multi-stage integrators** may require post-physics BC application depending on the scheme:
-
-- **Predictor-corrector methods** that compute temporary states outside valid bounds must reapply BCs after each substage that produces a physically invalid intermediate state
-- **Runge-Kutta methods** typically do not require intermediate BC application unless the problem has strong boundary constraints that must be enforced at all times
-- **Split-step methods** may require BC application after each substep if the substep modifies boundary values
-
-Example of post-physics BC application in a predictor-corrector scheme:
-
-```cpp
-simulator.begin_integrator_step();
-
-// Predictor step (may violate BCs)
-auto& u = model.get_real_field("density");
-auto u_pred = u + dt * compute_rhs(t, u);
-
-// Reapply BCs if predictor violates constraints
-simulator.apply_boundary_conditions();
-
-// Corrector step
-auto rhs_corrector = compute_rhs(t + dt, u_pred);
-u += 0.5 * dt * (compute_rhs(t, u) + rhs_corrector);
-
-simulator.end_integrator_step();
-```
+**Multi-stage steppers** may require post-physics BC application depending on the
+scheme (predictor-corrector, split-step). Runge-Kutta methods typically do not.
 
 ## 5. Output scheduling guarantees
 
 ### Save point detection
 
-Output scheduling is controlled by the `Time` object through `Time::do_save()`. This method returns true when the current time corresponds to a scheduled save point based on the `saveat` interval:
-
-```cpp
-if (time.do_save()) {
-    simulator.write_results();
-}
-```
-
-The `Time::saveat()` interval uses floating-point modulo with a tolerance of 1e-6 to determine save points. A `saveat` value of 0.0 disables automatic saving.
+Output scheduling is controlled by `Time` through `pfc::time::do_save(time)`,
+which is true when the current time is a scheduled save point on the `saveat`
+grid (floating-point modulo with a `1e-6` tolerance). A `saveat` of `0.0`
+disables automatic saving. `Time` is the **only** save-point scheduler.
 
 ### Result writing mechanism
 
-Result writing is performed through `Simulator::write_results()`, which internally calls `write_scheduled_simulator_results()`. This function:
+Sessions write results in the `on_save` hook by dispatching the registered
+`ResultsWriter`s with the current field state and incrementing their result
+counter (used for incrementing filenames such as `field_0000.bin`).
 
-1. Dispatches all registered `ResultsWriters` with the current field state
-2. Increments the internal result counter via `simulator.set_result_counter(file_num + 1)`
+### Custom stepper responsibilities
 
-The result counter is used by writers to generate incrementing filenames (e.g., `field_0000.bin`, `field_0001.bin`).
-
-### Custom integrator responsibilities
-
-Custom integrators must respect `Time::saveat()` semantics or call `Simulator::write_results()` explicitly at save points. The recommended approach is to rely on the hook semantics:
-
-```cpp
-simulator.begin_integrator_step();  // Handles initial save if needed
-// Perform physics
-simulator.end_integrator_step();    // Handles final save if needed
-```
-
-For integrators that need custom output timing, explicitly check `time.do_save()` and call `write_results()`:
-
-```cpp
-if (time.do_save()) {
-    simulator.write_results();
-}
-```
+Steppers must not write results themselves; they rely on the driver's `on_save`
+hook. Steppers that need custom output timing check `pfc::time::do_save(time)` in
+their own hook implementation.
 
 ## 6. Restart and checkpoint semantics
 
 ### Checkpoint writing
 
-Scheduled field dumps still go through `ResultsWriters` / frontend
-`BinaryWriter` as **headerless** MPI-IO bricks (periodic output and
-post-processing). That raw layout is specified in
+Scheduled field dumps go through `ResultsWriter`s as **headerless** MPI-IO bricks
+(periodic output and post-processing); the raw layout is specified in
 [`docs/reference/binary_field_io_spec.md`](../reference/binary_field_io_spec.md).
 
-For a **durable accepted-state restart bundle**, use
-`pfc::checkpoint::publish_checkpoint_directory` (kernel headers under
-`include/openpfc/kernel/checkpoint/`). It stages versioned `metadata.json`
-plus accepted field bricks, then atomically renames the staging directory to
-the final path so incomplete writes are never loadable. See
+For a **durable accepted-state restart bundle**, sessions own a
+`pfc::sim::CheckpointService`
+(`include/openpfc/kernel/simulation/checkpoint_service.hpp`), configured by the
+JSON keys `checkpoint.every` / `checkpoint.directory` / `restart_from`. It
+publishes versioned `metadata.json` plus accepted field bricks through a staging
+directory and an atomic rename, so incomplete writes are never loadable, and
+restores fields, `Time`, the result counter, and the integrator identity on
+`restart_from`. See
 [`docs/development/checkpoint_publish.md`](../development/checkpoint_publish.md).
-Restore / migration validation is not claimed here.
-
-Key properties of the **headerless scheduled dump** format:
-
-- **Layout:** Single global 3D array in Fortran (column-major) order
-- **Element type:** `double` for real fields, `std::complex<double>` for complex fields
-- **Byte order:** Native to the writing machine
-- **No header:** Files contain only raw payload data
-- **Per-rank data:** Each rank writes its local brick, together covering the global grid
 
 ### Resume expectations
 
-Restart logic expects:
+Restart requires:
 
-1. **Consistent field state** — All fields must contain values matching the checkpoint time
-2. **Matching `Time` state** — The `Time` object must be configured with the same `t0`, `t1`, `dt`, and `saveat` values used when the checkpoint was written
-3. **Increment alignment** — The `Time::get_increment()` value should match the increment number encoded in the checkpoint filename
-
-When reading a checkpoint, the `BinaryReader` uses the same MPI-IO subarray view as the writer, requiring the same communicator, decomposition, and data type configuration.
+1. **Consistent field state** — all fields contain values at the checkpoint time
+2. **Matching `Time` configuration** — the same `t1`, `dt`, and `saveat`; `t0`
+   and the increment are restored from the bundle
+3. **Identity match** — grid, decomposition, and integrator method must equal the
+   bundle's metadata (mismatch is a hard error)
 
 ## 7. CPU and accelerator numerical contract
 
 ### Numerical equivalence requirement
 
-Both CPU and GPU paths must produce identical results within floating-point tolerance. This requirement ensures that:
-
-- Simulations can be developed and debugged on CPU workstations
-- Results are reproducible across different hardware backends
-- Validation studies are not tied to a specific platform
+Both CPU and GPU paths must produce identical results within floating-point
+tolerance (the parity suites pin `1e-10` for tungsten, allen_cahn, and wave2d).
 
 ### Architecture layering
 
-The kernel/runtime separation described in [`docs/concepts/architecture.md`](architecture.md) enforces this contract:
+The kernel/runtime separation described in
+[`docs/concepts/architecture.md`](architecture.md) enforces this contract:
 
-- **Kernel layer** — Backend-agnostic numerical algorithms and data structures
-- **Runtime layer** — Backend-specific implementations (CPU, CUDA, HIP)
-
-Numerical behavior is defined at the kernel layer and must be preserved by all runtime implementations.
+- **Kernel layer** — backend-agnostic numerical algorithms and data structures
+- **Runtime layer** — backend-specific implementations (`runtime/gpu`, single
+  source for CUDA and HIP)
 
 ### GPU implementation obligations
 
-GPU implementations of steppers (via `runtime/gpu`, or the CUDA/HIP vendor shims) must:
+GPU implementations of steppers must:
 
 1. **Obey the same stage ordering** as CPU implementations
-2. **Use equivalent numerical algorithms** — same order of operations, same stencil coefficients
-3. **Handle boundary conditions identically** — same BC application points and logic
-4. **Respect the same halo exchange contract** — same ghost cell synchronization patterns
+2. **Use equivalent numerical algorithms** — same order of operations, same
+   stencil coefficients
+3. **Handle boundary conditions identically** — same BC application points
+4. **Respect the same halo exchange contract** — same ghost cell synchronization
 
-Deviations from these requirements are acceptable only when documented as platform-specific limitations with clear justification.
+Deviations are acceptable only when documented as platform-specific limitations.
 
 ## 8. Example integration patterns
 
-### Single-stage Euler using `step_with_physics()`
+### Single-stage Euler on the FD CPU stack
 
 ```cpp
-#include <openpfc/kernel/simulation/simulator.hpp>
+#include <openpfc/kernel/field/fd_gradient.hpp>
+#include <openpfc/kernel/simulation/simulation_driver.hpp>
+#include <openpfc/kernel/simulation/stacks/fd_cpu_stack.hpp>
+#include <openpfc/kernel/simulation/steppers/euler.hpp>
+#include <openpfc/kernel/simulation/time.hpp>
 
-void run_euler_simulation(Simulator& simulator, Model& model) {
-    auto& time = simulator.get_time();
-
-    while (!time.done()) {
-        simulator.step_with_physics([&]() {
-            model.step(time.get_current());
-        });
-    }
+void run_euler(pfc::sim::stacks::FDCPUStack &stack, heat3d::HeatModel &model,
+               pfc::Time &time, double dt) {
+  auto grad = pfc::field::create<heat3d::HeatGrads>(stack.u(), /*order=*/2);
+  auto stepper = pfc::sim::steppers::create(stack.u(), grad, model, dt);
+  pfc::sim::run(time, [&](double t) {
+    stack.exchange_halos();
+    (void)stepper.step(t, stack.u().vec());
+  });
 }
 ```
 
-This pattern is used in the time stepping demo at [`docs/api/examples/04_time_stepping.cpp`](../../docs/api/examples/04_time_stepping.cpp).
+This is the pattern used by the heat3d tests
+([`apps/heat3d/tests/test_heat3d.cpp`](../../apps/heat3d/tests/test_heat3d.cpp)).
 
-### Multi-stage integrator with explicit `begin/end` calls
-
-```cpp
-#include <openpfc/kernel/simulation/simulator.hpp>
-
-class RK4Integrator {
-public:
-    void step(Simulator& simulator, Model& model, double dt) {
-        auto& time = simulator.get_time();
-        auto& u = model.get_real_field("density");
-
-        simulator.begin_integrator_step();
-
-        double t = time.get_current();
-        auto u_backup = u;  // Save initial state
-
-        // Stage 1
-        auto k1 = compute_rhs(model, t, u);
-
-        // Stage 2
-        u = u_backup + 0.5 * dt * k1;
-        auto k2 = compute_rhs(model, t + 0.5*dt, u);
-
-        // Stage 3
-        u = u_backup + 0.5 * dt * k2;
-        auto k3 = compute_rhs(model, t + 0.5*dt, u);
-
-        // Stage 4
-        u = u_backup + dt * k3;
-        auto k4 = compute_rhs(model, t + dt, u);
-
-        // Final combination
-        u = u_backup + (dt / 6.0) * (k1 + 2.0*k2 + 2.0*k3 + k4);
-
-        simulator.end_integrator_step();
-    }
-
-private:
-    std::vector<double> compute_rhs(Model& model, double t,
-                                    const std::vector<double>& u);
-};
-```
-
-### Custom integrator with halo exchange
+### Multi-stage stepper with conditions and writers
 
 ```cpp
-#include <openpfc/kernel/decomposition/sparse_halo_exchange.hpp>
-#include <openpfc/kernel/decomposition/halo_face_layout.hpp>
-#include <openpfc/kernel/field/finite_difference.hpp>
-
-class FDHeatIntegrator {
-public:
-    FDHeatIntegrator(SparseHaloExchanger<double>& exchanger,
-                     std::array<std::vector<double>, 6>& face_halos,
-                     int nx, int ny, int nz, double dx, double D)
-        : m_exchanger(exchanger), m_face_halos(face_halos),
-          m_nx(nx), m_ny(ny), m_nz(nz),
-          m_inv_dx2(1.0 / (dx * dx)), m_D(D) {}
-
-    void step(Simulator& simulator, Model& model, double dt) {
-        auto& u = model.get_real_field("temperature");
-        auto& lap = model.get_real_field("laplacian");
-
-        simulator.begin_integrator_step();
-
-        // Exchange halos before physics evaluation
-        m_exchanger.exchange_halos(u.data(), u.size());
-        halo::copy_to_face_layout(m_exchanger, m_face_halos);
-
-        // Build face pointer array for Laplacian
-        std::array<const double*, 6> face_ptrs;
-        for (int i = 0; i < 6; ++i) {
-            face_ptrs[i] = m_face_halos[i].data();
-        }
-
-        // Compute Laplacian using finite differences
-        field::fd::laplacian_periodic_separated<2>(
-            u.data(), face_ptrs, lap.data(),
-            m_nx, m_ny, m_nz,
-            m_inv_dx2, m_inv_dx2, m_inv_dx2, 1
-        );
-
-        // Explicit Euler update
-        for (size_t i = 0; i < u.size(); ++i) {
-            u[i] += dt * m_D * lap[i];
-        }
-
-        simulator.end_integrator_step();
-    }
-
-private:
-    SparseHaloExchanger<double>& m_exchanger;
-    std::array<std::vector<double>, 6>& m_face_halos;
-    int m_nx, m_ny, m_nz;
-    double m_inv_dx2;
-    double m_D;
-};
+pfc::sim::run(
+    time,
+    [&](double t) {            // step: all RK stages inside
+      stack.exchange_halos();
+      (void)rk4.step(t, stack.u().vec());
+    },
+    [&](pfc::Time &) {         // on_start: ICs + BCs
+      for (auto &ic : initial_conditions) apply_modifier(*ic, stack.u(), 0.0);
+      for (auto &bc : boundary_conditions) apply_modifier(*bc, stack.u(), 0.0);
+    },
+    [&](pfc::Time &tm) {       // apply: BCs at the new time
+      for (auto &bc : boundary_conditions)
+        apply_modifier(*bc, stack.u(), pfc::time::current(tm));
+    },
+    [&](const pfc::Time &) {   // on_save
+      writer.write(counter++, stack.u());
+    });
 ```
 
-This pattern extends the finite difference heat example at [`examples/15_finite_difference_heat.cpp`](../../examples/15_finite_difference_heat.cpp) into a full integrator with simulator hook integration.
+### Spectral ETD system as the stepper
+
+Production spectral apps (tungsten, aluminumNew) do not use a raw stepper leaf;
+the framework-owned spectral ETD system on `SimulationState` is the `step` hook:
+
+```cpp
+pfc::sim::run(time, [&](double t) { system.step(t); }, on_start, apply, on_save);
+```
 
 ---
 
-**See also:** [`docs/concepts/architecture.md`](architecture.md) for overall system architecture, [`docs/concepts/halo_exchange.md`](halo_exchange.md) for halo exchange patterns, [`docs/development/checkpoint_publish.md`](../development/checkpoint_publish.md) for atomic accepted-state publication, and [`docs/reference/binary_field_io_spec.md`](../reference/binary_field_io_spec.md) for headerless scheduled field dumps.
+**See also:** [`docs/concepts/architecture.md`](architecture.md) for overall
+system architecture, [`docs/concepts/halo_exchange.md`](halo_exchange.md) for halo
+exchange patterns, [`docs/development/checkpoint_publish.md`](../development/checkpoint_publish.md)
+for atomic accepted-state publication, and
+[`docs/reference/binary_field_io_spec.md`](../reference/binary_field_io_spec.md)
+for headerless scheduled field dumps.

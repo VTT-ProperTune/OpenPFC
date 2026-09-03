@@ -75,7 +75,7 @@ public:
    *
    * 0.2 path: no Model / FFT. @p field must have `box` voxel count.
    */
-  void apply(RealField &field, const Domain &domain, const Box3i &box,
+  void apply(pfc::field::FieldOutput<double> field, const Domain &domain, const Box3i &box,
              double time = 0.0) override {
     (void)time;
     pfc::field::apply(field, domain, box,

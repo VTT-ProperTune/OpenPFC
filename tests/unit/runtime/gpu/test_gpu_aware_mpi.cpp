@@ -102,3 +102,24 @@ TEST_CASE("MPICH_GPU_SUPPORT_ENABLED=1 enables when no Open MPI query",
           "MPICH_GPU_SUPPORT_ENABLED=1");
 #endif
 }
+
+TEST_CASE("No override, query, Cray env, or probe reports Undetermined (off)",
+          "[gpu][mpi][aware]") {
+  EnvGuard assume("OPENPFC_ASSUME_GPU_AWARE_MPI", nullptr);
+  EnvGuard probe("OPENPFC_PROBE_GPU_AWARE_MPI", nullptr);
+  EnvGuard cray("MPICH_GPU_SUPPORT_ENABLED", nullptr);
+  const auto d = decide_gpu_aware_mpi();
+#if !defined(OpenPFC_MPI_CUDA_AWARE) && !defined(OpenPFC_MPI_HIP_AWARE)
+  REQUIRE_FALSE(d.enabled);
+  REQUIRE(d.how == GPUAwareMPIHow::CompileTimeOff);
+#elif defined(OPENPFC_HAVE_MPIX_QUERY_CUDA_SUPPORT) ||                              \
+    defined(OPENPFC_HAVE_MPIX_QUERY_HIP_SUPPORT)
+  REQUIRE((d.how == GPUAwareMPIHow::OpenMPIQueryOn ||
+           d.how == GPUAwareMPIHow::OpenMPIQueryOff));
+#else
+  REQUIRE_FALSE(d.enabled);
+  REQUIRE(d.how == GPUAwareMPIHow::Undetermined);
+  REQUIRE(std::string(gpu_aware_how_cstr(d.how)).find("inconclusive") !=
+          std::string::npos);
+#endif
+}

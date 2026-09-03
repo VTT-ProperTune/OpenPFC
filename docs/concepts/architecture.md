@@ -94,8 +94,8 @@ Runtime code realizes backend-specific behavior.
 | `runtime/common` | shared adapters, MPI timing, affinity handling, and common launch helpers |
 | `runtime/cpu` | CPU and OpenMP execution plus the CPU FFT implementation |
 | `runtime/gpu` | single-source CUDA/HIP memory, kernels, exchange, and device drivers |
-| `runtime/cuda` | thin includes of `runtime/gpu`, plus CUDA FFT until M5 |
-| `runtime/hip` | thin includes of `runtime/gpu`, plus HIP FFT until M5 |
+| `runtime/cuda` | thin includes / namespace re-exports of `runtime/gpu` (`fft_cuda.hpp` is a thin include of `runtime/gpu/fft_gpu.hpp`) |
+| `runtime/hip` | thin includes / namespace re-exports of `runtime/gpu` (`fft_hip.hpp` is a thin include of `runtime/gpu/fft_gpu.hpp`) |
 
 Native `cudaMemcpy` / `hipMemcpy` in `include/` and `src/` must live under
 `runtime/gpu/` (`scripts/check_gpu_memcpy_single_source.sh`). Apps and tests

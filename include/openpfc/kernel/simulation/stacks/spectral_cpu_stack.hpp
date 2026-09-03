@@ -40,7 +40,6 @@
 
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/data/model_types.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft.hpp>
@@ -88,25 +87,6 @@ public:
                             MPI_Comm comm = MPI_COMM_WORLD)
       : SpectralCPUStack(std::move(domain), rank, nproc, comm,
                          heffte::default_options<heffte::backend::fftw>()) {}
-
-  /**
-   * @param size    Global grid size `{Nx, Ny, Nz}`.
-   * @param origin  World origin in physical coordinates.
-   * @param spacing Grid spacing in physical coordinates.
-   * @param rank    Caller's MPI rank on `comm`.
-   * @param nproc   Total number of ranks on `comm` (used by
-   *                `decomposition::create`).
-   * @param comm    MPI communicator passed to the FFT.
-   *
-   * @deprecated Use the Domain-based constructor for new code. This constructor
-   *             exists for backward compatibility with existing code.
-   */
-  [[deprecated("Use SpectralCPUStack(const Domain&, int, int, MPI_Comm) instead")]]
-  SpectralCPUStack(const pfc::GridSize &size, const pfc::PhysicalOrigin &origin,
-                   const pfc::GridSpacing &spacing, int rank, int nproc,
-                   MPI_Comm comm = MPI_COMM_WORLD)
-      : SpectralCPUStack(pfc::domain::create(size, origin, spacing), rank, nproc,
-                         comm) {}
 
   SpectralCPUStack(const SpectralCPUStack &) = delete;
   SpectralCPUStack &operator=(const SpectralCPUStack &) = delete;

@@ -42,7 +42,7 @@ struct DemoHost {
   sim::stacks::SpectralCPUStack stack;
   explicit DemoHost(Domain domain)
       : stack(std::move(domain), mpi_rank(), mpi_nproc()) {}
-  RealField &field() { return stack.u().vec(); }
+  std::vector<double> &field() { return stack.u().vec(); }
   const Domain &domain() const { return stack.u().domain(); }
   const Box3i &box() const { return stack.u().box(); }
 };
@@ -91,7 +91,7 @@ public:
       : m_center(center), m_amplitude(amplitude), m_width(width),
         m_background(background) {}
 
-  void apply(RealField &field, const Domain &domain, const Box3i &box,
+  void apply(pfc::field::FieldOutput<double> field, const Domain &domain, const Box3i &box,
              double /*time*/) override {
     int idx = 0;
     for (int k = box.low[2]; k <= box.high[2]; k++) {
@@ -185,7 +185,7 @@ public:
 
   const std::string &get_modifier_name() const override { return m_name; }
 
-  void apply(RealField &field, const Domain &domain, const Box3i &box,
+  void apply(pfc::field::FieldOutput<double> field, const Domain &domain, const Box3i &box,
              double /*time*/) override {
     double Lx = domain::get_size(domain, 0) * domain::get_spacing(domain, 0);
     double dx = domain::get_spacing(domain, 0);
@@ -290,7 +290,7 @@ public:
 
   const std::string &get_modifier_name() const override { return m_name; }
 
-  void apply(RealField &field, const Domain & /*domain*/, const Box3i &box,
+  void apply(pfc::field::FieldOutput<double> field, const Domain & /*domain*/, const Box3i &box,
              double time) override {
 
     // Time-varying amplitude (sinusoidal)

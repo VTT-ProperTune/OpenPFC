@@ -37,7 +37,7 @@
  * simulation results. BinaryWriter dumps are not a restart loader.
  *
  * @see `ResultsWriterMap` for a field-name → writer map used by sessions
- * @see types.hpp for RealField and ComplexField definitions
+ * @see kernel/field/state_access.hpp for `FieldView`
  * @see binary_reader.hpp for input counterpart
  *
  * @author OpenPFC Contributors
@@ -51,7 +51,8 @@
 #include <iostream>
 #include <memory>
 #include <mpi.h>
-#include <openpfc/kernel/data/model_types.hpp>
+#include <complex>
+#include <openpfc/kernel/field/state_access.hpp>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -122,10 +123,10 @@ namespace pfc {
  * auto inbox = fft::get_inbox(fft);
  * std::array<int, 3> local_offset = {inbox.low[0], inbox.low[1], inbox.low[2]};
  *
- * RealField field(fft.size_inbox());  // fill before writing
+ * pfc::Field<double> field(domain, inbox, 0);  // fill before writing
  * auto writer = std::make_unique<BinaryWriter>(\"results_%04d.bin\");
  * writer->set_domain(global_size, local_size, local_offset);
- * writer->write(0, field);  // collective MPI write; returns MPI_Status
+ * writer->write(0, field.view());  // collective MPI write; returns MPI_Status
  * ```
  *
  * @example
@@ -153,7 +154,7 @@ namespace pfc {
  * using namespace pfc;
  *
  * // After FFT forward transform
- * ComplexField k_space_field(fft.size_outbox());
+ * std::vector<std::complex<double>> k_space_field(fft.size_outbox());
  * fft.forward(real_field, k_space_field);
  *
  * // Write complex field
@@ -228,12 +229,12 @@ public:
   /**
    * @brief Write a real-valued field to file at specified time step
    *
-   * Writes the local portion of a RealField (double precision) to the output
+   * Writes the local portion of a real field view (double precision) to the output
    * file. In MPI contexts, this is a collective operation - all ranks write
    * their local data simultaneously to the correct position in the file.
    *
    * @param[in] increment Time step or frame number
-   * @param[in] data Local real field data (vector of doubles)
+   * @param[in] data Local real field view (`Field::view()` or a `std::vector<double>`)
    * @return MPI_Status Information about the write operation
    *
    * @example
@@ -250,12 +251,12 @@ public:
    * @note This is a collective MPI operation - all ranks must call it.
    * @note Field size must match local_size specified in set_domain().
    */
-  virtual MPI_Status write(int increment, const RealField &data) = 0;
+  virtual MPI_Status write(int increment, pfc::field::FieldView<double> data) = 0;
 
   /**
    * @brief Write a complex-valued field to file at specified time step
    *
-   * Writes the local portion of a ComplexField (complex doubles) to the output
+   * Writes the local portion of a complex field view (complex doubles) to the output
    * file. Useful for storing Fourier coefficients or k-space data.
    *
    * @param[in] increment Time step or frame number
@@ -263,12 +264,13 @@ public:
    * @return MPI_Status Information about the write operation
    *
    * @note Complex field size is typically ~50% of real field size (r2c symmetry).
-   * @see FFT::forward() - produces ComplexField from RealField
+   * @see FFT::forward() - produces the complex hat from the real field
    */
-  virtual MPI_Status write(int increment, const ComplexField &data) = 0;
+  virtual MPI_Status write(int increment,
+                           pfc::field::FieldView<std::complex<double>> data) = 0;
 
   template <typename T> MPI_Status write(const std::vector<T> &data) {
-    return write(0, data);
+    return write(0, pfc::field::FieldView<T>(data));
   }
 };
 

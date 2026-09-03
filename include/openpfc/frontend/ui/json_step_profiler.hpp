@@ -4,11 +4,14 @@
 #pragma once
 
 /**
- * @file tungsten_etd_profile.hpp
- * @brief Optional JSON `profiling` block for tungsten ETD sessions.
+ * @file json_step_profiler.hpp
+ * @brief JSON `profiling` section → barriered per-step `wall_step` frames.
  *
- * Same `AppProfilingController` + barriered `wall_step` as Gen-1 `App`, so
- * `scripts/compare_perf_baseline.py` can compare 0.2 vs stored Gen-1 JSON.
+ * @details
+ * Wraps `AppProfilingController` so any JSON-driven session can time its step
+ * with the same schema-v2 exporter the perf baselines use
+ * (`scripts/compare_perf_baseline.py`). When the `profiling` section is absent
+ * or disabled, `timed_step` just runs the step.
  */
 
 #include <optional>
@@ -22,16 +25,17 @@
 #include <openpfc/kernel/profiling/profiling.hpp>
 #include <openpfc/kernel/utils/logging.hpp>
 
-namespace tungsten {
+namespace pfc::ui {
 
-class EtdProfileEnv {
+class JsonStepProfiler {
 public:
-  EtdProfileEnv(nlohmann::json settings, int rank, MPI_Comm comm)
+  JsonStepProfiler(nlohmann::json settings, int rank, MPI_Comm comm)
       : m_settings(std::move(settings)), m_comm(comm), m_rank(rank),
         m_logger{pfc::LogLevel::Info, rank} {
     m_controller.configure_from_root_settings(m_settings, m_rank, m_rank == 0);
   }
 
+  /// Run @p step inside one profiling frame; FFT time comes from @p fft.
   template <class Step>
   void timed_step(int increment, pfc::fft::IFFTQueries &fft, Step &&step) {
     auto *prof = m_controller.session();
@@ -64,7 +68,7 @@ private:
   MPI_Comm m_comm;
   int m_rank;
   pfc::Logger m_logger;
-  pfc::ui::AppProfilingController m_controller;
+  AppProfilingController m_controller;
 };
 
-} // namespace tungsten
+} // namespace pfc::ui

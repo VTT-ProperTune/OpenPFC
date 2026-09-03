@@ -38,8 +38,7 @@
  * This file is part of the Simulation Control module, managing temporal
  * aspects of time-dependent simulations.
  *
- * @see simulator.hpp for time integration loop
- * @see model.hpp for physics model receiving dt
+ * @see simulation_driver.hpp for the `pfc::sim::run` time integration loop
  *
  * @author OpenPFC Contributors
  * @date 2025

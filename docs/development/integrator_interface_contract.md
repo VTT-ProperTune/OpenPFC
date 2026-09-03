@@ -14,23 +14,22 @@ implementer can check their code against.
 ## How this differs from the time integration architecture contract
 
 [`docs/concepts/time_integration_contract.md`](../concepts/time_integration_contract.md)
-is the conceptual, architect-facing overview: it describes the `Simulator`
-class's `begin_integrator_step()`/`end_integrator_step()` hooks, when to use
-`step_with_physics()` versus calling the hooks directly, and the overall
-relationship between integrators, models, and the simulator framework. This
+is the conceptual, architect-facing overview: it describes the
+`pfc::sim::run` hook sequence (`on_start` / `apply` / `step` / `on_save`) and the
+overall relationship between steppers, physics, and the simulation driver. This
 document is narrower and implementer-facing: it enumerates the concrete
 semantic requirements (ownership, timing, thread-safety, serialization) an
 integrator implementation must satisfy, grounded in the existing behavior of
-`Simulator` and the `EulerStepper`/`Heat3D` stepping patterns, so an
+`pfc::sim::run` and the `EulerStepper`/`Heat3D` stepping patterns, so an
 implementer has a checklist to validate a new integrator against rather than
 an architectural narrative to interpret.
 
 ## 1. Time state ownership requirements
 
-- The integrator must not own the simulation's current time or step size directly; these are owned by `Time` (see [`include/openpfc/kernel/simulation/simulator.hpp`](../../include/openpfc/kernel/simulation/simulator.hpp)) and passed to the integrator's step function as arguments.
+- The integrator must not own the simulation's current time or step size directly; these are owned by `Time` (see [`include/openpfc/kernel/simulation/time.hpp`](../../include/openpfc/kernel/simulation/time.hpp)) and passed to the integrator's step function as arguments.
 - On a successful step, time must advance from `current` to `current + dt`; the integrator's step function must return this new time value, matching the pattern in [`include/openpfc/kernel/simulation/steppers/euler.hpp`](../../include/openpfc/kernel/simulation/steppers/euler.hpp) (`return t + m_dt;`).
 - If a step is rejected (future adaptive-stepping scope), time must not change: the caller is responsible for not advancing `Time` when the integrator reports rejection (see [Error control API requirements](#5-error-control-api-requirements)).
-- The integrator must remain compatible with the time state orchestration pattern in [`include/openpfc/kernel/simulation/simulator.hpp`](../../include/openpfc/kernel/simulation/simulator.hpp): it advances state via `Simulator::step_with_physics()` or the explicit `begin_integrator_step()`/`end_integrator_step()` hooks, never by mutating `Time` itself.
+- The integrator must remain compatible with the time state orchestration in [`include/openpfc/kernel/simulation/simulation_driver.hpp`](../../include/openpfc/kernel/simulation/simulation_driver.hpp): it advances state inside the `step` hook of `pfc::sim::run`, never by mutating `Time` itself.
 
 ## 2. Stage evaluation contract requirements
 

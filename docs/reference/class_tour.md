@@ -33,9 +33,9 @@ The shortest useful mental model is:
 3. an FFT implementation transforms local field data;
 4. physics callables / ETD systems define the update;
 5. `pfc::sim::run` / `SimulationDriver` (or an ETD session) advances `Time` and writers;
-6. JSON sessions (`TungstenETDSession`, `AluminumETDSession`, `make_simulation_session`) build that stack from configuration.
+6. JSON sessions (`pfc::ui::SpectralETDSession<Physics, Stack>`, `make_simulation_session`) build that stack from configuration.
 
-`World` remains as the deprecated A0 wrapper over `Domain` + `Box3i`. Virtual `Model`, `Simulator`, and `App<Model>` are deleted. Production apps and examples 04/05/10/12 do not subclass `Model`.
+`World`, virtual `Model`, `Simulator`, and `App<Model>` are deleted. Production apps and examples 04/05/10/12 do not subclass `Model`.
 
 ## Stable concepts at a glance
 
@@ -45,10 +45,10 @@ The shortest useful mental model is:
 | `Box3i` | Inclusive integer bounds for local or transformed regions | `openpfc/kernel/data/box.hpp` | `examples/02_domain_decomposition.cpp` |
 | `Decomposition` | MPI partition and per-rank inbox/outbox geometry | `openpfc/kernel/decomposition/decomposition.hpp` | `examples/03_parallel_fft.cpp` |
 | `IHostFFT` / `CPUFFT` | Distributed host forward/backward transforms through HeFFTe | `openpfc/kernel/fft/fft.hpp` | `examples/03_parallel_fft.cpp` |
-| Physics / ETD system | Fields and the time-step update (no `Model` base) | `tungsten_physics.hpp`, `aluminum_physics.hpp`, `spectral_mean_field_etd.hpp` | `examples/04_diffusion_model.cpp` |
+| Physics / `SpectralETDSystem` | Fields, k-space symbols, and a device-capable `pointwise()` nonlinearity; the system owns the ETD update on host or device | `tungsten_physics.hpp`, `aluminum_physics.hpp`, `openpfc/kernel/simulation/spectral_etd_system.hpp` | `tests/fixtures/swift_hohenberg.hpp`, `examples/04_diffusion_model.cpp` |
 | `Time` | Start, stop, step size, current time, and save cadence | `openpfc/kernel/simulation/time.hpp` | `examples/time.cpp` |
 | `pfc::sim::run` / `SimulationDriver` | Time loop over physics `step` plus optional IC/BC/save hooks | `openpfc/kernel/simulation/simulation_driver.hpp` | `examples/05_simulator.cpp` |
-| Host-buffer IC | Initial conditions written onto `Field` (JSON or a callable) | app `*_field_modifiers.hpp` | `examples/10_ui_register_ic.cpp` |
+| `FieldModifier` + `apply_field_modifier` | Initial and boundary conditions on a host or device `Field` (JSON catalog or programmatic) | `openpfc/kernel/simulation/field_modifier.hpp`, `apply_field_modifier.hpp` | `examples/10_ui_register_ic.cpp` |
 | `ResultsWriter` | Stable interface for persisted simulation fields | `openpfc/kernel/simulation/results_writer.hpp` | `examples/11_write_results.cpp` |
 | `FileResultsWriter` | File sink with increment path templating | `openpfc/frontend/io/file_results_writer.hpp` | `BinaryWriter`, `VTKWriter` |
 | `World` | Deprecated A0 adapter around `Domain` | `openpfc/kernel/data/world.hpp` | `examples/world_strong_types_example.cpp` uses `Domain` |

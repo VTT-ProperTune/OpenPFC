@@ -42,7 +42,7 @@
 
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/model_types.hpp>
+#include <openpfc/kernel/field/state_access.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_interface.hpp>
 // Local iteration implemented inline to work with HeFFTe inbox type
@@ -52,7 +52,7 @@ namespace pfc::field {
 namespace detail {
 
 template <typename Body>
-inline void for_each_box_voxel(RealField &field, const Domain &domain,
+inline void for_each_box_voxel(FieldOutput<double> field, const Domain &domain,
                                const Box3i &box, Body &&body) {
   const auto expected = static_cast<size_t>(box.size[0]) *
                         static_cast<size_t>(box.size[1]) *
@@ -83,10 +83,10 @@ inline void for_each_box_voxel(RealField &field, const Domain &domain,
  * @tparam Fn Callable: double(const Real3&) or double(Real3)
  */
 template <typename Fn>
-inline void apply(RealField &field, const Domain &domain, const Box3i &box,
+inline void apply(FieldOutput<double> field, const Domain &domain, const Box3i &box,
                   Fn &&fn) {
   detail::for_each_box_voxel(field, domain, box, [&](size_t i, const Real3 &x) {
-    field[i] = static_cast<double>(fn(x));
+    field.data()[i] = static_cast<double>(fn(x));
   });
 }
 
@@ -96,10 +96,10 @@ inline void apply(RealField &field, const Domain &domain, const Box3i &box,
  * @tparam Fn Callable: double(const Real3&, double) or double(Real3, double)
  */
 template <typename Fn>
-inline void apply_with_time(RealField &field, const Domain &domain,
+inline void apply_with_time(FieldOutput<double> field, const Domain &domain,
                             const Box3i &box, double t, Fn &&fn) {
   detail::for_each_box_voxel(field, domain, box, [&](size_t i, const Real3 &x) {
-    field[i] = static_cast<double>(fn(x, t));
+    field.data()[i] = static_cast<double>(fn(x, t));
   });
 }
 
@@ -109,10 +109,10 @@ inline void apply_with_time(RealField &field, const Domain &domain,
  * @tparam Fn Callable: double(const Real3&, double current)
  */
 template <typename Fn>
-inline void apply_inplace(RealField &field, const Domain &domain, const Box3i &box,
+inline void apply_inplace(FieldOutput<double> field, const Domain &domain, const Box3i &box,
                           Fn &&fn) {
   detail::for_each_box_voxel(field, domain, box, [&](size_t i, const Real3 &x) {
-    field[i] = static_cast<double>(fn(x, field[i]));
+    field.data()[i] = static_cast<double>(fn(x, field.data()[i]));
   });
 }
 
@@ -122,10 +122,10 @@ inline void apply_inplace(RealField &field, const Domain &domain, const Box3i &b
  * @tparam Fn Callable: double(const Real3&, double current, double t)
  */
 template <typename Fn>
-inline void apply_inplace_with_time(RealField &field, const Domain &domain,
+inline void apply_inplace_with_time(FieldOutput<double> field, const Domain &domain,
                                     const Box3i &box, double t, Fn &&fn) {
   detail::for_each_box_voxel(field, domain, box, [&](size_t i, const Real3 &x) {
-    field[i] = static_cast<double>(fn(x, field[i], t));
+    field.data()[i] = static_cast<double>(fn(x, field.data()[i], t));
   });
 }
 
@@ -159,7 +159,7 @@ using PointFnT = std::function<double(double, double, double, double)>;
  * @param fn    Coordinate-space function returning new value
  */
 template <typename Fn>
-inline void apply(RealField &field, const Domain &domain, const fft::IHostFFT &fft,
+inline void apply(FieldOutput<double> field, const Domain &domain, const fft::IHostFFT &fft,
                   Fn &&fn) {
   apply(field, domain, pfc::fft::get_inbox(fft), std::forward<Fn>(fn));
 }
@@ -175,7 +175,7 @@ inline void apply(RealField &field, const Domain &domain, const fft::IHostFFT &f
  * @param fn    Space-time function returning new value
  */
 template <typename Fn>
-inline void apply_with_time(RealField &field, const Domain &domain,
+inline void apply_with_time(FieldOutput<double> field, const Domain &domain,
                             const fft::IHostFFT &fft, double t, Fn &&fn) {
   apply_with_time(field, domain, pfc::fft::get_inbox(fft), t, std::forward<Fn>(fn));
 }
@@ -194,7 +194,7 @@ inline void apply_with_time(RealField &field, const Domain &domain,
  * @param fn    Coordinate-space function returning new value given (x, current)
  */
 template <typename Fn>
-inline void apply_inplace(RealField &field, const Domain &domain,
+inline void apply_inplace(FieldOutput<double> field, const Domain &domain,
                           const fft::IHostFFT &fft, Fn &&fn) {
   apply_inplace(field, domain, pfc::fft::get_inbox(fft), std::forward<Fn>(fn));
 }
@@ -205,7 +205,7 @@ inline void apply_inplace(RealField &field, const Domain &domain,
  * @tparam Fn Callable: double(const Real3&, double current, double t)
  */
 template <typename Fn>
-inline void apply_inplace_with_time(RealField &field, const Domain &domain,
+inline void apply_inplace_with_time(FieldOutput<double> field, const Domain &domain,
                                     const fft::IHostFFT &fft, double t, Fn &&fn) {
   apply_inplace_with_time(field, domain, pfc::fft::get_inbox(fft), t,
                           std::forward<Fn>(fn));

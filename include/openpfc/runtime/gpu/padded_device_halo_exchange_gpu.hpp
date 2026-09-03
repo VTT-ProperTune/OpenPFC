@@ -484,10 +484,9 @@ public:
   DeviceFacesHalo(const decomposition::Decomposition &decomp, int rank,
                   int halo_width, MPI_Comm comm, halo::HaloDirectionSet dirs,
                   int base_tag = 0, halo::HaloDirectionSelector selector = {})
-      : m_decomp(decomp), m_rank(rank), m_halo_width(halo_width), m_comm(comm),
-        m_base_tag(base_tag),
+      : m_rank(rank), m_halo_width(halo_width), m_comm(comm), m_base_tag(base_tag),
         m_dirs(halo::resolve_direction_set(dirs, selector, rank)) {
-    const auto local_box = decomposition::local_box(m_decomp, m_rank);
+    const auto local_box = decomposition::local_box(decomp, m_rank);
     const auto local_size = local_box.size;
     const int nx = local_size[0];
     const int ny = local_size[1];
@@ -510,7 +509,7 @@ public:
     for (std::size_t i = 0; i < 6; ++i) {
       m_active[i] = m_dirs.contains(dirs_canon[i]);
       m_neighbors.push_back(
-          decomposition::get_neighbor_rank(m_decomp, m_rank, dirs_canon[i]));
+          decomposition::get_neighbor_rank(decomp, m_rank, dirs_canon[i]));
     }
     m_requests.resize(2 * 6);
 
@@ -903,7 +902,6 @@ private:
     }
   }
 
-  const decomposition::Decomposition &m_decomp;
   int m_rank = 0;
   int m_halo_width = 1;
   MPI_Comm m_comm = MPI_COMM_NULL;

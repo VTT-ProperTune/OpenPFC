@@ -12,8 +12,8 @@
  * Key features:
  * - CHECK_AND_ABORT_IF_NAN(value): Macro to check single values; uses the
  *   **default NaN-check communicator** (see `default_nan_check_mpi_comm()`), which
- *   `pfc::ui::App::main` sets to the application communicator (otherwise
- *   `MPI_COMM_WORLD`).
+ *   application drivers may set to their communicator via
+ *   `set_default_nan_check_mpi_comm` (otherwise `MPI_COMM_WORLD`).
  * - CHECK_AND_ABORT_IF_NANS(vec): Macro to check entire vectors (same default)
  * - CHECK_AND_ABORT_IF_NAN_MPI / CHECK_AND_ABORT_IF_NANS_MPI: pass an explicit
  *   communicator (e.g. `Model::mpi_comm()`) when the check site should not use
@@ -135,10 +135,9 @@ inline MPI_Comm &nan_check_default_comm_slot() {
  * @brief Communicator used by @ref CHECK_AND_ABORT_IF_NAN and
  *        @ref CHECK_AND_ABORT_IF_NANS for rank reporting and `MPI_Abort`.
  *
- * Initially `MPI_COMM_WORLD`. `pfc::ui::App::main` calls
- * `set_default_nan_check_mpi_comm` with the application communicator so split
- * communicators behave correctly. Standalone drivers may set the default once
- * at startup.
+ * Initially `MPI_COMM_WORLD`. Drivers that run on a split communicator call
+ * `set_default_nan_check_mpi_comm` (or `pfc::ui::configure_json_driver_hooks`)
+ * once at startup so rank reporting and `MPI_Abort` use that communicator.
  */
 inline MPI_Comm default_nan_check_mpi_comm() {
   return detail::nan_check_default_comm_slot();

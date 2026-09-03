@@ -12,7 +12,7 @@
  *
  * Compiled from `src/openpfc/runtime/gpu/elementwise_ops.cu` / `.hip`.
  *
- * @see apps/tungsten/include/tungsten/common/tungsten_ops.hpp
+ * @see runtime/gpu/spectral_etd_ops_gpu.hpp
  */
 
 #pragma once
@@ -45,9 +45,6 @@ void axpy_fill_cuda_impl(double *out, const double *x, double alpha, double beta
                          std::size_t n);
 void axpy_fill_cuda_impl(float *out, const float *x, float alpha, float beta,
                          std::size_t n);
-void polynomial_nl_cuda_impl(const double *psi, const double *mf, double *out,
-                             double c_psi, double c_psi2, double c_psi3, double c_mf,
-                             double c_mf2, double c_mf3, std::size_t n);
 #endif
 
 #if defined(OpenPFC_ENABLE_HIP)
@@ -71,9 +68,6 @@ void axpy_fill_hip_impl(double *out, const double *x, double alpha, double beta,
                         std::size_t n);
 void axpy_fill_hip_impl(float *out, const float *x, float alpha, float beta,
                         std::size_t n);
-void polynomial_nl_hip_impl(const double *psi, const double *mf, double *out,
-                            double c_psi, double c_psi2, double c_psi3, double c_mf,
-                            double c_mf2, double c_mf3, std::size_t n);
 #endif
 
 } // namespace pfc

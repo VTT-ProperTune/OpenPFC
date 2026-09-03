@@ -31,7 +31,7 @@ TEST_CASE("HDF5Writer writes field dataset and XDMF sidecar", "[hdf5][io]") {
   const std::array<int, 3> global{4, 2, 2};
   const std::array<int, 3> local{4, 2, 2};
   const std::array<int, 3> offset{0, 0, 0};
-  pfc::RealField data(4 * 2 * 2);
+  std::vector<double> data(4 * 2 * 2);
   for (std::size_t i = 0; i < data.size(); ++i) {
     data[i] = static_cast<double>(i) + 0.25;
   }
@@ -63,7 +63,7 @@ TEST_CASE("HDF5Writer writes field dataset and XDMF sidecar", "[hdf5][io]") {
 
   REQUIRE(back == data);
 
-  pfc::ComplexField z(data.size());
+  std::vector<std::complex<double>> z(data.size());
   pfc::HDF5Writer writer2(pattern, MPI_COMM_SELF);
   writer2.set_domain(global, local, offset);
   REQUIRE_THROWS_AS(writer2.write(0, z), std::invalid_argument);
@@ -84,7 +84,7 @@ TEST_CASE("HDF5Writer parallel x-split round-trips /field", "[hdf5][io][MPI]") {
   const std::array<int, 3> global{8, 2, 2};
   const std::array<int, 3> local{4, 2, 2};
   const std::array<int, 3> offset{rank * 4, 0, 0};
-  pfc::RealField data(4 * 2 * 2);
+  std::vector<double> data(4 * 2 * 2);
   for (int k = 0; k < 2; ++k) {
     for (int j = 0; j < 2; ++j) {
       for (int i = 0; i < 4; ++i) {

@@ -63,7 +63,7 @@ public:
 
   const std::string &get_modifier_name() const override { return m_name; }
 
-  void apply(RealField &field, const Domain &domain, const Box3i &box,
+  void apply(pfc::field::FieldOutput<double> field, const Domain &domain, const Box3i &box,
              double time = 0.0) override {
     (void)time;
     const double Lx = pfc::domain::get_size(domain, 0);

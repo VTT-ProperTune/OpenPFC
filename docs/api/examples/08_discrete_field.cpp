@@ -34,7 +34,6 @@
 #include <openpfc/kernel/data/strong_types.hpp>
 
 using namespace pfc;
-using namespace pfc::data;
 
 //==============================================================================
 // Helper functions for output formatting

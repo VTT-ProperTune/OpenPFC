@@ -28,8 +28,8 @@ inline std::atomic<int> &from_json_log_rank_storage() noexcept {
  * @brief MPI rank used when `from_json` helpers emit log lines (default: -1, no
  * prefix).
  *
- * Call `set_from_json_log_rank` from the application entry (e.g. `App::main` with
- * `MPI_Worker::get_rank()`) so FFT / plan-option messages are attributed to the
+ * Call `set_from_json_log_rank` (or `configure_json_driver_hooks`) from the
+ * application entry once the MPI rank is known so FFT / plan-option messages are attributed to the
  * correct rank. Tests may set this for deterministic diagnostics.
  */
 [[nodiscard]] inline int get_from_json_log_rank() noexcept {

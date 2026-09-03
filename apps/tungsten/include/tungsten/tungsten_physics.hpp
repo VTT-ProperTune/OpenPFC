@@ -5,11 +5,19 @@
 
 /**
  * @file tungsten_physics.hpp
- * @brief One tungsten model: params + schema + spectral mean-field ETD.
+ * @brief One tungsten model: params + schema + spectral mean-field ETD physics.
  *
- * Linear symbol and mean-field filter come from `physics_for_mode`.
- * Real-space @f$N(\psi,\psi_{\mathrm{MF}})@f$ includes stabilization.
- * No backend classes and no k-loops.
+ * @details
+ * Consumed by `pfc::sim::SpectralETDSystem<TungstenPhysics, MemorySpace>` on
+ * every backend:
+ *
+ * - `linear_symbol(k)` and `filter_mf(k)` come from `physics_for_mode`;
+ * - `nonlinear_symbol(k) = k` (PFC form \f$\partial_t\hat\psi =
+ *   k(C\hat\psi + \hat N)\f$);
+ * - `pointwise()` returns the device-capable `TungstenPointwise`
+ *   (`tungsten_pointwise.hpp`), which includes the ETD stabilisation.
+ *
+ * No backend classes, no k-loops, no hand-written kernels.
  */
 
 #include <nlohmann/json.hpp>
@@ -21,6 +29,7 @@
 #include <openpfc/kernel/simulation/simulation_state.hpp>
 #include <tungsten/common/tungsten_params.hpp>
 #include <tungsten/common/tungsten_spectral.hpp>
+#include <tungsten/tungsten_pointwise.hpp>
 
 namespace tungsten {
 
@@ -139,12 +148,13 @@ inline void apply_tungsten_json(const nlohmann::json &j, TungstenParams &p) {
 }
 
 /**
- * @tparam RealType   Field element type (default double).
+ * @tparam RealType    Field element type (default double).
  * @tparam MemorySpace Host or device space for `declare_fields`.
  */
 template <class RealType = double, class MemorySpace = pfc::HostSpace>
 struct TungstenPhysics {
   using parameters_type = TungstenParams;
+  using pointwise_type = TungstenPointwise;
 
   pfc::Domain domain{};
   pfc::Box3i box{};
@@ -152,6 +162,19 @@ struct TungstenPhysics {
 
   static pfc::sim::ParameterSchema<TungstenSchemaValues> schema() {
     return make_tungsten_schema();
+  }
+
+  /// JSON `model.params` + geometry → physics (used by `SpectralETDSession`).
+  static TungstenPhysics from_json(const nlohmann::json &params_json,
+                                   const pfc::Domain &domain_in,
+                                   const pfc::Box3i &box_in) {
+    TungstenPhysics p;
+    p.domain = domain_in;
+    p.box = box_in;
+    if (!params_json.is_null() && !params_json.empty()) {
+      apply_tungsten_json(params_json, p.params);
+    }
+    return p;
   }
 
   void declare_fields(pfc::SimulationState &state) const {
@@ -165,31 +188,35 @@ struct TungstenPhysics {
     return spectral::linear_symbol(k_laplacian, phys.opCk);
   }
 
+  /// PFC dynamics are conserved: \f$\hat N\f$ enters as \f$k_{\mathrm{lap}}\hat N\f$.
+  [[nodiscard]] double nonlinear_symbol(double k_laplacian) const {
+    return k_laplacian;
+  }
+
   [[nodiscard]] double filter_mf(double k_laplacian) const {
     const auto op = spectral::make_operator_params(params);
     return spectral::physics_for_mode(k_laplacian, op).filterMF;
   }
 
-  [[nodiscard]] double nonlinearity(double psi, double psi_mf) const {
-    const auto c = nonlinearity_poly();
-    const double u2 = psi * psi;
-    const double v2 = psi_mf * psi_mf;
-    return c.c_psi * psi + c.c_psi2 * u2 + c.c_psi3 * u2 * psi + c.c_mf * psi_mf +
-           c.c_mf2 * v2 + c.c_mf3 * v2 * psi_mf;
-  }
-
-  [[nodiscard]] pfc::sim::MeanFieldNonlinearityPoly
-  nonlinearity_poly() const noexcept {
+  [[nodiscard]] TungstenPointwise pointwise() const noexcept {
     return {.c_psi = -params.get_stabP(),
             .c_psi2 = params.get_p3_bar(),
             .c_psi3 = params.get_p4_bar(),
-            .c_mf = 0.0,
             .c_mf2 = params.get_q3_bar(),
             .c_mf3 = params.get_q4_bar()};
   }
+
+  /// Host convenience: \f$N(\psi,\psi_{\mathrm{MF}})\f$ via the pointwise functor.
+  [[nodiscard]] double nonlinearity(double psi, double psi_mf) const {
+    return pointwise().nonlinearity(
+        pfc::sim::SpectralCell{.psi = psi, .psi_mf = psi_mf});
+  }
 };
 
-static_assert(pfc::sim::MeanFieldETDPhysics<TungstenPhysics<>>);
+static_assert(pfc::sim::SpectralETDPhysics<TungstenPhysics<>>);
+static_assert(pfc::sim::HasMeanFieldFilter<TungstenPhysics<>>);
+static_assert(pfc::sim::HasNonlinearSymbol<TungstenPhysics<>>);
+static_assert(!pfc::sim::HasCorrelationKernel<TungstenPhysics<>>);
 static_assert(pfc::sim::HasParameters<TungstenPhysics<>>);
 
 } // namespace tungsten

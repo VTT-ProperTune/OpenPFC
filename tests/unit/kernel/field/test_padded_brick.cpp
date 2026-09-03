@@ -10,7 +10,7 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 
 using namespace pfc;
-using namespace pfc::data;
+using pfc::data::field_from_subdomain;
 using Catch::Approx;
 
 TEST_CASE("Field: storage size matches (n+2hw)^3 and idx round-trip",

@@ -12,7 +12,7 @@
 #include <openpfc/kernel/field/field_factory.hpp>
 
 using namespace pfc;
-using namespace pfc::data;
+using pfc::data::field_from_subdomain;
 using namespace pfc::utils;
 
 /**

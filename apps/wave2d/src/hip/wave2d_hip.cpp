@@ -19,7 +19,7 @@
 #include <vector>
 
 #include <openpfc/frontend/io/vtk_writer.hpp>
-#include <openpfc/kernel/data/model_types.hpp>
+#include <vector>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/domain/create.hpp>
@@ -149,7 +149,7 @@ int run_wave2d_hip(const wave2d::RunConfig &cfg, int rank, int nproc) {
               << " gpu_aware=" << (exchanger.uses_gpu_aware_mpi() ? 1 : 0) << "\n";
   }
 
-  pfc::RealField vtk_buf;
+  std::vector<double> vtk_buf;
   std::unique_ptr<pfc::VTKWriter> vtk_writer;
   if (!cfg.vtk_pattern.empty()) {
     vtk_writer = std::make_unique<pfc::VTKWriter>(cfg.vtk_pattern);

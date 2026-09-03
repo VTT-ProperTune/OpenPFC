@@ -23,11 +23,8 @@
 #include <nlohmann/json.hpp>
 
 #include <openpfc/kernel/fft/fft_interface.hpp>
-#include <tungsten/tungsten_etd_session.hpp>
+#include <tungsten/tungsten_session.hpp>
 
-#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL) || defined(OpenPFC_ENABLE_HIP_SPECTRAL)
-#include <tungsten/tungsten_etd_gpu_session.hpp>
-#endif
 
 using nlohmann::json;
 
@@ -168,7 +165,7 @@ public:
   }
 
   void run_cpu_test(int size_x, int size_y, int size_z, int num_iterations) {
-    run_backend<tungsten::TungstenETDSession>("CPU", size_x, size_y, size_z,
+    run_backend<tungsten::TungstenSession>("CPU", size_x, size_y, size_z,
                                               num_iterations, [](auto &session) {
                                                 auto &psi = session.psi().vec();
                                                 fill_sine(psi.data(), psi.size());
@@ -177,7 +174,7 @@ public:
 
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
   void run_cuda_test(int size_x, int size_y, int size_z, int num_iterations) {
-    run_backend<tungsten::TungstenETDCUDASession>(
+    run_backend<tungsten::TungstenCUDASession>(
         "CUDA", size_x, size_y, size_z, num_iterations, [](auto &session) {
           session.psi().with_host_view(
               [](double *d, std::size_t n) { fill_sine(d, n); });
@@ -187,7 +184,7 @@ public:
 
 #if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
   void run_hip_test(int size_x, int size_y, int size_z, int num_iterations) {
-    run_backend<tungsten::TungstenETDHIPSession>(
+    run_backend<tungsten::TungstenHIPSession>(
         "HIP", size_x, size_y, size_z, num_iterations, [](auto &session) {
           session.psi().with_host_view(
               [](double *d, std::size_t n) { fill_sine(d, n); });

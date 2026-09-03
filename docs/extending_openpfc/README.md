@@ -20,6 +20,7 @@ out-of-tree executable, follow the
 | Goal | Primary extension point | Starting point |
 |------|-------------------------|----------------|
 | Add a PDE or phase-field model | physics `step(t)` on a stack / `SimulationState` | `examples/04_diffusion_model.cpp`, `examples/12_cahn_hilliard.cpp` |
+| Add a stiff spectral-ETD (PFC) model | `pfc::sim::SpectralETDPhysics` consumed by `SpectralETDSystem` | [Add a spectral-ETD physics](#add-a-spectral-etd-physics), `tests/fixtures/swift_hohenberg.hpp` |
 | Add a config-selected initial or boundary condition | `pfc::FieldModifier` and a modifier catalog | `examples/10_ui_register_ic.cpp`, `examples/14_custom_field_initializer.cpp` |
 | Apply programmatic field operations | Namespace free functions and field iteration helpers | [Functional field operations](../getting_started/functional_field_ops.md) |
 | Add an output format | `pfc::ResultsWriter` or a writer catalog | `examples/11_write_results.cpp` |
@@ -31,6 +32,66 @@ out-of-tree executable, follow the
 
 The [Examples catalog](../reference/examples_catalog.md) is the authoritative
 inventory of runnable examples.
+
+
+## Add a spectral-ETD physics
+
+Stiff PFC-type models (tungsten, aluminum, Swift-Hohenberg) do not write a
+time loop. They describe themselves to `pfc::sim::SpectralETDSystem<Physics,
+MemorySpace>` (`include/openpfc/kernel/simulation/spectral_etd_system.hpp`),
+which runs on the host and on CUDA/HIP from the same physics source. A physics
+type provides:
+
+| Member | Required | Meaning |
+|--------|----------|---------|
+| `declare_fields(SimulationState&)` | yes | Allocate the primary field `psi` (see `pfc::sim::add_declared_field`). |
+| `linear_symbol(double k_laplacian)` | yes | Real diagonal symbol \(L(k)\) from OpenPFC's spectral Laplacian \(-|k|^2\). |
+| `pointwise()` | yes | Returns a trivially copyable functor with `OPENPFC_HD double nonlinearity(const pfc::sim::SpectralCell&) const`. |
+| `nonlinear_symbol(double k_laplacian)` | optional | Multiplier \(M(k)\) on \(\hat N\) (default 1; PFC models return `k_laplacian`). |
+| `filter_mf(double k_laplacian)` | optional | Mean-field filter \(\chi(k)\); the driver then fills `cell.psi_mf`. |
+| `correlation_kernel(double k_laplacian)` | optional | Kernel \(P(k)\); the driver then fills `cell.p_star`. |
+| functor `free_energy_density(const SpectralCell&)` | optional | Per-cell observable reduced into `last_free_energy()`. |
+
+The `SpectralCell` (`kernel/simulation/spectral_pointwise.hpp`) carries
+`psi`, `psi_mf`, `p_star`, the cell coordinates `x`, `y`, `z`, and the time
+`t`. The functor must be `OPENPFC_HD` and self-contained (all constants by
+value) because the driver launches it inside a GPU kernel. The concepts live in
+`kernel/simulation/physics_concepts.hpp` (`SpectralETDPhysics`,
+`HasMeanFieldFilter`, `HasCorrelationKernel`, `HasNonlinearSymbol`).
+
+The minimal example is
+[`tests/fixtures/swift_hohenberg.hpp`](../../tests/fixtures/swift_hohenberg.hpp)
+with its functor in
+[`tests/fixtures/spectral_etd_toys_pointwise.hpp`](../../tests/fixtures/spectral_etd_toys_pointwise.hpp);
+production examples are
+[`apps/tungsten/include/tungsten/tungsten_physics.hpp`](../../apps/tungsten/include/tungsten/tungsten_physics.hpp)
+and
+[`apps/aluminumNew/include/aluminum/aluminum_physics.hpp`](../../apps/aluminumNew/include/aluminum/aluminum_physics.hpp).
+
+To drive the physics from JSON, add `static Physics from_json(const
+nlohmann::json& params, const Domain&, const Box3i&)` and use
+`pfc::ui::SpectralETDSession<Physics, Stack>`
+(`include/openpfc/frontend/ui/json_spectral_etd_session.hpp`) with
+`pfc::ui::run_json_session_main<Session>` as `main()`. The session wires
+initial and boundary conditions from the `FieldModifier` catalog, writers from
+the `ResultsWriter` catalog, `CheckpointService`, and the JSON `profiling`
+section.
+
+GPU builds need exactly one CUDA or HIP translation unit that instantiates the
+functor for the device launcher; keep it free of JSON and session headers:
+
+```cpp
+// src/gpu/my_pointwise.inc, stamped into my_pointwise.cu and my_pointwise.hip
+#include <my_app/my_pointwise.hpp>
+#include <openpfc/runtime/gpu/spectral_pointwise_gpu.hpp>
+
+OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE(my_app::MyPointwise)
+```
+
+Add that source to every GPU target that instantiates
+`SpectralETDSystem<Physics, CUDASpace | HIPSpace>`; a missing instantiation
+fails at link time with the functor's name in the undefined symbol. The tungsten
+and aluminum `CMakeLists.txt` show the pattern.
 
 ## API style
 

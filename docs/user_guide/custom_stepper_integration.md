@@ -6,10 +6,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 # Custom stepper integration
 
 This guide shows how to integrate custom time steppers with OpenPFC's
-explicit stepper composition (heat3d / wave2d / example 19–21). Production
-spectral apps (tungsten, aluminum) use ETD sessions and `pfc::sim::run`,
-not `Model::step`. The Gen-1 `Simulator::step_with_physics()` path remains
-as an M12 adapter.
+explicit stepper composition (heat3d / wave2d / examples 19–21). Production
+spectral apps (tungsten, aluminumNew) use the framework spectral ETD system on
+`SimulationState` and drive it with the same `pfc::sim::run` loop; the stepper
+leaves described here are the explicit FD / point-wise spectral path.
 
 ## Prerequisites
 
@@ -17,7 +17,7 @@ Before working with custom steppers, you should:
 
 - Complete the [quickstart guide](../quickstart.md) to understand basic OpenPFC setup
 - Read [ADR 0003: Time integrator interface contracts](../adr/0003-time-integrator-interface.md) for the formal contracts between integrators, models, and spatial discretizations
-- Understand the [applications overview](applications.md) to see how spectral apps use the legacy `Model::step()` pattern
+- Understand the [applications overview](applications.md) to see how the shipped apps compose physics, stacks, and steppers
 - Review the [installation guide](../../INSTALL.md) for building OpenPFC with the required dependencies
 
 ## Physics model with `rhs()` method
@@ -84,31 +84,32 @@ The gradient evaluator bridges the spatial discretization (FD or spectral) with 
 
 ### Finite difference gradient evaluator
 
-For finite difference methods, use `pfc::gradient::FDGradient<G>`:
+For finite difference methods, use `pfc::field::FDGradient<G>` over a
+halo-padded `pfc::data::Field<double>`. The `FDCPUStack` bundle owns such a
+field together with its halo exchanger:
 
 ```cpp
 #include <openpfc/kernel/field/fd_gradient.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
+#include <openpfc/kernel/simulation/stacks/fd_cpu_stack.hpp>
 
-// Assume we have a PaddedBrick field containing the solution
-pfc::field::PaddedBrick<double> u = /* ... initialized field ... */;
+const int order = 4;  // even orders 2, 4, ..., 20 for second derivatives
+pfc::sim::stacks::FDCPUStack stack(domain, order, rank, nproc, MPI_COMM_WORLD);
 
-// Create FD gradient evaluator (default: second-order central differences)
-pfc::gradient::FDGradient<heat3d::HeatGrads> grad(u);
-
-// Or specify an explicit even order (2, 4, 6, ..., 20 for second derivatives)
-pfc::gradient::FDGradient<heat3d::HeatGrads> grad(u, 4);  // fourth-order
+// Create the FD gradient evaluator over the stack's padded Field
+auto grad = pfc::field::create<heat3d::HeatGrads>(stack.u(), order);
 ```
 
 The FD gradient evaluator:
 
-- Reads geometry (grid size, spacing, halo width) directly from the `PaddedBrick`
+- Reads geometry (grid size, spacing, halo width) directly from the `Field`
 - Supports even orders 2–14 for first derivatives (`x, y, z`)
 - Supports even orders 2–20 for second derivatives (`xx, yy, zz`)
 - Performs stencil computation on-the-fly during evaluation (no pre-computation)
-- Requires halo exchange before each step (application responsibility)
+- Requires halo exchange before each step (`stack.exchange_halos()`)
 
-**Note**: FD gradient evaluators cannot compute mixed second derivatives (`xy, xz, yz`) because they would require corner-filled halos. Attempting to use these members triggers a compile-time error.
+**Note**: FD gradient evaluators need a corner-filled halo for mixed second
+derivatives (`xy, xz, yz`); use `comm::HaloExchange` in `Full` connectivity mode
+for those.
 
 ### Spectral gradient evaluator
 
@@ -141,7 +142,7 @@ The spectral gradient evaluator:
 - Performs all FFT work internally during `prepare()` (no halo exchange needed)
 - Trades explicit time-stepping CFL limits for unconditional stability of the spectral spatial operator
 
-**Trade-offs**: Spectral evaluators support arbitrary point-wise RHS (enabling custom physics) but use explicit time integration (CFL-limited). For pure constant-coefficient diffusion, the implicit-Fourier path (2 FFTs/step, unconditionally stable) may be preferable.
+**Trade-offs**: Spectral evaluators support arbitrary point-wise RHS (enabling custom physics) but use explicit time integration (CFL-limited). For stiff problems, the spectral ETD system (2 FFTs/step, unconditionally stable linear part) is preferable.
 
 ## Stepper creation with factory pattern
 
@@ -153,7 +154,7 @@ OpenPFC provides a factory function `pfc::sim::steppers::create()` that binds a 
 // Assume we have:
 // - grad: gradient evaluator (FD or spectral)
 // - model: physics model with rhs() method
-// - u: field vector (std::vector<double> or LocalField)
+// - u: the state (std::vector<double> or pfc::data::Field<double>)
 // - dt: time step size
 
 double dt = 0.01;
@@ -161,9 +162,8 @@ double dt = 0.01;
 // Create stepper using factory (derives local_size from u.size())
 auto stepper = pfc::sim::steppers::create(grad, model, dt, u.size());
 
-// Alternative: pass LocalField to derive size automatically
-pfc::field::LocalField<double> u_local = /* ... */;
-auto stepper = pfc::sim::steppers::create(u_local, grad, model, dt);
+// Alternative: pass the Field to derive size automatically
+auto stepper = pfc::sim::steppers::create(stack.u(), grad, model, dt);
 ```
 
 The factory function:
@@ -172,7 +172,7 @@ The factory function:
 - Captures the gradient evaluator and model by reference (they must outlive the stepper)
 - Creates an internal RHS lambda that calls `pfc::sim::for_each_interior(model, eval, du, t)`
 - Allocates an internal scratch buffer `du` sized to match the field
-- Returns a stepper object with a `step(double t, std::vector<double>& u)` method
+- Returns a stepper object with a `step(double t, std::vector<double>& u)` method and the attempt/commit protocol (`attempt` / `commit_step_attempt`)
 
 **Type inference**: The factory deduces all template arguments automatically. You don't need to specify the gradient type, model type, or RHS signature explicitly.
 
@@ -214,91 +214,62 @@ JSON FD CPU sessions (`json_fd_session.hpp`) compose the RK method from
 
 See also [Time integration architecture](../development/time_integration_architecture.md).
 
-## Simulator integration with `step_with_physics()`
+## Driving the stepper with `pfc::sim::run`
 
-The `Simulator::step_with_physics()` method provides the integration point for custom steppers. It handles the prologue/epilogue contract (initial conditions, boundary conditions, result writing) while delegating the physics update to your stepper:
+The free-function loop
+[`pfc::sim::run`](../../include/openpfc/kernel/simulation/simulation_driver.hpp)
+is the integration point for custom steppers. It owns the prologue/epilogue
+contract (initial conditions, boundary conditions, result writing) through four
+hooks and delegates the physics update to your stepper:
 
 ```cpp
-#include <openpfc/kernel/simulation/simulator.hpp>
+#include <openpfc/kernel/simulation/simulation_driver.hpp>
+#include <openpfc/kernel/simulation/time.hpp>
 
 // Assume we have:
-// - model: physics model
-// - world: Domain object
-// - fft: FFT plan
-// - u: field vector
-// - grad: gradient evaluator
+// - stack:   pfc::sim::stacks::FDCPUStack (owns the padded Field + halo exchanger)
+// - model:   physics model
 // - stepper: created from pfc::sim::steppers::create()
-// - dt: time step size
 
-// Create time and simulator
-double t0 = 0.0;
-double t1 = 1.0;
-double saveat = 0.1;
 pfc::Time time({t0, t1, dt}, saveat);
-pfc::Simulator sim(model, time);
 
-// Add initial conditions, results writers, etc.
-sim.add_initial_conditions(/* ... */);
-sim.add_results_writer("u", /* ... */);
-
-// Initialize the simulator (applies initial conditions)
-pfc::initialize(sim);
-
-// Time-stepping loop with custom stepper
-double t = t0;
-while (!sim.done()) {
-  sim.step_with_physics([&]() {
-    t = stepper.step(t, u);  // Advance one step with the custom stepper
-  });
-}
+pfc::sim::run(
+    time,
+    [&](double t) {                       // step
+      stack.exchange_halos();
+      (void)stepper.step(t, stack.u().vec());
+    },
+    [&](pfc::Time &) {                    // on_start (increment == 0)
+      stack.u().apply(model.initial_condition);
+    },
+    [&](pfc::Time &) { /* boundary conditions at the new time */ },
+    [&](const pfc::Time &tm) {            // on_save
+      writer.write(pfc::time::increment(tm), stack.u());
+    });
 ```
 
-The `step_with_physics()` method:
+Per iteration, `pfc::sim::run`:
 
-1. Calls `begin_integrator_step()`: applies initial/boundary conditions, advances time, applies boundary conditions at new time
-2. Executes your physics lambda (typically `stepper.step(t, u)`)
-3. Calls `end_integrator_step()`: writes results if at a save point
+1. On the first iteration only, calls `on_start(time)` and then `on_save(time)` if `pfc::time::do_save(time)`
+2. Calls `pfc::time::next(time)` and then `apply(time)` (boundary conditions at the new time)
+3. Calls your `step(t)` with the accepted time
+4. Calls `on_save(time)` if `pfc::time::do_save(time)`
 
-This ordering contract is documented in [ADR 0003](../adr/0003-time-integrator-interface.md). Your stepper must respect that boundary conditions have already been applied when your lambda runs, and it must not modify model fields outside the `u` buffer it receives.
+This ordering contract is documented in [ADR 0003](../adr/0003-time-integrator-interface.md) and [time_integration_contract.md](../concepts/time_integration_contract.md). Your stepper may assume boundary conditions are already applied when `step` runs, and it must not touch fields other than the state it receives.
 
-## Legacy comparison: `Model::step()` vs custom stepper
+## Comparison: model-owned stepping (0.1) vs stepper composition (0.2)
 
-### Legacy pattern (spectral apps)
+### 0.1 pattern (removed)
 
-The legacy pattern used by spectral apps like `examples/05_simulator.cpp`:
+In 0.1 the virtual `Model::step(t)` owned the time integration and a `Simulator`
+called it; swapping the integration method meant editing the model. That
+`Model` / `Simulator` pair was deleted in 0.2 (see
+[`MIGRATION_0.1_to_0.2.md`](../MIGRATION_0.1_to_0.2.md)).
 
-```cpp
-// Legacy: model owns time integration
-class Diffusion : public Model {
-  void step(double t) override {
-    // Direct FFT-based time step (implicit Fourier)
-    fft.forward(psi, psi_F);
-    for (int k = 0; k < psi_F.size(); k++) {
-      psi_F[k] = opL[k] * psi_F[k];  // Apply implicit operator
-    }
-    fft.backward(psi_F, psi);
-  }
-};
-
-// Usage
-Simulator sim(model, time);
-while (!sim.done()) {
-  sim.step();  // Calls model.step(t) internally
-}
-```
-
-**Characteristics**:
-- Model owns the time-stepping logic
-- Hard to swap integration methods (requires modifying model code)
-- Efficient for specific problems (e.g., implicit Fourier for diffusion)
-- Limited to patterns implemented in the model
-
-### New pattern (custom stepper composition)
-
-The new pattern with explicit stepper composition:
+### 0.2 pattern (custom stepper composition)
 
 ```cpp
-// New: model is pure physics, stepper owns time integration
+// Model is pure physics, stepper owns time integration
 struct HeatModel {
   [[nodiscard]] double rhs(double t, const HeatGrads &g) const noexcept {
     return kD * (g.xx + g.yy + g.zz);
@@ -306,74 +277,63 @@ struct HeatModel {
 };
 
 // Usage
-auto grad = pfc::gradient::FDGradient<HeatGrads>(u);
-auto stepper = pfc::sim::steppers::create(grad, model, dt, u.size());
+auto grad = pfc::field::create<HeatGrads>(stack.u(), order);
+auto stepper = pfc::sim::steppers::create(stack.u(), grad, model, dt);
 
-Simulator sim(model, time);
-while (!sim.done()) {
-  sim.step_with_physics([&]() {
-    t = stepper.step(t, u);
-  });
-}
+pfc::sim::run(time, [&](double t) {
+  stack.exchange_halos();
+  (void)stepper.step(t, stack.u().vec());
+});
 ```
 
 **Characteristics**:
 - Model is pure physics (no time-stepping logic)
 - Easy to swap integration methods (change stepper factory call)
 - Supports arbitrary point-wise RHS (enables custom physics)
-- Enables future RK2, RK4, IMEX methods without model changes
+- RK2, RK4, IMEX, and adaptive methods work without model changes
 
 ### Migration steps
 
-To migrate from legacy to new pattern:
+To port model-owned stepping to the 0.2 pattern:
 
-1. **Extract point-wise physics**: Move the core physics computation from `Model::step()` into a `rhs(double t, const Grads&)` method
-2. **Choose spatial discretization**: Decide between FD (`pfc::gradient::FDGradient`) or spectral (`pfc::field::SpectralGradient`)
+1. **Extract point-wise physics**: Move the core physics computation into a `rhs(double t, const Grads&)` method
+2. **Choose spatial discretization**: Decide between FD (`pfc::field::FDGradient`) or spectral (`pfc::field::SpectralGradient`)
 3. **Build gradient evaluator**: Create the evaluator with appropriate parameters
 4. **Create stepper**: Use `pfc::sim::steppers::create()` to bind model, evaluator, and time step
-5. **Replace `sim.step()`**: Use `sim.step_with_physics()` with a lambda calling `stepper.step()`
+5. **Drive with `pfc::sim::run`**: call `stepper.step()` inside the `step` hook; ICs, BCs, and writers go in the other hooks
 
-## Contract: `begin_integrator_step()` / `end_integrator_step()` ordering
+## Contract: hook ordering in `pfc::sim::run`
 
-The `Simulator::step_with_physics()` method implements a strict ordering contract documented in [ADR 0003](../adr/0003-time-integrator-interface.md):
+`pfc::sim::run` implements a strict ordering contract documented in [ADR 0003](../adr/0003-time-integrator-interface.md):
 
 ### Call sequence
 
 ```cpp
-void step_with_physics(PhysicsFn&& physics_fn) {
-  begin_integrator_step();        // Prologue
-  std::forward<PhysicsFn>(physics_fn)();  // Your stepper.step() call
-  end_integrator_step();          // Epilogue
+while (!pfc::time::done(time)) {
+  if (pfc::time::increment(time) == 0) {
+    on_start(time);
+    if (pfc::time::do_save(time)) on_save(time);
+  }
+  pfc::time::next(time);
+  apply(time);
+  step(pfc::time::current(time));
+  if (pfc::time::do_save(time)) on_save(time);
 }
 ```
 
-### `begin_integrator_step()` prologue
-
-1. **First call only** (`increment == 0`):
-   - Apply initial conditions
-   - Apply boundary conditions
-   - Write results if `Time::do_save()` is true
-2. **Every call**:
-   - Call `Time::next()` (increment advances, current time updates)
-   - Apply boundary conditions at the new time
-
-### Your physics lambda
+### Your `step` hook
 
 - Execute `stepper.step(t, u)` or any custom physics update
-- Boundary conditions have already been applied
+- Boundary conditions have already been applied by `apply`
 - Time has already advanced to the new value
-- Must not modify model fields outside the `u` buffer
-
-### `end_integrator_step()` epilogue
-
-- Write results if `Time::do_save()` is true at the new time
+- Must not modify fields other than the state it steps
 
 ### Key constraints
 
 - **Initial conditions**: Run only on the first iteration when `increment == 0`
-- **Boundary conditions**: Applied after `Time::next()` but before your physics lambda
-- **Result writing**: Happens after IC application (first call) and/or after your physics lambda
-- **Time advancement**: `Time::next()` runs on every call, including the first
+- **Boundary conditions**: Applied after `Time::next()` but before your `step` hook
+- **Result writing**: Happens after IC application (first iteration) and/or after your `step` hook
+- **Time advancement**: `Time::next()` runs on every iteration, including the first
 
 Your stepper must respect that boundary conditions are already valid when `stepper.step(t, u)` is called, and it must not rely on any specific timing of halo exchanges beyond what your gradient evaluator's `prepare()` method provides.
 
@@ -418,10 +378,11 @@ Ready-made tableaus are available as factory functions in `butcher_tableau.hpp`:
 #include <openpfc/kernel/simulation/steppers/butcher_tableau.hpp>
 
 auto tableau = pfc::sim::steppers::make_rk4_classical<double>();
-auto rk4_stepper = pfc::sim::steppers::create(grad, model, dt, u.size(), tableau);
+auto rk4_stepper = pfc::sim::steppers::create(stack.u(), grad, model, dt, tableau);
 
-sim.step_with_physics([&]() {
-  t = rk4_stepper.step(t, u);  // Fourth-order accurate
+pfc::sim::run(time, [&](double t) {
+  stack.exchange_halos();
+  (void)rk4_stepper.step(t, stack.u().vec());  // Fourth-order accurate
 });
 ```
 
@@ -429,16 +390,16 @@ The key advantages:
 
 - **Same model interface**: Your `rhs(double t, const Grads&)` method works unchanged
 - **Same gradient evaluator**: FD and spectral evaluators work with any stepper
-- **Same Simulator integration**: `step_with_physics()` pattern remains identical
+- **Same driver integration**: the `pfc::sim::run` hook pattern remains identical
 
 ### Implementation status
 
-- ✅ **Euler stepper**: Fully implemented in [`include/openpfc/kernel/simulation/steppers/euler.hpp`](../../include/openpfc/kernel/simulation/steppers/euler.hpp)
-- ✅ **RK2 stepper**: Fully implemented in [`include/openpfc/kernel/simulation/steppers/explicit_rk.hpp`](../../include/openpfc/kernel/simulation/steppers/explicit_rk.hpp) (`make_rk2_midpoint`/`make_rk2_heun` tableaus)
-- ✅ **RK4 stepper**: Fully implemented in [`include/openpfc/kernel/simulation/steppers/explicit_rk.hpp`](../../include/openpfc/kernel/simulation/steppers/explicit_rk.hpp) (`make_rk4_classical` tableau)
-- ✅ **ETD1 stepper (CPU)**: Isolated-candidate exponential update in [`include/openpfc/kernel/simulation/steppers/etd1.hpp`](../../include/openpfc/kernel/simulation/steppers/etd1.hpp) (`ETD1Stepper` / `MultiETD1Stepper`); consumes diagonal `exp`/`phi1` spans from [`spectral_exp_coefficients.hpp`](../../include/openpfc/kernel/integrator/spectral_exp_coefficients.hpp). Does **not** replace app-local Tungsten `Model::step`.
-- ❌ **Adaptive RK stepper**: Exists on branch `ahojukka5/work-0070-add-adaptive-runge-kutta-stepper-with`, not yet merged to master
-- ✅ **IMEX stage-composition seam**: Kernel proof path in [`imex_stage_composition.hpp`](../../include/openpfc/kernel/simulation/steppers/imex_stage_composition.hpp) (`ImexEulerComposer`); sequences explicit eval then `SolveFunction` into an isolated candidate with `apply_candidate` commit
+- ✅ **Euler stepper**: [`include/openpfc/kernel/simulation/steppers/euler.hpp`](../../include/openpfc/kernel/simulation/steppers/euler.hpp)
+- ✅ **RK2 stepper**: [`include/openpfc/kernel/simulation/steppers/explicit_rk.hpp`](../../include/openpfc/kernel/simulation/steppers/explicit_rk.hpp) (`make_rk2_midpoint`/`make_rk2_heun` tableaus)
+- ✅ **RK4 stepper**: [`include/openpfc/kernel/simulation/steppers/explicit_rk.hpp`](../../include/openpfc/kernel/simulation/steppers/explicit_rk.hpp) (`make_rk4_classical` tableau)
+- ✅ **ETD1 stepper (CPU)**: Isolated-candidate exponential update in [`include/openpfc/kernel/simulation/steppers/etd1.hpp`](../../include/openpfc/kernel/simulation/steppers/etd1.hpp) (`ETD1Stepper` / `MultiETD1Stepper`, real or complex state); consumes diagonal `exp`/`phi1` spans from [`spectral_exp_coefficients.hpp`](../../include/openpfc/kernel/integrator/spectral_exp_coefficients.hpp). Production spectral apps use the framework spectral ETD system on `SimulationState` (host and device).
+- ✅ **Embedded RK + adaptive controller**: `EmbeddedRKStepper` (`make_embedded_rk45` / `make_embedded_rk23`) with `AdaptiveTimeController` closing error estimate → `Time` attempt transactions (example 21)
+- ✅ **IMEX stage-composition seam**: [`imex_stage_composition.hpp`](../../include/openpfc/kernel/simulation/steppers/imex_stage_composition.hpp) (`ImexEulerComposer`); sequences explicit eval then `SolveFunction` into an isolated candidate with `apply_candidate` commit
 - ⏳ **IMEX methods**: First-order IMEX Euler is landed on CPU in [`include/openpfc/kernel/simulation/steppers/imex_euler.hpp`](../../include/openpfc/kernel/simulation/steppers/imex_euler.hpp) (`ImexEulerStepper` / `MultiImexEulerStepper` attempt/commit isolation with injected `SolveFunction` + `LinearOperatorDesc`). Higher-order IMEX-RK and production spectral diagonal solvers remain separate work (e.g. board #161).
 
 Check the [refactoring roadmap](../development/refactoring_roadmap.md) for progress on higher-order stepper implementations.
@@ -448,14 +409,14 @@ Check the [refactoring roadmap](../development/refactoring_roadmap.md) for progr
 Putting it all together, here's a complete example showing FD gradient evaluation with explicit Euler stepping:
 
 ```cpp
-#include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/fft/fft_fftw.hpp>
+#include <mpi.h>
+
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
-#include <openpfc/kernel/simulation/simulator.hpp>
+#include <openpfc/kernel/simulation/simulation_driver.hpp>
+#include <openpfc/kernel/simulation/stacks/fd_cpu_stack.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
-#include <openpfc/kernel/simulation/du_field.hpp>
+#include <openpfc/kernel/simulation/time.hpp>
 
 // Physics model (from earlier example)
 namespace heat3d {
@@ -470,44 +431,44 @@ namespace heat3d {
 
 int main(int argc, char** argv) {
   MPI_Init(&argc, &argv);
+  int rank = 0, nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
-  // Setup world and decomposition
-  auto world = pfc::world::create(
+  // Global geometry
+  auto domain = pfc::domain::create(
       pfc::GridSize({64, 64, 64}),
       pfc::PhysicalOrigin({-3.14, -3.14, -3.14}),
       pfc::GridSpacing({0.098, 0.098, 0.098}));
 
-  auto decomp = pfc::decomposition::create(world, MPI_COMM_WORLD);
-  auto fft = pfc::fft::create(decomp);
+  // Padded Field + halo exchanger + decomposition in one bundle
+  const int order = 4;  // 4th-order stencils, halo width 2
+  pfc::sim::stacks::FDCPUStack stack(domain, order, rank, nproc, MPI_COMM_WORLD);
 
-  // Create field and gradient evaluator
-  pfc::field::PaddedBrick<double> u(fft.get_inbox_bounds(), 2);
-  pfc::gradient::FDGradient<heat3d::HeatGrads> grad(u, 4);  // 4th order
-
-  // Create model and stepper
+  // Gradient evaluator, model, and stepper
+  auto grad = pfc::field::create<heat3d::HeatGrads>(stack.u(), order);
   heat3d::HeatModel model;
-  double dt = 0.001;
-  auto stepper = pfc::sim::steppers::create(grad, model, dt, u.size());
+  const double dt = 0.001;
+  auto stepper = pfc::sim::steppers::create(stack.u(), grad, model, dt);
 
-  // Setup simulator
-  pfc::Time time({0.0, 1.0, dt}, 0.1);
-  pfc::Simulator sim(model, time);
-  pfc::initialize(sim);
+  // Initial condition on the owned cells
+  stack.u().apply([](double x, double y, double z) {
+    return std::exp(-(x * x + y * y + z * z));
+  });
 
   // Time-stepping loop
-  double t = 0.0;
-  while (!sim.done()) {
-    sim.step_with_physics([&]() {
-      t = stepper.step(t, u);
-    });
-  }
+  pfc::Time time({0.0, 1.0, dt}, /*saveat=*/0.1);
+  pfc::sim::run(time, [&](double t) {
+    stack.exchange_halos();
+    (void)stepper.step(t, stack.u().vec());
+  });
 
   MPI_Finalize();
   return 0;
 }
 ```
 
-This example demonstrates the complete migration path: from physics model through gradient evaluator to stepper creation and Simulator integration.
+This example demonstrates the complete path: from physics model through gradient evaluator to stepper creation and the `pfc::sim::run` driver.
 
 ## Additional resources
 

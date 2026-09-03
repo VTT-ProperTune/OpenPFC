@@ -52,8 +52,9 @@ void run_spectral_pointwise(const RunConfig &cfg, int rank, int nproc) {
   HeatModel model;
 
   sim::stacks::SpectralCPUStack stack(
-      GridSize({cfg.N, cfg.N, cfg.N}), PhysicalOrigin({0.0, 0.0, 0.0}),
-      GridSpacing({1.0, 1.0, 1.0}), rank, nproc, MPI_COMM_WORLD);
+      pfc::domain::create(GridSize({cfg.N, cfg.N, cfg.N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                          GridSpacing({1.0, 1.0, 1.0})),
+      rank, nproc, MPI_COMM_WORLD);
 
   auto &u = stack.u();
   auto du = stack.du<HeatGrads>();

@@ -9,10 +9,14 @@
  *
  * JSON keys: `checkpoint.every`, `checkpoint.directory`, `restart_from`.
  * Bundles are `<directory>/step_<increment>/` with `metadata.json` and
- * `fields/<name>.bin` (collective MPI-IO bricks). Interrupted publishes
- * leave only a `.publishing` staging dir, never a loadable `final_dir`.
+ * `fields/<name>.bin` (collective MPI-IO bricks via `brick_io.hpp`, published
+ * through the one `publish_checkpoint_directory` protocol). Interrupted
+ * publishes leave only a `.publishing` staging dir, never a loadable
+ * `final_dir`. Every method is templated on the fields' `MemorySpace` so GPU
+ * sessions checkpoint through the host mirror (`Field::with_host_view`).
  */
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <exception>
@@ -103,33 +107,69 @@ inline void require_checkpoint_identity(const checkpoint::CheckpointMetadata &fi
   }
 }
 
-template <typename T>
-[[nodiscard]] RealField pack_owned_real(const pfc::data::Field<T> &f) {
+/**
+ * @brief Copy the owned cells of @p f (x-fastest, no halo) into a transport
+ *        buffer. Device fields go through the host mirror.
+ */
+template <typename T, typename MemorySpace>
+[[nodiscard]] std::vector<double>
+pack_owned_real(pfc::data::Field<T, MemorySpace> &f) {
   static_assert(std::is_same_v<T, double>, "pack_owned_real is float64 only");
   const auto sz = f.local_size();
-  RealField out(static_cast<std::size_t>(sz[0]) * static_cast<std::size_t>(sz[1]) *
-                static_cast<std::size_t>(sz[2]));
-  std::size_t n = 0;
-  for (int k = 0; k < sz[2]; ++k) {
-    for (int j = 0; j < sz[1]; ++j) {
-      for (int i = 0; i < sz[0]; ++i) {
-        out[n++] = f(i, j, k);
+  std::vector<double> out(static_cast<std::size_t>(sz[0]) *
+                          static_cast<std::size_t>(sz[1]) *
+                          static_cast<std::size_t>(sz[2]));
+  if constexpr (pfc::data::Field<T, MemorySpace>::is_host_space) {
+    std::size_t n = 0;
+    for (int k = 0; k < sz[2]; ++k) {
+      for (int j = 0; j < sz[1]; ++j) {
+        for (int i = 0; i < sz[0]; ++i) {
+          out[n++] = f(i, j, k);
+        }
       }
     }
+  } else {
+    if (f.storage_halo() != 0) {
+      throw std::invalid_argument(
+          "pack_owned_real: device fields with storage halo are not supported");
+    }
+    f.with_host_view([&](double *d, std::size_t n) {
+      if (n != out.size()) {
+        throw std::runtime_error("pack_owned_real: host mirror size mismatch");
+      }
+      std::copy(d, d + n, out.begin());
+    });
   }
   return out;
 }
 
-template <typename T>
-inline void unpack_owned_real(pfc::data::Field<T> &f, const RealField &in) {
+/** @brief Inverse of @ref pack_owned_real. */
+template <typename T, typename MemorySpace>
+inline void unpack_owned_real(pfc::data::Field<T, MemorySpace> &f,
+                              const std::vector<double> &in) {
   const auto sz = f.local_size();
-  std::size_t n = 0;
-  for (int k = 0; k < sz[2]; ++k) {
-    for (int j = 0; j < sz[1]; ++j) {
-      for (int i = 0; i < sz[0]; ++i) {
-        f(i, j, k) = in[n++];
+  if constexpr (pfc::data::Field<T, MemorySpace>::is_host_space) {
+    std::size_t n = 0;
+    for (int k = 0; k < sz[2]; ++k) {
+      for (int j = 0; j < sz[1]; ++j) {
+        for (int i = 0; i < sz[0]; ++i) {
+          f(i, j, k) = in[n++];
+        }
       }
     }
+    f.note_host_write();
+  } else {
+    if (f.storage_halo() != 0) {
+      throw std::invalid_argument(
+          "unpack_owned_real: device fields with storage halo are not supported");
+    }
+    f.with_host_view([&](double *d, std::size_t n) {
+      if (n != in.size()) {
+        throw std::runtime_error("unpack_owned_real: host mirror size mismatch");
+      }
+      std::copy(in.begin(), in.end(), d);
+    });
+    f.sync_to_device();
   }
 }
 
@@ -148,28 +188,33 @@ public:
     return m_cfg.directory / oss.str();
   }
 
-  void save(const SimulationState &state, const Time &time) {
+  /**
+   * @brief Publish every `double` field of @p state in @p MemorySpace.
+   *
+   * Collective over the service communicator. Device fields are read through
+   * their host mirror; the residency bracket is owned here, not by the caller.
+   */
+  template <class MemorySpace = pfc::HostSpace>
+  void save(SimulationState &state, const Time &time) {
     if (m_cfg.directory.empty()) {
       throw std::invalid_argument("CheckpointService::save: directory is empty");
     }
     std::vector<std::string> names;
     for (const auto &name : state.field_names()) {
-      if (state.has_typed_field<double>(name)) {
+      if (state.has_typed_field<double, MemorySpace>(name)) {
         names.push_back(name);
       }
     }
     if (names.empty()) {
       throw std::invalid_argument("CheckpointService::save: no fields");
     }
-    const auto &field0 = state.get_field<double>(names.front());
+    const auto &field0 = state.get_field<double, MemorySpace>(names.front());
     const auto &dom = field0.domain();
     const auto sz = field0.local_size();
     const auto lo = field0.box().low;
 
     int nproc = 1;
-    int rank = 0;
     pfc::mpi::throw_on_mpi_error(MPI_Comm_size(m_comm, &nproc), "MPI_Comm_size");
-    pfc::mpi::throw_on_mpi_error(MPI_Comm_rank(m_comm, &rank), "MPI_Comm_rank");
 
     checkpoint::CheckpointMetadata meta;
     meta.accepted_time = time.get_current();
@@ -184,70 +229,24 @@ public:
     dm.local_offset = {lo[0], lo[1], lo[2]};
     meta.decomposition = dm;
 
-    const auto final_dir = step_dir(time.get_increment());
-    const auto staging = std::filesystem::path(final_dir.string() + ".publishing");
-
-    int exists_flag = 0;
-    if (rank == 0) {
-      exists_flag = std::filesystem::exists(final_dir) ? 1 : 0;
+    const auto outcome = checkpoint::publish_checkpoint_directory(
+        step_dir(time.get_increment()), meta, m_comm,
+        [&](const std::filesystem::path &fields_dir) {
+          for (const auto &name : names) {
+            auto &f = state.get_field<double, MemorySpace>(name);
+            const auto brick = pack_owned_real(f);
+            const auto loc = f.local_size();
+            const auto off = f.box().low;
+            const auto gsz = f.global_size();
+            checkpoint::write_real_brick_mpi(
+                (fields_dir / (name + ".bin")).string(), m_comm,
+                {gsz[0], gsz[1], gsz[2]}, {loc[0], loc[1], loc[2]},
+                {off[0], off[1], off[2]}, brick);
+          }
+        });
+    if (!outcome.ok) {
+      throw std::runtime_error("CheckpointService::save: " + outcome.message);
     }
-    pfc::mpi::throw_on_mpi_error(MPI_Bcast(&exists_flag, 1, MPI_INT, 0, m_comm),
-                                 "MPI_Bcast ckpt exists");
-    if (exists_flag != 0) {
-      throw std::runtime_error("checkpoint already exists: " + final_dir.string());
-    }
-
-    if (rank == 0) {
-      std::error_code ec;
-      std::filesystem::remove_all(staging, ec);
-      std::filesystem::create_directories(staging / "fields");
-    }
-    pfc::mpi::throw_on_mpi_error(MPI_Barrier(m_comm), "MPI_Barrier ckpt stage");
-
-    std::exception_ptr eptr;
-    try {
-      for (const auto &name : names) {
-        const auto &f = state.get_field<double>(name);
-        const auto brick = pack_owned_real(f);
-        const auto loc = f.local_size();
-        const auto off = f.box().low;
-        const auto gsz = f.global_size();
-        const auto path = (staging / "fields" / (name + ".bin")).string();
-        checkpoint::write_real_brick_mpi(path, m_comm, {gsz[0], gsz[1], gsz[2]},
-                                         {loc[0], loc[1], loc[2]},
-                                         {off[0], off[1], off[2]}, brick);
-      }
-      if (rank == 0) {
-        std::ofstream out(staging / "metadata.json");
-        if (!out) {
-          throw std::runtime_error("failed to write metadata.json");
-        }
-        out << checkpoint::to_json(meta).dump(2) << '\n';
-      }
-    } catch (...) {
-      eptr = std::current_exception();
-    }
-    int local_ok = eptr ? 0 : 1;
-    int global_ok = 0;
-    pfc::mpi::throw_on_mpi_error(
-        MPI_Allreduce(&local_ok, &global_ok, 1, MPI_INT, MPI_MIN, m_comm),
-        "MPI_Allreduce ckpt write");
-    if (global_ok == 0) {
-      if (rank == 0) {
-        std::error_code ec;
-        std::filesystem::remove_all(staging, ec);
-        std::filesystem::remove_all(final_dir, ec);
-      }
-      pfc::mpi::throw_on_mpi_error(MPI_Barrier(m_comm), "MPI_Barrier ckpt fail");
-      if (eptr) {
-        std::rethrow_exception(eptr);
-      }
-      throw std::runtime_error("checkpoint save failed on another rank");
-    }
-    if (rank == 0) {
-      std::filesystem::rename(staging, final_dir);
-    }
-    pfc::mpi::throw_on_mpi_error(MPI_Barrier(m_comm), "MPI_Barrier ckpt rename");
   }
 
   [[nodiscard]] checkpoint::CheckpointMetadata
@@ -289,13 +288,14 @@ public:
     return checkpoint::from_json(nlohmann::json::parse(buf));
   }
 
+  template <class MemorySpace = pfc::HostSpace>
   void load(SimulationState &state, Time &time, const std::filesystem::path &dir) {
     const auto meta = read_metadata(dir);
 
     std::vector<std::string> names = meta.fields;
     if (names.empty()) {
       for (const auto &name : state.field_names()) {
-        if (state.has_typed_field<double>(name)) {
+        if (state.has_typed_field<double, MemorySpace>(name)) {
           names.push_back(name);
         }
       }
@@ -303,7 +303,7 @@ public:
     if (names.empty()) {
       throw std::invalid_argument("checkpoint load: no field names");
     }
-    const auto &field0 = state.get_field<double>(names.front());
+    const auto &field0 = state.get_field<double, MemorySpace>(names.front());
     checkpoint::CheckpointMetadata want;
     want.format_version = checkpoint::kCheckpointFormatVersion;
     want.domain = domain_params_from(field0.domain());
@@ -328,13 +328,13 @@ public:
     m_result_counter = meta.result_counter;
 
     for (const auto &name : names) {
-      auto &f = state.get_field<double>(name);
+      auto &f = state.get_field<double, MemorySpace>(name);
       const auto loc = f.local_size();
       const auto off = f.box().low;
       const auto gsz = f.global_size();
-      RealField brick(static_cast<std::size_t>(loc[0]) *
-                      static_cast<std::size_t>(loc[1]) *
-                      static_cast<std::size_t>(loc[2]));
+      std::vector<double> brick(static_cast<std::size_t>(loc[0]) *
+                                static_cast<std::size_t>(loc[1]) *
+                                static_cast<std::size_t>(loc[2]));
       BinaryReader reader(m_comm);
       reader.set_domain({gsz[0], gsz[1], gsz[2]}, {loc[0], loc[1], loc[2]},
                         {off[0], off[1], off[2]});
@@ -344,7 +344,8 @@ public:
     }
   }
 
-  bool maybe_save(const SimulationState &state, const Time &time) {
+  template <class MemorySpace = pfc::HostSpace>
+  bool maybe_save(SimulationState &state, const Time &time) {
     if (m_cfg.every <= 0 || m_cfg.directory.empty()) {
       return false;
     }
@@ -352,15 +353,16 @@ public:
     if (inc == 0 || (inc % m_cfg.every) != 0) {
       return false;
     }
-    save(state, time);
+    save<MemorySpace>(state, time);
     return true;
   }
 
+  template <class MemorySpace = pfc::HostSpace>
   void restore_from_config(SimulationState &state, Time &time) {
     if (m_cfg.restart_from.empty()) {
       return;
     }
-    load(state, time, m_cfg.restart_from);
+    load<MemorySpace>(state, time, m_cfg.restart_from);
   }
 
 private:

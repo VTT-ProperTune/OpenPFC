@@ -117,29 +117,6 @@ public:
                       halo::HaloDirectionSelector{}) {}
 
   /**
-   * @brief Construct the exchanger and pre-build the 6 face MPI types
-   *        (default: full `Axes3D()` set, identical to the historical 6-face
-   *        exchange).
-   *
-   * @param decomp     Decomposition (must outlive this object).
-   * @param rank       This MPI rank.
-   * @param halo_width Ghost ring thickness `hw`. Must match the brick
-   *                   that `start_halo_exchange` is called with.
-   * @param comm       MPI communicator.
-   * @param base_tag   Base tag for messages (direction index added).
-   *
-   * @deprecated Use explicit Box3i + Domain constructor instead.
-   */
-  [[deprecated("Use explicit Box3i + Domain constructor: HostFacesHalo(box, "
-               "domain, decomp, rank, ...)")]]
-  HostFacesHalo(const decomposition::Decomposition &decomp, int rank, int halo_width,
-                MPI_Comm comm, int base_tag = 0)
-      : HostFacesHalo(decomposition::local_box(decomp, rank),
-                      decomposition::domain(decomp), decomp, rank, halo_width, comm,
-                      halo::presets::Axes3D(), base_tag,
-                      halo::HaloDirectionSelector{}) {}
-
-  /**
    * @brief Construct with a user-selected halo direction set.
    *
    * Restricts the active face slots to those listed in `dirs`. Non-face
@@ -148,35 +125,16 @@ public:
    * `pfc::comm::HaloExchange` with `HaloConnectivity::Full`.
    *
    * If `selector` is provided the active set for this rank is
-   * `selector(rank)`; otherwise the uniform `dirs` is used.
-   *
-   * @param decomp     Decomposition (must outlive this object).
-   * @param rank       This MPI rank.
-   * @param halo_width Ghost ring thickness `hw`.
-   * @param comm       MPI communicator.
-   * @param dirs       Direction set (defaults to `Axes3D()` for back-compat).
-   * @param base_tag   Base tag for messages (direction index added).
-   * @param selector   Optional per-rank override of the direction set.
-   *
-   * @deprecated Use explicit Box3i + Domain constructor instead.
+   * `selector(rank)`; otherwise the uniform `dirs` is used. The
+   * decomposition is consulted only during construction (neighbour ranks);
+   * no reference to it is retained.
    */
-  [[deprecated("Use explicit Box3i + Domain constructor: HostFacesHalo(box, "
-               "domain, decomp, rank, ...)")]]
-  HostFacesHalo(const decomposition::Decomposition &decomp, int rank, int halo_width,
-                MPI_Comm comm, halo::HaloDirectionSet dirs, int base_tag = 0,
-                halo::HaloDirectionSelector selector = {})
-      : HostFacesHalo(decomposition::local_box(decomp, rank),
-                      decomposition::domain(decomp), decomp, rank, halo_width, comm,
-                      dirs, base_tag, selector) {}
-
-  // Box3i + Domain constructor implementation
   HostFacesHalo(const Box3i &subdomain_box, const Domain &domain,
                 const decomposition::Decomposition &decomp, int rank, int halo_width,
                 MPI_Comm comm, halo::HaloDirectionSet dirs, int base_tag = 0,
                 halo::HaloDirectionSelector selector = {})
-      : m_subdomain_box(subdomain_box), m_domain(domain), m_decomp(decomp),
-        m_use_decomp(false), m_rank(rank), m_halo_width(halo_width), m_comm(comm),
-        m_base_tag(base_tag),
+      : m_subdomain_box(subdomain_box), m_domain(domain), m_rank(rank),
+        m_halo_width(halo_width), m_comm(comm), m_base_tag(base_tag),
         m_dirs(halo::resolve_direction_set(dirs, selector, rank)) {
     if (halo::neighbour_agreement_enabled()) {
       halo::validate_neighbour_direction_agreement(comm, decomp, rank, m_dirs);
@@ -196,7 +154,7 @@ public:
     for (std::size_t i = 0; i < 6; ++i) {
       m_active[i] = m_dirs.contains(dirs_canon[i]);
       m_neighbors.push_back(
-          decomposition::get_neighbor_rank(m_decomp, m_rank, dirs_canon[i]));
+          decomposition::get_neighbor_rank(decomp, m_rank, dirs_canon[i]));
     }
     m_requests.resize(2 * 6);
   }
@@ -365,14 +323,8 @@ private:
     }
   }
 
-  // Box3i + Domain interface (preferred for M1+)
   Box3i m_subdomain_box;
   Domain m_domain;
-
-  // Decomposition-based interface (deprecated)
-  const decomposition::Decomposition &m_decomp;
-  bool m_use_decomp =
-      false; // True when constructed via deprecated Decomposition path
 
   int m_rank;
   int m_halo_width;
@@ -461,24 +413,6 @@ public:
                      halo::HaloDirectionSelector{}) {}
 
   /**
-   * @brief Construct with the historical 26-direction default (`Full3D()`).
-   *
-   * @param decomp      Decomposition (must outlive this object).
-   * @param rank        MPI rank of the caller.
-   * @param halo_width  Halo ring thickness `hw` on every side; must be `>=1`.
-   * @param comm        MPI communicator for the exchange.
-   * @param base_tag    Starting MPI tag (uses `[base, base + 6)`).
-   *
-   * @deprecated Use explicit Box3i + Domain constructor instead.
-   */
-  [[deprecated("Use explicit Box3i + Domain constructor: "
-               "HostFullHalo(box, domain, rank, ...)")]]
-  HostFullHalo(const decomposition::Decomposition &decomp, int rank, int halo_width,
-               MPI_Comm comm, int base_tag = 0)
-      : HostFullHalo(decomp, rank, halo_width, comm, halo::presets::Full3D(),
-                     base_tag, halo::HaloDirectionSelector{}) {}
-
-  /**
    * @brief Construct with a user-selected halo direction set.
    *
    * **Default:** `Full3D()` — the historical 26-direction widening exchange.
@@ -492,27 +426,14 @@ public:
    *
    * If `selector` is provided the active set for this rank is
    * `selector(rank)`; otherwise the uniform `dirs` is used.
-   *
-   * @deprecated Use explicit Box3i + Domain constructor instead.
    */
-  [[deprecated("Use explicit Box3i + Domain constructor: "
-               "HostFullHalo(box, domain, rank, ...)")]]
-  HostFullHalo(const decomposition::Decomposition &decomp, int rank, int halo_width,
-               MPI_Comm comm, halo::HaloDirectionSet dirs, int base_tag = 0,
-               halo::HaloDirectionSelector selector = {})
-      : HostFullHalo(decomposition::local_box(decomp, rank),
-                     decomposition::domain(decomp), decomp, rank, halo_width, comm,
-                     dirs, base_tag, selector) {}
-
-  // Box3i + Domain constructor implementation
   HostFullHalo(const Box3i &subdomain_box, const Domain &domain,
                const decomposition::Decomposition &decomp, int rank, int halo_width,
                MPI_Comm comm, halo::HaloDirectionSet dirs, int base_tag = 0,
                halo::HaloDirectionSelector selector = {})
       : m_subdomain_box(subdomain_box), m_domain(domain), m_rank(rank),
         m_halo_width(halo_width), m_comm(comm), m_base_tag(base_tag),
-        m_dirs(halo::resolve_direction_set(dirs, selector, rank)),
-        m_use_decomp(false) {
+        m_dirs(halo::resolve_direction_set(dirs, selector, rank)) {
     if (halo_width < 1) {
       throw std::invalid_argument(
           "pfc::comm::detail::HostFullHalo: halo_width must be >= 1");
@@ -753,8 +674,6 @@ private:
   MPI_Comm m_comm = MPI_COMM_NULL;
   int m_base_tag = 0;
   halo::HaloDirectionSet m_dirs;
-  bool m_use_decomp =
-      false; // True when constructed via deprecated Decomposition path
 
   int m_nx = 0, m_ny = 0, m_nz = 0;
   int m_nxp = 0, m_nyp = 0, m_nzp = 0;
@@ -814,24 +733,6 @@ public:
                             halo::HaloDirectionSelector{}) {}
 
   /**
-   * @brief Construct with the historical 6-face axis-aligned set (`Axes3D()`).
-   *
-   * @param field_ptr Base pointer of the local field; must be stable for object
-   * lifetime.
-   *
-   * @deprecated Use explicit Box3i + Domain constructor:
-   * HostPersistentFaces(box, domain, decomp, rank, ...)
-   */
-  [[deprecated("Use explicit Box3i + Domain constructor: "
-               "HostPersistentFaces(box, domain, decomp, rank, ...)")]]
-  HostPersistentFaces(const decomposition::Decomposition &decomp, int rank,
-                      int halo_width, MPI_Comm comm, T *field_ptr, int base_tag = 0)
-      : HostPersistentFaces(decomposition::local_box(decomp, rank),
-                            decomposition::domain(decomp), decomp, rank, halo_width,
-                            comm, field_ptr, halo::presets::Axes3D(), base_tag,
-                            halo::HaloDirectionSelector{}) {}
-
-  /**
    * @brief Construct a persistent exchange bound to the directions in `dirs`.
    *
    * Uses one persistent `MPI_Recv_init` / `MPI_Send_init` pair per active
@@ -842,23 +743,9 @@ public:
    * Non-face directions in `dirs` are tolerated but ignored — this is a
    * face-only persistent driver.
    *
-   * @param dirs     Direction set (defaults to `Axes3D()` for back-compat).
+   * @param dirs     Direction set (defaults to `Axes3D()`).
    * @param selector Optional per-rank override of the direction set.
-   *
-   * @deprecated Use explicit Box3i + Domain constructor:
-   * HostPersistentFaces(box, domain, decomp, rank, ...)
    */
-  [[deprecated("Use explicit Box3i + Domain constructor: "
-               "HostPersistentFaces(box, domain, decomp, rank, ...)")]]
-  HostPersistentFaces(const decomposition::Decomposition &decomp, int rank,
-                      int halo_width, MPI_Comm comm, T *field_ptr,
-                      halo::HaloDirectionSet dirs, int base_tag = 0,
-                      halo::HaloDirectionSelector selector = {})
-      : HostPersistentFaces(decomposition::local_box(decomp, rank),
-                            decomposition::domain(decomp), decomp, rank, halo_width,
-                            comm, field_ptr, dirs, base_tag, selector) {}
-
-  // Main Box3i+Domain constructor implementation
   HostPersistentFaces(const Box3i &subdomain_box,
                       [[maybe_unused]] const Domain &domain,
                       const decomposition::Decomposition &decomp, int rank,

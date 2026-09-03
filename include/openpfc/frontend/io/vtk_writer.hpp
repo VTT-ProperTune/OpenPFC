@@ -82,7 +82,7 @@ private:
   /**
    * @brief Write VTK data section
    */
-  static void write_vti_data(std::ofstream &file, const RealField &data);
+  static void write_vti_data(std::ofstream &file, pfc::field::FieldView<double> data);
 
   /**
    * @brief Write parallel master file (.pvti)
@@ -128,12 +128,12 @@ public:
   /**
    * @brief Write real field to VTK file
    */
-  MPI_Status write(int increment, const RealField &data) override;
+  MPI_Status write(int increment, pfc::field::FieldView<double> data) override;
 
   /**
    * @brief Write complex field to VTK file (writes magnitude)
    */
-  MPI_Status write(int increment, const ComplexField &data) override;
+  MPI_Status write(int increment, pfc::field::FieldView<std::complex<double>> data) override;
 };
 
 } // namespace pfc

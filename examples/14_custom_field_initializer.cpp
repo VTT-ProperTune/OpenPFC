@@ -38,7 +38,8 @@
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 
 using namespace pfc;
-using namespace pfc::data;
+using pfc::data::field_from_subdomain_unpadded;
+using pfc::data::field_from_subdomain;
 
 // ============================================================================
 // Part 1: Define Custom Pattern Types

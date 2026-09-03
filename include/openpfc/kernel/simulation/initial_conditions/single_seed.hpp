@@ -50,7 +50,7 @@ public:
   void set_density(double density) { rho_seed = density; }
   double get_density() const { return rho_seed; }
 
-  void apply(RealField &field, const Domain &domain, const Box3i &box,
+  void apply(pfc::field::FieldOutput<double> field, const Domain &domain, const Box3i &box,
              double time = 0.0) override {
     (void)time;
     const double s = 1.0 / sqrt(2.0);

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <algorithm>
-#include <aluminum/aluminum_etd_session.hpp>
+#include <aluminum/aluminum_session.hpp>
 #include <aluminum/aluminum_physics.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
@@ -10,7 +10,7 @@
 #include <iomanip>
 #include <iostream>
 #include <nlohmann/json.hpp>
-#include <openpfc/kernel/simulation/moving_frame_mean_field_etd.hpp>
+#include <openpfc/kernel/simulation/spectral_etd_system.hpp>
 #include <openpfc/openpfc.hpp>
 
 using namespace Catch::Matchers;
@@ -60,7 +60,7 @@ json golden_settings(int n, double t1, double dt) {
 
 } // namespace
 
-TEST_CASE("MovingFrameMeanFieldETDSystem 8^3 two steps is finite",
+TEST_CASE("SpectralETDSystem<AluminumPhysics> 8^3 two steps is finite",
           "[aluminum][physics][etd]") {
   constexpr int N = 8;
   constexpr double dt = 0.01;
@@ -77,7 +77,7 @@ TEST_CASE("MovingFrameMeanFieldETDSystem 8^3 two steps is finite",
   phys.declare_fields(state);
   std::fill(state.get_field<double>("psi").vec().begin(),
             state.get_field<double>("psi").vec().end(), -0.0060);
-  pfc::sim::MovingFrameMeanFieldETDSystem<aluminum::AluminumPhysics<>> sys(
+  pfc::sim::SpectralETDSystem<aluminum::AluminumPhysics<>> sys(
       phys, fft, state, dt);
   REQUIRE(sys.linear_symbol().size() == fft.size_outbox());
   sys.step(0.0);
@@ -86,16 +86,16 @@ TEST_CASE("MovingFrameMeanFieldETDSystem 8^3 two steps is finite",
   REQUIRE(sumsq(state.get_field<double>("psi").vec()) > 0.0);
 }
 
-TEST_CASE("AluminumETDSession JSON constant IC two steps",
+TEST_CASE("AluminumSession JSON constant IC two steps",
           "[aluminum][physics][session]") {
   const json settings = golden_settings(8, 0.02, 0.01);
-  aluminum::AluminumETDSession session(settings, 0, 1, MPI_COMM_WORLD);
+  aluminum::AluminumSession session(settings, 0, 1, MPI_COMM_WORLD);
   session.run();
   REQUIRE(session.psi().vec().size() == 512);
   REQUIRE(std::isfinite(sumsq(session.psi().vec())));
 }
 
-TEST_CASE("AluminumETDSession 4-rank 16^3/20-step run", "[aluminum][golden][MPI]") {
+TEST_CASE("AluminumSession 4-rank 16^3/20-step run", "[aluminum][golden][MPI]") {
   int nproc = 1;
   int rank = 0;
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
@@ -104,7 +104,7 @@ TEST_CASE("AluminumETDSession 4-rank 16^3/20-step run", "[aluminum][golden][MPI]
     SKIP("requires exactly 4 MPI ranks");
   }
   const json settings = golden_settings(16, 0.20, 0.01);
-  aluminum::AluminumETDSession session(settings, rank, nproc, MPI_COMM_WORLD);
+  aluminum::AluminumSession session(settings, rank, nproc, MPI_COMM_WORLD);
   session.run();
   double s = sumsq(session.psi().vec());
   double g = 0.0;
@@ -113,7 +113,7 @@ TEST_CASE("AluminumETDSession 4-rank 16^3/20-step run", "[aluminum][golden][MPI]
   REQUIRE(g > 0.0);
 }
 
-TEST_CASE("AluminumETDSession seed_grid_fcc 5-step CPU checksum",
+TEST_CASE("AluminumSession seed_grid_fcc 5-step CPU checksum",
           "[aluminum][etd][seed_grid_fcc][session]") {
   constexpr int N = 32;
   constexpr double dt = 0.01;
@@ -139,7 +139,8 @@ TEST_CASE("AluminumETDSession seed_grid_fcc 5-step CPU checksum",
                      {"amplitude", 0.4},
                      {"rho", -0.036},
                      {"rseed", 42}}})}};
-  aluminum::AluminumETDSession session(settings, 0, 1, MPI_COMM_WORLD);
+  aluminum::register_catalog();
+  aluminum::AluminumSession session(settings, 0, 1, MPI_COMM_WORLD);
   session.run();
   double sum = 0.0;
   double sumsq_v = 0.0;

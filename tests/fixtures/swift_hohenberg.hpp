@@ -10,15 +10,19 @@
  * ∂t ψ = [ε − (1+∇²)²] ψ − ψ³
  *
  * Point-wise: `rhs(t, SHGrads)` with value / lap / biharm.
- * Spectral ETD: `linear_symbol(k_lap)` and `nonlinearity(psi)`.
+ * Spectral ETD: `linear_symbol(k_lap)` and the device-capable `pointwise()`
+ * functor (`SHPointwise`, see spectral_etd_toys_pointwise.hpp).
  * Parameters: `ParameterSchema`. No k-loops, no backend classes.
  */
 
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/execution/memory_space.hpp>
 #include <openpfc/kernel/simulation/parameter_schema.hpp>
 #include <openpfc/kernel/simulation/physics_concepts.hpp>
 #include <openpfc/kernel/simulation/simulation_state.hpp>
+
+#include <fixtures/spectral_etd_toys_pointwise.hpp>
 
 namespace pfc::test {
 
@@ -32,7 +36,7 @@ struct SHGrads {
   double biharm{};
 };
 
-struct SwiftHohenberg {
+template <class MemorySpace = pfc::HostSpace> struct SwiftHohenbergT {
   using parameters_type = SHParams;
 
   Domain domain{};
@@ -53,7 +57,7 @@ struct SwiftHohenberg {
   }
 
   void declare_fields(pfc::SimulationState &state) const {
-    pfc::sim::add_declared_field<double>(state, "psi", domain, box, 0);
+    pfc::sim::add_declared_field<double, MemorySpace>(state, "psi", domain, box, 0);
   }
 
   [[nodiscard]] double rhs(double /*t*/, const SHGrads &g) const {
@@ -66,15 +70,22 @@ struct SwiftHohenberg {
     return params.epsilon - one_plus_lap * one_plus_lap;
   }
 
+  /// Host convenience: the same cubic the pointwise functor evaluates.
   [[nodiscard]] double nonlinearity(double psi) const {
-    return -psi * psi * psi;
+    return SHPointwise{}.nonlinearity(pfc::sim::SpectralCell{.psi = psi});
   }
+
+  [[nodiscard]] SHPointwise pointwise() const { return SHPointwise{}; }
 };
+
+using SwiftHohenberg = SwiftHohenbergT<pfc::HostSpace>;
 
 static_assert(pfc::sim::HasParameters<SwiftHohenberg>);
 static_assert(pfc::sim::DeclaresFields<SwiftHohenberg>);
 static_assert(pfc::sim::PointwiseRhs<SwiftHohenberg, SHGrads>);
 static_assert(pfc::sim::SpectralETDPhysics<SwiftHohenberg>);
+static_assert(!pfc::sim::HasMeanFieldFilter<SwiftHohenberg>);
+static_assert(!pfc::sim::HasNonlinearSymbol<SwiftHohenberg>);
 static_assert(pfc::sim::HasParameterSchema<SwiftHohenberg>);
 
 } // namespace pfc::test

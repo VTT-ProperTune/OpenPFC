@@ -20,32 +20,26 @@ The following six contract areas define the interface boundaries between integra
 
 ### 1. Integrator surface API contracts
 
-The `Simulator::step()` method isolates integrator stages via prologue/epilogue hooks defined in [`include/openpfc/kernel/simulation/simulator_integrator.hpp`](../../include/openpfc/kernel/simulation/simulator_integrator.hpp):
+The free-function driver [`pfc::sim::run`](../../include/openpfc/kernel/simulation/simulation_driver.hpp) isolates integrator stages via four hooks:
 
 ```cpp
-inline void Simulator::begin_integrator_step() {
-  simulator_integrator::begin_integrator_step(*this);
-}
-
-inline void Simulator::end_integrator_step() {
-  simulator_integrator::end_integrator_step(*this);
-}
+pfc::sim::run(time, step, on_start, apply, on_save);
 ```
 
-The ordering contract implemented in `simulator_integrator::begin_integrator_step()`:
-1. On first call (`increment == 0`): apply initial conditions, apply boundary conditions, optionally write results if `do_save()`
+The ordering contract implemented by `pfc::sim::run`:
+1. On the first iteration (`increment == 0`): `on_start(time)` (initial conditions, boundary conditions), then `on_save(time)` if `do_save()`
 2. Call `pfc::time::next()` (increment advances; current time becomes `t0 + increment * dt`, clamped to `t1`)
-3. Apply boundary conditions at the new time
-4. Call `Model::step()` or custom physics body with the new current time
-5. Call `end_integrator_step()` to write results if at a save point
+3. `apply(time)` — boundary conditions at the new time
+4. `step(t)` — the stepper or spectral system advances with the new current time
+5. `on_save(time)` — write results if at a save point
 
-This contract ensures that initial conditions run only on the first step, boundary conditions apply before every physics update, and result writing happens at the appropriate times. Integrators using `begin_integrator_step()` and `end_integrator_step()` must respect this ordering.
+This contract ensures that initial conditions run only on the first step, boundary conditions apply before every physics update, and result writing happens at the appropriate times. Steppers driven by `pfc::sim::run` must respect this ordering.
 
 ### 2. State access patterns
 
 Two distinct RHS evaluation patterns are supported:
 
-**Legacy field-only RHS pattern (spectral apps):**
+**0.1 field-only RHS pattern (removed with `Model` in 0.2, kept for contrast):**
 ```cpp
 // include/openpfc/kernel/simulation/model.hpp
 class Model {
@@ -285,13 +279,11 @@ t = stepper.step(t, u);  // integrator owns the step logic
 3. Use `pfc::sim::steppers::create` factory to bind model + evaluator + time step
 4. Call `stepper.step(t, u)` instead of `model.step(t)`
 
-**Simulator integration:**
+**Driver integration:**
 ```cpp
-// Using stepper instead of Model::step(simulator, model)
+// The stepper is the `step` hook of pfc::sim::run
 auto stepper = pfc::sim::steppers::create(eval, model, dt, u.size());
-sim.step_with_physics([&]() {
-  t = stepper.step(t, u);
-});
+pfc::sim::run(time, [&](double t) { (void)stepper.step(t, u); });
 ```
 
 The model no longer owns time integration, enabling pluggable steppers (RK2, RK4, IMEX) without modifying model physics code.
@@ -323,23 +315,22 @@ method extras live on stepper accessors (`u_high`/`u_low`/`error`,
 ## Consequences
 
 - New integrator methods (RK2, RK4, IMEX) can be added without modifying model physics code by following the documented contracts
-- Model authors can choose between legacy `Model::step(double t)` (spectral apps) and explicit integrator composition (new explicit methods) based on their needs
+- Model authors can choose between spectral-diagonal descriptors consumed by the framework ETD system (stiff spectral apps) and explicit integrator composition (`rhs(t, g)` + stepper) based on their needs
 - Halo policy and gradient evaluator choices are now documented, enabling backend-agnostic numeric expectations
 - Integration path divergence is minimized through explicit interface contracts
-- Future integrators must respect the `begin_integrator_step()` / `end_integrator_step()` ordering and must not modify Model fields during RHS evaluation
-- Spectrum of abstraction: `DuField` (compact single-field) → `EulerStepper` (stepper-owns logic) → `Model::step` (legacy model-owns logic) provides multiple entry points with clear contracts
+- Future integrators must respect the `pfc::sim::run` hook ordering and must not modify state fields during RHS evaluation
+- Spectrum of abstraction: `DuField` (compact single-field) → `EulerStepper` (stepper-owns logic) → spectral ETD system (framework-owns the transform choreography) provides multiple entry points with clear contracts
 
 ## See also
 
-- [`include/openpfc/kernel/simulation/simulator.hpp`](../../include/openpfc/kernel/simulation/simulator.hpp) — `Simulator::step()` orchestration
-- [`include/openpfc/kernel/simulation/simulator_integrator.hpp`](../../include/openpfc/kernel/simulation/simulator_integrator.hpp) — `begin_integrator_step()` / `end_integrator_step()` implementation
+- [`include/openpfc/kernel/simulation/simulation_driver.hpp`](../../include/openpfc/kernel/simulation/simulation_driver.hpp) — `pfc::sim::run` hook orchestration (`on_start` / `apply` / `step` / `on_save`)
 - [`include/openpfc/kernel/simulation/steppers/step_attempt.hpp`](../../include/openpfc/kernel/simulation/steppers/step_attempt.hpp) — `StepAttemptResult` and `commit_step_attempt`
 - [`include/openpfc/kernel/simulation/steppers/euler.hpp`](../../include/openpfc/kernel/simulation/steppers/euler.hpp) — `EulerStepper` and `MultiEulerStepper` implementation
 - [`include/openpfc/kernel/simulation/for_each_interior.hpp`](../../include/openpfc/kernel/simulation/for_each_interior.hpp) — Canonical point-wise driver loop
 - [`include/openpfc/kernel/field/tuple_protocol.hpp`](../../include/openpfc/kernel/field/tuple_protocol.hpp) — Multi-field bundling convention
 - [`include/openpfc/kernel/simulation/du_field.hpp`](../../include/openpfc/kernel/simulation/du_field.hpp) — Stack-friendly residual field with `prepare_parent` hooks
 - [`include/openpfc/kernel/field/spectral_gradient.hpp`](../../include/openpfc/kernel/field/spectral_gradient.hpp) — Spectral evaluator with internal `prepare()` for FFTs
-- [`include/openpfc/kernel/simulation/model.hpp`](../../include/openpfc/kernel/simulation/model.hpp) — Legacy `Model::step(double t)` interface
+- [`include/openpfc/kernel/simulation/spectral_etd_system.hpp`](../../include/openpfc/kernel/simulation/spectral_etd_system.hpp) — framework-owned spectral ETD path
 - [`apps/wave2d/include/wave2d/wave_model.hpp`](../../apps/wave2d/include/wave2d/wave_model.hpp) — Example multi-field model with tuple protocol
 - [`docs/concepts/halo_exchange.md`](../concepts/halo_exchange.md) — Halo exchange policies, timing, and separated layout recommendation
 - [`docs/science/numerics_limits.md`](../science/numerics_limits.md) — Backend-specific stability constraints

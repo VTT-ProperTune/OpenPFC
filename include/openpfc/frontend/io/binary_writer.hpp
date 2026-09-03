@@ -83,10 +83,10 @@ private:
   MPI_Datatype m_etype = MPI_DATATYPE_NULL;
   bool m_type_valid = false;
 
-  static MPI_Datatype get_type([[maybe_unused]] const RealField &field) {
+  static MPI_Datatype get_type([[maybe_unused]] pfc::field::FieldView<double> field) {
     return MPI_DOUBLE;
   }
-  static MPI_Datatype get_type([[maybe_unused]] const ComplexField &field) {
+  static MPI_Datatype get_type([[maybe_unused]] pfc::field::FieldView<std::complex<double>> field) {
     return MPI_DOUBLE_COMPLEX;
   }
 
@@ -143,16 +143,16 @@ public:
     m_domain_valid = true;
   }
 
-  MPI_Status write(int increment, const RealField &data) override {
+  MPI_Status write(int increment, pfc::field::FieldView<double> data) override {
     return write_mpi_binary(increment, data);
   }
 
-  MPI_Status write(int increment, const ComplexField &data) override {
+  MPI_Status write(int increment, pfc::field::FieldView<std::complex<double>> data) override {
     return write_mpi_binary(increment, data);
   }
 
   template <typename T>
-  MPI_Status write_mpi_binary(int increment, const std::vector<T> &data) {
+  MPI_Status write_mpi_binary(int increment, pfc::field::FieldView<T> data) {
     const std::size_t expected =
         pfc::mpi::checked_local_extent_product(m_local, "BinaryWriter::write");
 

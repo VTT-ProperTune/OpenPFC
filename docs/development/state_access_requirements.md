@@ -11,7 +11,7 @@ The requirements are derived from existing field implementations and usage patte
 
 - **Scalar field patterns** (`apps/heat3d/`): `pfc::data::Field<double, HostSpace>` constructed via `pfc::data::field_from_subdomain<double>(decomp, rank, halo)` or `pfc::data::field_from_subdomain_unpadded<double>(decomp, rank, halo)`
 - **Multi-field patterns** (`apps/wave2d/`): Multiple `pfc::data::Field<double, HostSpace>` instances (u, v, lap) with halo padding, tuple-based increments (`WaveIncrements{du, dv}`), per-point Laplacian aggregate (`WaveLaplacian{lxx, lyy}`)
-- **Complex field patterns**: `pfc::data::Field<std::complex<double>, HostSpace>`, used in spectral methods via `ModelFieldRegistry`
+- **Complex field patterns**: `pfc::data::Field<std::complex<double>, HostSpace>`, owned by name in `SimulationState` for spectral methods
 - **Backend differences**: CPU and GPU both use `pfc::core::DataBuffer<BackendTag, T>` (`CPUTag` vs `CUDATag`/`HIPTag`); `pfc::data::Field<T, MemorySpace>` is the owning field on top of that buffer
 - **MPI coordination**: `PaddedHaloExchanger<T>` for non-blocking halo exchanges, face-only exchange patterns (6-direction), timing controlled by application driver
 

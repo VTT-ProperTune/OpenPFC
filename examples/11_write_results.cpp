@@ -12,7 +12,8 @@
 #include <vector>
 
 using namespace pfc;
-using namespace pfc::data;
+using pfc::data::field_from_subdomain_unpadded;
+using pfc::data::field_from_subdomain;
 
 // Write a Field to VTK via the thin VtkWriter wrapper (M2: no DiscreteField).
 int main(int argc, char **argv) {

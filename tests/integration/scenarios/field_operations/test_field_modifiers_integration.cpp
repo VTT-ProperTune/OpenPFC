@@ -17,7 +17,7 @@ public:
     set_field_name(field_name);
   }
 
-  void apply(RealField &field, const Domain & /*domain*/, const Box3i & /*box*/,
+  void apply(pfc::field::FieldOutput<double> field, const Domain & /*domain*/, const Box3i & /*box*/,
              double /*t*/) override {
     for (double &elem : field) {
       elem = value_;

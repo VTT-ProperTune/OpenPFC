@@ -84,9 +84,7 @@ struct HeatModel {
 #include <openpfc/kernel/simulation/stacks/fd_cpu_stack.hpp>
 
 pfc::sim::stacks::FDCPUStack stack(
-  pfc::GridSize{{N, N, N}},
-  pfc::PhysicalOrigin{{0.0, 0.0, 0.0}},
-  pfc::GridSpacing{{dx, dx, dx}},
+  pfc::domain::create(pfc::GridSize{{N, N, N}}, pfc::PhysicalOrigin{{0.0, 0.0, 0.0}}, pfc::GridSpacing{{dx, dx, dx}}),
   fd_order, rank, nproc);
 
 auto& u = stack.u();
@@ -99,9 +97,7 @@ auto grad = pfc::field::create<HeatGrads>(u, fd_order);
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 
 pfc::sim::stacks::SpectralCPUStack stack(
-  pfc::GridSize{{N, N, N}},
-  pfc::PhysicalOrigin{{0.0, 0.0, 0.0}},
-  pfc::GridSpacing{{dx, dx, dx}},
+  pfc::domain::create(pfc::GridSize{{N, N, N}}, pfc::PhysicalOrigin{{0.0, 0.0, 0.0}}, pfc::GridSpacing{{dx, dx, dx}}),
   rank, nproc);
 
 auto& u = stack.u();
@@ -147,7 +143,7 @@ Explicit Euler has the same stability limit regardless of backend:
 const double dt = 0.15 * dx * dx / (6.0 * D);  // Conservative safety factor
 ```
 
-Spectral methods are exact in space but still time-step limited for explicit integration. For unconditional stability, consider implicit methods or the legacy spectral `Model::step()` path which uses implicit integration.
+Spectral methods are exact in space but still time-step limited for explicit integration. For unconditional stability, consider IMEX (`ImexEulerStepper`) or the framework spectral ETD system, which treats the diagonal linear operator exactly.
 
 ## Benefits of pluggable integrators
 

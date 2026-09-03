@@ -52,13 +52,13 @@ The `increment` value is advanced by the simulator according to configuration (s
 
 | API | Element type |
 |-----|--------------|
-| `BinaryReader::read(filename, Field&)` / `RealField` | `MPI_DOUBLE` |
-| `BinaryReader::read(filename, ComplexField&)` | `MPI_DOUBLE_COMPLEX` |
+| `BinaryReader::read(filename, field::FieldOutput<double>)` (`Field::output()` or a `std::vector<double>`) | `MPI_DOUBLE` |
+| `BinaryReader::read(filename, field::FieldOutput<std::complex<double>>)` | `MPI_DOUBLE_COMPLEX` |
 
 **Implications:**
 
 - Files written as **pure `double`** real fields with the same `(global, local, offset)` decomposition can be read back for restart or `FileReader` initial conditions.  
-- Files written as **`std::complex<double>`** round-trip through `BinaryReader::read(..., ComplexField&)` with the same decomposition.  
+- Files written as **`std::complex<double>`** round-trip through the complex `BinaryReader::read` overload with the same decomposition.  
 - Match **communicator**, **decomposition**, and **datatype** when reading: a file written on *N* ranks is not automatically loadable on a different *N* without re-decomposition logic outside this low-level format. Do not read a complex file with the real `read` overload (or vice versa).
 
 ## JSON configuration surface

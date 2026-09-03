@@ -19,7 +19,7 @@
 
 #include <mpi.h>
 
-#include <openpfc/kernel/data/model_types.hpp>
+#include <openpfc/kernel/field/state_access.hpp>
 #include <openpfc/kernel/mpi/domain_geometry.hpp>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 
@@ -29,7 +29,7 @@ inline void write_real_brick_mpi(const std::string &path, MPI_Comm comm,
                                  const std::array<int, 3> &global,
                                  const std::array<int, 3> &local,
                                  const std::array<int, 3> &offset,
-                                 const RealField &data) {
+                                 pfc::field::FieldView<double> data) {
   pfc::mpi::validate_subarray_domain(global, local, offset, "write_real_brick_mpi");
   const std::size_t expected =
       pfc::mpi::checked_local_extent_product(local, "write_real_brick_mpi");

@@ -79,9 +79,7 @@ int main(int argc, char* argv[]) {
 
   // Build spectral stack (Domain + Decomposition + FFT + inbox-sized Field)
   pfc::sim::stacks::SpectralCPUStack stack(
-    pfc::GridSize{{N, N, N}},
-    pfc::PhysicalOrigin{{0.0, 0.0, 0.0}},
-    pfc::GridSpacing{{dx, dx, dx}},
+    pfc::domain::create(pfc::GridSize{{N, N, N}}, pfc::PhysicalOrigin{{0.0, 0.0, 0.0}}, pfc::GridSpacing{{dx, dx, dx}}),
     rank, nproc);
 
   // Initialize field with same Gaussian initial condition

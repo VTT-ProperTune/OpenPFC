@@ -9,6 +9,8 @@
 #include <openpfc/kernel/simulation/physics_concepts.hpp>
 #include <openpfc/kernel/simulation/simulation_state.hpp>
 
+#include <fixtures/spectral_etd_toys_pointwise.hpp>
+
 using pfc::Box3i;
 using pfc::Domain;
 using pfc::SimulationState;
@@ -17,10 +19,12 @@ using pfc::sim::DeclaresFields;
 using pfc::sim::FieldDeclaration;
 using pfc::sim::FieldElementKind;
 using pfc::sim::HasParameters;
-using pfc::sim::MovingFrameMeanFieldETDPhysics;
+using pfc::sim::HasCorrelationKernel;
+using pfc::sim::HasMeanFieldFilter;
+using pfc::sim::HasSpectralPointwise;
 using pfc::sim::PointwisePhysics;
 using pfc::sim::PointwiseRhs;
-using pfc::sim::SpectralDiagonalPhysics;
+using pfc::sim::SpectralLinearSymbol;
 using pfc::sim::SpectralETDPhysics;
 
 namespace {
@@ -72,6 +76,7 @@ struct SwiftHohenbergPhysics {
   }
 
   [[nodiscard]] double nonlinearity(double psi) const { return -psi * psi * psi; }
+  [[nodiscard]] pfc::test::SHPointwise pointwise() const { return {}; }
 };
 
 struct MovingFrameToy {
@@ -83,15 +88,10 @@ struct MovingFrameToy {
     add_declared_field<double>(state, "psi", domain, box, 0);
   }
   double linear_symbol(double k_laplacian) const { return k_laplacian; }
+  double nonlinear_symbol(double k_laplacian) const { return k_laplacian; }
   double filter_mf(double) const { return 1.0; }
   double correlation_kernel(double) const { return 0.0; }
-  double temperature_variation(double, double) const { return 0.0; }
-  double nonlinearity(double psi, double, double, double) const {
-    return -psi * psi * psi;
-  }
-  double free_energy_density(double psi, double, double, double) const {
-    return 0.5 * psi * psi;
-  }
+  pfc::test::MovingFrameToyPointwise pointwise() const { return {}; }
 };
 
 struct LinearOnly {
@@ -108,21 +108,26 @@ static_assert(DeclaresFields<HeatPhysics>);
 static_assert(PointwiseRhs<HeatPhysics, HeatGrads>);
 static_assert(PointwisePhysics<HeatPhysics, HeatGrads>);
 static_assert(HasParameters<HeatPhysics>);
-static_assert(!SpectralDiagonalPhysics<HeatPhysics>);
+static_assert(!HasSpectralPointwise<HeatPhysics>);
 static_assert(!SpectralETDPhysics<HeatPhysics>);
 
 static_assert(DeclaresFields<SwiftHohenbergPhysics>);
-static_assert(SpectralDiagonalPhysics<SwiftHohenbergPhysics>);
+static_assert(SpectralLinearSymbol<SwiftHohenbergPhysics>);
+static_assert(HasSpectralPointwise<SwiftHohenbergPhysics>);
 static_assert(SpectralETDPhysics<SwiftHohenbergPhysics>);
 static_assert(HasParameters<SwiftHohenbergPhysics>);
 static_assert(!PointwiseRhs<SwiftHohenbergPhysics, HeatGrads>);
 
-static_assert(MovingFrameMeanFieldETDPhysics<MovingFrameToy>);
-static_assert(!MovingFrameMeanFieldETDPhysics<SwiftHohenbergPhysics>);
+static_assert(SpectralETDPhysics<MovingFrameToy>);
+static_assert(HasMeanFieldFilter<MovingFrameToy>);
+static_assert(HasCorrelationKernel<MovingFrameToy>);
+static_assert(!HasMeanFieldFilter<SwiftHohenbergPhysics>);
+static_assert(!HasCorrelationKernel<SwiftHohenbergPhysics>);
+static_assert(pfc::sim::HasFreeEnergyDensity<pfc::test::MovingFrameToyPointwise>);
 
 static_assert(!DeclaresFields<LinearOnly>);
 static_assert(pfc::sim::SpectralLinearSymbol<LinearOnly>);
-static_assert(!SpectralDiagonalPhysics<LinearOnly>);
+static_assert(!HasSpectralPointwise<LinearOnly>);
 static_assert(!SpectralETDPhysics<LinearOnly>);
 
 static_assert(PointwiseRhs<RhsOnly, HeatGrads>);

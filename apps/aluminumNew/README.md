@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # AluminumNew
 
-Production aluminum binary: JSON/TOML → `AluminumETDSession` (moving-frame mean-field ETD on `SimulationState`). Initial conditions include `constant` and `seed_grid_fcc`.
+Production aluminum binary: JSON/TOML → `pfc::ui::SpectralETDSession<AluminumPhysics, Stack>` (aliases `AluminumSession`, `AluminumCUDASession`, `AluminumHIPSession` in `include/aluminum/aluminum_session.hpp`); the moving-frame mean-field ETD runs on the shared `pfc::sim::SpectralETDSystem`. Initial conditions include `constant` and the app-registered `seed_grid_fcc`.
 
 ## Build
 
@@ -34,12 +34,14 @@ A matching `aluminumNew.toml` is provided for TOML workflows. Adjust `results`, 
 
 | File | Role |
 |------|------|
-| `aluminumNew.cpp` | `main`: JSON → `AluminumETDSession` |
-| `aluminum_etd.cpp` | alias of `aluminumNew` |
-| `aluminum_etd_cuda.cpp` / `aluminum_etd_hip.cpp` | GPU sessions on `GPUSpectralStack` |
-| `include/aluminum/aluminum_physics.hpp` | Schema + moving-frame mean-field ETD descriptors |
-| `include/aluminum/aluminum_field_modifiers.hpp` | Host-buffer ICs (`constant`, `seed_grid_fcc`) |
-| `SeedFCC.hpp` | FCC seed helper used by the host-buffer IC |
+| `src/aluminum.cpp` | `main`: JSON → `AluminumSession` (`aluminumNew` and its alias `aluminum_etd`) |
+| `src/aluminum_cuda.cpp` / `src/aluminum_hip.cpp` | `main` for the GPU sessions on `GPUSpectralStack` |
+| `src/gpu/aluminum_pointwise.inc` (`.cu` / `.hip`) | Device instantiation of the pointwise nonlinearity |
+| `include/aluminum/aluminum_physics.hpp` | Schema, k-space symbols (`linear_symbol`, `filter_mf`, `correlation_kernel`, `nonlinear_symbol`), `pointwise()` |
+| `include/aluminum/aluminum_pointwise.hpp` | `OPENPFC_HD` functor: `N`, free-energy density, `temperature_variation(x, t)` |
+| `include/aluminum/seed_grid_fcc.hpp` | `seed_grid_fcc` catalog `FieldModifier` (registered by `aluminum::register_catalog()`) |
+| `include/aluminum/aluminum_session.hpp` | Session aliases + `register_catalog()` |
+| `SeedFCC.hpp` | FCC seed helper used by `seed_grid_fcc` |
 
 ## See also
 

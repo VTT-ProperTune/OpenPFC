@@ -10,8 +10,9 @@ milestone table is [`development/0.2_migration_map.md`](development/0.2_migratio
 Use this page when porting an application or example off the 0.1 `Model` /
 `Simulator` / `App` path.
 
-0.2 production physics (tungsten, aluminumNew) already runs on ETD sessions
-(`TungstenETDSession`, `AluminumETDSession`) and `pfc::sim::run`. There is no
+0.2 production physics (tungsten, aluminumNew) already runs on the generic
+`pfc::ui::SpectralETDSession<Physics, Stack>` (over `pfc::sim::SpectralETDSystem`)
+and `pfc::sim::run`. There is no
 `pfc::Model`, `pfc::Simulator`, or `pfc::ui::App`.
 
 ## Architecture in one paragraph
@@ -28,17 +29,20 @@ composed stepper). JSON still describes domain, time, `method`/`backend`,
 
 | 0.1 | 0.2 |
 |-----|-----|
-| `pfc::Model` (virtual `step` / `initialize`) | Physics struct or lambda; ETD systems (`SpectralMeanFieldETDSystem`, `MovingFrameMeanFieldETDSystem`); `pfc::sim::run` |
+| `pfc::Model` (virtual `step` / `initialize`) | Physics struct or lambda; for stiff spectral models a `SpectralETDPhysics` consumed by `pfc::sim::SpectralETDSystem<Physics, MemorySpace>`; `pfc::sim::run` |
 | `pfc::Simulator` | `pfc::sim::run` / `pfc::sim::SimulationDriver` |
-| `pfc::ui::App<Model>` / `JsonAppRun` / `SpectralSimulationSession` | `pfc::ui::make_simulation_session<Stack>` + session `run()`, or an app-owned session (`TungstenETDSession`, …) |
+| `pfc::ui::App<Model>` / `JsonAppRun` / `SpectralSimulationSession` | `pfc::ui::make_simulation_session<Stack>` + session `run()`, or `pfc::ui::SpectralETDSession<Physics, Stack>` for spectral-ETD physics |
 | `Model::add_real_field` / `get_real_field` | `pfc::data::Field<T>` on the stack (`stack.u()`) or `SimulationState::get_field<T>(name)` |
-| `Simulator::add_initial_conditions` | `FieldModifier::apply(field, domain, box, t)` once at start, or host-buffer helpers (`apply_ics_from_json` in tungsten) |
+| `Simulator::add_initial_conditions` | `pfc::apply_field_modifier(modifier, field, t)` once at start (host or device `Field`), or the JSON `initial_conditions` catalog |
 | `Simulator::add_boundary_conditions` | Apply modifiers in the `pfc::sim::run` `apply` hook, or stage-prep (`StagePreparationService`) |
 | `Simulator::add_results_writer` | Writer on the `on_save` hook; JSON `parse_result_writers_from_json` |
 | `Simulator::step` / `pfc::step(sim)` / `pfc::done(sim)` | `pfc::sim::run(time, step, on_start, apply, on_save)` |
 | `pfc::compat::LegacyModelPhysics` (A1) | Deleted — wrap physics as `step(t)` directly |
 | `Simulator::step_with_physics` (A2) | Deleted — call the physics stepper from `pfc::sim::run` |
-| `FieldModifier::apply(Model&, double)` | `apply(RealField&, const Domain&, const Box3i&, double)` |
+| `FieldModifier::apply(Model&, double)` | `apply(field::FieldOutput<double>, const Domain&, const Box3i&, double)`; a `std::vector<double>` lvalue converts implicitly |
+| `pfc::Field` / `RealField` (`std::vector<double>` aliases, `model_types.hpp`) | `pfc::Field<T, MemorySpace>` = `pfc::data::Field` (owning); `field::FieldView<T>` / `field::FieldOutput<T>` (non-owning) at modifier/writer/reader boundaries |
+| `ResultsWriter::write(int, const RealField&)` | `write(int, field::FieldView<double>)` (`field.view()` or a `std::vector<double>`) |
+| `checkpoint::PublishedFieldBrick` + `std::ofstream` bricks | `publish_checkpoint_directory(final_dir, meta, comm, write_fields)` — MPI-collective; bricks via `brick_io.hpp` |
 | `from_json(json, Model&)` stub | App-local `from_json` into a params struct (`apply_tungsten_json`, …) |
 | `restart_from` + `simulator.increment` / `result_counter` | `CheckpointService` only (`checkpoint.every`, `restart_from`); mixing the old keys is an error |
 | `Box3D`, `csys.hpp`, `world_types.hpp` | `pfc::Box3i`, `pfc::Domain` |
@@ -117,7 +121,7 @@ Changed:
 Implement one method:
 
 ```cpp
-void apply(pfc::RealField &field, const pfc::Domain &domain,
+void apply(pfc::field::FieldOutput<double> field, const pfc::Domain &domain,
            const pfc::Box3i &box, double time) override;
 ```
 
@@ -139,8 +143,9 @@ no Gen-1 `restore_gen1_from_checkpoint`.
 | Time loop | `include/openpfc/kernel/simulation/simulation_driver.hpp` |
 | JSON → session | `include/openpfc/frontend/ui/from_json_simulation_session.hpp` |
 | JSON FD heat | `include/openpfc/frontend/ui/json_fd_session.hpp` |
-| JSON ICs / writers | `include/openpfc/frontend/ui/simulation_wiring.hpp` |
-| Tungsten production | `apps/tungsten/include/tungsten/tungsten_etd_session.hpp` |
+| JSON ICs / writers | `include/openpfc/frontend/ui/simulation_wiring_conditions.hpp`, `simulation_wiring_writers.hpp` |
+| Spectral-ETD JSON session | `include/openpfc/frontend/ui/json_spectral_etd_session.hpp` |
+| Tungsten production | `apps/tungsten/include/tungsten/tungsten_session.hpp`, `tungsten_physics.hpp` |
 | Spectral example | `examples/04_diffusion_model.cpp`, `examples/05_simulator.cpp` |
 | Custom JSON IC | `examples/10_ui_register_ic.cpp` |
 | API catalog | `docs/api/examples/` |

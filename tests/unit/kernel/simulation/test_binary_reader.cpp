@@ -3,7 +3,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <openpfc/kernel/data/model_types.hpp>
+#include <vector>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <openpfc/kernel/simulation/binary_reader.hpp>
 
@@ -29,7 +29,7 @@ TEST_CASE("BinaryReader does not leak an MPI_File handle when MPI_File_open fail
   const std::array<int, 3> offset{0, 0, 0};
   reader.set_domain(global, local, offset);
 
-  RealField data(4, 0.0);
+  std::vector<double> data(4, 0.0);
   // MPI_File_open itself fails here (nonexistent file/directory), so no
   // MPI_File handle is ever produced to leak.
   REQUIRE_THROWS_AS(

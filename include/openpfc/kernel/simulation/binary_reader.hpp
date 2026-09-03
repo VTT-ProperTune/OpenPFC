@@ -47,7 +47,9 @@
 #define PFC_BINARY_READER_HPP
 
 #include <mpi.h>
-#include <openpfc/kernel/data/model_types.hpp>
+#include <array>
+#include <complex>
+#include <openpfc/kernel/field/state_access.hpp>
 #include <openpfc/kernel/mpi/domain_geometry.hpp>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 
@@ -80,9 +82,9 @@ class BinaryReader {
 
 private:
   MPI_Comm m_comm = MPI_COMM_WORLD;
-  Vec3<int> m_global{};
-  Vec3<int> m_local{};
-  Vec3<int> m_offset{};
+  std::array<int, 3> m_global{};
+  std::array<int, 3> m_local{};
+  std::array<int, 3> m_offset{};
   bool m_domain_valid = false;
   MPI_Datatype m_filetype{};
   MPI_Datatype m_etype = MPI_DATATYPE_NULL;
@@ -109,8 +111,9 @@ private:
   }
 
   template <typename T>
-  MPI_Status read_mpi_binary(const std::string &filename, std::vector<T> &data,
-                             MPI_Datatype etype, const char *element_name) {
+  MPI_Status read_mpi_binary(const std::string &filename,
+                             pfc::field::FieldOutput<T> data, MPI_Datatype etype,
+                             const char *element_name) {
     const std::size_t expected =
         pfc::mpi::checked_local_extent_product(m_local, "BinaryReader::read");
 
@@ -188,8 +191,8 @@ public:
     }
   }
 
-  void set_domain(const Vec3<int> &arr_global, const Vec3<int> &arr_local,
-                  const Vec3<int> &arr_offset) {
+  void set_domain(const std::array<int, 3> &arr_global, const std::array<int, 3> &arr_local,
+                  const std::array<int, 3> &arr_offset) {
     pfc::mpi::validate_subarray_domain(arr_global, arr_local, arr_offset,
                                        "BinaryReader::set_domain");
     if (m_type_valid) {
@@ -203,11 +206,14 @@ public:
     m_domain_valid = true;
   }
 
-  MPI_Status read(const std::string &filename, Field &data) {
+  /// Collective read into a mutable host view (`Field::output()` or a
+  /// `std::vector<double>` lvalue).
+  MPI_Status read(const std::string &filename, pfc::field::FieldOutput<double> data) {
     return read_mpi_binary(filename, data, MPI_DOUBLE, "doubles");
   }
 
-  MPI_Status read(const std::string &filename, ComplexField &data) {
+  MPI_Status read(const std::string &filename,
+                  pfc::field::FieldOutput<std::complex<double>> data) {
     return read_mpi_binary(filename, data, MPI_DOUBLE_COMPLEX, "complex elements");
   }
 };

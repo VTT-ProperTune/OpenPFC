@@ -11,7 +11,7 @@ compilable with **narrow includes**. Prefer domain headers over umbrella pulls:
 - **`openpfc_minimal.hpp`** — small entry when you only need core aliases and
   forward declarations (see that header’s Doxygen).
 - **Kernel work** — include `openpfc/kernel/...` headers that declare what you
-  use (`world.hpp`, `simulator.hpp`, `fft_fftw.hpp`, …) instead of shipping
+  use (`domain.hpp`, `simulation_driver.hpp`, `fft_fftw.hpp`, …) instead of shipping
   `openpfc.hpp` into every translation unit.
 - **Frontend / JSON** — include `openpfc/frontend/ui/...` slices (`errors_config_format.hpp`,
   `simulation_wiring_context.hpp`, …) when a parser should not depend on

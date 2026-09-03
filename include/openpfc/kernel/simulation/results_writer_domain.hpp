@@ -10,9 +10,9 @@
  *
  * @details
  * File writers need global size, local size, and local offset. Those come from
- * the field's geometry, not from an FFT inbox. Gen-1 `Simulator` still passes
- * the FFT real-space box as the owned box until Model fields are
- * `pfc::data::Field`.
+ * the field's geometry (`Domain` + owned `Box3i`), not from an FFT inbox;
+ * prefer the `Field` overload so the writer and the data it receives share one
+ * geometry source.
  */
 
 #include <array>

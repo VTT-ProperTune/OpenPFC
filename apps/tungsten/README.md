@@ -5,17 +5,17 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Tungsten PFC application
 
-Production tungsten phase-field crystal binary: JSON/TOML → `TungstenETDSession` (CPU) or `TungstenETDGPUSession` (CUDA/HIP). Model parameters are validated at startup (see root `README.md` — Configuration Validation).
+Production tungsten phase-field crystal binary: JSON/TOML → `pfc::ui::SpectralETDSession<TungstenPhysics, Stack>` (aliases `TungstenSession` (CPU), `TungstenCUDASession`, `TungstenHIPSession` in `include/tungsten/tungsten_session.hpp`). Model parameters are validated at startup (see root `README.md` — Configuration Validation).
 
 ## Binaries (after `OpenPFC_BUILD_APPS=ON`)
 
 | Target | When |
 |--------|------|
-| `tungsten` | Always (CPU FFT / HeFFTe) — 0.2 `TungstenETDSession` |
+| `tungsten` | Always (CPU FFT / HeFFTe) — `TungstenSession` |
 | `tungsten_etd` | Always — alias of `tungsten` |
-| `tungsten_cuda` | CUDA spectral — 0.2 `TungstenETDCUDASession` |
+| `tungsten_cuda` | CUDA spectral — `TungstenCUDASession` |
 | `tungsten_etd_cuda` | CUDA spectral — alias of `tungsten_cuda` |
-| `tungsten_hip` | HIP spectral — 0.2 `TungstenETDHIPSession` |
+| `tungsten_hip` | HIP spectral — `TungstenHIPSession` |
 | `tungsten_etd_hip` | HIP spectral — alias of `tungsten_hip` |
 | `verify_gpu_aware_mpi` | HIP + MPI device-buffer check |
 
@@ -43,9 +43,11 @@ Use `tungsten_cuda` / `tungsten_hip` when built; pass the same config path. On L
 
 | Area | Path |
 |------|------|
-| Physics + ETD sessions | `include/tungsten/tungsten_physics.hpp`, `tungsten_etd_session.hpp`, `tungsten_etd_gpu_session.hpp` |
-| ICs / BCs / writers | `tungsten_field_modifiers.hpp`, `tungsten_etd_io.hpp` |
-| Shared `main()` | `include/tungsten/common/tungsten_app_main.hpp` |
+| Physics (schema, k-space symbols, `pointwise()`) | `include/tungsten/tungsten_physics.hpp`, `tungsten_pointwise.hpp` |
+| Session aliases + catalog registration | `include/tungsten/tungsten_session.hpp` (`pfc::ui::SpectralETDSession`) |
+| ICs / BCs / writers | Framework catalogs: `constant`, `single_seed`, `seed_grid` ICs; `fixed` / `moving` BCs from `apps/common` (`tungsten::register_catalog()`); `fields[]` writers (`binary`, `vtk`, `hdf5`) |
+| Device instantiation of the nonlinearity | `src/gpu/tungsten_pointwise.inc` (stamped into `.cu` / `.hip`) |
+| `main()` | `src/{cpu,cuda,hip}/tungsten.cpp` via `pfc::ui::run_json_session_main` |
 
 ## See also
 

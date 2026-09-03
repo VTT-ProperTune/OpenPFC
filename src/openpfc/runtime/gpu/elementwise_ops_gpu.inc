@@ -133,35 +133,6 @@ void launch_axpy_fill(T *out, const T *x, T alpha, T beta, std::size_t n) {
   check_elem_launch("axpy_fill");
 }
 
-/** n = c1*psi + c2*psi^2 + c3*psi^3 + d1*mf + d2*mf^2 + d3*mf^3 */
-template <typename T>
-__global__ void polynomial_nl_kernel(const T *psi, const T *mf, T *out, T c_psi,
-                                     T c_psi2, T c_psi3, T c_mf, T c_mf2, T c_mf3,
-                                     std::size_t n) {
-  const std::size_t i =
-      static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
-  if (i < n) {
-    const T p = psi[i];
-    const T m = mf[i];
-    const T p2 = p * p;
-    const T m2 = m * m;
-    out[i] = c_psi * p + c_psi2 * p2 + c_psi3 * p2 * p + c_mf * m + c_mf2 * m2 +
-             c_mf3 * m2 * m;
-  }
-}
-
-template <typename T>
-void launch_polynomial_nl(const T *psi, const T *mf, T *out, T c_psi, T c_psi2,
-                          T c_psi3, T c_mf, T c_mf2, T c_mf3, std::size_t n) {
-  if (n == 0) {
-    return;
-  }
-  constexpr int threads = 256;
-  polynomial_nl_kernel<<<elem_blocks(n), threads>>>(psi, mf, out, c_psi, c_psi2,
-                                                    c_psi3, c_mf, c_mf2, c_mf3, n);
-  check_elem_launch("polynomial_nl");
-}
-
 #if defined(OpenPFC_ENABLE_CUDA) && defined(OPENPFC_GPU_API_CUDA)
 void multiply_complex_real_cuda_impl(const std::complex<double> *a, const double *b,
                                      std::complex<double> *out, std::size_t n) {
@@ -204,11 +175,6 @@ void axpy_fill_cuda_impl(double *out, const double *x, double alpha, double beta
 void axpy_fill_cuda_impl(float *out, const float *x, float alpha, float beta,
                          std::size_t n) {
   launch_axpy_fill(out, x, alpha, beta, n);
-}
-void polynomial_nl_cuda_impl(const double *psi, const double *mf, double *out,
-                             double c_psi, double c_psi2, double c_psi3, double c_mf,
-                             double c_mf2, double c_mf3, std::size_t n) {
-  launch_polynomial_nl(psi, mf, out, c_psi, c_psi2, c_psi3, c_mf, c_mf2, c_mf3, n);
 }
 #endif
 
@@ -254,11 +220,6 @@ void axpy_fill_hip_impl(double *out, const double *x, double alpha, double beta,
 void axpy_fill_hip_impl(float *out, const float *x, float alpha, float beta,
                         std::size_t n) {
   launch_axpy_fill(out, x, alpha, beta, n);
-}
-void polynomial_nl_hip_impl(const double *psi, const double *mf, double *out,
-                            double c_psi, double c_psi2, double c_psi3, double c_mf,
-                            double c_mf2, double c_mf3, std::size_t n) {
-  launch_polynomial_nl(psi, mf, out, c_psi, c_psi2, c_psi3, c_mf, c_mf2, c_mf3, n);
 }
 #endif
 
