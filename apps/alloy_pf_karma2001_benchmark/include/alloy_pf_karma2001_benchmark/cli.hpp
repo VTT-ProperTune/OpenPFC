@@ -21,12 +21,12 @@ struct RunConfig {
   int Nz = 1;
   int n_steps = 0;
   double t_star_max = 10000.0;
-  std::string output_dir = "results/karma2001";
+  std::string output_dir = "results/alloy_pf_karma2001_benchmark";
   int num_threads = 0;
   int nprint = 200;
   int nsave = 5000;
   int n_hist = 20;
-  double L_over_d0 = 460.0;
+  double L_over_d0 = 1000.0;
   /** Abort on any far-wall interaction (solid, φ, or c). 0 disables. */
   double stop_frac = 0.80;
   /** Number of φ=0 isoline dumps (including t=0). 0 disables. AM default 12. */
@@ -34,6 +34,14 @@ struct RunConfig {
   bool use_glasner = true;
   /** Ji et al. JCP 2022 isotropic FD (\(\bar S_{2,1}\) in 2D, \(\bar S_{1,2,0}\) in 3D). */
   bool use_isotropic = true;
+  /** 2 = 5-point / Ji (2nd order). 4 = 4th-order Cartesian Laplacian on φ. */
+  int fd_order = 2;
+  /** Lab-frame origin of cell (1,1,1). Default (0,0): quarter seed, x≥0, y≥0. */
+  double origin_x = 0.0;
+  double origin_y = 0.0;
+  double origin_z = 0.0;
+  /** 1 = quarter (symmetry on x=0,y=0), 2 = x≥0 half-plane, 4 = full plane. */
+  int n_halves = 1;
   /** FDT interface noise on φ. 0 disables. Default off; env OPENPFC_KARMA_NOISE. */
   double noise_F0 = 0.0;
   unsigned noise_seed = kNoiseSeed;
@@ -41,28 +49,28 @@ struct RunConfig {
 
 inline void print_usage(std::ostream &os, const char *exe) {
   os << "Karma 2001 present-model isothermal dendrite (OpenMP).\n"
-     << "Cubic a_s(n)=1-3ε_c+4ε_c∑n_i^4, a_k=1+3ε_k-4ε_k∑n_i^4; τ from Pinomaa (2020)\n"
-     << "eq. (7) at W_s=W0 a_s and β_k=β0 a_k. A is the trapping parameter. Glasner Δx=W0.\n"
+     << "Independent of apps/alloy_pf_directional. Paper suite:\n"
+     << "  scripts/run_karma2001_benchmark.sh          # 3 [100] cases, t*=10^4\n"
+     << "  QUICK=1 scripts/run_karma2001_benchmark.sh   # short t* pipeline check\n"
+     << "Defaults: A=β0=εk=0, k=0.15, εc=0.02, Ω=0.55, seed 22 d0, L/d0=1000.\n"
      << "Usage:\n  " << exe << " glasner [d0_over_W] [phi1_deg] [output_dir] [nthreads]\n"
-     << "  " << exe << " am [W0_nm] [phi1_deg] [output_dir] [nthreads]\n"
-     << "  " << exe << " smoke\n"
-     << "  " << exe << " smoke3d [nthreads]\n"
-     << "  " << exe << " fine [d0_over_W]   # Δx=0.4 W0, no Glasner (legacy)\n"
-     << "phi1_deg is Bunge φ1 (2D rotation). Φ=φ2=0 unless set via env\n"
-     << "OPENPFC_KARMA_PHI=deg OPENPFC_KARMA_PHI2=deg.\n"
-     << "Env: OPENPFC_KARMA_SKIP_PNG=1  OPENPFC_KARMA_QUIET=1  OPENPFC_KARMA_MAX_STEPS=N\n"
-     << "     OPENPFC_KARMA_DX=<dx/W0>  (Glasner; dt = 0.02·(dx/W0)·τ0)\n"
-     << "     OPENPFC_KARMA_DT=<dt/tau0>  (default 0.02; scales with dx/W0)\n"
-     << "     OPENPFC_KARMA_ISO=0       (disable Ji 2022 isotropic FD; default on)\n"
-     << "     OPENPFC_KARMA_VD=<m/s>    OPENPFC_KARMA_BETA0=<s/m>\n"
-     << "     OPENPFC_KARMA_TSTAR=<t D/d0^2>  (default 10000)\n"
-     << "     OPENPFC_KARMA_TDOT=<K/s>  OPENPFC_KARMA_TEND=<s>  (am protocol)\n"
-     << "     OPENPFC_KARMA_TDECAY=<s>  Ṫ(t)=Ṫ₀ e^{−t/τ}; 0 = linear Ṫ t (am)\n"
-     << "     OPENPFC_KARMA_NCONTOUR=<n>  φ=0 isoline dumps (glasner 2, am 12)\n"
-     << "     OPENPFC_KARMA_L=<m>       OPENPFC_KARMA_STOP_FRAC=<0–1>  (am box / far-wall abort)\n"
-     << "     OPENPFC_KARMA_DTEXTRA=<K>  extra undercooling vs Γ/R (default 0.05)\n"
-     << "     OPENPFC_KARMA_NOISE=<F0>  FDT φ-noise; 0 off, 1/on → 1e-3, or a value\n"
-     << "     OPENPFC_KARMA_NOISE_SEED=<u>  (default 1)\n";
+     << "  " << exe << " fine [d0_over_W] [output_dir] [nthreads]\n"
+     << "  " << exe << " smoke [nthreads]\n"
+     << "  " << exe << " am [W0_nm] [phi1_deg] [output_dir] [nthreads]   # extra: cooling\n"
+     << "  " << exe << " smoke3d [nthreads]   # extra: tiny 3D brick\n"
+     << "glasner: Δx=W0, Glasner ψ, Ji 9-pt (case 1–2). Default d0/W=0.277, φ1=0.\n"
+     << "fine: 2001-like mesh — Δx=0.4 W0, no Glasner, 5-pt, τ frozen at e^u=1.\n"
+     << "phi1_deg is Bunge φ1 ([100] is 0). Φ=φ2=0 unless OPENPFC_KARMA_PHI / PHI2.\n"
+     << "Env (paper): OPENPFC_KARMA_DT=<dt/tau0>  OPENPFC_KARMA_DX=<dx/W0>\n"
+     << "     OPENPFC_KARMA_TSTAR=<t D/d0^2>  OPENPFC_KARMA_LD0=<L/d0>\n"
+     << "     OPENPFC_KARMA_GLASNER=0  OPENPFC_KARMA_ISO=0  OPENPFC_KARMA_TAU_EU=0\n"
+     << "     OPENPFC_KARMA_SKIP_PNG=1  OPENPFC_KARMA_QUIET=1  OPENPFC_KARMA_MAX_STEPS=N\n"
+     << "     OPENPFC_KARMA_HALVES=2|4  OPENPFC_KARMA_NHIST=<n>  OPENPFC_KARMA_FD=4\n"
+     << "     OPENPFC_KARMA_SEED_D0=<R/d0>  OPENPFC_KARMA_STOP_FRAC=<0–1>\n"
+     << "     OPENPFC_KARMA_EPSC  OPENPFC_KARMA_K  OPENPFC_KARMA_OMEGA\n"
+     << "Extra trapping/AM: OPENPFC_KARMA_VD OPENPFC_KARMA_BETA0 OPENPFC_KARMA_EPSK\n"
+     << "     OPENPFC_KARMA_TDOT OPENPFC_KARMA_TEND OPENPFC_KARMA_TDECAY OPENPFC_KARMA_L\n"
+     << "     OPENPFC_KARMA_NCONTOUR OPENPFC_KARMA_DTEXTRA OPENPFC_KARMA_NOISE\n";
 }
 
 inline RunConfig sized_from_physics(const Physics &phys, double t_star_max, double L_over_d0,
@@ -114,8 +122,73 @@ inline void apply_kinetics_env(Physics &phys) {
       phys.beta0 = b;
     }
   }
+  if (const char *e = std::getenv("OPENPFC_KARMA_EPSC")) {
+    const double v = std::atof(e);
+    if (std::isfinite(v) && v >= 0.0) {
+      phys.eps_c = v;
+    }
+  }
+  if (const char *e = std::getenv("OPENPFC_KARMA_EPSK")) {
+    const double v = std::atof(e);
+    if (std::isfinite(v) && v >= 0.0) {
+      phys.eps_k = v;
+    }
+  }
+  if (const char *e = std::getenv("OPENPFC_KARMA_K")) {
+    const double v = std::atof(e);
+    if (std::isfinite(v) && v > 0.0 && v < 1.0) {
+      phys.k = v;
+    }
+  }
+  if (const char *e = std::getenv("OPENPFC_KARMA_OMEGA")) {
+    const double v = std::atof(e);
+    if (std::isfinite(v) && v > 0.0 && v < 1.0) {
+      phys.Omega = v;
+    }
+  }
   refresh_derived(phys);
   set_dx_over_W(phys, phys.dx / phys.W0);
+}
+
+inline void apply_ld0_env(RunConfig &c) {
+  if (const char *e = std::getenv("OPENPFC_KARMA_LD0")) {
+    const double ld0 = std::atof(e);
+    if (ld0 > 0.0 && std::isfinite(ld0)) {
+      c.L_over_d0 = ld0;
+      const double L = ld0 * c.phys.d0;
+      c.Nx = static_cast<int>(std::ceil(L / c.phys.dx)) + 2;
+      c.Ny = c.Nx;
+      if (c.Nz > 1) {
+        c.Nz = c.Nx;
+      }
+    }
+  }
+}
+
+inline void apply_stop_frac_env(RunConfig &c) {
+  if (const char *e = std::getenv("OPENPFC_KARMA_STOP_FRAC")) {
+    const double v = std::atof(e);
+    if (v >= 0.0 && v <= 1.0 && std::isfinite(v)) {
+      c.stop_frac = v;
+    }
+  }
+}
+
+inline void apply_tau_eu_env(Physics &phys) {
+  if (const char *e = std::getenv("OPENPFC_KARMA_TAU_EU")) {
+    const std::string v(e);
+    phys.tau_eu_local = !(v == "0" || v == "off" || v == "false" || v == "OFF" || v == "FALSE");
+  }
+}
+
+inline void apply_seed_env(Physics &phys) {
+  if (const char *e = std::getenv("OPENPFC_KARMA_SEED_D0")) {
+    const double v = std::atof(e);
+    if (v > 0.0 && std::isfinite(v)) {
+      phys.r_seed = v * phys.d0;
+      phys.dT_gt = (phys.r_seed > 0.0) ? (phys.Gamma / phys.r_seed) : 0.0;
+    }
+  }
 }
 
 inline void apply_ncontour_env(RunConfig &c) {
@@ -145,7 +218,7 @@ inline std::optional<RunConfig> parse_args(int argc, char **argv) {
     apply_kinetics_env(phys);
     RunConfig c = sized_from_physics(phys, 50.0, 80.0);
     c.use_glasner = true;
-    c.output_dir = "results/karma2001_smoke";
+    c.output_dir = "results/alloy_pf_karma2001_benchmark/smoke";
     c.nprint = 50;
     c.nsave = 200;
     c.n_hist = 5;
@@ -159,7 +232,7 @@ inline std::optional<RunConfig> parse_args(int argc, char **argv) {
     apply_kinetics_env(phys);
     RunConfig c = sized_from_physics(phys, 400.0, 70.0, /*Nz=*/2);
     c.use_glasner = true;
-    c.output_dir = "results/karma2001_smoke3d";
+    c.output_dir = "results/alloy_pf_karma2001_benchmark/smoke3d";
     c.nprint = 50;
     c.nsave = 200;
     c.n_hist = 5;
@@ -241,8 +314,9 @@ inline std::optional<RunConfig> parse_args(int argc, char **argv) {
     apply_ncontour_env(c);
     c.use_glasner = true;
     c.noise_F0 = 0.0;
-    c.output_dir = "results/karma2001_am_W" + std::to_string(static_cast<int>(std::lround(W0_nm))) +
-                   "nm_th" + std::to_string(static_cast<int>(std::lround(phi1_deg)));
+    c.output_dir = "results/alloy_pf_karma2001_benchmark/am_W" +
+                   std::to_string(static_cast<int>(std::lround(W0_nm))) + "nm_th" +
+                   std::to_string(static_cast<int>(std::lround(phi1_deg)));
     if (argc > arg0 && argv[arg0][0] != '\0' &&
         std::string(argv[arg0]).find_first_not_of("+-0123456789") != std::string::npos) {
       c.output_dir = argv[arg0];
@@ -262,10 +336,10 @@ inline std::optional<RunConfig> parse_args(int argc, char **argv) {
     apply_dx_env(phys);
     apply_dt_env(phys);
     apply_bunge_env(phys);
-    RunConfig c = sized_from_physics(phys, 10000.0, 460.0);
+    RunConfig c = sized_from_physics(phys, 10000.0, 1000.0);
     c.use_glasner = true;
     c.n_contour = 2; // t = 0 and final φ=0 isoline
-    c.output_dir = "results/karma2001_trap_d0W_" + std::to_string(d0W) + "_th" +
+    c.output_dir = "results/alloy_pf_karma2001_benchmark/d0W_" + std::to_string(d0W) + "_th" +
                    std::to_string(static_cast<int>(std::lround(phi1_deg)));
     return c;
   };
@@ -310,9 +384,12 @@ inline std::optional<RunConfig> parse_args(int argc, char **argv) {
   }
 
   if (std::string(argv[1]) == "fine") {
-    double d0W = 0.544;
-    if (argc >= 3) {
+    double d0W = 0.277;
+    int arg0 = 2;
+    if (argc >= 3 &&
+        std::string(argv[2]).find_first_not_of("+-0123456789.eE") == std::string::npos) {
       d0W = std::atof(argv[2]);
+      ++arg0;
     }
     if (!(d0W > 0.0) || !std::isfinite(d0W)) {
       return std::nullopt;
@@ -320,9 +397,21 @@ inline std::optional<RunConfig> parse_args(int argc, char **argv) {
     Physics phys = make_physics(d0W);
     apply_kinetics_env(phys);
     set_dx_over_W(phys, kDx);
-    RunConfig c = sized_from_physics(phys, 10000.0, 460.0);
+    set_dt_over_tau(phys, kDtGlasner);
+    phys.tau_eu_local = false;
+    RunConfig c = sized_from_physics(phys, 10000.0, 1000.0);
     c.use_glasner = false;
-    c.output_dir = "results/karma2001_d0W_" + std::to_string(d0W);
+    c.use_isotropic = false;
+    c.output_dir = "results/alloy_pf_karma2001_benchmark/d0W_" + std::to_string(d0W) + "_paperlike";
+    if (argc > arg0 && argv[arg0][0] != '\0' &&
+        std::string(argv[arg0]).find_first_not_of("+-0123456789") != std::string::npos) {
+      c.output_dir = argv[arg0];
+      if (argc > arg0 + 1) {
+        c.num_threads = std::atoi(argv[arg0 + 1]);
+      }
+    } else if (argc > arg0) {
+      c.num_threads = std::atoi(argv[arg0]);
+    }
     return c;
   }
 
@@ -333,6 +422,54 @@ inline void apply_iso_env(RunConfig &c) {
   if (const char *e = std::getenv("OPENPFC_KARMA_ISO")) {
     const std::string v(e);
     c.use_isotropic = !(v == "0" || v == "off" || v == "false" || v == "OFF" || v == "FALSE");
+  }
+}
+
+inline void apply_fd_env(RunConfig &c) {
+  if (const char *e = std::getenv("OPENPFC_KARMA_FD")) {
+    const int o = std::atoi(e);
+    if (o == 4) {
+      c.fd_order = 4;
+      c.use_isotropic = false;
+    } else if (o == 2) {
+      c.fd_order = 2;
+    }
+  }
+}
+
+inline void apply_glasner_env(RunConfig &c) {
+  if (const char *e = std::getenv("OPENPFC_KARMA_GLASNER")) {
+    const std::string v(e);
+    c.use_glasner = !(v == "0" || v == "off" || v == "false" || v == "OFF" || v == "FALSE");
+  }
+}
+
+inline void apply_nhist_env(RunConfig &c) {
+  if (const char *e = std::getenv("OPENPFC_KARMA_NHIST")) {
+    const int v = std::atoi(e);
+    if (v > 0) {
+      c.n_hist = v;
+    }
+  }
+}
+
+inline void apply_halves_env(RunConfig &c) {
+  if (const char *e = std::getenv("OPENPFC_KARMA_HALVES")) {
+    const int h = std::atoi(e);
+    if (h == 2 || h == 4) {
+      c.n_halves = h;
+      const int n0 = c.Nx;
+      if (h == 4) {
+        c.Nx = 2 * n0;
+        c.Ny = 2 * n0;
+        c.origin_x = -0.5 * static_cast<double>(c.Nx) * c.phys.dx;
+        c.origin_y = -0.5 * static_cast<double>(c.Ny) * c.phys.dx;
+      } else {
+        c.Ny = 2 * n0;
+        c.origin_x = 0.0;
+        c.origin_y = -0.5 * static_cast<double>(c.Ny) * c.phys.dx;
+      }
+    }
   }
 }
 
@@ -382,7 +519,18 @@ inline std::optional<RunConfig> parse_or_print_usage(int argc, char **argv) {
     return cfg;
   }
   apply_iso_env(*cfg);
+  apply_fd_env(*cfg);
+  apply_glasner_env(*cfg);
   apply_dt_env(cfg->phys);
+  apply_tau_eu_env(cfg->phys);
+  apply_seed_env(cfg->phys);
+  apply_ld0_env(*cfg);
+  apply_halves_env(*cfg);
+  if (std::getenv("OPENPFC_KARMA_NHIST") == nullptr && !(cfg->phys.Tdot > 0.0)) {
+    cfg->n_hist = default_n_hist(cfg->phys);
+  }
+  apply_nhist_env(*cfg);
+  apply_stop_frac_env(*cfg);
   {
     const double t_end = cfg->t_star_max * cfg->phys.d0 * cfg->phys.d0 / cfg->phys.D;
     cfg->n_steps = std::max(1, static_cast<int>(std::ceil(t_end / cfg->phys.dt)));

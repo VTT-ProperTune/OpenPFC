@@ -19,16 +19,19 @@
  * Al-Cu directional cases so length, time, velocity and undercooling can be
  * reported in SI. Partition k and supersaturation Ω stay at the Karma values.
  *
- * Solute trapping: modified antitrapping a'(φ)=a(1−A(1−φ²)),
- * A = D_L/(V_D^{PF} W₀) is the trapping parameter, and a2^α(A) with partial
- * drag α=0.38 (Pinomaa & Provatas, Acta Mater. 2019). Capillary and kinetic
- * anisotropies are a_s(n) and a_k(n). The time scale is the inversion of
- * Pinomaa (2020) eq. (7) at W_s = W₀ a_s and β_k = β₀ a_k.
+ * The advertised product is the present model of Karma, PRL 87, 115701 (2001):
+ * A = β₀ = ε_k = 0, k = 0.15, ε_c = 0.02, Ω = 0.55. Optional extras (env or
+ * `am`) restore solute trapping and/or uniform cooling. Trapping uses modified
+ * antitrapping a'(φ)=a(1−A(1−φ²)), A = D_L/(V_D^{PF} W₀), and a2^α(A) with
+ * partial drag α=0.38 (Pinomaa & Provatas, Acta Mater. 2019). Capillary and
+ * kinetic anisotropies are a_s(n) and a_k(n). Local τ inverts
+ *   β = a1 τ/(λ W) − a1 a2 (W/D_L) e^u
+ * at W_s = W₀ a_s and β_k = β₀ a_k (Pinomaa, J. Cryst. Growth 532, 125418
+ * (2020); thesis eq. (4.12)). τ₀ for Δt uses e^u = 1.
  *
- * Default V_D is magnified so k(V) moves at isothermal tip speeds. Default
- * β₀=4 s/m is a compromise: Δ_k=β₀ V is a few percent of Ω at V~7 mm/s,
- * while Δt=0.1 τ₀ remains inside the solute Fourier limit. AM uses physical
- * Al–Cu V_D and β₀.
+ * Extra isothermal trapping uses a magnified V_D so k(V) moves at tip speeds
+ * and β₀=4 s/m (Δ_k a few percent of Ω at V~7 mm/s, Δt=0.1 τ₀ still inside
+ * the solute Fourier limit). The `am` protocol uses physical Al–Cu V_D and β₀.
  *
  * Glasner (2001) preconditioning: φ = tanh(ψ/√2). Cubic a_s(n) in the crystal
  * frame; n_lab is rotated by a Bunge ZXZ matrix; 2D is n_z = 0.
@@ -47,8 +50,9 @@ inline constexpr double kDtGlasner = 0.02;
 /** Cubic capillary anisotropy; equals Karma ε₄ in 2D (n_z = 0). */
 inline constexpr double kEpsC = 0.02;
 /**
- * Kinetic anisotropy strength. a_k = 1 + 3ε_k − 4ε_k ∑ n_i⁴ so β is smallest
- * on [100] (Pinomaa & Provatas, Acta Mater. 2019, eq. 13).
+ * Kinetic anisotropy strength for trapping/AM extras. a_k = 1 + 3ε_k − 4ε_k ∑ n_i⁴
+ * so β is smallest on [100] (Pinomaa & Provatas, Acta Mater. 2019, eq. 13).
+ * Present-model glasner runs set ε_k = 0 (β₀ = 0).
  */
 inline constexpr double kEpsK = 0.12;
 inline constexpr double kPartition = 0.15;
@@ -65,9 +69,9 @@ inline constexpr double kGammaPhys = 2.41e-7; // K m
 inline constexpr double kMlePhys = -5.3;      // K / at%
 inline constexpr double kCloPhys = 4.5;       // at%
 /**
- * Magnified vs directional V_D^{PF}=2 m/s so V/V_D is large enough at the
- * isothermal tip (V ~ 7 mm/s) that k(V) moves the V(t) curve. A = D_L/(V_D W)
- * is O(1) at W₀=22 nm.
+ * Extra isothermal trapping only (not the PRL present model). Magnified vs
+ * directional V_D^{PF}=2 m/s so V/V_D is large enough at the isothermal tip
+ * (V ~ 7 mm/s) that k(V) moves. A = D_L/(V_D W) is O(1) at W₀=22 nm.
  */
 inline constexpr double kVDPf = 0.15; // m/s
 /**
@@ -147,7 +151,11 @@ inline double a2_of_A(double A, double alpha = kDragAlpha) noexcept {
   return (1.0 - alpha) * a2_pm(A, false) + alpha * a2_pm(A, true);
 }
 
-inline double u_corr_from_eu(double eu) noexcept { return eu > 0.2 ? eu : 0.2; }
+inline double u_corr_from_eu(double eu) noexcept {
+  // Pinomaa thesis eq. (4.12) / J. Crystal Growth 532, 125418 (2020): the a2
+  // term in β(τ) is multiplied by e^u (Echebarria high-undercooling correction).
+  return std::max(0.2, eu);
+}
 
 inline double k_cgm(double k, double V, double VD) noexcept {
   if (!(VD > 0.0)) {
@@ -247,7 +255,7 @@ struct Physics {
   double dx = kDxGlasner;
   double dt = kDtGlasner;
   double eps_c = kEpsC;
-  double eps_k = kEpsK;
+  double eps_k = 0.0;
   double k = kPartition;
   double Omega = kOmega;
   double cl0 = kCl0;
@@ -258,8 +266,8 @@ struct Physics {
   double A_trap = 0.0;
   double a2 = kA2;
   double alpha_drag = kDragAlpha;
-  double VD_pf = kVDPf;
-  double beta0 = kBeta0;
+  double VD_pf = 0.0;
+  double beta0 = 0.0;
   double Gamma = kGammaPhys;
   double mle = kMlePhys;
   double clo_phys = kCloPhys;
@@ -277,12 +285,14 @@ struct Physics {
   double phi1 = 0.0;
   double Phi = 0.0;
   double phi2 = 0.0;
+  /** If true, local τ uses e^u in the a2 term; if false, τ is frozen at e^u=1 (U=0). */
+  bool tau_eu_local = true;
 };
 
 /**
- * Invert Pinomaa (2020) eq. (7) for τ:
- *   β = a1 τ / (λ W) − a1 a2 W/D_L (1+(1−k)U)
- * at W_s = W₀ a_s and β_k = β₀ a_k. u_corr stands in for (1+(1−k)U).
+ * Invert Pinomaa (2020) eq. (7) / thesis (4.12) for τ:
+ *   β = a1 τ / (λ W) − a1 a2 W/D_L e^u
+ * at W_s = W₀ a_s and β_k = β₀ a_k. e^u is the dilute 1+(1−k)U factor.
  */
 inline double tau_aniso(const Physics &p, double W_s, double beta_k, double eu) noexcept {
   const double u_corr = u_corr_from_eu(eu);
@@ -318,15 +328,24 @@ inline double dt_over_tau_of(const Physics &p) noexcept {
   return (p.tau0 > 0.0 && dxW > 0.0) ? (p.dt / (p.tau0 * dxW)) : 0.0;
 }
 
+/** History stride so Δt* between samples is ≲ 8 (centered LS window is 80). */
+inline int default_n_hist(const Physics &p) noexcept {
+  const double dtt = dt_over_tau_of(p);
+  const double dxw = (p.W0 > 0.0) ? (p.dx / p.W0) : 1.0;
+  const double d0w = std::max(p.d0_over_W, 1.0e-12);
+  const double tstar_step = dtt * dxw * kA1 * kA2 / (d0w * d0w * d0w);
+  return std::max(1, static_cast<int>(std::lround(8.0 / std::max(tstar_step, 1.0e-9))));
+}
+
 inline Physics make_physics(double d0_over_W) noexcept {
   Physics p;
   p.d0_over_W = d0_over_W;
   p.d0 = kD0Phys;
   p.D = kDLPhys;
   p.W0 = p.d0 / d0_over_W;
-  p.VD_pf = kVDPf;
-  p.beta0 = kBeta0;
-  p.eps_k = kEpsK;
+  p.VD_pf = 0.0;
+  p.beta0 = 0.0;
+  p.eps_k = 0.0;
   refresh_derived(p);
   set_dx_over_W(p, kDxGlasner);
   return p;
@@ -345,6 +364,7 @@ inline void set_am_cooling(Physics &p, double Tdot, double dT_extra = kDTExtra) 
   p.dT_extra = dT_extra;
   p.VD_pf = kVDPfAm;
   p.beta0 = kBeta0Am;
+  p.eps_k = kEpsK;
   refresh_derived(p);
   set_dx_over_W(p, p.dx / p.W0);
 }

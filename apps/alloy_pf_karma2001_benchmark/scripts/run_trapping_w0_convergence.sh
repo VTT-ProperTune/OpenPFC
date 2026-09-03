@@ -3,13 +3,14 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Isothermal trap dendrites at β₀=4 s/m, plus matching no-trap (A=β₀=0).
+# Extra to the PRL present-model suite (run_karma2001_benchmark.sh).
 # d0/W = 0.138 is W₀≈88 nm (coarse; expected to sit off the W₀ plateau).
 # Δt=0.1 τ₀ is used where stable; 88 nm and 44 nm no-trap need 0.02 τ₀.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 BIN="${ROOT}/builds/macos-cpu-release/apps/alloy_pf_karma2001_benchmark/alloy_pf_karma2001_benchmark_openmp"
-OUTROOT="${OUTROOT:-${ROOT}/results/karma2001_trap_w0/beta4}"
+OUTROOT="${OUTROOT:-${ROOT}/results/alloy_pf_karma2001_benchmark/trap_w0/beta4}"
 NTHREADS="${NTHREADS:-8}"
 PHI1="${PHI1:-45}"
 D0WS=(0.138 0.277 0.544)
@@ -19,7 +20,10 @@ export OMP_NUM_THREADS="${NTHREADS}"
 export OPENPFC_KARMA_SKIP_PNG="${OPENPFC_KARMA_SKIP_PNG:-1}"
 export OPENPFC_KARMA_QUIET="${OPENPFC_KARMA_QUIET:-1}"
 export OPENPFC_KARMA_NCONTOUR="${OPENPFC_KARMA_NCONTOUR:-2}"
-unset OPENPFC_KARMA_VD OPENPFC_KARMA_BETA0 OPENPFC_KARMA_NOISE || true
+export OPENPFC_KARMA_VD="${OPENPFC_KARMA_VD:-0.15}"
+export OPENPFC_KARMA_BETA0="${OPENPFC_KARMA_BETA0:-4}"
+export OPENPFC_KARMA_EPSK="${OPENPFC_KARMA_EPSK:-0.12}"
+unset OPENPFC_KARMA_NOISE || true
 
 if [[ ! -x "${BIN}" ]]; then
   echo "missing binary: ${BIN}" >&2
@@ -46,13 +50,13 @@ for d0w in "${D0WS[@]}"; do
   run_one "${d0w}" "" "${dt}"
 done
 
-export OPENPFC_KARMA_VD=0 OPENPFC_KARMA_BETA0=0
+export OPENPFC_KARMA_VD=0 OPENPFC_KARMA_BETA0=0 OPENPFC_KARMA_EPSK=0
 for d0w in "${D0WS[@]}"; do
   dt="0.02"
   if [[ "${d0w}" == "0.544" ]]; then dt="0.1"; fi
   run_one "${d0w}" "_notrap" "${dt}"
 done
-unset OPENPFC_KARMA_VD OPENPFC_KARMA_BETA0 OPENPFC_KARMA_DT
+unset OPENPFC_KARMA_VD OPENPFC_KARMA_BETA0 OPENPFC_KARMA_EPSK OPENPFC_KARMA_DT
 
 PLOT=()
 for d0w in "${D0WS[@]}"; do

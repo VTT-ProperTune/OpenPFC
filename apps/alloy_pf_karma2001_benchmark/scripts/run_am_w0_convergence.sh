@@ -2,8 +2,8 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# AM-rate spatially isothermal cooling (Ω=0, curvature-compensated T0),
-# no noise. Glasner Δx=W0. Physical Al–Cu kinetics (V_D=2 m/s, β₀=0.1 s/m)
+# Extra to the PRL present-model suite: spatially isothermal AM cooling
+# (Ω=0, curvature-compensated T0), no noise. Glasner Δx=W0. Physical Al–Cu kinetics (V_D=2 m/s, β₀=0.1 s/m)
 # except one no-trap companion. Exponential Ṫ(t)=Ṫ₀ e^{−t/τ} with τ=12 μs
 # (ΔT_cool → 120 K), t_end=18 μs, L=7 μm (2× the old 3.5 μm box so the
 # circular envelope stays off the far wall).
@@ -13,7 +13,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 BIN="${ROOT}/builds/macos-cpu-release/apps/alloy_pf_karma2001_benchmark/alloy_pf_karma2001_benchmark_openmp"
-OUTROOT="${OUTROOT:-${ROOT}/results/karma2001_am_w0/tau12_L7e-6}"
+OUTROOT="${OUTROOT:-${ROOT}/results/alloy_pf_karma2001_benchmark/am_w0/tau12_L7e-6}"
 NTHREADS="${NTHREADS:-8}"
 PHI1="${PHI1:-45}"
 export OPENPFC_KARMA_TDOT="${OPENPFC_KARMA_TDOT:-1e7}"

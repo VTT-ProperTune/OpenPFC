@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Karma 2001 isothermal dendrite plots: W0-convergence of trapping kinetics."""
+"""Loaders and extra plots (AM cooling, trapping W0 scan) for the Karma 2001 app.
+
+Paper Fig. 1–2 overlays live in compare_karma2001.py (centered LS tip speed).
+"""
 
 from __future__ import annotations
 
@@ -15,6 +18,47 @@ import numpy as np
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 FIG1_PAPER = DATA_DIR / "karma2001_fig1_present.tsv"
 FIG2_PAPER = DATA_DIR / "karma2001_fig2_present.tsv"
+
+# Simulation series: later runs are thinner with dashed / dash-dot linestyles.
+# Digitised paper: one thick dark translucent band on top of the traces
+# (zorder 12). Simulations stay at 2+i. Legend uses this same Line2D.
+LINESTYLES = ("-", "--", "-.", (0, (4, 1, 1, 1)))
+PAPER_LINE = dict(
+    color="0.08",
+    lw=7.5,
+    alpha=0.40,
+    ls="-",
+    zorder=12,
+    solid_capstyle="round",
+)
+
+
+def plot_paper_xy(ax, xy: np.ndarray, *, label: str) -> None:
+    """Draw the digitized paper curve on top of simulation traces."""
+    ax.plot(xy[:, 0], xy[:, 1], label=label, **PAPER_LINE)
+
+
+def run_line_kw(i: int) -> dict:
+    return {
+        "color": f"C{i % 10}",
+        "ls": LINESTYLES[i % 4],
+        "lw": max(1.35, 2.85 - 0.4 * i),
+        "alpha": 0.88,
+        "zorder": 2 + i,
+        "solid_capstyle": "round",
+        "dash_capstyle": "round",
+    }
+
+
+def interior_solid_mask(phi: np.ndarray, x_over_d0: np.ndarray, r_tip_over_d0: float,
+                         d0: float, w0: float) -> np.ndarray:
+    """Solid interior behind the tip, excluding the diffuse interface pile-up.
+
+    Karma Fig. 2 is cs in the crystal, not the high-c liquid layer at φ≈0.
+    Cut ~6 W0 (~ a few d0/W) behind the φ=0 isoline.
+    """
+    cut = max(8.0, 6.0 * (w0 / d0) if d0 > 0.0 else 8.0)
+    return (phi > 0.95) & (x_over_d0 < r_tip_over_d0 - cut)
 
 
 def load_meta(path: Path) -> dict[str, float | str]:
@@ -226,16 +270,26 @@ V_MIN_TSTAR = 50.0
 
 
 def rolling_ls_slope(
-    t: np.ndarray, r: np.ndarray, min_points: int = V_MIN_POINTS, min_dt: float = 0.0
+    t: np.ndarray,
+    r: np.ndarray,
+    min_points: int = V_MIN_POINTS,
+    min_dt: float | np.ndarray = 0.0,
 ) -> np.ndarray:
-    """Least-squares dr/dt. Window is ≥ min_points samples and ≥ min_dt in time."""
+    """Least-squares dr/dt. Window is ≥ min_points samples and ≥ min_dt in time.
+
+    ``min_dt`` may be a scalar or an array (one value per sample). A per-sample
+    window is required when the tip decelerates: a single late-time 8 Δx window
+    smears the seed spike over Δt* ~ 10³ and inflates early V*.
+    """
     n = len(t)
     v = np.full(n, np.nan)
+    dt_req = np.full(n, float(min_dt), dtype=float) if np.isscalar(min_dt) else np.asarray(min_dt, dtype=float)
     left = 0
     for i in range(n):
+        need = float(dt_req[i])
         while left < i:
             nxt = left + 1
-            if (i - nxt + 1) >= min_points and (t[i] - t[nxt]) >= min_dt:
+            if (i - nxt + 1) >= min_points and (t[i] - t[nxt]) >= need:
                 left = nxt
             else:
                 break
@@ -256,17 +310,26 @@ def rolling_ls_slope(
 
 
 def smooth_hist_velocity(hc: dict[str, np.ndarray], meta: dict[str, float | str]) -> dict[str, np.ndarray]:
-    """LS dr/dt: ≥10 samples, Δt*≥50, and ≥8 Δx of tip travel so grid jitter averages out."""
+    """LS dr/dt with a local window: ≥10 samples, Δt*≥50, and ≥8 Δx of travel.
+
+    Travel is estimated from a first Δt*≥50 pass (not from the late-time mean
+    speed). The window is also capped at 1/4 of the elapsed time so the circular
+    seed spike cannot leak into the dendritic branch.
+    """
     d0 = float(meta["d0"])
     D = float(meta["D"])
     dx = float(meta.get("dx", d0))
     t = hc["t"]
     r = hc["r"]
     n = len(t)
-    i0 = max(0, n // 2)
-    v_g = abs(float(r[-1] - r[i0]) / max(float(t[-1] - t[i0]), 1.0e-30))
-    v_g = max(v_g, 1.0e-8)
-    min_dt = max(V_MIN_TSTAR * d0 * d0 / D, 8.0 * dx / v_g)
+    min_dt_floor = V_MIN_TSTAR * d0 * d0 / D
+    v_loc = rolling_ls_slope(t, r, V_MIN_POINTS, min_dt_floor)
+    min_dt = np.full(n, min_dt_floor, dtype=float)
+    for i in range(n):
+        vg = abs(float(v_loc[i])) if np.isfinite(v_loc[i]) else 0.0
+        need = max(min_dt_floor, 8.0 * dx / max(vg, 1.0e-8))
+        cap = max(min_dt_floor, 0.25 * float(t[i]))
+        min_dt[i] = min(need, cap)
     v = rolling_ls_slope(t, r, V_MIN_POINTS, min_dt)
     out = dict(hc)
     out["V"] = v
@@ -287,6 +350,61 @@ def smooth_hist_velocity(hc: dict[str, np.ndarray], meta: dict[str, float | str]
     return out
 
 
+def centered_ls_velocity(
+    t: np.ndarray, r: np.ndarray, min_dt: float, min_points: int = 4
+) -> np.ndarray:
+    """Centered least-squares dr/dt on a fixed time window.
+
+    Unlike :func:`smooth_hist_velocity` this is not causal, does not require 10
+    samples, and does not grow the window to 8 Δx of late-time travel. Sparse
+    histories (large Δt, 45°) therefore do not jump when an early sample leaves
+    a 10-point buffer.
+    """
+    n = len(t)
+    v = np.full(n, np.nan)
+    if n < 2:
+        return v
+    half = 0.5 * float(min_dt)
+    for i in range(n):
+        lo = t[i] - half
+        hi = t[i] + half
+        j0 = int(np.searchsorted(t, lo, side="left"))
+        j1 = int(np.searchsorted(t, hi, side="right"))
+        if j1 - j0 < min_points:
+            j0 = max(0, i - max(min_points // 2, 1))
+            j1 = min(n, j0 + min_points)
+            j0 = max(0, j1 - min_points)
+        tt = t[j0:j1]
+        rr = r[j0:j1]
+        m = float(len(tt))
+        if m < 2.0:
+            continue
+        st = float(tt.sum())
+        sr = float(rr.sum())
+        stt = float((tt * tt).sum())
+        str_ = float((tt * rr).sum())
+        den = m * stt - st * st
+        if abs(den) < 1.0e-30:
+            continue
+        v[i] = (m * str_ - st * sr) / den
+    return v
+
+
+def hist_tip_velocity(
+    hc: dict[str, np.ndarray], meta: dict[str, float | str], tstar_window: float = 80.0
+) -> dict[str, np.ndarray]:
+    """Plotting estimator: centered LS over Δt* = ``tstar_window`` (default 80)."""
+    d0 = float(meta["d0"])
+    D = float(meta["D"])
+    min_dt = tstar_window * d0 * d0 / D
+    v = centered_ls_velocity(hc["t"], hc["r"], min_dt, min_points=4)
+    out = dict(hc)
+    out["V"] = v
+    out["V_mps"] = v
+    out["V_star"] = v * d0 / D
+    return out
+
+
 def plot_fig1_compare(runs: list[Path], out: Path) -> None:
     fig, (ax, axz) = plt.subplots(
         2, 1, figsize=(6.6, 7.2), gridspec_kw={"height_ratios": [1.35, 1.0]}
@@ -298,34 +416,29 @@ def plot_fig1_compare(runs: list[Path], out: Path) -> None:
         meta = load_meta(meta_path(root))
         d0 = float(meta["d0"])
         D = float(meta["D"])
-        cols = smooth_hist_velocity(hist_cols(hist), meta)
+        cols = hist_tip_velocity(hist_cols(hist), meta)
         series.append(
             (float(meta.get("d0_over_W", meta.get("dx", 1.0))), run_label(root), cols["t_star"], cols["V_star"])
         )
     series.sort(key=lambda s: s[0])
 
     def draw(ax_i, xlim, ylim, ylabel: bool) -> None:
+        for i, (_, label, t_star, v_star) in enumerate(series):
+            ax_i.plot(t_star, v_star, label=label, **run_line_kw(i))
         if paper is not None:
-            ax_i.plot(paper[:, 0], paper[:, 1], color="k", lw=3.6, zorder=1)
-        for _, label, t_star, v_star in series:
-            ax_i.plot(t_star, v_star, lw=1.45, label=label, zorder=2)
-        if paper is not None:
-            ax_i.plot(
-                paper[:, 0],
-                paper[:, 1],
-                color="k",
-                lw=2.4,
-                label="Karma 2001 present (digitized)",
-                zorder=5,
-            )
+            plot_paper_xy(ax_i, paper, label="Karma 2001 present (digitized)")
         ax_i.set_xlim(*xlim)
         ax_i.set_ylim(*ylim)
         ax_i.set_ylabel(r"$V d_0 / D$")
         ax_i.grid(True, alpha=0.25)
         if ylabel:
-            ax_i.legend(frameon=False, fontsize=8, loc="upper right")
+            handles, labels = ax_i.get_legend_handles_labels()
+            if paper is not None and handles:
+                handles = [handles[-1], *handles[:-1]]
+                labels = [labels[-1], *labels[:-1]]
+            ax_i.legend(handles, labels, frameon=False, fontsize=8, loc="upper right")
 
-    draw(ax, (0.0, 10000.0), (0.0, 0.03), True)
+    draw(ax, (0.0, 10000.0), (0.0, 0.08), True)
     ax.set_title(r"Tip speed vs time (Glasner + Ji, trapping + $\beta_0$)")
     draw(axz, (4000.0, 10000.0), (0.0, 0.03), False)
     axz.set_xlabel(r"$t D / d_0^2$")
@@ -337,20 +450,9 @@ def plot_fig1_compare(runs: list[Path], out: Path) -> None:
 
 def plot_fig2_compare(runs: list[Path], out: Path) -> None:
     fig, ax = plt.subplots(figsize=(6.6, 4.6))
-    if FIG2_PAPER.exists():
-        paper = load_paper_xy(FIG2_PAPER)
-        ax.plot(paper[:, 0], paper[:, 1], color="k", lw=3.6, zorder=1)
-        ax.plot(
-            paper[:, 0],
-            paper[:, 1],
-            color="k",
-            lw=2.4,
-            label="Karma 2001 present (digitized)",
-            zorder=5,
-        )
     gt_drawn = False
     runs_sorted = sorted(runs, key=lambda r: float(load_meta(r / "meta.txt").get("dx", 1.0)))
-    for root in runs_sorted:
+    for i, root in enumerate(runs_sorted):
         meta = load_meta(root / "meta.txt")
         prof = load_axis(profile_path(root))
         pc = profile_cols(prof)
@@ -360,9 +462,10 @@ def plot_fig2_compare(runs: list[Path], out: Path) -> None:
         hist = load_history(root / "tip_history.tsv")
         hc = hist_cols(hist)
         d0 = float(meta["d0"])
+        w0 = float(meta.get("W0", d0))
         r_tip = float(hc["r"][-1]) / d0
-        solid = (phi > 0.95) & (x_over < r_tip - 12.0)
-        ax.plot(x_over[solid], c_over[solid], lw=1.5, label=run_label(root), zorder=2)
+        solid = interior_solid_mask(phi, x_over, r_tip, d0, w0)
+        ax.plot(x_over[solid], c_over[solid], label=run_label(root), **run_line_kw(i))
         rho = hc["rho"][-1]
         k = float(meta["k"])
         if (not gt_drawn) and np.isfinite(rho) and rho > 0.0:
@@ -376,9 +479,15 @@ def plot_fig2_compare(runs: list[Path], out: Path) -> None:
                 zorder=3,
             )
             gt_drawn = True
+    if FIG2_PAPER.exists():
+        plot_paper_xy(
+            ax,
+            load_paper_xy(FIG2_PAPER),
+            label="Karma 2001 present (digitized)",
+        )
     ax.set_xlabel(r"$x / d_0$")
     ax.set_ylabel(r"$c_s / c_l^0$")
-    ax.set_title(r"Fig. 2: $d_0/W=0.277$, Glasner, $\theta_0=45^\circ$")
+    ax.set_title(r"Solid concentration along the growth ray vs Karma 2001 Fig. 2")
     ax.set_xlim(0.0, 400.0)
     ax.set_ylim(0.0, 0.4)
     ax.legend(frameon=False, fontsize=8)

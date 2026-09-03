@@ -26,6 +26,47 @@ inline double laplacian_std(const F &f, int i, int j, int k, double h, bool dim3
   return (s - 4.0 * f(i, j, k)) * invh2;
 }
 
+/** 4th-order Cartesian Laplacian. Missing ±2 nodes use even Neumann reflection. */
+template <class F>
+inline double laplacian_4th(const F &f, int i, int j, int k, double h, bool dim3) noexcept {
+  const double inv12h2 = 1.0 / (12.0 * h * h);
+  auto at = [&](int ii, int jj, int kk) {
+    const int Nx = f.Nx;
+    const int Ny = f.Ny;
+    const int Nz = f.Nz;
+    int i2 = ii, j2 = jj, k2 = kk;
+    if (i2 < 1) {
+      i2 = 1 - i2;
+    } else if (i2 > Nx) {
+      i2 = 2 * Nx + 1 - i2;
+    }
+    if (j2 < 1) {
+      j2 = 1 - j2;
+    } else if (j2 > Ny) {
+      j2 = 2 * Ny + 1 - j2;
+    }
+    if (dim3) {
+      if (k2 < 1) {
+        k2 = 1 - k2;
+      } else if (k2 > Nz) {
+        k2 = 2 * Nz + 1 - k2;
+      }
+    } else {
+      k2 = k;
+    }
+    return f(i2, j2, k2);
+  };
+  double s = -at(i + 2, j, k) + 16.0 * at(i + 1, j, k) - 30.0 * at(i, j, k) +
+             16.0 * at(i - 1, j, k) - at(i - 2, j, k);
+  s += -at(i, j + 2, k) + 16.0 * at(i, j + 1, k) - 30.0 * at(i, j, k) + 16.0 * at(i, j - 1, k) -
+       at(i, j - 2, k);
+  if (dim3) {
+    s += -at(i, j, k + 2) + 16.0 * at(i, j, k + 1) - 30.0 * at(i, j, k) + 16.0 * at(i, j, k - 1) -
+         at(i, j, k - 2);
+  }
+  return s * inv12h2;
+}
+
 template <class F>
 inline double laplacian_iso(const F &f, int i, int j, int k, double h, bool dim3) noexcept {
   const double invh2 = 1.0 / (h * h);
