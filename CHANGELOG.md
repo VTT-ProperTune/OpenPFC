@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- `apps/alloy_pf_karma2001_benchmark` — OpenMP present-model isothermal dendrite for [Karma, PRL 87, 115701 (2001)](https://doi.org/10.1103/PhysRevLett.87.115701) Figs. 1–2 (`alloy_pf_karma2001_benchmark_openmp`)
 - `pfc::Domain` — canonical coordinate/geometry type replacing the templated `World`
 - `pfc::Box3i` — single canonical inclusive integer index box
 - `pfc::data::Field<T, MemorySpace>` — canonical owning field container unifying LocalField/PaddedBrick
