@@ -82,7 +82,7 @@ TEST_CASE("Manual explicit Euler with spectral gradients",
   auto domain = domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, size);
   auto fft = fft::create(decomp);
-  auto u = pfc::data::field_from_inbox<double>(pfc::domain, fft.get_inbox_bounds());
+  auto u = pfc::data::field_from_inbox<double>(domain, fft.get_inbox_bounds());
 
   // Parameters
   const double D = 1.0;
@@ -143,7 +143,7 @@ TEST_CASE("EulerStepper infrastructure with spectral gradients",
   auto domain = domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, size);
   auto fft = fft::create(decomp);
-  auto u = pfc::data::field_from_inbox<double>(pfc::domain, fft.get_inbox_bounds());
+  auto u = pfc::data::field_from_inbox<double>(domain, fft.get_inbox_bounds());
 
   // Parameters
   const double D = 1.0;
@@ -207,7 +207,7 @@ TEST_CASE("Stepper contract equivalence: manual vs infrastructure",
   const int steps = 10;
 
   // Manual implementation
-  auto u_manual = pfc::data::field_from_inbox<double>(pfc::domain, fft.get_inbox_bounds());
+  auto u_manual = pfc::data::field_from_inbox<double>(domain, fft.get_inbox_bounds());
   apply_gaussian_initial_condition(u_manual, D);
   auto grad_manual = field::create<DiffusionGrads>(u_manual, fft);
   std::vector<double> du_manual(u_manual.size(), 0.0);
@@ -222,7 +222,7 @@ TEST_CASE("Stepper contract equivalence: manual vs infrastructure",
   }
 
   // Infrastructure implementation
-  auto u_infra = pfc::data::field_from_inbox<double>(pfc::domain, fft.get_inbox_bounds());
+  auto u_infra = pfc::data::field_from_inbox<double>(domain, fft.get_inbox_bounds());
   apply_gaussian_initial_condition(u_infra, D);
   auto grad_infra = field::create<DiffusionGrads>(u_infra, fft);
   auto stepper = pfc::sim::steppers::create(u_infra, grad_infra, model, dt);
