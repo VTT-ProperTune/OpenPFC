@@ -1,9 +1,9 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Optional static analysis: failures here do not block the main CI workflow (ci.yml).
-# For branch protection, do not mark this job as a required check if merges should
-# proceed when only clang-tidy is red.
+# Merge-blocking static analysis (M12): WarningsAsErrors from `.clang-tidy`.
+# Also run as the `clang-tidy` job in `ci.yml` so the Unit Tests workflow fails
+# when tidy is red. Keep this workflow for a dedicated tidy-only signal.
 
 name: Clang-Tidy
 

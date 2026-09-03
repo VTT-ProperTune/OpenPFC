@@ -57,6 +57,54 @@ jobs:
         run: bash scripts/check_gpu_memcpy_single_source.sh --self-test
 
   # ============================================================================
+  # Clang-Tidy (M12: blocking on the Unit Tests workflow)
+  # ============================================================================
+  clang-tidy:
+    name: Clang-Tidy
+    needs: [code-quality]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake \
+            ninja-build \
+            clang-tidy \
+            clang-tools \
+            libopenmpi-dev \
+            openmpi-bin \
+            libfftw3-dev \
+            libfftw3-mpi-dev \
+            nlohmann-json3-dev
+
+      - name: Cache HeFFTe (clang-tidy)
+        id: cache-heffte-tidy
+        uses: actions/cache@v4
+        with:
+          path: ~/opt/heffte/2.4.1-cpu
+          key: heffte-2.4.1-cpu-ubuntu-24.04-tidy-clang-tidy
+
+      - name: Build and install HeFFTe (clang-tidy)
+        if: steps.cache-heffte-tidy.outputs.cache-hit != 'true'
+        run: scripts/install-heffte-ci.sh Debug /tmp/heffte-build-tidy
+
+      - name: Configure (Debug with compile_commands)
+        run: |
+          cmake -S . -B build-tidy -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu
+
+      - name: Run clang-tidy
+        run: bash scripts/run-clang-tidy.sh --build-dir=build-tidy
+
+  # ============================================================================
   # CMake Build Matrix
   # ============================================================================
   build-and-test:
