@@ -5,9 +5,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # alloy_pf_karma2001_benchmark
 
-Frozen Karma (2001) alloy phase-field **present-model** benchmark. This tree is
-independent of [`apps/alloy_pf_directional`](../alloy_pf_directional) (no shared
-headers or objects). Binary: `alloy_pf_karma2001_benchmark_openmp`.
+Frozen Karma (2001) alloy phase-field **present-model** benchmark. This tree
+does not share headers or objects with other alloy phase-field apps.
+Binary: `alloy_pf_karma2001_benchmark_openmp`.
 
 Protocol of [Karma, PRL 87, 115701 (2001)](https://doi.org/10.1103/PhysRevLett.87.115701):
 \(A=0\), \(\beta_0=0\), \(\varepsilon_k=0\), \(k=0.15\), \(\varepsilon_c=0.02\),
@@ -56,6 +56,9 @@ Always go through `./scripts/build.sh` at the repo root on Tohtori/LUMI (see
 ```bash
 cmake --build builds/macos-cpu-release --target alloy_pf_karma2001_benchmark_openmp -j 8
 ```
+
+`ctest -R alloy-pf-karma2001-benchmark-smoke` runs two capped `smoke` steps
+(`OPENPFC_KARMA_MAX_STEPS=2`, PNG skipped).
 
 ## Run
 

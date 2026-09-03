@@ -49,7 +49,7 @@ struct RunConfig {
 
 inline void print_usage(std::ostream &os, const char *exe) {
   os << "Karma 2001 present-model isothermal dendrite (OpenMP).\n"
-     << "Independent of apps/alloy_pf_directional. Paper suite:\n"
+     << "Independent OpenMP FD app. Paper suite:\n"
      << "  scripts/run_karma2001_benchmark.sh          # 3 [100] cases, t*=10^4\n"
      << "  QUICK=1 scripts/run_karma2001_benchmark.sh   # short t* pipeline check\n"
      << "Defaults: A=β0=εk=0, k=0.15, εc=0.02, Ω=0.55, seed 22 d0, L/d0=1000.\n"

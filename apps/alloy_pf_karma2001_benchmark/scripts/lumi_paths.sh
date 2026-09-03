@@ -4,7 +4,7 @@
 # Karma 2001 LUMI-C layout (CPU OpenMP). Source from laptop rsync/sbatch
 # wrappers or from the job script on LUMI.
 #
-# Independent of apps/alloy_pf_directional (scratch I/O stays under karma2001/).
+# Scratch I/O stays under karma2001/.
 
 LUMI_PROJECT="${LUMI_PROJECT:-project_462001519}"
 LUMI_USER="${LUMI_USER:-tpinomaa}"
