@@ -46,6 +46,7 @@ sessions, a second field representation at the modifier/writer boundary).
 - GitHub Unit Tests run the monolithic `openpfc-all-tests` CTest entry. Catch2 3.3.2 `catch_discover_tests` drops names that contain `[`, so sharded discovery registered 260 of 932 cases and never ran the suite. Skip `MPI_Init` on Catch2 `--list-*`.
 - CUDA/HIP compile-only jobs use official `nvidia/cuda` devel and `rocm/dev-ubuntu-24.04:6.2-complete` images (`nvcc` / `hipcc` already in the image). They do not download or compile HeFFTe; FD/kernel GPU TUs build with `OpenPFC_ENABLE_HEFFTE=OFF` and `OpenPFC_BUILD_TESTS=OFF`. Install `git` before `actions/checkout@v5`.
 - Open MPI GPU-aware query: only call `MPIX_Query_cuda_support` / `MPIX_Query_rocm_support` when `OMPI_HAVE_MPI_EXT_CUDA` / `OMPI_HAVE_MPI_EXT_ROCM` is 1. Ubuntu Open MPI ships `<mpi-ext.h>` with CUDA but not HIP; the old `#define` made HIP apps fail to compile.
+- HIP TUs compile with `-fPIC` so they link into PIE executables (Ubuntu 24.04 default). Without it, `wave2d_hip` failed `R_X86_64_32 against .rodata`.
 - GitHub Actions: `fsfe/reuse-action@v6` (reads `REUSE.toml`); bump checkout/cache/artifact/github-script/codecov to current majors.
 - Coverage: stop overwriting `CMAKE_CXX_FLAGS` in CompilerSettings; apply `--coverage` before tests are added so `lcov` finds `.gcda`.
 - REUSE: copyright on `grid_field` / `residency` headers and tests; SPDX on wave2d README, docs toolchain files; `REUSE.toml` annotations for `uv.lock`, `.python-version`, `integrator_selection.json`, and vendored stb.

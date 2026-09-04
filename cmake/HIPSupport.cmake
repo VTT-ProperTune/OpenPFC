@@ -138,6 +138,14 @@ if(OpenPFC_ENABLE_HIP)
       enable_language(HIP)
     endif()
 
+    # Ubuntu 24.04 links executables as PIE. ROCm Clang does not add -fPIC to
+    # HIP TUs by default, so host ld fails with R_X86_64_32 against .rodata.
+    if(NOT CMAKE_HIP_FLAGS MATCHES "-fPIC" AND NOT CMAKE_HIP_FLAGS MATCHES "-fPIE")
+      string(APPEND CMAKE_HIP_FLAGS " -fPIC")
+      set(CMAKE_HIP_FLAGS "${CMAKE_HIP_FLAGS}" CACHE STRING
+        "HIP compile flags (OpenPFC)" FORCE)
+    endif()
+
     if(_openpfc_rocm_root)
       message(STATUS "✅ HIP enabled (found HIP; ROCm root ${_openpfc_rocm_root})")
     else()
