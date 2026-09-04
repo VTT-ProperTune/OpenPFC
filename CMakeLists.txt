@@ -71,17 +71,17 @@ include(cmake/OpenPFCGPUAwareMpi.cmake)
 include(cmake/LibraryConfiguration.cmake)
 
 # ----------------------------------------------------------------------------
-# 7. Build Options
+# 7. Code Coverage
+# ----------------------------------------------------------------------------
+# Directory-scope --coverage must be set before tests/apps/examples are added.
+include(cmake/CodeCoverage.cmake)
+
+# ----------------------------------------------------------------------------
+# 8. Build Options
 # ----------------------------------------------------------------------------
 # Configure what gets built: apps, examples, tests; benchmark sources under
 # tests/ when OpenPFC_BUILD_BENCHMARKS=ON (see tests/CMakeLists.txt).
 include(cmake/BuildOptions.cmake)
-
-# ----------------------------------------------------------------------------
-# 8. Code Coverage
-# ----------------------------------------------------------------------------
-# Code coverage configuration and custom targets
-include(cmake/CodeCoverage.cmake)
 
 # ----------------------------------------------------------------------------
 # 9. Installation Rules

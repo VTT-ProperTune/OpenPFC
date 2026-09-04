@@ -43,9 +43,10 @@ sessions, a second field representation at the modifier/writer boundary).
 
 ### Fixed
 
+- GitHub Actions: `fsfe/reuse-action@v6` (reads `REUSE.toml`); bump checkout/cache/artifact/github-script/codecov to current majors.
+- Coverage: stop overwriting `CMAKE_CXX_FLAGS` in CompilerSettings; apply `--coverage` before tests are added so `lcov` finds `.gcda`.
 - REUSE: copyright on `grid_field` / `residency` headers and tests; SPDX on wave2d README, docs toolchain files; `REUSE.toml` annotations for `uv.lock`, `.python-version`, `integrator_selection.json`, and vendored stb.
 - Doxygen: drop unknown `\\partial_t` / `\\Delta` commands in `json_fd_session.hpp`; replace unresolved `@ref` to C++20 concepts and checkpoint payload types so the unresolved-reference count stays within the legacy baseline.
-- Coverage workflow enables `OpenPFC_ENABLE_CODE_COVERAGE` so `lcov` finds `.gcda` files (instrumentation is opt-in and no longer leaked via global `CMAKE_CXX_FLAGS`).
 - GitHub Actions `code-quality` no longer depends on the private `ahojukka5/clang-format-action` (the VTT-ProperTune token cannot resolve it, so the Unit Tests workflow never reached a compiler). The check uses public `jidicula/clang-format-action@v4.18.0` and stays advisory (`continue-on-error`).
 - Clang-tidy is a dedicated non-blocking workflow again. `WarningsAsErrors` is not clean on this tree; making it a Unit Tests gate skipped the GCC matrix.
 - `docs/user_guide/parameter_validation.md` no longer links to the deleted `appconcretemodelmain-order-of-operations` anchor or the removed `JsonAppRun` / `SpectralSimulationSession` path (Sphinx `myst.xref_missing`).

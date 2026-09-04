@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: true
 
@@ -44,7 +44,7 @@ jobs:
 
       - name: Cache HeFFTe
         id: cache-heffte
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/opt/heffte/2.4.1-cpu
           key: heffte-2.4.1-cpu-ubuntu-24.04-coverage
@@ -65,6 +65,10 @@ jobs:
             -GNinja \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu \
+            -DCMAKE_CXX_FLAGS="--coverage -fprofile-arcs -ftest-coverage" \
+            -DCMAKE_C_FLAGS="--coverage -fprofile-arcs -ftest-coverage" \
+            -DCMAKE_EXE_LINKER_FLAGS="--coverage" \
+            -DGCOV_EXECUTABLE=gcov-11 \
             -DOpenPFC_ENABLE_CODE_COVERAGE=ON \
             -DOpenPFC_BUILD_TESTS=ON \
             -DOpenPFC_BUILD_EXAMPLES=OFF \
@@ -87,25 +91,27 @@ jobs:
       - name: Generate coverage report
         working-directory: build
         run: |
-          # Match gcov to gcc-11 (default /usr/bin/gcov is often newer and breaks lcov)
-          # Capture coverage data
-          lcov --directory . --capture --output-file coverage.info --gcov-tool gcov-11
-          
-          # Remove external dependencies and test files from coverage
+          echo "gcno count: $(find . -name '*.gcno' | wc -l)"
+          echo "gcda count: $(find . -name '*.gcda' | wc -l)"
+          if ! find . -name '*.gcda' | grep -q .; then
+            echo "::error::No .gcda files under build/; coverage instrumentation did not run"
+            find . -name '*.gcno' | head
+            exit 1
+          fi
+          # Ubuntu 24.04 ships lcov 2.x, which is stricter than 1.x.
+          lcov --directory . --capture --output-file coverage.info \
+            --gcov-tool gcov-11 \
+            --ignore-errors mismatch,gcov,empty,negative,unused
           lcov --remove coverage.info \
             '/usr/*' \
             '*/tests/*' \
             '*/examples/*' \
             '*/extern/*' \
-            '*/build/*' \
             '*/_deps/*' \
-            --ignore-errors unused \
+            --ignore-errors unused,empty \
             --output-file coverage.info
-          
-          # Generate HTML report
-          genhtml coverage.info --output-directory coverage-html
-          
-          # Generate summary
+          genhtml coverage.info --output-directory coverage-html \
+            --ignore-errors source,unmapped || genhtml coverage.info --output-directory coverage-html
           lcov --list coverage.info > coverage-summary.txt
 
       - name: Display coverage summary
@@ -127,7 +133,7 @@ jobs:
           fi
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./build/coverage.info
@@ -135,7 +141,7 @@ jobs:
           verbose: true
 
       - name: Upload coverage HTML report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage-report
           path: build/coverage-html
@@ -143,7 +149,7 @@ jobs:
 
       - name: Comment coverage on PR
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const fs = require('fs');

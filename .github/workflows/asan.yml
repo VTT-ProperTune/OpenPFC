@@ -29,7 +29,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: true
 
@@ -49,7 +49,7 @@ jobs:
 
       - name: Cache HeFFTe (ASan build)
         id: cache-heffte-asan
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ env.HEFFTE_INSTALL_PREFIX }}
           key: heffte-2.4.1-cpu-asan-${{ runner.os }}-gcc-13-Debug-${{ hashFiles('scripts/install-heffte-ci.sh') }}

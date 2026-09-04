@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Code coverage configuration and targets
@@ -10,9 +10,17 @@
 option(OpenPFC_ENABLE_CODE_COVERAGE "Enable coverage" OFF)
 
 if(OpenPFC_ENABLE_CODE_COVERAGE)
-  message(STATUS "📊 Enabling code coverage")
-  target_compile_options(openpfc PRIVATE --coverage)
-  target_link_options(openpfc PRIVATE --coverage)
+  message(STATUS "Enabling code coverage")
+  # Directory-scope flags cover targets added after this file is included
+  # (tests, apps, examples). The library already exists.
+  add_compile_options(
+    "$<$<COMPILE_LANGUAGE:CXX>:--coverage>"
+    "$<$<COMPILE_LANGUAGE:C>:--coverage>")
+  add_link_options("$<$<LINK_LANGUAGE:CXX>:--coverage>")
+  if(TARGET openpfc)
+    target_compile_options(openpfc PRIVATE --coverage)
+    target_link_options(openpfc PRIVATE --coverage)
+  endif()
   
   # Find coverage tools
   find_program(LCOV_EXECUTABLE lcov)

@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: true
 
@@ -39,7 +39,7 @@ jobs:
         run: rm -f failing-files.txt
 
       - name: Check REUSE compliance
-        uses: fsfe/reuse-action@v2
+        uses: fsfe/reuse-action@v6
 
       - name: Kernel layering (no frontend includes)
         run: |
@@ -81,7 +81,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: true
 
@@ -101,7 +101,7 @@ jobs:
 
       - name: Cache HeFFTe
         id: cache-heffte
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/opt/heffte/2.4.1-cpu
           key: heffte-2.4.1-cpu-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.build_type }}
@@ -182,7 +182,7 @@ jobs:
 
       - name: Upload test results
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: test-results-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.build_type }}
           path: build/Testing/Temporary/LastTest.log
@@ -199,7 +199,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: true
 
@@ -211,7 +211,7 @@ jobs:
 
       - name: Cache HeFFTe
         id: cache-heffte
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/opt/heffte/2.4.1-cpu
           key: heffte-2.4.1-cpu-ubuntu-24.04-gcc-13-Release
@@ -262,7 +262,7 @@ jobs:
     continue-on-error: true
     container: nvidia/cuda:12.6.0-devel-ubuntu24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with: { submodules: true }
       - name: Install dependencies
         run: |
@@ -290,7 +290,7 @@ jobs:
     continue-on-error: true
     container: rocm/dev-ubuntu-24.04:6.2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with: { submodules: true }
       - name: Install dependencies
         run: |
