@@ -66,8 +66,10 @@ target_include_directories(openpfc-tests PRIVATE ${_catch2_include_dirs})
 # — without this, nvcc fails with "A single input file is required for a
 # non-link phase when an outputfile is specified".
 foreach(dir IN LISTS _catch2_include_dirs)
-  target_compile_options(openpfc-tests PRIVATE
-    "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-isystem ${dir}>")
+  if(dir)
+    target_compile_options(openpfc-tests PRIVATE
+      "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-isystem ${dir}>")
+  endif()
 endforeach()
 
 if(OpenPFC_ENABLE_CODE_COVERAGE)

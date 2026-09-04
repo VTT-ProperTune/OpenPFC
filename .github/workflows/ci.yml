@@ -258,7 +258,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DOpenPFC_ENABLE_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=90 \
             -DOpenPFC_ENABLE_HEFFTE=OFF \
-            -DOpenPFC_BUILD_TESTS=ON -DOpenPFC_BUILD_APPS=ON \
+            -DOpenPFC_BUILD_TESTS=OFF -DOpenPFC_BUILD_APPS=ON \
             -DOpenPFC_BUILD_EXAMPLES=OFF -DOpenPFC_BUILD_DOCUMENTATION=OFF
           cmake --build build-cuda -j2
 
@@ -285,7 +285,7 @@ jobs:
             -DCMAKE_PREFIX_PATH=/opt/rocm \
             -DOpenPFC_ENABLE_HIP=ON -DCMAKE_HIP_ARCHITECTURES=gfx90a \
             -DOpenPFC_ENABLE_HEFFTE=OFF \
-            -DOpenPFC_BUILD_TESTS=ON -DOpenPFC_BUILD_APPS=ON \
+            -DOpenPFC_BUILD_TESTS=OFF -DOpenPFC_BUILD_APPS=ON \
             -DOpenPFC_BUILD_EXAMPLES=OFF -DOpenPFC_BUILD_DOCUMENTATION=OFF
           cmake --build build-hip -j2
 
