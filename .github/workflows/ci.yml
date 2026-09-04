@@ -230,11 +230,10 @@ jobs:
 
   # ============================================================================
   # Compile-only GPU jobs (audit 11 / PN). GitHub runners have no GPU, but nvcc
-  # / hipcc compile without one, so these catch GPU-path rot between manual
-  # cluster builds. NOTE: authored to mirror the CPU job + build.sh; they build a
-  # matching-backend HeFFTe and are marked continue-on-error until first
-  # validated on GitHub (the authoritative GPU compile check today is
-  # `scripts/build.sh --with-cuda|--with-rocm --no-test` on the clusters).
+  # / hipcc compile without one. Official devel images already ship the toolkit;
+  # do not download or compile HeFFTe here (spectral GPU stays cluster-only).
+  # OpenPFC_ENABLE_HEFFTE=OFF still builds FD/kernel CUDA and HIP TUs.
+  # continue-on-error until first validated on GitHub.
   # ============================================================================
   cuda-compile:
     name: CUDA compile-only (no GPU)
@@ -242,25 +241,23 @@ jobs:
     runs-on: ubuntu-24.04
     continue-on-error: true
     container: nvidia/cuda:12.6.0-devel-ubuntu24.04
+    env:
+      DEBIAN_FRONTEND: noninteractive
     steps:
-      - name: Install git (images have no git; checkout@v5 needs it for submodules)
-        run: apt-get update && apt-get install -y git
+      - name: Install git and host build deps
+        run: |
+          apt-get update && apt-get install -y --no-install-recommends \
+            git ca-certificates cmake ninja-build gcc-13 g++-13 \
+            libopenmpi-dev openmpi-bin nlohmann-json3-dev
       - uses: actions/checkout@v5
         with: { submodules: true }
-      - name: Install dependencies
-        run: |
-          apt-get install -y gcc-13 g++-13 cmake ninja-build \
-            libopenmpi-dev openmpi-bin libfftw3-dev libfftw3-mpi-dev nlohmann-json3-dev
-      - name: Build HeFFTe (CUDA)
-        env: { CC: gcc-13, CXX: g++-13 }
-        run: scripts/install-heffte-ci.sh Release /tmp/heffte-cuda --cuda || scripts/install-heffte-ci.sh Release /tmp/heffte-cuda
-      - name: Configure + compile (no tests, no run)
+      - name: Configure + compile FD CUDA (no HeFFTe, no run)
         env: { CC: gcc-13, CXX: g++-13 }
         run: |
           cmake -S . -B build-cuda -GNinja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cuda \
             -DOpenPFC_ENABLE_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=90 \
+            -DOpenPFC_ENABLE_HEFFTE=OFF \
             -DOpenPFC_BUILD_TESTS=ON -DOpenPFC_BUILD_APPS=ON \
             -DOpenPFC_BUILD_EXAMPLES=OFF -DOpenPFC_BUILD_DOCUMENTATION=OFF
           cmake --build build-cuda -j2
@@ -270,24 +267,24 @@ jobs:
     needs: [code-quality]
     runs-on: ubuntu-24.04
     continue-on-error: true
-    container: rocm/dev-ubuntu-24.04:6.2
+    container: rocm/dev-ubuntu-24.04:6.2-complete
+    env:
+      DEBIAN_FRONTEND: noninteractive
     steps:
-      - name: Install git (images have no git; checkout@v5 needs it for submodules)
-        run: apt-get update && apt-get install -y git
+      - name: Install git and host build deps
+        run: |
+          apt-get update && apt-get install -y --no-install-recommends \
+            git ca-certificates cmake ninja-build \
+            libopenmpi-dev openmpi-bin nlohmann-json3-dev
       - uses: actions/checkout@v5
         with: { submodules: true }
-      - name: Install dependencies
-        run: |
-          apt-get install -y cmake ninja-build \
-            libopenmpi-dev openmpi-bin libfftw3-dev libfftw3-mpi-dev nlohmann-json3-dev
-      - name: Build HeFFTe (ROCm)
-        run: scripts/install-heffte-ci.sh Release /tmp/heffte-rocm --rocm || scripts/install-heffte-ci.sh Release /tmp/heffte-rocm
-      - name: Configure + compile (no tests, no run)
+      - name: Configure + compile FD HIP (no HeFFTe, no run)
         run: |
           cmake -S . -B build-hip -GNinja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-rocm \
+            -DCMAKE_PREFIX_PATH=/opt/rocm \
             -DOpenPFC_ENABLE_HIP=ON -DCMAKE_HIP_ARCHITECTURES=gfx90a \
+            -DOpenPFC_ENABLE_HEFFTE=OFF \
             -DOpenPFC_BUILD_TESTS=ON -DOpenPFC_BUILD_APPS=ON \
             -DOpenPFC_BUILD_EXAMPLES=OFF -DOpenPFC_BUILD_DOCUMENTATION=OFF
           cmake --build build-hip -j2
