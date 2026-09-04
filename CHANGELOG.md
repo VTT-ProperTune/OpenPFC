@@ -43,6 +43,7 @@ sessions, a second field representation at the modifier/writer boundary).
 
 ### Fixed
 
+- GitHub Unit Tests run the monolithic `openpfc-all-tests` CTest entry. Catch2 3.3.2 `catch_discover_tests` drops names that contain `[`, so sharded discovery registered 260 of 932 cases and never ran the suite. Skip `MPI_Init` on Catch2 `--list-*`. CUDA/HIP compile-only jobs install `git` before `actions/checkout@v5`.
 - GitHub Actions: `fsfe/reuse-action@v6` (reads `REUSE.toml`); bump checkout/cache/artifact/github-script/codecov to current majors.
 - Coverage: stop overwriting `CMAKE_CXX_FLAGS` in CompilerSettings; apply `--coverage` before tests are added so `lcov` finds `.gcda`.
 - REUSE: copyright on `grid_field` / `residency` headers and tests; SPDX on wave2d README, docs toolchain files; `REUSE.toml` annotations for `uv.lock`, `.python-version`, `integrator_selection.json`, and vendored stb.

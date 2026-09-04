@@ -82,11 +82,10 @@ endif()
 # Default: a single invocation of all non-MPI cases -- fastest for local dev,
 # no per-test process overhead.
 #
-# CI (OpenPFC_CTEST_DISCOVER=ON): register each Catch2 TEST_CASE as its own CTest
-# entry via catch_discover_tests, so a single crashing/hanging case is isolated
-# in the report instead of taking down the whole batch, and CTest sharding
-# (`ctest -j`) parallelizes across cases. No case is lost: discovery enumerates
-# the binary's full `~[MPI]` set (compare counts against the single-run summary).
+# Optional (OpenPFC_CTEST_DISCOVER=ON): register each Catch2 TEST_CASE as its
+# own CTest entry via catch_discover_tests. Catch2 3.3.2 CatchAddTests.cmake
+# splits names on '[' / ';' (unquoted foreach), so GitHub CI stays on the
+# monolithic openpfc-all-tests path. Do not enable this in .github/workflows.
 option(OpenPFC_CTEST_DISCOVER
        "Register each non-MPI Catch2 case as its own CTest entry (CI granular reporting)"
        OFF)
@@ -95,6 +94,7 @@ if(OpenPFC_CTEST_DISCOVER)
   catch_discover_tests(openpfc-tests
     TEST_SPEC "~[MPI]"
     TEST_PREFIX "openpfc:"
+    DISCOVERY_TIMEOUT 120
     PROPERTIES ENVIRONMENT
       "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
 else()
