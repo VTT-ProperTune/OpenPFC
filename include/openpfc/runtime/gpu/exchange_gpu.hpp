@@ -44,12 +44,17 @@
 #if (defined(OpenPFC_MPI_CUDA_AWARE) || defined(OpenPFC_MPI_HIP_AWARE)) &&          \
     defined(OPEN_MPI) && __has_include(<mpi-ext.h>)
 #include <mpi-ext.h>
-#if defined(OpenPFC_MPI_CUDA_AWARE)
+#if defined(OpenPFC_MPI_CUDA_AWARE) && defined(OMPI_HAVE_MPI_EXT_CUDA) &&           \
+    OMPI_HAVE_MPI_EXT_CUDA
 #ifndef OPENPFC_HAVE_MPIX_QUERY_CUDA_SUPPORT
 #define OPENPFC_HAVE_MPIX_QUERY_CUDA_SUPPORT 1
 #endif
 #endif
-#if defined(OpenPFC_MPI_HIP_AWARE)
+#if defined(OpenPFC_MPI_HIP_AWARE) && defined(OMPI_HAVE_MPI_EXT_ROCM) &&            \
+    OMPI_HAVE_MPI_EXT_ROCM
+#ifndef OPENPFC_HAVE_MPIX_QUERY_ROCM_SUPPORT
+#define OPENPFC_HAVE_MPIX_QUERY_ROCM_SUPPORT 1
+#endif
 #ifndef OPENPFC_HAVE_MPIX_QUERY_HIP_SUPPORT
 #define OPENPFC_HAVE_MPIX_QUERY_HIP_SUPPORT 1
 #endif

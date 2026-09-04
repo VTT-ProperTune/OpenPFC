@@ -10,8 +10,10 @@
  * @details
  * Order:
  *   1. `OPENPFC_ASSUME_GPU_AWARE_MPI=0|1` — hard override.
- *   2. Open MPI `MPIX_Query_cuda_support` / `MPIX_Query_hip_support` when
- *      the compile was GPU-aware and `<mpi-ext.h>` is present.
+ *   2. Open MPI `MPIX_Query_cuda_support` / `MPIX_Query_rocm_support` when
+ *      the compile was GPU-aware and the matching `OMPI_HAVE_MPI_EXT_*`
+ *      macro is 1 (`<mpi-ext.h>`). Ubuntu's Open MPI often has CUDA but not
+ *      ROCm; do not assume both queries exist.
  *   3. Cray MPICH: `MPICH_GPU_SUPPORT_ENABLED=1` plus a HIP or CUDA-aware
  *      compile (the LUMI contract; Open MPI's query is absent here).
  *   4. Optional `OPENPFC_PROBE_GPU_AWARE_MPI=1` — device-pointer Sendrecv
@@ -33,11 +35,18 @@
 #if (defined(OpenPFC_MPI_CUDA_AWARE) || defined(OpenPFC_MPI_HIP_AWARE)) &&          \
     defined(OPEN_MPI) && __has_include(<mpi-ext.h>)
 #include <mpi-ext.h>
+#if defined(OMPI_HAVE_MPI_EXT_CUDA) && OMPI_HAVE_MPI_EXT_CUDA
 #ifndef OPENPFC_HAVE_MPIX_QUERY_CUDA_SUPPORT
 #define OPENPFC_HAVE_MPIX_QUERY_CUDA_SUPPORT 1
 #endif
+#endif
+#if defined(OMPI_HAVE_MPI_EXT_ROCM) && OMPI_HAVE_MPI_EXT_ROCM
+#ifndef OPENPFC_HAVE_MPIX_QUERY_ROCM_SUPPORT
+#define OPENPFC_HAVE_MPIX_QUERY_ROCM_SUPPORT 1
+#endif
 #ifndef OPENPFC_HAVE_MPIX_QUERY_HIP_SUPPORT
 #define OPENPFC_HAVE_MPIX_QUERY_HIP_SUPPORT 1
+#endif
 #endif
 #endif
 
@@ -166,7 +175,11 @@ inline GPUAwareMPIDecision decide_gpu_aware_mpi() {
   return d;
 #endif
 #if defined(OPENPFC_HAVE_MPIX_QUERY_HIP_SUPPORT) && defined(OpenPFC_MPI_HIP_AWARE)
+#if defined(OPENPFC_HAVE_MPIX_QUERY_ROCM_SUPPORT)
+  d.enabled = MPIX_Query_rocm_support() == 1;
+#else
   d.enabled = MPIX_Query_hip_support() == 1;
+#endif
   d.how = d.enabled ? GPUAwareMPIHow::OpenMPIQueryOn : GPUAwareMPIHow::OpenMPIQueryOff;
   return d;
 #endif
