@@ -41,6 +41,10 @@ sessions, a second field representation at the modifier/writer boundary).
 - Removed the unused `frontend/ui/simulation_wiring.hpp` umbrella and `frontend/utils/field_iteration.hpp`; include the `simulation_wiring_*` slices directly. The stray `scripts/build_LUMI.sbatch` is gone (`scripts/build.sh` generates its own).
 - Docs: time-integration contract, custom stepper guide, ADR 0003 and related pages rewritten onto `pfc::sim::run` / `SimulationState`; stale `Simulator` / `App::main` / `Model::step` references removed.
 
+### Changed
+
+- Perf pins in `tests/baselines/perf/` are schema-v4 summaries (mean/median/min/max of frame scalars after warmup). Full per-frame traces stay a cluster export under `results/`; collapse a new pin with `scripts/compare_perf_baseline.py --summarize`.
+
 ### Fixed
 
 - GitHub Unit Tests run the monolithic `openpfc-all-tests` CTest entry. Catch2 3.3.2 `catch_discover_tests` drops names that contain `[`, so sharded discovery registered 260 of 932 cases and never ran the suite. Skip `MPI_Init` on Catch2 `--list-*`.
@@ -102,7 +106,7 @@ sessions, a second field representation at the modifier/writer boundary).
 - Example `03_parallel_fft` uses `std::numbers::pi` instead of `atan(1.0)`.
 - `JsonWiringSession` constructor parameters no longer shadow the catalog members (`-Wshadow`).
 - `scripts/build.sh --no-heffte` configures an FD-only / kernel-only tree (`-DOpenPFC_ENABLE_HEFFTE=OFF`).
-- `scripts/compare_perf_baseline.py` compares profiling JSON (schema v2/v3) `wall_step` means against a stored baseline (pass ≤5% regression, warn >5%, fail >15%). Canary input: `tests/baselines/perf/inputs/tungsten_canary.json`.
+- `scripts/compare_perf_baseline.py` compares `wall_step` means against a stored baseline (schema v2/v3 traces or v4 summaries; pass ≤5% regression, warn >5%, fail >15%). Canary input: `tests/baselines/perf/inputs/tungsten_canary.json`.
 - Tungsten CUDA Release 256³/20-step perf JSON on tohtori `g0005`: 1-rank and 8-rank (`tests/baselines/perf/tohtori-g0005-tungsten-cuda-*-release-256.json`). Input: `tests/baselines/perf/inputs/tungsten_release_256.json`. Compare with `--warmup-frames=1`.
 - Tungsten CPU Release 64³/20-step strong-scaling JSON on tohtori `g0005`: 1/4/16 ranks (`tests/baselines/perf/tohtori-g0005-tungsten-cpu-*-release-64.json`). Compare with `--warmup-frames=1`.
 - `examples/23_halo_microtiming` times `HaloExchange` (host / `--cuda` / `--hip`) and writes schema-v2 JSON. CTest `halo-microtiming-host-2rank` smokes a 16³/4-iter run.

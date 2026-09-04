@@ -46,13 +46,26 @@ within a stated numeric tolerance, per backend).
 
 ## Performance baselines
 
-Capture machine-tagged JSON via the profiling schema-v2/v3 exporter into
-`tests/baselines/perf/` and compare with `scripts/compare_perf_baseline.py`
-(pass ≤5% regression / warn >5% / fail >15%; speedups pass):
+In-tree pins under `tests/baselines/perf/` are **schema v4 summaries** (mean /
+median / min / max of frame scalars after warmup, plus top-level region
+exclusive means). They are not full per-frame traces. Cluster jobs still
+export schema v2/v3 traces (write those under `results/`); collapse a new pin
+with:
+
+```
+python3 scripts/compare_perf_baseline.py --summarize path/to/new_profile.json \
+  --warmup-frames=N -o tests/baselines/perf/<baseline>.json
+```
+
+Compare a stored pin to a new full export with `scripts/compare_perf_baseline.py`
+(pass ≤5% regression / warn >5% / fail >15%; speedups pass). `--warmup-frames`
+applies to the v2/v3 *current* file; the pin already baked that skip into
+`metrics.*.mean`:
 
 ```
 python3 scripts/compare_perf_baseline.py \
-  tests/baselines/perf/<baseline>.json path/to/new_profile.json
+  tests/baselines/perf/<baseline>.json path/to/new_profile.json \
+  --warmup-frames=N
 ```
 
 Canary input: `tests/baselines/perf/inputs/tungsten_canary.json` (64³, 20 steps,

@@ -14,6 +14,7 @@ This document describes the on-disk layout written by `ProfilingSession::finaliz
 | 1 (legacy) | Single flat `frames` array of length `n_frames` (all ranks’ frames concatenated). HDF5: global `frame_scalars` and per-path datasets of length `n_frames`. |
 | 2 | Hierarchical: `ranks[]`, each with `mpi_rank`, `n_frames`, and `frames[]`. HDF5: `openpfc/profiling/` holds payload directly (`schema_version` = 2 on that group). |
 | 3 (namespaced run) | Same payload as v2, but nested for merge-friendly multi-job files. JSON: `schema_version` = 3, `run_id`, `metadata`, then the same fields as v2. HDF5: `openpfc/profiling/` has `schema_version` = 3; payload lives under `openpfc/profiling/runs/<sanitized_run_id>/` (inner group still carries v2-style `schema_version` = 2, datasets, and `ranks/`). |
+| 4 (in-tree perf pin) | **Not an exporter format.** `scripts/compare_perf_baseline.py --summarize` collapses a v2/v3 trace to mean/median/min/max of each frame scalar (and top-level region exclusive means) after `--warmup-frames`. Stored under `tests/baselines/perf/`. Full traces belong under `results/`. |
 
 Exports default to v2 when `ProfilingExportOptions::run_id` is empty. When `run_id` is set (e.g. Slurm job id via `App` or `OPENPFC_PROFILING_RUN_ID`), exports use v3.
 
@@ -145,6 +146,21 @@ All other fields (`openpfc_version`, `n_mpi_ranks`, `total_frames`, `frame_metri
 | `openpfc/profiling/runs/<id>/…` | Same layout as HDF5 schema version 2 under this group (`schema_version` = 2, `openpfc_version`, `frame_metric_names`, `region_paths`, `ranks/…`). |
 
 Merging jobs: copy each run subtree into one file, e.g. with `h5copy` from `openpfc/profiling/runs/JOB_A` to the same path in a destination file (unique `run_id` ⇒ no collisions).
+
+## JSON schema version 4 (in-tree perf pin)
+
+Not written by `ProfilingSession`. `scripts/compare_perf_baseline.py --summarize` collapses a v2/v3 file after `--warmup-frames`. There is no HDF5 v4.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `schema_version` | int | Always `4`. |
+| `kind` | string | Always `perf_summary`. |
+| `n_mpi_ranks` | int | From the source trace. |
+| `n_frames_per_rank` | int | Frames recorded on rank 0 (source traces are uniform). |
+| `warmup_frames` | int | Leading frames per rank skipped when computing means. |
+| `n_samples` | int | `(n_frames_per_rank - warmup_frames) × n_mpi_ranks`. |
+| `metrics` | object | Per `frame_metric_names` entry: `mean`, `median`, `min`, `max`. |
+| `region_exclusive_mean` | object | Mean exclusive time of each **top-level** region after warmup. |
 
 ## Migration from schema 1 to 2
 

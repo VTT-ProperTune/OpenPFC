@@ -17,6 +17,8 @@ from compare_perf_baseline import (  # noqa: E402
     load_profiling_json,
     main,
     mean_metric,
+    sample_count,
+    summarize_doc,
 )
 
 
@@ -71,3 +73,29 @@ def test_cli_fail_and_warn_exit_codes(tmp_path: Path) -> None:
 
     current.write_text(json.dumps(_doc([0.90, 0.90])), encoding="utf-8")
     assert main([str(baseline), str(current)]) == 0
+
+
+def test_summarize_drops_frames_and_preserves_mean() -> None:
+    doc = _doc([10.0, 1.0, 3.0])
+    summary = summarize_doc(doc, warmup_frames=1)
+    assert summary["schema_version"] == 4
+    assert summary["kind"] == "perf_summary"
+    assert "ranks" not in summary
+    assert summary["warmup_frames"] == 1
+    assert summary["n_samples"] == 2
+    assert mean_metric(summary, "wall_step", warmup_frames=99) == pytest.approx(2.0)
+    assert sample_count(summary, "wall_step", warmup_frames=99) == 2
+
+
+def test_cli_summarize_and_compare_against_full(tmp_path: Path) -> None:
+    full = tmp_path / "full.json"
+    pin = tmp_path / "pin.json"
+    full.write_text(json.dumps(_doc([10.0, 2.0, 2.0])), encoding="utf-8")
+    assert main(["--summarize", str(full), "--warmup-frames", "1", "-o", str(pin)]) == 0
+    pin_doc = json.loads(pin.read_text(encoding="utf-8"))
+    assert pin_doc["schema_version"] == 4
+    assert "ranks" not in pin_doc
+    assert "frames" not in pin_doc
+    assert main([str(pin), str(full), "--warmup-frames", "1"]) == 0
+    # Current still includes the warmup frame if the flag is omitted → slower.
+    assert main([str(pin), str(full)]) == 1
