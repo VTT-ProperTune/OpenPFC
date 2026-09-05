@@ -343,3 +343,14 @@ target_compile_definitions(openpfc PRIVATE
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "9.0")
   target_link_libraries(openpfc PUBLIC stdc++fs)
 endif()
+
+# Compile-only CUDA Field residency API. Not a Catch2 test and not linked into
+# openpfc-tests: a global constructor in this TU used to run CUDA at process
+# start (CTest discovery on GPU-less runners).
+if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
+  add_library(openpfc_cuda_field_residency_compile OBJECT
+      ${PROJECT_SOURCE_DIR}/tests/unit/kernel/data/cuda_field_residency_compile.cpp)
+  target_link_libraries(openpfc_cuda_field_residency_compile PRIVATE
+      openpfc openpfc_gpu_compile_defs CUDA::cudart)
+  target_compile_features(openpfc_cuda_field_residency_compile PRIVATE cxx_std_20)
+endif()

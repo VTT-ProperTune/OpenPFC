@@ -9,6 +9,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Fixed
 
+- CUDA Field residency compile-check is an OBJECT library, not a Catch2 TU.
+  A namespace-scope constructor used to run CUDA at process start during CTest
+  discovery on GPU-less runners (#67).
 - `tungsten-golden-4rank` and `aluminum-golden-4rank` honor
   `OpenPFC_MPI_TEST_MAX_WORLD_SIZE` (CI sets 2). They were launching 4 ranks on
   GitHub runners, which Open MPI rejects; gcc-13 jobs hid the same CTest

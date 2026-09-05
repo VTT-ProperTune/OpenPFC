@@ -43,6 +43,7 @@ Smaller binaries are used when **linking**, **launch**, or **isolation** differs
 | Target (examples) | Rationale |
 |-------------------|-----------|
 | `test_gpu_device`, `test_gpu_fft` | Built only with CUDA; link CUDA / kernel objects without pulling them into every default build. See `tests/unit/runtime/gpu/CMakeLists.txt`. |
+| `openpfc_cuda_field_residency_compile` | OBJECT library: compiles `Field` CUDA residency APIs. Not linked into `openpfc-tests` and not a CTest test (a global constructor here used to run CUDA during Catch2 discovery). |
 | `test_vtk_writer` | CTest runs **serial and 2-rank MPI** invocations via `mpiexec`. See `tests/unit/frontend/io/CMakeLists.txt`. |
 | `test_logging` | Serial Catch2 with `Catch2WithMain` (no shared MPI runner). |
 | Tests under `apps/` (e.g. Tungsten) | Application-scoped correctness, not the core library target. |
