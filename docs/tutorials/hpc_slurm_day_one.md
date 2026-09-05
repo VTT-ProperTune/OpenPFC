@@ -16,7 +16,7 @@ This page is a **minimal** pattern for running OpenPFC under **Slurm** on a typi
 
 Slurm starts the job in **`$SLURM_SUBMIT_DIR`** (where you ran `sbatch`) or a directory you set with `#SBATCH -D` / `cd` in the script.
 
-**Rule:** Paths in JSON (`fields[].data`, logs) are usually **relative to the job’s current working directory**. Use **absolute paths** if you prefer not to depend on `cd`.
+**Rule:** Paths in JSON (`fields[].data`, logs) are usually **relative to the job’s current working directory**. Use **absolute paths** if you prefer not to depend on `cd`. `fields[].data` may also use `$NAME` / `${NAME}` (for example `$RESULTS/psi_%04d.bin` or `${SLURM_JOB_ID}`) so the same input can write under scratch without rewriting the file; unset variables fail at writer setup.
 
 See also: [`../mpi_io_layout_checklist.md`](../hpc/mpi_io_layout_checklist.md).
 

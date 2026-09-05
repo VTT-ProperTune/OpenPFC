@@ -14,7 +14,7 @@ This document describes the **raw binary** files produced by `pfc::BinaryWriter`
 Do not treat a lone headerless `BinaryWriter` file as the full checkpoint /
 restart contract.
 
-**Implementation references:** [`include/openpfc/frontend/io/binary_writer.hpp`](../../include/openpfc/frontend/io/binary_writer.hpp), [`include/openpfc/kernel/simulation/binary_reader.hpp`](../../include/openpfc/kernel/simulation/binary_reader.hpp), [`include/openpfc/frontend/utils/utils.hpp`](../../include/openpfc/frontend/utils/utils.hpp) (`format_with_number`).
+**Implementation references:** [`include/openpfc/frontend/io/binary_writer.hpp`](../../include/openpfc/frontend/io/binary_writer.hpp), [`include/openpfc/kernel/simulation/binary_reader.hpp`](../../include/openpfc/kernel/simulation/binary_reader.hpp), [`include/openpfc/frontend/utils/utils.hpp`](../../include/openpfc/frontend/utils/utils.hpp) (`expand_env_in_path`, `format_with_number`).
 
 ## File contents
 
@@ -38,11 +38,12 @@ Each `write(increment, field)` call:
 
 ## Filename template and `increment`
 
-The JSON `fields[].data` string is passed to `BinaryWriter` as the filename template.
+The JSON `fields[].data` string is passed to `BinaryWriter` as the filename template. `FileResultsWriter` resolves it at writer setup in this order:
 
-- If the string contains **`%`**, it is passed to `printf`-style formatting with the **integer `increment`** supplied by the simulator (see [`simulation_wiring_writers.hpp`](../../include/openpfc/frontend/ui/simulation_wiring_writers.hpp) and `BinaryWriter::write_mpi_binary`).  
-  Examples: `./psi_%d.bin`, `./data/u_%04d.bin`.  
-- If there is **no `%`**, the same path is used on every write (overwrites each time).
+1. **Environment expansion.** `$NAME` and `${NAME}` (POSIX name `[A-Za-z_][A-Za-z0-9_]*`) are replaced from the process environment. Unset or empty variables, and any stray `$`, fail closed with `std::invalid_argument` — they do not become a literal relative path. Example: `$RESULTS/data_%04d.bin` with `RESULTS=/scratch/run` becomes `/scratch/run/data_%04d.bin`.
+2. **Increment templating.** If the expanded string contains **`%`**, it is passed to `printf`-style formatting with the **integer `increment`** supplied by the simulator (see [`simulation_wiring_writers.hpp`](../../include/openpfc/frontend/ui/simulation_wiring_writers.hpp) and `BinaryWriter::write_mpi_binary`).  
+   Examples: `./psi_%d.bin`, `./data/u_%04d.bin`, `$RESULTS/data_%04d.bin`.  
+- If there is **no `%`** after expansion, the same path is used on every write (overwrites each time).
 
 The `increment` value is advanced by the simulator according to configuration (see [`app_pipeline.md`](../user_guide/app_pipeline.md) and the `simulator` section in JSON).
 

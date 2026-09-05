@@ -54,7 +54,7 @@ When `saveat > 0` and `fields` is present, `parse_result_writers_from_json` cons
 | Key | Type | Meaning |
 |-----|------|---------|
 | `fields[].name` | string | Field identifier known to the simulator / model |
-| `fields[].data` | string | Filename template; if it contains `%`, `printf`-style formatting with the simulator’s output **increment** is applied (see [`binary_field_io_spec.md`](binary_field_io_spec.md)) |
+| `fields[].data` | string | Filename template. `$NAME` / `${NAME}` environment references are expanded first (unset or empty is a hard error). If the expanded string contains `%`, `printf`-style formatting with the simulator’s output **increment** is applied (see [`binary_field_io_spec.md`](binary_field_io_spec.md)) |
 | `fields[].writer` | string | Catalog key: `"binary"` (default), `"vtk"`, or `"hdf5"` when built with `OpenPFC_ENABLE_HDF5`. Unknown keys are a hard error. `"hdf5"` writes `/field` plus a `.xdmf` sidecar (parallel HDF5 MPI-IO, or gather-to-rank-0 when HDF5 is serial). |
 
 ## Initial / boundary conditions

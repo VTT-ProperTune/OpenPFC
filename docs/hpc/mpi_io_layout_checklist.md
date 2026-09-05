@@ -16,7 +16,7 @@ Use this before debugging “missing file” or **hang** issues on clusters.
 
 - [ ] Job script **`cd`**s to the directory where relative paths in JSON are valid.  
 - [ ] **`argv[1]`** config path is correct from that directory (or use an absolute path).  
-- [ ] **`fields[].data`** directories exist or are creatable; rank 0 creates parents in the default wiring ([`binary_field_io_spec.md`](../reference/binary_field_io_spec.md)).
+- [ ] **`fields[].data`** directories exist or are creatable; rank 0 creates parents in the default wiring ([`binary_field_io_spec.md`](../reference/binary_field_io_spec.md)). If the template uses `$NAME` / `${NAME}`, those variables must be set and non-empty in the job environment.
 
 ## Binary writers (`BinaryWriter`)
 

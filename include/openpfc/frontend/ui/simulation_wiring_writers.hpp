@@ -24,6 +24,7 @@
 #include <nlohmann/json.hpp>
 #include <openpfc/frontend/ui/results_writer_catalog.hpp>
 #include <openpfc/frontend/ui/simulation_wiring_context.hpp>
+#include <openpfc/frontend/utils/utils.hpp>
 #include <openpfc/kernel/simulation/results_writer.hpp>
 #include <openpfc/kernel/utils/logging.hpp>
 
@@ -92,7 +93,8 @@ parse_result_writers_from_json(const nlohmann::json &settings,
   if (has_fields && saves) {
     for (const auto &field : settings["fields"]) {
       std::string name = field["name"];
-      std::string data = field["data"];
+      std::string data =
+          pfc::utils::expand_env_in_path(field["data"].get<std::string>());
       std::string writer_type = "binary";
       if (field.contains("writer") && field["writer"].is_string()) {
         writer_type = field["writer"].get<std::string>();

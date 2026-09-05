@@ -33,6 +33,7 @@
 #ifndef PFC_UTILS_HPP
 #define PFC_UTILS_HPP
 
+#include <cstdlib>
 #include <mpi.h>
 #include <stdexcept>
 #include <string>
@@ -135,6 +136,103 @@ inline std::string format_with_number(const std::string &filename, int increment
     return string_format(filename, increment);
   }
   return filename;
+}
+
+/**
+ * @brief Expand `$NAME` / `${NAME}` POSIX environment references in a path
+ *
+ * @details
+ * A single left-to-right pass replaces each `$NAME` or `${NAME}` with
+ * `std::getenv(NAME)`. Names match `[A-Za-z_][A-Za-z0-9_]*`. Values are not
+ * re-scanned. This runs **before** `format_with_number` so a pattern such as
+ * `$RESULTS/data_%04d.bin` becomes `/scratch/run/data_%04d.bin` and then
+ * `/scratch/run/data_0007.bin`.
+ *
+ * Fail-closed: an unset or empty variable, or any `$` that is not a valid
+ * reference (including `$$`, a trailing `$`, `${}` , and unclosed `${…}`),
+ * throws `std::invalid_argument`. There is no silent fallback to a literal
+ * `$RESULTS/...` relative path.
+ *
+ * @param path Filename pattern, possibly containing environment references
+ * @return Path with environment references substituted
+ *
+ * @throws std::invalid_argument if a referenced variable is unset or empty,
+ *         or if the string contains a stray `$`
+ *
+ * @see format_with_number
+ * @see FileResultsWriter
+ */
+[[nodiscard]] inline std::string expand_env_in_path(const std::string &path) {
+  if (path.find('$') == std::string::npos) {
+    return path;
+  }
+  const auto is_name_start = [](unsigned char c) {
+    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_';
+  };
+  const auto is_name_cont = [&](unsigned char c) {
+    return is_name_start(c) || (c >= '0' && c <= '9');
+  };
+  const auto stray_dollar = [&path]() {
+    return std::invalid_argument(
+        std::string("expand_env_in_path: stray '$' in filename pattern '") + path +
+        "'");
+  };
+  const auto posix_name = [&is_name_start, &is_name_cont](const std::string &name) {
+    if (name.empty() || !is_name_start(static_cast<unsigned char>(name.front()))) {
+      return false;
+    }
+    for (std::size_t i = 1; i < name.size(); ++i) {
+      if (!is_name_cont(static_cast<unsigned char>(name[i]))) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  std::string out;
+  out.reserve(path.size());
+  for (std::size_t i = 0; i < path.size();) {
+    if (path[i] != '$') {
+      out.push_back(path[i]);
+      ++i;
+      continue;
+    }
+    ++i;
+    std::string name;
+    if (i < path.size() && path[i] == '{') {
+      ++i;
+      const std::size_t name_begin = i;
+      while (i < path.size() && path[i] != '}') {
+        ++i;
+      }
+      if (i >= path.size()) {
+        throw stray_dollar();
+      }
+      name = path.substr(name_begin, i - name_begin);
+      ++i;
+      if (!posix_name(name)) {
+        throw stray_dollar();
+      }
+    } else {
+      if (i >= path.size() || !is_name_start(static_cast<unsigned char>(path[i]))) {
+        throw stray_dollar();
+      }
+      const std::size_t name_begin = i;
+      ++i;
+      while (i < path.size() && is_name_cont(static_cast<unsigned char>(path[i]))) {
+        ++i;
+      }
+      name = path.substr(name_begin, i - name_begin);
+    }
+    const char *value = std::getenv(name.c_str());
+    if (value == nullptr || value[0] == '\0') {
+      throw std::invalid_argument(
+          std::string("expand_env_in_path: environment variable '") + name +
+          "' is unset or empty in filename pattern '" + path + "'");
+    }
+    out.append(value);
+  }
+  return out;
 }
 
 template <typename T> size_t sizeof_vec(const std::vector<T> &V) {

@@ -1,7 +1,9 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#include <cstdlib>
 #include <mpi.h>
+#include <string>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -140,6 +142,103 @@ TEST_CASE("utils - format_with_number validation accepts valid patterns", "[util
   SECTION("Accepts pattern with % in middle of text") {
     std::string result = utils::format_with_number("data_frame_%d_raw", 5);
     REQUIRE(result == "data_frame_5_raw");
+  }
+}
+
+namespace {
+
+struct EnvVarGuard {
+  std::string name_;
+  std::string original_;
+  bool was_set_;
+
+  EnvVarGuard(std::string name, const char *value) : name_(std::move(name)) {
+    const char *val = std::getenv(name_.c_str());
+    was_set_ = val != nullptr;
+    original_ = was_set_ ? val : "";
+    if (value == nullptr) {
+      unsetenv(name_.c_str());
+    } else {
+      setenv(name_.c_str(), value, 1);
+    }
+  }
+
+  ~EnvVarGuard() {
+    if (was_set_) {
+      setenv(name_.c_str(), original_.c_str(), 1);
+    } else {
+      unsetenv(name_.c_str());
+    }
+  }
+
+  EnvVarGuard(const EnvVarGuard &) = delete;
+  EnvVarGuard &operator=(const EnvVarGuard &) = delete;
+};
+
+} // namespace
+
+TEST_CASE("utils - expand_env_in_path", "[utils][unit]") {
+  SECTION("Returns paths without $ unchanged") {
+    REQUIRE(utils::expand_env_in_path("output_%04d.dat") == "output_%04d.dat");
+    REQUIRE(utils::expand_env_in_path("plain.dat") == "plain.dat");
+  }
+
+  SECTION("Expands $NAME and ${NAME}") {
+    EnvVarGuard results("OPENPFC_TEST_RESULTS", "/tmp/run");
+    REQUIRE(utils::expand_env_in_path("$OPENPFC_TEST_RESULTS/data_%04d.bin") ==
+            "/tmp/run/data_%04d.bin");
+    REQUIRE(utils::expand_env_in_path("${OPENPFC_TEST_RESULTS}/data_%04d.bin") ==
+            "/tmp/run/data_%04d.bin");
+  }
+
+  SECTION("Expands several references in one path") {
+    EnvVarGuard a("OPENPFC_TEST_A", "/scratch");
+    EnvVarGuard b("OPENPFC_TEST_B", "job42");
+    REQUIRE(utils::expand_env_in_path("$OPENPFC_TEST_A/${OPENPFC_TEST_B}/u.bin") ==
+            "/scratch/job42/u.bin");
+  }
+
+  SECTION("Does not treat a prefix as the full name") {
+    EnvVarGuard home("OPENPFC_TEST_HOME", "/home/user");
+    EnvVarGuard extra("OPENPFC_TEST_HOME_EXTRA", "/other");
+    REQUIRE(utils::expand_env_in_path("$OPENPFC_TEST_HOME_EXTRA/x") == "/other/x");
+  }
+
+  SECTION("Fails closed when the variable is unset") {
+    EnvVarGuard missing("OPENPFC_TEST_MISSING", nullptr);
+    REQUIRE_THROWS_AS(utils::expand_env_in_path("$OPENPFC_TEST_MISSING/data.bin"),
+                      std::invalid_argument);
+    try {
+      (void)utils::expand_env_in_path("$OPENPFC_TEST_MISSING/data.bin");
+      FAIL("Should have thrown std::invalid_argument");
+    } catch (const std::invalid_argument &e) {
+      const std::string msg = e.what();
+      REQUIRE(msg.find("OPENPFC_TEST_MISSING") != std::string::npos);
+      REQUIRE(msg.find("unset or empty") != std::string::npos);
+    }
+  }
+
+  SECTION("Fails closed when the variable is empty") {
+    EnvVarGuard empty("OPENPFC_TEST_EMPTY", "");
+    REQUIRE_THROWS_AS(utils::expand_env_in_path("${OPENPFC_TEST_EMPTY}/data.bin"),
+                      std::invalid_argument);
+  }
+
+  SECTION("Fails closed on stray $") {
+    REQUIRE_THROWS_AS(utils::expand_env_in_path("data$.bin"), std::invalid_argument);
+    REQUIRE_THROWS_AS(utils::expand_env_in_path("data$$.bin"), std::invalid_argument);
+    REQUIRE_THROWS_AS(utils::expand_env_in_path("$123/x.bin"), std::invalid_argument);
+    REQUIRE_THROWS_AS(utils::expand_env_in_path("${}/x.bin"), std::invalid_argument);
+    REQUIRE_THROWS_AS(utils::expand_env_in_path("${OPEN/x.bin"), std::invalid_argument);
+    REQUIRE_THROWS_AS(utils::expand_env_in_path("${bad-name}/x.bin"),
+                      std::invalid_argument);
+    try {
+      (void)utils::expand_env_in_path("out$.bin");
+      FAIL("Should have thrown std::invalid_argument");
+    } catch (const std::invalid_argument &e) {
+      const std::string msg = e.what();
+      REQUIRE(msg.find("stray '$'") != std::string::npos);
+    }
   }
 }
 

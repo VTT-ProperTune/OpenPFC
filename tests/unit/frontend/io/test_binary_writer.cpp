@@ -17,6 +17,7 @@
 #include <climits>
 #include <complex>
 #include <cstddef>
+#include <cstdlib>
 #include <filesystem>
 #include <stdexcept>
 #include <string>
@@ -97,6 +98,50 @@ TEST_CASE("FileResultsWriter formats increment into the path",
   BinaryWriter writer("out_%04d.bin");
   REQUIRE(writer.filename_pattern() == "out_%04d.bin");
   REQUIRE(writer.formatted_path(7) == "out_0007.bin");
+}
+
+TEST_CASE("FileResultsWriter expands $ENV before the increment template",
+          "[binary_writer][io]") {
+  const char *name = "OPENPFC_TEST_RESULTS";
+  const char *old = std::getenv(name);
+  REQUIRE(setenv(name, "/tmp/run", 1) == 0);
+  try {
+    BinaryWriter writer("$OPENPFC_TEST_RESULTS/data_%04d.bin");
+    REQUIRE(writer.filename_pattern() == "/tmp/run/data_%04d.bin");
+    REQUIRE(writer.formatted_path(0) == "/tmp/run/data_0000.bin");
+    REQUIRE(writer.formatted_path(7) == "/tmp/run/data_0007.bin");
+  } catch (...) {
+    if (old) {
+      setenv(name, old, 1);
+    } else {
+      unsetenv(name);
+    }
+    throw;
+  }
+  if (old) {
+    setenv(name, old, 1);
+  } else {
+    unsetenv(name);
+  }
+}
+
+TEST_CASE("FileResultsWriter fails at construction when $ENV is unset",
+          "[binary_writer][io]") {
+  const char *name = "OPENPFC_TEST_MISSING";
+  const char *old = std::getenv(name);
+  unsetenv(name);
+  try {
+    REQUIRE_THROWS_AS(BinaryWriter("$OPENPFC_TEST_MISSING/data_%04d.bin"),
+                      std::invalid_argument);
+  } catch (...) {
+    if (old) {
+      setenv(name, old, 1);
+    }
+    throw;
+  }
+  if (old) {
+    setenv(name, old, 1);
+  }
 }
 
 TEST_CASE("ResultsWriter default-constructs without a filename",

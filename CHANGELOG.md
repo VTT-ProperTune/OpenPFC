@@ -7,6 +7,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+### Added
+
+- `FileResultsWriter` expands `$NAME` / `${NAME}` in result filename patterns
+  at writer setup, then applies the existing increment template (`#65`).
+  Unset, empty, or stray `$` fail closed.
+
 ### Fixed
 
 - Docs `uv.lock` urllib3 2.7.0 and idna 3.19 (GHSA-qccp-gfcp-xxvc,
