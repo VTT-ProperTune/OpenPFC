@@ -9,6 +9,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Fixed
 
+- Docs `uv.lock` urllib3 2.7.0 and idna 3.19 (GHSA-qccp-gfcp-xxvc,
+  GHSA-mf9v-mfxr-j63j, GHSA-65pc-fj4g-8rjx).
 - CUDA Field residency compile-check is an OBJECT library, not a Catch2 TU.
   A namespace-scope constructor used to run CUDA at process start during CTest
   discovery on GPU-less runners (#67).
