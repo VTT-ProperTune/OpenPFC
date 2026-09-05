@@ -130,6 +130,7 @@ jobs:
       - name: Run Tests
         working-directory: build
         run: |
+          set -o pipefail
           # Run tests with verbose output on failure
           ctest --output-on-failure -j2 \
             --exclude-regex "benchmark" \

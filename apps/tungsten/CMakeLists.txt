@@ -112,12 +112,19 @@ if(TUNGSTEN_ENABLE_TESTS)
     add_test(NAME tungsten-cpu-golden COMMAND test_tungsten "[etd_cpu_golden]")
     add_test(NAME tungsten-etd-cpu-golden COMMAND test_tungsten "[etd_cpu_golden]")
     if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
-      add_test(NAME tungsten-golden-4rank
-        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
-                $<TARGET_FILE:test_tungsten> "[golden][MPI]")
-      set_tests_properties(tungsten-golden-4rank PROPERTIES
-        TIMEOUT 180
-        RUN_SERIAL TRUE)
+      if(OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER 0 AND
+         OpenPFC_MPI_TEST_MAX_WORLD_SIZE LESS 4)
+        message(STATUS
+          "Skipping tungsten-golden-4rank: OpenPFC_MPI_TEST_MAX_WORLD_SIZE="
+          "${OpenPFC_MPI_TEST_MAX_WORLD_SIZE}")
+      else()
+        add_test(NAME tungsten-golden-4rank
+          COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                  $<TARGET_FILE:test_tungsten> "[golden][MPI]")
+        set_tests_properties(tungsten-golden-4rank PROPERTIES
+          TIMEOUT 180
+          RUN_SERIAL TRUE)
+      endif()
     endif()
 
     if(OpenPFC_ENABLE_CUDA_SPECTRAL)

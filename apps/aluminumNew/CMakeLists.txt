@@ -93,12 +93,19 @@ if(ALUMINUM_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     add_test(NAME aluminum-etd-cpu-golden COMMAND aluminumTest
         "[seed_grid_fcc][session]")
     if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
-      add_test(NAME aluminum-golden-4rank
-        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
-                $<TARGET_FILE:aluminumTest> "[golden][MPI]")
-      set_tests_properties(aluminum-golden-4rank PROPERTIES
-        TIMEOUT 180
-        RUN_SERIAL TRUE)
+      if(OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER 0 AND
+         OpenPFC_MPI_TEST_MAX_WORLD_SIZE LESS 4)
+        message(STATUS
+          "Skipping aluminum-golden-4rank: OpenPFC_MPI_TEST_MAX_WORLD_SIZE="
+          "${OpenPFC_MPI_TEST_MAX_WORLD_SIZE}")
+      else()
+        add_test(NAME aluminum-golden-4rank
+          COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                  $<TARGET_FILE:aluminumTest> "[golden][MPI]")
+        set_tests_properties(aluminum-golden-4rank PROPERTIES
+          TIMEOUT 180
+          RUN_SERIAL TRUE)
+      endif()
     endif()
 
     if(OpenPFC_ENABLE_CUDA_SPECTRAL)

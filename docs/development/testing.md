@@ -51,7 +51,7 @@ VTK writer tests and other targets may `add_test` separately under `tests/unit/f
 
 ## Application tests
 
-When `OpenPFC_BUILD_APPS=ON`, some apps register extra CTest entries (e.g. tungsten / aluminum checks). Those live next to each app’s `CMakeLists.txt`.
+When `OpenPFC_BUILD_APPS=ON`, some apps register extra CTest entries (e.g. tungsten / aluminum checks). Those live next to each app’s `CMakeLists.txt`. `tungsten-golden-4rank` and `aluminum-golden-4rank` follow `OpenPFC_MPI_TEST_MAX_WORLD_SIZE` (CI uses 2, so they are omitted on GitHub-hosted runners).
 
 Minimal new-test walkthrough: [`tutorials/add_catch2_test.md`](../tutorials/add_catch2_test.md).
 
