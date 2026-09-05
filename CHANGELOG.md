@@ -7,6 +7,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+### Changed
+
+- Pull-request CI is gcc-13 Debug+Release, code-quality, packaging, and
+  path-filtered docs. gcc-11 Debug, CUDA/HIP compile-only, and coverage run on
+  `master` pushes (coverage also weekly). Clang-tidy is weekly plus
+  `workflow_dispatch`, not per PR.
+
 ## [0.2.0] - 2026-09-05
 
 Breaking architecture release. There is no `pfc::Model`, `pfc::Simulator`,

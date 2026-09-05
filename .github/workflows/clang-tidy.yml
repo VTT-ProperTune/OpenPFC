@@ -1,18 +1,16 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Optional static analysis: failures here do not block the main CI workflow (ci.yml).
-# For branch protection, do not mark this job as a required check if merges should
-# proceed when only clang-tidy is red. M12 still wants this required once the
-# WarningsAsErrors backlog is clear.
+# Optional static analysis. Not on pull requests: a full-tree clang-tidy pass
+# is ~45–60 min on GitHub runners and is continue-on-error until the
+# WarningsAsErrors backlog is cleared. Weekly + manual is enough until then.
 
 name: Clang-Tidy
 
 on:
-  push:
-    branches: ["master", "main", "develop"]
-  pull_request:
-    branches: ["master", "main"]
+  schedule:
+    - cron: "0 3 * * 0"
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

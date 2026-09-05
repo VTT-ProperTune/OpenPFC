@@ -63,7 +63,6 @@ jobs:
     name: ${{ matrix.os }} / ${{ matrix.compiler }} / ${{ matrix.build_type }}
     needs: [code-quality]
     runs-on: ${{ matrix.os }}
-
     strategy:
       fail-fast: false
       matrix:
@@ -71,13 +70,14 @@ jobs:
         compiler: [gcc-11, gcc-13]
         build_type: [Debug, Release]
         include:
-          # Add specific compiler versions for each
           - compiler: gcc-11
             cc: gcc-11
             cxx: g++-11
           - compiler: gcc-13
             cc: gcc-13
             cxx: g++-13
+    # PRs: gcc-13 Debug+Release only. gcc-11 Debug runs on branch pushes.
+    if: ${{ matrix.compiler == 'gcc-13' || (github.event_name == 'push' && matrix.compiler == 'gcc-11' && matrix.build_type == 'Debug') }}
 
     steps:
       - name: Checkout repository
@@ -233,10 +233,11 @@ jobs:
   # / hipcc compile without one. Official devel images already ship the toolkit;
   # do not download or compile HeFFTe here (spectral GPU stays cluster-only).
   # OpenPFC_ENABLE_HEFFTE=OFF still builds FD/kernel CUDA and HIP TUs.
-  # continue-on-error until first validated on GitHub.
+  # Push to master/develop only (not PRs). continue-on-error.
   # ============================================================================
   cuda-compile:
     name: CUDA compile-only (no GPU)
+    if: github.event_name == 'push'
     needs: [code-quality]
     runs-on: ubuntu-24.04
     continue-on-error: true
@@ -264,6 +265,7 @@ jobs:
 
   hip-compile:
     name: HIP compile-only (no GPU)
+    if: github.event_name == 'push'
     needs: [code-quality]
     runs-on: ubuntu-24.04
     continue-on-error: true

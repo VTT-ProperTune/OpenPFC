@@ -211,13 +211,13 @@ follows the message rules.
 
 ## CI (GitHub Actions)
 
-Pull requests run workflows under [`.github/workflows/`](.github/workflows):
-**`ci.yml`** (main build/test matrix on Ubuntu 24.04), **`docs.yml`**
-(markdown link check via `scripts/check_doc_links.py`, Doxygen when
-enabled), **`coverage.yml`**, **`asan.yml`**, **`clang-tidy.yml`**.
-Doc-only edits under `docs/**` still trigger the Documentation
-workflow's link job — run `python3 scripts/check_doc_links.py` locally
-before pushing.
+Pull requests run a **short** set under [`.github/workflows/`](.github/workflows):
+**`ci.yml`** code-quality, gcc-13 Debug+Release `ctest` (including 2-rank MPI),
+and packaging smoke; **`docs.yml`** when docs/headers/README change. Coverage
+and CUDA/HIP compile-only run on `master` pushes (coverage also weekly).
+Clang-tidy is weekly plus `workflow_dispatch`, not a PR gate. AddressSanitizer
+is `workflow_dispatch` only. Doc-only edits still trigger the Documentation
+link job — run `python3 scripts/check_doc_links.py` locally before pushing.
 
 Passing checks make a PR mergeable, not right. Fix only lint/test
 failures **this PR introduced**; fold those fixes into the commit that
