@@ -221,9 +221,11 @@ Use instead:
   concepts;
 - [`../reference/examples_catalog.md`](../reference/examples_catalog.md) for
   runnable code;
-- [`../development/refactoring_roadmap.md`](../development/refactoring_roadmap.md)
-  for implementation migration plans;
-- [`../adr/README.md`](../adr/README.md) for accepted architecture decisions.
+- [`../MIGRATION_0.1_to_0.2.md`](../MIGRATION_0.1_to_0.2.md) for 0.1 → 0.2
+  replacements;
+- [`../adr/README.md`](../adr/README.md) for accepted architecture decisions;
+- [`../archive/README.md`](../archive/README.md) for historical 0.2 planning
+  documents.
 
 ## See also
 

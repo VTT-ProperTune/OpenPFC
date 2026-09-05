@@ -5,6 +5,14 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # OpenPFC 0.2 Refactoring Execution Plan
 
+> Historical. Archived after OpenPFC 0.2.0. The M0–M12 sequence in this file
+> produced the 0.2 architecture. Unchecked boxes here are stale; they are not
+> a backlog. Current architecture:
+> [`docs/concepts/architecture.md`](../concepts/architecture.md).
+> Remaining product work:
+> [milestone 0.2.1](https://github.com/VTT-ProperTune/OpenPFC/milestone/7).
+> Index: [`README.md`](README.md).
+
 **Source of truth for rationale:** `OPENPFC_ARCHITECTURE_AUDIT.md` (referenced below as *Audit* with section numbers). This plan converts the audit into an executable sequence. It contains no implementation code.
 
 **Release sequence enforced by this plan:**

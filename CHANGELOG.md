@@ -16,6 +16,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Changed
 
+- Historical 0.2 planning documents (architecture audit, execution plan,
+  migration map, refactoring roadmap) moved to `docs/archive/`. Current
+  architecture is `docs/concepts/architecture.md`.
 - Pull-request CI is gcc-13 Debug+Release, code-quality, packaging, and
   path-filtered docs. gcc-11 Debug, CUDA/HIP compile-only, and coverage run on
   `master` pushes (coverage also weekly). Clang-tidy is weekly plus

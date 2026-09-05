@@ -48,6 +48,7 @@ MyST, and Breathe render the final site.
 | `api/` | Generated declarations, overloads, namespaces, and source comments | [C++ API reference](api/index.md) |
 | `science/` | Scientific context and model limitations | [Tungsten quicklook](science/tungsten_quicklook.md) |
 | `development/` and `adr/` | Maintainer guidance and decisions | [Contributing to docs](development/contributing-docs.md), [ADRs](adr/README.md) |
+| `archive/` | Historical 0.2 planning documents | [Archive](archive/README.md) |
 | `workshop/` | Multi-session teaching material | [Workshop](workshop/README.md) |
 
 ## Canonical ownership

@@ -39,6 +39,11 @@ exclude_patterns = [
     "_build/**",
     "Thumbs.db",
     ".DS_Store",
+    # Historical 0.2 planning dumps; listed from archive/README.md, not rendered.
+    "archive/OPENPFC_ARCHITECTURE_AUDIT.md",
+    "archive/OPENPFC_REFACTORING_EXECUTION_PLAN.md",
+    "archive/0.2_migration_map.md",
+    "archive/refactoring_roadmap.md",
 ]
 suppress_warnings = ["toc.not_included"]
 

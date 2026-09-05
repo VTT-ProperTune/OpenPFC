@@ -23,7 +23,7 @@ Advance a **unified abstraction for spatial operators** (gradients, Laplacians, 
 
 - Documentation must describe **both** the current spectral-first reality and the **FD roadmap** ([`when_not_to_use_openpfc.md`](../when_not_to_use_openpfc.md)).  
 - Performance and correctness tests must cover **both** paths where exposed.  
-- [`refactoring_roadmap.md`](../development/refactoring_roadmap.md) may track concrete milestones.
+- Remaining product work is tracked on [GitHub milestone 0.2.1](https://github.com/VTT-ProperTune/OpenPFC/milestone/7).
 
 ## See also
 

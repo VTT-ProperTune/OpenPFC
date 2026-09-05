@@ -37,6 +37,4 @@ root:
 Wire this into CI only if your pipeline already shells out to similar `rg` /
 `grep` gates.
 
-See also [`architecture.md`](../concepts/architecture.md) (include audit) and
-[`refactoring_roadmap.md`](refactoring_roadmap.md) backlog item on minimal
-includes.
+See also [`architecture.md`](../concepts/architecture.md) (include audit).

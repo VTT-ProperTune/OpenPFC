@@ -5,11 +5,22 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # OpenPFC Architecture Audit
 
+> Historical. Archived after OpenPFC 0.2.0. This snapshot describes the 0.1
+> tree that motivated the refactor. It is not current architecture.
+> Current: [`docs/concepts/architecture.md`](../concepts/architecture.md),
+> [`docs/MIGRATION_0.1_to_0.2.md`](../MIGRATION_0.1_to_0.2.md).
+> Index: [`README.md`](README.md).
+
 **Scope:** full repository at commit `e86e65ce` (v0.1.4 + ~7 months of unreleased work).
 **Method:** independent senior C++/HPC architecture review. Every claim below was verified against the implementation, not the documentation. Eight parallel subsystem deep-dives (core data model; execution/memory; MPI/decomposition/halo; spectral/FD; model/simulator/steppers; applications; frontend/config/I/O; build/tests/CI/docs) plus direct verification of all critical findings.
 **Convention:** findings are tagged **[C]** immediate correctness defect, **[AB]** architectural blocker, **[SD]** significant technical debt, **[LC]** local cleanup — and given a verdict: *retain / repair / redesign / replace / remove*.
 
-> **This is a historical snapshot as of commit `e86e65ce`.** It is not updated as the refactor progresses — `OPENPFC_REFACTORING_EXECUTION_PLAN.md` tracks current milestone-by-milestone status (see its "Current status" section), and `docs/development/0.2_migration_map.md` (in-repo) tracks which 0.1 types have been replaced. As of the last cross-check (2026-08-01, `master` @ `fa35197c`): Pre-M0 (all §4/§11 defects below) is fixed and released as `v0.1.5`; M0 (ADRs, layering enforcement) is complete; the "ten field-container types" / "six index-box types" count in §1/§13.2 has shrunk on the box/domain axis — `Box3D`, `World`'s templated `CoordinateSystem`, and the dead `world_types` strong-type layer are all deleted, with `Box3i`/`Domain` now canonical (M1, nearly done) — but on the field-container axis the count has *not* yet shrunk: `LocalField`, `PaddedBrick`, `DiscreteField`, and `Array` (§2, §4.10, §13.3) all still exist alongside the new `pfc::data::Field<T, MemorySpace>` (M2, roughly a third to half done). Everything in §5 (AB-2 through AB-6) and §13.4 onward remains as described.
+> **This is a historical snapshot as of commit `e86e65ce`.** It was not updated
+> as the refactor progressed. The companion files in this directory
+> (`OPENPFC_REFACTORING_EXECUTION_PLAN.md`, `0.2_migration_map.md`) are also
+> archived. The last cross-check while the plan was live (2026-08-01,
+> `master` @ `fa35197c`) still described unfinished M1/M2 work; that work
+> later shipped in 0.2.0. The body below is the original 0.1 audit text.
 
 ---
 

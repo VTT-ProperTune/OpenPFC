@@ -46,7 +46,7 @@ The root [`.gitignore`](.gitignore) ignores common build and output paths (`buil
 | [`apps/`](apps/) | Runnable programs (JSON/TOML-driven spectral apps, demos). |
 | [`examples/`](examples/) | Small programs illustrating APIs and workflows. |
 | [`tests/`](tests/) | Unit and integration tests (Catch2, `ctest`). |
-| [`docs/`](docs/) | User and developer guides (not a substitute for Doxygen API HTML). |
+| [`docs/`](docs/) | User and developer guides (not a substitute for Doxygen API HTML). Historical 0.2 plans are under [`docs/archive/`](docs/archive/README.md); do not treat them as current architecture. |
 | [`cmake/`](cmake/) | CMake modules, presets, toolchains. |
 
 **Contributing:** [`CONTRIBUTING.md`](CONTRIBUTING.md) — tests, CI expectations, commit scope, commit messages, PR/merge workflow (rebase not squash), changelog. **Tests:** [`docs/development/testing.md`](docs/development/testing.md).

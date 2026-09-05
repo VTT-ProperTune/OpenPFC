@@ -24,4 +24,5 @@ We keep **ADRs** in `docs/adr/` as short markdown files: status, context, decisi
 
 ## See also
 
-- [`refactoring_roadmap.md`](../development/refactoring_roadmap.md) — phased refactors  
+- [`architecture.md`](../concepts/architecture.md) — current architecture
+- [`archive/README.md`](../archive/README.md) — historical 0.2 planning documents

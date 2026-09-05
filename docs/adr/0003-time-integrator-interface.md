@@ -12,7 +12,7 @@ the single stepper protocol.
 
 ## Context
 
-OpenPFC has multiple integration paths: `Model::step(double t)` for legacy spectral apps, `EulerStepper`/`MultiEulerStepper` for new explicit methods, and `DuField` for ergonomic single-field loops. However, there is no unified design documentation specifying contracts between integrators, models, and spatial discretizations. As new time integration methods (RK2, RK4, IMEX) are added, without explicit contracts each stepper could evolve different assumptions about state ownership, halo timing, or multi-field composition. This ADR establishes explicit boundaries to enable replaceable integrators without rewriting model physics, advancing the long-term goal of "replaceable integrators without rewriting model physics" referenced in [`docs/development/refactoring_roadmap.md`](../development/refactoring_roadmap.md).
+OpenPFC has multiple integration paths: `Model::step(double t)` for legacy spectral apps, `EulerStepper`/`MultiEulerStepper` for new explicit methods, and `DuField` for ergonomic single-field loops. However, there is no unified design documentation specifying contracts between integrators, models, and spatial discretizations. As new time integration methods (RK2, RK4, IMEX) are added, without explicit contracts each stepper could evolve different assumptions about state ownership, halo timing, or multi-field composition. This ADR establishes explicit boundaries to enable replaceable integrators without rewriting model physics, advancing the long-term goal of "replaceable integrators without rewriting model physics" referenced in the [archived 0.2 plans](../archive/README.md).
 
 ## Decision
 
@@ -335,4 +335,4 @@ method extras live on stepper accessors (`u_high`/`u_low`/`error`,
 - [`docs/concepts/halo_exchange.md`](../concepts/halo_exchange.md) — Halo exchange policies, timing, and separated layout recommendation
 - [`docs/science/numerics_limits.md`](../science/numerics_limits.md) — Backend-specific stability constraints
 - [`docs/adr/0002-gradient-operators-fd-vs-spectral.md`](0002-gradient-operators-fd-vs-spectral.md) — Spatial operator directionality (FD vs spectral)
-- [`docs/development/refactoring_roadmap.md`](../development/refactoring_roadmap.md) — Phase integration and refactor tracking
+- [`docs/development/time_integration_architecture.md`](../development/time_integration_architecture.md) — current time-integration architecture
