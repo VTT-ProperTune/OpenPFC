@@ -117,7 +117,7 @@ development/sphinx_preview
 development/documentation_versioning
 development/from_paper_to_run
 adr/README
-development/refactoring_roadmap
+archive/README
 development/handbook_build
 development/image-prompts
 hpc/scalability_analysis_plan

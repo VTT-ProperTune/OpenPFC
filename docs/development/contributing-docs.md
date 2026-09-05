@@ -38,6 +38,7 @@ one navigation tree, and one search index.
 | Curated generated C++ declarations | Public headers, exposed through `docs/api/` |
 | Maintainer workflow or implementation note | `docs/development/` |
 | Architecture decision | `docs/adr/` |
+| Finished 0.2 planning documents | `docs/archive/` (not a source of current work) |
 
 Large subtrees have their own `README.md` index. Add new pages to the nearest
 local index and to `docs/index.md` when they belong in primary navigation. Only

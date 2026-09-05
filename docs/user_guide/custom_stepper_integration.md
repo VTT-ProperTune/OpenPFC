@@ -402,7 +402,8 @@ The key advantages:
 - ✅ **IMEX stage-composition seam**: [`imex_stage_composition.hpp`](../../include/openpfc/kernel/simulation/steppers/imex_stage_composition.hpp) (`ImexEulerComposer`); sequences explicit eval then `SolveFunction` into an isolated candidate with `apply_candidate` commit
 - ⏳ **IMEX methods**: First-order IMEX Euler is landed on CPU in [`include/openpfc/kernel/simulation/steppers/imex_euler.hpp`](../../include/openpfc/kernel/simulation/steppers/imex_euler.hpp) (`ImexEulerStepper` / `MultiImexEulerStepper` attempt/commit isolation with injected `SolveFunction` + `LinearOperatorDesc`). Higher-order IMEX-RK and production spectral diagonal solvers remain separate work (e.g. board #161).
 
-Check the [refactoring roadmap](../development/refactoring_roadmap.md) for progress on higher-order stepper implementations.
+Higher-order IMEX-RK remains follow-on work; see
+[`time_integration_architecture.md`](../development/time_integration_architecture.md).
 
 ## Complete working example
 
@@ -477,4 +478,4 @@ This example demonstrates the complete path: from physics model through gradient
 - **Wave2D application**: Multi-field model with tuple protocol ([`apps/wave2d/README.md`](../../apps/wave2d/README.md))
 - **Gradient concepts**: Per-member detection and backend capabilities ([`include/openpfc/kernel/field/grad_concepts.hpp`](../../include/openpfc/kernel/field/grad_concepts.hpp))
 - **DuField**: Stack-friendly residual field with prepare hooks ([`include/openpfc/kernel/simulation/du_field.hpp`](../../include/openpfc/kernel/simulation/du_field.hpp))
-- **Refactoring roadmap**: Track progress on higher-order stepper implementations ([`docs/development/refactoring_roadmap.md`](../development/refactoring_roadmap.md))
+- **Time integration architecture**: [`docs/development/time_integration_architecture.md`](../development/time_integration_architecture.md)

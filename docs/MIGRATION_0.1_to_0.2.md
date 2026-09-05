@@ -5,8 +5,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Migrating from OpenPFC 0.1 to 0.2
 
-This is the user-facing replacement list for the 0.2 architecture. The living
-milestone table is [`development/0.2_migration_map.md`](development/0.2_migration_map.md).
+This is the user-facing replacement list for the 0.2 architecture. The
+historical milestone table used during the refactor is in
+[`docs/archive/`](archive/README.md).
 Use this page when porting an application or example off the 0.1 `Model` /
 `Simulator` / `App` path.
 

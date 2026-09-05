@@ -5,7 +5,14 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Refactoring roadmap (architecture)
 
-This document tracks planned and in-progress structural improvements discussed for OpenPFC: clearer layering, less duplication, and alignment with SOLID-style practices. It complements [`architecture.md`](../concepts/architecture.md).
+> Historical. Archived after OpenPFC 0.2.0. Phases below describe Gen-1
+> `Model` / `Simulator` / `App` as if they still existed. Current architecture:
+> [`docs/concepts/architecture.md`](../concepts/architecture.md).
+> Index: [`README.md`](README.md).
+
+This document tracked planned and in-progress structural improvements discussed
+for OpenPFC: clearer layering, less duplication, and alignment with SOLID-style
+practices. It complements [`architecture.md`](../concepts/architecture.md).
 
 ## Phase A — Communicator consistency
 
@@ -87,7 +94,7 @@ Done:
 - **`pfc::time::`:** free spellings in `time.hpp` (`current`, `dt`, `done`, `next`, `do_save`, …) aligned with `pfc::get_time` / simulator integrator usage.
 - **`SimulatorIntegratorLoopEnv`:** `app_integrator_loop.hpp` — primary `run_simulator_time_integration_loop(session, env)` plus legacy overload that packs MPI rank, profiler, and logger.
 - **Test fixtures:** `tests/fixtures/simulation_factories.hpp` (`make_world_cube_8`, `make_serial_decomposition`) for repeated simulator/world setup.
-- **Include hygiene:** [include_hygiene.md](include_hygiene.md) and `scripts/check_minimal_includes.sh` (optional gate: no umbrella `openpfc/openpfc.hpp` in `tests/unit/kernel`).
+- **Include hygiene:** [include_hygiene.md](../development/include_hygiene.md) and `scripts/check_minimal_includes.sh` (optional gate: no umbrella `openpfc/openpfc.hpp` in `tests/unit/kernel`).
 
 ## Backlog — larger SOLID-oriented refactors
 
@@ -95,7 +102,7 @@ High impact, not tied to a single PR; pick by maintenance pain.
 
 ### Suggested PR-scale moves (free-function & data-centric API)
 
-Aligned with the [ownership and extension boundaries](../concepts/architecture.md#ownership-and-extension-boundaries) and the [styleguide API shape](styleguide.md#api-shape-free-functions-and-data-centric-types): keep `virtual` boundaries thin; push mechanics to namespaced free functions.
+Aligned with the [ownership and extension boundaries](../concepts/architecture.md#ownership-and-extension-boundaries) and the [styleguide API shape](../development/styleguide.md#api-shape-free-functions-and-data-centric-types): keep `virtual` boundaries thin; push mechanics to namespaced free functions.
 
 1. **Examples + apps:** mechanical pass replacing `model.get_world()` / `get_fft()` member spellings with `pfc::get_world(model)` / `pfc::get_fft(model)` (and simulator analogs) in touched files — high visibility, low risk.
 2. **Shipped models (Tungsten, Aluminum, diffusion fixtures):** extract `initialize` / `step` internals into **`namespace …::`** free functions; leave `Model::step` as a one-line forwarder (easier testing and profiling).
@@ -106,7 +113,7 @@ Aligned with the [ownership and extension boundaries](../concepts/architecture.m
 7. **`SpectralCPUStack` / session:** optional free `assemble_*` + `wire_*` for drivers that skip `App`. **Note:** `fft::CPUFFT` is not movable; a “return struct of parts” API cannot move the FFT out of a temporary—use out-parameters, or keep constructing `CPUFFT` inside `SpectralCPUStack`’s initializer list (current approach).
 8. **Integrator loop:** narrow `run_simulator_time_integration_loop` inputs to structs + free functions (less hidden state than callbacks on opaque objects). **Done:** `SimulatorIntegratorLoopEnv` + primary overload in `app_integrator_loop.hpp`.
 9. **Tests:** shared **`tests/fixtures/`** free factories (`make_world`, `make_mock_model`, …). **Started:** `simulation_factories.hpp` (8³ world + serial decomposition); extend as more tests adopt it.
-10. **Include hygiene:** document + optionally CI-check “minimal includes”. **Done:** [include_hygiene.md](include_hygiene.md) + `scripts/check_minimal_includes.sh`.
+10. **Include hygiene:** document + optionally CI-check “minimal includes”. **Done:** [include_hygiene.md](../development/include_hygiene.md) + `scripts/check_minimal_includes.sh`.
 
 - **Gradient / spatial-operator abstraction:** unify spectral (FFT) and finite-difference evaluation of gradients and related operators where supported; track [`adr/0002-gradient-operators-fd-vs-spectral.md`](../adr/0002-gradient-operators-fd-vs-spectral.md) and [`when_not_to_use_openpfc.md`](../when_not_to_use_openpfc.md).
 - **Simulator:** If orchestration grows again, consider named collaborators (e.g. explicit IC/BC pipeline type vs results scheduling) on top of existing `*_dispatch.hpp` helpers.

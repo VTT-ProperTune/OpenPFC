@@ -408,8 +408,7 @@ IMEX Euler (`ImexEulerStepper` in
 [`imex_euler.hpp`](../../include/openpfc/kernel/simulation/steppers/imex_euler.hpp))
 is landed on CPU; higher-order IMEX-RK and adaptive *controller* policy
 (accept/reject and next-`dt` selection that *uses* that config) remain
-follow-on / driver-owned work tracked in
-[`refactoring_roadmap.md`](refactoring_roadmap.md). The checkpoint protocol on
+follow-on / driver-owned work (GitHub milestone 0.2.1). The checkpoint protocol on
 `EulerStepper` (`save_state` / `restore_state` / `can_rollback`) is the hook
 those controller features are expected to use.
 
@@ -520,7 +519,7 @@ Inside a session, the same two lines form the `step` hook passed to
 | Custom stepper integration | [`docs/user_guide/custom_stepper_integration.md`](../user_guide/custom_stepper_integration.md) | Task-oriented migration guide with a complete worked example |
 | ADR 0002 — Gradient operators | [`docs/adr/0002-gradient-operators-fd-vs-spectral.md`](../adr/0002-gradient-operators-fd-vs-spectral.md) | FD vs spectral spatial operators |
 | Halo exchange | [`docs/concepts/halo_exchange.md`](../concepts/halo_exchange.md) | Halo policies referenced by the FD timing contract |
-| Refactoring roadmap | [`docs/development/refactoring_roadmap.md`](refactoring_roadmap.md) | Remaining stepper/integrator work (IMEX, adaptive control) |
+| Historical 0.2 plans | [`docs/archive/README.md`](../archive/README.md) | Archived audit and execution plan |
 
 Primary headers cited in this guide:
 

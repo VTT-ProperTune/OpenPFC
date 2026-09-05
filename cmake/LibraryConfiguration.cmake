@@ -16,7 +16,7 @@ endif()
 
 # Split compiled sources into object libraries (kernel/runtime vs frontend) for
 # clearer layering and faster incremental rebuilds; link as one `openpfc` for
-# install/export (see docs/refactoring_roadmap.md Phase D).
+# install/export (see docs/archive/refactoring_roadmap.md Phase D).
 set(_openpfc_kernel_obj_sources
     src/openpfc/kernel/decomposition/decomposition.cpp
     src/openpfc/kernel/decomposition/decomposition_factory.cpp

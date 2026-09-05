@@ -12,7 +12,7 @@ Accepted (2026-07-23). Implemented in M3: the Kokkos-facsimile above
 
 ## Context
 
-The audit (`OPENPFC_ARCHITECTURE_AUDIT.md` §6, §17.1) found two parallel
+The [architecture audit](../archive/README.md) (§6, §17.1) found two parallel
 execution abstractions:
 
 - a **Kokkos-facsimile** in `include/openpfc/kernel/execution/` (`View`,

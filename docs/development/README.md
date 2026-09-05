@@ -28,7 +28,7 @@ General contribution and commit rules are in
 | Topic | Document |
 |------|----------|
 | Recorded architecture decisions | [ADR index](../adr/README.md) |
-| Refactoring direction | [Refactoring roadmap](refactoring_roadmap.md) |
+| Historical 0.2 plans | [Archive](../archive/README.md) |
 | Relate the publication to runnable software | [From paper to run](from_paper_to_run.md) |
 | Checkpoint publication contract | [Checkpoint publication](checkpoint_publish.md) (`CheckpointService` restart) |
 | Checkpoint state capture | [Checkpoint state capture](checkpoint_state_capture.md) |
