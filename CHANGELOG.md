@@ -7,6 +7,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+### Fixed
+
+- `tungsten-golden-4rank` and `aluminum-golden-4rank` honor
+  `OpenPFC_MPI_TEST_MAX_WORLD_SIZE` (CI sets 2). They were launching 4 ranks on
+  GitHub runners, which Open MPI rejects; gcc-13 jobs hid the same CTest
+  failures because `ctest | tee` dropped the exit code.
+
 ### Changed
 
 - Pull-request CI is gcc-13 Debug+Release, code-quality, packaging, and
