@@ -21,6 +21,9 @@ combines MPI domain decomposition with HeFFTe-based distributed FFTs and can be
 used either as a library or through the configuration-driven applications
 shipped under `apps/`.
 
+**0.2 is a breaking release.** The 0.1 `Model` / `Simulator` / `App` / `World`
+path is gone. See [Migrating from 0.1 to 0.2](docs/MIGRATION_0.1_to_0.2.md).
+
 OpenPFC is intended for research workflows that need atomic-resolution
 microstructure information on diffusive time scales, including solidification,
 defect evolution, elastic-plastic response, epitaxial growth, phase

@@ -5,7 +5,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 # Project definition (must be literal in root file to avoid CMake warnings)
-# 0.2.0 is in development on master (the breaking architecture refactor, M0+).
+# 0.2.0 is the first release of the post-Gen-1 architecture (PR #71).
 # Configure with -DOpenPFC_DEVELOPMENT=ON for the "-dev" version suffix.
 project(OpenPFC VERSION 0.2.0 DESCRIPTION "Phase Field Crystal simulation framework")
 

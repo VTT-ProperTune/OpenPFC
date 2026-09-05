@@ -5,6 +5,8 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 type: software
 title: "OpenPFC: an open-source framework for high performance 3D phase field crystal simulations"
+version: "0.2.0"
+date-released: "2026-09-05"
 authors:
   - family-names: Pinomaa
     given-names: Tatu

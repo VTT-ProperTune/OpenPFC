@@ -5,12 +5,29 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Changelog
 
-## [Unreleased] — 0.2.0 development
+## [Unreleased]
 
-Breaking architecture refactor (see `OPENPFC_REFACTORING_EXECUTION_PLAN.md`,
-milestones M0–M12). 0.2.0 will be released only after the Gen-1 architecture and
-all temporary migration adapters are removed. Expect breaking API changes; 0.1.x
-source compatibility is explicitly not a goal.
+## [0.2.0] - 2026-09-05
+
+Breaking architecture release. There is no `pfc::Model`, `pfc::Simulator`,
+`pfc::ui::App`, or `pfc::World`. Port applications with
+[`docs/MIGRATION_0.1_to_0.2.md`](docs/MIGRATION_0.1_to_0.2.md). 0.1.x source
+compatibility is not a goal.
+
+**Highlights**
+
+- One `pfc::sim::SpectralETDSystem<Physics, MemorySpace>` and one JSON
+  `pfc::ui::SpectralETDSession<Physics, Stack>`.
+- Canonical field is `pfc::data::Field<T, MemorySpace>`; modifiers and writers
+  take `FieldView` / `FieldOutput`.
+- Host halos are `pfc::comm::HaloExchange` / `SparseExchange`; GPU copies live
+  under `runtime/gpu/`.
+- GitHub CI: CPU gcc-11/13 Debug+Release, 2-rank MPI, packaging smoke, coverage,
+  docs, CUDA/HIP compile-only (FD/kernel, no HeFFTe in those jobs).
+- In-tree perf pins are schema-v4 summaries, not full frame traces.
+
+The sections below are the development record that landed on `master` with
+PR #71.
 
 ### Architecture consolidation before 0.2.0 (2026-09-03)
 
