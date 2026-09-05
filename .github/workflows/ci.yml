@@ -67,17 +67,12 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04]
-        compiler: [gcc-11, gcc-13]
+        compiler: [gcc-13]
         build_type: [Debug, Release]
         include:
-          - compiler: gcc-11
-            cc: gcc-11
-            cxx: g++-11
           - compiler: gcc-13
             cc: gcc-13
             cxx: g++-13
-    # PRs: gcc-13 Debug+Release only. gcc-11 Debug runs on branch pushes.
-    if: ${{ matrix.compiler == 'gcc-13' || (github.event_name == 'push' && matrix.compiler == 'gcc-11' && matrix.build_type == 'Debug') }}
 
     steps:
       - name: Checkout repository
@@ -166,6 +161,62 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: test-results-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.build_type }}
+          path: build/Testing/Temporary/LastTest.log
+
+  # Second compiler on branch pushes only (not pull requests).
+  build-gcc11-debug:
+    name: ubuntu-24.04 / gcc-11 / Debug
+    if: github.event_name == 'push'
+    needs: [code-quality]
+    runs-on: ubuntu-24.04
+    env:
+      CC: gcc-11
+      CXX: g++-11
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          submodules: true
+      - name: Install dependencies (Ubuntu)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-11 g++-11 cmake ninja-build \
+            libopenmpi-dev openmpi-bin libfftw3-dev libfftw3-mpi-dev \
+            nlohmann-json3-dev
+      - name: Cache HeFFTe
+        id: cache-heffte
+        uses: actions/cache@v5
+        with:
+          path: ~/opt/heffte/2.4.1-cpu
+          key: heffte-2.4.1-cpu-ubuntu-24.04-gcc-11-Debug
+      - name: Build and Install HeFFTe
+        if: steps.cache-heffte.outputs.cache-hit != 'true'
+        run: scripts/install-heffte-ci.sh Debug /tmp/heffte-build-openpfc-ci
+      - name: Configure OpenPFC
+        run: |
+          cmake -S . -B build \
+            -GNinja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu \
+            -DOpenPFC_BUILD_TESTS=ON \
+            -DOpenPFC_BUILD_EXAMPLES=ON \
+            -DOpenPFC_BUILD_APPS=ON \
+            -DOpenPFC_BUILD_DOCUMENTATION=OFF \
+            -DOpenPFC_RUN_MPI_SUITES=ON \
+            -DOpenPFC_MPI_TEST_MAX_WORLD_SIZE=2
+      - name: Build OpenPFC
+        run: cmake --build build -j2
+      - name: Run Tests
+        working-directory: build
+        run: |
+          ctest --output-on-failure -j2 \
+            --exclude-regex "benchmark" \
+            --timeout 300
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: test-results-ubuntu-24.04-gcc-11-Debug
           path: build/Testing/Temporary/LastTest.log
 
   # ============================================================================
@@ -308,6 +359,10 @@ jobs:
           fi
           if [[ "${{ needs.build-and-test.result }}" != "success" ]]; then
             echo "❌ Build and test failed"
+            exit 1
+          fi
+          if [[ "${{ needs.packaging-smoke.result }}" != "success" ]]; then
+            echo "❌ Packaging smoke failed"
             exit 1
           fi
           echo "✅ All CI checks passed"
