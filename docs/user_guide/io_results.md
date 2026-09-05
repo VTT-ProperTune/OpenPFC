@@ -28,7 +28,7 @@ a mock writer; no simulator object is needed.
 
 ### JSON-driven `App` path
 
-[`simulation_wiring_writers.hpp`](../../include/openpfc/frontend/ui/simulation_wiring_writers.hpp) `parse_result_writers_from_json` takes a **`ResultsWriterCatalog`** at the call site (e.g. `default_results_writer_catalog()` for built-in `binary`). It returns named `BinaryWriter`s (or catalog `vtk`/`hdf5`): for each `fields[]` entry it uses `field["data"]` as the path template. Sessions attach those writers on the `on_save` hook.
+[`simulation_wiring_writers.hpp`](../../include/openpfc/frontend/ui/simulation_wiring_writers.hpp) `parse_result_writers_from_json` takes a **`ResultsWriterCatalog`** at the call site (e.g. `default_results_writer_catalog()` for built-in `binary`). It returns named `BinaryWriter`s (or catalog `vtk`/`hdf5`): for each `fields[]` entry it uses `field["data"]` as the path template. `$NAME` and `${NAME}` environment references are expanded when the writer is created (unset or empty variables are a hard error); increment templating (`%04d`) runs afterwards. Sessions attach those writers on the `on_save` hook.
 
 Requirements in settings: `saveat > 0`, `fields` array with `name` and `data`.
 

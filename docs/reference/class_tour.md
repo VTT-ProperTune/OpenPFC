@@ -50,7 +50,7 @@ The shortest useful mental model is:
 | `pfc::sim::run` / `SimulationDriver` | Time loop over physics `step` plus optional IC/BC/save hooks | `openpfc/kernel/simulation/simulation_driver.hpp` | `examples/05_simulator.cpp` |
 | `FieldModifier` + `apply_field_modifier` | Initial and boundary conditions on a host or device `Field` (JSON catalog or programmatic) | `openpfc/kernel/simulation/field_modifier.hpp`, `apply_field_modifier.hpp` | `examples/10_ui_register_ic.cpp` |
 | `ResultsWriter` | Stable interface for persisted simulation fields | `openpfc/kernel/simulation/results_writer.hpp` | `examples/11_write_results.cpp` |
-| `FileResultsWriter` | File sink with increment path templating | `openpfc/frontend/io/file_results_writer.hpp` | `BinaryWriter`, `VTKWriter` |
+| `FileResultsWriter` | File sink with `$ENV` expansion and increment path templating | `openpfc/frontend/io/file_results_writer.hpp` | `BinaryWriter`, `VTKWriter` |
 | `World` | Deprecated A0 adapter around `Domain` | `openpfc/kernel/data/world.hpp` | `examples/world_strong_types_example.cpp` uses `Domain` |
 | `SpectralCPUStack` | Owns the CPU domain, decomposition, FFT, and field stack | `openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp` | `user_guide/app_pipeline.md` |
 | `GPUSpectralStack` | Device FFT stack; JSON `plan_options` overlay like CPU | `openpfc/runtime/gpu/gpu_spectral_stack.hpp` | `tungsten_cuda`, session-matrix-cuda |
