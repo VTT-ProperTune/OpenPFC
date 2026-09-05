@@ -142,6 +142,7 @@ benchmark source of truth.
 
 ## See also
 
+- [LUMI GPU scaling campaign](lumi_gpu_scaling.md) — first `tungsten_hip` 1–8 GCD slice
 - [Performance profiling](performance_profiling.md)
 - [GPU path decision](gpu_path_decision.md)
 - [MPI-IO layout checklist](mpi_io_layout_checklist.md)

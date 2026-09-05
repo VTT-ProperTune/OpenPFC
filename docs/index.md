@@ -65,6 +65,7 @@ hpc/build_cpu_gpu
 hpc/mpi_io_layout_checklist
 hpc/performance_profiling
 hpc/profiling_export_schema
+hpc/lumi_gpu_scaling
 hpc/INSTALL.LUMI
 hpc/INSTALL.tohtori
 lumi_slurm/README
