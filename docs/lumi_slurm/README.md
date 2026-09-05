@@ -5,9 +5,26 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Slurm: tungsten performance on LUMI
 
-Scripts and TOML inputs for running the tungsten performance case (`tungsten_performance.toml`–style settings) on LUMI-C (CPU / FFTW) and LUMI-G (HIP / rocFFT).
+Scripts and TOML inputs for running tungsten on LUMI-C (CPU / FFTW) and LUMI-G
+(HIP / rocFFT).
 
-## Layout
+## 0.2 GPU scaling campaign (start here)
+
+Issue `#87` first slice: size `tungsten_hip` on one GCD, then strong-scale
+1/2/4/8 GCDs with I/O off. Recipe, account, and scratch paths:
+[LUMI GPU scaling campaign](../hpc/lumi_gpu_scaling.md).
+
+```bash
+export TUNGSTEN_HIP_BIN=/path/to/tungsten_hip   # 0.2 HIP build
+./docs/lumi_slurm/submit_tungsten_hip_scaling.sh size
+TUNGSTEN_LX=512 ./docs/lumi_slurm/submit_tungsten_hip_scaling.sh strong
+```
+
+Files: `tungsten_hip_scaling.sbatch`, `tungsten_hip_scaling.toml`,
+`submit_tungsten_hip_scaling.sh`. Account `project_462001519`. Do not point
+these jobs at the 0.1.4 binaries or `project_462001245` scratch used below.
+
+## Layout (legacy 1024³ helpers)
 
 - This directory (under the git repo): `*.sbatch`, `submit_tungsten_performance.sh`, `verify_gpu_aware_mpi.sh`, and `tungsten_performance_*.toml`.
 - Domain size: `tungsten_performance_*.toml` use 1024³ grid points (heavy run; sbatch time limit 12 h).

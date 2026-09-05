@@ -19,6 +19,7 @@ Start with the [HPC operator guide](operator_guide.md).
 | MPI-IO paths and collective layout | [MPI-IO layout checklist](mpi_io_layout_checklist.md) |
 | Runtime instrumentation | [Performance profiling](performance_profiling.md) |
 | Profiling output contract | [Profiling export schema](profiling_export_schema.md) |
+| LUMI-G tungsten_hip 1–8 GCD campaign | [LUMI GPU scaling](lumi_gpu_scaling.md) |
 | First batch submission | [Slurm day one](../tutorials/hpc_slurm_day_one.md) |
 
 ## Site-specific guidance

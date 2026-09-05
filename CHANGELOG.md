@@ -12,6 +12,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - `FileResultsWriter` expands `$NAME` / `${NAME}` in result filename patterns
   at writer setup, then applies the existing increment template (`#65`).
   Unset, empty, or stray `$` fail closed.
+- LUMI-G `tungsten_hip` 1–8 GCD scaling recipe (`#87` first slice): I/O-off
+  TOML, parameterized sbatch, and [lumi_gpu_scaling.md](docs/hpc/lumi_gpu_scaling.md).
 
 ### Fixed
 
