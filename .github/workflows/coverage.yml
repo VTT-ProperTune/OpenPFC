@@ -6,8 +6,6 @@ name: Coverage
 on:
   push:
     branches: [ "master", "main", "develop" ]
-  pull_request:
-    branches: [ "master", "main" ]
   schedule:
     # Run coverage weekly on Sunday at 00:00 UTC
     - cron: '0 0 * * 0'

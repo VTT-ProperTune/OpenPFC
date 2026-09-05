@@ -15,35 +15,37 @@ Runs on: Push to master/main/develop, PRs to master/main
 
 Purpose: Primary continuous integration pipeline ensuring code quality and functionality.
 
-Jobs (sequential fail-fast): `code-quality` → `build-and-test`. If Code Quality fails, the build matrix is skipped.
+Jobs: `code-quality` → `build-and-test` + `packaging-smoke`. If Code Quality fails, the build matrix is skipped.
 
 1. Code Quality
- - clang-format 20 (advisory: reports formatting issues but does not fail the job)
- - REUSE compliance verification (must pass)
+ - clang-format 20 (advisory)
+ - REUSE compliance (must pass)
+ - kernel layering and GPU memcpy single-source checks
 
 2. CMake Build Matrix
- - OS: Ubuntu 24.04 LTS
- - Compilers: GCC 11, GCC 13
- - Build Types: Debug, Release
- - Caches HeFFTe installation
- - Runs full test suite with CTest
- - Uploads test logs on failure
+ - PRs: gcc-13 Debug + Release only
+ - Pushes to master/develop: also gcc-11 Debug
+ - Caches HeFFTe; full `ctest` including 2-rank MPI (`OpenPFC_MPI_TEST_MAX_WORLD_SIZE=2`)
 
-3. CI Status Check
- - Required status check for merging
- - Aggregates Code Quality and build-and-test only (clang-tidy is separate; see below)
+3. Packaging smoke (`find_package` consumer)
 
-Typical Duration: 20-30 minutes (with cache), 45-60 minutes (cold cache)
+4. CUDA/HIP compile-only: **push to master/develop only** (not PRs), `continue-on-error`
+
+5. CI Status
+ - Required for merging
+ - Aggregates Code Quality, build-and-test, and packaging-smoke
+
+Typical Duration: ~10–15 minutes on a PR (with HeFFTe cache)
 
 ---
 
 ### `clang-tidy.yml` - Static analysis (non-blocking)
 
-Runs on: Same triggers as `ci.yml` (push to master/main/develop, PRs to master/main).
+Runs on: weekly Sunday 03:00 UTC, and `workflow_dispatch`. Not on pull requests.
 
-Purpose: Run `scripts/run-clang-tidy.sh` with HeFFTe + `compile_commands.json`. Failures do not fail the main CI workflow or its CI Status job. Treat as advisory unless you add this workflow’s job as a required check in branch protection.
+Purpose: Run `scripts/run-clang-tidy.sh` with HeFFTe + `compile_commands.json`. A full-tree pass is ~45–60 min on GitHub runners and is `continue-on-error` until the WarningsAsErrors backlog is clear. Do not add this job as a required check.
 
-Typical Duration: ~15–20 minutes (similar HeFFTe cache key to the former in-repo job).
+Typical Duration: ~45–60 minutes.
 
 ---
 
@@ -81,9 +83,10 @@ Setup Required:
 
 Runs on:
 - Push to master/main/develop
-- PRs to master/main
 - Weekly schedule (Sunday 00:00 UTC)
 - Manual trigger (workflow_dispatch)
+
+Not on pull requests (duplicates a Debug `ctest` already in `ci.yml`).
 
 Purpose: Measure and report test coverage (target: >90%).
 
