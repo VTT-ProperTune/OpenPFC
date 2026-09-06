@@ -60,8 +60,8 @@ export TUNGSTEN_HIP_BIN=/flash/project_462001519/juaho/build/<tree>/apps/tungste
 # 2. After picking Lx (wall_step busy, memory fits), strong-scale 1/2/4/8 GCDs.
 TUNGSTEN_LX=768 ./docs/lumi_slurm/submit_tungsten_hip_scaling.sh strong
 
-# 3. Same grid, 2/3/4 nodes (16/24/32 GCDs). HeFFTe reshape is alltoall
-#    (JSON plus an automatic p2p → alltoall upgrade when ranks > 8).
+# 3. Same grid, 2/3/4 nodes (16/24/32 GCDs). HeFFTe slabs (use_pencils=false);
+#    JSON sessions also drop pencils when nproc >= 9.
 TUNGSTEN_LX=768 PARTITION=standard-g ./docs/lumi_slurm/submit_tungsten_hip_scaling.sh multinode
 
 # 4. 3D FD HIP twin (device halo + stencil), same node counts.
