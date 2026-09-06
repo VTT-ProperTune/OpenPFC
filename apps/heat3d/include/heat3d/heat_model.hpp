@@ -21,8 +21,8 @@
  *    only the members `G` declares — naming `xx, yy, zz` here is enough
  *    to get exactly those second derivatives and nothing else.
  *  - `kD` is a single source-level `inline constexpr double` at namespace
- *    scope, not a mutable model member. The five heat3d binaries
- *    (`heat3d_fd`, `heat3d_fd_manual`, `heat3d_fd_scratch`,
+ *    scope, not a mutable model member. The heat3d binaries
+ *    (`heat3d_fd`, `heat3d_fd_hip`, `heat3d_fd_manual`, `heat3d_fd_scratch`,
  *    `heat3d_spectral`, `heat3d_spectral_pointwise`) share one fixed
  *    value of \f$D\f$ so their L2-vs-analytic outputs are directly
  *    comparable. To experiment with a different coefficient, change the
@@ -75,7 +75,7 @@ using PointFnT = std::function<double(double, double, double, double)>;
  * @brief Diffusion coefficient \f$D\f$ shared by every heat3d binary.
  *
  * Hard-pinned to `1.0` to match `examples/15_finite_difference_heat.cpp`
- * and to keep the L2 numbers reported by the five drivers comparable.
+ * and to keep the L2 numbers reported by the heat3d drivers comparable.
  * Change the literal here (and rebuild) to experiment with a different
  * coefficient — every driver, the analytic reference solution, and the
  * default initial condition pick it up automatically.
