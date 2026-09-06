@@ -13,10 +13,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   `for_each_interior_device`). Same CLI as `heat3d_fd`; `HEAT3D_PROFILE_JSON`
   writes schema-v4 `wall_step` frames. LUMI submit helpers:
   `docs/lumi_slurm/submit_heat3d_fd_hip_scaling.sh`.
-- HeFFTe `p2p` / `p2p_plined` plan options upgrade to `alltoall` when the
-  MPI size is 9 or more (`apply_heffte_comm_scale`, used by CPU/CUDA/HIP
-  spectral JSON sessions). LUMI `tungsten_hip` campaign TOML now requests
-  `alltoall` so off-node 16/24/32 GCD jobs do not keep the one-node p2p path.
+- HeFFTe `apply_heffte_comm_scale` disables pencils (uses slabs) when
+  `nproc >= 9`. LUMI-G HIP 768³ pencil `p2p_plined` was slower at 16 GCDs
+  than at 8; slabs drop 16-GCD median `wall_step` below 8 GCD. `alltoall`
+  was slower than `p2p_plined` on this path. Campaign TOML requests slabs.
+- `SpectralETDSession` prints `SPECTRAL_CHECKSUM` / `_HEX` after the run
+  so 1-vs-N GCD field sums do not need I/O.
 
 - LUMI `tungsten_hip` 768³ 16/32 GCD points (`#87`): 222 ms (24%
   efficiency) and 103 ms (26%). 16 GCDs is slower than 8 GCDs on this

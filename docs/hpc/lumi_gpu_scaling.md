@@ -123,26 +123,52 @@ HIP `fft` region timers after step 1 are under-counted on the 1-GCD path
 (sub-millisecond) and should not be used to explain the curve. `wall_step` is
 the metric.
 
-Limits for this 768³ problem:
+Pencil `p2p_plined` (the first multi-node pins) is slower at 16 GCDs than
+at 8. HeFFTe **slabs** (`use_pencils = false`, still `p2p_plined`, GPU-aware)
+fix that. `alltoall` / `alltoallv` were slower. JSON sessions call
+`apply_heffte_comm_scale` so `nproc >= 9` drops pencils. Campaign TOML
+requests slabs. HIP `fft` exclusive tracks `wall_step` on multi-GCD runs
+(`measure_barriered` is ~5–9 ms, not the 16-GCD dip). 1-GCD `fft` timers
+remain untrusted.
 
-- One node: efficiency crosses 50% at 8 GCDs.
-- Off node: 16 GCDs is slower than 8 GCDs (222 ms vs 215 ms). 32 GCDs
-  recovers wall time (103 ms) but efficiency stays ~25%. Going to 64 GCDs
-  on this grid is not useful until the communication path is understood.
+Slabs 768³, 10 steps, I/O off, median `wall_step` after warmup, HIP tree
+`openpfc-lumi-rocm-scale` (2026-09-06):
+
+| GCDs | Nodes | Partition | Job | Median `wall_step` | Speedup | Efficiency |
+|------|-------|-----------|-----|--------------------|---------|------------|
+| 1 | 1 | `standard-g` | 21761281 | 851 ms | 1.00 | 100% |
+| 8 | 1 | `standard-g` | 21761220 | 216 ms | 3.95 | 49% |
+| 16 | 2 | `standard-g` | 21761221 | 182 ms | 4.68 | 29% |
+| 24 | 3 | `standard-g` | 21761282 | 150 ms | 5.69 | 24% |
+| 32 | 4 | `standard-g` | 21761283 | 122 ms | 6.96 | 22% |
+
+Pins: `tests/baselines/perf/lumi-standard-g-tungsten-hip-slabs-{1,8,16,24,32}gcd-release-768.json`.
+`SPECTRAL_CHECKSUM` 1 vs 16 GCD agrees to ~1e-12 relative. 1024³ and 896³
+OOM on one GCD; 832³ fits but 16-GCD efficiency stays ~29% (FFT transpose
+volume scales with \(N^3\)).
 
 `submit_tungsten_hip_scaling.sh multinode` launches 16/24/32 GCD jobs on
 `standard-g` (8 ranks per node, same CPU map per node). 24 GCDs (3 nodes)
-is not a power of two; if HeFFTe refuses that decomposition, use the 32 GCD
-point. Campaign TOML `reshape_algorithm` is `alltoall`. Spectral JSON
-sessions also upgrade `p2p` / `p2p_plined` to `alltoall` when `nproc >= 9`
-(`pfc::ui::apply_heffte_comm_scale`).
+starts (grid 2×3×4).
 
-3D FD HIP (`heat3d_fd_hip`) uses the same node counts and CPU map via
-`submit_heat3d_fd_hip_scaling.sh`. Metric is still median `wall_step` with
-I/O off. Compare `HEAT3D_HIP_CHECKSUM` (or HEX) at 1 GCD vs 16 GCD.
+### 3D FD HIP (`heat3d_fd_hip`)
 
-This timing curve does not include a 1-GCD vs N-GCD field checksum. That
-check is still required before treating a point as a `#87` science result.
+Same node counts, device `HaloExchange` + stencil, I/O off, 512³ / 20
+steps / `dt=0.01` / `fd_order=2`. GPU-aware MPI. Median `wall_step` after
+warmup:
+
+| GCDs | Nodes | Partition | Job | Median `wall_step` | Speedup | Efficiency |
+|------|-------|-----------|-----|--------------------|---------|------------|
+| 1 | 1 | `dev-g` | 21761036 | 5.91 ms | 1.00 | 100% |
+| 8 | 1 | `standard-g` | 21761037 | 0.951 ms | 6.22 | 78% |
+| 16 | 2 | `standard-g` | 21761038 | 0.567 ms | 10.4 | 65% |
+| 24 | 3 | `standard-g` | 21761039 | 0.476 ms | 12.4 | 52% |
+| 32 | 4 | `standard-g` | 21761042 | 0.394 ms | 15.0 | 47% |
+
+Pins: `tests/baselines/perf/lumi-dev-g-heat3d-fd-hip-1gcd-release-512.json` and
+`lumi-standard-g-heat3d-fd-hip-{8,16,24,32}gcd-release-512.json`.
+`HEAT3D_HIP_CHECKSUM` 1 vs 16 GCD agrees to ~5e-15 relative. Submit with
+`submit_heat3d_fd_hip_scaling.sh`.
 
 ## How to read a point
 
