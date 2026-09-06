@@ -9,6 +9,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- LUMI `tungsten_hip` submit helper `multinode` mode: 16 and 32 GCDs
+  (2/4 nodes, 8 ranks per node) on the same 768³ grid (`#87`).
 - LUMI-G `tungsten_hip` 768³ 1–8 GCD strong-scaling pins (`#87` first
   slice). Median `wall_step` 847 / 455 / 315 / 215 ms; efficiency 49% at
   8 GCDs. See [`docs/hpc/lumi_gpu_scaling.md`](docs/hpc/lumi_gpu_scaling.md).

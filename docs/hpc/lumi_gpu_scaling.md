@@ -58,7 +58,10 @@ export TUNGSTEN_HIP_BIN=/flash/project_462001519/juaho/build/<tree>/apps/tungste
 ./docs/lumi_slurm/submit_tungsten_hip_scaling.sh size
 
 # 2. After picking Lx (wall_step busy, memory fits), strong-scale 1/2/4/8 GCDs.
-TUNGSTEN_LX=512 ./docs/lumi_slurm/submit_tungsten_hip_scaling.sh strong
+TUNGSTEN_LX=768 ./docs/lumi_slurm/submit_tungsten_hip_scaling.sh strong
+
+# 3. Same grid, 2 and 4 nodes (16 and 32 GCDs).
+TUNGSTEN_LX=768 PARTITION=standard-g ./docs/lumi_slurm/submit_tungsten_hip_scaling.sh multinode
 ```
 
 `PARTITION` defaults to `small-g`. Use `dev-g` for bring-up. `standard-g` is
@@ -112,7 +115,8 @@ HIP `fft` region timers after step 1 are under-counted on the 1-GCD path
 the metric.
 
 One-node limit for this 768³ problem: parallel efficiency crosses 50% at 8
-GCDs. Next: multi-node (16+ GCDs) on the same grid, then the FD envelope.
+GCDs. Multi-node (16/32 GCD) uses `submit_tungsten_hip_scaling.sh multinode`
+on `standard-g` (8 ranks per node, same CPU map per node).
 
 This timing curve does not include a 1-GCD vs N-GCD field checksum. That
 check is still required before treating a point as a `#87` science result.
