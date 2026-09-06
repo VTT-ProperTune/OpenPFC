@@ -12,6 +12,12 @@
 using json = nlohmann::json;
 using pfc::ui::from_json;
 
+TEST_CASE("from_json parses HeFFTe num_subranks", "[ui][heffte]") {
+  const json config = {{"num_subranks", 2}};
+  const auto options = from_json<heffte::plan_options>(config);
+  REQUIRE(options.get_subranks() == 2);
+}
+
 TEST_CASE("from_json parses HeFFTe reshape algorithm", "[ui][heffte]") {
   const json config = {{"reshape_algorithm", "p2p"}};
 
@@ -83,13 +89,11 @@ TEST_CASE("hip_spectral_plan_options_from_json overlays plan_options",
 
 TEST_CASE("hip_spectral_plan_options_from_json uses slabs off-node",
           "[ui][heffte][spectral_gpu][comm_scale]") {
-  const json settings = {{"plan_options",
-                          {{"reshape_algorithm", "p2p_plined"},
-                           {"use_pencils", true}}}};
-  const auto one_node =
-      pfc::ui::hip_spectral_plan_options_from_json(settings, 8);
-  const auto two_nodes =
-      pfc::ui::hip_spectral_plan_options_from_json(settings, 16);
+  const json settings = {
+      {"plan_options",
+       {{"reshape_algorithm", "p2p_plined"}, {"use_pencils", true}}}};
+  const auto one_node = pfc::ui::hip_spectral_plan_options_from_json(settings, 8);
+  const auto two_nodes = pfc::ui::hip_spectral_plan_options_from_json(settings, 16);
   using AlgorithmType = std::underlying_type_t<heffte::reshape_algorithm>;
   REQUIRE(one_node.use_pencils == true);
   REQUIRE(two_nodes.use_pencils == false);
@@ -125,10 +129,10 @@ TEST_CASE("apply_heffte_comm_scale switches to slabs above 8 ranks",
 TEST_CASE("cpu_spectral_plan_options_from_json uses slabs at 16 ranks",
           "[ui][heffte][spectral_cpu][comm_scale]") {
   const json settings = {
-      {"plan_options", {{"use_pencils", true}, {"reshape_algorithm", "p2p_plined"}}}};
+      {"plan_options",
+       {{"use_pencils", true}, {"reshape_algorithm", "p2p_plined"}}}};
   const auto eight = pfc::ui::cpu_spectral_plan_options_from_json(settings, 8);
-  const auto sixteen =
-      pfc::ui::cpu_spectral_plan_options_from_json(settings, 16);
+  const auto sixteen = pfc::ui::cpu_spectral_plan_options_from_json(settings, 16);
   REQUIRE(eight.use_pencils == true);
   REQUIRE(sixteen.use_pencils == false);
 }

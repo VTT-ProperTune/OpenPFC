@@ -13,6 +13,8 @@
 #include <sstream>
 #include <stdexcept>
 
+#include <openpfc/kernel/decomposition/brick_split.hpp>
+
 #include <openpfc/frontend/ui/from_json_fwd.hpp>
 #include <openpfc/frontend/ui/from_json_log.hpp>
 
@@ -62,6 +64,12 @@ inline void apply_heffte_plan_options_json_overrides(const json &j,
     pfc::log_debug(from_json_debug_logger(), "Using gpu aware fft");
     options.use_gpu_aware = j["use_gpu_aware"];
   }
+  if (j.contains("num_subranks")) {
+    const int nsub = j["num_subranks"].get<int>();
+    pfc::log_debug(from_json_debug_logger(),
+                   "Using HeFFTe num_subranks=" + std::to_string(nsub));
+    options.use_num_subranks(nsub);
+  }
   std::ostringstream options_ss;
   options_ss << "Backend options: " << options;
   pfc::log_debug(from_json_debug_logger(), options_ss.str());
@@ -72,22 +80,30 @@ inline void apply_heffte_plan_options_json_overrides(const json &j,
 /**
  * @brief One LUMI-G node has 8 GCDs (one MPI rank per GCD).
  *
- * One LUMI-G node is 8 GCDs. Off-node HIP 768³ with pencil `p2p_plined`
- * was slower at 16 GCDs than at 8; slab decomposition (`use_pencils=false`)
- * dropped 16-GCD median `wall_step` below the 8-GCD pencil/slab times.
- * `alltoall` / `alltoallv` were slower than `p2p_plined` on this path.
+ * Off-node, `spectral_fft_proc_grid` uses a 1×8×nnodes layout so consecutive
+ * ranks stay on one node. HeFFTe pencils match that 2D grid: the y-pencil
+ * reshape is intra-node, the z-pencil reshape is pairwise between nodes.
+ * Rank counts that are not a multiple of 8 still drop to 1D slabs.
  */
 inline constexpr int kHeffteAlltoallMinRanks = 9;
+inline constexpr int kHeffteNodeGcds = 8;
 
 /**
- * @brief Prefer HeFFTe slabs when @p nproc is at least
- *        @ref kHeffteAlltoallMinRanks.
+ * @brief Match HeFFTe pencils / slabs to `spectral_fft_proc_grid`.
  *
- * Does not change `reshape_algorithm`. JSON spectral sessions apply this
- * after overlaying plan_options.
+ * Multiples of one LUMI-G node (16, 24, 32, …) keep pencils. Other off-node
+ * counts use slabs. Does not change `reshape_algorithm`.
  */
 inline void apply_heffte_comm_scale(heffte::plan_options &options, int nproc) {
   if (nproc < kHeffteAlltoallMinRanks) {
+    return;
+  }
+  if (pfc::decomposition::fft_node_grid_override() && nproc % kHeffteNodeGcds == 0) {
+    if (!options.use_pencils) {
+      pfc::log_debug(from_json_debug_logger(),
+                     "HeFFTe use_pencils enabled for node-aware 1x8xN grid");
+      options.use_pencils = true;
+    }
     return;
   }
   if (options.use_pencils) {

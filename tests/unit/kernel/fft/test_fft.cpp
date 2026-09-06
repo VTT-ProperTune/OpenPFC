@@ -14,9 +14,28 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
+#include <openpfc/kernel/fft/fft_layout.hpp>
 
 using namespace Catch::Matchers;
 using namespace pfc;
+
+TEST_CASE("r2c z-slab real inbox uses y-slab complex outbox",
+          "[fft][layout][unit]") {
+  auto domain = domain::create(Int3{768, 768, 768});
+  auto decomp = decomposition::create(domain, Int3{1, 1, 16});
+  auto layout = fft::layout::create(decomp, 0);
+  const auto &real0 = fft::layout::get_real_box(layout, 0);
+  const auto &cplx0 = fft::layout::get_complex_box(layout, 0);
+  const auto &cplx15 = fft::layout::get_complex_box(layout, 15);
+  REQUIRE(real0.size[0] == 768);
+  REQUIRE(real0.size[1] == 768);
+  REQUIRE(real0.size[2] == 48);
+  REQUIRE(cplx0.size[0] == 385);
+  REQUIRE(cplx0.size[1] == 48);
+  REQUIRE(cplx0.size[2] == 768);
+  REQUIRE(cplx15.high[2] == 767);
+  REQUIRE(cplx15.low[1] > cplx0.low[1]);
+}
 
 TEST_CASE("FFT - basic functionality", "[fft][unit]") {
   auto domain = domain::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}),
@@ -86,8 +105,9 @@ TEST_CASE("FFT workspace allocation - FFTW reports one complex workspace",
 }
 
 TEST_CASE("FFT create honors r2c_direction on a non-cubic grid", "[fft][unit]") {
-  auto domain = domain::create(GridSize({8, 16, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                               GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      domain::create(GridSize({8, 16, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
   auto decomposition = decomposition::create(domain, 1);
   auto fft_x = fft::create(decomposition, 0, MPI_COMM_WORLD, /*r2c_direction=*/0);
   auto fft_z = fft::create(decomposition, 0, MPI_COMM_WORLD, /*r2c_direction=*/2);
