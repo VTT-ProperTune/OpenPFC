@@ -20,6 +20,8 @@ find_package(OpenMP COMPONENTS CXX)
 #   heat3d_fd_manual           — laboratory-style explicit-stencil FD driver
 #   heat3d_fd                  — compact FD (pfc::data::Field + PaddedHalo +
 #                                FDGradient + for_each, decoupled in main)
+#   heat3d_fd_hip              — 3D FD on HIP (FDGPUStack + device halo +
+#                                for_each_interior_device); LUMI-G scaling
 #   heat3d_spectral_pointwise  — point-wise spectral RHS + explicit Euler
 #   heat3d_spectral            — implicit-Euler spectral
 set(_heat3d_binaries heat3d_fd_scratch heat3d_fd_manual heat3d_fd)
@@ -36,6 +38,31 @@ foreach(_target IN LISTS _heat3d_binaries)
   endif()
   install(TARGETS ${_target} DESTINATION bin)
 endforeach()
+
+if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+  add_executable(heat3d_fd_hip
+    src/hip/heat3d_fd_hip.cpp
+    src/hip/heat3d_fd_hip_kernels.hip
+  )
+  target_include_directories(heat3d_fd_hip PRIVATE ${HEAT3D_INCLUDE_DIR})
+  target_link_libraries(heat3d_fd_hip PRIVATE OpenPFC openpfc_apps_common
+                        hip::host openpfc_hip_kernels ${_heat3d_heffte_tgt})
+  set_target_properties(heat3d_fd_hip PROPERTIES
+    HIP_STANDARD 20
+    HIP_STANDARD_REQUIRED ON
+  )
+  install(TARGETS heat3d_fd_hip DESTINATION bin)
+  message(STATUS "heat3d_fd_hip (MPI + HIP) enabled")
+
+  if(HEAT3D_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
+    include(CTest)
+    add_test(NAME heat3d-fd-hip-smoke
+             COMMAND $<TARGET_FILE:heat3d_fd_hip> 16 4 0.01 2)
+    set_tests_properties(heat3d-fd-hip-smoke PROPERTIES
+      PASS_REGULAR_EXPRESSION "HEAT3D_HIP_CHECKSUM"
+      TIMEOUT 180)
+  endif()
+endif()
 
 # Catch2-based unit tests for HeatModel + field stack/Euler integration.
 # Mirrors the gating used by apps/tungsten and apps/aluminumNew so the test

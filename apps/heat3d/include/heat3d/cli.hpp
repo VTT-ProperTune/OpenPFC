@@ -6,7 +6,7 @@
 /**
  * @file cli.hpp
  * @brief Command-line parsing for the heat3d binary lineup
- *        (`heat3d_fd`, `heat3d_fd_manual`, `heat3d_fd_scratch`,
+ *        (`heat3d_fd`, `heat3d_fd_hip`, `heat3d_fd_manual`, `heat3d_fd_scratch`,
  *        `heat3d_spectral`, `heat3d_spectral_pointwise`).
  *
  * @details
