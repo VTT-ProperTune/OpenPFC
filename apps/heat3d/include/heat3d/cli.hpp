@@ -7,7 +7,7 @@
  * @file cli.hpp
  * @brief Command-line parsing for the heat3d binary lineup
  *        (`heat3d_fd`, `heat3d_fd_hip`, `heat3d_fd_manual`, `heat3d_fd_scratch`,
- *        `heat3d_spectral`, `heat3d_spectral_pointwise`).
+ *        `heat3d_spectral`, `heat3d_spectral_hip`, `heat3d_spectral_pointwise`).
  *
  * @details
  * Header-only, MPI-free, OpenPFC-free. Lives next to `heat_model.hpp`
@@ -25,7 +25,7 @@
  *    used by `heat3d_fd`.
  *  - `parse_spectral` / `parse_spectral_or_print_usage` —
  *    `<N> <n_steps> <dt>`, used by `heat3d_fd_manual`,
- *    `heat3d_fd_scratch`, `heat3d_spectral`, and
+ *    `heat3d_fd_scratch`, `heat3d_spectral`, `heat3d_spectral_hip`, and
  *    `heat3d_spectral_pointwise`.
  *
  * Both return `std::optional<RunConfig>`: `nullopt` on insufficient

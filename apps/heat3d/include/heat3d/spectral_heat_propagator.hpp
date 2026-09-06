@@ -31,14 +31,76 @@
 
 #include <complex>
 #include <cstddef>
+#include <span>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
+#include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/constants.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 
 namespace heat3d {
+
+/**
+ * @brief Fill the implicit-Euler Fourier multiplier
+ *        \f$1/(1 - \Delta t\, D\, k_\mathrm{lap})\f$ for one rank's outbox.
+ *
+ * @details Host-only and FFT-backend-free: the same table is uploaded to the
+ *          device by `SpectralHeatPropagatorHIP`. `k_lap = -(k_x^2+k_y^2+k_z^2)`
+ *          with the usual periodic signed-wavenumber convention
+ *          (`i <= N/2` → positive, else wrapped). Layout is k-outer, i-inner,
+ *          matching HeFFTe's local outbox walk.
+ *
+ * @param opL      Destination, length equal to the outbox volume.
+ * @param outbox   Local Fourier-space index box (inclusive corners).
+ * @param size     Global grid `{Nx, Ny, Nz}`.
+ * @param spacing  Grid spacing `{dx, dy, dz}`.
+ * @param D        Diffusion coefficient.
+ * @param dt       Time-step size.
+ * @throws std::invalid_argument when `opL.size()` does not match the outbox
+ *         volume implied by `outbox.low`/`outbox.high`.
+ */
+inline void fill_implicit_euler_symbol(std::span<double> opL,
+                                       const pfc::Box3i &outbox, pfc::Int3 size,
+                                       pfc::Real3 spacing, double D, double dt) {
+  const auto axis_count = [](int lo, int hi) -> std::size_t {
+    return static_cast<std::size_t>(hi - lo + 1);
+  };
+  const std::size_t expected = axis_count(outbox.low[0], outbox.high[0]) *
+                               axis_count(outbox.low[1], outbox.high[1]) *
+                               axis_count(outbox.low[2], outbox.high[2]);
+  if (opL.size() != expected) {
+    throw std::invalid_argument("fill_implicit_euler_symbol: opL size " +
+                                std::to_string(opL.size()) + " != outbox volume " +
+                                std::to_string(expected));
+  }
+  const double fx =
+      2.0 * pfc::constants::pi / (spacing[0] * static_cast<double>(size[0]));
+  const double fy =
+      2.0 * pfc::constants::pi / (spacing[1] * static_cast<double>(size[1]));
+  const double fz =
+      2.0 * pfc::constants::pi / (spacing[2] * static_cast<double>(size[2]));
+  const auto signed_k = [](int i, int n, double f) {
+    return (i <= n / 2) ? static_cast<double>(i) * f
+                        : static_cast<double>(i - n) * f;
+  };
+  std::size_t idx = 0;
+  for (int k = outbox.low[2]; k <= outbox.high[2]; ++k) {
+    for (int j = outbox.low[1]; j <= outbox.high[1]; ++j) {
+      for (int i = outbox.low[0]; i <= outbox.high[0]; ++i) {
+        const double ki = signed_k(i, size[0], fx);
+        const double kj = signed_k(j, size[1], fy);
+        const double kk = signed_k(k, size[2], fz);
+        const double k_lap = -(ki * ki + kj * kj + kk * kk);
+        opL[idx++] = 1.0 / (1.0 - dt * D * k_lap);
+      }
+    }
+  }
+}
 
 /**
  * @brief Heat equation solver using implicit Euler time integration in Fourier space
@@ -112,33 +174,8 @@ public:
   SpectralHeatPropagator(pfc::fft::IHostFFT &fft, const pfc::data::Field<double> &u,
                          double D, double dt)
       : m_fft(fft), m_psi_F(fft.size_outbox()), m_opL(fft.size_outbox()) {
-    const auto size = u.global_size();
-    const auto spacing = u.spacing();
-    const auto ob = fft.get_outbox_bounds();
-    const double fx =
-        2.0 * pfc::constants::pi / (spacing[0] * static_cast<double>(size[0]));
-    const double fy =
-        2.0 * pfc::constants::pi / (spacing[1] * static_cast<double>(size[1]));
-    const double fz =
-        2.0 * pfc::constants::pi / (spacing[2] * static_cast<double>(size[2]));
-    std::size_t idx = 0;
-    for (int k = ob.low[2]; k <= ob.high[2]; ++k) {
-      for (int j = ob.low[1]; j <= ob.high[1]; ++j) {
-        for (int i = ob.low[0]; i <= ob.high[0]; ++i) {
-          const double ki = (i <= size[0] / 2)
-                                ? static_cast<double>(i) * fx
-                                : static_cast<double>(i - size[0]) * fx;
-          const double kj = (j <= size[1] / 2)
-                                ? static_cast<double>(j) * fy
-                                : static_cast<double>(j - size[1]) * fy;
-          const double kk = (k <= size[2] / 2)
-                                ? static_cast<double>(k) * fz
-                                : static_cast<double>(k - size[2]) * fz;
-          const double k_lap = -(ki * ki + kj * kj + kk * kk);
-          m_opL[idx++] = 1.0 / (1.0 - dt * D * k_lap);
-        }
-      }
-    }
+    fill_implicit_euler_symbol(m_opL, fft.get_outbox_bounds(), u.global_size(),
+                               u.spacing(), D, dt);
   }
 
   /** Advance `u` by one implicit-Euler step (1 fwd FFT + 1 inv FFT). */

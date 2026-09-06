@@ -24,10 +24,18 @@ find_package(OpenMP COMPONENTS CXX)
 #                                for_each_interior_device); LUMI-G scaling
 #   heat3d_spectral_pointwise  — point-wise spectral RHS + explicit Euler
 #   heat3d_spectral            — implicit-Euler spectral
+#   heat3d_spectral_hip        — implicit-Euler spectral on HIP (2 FFTs/step)
 set(_heat3d_binaries heat3d_fd_scratch heat3d_fd_manual heat3d_fd)
 if(OpenPFC_ENABLE_HEFFTE)
   list(APPEND _heat3d_binaries heat3d_spectral_pointwise heat3d_spectral)
 endif()
+
+# Catch2-based unit tests for HeatModel + field stack/Euler integration.
+# Mirrors the gating used by apps/tungsten and apps/aluminumNew so the test
+# target only builds when the project was configured with tests enabled and
+# Catch2 is actually available. Declared before HIP smokes so the option is
+# defined on the first configure.
+option(HEAT3D_ENABLE_TESTS "Enable building heat3d tests" ON)
 foreach(_target IN LISTS _heat3d_binaries)
   add_executable(${_target} src/cpu/${_target}.cpp)
   target_include_directories(${_target} PRIVATE ${HEAT3D_INCLUDE_DIR})
@@ -62,13 +70,32 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
       PASS_REGULAR_EXPRESSION "HEAT3D_HIP_CHECKSUM"
       TIMEOUT 180)
   endif()
-endif()
 
-# Catch2-based unit tests for HeatModel + field stack/Euler integration.
-# Mirrors the gating used by apps/tungsten and apps/aluminumNew so the test
-# target only builds when the project was configured with tests enabled and
-# Catch2 is actually available.
-option(HEAT3D_ENABLE_TESTS "Enable building heat3d tests" ON)
+  if(OpenPFC_ENABLE_HIP_SPECTRAL)
+    add_executable(heat3d_spectral_hip src/hip/heat3d_spectral_hip.cpp)
+    target_include_directories(heat3d_spectral_hip PRIVATE ${HEAT3D_INCLUDE_DIR})
+    target_link_libraries(heat3d_spectral_hip PRIVATE OpenPFC openpfc_apps_common
+                          hip::host openpfc_hip_kernels ${_heat3d_heffte_tgt})
+    set_target_properties(heat3d_spectral_hip PROPERTIES
+      HIP_STANDARD 20
+      HIP_STANDARD_REQUIRED ON
+    )
+    install(TARGETS heat3d_spectral_hip DESTINATION bin)
+    message(STATUS "heat3d_spectral_hip (MPI + HIP spectral) enabled")
+
+    if(HEAT3D_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
+      include(CTest)
+      add_test(NAME heat3d-spectral-hip-smoke
+               COMMAND $<TARGET_FILE:heat3d_spectral_hip> 16 4 0.01)
+      set_tests_properties(heat3d-spectral-hip-smoke PROPERTIES
+        PASS_REGULAR_EXPRESSION "HEAT3D_SPECTRAL_HIP_CHECKSUM"
+        TIMEOUT 180)
+    endif()
+  else()
+    message(STATUS
+      "heat3d_spectral_hip disabled: ROCm HeFFTe (rocFFT) missing (HIP spectral support OFF).")
+  endif()
+endif()
 
 if(HEAT3D_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
   find_package(Catch2 QUIET)

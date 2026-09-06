@@ -25,9 +25,12 @@
 #include <filesystem>
 #include <iostream>
 #include <mpi.h>
+#include <stdexcept>
 #include <system_error>
 #include <vector>
 
+#include <openpfc/kernel/data/box3i.hpp>
+#include <openpfc/kernel/data/constants.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
@@ -39,6 +42,7 @@
 #include <openpfc/kernel/simulation/checkpoint_service.hpp>
 #include <openpfc/kernel/simulation/simulation_state.hpp>
 #include <openpfc/kernel/simulation/stacks/fd_cpu_stack.hpp>
+#include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
 #include <openpfc/kernel/simulation/steppers/rk2_heun.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
@@ -46,6 +50,7 @@
 #include <heat3d/cli.hpp>
 #include <heat3d/heat_model.hpp>
 #include <heat3d/reporting.hpp>
+#include <heat3d/spectral_heat_propagator.hpp>
 
 using Catch::Matchers::WithinAbs;
 using heat3d::HeatModel;
@@ -140,7 +145,8 @@ TEST_CASE("HeatModel + FDCPUStack: u.apply samples the model IC",
   // subworld coordinates. For nproc=1 the local subworld == global world,
   // so u(ix, iy, iz) samples the IC at global (ix, iy, iz).
   pfc::sim::stacks::FDCPUStack stack(
-      pfc::domain::create(pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+      pfc::domain::create(pfc::GridSize({N, N, N}),
+                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                           pfc::GridSpacing({1.0, 1.0, 1.0})),
       /*fd_order=*/2, /*rank=*/0, /*nproc=*/1, MPI_COMM_WORLD);
   stack.u().apply(model.initial_condition);
@@ -174,7 +180,8 @@ TEST_CASE("HeatModel + FDCPUStack + EulerStepper: explicit-Euler FD steps "
   const int order = 2;
 
   pfc::sim::stacks::FDCPUStack stack(
-      pfc::domain::create(pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+      pfc::domain::create(pfc::GridSize({N, N, N}),
+                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                           pfc::GridSpacing({1.0, 1.0, 1.0})),
       order, /*rank=*/0, /*nproc=*/1, MPI_COMM_WORLD);
 
@@ -211,7 +218,8 @@ namespace {
   constexpr double dt = 5.0e-4;
   constexpr int n_steps = 10;
   pfc::sim::stacks::FDCPUStack stack(
-      pfc::domain::create(pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+      pfc::domain::create(pfc::GridSize({N, N, N}),
+                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                           pfc::GridSpacing({1.0, 1.0, 1.0})),
       order, /*rank=*/0, /*nproc=*/1, MPI_COMM_WORLD);
   HeatModel model;
@@ -277,7 +285,8 @@ TEST_CASE("FDGradient<G> + EulerStepper compile and run with a pruned grads "
   const int order = 2;
 
   pfc::sim::stacks::FDCPUStack stack(
-      pfc::domain::create(pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+      pfc::domain::create(pfc::GridSize({N, N, N}),
+                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                           pfc::GridSpacing({1.0, 1.0, 1.0})),
       order, /*rank=*/0, /*nproc=*/1, MPI_COMM_WORLD);
 
@@ -455,10 +464,10 @@ TEST_CASE("Manual FD driver: produces same interior L2 as compact FDCPUStack pat
 
   HeatModel model;
 
-  sim::stacks::FDCPUStack stack(
-      pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                          GridSpacing({1.0, 1.0, 1.0})),
-      order, 0, 1, MPI_COMM_WORLD);
+  sim::stacks::FDCPUStack stack(pfc::domain::create(GridSize({N, N, N}),
+                                                    PhysicalOrigin({0.0, 0.0, 0.0}),
+                                                    GridSpacing({1.0, 1.0, 1.0})),
+                                order, 0, 1, MPI_COMM_WORLD);
   stack.u().apply(model.initial_condition);
   auto grad = field::create<heat3d::HeatGrads>(stack.u(), order);
   auto stepper = sim::steppers::create(stack.u(), grad, model, dt);
@@ -745,10 +754,10 @@ TEST_CASE("Scratch FD driver: produces same interior L2 as compact FDCPUStack "
 
   HeatModel model;
 
-  sim::stacks::FDCPUStack stack(
-      pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                          GridSpacing({1.0, 1.0, 1.0})),
-      order, 0, 1, MPI_COMM_WORLD);
+  sim::stacks::FDCPUStack stack(pfc::domain::create(GridSize({N, N, N}),
+                                                    PhysicalOrigin({0.0, 0.0, 0.0}),
+                                                    GridSpacing({1.0, 1.0, 1.0})),
+                                order, 0, 1, MPI_COMM_WORLD);
   stack.u().apply(model.initial_condition);
   auto grad = field::create<heat3d::HeatGrads>(stack.u(), order);
   auto stepper = sim::steppers::create(stack.u(), grad, model, dt);
@@ -894,6 +903,78 @@ TEST_CASE("heat3d::parse_spectral: rejects out-of-range values", "[heat3d][cli]"
 }
 
 // -----------------------------------------------------------------------------
+// Implicit-Euler Fourier symbol (shared by CPU and HIP spectral Heat3D).
+// -----------------------------------------------------------------------------
+
+TEST_CASE("fill_implicit_euler_symbol: DC mode is exactly 1", "[heat3d][spectral]") {
+  constexpr int N = 8;
+  const auto box = pfc::Box3i::from_bounds({0, 0, 0}, {N / 2, N - 1, N - 1});
+  std::vector<double> opL(
+      static_cast<std::size_t>(box.size[0] * box.size[1] * box.size[2]));
+  heat3d::fill_implicit_euler_symbol(opL, box, {N, N, N}, {1.0, 1.0, 1.0},
+                                     heat3d::kD, 0.01);
+  REQUIRE_THAT(opL[0], WithinAbs(1.0, 1e-15));
+}
+
+TEST_CASE("fill_implicit_euler_symbol: first kx mode matches 1/(1+dt D k^2)",
+          "[heat3d][spectral]") {
+  constexpr int N = 8;
+  constexpr double dt = 0.01;
+  const auto box = pfc::Box3i::from_bounds({0, 0, 0}, {N / 2, N - 1, N - 1});
+  std::vector<double> opL(
+      static_cast<std::size_t>(box.size[0] * box.size[1] * box.size[2]));
+  heat3d::fill_implicit_euler_symbol(opL, box, {N, N, N}, {1.0, 1.0, 1.0},
+                                     heat3d::kD, dt);
+  const double ki = 2.0 * pfc::constants::pi / static_cast<double>(N);
+  const double expected = 1.0 / (1.0 + dt * heat3d::kD * ki * ki);
+  REQUIRE_THAT(opL[1], WithinAbs(expected, 1e-14));
+}
+
+TEST_CASE("fill_implicit_euler_symbol: wrapped ky matches first-mode |k|",
+          "[heat3d][spectral]") {
+  constexpr int N = 8;
+  constexpr double dt = 0.25;
+  const auto box = pfc::Box3i::from_bounds({0, 0, 0}, {N / 2, N - 1, N - 1});
+  const int nx = box.size[0];
+  std::vector<double> opL(
+      static_cast<std::size_t>(box.size[0] * box.size[1] * box.size[2]));
+  heat3d::fill_implicit_euler_symbol(opL, box, {N, N, N}, {1.0, 1.0, 1.0},
+                                     heat3d::kD, dt);
+  const std::size_t idx =
+      static_cast<std::size_t>(N - 1) * static_cast<std::size_t>(nx);
+  REQUIRE_THAT(opL[idx], WithinAbs(opL[1], 1e-15));
+}
+
+TEST_CASE("fill_implicit_euler_symbol: rejects size mismatch",
+          "[heat3d][spectral]") {
+  const auto box = pfc::Box3i::from_bounds({0, 0, 0}, {4, 7, 7});
+  std::vector<double> too_small(1, 0.0);
+  REQUIRE_THROWS_AS(heat3d::fill_implicit_euler_symbol(too_small, box, {8, 8, 8},
+                                                       {1.0, 1.0, 1.0}, 1.0, 0.01),
+                    std::invalid_argument);
+}
+
+TEST_CASE("SpectralHeatPropagator: constant field is a fixed point",
+          "[heat3d][spectral]") {
+  int rank = 0;
+  int nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  constexpr int N = 8;
+  pfc::sim::stacks::SpectralCPUStack stack(
+      pfc::domain::create(pfc::GridSize({N, N, N}),
+                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                          pfc::GridSpacing({1.0, 1.0, 1.0})),
+      rank, nproc, MPI_COMM_WORLD);
+  stack.u().apply([](double, double, double) { return 3.0; });
+  heat3d::SpectralHeatPropagator prop(stack.fft(), stack.u(), heat3d::kD, 0.1);
+  prop.step(stack.u());
+  stack.u().for_each_owned([&](double, double, double, double u_val) {
+    REQUIRE_THAT(u_val, WithinAbs(3.0, 1e-12));
+  });
+}
+
+// -----------------------------------------------------------------------------
 // Reporting helpers (analytic reference solution).
 // -----------------------------------------------------------------------------
 
@@ -1018,12 +1099,18 @@ TEST_CASE("heat3d CheckpointService N+M restart matches continuous Euler",
   HeatModel model;
 
   pfc::sim::stacks::FDCPUStack continuous(
-      pfc::domain::create(pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}), pfc::GridSpacing({1.0, 1.0, 1.0})), 2, 0, 1, MPI_COMM_WORLD);
+      pfc::domain::create(pfc::GridSize({N, N, N}),
+                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                          pfc::GridSpacing({1.0, 1.0, 1.0})),
+      2, 0, 1, MPI_COMM_WORLD);
   continuous.u().apply(model.initial_condition);
   heat_euler_steps(continuous, model, n_head + n_tail, dt);
 
   pfc::sim::stacks::FDCPUStack head(
-      pfc::domain::create(pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}), pfc::GridSpacing({1.0, 1.0, 1.0})), 2, 0, 1, MPI_COMM_WORLD);
+      pfc::domain::create(pfc::GridSize({N, N, N}),
+                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                          pfc::GridSpacing({1.0, 1.0, 1.0})),
+      2, 0, 1, MPI_COMM_WORLD);
   head.u().apply(model.initial_condition);
   heat_euler_steps(head, model, n_head, dt);
 
@@ -1044,7 +1131,10 @@ TEST_CASE("heat3d CheckpointService N+M restart matches continuous Euler",
   svc.save(snap, time);
 
   pfc::sim::stacks::FDCPUStack tail(
-      pfc::domain::create(pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}), pfc::GridSpacing({1.0, 1.0, 1.0})), 2, 0, 1, MPI_COMM_WORLD);
+      pfc::domain::create(pfc::GridSize({N, N, N}),
+                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                          pfc::GridSpacing({1.0, 1.0, 1.0})),
+      2, 0, 1, MPI_COMM_WORLD);
   pfc::SimulationState restored;
   restored.add_field("u", tail.u());
   pfc::Time time2({0.0, 1.0, dt}, 0.0);

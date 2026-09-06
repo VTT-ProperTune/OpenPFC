@@ -7,9 +7,9 @@
  *        Euler in Fourier space.
  *
  * @details
- * Per-method binary in the heat3d quartet
+ * Per-method binary in the heat3d lineup
  * (`heat3d_fd`, `heat3d_fd_manual`, `heat3d_spectral`,
- * `heat3d_spectral_pointwise`). The spectral propagator
+ * `heat3d_spectral_hip`, `heat3d_spectral_pointwise`). The spectral propagator
  * (`heat3d::SpectralHeatPropagator`) takes 2 FFTs/step (forward,
  * apply diagonal multiplier in k-space, inverse). No FD halo, no
  * stencil — the laboratory-style variant lives in `heat3d_fd_manual`.
@@ -37,7 +37,8 @@ void run_spectral(const RunConfig &cfg, int rank, int nproc) {
   HeatModel model;
 
   sim::stacks::SpectralCPUStack stack(
-      pfc::domain::create(GridSize({cfg.N, cfg.N, cfg.N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+      pfc::domain::create(GridSize({cfg.N, cfg.N, cfg.N}),
+                          PhysicalOrigin({0.0, 0.0, 0.0}),
                           GridSpacing({1.0, 1.0, 1.0})),
       rank, nproc, MPI_COMM_WORLD);
   stack.u().apply(model.initial_condition);
