@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Heat3D — single-purpose drivers
 
-MPI CPU drivers for the **3D heat equation** \(\partial u/\partial t = D \nabla^2 u\) on a uniform periodic brick \([0,N)^3\) with spacing 1. Each method ships as its **own executable**, and the binaries are arranged as a **model hierarchy** from "raw pointers in `main`" to "compose three production stacks":
+MPI drivers for the **3D heat equation** \(\partial u/\partial t = D \nabla^2 u\) on a uniform periodic brick \([0,N)^3\) with spacing 1 (CPU, plus HIP twins for compact FD and implicit-Euler spectral). Each method ships as its **own executable**, and the binaries are arranged as a **model hierarchy** from "raw pointers in `main`" to "compose three production stacks":
 
 | Binary | Layer | What it shows |
 |---|---|---|
@@ -15,8 +15,9 @@ MPI CPU drivers for the **3D heat equation** \(\partial u/\partial t = D \nabla^
 | **`heat3d_fd_hip`** | Compact FD on HIP | Same physics and CLI as `heat3d_fd`, on `FDGPUStack<HIPSpace>`: device `HaloExchange`, `for_each_interior_device` Laplacian, Euler axpy on the GCD. One MPI rank per GPU. Optional `HEAT3D_PROFILE_JSON` writes schema-v4 `wall_step` frames for LUMI-G scaling. |
 | **`heat3d_spectral_pointwise`** | Point-wise spectral RHS + explicit Euler | The **spectral twin** of `heat3d_fd`: identical user-facing time loop, but the residual is built by `pfc::field::SpectralGradient<HeatGrads>` (1 fwd + 3 inv FFTs/step) instead of FD stencils. The same `HeatModel::rhs` is applied cell-by-cell through `pfc::sim::DuField`. |
 | **`heat3d_spectral`** | Implicit Euler in Fourier space | HeFFTe-backed forward + backward FFT per step (`heat3d::SpectralHeatPropagator`). |
+| **`heat3d_spectral_hip`** | Implicit Euler on HIP | HIP twin of `heat3d_spectral`: `HIPSpectralStack` + device multiply of \(1/(1-\Delta t D k_\mathrm{lap})\), 2 FFTs/step. Same CLI as the CPU spectral driver. `HEAT3D_PROFILE_JSON` / `HEAT3D_WARMUP` match `heat3d_fd_hip`. Built when HIP spectral (rocFFT HeFFTe) is on. |
 
-All three FD drivers (`scratch`, `manual`, `fd`) compute the **same thing** with the same 7-point central stencil. Tests assert `l2_scratch == l2_manual == l2_compact` to within 1e-7. The four higher binaries share `HeatModel` for physics and `heat3d::report` for the `method / timing / l2_error` summary line; `heat3d_fd_scratch` only uses `heat3d::report` and inlines its own physics.
+All three CPU FD drivers (`scratch`, `manual`, `fd`) compute the **same thing** with the same 7-point central stencil. Tests assert `l2_scratch == l2_manual == l2_compact` to within 1e-7. The higher binaries share `HeatModel` for physics and `heat3d::report` for the `method / timing / l2_error` summary line; `heat3d_fd_scratch` only uses `heat3d::report` and inlines its own physics.
 
 Initial condition matches the diffusion examples: \(u(\mathbf{x},0)=\exp(-|\mathbf{x}|^2/(4D))\) with origin at \((0,0,0)\). The diffusion coefficient \(D\) is **hard-pinned** to `1.0` via `heat3d::kD` in [`include/heat3d/heat_model.hpp`](include/heat3d/heat_model.hpp) so all heat3d binaries share one fixed value (and their L2 outputs stay directly comparable). To experiment with a different coefficient, change the literal there and rebuild.
 
@@ -29,7 +30,8 @@ Enabled with `OpenPFC_BUILD_APPS=ON` (default). Requires HeFFTe (the spectral bi
 Shared physics, IC, propagator, parser, and reporting headers (live in `include/heat3d/`):
 
 - **[`include/heat3d/heat_model.hpp`](include/heat3d/heat_model.hpp)** — the **physics**, **all in one file**: the `heat3d::HeatGrads` per-point grads aggregate (`xx, yy, zz`) drawn from the OpenPFC catalog so the kernel's templated evaluators (`pfc::field::FDGradient<G>`, `pfc::field::SpectralGradient<G>`) compute exactly those second derivatives and nothing else; the **single source-level constexpr** `heat3d::kD` for the diffusion coefficient; the small self-contained `heat3d::HeatModel` struct (initial-condition lambda + optional boundary-value provider + per-point RHS `kD * (g.xx + g.yy + g.zz)`). **OpenPFC-free** (only `<cmath>` and `<functional>` are included); this is the only file a physicist edits to define a new heat problem or change `D`. See [`docs/extending_openpfc/per_point_grads.md`](../../docs/extending_openpfc/per_point_grads.md) for the per-point grads contract.
-- **[`include/heat3d/spectral_heat_propagator.hpp`](include/heat3d/spectral_heat_propagator.hpp)** — heat-specific **implicit-Euler-in-Fourier-space** propagator. Builds the `1 / (1 - dt·D·k²)` symbol table once from the FFT layout and exposes `step(pfc::data::Field<double, pfc::HostSpace>&)`. Backend-agnostic (takes `pfc::fft::IHostFFT&`).
+- **[`include/heat3d/spectral_heat_propagator.hpp`](include/heat3d/spectral_heat_propagator.hpp)** — heat-specific **implicit-Euler-in-Fourier-space** propagator. `fill_implicit_euler_symbol` builds the `1 / (1 - dt·D·k²)` table (Catch2-tested without a GPU). The CPU class exposes `step(pfc::data::Field<double, pfc::HostSpace>&)` on `pfc::fft::IHostFFT`.
+- **[`include/heat3d/spectral_heat_propagator_hip.hpp`](include/heat3d/spectral_heat_propagator_hip.hpp)** — HIP twin: uploads that table once, then each step is a device forward FFT, `multiply_complex_real_hip_impl`, and inverse FFT.
 - **[`include/heat3d/cli.hpp`](include/heat3d/cli.hpp)** — `RunConfig` plus the slim per-binary parsers `parse_fd` / `parse_spectral` and their `_or_print_usage` wrappers. `D` is *not* a CLI knob (it lives in `heat_model.hpp`). Each binary already knows its own discretisation, so the parsers do **not** consume an `argv[1]` discriminator. Header-only, MPI-free, OpenPFC-free; trivially unit-testable.
 - **[`include/heat3d/reporting.hpp`](include/heat3d/reporting.hpp)** — `analytic_gaussian` (closed-form reference solution on \(\mathbb{R}^3\)), `fd_extra_metadata` (FD/OpenMP info string), and the rank-0 `report` template that prints the canonical `method` / `timing` / `l2_error` triplet, shared by all heat3d binaries.
 
@@ -52,6 +54,7 @@ Per-binary drivers (live in `src/cpu/`):
 
   Halo, gradient evaluator, and per-cell sweep are three visible primitives composed by the user. `halo.exchange()` is the blocking one-shot; `pfc::gradient::evaluate(grad, idx)` keeps the inner loop dimension-agnostic; `pfc::data::Field::operator[]` is used for element access. The spectral twin still bundles those concerns through `pfc::sim::DuField`.
 - **[`src/hip/heat3d_fd_hip.cpp`](src/hip/heat3d_fd_hip.cpp)** — HIP twin of compact FD. `FDGPUStack<HIPSpace>` owns the padded device field and `HaloExchange<HIPSpace>`; each step is `halo.exchange()` / `heat3d::fd_rhs_hip` (`for_each_interior_device`) / `heat3d::euler_axpy_hip`. Built when `OpenPFC_ENABLE_HIP` is on.
+- **[`src/hip/heat3d_spectral_hip.cpp`](src/hip/heat3d_spectral_hip.cpp)** — HIP twin of implicit-Euler spectral. `HIPSpectralStack` + `SpectralHeatPropagatorHIP`. Built when `OpenPFC_ENABLE_HIP_SPECTRAL` is on. CTest `heat3d-spectral-hip-smoke` looks for `HEAT3D_SPECTRAL_HIP_CHECKSUM`. LUMI submit: `docs/lumi_slurm/submit_heat3d_spectral_hip_scaling.sh`.
 - **[`src/cpu/heat3d_fd_manual.cpp`](src/cpu/heat3d_fd_manual.cpp)** — **laboratory-style** 2nd-order central FD driver. The hot loop reads:
 
   ```cpp
@@ -65,12 +68,12 @@ Per-binary drivers (live in `src/cpu/`):
   ```
 
   with a single `stencil_step` lambda calling `model.rhs(0.0, HeatGrads{xx, yy, zz})`. Each stage is wrapped in `pfc::runtime::tic(timer, "...")` / `toc(timer, "...")` and `print_timing_summary(timer, 0)` prints a sorted breakdown on rank 0 at the end.
-- **[`src/cpu/heat3d_spectral.cpp`](src/cpu/heat3d_spectral.cpp)** — implicit-Euler spectral driver. Calls `heat3d::SpectralHeatPropagator::step(stack.u())` once per step (forward FFT → diagonal multiply in k-space → inverse FFT).
+- **[`src/cpu/heat3d_spectral.cpp`](src/cpu/heat3d_spectral.cpp)** — implicit-Euler spectral driver. Calls `heat3d::SpectralHeatPropagator::step(stack.u())` once per step (forward FFT → diagonal multiply in k-space → inverse FFT). HIP twin: `heat3d_spectral_hip`.
 - **[`src/cpu/heat3d_spectral_pointwise.cpp`](src/cpu/heat3d_spectral_pointwise.cpp)** — point-wise spectral RHS: the **spectral twin** of `heat3d_fd`. Built on `pfc::sim::stacks::SpectralCPUStack` + `pfc::sim::DuField<HeatGrads, SpectralGradient<HeatGrads>>`, so the user-facing time loop reads `du.apply(...)` / `u += dt * du` / `t += dt`; the residual is materialised by `pfc::field::SpectralGradient<HeatGrads>` (1 forward + 3 inverse FFTs/step) instead of a stencil sweep. The `DuField` shim hides halo prep + per-cell evaluation here, where the FD twin (`heat3d_fd`) instead spells those primitives out in `main`.
 
 Tests:
 
-- **[`tests/test_heat3d.cpp`](tests/test_heat3d.cpp)** — Catch2 unit tests covering: `heat3d::kD` is pinned to 1.0; `HeatModel` (default IC at the origin, IC override, the `rhs = kD * (xx + yy + zz)` formula); the slim per-binary CLI parsers (happy paths + every rejection case); the analytic reference solution; two single-rank integration tests against a padded field / explicit Euler stepper; **two** single-rank cases for the manual driver (smoke + L2-vs-analytic, and parity vs the compact `FDCPUStack` path); and **two** single-rank cases for the from-scratch driver (smoke + L2-vs-analytic, and parity vs the compact path to within 1e-7). Built into the `test_heat3d` executable and registered with CTest as `heat3d-all-tests` whenever `OpenPFC_BUILD_TESTS=ON` and Catch2 is available (set `HEAT3D_ENABLE_TESTS=OFF` to skip).
+- **[`tests/test_heat3d.cpp`](tests/test_heat3d.cpp)** — Catch2 unit tests covering: `heat3d::kD` is pinned to 1.0; `HeatModel` (default IC at the origin, IC override, the `rhs = kD * (xx + yy + zz)` formula); the slim per-binary CLI parsers (happy paths + every rejection case); `fill_implicit_euler_symbol` (DC = 1, first-mode formula, wrapped \(k_y\), size mismatch) and a constant-field fixed point of `SpectralHeatPropagator`; the analytic reference solution; two single-rank integration tests against a padded field / explicit Euler stepper; **two** single-rank cases for the manual driver (smoke + L2-vs-analytic, and parity vs the compact `FDCPUStack` path); and **two** single-rank cases for the from-scratch driver (smoke + L2-vs-analytic, and parity vs the compact path to within 1e-7). Built into the `test_heat3d` executable and registered with CTest as `heat3d-all-tests` whenever `OpenPFC_BUILD_TESTS=ON` and Catch2 is available (set `HEAT3D_ENABLE_TESTS=OFF` to skip). HIP smokes: `heat3d-fd-hip-smoke`, `heat3d-spectral-hip-smoke`.
 
 ### Where OpenMP runs (FD)
 
@@ -98,8 +101,10 @@ Rank 0 prints `omp_max_threads` and **`omp_get_num_procs()`** in the summary lin
 heat3d_fd_scratch          <N> <n_steps> <dt>
 heat3d_fd_manual           <N> <n_steps> <dt>
 heat3d_fd                  <N> <n_steps> <dt> <fd_order>
+heat3d_fd_hip              <N> <n_steps> <dt> <fd_order>
 heat3d_spectral_pointwise  <N> <n_steps> <dt>
 heat3d_spectral            <N> <n_steps> <dt>
+heat3d_spectral_hip        <N> <n_steps> <dt>
 ```
 
 - `D` is **not** a CLI knob: it is fixed at `heat3d::kD = 1.0` in [`include/heat3d/heat_model.hpp`](include/heat3d/heat_model.hpp). Edit the literal there if you want to experiment.
@@ -118,6 +123,9 @@ mpirun -n 4 ./apps/heat3d/heat3d_fd_manual          64 200 0.001
 mpirun -n 4 ./apps/heat3d/heat3d_fd                 64 200 0.001 4
 mpirun -n 4 ./apps/heat3d/heat3d_spectral_pointwise 64 200 0.001
 mpirun -n 4 ./apps/heat3d/heat3d_spectral           64 200 0.001
+# HIP (one rank per GPU; LUMI-G uses the submit helpers under docs/lumi_slurm/):
+#   heat3d_fd_hip       64 200 0.001 2
+#   heat3d_spectral_hip 64 200 0.001
 ```
 
 All three FD binaries report identical `l2_error_vs_R3_analytic_rms` (the manual binary additionally prints a per-section breakdown — `inner / halo_wait / border / euler` — from `pfc::runtime::print_timing_summary`).

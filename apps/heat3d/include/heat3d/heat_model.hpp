@@ -23,8 +23,8 @@
  *  - `kD` is a single source-level `inline constexpr double` at namespace
  *    scope, not a mutable model member. The heat3d binaries
  *    (`heat3d_fd`, `heat3d_fd_hip`, `heat3d_fd_manual`, `heat3d_fd_scratch`,
- *    `heat3d_spectral`, `heat3d_spectral_pointwise`) share one fixed
- *    value of \f$D\f$ so their L2-vs-analytic outputs are directly
+ *    `heat3d_spectral`, `heat3d_spectral_hip`, `heat3d_spectral_pointwise`) share
+ * one fixed value of \f$D\f$ so their L2-vs-analytic outputs are directly
  *    comparable. To experiment with a different coefficient, change the
  *    literal here and rebuild.
  *  - `HeatModel::initial_condition` is a runtime-swappable spatial
