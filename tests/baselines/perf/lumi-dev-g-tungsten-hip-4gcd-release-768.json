@@ -1,0 +1,53 @@
+{
+  "schema_version": 4,
+  "kind": "perf_summary",
+  "openpfc_version": "0.2.0",
+  "n_mpi_ranks": 4,
+  "n_frames_per_rank": 10,
+  "total_frames": 40,
+  "warmup_frames": 1,
+  "n_samples": 36,
+  "metrics": {
+    "step": {
+      "mean": 6.0,
+      "median": 6.0,
+      "min": 2.0,
+      "max": 10.0
+    },
+    "mpi_rank": {
+      "mean": 1.5,
+      "median": 1.5,
+      "min": 0.0,
+      "max": 3.0
+    },
+    "wall_step": {
+      "mean": 1.552355328472168,
+      "median": 0.3154488600002878,
+      "min": 0.31225716100016143,
+      "max": 11.448099646000173
+    },
+    "rss_bytes": {
+      "mean": 0.0,
+      "median": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "model_heap_bytes": {
+      "mean": 0.0,
+      "median": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "heap_secondary_bytes": {
+      "mean": 0.0,
+      "median": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    }
+  },
+  "region_exclusive_mean": {
+    "communication": 0.0,
+    "fft": 1.5264147915832307,
+    "gradient": 0.0
+  }
+}
