@@ -31,9 +31,12 @@
  * code touches residency.
  */
 
+#include <cmath>
 #include <complex>
 #include <cstddef>
 #include <filesystem>
+#include <iomanip>
+#include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -170,6 +173,41 @@ public:
     m_result_counter = m_ckpt.result_counter();
   }
 
+  /// Communicator-wide owned-cell sum / sum-of-squares of the primary field.
+  struct FieldChecksum {
+    double sum{};
+    double sumsq{};
+  };
+
+  [[nodiscard]] FieldChecksum field_checksum() {
+    double sum = 0.0;
+    double sumsq = 0.0;
+    auto &f = psi();
+    const auto accumulate = [&](double v) {
+      sum += v;
+      sumsq += v * v;
+    };
+    if constexpr (is_host) {
+      f.for_each_owned([&](int i, int j, int k) { accumulate(f(i, j, k)); });
+    } else {
+      f.with_host_view([&](double *d, std::size_t) {
+        const auto sz = f.local_size();
+        for (int k = 0; k < sz[2]; ++k) {
+          for (int j = 0; j < sz[1]; ++j) {
+            for (int i = 0; i < sz[0]; ++i) {
+              accumulate(d[f.idx(i, j, k)]);
+            }
+          }
+        }
+      });
+      f.note_device_write();
+    }
+    FieldChecksum global{};
+    MPI_Allreduce(&sum, &global.sum, 1, MPI_DOUBLE, MPI_SUM, m_ctx.comm);
+    MPI_Allreduce(&sumsq, &global.sumsq, 1, MPI_DOUBLE, MPI_SUM, m_ctx.comm);
+    return global;
+  }
+
   /// Run to `t1`: BCs before every step, writers on `saveat`, checkpoints.
   void run() {
     pfc::sim::SimulationDriver driver(m_session.time(), &m_state);
@@ -182,6 +220,15 @@ public:
         [&](pfc::Time &tm) { apply_bcs(tm); }, [&](pfc::Time &tm) { apply_bcs(tm); },
         [&](const pfc::Time &) { write_results(); });
     m_profile.finalize();
+    const FieldChecksum cs = field_checksum();
+    if (m_ctx.rank0) {
+      std::cout << std::setprecision(17) << "SPECTRAL_CHECKSUM field=" << m_psi_name
+                << " sum=" << cs.sum << " sumsq=" << cs.sumsq
+                << " l2=" << std::sqrt(cs.sumsq) << '\n';
+      std::cout << "SPECTRAL_CHECKSUM_HEX sum=" << std::hexfloat << cs.sum
+                << std::defaultfloat << " sumsq=" << std::hexfloat << cs.sumsq
+                << '\n';
+    }
   }
 
   /// One physics step at the current time without the driver (benchmarks).

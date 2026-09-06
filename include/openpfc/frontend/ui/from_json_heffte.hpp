@@ -72,9 +72,9 @@ inline void apply_heffte_plan_options_json_overrides(const json &j,
 /**
  * @brief One LUMI-G node has 8 GCDs (one MPI rank per GCD).
  *
- * `p2p` / `p2p_plined` HeFFTe reshapes issue many small GPU messages; that
- * path is slower off-node than a single-node 8-GCD run on 768³. Rank counts
- * above this threshold upgrade those algorithms to `alltoall`.
+ * One LUMI-G node is 8 GCDs. Callers may use this threshold when choosing
+ * a reshape. Automatic p2p→alltoall is not applied: on LUMI-G HIP 768³,
+ * alltoall was slower than p2p_plined at 8–32 GCDs.
  */
 inline constexpr int kHeffteAlltoallMinRanks = 9;
 
@@ -82,8 +82,8 @@ inline constexpr int kHeffteAlltoallMinRanks = 9;
  * @brief Upgrade HeFFTe `p2p` / `p2p_plined` to `alltoall` when @p nproc is
  *        at least @ref kHeffteAlltoallMinRanks.
  *
- * `alltoall` and `alltoallv` are left unchanged. @p nproc below the
- * threshold is a no-op so one-node defaults stay as JSON requested.
+ * Opt-in helper. JSON spectral sessions do not call this; campaign TOML
+ * selects the reshape. `alltoall` / `alltoallv` are left unchanged.
  */
 inline void apply_heffte_comm_scale(heffte::plan_options &options, int nproc) {
   if (nproc < kHeffteAlltoallMinRanks) {
