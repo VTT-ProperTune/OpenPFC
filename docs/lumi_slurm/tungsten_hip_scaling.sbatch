@@ -11,8 +11,8 @@
 #SBATCH --time=01:00:00
 #SBATCH --output=/scratch/project_462001519/juaho/logs/%x-%j.out
 #
-# tungsten_hip on LUMI-G: one MPI rank per GCD. First #87 slice (size one
-# GCD, then strong-scale 1/2/4/8 GCDs on one node). I/O off. Submit with
+# tungsten_hip on LUMI-G: one MPI rank per GCD. Size one GCD, strong-scale
+# 1/2/4/8 GCDs on one node, then 16/32 GCDs (2/4 nodes). I/O off. Submit with
 # docs/lumi_slurm/submit_tungsten_hip_scaling.sh so ntasks and gpus-per-node
 # match. Do not use the 0.1.4 / project_462001245 paths in tungsten_gpu.sbatch.
 #
@@ -62,15 +62,17 @@ exec "$@"
 EOF
 chmod +x "${RUNDIR}/select_gpu"
 
-# Full-node 8-GCD map from LUMI-G docs. Partial GCD allocations (dev-g /
-# small-g with 1–4 GPUs) do not own those CPUs; map_cpu:49 then fails.
+# Full-node 8-GCD map from LUMI-G docs, applied per node. Partial GCD
+# allocations (dev-g / small-g with 1–4 GPUs) do not own those CPUs;
+# map_cpu:49 then fails.
+PER_NODE="${SLURM_NTASKS_PER_NODE:-${NTASKS}}"
 SRUN_BIND=()
 CPU_BIND="none"
-if (( NTASKS == 8 )); then
+if (( PER_NODE == 8 )); then
   CPU_BIND="map_cpu:49,57,17,25,1,9,33,41"
   SRUN_BIND=(--cpu-bind="${CPU_BIND}")
-elif (( NTASKS > 8 )); then
-  echo "this slice is one node (max 8 GCDs); ntasks=${NTASKS}" >&2
+elif (( PER_NODE > 8 )); then
+  echo "at most 8 ranks per node (one per GCD); ntasks-per-node=${PER_NODE}" >&2
   exit 1
 fi
 
