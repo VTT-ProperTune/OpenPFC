@@ -80,6 +80,39 @@ namespace pfc::decomposition {
   return best;
 }
 
+/// Off-node FFT: pair with HeFFTe slabs (`use_pencils=false`). One LUMI-G node
+/// is 8 GCDs; brick min-surface grids at 16 ranks (2×2×4) still force a
+/// brick-to-slab reshape every transform.
+inline constexpr int kSpectralSlabMinRanks = 9;
+
+/**
+ * @brief 1D process grid along the first axis that `num_procs` divides.
+ *
+ * Prefers z, then y, then x so a typical r2c direction 0 stays in-plane.
+ * Falls back to @ref min_surface_proc_grid when no axis divides evenly.
+ */
+[[nodiscard]] inline Int3 slab_proc_grid(const Int3 &size, int num_procs) {
+  if (num_procs <= 1) {
+    return Int3{1, 1, 1};
+  }
+  for (int d : {2, 1, 0}) {
+    if (num_procs <= size[d] && size[d] % num_procs == 0) {
+      Int3 g{1, 1, 1};
+      g[d] = num_procs;
+      return g;
+    }
+  }
+  return min_surface_proc_grid(size, num_procs);
+}
+
+/// Brick min-surface on one node; 1D slabs at @ref kSpectralSlabMinRanks and up.
+[[nodiscard]] inline Int3 spectral_fft_proc_grid(const Int3 &size, int num_procs) {
+  if (num_procs >= kSpectralSlabMinRanks) {
+    return slab_proc_grid(size, num_procs);
+  }
+  return min_surface_proc_grid(size, num_procs);
+}
+
 /// Regular Cartesian split of an inclusive box; ranks are x-fastest.
 [[nodiscard]] inline std::vector<Box3i> split_box(const Box3i &world,
                                                   const Int3 &grid) {

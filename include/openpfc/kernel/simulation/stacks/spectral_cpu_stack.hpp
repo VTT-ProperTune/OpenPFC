@@ -41,6 +41,7 @@
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
+#include <openpfc/kernel/decomposition/brick_split.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
@@ -77,7 +78,8 @@ public:
   explicit SpectralCPUStack(pfc::Domain domain, int rank, int nproc, MPI_Comm comm,
                             const heffte::plan_options &options)
       : m_geometry({domain.size, domain.spacing, domain.origin, domain.periodic}),
-        m_decomp(pfc::decomposition::create(domain, nproc)),
+        m_decomp(pfc::decomposition::create(
+            domain, pfc::decomposition::spectral_fft_proc_grid(domain.size, nproc))),
         m_fft(pfc::fft::create(pfc::fft::layout::create(m_decomp, 0), rank, options,
                                comm)),
         m_u(pfc::data::field_from_inbox<double>(domain, m_fft.get_inbox_bounds())),
