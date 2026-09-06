@@ -9,6 +9,15 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- `heat3d_fd_hip`: 3D heat-equation FD on HIP (`FDGPUStack`, device halo,
+  `for_each_interior_device`). Same CLI as `heat3d_fd`; `HEAT3D_PROFILE_JSON`
+  writes schema-v4 `wall_step` frames. LUMI submit helpers:
+  `docs/lumi_slurm/submit_heat3d_fd_hip_scaling.sh`.
+- HeFFTe `p2p` / `p2p_plined` plan options upgrade to `alltoall` when the
+  MPI size is 9 or more (`apply_heffte_comm_scale`, used by CPU/CUDA/HIP
+  spectral JSON sessions). LUMI `tungsten_hip` campaign TOML now requests
+  `alltoall` so off-node 16/24/32 GCD jobs do not keep the one-node p2p path.
+
 - LUMI `tungsten_hip` 768³ 16/32 GCD points (`#87`): 222 ms (24%
   efficiency) and 103 ms (26%). 16 GCDs is slower than 8 GCDs on this
   grid. Submit helper: `multinode` mode.

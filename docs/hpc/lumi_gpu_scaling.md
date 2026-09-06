@@ -34,9 +34,9 @@ Keep these comparisons separate, as `#87` states:
 
 | Comparison | Status in this slice |
 |------------|----------------------|
-| Same PDE, spectral vs finite difference (Heat3D HIP twins) | Not started. Needs HIP drivers that do not exist yet. |
+| Same PDE, spectral vs finite difference (Heat3D HIP twins) | FD HIP driver `heat3d_fd_hip` exists; Heat3D *spectral* HIP and a published science figure are still later. |
 | Production FD envelope (`kobayashi_fd_hip`, 2D) | Later `#87` slice. Different PDE; report cells/s, not “FD is faster”. |
-| Multi-node (>8 GCD) and LUMI-C CPU control | After the one-node GPU curve. |
+| Multi-node (>8 GCD) and LUMI-C CPU control | Multi-node GPU jobs are in the submit helper (16/24/32 GCD). LUMI-C CPU control is still later. |
 | Float GPU path | `#11`, not this campaign. Precision is double. |
 
 ## How to run (LUMI login node)
@@ -60,8 +60,15 @@ export TUNGSTEN_HIP_BIN=/flash/project_462001519/juaho/build/<tree>/apps/tungste
 # 2. After picking Lx (wall_step busy, memory fits), strong-scale 1/2/4/8 GCDs.
 TUNGSTEN_LX=768 ./docs/lumi_slurm/submit_tungsten_hip_scaling.sh strong
 
-# 3. Same grid, 2 and 4 nodes (16 and 32 GCDs).
+# 3. Same grid, 2/3/4 nodes (16/24/32 GCDs). HeFFTe reshape is alltoall
+#    (JSON plus an automatic p2p → alltoall upgrade when ranks > 8).
 TUNGSTEN_LX=768 PARTITION=standard-g ./docs/lumi_slurm/submit_tungsten_hip_scaling.sh multinode
+
+# 4. 3D FD HIP twin (device halo + stencil), same node counts.
+export HEAT3D_HIP_BIN=/flash/project_462001519/juaho/build/<tree>/apps/heat3d/heat3d_fd_hip
+./docs/lumi_slurm/submit_heat3d_fd_hip_scaling.sh size
+HEAT3D_N=256 PARTITION=standard-g ./docs/lumi_slurm/submit_heat3d_fd_hip_scaling.sh strong
+HEAT3D_N=256 PARTITION=standard-g ./docs/lumi_slurm/submit_heat3d_fd_hip_scaling.sh multinode
 ```
 
 `PARTITION` defaults to `small-g`. Use `dev-g` for bring-up. `standard-g` is
@@ -123,8 +130,16 @@ Limits for this 768³ problem:
   recovers wall time (103 ms) but efficiency stays ~25%. Going to 64 GCDs
   on this grid is not useful until the communication path is understood.
 
-`submit_tungsten_hip_scaling.sh multinode` launches the 16/32 GCD jobs on
-`standard-g` (8 ranks per node, same CPU map per node).
+`submit_tungsten_hip_scaling.sh multinode` launches 16/24/32 GCD jobs on
+`standard-g` (8 ranks per node, same CPU map per node). 24 GCDs (3 nodes)
+is not a power of two; if HeFFTe refuses that decomposition, use the 32 GCD
+point. Campaign TOML `reshape_algorithm` is `alltoall`. Spectral JSON
+sessions also upgrade `p2p` / `p2p_plined` to `alltoall` when `nproc >= 9`
+(`pfc::ui::apply_heffte_comm_scale`).
+
+3D FD HIP (`heat3d_fd_hip`) uses the same node counts and CPU map via
+`submit_heat3d_fd_hip_scaling.sh`. Metric is still median `wall_step` with
+I/O off. Compare `HEAT3D_HIP_CHECKSUM` (or HEX) at 1 GCD vs 16 GCD.
 
 This timing curve does not include a 1-GCD vs N-GCD field checksum. That
 check is still required before treating a point as a `#87` science result.

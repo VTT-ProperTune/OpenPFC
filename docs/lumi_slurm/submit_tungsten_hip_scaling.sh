@@ -30,6 +30,7 @@ fi
 MODE="${1:-}"
 if [[ "${MODE}" != "size" && "${MODE}" != "strong" && "${MODE}" != "multinode" ]]; then
   echo "usage: $0 size|strong|multinode" >&2
+  echo "  multinode: 16 (2 nodes), 24 (3 nodes), and 32 (4 nodes) GCDs" >&2
   exit 1
 fi
 
@@ -79,8 +80,9 @@ case "${MODE}" in
     ;;
   multinode)
     LX="${TUNGSTEN_LX:-768}"
-    echo "Strong scaling ${LX}³ on 16/32 GCDs (2/4 nodes, 8 GCD/node, I/O off, ${STEPS} steps, partition=${PARTITION})"
+    echo "Strong scaling ${LX}³ on 16/24/32 GCDs (2/3/4 nodes, 8 GCD/node, I/O off, ${STEPS} steps, partition=${PARTITION})"
     submit_one 2 8 "${LX}" "thip-strong-16gcd-lx${LX}"
+    submit_one 3 8 "${LX}" "thip-strong-24gcd-lx${LX}"
     submit_one 4 8 "${LX}" "thip-strong-32gcd-lx${LX}"
     ;;
 esac

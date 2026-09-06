@@ -18,10 +18,21 @@ Issue `#87` first slice: size `tungsten_hip` on one GCD, then strong-scale
 export TUNGSTEN_HIP_BIN=/path/to/tungsten_hip   # 0.2 HIP build
 ./docs/lumi_slurm/submit_tungsten_hip_scaling.sh size
 TUNGSTEN_LX=512 ./docs/lumi_slurm/submit_tungsten_hip_scaling.sh strong
+PARTITION=standard-g TUNGSTEN_LX=768 ./docs/lumi_slurm/submit_tungsten_hip_scaling.sh multinode
+```
+
+3D FD HIP twin (`heat3d_fd_hip`, device halo + stencil):
+
+```bash
+export HEAT3D_HIP_BIN=/path/to/heat3d_fd_hip
+./docs/lumi_slurm/submit_heat3d_fd_hip_scaling.sh size
+HEAT3D_N=256 ./docs/lumi_slurm/submit_heat3d_fd_hip_scaling.sh strong
+PARTITION=standard-g HEAT3D_N=256 ./docs/lumi_slurm/submit_heat3d_fd_hip_scaling.sh multinode
 ```
 
 Files: `tungsten_hip_scaling.sbatch`, `tungsten_hip_scaling.toml`,
-`submit_tungsten_hip_scaling.sh`. Account `project_462001519`. Do not point
+`submit_tungsten_hip_scaling.sh`, `heat3d_fd_hip_scaling.sbatch`,
+`submit_heat3d_fd_hip_scaling.sh`. Account `project_462001519`. Do not point
 these jobs at the 0.1.4 binaries or `project_462001245` scratch used below.
 
 ## Layout (legacy 1024³ helpers)
