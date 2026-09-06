@@ -81,67 +81,54 @@ TEST_CASE("hip_spectral_plan_options_from_json overlays plan_options",
   REQUIRE(opts.use_pencils == true);
 }
 
-TEST_CASE("hip_spectral_plan_options_from_json keeps JSON reshape at 16 ranks",
+TEST_CASE("hip_spectral_plan_options_from_json uses slabs off-node",
           "[ui][heffte][spectral_gpu][comm_scale]") {
-  const json settings = {
-      {"plan_options", {{"reshape_algorithm", "p2p_plined"}}}};
+  const json settings = {{"plan_options",
+                          {{"reshape_algorithm", "p2p_plined"},
+                           {"use_pencils", true}}}};
+  const auto one_node =
+      pfc::ui::hip_spectral_plan_options_from_json(settings, 8);
   const auto two_nodes =
       pfc::ui::hip_spectral_plan_options_from_json(settings, 16);
   using AlgorithmType = std::underlying_type_t<heffte::reshape_algorithm>;
+  REQUIRE(one_node.use_pencils == true);
+  REQUIRE(two_nodes.use_pencils == false);
   REQUIRE(static_cast<AlgorithmType>(two_nodes.algorithm) ==
           static_cast<AlgorithmType>(heffte::reshape_algorithm::p2p_plined));
 }
 #endif
 
-TEST_CASE("apply_heffte_comm_scale keeps p2p_plined on one LUMI-G node",
+TEST_CASE("apply_heffte_comm_scale keeps pencils on one LUMI-G node",
           "[ui][heffte][comm_scale]") {
   heffte::plan_options opts = heffte::default_options<heffte::backend::fftw>();
+  opts.use_pencils = true;
   opts.algorithm = heffte::reshape_algorithm::p2p_plined;
   pfc::ui::apply_heffte_comm_scale(opts, 8);
+  REQUIRE(opts.use_pencils == true);
   using AlgorithmType = std::underlying_type_t<heffte::reshape_algorithm>;
   REQUIRE(static_cast<AlgorithmType>(opts.algorithm) ==
           static_cast<AlgorithmType>(heffte::reshape_algorithm::p2p_plined));
 }
 
-TEST_CASE("apply_heffte_comm_scale upgrades p2p and p2p_plined above 8 ranks",
+TEST_CASE("apply_heffte_comm_scale switches to slabs above 8 ranks",
           "[ui][heffte][comm_scale]") {
+  heffte::plan_options opts = heffte::default_options<heffte::backend::fftw>();
+  opts.use_pencils = true;
+  opts.algorithm = heffte::reshape_algorithm::p2p_plined;
+  pfc::ui::apply_heffte_comm_scale(opts, 16);
+  REQUIRE(opts.use_pencils == false);
   using AlgorithmType = std::underlying_type_t<heffte::reshape_algorithm>;
-  heffte::plan_options p2p = heffte::default_options<heffte::backend::fftw>();
-  p2p.algorithm = heffte::reshape_algorithm::p2p;
-  pfc::ui::apply_heffte_comm_scale(p2p, 16);
-  REQUIRE(static_cast<AlgorithmType>(p2p.algorithm) ==
-          static_cast<AlgorithmType>(heffte::reshape_algorithm::alltoall));
-
-  heffte::plan_options plined = heffte::default_options<heffte::backend::fftw>();
-  plined.algorithm = heffte::reshape_algorithm::p2p_plined;
-  pfc::ui::apply_heffte_comm_scale(plined, 9);
-  REQUIRE(static_cast<AlgorithmType>(plined.algorithm) ==
-          static_cast<AlgorithmType>(heffte::reshape_algorithm::alltoall));
+  REQUIRE(static_cast<AlgorithmType>(opts.algorithm) ==
+          static_cast<AlgorithmType>(heffte::reshape_algorithm::p2p_plined));
 }
 
-TEST_CASE("apply_heffte_comm_scale leaves alltoall and alltoallv alone",
-          "[ui][heffte][comm_scale]") {
-  using AlgorithmType = std::underlying_type_t<heffte::reshape_algorithm>;
-  heffte::plan_options a2a = heffte::default_options<heffte::backend::fftw>();
-  a2a.algorithm = heffte::reshape_algorithm::alltoall;
-  pfc::ui::apply_heffte_comm_scale(a2a, 32);
-  REQUIRE(static_cast<AlgorithmType>(a2a.algorithm) ==
-          static_cast<AlgorithmType>(heffte::reshape_algorithm::alltoall));
-
-  heffte::plan_options a2av = heffte::default_options<heffte::backend::fftw>();
-  a2av.algorithm = heffte::reshape_algorithm::alltoallv;
-  pfc::ui::apply_heffte_comm_scale(a2av, 16);
-  REQUIRE(static_cast<AlgorithmType>(a2av.algorithm) ==
-          static_cast<AlgorithmType>(heffte::reshape_algorithm::alltoallv));
-}
-
-TEST_CASE("cpu_spectral_plan_options_from_json keeps JSON reshape at 16 ranks",
+TEST_CASE("cpu_spectral_plan_options_from_json uses slabs at 16 ranks",
           "[ui][heffte][spectral_cpu][comm_scale]") {
   const json settings = {
-      {"plan_options", {{"reshape_algorithm", "p2p_plined"}}}};
+      {"plan_options", {{"use_pencils", true}, {"reshape_algorithm", "p2p_plined"}}}};
+  const auto eight = pfc::ui::cpu_spectral_plan_options_from_json(settings, 8);
   const auto sixteen =
       pfc::ui::cpu_spectral_plan_options_from_json(settings, 16);
-  using AlgorithmType = std::underlying_type_t<heffte::reshape_algorithm>;
-  REQUIRE(static_cast<AlgorithmType>(sixteen.algorithm) ==
-          static_cast<AlgorithmType>(heffte::reshape_algorithm::p2p_plined));
+  REQUIRE(eight.use_pencils == true);
+  REQUIRE(sixteen.use_pencils == false);
 }
