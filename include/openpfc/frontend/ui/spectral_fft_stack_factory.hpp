@@ -97,13 +97,16 @@ inline void reject_cuda_backend_for_cpu_spectral_stack(const nlohmann::json &pla
  * (`fft::create` → `CPUFFT`).
  */
 [[nodiscard]] inline heffte::plan_options
-cpu_spectral_plan_options_from_json(const nlohmann::json &settings) {
+cpu_spectral_plan_options_from_json(const nlohmann::json &settings,
+                                    int nproc = 1) {
   const nlohmann::json plan_opts = merged_spectral_plan_options_json(settings);
-  if (plan_opts.empty()) {
-    return heffte::default_options<heffte::backend::fftw>();
+  heffte::plan_options options = heffte::default_options<heffte::backend::fftw>();
+  if (!plan_opts.empty()) {
+    detail::reject_cuda_backend_for_cpu_spectral_stack(plan_opts);
+    options = ui::from_json<heffte::plan_options>(plan_opts);
   }
-  detail::reject_cuda_backend_for_cpu_spectral_stack(plan_opts);
-  return ui::from_json<heffte::plan_options>(plan_opts);
+  apply_heffte_comm_scale(options, nproc);
+  return options;
 }
 
 /**
@@ -129,13 +132,14 @@ cpu_fft_from_json_and_decomposition(const nlohmann::json &settings,
  * `make_simulation_session<GPUSpectralStack<CUDASpace>>` and GPU ETD sessions.
  */
 [[nodiscard]] inline heffte::plan_options
-cuda_spectral_plan_options_from_json(const nlohmann::json &settings) {
+cuda_spectral_plan_options_from_json(const nlohmann::json &settings,
+                                     int nproc = 1) {
   const nlohmann::json merged = merged_spectral_plan_options_json(settings);
-  if (merged.empty()) {
-    return heffte::default_options<heffte::backend::cufft>();
-  }
   heffte::plan_options options = heffte::default_options<heffte::backend::cufft>();
-  detail::apply_heffte_plan_options_json_overrides(merged, options);
+  if (!merged.empty()) {
+    detail::apply_heffte_plan_options_json_overrides(merged, options);
+  }
+  apply_heffte_comm_scale(options, nproc);
   return options;
 }
 
@@ -150,13 +154,14 @@ cuda_spectral_plan_options_from_json(const nlohmann::json &settings) {
  * `heffte::backend::rocfft` defaults.
  */
 [[nodiscard]] inline heffte::plan_options
-hip_spectral_plan_options_from_json(const nlohmann::json &settings) {
+hip_spectral_plan_options_from_json(const nlohmann::json &settings,
+                                    int nproc = 1) {
   const nlohmann::json merged = merged_spectral_plan_options_json(settings);
-  if (merged.empty()) {
-    return heffte::default_options<heffte::backend::rocfft>();
-  }
   heffte::plan_options options = heffte::default_options<heffte::backend::rocfft>();
-  detail::apply_heffte_plan_options_json_overrides(merged, options);
+  if (!merged.empty()) {
+    detail::apply_heffte_plan_options_json_overrides(merged, options);
+  }
+  apply_heffte_comm_scale(options, nproc);
   return options;
 }
 
@@ -172,21 +177,24 @@ hip_spectral_plan_options_from_json(const nlohmann::json &settings) {
  */
 template <class MemorySpace>
 [[nodiscard]] heffte::plan_options
-gpu_spectral_plan_options_from_json(const nlohmann::json &settings);
+gpu_spectral_plan_options_from_json(const nlohmann::json &settings,
+                                    int nproc = 1);
 
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
 template <>
 [[nodiscard]] inline heffte::plan_options
-gpu_spectral_plan_options_from_json<pfc::CUDASpace>(const nlohmann::json &settings) {
-  return cuda_spectral_plan_options_from_json(settings);
+gpu_spectral_plan_options_from_json<pfc::CUDASpace>(const nlohmann::json &settings,
+                                                    int nproc) {
+  return cuda_spectral_plan_options_from_json(settings, nproc);
 }
 #endif
 
 #if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
 template <>
 [[nodiscard]] inline heffte::plan_options
-gpu_spectral_plan_options_from_json<pfc::HIPSpace>(const nlohmann::json &settings) {
-  return hip_spectral_plan_options_from_json(settings);
+gpu_spectral_plan_options_from_json<pfc::HIPSpace>(const nlohmann::json &settings,
+                                                   int nproc) {
+  return hip_spectral_plan_options_from_json(settings, nproc);
 }
 #endif
 

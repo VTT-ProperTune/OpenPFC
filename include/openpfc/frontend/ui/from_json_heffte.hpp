@@ -70,6 +70,35 @@ inline void apply_heffte_plan_options_json_overrides(const json &j,
 } // namespace detail
 
 /**
+ * @brief One LUMI-G node has 8 GCDs (one MPI rank per GCD).
+ *
+ * `p2p` / `p2p_plined` HeFFTe reshapes issue many small GPU messages; that
+ * path is slower off-node than a single-node 8-GCD run on 768³. Rank counts
+ * above this threshold upgrade those algorithms to `alltoall`.
+ */
+inline constexpr int kHeffteAlltoallMinRanks = 9;
+
+/**
+ * @brief Upgrade HeFFTe `p2p` / `p2p_plined` to `alltoall` when @p nproc is
+ *        at least @ref kHeffteAlltoallMinRanks.
+ *
+ * `alltoall` and `alltoallv` are left unchanged. @p nproc below the
+ * threshold is a no-op so one-node defaults stay as JSON requested.
+ */
+inline void apply_heffte_comm_scale(heffte::plan_options &options, int nproc) {
+  if (nproc < kHeffteAlltoallMinRanks) {
+    return;
+  }
+  if (options.algorithm == heffte::reshape_algorithm::p2p ||
+      options.algorithm == heffte::reshape_algorithm::p2p_plined) {
+    pfc::log_debug(from_json_debug_logger(),
+                   "HeFFTe reshape p2p/p2p_plined upgraded to alltoall "
+                   "(nproc exceeds one LUMI-G node)");
+    options.algorithm = heffte::reshape_algorithm::alltoall;
+  }
+}
+
+/**
  * @brief Converts a JSON object to heffte::plan_options.
  *
  * This function parses the provided JSON object and constructs a
