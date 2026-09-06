@@ -67,12 +67,9 @@ void check_elem_launch(const char *op) {
     throw std::runtime_error(std::string(kElemGpuKind) + " " + op +
                              " kernel failed: " + ::pfc::gpuGetErrorString(err));
   }
-  err = ::pfc::gpuDeviceSynchronize();
-  if (err != ::pfc::gpuSuccess) {
-    throw std::runtime_error(
-        std::string(kElemGpuKind) + " " + op +
-        " kernel sync failed: " + ::pfc::gpuGetErrorString(err));
-  }
+  // Do not gpuDeviceSynchronize here: SpectralETD queues multiply/combine
+  // immediately before a HeFFTe transform on the default stream. A full-device
+  // wait between them prevents overlapping those kernels with the FFT reshape.
 }
 
 int elem_blocks(std::size_t n) {
