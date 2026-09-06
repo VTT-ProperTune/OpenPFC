@@ -27,6 +27,7 @@
 
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/decomposition/brick_split.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/runtime/gpu/memory_space_gpu.hpp>
@@ -82,7 +83,9 @@ public:
                             const heffte::plan_options &options)
       : m_domain(std::move(domain)), m_decomp([&] {
           pfc::runtime::gpu::bind_local_device(comm);
-          return pfc::decomposition::create(m_domain, nproc);
+          return pfc::decomposition::create(
+              m_domain, pfc::decomposition::spectral_fft_proc_grid(
+                            m_domain.size, nproc));
         }()),
         m_fft(gpu_fft_for<MemorySpace>::create(m_decomp, rank, comm, options)),
         m_u(m_domain, m_fft.get_inbox_bounds(), 0), m_rank(rank), m_nproc(nproc),

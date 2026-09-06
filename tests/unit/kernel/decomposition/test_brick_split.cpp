@@ -13,6 +13,8 @@
 
 using namespace pfc;
 using pfc::decomposition::min_surface_proc_grid;
+using pfc::decomposition::slab_proc_grid;
+using pfc::decomposition::spectral_fft_proc_grid;
 using pfc::decomposition::split_box;
 
 namespace {
@@ -106,4 +108,22 @@ TEST_CASE("split_box is x-fastest for an explicit 2x2x1 grid",
   REQUIRE(boxes[0].low[0] == 0);
   REQUIRE(boxes[1].low[0] > boxes[0].low[0]);
   REQUIRE(boxes[2].low[1] > boxes[0].low[1]);
+}
+
+TEST_CASE("slab_proc_grid is 1D along a divisible axis", "[brick_split][unit]") {
+  const Int3 cube{768, 768, 768};
+  REQUIRE(slab_proc_grid(cube, 1) == Int3{1, 1, 1});
+  REQUIRE(slab_proc_grid(cube, 8) == Int3{1, 1, 8});
+  REQUIRE(slab_proc_grid(cube, 16) == Int3{1, 1, 16});
+  REQUIRE(slab_proc_grid(cube, 24) == Int3{1, 1, 24});
+  REQUIRE(slab_proc_grid(cube, 32) == Int3{1, 1, 32});
+  const Int3 xy{16, 8, 7};
+  REQUIRE(slab_proc_grid(xy, 8) == Int3{1, 8, 1});
+}
+
+TEST_CASE("spectral_fft_proc_grid keeps bricks on one node",
+          "[brick_split][unit]") {
+  const Int3 cube{768, 768, 768};
+  REQUIRE(spectral_fft_proc_grid(cube, 8) == min_surface_proc_grid(cube, 8));
+  REQUIRE(spectral_fft_proc_grid(cube, 16) == Int3{1, 1, 16});
 }
