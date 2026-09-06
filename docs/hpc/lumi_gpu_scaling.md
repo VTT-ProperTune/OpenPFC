@@ -97,15 +97,17 @@ one per GCD).
 
 256³ is still launch-noise class. 768³ is the strong-scaling grid.
 
-| GCDs | Partition | Job | Median `wall_step` | Speedup | Efficiency |
-|------|-----------|-----|--------------------|---------|------------|
-| 1 | `dev-g` | 21759720 | 847 ms | 1.00 | 100% |
-| 2 | `dev-g` | 21759944 | 455 ms | 1.86 | 93% |
-| 4 | `dev-g` | 21759945 | 315 ms | 2.69 | 67% |
-| 8 | `standard-g` | 21759946 | 215 ms | 3.94 | 49% |
+| GCDs | Nodes | Partition | Job | Median `wall_step` | Speedup | Efficiency |
+|------|-------|-----------|-----|--------------------|---------|------------|
+| 1 | 1 | `dev-g` | 21759720 | 847 ms | 1.00 | 100% |
+| 2 | 1 | `dev-g` | 21759944 | 455 ms | 1.86 | 93% |
+| 4 | 1 | `dev-g` | 21759945 | 315 ms | 2.69 | 67% |
+| 8 | 1 | `standard-g` | 21759946 | 215 ms | 3.94 | 49% |
+| 16 | 2 | `standard-g` | 21760377 | 222 ms | 3.82 | 24% |
+| 32 | 4 | `standard-g` | 21760378 | 103 ms | 8.19 | 26% |
 
 Schema-v4 summaries: `tests/baselines/perf/lumi-dev-g-tungsten-hip-{1,2,4}gcd-release-768.json` and
-`lumi-standard-g-tungsten-hip-8gcd-release-768.json`. Compare with
+`lumi-standard-g-tungsten-hip-{8,16,32}gcd-release-768.json`. Compare with
 `--warmup-frames=1`. Use median `wall_step`: the 4-GCD run had one
 collective stall (step 3 ≈ 11.4 s on every rank), so the mean is not a
 steady-state number.
@@ -114,9 +116,15 @@ HIP `fft` region timers after step 1 are under-counted on the 1-GCD path
 (sub-millisecond) and should not be used to explain the curve. `wall_step` is
 the metric.
 
-One-node limit for this 768³ problem: parallel efficiency crosses 50% at 8
-GCDs. Multi-node (16/32 GCD) uses `submit_tungsten_hip_scaling.sh multinode`
-on `standard-g` (8 ranks per node, same CPU map per node).
+Limits for this 768³ problem:
+
+- One node: efficiency crosses 50% at 8 GCDs.
+- Off node: 16 GCDs is slower than 8 GCDs (222 ms vs 215 ms). 32 GCDs
+  recovers wall time (103 ms) but efficiency stays ~25%. Going to 64 GCDs
+  on this grid is not useful until the communication path is understood.
+
+`submit_tungsten_hip_scaling.sh multinode` launches the 16/32 GCD jobs on
+`standard-g` (8 ranks per node, same CPU map per node).
 
 This timing curve does not include a 1-GCD vs N-GCD field checksum. That
 check is still required before treating a point as a `#87` science result.
@@ -148,10 +156,11 @@ check is not a valid `#87` result.
 
 ## After this slice
 
-1. Multi-node (16, 32, … GCDs) on 768³ until efficiency or memory stops.
-2. 1-GCD vs N-GCD field checksum / L2 on the same grid and step count.
-3. FD envelope (`kobayashi_fd_hip`) and, when HIP twins exist, the Heat3D
+1. 1-GCD vs N-GCD field checksum / L2 on the same grid and step count.
+2. FD envelope (`kobayashi_fd_hip`) and, when HIP twins exist, the Heat3D
    same-PDE comparison.
+3. A larger spectral grid if the goal is to push past one node with
+   acceptable efficiency (768³ saturates at 8 GCDs).
 
 ## See also
 
