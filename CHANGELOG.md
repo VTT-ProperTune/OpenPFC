@@ -9,6 +9,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- Tungsten optional `G_grid` / `V_grid` / `x_initial` thermal drive (`#34`).
+  Omitting the keys keeps the isothermal CPU goldens; CPU/CUDA/HIP share
+  `TungstenPointwise`.
 - `FileResultsWriter` expands `$NAME` / `${NAME}` in result filename patterns
   at writer setup, then applies the existing increment template (`#65`).
   Unset, empty, or stray `$` fail closed.

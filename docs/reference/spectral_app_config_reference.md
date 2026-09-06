@@ -47,6 +47,16 @@ Object key `"plan_options"` (JSON) or `[plan_options]` (TOML). Passed to HeFFTe 
 
 Validation is **model-dependent** (see [`parameter_validation.md`](../user_guide/parameter_validation.md)).
 
+Tungsten (`apps/tungsten`) accepts optional thermal-drive keys on `model.params`. Omitting them is the isothermal 0.2.0 case (CPU goldens unchanged):
+
+| Key | Type | Meaning |
+|-----|------|---------|
+| `G_grid` | number | Thermal gradient along x. Default `0` (no T_var). |
+| `V_grid` | number | Frame velocity in `T_var(x,t) = G (x' - x_initial - V t)`. Default `0`. |
+| `x_initial` | number | Initial front position used to unwrap x. Default `0`. |
+
+The linear ETD symbol still uses the JSON reference `T`. Only the real-space mean-field cubic (`q3`) sees the local temperature. CPU, CUDA, and HIP share `TungstenPointwise`. See [`apps/tungsten/README.md`](../../apps/tungsten/README.md).
+
 ## Result writers
 
 When `saveat > 0` and `fields` is present, `parse_result_writers_from_json` constructs a catalog writer per entry (default `"binary"` → `BinaryWriter`):

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #ifndef TUNGSTEN_PARAMS_HPP
@@ -55,6 +55,10 @@ private:
   double m_q30 = -12.4567;   ///< Vapor-model coefficient q30
   double m_q31 = 20.0;       ///< Vapor-model coefficient q31
   double m_q40 = 45.0;       ///< Vapor-model coefficient q40
+  double m_G_grid = 0.0;     ///< Thermal gradient along x (0 = isothermal)
+  double m_V_grid = 0.0;     ///< Frame velocity used in T_var(x, t)
+  double m_x_initial = 0.0;  ///< Initial solidification-front position
+  double m_xpos = 0.0;       ///< Current front position (starts as x_initial)
 
 public:
   /**
@@ -198,6 +202,33 @@ public:
    */
   void set_q40(double q40) { m_q40 = q40; }
 
+  /**
+   * @brief Set thermal gradient along x (JSON `G_grid`)
+   * @param G_grid Gradient; 0 disables the thermal drive
+   */
+  void set_G_grid(double G_grid) { m_G_grid = G_grid; }
+
+  /**
+   * @brief Set moving-frame velocity used in T_var (JSON `V_grid`)
+   * @param V_grid Frame velocity
+   */
+  void set_V_grid(double V_grid) { m_V_grid = V_grid; }
+
+  /**
+   * @brief Set initial front position (JSON `x_initial`)
+   * @param x_initial Front coordinate; also resets the current front
+   */
+  void set_x_initial(double x_initial) {
+    m_x_initial = x_initial;
+    m_xpos = x_initial;
+  }
+
+  /**
+   * @brief Set current front position used to unwrap T_var
+   * @param xpos Front coordinate
+   */
+  void set_xpos(double xpos) { m_xpos = xpos; }
+
   // ============================================================================
   // Getters for base parameters
   // ============================================================================
@@ -327,6 +358,11 @@ public:
    * @return Coefficient value
    */
   double get_q40() const { return m_q40; }
+
+  double get_G_grid() const { return m_G_grid; }
+  double get_V_grid() const { return m_V_grid; }
+  double get_x_initial() const { return m_x_initial; }
+  double get_xpos() const { return m_xpos; }
 
   // ============================================================================
   // Getters for derived parameters (calculated on-the-fly)
