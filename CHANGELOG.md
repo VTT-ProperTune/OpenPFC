@@ -9,6 +9,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- JSON/TOML `saveat <= 0` is accepted and disables periodic saves, matching
+  `Time` and the spectral config reference. Negative sentinels such as
+  `saveat = -1` in LUMI I/O-off inputs no longer fail at parse.
 - Tungsten optional `G_grid` / `V_grid` / `x_initial` thermal drive (`#34`).
   Omitting the keys keeps the isothermal CPU goldens; CPU/CUDA/HIP share
   `TungstenPointwise`.
@@ -20,6 +23,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Fixed
 
+- LUMI `tungsten_hip` scaling sbatch applies the 8-GCD `map_cpu` bind only
+  for 8-rank jobs. Prefixing that map on a 1-GCD `dev-g` allocation made
+  `srun` fail (`CPU binding outside of job step allocation`).
 - Docs `uv.lock` urllib3 2.7.0 and idna 3.19 (GHSA-qccp-gfcp-xxvc,
   GHSA-mf9v-mfxr-j63j, GHSA-65pc-fj4g-8rjx).
 - CUDA Field residency compile-check is an OBJECT library, not a Catch2 TU.

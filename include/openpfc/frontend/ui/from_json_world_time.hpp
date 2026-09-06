@@ -240,11 +240,8 @@ template <> [[nodiscard]] inline Time from_json<Time>(const json &j) {
         "saveat", "snapshot output interval", "finite float",
         get_json_value_string(j, "saveat"), {}, "\"saveat\": 1.0"));
   }
-  if (saveat <= 0.0) {
-    throw std::invalid_argument(format_config_error(
-        "saveat", "snapshot output interval", "positive float",
-        get_json_value_string(j, "saveat"), {}, "\"saveat\": 1.0"));
-  }
+  // `saveat <= 0` disables periodic saves (`Time::do_save`); I/O-off
+  // campaign inputs use -1. Positive values must still be finite.
 
   // Parse integrator method (optional, defaults to Euler).
   pfc::sim::steppers::RKIntegratorMethod method =

@@ -410,18 +410,20 @@ TEST_CASE("[world][positivity] from_json_world_with_nested_domain_accepts_valid_
   REQUIRE_NOTHROW(from_json<Domain>(j));
 }
 
-TEST_CASE("[time][positivity] from_json_time_rejects_zero_saveat") {
+TEST_CASE("[time][positivity] from_json_time_accepts_zero_saveat_to_disable_saves") {
   json j = {
       {"timestepping", {{"t0", 0.0}, {"t1", 10.0}, {"dt", 0.1}, {"saveat", 0.0}}}};
 
-  REQUIRE_THROWS_AS(from_json<Time>(j), std::invalid_argument);
+  const Time time = from_json<Time>(j);
+  REQUIRE(time.get_saveat() == 0.0);
 }
 
-TEST_CASE("[time][positivity] from_json_time_rejects_negative_saveat") {
+TEST_CASE("[time][positivity] from_json_time_accepts_negative_saveat_to_disable_saves") {
   json j = {
       {"timestepping", {{"t0", 0.0}, {"t1", 10.0}, {"dt", 0.1}, {"saveat", -1.0}}}};
 
-  REQUIRE_THROWS_AS(from_json<Time>(j), std::invalid_argument);
+  const Time time = from_json<Time>(j);
+  REQUIRE(time.get_saveat() == -1.0);
 }
 
 TEST_CASE("[time][positivity] from_json_time_accepts_valid_positive_saveat") {
@@ -432,8 +434,7 @@ TEST_CASE("[time][positivity] from_json_time_accepts_valid_positive_saveat") {
 }
 
 TEST_CASE("[time][positivity] from_json_time_error_message_names_saveat") {
-  json j = {
-      {"timestepping", {{"t0", 0.0}, {"t1", 10.0}, {"dt", 0.1}, {"saveat", 0.0}}}};
+  json j = {{"timestepping", {{"t0", 0.0}, {"t1", 10.0}, {"dt", 0.1}}}};
 
   try {
     (void)from_json<Time>(j);
@@ -441,7 +442,6 @@ TEST_CASE("[time][positivity] from_json_time_error_message_names_saveat") {
   } catch (const std::invalid_argument &e) {
     std::string msg = e.what();
     REQUIRE(msg.find("saveat") != std::string::npos);
-    REQUIRE(msg.find("snapshot output interval") != std::string::npos);
   }
 }
 
@@ -480,14 +480,15 @@ TEST_CASE("[time][positivity] from_json_time_error_message_names_t1_interval") {
   }
 }
 
-TEST_CASE("[time][positivity] from_json_time_with_flat_structure_rejects_non_positive_saveat") {
+TEST_CASE("[time][positivity] from_json_time_with_flat_structure_accepts_non_positive_saveat") {
   json j = {
       {"t0", 0.0},
       {"t1", 10.0},
       {"dt", 0.1},
       {"saveat", -0.5}};
 
-  REQUIRE_THROWS_AS(from_json<Time>(j), std::invalid_argument);
+  const Time time = from_json<Time>(j);
+  REQUIRE(time.get_saveat() == -0.5);
 }
 
 TEST_CASE("[time][positivity] from_json_time_with_flat_structure_rejects_t1_less_than_t0") {
