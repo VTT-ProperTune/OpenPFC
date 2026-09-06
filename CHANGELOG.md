@@ -13,9 +13,33 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   `for_each_interior_device`). Same CLI as `heat3d_fd`; `HEAT3D_PROFILE_JSON`
   writes schema-v4 `wall_step` frames. LUMI submit helpers:
   `docs/lumi_slurm/submit_heat3d_fd_hip_scaling.sh`.
-- Spectral stacks use a 1D slab process grid at `nproc >= 9`
-  (`slab_proc_grid`) so HeFFTe slab mode does not reshape 2×2×4 bricks
-  every transform. `apply_heffte_comm_scale` still disables pencils off-node.
+- `heat3d_spectral_hip`: HIP twin of `heat3d_spectral` (implicit Euler,
+  2 FFTs/step on `HIPSpectralStack`). Same CLI as the CPU spectral driver;
+  `HEAT3D_PROFILE_JSON` / `HEAT3D_SPECTRAL_HIP_CHECKSUM`. LUMI-G 768³
+  median `wall_step` 416 / 204 / 127 / 88 / 50 / 39 / 34 ms on
+  1 / 2 / 4 / 8 / 16 / 24 / 32 GCDs (52% at 16). Submit:
+  `docs/lumi_slurm/submit_heat3d_spectral_hip_scaling.sh`.
+- Spectral r2c with 1D z-slabs puts the complex outbox on y-slabs (full
+  z) so HeFFTe's z-FFT does not reshape back to z-slabs after the
+  transform. That extra hop was the 16-GCD LUMI-G transpose tax.
+  `tungsten_hip` 768³ median `wall_step` 177 / 84 / 72 / 63 ms on
+  8 / 16 / 24 / 32 GCDs (64% at 16 vs 1 GCD 851 ms).
+- Spectral stacks use a 1D slab process grid at `nproc >= 9`.
+  `OPENPFC_FFT_SLAB_AXIS` (`x`/`y`/`z`) forces the split axis.
+  `OPENPFC_FFT_NODE_GRID=1` selects a 1×8×N pencil grid (slower than 1D
+  slabs on LUMI-G 768³). `OPENPFC_FFT_PROC_GRID=gx,gy,gz` forces that
+  Cartesian grid when it factors the rank count. `slab_proc_grid` keeps
+  the r2c axis in-plane.
+  JSON `num_subranks` overlays HeFFTe `use_num_subranks`.
+- GPU ETD multiply/combine/pointwise check launch errors only; they no longer
+  `gpuDeviceSynchronize` after every kernel, so the following HeFFTe reshape
+  can overlap on the default stream.
+- LUMI-G scaling sbatch leaves every GCD visible (`bind_local_device` in the
+  binary) so GPU-aware HeFFTe can use intra-node HIP IPC.
+- GPU apps pin the local device from `SLURM_LOCALID` *before* `MPI_Init` so
+  Cray `MPICH_OFI_NIC_POLICY=GPU` sees the intended GCD. All GCDs stay
+  visible for IPC. HeFFTe 2.4.1 `p2p_plined` pack-all patch:
+  [`cmake/heffte-2.4.1-p2p-plined-packall.patch`](cmake/heffte-2.4.1-p2p-plined-packall.patch).
 - `SpectralETDSession` prints `SPECTRAL_CHECKSUM` / `_HEX` after the run
   so 1-vs-N GCD field sums do not need I/O.
 

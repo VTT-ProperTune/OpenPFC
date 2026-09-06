@@ -30,9 +30,19 @@ HEAT3D_N=256 ./docs/lumi_slurm/submit_heat3d_fd_hip_scaling.sh strong
 PARTITION=standard-g HEAT3D_N=256 ./docs/lumi_slurm/submit_heat3d_fd_hip_scaling.sh multinode
 ```
 
+3D spectral HIP twin (`heat3d_spectral_hip`, implicit Euler, 2 FFTs/step):
+
+```bash
+export HEAT3D_SPECTRAL_HIP_BIN=/path/to/heat3d_spectral_hip
+./docs/lumi_slurm/submit_heat3d_spectral_hip_scaling.sh size
+HEAT3D_N=768 ./docs/lumi_slurm/submit_heat3d_spectral_hip_scaling.sh strong
+PARTITION=standard-g HEAT3D_N=768 ./docs/lumi_slurm/submit_heat3d_spectral_hip_scaling.sh multinode
+```
+
 Files: `tungsten_hip_scaling.sbatch`, `tungsten_hip_scaling.toml`,
 `submit_tungsten_hip_scaling.sh`, `heat3d_fd_hip_scaling.sbatch`,
-`submit_heat3d_fd_hip_scaling.sh`. Account `project_462001519`. Do not point
+`submit_heat3d_fd_hip_scaling.sh`, `heat3d_spectral_hip_scaling.sbatch`,
+`submit_heat3d_spectral_hip_scaling.sh`. Account `project_462001519`. Do not point
 these jobs at the 0.1.4 binaries or `project_462001245` scratch used below.
 
 ## Layout (legacy 1024³ helpers)
@@ -68,8 +78,9 @@ GPU (`tungsten_gpu.sbatch`)
 - `partition/G` + `small-g`: 8 MPI ranks per node (one per GCD), `--gpus-per-node=8`, `--exclusive`.
 - `MPICH_GPU_SUPPORT_ENABLED=1` for GPU-aware MPI (required for device pointers; see [INSTALL.LUMI.md](../hpc/INSTALL.LUMI.md)).
 - Optional smoke check: `sbatch docs/lumi_slurm/verify_gpu_aware_mpi.sh` (or run `verify_gpu_aware_mpi` from the OpenPFC `bin/` after setting `VERIFY_GPU_MPI_BIN` if needed).
-- Wrapper script sets `ROCR_VISIBLE_DEVICES=$SLURM_LOCALID` so each rank sees a single GPU as device 0 ([LUMI-G MPI example](https://docs.lumi-supercomputer.eu/runjobs/scheduled-jobs/lumig-job/)).
-- `srun --cpu-bind=map_cpu:49,57,17,25,1,9,33,41` matches the documented LUMI-G rank/NUMA/GPU mapping ([GPU binding](https://docs.lumi-supercomputer.eu/runjobs/scheduled-jobs/distribution-binding/#gpu-binding)).
+- `tungsten_hip` / `heat3d_fd_hip` / `heat3d_spectral_hip` call `bind_local_device()` (`local_rank % n_devices`). Scaling sbatch leaves every GCD visible so GPU-aware MPI can use intra-node HIP IPC; it does not wrap ranks with `ROCR_VISIBLE_DEVICES=$SLURM_LOCALID`.
+- Full-node 8-GCD jobs bind 7 cores per GCD with the LUMI CCD `mask_cpu` map (not a single `map_cpu` thread). That cut 16-GCD 768³ `wall_step` from 138 ms to 136 ms.
+- Optional `OPENPFC_FFT_SLAB_AXIS=x|y|z` forces the 1D HeFFTe slab split.
 
 ## Outputs
 
