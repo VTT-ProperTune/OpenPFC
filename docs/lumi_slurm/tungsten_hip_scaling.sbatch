@@ -62,14 +62,17 @@ exec "$@"
 EOF
 chmod +x "${RUNDIR}/select_gpu"
 
-# Full-node 8-GCD map from LUMI-G docs. Prefix it when requesting fewer GCDs.
-GCD_CPUS=(49 57 17 25 1 9 33 41)
-if (( NTASKS > ${#GCD_CPUS[@]} )); then
+# Full-node 8-GCD map from LUMI-G docs. Partial GCD allocations (dev-g /
+# small-g with 1–4 GPUs) do not own those CPUs; map_cpu:49 then fails.
+SRUN_BIND=()
+CPU_BIND="none"
+if (( NTASKS == 8 )); then
+  CPU_BIND="map_cpu:49,57,17,25,1,9,33,41"
+  SRUN_BIND=(--cpu-bind="${CPU_BIND}")
+elif (( NTASKS > 8 )); then
   echo "this slice is one node (max 8 GCDs); ntasks=${NTASKS}" >&2
   exit 1
 fi
-BIND_LIST="$(IFS=,; echo "${GCD_CPUS[*]:0:${NTASKS}}")"
-CPU_BIND="map_cpu:${BIND_LIST}"
 
 {
   echo "=== tungsten_hip scaling ==="
@@ -81,7 +84,7 @@ CPU_BIND="map_cpu:${BIND_LIST}"
   echo "MPICH_GPU_SUPPORT_ENABLED=${MPICH_GPU_SUPPORT_ENABLED}"
 } | tee "${RUNDIR}/run_meta.txt"
 
-srun --cpu-bind="${CPU_BIND}" "${RUNDIR}/select_gpu" \
+srun "${SRUN_BIND[@]}" "${RUNDIR}/select_gpu" \
   "${TUNGSTEN_HIP_BIN}" "${RUNDIR}/input.toml"
 
 rm -f "${RUNDIR}/select_gpu"
