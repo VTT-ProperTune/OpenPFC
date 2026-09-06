@@ -44,7 +44,8 @@ namespace pfc::sim::gpu {
  *
  * All pointers are device memory. `psi_mf`, `p_star`, `fe_out` may be null
  * (`fe_out` is written only when `F` models `HasFreeEnergyDensity`).
- * Synchronizes @p stream before returning.
+ * Does not synchronize @p stream; the next default-stream HeFFTe transform
+ * waits.
  */
 template <class F>
 void spectral_pointwise_apply(const PointwiseGeometry &g, double t,
@@ -95,7 +96,7 @@ void spectral_pointwise_apply(const PointwiseGeometry &g, double t,
       static_cast<unsigned>((n + threads - 1) / static_cast<std::size_t>(threads));
   GPU_LAUNCH_KERNEL(spectral_pointwise_kernel<F>, blocks, threads,
                     (g, t, psi, psi_mf, p_star, n_out, fe_out, f), stream);
-  GPU_CHECK(::pfc::gpuStreamSynchronize(stream));
+  GPU_CHECK(::pfc::gpuGetLastError());
 }
 
 /// Explicitly instantiate the device launcher for functor type @p F.
