@@ -104,6 +104,50 @@ TEST_CASE("TungstenPhysics schema round-trips JSON params",
   tungsten::apply_schema_values(vals, p);
   REQUIRE(p.get_n0() == Approx(-0.12));
   REQUIRE(p.get_alpha_highOrd() == 4);
+  REQUIRE(p.get_G_grid() == Approx(0.0));
+  REQUIRE(p.get_V_grid() == Approx(0.0));
+  REQUIRE(p.get_x_initial() == Approx(0.0));
+}
+
+TEST_CASE("TungstenPhysics thermal gradient is off when G_grid is omitted",
+          "[tungsten][physics][temperature]") {
+  tungsten::TungstenPhysics<> phys;
+  phys.domain = pfc::domain::create({32, 32, 32});
+  REQUIRE(phys.temperature_variation(10.0, 1.0) == Approx(0.0));
+
+  const double u = 0.1;
+  const double v = -0.05;
+  const double n0 = phys.nonlinearity(u, v);
+  phys.params.set_G_grid(0.5);
+  phys.params.set_V_grid(0.1);
+  phys.params.set_x_initial(4.0);
+  REQUIRE(phys.temperature_variation(10.0, 2.0) != Approx(0.0));
+  REQUIRE(phys.nonlinearity(u, v, 10.0, 2.0) != Approx(n0));
+}
+
+TEST_CASE("TungstenSession non-zero G_grid 8^3 run differs from isothermal",
+          "[tungsten][physics][temperature][golden]") {
+  int nproc = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  if (nproc != 1) {
+    return;
+  }
+  json iso = golden_settings(8, 0.05, 0.01);
+  json grad = iso;
+  grad["model"]["params"]["G_grid"] = 0.5;
+  grad["model"]["params"]["V_grid"] = 0.1;
+  grad["model"]["params"]["x_initial"] = 2.0;
+
+  tungsten::TungstenSession a(iso, 0, 1, MPI_COMM_WORLD);
+  a.run();
+  tungsten::TungstenSession b(grad, 0, 1, MPI_COMM_WORLD);
+  b.run();
+  const double sa = sumsq(a.psi().vec());
+  const double sb = sumsq(b.psi().vec());
+  REQUIRE(std::isfinite(sa));
+  REQUIRE(std::isfinite(sb));
+  REQUIRE(std::abs(sa - sb) > 1e-12);
+  REQUIRE(sb > 0.0);
 }
 
 TEST_CASE("TungstenPhysics ETD weights: zero mode, near-zero, long-dt",

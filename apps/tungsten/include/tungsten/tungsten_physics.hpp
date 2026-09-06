@@ -15,7 +15,8 @@
  * - `nonlinear_symbol(k) = k` (PFC form \f$\partial_t\hat\psi =
  *   k(C\hat\psi + \hat N)\f$);
  * - `pointwise()` returns the device-capable `TungstenPointwise`
- *   (`tungsten_pointwise.hpp`), which includes the ETD stabilisation.
+ *   (`tungsten_pointwise.hpp`), which includes the ETD stabilisation and
+ *   optional `G_grid` / `V_grid` thermal drive (isothermal when omitted).
  *
  * No backend classes, no k-loops, no hand-written kernels.
  */
@@ -56,6 +57,9 @@ struct TungstenSchemaValues {
   double q30{-12.4567};
   double q31{20.0};
   double q40{45.0};
+  double G_grid{0.0};
+  double V_grid{0.0};
+  double x_initial{0.0};
 };
 
 inline void apply_schema_values(const TungstenSchemaValues &v, TungstenParams &p) {
@@ -80,6 +84,9 @@ inline void apply_schema_values(const TungstenSchemaValues &v, TungstenParams &p
   p.set_q30(v.q30);
   p.set_q31(v.q31);
   p.set_q40(v.q40);
+  p.set_G_grid(v.G_grid);
+  p.set_V_grid(v.V_grid);
+  p.set_x_initial(v.x_initial);
 }
 
 inline pfc::sim::ParameterSchema<TungstenSchemaValues> make_tungsten_schema() {
@@ -139,7 +146,22 @@ inline pfc::sim::ParameterSchema<TungstenSchemaValues> make_tungsten_schema() {
       .real(&TungstenSchemaValues::q31,
             {.name = "q31", .description = "q31", .required = true})
       .real(&TungstenSchemaValues::q40,
-            {.name = "q40", .description = "q40", .required = true});
+            {.name = "q40", .description = "q40", .required = true})
+      .real(&TungstenSchemaValues::G_grid,
+            {.name = "G_grid",
+             .description = "thermal gradient along x (0 = isothermal)",
+             .required = false,
+             .default_value = 0.0})
+      .real(&TungstenSchemaValues::V_grid,
+            {.name = "V_grid",
+             .description = "moving-frame velocity in T_var(x, t)",
+             .required = false,
+             .default_value = 0.0})
+      .real(&TungstenSchemaValues::x_initial,
+            {.name = "x_initial",
+             .description = "initial solidification-front position",
+             .required = false,
+             .default_value = 0.0});
   return s;
 }
 
@@ -199,17 +221,33 @@ struct TungstenPhysics {
   }
 
   [[nodiscard]] TungstenPointwise pointwise() const noexcept {
+    const auto size = pfc::domain::get_size(domain);
+    const auto spacing = pfc::domain::get_spacing(domain);
     return {.c_psi = -params.get_stabP(),
             .c_psi2 = params.get_p3_bar(),
             .c_psi3 = params.get_p4_bar(),
             .c_mf2 = params.get_q3_bar(),
-            .c_mf3 = params.get_q4_bar()};
+            .c_mf3 = params.get_q4_bar(),
+            .T = params.get_T(),
+            .T0 = params.get_T0(),
+            .q30_bar = params.get_q30_bar(),
+            .q31_bar = params.get_q31_bar(),
+            .G_grid = params.get_G_grid(),
+            .V_grid = params.get_V_grid(),
+            .x_initial = params.get_x_initial(),
+            .front_x = params.get_xpos(),
+            .length_x = static_cast<double>(size[0]) * spacing[0]};
   }
 
   /// Host convenience: \f$N(\psi,\psi_{\mathrm{MF}})\f$ via the pointwise functor.
-  [[nodiscard]] double nonlinearity(double psi, double psi_mf) const {
-    return pointwise().nonlinearity(
-        pfc::sim::SpectralCell{.psi = psi, .psi_mf = psi_mf});
+  [[nodiscard]] double nonlinearity(double psi, double psi_mf, double x = 0.0,
+                                    double t = 0.0) const {
+    return pointwise().nonlinearity(pfc::sim::SpectralCell{
+        .psi = psi, .psi_mf = psi_mf, .x = x, .t = t});
+  }
+
+  [[nodiscard]] double temperature_variation(double x, double t) const {
+    return pointwise().temperature_variation(x, t);
   }
 };
 
