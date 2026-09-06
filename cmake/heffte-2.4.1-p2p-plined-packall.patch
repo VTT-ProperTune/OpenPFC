@@ -1,0 +1,58 @@
+--- a/src/heffte_reshape3d.cpp
++++ b/src/heffte_reshape3d.cpp
+@@ -704,29 +704,50 @@ void reshape3d_pointtopoint<location_tag, packer, index>::apply_base(int batch_s
+                   recv_proc[i], 0, comm, &requests[i]);
+     }
+ 
+-    // perform the send commands, using blocking send
++    // Pack every outgoing block, one device sync, then post all Isend.
++    // Stock HeFFTe synchronized after each pack, which serializes GPU-aware
++    // MPI on LUMI-G (16-way slab reshape = 15 hipDeviceSynchronize per hop).
+     size_t offset = 0;
+-    for(size_t i=0; i<send_proc.size() + ((self_to_self) ? -1 : 0); i++){
+-        { heffte::add_trace name("packing");
++    const size_t nsend = send_proc.size() + ((self_to_self) ? -1 : 0);
++    if (algorithm == reshape_algorithm::p2p_plined){
++        { heffte::add_trace name("packing");
++            for(size_t i=0; i<nsend; i++){
++                for(int j=0; j<batch_size; j++){
++                    packit.pack(this->stream(), packplan[i], source + j * this->input_size + send_offset[i],
++                                send_buffer + offset + j * send_size[i]);
++                }
++                offset += batch_size * send_size[i];
++            }
++            this->synchronize_device();
++        }
++        offset = 0;
++        for(size_t i=0; i<nsend; i++){
++            heffte::add_trace name("isend " + std::to_string(batch_size * send_size[i]) + " for " + std::to_string(send_proc[i]));
++            MPI_Isend(send_buffer + offset, batch_size * send_size[i], mpi::type_from<scalar_type>(),
++                      send_proc[i], 0, comm, &isends[i]);
++            offset += batch_size * send_size[i];
++        }
++    }else{
++        for(size_t i=0; i<nsend; i++){
++            { heffte::add_trace name("packing");
+             for(int j=0; j<batch_size; j++){
+                 packit.pack(this->stream(), packplan[i], source + j * this->input_size + send_offset[i],
+                             send_buffer + offset + j * send_size[i]);
+             }
+ 
+             this->synchronize_device();
+-        }
+-
+-        if (algorithm == reshape_algorithm::p2p_plined){
+-            heffte::add_trace name("isend " + std::to_string(batch_size * send_size[i]) + " for " + std::to_string(send_proc[i]));
+-            MPI_Isend(send_buffer + offset, batch_size * send_size[i], mpi::type_from<scalar_type>(),
+-                      send_proc[i], 0, comm, &isends[i]);
+-        }else{
++            }
+             heffte::add_trace name("send " + std::to_string(batch_size* send_size[i]) + " for " + std::to_string(send_proc[i]));
+             MPI_Send(send_buffer + offset, batch_size * send_size[i], mpi::type_from<scalar_type>(),
+                      send_proc[i], 0, comm);
++            offset += batch_size * send_size[i];
+         }
+-        offset += batch_size * send_size[i];
+     }
+ 
+     if (self_to_self){ // if using self-to-self, do not invoke an MPI command
