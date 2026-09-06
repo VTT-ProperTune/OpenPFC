@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdlib>
 #include <limits>
 #include <stdexcept>
 #include <string>
@@ -80,35 +81,143 @@ namespace pfc::decomposition {
   return best;
 }
 
-/// Off-node FFT: pair with HeFFTe slabs (`use_pencils=false`). One LUMI-G node
-/// is 8 GCDs; brick min-surface grids at 16 ranks (2×2×4) still force a
-/// brick-to-slab reshape every transform.
+/// Off-node FFT. One LUMI-G node is 8 GCDs. A 1D slab (1×1×N) makes every
+/// HeFFTe z-transpose an N-rank all-to-all. A 2D grid 1×8×nnodes keeps
+/// consecutive ranks on one node so the y-pencil reshape is intra-node and
+/// the z-pencil reshape is pairwise between nodes. Pair with HeFFTe pencils.
 inline constexpr int kSpectralSlabMinRanks = 9;
+inline constexpr int kSpectralNodeGcds = 8;
+
+/// `OPENPFC_FFT_SLAB_AXIS` = `x`/`y`/`z` or `0`/`1`/`2`; -1 means unset.
+[[nodiscard]] inline int fft_slab_axis_override() {
+  const char *e = std::getenv("OPENPFC_FFT_SLAB_AXIS");
+  if (e == nullptr || e[0] == '\0' || e[1] != '\0') {
+    return -1;
+  }
+  if (e[0] == 'x' || e[0] == '0') {
+    return 0;
+  }
+  if (e[0] == 'y' || e[0] == '1') {
+    return 1;
+  }
+  if (e[0] == 'z' || e[0] == '2') {
+    return 2;
+  }
+  return -1;
+}
 
 /**
  * @brief 1D process grid along the first axis that `num_procs` divides.
  *
- * Prefers z, then y, then x so a typical r2c direction 0 stays in-plane.
- * Falls back to @ref min_surface_proc_grid when no axis divides evenly.
+ * Prefers axes that keep @p r2c_direction in-plane (default x, so z then y
+ * then x). Splitting the r2c axis last avoids an extra HeFFTe reshape of the
+ * reduced complex dimension. `OPENPFC_FFT_SLAB_AXIS` forces x, y, or z when
+ * that axis divides `num_procs`. Falls back to @ref min_surface_proc_grid
+ * when no axis divides evenly.
  */
-[[nodiscard]] inline Int3 slab_proc_grid(const Int3 &size, int num_procs) {
+[[nodiscard]] inline Int3 slab_proc_grid(const Int3 &size, int num_procs,
+                                         int r2c_direction = 0) {
   if (num_procs <= 1) {
     return Int3{1, 1, 1};
   }
-  for (int d : {2, 1, 0}) {
+  if (r2c_direction < 0 || r2c_direction > 2) {
+    r2c_direction = 0;
+  }
+  auto try_axis = [&](int d) -> Int3 {
+    Int3 g{1, 1, 1};
+    g[d] = num_procs;
+    return g;
+  };
+  const int forced = fft_slab_axis_override();
+  if (forced >= 0 && num_procs <= size[forced] && size[forced] % num_procs == 0) {
+    return try_axis(forced);
+  }
+  // Last spatial axis first among the two that are not the r2c direction.
+  static constexpr int kPref[3][3] = {{2, 1, 0}, {2, 0, 1}, {1, 0, 2}};
+  for (int k = 0; k < 3; ++k) {
+    const int d = kPref[r2c_direction][k];
     if (num_procs <= size[d] && size[d] % num_procs == 0) {
-      Int3 g{1, 1, 1};
-      g[d] = num_procs;
-      return g;
+      return try_axis(d);
     }
   }
   return min_surface_proc_grid(size, num_procs);
 }
 
-/// Brick min-surface on one node; 1D slabs at @ref kSpectralSlabMinRanks and up.
-[[nodiscard]] inline Int3 spectral_fft_proc_grid(const Int3 &size, int num_procs) {
+/**
+ * @brief 2D process grid 1 × gcds-per-node × nnodes when @p num_procs is a
+ *        multiple of `kSpectralNodeGcds` and both axes divide @p size.
+ *
+ * Rank order is x-fastest, so ranks `[node*8, node*8+7]` share a z-slab of
+ * the node and map onto Slurm's 8-ranks-per-node layout. Returns `{0,0,0}`
+ * when this layout does not divide the grid.
+ */
+[[nodiscard]] inline Int3 node_aware_fft_proc_grid(const Int3 &size, int num_procs) {
+  if (num_procs < kSpectralSlabMinRanks || num_procs % kSpectralNodeGcds != 0) {
+    return Int3{0, 0, 0};
+  }
+  const int nnodes = num_procs / kSpectralNodeGcds;
+  if (size[1] % kSpectralNodeGcds == 0 && size[2] % nnodes == 0) {
+    return Int3{1, kSpectralNodeGcds, nnodes};
+  }
+  if (size[2] % kSpectralNodeGcds == 0 && size[1] % nnodes == 0) {
+    return Int3{1, nnodes, kSpectralNodeGcds};
+  }
+  return Int3{0, 0, 0};
+}
+
+/// `OPENPFC_FFT_NODE_GRID=1` selects @ref node_aware_fft_proc_grid (1×8×N).
+[[nodiscard]] inline bool fft_node_grid_override() {
+  const char *e = std::getenv("OPENPFC_FFT_NODE_GRID");
+  return e != nullptr && e[0] == '1' && e[1] == '\0';
+}
+
+/// `OPENPFC_FFT_PROC_GRID=gx,gy,gz` (or `gx x gy x gz`). `{0,0,0}` if unset.
+[[nodiscard]] inline Int3 fft_proc_grid_override() {
+  const char *e = std::getenv("OPENPFC_FFT_PROC_GRID");
+  if (e == nullptr || e[0] == '\0') {
+    return Int3{0, 0, 0};
+  }
+  int g[3] = {0, 0, 0};
+  const char *p = e;
+  for (int i = 0; i < 3; ++i) {
+    char *end = nullptr;
+    const long v = std::strtol(p, &end, 10);
+    if (end == p || v < 1 || v > 1024) {
+      return Int3{0, 0, 0};
+    }
+    g[i] = static_cast<int>(v);
+    if (i < 2) {
+      if (*end != ',' && *end != 'x' && *end != 'X') {
+        return Int3{0, 0, 0};
+      }
+      p = end + 1;
+    } else if (*end != '\0') {
+      return Int3{0, 0, 0};
+    }
+  }
+  return Int3{g[0], g[1], g[2]};
+}
+
+/// Brick min-surface on one node; 1D slabs off-node (measured fastest on
+/// LUMI-G). `OPENPFC_FFT_NODE_GRID=1` selects the 1×8×N pencil grid.
+/// `OPENPFC_FFT_PROC_GRID=gx,gy,gz` forces that Cartesian grid when it
+/// factors `num_procs` and divides `size`.
+[[nodiscard]] inline Int3 spectral_fft_proc_grid(const Int3 &size, int num_procs,
+                                                 int r2c_direction = 0) {
+  const Int3 forced = fft_proc_grid_override();
+  if (forced[0] * forced[1] * forced[2] == num_procs && forced[0] >= 1 &&
+      size[0] % forced[0] == 0 && size[1] % forced[1] == 0 &&
+      size[2] % forced[2] == 0) {
+    return forced;
+  }
   if (num_procs >= kSpectralSlabMinRanks) {
-    return slab_proc_grid(size, num_procs);
+    if (fft_node_grid_override()) {
+      const Int3 node = node_aware_fft_proc_grid(size, num_procs);
+      if (node[0] * node[1] * node[2] == num_procs) {
+        return node;
+      }
+    }
+    return slab_proc_grid(size, num_procs, r2c_direction);
   }
   return min_surface_proc_grid(size, num_procs);
 }

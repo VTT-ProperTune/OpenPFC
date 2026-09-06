@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <array>
+#include <cstdlib>
 #include <heffte.h>
 #include <vector>
 
@@ -13,6 +14,7 @@
 
 using namespace pfc;
 using pfc::decomposition::min_surface_proc_grid;
+using pfc::decomposition::node_aware_fft_proc_grid;
 using pfc::decomposition::slab_proc_grid;
 using pfc::decomposition::spectral_fft_proc_grid;
 using pfc::decomposition::split_box;
@@ -121,9 +123,88 @@ TEST_CASE("slab_proc_grid is 1D along a divisible axis", "[brick_split][unit]") 
   REQUIRE(slab_proc_grid(xy, 8) == Int3{1, 8, 1});
 }
 
-TEST_CASE("spectral_fft_proc_grid keeps bricks on one node",
-          "[brick_split][unit]") {
+TEST_CASE("slab_proc_grid keeps the r2c axis in-plane", "[brick_split][unit]") {
+  const Int3 cube{768, 768, 768};
+  REQUIRE(slab_proc_grid(cube, 16, 0) == Int3{1, 1, 16});
+  REQUIRE(slab_proc_grid(cube, 16, 1) == Int3{1, 1, 16});
+  REQUIRE(slab_proc_grid(cube, 16, 2) == Int3{1, 16, 1});
+  const Int3 tall{64, 32, 16};
+  REQUIRE(slab_proc_grid(tall, 16, 0) == Int3{1, 1, 16});
+  REQUIRE(slab_proc_grid(tall, 16, 2) == Int3{1, 16, 1});
+  const Int3 flat{64, 8, 32};
+  REQUIRE(slab_proc_grid(flat, 16, 2) == Int3{16, 1, 1});
+}
+
+TEST_CASE("spectral_fft_proc_grid keeps bricks on one node", "[brick_split][unit]") {
   const Int3 cube{768, 768, 768};
   REQUIRE(spectral_fft_proc_grid(cube, 8) == min_surface_proc_grid(cube, 8));
+}
+
+TEST_CASE("node_aware_fft_proc_grid is 1x8xnnodes off-node", "[brick_split][unit]") {
+  const Int3 cube{768, 768, 768};
+  REQUIRE(node_aware_fft_proc_grid(cube, 8) == Int3{0, 0, 0});
+  REQUIRE(node_aware_fft_proc_grid(cube, 16) == Int3{1, 8, 2});
+  REQUIRE(node_aware_fft_proc_grid(cube, 24) == Int3{1, 8, 3});
+  REQUIRE(node_aware_fft_proc_grid(cube, 32) == Int3{1, 8, 4});
   REQUIRE(spectral_fft_proc_grid(cube, 16) == Int3{1, 1, 16});
+  REQUIRE(spectral_fft_proc_grid(cube, 24) == Int3{1, 1, 24});
+  REQUIRE(spectral_fft_proc_grid(cube, 32) == Int3{1, 1, 32});
+  struct Clear {
+    ~Clear() { unsetenv("OPENPFC_FFT_NODE_GRID"); }
+  } clear;
+  REQUIRE(setenv("OPENPFC_FFT_NODE_GRID", "1", 1) == 0);
+  REQUIRE(spectral_fft_proc_grid(cube, 16) == Int3{1, 8, 2});
+  REQUIRE(spectral_fft_proc_grid(cube, 24) == Int3{1, 8, 3});
+  REQUIRE(unsetenv("OPENPFC_FFT_NODE_GRID") == 0);
+  REQUIRE(spectral_fft_proc_grid(cube, 16) == Int3{1, 1, 16});
+
+  const Box3i world = Box3i::from_bounds({0, 0, 0}, {767, 767, 767});
+  const auto boxes = split_box(world, Int3{1, 8, 2});
+  REQUIRE(boxes.size() == 16);
+  // x-fastest: ranks 0-7 are z-half 0 (one node), 8-15 are z-half 1.
+  REQUIRE(boxes[0].low[2] == 0);
+  REQUIRE(boxes[7].high[2] == 383);
+  REQUIRE(boxes[8].low[2] == 384);
+  REQUIRE(boxes[15].high[2] == 767);
+  REQUIRE(boxes[0].low[1] == 0);
+  REQUIRE(boxes[1].low[1] > boxes[0].low[1]);
+}
+
+TEST_CASE("spectral_fft_proc_grid honors OPENPFC_FFT_PROC_GRID",
+          "[brick_split][unit]") {
+  struct Clear {
+    ~Clear() { unsetenv("OPENPFC_FFT_PROC_GRID"); }
+  } clear;
+  const Int3 cube{768, 768, 768};
+  REQUIRE(unsetenv("OPENPFC_FFT_PROC_GRID") == 0);
+  REQUIRE(pfc::decomposition::fft_proc_grid_override() == Int3{0, 0, 0});
+  REQUIRE(setenv("OPENPFC_FFT_PROC_GRID", "1,2,8", 1) == 0);
+  REQUIRE(spectral_fft_proc_grid(cube, 16) == Int3{1, 2, 8});
+  REQUIRE(setenv("OPENPFC_FFT_PROC_GRID", "1x4x4", 1) == 0);
+  REQUIRE(spectral_fft_proc_grid(cube, 16) == Int3{1, 4, 4});
+  REQUIRE(setenv("OPENPFC_FFT_PROC_GRID", "2,8,1", 1) == 0);
+  REQUIRE(spectral_fft_proc_grid(cube, 16) == Int3{2, 8, 1});
+  REQUIRE(setenv("OPENPFC_FFT_PROC_GRID", "1,1,15", 1) == 0); // not 16 ranks
+  REQUIRE(spectral_fft_proc_grid(cube, 16) == Int3{1, 1, 16});
+  REQUIRE(unsetenv("OPENPFC_FFT_PROC_GRID") == 0);
+}
+
+TEST_CASE("slab_proc_grid honors OPENPFC_FFT_SLAB_AXIS", "[brick_split][unit]") {
+  struct Clear {
+    ~Clear() { unsetenv("OPENPFC_FFT_SLAB_AXIS"); }
+  } clear;
+  const Int3 cube{768, 768, 768};
+  REQUIRE(unsetenv("OPENPFC_FFT_SLAB_AXIS") == 0);
+  REQUIRE(pfc::decomposition::fft_slab_axis_override() == -1);
+  REQUIRE(slab_proc_grid(cube, 16) == Int3{1, 1, 16});
+  REQUIRE(setenv("OPENPFC_FFT_SLAB_AXIS", "y", 1) == 0);
+  REQUIRE(pfc::decomposition::fft_slab_axis_override() == 1);
+  REQUIRE(slab_proc_grid(cube, 16) == Int3{1, 16, 1});
+  REQUIRE(spectral_fft_proc_grid(cube, 16) == Int3{1, 16, 1});
+  REQUIRE(setenv("OPENPFC_FFT_SLAB_AXIS", "x", 1) == 0);
+  REQUIRE(slab_proc_grid(cube, 16) == Int3{16, 1, 1});
+  REQUIRE(setenv("OPENPFC_FFT_SLAB_AXIS", "z", 1) == 0);
+  REQUIRE(slab_proc_grid(cube, 16) == Int3{1, 1, 16});
+  REQUIRE(unsetenv("OPENPFC_FFT_SLAB_AXIS") == 0);
+  REQUIRE(slab_proc_grid(cube, 16) == Int3{1, 1, 16});
 }
