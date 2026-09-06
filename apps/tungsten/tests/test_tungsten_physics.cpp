@@ -308,6 +308,10 @@ TEST_CASE("TungstenSession 1-rank 100-step run", "[tungsten][golden]") {
   const double s = sumsq(session.psi().vec());
   REQUIRE(std::isfinite(s));
   REQUIRE(s > 0.0);
+  const auto cs = session.field_checksum();
+  REQUIRE(std::isfinite(cs.sum));
+  REQUIRE(std::isfinite(cs.sumsq));
+  REQUIRE(cs.sumsq > 0.0);
 }
 
 TEST_CASE("TungstenSession 4-rank 16^3/20-step run", "[tungsten][golden][MPI]") {

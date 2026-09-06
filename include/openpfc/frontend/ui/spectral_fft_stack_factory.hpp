@@ -99,13 +99,15 @@ inline void reject_cuda_backend_for_cpu_spectral_stack(const nlohmann::json &pla
 [[nodiscard]] inline heffte::plan_options
 cpu_spectral_plan_options_from_json(const nlohmann::json &settings,
                                     int nproc = 1) {
+  (void)nproc;
   const nlohmann::json plan_opts = merged_spectral_plan_options_json(settings);
   heffte::plan_options options = heffte::default_options<heffte::backend::fftw>();
   if (!plan_opts.empty()) {
     detail::reject_cuda_backend_for_cpu_spectral_stack(plan_opts);
     options = ui::from_json<heffte::plan_options>(plan_opts);
   }
-  apply_heffte_comm_scale(options, nproc);
+  // Do not auto-upgrade reshape here. LUMI-G 768³ HIP measured alltoall
+  // slower than p2p_plined at 8–32 GCDs; the caller JSON chooses the algorithm.
   return options;
 }
 
@@ -134,12 +136,12 @@ cpu_fft_from_json_and_decomposition(const nlohmann::json &settings,
 [[nodiscard]] inline heffte::plan_options
 cuda_spectral_plan_options_from_json(const nlohmann::json &settings,
                                      int nproc = 1) {
+  (void)nproc;
   const nlohmann::json merged = merged_spectral_plan_options_json(settings);
   heffte::plan_options options = heffte::default_options<heffte::backend::cufft>();
   if (!merged.empty()) {
     detail::apply_heffte_plan_options_json_overrides(merged, options);
   }
-  apply_heffte_comm_scale(options, nproc);
   return options;
 }
 
@@ -156,12 +158,12 @@ cuda_spectral_plan_options_from_json(const nlohmann::json &settings,
 [[nodiscard]] inline heffte::plan_options
 hip_spectral_plan_options_from_json(const nlohmann::json &settings,
                                     int nproc = 1) {
+  (void)nproc;
   const nlohmann::json merged = merged_spectral_plan_options_json(settings);
   heffte::plan_options options = heffte::default_options<heffte::backend::rocfft>();
   if (!merged.empty()) {
     detail::apply_heffte_plan_options_json_overrides(merged, options);
   }
-  apply_heffte_comm_scale(options, nproc);
   return options;
 }
 

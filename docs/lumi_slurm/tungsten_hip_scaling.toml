@@ -71,6 +71,6 @@ print_report = true
 [plan_options]
 backend = "fftw"
 use_reorder = true
-reshape_algorithm = "alltoall"
+reshape_algorithm = "p2p_plined"
 use_pencils = true
 use_gpu_aware = true

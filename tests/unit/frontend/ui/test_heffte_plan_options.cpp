@@ -81,19 +81,15 @@ TEST_CASE("hip_spectral_plan_options_from_json overlays plan_options",
   REQUIRE(opts.use_pencils == true);
 }
 
-TEST_CASE("hip_spectral_plan_options_from_json upgrades p2p_plined off-node",
+TEST_CASE("hip_spectral_plan_options_from_json keeps JSON reshape at 16 ranks",
           "[ui][heffte][spectral_gpu][comm_scale]") {
   const json settings = {
       {"plan_options", {{"reshape_algorithm", "p2p_plined"}}}};
-  const auto one_node =
-      pfc::ui::hip_spectral_plan_options_from_json(settings, 8);
   const auto two_nodes =
       pfc::ui::hip_spectral_plan_options_from_json(settings, 16);
   using AlgorithmType = std::underlying_type_t<heffte::reshape_algorithm>;
-  REQUIRE(static_cast<AlgorithmType>(one_node.algorithm) ==
-          static_cast<AlgorithmType>(heffte::reshape_algorithm::p2p_plined));
   REQUIRE(static_cast<AlgorithmType>(two_nodes.algorithm) ==
-          static_cast<AlgorithmType>(heffte::reshape_algorithm::alltoall));
+          static_cast<AlgorithmType>(heffte::reshape_algorithm::p2p_plined));
 }
 #endif
 
@@ -139,16 +135,13 @@ TEST_CASE("apply_heffte_comm_scale leaves alltoall and alltoallv alone",
           static_cast<AlgorithmType>(heffte::reshape_algorithm::alltoallv));
 }
 
-TEST_CASE("cpu_spectral_plan_options_from_json applies comm scale",
+TEST_CASE("cpu_spectral_plan_options_from_json keeps JSON reshape at 16 ranks",
           "[ui][heffte][spectral_cpu][comm_scale]") {
   const json settings = {
       {"plan_options", {{"reshape_algorithm", "p2p_plined"}}}};
-  const auto eight = pfc::ui::cpu_spectral_plan_options_from_json(settings, 8);
   const auto sixteen =
       pfc::ui::cpu_spectral_plan_options_from_json(settings, 16);
   using AlgorithmType = std::underlying_type_t<heffte::reshape_algorithm>;
-  REQUIRE(static_cast<AlgorithmType>(eight.algorithm) ==
-          static_cast<AlgorithmType>(heffte::reshape_algorithm::p2p_plined));
   REQUIRE(static_cast<AlgorithmType>(sixteen.algorithm) ==
-          static_cast<AlgorithmType>(heffte::reshape_algorithm::alltoall));
+          static_cast<AlgorithmType>(heffte::reshape_algorithm::p2p_plined));
 }
