@@ -34,7 +34,7 @@ Keep these comparisons separate, as `#87` states:
 
 | Comparison | Status in this slice |
 |------------|----------------------|
-| Same PDE, spectral vs finite difference (Heat3D HIP twins) | FD HIP driver `heat3d_fd_hip` exists; Heat3D *spectral* HIP and a published science figure are still later. |
+| Same PDE, spectral vs finite difference (Heat3D HIP twins) | Both HIP drivers exist (`heat3d_fd_hip`, `heat3d_spectral_hip`). A published science figure is still later. |
 | Production FD envelope (`kobayashi_fd_hip`, 2D) | Later `#87` slice. Different PDE; report cells/s, not “FD is faster”. |
 | Multi-node (>8 GCD) and LUMI-C CPU control | Multi-node GPU jobs are in the submit helper (16/24/32 GCD). LUMI-C CPU control is still later. |
 | Float GPU path | `#11`, not this campaign. Precision is double. |
@@ -60,8 +60,8 @@ export TUNGSTEN_HIP_BIN=/flash/project_462001519/juaho/build/<tree>/apps/tungste
 # 2. After picking Lx (wall_step busy, memory fits), strong-scale 1/2/4/8 GCDs.
 TUNGSTEN_LX=768 ./docs/lumi_slurm/submit_tungsten_hip_scaling.sh strong
 
-# 3. Same grid, 2/3/4 nodes (16/24/32 GCDs). HeFFTe slabs (use_pencils=false);
-#    JSON sessions also drop pencils when nproc >= 9.
+# 3. Same grid, 2/3/4 nodes (16/24/32 GCDs). Off-node uses 1D z-slabs
+#    in real space and y-slabs in the r2c outbox.
 TUNGSTEN_LX=768 PARTITION=standard-g ./docs/lumi_slurm/submit_tungsten_hip_scaling.sh multinode
 
 # 4. 3D FD HIP twin (device halo + stencil), same node counts.
@@ -69,10 +69,21 @@ export HEAT3D_HIP_BIN=/flash/project_462001519/juaho/build/<tree>/apps/heat3d/he
 ./docs/lumi_slurm/submit_heat3d_fd_hip_scaling.sh size
 HEAT3D_N=256 PARTITION=standard-g ./docs/lumi_slurm/submit_heat3d_fd_hip_scaling.sh strong
 HEAT3D_N=256 PARTITION=standard-g ./docs/lumi_slurm/submit_heat3d_fd_hip_scaling.sh multinode
+
+# 5. 3D spectral HIP twin (implicit Euler, 2 FFTs/step), same node counts.
+export HEAT3D_SPECTRAL_HIP_BIN=/flash/project_462001519/juaho/build/<tree>/apps/heat3d/heat3d_spectral_hip
+./docs/lumi_slurm/submit_heat3d_spectral_hip_scaling.sh size
+HEAT3D_N=768 PARTITION=standard-g ./docs/lumi_slurm/submit_heat3d_spectral_hip_scaling.sh strong
+HEAT3D_N=768 PARTITION=standard-g ./docs/lumi_slurm/submit_heat3d_spectral_hip_scaling.sh multinode
 ```
 
 `PARTITION` defaults to `small-g`. Use `dev-g` for bring-up. `standard-g` is
 the full-node queue; it is not required for a 1–8 GCD single-node curve.
+
+The scaling sbatch does not mask GCDs with `ROCR_VISIBLE_DEVICES`.
+`bind_local_device()` picks `local_rank % n_devices` while every GCD stays
+visible so GPU-aware HeFFTe can use intra-node IPC. Set
+`OPENPFC_FFT_SLAB_AXIS` to `x`, `y`, or `z` to force the 1D slab split.
 
 Each job writes `input.toml`, a copy of the sbatch script, `run_meta.txt`,
 and `timing_profile.json` in its run directory. Keep the Slurm job id with
@@ -80,7 +91,7 @@ those files. Do not commit profiles.
 
 Inputs: [`docs/lumi_slurm/tungsten_hip_scaling.toml`](../lumi_slurm/tungsten_hip_scaling.toml)
 (`saveat = -1`, no `[[fields]]`). The wrapper substitutes `__LX__` and
-`__T1__`. The 8-GCD CPU map is used only when `ntasks` is 8; 1–4 GCD
+`__T1__`. The 8-GCD CPU map is used only when `ntasks-per-node` is 8; 1–4 GCD
 allocations skip it. GPU-aware MPI is `MPICH_GPU_SUPPORT_ENABLED=1`.
 
 ## Measured one-node curve (2026-09-06)
@@ -123,33 +134,32 @@ HIP `fft` region timers after step 1 are under-counted on the 1-GCD path
 (sub-millisecond) and should not be used to explain the curve. `wall_step` is
 the metric.
 
-Pencil `p2p_plined` (the first multi-node pins) is slower at 16 GCDs than
-at 8. HeFFTe **slabs** (`use_pencils = false`, still `p2p_plined`, GPU-aware)
-fix that. `alltoall` / `alltoallv` were slower. JSON sessions call
-`apply_heffte_comm_scale` so `nproc >= 9` drops pencils. Campaign TOML
-requests slabs. HIP `fft` exclusive tracks `wall_step` on multi-GCD runs
-(`measure_barriered` is ~5–9 ms, not the 16-GCD dip). 1-GCD `fft` timers
-remain untrusted.
+Pencil `p2p_plined` on a min-surface 2×2×4 grid was slower at 16 GCDs than
+at 8. Real-space 1D z-slabs with a **y-slab complex outbox** (full z per
+rank) drop HeFFTe's extra pencils-back-to-z-slabs reshape. Combined with
+leaving every GCD visible (no `ROCR_VISIBLE_DEVICES`) and pinning the
+device before `MPI_Init`, 16-GCD 768³ is 84 ms (64% vs 1 GCD). 1×8×N
+pencils and `alltoall` / `alltoallv` were slower. HIP `fft` exclusive
+tracks `wall_step` on multi-GCD runs. 1-GCD `fft` timers remain untrusted.
 
 Slabs 768³, 10 steps, I/O off, median `wall_step` after warmup, HIP tree
-`openpfc-lumi-rocm-scale` (2026-09-06):
+`openpfc-lumi-rocm-prebind` (2026-09-06). Efficiency vs 1 GCD job
+21761281 (851.215 ms; 1-GCD layout is unchanged):
 
 | GCDs | Nodes | Partition | Job | Median `wall_step` | Speedup | Efficiency |
 |------|-------|-----------|-----|--------------------|---------|------------|
 | 1 | 1 | `standard-g` | 21761281 | 851 ms | 1.00 | 100% |
-| 8 | 1 | `standard-g` | 21761220 | 216 ms | 3.95 | 49% |
-| 16 | 2 | `standard-g` | 21761221 | 182 ms | 4.68 | 29% |
-| 24 | 3 | `standard-g` | 21761282 | 150 ms | 5.69 | 24% |
-| 32 | 4 | `standard-g` | 21761283 | 122 ms | 6.96 | 22% |
+| 8 | 1 | `standard-g` | 21764313 | 177 ms | 4.81 | 60% |
+| 16 | 2 | `standard-g` | 21764315 | 84 ms | 10.2 | 64% |
+| 24 | 3 | `standard-g` | 21764316 | 72 ms | 11.9 | 50% |
+| 32 | 4 | `standard-g` | 21764317 | 63 ms | 13.6 | 42% |
 
-Pins: `tests/baselines/perf/lumi-standard-g-tungsten-hip-slabs-{1,8,16,24,32}gcd-release-768.json`.
-`SPECTRAL_CHECKSUM` 1 vs 16 GCD agrees to ~1e-12 relative. 1024³ and 896³
-OOM on one GCD; 832³ fits but 16-GCD efficiency stays ~29% (FFT transpose
-volume scales with \(N^3\)).
+Repeat 16 GCD job 21764314 was 85 ms. Pins:
+`tests/baselines/perf/lumi-standard-g-tungsten-hip-slabs-{1,8,16,24,32}gcd-release-768.json`.
+`SPECTRAL_CHECKSUM` 1 vs 16 GCD agrees to ~1e-12 relative.
 
 `submit_tungsten_hip_scaling.sh multinode` launches 16/24/32 GCD jobs on
-`standard-g` (8 ranks per node, same CPU map per node). 24 GCDs (3 nodes)
-starts (grid 2×3×4).
+`standard-g` (8 ranks per node). 24 GCDs (3 nodes) starts.
 
 ### 3D FD HIP (`heat3d_fd_hip`)
 
@@ -169,6 +179,36 @@ Pins: `tests/baselines/perf/lumi-dev-g-heat3d-fd-hip-1gcd-release-512.json` and
 `lumi-standard-g-heat3d-fd-hip-{8,16,24,32}gcd-release-512.json`.
 `HEAT3D_HIP_CHECKSUM` 1 vs 16 GCD agrees to ~5e-15 relative. Submit with
 `submit_heat3d_fd_hip_scaling.sh`.
+
+### Spectral HIP (`heat3d_spectral_hip`)
+
+HIP twin of `heat3d_spectral`: implicit Euler in Fourier space, 2 FFTs per
+step (`HIPSpectralStack` + `1/(1-\Delta t D k_\mathrm{lap})`). Same CLI as
+the CPU spectral driver (`<N> <n_steps> <dt>`). I/O off via
+`HEAT3D_PROFILE_JSON`. Same bind/visibility as `tungsten_hip` /
+`heat3d_fd_hip`. The driver uses HeFFTe slabs (`use_pencils=false`,
+GPU-aware `p2p_plined`) on every rank count, matching
+`tungsten_hip_scaling.toml`. Compare FFT time to the FD HIP halo+stencil
+on the **same PDE**; do not claim “FD is faster than tungsten.”
+
+768³ / 20 steps / `dt=0.01`, I/O off, median `wall_step` after warmup 1.
+Efficiency vs 1 GCD job 21773962 (416 ms):
+
+| GCDs | Nodes | Partition | Job | Median `wall_step` | Speedup | Efficiency |
+|------|-------|-----------|-----|--------------------|---------|------------|
+| 1 | 1 | `standard-g` | 21773962 | 416 ms | 1.00 | 100% |
+| 2 | 1 | `standard-g` | 21774367 | 204 ms | 2.04 | 102% |
+| 4 | 1 | `standard-g` | 21774368 | 127 ms | 3.29 | 82% |
+| 8 | 1 | `standard-g` | 21774369 | 88 ms | 4.74 | 59% |
+| 16 | 2 | `standard-g` | 21773966 | 50 ms | 8.34 | 52% |
+| 24 | 3 | `standard-g` | 21773967 | 39 ms | 10.6 | 44% |
+| 32 | 4 | `standard-g` | 21773968 | 34 ms | 12.2 | 38% |
+
+2/4/8 jobs 21773963–21773965 used default rocFFT pencils and were slower
+than 1 GCD; they are not the pin. Pins:
+`tests/baselines/perf/lumi-standard-g-heat3d-spectral-hip-{1,2,4,8,16,24,32}gcd-release-768.json`.
+`HEAT3D_SPECTRAL_HIP_CHECKSUM` 1 vs 16 GCD agrees to ~3e-16 relative.
+Submit with `submit_heat3d_spectral_hip_scaling.sh`.
 
 ## How to read a point
 
