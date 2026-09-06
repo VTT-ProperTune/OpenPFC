@@ -43,6 +43,9 @@
 #include <utility>
 
 #include <openpfc/runtime/common/cpu_affinity.hpp>
+#if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
+#include <openpfc/runtime/gpu/bind_local_device.hpp>
+#endif
 
 namespace pfc::runtime {
 
@@ -67,6 +70,11 @@ namespace pfc::runtime {
  *       useful message before the abort.
  */
 template <class Body> int mpi_main(int argc, char **argv, Body &&body) {
+#if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
+  // Device must be set before MPI_Init so MPICH_OFI_NIC_POLICY=GPU binds the
+  // NIC next to this rank's GCD. All devices stay visible for GPU-aware IPC.
+  pfc::runtime::gpu::bind_local_device_before_mpi();
+#endif
   MPI_Init(&argc, &argv);
   int rank = 0;
   int nproc = 1;
@@ -77,7 +85,7 @@ template <class Body> int mpi_main(int argc, char **argv, Body &&body) {
   int rc = EXIT_SUCCESS;
   try {
     rc = std::forward<Body>(body)(argc, argv, rank, nproc);
- } catch (const std::exception &e) {
+  } catch (const std::exception &e) {
     std::cerr << "(rank " << rank << "): " << e.what() << "\n";
     MPI_Abort(MPI_COMM_WORLD, 1);
   } catch (...) {
