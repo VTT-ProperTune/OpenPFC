@@ -42,7 +42,7 @@ make_simulation_session(const json &settings, int rank, int nproc,
     pfc::sim::require_session_for_stack(selection,
                                         pfc::sim::SimulationMethod::Spectral,
                                         pfc::sim::SimulationBackend::Cpu);
-    const auto options = cpu_spectral_plan_options_from_json(settings);
+    const auto options = cpu_spectral_plan_options_from_json(settings, nproc);
     return pfc::sim::SimulationSession<Stack>(selection, std::move(time), [&] {
       return pfc::sim::stacks::SpectralCPUStack(std::move(domain), rank, nproc, comm,
                                                 options);
@@ -53,7 +53,7 @@ make_simulation_session(const json &settings, int rank, int nproc,
     pfc::sim::require_session_for_stack(selection,
                                         pfc::sim::SimulationMethod::Spectral,
                                         pfc::sim::SimulationBackend::Cuda);
-    const auto options = cuda_spectral_plan_options_from_json(settings);
+    const auto options = cuda_spectral_plan_options_from_json(settings, nproc);
     return pfc::sim::SimulationSession<Stack>(selection, std::move(time), [&] {
       return Stack(std::move(domain), rank, nproc, comm, options);
     });
@@ -64,7 +64,7 @@ make_simulation_session(const json &settings, int rank, int nproc,
     pfc::sim::require_session_for_stack(selection,
                                         pfc::sim::SimulationMethod::Spectral,
                                         pfc::sim::SimulationBackend::Hip);
-    const auto options = hip_spectral_plan_options_from_json(settings);
+    const auto options = hip_spectral_plan_options_from_json(settings, nproc);
     return pfc::sim::SimulationSession<Stack>(selection, std::move(time), [&] {
       return Stack(std::move(domain), rank, nproc, comm, options);
     });
