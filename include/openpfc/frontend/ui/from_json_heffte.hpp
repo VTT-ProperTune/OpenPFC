@@ -72,29 +72,29 @@ inline void apply_heffte_plan_options_json_overrides(const json &j,
 /**
  * @brief One LUMI-G node has 8 GCDs (one MPI rank per GCD).
  *
- * One LUMI-G node is 8 GCDs. Callers may use this threshold when choosing
- * a reshape. Automatic p2p→alltoall is not applied: on LUMI-G HIP 768³,
- * alltoall was slower than p2p_plined at 8–32 GCDs.
+ * One LUMI-G node is 8 GCDs. Off-node HIP 768³ with pencil `p2p_plined`
+ * was slower at 16 GCDs than at 8; slab decomposition (`use_pencils=false`)
+ * dropped 16-GCD median `wall_step` below the 8-GCD pencil/slab times.
+ * `alltoall` / `alltoallv` were slower than `p2p_plined` on this path.
  */
 inline constexpr int kHeffteAlltoallMinRanks = 9;
 
 /**
- * @brief Upgrade HeFFTe `p2p` / `p2p_plined` to `alltoall` when @p nproc is
- *        at least @ref kHeffteAlltoallMinRanks.
+ * @brief Prefer HeFFTe slabs when @p nproc is at least
+ *        @ref kHeffteAlltoallMinRanks.
  *
- * Opt-in helper. JSON spectral sessions do not call this; campaign TOML
- * selects the reshape. `alltoall` / `alltoallv` are left unchanged.
+ * Does not change `reshape_algorithm`. JSON spectral sessions apply this
+ * after overlaying plan_options.
  */
 inline void apply_heffte_comm_scale(heffte::plan_options &options, int nproc) {
   if (nproc < kHeffteAlltoallMinRanks) {
     return;
   }
-  if (options.algorithm == heffte::reshape_algorithm::p2p ||
-      options.algorithm == heffte::reshape_algorithm::p2p_plined) {
+  if (options.use_pencils) {
     pfc::log_debug(from_json_debug_logger(),
-                   "HeFFTe reshape p2p/p2p_plined upgraded to alltoall "
-                   "(nproc exceeds one LUMI-G node)");
-    options.algorithm = heffte::reshape_algorithm::alltoall;
+                   "HeFFTe use_pencils disabled (slabs) for nproc exceeding "
+                   "one LUMI-G node");
+    options.use_pencils = false;
   }
 }
 
