@@ -45,6 +45,12 @@ module load LUMI/25.09 partition/G cpeGNU cray-fftw lumi-CrayPath
 
 export LD_LIBRARY_PATH="${CRAY_LD_LIBRARY_PATH:-}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export MPICH_GPU_SUPPORT_ENABLED=1
+# Leave every GCD visible: bind_local_device() selects local_rank % n_devices
+# so GPU-aware MPI can use intra-node HIP IPC. Do not mask with
+# ROCR_VISIBLE_DEVICES. MPICH_OFI_NIC_POLICY=GPU made 16-GCD 768³ slower
+# than the Cray default BLOCK (373 ms vs 145 ms); override in the job
+# environment to experiment.
+unset ROCR_VISIBLE_DEVICES HIP_VISIBLE_DEVICES CUDA_VISIBLE_DEVICES || true
 
 NTASKS="${SLURM_NTASKS:?SLURM_NTASKS is not set}"
 RUNDIR="${JOBROOT}/runs/${SLURM_JOB_NAME}_${SLURM_JOB_ID}"
@@ -55,21 +61,16 @@ sed -e "s/__LX__/${LX}/g" -e "s/__T1__/${STEPS}/g" "${TEMPLATE}" \
 cp -f "${BASH_SOURCE[0]}" "${RUNDIR}/tungsten_hip_scaling.sbatch"
 cd "${RUNDIR}"
 
-cat << 'EOF' > "${RUNDIR}/select_gpu"
-#!/bin/bash
-export ROCR_VISIBLE_DEVICES=${SLURM_LOCALID}
-exec "$@"
-EOF
-chmod +x "${RUNDIR}/select_gpu"
-
 # Full-node 8-GCD map from LUMI-G docs, applied per node. Partial GCD
 # allocations (dev-g / small-g with 1–4 GPUs) do not own those CPUs;
-# map_cpu:49 then fails.
+# map_cpu:49 then fails. Do not wrap with ROCR_VISIBLE_DEVICES: the binary
+# calls bind_local_device() so every GCD stays visible for GPU-aware IPC.
 PER_NODE="${SLURM_NTASKS_PER_NODE:-${NTASKS}}"
 SRUN_BIND=()
 CPU_BIND="none"
 if (( PER_NODE == 8 )); then
-  CPU_BIND="map_cpu:49,57,17,25,1,9,33,41"
+  # 7 cores per GCD (LUMI CCD mask), not a single map_cpu thread.
+  CPU_BIND="mask_cpu:0xfe000000000000,0xfe00000000000000,0xfe0000,0xfe000000,0xfe,0xfe00,0xfe00000000,0xfe0000000000"
   SRUN_BIND=(--cpu-bind="${CPU_BIND}")
 elif (( PER_NODE > 8 )); then
   echo "at most 8 ranks per node (one per GCD); ntasks-per-node=${PER_NODE}" >&2
@@ -84,10 +85,12 @@ fi
   echo "Lx=Ly=Lz=${LX} steps=${STEPS} cwd=${RUNDIR}"
   echo "cpu-bind=${CPU_BIND}"
   echo "MPICH_GPU_SUPPORT_ENABLED=${MPICH_GPU_SUPPORT_ENABLED}"
+  echo "MPICH_OFI_NIC_POLICY=${MPICH_OFI_NIC_POLICY:-unset}"
+  echo "ROCR_VISIBLE_DEVICES=${ROCR_VISIBLE_DEVICES:-unset}"
+  echo "OPENPFC_FFT_SLAB_AXIS=${OPENPFC_FFT_SLAB_AXIS:-unset}"
 } | tee "${RUNDIR}/run_meta.txt"
 
-srun "${SRUN_BIND[@]}" "${RUNDIR}/select_gpu" \
+srun "${SRUN_BIND[@]}" \
   "${TUNGSTEN_HIP_BIN}" "${RUNDIR}/input.toml"
 
-rm -f "${RUNDIR}/select_gpu"
 echo "=== done ==="

@@ -101,6 +101,8 @@ You may see CMake dev warnings about GPU_TARGETS / amdgpu-arch on login nodes; `
 
 GPU-aware MPI (HeFFTe): For multi-GPU scaling, HeFFTe must use device-buffer MPI (no host staging between ranks). In HeFFTe 2.4.x this is controlled by `Heffte_ENABLE_GPU_AWARE_MPI` (defaults to ON when a GPU backend is enabled, unless `Heffte_DISABLE_GPU_AWARE_MPI` was set). Pass `-DHeffte_ENABLE_GPU_AWARE_MPI=ON` explicitly so a CMake summary or reinstall clearly shows GPU-aware MPI. At runtime, Cray MPICH still requires `export MPICH_GPU_SUPPORT_ENABLED=1` (see §5).
 
+HeFFTe 2.4.1 `p2p_plined` GPU-aware reshape otherwise `hipDeviceSynchronize`s after packing each destination. On a 16-rank 1D slab that is 15 device waits per hop. Apply [`cmake/heffte-2.4.1-p2p-plined-packall.patch`](../../cmake/heffte-2.4.1-p2p-plined-packall.patch) to pack every block, sync once, then `MPI_Isend` all (side-by-side prefix, do not overwrite the unpatched `2.4.1-rocm` install until the 16-GCD curve is re-timed).
+
 Optional: add `-DHeffte_ENABLE_TESTING=OFF` for a faster build.
 
 Fallback: if configuration fails with GNU, try `cpeCray` or `cpeAMD` instead of `cpeGNU`, keeping `partition/G` and `rocm`.
@@ -183,7 +185,7 @@ A ready-made Slurm helper is [lumi_slurm/verify_gpu_aware_mpi.sh](../lumi_slurm/
 
 ### 5.2 Maximum-throughput layout (one rank per GCD)
 
-For MI250X nodes (8 GCDs per node), LUMI recommends one MPI rank per GCD, `ntasks-per-node=8`, `gpus-per-node=8`, CPU binding, and `ROCR_VISIBLE_DEVICES=${SLURM_LOCALID}` via a wrapper. A full example is [lumi_slurm/tungsten_gpu.sbatch](../lumi_slurm/tungsten_gpu.sbatch) — set `TUNGSTEN_HIP_BIN` to your `tungsten_hip` if needed.
+For MI250X nodes (8 GCDs per node), LUMI recommends one MPI rank per GCD, `ntasks-per-node=8`, `gpus-per-node=8`, and the 8-GCD CPU map. The 0.2 scaling scripts ([lumi_slurm/tungsten_hip_scaling.sbatch](../lumi_slurm/tungsten_hip_scaling.sbatch)) leave every GCD visible; `tungsten_hip` calls `bind_local_device()`. The older 0.1.4 helper [lumi_slurm/tungsten_gpu.sbatch](../lumi_slurm/tungsten_gpu.sbatch) still wraps `ROCR_VISIBLE_DEVICES=${SLURM_LOCALID}` — do not use it for the 0.2 campaign.
 
 Minimal single-GPU smoke fragment (adjust account and partition):
 
@@ -211,7 +213,7 @@ The `tungsten_hip` binary is the HIP build of the tungsten application.
 - Build HeFFTe with `-DHeffte_ENABLE_GPU_AWARE_MPI=ON` and OpenPFC with `-DOpenPFC_MPI_HIP_AWARE=ON` (defaults for both in typical HIP builds).
 - Always `export MPICH_GPU_SUPPORT_ENABLED=1` in the job environment.
 - Keep `lumi-CrayPath` last in the module order and prepend `CRAY_LD_LIBRARY_PATH` to `LD_LIBRARY_PATH` so the module ROCm is used (see §4).
-- If `verify_gpu_aware_mpi` fails but single-rank `tungsten_hip` runs, check GPU binding (`--gpus-per-node`, `select_gpu` / `ROCR_VISIBLE_DEVICES`) and that `srun` uses at least two ranks on GPUs.
+- If `verify_gpu_aware_mpi` fails but single-rank `tungsten_hip` runs, check GPU binding (`--gpus-per-node`, `bind_local_device` / CPU map) and that `srun` uses at least two ranks on GPUs. Do not mask peer GCDs with `ROCR_VISIBLE_DEVICES` on multi-GCD nodes.
 
 ## 6. Runtime FFT / TOML `backend` field
 
