@@ -11,7 +11,7 @@ For realistic runs, assume MPI is involved. Use the same compiler, MPI and HeFFT
 
 ## Which application should I run?
 
-Start with tungsten if you want the production-style PFC path. It reads JSON or TOML, uses the `App` pipeline, writes configured fields, and has CPU, CUDA and HIP variants when the build enables them. Start with Allen–Cahn if you want a small visual sanity check with optional PNG output and fewer moving pieces. Use Heat3D when your question is about finite-difference orders, the spectral heat-equation path, timings or scaling comparisons. Use **cahn_hilliard** for conserved fourth-order spinodal decomposition (Fe–Cr-like regular solution) on the same JSON spectral-ETD path as tungsten. Use **wave2d** for a minimal **coupled first-order** wave-equation demo (displacement + velocity) with mixed periodic / physical y-boundaries. Use **kobayashi** for a **coupled phase-field + temperature** dendritic-growth-style demo (periodic torus, manual FD, PNG of \(\phi\)). AluminumNew is mostly useful as a compact example of an `App<Model>` program wired through JSON.
+Start with tungsten if you want the production-style PFC path. It reads JSON or TOML, uses the `App` pipeline, writes configured fields, and has CPU, CUDA and HIP variants when the build enables them. Start with Allen–Cahn if you want a small visual sanity check with optional PNG output and fewer moving pieces. Use Heat3D when your question is about finite-difference orders, the spectral heat-equation path, timings or scaling comparisons. Use **cahn_hilliard** for conserved fourth-order spinodal decomposition (Fe–Cr-like regular solution) on the same JSON spectral-ETD path as tungsten. Use **thin_film** for lubrication dewetting / coating (\(k^4\) capillary plus disjoining pressure, including an \(A=0\) leveling case). Use **wave2d** for a minimal **coupled first-order** wave-equation demo (displacement + velocity) with mixed periodic / physical y-boundaries. Use **kobayashi** for a **coupled phase-field + temperature** dendritic-growth-style demo (periodic torus, manual FD, PNG of \(\phi\)). AluminumNew is mostly useful as a compact example of an `App<Model>` program wired through JSON.
 
 If you want declarative configuration, read [`app_pipeline.md`](app_pipeline.md) before writing your own input files. If your immediate question is “what file did this run write?”, read [`io_results.md`](io_results.md).
 
@@ -48,6 +48,21 @@ mpirun -n 1 ./apps/cahn_hilliard/cahn_hilliard \
 VTK of `c` is written under `results/cahn_hilliard/` (create that directory, or
 let the writer create it). This is the materials-science Cahn–Hilliard app;
 `examples/12_cahn_hilliard` remains the short teaching example.
+
+## Thin film (dewetting / coating)
+
+`thin_film` is a 0.2 spectral-ETD lubrication model for a periodic liquid
+film. The field is thickness `h`. Capillary \(\nabla^4\) damps short waves;
+van der Waals plus repulsion \(\Pi(h)\) can make a finite unstable band
+(dewetting) or, with `A = 0`, level roughness. HIP builds add `thin_film_hip`.
+See [`apps/thin_film/README.md`](../../apps/thin_film/README.md).
+
+```bash
+mpirun -n 1 ./apps/thin_film/thin_film \
+  ../apps/thin_film/inputs_json/dewetting.json
+mpirun -n 1 ./apps/thin_film/thin_film \
+  ../apps/thin_film/inputs_json/leveling.json
+```
 
 ## Heat3D
 
