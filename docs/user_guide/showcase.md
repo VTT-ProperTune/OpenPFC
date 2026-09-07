@@ -49,6 +49,14 @@ This page ties **figures** you may see in the repository or publications to **ru
 | **VTK** | height `h` under `results/surface_diffusion/`; mode-amplitude recipe in the app README |
 | **Concepts** | Linear Mullins \(k^4\); \(h_k(t)=h_k(0)\exp(-B|k|^4 t)\) |
 
+## Kawahara (capillary–gravity waves)
+
+| | |
+|---|---|
+| **Runnable** | [`apps/kawahara`](../../apps/kawahara/README.md) — `pulse.json` |
+| **VTK** | height `u` under `results/kawahara/` |
+| **Concepts** | Odd-order dispersion \(\omega=\beta k^3+\gamma k^5\); \(k^4\) here rotates, it does not damp |
+
 ## Thin-film dewetting / coating
 
 | | |

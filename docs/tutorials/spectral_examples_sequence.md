@@ -62,3 +62,4 @@ explains their order rather than copying their implementations.
 | Find every runnable example | [Examples catalog](../reference/examples_catalog.md) |
 | Look up API-focused snippets | [API examples walkthrough](../reference/api_examples_walkthrough.md) |
 | Run linear \(k^4\) surface diffusion as a JSON app | [`apps/surface_diffusion`](../../apps/surface_diffusion/README.md) (`#79`) |
+| Run odd-order \(ik^3\)/\(ik^5\) Kawahara waves | [`apps/kawahara`](../../apps/kawahara/README.md) (`#80`) |
