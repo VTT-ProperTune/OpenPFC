@@ -61,3 +61,4 @@ explains their order rather than copying their implementations.
 | Inspect output in ParaView | [VTK and ParaView workflow](vtk_paraview_workflow.md) |
 | Find every runnable example | [Examples catalog](../reference/examples_catalog.md) |
 | Look up API-focused snippets | [API examples walkthrough](../reference/api_examples_walkthrough.md) |
+| Run linear \(k^4\) surface diffusion as a JSON app | [`apps/surface_diffusion`](../../apps/surface_diffusion/README.md) (`#79`) |

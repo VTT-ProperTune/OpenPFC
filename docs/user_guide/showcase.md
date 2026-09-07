@@ -41,6 +41,14 @@ This page ties **figures** you may see in the repository or publications to **ru
 | **VTK / ParaView** | Walkthrough: [`tutorials/vtk_paraview_workflow.md`](../tutorials/vtk_paraview_workflow.md) |
 | **Concepts** | Fourth-order spectral ETD; \(k^4\) is a multiply |
 
+## Surface diffusion (nanoscale smoothing)
+
+| | |
+|---|---|
+| **Runnable** | [`apps/surface_diffusion`](../../apps/surface_diffusion/README.md) — `smoothing.json` |
+| **VTK** | height `h` under `results/surface_diffusion/`; mode-amplitude recipe in the app README |
+| **Concepts** | Linear Mullins \(k^4\); \(h_k(t)=h_k(0)\exp(-B|k|^4 t)\) |
+
 ## Thin-film dewetting / coating
 
 | | |
