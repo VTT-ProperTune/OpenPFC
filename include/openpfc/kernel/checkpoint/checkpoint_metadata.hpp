@@ -71,6 +71,8 @@ struct CheckpointMetadata {
   std::optional<DecompositionMeta> decomposition{};
   std::string method_identity{};
   std::vector<std::string> fields{};
+  /// Optional session-owned BC configuration and state; null in older bundles.
+  nlohmann::json boundary_conditions = nullptr;
 };
 
 /**
@@ -99,6 +101,9 @@ struct CheckpointMetadata {
   }
   j["method_identity"] = meta.method_identity;
   j["fields"] = meta.fields;
+  if (!meta.boundary_conditions.is_null()) {
+    j["boundary_conditions"] = meta.boundary_conditions;
+  }
   return j;
 }
 
@@ -155,6 +160,9 @@ struct CheckpointMetadata {
   meta.method_identity = require_key("method_identity").get<std::string>();
   if (j.contains("fields") && j["fields"].is_array()) {
     meta.fields = j["fields"].get<std::vector<std::string>>();
+  }
+  if (j.contains("boundary_conditions")) {
+    meta.boundary_conditions = j.at("boundary_conditions");
   }
   return meta;
 }

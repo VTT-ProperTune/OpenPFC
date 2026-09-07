@@ -95,6 +95,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Fixed
 
+- Moving-boundary spectral restarts retain the unwrapped front position,
+  scan index, and detection state in the atomic checkpoint bundle (`#37`).
+  Missing front state or changed BC configuration fails at startup. Tungsten
+  JSON/TOML restart inputs now use `restart_from` with a moving-front case.
+- Spectral checkpoints publish after scheduled result output, preserving the
+  next output index so a resumed run does not reuse its last saved filename.
+
 - LUMI `tungsten_hip` scaling sbatch applies the 8-GCD `map_cpu` bind only
   for 8-rank jobs. Prefixing that map on a 1-GCD `dev-g` allocation made
   `srun` fail (`CPU binding outside of job step allocation`).

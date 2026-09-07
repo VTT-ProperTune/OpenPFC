@@ -43,6 +43,7 @@
 #define PFC_FIELD_MODIFIER_HPP
 
 #include <mpi.h>
+#include <nlohmann/json.hpp>
 
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/constants.hpp>
@@ -242,6 +243,23 @@ public:
    *        front-tracking BCs override.
    */
   virtual void set_mpi_comm(MPI_Comm /*comm*/) {}
+
+  /**
+   * @brief Restart state for this modifier, or null for a stateless modifier.
+   *
+   * Sessions capture this on every rank when publishing a checkpoint. Stateful
+   * implementations must return the same state on each rank and override
+   * restore_checkpoint_state, rejecting null when their state is required.
+   */
+  [[nodiscard]] virtual nlohmann::json checkpoint_state() const { return nullptr; }
+
+  /** @brief Restore saved state; the default accepts only a stateless record. */
+  virtual void restore_checkpoint_state(const nlohmann::json &state) {
+    if (!state.is_null()) {
+      throw std::invalid_argument("Unexpected checkpoint state for modifier " +
+                                  get_modifier_name());
+    }
+  }
 
   /**
    * @brief Apply the field modification with explicit simulation context

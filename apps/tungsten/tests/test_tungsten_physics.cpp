@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <nlohmann/json.hpp>
@@ -14,7 +15,9 @@
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <mpi.h>
 #include <openpfc/kernel/data/constants.hpp>
@@ -27,8 +30,8 @@
 #include <openpfc/kernel/simulation/initial_conditions/seed_grid.hpp>
 #include <openpfc/kernel/simulation/spectral_etd_system.hpp>
 #include <tungsten/common/tungsten_spectral.hpp>
-#include <tungsten/tungsten_session.hpp>
 #include <tungsten/tungsten_physics.hpp>
+#include <tungsten/tungsten_session.hpp>
 
 using Catch::Approx;
 using Catch::Matchers::WithinRel;
@@ -301,6 +304,110 @@ TEST_CASE("TungstenSession checkpoint restart matches continuous run",
   std::filesystem::remove_all(ckpt_root, ec);
 }
 
+TEST_CASE("TungstenSession moving boundary survives checkpoint and restart",
+          "[tungsten][checkpoint][moving_restart]") {
+  int rank = 0, nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  int root_pid = static_cast<int>(getpid());
+  MPI_Bcast(&root_pid, 1, MPI_INT, 0, MPI_COMM_WORLD);
+  const auto root = std::filesystem::temp_directory_path() /
+                    ("openpfc_moving_restart_" + std::to_string(root_pid));
+  if (rank == 0) {
+    for (const auto &leg : {"full", "split", "tail"}) {
+      std::filesystem::create_directories(root / leg);
+    }
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+  tungsten::register_catalog();
+  json full = golden_settings(8, 0.0004, 0.0001);
+  const double saveat = GENERATE(0.0001, -1.0);
+  full["timestepping"]["saveat"] = saveat;
+  full["fields"] = {
+      {{"name", "psi"}, {"data", (root / "full" / "psi_%d.bin").string()}}};
+  full["initial_conditions"][0]["n0"] = 0.2;
+  full["boundary_conditions"] = json::array({{{"type", "moving"},
+                                              {"target", "psi"},
+                                              {"rho_low", -0.1},
+                                              {"rho_high", 0.3},
+                                              {"width", 1.0},
+                                              {"alpha", 1.0},
+                                              {"disp", 2.0},
+                                              {"xpos", 0.0}}});
+  full["checkpoint"] = {{"every", 2}, {"directory", (root / "full").string()}};
+  tungsten::TungstenSession continuous(full, rank, nproc);
+  continuous.run();
+
+  json first = full;
+  first["timestepping"]["t1"] = 0.0002;
+  first["checkpoint"]["directory"] = (root / "split").string();
+  first["fields"][0]["data"] = (root / "split" / "psi_%d.bin").string();
+  tungsten::TungstenSession head(first, rank, nproc);
+  head.run();
+  const auto saved = root / "split" / "step_2";
+  pfc::sim::CheckpointService reader({}, MPI_COMM_WORLD);
+  const auto midpoint = reader.read_metadata(saved);
+  REQUIRE(midpoint.boundary_conditions.at(0).at("state").at("idx").get<int>() >= 8);
+  REQUIRE(midpoint.boundary_conditions.at(0).at("state").at("first") == false);
+
+  json resumed = full;
+  resumed["restart_from"] = saved.string();
+  resumed["checkpoint"]["directory"] = (root / "tail").string();
+  resumed["fields"][0]["data"] = (root / "tail" / "psi_%d.bin").string();
+  resumed.erase("initial_conditions");
+  tungsten::TungstenSession tail(resumed, rank, nproc);
+  REQUIRE(tail.time().get_increment() == 2);
+  tail.run();
+  REQUIRE(tail.time().get_increment() == 4);
+  for (const auto value : tail.psi().vec()) {
+    REQUIRE(std::isfinite(value));
+  }
+  REQUIRE(max_abs_diff(continuous.psi().vec(), tail.psi().vec()) < 1e-12);
+  REQUIRE(tail.dumps() == continuous.dumps());
+  REQUIRE(tail.dumps() == (saveat > 0 ? 5 : 0));
+  if (saveat > 0) {
+    REQUIRE(std::filesystem::exists(root / "tail" / "psi_3.bin"));
+    REQUIRE_FALSE(std::filesystem::exists(root / "tail" / "psi_2.bin"));
+  }
+  const auto expected = reader.read_metadata(root / "full" / "step_4");
+  const auto actual = reader.read_metadata(root / "tail" / "step_4");
+  REQUIRE(actual.boundary_conditions == expected.boundary_conditions);
+  REQUIRE(actual.result_counter == expected.result_counter);
+
+  SECTION("Changed boundary configuration fails closed") {
+    resumed["boundary_conditions"][0]["disp"] = 3.0;
+    REQUIRE_THROWS_WITH(
+        (tungsten::TungstenSession(resumed, rank, nproc)),
+        Catch::Matchers::ContainsSubstring("configuration/state mismatch"));
+  }
+  SECTION("Legacy checkpoint missing front state fails on every rank") {
+    if (rank == 0) {
+      auto metadata = pfc::checkpoint::to_json(midpoint);
+      metadata.erase("boundary_conditions");
+      std::ofstream out(saved / "metadata.json");
+      out << metadata.dump(2);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    REQUIRE_THROWS_WITH((tungsten::TungstenSession(resumed, rank, nproc)),
+                        Catch::Matchers::ContainsSubstring("MovingBC checkpoint"));
+  }
+  SECTION("Incomplete front state fails on every rank") {
+    if (rank == 0) {
+      auto metadata = pfc::checkpoint::to_json(midpoint);
+      metadata["boundary_conditions"][0]["state"].erase("idx");
+      std::ofstream out(saved / "metadata.json");
+      out << metadata.dump(2);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    REQUIRE_THROWS_WITH((tungsten::TungstenSession(resumed, rank, nproc)),
+                        Catch::Matchers::ContainsSubstring("MovingBC checkpoint"));
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (rank == 0) {
+    std::filesystem::remove_all(root);
+  }
+}
+
 TEST_CASE("TungstenSession 1-rank 100-step run", "[tungsten][golden]") {
   const json settings = golden_settings(8, 1.0, 0.01);
   tungsten::TungstenSession session(settings, 0, 1, MPI_COMM_WORLD);
@@ -388,8 +495,7 @@ TEST_CASE("Tungsten seed_grid IC writes crystalline seeds",
   REQUIRE(span > 1e-6);
 }
 
-TEST_CASE("TungstenSession runs with moving BC JSON",
-          "[tungsten][etd][moving_bc]") {
+TEST_CASE("TungstenSession runs with moving BC JSON", "[tungsten][etd][moving_bc]") {
   int nproc = 1;
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
   REQUIRE(nproc == 1);

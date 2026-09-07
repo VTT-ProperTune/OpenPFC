@@ -77,6 +77,18 @@ workspace hats (e.g. tungsten `N_hat`) are omitted and recomputed on the
 next step. Grid or method mismatch is a hard error that names the field.
 Halos are not stored; exchange them after load.
 
+Spectral JSON sessions also publish an optional `boundary_conditions` array
+in schema-v1 metadata. Entries contain the original BC `config` and its
+`state`, in application order. The session verifies configuration equality
+before restoring each modifier through `FieldModifier::restore_checkpoint_state`.
+Stateless modifiers return null from `checkpoint_state`; stateful modifiers
+override both hooks and reject missing state. Hooks must produce identical
+state on all ranks. `MovingBC` synchronizes its unwrapped index and position
+and saves `{xpos, idx, first}`; its reduction buffers are rebuilt on use.
+Older bundles without this array can restart stateless BCs, while a moving
+BC reports missing front state. The state travels inside the same atomic
+publication as the fields, so no separately published sidecar is required.
+
 ## Atomicity protocol
 
 1. Rank 0 checks that `final_dir` does not exist; the decision is broadcast and

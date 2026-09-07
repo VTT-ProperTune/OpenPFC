@@ -112,6 +112,14 @@ if(TUNGSTEN_ENABLE_TESTS)
     add_test(NAME tungsten-cpu-golden COMMAND test_tungsten "[etd_cpu_golden]")
     add_test(NAME tungsten-etd-cpu-golden COMMAND test_tungsten "[etd_cpu_golden]")
     if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
+      if(OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR
+         OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 2)
+        add_test(NAME tungsten-moving-restart-2rank
+          COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                  $<TARGET_FILE:test_tungsten> "[moving_restart]")
+        set_tests_properties(tungsten-moving-restart-2rank PROPERTIES
+          TIMEOUT 180 RUN_SERIAL TRUE)
+      endif()
       if(OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER 0 AND
          OpenPFC_MPI_TEST_MAX_WORLD_SIZE LESS 4)
         message(STATUS

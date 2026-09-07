@@ -93,11 +93,10 @@ using stack_memory_space_t = typename stack_memory_space<Stack>::type;
  * @brief Physics constructible from its JSON `model.params` plus geometry.
  */
 template <class Physics>
-concept JsonConstructiblePhysics =
-    requires(const nlohmann::json &params, const pfc::Domain &domain,
-             const pfc::Box3i &box) {
-      { Physics::from_json(params, domain, box) } -> std::same_as<Physics>;
-    };
+concept JsonConstructiblePhysics = requires(
+    const nlohmann::json &params, const pfc::Domain &domain, const pfc::Box3i &box) {
+  { Physics::from_json(params, domain, box) } -> std::same_as<Physics>;
+};
 
 /**
  * @brief JSON → spectral ETD run for one physics on one stack.
@@ -148,14 +147,15 @@ public:
 
     // Conditions from the catalog; ICs applied once, BCs kept for the loop.
     auto &modifiers = default_field_modifier_catalog();
-    for (auto &ic : parse_initial_conditions_from_json(m_settings, m_ctx, modifiers)) {
+    for (auto &ic :
+         parse_initial_conditions_from_json(m_settings, m_ctx, modifiers)) {
       apply_modifier(*ic, pfc::time::current(m_session.time()));
     }
     m_bcs = parse_boundary_conditions_from_json(m_settings, m_ctx, modifiers);
 
     // Writers, fed from field geometry.
-    for (auto &nw : parse_result_writers_from_json(m_settings, m_ctx,
-                                                   default_results_writer_catalog())) {
+    for (auto &nw : parse_result_writers_from_json(
+             m_settings, m_ctx, default_results_writer_catalog())) {
       const std::string &name = nw.field_name;
       if (!m_state.has_field(name)) {
         throw std::invalid_argument("SpectralETDSession: fields[] names '" + name +
@@ -170,6 +170,9 @@ public:
                                      pfc::time::dt(m_session.time()),
                                      std::move(system_options));
     m_ckpt.template restore_from_config<memory_space>(m_state, m_session.time());
+    if (!m_ckpt.config().restart_from.empty()) {
+      restore_boundary_conditions();
+    }
     m_result_counter = m_ckpt.result_counter();
   }
 
@@ -215,10 +218,17 @@ public:
         [&](double t) {
           m_profile.timed_step(pfc::time::increment(m_session.time()), fft(),
                                [&] { m_sys->step(t); });
-          m_ckpt.template maybe_save<memory_space>(m_state, m_session.time());
+          if (!pfc::time::do_save(m_session.time())) {
+            maybe_checkpoint();
+          }
         },
         [&](pfc::Time &tm) { apply_bcs(tm); }, [&](pfc::Time &tm) { apply_bcs(tm); },
-        [&](const pfc::Time &) { write_results(); });
+        [&](const pfc::Time &) {
+          write_results();
+          // Publish after output advances its counter so restart does not
+          // reuse the index of the dump from this accepted step.
+          maybe_checkpoint();
+        });
     m_profile.finalize();
     const FieldChecksum cs = field_checksum();
     if (m_ctx.rank0) {
@@ -252,7 +262,9 @@ public:
   [[nodiscard]] const System &system() const noexcept { return *m_sys; }
   [[nodiscard]] int dumps() const noexcept { return m_result_counter; }
   [[nodiscard]] bool writers_enabled() const noexcept { return !m_writers.empty(); }
-  [[nodiscard]] const nlohmann::json &settings() const noexcept { return m_settings; }
+  [[nodiscard]] const nlohmann::json &settings() const noexcept {
+    return m_settings;
+  }
 
   /// Communicator-wide free energy after the last step (0 if the physics has none).
   [[nodiscard]] double last_free_energy() const noexcept {
@@ -319,6 +331,51 @@ private:
     const double t = pfc::time::current(tm);
     for (auto &bc : m_bcs) {
       apply_modifier(*bc, t);
+    }
+  }
+
+  void maybe_checkpoint() {
+    const auto &cfg = m_ckpt.config();
+    const int increment = m_session.time().get_increment();
+    if (cfg.every > 0 && !cfg.directory.empty() && increment > 0 &&
+        increment % cfg.every == 0) {
+      m_ckpt.set_boundary_conditions(capture_boundary_conditions());
+      m_ckpt.template maybe_save<memory_space>(m_state, m_session.time());
+    }
+  }
+
+  nlohmann::json capture_boundary_conditions() const {
+    auto records = nlohmann::json::array();
+    for (std::size_t i = 0; i < m_bcs.size(); ++i) {
+      records.push_back({{"config", m_settings.at("boundary_conditions").at(i)},
+                         {"state", m_bcs[i]->checkpoint_state()}});
+    }
+    return records;
+  }
+
+  void restore_boundary_conditions() {
+    const auto &records = m_ckpt.boundary_conditions();
+    if (records.is_null()) {
+      // Legacy bundles remain usable for stateless BCs. Stateful BCs reject
+      // missing state themselves, without the frontend knowing their physics.
+      for (auto &bc : m_bcs) {
+        bc->restore_checkpoint_state(nullptr);
+      }
+      return;
+    }
+    if (!records.is_array() || records.size() != m_bcs.size()) {
+      throw std::invalid_argument("checkpoint boundary_conditions count mismatch");
+    }
+    for (std::size_t i = 0; i < m_bcs.size(); ++i) {
+      const auto &record = records.at(i);
+      if (!record.is_object() || !record.contains("config") ||
+          record.at("config") != m_settings.at("boundary_conditions").at(i) ||
+          !record.contains("state")) {
+        throw std::invalid_argument(
+            "checkpoint boundary_conditions configuration/state mismatch at index " +
+            std::to_string(i));
+      }
+      m_bcs[i]->restore_checkpoint_state(record.at("state"));
     }
   }
 

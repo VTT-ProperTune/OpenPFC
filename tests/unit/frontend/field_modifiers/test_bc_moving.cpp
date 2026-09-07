@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <algorithm>
+#include <limits>
 #include <vector>
 
 #include <catch2/catch_approx.hpp>
@@ -14,6 +15,29 @@
 
 using namespace pfc;
 using Catch::Approx;
+
+TEST_CASE("MovingBC rejects incomplete or invalid restart state", "[bc_moving]") {
+  MovingBC bc(0.0, 1.0);
+  const nlohmann::json valid = {{"xpos", 45.0}, {"idx", 33}, {"first", false}};
+  REQUIRE_NOTHROW(bc.restore_checkpoint_state(valid));
+  REQUIRE(bc.checkpoint_state() == valid);
+  for (const auto &key : {"xpos", "idx", "first"}) {
+    auto missing = valid;
+    missing.erase(key);
+    REQUIRE_THROWS_AS(bc.restore_checkpoint_state(missing), std::invalid_argument);
+  }
+  for (const auto &idx :
+       {nlohmann::json(-1), nlohmann::json(1.5),
+        nlohmann::json(std::numeric_limits<unsigned long long>::max())}) {
+    auto invalid = valid;
+    invalid["idx"] = idx;
+    REQUIRE_THROWS_AS(bc.restore_checkpoint_state(invalid), std::invalid_argument);
+  }
+  auto invalid = valid;
+  invalid["xpos"] = std::numeric_limits<double>::infinity();
+  REQUIRE_THROWS_AS(bc.restore_checkpoint_state(invalid), std::invalid_argument);
+  REQUIRE(bc.checkpoint_state() == valid);
+}
 
 TEST_CASE("MovingBC - Parameter Access", "[bc_moving]") {
   MovingBC bc;
