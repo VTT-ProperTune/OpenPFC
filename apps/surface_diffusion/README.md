@@ -82,7 +82,8 @@ against that exponential and a two-mode rate ratio of 16
 `ctest -R surface-diffusion` checks \(L(k)=-B k_{\mathrm{lap}}^2\), exact
 single-mode \(\exp(-B k^4 t)\), two-mode decay rates in the ratio
 \((k_2/k_1)^4=16\), and mean-height conservation. HIP builds add
-`HIP_SurfaceDiffusionETD` and `surface-diffusion-hip-smoke`.
+`HIP_SurfaceDiffusionETD` and `surface-diffusion-hip-smoke`. LUMI-G smoke:
+job 21791182 (`small-g`, 16², mean \(h=0\)).
 
 ## Layout
 

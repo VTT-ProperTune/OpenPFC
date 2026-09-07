@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   spectral-ETD session (`#79`). Exact \(k^4\) decay of Fourier modes;
   multi-wavelength JSON demo. Catch2 single-mode \(\exp(-B k^4 t)\) and
   two-mode \((k_2/k_1)^4\) scaling. CPU binary plus `surface_diffusion_hip`
-  when rocFFT HeFFTe is on.
+  when rocFFT HeFFTe is on (LUMI-G smoke job 21791182).
 - `thin_film`: lubrication dewetting / coating on the 0.2 spectral-ETD
   session (`#78`). Capillary \(k^4\) plus van der Waals/repulsion \(\Pi(h)\);
   `A=0` is a leveling check. JSON + VTK, Catch2 volume / \(\lambda(k)\) /
