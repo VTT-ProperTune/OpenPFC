@@ -30,15 +30,16 @@ This page ties **figures** you may see in the repository or publications to **ru
 | **Context** | HPC campaigns on large grids (e.g. LUMI); see [`performance_profiling.md`](../hpc/performance_profiling.md), [`lumi_slurm/README.md`](../lumi_slurm/README.md) |
 | **Typical app** | Same [`apps/tungsten`](../../apps/tungsten/README.md) family with performance-oriented inputs (e.g. `tungsten_performance.json` — large domain; use for scaling studies, not first debug) |
 
-## Cahn–Hilliard–style dynamics (`examples/`)
+## Cahn–Hilliard–style dynamics
 
 ![Cahn–Hilliard example animation](../img/cahn_hilliard.gif)
 
 | | |
 |---|---|
-| **Runnable** | `examples/12_cahn_hilliard` (see [`examples_catalog.md`](../reference/examples_catalog.md)) |
+| **Materials app** | [`apps/cahn_hilliard`](../../apps/cahn_hilliard/README.md) — Fe–Cr-like spinodal, JSON, VTK of `c` |
+| **Teaching example** | `examples/12_cahn_hilliard` (see [`examples_catalog.md`](../reference/examples_catalog.md)) |
 | **VTK / ParaView** | Walkthrough: [`tutorials/vtk_paraview_workflow.md`](../tutorials/vtk_paraview_workflow.md) |
-| **Concepts** | Spectral model + `Simulator` workflow |
+| **Concepts** | Fourth-order spectral ETD; \(k^4\) is a multiply |
 
 ## Quick 2D PNG snapshots (Allen–Cahn)
 
