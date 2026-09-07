@@ -9,6 +9,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- `thin_film`: lubrication dewetting / coating on the 0.2 spectral-ETD
+  session (`#78`). Capillary \(k^4\) plus van der Waals/repulsion \(\Pi(h)\);
+  `A=0` is a leveling check. JSON + VTK, Catch2 volume / \(\lambda(k)\) /
+  leveling. CPU binary plus `thin_film_hip` when rocFFT HeFFTe is on
+  (LUMI-G smoke job 21781449).
 - `cahn_hilliard`: conserved Fe–Cr-like Cahn–Hilliard on the 0.2 spectral-ETD
   session (`#77`). Regular-solution \(f(c)\) at 475 °C, \(L(k)\propto k^4\),
   JSON + VTK, Catch2 mass / linear-mode / spinodal checks. CPU binary plus
