@@ -9,6 +9,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- CPU case baker (`#13` first slice): stage an Apptainer runtime image from
+  a compiled CLI tungsten case, with input/runtime-library hashes and explicit
+  host-MPI/PMIx/UCX mounts. Includes a baked-case entrypoint and portability
+  checks. Validated with a two-rank Tohtori CPU smoke; GPU and multi-node
+  networking are not yet validated.
+
 - `openpfc` CLI (`#41` first slice): create a small tungsten case, compile
   through `scripts/build.sh` with local CPU / Tohtori CUDA / LUMI HIP profiles,
   and run with MPI or Slurm. Build and installed drivers report the project
