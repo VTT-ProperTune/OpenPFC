@@ -14,6 +14,10 @@ If anything fails, stop at that step. Open
 [`INSTALL.md`](../INSTALL.md) when the problem concerns compilers, MPI, or
 HeFFTe.
 
+For a case-oriented workflow on a supported build machine, use the
+[`openpfc` CLI guide](user_guide/cli.md): `init` creates a tungsten input,
+`compile` uses the canonical build script, and `run` launches it with MPI.
+
 ## Check the environment
 
 You need:

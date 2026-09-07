@@ -51,6 +51,7 @@ workshop/README
 
 user_guide/README
 user_guide/applications
+user_guide/cli
 user_guide/configuration
 user_guide/app_pipeline
 user_guide/parameter_validation

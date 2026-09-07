@@ -3,6 +3,26 @@
 #
 # Installation rules for headers, libraries, and binaries
 
+# Python CLI is usable from the build tree and relocatable after installation.
+configure_file(${CMAKE_SOURCE_DIR}/scripts/openpfc ${CMAKE_BINARY_DIR}/bin/openpfc
+    COPYONLY FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
+    GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/share/openpfc/version
+    CONTENT "${PROJECT_VERSION}${OpenPFC_VERSION_SUFFIX}\n")
+install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/openpfc DESTINATION bin)
+install(FILES ${CMAKE_BINARY_DIR}/share/openpfc/version DESTINATION share/openpfc)
+
+if(OpenPFC_BUILD_TESTS AND TARGET tungsten)
+    find_package(Python3 3.8 COMPONENTS Interpreter QUIET)
+    if(Python3_Interpreter_FOUND)
+        add_test(NAME openpfc-cli-smoke
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/tests/cli_smoke.py
+                --cli ${CMAKE_BINARY_DIR}/bin/openpfc
+                --binary $<TARGET_FILE:tungsten>)
+        set_tests_properties(openpfc-cli-smoke PROPERTIES TIMEOUT 120)
+    endif()
+endif()
+
 # Install public headers only. Device TUs live under src/openpfc/runtime/gpu/;
 # kernel .inc files live next to those TUs under src/ and are not installed.
 # Stray .md under include/ must not ship.

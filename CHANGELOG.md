@@ -9,6 +9,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- `openpfc` CLI (`#41` first slice): create a small tungsten case, compile
+  through `scripts/build.sh` with local CPU / Tohtori CUDA / LUMI HIP profiles,
+  and run with MPI or Slurm. Build and installed drivers report the project
+  version; nested MPI launches are rejected. Container packaging remains #13.
 - `gradient_elasticity`: isotropic Helmholtz–Navier strain-gradient
   elasticity on a 2-D periodic eigenstrain (`#82`). Fourth-order
   \(\alpha=1+\ell^2 k^2\) (optional sixth-order stretch); one-shot
