@@ -9,6 +9,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- `cahn_hilliard`: conserved Fe–Cr-like Cahn–Hilliard on the 0.2 spectral-ETD
+  session (`#77`). Regular-solution \(f(c)\) at 475 °C, \(L(k)\propto k^4\),
+  JSON + VTK, Catch2 mass / linear-mode / spinodal checks. CPU binary plus
+  `cahn_hilliard_hip` when rocFFT HeFFTe is on (same JSON; CPU vs HIP field
+  to \(10^{-10}\)).
 - `heat3d_fd_hip`: 3D heat-equation FD on HIP (`FDGPUStack`, device halo,
   `for_each_interior_device`). Same CLI as `heat3d_fd`; `HEAT3D_PROFILE_JSON`
   writes schema-v4 `wall_step` frames. LUMI submit helpers:
