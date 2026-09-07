@@ -11,7 +11,7 @@ For realistic runs, assume MPI is involved. Use the same compiler, MPI and HeFFT
 
 ## Which application should I run?
 
-Start with tungsten if you want the production-style PFC path. It reads JSON or TOML, uses the `App` pipeline, writes configured fields, and has CPU, CUDA and HIP variants when the build enables them. Start with Allen–Cahn if you want a small visual sanity check with optional PNG output and fewer moving pieces. Use Heat3D when your question is about finite-difference orders, the spectral heat-equation path, timings or scaling comparisons. Use **cahn_hilliard** for conserved fourth-order spinodal decomposition (Fe–Cr-like regular solution) on the same JSON spectral-ETD path as tungsten. Use **thin_film** for lubrication dewetting / coating (\(k^4\) capillary plus disjoining pressure, including an \(A=0\) leveling case). Use **wave2d** for a minimal **coupled first-order** wave-equation demo (displacement + velocity) with mixed periodic / physical y-boundaries. Use **kobayashi** for a **coupled phase-field + temperature** dendritic-growth-style demo (periodic torus, manual FD, PNG of \(\phi\)). AluminumNew is mostly useful as a compact example of an `App<Model>` program wired through JSON.
+Start with tungsten if you want the production-style PFC path. It reads JSON or TOML, uses the `App` pipeline, writes configured fields, and has CPU, CUDA and HIP variants when the build enables them. Start with Allen–Cahn if you want a small visual sanity check with optional PNG output and fewer moving pieces. Use Heat3D when your question is about finite-difference orders, the spectral heat-equation path, timings or scaling comparisons. Use **cahn_hilliard** for conserved fourth-order spinodal decomposition (Fe–Cr-like regular solution) on the same JSON spectral-ETD path as tungsten. Use **thin_film** for lubrication dewetting / coating (\(k^4\) capillary plus disjoining pressure, including an \(A=0\) leveling case). Use **surface_diffusion** for Mullins thermal smoothing of nanoscale roughness (exact \(k^4\) decay). Use **wave2d** for a minimal **coupled first-order** wave-equation demo (displacement + velocity) with mixed periodic / physical y-boundaries. Use **kobayashi** for a **coupled phase-field + temperature** dendritic-growth-style demo (periodic torus, manual FD, PNG of \(\phi\)). AluminumNew is mostly useful as a compact example of an `App<Model>` program wired through JSON.
 
 If you want declarative configuration, read [`app_pipeline.md`](app_pipeline.md) before writing your own input files. If your immediate question is “what file did this run write?”, read [`io_results.md`](io_results.md).
 
@@ -62,6 +62,18 @@ mpirun -n 1 ./apps/thin_film/thin_film \
   ../apps/thin_film/inputs_json/dewetting.json
 mpirun -n 1 ./apps/thin_film/thin_film \
   ../apps/thin_film/inputs_json/leveling.json
+```
+
+## Surface diffusion (Mullins)
+
+`surface_diffusion` is a 0.2 spectral-ETD Mullins model: \(\partial_t h=-B\nabla^4 h\).
+Every Fourier mode decays as \(\exp(-B|k|^4 t)\), so short-wavelength roughness
+vanishes first. HIP builds add `surface_diffusion_hip`. See
+[`apps/surface_diffusion/README.md`](../../apps/surface_diffusion/README.md).
+
+```bash
+mpirun -n 1 ./apps/surface_diffusion/surface_diffusion \
+  ../apps/surface_diffusion/inputs_json/smoothing.json
 ```
 
 ## Heat3D
