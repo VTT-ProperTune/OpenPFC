@@ -63,7 +63,8 @@ JSON `model.params`: `h0`, `B`, `M0`, `gamma`, `A`. Initial condition
 `ctest -R ehd-film` checks \(L(k)=M_0 B k_{\mathrm{lap}}^3\), exact
 \(\exp(-M_0 B k^6 t)\), two-mode rate ratio 64, mean-gap conservation,
 and that \(A>0\) grows at low \(k\). HIP builds add `HIP_EhdFilmETD` and
-`ehd-film-hip-smoke`.
+`ehd-film-hip-smoke`. LUMI-G smoke: job 21799835 (`small-g`, 16²,
+mean \(h=1\)).
 
 ## Layout
 
