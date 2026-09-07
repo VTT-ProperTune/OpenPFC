@@ -1,0 +1,8 @@
+{
+    "model": {"name": "cahn_hilliard", "params": {"c0": 0.32, "T": 748.15, "Omega": 20100.0, "kappa": 1.0, "M": 1.0}},
+    "domain": {"Lx": 128, "Ly": 128, "Lz": 1, "dx": 1.0, "dy": 1.0, "dz": 1.0, "origin": "corner"},
+    "timestepping": {"t0": 0.0, "t1": 100.0, "dt": 0.01, "saveat": 5.0},
+    "initial_conditions": [{"target": "c", "type": "seeded_noise", "c0": 0.32, "amplitude": 0.02, "seed": 42}],
+    "fields": [{"name": "c", "data": "results/cahn_hilliard/c_%04d.vti"}],
+    "diagnostics": {"csv": "results/cahn_hilliard/diagnostics.csv"}
+}

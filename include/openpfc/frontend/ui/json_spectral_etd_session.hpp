@@ -212,7 +212,9 @@ public:
   }
 
   /// Run to `t1`: BCs before every step, writers on `saveat`, checkpoints.
-  void run() {
+  /// Optional collective observer called on saveat, even without field writers.
+  /// It sees the accepted state (including the initial state on a fresh run).
+  template <class Observer = pfc::sim::NoopHook> void run(Observer observe = {}) {
     pfc::sim::SimulationDriver driver(m_session.time(), &m_state);
     driver.run(
         [&](double t) {
@@ -224,6 +226,7 @@ public:
         },
         [&](pfc::Time &tm) { apply_bcs(tm); }, [&](pfc::Time &tm) { apply_bcs(tm); },
         [&](const pfc::Time &) {
+          observe();
           write_results();
           // Publish after output advances its counter so restart does not
           // reuse the index of the dump from this accepted step.
@@ -324,7 +327,8 @@ private:
   }
 
   void apply_modifier(pfc::FieldModifier &m, double t) {
-    pfc::apply_field_modifier(m, target_field(m), t);
+    const pfc::SimulationContext context(m_ctx.comm);
+    pfc::apply_field_modifier(m, target_field(m), t, &context);
   }
 
   void apply_bcs(pfc::Time &tm) {
