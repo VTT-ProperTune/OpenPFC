@@ -11,7 +11,7 @@ For realistic runs, assume MPI is involved. Use the same compiler, MPI and HeFFT
 
 ## Which application should I run?
 
-Start with tungsten if you want the production-style PFC path. It reads JSON or TOML, uses the `App` pipeline, writes configured fields, and has CPU, CUDA and HIP variants when the build enables them. Start with Allen–Cahn if you want a small visual sanity check with optional PNG output and fewer moving pieces. Use Heat3D when your question is about finite-difference orders, the spectral heat-equation path, timings or scaling comparisons. Use **wave2d** for a minimal **coupled first-order** wave-equation demo (displacement + velocity) with mixed periodic / physical y-boundaries. Use **kobayashi** for a **coupled phase-field + temperature** dendritic-growth-style demo (periodic torus, manual FD, PNG of \(\phi\)). AluminumNew is mostly useful as a compact example of an `App<Model>` program wired through JSON.
+Start with tungsten if you want the production-style PFC path. It reads JSON or TOML, uses the `App` pipeline, writes configured fields, and has CPU, CUDA and HIP variants when the build enables them. Start with Allen–Cahn if you want a small visual sanity check with optional PNG output and fewer moving pieces. Use Heat3D when your question is about finite-difference orders, the spectral heat-equation path, timings or scaling comparisons. Use **cahn_hilliard** for conserved fourth-order spinodal decomposition (Fe–Cr-like regular solution) on the same JSON spectral-ETD path as tungsten. Use **wave2d** for a minimal **coupled first-order** wave-equation demo (displacement + velocity) with mixed periodic / physical y-boundaries. Use **kobayashi** for a **coupled phase-field + temperature** dendritic-growth-style demo (periodic torus, manual FD, PNG of \(\phi\)). AluminumNew is mostly useful as a compact example of an `App<Model>` program wired through JSON.
 
 If you want declarative configuration, read [`app_pipeline.md`](app_pipeline.md) before writing your own input files. If your immediate question is “what file did this run write?”, read [`io_results.md`](io_results.md).
 
@@ -30,6 +30,24 @@ The JSON inputs live under [`apps/tungsten/inputs_json/`](../../apps/tungsten/in
 ## AluminumNew
 
 `aluminumNew` is a sample 3D application using OpenPFC, nlohmann_json and HeFFTe. It is useful when you want to see an `App<Model>` target without the full tungsten complexity. Its README is intentionally small; the source and CMake target are the reference. See [`apps/aluminumNew/README.md`](../../apps/aluminumNew/README.md).
+
+## Cahn–Hilliard (Fe–Cr spinodal)
+
+`cahn_hilliard` is a 0.2 spectral-ETD application for conserved Cahn–Hilliard
+dynamics on a periodic grid. The field is Cr mole fraction `c`. The default
+regular-solution free energy at 475 °C puts Fe–32Cr inside the chemical
+spinodal; \(\nabla^4\) is a \(k^4\) multiplier. JSON/TOML CLI matches tungsten.
+HIP builds add `cahn_hilliard_hip` with the same input. See
+[`apps/cahn_hilliard/README.md`](../../apps/cahn_hilliard/README.md).
+
+```bash
+mpirun -n 1 ./apps/cahn_hilliard/cahn_hilliard \
+  ../apps/cahn_hilliard/inputs_json/fe_cr_spinodal.json
+```
+
+VTK of `c` is written under `results/cahn_hilliard/` (create that directory, or
+let the writer create it). This is the materials-science Cahn–Hilliard app;
+`examples/12_cahn_hilliard` remains the short teaching example.
 
 ## Heat3D
 
