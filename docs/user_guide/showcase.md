@@ -57,6 +57,14 @@ This page ties **figures** you may see in the repository or publications to **ru
 | **VTK** | height `u` under `results/kawahara/` |
 | **Concepts** | Odd-order dispersion \(\omega=\beta k^3+\gamma k^5\); \(k^4\) here rotates, it does not damp |
 
+## EHD film (flexible plate)
+
+| | |
+|---|---|
+| **Runnable** | [`apps/ehd_film`](../../apps/ehd_film/README.md) — `relaxation.json` |
+| **VTK** | gap `h` under `results/ehd_film/` |
+| **Concepts** | Sixth-order bending lubrication; \(\lambda=-M_0 B k^6\) |
+
 ## Thin-film dewetting / coating
 
 | | |
