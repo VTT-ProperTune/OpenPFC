@@ -97,6 +97,9 @@ TEST_CASE("from_json CheckpointMetadata round-trip", "[checkpoint][metadata]") {
           },
       .method_identity = "euler",
       .fields = {"u"},
+      .boundary_conditions = nlohmann::json::array(
+          {{{"config", {{"type", "moving"}}},
+            {"state", {{"xpos", 12.0}, {"idx", 8}, {"first", false}}}}}),
   };
   const auto j = pfc::checkpoint::to_json(meta);
   const auto back = pfc::checkpoint::from_json(j);
@@ -104,6 +107,10 @@ TEST_CASE("from_json CheckpointMetadata round-trip", "[checkpoint][metadata]") {
   REQUIRE(back.method_identity == "euler");
   REQUIRE(back.fields == std::vector<std::string>{"u"});
   REQUIRE(back.result_counter == 2);
+  REQUIRE(back.boundary_conditions == meta.boundary_conditions);
+  auto legacy = j;
+  legacy.erase("boundary_conditions");
+  REQUIRE(pfc::checkpoint::from_json(legacy).boundary_conditions.is_null());
 }
 
 TEST_CASE("from_json rejects schema version mismatch", "[checkpoint][metadata]") {

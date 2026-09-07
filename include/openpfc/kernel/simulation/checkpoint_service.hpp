@@ -182,6 +182,15 @@ public:
   [[nodiscard]] int result_counter() const noexcept { return m_result_counter; }
   void set_result_counter(int c) noexcept { m_result_counter = c; }
 
+  /// Session-owned BC records, published atomically with fields and time.
+  void set_boundary_conditions(nlohmann::json records) {
+    m_boundary_conditions = std::move(records);
+  }
+  /// Records from the last load (null for legacy field-only bundles).
+  [[nodiscard]] const nlohmann::json &boundary_conditions() const noexcept {
+    return m_boundary_conditions;
+  }
+
   [[nodiscard]] std::filesystem::path step_dir(int increment) const {
     std::ostringstream oss;
     oss << "step_" << increment;
@@ -223,6 +232,7 @@ public:
     meta.domain = domain_params_from(dom);
     meta.method_identity = pfc::sim::steppers::to_string(time.method());
     meta.fields = names;
+    meta.boundary_conditions = m_boundary_conditions;
     checkpoint::DecompositionMeta dm;
     dm.mpi_size = nproc;
     dm.local_size = {sz[0], sz[1], sz[2]};
@@ -238,10 +248,10 @@ public:
             const auto loc = f.local_size();
             const auto off = f.box().low;
             const auto gsz = f.global_size();
-            checkpoint::write_real_brick_mpi(
-                (fields_dir / (name + ".bin")).string(), m_comm,
-                {gsz[0], gsz[1], gsz[2]}, {loc[0], loc[1], loc[2]},
-                {off[0], off[1], off[2]}, brick);
+            checkpoint::write_real_brick_mpi((fields_dir / (name + ".bin")).string(),
+                                             m_comm, {gsz[0], gsz[1], gsz[2]},
+                                             {loc[0], loc[1], loc[2]},
+                                             {off[0], off[1], off[2]}, brick);
           }
         });
     if (!outcome.ok) {
@@ -326,6 +336,7 @@ public:
       time.set_method(*parsed);
     }
     m_result_counter = meta.result_counter;
+    m_boundary_conditions = meta.boundary_conditions;
 
     for (const auto &name : names) {
       auto &f = state.get_field<double, MemorySpace>(name);
@@ -369,6 +380,7 @@ private:
   CheckpointConfig m_cfg;
   MPI_Comm m_comm{MPI_COMM_WORLD};
   int m_result_counter{0};
+  nlohmann::json m_boundary_conditions = nullptr;
 };
 
 } // namespace pfc::sim

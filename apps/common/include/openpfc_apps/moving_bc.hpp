@@ -92,14 +92,38 @@ public:
 
   const std::string &get_modifier_name() const override { return m_name; }
 
+  /// Unwrapped front position/index and first-detection flag (no scratch buffers).
+  [[nodiscard]] nlohmann::json checkpoint_state() const override {
+    return {{"xpos", m_xpos}, {"idx", m_idx}, {"first", m_first}};
+  }
+
+  /// Missing or malformed front state cannot reproduce a moving-BC restart.
+  void restore_checkpoint_state(const nlohmann::json &state) override {
+    if (!state.is_object() || !state.contains("xpos") ||
+        !state["xpos"].is_number() || !state.contains("idx") ||
+        !state["idx"].is_number_integer() || state["idx"] < 0 ||
+        state["idx"] > std::numeric_limits<int>::max() || !state.contains("first") ||
+        !state["first"].is_boolean()) {
+      throw std::invalid_argument(
+          "MovingBC checkpoint: missing or invalid front state (xpos, idx, first)");
+    }
+    const double xpos = state["xpos"].get<double>();
+    if (!std::isfinite(xpos)) {
+      throw std::invalid_argument("MovingBC checkpoint: xpos must be finite");
+    }
+    m_xpos = xpos;
+    m_idx = state["idx"].get<int>();
+    m_first = state["first"].get<bool>();
+  }
+
   void set_mpi_comm(MPI_Comm c) noexcept override {
     comm = c;
     rank = mpi::get_comm_rank(comm);
     size = mpi::get_comm_size(comm);
   }
 
-  void apply(pfc::field::FieldOutput<double> field, const Domain &domain, const Box3i &box,
-             double time = 0.0) override {
+  void apply(pfc::field::FieldOutput<double> field, const Domain &domain,
+             const Box3i &box, double time = 0.0) override {
     (void)time;
     const Int3 low = box.low;
     const Int3 high = box.high;
@@ -108,7 +132,7 @@ public:
     const auto dx = pfc::domain::get_spacing(domain, 0);
     const auto x0 = pfc::domain::get_origin(domain, 0);
 
-    if (m_first) {
+    if (xline.size() != static_cast<std::size_t>(Lx)) {
       xline.resize(Lx);
       // Receive buffer is ignored on non-root ranks, but a valid length-Lx buffer
       // avoids undefined behavior from empty-vector data() on some MPI stacks.
@@ -158,6 +182,9 @@ public:
       }
     }
 
+    // Keep the unwrapped index identical on every rank for restart capture.
+    pfc::mpi::throw_on_mpi_error(MPI_Bcast(&m_idx, 1, MPI_INT, 0, comm),
+                                 "MPI_Bcast MovingBC index");
     double new_xpos = x0 + (m_idx * dx) + m_disp;
     m_xpos = std::max(new_xpos, m_xpos);
     // Fail closed before fill_bc so ranks never apply a divergent m_xpos.
@@ -178,9 +205,8 @@ public:
     fill_bc(field, domain, box);
   }
 
-
-
-  void fill_bc(pfc::field::FieldOutput<double> field, const Domain &domain, const Box3i &box) {
+  void fill_bc(pfc::field::FieldOutput<double> field, const Domain &domain,
+               const Box3i &box) {
     const double Lx = pfc::domain::get_size(domain, 0);
     const double dx = pfc::domain::get_spacing(domain, 0);
     const double l = Lx * dx;
