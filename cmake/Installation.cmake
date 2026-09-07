@@ -20,6 +20,15 @@ if(OpenPFC_BUILD_TESTS AND TARGET tungsten)
                 --cli ${CMAKE_BINARY_DIR}/bin/openpfc
                 --binary $<TARGET_FILE:tungsten>)
         set_tests_properties(openpfc-cli-smoke PROPERTIES TIMEOUT 120)
+        if(TARGET cahn_hilliard AND OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
+           (OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 2))
+            add_test(NAME cahn-hilliard-diagnostics-workflow
+                COMMAND ${Python3_EXECUTABLE}
+                    ${CMAKE_SOURCE_DIR}/scripts/tests/cahn_hilliard_diagnostics_smoke.py
+                    --binary $<TARGET_FILE:cahn_hilliard> --mpiexec ${MPIEXEC_EXECUTABLE})
+            set_tests_properties(cahn-hilliard-diagnostics-workflow PROPERTIES
+                TIMEOUT 180 PROCESSORS 2)
+        endif()
     endif()
 endif()
 

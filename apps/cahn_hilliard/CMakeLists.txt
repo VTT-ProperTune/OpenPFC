@@ -59,6 +59,13 @@ if(CAHN_HILLIARD_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     target_link_libraries(test_cahn_hilliard PRIVATE Catch2::Catch2)
     include(CTest)
     add_test(NAME cahn-hilliard-all-tests COMMAND test_cahn_hilliard)
+    if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
+       (OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 2))
+      add_test(NAME cahn-hilliard-mpi-tests
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS}
+          $<TARGET_FILE:test_cahn_hilliard> ${MPIEXEC_POSTFLAGS})
+      set_tests_properties(cahn-hilliard-mpi-tests PROPERTIES TIMEOUT 120 PROCESSORS 2)
+    endif()
 
     if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
       cahn_hilliard_hip_executable(test_cahn_hilliard_hip

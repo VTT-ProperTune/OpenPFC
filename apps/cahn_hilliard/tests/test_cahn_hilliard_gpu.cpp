@@ -72,6 +72,16 @@ TEST_CASE("CahnHilliardHIPSession matches host within 1e-10",
   cahn_hilliard::CahnHilliardHIPSession dev(settings, rank, nproc, MPI_COMM_WORLD);
   dev.run();
 
+  cahn_hilliard::Diagnostics<pfc::HostSpace> host_diagnostics(
+      host.domain(), host.fft(), MPI_COMM_WORLD);
+  cahn_hilliard::Diagnostics<pfc::HIPSpace> device_diagnostics(
+      dev.domain(), dev.fft(), MPI_COMM_WORLD);
+  const auto h = host_diagnostics.sample(host.psi(), host.system().physics().params);
+  const auto d = device_diagnostics.sample(dev.psi(), dev.system().physics().params);
+  REQUIRE(std::abs(h.mass - d.mass) < 1e-9);
+  REQUIRE(std::abs(h.gradient_energy - d.gradient_energy) < 1e-9);
+  REQUIRE(std::abs(h.total_energy() - d.total_energy()) < 1e-9);
+
   const auto &c_h = host.psi().vec();
   dev.psi().with_host_view([&](double *d, std::size_t n) {
     REQUIRE(n == c_h.size());

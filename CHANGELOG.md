@@ -9,6 +9,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- Cahn–Hilliard seeded broadband coarsening preset and optional collective CSV
+  diagnostics: mass, bounds, and current-state total energy including spectral
+  gradient energy. Invalid sampled compositions stop the run; CSV files are
+  never overwritten. Noise initialization is independent of MPI decomposition.
 - Independent Kawahara manufactured-solution tests for third- and fifth-order
   dispersion. Correct the documented PDE to the existing `-beta*u_xxx`
   convention without changing solver coefficients; fix the pulse preset's

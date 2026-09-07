@@ -238,7 +238,7 @@ TEST_CASE("CahnHilliard ETD conserves mean c and matches linear growth",
   REQUIRE_THAT(amp, WithinRel(expected, 0.05));
 }
 
-TEST_CASE("CahnHilliard spinodal mode grows and bulk free energy falls",
+TEST_CASE("CahnHilliard spinodal mode grows and total free energy falls",
           "[cahn_hilliard][spectral][energy]") {
   if (world_size() != 1) {
     SKIP("single-rank free-energy comparison");
@@ -270,14 +270,99 @@ TEST_CASE("CahnHilliard spinodal mode grows and bulk free energy falls",
       phys, stack.fft(), state, dt, opt);
 
   const double var0 = variance_c(c);
-  (void)sys.step(0.0);
-  const double bulk0 = sys.last_free_energy();
-  double t = dt;
-  for (int step = 1; step < n_steps; ++step) {
+  cahn_hilliard::Diagnostics<pfc::HostSpace> diagnostics(domain, stack.fft(),
+                                                         MPI_COMM_WORLD);
+  auto previous = diagnostics.sample(c, phys.params);
+  double t = 0;
+  for (int step = 0; step < n_steps; ++step) {
     t = sys.step(t);
+    const auto current = diagnostics.sample(c, phys.params);
+    REQUIRE(current.total_energy() <= previous.total_energy() + 1e-12);
+    REQUIRE_THAT(current.mass, WithinAbs(previous.mass, 1e-10));
+    previous = current;
   }
   REQUIRE(variance_c(c) > var0);
-  REQUIRE(sys.last_free_energy() <= bulk0 + 1.0e-12);
+}
+
+TEST_CASE("Diagnostics match the analytical gradient energy on distributed grids",
+          "[cahn_hilliard][diagnostics]") {
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  const auto domain = pfc::domain::create(pfc::GridSize({32, 16, 1}),
+                                          pfc::PhysicalOrigin({-2.0, 3.0, 0.0}),
+                                          pfc::GridSpacing({0.5, 2.0, 1.0}));
+  pfc::sim::stacks::SpectralCPUStack stack(domain, rank, world_size(),
+                                           MPI_COMM_WORLD);
+  auto &c = stack.u();
+  cahn_hilliard::CahnHilliardParams params;
+  cahn_hilliard::Diagnostics<pfc::HostSpace> diagnostics(domain, stack.fft(),
+                                                         MPI_COMM_WORLD);
+  const double kx = 2 * std::numbers::pi / 16;
+  const double ky = 4 * std::numbers::pi / 32;
+  c.apply([&](double x, double y, double) {
+    return 0.32 + 0.02 * std::cos(kx * x + ky * y);
+  });
+  const auto s = diagnostics.sample(c, params);
+  REQUIRE_THAT(s.mean, WithinAbs(0.32, 1e-13));
+  REQUIRE_THAT(s.mass, WithinAbs(0.32 * 512, 1e-10));
+  REQUIRE_THAT(
+      s.gradient_energy,
+      WithinAbs(512 * params.kappa * 0.02 * 0.02 * (kx * kx + ky * ky) / 4, 1e-12));
+  REQUIRE(s.invalid_cells == 0);
+  c.apply([](double, double, double) { return 0.32; });
+  const auto flat = diagnostics.sample(c, params);
+  REQUIRE_THAT(flat.gradient_energy, WithinAbs(0, 1e-12));
+  const auto pw = cahn_hilliard::CahnHilliardPointwise{.omega_nd = params.omega_nd};
+  REQUIRE_THAT(flat.bulk_energy, WithinAbs(512 * pw.f_bulk(0.32), 1e-10));
+  c.apply([](double, double, double) { return 1e-14; });
+  const auto dilute = diagnostics.sample(c, params);
+  const double dilute_energy = params.omega_nd * 1e-14 * (1 - 1e-14) +
+                               1e-14 * std::log(1e-14) +
+                               (1 - 1e-14) * std::log1p(-1e-14);
+  REQUIRE_THAT(dilute.bulk_energy, WithinAbs(512 * dilute_energy, 1e-22));
+  c.apply([](double, double, double) { return 1.1; });
+  const auto bad = diagnostics.sample(c, params);
+  REQUIRE(bad.invalid_cells == 512);
+  REQUIRE(std::isnan(bad.total_energy()));
+}
+
+TEST_CASE("Seeded noise has the same mean and cells on every decomposition",
+          "[cahn_hilliard][noise]") {
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  const auto domain =
+      pfc::domain::create(pfc::GridSize({32, 16, 1}), pfc::PhysicalOrigin({0, 0, 0}),
+                          pfc::GridSpacing({1, 1, 1}));
+  pfc::sim::stacks::SpectralCPUStack stack(domain, rank, world_size(),
+                                           MPI_COMM_WORLD);
+  cahn_hilliard::SeededNoise noise;
+  cahn_hilliard::from_json(json{{"type", "seeded_noise"},
+                                {"c0", 0.32},
+                                {"amplitude", 0.02},
+                                {"seed", 1234}},
+                           noise);
+  const pfc::SimulationContext context(MPI_COMM_WORLD);
+  pfc::apply_field_modifier(noise, stack.u(), 0, &context);
+  auto full = pfc::data::field_from_inbox<double>(
+      domain, pfc::Box3i::from_bounds({0, 0, 0}, {31, 15, 0}));
+  pfc::apply_field_modifier(noise, full, 0);
+  auto &c = stack.u();
+  c.for_each_owned([&](int i, int j, int k) {
+    REQUIRE(c(i, j, k) ==
+            full(i + c.box().low[0], j + c.box().low[1], k + c.box().low[2]));
+  });
+  REQUIRE_THAT(mean_c(full), WithinAbs(0.32, 1e-14));
+  REQUIRE(variance_c(full) > 0);
+  const auto before = full.vec();
+  ++noise.seed;
+  pfc::apply_field_modifier(noise, full, 0);
+  REQUIRE(full.vec() != before);
+  noise.amplitude = 0.5;
+  REQUIRE_THROWS(pfc::apply_field_modifier(noise, full, 0));
+  REQUIRE_THROWS(cahn_hilliard::from_json(
+      json{
+          {"type", "seeded_noise"}, {"c0", 0.32}, {"amplitude", 0.02}, {"seed", -1}},
+      noise));
 }
 
 TEST_CASE("CahnHilliardSession runs a short JSON case", "[cahn_hilliard][session]") {

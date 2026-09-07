@@ -67,12 +67,68 @@ JSON `model.params`: `c0`, `T` (K), `Omega` (J/mol), `R`, `kappa`, `M`.
 All have defaults. Initial condition `"type": "cosine_mode"` sets
 \(c=c_0+A\cos(2\pi n_x x/L_x+\cdots)\).
 
+## Coarsening preset and diagnostics
+
+Keep `fe_cr_spinodal.json` for single-mode growth verification. The separate
+[`coarsening.json`](inputs_json/coarsening.json) seeds broadband perturbations
+on a 128² grid and runs to 100 time units with `dt=0.01`. It is an illustrative
+spinodal/coarsening case, not a calibrated Fe–Cr timescale. The CLI exposes it as:
+
+```bash
+./scripts/openpfc init results/spinodal --app=cahn_hilliard --preset=spinodal
+```
+
+`seeded_noise` takes `c0`, `amplitude`, and a nonnegative 64-bit integer `seed`.
+It hashes global grid indices and removes the global mean using an exact
+integer reduction. Initial cells are identical across MPI decompositions;
+floating-point timestepping/reductions may subsequently differ by roundoff.
+`amplitude` bounds `|c-c0|` (not RMS); require
+`0 <= amplitude < min(c0, 1-c0)`. Noise is grid-scale: changing the grid changes
+the initial condition, so use a fixed smooth IC for spatial convergence studies.
+
+Enable time-series diagnostics with:
+
+```json
+"diagnostics": {"csv": "results/cahn_hilliard/diagnostics.csv"}
+```
+
+At `saveat`, rank zero writes
+`step,time,mean,mass,min,max,bulk_energy,gradient_energy,total_energy,invalid_cells`.
+Sampling includes the initial scheduled save and works without VTK writers.
+The energy is evaluated from the current accepted field:
+
+\[
+F=\int [f(c)+(\kappa/2)|\nabla c|^2]\,dV
+ =\int [f(c)-(\kappa/2)c\nabla^2c]\,dV.
+\]
+
+The Laplacian uses the solver's spectral wavenumbers and backend; periodicity
+makes the two integral expressions equivalent. Integrals include `dx*dy*dz`,
+including the slab depth. Bulk density is in units of `RT`, while lengths and
+mobility remain grid units. The system `last_free_energy()` accessor remains a
+bulk-only RHS diagnostic; use this CSV for current-state total energy. Optional
+diagnostics cost an extra forward and inverse FFT plus host reductions per
+sample (including host transfers on HIP).
+
+Existing CSV files are never overwritten or appended. On restart choose a new
+CSV path; its first row records the restored state, followed by scheduled saves.
+Nonfinite cells or composition outside `0<c<1` produce an invalid count and NaN
+energies, then stop the run collectively. This checks output times only; it is
+not a bound-preserving integrator or an every-step stability guard. Without
+diagnostics the existing logarithm evaluator's clamp remains unchanged.
+
+Check mass drift and total-energy evolution, and repeat with smaller `dt`.
+ETD here is not unconditionally energy-stable; the CSV is evidence to inspect,
+not a guarantee of monotonicity at arbitrary steps or resolutions.
+
 ## Tests
 
 `ctest -R cahn-hilliard` (or `test_cahn_hilliard`) checks the spinodal
 interval, the \(L(k)\) formula, mean-\(c\) conservation, linear-mode growth
-against \(\exp(\lambda t)\), and that composition variance grows while bulk
-free energy falls. HIP builds add `HIP_CahnHilliardETD` (CPU vs device field
+against \(\exp(\lambda t)\), and that composition variance grows while total
+free energy falls for a resolved small-step case. One- and two-rank tests check
+analytical gradient energy and bit-identical initial noise across decompositions.
+HIP builds add `HIP_CahnHilliardETD` (CPU vs device field
 to \(10^{-10}\)) and `cahn-hilliard-hip-smoke` (`SPECTRAL_CHECKSUM`).
 LUMI-G smoke: job 21780712 (`small-g`, 16², mean \(c=0.32\)).
 
