@@ -1,0 +1,44 @@
+{
+    "model": {
+        "name": "ehd_film",
+        "params": {
+            "h0": 1.0,
+            "B": 1.0,
+            "M0": 1.0,
+            "gamma": 0.0,
+            "A": 0.0
+        }
+    },
+    "domain": {
+        "Lx": 128,
+        "Ly": 128,
+        "Lz": 1,
+        "dx": 1.0,
+        "dy": 1.0,
+        "dz": 1.0,
+        "origin": "corner"
+    },
+    "timestepping": {
+        "t0": 0.0,
+        "t1": 2.0,
+        "dt": 0.05,
+        "saveat": 0.2
+    },
+    "fields": [
+        {
+            "name": "h",
+            "data": "results/ehd_film/h_%04d.vti"
+        }
+    ],
+    "initial_conditions": [
+        {
+            "target": "h",
+            "type": "cosine_mode",
+            "h0": 1.0,
+            "amplitude": 0.08,
+            "nx": 4,
+            "ny": 2,
+            "nz": 0
+        }
+    ]
+}
