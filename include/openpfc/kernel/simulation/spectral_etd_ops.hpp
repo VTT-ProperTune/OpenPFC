@@ -43,14 +43,16 @@ namespace pfc::sim {
  * Required interface (see the `HostSpace` specialization for reference):
  *
  * - `using FFT`, `using real_coeffs`, `using complex_scratch`;
- * - `make_real(n)`, `make_complex(n)`, `upload(real_coeffs&, span)`;
+ * - `make_real(n)`, `make_complex(n)`, `upload(real_coeffs&, span)`,
+ *   `upload(complex_scratch&, span<Complex>)`;
  * - `forward(fft, RealField&, ComplexField&)`, `backward(fft, ComplexField
  *   const&, RealField&)`, `backward(fft, complex_scratch const&, RealField&)`;
  * - `multiply(ComplexField const&, real_coeffs const&, ComplexField&)` and
  *   the `complex_scratch` output overload;
- * - `combine(ComplexField const& u, X const& n_hat, real_coeffs const& exp_Ldt,
- *   real_coeffs const& n_weight, complex_scratch& out)` for `X` in
- *   {`ComplexField`, `complex_scratch`};
+ * - `combine(ComplexField const& u, X const& n_hat, W const& exp_Ldt,
+ *   W const& n_weight, complex_scratch& out)` for `X` in
+ *   {`ComplexField`, `complex_scratch`} and `W` in
+ *   {`real_coeffs`, `complex_scratch`};
  * - `swap(ComplexField&, complex_scratch&)`;
  * - `pointwise(geometry, t, psi, psi_mf*, p_star*, n, fe*, functor)`.
  */
@@ -67,6 +69,9 @@ template <> struct SpectralETDOps<pfc::HostSpace> {
   static real_coeffs make_real(std::size_t n) { return real_coeffs(n, 0.0); }
   static complex_scratch make_complex(std::size_t n) { return complex_scratch(n); }
   static void upload(real_coeffs &dst, std::span<const double> src) {
+    dst.assign(src.begin(), src.end());
+  }
+  static void upload(complex_scratch &dst, std::span<const Complex> src) {
     dst.assign(src.begin(), src.end());
   }
 
@@ -105,6 +110,18 @@ template <> struct SpectralETDOps<pfc::HostSpace> {
     combine_raw(u.data(), n_hat.data(), exp_Ldt.data(), n_weight.data(), out.data(),
                 u.size());
   }
+  static void combine(const ComplexField &u, const ComplexField &n_hat,
+                      const complex_scratch &exp_Ldt,
+                      const complex_scratch &n_weight, complex_scratch &out) {
+    combine_raw(u.data(), n_hat.data(), exp_Ldt.data(), n_weight.data(), out.data(),
+                u.size());
+  }
+  static void combine(const ComplexField &u, const complex_scratch &n_hat,
+                      const complex_scratch &exp_Ldt,
+                      const complex_scratch &n_weight, complex_scratch &out) {
+    combine_raw(u.data(), n_hat.data(), exp_Ldt.data(), n_weight.data(), out.data(),
+                u.size());
+  }
 
   /// Commit: the candidate becomes the field's storage (O(1)).
   static void swap(ComplexField &field, complex_scratch &candidate) {
@@ -136,6 +153,12 @@ private:
   }
   static void combine_raw(const Complex *u, const Complex *n_hat, const double *e,
                           const double *w, Complex *out, std::size_t n) {
+    for (std::size_t i = 0; i < n; ++i) {
+      out[i] = e[i] * u[i] + w[i] * n_hat[i];
+    }
+  }
+  static void combine_raw(const Complex *u, const Complex *n_hat, const Complex *e,
+                          const Complex *w, Complex *out, std::size_t n) {
     for (std::size_t i = 0; i < n; ++i) {
       out[i] = e[i] * u[i] + w[i] * n_hat[i];
     }

@@ -237,6 +237,94 @@ TEST_CASE("SpectralETDSystem mean-field physics allocates filter fields and "
   REQUIRE(mean1 == Approx(mean0).margin(1e-10));
 }
 
+namespace {
+
+struct AdvectionToy {
+  pfc::Domain domain{};
+  pfc::Box3i box{};
+
+  void declare_fields(SimulationState &state) const {
+    pfc::sim::add_declared_field<double>(state, "psi", domain, box, 0);
+  }
+
+  [[nodiscard]] std::complex<double> linear_symbol(double kx, double, double) const {
+    return {0.0, -kx};
+  }
+
+  struct PW {
+    [[nodiscard]] double nonlinearity(const pfc::sim::SpectralCell &) const {
+      return 0.0;
+    }
+  };
+  [[nodiscard]] PW pointwise() const { return {}; }
+};
+
+static_assert(pfc::sim::HasComplexLinearSymbol<AdvectionToy>);
+static_assert(pfc::sim::SpectralETDPhysics<AdvectionToy>);
+
+double cosine_phase(const pfc::data::Field<double> &u, int nx) {
+  const auto n = u.local_size();
+  const auto sp = u.spacing();
+  const double Lx = static_cast<double>(n[0]) * sp[0];
+  const double twopi = 2.0 * pfc::pi;
+  double c = 0.0;
+  double s = 0.0;
+  for (int k = 0; k < n[2]; ++k) {
+    for (int j = 0; j < n[1]; ++j) {
+      for (int i = 0; i < n[0]; ++i) {
+        const auto x = u.coords(i, j, k);
+        const double th = twopi * static_cast<double>(nx) * x[0] / Lx;
+        c += u(i, j, k) * std::cos(th);
+        s += u(i, j, k) * std::sin(th);
+      }
+    }
+  }
+  return std::atan2(s, c);
+}
+
+} // namespace
+
+TEST_CASE("SpectralETDSystem complex L advects a cosine without damping",
+          "[spectral_etd][unit][complex]") {
+  constexpr int N = 32;
+  constexpr int nx = 2;
+  constexpr double dt = 0.05;
+  constexpr int n_steps = 8;
+  const auto domain = pfc::domain::create(pfc::GridSize({N, 1, 1}),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = pfc::decomposition::create(domain, 1);
+  auto fft = pfc::fft::create(decomp);
+  auto physics = make_physics<AdvectionToy>(domain, fft);
+  SimulationState state;
+  physics.declare_fields(state);
+  auto &psi = state.get_field<double>("psi");
+  const double Lx = static_cast<double>(N);
+  const double k = 2.0 * pfc::pi * static_cast<double>(nx) / Lx;
+  psi.apply([&](double x, double, double) { return std::cos(k * x); });
+
+  SpectralETDSystem<AdvectionToy> sys(physics, fft, state, dt);
+  REQUIRE(sys.linear_symbol().empty());
+  REQUIRE(sys.linear_symbol_complex().size() == fft.size_outbox());
+
+  double t = 0.0;
+  for (int step = 0; step < n_steps; ++step) {
+    t = sys.step(t);
+  }
+  const double amp = cosine_phase(psi, nx);
+  REQUIRE(amp == Approx(k * t).margin(1e-6));
+  double energy = 0.0;
+  const auto n = psi.local_size();
+  for (int kk = 0; kk < n[2]; ++kk) {
+    for (int j = 0; j < n[1]; ++j) {
+      for (int i = 0; i < n[0]; ++i) {
+        energy += psi(i, j, kk) * psi(i, j, kk);
+      }
+    }
+  }
+  REQUIRE(energy == Approx(0.5 * static_cast<double>(N)).margin(1e-8));
+}
+
 TEST_CASE("SpectralETDSystem moving-frame physics zero field stays zero and "
           "reduces the free energy",
           "[spectral_etd][unit][moving_frame]") {

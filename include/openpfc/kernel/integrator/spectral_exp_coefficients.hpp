@@ -37,6 +37,7 @@
 
 #include <bit>
 #include <cmath>
+#include <complex>
 #include <cstdint>
 #include <span>
 #include <stdexcept>
@@ -84,6 +85,27 @@ spectral_exp_coeffs(Real L, Real dt, Real abs_L_threshold = Real(1e-12)) {
 }
 
 /**
+ * @brief Complex diagonal coefficients for odd-order (dispersive) symbols.
+ *
+ * Same Taylor / `(exp(L dt)-1)/L` split as the real path. For purely
+ * imaginary @p L, `|exp(L dt)| = 1` (no numerical damping).
+ */
+[[nodiscard]] inline SpectralExpCoeffs<std::complex<double>>
+spectral_exp_coeffs(std::complex<double> L, double dt,
+                    double abs_L_threshold = 1e-12) {
+  using C = std::complex<double>;
+  SpectralExpCoeffs<C> out{};
+  const C arg = L * dt;
+  out.exp_Ldt = std::exp(arg);
+  if (std::abs(L) < abs_L_threshold) {
+    out.phi1_L = dt + C(0.5) * L * dt * dt;
+  } else {
+    out.phi1_L = (out.exp_Ldt - C{1.0, 0.0}) / L;
+  }
+  return out;
+}
+
+/**
  * @brief Fill caller-owned coefficient arrays from diagonal @c L samples.
  *
  * @param L Input spectral samples.
@@ -98,16 +120,14 @@ spectral_exp_coeffs(Real L, Real dt, Real abs_L_threshold = Real(1e-12)) {
  */
 template <typename Real = double>
 inline void fill_spectral_exp_coeffs(std::span<const Real> L, Real dt,
-                                     std::span<Real> exp_Ldt,
-                                     std::span<Real> phi1_L,
+                                     std::span<Real> exp_Ldt, std::span<Real> phi1_L,
                                      Real abs_L_threshold = Real(1e-12)) {
   if (exp_Ldt.size() != L.size() || phi1_L.size() != L.size()) {
     throw std::invalid_argument(
         "fill_spectral_exp_coeffs: span sizes must match L.size()");
   }
   for (std::size_t i = 0; i < L.size(); ++i) {
-    const SpectralExpCoeffs<Real> c =
-        spectral_exp_coeffs(L[i], dt, abs_L_threshold);
+    const SpectralExpCoeffs<Real> c = spectral_exp_coeffs(L[i], dt, abs_L_threshold);
     exp_Ldt[i] = c.exp_Ldt;
     phi1_L[i] = c.phi1_L;
   }
@@ -177,8 +197,7 @@ public:
               SpectralExpDtId dt_id, SpectralExpConfigId config_id,
               Real abs_L_threshold = Real(1e-12)) {
     const bool same_ids = m_valid && op_id == m_op_id && dt_id == m_dt_id &&
-                          config_id == m_config_id &&
-                          L.size() == m_exp_Ldt.size();
+                          config_id == m_config_id && L.size() == m_exp_Ldt.size();
     if (same_ids) {
       m_rebuilt_last = false;
       return;
@@ -196,20 +215,14 @@ public:
     m_rebuilt_last = true;
   }
 
-  [[nodiscard]] std::span<const Real> exp_Ldt() const noexcept {
-    return m_exp_Ldt;
-  }
+  [[nodiscard]] std::span<const Real> exp_Ldt() const noexcept { return m_exp_Ldt; }
 
-  [[nodiscard]] std::span<const Real> phi1_L() const noexcept {
-    return m_phi1_L;
-  }
+  [[nodiscard]] std::span<const Real> phi1_L() const noexcept { return m_phi1_L; }
 
   [[nodiscard]] bool valid() const noexcept { return m_valid; }
 
   /// True iff the last @ref ensure recomputed coefficients (diagnostic only).
-  [[nodiscard]] bool rebuilt_last_call() const noexcept {
-    return m_rebuilt_last;
-  }
+  [[nodiscard]] bool rebuilt_last_call() const noexcept { return m_rebuilt_last; }
 
 private:
   std::vector<Real> m_exp_Ldt;

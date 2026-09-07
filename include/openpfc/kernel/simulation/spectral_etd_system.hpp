@@ -84,8 +84,8 @@ struct SpectralETDOptions {
   std::string p_star_name{"P_star_psi"};
   std::string p_hat_name{"P_hat"};
   std::string fe_name{"fe_density"};
-  bool dealias{false};              ///< Orszag 2/3-rule mask on \f$\hat N\f$
-  MPI_Comm comm{MPI_COMM_WORLD};    ///< reduction communicator for observables
+  bool dealias{false};           ///< Orszag 2/3-rule mask on \f$\hat N\f$
+  MPI_Comm comm{MPI_COMM_WORLD}; ///< reduction communicator for observables
 };
 
 /**
@@ -122,6 +122,8 @@ public:
   static constexpr bool has_mean_field = HasMeanFieldFilter<Physics>;
   static constexpr bool has_correlation = HasCorrelationKernel<Physics>;
   static constexpr bool has_nonlinear_symbol = HasNonlinearSymbol<Physics>;
+  static constexpr bool has_complex_linear = HasComplexLinearSymbol<Physics>;
+  static constexpr bool has_complex_nonlinear = HasComplexNonlinearSymbol<Physics>;
   static constexpr bool has_free_energy = HasFreeEnergyDensity<Pointwise>;
 
   SpectralETDSystem(Physics physics, FFT &fft, SimulationState &state, double dt,
@@ -139,8 +141,7 @@ public:
     }
     auto &psi = this->psi();
     if (psi.size() != m_fft.size_inbox()) {
-      throw std::invalid_argument(
-          "SpectralETDSystem: psi.size() != FFT inbox size");
+      throw std::invalid_argument("SpectralETDSystem: psi.size() != FFT inbox size");
     }
     if (psi.storage_halo() != 0) {
       throw std::invalid_argument(
@@ -165,42 +166,78 @@ public:
     const auto &dom = psi().domain();
     const std::size_t n = m_fft.size_outbox();
 
-    m_L.assign(n, 0.0);
-    std::vector<double> nonlinear_symbol(n, 1.0);
     std::vector<double> filter(has_mean_field ? n : 0, 0.0);
     std::vector<double> kernel(has_correlation ? n : 0, 0.0);
-    fft::kspace::for_each_kpoint(
-        outbox, dom,
-        [&](std::size_t idx, double kx, double ky, double kz, int, int, int) {
-          const double k_lap = fft::kspace::k_laplacian_value(kx, ky, kz);
-          m_L[idx] = m_physics.linear_symbol(k_lap);
-          if constexpr (has_nonlinear_symbol) {
-            nonlinear_symbol[idx] = m_physics.nonlinear_symbol(k_lap);
-          }
-          if constexpr (has_mean_field) {
-            filter[idx] = m_physics.filter_mf(k_lap);
-          }
-          if constexpr (has_correlation) {
-            kernel[idx] = m_physics.correlation_kernel(k_lap);
-          }
-        });
 
-    m_cache.ensure(std::span<const double>(m_L), m_dt,
-                   integrator::SpectralExpOperatorId{.value = 1},
-                   integrator::SpectralExpDtId::from_bits(m_dt),
-                   integrator::SpectralExpConfigId{.value = 1});
-    const auto phi1 = m_cache.phi1_L();
-    m_n_weight.resize(n);
-    for (std::size_t i = 0; i < n; ++i) {
-      m_n_weight[i] = nonlinear_symbol[i] * phi1[i];
+    if constexpr (has_complex_linear) {
+      m_L_c.assign(n, Complex{0.0, 0.0});
+      std::vector<Complex> nonlinear_symbol(n, Complex{1.0, 0.0});
+      fft::kspace::for_each_kpoint(
+          outbox, dom,
+          [&](std::size_t idx, double kx, double ky, double kz, int, int, int) {
+            m_L_c[idx] = m_physics.linear_symbol(kx, ky, kz);
+            if constexpr (has_complex_nonlinear) {
+              nonlinear_symbol[idx] = m_physics.nonlinear_symbol(kx, ky, kz);
+            } else if constexpr (has_nonlinear_symbol) {
+              const double k_lap = fft::kspace::k_laplacian_value(kx, ky, kz);
+              nonlinear_symbol[idx] = m_physics.nonlinear_symbol(k_lap);
+            }
+            if constexpr (has_mean_field) {
+              const double k_lap = fft::kspace::k_laplacian_value(kx, ky, kz);
+              filter[idx] = m_physics.filter_mf(k_lap);
+            }
+            if constexpr (has_correlation) {
+              const double k_lap = fft::kspace::k_laplacian_value(kx, ky, kz);
+              kernel[idx] = m_physics.correlation_kernel(k_lap);
+            }
+          });
+      m_exp_c.resize(n);
+      m_n_weight_c.resize(n);
+      for (std::size_t i = 0; i < n; ++i) {
+        const auto c = integrator::spectral_exp_coeffs(m_L_c[i], m_dt);
+        m_exp_c[i] = c.exp_Ldt;
+        m_n_weight_c[i] = nonlinear_symbol[i] * c.phi1_L;
+      }
+      m_exp_c_dev = Ops::make_complex(n);
+      m_n_weight_c_dev = Ops::make_complex(n);
+      Ops::upload(m_exp_c_dev, std::span<const Complex>(m_exp_c));
+      Ops::upload(m_n_weight_c_dev, std::span<const Complex>(m_n_weight_c));
+    } else {
+      m_L.assign(n, 0.0);
+      std::vector<double> nonlinear_symbol(n, 1.0);
+      fft::kspace::for_each_kpoint(
+          outbox, dom,
+          [&](std::size_t idx, double kx, double ky, double kz, int, int, int) {
+            const double k_lap = fft::kspace::k_laplacian_value(kx, ky, kz);
+            m_L[idx] = m_physics.linear_symbol(k_lap);
+            if constexpr (has_nonlinear_symbol) {
+              nonlinear_symbol[idx] = m_physics.nonlinear_symbol(k_lap);
+            }
+            if constexpr (has_mean_field) {
+              filter[idx] = m_physics.filter_mf(k_lap);
+            }
+            if constexpr (has_correlation) {
+              kernel[idx] = m_physics.correlation_kernel(k_lap);
+            }
+          });
+
+      m_cache.ensure(std::span<const double>(m_L), m_dt,
+                     integrator::SpectralExpOperatorId{.value = 1},
+                     integrator::SpectralExpDtId::from_bits(m_dt),
+                     integrator::SpectralExpConfigId{.value = 1});
+      const auto phi1 = m_cache.phi1_L();
+      m_n_weight.resize(n);
+      for (std::size_t i = 0; i < n; ++i) {
+        m_n_weight[i] = nonlinear_symbol[i] * phi1[i];
+      }
+      m_exp_dev = Ops::make_real(n);
+      m_n_weight_dev = Ops::make_real(n);
+      Ops::upload(m_exp_dev, m_cache.exp_Ldt());
+      Ops::upload(m_n_weight_dev, std::span<const double>(m_n_weight));
     }
+
     m_filter_host = std::move(filter);
     m_kernel_host = std::move(kernel);
-
-    m_exp_dev = Ops::make_real(n);
-    m_n_weight_dev = Ops::make_real(n);
-    Ops::upload(m_exp_dev, m_cache.exp_Ldt());
-    Ops::upload(m_n_weight_dev, std::span<const double>(m_n_weight));
     if constexpr (has_mean_field) {
       m_filter_dev = Ops::make_real(n);
       Ops::upload(m_filter_dev, std::span<const double>(m_filter_host));
@@ -266,7 +303,14 @@ public:
 
     if (m_opt.dealias) {
       Ops::multiply(n_hat, m_mask_dev, m_n_masked);
-      Ops::combine(psi_hat, m_n_masked, m_exp_dev, m_n_weight_dev, m_candidate);
+      if constexpr (has_complex_linear) {
+        Ops::combine(psi_hat, m_n_masked, m_exp_c_dev, m_n_weight_c_dev,
+                     m_candidate);
+      } else {
+        Ops::combine(psi_hat, m_n_masked, m_exp_dev, m_n_weight_dev, m_candidate);
+      }
+    } else if constexpr (has_complex_linear) {
+      Ops::combine(psi_hat, n_hat, m_exp_c_dev, m_n_weight_c_dev, m_candidate);
     } else {
       Ops::combine(psi_hat, n_hat, m_exp_dev, m_n_weight_dev, m_candidate);
     }
@@ -305,9 +349,13 @@ public:
   [[nodiscard]] Physics &physics() noexcept { return m_physics; }
   [[nodiscard]] const Pointwise &pointwise() const noexcept { return m_pointwise; }
   [[nodiscard]] const SpectralETDOptions &options() const noexcept { return m_opt; }
-  /// \f$L(k)\f$ on this rank's outbox.
+  /// \f$L(k)\f$ on this rank's outbox (empty when the physics uses complex L).
   [[nodiscard]] const std::vector<double> &linear_symbol() const noexcept {
     return m_L;
+  }
+  /// Complex \f$L(\mathbf{k})\f$ (empty when the physics uses real L).
+  [[nodiscard]] const std::vector<Complex> &linear_symbol_complex() const noexcept {
+    return m_L_c;
   }
   /// \f$M(k)\,\varphi_1(L\,dt)\f$ on this rank's outbox.
   [[nodiscard]] const std::vector<double> &nonlinear_weight() const noexcept {
@@ -408,6 +456,9 @@ private:
 
   std::vector<double> m_L;
   std::vector<double> m_n_weight;
+  std::vector<Complex> m_L_c;
+  std::vector<Complex> m_exp_c;
+  std::vector<Complex> m_n_weight_c;
   std::vector<double> m_filter_host;
   std::vector<double> m_kernel_host;
   std::vector<double> m_mask_host;
@@ -415,6 +466,8 @@ private:
 
   typename Ops::real_coeffs m_exp_dev{};
   typename Ops::real_coeffs m_n_weight_dev{};
+  typename Ops::complex_scratch m_exp_c_dev{};
+  typename Ops::complex_scratch m_n_weight_c_dev{};
   typename Ops::real_coeffs m_filter_dev{};
   typename Ops::real_coeffs m_kernel_dev{};
   typename Ops::real_coeffs m_mask_dev{};

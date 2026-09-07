@@ -7,6 +7,7 @@
 #include <openpfc/kernel/integrator/spectral_exp_coefficients.hpp>
 
 #include <cmath>
+#include <complex>
 #include <stdexcept>
 #include <vector>
 
@@ -158,4 +159,24 @@ TEST_CASE("SpectralExpCoefficientCache identity invalidation",
     REQUIRE(cache.rebuilt_last_call());
     REQUIRE(cache.exp_Ldt().size() == 2);
   }
+}
+
+TEST_CASE("spectral_exp_coeffs of imaginary L is a pure phase",
+          "[integrator][spectral_exp][complex]") {
+  using C = std::complex<double>;
+  constexpr double dt = 0.25;
+  const C L{0.0, -2.0};
+  const auto c = spectral_exp_coeffs(L, dt);
+  REQUIRE_THAT(std::abs(c.exp_Ldt), WithinAbs(1.0, 1e-14));
+  const C expected_exp = std::exp(L * dt);
+  REQUIRE_THAT(c.exp_Ldt.real(), WithinAbs(expected_exp.real(), 1e-14));
+  REQUIRE_THAT(c.exp_Ldt.imag(), WithinAbs(expected_exp.imag(), 1e-14));
+  const C expected_phi = (expected_exp - C{1.0, 0.0}) / L;
+  REQUIRE_THAT(c.phi1_L.real(), WithinAbs(expected_phi.real(), 1e-14));
+  REQUIRE_THAT(c.phi1_L.imag(), WithinAbs(expected_phi.imag(), 1e-14));
+
+  const auto z = spectral_exp_coeffs(C{0.0, 0.0}, dt);
+  REQUIRE_THAT(z.exp_Ldt.real(), WithinAbs(1.0, 1e-15));
+  REQUIRE_THAT(z.phi1_L.real(), WithinAbs(dt, 1e-15));
+  REQUIRE_THAT(z.phi1_L.imag(), WithinAbs(0.0, 1e-15));
 }
