@@ -63,3 +63,4 @@ explains their order rather than copying their implementations.
 | Look up API-focused snippets | [API examples walkthrough](../reference/api_examples_walkthrough.md) |
 | Run linear \(k^4\) surface diffusion as a JSON app | [`apps/surface_diffusion`](../../apps/surface_diffusion/README.md) (`#79`) |
 | Run odd-order \(ik^3\)/\(ik^5\) Kawahara waves | [`apps/kawahara`](../../apps/kawahara/README.md) (`#80`) |
+| Run sixth-order EHD film under a flexible plate | [`apps/ehd_film`](../../apps/ehd_film/README.md) (`#81`) |

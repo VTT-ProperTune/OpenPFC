@@ -9,6 +9,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- `ehd_film`: elastohydrodynamic film under a flexible plate on the 0.2
+  spectral-ETD session (`#81`). Bending pressure \(B\nabla^4 h\) plus
+  lubrication gives \(\lambda=-M_0 B k^6\). Catch2 exact \(k^6\) decay,
+  two-mode ratio 64, and mean-gap conservation. CPU binary plus
+  `ehd_film_hip` when rocFFT HeFFTe is on.
 - `kawahara`: capillary–gravity Kawahara waves on the 0.2 spectral-ETD
   session (`#80`). Odd-order \(L(k)=-i(\beta k^3+\gamma k^5)\) plus
   dealiased \(u^2\). Catch2 phase-velocity / \(k^3\) vs \(k^5\) / mean
