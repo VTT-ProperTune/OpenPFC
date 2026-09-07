@@ -41,6 +41,14 @@ This page ties **figures** you may see in the repository or publications to **ru
 | **VTK / ParaView** | Walkthrough: [`tutorials/vtk_paraview_workflow.md`](../tutorials/vtk_paraview_workflow.md) |
 | **Concepts** | Fourth-order spectral ETD; \(k^4\) is a multiply |
 
+## Thin-film dewetting / coating
+
+| | |
+|---|---|
+| **Runnable** | [`apps/thin_film`](../../apps/thin_film/README.md) — `dewetting.json` / `leveling.json` |
+| **VTK** | film height `h` under `results/thin_film/` |
+| **Concepts** | Fourth-order capillary ETD; \(\lambda(k)=M_0 k^2(\Pi'(h_0)-\gamma k^2)\) |
+
 ## Quick 2D PNG snapshots (Allen–Cahn)
 
 The **Allen–Cahn** demo can write **grayscale PNG** snapshots (optional final, or initial + final). No JSON `App` — CLI arguments only.
