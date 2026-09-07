@@ -9,6 +9,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- Multi-app CLI catalog and installed presets for seven JSON-session apps,
+  with explicit backend availability and CPU entrypoint smoke tests.
 - Cahn–Hilliard seeded broadband coarsening preset and optional collective CSV
   diagnostics: mass, bounds, and current-state total energy including spectral
   gradient energy. Invalid sampled compositions stop the run; CSV files are

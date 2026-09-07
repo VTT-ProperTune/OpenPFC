@@ -12,6 +12,18 @@ file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/share/openpfc/version
 install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/openpfc DESTINATION bin)
 install(FILES ${CMAKE_BINARY_DIR}/share/openpfc/version DESTINATION share/openpfc)
 
+# Keep source, build-tree and relocatable installed CLI presets identical.
+foreach(_app aluminumNew cahn_hilliard thin_film surface_diffusion kawahara ehd_film)
+    file(GLOB _presets CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/apps/${_app}/inputs_json/*)
+    foreach(_preset IN LISTS _presets)
+        get_filename_component(_name ${_preset} NAME)
+        configure_file(${_preset}
+            ${CMAKE_BINARY_DIR}/share/openpfc/cases/${_app}/inputs_json/${_name} COPYONLY)
+    endforeach()
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/apps/${_app}/inputs_json
+        DESTINATION share/openpfc/cases/${_app})
+endforeach()
+
 if(OpenPFC_BUILD_TESTS AND TARGET tungsten)
     find_package(Python3 3.8 COMPONENTS Interpreter QUIET)
     if(Python3_Interpreter_FOUND)
@@ -20,6 +32,20 @@ if(OpenPFC_BUILD_TESTS AND TARGET tungsten)
                 --cli ${CMAKE_BINARY_DIR}/bin/openpfc
                 --binary $<TARGET_FILE:tungsten>)
         set_tests_properties(openpfc-cli-smoke PROPERTIES TIMEOUT 120)
+        foreach(_pair "aluminum,aluminum_etd" "cahn_hilliard,cahn_hilliard"
+                      "thin_film,thin_film" "surface_diffusion,surface_diffusion"
+                      "kawahara,kawahara" "ehd_film,ehd_film")
+            string(REPLACE "," ";" _entry ${_pair})
+            list(GET _entry 0 _app)
+            list(GET _entry 1 _binary)
+            if(TARGET ${_binary})
+                add_test(NAME openpfc-cli-${_app}-smoke
+                    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/tests/cli_smoke.py
+                        --cli ${CMAKE_BINARY_DIR}/bin/openpfc
+                        --binary $<TARGET_FILE:${_binary}> --app ${_app})
+                set_tests_properties(openpfc-cli-${_app}-smoke PROPERTIES TIMEOUT 120)
+            endif()
+        endforeach()
         if(TARGET cahn_hilliard AND OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
            (OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 2))
             add_test(NAME cahn-hilliard-diagnostics-workflow
