@@ -1,0 +1,240 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+"""Create, compile, and run a shipped OpenPFC case (Python 3.8+)."""
+
+import argparse
+import json
+import os
+from pathlib import Path
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+
+
+HERE = Path(__file__).resolve().parent
+PROFILES = {
+    "local": ("tungsten", ["--cpu", "--no-submit"]),
+    "tohtori": ("tungsten_cuda", ["--machine=tohtori", "--with-cuda"]),
+    "lumi": ("tungsten_hip", ["--machine=lumi", "--with-rocm", "--wait"]),
+}
+RANK_VARIABLES = ("OMPI_COMM_WORLD_RANK", "PMI_RANK", "PMIX_RANK", "SLURM_PROCID")
+
+
+def version():
+    installed = HERE.parent / "share" / "openpfc" / "version"
+    if installed.is_file():
+        return installed.read_text().strip()
+    root = HERE.parent / "CMakeLists.txt"
+    if root.is_file():
+        match = re.search(r"project\(OpenPFC\s+VERSION\s+([0-9.]+)", root.read_text())
+        if match:
+            return match.group(1)
+    raise ValueError("version data missing; use the source or installed openpfc driver")
+
+
+def positive(value):
+    result = int(value)
+    if result <= 0:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return result
+
+
+def read_project(path):
+    project = Path(path).resolve()
+    with (project / "openpfc.json").open() as stream:
+        manifest = json.load(stream)
+    if (not isinstance(manifest, dict) or manifest.get("format_version") != 1
+            or manifest.get("app") != "tungsten" or manifest.get("input") != "input.json"):
+        raise ValueError("unsupported openpfc.json: expected a version-1 tungsten case")
+    if not (project / "input.json").is_file():
+        raise ValueError("case input.json is missing")
+    return project, manifest
+
+
+def write_manifest(project, manifest):
+    # Publish build selection only after a successful compile and binary check.
+    temporary = project / "openpfc.json.tmp"
+    with temporary.open("x") as stream:
+        json.dump(manifest, stream, indent=2)
+        stream.write("\n")
+    temporary.replace(project / "openpfc.json")
+
+
+def init_case(args):
+    project = Path(args.project).resolve()
+    # Refuse even an existing empty directory, so no user files are replaced.
+    project.mkdir(parents=True, exist_ok=False)
+    settings = {
+        "model": {"name": "tungsten", "params": {}},
+        "domain": {"Lx": 16, "Ly": 16, "Lz": 16, "dx": 1.0, "dy": 1.0,
+                   "dz": 1.0, "origin": "corner"},
+        "timestepping": {"t0": 0.0, "t1": 0.1, "dt": 0.01, "saveat": 0.05},
+        "initial_conditions": [
+            {"target": "psi", "type": "constant", "n0": -0.4},
+            {"target": "psi", "type": "single_seed", "amp_eq": 0.215936,
+             "rho_seed": -0.047},
+        ],
+        "fields": [{"name": "psi", "data": "results/psi_%04d.vti"}],
+        "checkpoint": {"every": 10, "directory": "results/checkpoints"},
+    }
+    (project / "input.json").write_text(json.dumps(settings, indent=2) + "\n")
+    write_manifest(project, {"format_version": 1, "app": "tungsten", "input": "input.json"})
+    (project / "README.md").write_text(
+        "# Tungsten case\n\n"
+        "Edit input.json to change the physics, grid, and time interval.\n"
+        "From this directory, run `openpfc compile . --profile=local`, then\n"
+        "`openpfc run . --ranks=1`. Load the matching MPI modules before running.\n"
+        "Output is relative to this directory, under results/.\n\n"
+        "The default is a small runtime check, not a calibrated materials case.\n"
+        "Use a fresh output directory for each run to preserve earlier results.\n"
+        "For restart, set restart_from to a published checkpoint bundle and use\n"
+        "new output paths. See the OpenPFC CLI and checkpoint guides.\n"
+    )
+    print("Created tungsten case: {}".format(project))
+    return 0
+
+
+def source_root(requested):
+    selected = requested or os.environ.get("OPENPFC_SOURCE_DIR")
+    if not selected:
+        selected = HERE.parent
+        cache = HERE.parent / "CMakeCache.txt"
+        if cache.is_file():
+            match = re.search(r"^CMAKE_HOME_DIRECTORY:INTERNAL=([^\n]+)$",
+                              cache.read_text(), re.MULTILINE)
+            if match:
+                selected = match.group(1)
+    root = Path(selected).resolve()
+    if not (root / "scripts" / "build.sh").is_file():
+        raise ValueError("compile needs an OpenPFC checkout: pass --source or set OPENPFC_SOURCE_DIR")
+    return root
+
+
+def execute(command, cwd, dry_run=False):
+    print("+ {} (cwd={})".format(" ".join(shlex.quote(str(x)) for x in command), cwd), flush=True)
+    if dry_run:
+        return 0
+    return subprocess.run([str(x) for x in command], cwd=str(cwd)).returncode
+
+
+def compile_case(args):
+    project, manifest = read_project(args.project)
+    root = source_root(args.source)
+    binary, flags = PROFILES[args.profile]
+    if args.build_dir:
+        build = Path(args.build_dir).resolve()
+    elif args.profile == "lumi":
+        flash = Path(os.environ.get("LUMI_FLASH_ROOT", "/flash/project_462001519/juaho/build"))
+        build = flash / "openpfc-cli-lumi"
+    else:
+        build = root / "builds" / ("cli-" + args.profile)
+    command = ["bash", root / "scripts" / "build.sh", *flags,
+               "--build-dir=" + str(build), "--without-timestamp",
+               "--test" if not args.no_test else "--no-test"]
+    if args.jobs:
+        command.append("--jobs=" + str(args.jobs))
+    if args.dry_run:
+        return execute(command, root, True)
+    if any(name in os.environ for name in RANK_VARIABLES):
+        raise ValueError("compile must run once, outside an MPI launch")
+    code = execute(command, root)
+    if code:
+        return code
+    executable = build / "apps" / "tungsten" / binary
+    if not executable.is_file() or not os.access(executable, os.X_OK):
+        raise ValueError("build succeeded but expected executable is missing: " + str(executable))
+    manifest.update(profile=args.profile, source=str(root), build_dir=str(build),
+                    executable=str(executable))
+    manifest.pop("mpiexec", None)
+    cache = build / "CMakeCache.txt"
+    if cache.is_file():
+        match = re.search(r"^MPIEXEC_EXECUTABLE:[^=]+=([^\n]+)$", cache.read_text(), re.MULTILINE)
+        if match and Path(match.group(1)).is_file():
+            manifest["mpiexec"] = match.group(1)
+    write_manifest(project, manifest)
+    print("Ready: openpfc run {}".format(shlex.quote(str(project))))
+    return 0
+
+
+def run_case(args):
+    project, manifest = read_project(args.project)
+    selected = args.executable or manifest.get("executable")
+    if selected:
+        executable = Path(selected).resolve()
+    else:
+        # An installed/image driver can run its sibling app without source.
+        executable = HERE / "tungsten"
+        if not executable.is_file():
+            executable = HERE.parent / "apps" / "tungsten" / "tungsten"
+    if not executable.is_file() or not os.access(executable, os.X_OK):
+        raise ValueError("tungsten executable missing; compile the case or pass --executable")
+    in_mpi = any(name in os.environ for name in RANK_VARIABLES)
+    launcher = args.launcher
+    if in_mpi:
+        if args.ranks is not None or launcher not in ("auto", "none"):
+            raise ValueError("already inside MPI: set ranks on the outer mpirun/srun command")
+        launcher = "none"
+    elif launcher == "auto":
+        launcher = "srun" if "SLURM_JOB_ID" in os.environ else "mpirun"
+    if launcher == "none" and args.ranks not in (None, 1):
+        raise ValueError("--launcher=none cannot launch multiple ranks")
+    command = []
+    if launcher == "mpirun":
+        mpiexec = manifest.get("mpiexec") if not args.executable else None
+        command = [mpiexec or "mpirun", "-n", str(args.ranks or 1)]
+    elif launcher == "srun":
+        command = ["srun"]
+        if args.ranks is not None:
+            command += ["--ntasks", str(args.ranks)]
+    command += [executable, project / manifest["input"]]
+    if args.dry_run:
+        return execute(command, project, True)
+    if launcher != "none" and shutil.which(str(command[0])) is None:
+        raise ValueError("MPI launcher missing; load the MPI modules used to build this app")
+    (project / "results").mkdir(exist_ok=True)
+    return execute(command, project)
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--version", action="store_true", help="print the OpenPFC version")
+    commands = parser.add_subparsers(dest="command")
+    init = commands.add_parser("init", help="create a small tungsten case")
+    init.add_argument("project")
+    init.set_defaults(handler=init_case)
+    compile_cmd = commands.add_parser("compile", help="build using scripts/build.sh")
+    compile_cmd.add_argument("project")
+    compile_cmd.add_argument("--profile", choices=PROFILES, default="local")
+    compile_cmd.add_argument("--source", help="OpenPFC source checkout")
+    compile_cmd.add_argument("--build-dir", help="build tree (use flash on LUMI)")
+    compile_cmd.add_argument("--jobs", type=positive)
+    compile_cmd.add_argument("--no-test", action="store_true")
+    compile_cmd.add_argument("--dry-run", action="store_true")
+    compile_cmd.set_defaults(handler=compile_case)
+    run = commands.add_parser("run", help="run the case with MPI or Slurm")
+    run.add_argument("project")
+    run.add_argument("--ranks", type=positive)
+    run.add_argument("--launcher", choices=("auto", "mpirun", "srun", "none"), default="auto")
+    run.add_argument("--executable", help="use this app binary instead of the recorded build")
+    run.add_argument("--dry-run", action="store_true")
+    run.set_defaults(handler=run_case)
+    args = parser.parse_args(argv)
+    try:
+        if args.version:
+            print("OpenPFC " + version())
+            return 0
+        if not args.command:
+            parser.print_help()
+            return 0
+        return args.handler(args)
+    except (OSError, ValueError) as error:
+        print("openpfc: {}".format(error), file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())

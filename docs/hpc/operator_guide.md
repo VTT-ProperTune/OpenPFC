@@ -9,6 +9,11 @@ This page is the entry point for production-style OpenPFC runs: cluster modules,
 
 ## Build the right binary first
 
+The [`openpfc` CLI](../user_guide/cli.md) provides `init`, `compile`, and `run`
+for shipped tungsten cases. Its `tohtori` and `lumi` profiles delegate to the
+existing CUDA and HIP build stacks; MPI ranks remain controlled by the launcher
+or Slurm allocation.
+
 Most cluster failures begin before the job is submitted. The compiler, MPI and HeFFTe used by OpenPFC must be the same stack that your job launcher sees at runtime. The canonical install instructions are in [`INSTALL.md`](../../INSTALL.md), and the one-page summary of tested and optional dependencies is [`../reference/dependency_matrix.md`](../reference/dependency_matrix.md).
 
 Keep CPU and GPU builds in separate directories. It is tempting to flip CUDA or HIP options in an existing build tree, but the resulting cache is easy to misunderstand. [`build_cpu_gpu.md`](build_cpu_gpu.md) describes the safer pattern. If you are not sure whether GPU support is worth enabling for your run, read [`gpu_path_decision.md`](gpu_path_decision.md) before you start compiling device-enabled HeFFTe.
