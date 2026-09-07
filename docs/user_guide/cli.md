@@ -98,6 +98,7 @@ build-tree drivers discover their checkout automatically. `run --executable`
 selects a particular installed CPU/CUDA/HIP binary and overrides the case's
 recorded build path; load its matching MPI environment.
 
-These paths are suitable for a future development or runtime image, but the
-Apptainer/CharlieCloud image, host-MPI bindings, and bake/export workflow remain
-separate packaging work. No image is produced by this CLI.
+The separate [CPU runtime baker](../../containers/runtime/README.md) can package
+a compiled local tungsten case into an Apptainer image with host-MPI bindings. The CLI
+itself does not produce images. Development images, GPU profiles for images,
+and multi-node network integration remain packaging work.
