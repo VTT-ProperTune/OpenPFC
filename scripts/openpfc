@@ -17,9 +17,29 @@ import sys
 
 HERE = Path(__file__).resolve().parent
 PROFILES = {
-    "local": ("tungsten", ["--cpu", "--no-submit"]),
-    "tohtori": ("tungsten_cuda", ["--machine=tohtori", "--with-cuda"]),
-    "lumi": ("tungsten_hip", ["--machine=lumi", "--with-rocm", "--wait"]),
+    "local": ("cpu", ["--cpu", "--no-submit"]),
+    "tohtori": ("cuda", ["--machine=tohtori", "--with-cuda"]),
+    "lumi": ("hip", ["--machine=lumi", "--with-rocm", "--wait"]),
+}
+# Catalogued JSON-session apps. Positional-argument teaching drivers retain
+# their own interfaces. Preset files are shared with the app documentation.
+APPS = {
+    "tungsten": {"directory": "tungsten", "binaries": {"cpu": "tungsten", "cuda": "tungsten_cuda", "hip": "tungsten_hip"},
+                 "presets": {"smoke": None}, "description": "Small PFC runtime check"},
+    "aluminum": {"directory": "aluminumNew", "binaries": {"cpu": "aluminum_etd", "cuda": "aluminum_etd_cuda", "hip": "aluminum_etd_hip"},
+                 "presets": {"smoke": "inputs_json/smoke.json"}, "description": "Small aluminum ETD runtime check"},
+    "cahn_hilliard": {"directory": "cahn_hilliard", "binaries": {"cpu": "cahn_hilliard", "hip": "cahn_hilliard_hip"},
+                      "presets": {"spinodal": "inputs_json/coarsening.json", "mode": "inputs_json/fe_cr_spinodal.json"},
+                      "description": "Seeded spinodal decomposition or single-mode verification"},
+    "thin_film": {"directory": "thin_film", "binaries": {"cpu": "thin_film", "hip": "thin_film_hip"},
+                  "presets": {"leveling": "inputs_json/leveling.json", "dewetting": "inputs_json/dewetting.json"},
+                  "description": "Constant-mobility film leveling/dewetting"},
+    "surface_diffusion": {"directory": "surface_diffusion", "binaries": {"cpu": "surface_diffusion", "hip": "surface_diffusion_hip"},
+                          "presets": {"smoothing": "inputs_json/smoothing.json"}, "description": "Multimode surface smoothing"},
+    "kawahara": {"directory": "kawahara", "binaries": {"cpu": "kawahara", "hip": "kawahara_hip"},
+                 "presets": {"pulse": "inputs_json/pulse.json"}, "description": "Dispersive pulse on a periodic line"},
+    "ehd_film": {"directory": "ehd_film", "binaries": {"cpu": "ehd_film", "hip": "ehd_film_hip"},
+                 "presets": {"relaxation": "inputs_json/relaxation.json"}, "description": "Sixth-order film relaxation"},
 }
 RANK_VARIABLES = ("OMPI_COMM_WORLD_RANK", "PMI_RANK", "PMIX_RANK", "SLURM_PROCID")
 
@@ -48,8 +68,11 @@ def read_project(path):
     with (project / "openpfc.json").open() as stream:
         manifest = json.load(stream)
     if (not isinstance(manifest, dict) or manifest.get("format_version") != 1
-            or manifest.get("app") != "tungsten" or manifest.get("input") != "input.json"):
-        raise ValueError("unsupported openpfc.json: expected a version-1 tungsten case")
+            or not isinstance(manifest.get("app"), str)
+            or manifest.get("app") not in APPS or manifest.get("input") != "input.json"):
+        raise ValueError("unsupported openpfc.json: expected a version-1 catalogued app case")
+    if "profile" in manifest and (not isinstance(manifest["profile"], str) or manifest["profile"] not in PROFILES):
+        raise ValueError("unsupported profile in openpfc.json")
     if not (project / "input.json").is_file():
         raise ValueError("case input.json is missing")
     return project, manifest
@@ -66,8 +89,10 @@ def write_manifest(project, manifest):
 
 def init_case(args):
     project = Path(args.project).resolve()
-    # Refuse even an existing empty directory, so no user files are replaced.
-    project.mkdir(parents=True, exist_ok=False)
+    app = APPS[args.app]
+    preset = args.preset or next(iter(app["presets"]))
+    if preset not in app["presets"]:
+        raise ValueError("unknown preset for {}: choose {}".format(args.app, ", ".join(app["presets"])))
     settings = {
         "model": {"name": "tungsten", "params": {}},
         "domain": {"Lx": 16, "Ly": 16, "Lz": 16, "dx": 1.0, "dy": 1.0,
@@ -81,20 +106,38 @@ def init_case(args):
         "fields": [{"name": "psi", "data": "results/psi_%04d.vti"}],
         "checkpoint": {"every": 10, "directory": "results/checkpoints"},
     }
+    template = app["presets"][preset]
+    if template is not None:
+        installed = HERE.parent / "share/openpfc/cases" / app["directory"] / template
+        source = HERE.parent / "apps" / app["directory"] / template
+        selected = installed if installed.is_file() else source
+        if not selected.is_file():
+            raise ValueError("preset data missing; use a complete source checkout or installation")
+        settings = json.loads(selected.read_text())
+    # Validate selection before creating anything; never overwrite a case.
+    project.mkdir(parents=True, exist_ok=False)
     (project / "input.json").write_text(json.dumps(settings, indent=2) + "\n")
-    write_manifest(project, {"format_version": 1, "app": "tungsten", "input": "input.json"})
+    write_manifest(project, {"format_version": 1, "app": args.app, "preset": preset, "input": "input.json"})
     (project / "README.md").write_text(
-        "# Tungsten case\n\n"
+        "# {} / {}\n\n{}\n\n".format(args.app, preset, app["description"]) +
         "Edit input.json to change the physics, grid, and time interval.\n"
         "From this directory, run `openpfc compile . --profile=local`, then\n"
         "`openpfc run . --ranks=1`. Load the matching MPI modules before running.\n"
         "Output is relative to this directory, under results/.\n\n"
-        "The default is a small runtime check, not a calibrated materials case.\n"
+        "Presets are demonstrations or verification cases, not calibrated materials predictions.\n"
         "Use a fresh output directory for each run to preserve earlier results.\n"
         "For restart, set restart_from to a published checkpoint bundle and use\n"
         "new output paths. See the OpenPFC CLI and checkpoint guides.\n"
     )
-    print("Created tungsten case: {}".format(project))
+    print("Created {} / {} case: {}".format(args.app, preset, project))
+    return 0
+
+
+def list_apps(args):
+    for name, app in APPS.items():
+        print("{}: {}\n  presets: {}; backends: {}".format(
+            name, app["description"], ", ".join(app["presets"]), ", ".join(app["binaries"])))
+    print("Backend support describes build targets, not binaries installed on this machine.")
     return 0
 
 
@@ -124,7 +167,11 @@ def execute(command, cwd, dry_run=False):
 def compile_case(args):
     project, manifest = read_project(args.project)
     root = source_root(args.source)
-    binary, flags = PROFILES[args.profile]
+    backend, flags = PROFILES[args.profile]
+    app = APPS[manifest["app"]]
+    if backend not in app["binaries"]:
+        raise ValueError("{} has no {} target; use --profile=local for CPU or --profile=lumi for HIP".format(manifest["app"], backend))
+    binary = app["binaries"][backend]
     if args.build_dir:
         build = Path(args.build_dir).resolve()
     elif args.profile == "lumi":
@@ -144,7 +191,7 @@ def compile_case(args):
     code = execute(command, root)
     if code:
         return code
-    executable = build / "apps" / "tungsten" / binary
+    executable = build / "apps" / app["directory"] / binary
     if not executable.is_file() or not os.access(executable, os.X_OK):
         raise ValueError("build succeeded but expected executable is missing: " + str(executable))
     manifest.update(profile=args.profile, source=str(root), build_dir=str(build),
@@ -167,11 +214,16 @@ def run_case(args):
         executable = Path(selected).resolve()
     else:
         # An installed/image driver can run its sibling app without source.
-        executable = HERE / "tungsten"
+        app = APPS[manifest["app"]]
+        backend = PROFILES[manifest.get("profile", "local")][0]
+        binary = app["binaries"].get(backend)
+        if binary is None:
+            raise ValueError("recorded profile is unsupported for this app")
+        executable = HERE / binary
         if not executable.is_file():
-            executable = HERE.parent / "apps" / "tungsten" / "tungsten"
+            executable = HERE.parent / "apps" / app["directory"] / binary
     if not executable.is_file() or not os.access(executable, os.X_OK):
-        raise ValueError("tungsten executable missing; compile the case or pass --executable")
+        raise ValueError("{} executable missing; compile the case or pass --executable".format(manifest["app"]))
     in_mpi = any(name in os.environ for name in RANK_VARIABLES)
     launcher = args.launcher
     if in_mpi:
@@ -203,8 +255,12 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--version", action="store_true", help="print the OpenPFC version")
     commands = parser.add_subparsers(dest="command")
-    init = commands.add_parser("init", help="create a small tungsten case")
+    catalog = commands.add_parser("apps", help="list app presets and supported backends")
+    catalog.set_defaults(handler=list_apps)
+    init = commands.add_parser("init", help="create a shipped app case")
     init.add_argument("project")
+    init.add_argument("--app", choices=APPS, default="tungsten")
+    init.add_argument("--preset", help="preset from openpfc apps (default: first listed for app)")
     init.set_defaults(handler=init_case)
     compile_cmd = commands.add_parser("compile", help="build using scripts/build.sh")
     compile_cmd.add_argument("project")

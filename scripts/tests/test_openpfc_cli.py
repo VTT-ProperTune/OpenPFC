@@ -146,3 +146,79 @@ def test_invalid_ranks_and_missing_binary(case):
     result = call("run", case, "--executable=/does/not/exist")
     assert result.returncode != 0
     assert "compile the case" in result.stderr
+
+
+@pytest.mark.parametrize("app,preset", [
+    ("aluminum", "smoke"), ("cahn_hilliard", "spinodal"),
+    ("cahn_hilliard", "mode"), ("thin_film", "leveling"), ("thin_film", "dewetting"),
+    ("surface_diffusion", "smoothing"), ("kawahara", "pulse"), ("ehd_film", "relaxation"),
+])
+def test_catalog_presets_and_installed_data(tmp_path, app, preset):
+    case = tmp_path / "case"
+    result = call("init", case, "--app", app, "--preset", preset)
+    assert result.returncode == 0, result.stderr
+    manifest = json.loads((case / "openpfc.json").read_text())
+    assert manifest["app"] == app and manifest["preset"] == preset
+    settings = json.loads((case / "input.json").read_text())
+    assert settings["model"]["name"] == app
+    assert all(isinstance(settings["domain"][key], int) for key in ("Lx", "Ly", "Lz"))
+    assert all(f["data"].startswith("results/") for f in settings["fields"])
+    prefix = tmp_path / "prefix"
+    driver = prefix / "bin/openpfc"
+    driver.parent.mkdir(parents=True)
+    shutil.copyfile(CLI, driver)
+    directory = "aluminumNew" if app == "aluminum" else app
+    shutil.copytree(CLI.parent.parent / "apps" / directory / "inputs_json",
+                    prefix / "share/openpfc/cases" / directory / "inputs_json")
+    relocated = tmp_path / "relocated-case"
+    result = call("init", relocated, "--app", app, "--preset", preset, cli=driver)
+    assert result.returncode == 0, result.stderr
+    assert (relocated / "input.json").read_bytes() == (case / "input.json").read_bytes()
+
+
+def test_catalog_and_unsupported_backend(tmp_path):
+    result = call("apps")
+    assert "cahn_hilliard" in result.stdout and "spinodal, mode" in result.stdout
+    case = tmp_path / "case"
+    assert call("init", case, "--app=cahn_hilliard", "--preset=bad").returncode != 0
+    assert not case.exists()
+    assert call("init", case, "--app=cahn_hilliard").returncode == 0
+    before = (case / "openpfc.json").read_bytes()
+    result = call("compile", case, "--profile=tohtori", "--dry-run")
+    assert result.returncode != 0 and "no cuda target" in result.stderr
+    assert (case / "openpfc.json").read_bytes() == before
+
+
+def test_invalid_manifest_is_a_clear_error(case):
+    manifest = json.loads((case / "openpfc.json").read_text())
+    manifest["profile"] = "missing"
+    (case / "openpfc.json").write_text(json.dumps(manifest))
+    result = call("run", case)
+    assert result.returncode == 2 and "unsupported profile" in result.stderr
+    manifest.pop("profile")
+    manifest["app"] = []
+    (case / "openpfc.json").write_text(json.dumps(manifest))
+    result = call("run", case)
+    assert result.returncode == 2 and "unsupported openpfc.json" in result.stderr
+
+
+@pytest.mark.parametrize("app,binary,directory,profile", [
+    ("cahn_hilliard", "cahn_hilliard", "cahn_hilliard", "local"),
+    ("cahn_hilliard", "cahn_hilliard_hip", "cahn_hilliard", "lumi"),
+    ("aluminum", "aluminum_etd_cuda", "aluminumNew", "tohtori"),
+])
+def test_multi_app_build_selection(tmp_path, app, binary, directory, profile):
+    case = tmp_path / "case"
+    assert call("init", case, "--app", app).returncode == 0
+    source = tmp_path / "source"
+    (source / "scripts").mkdir(parents=True)
+    (source / "scripts/build.sh").write_text("exit 0\n")
+    build = tmp_path / "build"
+    executable = build / "apps" / directory / binary
+    executable.parent.mkdir(parents=True)
+    shutil.copyfile("/bin/true", executable)
+    executable.chmod(0o755)
+    result = call("compile", case, "--source", source, "--build-dir", build, "--profile", profile)
+    assert result.returncode == 0, result.stderr
+    assert json.loads((case / "openpfc.json").read_text())["executable"] == str(executable)
+    assert call("run", case, "--launcher=none").returncode == 0

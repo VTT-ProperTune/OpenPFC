@@ -5,9 +5,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Create, compile, and run a case
 
-The `openpfc` command creates a small tungsten case, builds a shipped application
+The `openpfc` command creates a shipped app case, builds the application
 through `scripts/build.sh`, and launches it with MPI or Slurm. It requires
-Python 3.8 or newer. This first version selects shipped physics; it does not
+Python 3.8 or newer. It selects shipped physics; it does not
 compile custom C++ models or build container images.
 
 From a checkout on Tohtori, run:
@@ -33,13 +33,48 @@ build. `--jobs=N` controls build parallelism; `--no-test` explicitly skips the
 suite for subsequent development builds. `--build-dir=/absolute/path` selects
 an existing compatible build tree. Never mix CPU and GPU backends in one tree.
 
+## Choose an app
+
+```bash
+./scripts/openpfc apps
+./scripts/openpfc init results/spinodal --app=cahn_hilliard --preset=spinodal
+./scripts/openpfc compile results/spinodal --profile=local
+module load openmpi/5.0.10
+./scripts/openpfc run results/spinodal --ranks=2
+```
+
+The catalog covers seven JSON-session apps. `init` without options still creates
+the tungsten smoke case; otherwise the first listed preset is the app default.
+
+| App | Presets | Backends |
+|-----|---------|----------|
+| `tungsten` | `smoke` | CPU, CUDA, HIP |
+| `aluminum` | `smoke` | CPU, CUDA, HIP |
+| `cahn_hilliard` | `spinodal`, `mode` | CPU, HIP |
+| `thin_film` | `leveling`, `dewetting` | CPU, HIP |
+| `surface_diffusion` | `smoothing` | CPU, HIP |
+| `kawahara` | `pulse` | CPU, HIP |
+| `ehd_film` | `relaxation` | CPU, HIP |
+
+Support means a build target exists, not that it is installed or verified on
+the current machine. Presets are installed alongside the CLI, so initialization
+does not require a source checkout. Unsupported app/profile combinations fail
+before building. The positional-argument teaching apps (`allen_cahn`, `heat3d`,
+`wave2d`, `kobayashi`) retain their own interfaces.
+
+The Cahn–Hilliard `spinodal` preset seeds reproducible broadband perturbations
+and writes `results/cahn_hilliard/diagnostics.csv`. `mode` retains the original
+single-cosine verification case. See the [app guide](../../apps/cahn_hilliard/README.md)
+for energy interpretation and timestep limitations. Aluminum's small uniform
+case is a runtime check, not a solidification demonstration.
+
 ## Profiles
 
-| Profile | Application | Build route |
+| Profile | Backend | Build route |
 |---------|-------------|-------------|
-| `local` (default) | `tungsten` | CPU, machine auto-detection, build in this process; `builds/cli-local` |
-| `tohtori` | `tungsten_cuda` | Tohtori CUDA stack; `builds/cli-tohtori` |
-| `lumi` | `tungsten_hip` | LUMI HIP stack and Slurm build with `--wait`; flash build tree |
+| `local` (default) | CPU | Machine auto-detection, build in this process; `builds/cli-local` |
+| `tohtori` | CUDA | Tohtori CUDA stack; `builds/cli-tohtori` |
+| `lumi` | HIP | LUMI HIP stack and Slurm build with `--wait`; flash build tree |
 
 Profiles use the machines and toolchains already supported by
 [`scripts/build.sh`](../../scripts/build.sh); `local` currently needs a supported

@@ -1,0 +1,7 @@
+{
+    "model": {"name": "aluminum", "params": {}},
+    "domain": {"Lx": 16, "Ly": 16, "Lz": 16, "dx": 1.3603495232, "dy": 1.3603495232, "dz": 1.3603495232, "origin": "corner"},
+    "timestepping": {"t0": 0.0, "t1": 0.1, "dt": 0.01, "saveat": 0.05},
+    "initial_conditions": [{"target": "psi", "type": "constant", "n0": -0.006}],
+    "fields": [{"name": "psi", "data": "results/aluminum/psi_%04d.vti"}]
+}
