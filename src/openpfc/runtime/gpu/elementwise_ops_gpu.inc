@@ -100,6 +100,38 @@ void launch_combine_two_term(const T *x0, const T *x1, const T *w0, const T *w1,
 }
 
 template <typename T>
+__global__ void combine_two_term_complex_kernel(const T *x0, const T *x1,
+                                                const T *w0, const T *w1, T *out,
+                                                std::size_t n) {
+  const std::size_t i =
+      static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (i < n) {
+    const T ar = w0[2 * i];
+    const T ai = w0[2 * i + 1];
+    const T br = w1[2 * i];
+    const T bi = w1[2 * i + 1];
+    const T x0r = x0[2 * i];
+    const T x0i = x0[2 * i + 1];
+    const T x1r = x1[2 * i];
+    const T x1i = x1[2 * i + 1];
+    out[2 * i] = ar * x0r - ai * x0i + br * x1r - bi * x1i;
+    out[2 * i + 1] = ar * x0i + ai * x0r + br * x1i + bi * x1r;
+  }
+}
+
+template <typename T>
+void launch_combine_two_term_complex(const T *x0, const T *x1, const T *w0,
+                                     const T *w1, T *out, std::size_t n) {
+  if (n == 0) {
+    return;
+  }
+  constexpr int threads = 256;
+  combine_two_term_complex_kernel<<<elem_blocks(n), threads>>>(x0, x1, w0, w1, out,
+                                                               n);
+  check_elem_launch("combine_two_term_complex");
+}
+
+template <typename T>
 __global__ void combine_two_term_real_kernel(const T *x0, const T *x1, const T *w0,
                                              const T *w1, T *out, std::size_t n) {
   const std::size_t i =
@@ -157,6 +189,26 @@ void combine_two_term_cuda_impl(const std::complex<float> *x0,
                           reinterpret_cast<const float *>(x1), w0, w1,
                           reinterpret_cast<float *>(out), n);
 }
+void combine_two_term_cuda_impl(const std::complex<double> *x0,
+                                const std::complex<double> *x1,
+                                const std::complex<double> *w0,
+                                const std::complex<double> *w1,
+                                std::complex<double> *out, std::size_t n) {
+  launch_combine_two_term_complex(
+      reinterpret_cast<const double *>(x0), reinterpret_cast<const double *>(x1),
+      reinterpret_cast<const double *>(w0), reinterpret_cast<const double *>(w1),
+      reinterpret_cast<double *>(out), n);
+}
+void combine_two_term_cuda_impl(const std::complex<float> *x0,
+                                const std::complex<float> *x1,
+                                const std::complex<float> *w0,
+                                const std::complex<float> *w1,
+                                std::complex<float> *out, std::size_t n) {
+  launch_combine_two_term_complex(
+      reinterpret_cast<const float *>(x0), reinterpret_cast<const float *>(x1),
+      reinterpret_cast<const float *>(w0), reinterpret_cast<const float *>(w1),
+      reinterpret_cast<float *>(out), n);
+}
 void combine_two_term_cuda_impl(const double *x0, const double *x1, const double *w0,
                                 const double *w1, double *out, std::size_t n) {
   launch_combine_two_term_real(x0, x1, w0, w1, out, n);
@@ -201,6 +253,26 @@ void combine_two_term_hip_impl(const std::complex<float> *x0,
   launch_combine_two_term(reinterpret_cast<const float *>(x0),
                           reinterpret_cast<const float *>(x1), w0, w1,
                           reinterpret_cast<float *>(out), n);
+}
+void combine_two_term_hip_impl(const std::complex<double> *x0,
+                               const std::complex<double> *x1,
+                               const std::complex<double> *w0,
+                               const std::complex<double> *w1,
+                               std::complex<double> *out, std::size_t n) {
+  launch_combine_two_term_complex(
+      reinterpret_cast<const double *>(x0), reinterpret_cast<const double *>(x1),
+      reinterpret_cast<const double *>(w0), reinterpret_cast<const double *>(w1),
+      reinterpret_cast<double *>(out), n);
+}
+void combine_two_term_hip_impl(const std::complex<float> *x0,
+                               const std::complex<float> *x1,
+                               const std::complex<float> *w0,
+                               const std::complex<float> *w1,
+                               std::complex<float> *out, std::size_t n) {
+  launch_combine_two_term_complex(
+      reinterpret_cast<const float *>(x0), reinterpret_cast<const float *>(x1),
+      reinterpret_cast<const float *>(w0), reinterpret_cast<const float *>(w1),
+      reinterpret_cast<float *>(out), n);
 }
 void combine_two_term_hip_impl(const double *x0, const double *x1, const double *w0,
                                const double *w1, double *out, std::size_t n) {

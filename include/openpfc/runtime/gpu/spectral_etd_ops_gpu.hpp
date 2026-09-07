@@ -58,6 +58,9 @@ template <class MemorySpace> struct DeviceSpectralETDOps {
   static void upload(real_coeffs &dst, std::span<const double> src) {
     dst.copy_from_host(src);
   }
+  static void upload(complex_scratch &dst, std::span<const Complex> src) {
+    dst.copy_from_host(src);
+  }
 
   static void forward(FFT &fft, RealField &in, ComplexField &out) {
     in.sync_to_device();
@@ -92,6 +95,18 @@ template <class MemorySpace> struct DeviceSpectralETDOps {
   static void combine(const ComplexField &u, const complex_scratch &n_hat,
                       const real_coeffs &exp_Ldt, const real_coeffs &n_weight,
                       complex_scratch &out) {
+    combine_raw(u.data(), n_hat.data(), exp_Ldt.data(), n_weight.data(), out.data(),
+                u.size());
+  }
+  static void combine(const ComplexField &u, const ComplexField &n_hat,
+                      const complex_scratch &exp_Ldt,
+                      const complex_scratch &n_weight, complex_scratch &out) {
+    combine_raw(u.data(), n_hat.data(), exp_Ldt.data(), n_weight.data(), out.data(),
+                u.size());
+  }
+  static void combine(const ComplexField &u, const complex_scratch &n_hat,
+                      const complex_scratch &exp_Ldt,
+                      const complex_scratch &n_weight, complex_scratch &out) {
     combine_raw(u.data(), n_hat.data(), exp_Ldt.data(), n_weight.data(), out.data(),
                 u.size());
   }
@@ -155,17 +170,34 @@ private:
     }
 #endif
   }
+  static void combine_raw(const Complex *u, const Complex *n_hat, const Complex *e,
+                          const Complex *w, Complex *out, std::size_t n) {
+#if defined(OpenPFC_ENABLE_CUDA)
+    if constexpr (std::is_same_v<MemorySpace, pfc::CUDASpace>) {
+      pfc::combine_two_term_cuda_impl(u, n_hat, e, w, out, n);
+      return;
+    }
+#endif
+#if defined(OpenPFC_ENABLE_HIP)
+    if constexpr (std::is_same_v<MemorySpace, pfc::HIPSpace>) {
+      pfc::combine_two_term_hip_impl(u, n_hat, e, w, out, n);
+      return;
+    }
+#endif
+  }
 };
 
 } // namespace detail
 
 #if defined(OpenPFC_ENABLE_CUDA)
 template <>
-struct SpectralETDOps<pfc::CUDASpace> : detail::DeviceSpectralETDOps<pfc::CUDASpace> {};
+struct SpectralETDOps<pfc::CUDASpace>
+    : detail::DeviceSpectralETDOps<pfc::CUDASpace> {};
 #endif
 #if defined(OpenPFC_ENABLE_HIP)
 template <>
-struct SpectralETDOps<pfc::HIPSpace> : detail::DeviceSpectralETDOps<pfc::HIPSpace> {};
+struct SpectralETDOps<pfc::HIPSpace> : detail::DeviceSpectralETDOps<pfc::HIPSpace> {
+};
 #endif
 
 } // namespace pfc::sim

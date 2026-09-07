@@ -21,13 +21,16 @@
  *    aggregate.
  * 3. **Spectral-ETD descriptors** — the single contract consumed by
  *    `SpectralETDSystem` for every memory space:
- *      - `linear_symbol(k_laplacian)` — real diagonal symbol \f$L(k)\f$;
+ *      - `linear_symbol(k_laplacian)` — real diagonal symbol \f$L(k)\f$,
+ *        or `linear_symbol(kx,ky,kz)` returning \f$\mathbb{C}\f$ for
+ *        odd-order dispersive operators (\f$ik^3\f$, \f$ik^5\f$);
  *      - `pointwise()` — a device-capable functor (`SpectralPointwise`)
  *        evaluating the real-space nonlinearity per cell;
  *      - optional `nonlinear_symbol(k_laplacian)` — real multiplier
  *        \f$M(k)\f$ applied to \f$\hat N\f$ (defaults to 1; PFC models use
  *        \f$k_{\mathrm{lap}}\f$ so that
- *        \f$\partial_t\hat\psi = L\hat\psi + M\hat N\f$);
+ *        \f$\partial_t\hat\psi = L\hat\psi + M\hat N\f$), or the complex
+ *        k-vector form `nonlinear_symbol(kx,ky,kz)`;
  *      - optional `filter_mf(k_laplacian)` — mean-field filter
  *        \f$\chi(k)\f$; the driver then supplies `cell.psi_mf`;
  *      - optional `correlation_kernel(k_laplacian)` — \f$P(k)\f$; the driver
@@ -146,6 +149,29 @@ concept HasNonlinearSymbol = requires(const Physics &physics, double k_laplacian
 };
 
 /**
+ * @brief Complex diagonal symbol \f$L(\mathbf{k})\f$ from signed wavevector
+ * components (odd-order dispersion).
+ */
+template <class Physics>
+concept HasComplexLinearSymbol =
+    requires(const Physics &physics, double kx, double ky, double kz) {
+      {
+        physics.linear_symbol(kx, ky, kz)
+      } -> std::convertible_to<std::complex<double>>;
+    };
+
+/**
+ * @brief Optional complex multiplier \f$M(\mathbf{k})\f$ on \f$\hat N\f$.
+ */
+template <class Physics>
+concept HasComplexNonlinearSymbol =
+    requires(const Physics &physics, double kx, double ky, double kz) {
+      {
+        physics.nonlinear_symbol(kx, ky, kz)
+      } -> std::convertible_to<std::complex<double>>;
+    };
+
+/**
  * @brief Optional mean-field filter @f$\chi(k)@f$; enables `cell.psi_mf`.
  */
 template <class Physics>
@@ -157,10 +183,9 @@ concept HasMeanFieldFilter = requires(const Physics &physics, double k_laplacian
  * @brief Optional correlation kernel @f$P(k)@f$; enables `cell.p_star`.
  */
 template <class Physics>
-concept HasCorrelationKernel =
-    requires(const Physics &physics, double k_laplacian) {
-      { physics.correlation_kernel(k_laplacian) } -> std::convertible_to<double>;
-    };
+concept HasCorrelationKernel = requires(const Physics &physics, double k_laplacian) {
+  { physics.correlation_kernel(k_laplacian) } -> std::convertible_to<double>;
+};
 
 /**
  * @brief Physics that provides a device-capable pointwise nonlinearity.
@@ -194,14 +219,16 @@ concept PointwisePhysics = DeclaresFields<Physics> && PointwiseRhs<Physics, Grad
 /**
  * @brief Field-declaring spectral-ETD physics (stiff PFC path).
  *
- * Required: `declare_fields`, `linear_symbol(k)`, `pointwise()`.
- * Optional, detected by the driver: `nonlinear_symbol(k)`, `filter_mf(k)`,
- * `correlation_kernel(k)`, and `free_energy_density(cell)` on the functor.
+ * Required: `declare_fields`, `pointwise()`, and either real
+ * `linear_symbol(k_laplacian)` or complex `linear_symbol(kx,ky,kz)`.
+ * Optional, detected by the driver: `nonlinear_symbol` (real or complex),
+ * `filter_mf(k)`, `correlation_kernel(k)`, and `free_energy_density(cell)`
+ * on the functor.
  */
 template <class Physics>
-concept SpectralETDPhysics = DeclaresFields<Physics> &&
-                             SpectralLinearSymbol<Physics> &&
-                             HasSpectralPointwise<Physics>;
+concept SpectralETDPhysics =
+    DeclaresFields<Physics> && HasSpectralPointwise<Physics> &&
+    (SpectralLinearSymbol<Physics> || HasComplexLinearSymbol<Physics>);
 
 /// Functor type returned by `physics.pointwise()`.
 template <class Physics>
