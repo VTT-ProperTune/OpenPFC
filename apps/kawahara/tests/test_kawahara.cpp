@@ -131,7 +131,14 @@ TEST_CASE("Kawahara linear cosine tracks omega(k) without damping",
                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                           pfc::GridSpacing({dx, 1.0, 1.0}));
   pfc::sim::stacks::SpectralCPUStack stack(domain, 0, 1, MPI_COMM_WORLD);
-  json params{{"alpha", 0.0}, {"beta", 1.0}, {"gamma", -1.0}};
+  // Independent manufactured solutions of u_t - beta*u_xxx + gamma*u_xxxxx=0.
+  // For cos(k*x-w*t), the third and fifth derivatives are k^3*sin and
+  // -k^5*sin. Do not obtain the expected phase from omega_k().
+  double beta = 1.0, gamma = -1.0;
+  SECTION("third derivative only") { gamma = 0.0; }
+  SECTION("fifth derivative only") { beta = 0.0; }
+  SECTION("competing derivatives") {}
+  json params{{"alpha", 0.0}, {"beta", beta}, {"gamma", gamma}};
   auto phys = kawahara::KawaharaPhysics<>::from_json(params, domain,
                                                      stack.fft().get_inbox_bounds());
   pfc::SimulationState state;
@@ -147,14 +154,18 @@ TEST_CASE("Kawahara linear cosine tracks omega(k) without damping",
   opt.dealias = true;
   pfc::sim::SpectralETDSystem<kawahara::KawaharaPhysics<>> sys(phys, stack.fft(),
                                                                state, dt, opt);
-  const double omega = kawahara::omega_k(k, phys.params);
-  REQUIRE(omega > 0.0);
+  const double omega = beta * 0.125 + gamma * 0.03125; // k=1/2
   double t = 0.0;
   for (int step = 0; step < n_steps; ++step) {
     t = sys.step(t);
   }
   REQUIRE_THAT(cosine_amplitude(u, nx), WithinRel(amp0, 1.0e-3));
   REQUIRE_THAT(cosine_phase(u, nx), WithinAbs(omega * t, 1.0e-5));
+  u.for_each_owned([&](int i, int j, int z) {
+    const auto x = u.coords(i, j, z);
+    REQUIRE_THAT(u(i, j, z),
+                 WithinAbs(amp0 * std::cos(k * x[0] - omega * t), 1e-12));
+  });
   REQUIRE_THAT(mean_u(u), WithinAbs(0.0, 1e-12));
 }
 

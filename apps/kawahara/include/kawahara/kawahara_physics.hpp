@@ -12,12 +12,13 @@
  * dispersion (Kawahara 1972):
  *
  * \f[
- *   \partial_t u + \alpha u\partial_x u + \beta\partial_x^3 u
+ *   \partial_t u + \alpha u\partial_x u - \beta\partial_x^3 u
  *   + \gamma\partial_x^5 u = 0.
  * \f]
  *
- * Defaults \(\alpha=1\), \(\beta=1\), \(\gamma=-1\) are the classic
- * capillary–gravity regime where fifth-order dispersion is material.
+ * This app defines beta with a minus sign in the PDE. To use a coefficient
+ * b multiplying +u_xxx, set beta=-b. Existing inputs retain their meaning.
+ * Defaults \(\alpha=1\), \(\beta=1\), \(\gamma=-1\) give competing dispersion.
  * The linear symbol is purely imaginary,
  * \(L(k)=-i\omega(k)\) with \(\omega(k)=\beta k^3+\gamma k^5\). Phase
  * velocity \(c_p=\beta k^2+\gamma k^4\) changes sign at
