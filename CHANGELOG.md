@@ -12,7 +12,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - `kawahara`: capillary–gravity Kawahara waves on the 0.2 spectral-ETD
   session (`#80`). Odd-order \(L(k)=-i(\beta k^3+\gamma k^5)\) plus
   dealiased \(u^2\). Catch2 phase-velocity / \(k^3\) vs \(k^5\) / mean
-  checks. CPU binary plus `kawahara_hip` when rocFFT HeFFTe is on.
+  checks. CPU binary plus `kawahara_hip` when rocFFT HeFFTe is on
+  (LUMI-G smoke job 21792406).
 - `surface_diffusion`: Mullins small-slope surface diffusion on the 0.2
   spectral-ETD session (`#79`). Exact \(k^4\) decay of Fourier modes;
   multi-wavelength JSON demo. Catch2 single-mode \(\exp(-B k^4 t)\) and

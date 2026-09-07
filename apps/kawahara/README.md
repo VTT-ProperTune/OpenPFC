@@ -64,7 +64,8 @@ JSON `model.params`: `alpha`, `beta`, `gamma`. Initial conditions:
 cosine against that dispersion with no amplitude loss, opposite phase
 velocities on either side of \(|k|=1\), and mean-\(u\) conservation with
 the quadratic term on. HIP builds add `HIP_KawaharaETD` and
-`kawahara-hip-smoke`.
+`kawahara-hip-smoke`. LUMI-G smoke: job 21792406 (`small-g`, 32-point
+line, mean \(u=0\)).
 
 ## Layout
 
