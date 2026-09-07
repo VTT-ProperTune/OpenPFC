@@ -1,0 +1,43 @@
+{
+    "model": {
+        "name": "thin_film",
+        "params": {
+            "h0": 1.0,
+            "gamma": 1.0,
+            "M0": 1.0,
+            "A": 0.05
+        }
+    },
+    "domain": {
+        "Lx": 128,
+        "Ly": 128,
+        "Lz": 1,
+        "dx": 1.0,
+        "dy": 1.0,
+        "dz": 1.0,
+        "origin": "corner"
+    },
+    "timestepping": {
+        "t0": 0.0,
+        "t1": 40.0,
+        "dt": 0.1,
+        "saveat": 4.0
+    },
+    "fields": [
+        {
+            "name": "h",
+            "data": "results/thin_film/h_%04d.vti"
+        }
+    ],
+    "initial_conditions": [
+        {
+            "target": "h",
+            "type": "cosine_mode",
+            "h0": 1.0,
+            "amplitude": 0.02,
+            "nx": 8,
+            "ny": 6,
+            "nz": 0
+        }
+    ]
+}
