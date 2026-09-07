@@ -18,11 +18,14 @@ Long weakly nonlinear free-surface waves can need both \(\partial_x^3\) and
 The Kawahara equation (1972) is
 
 \[
-\partial_t u + \alpha u\partial_x u + \beta\partial_x^3 u + \gamma\partial_x^5 u = 0.
+\partial_t u + \alpha u\partial_x u - \beta\partial_x^3 u + \gamma\partial_x^5 u = 0.
 \]
 
-Defaults \(\alpha=1\), \(\beta=1\), \(\gamma=-1\) are the classic
-capillary–gravity regime. This is a 1D equation on a periodic line
+The app defines `beta` with a minus sign in the PDE. For a reference equation
+with `+b u_xxx`, supply `beta=-b`. Earlier documentation incorrectly printed
+`+beta u_xxx`; the implementation and existing input results are unchanged.
+Defaults \(\alpha=1\), \(\beta=1\), \(\gamma=-1\) give competing
+dispersion. This is a 1D equation on a periodic line
 (\(N_y=N_z=1\)).
 
 Linear Fourier modes rotate rather than decay:
@@ -61,7 +64,8 @@ JSON `model.params`: `alpha`, `beta`, `gamma`. Initial conditions:
 ## Tests
 
 `ctest -R kawahara` checks \(\omega(k)=\beta k^3+\gamma k^5\), a linear
-cosine against that dispersion with no amplitude loss, opposite phase
+cosine against independently derived third-only and fifth-only solutions
+with no amplitude loss, opposite phase
 velocities on either side of \(|k|=1\), and mean-\(u\) conservation with
 the quadratic term on. HIP builds add `HIP_KawaharaETD` and
 `kawahara-hip-smoke`. LUMI-G smoke: job 21792406 (`small-g`, 32-point

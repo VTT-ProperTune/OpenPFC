@@ -9,6 +9,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- Independent Kawahara manufactured-solution tests for third- and fifth-order
+  dispersion. Correct the documented PDE to the existing `-beta*u_xxx`
+  convention without changing solver coefficients; fix the pulse preset's
+  grid count to the documented 256 points.
+
 - CPU case baker (`#13` first slice): stage an Apptainer runtime image from
   a compiled CLI tungsten case, with input/runtime-library hashes and explicit
   host-MPI/PMIx/UCX mounts. Includes a baked-case entrypoint and portability
