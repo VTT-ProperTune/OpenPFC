@@ -42,7 +42,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   factored analytical form, the derived coefficient expansion, band structure,
   the \(k^4\)-vs-\(k^8\) comparison, \(e^{L(k)t}\) growth, mass conservation
   and ETD stability at 1000x the explicit limit. CPU binary plus
-  `higher_order_pfc_hip` when rocFFT HeFFTe is on.
+  `higher_order_pfc_hip` when rocFFT HeFFTe is on (LUMI-G `standard-g` jobs
+  21829597 on 1 GCD and 21829755 on 2 GCD; conserved `sum` bit-identical to the
+  CPU run on one GCD, within 9 ULP on two).
 
 - Multi-app CLI catalog and installed presets for eight JSON-session apps,
   with explicit backend availability and CPU entrypoint smoke tests.
