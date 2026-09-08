@@ -11,9 +11,14 @@ non-MPI runtime dependencies. MPI, PMIx, and UCX remain on the host and are
 mounted read-only by the generated `run-host.sh`. The application is not
 recompiled inside the image.
 
-This first implementation supports the CLI's `local` CPU profile on a
-compatible Linux host. It is a runtime image, not the development image,
-GPU profiles, or multi-node/RDMA deployment proposed in issue #13.
+Two host MPI stacks are supported, selected with `--site`:
+
+| `--site` | stack | tested on |
+|---|---|---|
+| `openmpi` (default) | Open MPI / PMIx / UCX | Tohtori, single node |
+| `cray` | Cray MPICH / libfabric / Slingshot | LUMI, **4 nodes / 32 ranks** |
+
+It is a runtime image, not the development image or a GPU profile.
 
 ## Prepare and bake
 
@@ -85,6 +90,85 @@ They do not validate the site's RDMA path. Production networking can require
 additional provider directories, `/etc/libibverbs.d`, devices, and matching
 libfabric/PMI libraries. Do not infer multi-node scaling from this smoke run.
 
+## LUMI (`--site cray`)
+
+LUMI differs from Tohtori in four ways that each break a naive port, so they
+are encoded in the site profile rather than left to the operator.
+
+**1. The base image needs a new enough glibc.** The bind model loads *host*
+libraries inside the image, so the base's glibc must be at least as new as
+theirs. On LUMI, Cray MPICH, libfabric and libcxi all require `GLIBC_2.38`:
+
+```console
+$ objdump -T /opt/cray/pe/lib64/libmpi_gnu_123.so.12 | grep -o 'GLIBC_[0-9.]*' | sort -V | tail -1
+GLIBC_2.38
+```
+
+The Debian Bookworm base used for Tohtori ships glibc 2.36 and **cannot** work
+here; the symptom is an unhelpful symbol error at run time. Use a Trixie or
+Ubuntu 24.04 base. The baker records the measured floor as
+`host_glibc_requirement` in `provenance.json`.
+
+**2. Slingshot libraries share a directory with ordinary system libraries.**
+`libcxi.so.1` and `libxpmem.so.0` live in `/usr/lib64` next to `libstdc++.so.6`
+and `libz.so.1`. A prefix rule cannot separate them, and mounting the whole
+directory would shadow the base image's own libraries. Name them individually
+with `--host-lib`; the wrapper binds each file to `/opt/openpfc/hostlib/<soname>`
+and never mounts the shared directory. Omitting one is an error, not a silent
+bake of the interconnect into the image.
+
+**3. Cray PMI needs the Slurm daemon's socket directory.** The site profile
+binds `/var/spool/slurmd`. Without it `MPI_Init` fails with `job id unknown`
+and every rank believes it is rank 0.
+
+**4. LUMI cannot build images.** There is no `/etc/subuid` mapping for ordinary
+users and no readable `proot`, so `singularity build` fails whether or not
+`--fakeroot` is given. Bake on a build host and copy `case.sif` and
+`run-host.sh` to LUMI — which is the workflow #13 describes anyway. LUMI ships
+`singularity-ce`, not `apptainer`, hence `--runtime singularity`.
+
+```bash
+python3 scripts/bake_case.py CASE \
+  --site cray --runtime singularity \
+  --base BASE_WITH_GLIBC_2.38_OR_NEWER.sif \
+  --output builds/containers/mycase \
+  --host-prefix /opt/cray \
+  --host-prefix /opt/rocm-6.3.4 --host-prefix /opt/amdgpu \
+  --host-lib /usr/lib64/libcxi.so.1 \
+  --host-lib /usr/lib64/libxpmem.so.0
+```
+
+Use `/opt/cray`, not `/opt/cray/pe/lib64`: the libraries there are symlinks into
+`/opt/cray/pe/mpich/...`, and the baker resolves them before classifying.
+
+The case directory is not bound by the wrapper, so point `SINGULARITY_BIND` at
+the filesystem holding it. On LUMI that means both spellings, because
+`/flash/project_*` is a symlink into `/pfs`:
+
+```bash
+export SINGULARITY_BIND=/pfs,/flash
+srun -n 32 builds/containers/mycase/run-host.sh run "$CASE"
+```
+
+### Multi-node validation
+
+`small` partition, **4 nodes x 8 ranks = 32 ranks**, tungsten 64^3 for 5 steps.
+Both runs report `MPICH CH4 OFI netmod using cxi provider (domain_name=cxi0)`,
+so this exercises the Slingshot RDMA path and not a TCP fallback:
+
+| run | job | `sum` (hex) | `sumsq` (hex) |
+|---|---|---|---|
+| native | 21830651 | `-0x1.9e04f59f6c34p+13` | `0x1.04d0a9db35c98p+17` |
+| baked bundle | 21830651 | `-0x1.9e04f59f6c34p+13` | `0x1.04d0a9db35c98p+17` |
+
+Bit-identical. An earlier 2-node run (21830470 native, 21830489 container) agrees
+the same way. This closes the "host-MPI bind on more than one node" item of #13.
+
+The baked-bundle run above bound `payload/` into the base image rather than
+using a built `case.sif`, because LUMI cannot build one (point 4). It exercises
+the generated `run-host.sh` bind list, the payload/host split and the
+entrypoint; the SIF packaging step itself is covered by the Tohtori path.
+
 ## Bundle contents and provenance
 
 The staging directory contains `runtime.def`, `payload/`, `base.sif` (a symlink
@@ -132,8 +216,9 @@ resolution and check payload exclusion, hashes, input portability, and
 non-overwrite behavior. They do not require Apptainer privileges.
 
 Remaining issue #13 work includes a development image, exact build-source
-provenance, CUDA/HIP image profiles, network-provider integration, and a
-multi-node host-MPI validation. No container has been published to a registry.
+provenance, CUDA/HIP image profiles, and baking on a host that can build the
+SIF for LUMI. No container has been published to a registry, so the "download
+an image" entry point of the user workflow does not exist yet.
 
 The runtime follows Apptainer's documented
 [MPI bind model](https://apptainer.org/docs/user/main/mpi.html#bind-model) and

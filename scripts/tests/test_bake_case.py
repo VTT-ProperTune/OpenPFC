@@ -114,3 +114,126 @@ def test_nonportable_case_is_rejected(bundle, settings):
     result = subprocess.run(command, env=env, text=True, capture_output=True)
     assert result.returncode != 0
     assert not output.exists()
+
+
+@pytest.fixture
+def cray_bundle(tmp_path):
+    """A LUMI-shaped case: Cray MPICH naming, and Slingshot libraries sharing a
+    directory with ordinary system libraries."""
+    case = tmp_path / "case"
+    case.mkdir()
+    build = tmp_path / "build"
+    (build / "share/openpfc").mkdir(parents=True)
+    (build / "share/openpfc/version").write_text("0.2.0\n")
+    app = build / "tungsten"
+    app.write_bytes(b"#!/bin/sh\nexit 0\n")
+    app.chmod(0o755)
+    host = tmp_path / "cray-pe"
+    host.mkdir()
+    for name in ("libmpi_gnu_123.so.12", "libfabric.so.1", "libpmi.so.0"):
+        (host / name).write_bytes(b"cray host stack")
+    # /usr/lib64 equivalent: Slingshot and ordinary system libraries together.
+    sysdir = tmp_path / "usr-lib64"
+    sysdir.mkdir()
+    (sysdir / "libcxi.so.1").write_bytes(b"slingshot provider, host only")
+    (sysdir / "libstdc++.so.6").write_bytes(b"ordinary system library, bundle it")
+    physics = tmp_path / "libheffte.so.2"
+    physics.write_bytes(b"packaged physics dependency")
+    libc = tmp_path / "libc.so.6"
+    libc.write_bytes(b"base supplies its own libc")
+    tools = tmp_path / "tools"
+    tools.mkdir()
+    lines = ["libmpi_gnu_123.so.12 => {} (0x1)".format(host / "libmpi_gnu_123.so.12"),
+             "libfabric.so.1 => {} (0x2)".format(host / "libfabric.so.1"),
+             "libpmi.so.0 => {} (0x3)".format(host / "libpmi.so.0"),
+             "libcxi.so.1 => {} (0x4)".format(sysdir / "libcxi.so.1"),
+             "libstdc++.so.6 => {} (0x5)".format(sysdir / "libstdc++.so.6"),
+             "libheffte.so.2 => {} (0x6)".format(physics),
+             "libc.so.6 => {} (0x7)".format(libc)]
+    ldd = tools / "ldd"
+    ldd.write_text("#!/bin/sh\nprintf '%s\\n' " + " ".join(map(shlex.quote, lines)) + "\n")
+    ldd.chmod(0o755)
+    (case / "openpfc.json").write_text(json.dumps({
+        "format_version": 1, "app": "tungsten", "input": "input.json", "profile": "lumi",
+        "executable": str(app), "build_dir": str(build), "source": str(tmp_path),
+    }))
+    (case / "input.json").write_text(json.dumps({
+        "initial_conditions": [{"type": "constant", "n0": -0.4}],
+        "fields": [{"data": "results/psi_%d.vti"}],
+    }))
+    base = tmp_path / "base.sif"
+    base.write_bytes(b"test base identity")
+    output = tmp_path / "bundle"
+    command = [sys.executable, str(SCRIPT), str(case), "--base", str(base),
+               "--output", str(output), "--site", "cray",
+               "--host-prefix", str(host), "--prepare-only"]
+    env = dict(os.environ, PATH=str(tools) + os.pathsep + os.environ["PATH"])
+    return command, env, output, sysdir
+
+
+def test_cray_slingshot_library_is_not_silently_bundled(cray_bundle):
+    """libcxi shares /usr/lib64 with ordinary libraries, so a prefix rule cannot
+    reach it. Baking it would put the interconnect inside the image."""
+    command, env, output, _ = cray_bundle
+    result = subprocess.run(command, env=env, capture_output=True, text=True)
+    assert result.returncode == 2, result.stdout
+    assert "libcxi.so.1" in result.stderr
+    assert "--host-lib" in result.stderr
+    assert not output.exists()
+
+
+def test_cray_host_lib_splits_a_shared_system_directory(cray_bundle):
+    command, env, output, sysdir = cray_bundle
+    command = command + ["--host-lib", str(sysdir / "libcxi.so.1")]
+    result = subprocess.run(command, env=env, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    payload = output / "payload"
+    # Same directory, opposite sides of the split.
+    assert not (payload / "lib/libcxi.so.1").exists()
+    assert (payload / "lib/libstdc++.so.6").is_file()
+    assert (payload / "lib/libheffte.so.2").is_file()
+    provenance = json.loads((payload / "provenance.json").read_text())
+    assert provenance["site"] == "cray"
+    assert provenance["profile"] == "lumi"
+    assert "libcxi.so.1" in provenance["host_libraries"]
+    assert "libmpi_gnu_123.so.12" in provenance["host_libraries"]
+    assert "libstdc++.so.6" in provenance["bundled_libraries"]
+    # The wrapper binds the single file, never the shared directory.
+    wrapper = (output / "run-host.sh").read_text()
+    assert "libcxi.so.1:/opt/openpfc/hostlib/libcxi.so.1:ro" in wrapper
+    assert str(sysdir) + ":" + str(sysdir) not in wrapper
+    assert "/opt/openpfc/hostlib" in wrapper
+
+
+def test_cray_mpi_naming_counts_as_an_mpi_application(cray_bundle):
+    """Cray names its library libmpi_gnu_123.so.12, not libmpi.so.*."""
+    command, env, output, sysdir = cray_bundle
+    command = command + ["--host-lib", str(sysdir / "libcxi.so.1")]
+    result = subprocess.run(command, env=env, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert "expected a dynamically linked MPI application" not in result.stderr
+
+
+def test_openmpi_site_rejects_a_lumi_profile_case(cray_bundle):
+    command, env, output, sysdir = cray_bundle
+    command = [a for a in command if a not in ("cray",)]
+    command = [a for a in command if a != "--site"]
+    command += ["--host-lib", str(sysdir / "libcxi.so.1")]
+    result = subprocess.run(command, env=env, capture_output=True, text=True)
+    assert result.returncode == 2
+    assert "profile" in result.stderr
+
+
+def test_cray_wrapper_binds_the_slurm_pmi_socket_directory(cray_bundle):
+    """Cray PMI reaches the Slurm daemon through /var/spool/slurmd. Without it
+    MPI_Init fails and every rank believes it is rank 0."""
+    command, env, output, sysdir = cray_bundle
+    command = command + ["--host-lib", str(sysdir / "libcxi.so.1")]
+    assert subprocess.run(command, env=env, capture_output=True, text=True).returncode == 0
+    assert "/var/spool/slurmd:/var/spool/slurmd" in (output / "run-host.sh").read_text()
+
+
+def test_openmpi_wrapper_has_no_cray_site_binds(bundle):
+    command, env, output, _, _ = bundle
+    assert subprocess.run(command, env=env, capture_output=True, text=True).returncode == 0
+    assert "/var/spool/slurmd" not in (output / "run-host.sh").read_text()
