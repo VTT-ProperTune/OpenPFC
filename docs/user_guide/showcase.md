@@ -65,6 +65,14 @@ This page ties **figures** you may see in the repository or publications to **ru
 | **VTK** | gap `h` under `results/ehd_film/` |
 | **Concepts** | Sixth-order bending lubrication; \(\lambda=-M_0 B k^6\) |
 
+## Gradient elasticity (size-dependent defects)
+
+| | |
+|---|---|
+| **Runnable** | [`apps/gradient_elasticity`](../../apps/gradient_elasticity/README.md) — `inclusion.json` / `gaussian.json` |
+| **VTK** | inclusion `g` and displacement `ux`,`uy` under `results/gradient_elasticity/` |
+| **Concepts** | Helmholtz–Navier \((1-\ell^2\nabla^2)L_{\mathrm{navier}}\mathbf{u}=\mathbf{f}\); \(\ell\) regularizes high \(k\) |
+
 ## Thin-film dewetting / coating
 
 | | |
