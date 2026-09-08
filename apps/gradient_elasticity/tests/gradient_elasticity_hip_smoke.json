@@ -1,0 +1,35 @@
+{
+    "model": {
+        "name": "gradient_elasticity",
+        "params": {
+            "ell": 1.0,
+            "eps0": 0.02
+        }
+    },
+    "domain": {
+        "Lx": 16,
+        "Ly": 16,
+        "Lz": 1,
+        "dx": 1.0,
+        "dy": 1.0,
+        "dz": 1.0,
+        "origin": "corner"
+    },
+    "timestepping": {
+        "t0": 0.0,
+        "t1": 1.0,
+        "dt": 1.0,
+        "saveat": -1
+    },
+    "initial_conditions": [
+        {
+            "target": "g",
+            "type": "cosine_mode",
+            "g0": 0.0,
+            "amplitude": 1.0,
+            "nx": 2,
+            "ny": 0,
+            "nz": 0
+        }
+    ]
+}
