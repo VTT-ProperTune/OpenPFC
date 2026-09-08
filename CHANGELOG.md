@@ -7,6 +7,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+### Changed
+
+- LUMI HIP work uses a clean `origin/master` clone at
+  `/flash/project_462001519/juaho/dev/openpfc-master` and build tree
+  `/flash/project_462001519/juaho/build/openpfc-lumi-rocm-master`. Stop
+  rsyncing apps onto the frozen `openpfc-0.2` HIP-scaling checkout.
+
 ### Added
 
 - Multi-app CLI catalog and installed presets for eight JSON-session apps,
