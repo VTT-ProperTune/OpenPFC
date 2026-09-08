@@ -9,6 +9,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- `gradient_elasticity`: isotropic Helmholtz–Navier strain-gradient
+  elasticity on a 2-D periodic eigenstrain (`#82`). Fourth-order
+  \(\alpha=1+\ell^2 k^2\) (optional sixth-order stretch); one-shot
+  spectral \(2\times 2\) invert per \(\mathbf{k}\), not ETD. Catch2
+  analytical Fourier \(\mathbf{u}\), \(\ell\to 0\) classical recovery,
+  high-\(k\) reduction, and mean \(\mathbf{u}=0\). CPU binary plus
+  `gradient_elasticity_hip` when rocFFT HeFFTe is on.
 - `ehd_film`: elastohydrodynamic film under a flexible plate on the 0.2
   spectral-ETD session (`#81`). Bending pressure \(B\nabla^4 h\) plus
   lubrication gives \(\lambda=-M_0 B k^6\). Catch2 exact \(k^6\) decay,

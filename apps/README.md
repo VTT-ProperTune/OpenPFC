@@ -9,7 +9,7 @@ Full programs built when **`OpenPFC_BUILD_APPS=ON`** (default). They install und
 
 User-facing overview and example commands: [`docs/user_guide/applications.md`](../docs/user_guide/applications.md).
 
-CMake wires subdirectories from [`apps/CMakeLists.txt`](CMakeLists.txt) in this order: `tungsten`, `aluminumNew`, `cahn_hilliard`, `thin_film`, `surface_diffusion`, `kawahara`, `ehd_film`, `allen_cahn`, `heat3d`, `wave2d`, `kobayashi`.
+CMake wires subdirectories from [`apps/CMakeLists.txt`](CMakeLists.txt) in this order: `tungsten`, `aluminumNew`, `cahn_hilliard`, `thin_film`, `surface_diffusion`, `kawahara`, `ehd_film`, `gradient_elasticity`, `allen_cahn`, `heat3d`, `wave2d`, `kobayashi`.
 
 ## Catalog
 
@@ -22,6 +22,7 @@ CMake wires subdirectories from [`apps/CMakeLists.txt`](CMakeLists.txt) in this 
 | [**`surface_diffusion/`**](surface_diffusion/README.md) | **Mullins surface diffusion** (exact \(k^4\) annealing) | JSON (`inputs_json/`) | `SpectralETDSession<SurfaceDiffusionPhysics, …>`; CPU + optional HIP |
 | [**`kawahara/`**](kawahara/README.md) | **Kawahara capillary–gravity waves** (odd-order \(ik^3\)/\(ik^5\)) | JSON (`inputs_json/`) | `SpectralETDSession<KawaharaPhysics, …>`; CPU + optional HIP |
 | [**`ehd_film/`**](ehd_film/README.md) | **EHD film under a flexible plate** (\(k^6\) bending lubrication) | JSON (`inputs_json/`) | `SpectralETDSession<EhdFilmPhysics, …>`; CPU + optional HIP |
+| [**`gradient_elasticity/`**](gradient_elasticity/README.md) | **Strain-gradient elasticity** (Helmholtz–Navier, 4th/6th order) | JSON (`inputs_json/`) | one-shot spectral \(2\times 2\) invert (not ETD); CPU + optional HIP |
 | [**`allen_cahn/`**](allen_cahn/README.md) | **2D Allen–Cahn** demo; quick visual check | CLI only (no `App` JSON) | FD, separated halos, optional PNG; CPU + optional CUDA/HIP |
 | [**`heat3d/`**](heat3d/README.md) | **3D heat equation** \(\partial_t u = D\Delta u\); five drivers from scratch → spectral implicit | CLI per binary | FD (orders 2–20), spectral pointwise RHS, spectral implicit Euler; OpenMP where enabled |
 | [**`wave2d/`**](wave2d/README.md) | **2D acoustic wave** as **coupled first-order** system; mixed periodic / physical **y** boundaries | CLI (+ optional `--vtk` on all variants) | FD (manual 2nd order or orders 2–20); CPU + optional CUDA/HIP |
