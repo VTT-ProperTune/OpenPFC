@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-"""Bake a compiled CPU tungsten case into an Apptainer image using host MPI."""
+"""Bake a compiled CPU tungsten case into a container image using host MPI."""
 
 import argparse
 import hashlib
@@ -17,8 +17,48 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parent.parent
-GLIBC = re.compile(r"lib(?:c|m|dl|pthread|rt|util|resolv|anl|nss_[\w]+)\.so(?:\.|$)")
-MPI_STACK = re.compile(r"lib(?:mpi[^/]*|open-pal|pmix|ucp|uct|ucs|ucm)\.so(?:\.|$)")
+GLIBC = re.compile(r"lib(?:c|m|mvec|dl|pthread|rt|util|resolv|anl|nss_[\w]+)\.so(?:\.|$)")
+
+# Libraries that must come from the host, per site MPI stack. Baking any of
+# these would put the site's interconnect inside the image, which defeats the
+# host-MPI model and does not survive a move to another machine.
+MPI_STACK = {
+    # Open MPI / UCX (Tohtori).
+    "openmpi": re.compile(r"lib(?:mpi[^/]*|open-pal|pmix|ucp|uct|ucs|ucm)\.so(?:\.|$)"),
+    # Cray MPICH / libfabric / Slingshot (LUMI). libcxi and libxpmem live in
+    # /usr/lib64 next to ordinary system libraries, so a prefix rule cannot
+    # separate them: they need --host-lib.
+    "cray": re.compile(
+        r"lib(?:mpi[^/]*|fabric|cxi|pmi|pmi2|pals|xpmem|dsmml)\.so(?:\.|$)"),
+}
+MPI_MARKER = re.compile(r"libmpi[^/]*\.so(?:\.|$)")
+SITE_PROFILES = {"openmpi": {"local"}, "cray": {"local", "lumi"}}
+# Runtime state the site's process manager needs inside the container. Cray PMI
+# reaches the Slurm daemon through this socket directory; without it MPI_Init
+# fails with "job id unknown" and every rank believes it is rank 0.
+SITE_BINDS = {"openmpi": (), "cray": ("/var/spool/slurmd",)}
+
+
+def glibc_requirement(paths):
+    """Highest GLIBC_x.y symbol version the host-provided libraries need.
+
+    The bind model loads these host libraries inside the image, so the base
+    image's glibc must be at least this new. Getting this wrong fails at run
+    time with an unhelpful symbol error, so it is recorded in provenance and
+    checked against the base image when a container runtime is available.
+    """
+    best = None
+    for path in paths:
+        try:
+            out = subprocess.run(["objdump", "-T", str(path)], text=True,
+                                 capture_output=True, check=True).stdout
+        except (OSError, subprocess.CalledProcessError):
+            return None
+        for match in re.finditer(r"GLIBC_(\d+)\.(\d+)", out):
+            version = (int(match.group(1)), int(match.group(2)))
+            if best is None or version > best:
+                best = version
+    return best
 
 
 def digest(path):
@@ -44,7 +84,7 @@ def parse_ldd(output):
             if "/" in name or not path.startswith("/"):
                 raise ValueError("unsupported ldd entry: " + line)
             libraries[name] = Path(path).resolve()
-    if not any(name.startswith("libmpi.so") for name in libraries):
+    if not any(MPI_MARKER.match(name) for name in libraries):
         raise ValueError("expected a dynamically linked MPI application")
     return libraries
 
@@ -67,9 +107,11 @@ def validate_input(settings):
 def prepare(args):
     case = Path(args.case).resolve()
     manifest = json.loads((case / "openpfc.json").read_text())
+    profile = manifest.get("profile")
     if (manifest.get("format_version") != 1 or manifest.get("app") != "tungsten"
-            or manifest.get("profile") != "local" or manifest.get("input") != "input.json"):
-        raise ValueError("first runtime recipe requires a compiled local CPU tungsten case")
+            or profile not in SITE_PROFILES[args.site] or manifest.get("input") != "input.json"):
+        raise ValueError("runtime recipe requires a compiled tungsten case with profile "
+                         + "/".join(sorted(SITE_PROFILES[args.site])))
     validate_input(json.loads((case / "input.json").read_text()))
     executable = Path(manifest["executable"]).resolve()
     if not executable.is_file():
@@ -77,6 +119,18 @@ def prepare(args):
     base = Path(args.base).resolve()
     if not base.is_file():
         raise ValueError("--base must be a local Python 3.8+ Apptainer SIF image")
+    host_libs = {}
+    for value in args.host_lib:
+        given = Path(value)
+        path = given.resolve()
+        if not path.is_file():
+            raise ValueError("--host-lib is not a file: " + value)
+        if any(c in str(path) for c in ",:\n"):
+            raise ValueError("--host-lib path must not contain commas, colons, or newlines")
+        # Key on the spelling given, which is the soname ldd reports
+        # (libxpmem.so.0), not the versioned file it resolves to
+        # (libxpmem.so.0.0.0).
+        host_libs[given.name] = path
     prefixes = [Path(p).resolve() for p in args.host_prefix]
     # Site MPI may embed its original symlink spelling in plugin/help paths.
     bindings = sorted(set(prefixes + [Path(p).absolute() for p in args.host_prefix]))
@@ -84,12 +138,18 @@ def prepare(args):
         if not prefix.is_dir() or prefix == Path("/") or any(c in str(prefix) for c in ",:\n"):
             raise ValueError("host prefix must be a directory without commas, colons, or newlines")
     libraries = parse_ldd(subprocess.check_output(["ldd", str(executable)], text=True))
-    bundled, external, system = {}, {}, {}
+    mpi_stack = MPI_STACK[args.site]
+    bundled, external, host_files, system = {}, {}, {}, {}
     for name, path in libraries.items():
-        if any(under(path, prefix) for prefix in prefixes):
+        if name in host_libs:
+            if host_libs[name] != path:
+                raise ValueError("--host-lib does not match the resolved library: " + name)
+            host_files[name] = path
+        elif any(under(path, prefix) for prefix in prefixes):
             external[name] = path
-        elif MPI_STACK.match(name):
-            raise ValueError("MPI/PMIx/UCX library needs --host-prefix: " + str(path))
+        elif mpi_stack.match(name):
+            raise ValueError("host MPI stack library needs --host-prefix or --host-lib: "
+                             + str(path))
         elif GLIBC.match(name):
             system[name] = path
         else:
@@ -97,8 +157,10 @@ def prepare(args):
     output = Path(args.output).resolve()
     output.mkdir(parents=True, exist_ok=False)
     payload = output / "payload"
-    for directory in ("bin", "lib", "case", "share/openpfc"):
+    for directory in ("bin", "lib", "hostlib", "case", "share/openpfc"):
         (payload / directory).mkdir(parents=True, exist_ok=True)
+    # Bind destinations must already exist in the image.
+    (payload / "hostlib/.keep").write_text("")
     shutil.copy2(executable, payload / "bin/tungsten")
     shutil.copy2(ROOT / "scripts/openpfc", payload / "bin/openpfc")
     shutil.copy2(ROOT / "containers/runtime/baked_case.py", payload / "bin/baked-case")
@@ -108,7 +170,7 @@ def prepare(args):
     shutil.copy2(case / "input.json", payload / "case/input.json")
     (payload / "case/openpfc.json").write_text(json.dumps({
         "format_version": 1, "app": "tungsten", "input": "input.json",
-        "profile": "local", "executable": "/opt/openpfc/bin/tungsten",
+        "profile": profile, "executable": "/opt/openpfc/bin/tungsten",
     }, indent=2) + "\n")
     (payload / "case/README.md").write_text(
         "# Baked tungsten case\n\n"
@@ -125,15 +187,19 @@ def prepare(args):
                               text=True, capture_output=True)
     status = subprocess.run(["git", "-C", str(source), "status", "--porcelain"],
                             text=True, capture_output=True)
+    glibc_floor = glibc_requirement(sorted(set(external.values()) | set(host_files.values())))
     provenance = {
-        "format_version": 1, "profile": "local", "mpi_mode": "host-bind",
+        "format_version": 1, "profile": profile, "mpi_mode": "host-bind",
         "base_sha256": digest(base), "binary_sha256": digest(executable),
         "input_sha256": digest(case / "input.json"),
         "openpfc_version": (payload / "share/openpfc/version").read_text().strip(),
         "packaging_checkout_revision": revision.stdout.strip() if revision.returncode == 0 else None,
         "packaging_checkout_dirty": bool(status.stdout) if status.returncode == 0 else None,
         "source_identity_note": "Checkout at packaging time; not proof of binary build provenance.",
-        "bundled_libraries": records(bundled), "host_libraries": records(external),
+        "bundled_libraries": records(bundled),
+        "host_libraries": records({**external, **host_files}),
+        "host_glibc_requirement": (".".join(map(str, glibc_floor)) if glibc_floor else None),
+        "site": args.site,
         "base_provided_glibc": records(system),
         "host_prefixes": [str(p) for p in prefixes],
         "host_bindings": [str(p) for p in bindings],
@@ -148,15 +214,26 @@ def prepare(args):
         "%environment\n    export PATH=/opt/openpfc/bin:$PATH\n"
         "    export LD_LIBRARY_PATH=/opt/openpfc/lib:${LD_LIBRARY_PATH:-}\n\n"
         "%runscript\n    exec /opt/openpfc/bin/baked-case \"$@\"\n")
-    library_path = ":".join(["/opt/openpfc/lib", *sorted({str(p.parent) for p in external.values()})])
+    hostlib_dir = "/opt/openpfc/hostlib"
+    library_path = ":".join(["/opt/openpfc/lib",
+                             *([hostlib_dir] if host_files else []),
+                             *sorted({str(p.parent) for p in external.values()})])
     options = []
     for prefix in bindings:
         options += ["--bind", str(prefix) + ":" + str(prefix) + ":ro"]
+    # Site process-manager state; present on the target, not necessarily here.
+    for path in SITE_BINDS[args.site]:
+        options += ["--bind", path + ":" + path]
+    # Individually bound host libraries: their directory also holds ordinary
+    # system libraries, so the whole directory must not be mounted over.
+    for name, path in sorted(host_files.items()):
+        options += ["--bind", str(path) + ":" + hostlib_dir + "/" + name + ":ro"]
     options += ["--env", "LD_LIBRARY_PATH=" + library_path]
     (output / "run-host.sh").write_text(
         "#!/bin/sh\nset -eu\n"
         'bundle_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)\n'
-        "exec apptainer run " + " ".join(shlex.quote(arg) for arg in options) +
+        "exec " + shlex.quote(args.runtime) + " run " +
+        " ".join(shlex.quote(arg) for arg in options) +
         ' "$bundle_dir/case.sif" "$@"\n')
     (output / "run-host.sh").chmod(0o755)
     return output
@@ -168,13 +245,22 @@ def main(argv=None):
     parser.add_argument("--base", required=True, help="local Python runtime SIF")
     parser.add_argument("--output", required=True, help="new bundle directory under builds/")
     parser.add_argument("--host-prefix", action="append", required=True,
-                        help="MPI/PMIx/UCX install prefix to mount read-only; repeat as needed")
+                        help="host MPI stack install prefix to mount read-only; repeat as needed")
+    parser.add_argument("--host-lib", action="append", default=[],
+                        help="single host library file to bind (for stack libraries that "
+                             "share a directory with ordinary system libraries, such as "
+                             "LUMI's /usr/lib64/libcxi.so.1); repeat as needed")
+    parser.add_argument("--site", choices=sorted(MPI_STACK), default="openmpi",
+                        help="host MPI stack: openmpi (Tohtori) or cray (LUMI)")
+    parser.add_argument("--runtime", choices=("apptainer", "singularity"), default="apptainer",
+                        help="container runtime to build with and to call from run-host.sh; "
+                             "LUMI ships singularity-ce, Tohtori ships apptainer")
     parser.add_argument("--prepare-only", action="store_true", help="stage recipe without building SIF")
     args = parser.parse_args(argv)
     try:
         output = prepare(args)
         if not args.prepare_only:
-            subprocess.run(["apptainer", "build", "--disable-cache", "case.sif", "runtime.def"],
+            subprocess.run([args.runtime, "build", "--disable-cache", "case.sif", "runtime.def"],
                            cwd=str(output), check=True)
         print("Runtime bundle: " + str(output))
         return 0

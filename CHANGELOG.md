@@ -25,6 +25,15 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- Cray/LUMI site profile for the runtime baker (`#13`): `--site cray`,
+  `--host-lib` for stack libraries that share a directory with ordinary system
+  libraries (LUMI's `/usr/lib64/libcxi.so.1`, `libxpmem.so.0`), `--runtime` to
+  select singularity-ce, a `/var/spool/slurmd` site bind that Cray PMI needs,
+  and a measured `host_glibc_requirement` in provenance. Validated on LUMI with
+  **4 nodes / 32 ranks** over the Slingshot `cxi` provider: the baked bundle
+  reproduces the native run bit-for-bit (job 21830651).
+
+
 - Multi-app CLI catalog and installed presets for eight JSON-session apps,
   with explicit backend availability and CPU entrypoint smoke tests.
 - Cahn–Hilliard seeded broadband coarsening preset and optional collective CSV
