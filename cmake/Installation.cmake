@@ -13,7 +13,8 @@ install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/openpfc DESTINATION bin)
 install(FILES ${CMAKE_BINARY_DIR}/share/openpfc/version DESTINATION share/openpfc)
 
 # Keep source, build-tree and relocatable installed CLI presets identical.
-foreach(_app aluminumNew cahn_hilliard thin_film surface_diffusion kawahara ehd_film)
+foreach(_app aluminumNew cahn_hilliard thin_film surface_diffusion kawahara ehd_film
+            gradient_elasticity)
     file(GLOB _presets CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/apps/${_app}/inputs_json/*)
     foreach(_preset IN LISTS _presets)
         get_filename_component(_name ${_preset} NAME)
@@ -34,7 +35,8 @@ if(OpenPFC_BUILD_TESTS AND TARGET tungsten)
         set_tests_properties(openpfc-cli-smoke PROPERTIES TIMEOUT 120)
         foreach(_pair "aluminum,aluminum_etd" "cahn_hilliard,cahn_hilliard"
                       "thin_film,thin_film" "surface_diffusion,surface_diffusion"
-                      "kawahara,kawahara" "ehd_film,ehd_film")
+                      "kawahara,kawahara" "ehd_film,ehd_film"
+                      "gradient_elasticity,gradient_elasticity")
             string(REPLACE "," ";" _entry ${_pair})
             list(GET _entry 0 _app)
             list(GET _entry 1 _binary)

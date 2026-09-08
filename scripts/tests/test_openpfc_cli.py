@@ -152,6 +152,7 @@ def test_invalid_ranks_and_missing_binary(case):
     ("aluminum", "smoke"), ("cahn_hilliard", "spinodal"),
     ("cahn_hilliard", "mode"), ("thin_film", "leveling"), ("thin_film", "dewetting"),
     ("surface_diffusion", "smoothing"), ("kawahara", "pulse"), ("ehd_film", "relaxation"),
+    ("gradient_elasticity", "inclusion"), ("gradient_elasticity", "gaussian"),
 ])
 def test_catalog_presets_and_installed_data(tmp_path, app, preset):
     case = tmp_path / "case"

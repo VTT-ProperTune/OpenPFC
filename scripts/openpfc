@@ -40,6 +40,11 @@ APPS = {
                  "presets": {"pulse": "inputs_json/pulse.json"}, "description": "Dispersive pulse on a periodic line"},
     "ehd_film": {"directory": "ehd_film", "binaries": {"cpu": "ehd_film", "hip": "ehd_film_hip"},
                  "presets": {"relaxation": "inputs_json/relaxation.json"}, "description": "Sixth-order film relaxation"},
+    "gradient_elasticity": {"directory": "gradient_elasticity",
+                            "binaries": {"cpu": "gradient_elasticity", "hip": "gradient_elasticity_hip"},
+                            "presets": {"inclusion": "inputs_json/inclusion.json",
+                                        "gaussian": "inputs_json/gaussian.json"},
+                            "description": "Helmholtz-Navier eigenstrain inclusion"},
 }
 RANK_VARIABLES = ("OMPI_COMM_WORLD_RANK", "PMI_RANK", "PMIX_RANK", "SLURM_PROCID")
 
