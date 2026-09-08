@@ -17,6 +17,17 @@ The `lumi-release` preset in [CMakePresets.json](../../CMakePresets.json) uses `
 
 Adjust paths if your project ID or layout differs.
 
+For **project_462001519** (this repository’s LUMI account) prefer
+`./scripts/build.sh --machine=lumi --with-rocm` from a clean
+`origin/master` clone. The juaho layout is:
+
+- source: `/flash/project_462001519/juaho/dev/openpfc-master` (`git pull --ff-only`)
+- HIP build: `/flash/project_462001519/juaho/build/openpfc-lumi-rocm-master`
+- logs: `/scratch/project_462001519/juaho/logs/`
+
+Do not copy files onto `/users/juaho/dev/openpfc-0.2`; that checkout is a
+frozen HIP-scaling experiment, not the live source.
+
 ## 1. Module environment
 
 Load the GPU partition toolchain, GNU compilers, FFTW, and fix runtime library search for the Cray PE (see also the [LUMI programming environment](https://docs.lumi-supercomputer.eu/development/compiling/prgenv/)):
