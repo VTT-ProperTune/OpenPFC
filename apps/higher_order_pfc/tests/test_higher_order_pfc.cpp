@@ -506,34 +506,38 @@ TEST_CASE("A seeded perturbation orders while the mean density is held fixed",
 // Initial conditions and session
 // ---------------------------------------------------------------------------
 
-TEST_CASE("Seeded noise has the mean it advertises on any decomposition",
+TEST_CASE("Seeded noise gives the same field on every decomposition",
           "[higher_order_pfc][ic]") {
   constexpr int N = 16;
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   const auto domain =
       pfc::domain::create(pfc::GridSize({N, N, 1}),
                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                           pfc::GridSpacing({kDx, kDx, kDx}));
-  pfc::sim::stacks::SpectralCPUStack stack(domain, 0, world_size(), MPI_COMM_WORLD);
-  pfc::SimulationState state;
-  auto phys = hop::HigherOrderPFCPhysics<>::from_json(json::object(), domain,
-                                                      stack.fft().get_inbox_bounds());
-  phys.declare_fields(state);
-  auto &psi = state.get_field<double>("psi");
+  pfc::sim::stacks::SpectralCPUStack stack(domain, rank, world_size(),
+                                           MPI_COMM_WORLD);
 
   hop::SeededNoise noise;
   noise.psi0 = -0.15;
   noise.amplitude = 1.0e-2;
   noise.seed = 3;
-  const pfc::SimulationContext context(MPI_COMM_WORLD);
-  pfc::apply_field_modifier(noise, psi, 0.0, &context);
 
-  const auto n = psi.local_size();
-  double local = 0.0;
-  for (int j = 0; j < n[1]; ++j)
-    for (int i = 0; i < n[0]; ++i) local += psi(i, j, 0);
-  double global = 0.0;
-  MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  REQUIRE_THAT(global / (static_cast<double>(N) * N), WithinAbs(-0.15, 1e-12));
+  // Distributed apply on this rank's slab ...
+  const pfc::SimulationContext context(MPI_COMM_WORLD);
+  pfc::apply_field_modifier(noise, stack.u(), 0.0, &context);
+  // ... versus a whole-grid apply every rank can do on its own.
+  auto full = pfc::data::field_from_inbox<double>(
+      domain, pfc::Box3i::from_bounds({0, 0, 0}, {N - 1, N - 1, 0}));
+  pfc::apply_field_modifier(noise, full, 0.0);
+
+  auto &psi = stack.u();
+  psi.for_each_owned([&](int i, int j, int k) {
+    REQUIRE(psi(i, j, k) == full(i + psi.box().low[0], j + psi.box().low[1],
+                                 k + psi.box().low[2]));
+  });
+  REQUIRE_THAT(mean_psi(full), WithinAbs(-0.15, 1e-13));
+  REQUIRE(variance_psi(full) > 0.0);
 
   REQUIRE_THROWS(hop::from_json(
       json{{"type", "seeded_noise"}, {"psi0", 0.0}, {"amplitude", 0.01}, {"seed", -1}},
