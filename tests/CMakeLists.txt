@@ -65,11 +65,17 @@ target_include_directories(openpfc-tests PRIVATE ${_catch2_include_dirs})
 # kernels) are not handed unrecognised flags by nvcc
 # — without this, nvcc fails with "A single input file is required for a
 # non-link phase when an outputfile is specified".
+# `if(dir)` tests the unevaluated string, so an `$<INSTALL_INTERFACE:...>`
+# entry passes the guard but expands to nothing in a build tree. That emits a
+# bare `-isystem`, which swallows whatever flag follows it on the command line
+# (`-MD`, and then cc1plus rejects `-MT`/`-MF` without `-M`). Install-interface
+# paths are meaningless here, so drop them.
 foreach(dir IN LISTS _catch2_include_dirs)
-  if(dir)
-    target_compile_options(openpfc-tests PRIVATE
-      "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-isystem ${dir}>")
+  if(NOT dir OR dir MATCHES "^\\$<INSTALL_INTERFACE:")
+    continue()
   endif()
+  target_compile_options(openpfc-tests PRIVATE
+    "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-isystem ${dir}>")
 endforeach()
 
 if(OpenPFC_ENABLE_CODE_COVERAGE)

@@ -7,6 +7,15 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+### Fixed
+
+- `ctest` can be registered in a `--no-heffte` CPU build again (`#105`). The
+  Catch2 `-isystem` loop in `tests/CMakeLists.txt` guarded on the unevaluated
+  string, so `$<INSTALL_INTERFACE:include>` passed the check and expanded to
+  nothing, emitting a bare `-isystem` that swallowed `-MD`. Install-interface
+  entries are now skipped. `heat3d`'s spectral Catch2 suite is gated on HeFFTe;
+  its FD operator-evaluation and rhs-pattern suites stay available.
+
 ### Changed
 
 - LUMI HIP work uses a clean `origin/master` clone at
