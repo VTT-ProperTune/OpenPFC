@@ -574,6 +574,10 @@ setup_lumi_env() {
   if [[ -n "${HEFFTE_MODULE}" ]]; then
     module load "${HEFFTE_MODULE}"
   fi
+  # cray-python is the only interpreter on LUMI that satisfies scripts/tests:
+  # /usr/bin/python3 is 3.6, and python3.11/3.12 ship without pytest. Without
+  # it the Python suite silently reports "skipped" on every LUMI build.
+  module load cray-python || true
   export LD_LIBRARY_PATH="${CRAY_LD_LIBRARY_PATH:-}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
   export MPICH_GPU_SUPPORT_ENABLED="${MPICH_GPU_SUPPORT_ENABLED:-1}"
   # FindMPI on Cray PE fails to populate MPI_C_LIB_NAMES unless the PE
@@ -865,8 +869,8 @@ if (( RUN_TESTS )); then
   FAILED_PHASE="tests"
   if [[ -d "${REPO_ROOT}/scripts/tests" ]]; then
     # check_doc_links.py needs Python 3.8+ (from __future__ import annotations).
-    # LUMI compute nodes often have /usr/bin/python3 = 3.6 plus a newer
-    # python3.11 without pytest — skip rather than fail a GPU job for that.
+    # setup_lumi_env loads cray-python so LUMI has one; a host that still lacks
+    # pytest is skipped rather than failing a GPU job for it.
     PYTEST_PYTHON=""
     for cand in ${PYTHON:-} python3.12 python3.11 python3; do
       [[ -n "${cand}" ]] || continue
