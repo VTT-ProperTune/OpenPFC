@@ -43,7 +43,7 @@ module load openmpi/5.0.10
 ./scripts/openpfc run results/spinodal --ranks=2
 ```
 
-The catalog covers seven JSON-session apps. `init` without options still creates
+The catalog covers eight JSON-session apps. `init` without options still creates
 the tungsten smoke case; otherwise the first listed preset is the app default.
 
 | App | Presets | Backends |
@@ -55,6 +55,7 @@ the tungsten smoke case; otherwise the first listed preset is the app default.
 | `surface_diffusion` | `smoothing` | CPU, HIP |
 | `kawahara` | `pulse` | CPU, HIP |
 | `ehd_film` | `relaxation` | CPU, HIP |
+| `gradient_elasticity` | `inclusion`, `gaussian` | CPU, HIP |
 
 Support means a build target exists, not that it is installed or verified on
 the current machine. Presets are installed alongside the CLI, so initialization

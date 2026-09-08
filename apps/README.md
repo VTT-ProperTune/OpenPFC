@@ -11,7 +11,7 @@ User-facing overview and example commands: [`docs/user_guide/applications.md`](.
 
 CMake wires subdirectories from [`apps/CMakeLists.txt`](CMakeLists.txt) in this order: `tungsten`, `aluminumNew`, `cahn_hilliard`, `thin_film`, `surface_diffusion`, `kawahara`, `ehd_film`, `gradient_elasticity`, `allen_cahn`, `heat3d`, `wave2d`, `kobayashi`.
 
-For the seven JSON-session apps, `./scripts/openpfc apps` lists presets and
+For the eight JSON-session apps, `./scripts/openpfc apps` lists presets and
 supported backends. Create a case with `openpfc init CASE --app=NAME`; see the
 [CLI guide](../docs/user_guide/cli.md). Teaching drivers with positional arguments
 retain their app-specific commands.
