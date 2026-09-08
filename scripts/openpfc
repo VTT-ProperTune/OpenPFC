@@ -45,6 +45,11 @@ APPS = {
                             "presets": {"inclusion": "inputs_json/inclusion.json",
                                         "gaussian": "inputs_json/gaussian.json"},
                             "description": "Helmholtz-Navier eigenstrain inclusion"},
+    "higher_order_pfc": {"directory": "higher_order_pfc",
+                         "binaries": {"cpu": "higher_order_pfc", "hip": "higher_order_pfc_hip"},
+                         "presets": {"two_mode": "inputs_json/two_mode_square.json",
+                                     "single_mode": "inputs_json/single_mode_triangular.json"},
+                         "description": "Eighth-order two-mode PFC correlation kernel"},
 }
 RANK_VARIABLES = ("OMPI_COMM_WORLD_RANK", "PMI_RANK", "PMIX_RANK", "SLURM_PROCID")
 

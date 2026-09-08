@@ -33,6 +33,16 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   **4 nodes / 32 ranks** over the Slingshot `cxi` provider: the baked bundle
   reproduces the native run bit-for-bit (job 21830651).
 
+- `higher_order_pfc`: eighth-order two-mode PFC correlation kernel (`#83`).
+  \(\Lambda=-\varepsilon+(1+\nabla^2)^2[r_1+(q_1^2+\nabla^2)^2]\) is quartic in
+  the Laplacian symbol (\(k^8\)); conserved dynamics makes the evolution
+  operator quintic (\(k^{10}\)) with a bit-exact zero at \(k=0\). A small
+  generic `PolynomialInKLap<N>` keeps both as Horner loops rather than
+  hand-written \(k^8\)/\(k^{10}\) cases. Catch2 checks the kernel against the
+  factored analytical form, the derived coefficient expansion, band structure,
+  the \(k^4\)-vs-\(k^8\) comparison, \(e^{L(k)t}\) growth, mass conservation
+  and ETD stability at 1000x the explicit limit. CPU binary plus
+  `higher_order_pfc_hip` when rocFFT HeFFTe is on.
 
 - Multi-app CLI catalog and installed presets for eight JSON-session apps,
   with explicit backend availability and CPU entrypoint smoke tests.
