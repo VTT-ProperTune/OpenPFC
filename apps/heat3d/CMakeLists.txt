@@ -100,18 +100,27 @@ endif()
 if(HEAT3D_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
   find_package(Catch2 QUIET)
   if(TARGET Catch2::Catch2)
-    add_executable(test_heat3d tests/test_heat3d.cpp)
-    target_include_directories(test_heat3d PRIVATE ${HEAT3D_INCLUDE_DIR})
-    target_link_libraries(test_heat3d PRIVATE
-      OpenPFC
-      openpfc_apps_common
-      ${_heat3d_heffte_tgt}
-      Catch2::Catch2
-    )
     include(CTest)
-    # Run the whole heat3d suite in a single invocation to avoid per-test MPI
-    # init/finalize overhead (matches tungsten-all-tests / aluminum-all-tests).
-    add_test(NAME heat3d-all-tests COMMAND test_heat3d)
+    # test_heat3d.cpp covers the spectral propagator, so it includes
+    # fft_fftw.hpp (via spectral_cpu_stack.hpp) and cannot compile without
+    # HeFFTe. The operator-evaluation and rhs-pattern suites below are pure FD
+    # and stay available in a --no-heffte build.
+    if(OpenPFC_ENABLE_HEFFTE)
+      add_executable(test_heat3d tests/test_heat3d.cpp)
+      target_include_directories(test_heat3d PRIVATE ${HEAT3D_INCLUDE_DIR})
+      target_link_libraries(test_heat3d PRIVATE
+        OpenPFC
+        openpfc_apps_common
+        ${_heat3d_heffte_tgt}
+        Catch2::Catch2
+      )
+      # Run the whole heat3d suite in a single invocation to avoid per-test MPI
+      # init/finalize overhead (matches tungsten-all-tests / aluminum-all-tests).
+      add_test(NAME heat3d-all-tests COMMAND test_heat3d)
+    else()
+      message(STATUS
+        "heat3d-all-tests disabled: spectral suite needs HeFFTe")
+    endif()
 
     # Operator-evaluation contract tests
     add_executable(test_heat3d_operator_evaluation tests/test_heat3d_operator_evaluation.cpp)
