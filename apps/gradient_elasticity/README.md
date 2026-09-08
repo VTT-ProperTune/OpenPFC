@@ -87,7 +87,8 @@ longitudinal invert, \(k=0\) projection, \(\ell\to 0\) recovery of
 classical elasticity, analytical Fourier displacement for a cosine
 inclusion, high-\(k\) reduction at finite \(\ell\), and mean
 \(\mathbf{u}=0\). HIP builds add `HIP_GradientElasticity` and
-`gradient-elasticity-hip-smoke`.
+`gradient-elasticity-hip-smoke`. LUMI-G smoke: job 21820023 (`small-g`,
+16², mean \(\mathbf{u}=0\)).
 
 ## Layout
 
