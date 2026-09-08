@@ -156,6 +156,20 @@ mpirun -n 4 ./apps/higher_order_pfc/higher_order_pfc \
 Create `results/higher_order_pfc/` first. GPU builds also provide
 `higher_order_pfc_hip` when rocFFT HeFFTe is on.
 
+### LUMI-G
+
+`tests/two_mode_hip_smoke.json` (64², `t=1`) on `standard-g`:
+
+| run | job | `sum` (hex) | `sumsq` (hex) |
+|---|---|---|---|
+| CPU, 1 rank | — | `-0x1.333333333332fp+9` | `0x1.70a757850fcb7p+6` |
+| HIP, 1 GCD | 21829597 | `-0x1.333333333332fp+9` | `0x1.70a757850fcb4p+6` |
+| HIP, 2 GCD | 21829755 | `-0x1.3333333333338p+9` | `0x1.70a757850fcbcp+6` |
+
+`sum` is the conserved quantity: bit-identical between CPU and one GCD, and
+within 9 ULP on two GCDs where the MPI reduction order changes. `sumsq` agrees
+to 3 and 5 ULP. Both jobs exited `0:0`.
+
 ## Tests
 
 `ctest -R higher-order-pfc`. The suite checks the claims above rather than a
