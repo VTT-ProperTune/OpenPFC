@@ -1,0 +1,31 @@
+# Abstract {.unnumbered}
+
+OpenPFC is a framework for solving partial differential equations on
+structured, periodic, MPI-distributed grids, with matching CPU and GPU
+execution paths. Its original target was the phase-field crystal (PFC) model,
+but the architecture — a domain decomposition, a distributed field, a
+pluggable spectral or finite-difference stack, and a session that wires them
+from JSON — is not specific to PFC.
+
+This report describes the twelve applications shipped with OpenPFC 0.2. They
+span fourth- through tenth-order spatial operators, conserved and
+non-conserved dynamics, dispersive and dissipative behaviour, single-field and
+coupled multi-field systems, and both spectral and finite-difference
+discretisations.
+
+Two claims run through the report.
+
+The first is that **high differential order is not high implementation
+complexity in a spectral code**. A sixth-order elastohydrodynamic operator and
+a fourth-order Cahn–Hilliard operator differ, in the source, by the polynomial
+returned from one function. The equivalent real-space stencils would not be
+comparable in effort. What high order does cost is stiffness, and the report
+is explicit about how exponential time differencing absorbs it.
+
+The second is that **the same application source runs on a laptop core and on
+32 GPUs**. Chapter @sec-scalability reports measured strong-scaling curves for
+three models on LUMI-G, out to 32 GCDs across four nodes, together with the
+point at which each curve stops being worth extending.
+
+Neither claim is asserted without a number behind it. Where a property has not
+been measured, the report says so.

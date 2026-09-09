@@ -19,3 +19,10 @@ path = [
 ]
 SPDX-FileCopyrightText = "Sean Barrett"
 SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = [
+    "docs/report/**",
+]
+SPDX-FileCopyrightText = "2026 VTT Technical Research Centre of Finland Ltd"
+SPDX-License-Identifier = "AGPL-3.0-or-later"

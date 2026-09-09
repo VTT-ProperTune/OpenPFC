@@ -1,0 +1,82 @@
+# Elastohydrodynamic film {#sec-ehd-film}
+
+`apps/ehd_film` — the highest-order evolution operator in the shipped set:
+sixth order in space.
+
+## Physical setting
+
+A viscous liquid film confined beneath a thin elastic plate. The plate resists
+bending, that bending sets the pressure in the gap, the pressure gradient
+drives lubrication flow, and the flow changes the gap. This is the
+elastohydrodynamic problem behind compliant bearings, soft contacts, and
+adhesive films — anywhere a thin fluid layer is bounded by something that
+deforms.
+
+## Governing equations
+
+$$
+p \;=\; B\nabla^4 h \;-\; \gamma\nabla^2 h \;-\; \Pi(h),
+\qquad
+\partial_t h \;=\; \nabla\cdot\big[M_0\nabla p\big].
+$$ {#eq-ehd-pde}
+
+The chain is worth reading in order: plate curvature $\to$ bending pressure
+($B\nabla^4h$) $\to$ pressure gradient $\to$ viscous flux $\to$ $\partial_t h$.
+The bending term is already fourth order, and the divergence of the flux adds
+two more, so the evolution operator is $\nabla^6$.
+
+## Spectral formulation
+
+With $u = k_{\mathrm{lap}}$,
+
+$$
+L(k) \;=\; M_0 B\,u^3 \;-\; M_0\gamma\,u^2 \;-\; M_0\Pi'(h_0)\,u ,
+\qquad
+M_{\mathrm{nl}}(k) \;=\; -M_0\,u .
+$$ {#eq-ehd-symbol}
+
+In terms of $|\mathbf{k}| = k$,
+
+$$
+\lambda(k) \;=\; -M_0 B k^6 \;-\; M_0\gamma k^4 \;+\; M_0\Pi'(h_0)k^2 .
+$$ {#eq-ehd-growth}
+
+The defaults $A = \gamma = 0$ leave pure bending relaxation,
+$\lambda = -M_0Bk^6$, which is an exact analytical target.
+
+## Why this chapter is the stiffness argument
+
+@eq-ehd-growth is where the case for ETD is easiest to see. An explicit step on
+a grid of spacing $\Delta x$ would require
+
+$$
+\Delta t \;\lesssim\; \frac{\Delta x^6}{M_0 B\,\pi^6},
+$$ {#eq-ehd-cfl}
+
+a sixth power of the mesh size. Halving $\Delta x$ costs a factor of 64 in
+timestep on top of the factor of $2^d$ in cells per step. ETD treats the $k^6$
+operator as a pointwise multiply by $e^{L\Delta t}$, which is unconditionally
+stable, and the timestep is then set by accuracy and by the nonlinearity
+instead.
+
+The implementation difference between this sixth-order model and the
+fourth-order @sec-thin-film is one extra term in @eq-ehd-symbol.
+
+## Solution strategy
+
+ETD1 as in @eq-etd1, dealiased.
+
+## Verification
+
+* **Exact $k^6$ decay.** A single mode decays as $e^{-M_0Bk^6t}$.
+* **Two-mode ratio of 64.** Doubling the wave number multiplies the decay rate
+  by $2^6 = 64$; the measured ratio matches.
+* **Mean-gap conservation.** The mean of $h$ is preserved.
+
+## Binaries and inputs
+
+`ehd_film` (CPU), `ehd_film_hip`. Preset `relaxation.json`.
+
+## Scalability
+
+Not measured.

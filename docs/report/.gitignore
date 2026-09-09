@@ -1,0 +1,4 @@
+# Quarto build output
+_output/
+
+/.quarto/

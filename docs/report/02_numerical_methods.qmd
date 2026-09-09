@@ -1,0 +1,113 @@
+# Numerical methods {#sec-methods}
+
+This chapter fixes the notation and the two time-stepping strategies used
+throughout. Individual application chapters refer back to it rather than
+restating it.
+
+## Reciprocal-space convention {#sec-klap}
+
+Every spectral application is written in terms of the **Laplacian symbol**
+
+$$
+u \;=\; k_{\mathrm{lap}} \;=\; -|\mathbf{k}|^2 ,
+$$ {#eq-klap}
+
+so that $\widehat{\nabla^2 \psi} = u\,\hat\psi$ exactly. Using $u$ rather than
+$|\mathbf{k}|$ keeps every operator a *polynomial with no square roots*:
+$\nabla^4 \mapsto u^2$, $\nabla^6 \mapsto u^3$. It also makes the sign
+bookkeeping uniform — $u$ is negative for every mode except $\mathbf{k}=0$,
+which is where conservation lives.
+
+A conserved equation is one whose evolution operator carries an explicit factor
+of $u$. Because $u=0$ at $\mathbf{k}=0$, the mean of the field is then
+annihilated *exactly*, not to within a tolerance — a property several
+application chapters assert bit-exactly rather than numerically.
+
+## Spectral exponential time differencing {#sec-etd}
+
+The spectral applications share one semi-discrete form. Splitting the right
+hand side into a part linear in the unknown and a remainder,
+
+$$
+\partial_t \hat\psi(\mathbf{k},t)
+  = L(k)\,\hat\psi(\mathbf{k},t)
+  + M_{\mathrm{nl}}(k)\,\widehat{N[\psi]}(\mathbf{k},t),
+$$ {#eq-etd-semi}
+
+where $L$ and $M_{\mathrm{nl}}$ are pointwise multipliers and $N$ is evaluated
+in real space. Integrating the linear part exactly over one step gives the
+first-order exponential time differencing (ETD1) update
+
+$$
+\hat\psi^{\,n+1}
+  = e^{L\Delta t}\,\hat\psi^{\,n}
+  + \frac{e^{L\Delta t}-1}{L}\,M_{\mathrm{nl}}\,\widehat{N[\psi^{\,n}]},
+$$ {#eq-etd1}
+
+with the coefficient evaluated by its Taylor series where $|L\Delta t|$ is
+small enough for the quotient to lose precision.
+
+The point of @eq-etd1 is that **all of the stiffness sits inside
+$e^{L\Delta t}$**, which is a pointwise multiply and is unconditionally stable
+for $L<0$ no matter how negative $L$ becomes. A $k^{10}$ operator is no less
+stable than a $k^2$ one. The timestep is then limited by the *nonlinearity* and
+by accuracy, not by the highest derivative in the equation.
+
+The practical size of that effect is worth stating concretely. On a grid with
+$\Delta x = 2\pi/8$ the Nyquist wave number is $k_{\max}=4$, and a sixth-order
+operator with unit coefficient has $|L(k_{\max})| \approx 4^6 = 4096$, so
+forward Euler would need $\Delta t < 2/|L| \approx 5\times 10^{-4}$. The
+corresponding tenth-order operator needs $\Delta t \lesssim 2\times 10^{-6}$.
+ETD runs both at the timestep the physics wants.
+
+One step therefore costs two transforms — a forward transform of $N$ and an
+inverse transform of the updated field — plus $O(1)$ work per mode.
+
+### Dealiasing
+
+Where $N$ is polynomial, the product raises the highest wave number present:
+$\psi^2$ doubles it and $\psi^3$ triples it. On a finite grid that content
+folds back onto resolved modes. Applications with a polynomial nonlinearity
+therefore apply the Orszag 2/3 rule, zeroing the upper third of the spectrum
+after each nonlinear evaluation. Purely linear applications
+(@sec-surface-diffusion) do not need it and switch it off.
+
+## Finite differences {#sec-fd-methods}
+
+The finite-difference applications discretise derivatives with centred
+stencils of even order $2m$, exchanging $m$ ghost cells per face before each
+evaluation. OpenPFC provides the halo exchange for host and device fields,
+including a GPU-aware path that passes device pointers to MPI directly when
+the installation supports it.
+
+Time stepping is explicit — forward Euler, or a Runge–Kutta scheme where the
+application needs it — and therefore subject to the usual parabolic condition
+
+$$
+\Delta t \;\lesssim\; \frac{\Delta x^2}{2 d\, D}
+$$ {#eq-cfl}
+
+in $d$ dimensions for a diffusion coefficient $D$. This is exactly the
+constraint ETD removes for the spectral applications, and it is why the
+finite-difference applications in this report are second-order-in-space
+problems rather than sixth.
+
+## What "verified" means here
+
+Each application chapter ends with a *Verification* section. The tests behind
+those sections fall into four kinds, and it is worth distinguishing them:
+
+* **Analytical** — the discrete operator is compared against a closed-form
+  symbol or solution, typically to $10^{-12}$ or better. This is the strongest
+  kind and most of the spectral applications have one, because a single
+  Fourier mode of a linear operator has an exact answer.
+* **Conservation** — a quantity the formulation should preserve is checked,
+  in several cases bit-exactly.
+* **Convergence** — the error is measured against a refined or analytic
+  solution across resolutions and the observed order compared to the design
+  order.
+* **Regression** — a checksum is pinned so that a change of decomposition,
+  backend, or platform is detected. These catch ports, not physics.
+
+Where an application has only regression coverage for some property, the
+chapter says so.

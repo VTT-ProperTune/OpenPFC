@@ -1,0 +1,8 @@
+# Strong scaling, tungsten_hip, 768^3, LUMI-G standard-g, prebind layout (2026-09-06).
+# Source: docs/hpc/lumi_gpu_scaling.md. wall_step is the median over accepted steps after warmup.
+gcds,nodes,job,wall_step_ms
+1,1,21761281,851
+8,1,21764313,177
+16,2,21764315,84
+24,3,21764316,72
+32,4,21764317,63

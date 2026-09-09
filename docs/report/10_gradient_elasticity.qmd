@@ -1,0 +1,97 @@
+# Strain-gradient elasticity {#sec-gradient-elasticity}
+
+`apps/gradient_elasticity` — the one spectral application in the report that is
+**not** a time-stepping problem.
+
+## Physical setting
+
+Classical linear elasticity has no intrinsic length scale, so it predicts
+singular strain fields at idealised defects — a dislocation core, a sharp crack
+tip — where the real material has a finite structure. Aifantis-type gradient
+elasticity introduces an internal length $\ell$ that regularises exactly those
+features while leaving the far field classical. It is the continuum answer to
+"what happens below the scale where continuum elasticity stops making sense".
+
+## Governing equations
+
+A Helmholtz operator applied to the Navier operator:
+
+$$
+\big(1 - \ell^2\nabla^2\big)\,L_{\mathrm{Navier}}\,\mathbf{u} \;=\; \mathbf{f},
+$$ {#eq-ge-pde}
+
+which is fourth order in the displacement $\mathbf{u}$. Features much smaller
+than $\ell$ are smoothed; features much larger than $\ell$ are unaffected, and
+the $\ell \to 0$ limit recovers classical elasticity.
+
+## Spectral formulation
+
+For constant isotropic moduli on a periodic grid, @eq-ge-pde becomes an
+independent $2\times2$ linear system at each $\mathbf{k}$ — no iteration and no
+time stepping. Splitting the transformed body force into components parallel
+and perpendicular to $\mathbf{k}$,
+
+$$
+\hat{\mathbf{u}}_L \;=\; \frac{\hat{\mathbf{f}}_L}{-\alpha(\lambda+2\mu)k^2},
+\qquad
+\hat{\mathbf{u}}_T \;=\; \frac{\hat{\mathbf{f}}_T}{-\alpha\mu k^2},
+$$ {#eq-ge-solve}
+
+with the gradient factor
+
+$$
+\alpha \;=\; 1 + \ell^2 k^2 \quad\text{(fourth order)},
+$$ {#eq-ge-alpha}
+
+and optional sixth-order stretches $\alpha = (1+\ell^2k^2)^2$ or
+$\alpha = 1 + \ell^2k^2 + \ell_4^4k^4$. The $\mathbf{k}=0$ mode is projected to
+$\hat{\mathbf{u}} = 0$, which fixes the rigid-body translation the periodic
+problem leaves undetermined.
+
+Separating longitudinal from transverse components is what makes the system
+diagonal: the two polarisations decouple, and each is a scalar divide.
+
+## Eigenstrain loading
+
+A two-dimensional dilatational eigenstrain
+$\varepsilon^* = \varepsilon_0\,g\,I$ is equivalent to the body force
+
+$$
+\mathbf{f} \;=\; \nabla\cdot\big(C:\varepsilon^*\big)
+            \;=\; 2(\lambda+\mu)\,\varepsilon_0\,\nabla g .
+$$ {#eq-ge-eigen}
+
+For a cosine inclusion $g = A\cos(\mathbf{k}\cdot\mathbf{x})$ the displacement
+is the sine field $\mathbf{u} = B\,\mathbf{k}\sin(\mathbf{k}\cdot\mathbf{x})$
+with $B$ known in closed form — which is the analytical target the tests use.
+
+## Solution strategy
+
+**One shot, not ETD.** Forward transform the body force, solve @eq-ge-solve at
+each mode, inverse transform. Two transforms per component, no time loop, no
+stability condition.
+
+This is worth stating plainly because it shows the spectral stack is not tied
+to time stepping: the same domain, field, and FFT machinery serves an elliptic
+solve.
+
+## Verification
+
+* **Analytical displacement.** The computed $\mathbf{u}$ matches the
+  closed-form Fourier solution for a cosine eigenstrain.
+* **Classical limit.** $\ell \to 0$ recovers the classical Navier result.
+* **High-$k$ reduction.** Short-wavelength response is suppressed by the
+  $\alpha$ factor as designed.
+* **Zero mean.** $\langle\mathbf{u}\rangle = 0$ exactly, from the
+  $\mathbf{k}=0$ projection.
+
+## Binaries and inputs
+
+`gradient_elasticity` (CPU), `gradient_elasticity_hip`. Presets
+`inclusion.json`, `gaussian.json`.
+
+## Scalability
+
+Not measured. The cost is a fixed small number of transforms rather than a
+time loop, so the relevant question is transform throughput rather than steps
+per second.

@@ -1,0 +1,100 @@
+# Cahn–Hilliard spinodal decomposition {#sec-cahn-hilliard}
+
+`apps/cahn_hilliard` — conserved fourth-order phase separation, parameterised
+for the Fe–Cr miscibility gap.
+
+## Physical setting
+
+An Fe–Cr alloy held at 475 °C inside its chemical spinodal separates
+spontaneously into Fe-rich and Cr-rich domains. There is no nucleation barrier:
+every long-wavelength composition fluctuation grows. The technological interest
+is that this is the mechanism behind "475 °C embrittlement" in ferritic
+stainless steels, and the length scale of the resulting microstructure sets the
+mechanical consequence.
+
+## Governing equations
+
+One conserved composition field $c$ (Cr mole fraction):
+
+$$
+\partial_t c \;=\; M\nabla^2\!\left( f'(c) - \kappa\nabla^2 c \right),
+$$ {#eq-ch-pde}
+
+with the regular-solution bulk free energy in units of $RT$,
+
+$$
+f(c) \;=\; \omega\,c(1-c) \;+\; c\ln c \;+\; (1-c)\ln(1-c),
+\qquad \omega = \frac{\Omega}{RT}.
+$$ {#eq-ch-f}
+
+The defaults $T = 748.15\,\mathrm{K}$ and
+$\Omega = 20.1\,\mathrm{kJ\,mol^{-1}}$ place Fe–32Cr inside the spinodal. This
+is a documented representative miscibility-gap model, not a CALPHAD
+assessment, and the report does not claim quantitative agreement with a
+thermodynamic database.
+
+## Spectral formulation
+
+Linearising the bulk term about the alloy composition $c_0$ puts $f''(c_0)$
+into the linear symbol and leaves the remainder to the nonlinearity. With
+$u = k_{\mathrm{lap}}$,
+
+$$
+L(k) \;=\; M\big( f''(c_0)\,u \;-\; \kappa\,u^2 \big),
+\qquad
+M_{\mathrm{nl}}(k) \;=\; M\,u ,
+$$ {#eq-ch-symbol}
+
+$$
+N(c) \;=\; f'(c) - f'(c_0) - f''(c_0)\,(c-c_0).
+$$ {#eq-ch-nl}
+
+Both channels carry the factor $u$, so the mean composition is conserved
+exactly.
+
+The growth rate follows directly from @eq-ch-symbol. Writing
+$|\mathbf{k}| = k$,
+
+$$
+\lambda(k) \;=\; -M k^2\big( f''(c_0) + \kappa k^2 \big),
+$$ {#eq-ch-growth}
+
+which is positive — unstable — precisely when $f''(c_0) < 0$, the spinodal
+condition. The fastest-growing mode is at
+$k_{\max}^2 = -f''(c_0)/(2\kappa)$, and this wavelength is what sets the
+initial domain spacing.
+
+The nonlinearity @eq-ch-nl is not a low-order polynomial — it contains
+$\ln\!\big(c/(1-c)\big)$ — so dealiasing is on.
+
+## Solution strategy
+
+ETD1 as in @eq-etd1. Composition is clamped away from $\{0,1\}$ so the
+logarithms stay finite; a sampled composition outside the physical range stops
+the run rather than producing quiet nonsense.
+
+Optional collective CSV diagnostics record mass, composition bounds, and the
+current-state total energy including the spectral gradient contribution.
+
+## Verification
+
+* **Analytical growth rate.** A single seeded mode grows as
+  $e^{\lambda(k)t}$ with $\lambda$ from @eq-ch-growth, matched within 5%.
+* **Mass conservation.** The mean composition is held to $10^{-12}$ across a
+  run.
+* **Free energy decreases.** The total free energy falls monotonically while a
+  spinodal mode grows.
+* **Gradient energy.** The diagnostic gradient energy matches the analytical
+  value on distributed grids.
+* **Decomposition independence.** Seeded noise produces the same field and the
+  same mean on any number of ranks.
+
+## Binaries and inputs
+
+`cahn_hilliard` (CPU), `cahn_hilliard_hip`. Presets: `fe_cr_spinodal.json`
+(single-mode verification) and `coarsening.json` (seeded broadband
+coarsening with diagnostics).
+
+## Scalability
+
+Not measured. Shares the spectral ETD stack with @sec-tungsten.

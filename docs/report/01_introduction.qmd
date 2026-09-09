@@ -1,0 +1,67 @@
+# Introduction
+
+## What the applications have in common
+
+An OpenPFC application is a small amount of physics on top of a large amount
+of shared machinery. The machinery is a periodic structured grid decomposed
+across MPI ranks, a distributed field type that is host- or device-resident,
+an FFT or finite-difference stack, and a session that assembles them from a
+JSON input. The physics is typically one header.
+
+For the spectral applications that header supplies three things:
+
+* a **linear symbol** $L(k)$ — everything in the equation that is linear in
+  the unknown, expressed as a multiplier on each Fourier mode;
+* a **pointwise nonlinearity** $N(\psi)$ — evaluated in real space, one cell
+  at a time, with no knowledge of the grid or the decomposition;
+* a **nonlinear coupling** $M_{\mathrm{nl}}(k)$ — how the transformed
+  nonlinearity re-enters the equation.
+
+Nothing else. No loops over $k$, no MPI, no hand-written kernels, and no
+separate GPU implementation of the physics: the same header is instantiated
+for the host and device memory spaces.
+
+## Why that shape is the interesting part
+
+The consequence is that the derivative order of a model is not a measure of
+how hard it is to implement. Chapter @sec-surface-diffusion solves
+$\partial_t h = -B\nabla^4 h$ and chapter @sec-ehd-film solves a sixth-order
+elastohydrodynamic problem; in the source the difference is that one function
+returns $-Bk_{\mathrm{lap}}^2$ and the other returns a cubic in
+$k_{\mathrm{lap}}$. Both are pointwise multiplies on a transformed field.
+
+Writing the same two operators as real-space stencils would not be comparable
+in effort, and the sixth-order stencil would be wide, awkward at the
+decomposition boundary, and expensive in halo traffic.
+
+What high order does cost is **stiffness**. The most negative eigenvalue of a
+$k^6$ operator on a grid of spacing $\Delta x$ scales as $\Delta x^{-6}$, so an
+explicit integrator's stable timestep collapses. The applications in this
+report deal with that by integrating the linear part exactly; chapter
+@sec-methods sets out how.
+
+## Why not spectral everywhere
+
+Spectral methods buy exactness and simplicity when the problem is periodic and
+smooth. When it is not, they stop being the right tool. Non-periodic
+boundaries, sharp interfaces, local transport, and directional-solidification
+geometry are all better served by high-order finite differences, and OpenPFC
+supports both under one runtime.
+
+The finite-difference applications in this report exist to make that concrete.
+`heat3d` in particular ships both discretisations of the *same* PDE, which is
+what makes the comparison in chapter @sec-scalability meaningful: it measures
+the methods, not two different problems.
+
+## What this report contains
+
+| Part | Chapters | Character |
+|---|---|---|
+| Phase-field crystal | @sec-tungsten, @sec-aluminum | Production PFC, mean-field ETD, moving frames |
+| High-order spectral | @sec-cahn-hilliard – @sec-gradient-elasticity | $k^4$ to $k^6$ operators, each with an analytical check |
+| Finite difference | @sec-heat3d – @sec-kobayashi | Stencils, coupled fields, mixed boundaries |
+| Scalability | @sec-scalability | Measured LUMI-G curves, 1–32 GCDs |
+
+Every chapter ends with a *Verification* section listing what the test suite
+actually asserts. The intent is that no statement in this report has to be
+taken on trust: it either cites a test or is marked as unmeasured.

@@ -1,0 +1,128 @@
+# Tungsten PFC {#sec-tungsten}
+
+`apps/tungsten` — the production phase-field crystal application, and the model
+behind the scalability measurements in @sec-scalability.
+
+## Physical setting
+
+Phase-field crystal describes a crystalline solid through a continuous,
+periodic density field $\psi(\mathbf{x},t)$ whose minima sit on lattice sites.
+Because the field is continuous but its ground state is periodic, PFC resolves
+elasticity, defects, and grain boundaries on diffusive time scales rather than
+the vibrational scales molecular dynamics is bound to. This application is
+parameterised for tungsten and is used for solidification and defect studies in
+three dimensions.
+
+## Governing equations
+
+The dynamics are conserved,
+
+$$
+\partial_t \psi \;=\; \nabla^2 \frac{\delta F}{\delta \psi},
+$$ {#eq-w-dyn}
+
+so the spatial mean of $\psi$ is a constant of the motion. The free energy
+splits into a quadratic part carrying the two-point correlation and a local
+remainder,
+
+$$
+F[\psi] \;=\; \int \Big[ \tfrac12\,\psi\,\big(C(\nabla^2)\big)\,\psi
+                        \;+\; f_{\mathrm{loc}}(\psi,\psi_{\mathrm{MF}}) \Big]\,
+          d\mathbf{x}.
+$$ {#eq-w-energy}
+
+The local part is a polynomial in $\psi$ and in a mean-field-filtered density
+$\psi_{\mathrm{MF}}$, with coefficients $p_2,p_3,p_4$ and $q_{20},\dots,q_{40}$
+that encode the solid and vapour branches of the equation of state.
+
+## Spectral formulation
+
+Writing $u = k_{\mathrm{lap}} = -|\mathbf{k}|^2$ as in @sec-klap, the
+evolution operator is
+
+$$
+L(k) \;=\; u\;C(k), \qquad M_{\mathrm{nl}}(k) \;=\; u ,
+$$ {#eq-w-symbol}
+
+so both the linear and the nonlinear channel carry the conserving factor $u$.
+
+The correlation symbol $C(k)$ is built around a peak at $|\mathbf{k}|=1$, which
+is what selects the lattice constant. With $\kappa = |\mathbf{k}|-1$ measuring
+distance from the peak,
+
+$$
+C(k) \;=\; \underbrace{P_{\mathrm{stab}}}_{\text{ETD stabiliser}}
+        \;+\; \bar p_2
+        \;-\; \underbrace{B_x\,e^{-T/T_0}\,g(\kappa)}_{\text{correlation peak}}
+        \;+\; \bar q_2\, f_{\mathrm{MF}}(k),
+$$ {#eq-w-ck}
+
+with a deliberately **asymmetric** peak shape
+
+$$
+g(\kappa) \;=\;
+\begin{cases}
+  \exp\!\big(-\kappa^2/\alpha^2\big), & \kappa < 0 \quad\text{(Gaussian side)},\\[4pt]
+  1 - \kappa^2/\alpha^2,              & \kappa \ge 0 \quad\text{(parabolic side)},
+\end{cases}
+$$ {#eq-w-peak}
+
+and a mean-field filter
+
+$$
+f_{\mathrm{MF}}(k) \;=\; e^{\,u/\lambda^2}.
+$$ {#eq-w-mf}
+
+Two details in @eq-w-ck matter for the numerics rather than the physics. The
+$e^{-T/T_0}$ factor makes the peak depth temperature-dependent, which is how
+melting enters. The $P_{\mathrm{stab}}$ term is a constant shift added to
+$C$ and subtracted again inside the pointwise nonlinearity; it moves $L$ away
+from zero for the modes that would otherwise sit near the stability boundary,
+which is what lets ETD take a useful timestep. It changes the split, not the
+solution.
+
+An optional thermal drive $G_{\mathrm{grid}}$, $V_{\mathrm{grid}}$ imposes a
+moving temperature gradient for directional-solidification studies. When
+omitted the run is isothermal.
+
+## Solution strategy
+
+ETD1 as in @eq-etd1, with dealiasing on, one $\psi$ field and a filtered
+$\psi_{\mathrm{MF}}$ derived from it each step. Two transforms per step.
+
+For moving-front studies the application supports a `moving` boundary
+condition that tracks the solidification front along $x$ and shifts the
+computational window to follow it. The tracked front state — the unwrapped
+position, the scan index, and a first-detection flag — is part of the
+checkpoint, so a restarted two-leg run continues the same interface rather than
+re-detecting it at $t=0$.
+
+## Verification
+
+* **Split-run equivalence.** A checkpoint-and-restart run reproduces an
+  uninterrupted run: local fields agree within $10^{-12}$ and the saved front
+  state agrees exactly, on one and two MPI ranks
+  (`tungsten-moving-restart-2rank`).
+* **Golden regression.** CPU and 4-rank golden checksums are pinned
+  (`tungsten-cpu-golden`, `tungsten-golden-4rank`).
+* **CPU/GPU agreement.** `SPECTRAL_CHECKSUM` from 1 GCD and 16 GCDs agrees to
+  about $10^{-12}$ relative.
+* **Fail-closed restart.** A checkpoint missing front state, or one whose
+  boundary configuration has changed, is a startup error rather than a silent
+  re-detection.
+
+There is no closed-form solution to compare against here — that is the price of
+a realistic equation of state — so the coverage is regression and
+self-consistency rather than analytical. The high-order spectral chapters that
+follow are the ones carrying analytical checks.
+
+## Binaries and inputs
+
+`tungsten` (CPU), `tungsten_cuda`, `tungsten_hip`. Inputs under
+`inputs_json/` and `inputs_toml/`: single seed, fixed and moving boundary
+conditions, restart, and a performance configuration.
+
+## Scalability
+
+Measured on LUMI-G from 1 to 32 GCDs at $768^3$; see @sec-scalability. This is
+the model used for the sizing sweep that fixes the single-GCD working point.

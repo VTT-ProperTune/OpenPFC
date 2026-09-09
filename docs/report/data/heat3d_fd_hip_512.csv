@@ -1,0 +1,8 @@
+# Strong scaling, heat3d_fd_hip, 512^3, LUMI-G, 20 steps, dt=0.01, fd_order=2 (2026-09-06).
+# Source: docs/hpc/lumi_gpu_scaling.md.
+gcds,nodes,job,wall_step_ms
+1,1,21761036,5.91
+8,1,21761037,0.951
+16,2,21761038,0.567
+24,3,21761039,0.476
+32,4,21761042,0.394

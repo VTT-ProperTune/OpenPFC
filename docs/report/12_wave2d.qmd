@@ -1,0 +1,76 @@
+# Two-dimensional wave equation {#sec-wave2d}
+
+`apps/wave2d` — the reference for **coupled first-order systems** and for
+mixed boundary conditions.
+
+## Physical setting
+
+Acoustic propagation on a two-dimensional slab. The application is the
+smallest shipped example of two prognostic fields advanced together, and of a
+domain that is periodic in one direction and physically bounded in the other.
+
+## Governing equations
+
+The second-order wave equation $u_{tt} = c^2\nabla^2 u$ is written as a
+coupled first-order system in displacement and velocity:
+
+$$
+\partial_t u \;=\; v,
+\qquad
+\partial_t v \;=\; c^2\,\nabla^2 u ,
+$$ {#eq-w2-pde}
+
+with $\nabla^2 = \partial_{xx} + \partial_{yy}$ on an $n_z = 1$ slab.
+
+Writing it this way is what lets a single stepper advance a tuple of
+increments $(\mathrm{d}u, \mathrm{d}v)$, which is the pattern any multi-field
+application reuses.
+
+## Boundary conditions
+
+Periodic in $x$, handled by MPI halo exchange. In $y$ the slab is physically
+bounded, with homogeneous **Dirichlet** ($u = 0$) or **Neumann**
+($\partial_y u = 0$) conditions applied as a ghost-cell correction after the
+periodic exchange.
+
+The ordering matters: the exchange is unconditional and the physical
+correction overwrites the ghost values it produced on the boundary faces. This
+keeps the mixed case from needing a separate communication pattern.
+
+## Finite-difference formulation
+
+Centred stencils, either a fixed second-order Laplacian
+(`wave2d_fd_manual`) or even orders 2–20 (`wave2d_fd`). The Laplacian
+components are accumulated as *unscaled* stencil sums and multiplied by
+$1/\Delta x^2$, $1/\Delta y^2$ in the model's right-hand side, which keeps the
+stencil evaluator independent of the grid metric.
+
+Time stepping is explicit, with the hyperbolic CFL condition
+
+$$
+\Delta t \;\lesssim\; \frac{1}{c}\left(\frac{1}{\Delta x^2}
+                                     + \frac{1}{\Delta y^2}\right)^{-1/2}.
+$$ {#eq-w2-cfl}
+
+Note this is $\Delta t \sim \Delta x$, not the $\Delta x^2$ of a parabolic
+problem: a wave equation is far less stiff than a diffusion equation at the
+same resolution, and much less stiff than the high-order operators in the
+spectral chapters.
+
+## Verification
+
+* **Runge–Kutta convergence.** Observed temporal order matches the scheme.
+* **Operator evaluation.** The Laplacian evaluator is checked against known
+  inputs.
+* **RHS structure.** Structural tests on the right-hand side pattern.
+* **CPU–GPU parity.** Where GPU twins are built.
+
+## Binaries and inputs
+
+`wave2d_fd_manual`, `wave2d_fd`, plus `wave2d_cuda` / `wave2d_hip` when
+enabled. Command-line driven, with optional VTK output (`--vtk`,
+`--vtk-every`).
+
+## Scalability
+
+Not measured.
