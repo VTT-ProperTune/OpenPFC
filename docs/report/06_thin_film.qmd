@@ -35,7 +35,7 @@ formation, and the diagnostics above. Neither science preset is run by CI.
 | Grid | $t \in [0, 140]$ (spontaneous) or $[0, 100]$ (defect) at $\Delta t = 0.002$, sampled every 5 | $t \in [0, 20]$ and $[0, 40]$ at $\Delta t = 0.1$ |
 | Boundary conditions | Periodic on both axes | Periodic on both axes |
 | Initial condition | $h = h_0[1 + \varepsilon\,\xi(x,y) + g(x,y)]$ with deterministic hashed noise $\xi$ (`seed = 2024`); $g$ is an optional Gaussian depression, 30 % deep with $\sigma = 3$, for the defect case | `cosine_mode`: a single mode, amplitude $0.05$ at $(n_x,n_y) = (4,2)$ for levelling, $0.02$ at $(8,6)$ for dewetting |
-| Key physical parameters | $h_0 = 1$, $\gamma = 1$, $M_0 = 1$, $A = 8.6022$, precursor $h^\* = 0.15$ | $h_0 = 1$, $\gamma = 1$, $M_0 = 1$; $A = 0$ (levelling) or $A = 0.05$ (dewetting) |
+| Key physical parameters | $h_0 = 1$, $\gamma = 1$, $M_0 = 1$, $A = 8.6022$, precursor $h^{*} = 0.15$ | $h_0 = 1$, $\gamma = 1$, $M_0 = 1$; $A = 0$ (levelling) or $A = 0.05$ (dewetting) |
 | Observable | Rupture time, minimum thickness, hole area fraction, dominant spacing, liquid volume | Single-mode amplitude against $e^{\lambda(k)t}$; mean thickness |
 | Model maturity | numerical verification: **analytical** — the nonlinear flux solver is asserted, not assumed, to reproduce the exact $k^4$ decay at constant mobility · physical completeness: **reduced** — isothermal, no evaporation, no slip, small-slope lubrication · calibration: **nondimensional**; the parameters are illustrative, not a specific liquid | numerical verification: **analytical** · physical completeness: **reduced**, as beside · calibration: **nondimensional** |
 
@@ -51,7 +51,7 @@ statistic to mean anything, which is what the 16-wavelength sizing above buys.
 ### Measured
 
 $512^2$, $\Delta x = 0.5$, $\Delta t = 0.002$. "Reaches precursor" is the first
-time $\min h$ falls below $h^\* = 0.15$.
+time $\min h$ falls below $h^{*} = 0.15$.
 
 | Case | Reaches precursor | Final $\min h$ | Hole area fraction | Dominant spacing | Volume drift |
 |---|---|---|---|---|---|
@@ -66,7 +66,7 @@ and moves it **to the defect**, so the defect case's 25.6 reflects one isolated
 hole rather than a pattern.
 
 These runs stop where they do for a structural reason, not an accuracy one.
-Once $\min h$ falls to roughly $0.6\,h^\*$ the solver diverges, and neither
+Once $\min h$ falls to roughly $0.6\,h^{*}$ the solver diverges, and neither
 refining the timestep by 5× nor the grid by 2× moves the breakdown point: the
 mobility is degenerate ($M \to 0$ as $h \to 0$, so the equation loses
 parabolicity exactly where the interesting event is), the scheme has no
@@ -114,12 +114,12 @@ hole instead of relaxing. Constant mobility cannot produce that.
 The science path also switches the disjoining pressure to a precursor form,
 
 $$
-\Pi(h) \;=\; A\left[\left(\frac{h^\*}{h}\right)^{3}
-                   -\left(\frac{h^\*}{h}\right)^{2}\right]
-\qquad (h^\* > 0),
+\Pi(h) \;=\; A\left[\left(\frac{h^{*}}{h}\right)^{3}
+                   -\left(\frac{h^{*}}{h}\right)^{2}\right]
+\qquad (h^{*} > 0),
 $$ {#eq-tf-precursor}
 
-repulsive below $h^\*$ and attractive above it, so the film still destabilises
+repulsive below $h^{*}$ and attractive above it, so the film still destabilises
 at $h_0$ but a rupturing hole drains to a stable precursor rather than to zero.
 The exponents 3 and 2, rather than the 9 and 3 of @eq-tf-disjoining, are as
 much a numerical choice as a physical one: a ninth-power repulsion calibrated
