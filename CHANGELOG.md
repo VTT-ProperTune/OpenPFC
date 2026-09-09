@@ -30,6 +30,16 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   `easybuild/easyconfigs/`. Verified end to end on LUMI: both install, and
   `srun -n 4 tungsten` runs a 64³ case from the resulting module. Documented
   as an optional alternative to `scripts/build.sh` in `INSTALL.LUMI.md`.
+- Fe–Cr Cahn–Hilliard science upgrade (`#113`): Redlich–Kister excess free
+  energy with the assessed bcc Cr–Fe interaction, a code-to-physical scale map
+  (1 code length = 1.07 nm, 1 code time = 0.278 h at 475 °C), and
+  structure-factor diagnostics — azimuthally averaged `S(k)`, first moment
+  `k1`, domain length `L = 2π/k1` and dominant wavelength, all added to the
+  diagnostics CSV. Two science presets measure the early-stage band selection
+  (`k_peak = 0.368` against a predicted `0.362`) and late-stage coarsening
+  (`L ∝ t^0.35` against the Lifshitz–Slyozov `1/3`, reaching 40 nm after
+  1100 h of simulated ageing). The reduced regular-solution verifier is the
+  `L1 = 0` case of the same expression, not a second code path.
 
 
 - Cray/LUMI site profile for the runtime baker (`#13`): `--site cray`,
