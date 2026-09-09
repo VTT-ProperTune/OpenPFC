@@ -277,6 +277,35 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   systematic 4th-vs-6th-order comparison (section C) beyond the existing
   `alpha(k)` unit tests -- see the app README's "What `#117` does not
   cover".
+- `kawahara`: documented capillary-gravity parameter mapping and a wave-packet
+  / dispersive-radiation science case on top of the existing arbitrary-
+  coefficient verification (`#119`). `capillary_gravity_mapping.hpp` maps
+  depth/gravity/Bond number \((h,g,\tau)\) to \((\alpha,\beta,\gamma)\) in a
+  frame moving at \(c_0=\sqrt{gh}\); this reduction is attributed in
+  secondary literature to Hasimoto (1970)/Kawahara (1972)/Hunter &
+  Vanden-Broeck (1983), but was not checked against a primary source
+  reachable from this machine, so it is documented as **representative**, not
+  quantitative calibration. A new `wave_packet` initial condition (Gaussian-
+  envelope carrier at `k0`) plus `WavePacketDiagnostics` (envelope centroid/
+  width via spectral low-pass of \(u^2\), exact carrier phase from the
+  discrete Fourier coefficient at `k0`, and an automated no-periodic-wrap
+  `edge_fraction` sentinel) measure group and phase velocity against
+  \(d\omega/dk\) and \(\omega/k\) for `k0` on both sides of the
+  \(k_c=\sqrt{-\beta/\gamma}\) crossover; `PulseDiagnostics` compares a
+  third-order-only nonlinear pulse against the full third+fifth-order case
+  (trailing-radiation RMS). Both diagnostics write CSV through the CPU
+  session only (`kind: wave_packet` / `kind: pulse`). Measured on LUMI
+  (\(\tau=0.30\), \(k_c=\sqrt{1.5}\approx1.2247\), `t1=250`): group velocity
+  (centroid drift) vs \(d\omega/dk\) agree to 2.3% (\(k_0=0.699<k_c\), both
+  \(v_g\) and \(c_p\) small and negative) and 0.4% (\(k_0=2.003>k_c\), both
+  positive and an order of magnitude larger); carrier phase velocity vs
+  \(\omega/k\) agrees to
+  \(\sim10^{-14}\) (exact per-mode ETD rotation); `edge_fraction<10^{-7}`
+  throughout, i.e. no periodic self-interaction. A nonlinear pulse run
+  (`alpha=1.5`, same `beta`, amplitude 0.15, `t1=40`) shows the fifth-order
+  term reproducibly lowering both trailing-radiation RMS (\(\sim7\%\) at
+  `t=40`) and peak amplitude (\(\sim5.8\%\)) versus the third-order-only
+  control at identical mean (conserved to displayed precision in both runs).
 
 - Cray/LUMI site profile for the runtime baker (`#13`): `--site cray`,
   `--host-lib` for stack libraries that share a directory with ordinary system

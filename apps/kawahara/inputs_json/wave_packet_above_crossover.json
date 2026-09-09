@@ -1,0 +1,49 @@
+{
+    "model": {
+        "name": "kawahara",
+        "params": {
+            "alpha": 0.0,
+            "beta": -0.016666666666666666,
+            "gamma": 0.011111111111111112
+        }
+    },
+    "domain": {
+        "Lx": 2560,
+        "Ly": 1,
+        "Lz": 1,
+        "dx": 0.3125,
+        "dy": 1.0,
+        "dz": 1.0,
+        "origin": "corner"
+    },
+    "timestepping": {
+        "t0": 0.0,
+        "t1": 250.0,
+        "dt": 1.0,
+        "saveat": 5.0
+    },
+    "fields": [
+        {
+            "name": "u",
+            "data": "results/kawahara/wave_packet_above_u_%04d.vti"
+        }
+    ],
+    "initial_conditions": [
+        {
+            "target": "u",
+            "type": "wave_packet",
+            "u0": 0.0,
+            "amplitude": 0.05,
+            "sigma": 15.0,
+            "k0": 2.0027626960987196,
+            "x0": 150.0,
+            "phase0": 0.0
+        }
+    ],
+    "diagnostics": {
+        "kind": "wave_packet",
+        "csv": "results/kawahara/wave_packet_above_crossover.csv",
+        "k0": 2.0027626960987196,
+        "cutoff_factor": 0.5
+    }
+}
