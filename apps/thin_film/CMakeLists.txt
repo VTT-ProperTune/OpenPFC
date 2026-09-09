@@ -37,6 +37,11 @@ endfunction()
 thin_film_cpu_executable(thin_film src/thin_film.cpp)
 install(TARGETS thin_film DESTINATION bin)
 
+# Science driver for #114: full h^3 lubrication mobility through the shared
+# conservative flux stepper. Host only; the flux path has no device kernels.
+thin_film_cpu_executable(thin_film_nonlinear src/thin_film_nonlinear.cpp)
+install(TARGETS thin_film_nonlinear DESTINATION bin)
+
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
   thin_film_hip_executable(thin_film_hip src/hip/thin_film.cpp)
   install(TARGETS thin_film_hip DESTINATION bin)

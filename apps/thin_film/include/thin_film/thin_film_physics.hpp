@@ -53,6 +53,7 @@ struct ThinFilmSchemaValues {
   double gamma{1.0}; ///< surface tension (grid units)
   double M0{1.0};    ///< mobility at h0
   double A{0.05};    ///< disjoining strength (0 = leveling)
+  double h_star{0.0};///< precursor thickness; >0 selects the rupture-safe form
 };
 
 struct ThinFilmParams : ThinFilmSchemaValues {
@@ -62,7 +63,7 @@ struct ThinFilmParams : ThinFilmSchemaValues {
   ThinFilmParams() { recompute_derived(); }
 
   void recompute_derived() {
-    ThinFilmPointwise pw{.A = A, .h0 = h0};
+    ThinFilmPointwise pw{.A = A, .h0 = h0, .h_star = h_star};
     Pi0 = pw.Pi(h0);
     Pip0 = pw.Pi_prime(h0);
   }
@@ -98,7 +99,14 @@ inline pfc::sim::ParameterSchema<ThinFilmSchemaValues> make_thin_film_schema() {
              .description = "disjoining strength; 0 is leveling",
              .required = false,
              .min = 0.0,
-             .default_value = 0.05});
+             .default_value = 0.05})
+      .real(&ThinFilmSchemaValues::h_star,
+            {.name = "h_star",
+             .description = "precursor thickness; >0 uses the rupture-safe "
+                            "disjoining pressure with a stable thin film",
+             .required = false,
+             .min = 0.0,
+             .default_value = 0.0});
   return s;
 }
 

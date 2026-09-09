@@ -15,7 +15,7 @@
 #include <vector>
 
 #include <cahn_hilliard/cahn_hilliard_physics.hpp>
-#include <cahn_hilliard/structure_factor.hpp>
+#include <openpfc_apps/structure_factor.hpp>
 #include <openpfc/kernel/fft/kspace_iterator.hpp>
 #include <openpfc/kernel/simulation/spectral_etd_ops.hpp>
 
@@ -95,7 +95,7 @@ public:
     // shell_average drops k=0, so the mean composition does not have to be
     // subtracted from the field first.
     m_hat.with_host_view([&](typename Ops::Complex *hat, std::size_t) {
-      const auto sf = shell_average(m_fft.get_outbox_bounds(), m_domain, hat,
+      const auto sf = pfc::apps::shell_average(m_fft.get_outbox_bounds(), m_domain, hat,
                                     m_comm, m_sf_bins);
       result.k1 = sf.k1;
       result.domain_length = sf.domain_length();
