@@ -135,6 +135,17 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   captions, in the `@sec-cahn-hilliard`, `@sec-thin-film`, and
   `@sec-tungsten` chapters.
 
+- Kawahara science case B is now an exact KdV solitary wave rather than a
+  Gaussian bump (`#119`). New `kdv_soliton` initial condition, whose width
+  \(W=\sqrt{-12\beta/(\alpha A)}\) is *derived* from the model coefficients
+  rather than supplied, so an input cannot quietly stop being a solution of
+  the equation it is run against; it refuses sign combinations that admit no
+  such wave. With `gamma=0` the wave is steady, which turns the comparison
+  into a controlled experiment: switching the fifth-order term on costs it
+  28% of its amplitude, raises the trailing-radiation RMS 75-fold, and puts a
+  wave train within 7% of \(k_{\mathrm{res}}\), the wavenumber where the
+  linear phase velocity equals the pulse's own speed — a number that comes
+  out of the dispersion relation and is nowhere in the solver.
 - EasyBuild recipes for a LUMI-C module install (`#46`): a CPU HeFFTe 2.4.1
   (FFTW backend, `cpeGNU/25.09`) and OpenPFC 0.2.0 on top of it, under
   `easybuild/easyconfigs/`. Verified end to end on LUMI: both install, and

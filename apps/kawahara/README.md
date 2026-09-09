@@ -15,16 +15,16 @@ is on.
 
 ## Problem setup
 
-| Item | Verification preset (`pulse.json`, mode tests) | Science preset (wave packet / nonlinear pulse, `#119`) |
+| Item | Verification preset (`pulse.json`, mode tests) | Science preset (wave packet / solitary wave, `#119`) |
 |---|---|---|
-| Use case | Exercise \(L(k)=-i(\beta k^3+\gamma k^5)\) against independently derived phase | Capillary-gravity wave packet dispersion and dispersive radiation near the critical Bond number |
+| Use case | Exercise \(L(k)=-i(\beta k^3+\gamma k^5)\) against independently derived phase | Capillary-gravity wave packet dispersion (Case A) and the loss of KdV integrability to fifth-order dispersion (Case B), both just below the critical Bond number |
 | Domain | 1D periodic line, \(N_x=64\)-\(256\) | 1D periodic line, \(N_x=2560\), \(L_x=800\) (Case A) / \(N_x=512\), \(L_x=128\) (Case B) |
-| Grid | \(dx=\pi/4\) to \(\pi/2\) | \(dx=0.3125\) (Case A) / \(dx=0.25\) (Case B) |
-| Boundary conditions | Periodic (both ends) | Periodic (both ends); domain sized so the packet/radiation do not reach the boundary over the reported interval (checked automatically, see below) |
-| Initial condition | Single cosine mode / arbitrary-amplitude Gaussian pulse | `wave_packet`: Gaussian-envelope carrier at `k0` (Case A); `gaussian_pulse`, representative (not literature-calibrated) amplitude (Case B) |
+| Grid | \(dx=\pi/4\) to \(\pi/2\) | \(dx=0.3125\) (Case A) / \(dx=0.25\) (Case B, i.e. 13 points across the solitary wave's width and 16 across the radiated wavelength) |
+| Boundary conditions | Periodic (both ends) | Periodic (both ends). Case A's domain is sized so the packet never reaches the boundary, and an `edge_fraction` sentinel checks it every `saveat`. Case B is measured *after* its radiation has wrapped: the observables there (tail RMS, dominant tail wavenumber) are whole-domain quantities for which wrapping is harmless, and no no-wrap claim is made |
+| Initial condition | Single cosine mode / arbitrary-amplitude Gaussian pulse | `wave_packet`: Gaussian-envelope carrier at `k0` (Case A); `kdv_soliton`, the exact solitary wave of the `gamma=0` limit with its width derived from `alpha`/`beta` (Case B) |
 | Key parameters | `alpha=1,beta=1,gamma=-1` (nondimensional, hand-picked) | `alpha,beta,gamma` from the documented \((h,g,\tau)\) mapping below; \(\tau=0.30\) |
-| Observable | Phase, amplitude vs analytical cosine solution; mean \(u\) | Group velocity (envelope centroid), phase velocity (carrier mode), packet width, Fourier spectrum, edge/no-wrap sentinel, dispersive-tail RMS |
-| Model maturity | numerical verification: **analytical**; physical completeness: **canonical Kawahara ODE test**; calibration: **none** (arbitrary coefficients) | numerical verification: **analytical** (phase) + **regression** (group velocity, tail RMS); physical completeness: **reduced** (1D, weakly nonlinear, long-wave asymptotics); calibration: **representative**, not quantitative (see honesty note below) |
+| Observable | Phase, amplitude vs analytical cosine solution; mean \(u\) | Group velocity (envelope centroid), phase velocity (carrier mode), packet width, Fourier spectrum, edge/no-wrap sentinel (Case A); solitary-wave amplitude decay, propagation speed, trailing-radiation RMS and its dominant wavenumber against the resonance \(c_p(k)=c\) (Case B) |
+| Model maturity | numerical verification: **analytical**; physical completeness: **canonical Kawahara ODE test**; calibration: **none** (arbitrary coefficients) | numerical verification: **analytical** (carrier phase velocity; solitary-wave amplitude, width and speed; radiation wavenumber from the dispersion relation) + **regression** (group velocity, tail RMS); physical completeness: **reduced** (1D, weakly nonlinear, long-wave asymptotics); calibration: **representative**, not quantitative (see honesty note below) |
 
 ## Physics
 
@@ -163,47 +163,118 @@ agreement is the narrowband-envelope-extraction accuracy, well within a few
 percent. `edge_fraction` stays \(<10^{-7}\) throughout both runs: the packet
 never approaches the periodic boundary over \(t_1=250\).
 
-## Science case B: nonlinear localized pulse (`#119`)
+## Science case B: a KdV solitary wave forced to radiate (`#119`)
 
-`nonlinear_pulse_kdv_only.json` (`gamma=0`, third-order-only control) and
-`nonlinear_pulse_kawahara.json` (`gamma=1/90`, full Kawahara) share
-`alpha=1.5`, `beta=-1/60`, a `gaussian_pulse` initial condition
-(`amplitude=0.15`, `sigma=6`, on a \(N_x=512\), \(L_x=128\) line,
-\(dx=0.25\)), and run to \(t_1=40\) with `dt=0.005`. **Honesty note:** the
-amplitude/width are a *representative* localized-pulse initial condition,
-not a pre-computed exact Kawahara solitary-wave profile -- deriving that
-profile (a nonlinear boundary-value problem in its own right) was out of
-scope here, so the pulse disperses somewhat rather than propagating as a
-clean coherent structure in either run. What is compared is the *difference
-the fifth-order term makes* to the same initial pulse, not an exact soliton.
-A larger amplitude (`0.3`) and coarser grid/timestep were tried first and
-went unstable (`NaN` by `t=63`, confirmed by a real run, not assumed); the
-shipped parameters were tuned down until both runs stayed finite to `t1`.
+The question is what the fifth-order term *does*, and answering it needs a
+control whose behaviour without that term is known exactly rather than merely
+observed.
+
+Setting `gamma=0` reduces this app's equation
+
+$$u_t + \alpha u u_x - \beta u_{xxx} + \gamma u_{xxxxx} = 0$$
+
+to KdV with dispersion coefficient \(\delta=-\beta\), and KdV has an exact
+travelling solution:
+
+$$u(x,t) = A\,\mathrm{sech}^2\!\Bigl(\frac{x-x_0-ct}{W}\Bigr),
+\qquad c=\frac{\alpha A}{3},
+\qquad W=\sqrt{\frac{-12\beta}{\alpha A}}.$$
+
+That is the control. It propagates unchanged indefinitely, so *every*
+departure from a constant peak amplitude and an empty tail in the
+\(\gamma\neq0\) run is attributable to \(\gamma\).
+
+`nonlinear_pulse_kdv_only.json` (`gamma=0`) and
+`nonlinear_pulse_kawahara.json` (`gamma=1/90`) share `alpha=1.5`,
+`beta=-1/60` (the \(\tau=0.30\) capillary–gravity mapping, i.e. just below
+the critical Bond number), a `kdv_soliton` initial condition with
+`amplitude=0.05` at `x0=32` on an \(N_x=512\), \(L_x=128\) line
+(\(dx=0.25\)), and run to \(t_1=100\) with `dt=0.005`. The initial condition
+takes `alpha` and `beta` rather than a width, and derives
+\(W=1.63299\) from them, so an input cannot quietly stop being a solution of
+the equation it is run against.
+
+### What the fifth-order term should do
+
+The solitary wave is resonant with the linear waves whose phase velocity
+equals its own,
+
+$$c_p(k) = \beta k^2 + \gamma k^4 = c,$$
+
+which for \(\beta<0<\gamma\) has exactly one positive root — here
+\(k_{\mathrm{res}}=1.5579\), a wavelength of \(4.03\), some 16 grid points and
+well inside the \(2/3\) dealiasing cut at \(k=8.38\). Nothing in the solver is
+told this number; it comes from the dispersion relation alone, which is what
+makes it worth measuring.
 
 ```bash
+mkdir -p results/kawahara
 mpirun -n 1 ./apps/kawahara/kawahara \
   ../apps/kawahara/inputs_json/nonlinear_pulse_kdv_only.json
 mpirun -n 1 ./apps/kawahara/kawahara \
   ../apps/kawahara/inputs_json/nonlinear_pulse_kawahara.json
 ```
 
-`diagnostics.csv` columns: `step,time,mean,peak_amplitude,peak_x,tail_rms`.
-`tail_rms` is the RMS of `u` outside a fixed window (`4*sigma` on each side)
-around the instantaneous peak -- the shed dispersive-radiation amplitude.
+Both are 1-D lines, so they run on a single rank; HeFFTe cannot split
+\(N_y=N_z=1\) across several.
 
-**Measured on LUMI**, at `t=40`: `mean` is identical between the two runs to
-17 significant digits (\(0.017624730055999\ldots\), conserved, as expected
-from `M(k)` at `k=0`), i.e. the two runs differ only through `gamma`, not
-through any drift in total \(u\). `peak_amplitude`: third-order-only
-`0.16220`, full `0.15274` (full run's peak is **5.8% lower**).
-`tail_rms`: third-order-only `0.014240`, full `0.013266` (full run's
-trailing RMS is **6.8% lower** at `t=40`, `10.4%` lower at `t=38`) --
-a reproducible, if modest, effect: at this amplitude/duration the fifth-order
-term measurably softens the pulse (lower peak) while the two runs' peak
-locations diverge slightly (`73.75` vs `73.25` at `t=40`), consistent with
-the fifth-order term changing the effective nonlinear propagation, not
-simply adding a separate radiating tail on top of an otherwise-identical
-core.
+`diagnostics.csv` columns: `step,time,mean,peak_amplitude,peak_x,tail_rms`.
+`tail_rms` is the RMS of `u` outside a window of \(\pm3W\) around the
+instantaneous peak — the shed dispersive-radiation amplitude. A sech\(^2\)
+holds over 99.9% of its area inside that window, and its remaining skirt is
+what the control's small nonzero `tail_rms` measures.
+
+### Measured on LUMI, at \(t=100\)
+
+| Quantity | KdV control (`gamma=0`) | Full Kawahara (`gamma=1/90`) |
+|---|---|---|
+| `mean` | `0.0012757759076995707` | `0.0012757759076995744` |
+| `peak_amplitude` | `0.05000699988643334` | `0.03598628436280036` |
+| `peak_x` | `34.5` | `35.25` |
+| `tail_rms` | `4.1875e-05` | `3.1327e-03` |
+
+Reading that across:
+
+- **The control is steady.** Its peak amplitude is unchanged to 1.4 parts in
+  \(10^4\) after 20000 steps, and its `tail_rms` is the same
+  \(4.19\times10^{-5}\) it started at — the sech\(^2\) skirt, not radiation.
+  It has moved \(2.50\) code lengths, against \(cT = 0.025\times100 = 2.50\)
+  from the closed form. This is the control behaving as an exact solution
+  should, which is the whole reason the comparison below means anything.
+- **The full run radiates.** `tail_rms` is 75× the control's, and the pulse
+  has given up 28% of its amplitude to pay for it.
+- **The radiation is at the predicted wavenumber.** The test measures the
+  dominant wavenumber of the field outside the pulse window (with a
+  raised-cosine mask, so the window's own edges contribute nothing at the
+  scale of interest) and finds \(k=1.669\) against
+  \(k_{\mathrm{res}}=1.5579\) — a 7% overshoot, consistent with the pulse
+  radiating while its own amplitude, and therefore its speed, is still
+  changing. The control's masked field peaks at \(k=0.049\), the lowest mode
+  in the box: no wave train at all.
+- **Mean is conserved** to a relative \(2\times10^{-15}\) in both, as it must
+  be — both terms in the PDE are \(x\)-derivatives, so the \(k=0\) mode is
+  untouched by construction.
+
+**What this is and is not.** The mapping from \((h,g,\tau)\) to
+\((\alpha,\beta,\gamma)\) is *representative*, not primary-source-verified;
+see the provenance note in `capillary_gravity_mapping.hpp`. The numbers above
+are exact statements about this solver on this input, and the resonance
+agreement is a genuine physical check of it, but the run is not calibrated
+against a laboratory water-wave experiment.
+
+**Superseded approach.** Earlier revisions of this case used a Gaussian bump
+of `amplitude=0.15`, `sigma=6` run to \(t=40\). A Gaussian solves neither
+equation: it steepens under \(\alpha uu_x\), and this close to the critical
+Bond number the dispersion available to arrest the steepening is weak
+(\(|\beta|=0.017\)), so the "control" was integrating the numerical approach
+to a gradient singularity — measurably flat only out to \(t\approx27\), with
+the estimated Burgers breaking time at \(t\approx44\). Whether it survived to
+\(t=40\) depended on the platform's rounding: it did on LUMI/Cray and
+produced `NaN` on `ubuntu-24.04`/`gcc-13`. The difference it reported between
+the two runs (a 6.8% change in trailing RMS) was also an order of magnitude
+smaller than what the solitary wave shows. The solitary wave takes the
+singularity out of the problem instead of timing the run to stop just short
+of it.
 
 ## Run (original verification preset)
 
@@ -239,8 +310,11 @@ the quadratic term on -- unchanged, still the numerical-verification core.
   (carrier mode phase) against \(d\omega/dk\) and \(\omega/k\) for `k0` on
   both sides of the crossover, plus the automated `edge_fraction` no-wrap
   check;
-- a reproducible difference in trailing-radiation RMS between a
-  third-order-only and a full third+fifth-order nonlinear pulse run, and
+- that the `gamma=0` control is an exact KdV solitary wave (steady peak
+  amplitude, closed-form propagation speed, no wave train behind it), that
+  switching `gamma` on costs it 28% of its amplitude and raises the trailing
+  RMS 75-fold, and that the shed wave train sits within 7% of the
+  wavenumber where the linear phase velocity equals the pulse's own speed,
   mean-\(u\) conservation for both.
 
 HIP builds add `HIP_KawaharaETD` and `kawahara-hip-smoke`; the `#119`
@@ -261,4 +335,5 @@ LUMI-G smoke: job 21792406 (`small-g`, 32-point line, mean \(u=0\)).
 | `src/kawahara.cpp` / `src/hip/` | CPU / HIP `main` |
 | `inputs_json/pulse.json` | Localized long-wave pulse (verification preset) |
 | `inputs_json/wave_packet_{below,above}_crossover.json` | Science case A |
+| `include/kawahara/kdv_soliton.hpp` | Exact KdV solitary-wave IC, width derived from `alpha`/`beta` (`#119`) |
 | `inputs_json/nonlinear_pulse_{kdv_only,kawahara}.json` | Science case B |

@@ -18,9 +18,9 @@
     },
     "timestepping": {
         "t0": 0.0,
-        "t1": 40.0,
+        "t1": 100.0,
         "dt": 0.005,
-        "saveat": 1.0
+        "saveat": 2.0
     },
     "fields": [
         {
@@ -31,16 +31,17 @@
     "initial_conditions": [
         {
             "target": "u",
-            "type": "gaussian_pulse",
+            "type": "kdv_soliton",
             "u0": 0.0,
-            "amplitude": 0.15,
-            "sigma": 6.0,
-            "x0": 64.0
+            "amplitude": 0.05,
+            "alpha": 1.5,
+            "beta": -0.016666666666666666,
+            "x0": 32.0
         }
     ],
     "diagnostics": {
         "kind": "pulse",
         "csv": "results/kawahara/nonlinear_pulse_kawahara.csv",
-        "window": 24.0
+        "window": 9.8
     }
 }
