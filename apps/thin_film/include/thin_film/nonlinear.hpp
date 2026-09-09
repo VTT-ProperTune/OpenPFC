@@ -45,21 +45,42 @@
 
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/data/host_device.hpp>
+#include <openpfc/kernel/execution/memory_space.hpp>
+#include <openpfc/kernel/simulation/spectral_pointwise.hpp>
 
 #include <thin_film/thin_film_pointwise.hpp>
 
 namespace thin_film {
 
 /// Cubic lubrication mobility, normalised so that \f$M(h_0)=M_0\f$.
+///
+/// Trivially copyable and `OPENPFC_HD` so it can run through
+/// `pfc::apps::MobilityGradPointwise` on host or device (see
+/// `apps/thin_film/src/gpu/thin_film_pointwise.inc`).
 struct CubicMobility {
   double M0{1.0};
   double h0{1.0};
   /// Films are clamped away from zero; a ruptured cell must not give M < 0.
   static constexpr double kMinH = 1.0e-6;
 
-  [[nodiscard]] double operator()(double h) const {
-    const double u = std::max(h, kMinH) / h0;
+  [[nodiscard]] OPENPFC_HD double operator()(double h) const {
+    const double u = (h > kMinH ? h : kMinH) / h0;
     return M0 * u * u * u;
+  }
+};
+
+/**
+ * @brief Device-capable adapter: \f$\Pi(h)\f$ as a `SpectralPointwise`
+ *        functor, for computing the full disjoining potential (not the
+ *        ETD remainder `ThinFilmPointwise::nonlinearity`).
+ */
+struct PotentialPointwise {
+  ThinFilmPointwise pw{};
+
+  [[nodiscard]] OPENPFC_HD double
+  nonlinearity(const pfc::sim::SpectralCell &cell) const {
+    return pw.Pi(cell.psi);
   }
 };
 
@@ -80,9 +101,10 @@ struct FilmSample {
  * @param rupture_frac rupture when `min_h < rupture_frac * h0`
  * @param comm         communicator to reduce over
  */
+template <class MemorySpace = pfc::HostSpace>
 [[nodiscard]] inline FilmSample
-sample_film(pfc::data::Field<double> &h, const pfc::Domain &domain, double h0,
-            double rupture_frac, MPI_Comm comm) {
+sample_film(pfc::data::Field<double, MemorySpace> &h, const pfc::Domain &domain,
+           double h0, double rupture_frac, MPI_Comm comm) {
   double lo = std::numeric_limits<double>::infinity(), hi = -lo;
   double local_sum = 0.0, local_holes = 0.0, local_cells = 0.0;
   h.with_host_view([&](const double *d, std::size_t n) {

@@ -114,7 +114,35 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - Conservative flux nonlinearity for the applications whose mobility depends on
   the field inside a divergence (`#114`): `pfc::apps::SpectralFlux` and
   `pfc::apps::FluxETD` in `apps/common`, evaluating `div(M(u) grad p)`
-  spectrally with Orszag 2/3 dealiasing and an ETD1 update. Host only.
+  spectrally with Orszag 2/3 dealiasing and an ETD1 update. Now templated on
+  `MemorySpace` and running on GPU as well as host -- see the entry below.
+- GPU flux path and a heroic-scale GPU dewetting run: `SpectralFlux<MemorySpace>`
+  and `FluxETD<MemorySpace>` route every elementwise step (the complex `i*k_d`
+  gradient, the dealias mask, the ETD combine) through
+  `pfc::sim::SpectralETDOps<MemorySpace>`, which already carried a
+  complex-coefficient `combine_raw` overload with real CUDA/HIP kernels behind
+  it; the mobility `M(u)` is evaluated on device with the same
+  `OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE` mechanism the physics nonlinearities
+  use, fused with the gradient multiply in one kernel launch
+  (`pfc::apps::MobilityGradPointwise`). New `thin_film_nonlinear_hip` binary
+  (same JSON schema and observables as `thin_film_nonlinear`), gated on
+  `OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL`,
+  plus a HIP-vs-host parity `ctest` case. The host path is unchanged
+  arithmetically (same operand order throughout, verified bit-identical by
+  construction). Measured on LUMI (128², `dt=0.002`, 10000 steps, 1 GCD vs 1
+  CPU rank): `min_h` agrees to a relative `1.6e-13`, liquid volume to
+  `4.4e-15` -- FFTW-vs-rocFFT round-off, not a numerical difference.
+  Heroic run (LUMI job 21857011): the spontaneous-dewetting preset at 4096²
+  (dx=0.5, ~128 fastest-growing wavelengths per side, 64x the validated 512²
+  case's area) on 16 GCDs (2 `standard-g` nodes), `t1=140`, `dt=0.002`
+  (70000 steps) in 2333.6 s (33.3 ms/step). Volume conserved to a relative
+  1.5e-14 through the valid window; the precursor is reached at `t=115`
+  (`min_h=0.133`) -- earlier than the 512² case's `t=140`, consistent with
+  more independent nucleation sites racing to rupture first over 64x the
+  area. The run then hits the documented, out-of-scope divergence near
+  `min_h~0.6 h*` around `t=130`-`135`, reproducing the known breakdown at a
+  resolution and domain size the CPU verifier never exercised -- confirming
+  it is a scale-independent modelling limitation, not a GPU-path defect.
 - `thin_film` science case: full `h^3` lubrication mobility, a precursor
   disjoining pressure that survives hole formation, and spontaneous versus
   defect-triggered dewetting presets. A 30 % deep defect brings failure forward

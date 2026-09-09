@@ -9,10 +9,13 @@ Lubrication **dewetting / coating** of a periodic liquid film, integrated
 with spectral ETD. This is the 0.2 application for GitHub issue `#78`.
 
 Binaries: `thin_film` (CPU, linear verifier); `thin_film_nonlinear` (CPU, full
-`h^3` lubrication, spectral ETD); `thin_film_fd` (CPU, the same `h^3`
+`h^3` lubrication, spectral ETD, `#114`); `thin_film_fd` (CPU, the same `h^3`
 lubrication, conservative face-flux FD -- integrates *through* rupture where
 the two spectral solvers cannot, see "Two methods, one problem" below);
-`thin_film_hip` when `OpenPFC_ENABLE_HIP_SPECTRAL` is on.
+`thin_film_hip` / `thin_film_nonlinear_hip` when `OpenPFC_ENABLE_HIP_SPECTRAL`
+is on. The nonlinear flux path (`pfc::apps::SpectralFlux` / `FluxETD`) runs on
+host and device -- see
+[`spectral_flux.hpp`](../common/include/openpfc_apps/spectral_flux.hpp).
 
 ## Dewetting and rupture: problem setup
 
@@ -46,6 +49,11 @@ Because `M(h)` sits *inside* a divergence it cannot be written as a
 reciprocal-space symbol, so this case uses the shared conservative flux stepper
 [`openpfc_apps/spectral_flux.hpp`](../common/include/openpfc_apps/spectral_flux.hpp)
 rather than the pointwise ETD path — four extra transforms per step in 2-D.
+`SpectralFlux` / `FluxETD` are templated on `MemorySpace`, so `thin_film_nonlinear`
+(host) and `thin_film_nonlinear_hip` (device) run the identical physics; the
+mobility \(M(h)\) is evaluated on device with the same pointwise mechanism the
+\(\Pi\) remainder uses (`OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE`, see
+`src/gpu/thin_film_pointwise.inc`).
 
 ### The disjoining pressure needs a precursor
 
@@ -330,11 +338,13 @@ The `h^3` lubrication science cases (`#114`, `#124`) take a different JSON
 shape (`domain.Lx`/`Ly`/`Lz`/`dx`, `model.params` adds `h_star`,
 `timestepping.t1`/`dt`/`saveat`, `initial_conditions.amplitude`/`seed`/
 `defect_amplitude`/`defect_sigma`, `diagnostics.csv`) and the same case file
-drives *either* binary:
+drives *any* of the three nonlinear binaries:
 
 ```bash
 mpirun -n 16 ./apps/thin_film/thin_film_nonlinear \
   ../apps/thin_film/inputs_json/thin_film_dewetting.json   # spectral, stops before rupture
+./apps/thin_film/thin_film_nonlinear_hip \
+  ../apps/thin_film/inputs_json/thin_film_dewetting.json   # same JSON, same observables, on device
 mpirun -n 16 ./apps/thin_film/thin_film_fd \
   ../apps/thin_film/inputs_json/thin_film_fd_dewetting.json  # FD, continues through it
 ```
@@ -355,8 +365,10 @@ mode decaying, and \(A=0\) leveling, plus the nonlinear/flux and FD suites
 conservation via `compute_rhs`, the linearized \(k^4\) decay and unstable
 growth rate, harmonic-vs-arithmetic positivity through a driven rupture, and
 FD-vs-spectral agreement on a controlled single-mode case. HIP builds add
-`HIP_ThinFilmETD` and `thin-film-hip-smoke`. LUMI-G smoke: job 21781449
-(`small-g`, 16², mean \(h=1\)).
+`HIP_ThinFilmETD` (constant-mobility session parity) and a nonlinear-flux
+HIP-vs-host parity case (`[thin_film][hip][nonlinear]`), plus
+`thin-film-hip-smoke`. LUMI-G smoke: job 21781449 (`small-g`, 16², mean
+\(h=1\)).
 
 ## Layout
 
@@ -365,13 +377,16 @@ FD-vs-spectral agreement on a controlled single-mode case. HIP builds add
 | `include/thin_film/thin_film_physics.hpp` | `SpectralETDPhysics` + schema |
 | `include/thin_film/thin_film_pointwise.hpp` | Device-capable \(\Pi\) remainder |
 | `include/thin_film/thin_film_session.hpp` | JSON session, field `h`, 2/3 dealias |
-| `include/thin_film/nonlinear.hpp` | `CubicMobility`, `sample_film`, `GaussianDefect` (shared by both nonlinear solvers) |
+| `include/thin_film/nonlinear.hpp` | `CubicMobility`, `PotentialPointwise`, `sample_film`, `GaussianDefect` (shared by all three nonlinear solvers) |
+| `include/thin_film/nonlinear_driver.hpp` | `MemorySpace`-templated `run_thin_film_nonlinear` (host and device) |
 | `include/thin_film/fd_flux.hpp` | Conservative face-flux FD solver: `FDFluxSolver`, `FaceMobility`, `sample_film_fd`, `count_dry_regions_rank0` |
 | `src/thin_film.cpp` / `src/hip/thin_film.cpp` | CPU / HIP `main` (linear verifier) |
-| `src/thin_film_nonlinear.cpp` | CPU `main`, spectral `h^3` lubrication |
+| `src/thin_film_nonlinear.cpp` / `src/hip/thin_film_nonlinear.cpp` | CPU / HIP `main`, spectral `h^3` lubrication |
 | `src/thin_film_fd.cpp` | CPU `main`, conservative FD `h^3` lubrication |
+| `src/gpu/thin_film_pointwise.{hip,inc}` | Device instantiations: \(\Pi\) remainder, \(\Pi(h)\), \(M(h)\cdot\nabla p\) |
 | `inputs_json/dewetting.json` | Unstable coating (linear verifier) |
 | `inputs_json/leveling.json` | \(A=0\) capillary smoothing (linear verifier) |
 | `inputs_json/thin_film_dewetting.json` / `thin_film_fd_dewetting.json` | Spontaneous dewetting, spectral / FD |
 | `inputs_json/thin_film_defect.json` / `thin_film_fd_defect.json` | Defect-triggered dewetting, spectral / FD |
+| `inputs_json/thin_film_dewetting_heroic.json` | Heroic-scale device run |
 | `slurm/fd_flagship.sbatch` | Reproduces the 512² FD through-rupture runs on `standard-g` |

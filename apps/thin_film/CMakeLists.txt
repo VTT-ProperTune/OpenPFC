@@ -38,7 +38,8 @@ thin_film_cpu_executable(thin_film src/thin_film.cpp)
 install(TARGETS thin_film DESTINATION bin)
 
 # Science driver for #114: full h^3 lubrication mobility through the shared
-# conservative flux stepper. Host only; the flux path has no device kernels.
+# conservative flux stepper (pfc::apps::SpectralFlux / FluxETD), templated on
+# MemorySpace -- host build here, HIP twin below.
 thin_film_cpu_executable(thin_film_nonlinear src/thin_film_nonlinear.cpp)
 install(TARGETS thin_film_nonlinear DESTINATION bin)
 
@@ -53,6 +54,10 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
   thin_film_hip_executable(thin_film_hip src/hip/thin_film.cpp)
   install(TARGETS thin_film_hip DESTINATION bin)
   message(STATUS "thin_film_hip (MPI + HIP spectral) enabled")
+
+  thin_film_hip_executable(thin_film_nonlinear_hip src/hip/thin_film_nonlinear.cpp)
+  install(TARGETS thin_film_nonlinear_hip DESTINATION bin)
+  message(STATUS "thin_film_nonlinear_hip (MPI + HIP spectral flux) enabled")
   if(THIN_FILM_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     include(CTest)
     add_test(NAME thin-film-hip-smoke
