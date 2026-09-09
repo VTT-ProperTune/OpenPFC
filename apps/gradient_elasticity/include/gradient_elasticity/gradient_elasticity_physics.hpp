@@ -85,6 +85,27 @@ struct ModeDisplacement {
   std::complex<double> uy{};
 };
 
+/// Spectral strain-tensor components at one wavevector (tensor, not
+/// engineering, shear: \(\hat\varepsilon_{xy}=\tfrac12(ik_y\hat u_x+ik_x\hat
+/// u_y)\)).
+struct ModeStrain {
+  std::complex<double> exx{};
+  std::complex<double> eyy{};
+  std::complex<double> exy{};
+};
+
+/// Real-space local elastic state derived from the classical constitutive
+/// law evaluated on the (regularized) displacement field -- see
+/// `GradientElasticityPhysics::stress_state`.
+struct LocalStressState {
+  double sxx{};
+  double syy{};
+  double sxy{};
+  double hydrostatic{};   ///< \((\sigma_{xx}+\sigma_{yy})/2\), 2-D mean normal stress.
+  double von_mises{};     ///< in-plane reduced von Mises, see `stress_state`.
+  double energy_density{}; ///< \(\tfrac12\sigma_{ij}\varepsilon^e_{ij}\).
+};
+
 inline pfc::sim::ParameterSchema<GradientElasticitySchemaValues>
 make_gradient_elasticity_schema() {
   pfc::sim::ParameterSchema<GradientElasticitySchemaValues> s;
@@ -200,10 +221,16 @@ struct GradientElasticityPhysics {
     return p;
   }
 
+  /// Displacement fields plus the derived strain/stress/energy diagnostics
+  /// (`#117`): `exx`/`eyy`/`exy` (compatible strain of `u`), `sxx`/`syy`/`sxy`
+  /// (Cauchy stress), `stress_hydro`/`stress_vm` (invariants), and
+  /// `energy_density`. See `stress_state()` for the constitutive convention.
   void declare_fields(pfc::SimulationState &state) const {
-    pfc::sim::add_declared_field<RealType, MemorySpace>(state, "g", domain, box, 0);
-    pfc::sim::add_declared_field<RealType, MemorySpace>(state, "ux", domain, box, 0);
-    pfc::sim::add_declared_field<RealType, MemorySpace>(state, "uy", domain, box, 0);
+    for (const char *name : {"g", "ux", "uy", "exx", "eyy", "exy", "sxx", "syy",
+                             "sxy", "stress_hydro", "stress_vm", "energy_density"}) {
+      pfc::sim::add_declared_field<RealType, MemorySpace>(state, name, domain, box,
+                                                           0);
+    }
   }
 
   /// Helmholtz factor \(\alpha(k^2)\).
@@ -253,6 +280,63 @@ struct GradientElasticityPhysics {
     const double alpha = helmholtz_alpha(k2);
     return 2.0 * (params.lambda + params.mu) * params.eps0 /
            (alpha * (params.lambda + 2.0 * params.mu) * k2);
+  }
+
+  /// Spectral strain \(\hat\varepsilon=\tfrac12(i\mathbf{k}\otimes\hat{\mathbf{u}}
+  /// +\hat{\mathbf{u}}\otimes i\mathbf{k})\) from the mode displacement.
+  [[nodiscard]] ModeStrain strain_from_displacement(double kx, double ky,
+                                                     ModeDisplacement u) const {
+    const std::complex<double> ik{0.0, 1.0};
+    return {ik * kx * u.ux, ik * ky * u.uy,
+            0.5 * (ik * ky * u.ux + ik * kx * u.uy)};
+  }
+
+  /**
+   * @brief Local Cauchy stress, hydrostatic/von-Mises invariants, and
+   * elastic energy density at one grid point, from the compatible strain
+   * \(\varepsilon(\mathbf{u})\) and the local eigenstrain field value \(g\).
+   *
+   * @details
+   * The displacement \(\mathbf{u}\) already solves the regularized
+   * Helmholtz--Navier equilibrium equation, so the strain
+   * \(\varepsilon(\mathbf{u})\) it produces is itself smoothed relative to
+   * the classical (\(\ell=0\)) solution near sharp features. This function
+   * then applies the **classical, local** isotropic constitutive law to
+   * that (already regularized) strain:
+   * \(\sigma=\lambda\,\mathrm{tr}(\varepsilon^e)I+2\mu\varepsilon^e\), with
+   * elastic strain \(\varepsilon^e=\varepsilon(\mathbf{u})-\varepsilon^*\),
+   * \(\varepsilon^*=\varepsilon_0 g I\).
+   *
+   * This is a deliberate, simpler modeling choice: it is **not** the
+   * higher-order Aifantis stress operator
+   * \(\sigma_{\mathrm{grad}}=(1-\ell^2\nabla^2)\sigma_{\mathrm{classical}}\),
+   * which would need its own (order-dependent) regularizing operator and is
+   * not uniquely defined for the `order=6`/`ell4` variants used here.
+   * Regularization enters this report only through the smoothed
+   * displacement/strain field. See the app README for the caveat.
+   *
+   * Von Mises is the **in-plane reduced** invariant
+   * \(\sigma_{vm}=\sqrt{\sigma_{xx}^2-\sigma_{xx}\sigma_{yy}+\sigma_{yy}^2
+   * +3\sigma_{xy}^2}\); it ignores an out-of-plane \(\sigma_{zz}\) because
+   * the eigenstrain here is purely planar (no `zz` component), so this is
+   * not the full 3-D plane-strain von Mises stress.
+   */
+  [[nodiscard]] LocalStressState stress_state(double exx, double eyy, double exy,
+                                              double g) const {
+    const double eps_star = params.eps0 * g;
+    const double eexx = exx - eps_star;
+    const double eeyy = eyy - eps_star;
+    const double eexy = exy; // eigenstrain here has no shear component
+    const double trace = eexx + eeyy;
+    LocalStressState s{};
+    s.sxx = params.lambda * trace + 2.0 * params.mu * eexx;
+    s.syy = params.lambda * trace + 2.0 * params.mu * eeyy;
+    s.sxy = 2.0 * params.mu * eexy;
+    s.hydrostatic = 0.5 * (s.sxx + s.syy);
+    s.von_mises = std::sqrt(s.sxx * s.sxx - s.sxx * s.syy + s.syy * s.syy +
+                            3.0 * s.sxy * s.sxy);
+    s.energy_density = 0.5 * (s.sxx * eexx + s.syy * eeyy + 2.0 * s.sxy * eexy);
+    return s;
   }
 };
 

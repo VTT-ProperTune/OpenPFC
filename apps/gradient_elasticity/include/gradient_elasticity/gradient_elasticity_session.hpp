@@ -17,6 +17,7 @@
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -27,8 +28,10 @@
 #include <mpi.h>
 #include <nlohmann/json.hpp>
 
+#include <gradient_elasticity/circular_inclusion.hpp>
 #include <gradient_elasticity/cosine_mode.hpp>
 #include <gradient_elasticity/gaussian_inclusion.hpp>
+#include <gradient_elasticity/gradient_elasticity_diagnostics.hpp>
 #include <gradient_elasticity/gradient_elasticity_physics.hpp>
 #include <gradient_elasticity/gradient_elasticity_solve.hpp>
 #include <openpfc/frontend/ui/field_modifier_registry.hpp>
@@ -62,6 +65,7 @@ namespace gradient_elasticity {
 inline void register_catalog() {
   pfc::ui::register_field_modifier<CosineMode>("cosine_mode");
   pfc::ui::register_field_modifier<GaussianInclusion>("gaussian_inclusion");
+  pfc::ui::register_field_modifier<CircularInclusion>("circular_inclusion");
 }
 
 template <class Stack> struct stack_memory_space {
@@ -72,6 +76,37 @@ template <> struct stack_memory_space<pfc::sim::stacks::SpectralCPUStack> {
 };
 template <class Stack>
 using stack_memory_space_t = typename stack_memory_space<Stack>::type;
+
+/// Optional straight-line CSV cut through the field, JSON `"line_profile"`:
+/// `{"path": "...", "x0": <opt>, "y0": <opt>}`. `x0`/`y0` default to the
+/// domain midpoint. Single-rank only, see `write_line_profile`.
+struct LineProfileConfig {
+  bool enabled{false};
+  std::string path;
+  double x0{std::numeric_limits<double>::quiet_NaN()};
+  double y0{std::numeric_limits<double>::quiet_NaN()};
+};
+
+inline LineProfileConfig parse_line_profile(const nlohmann::json &settings) {
+  LineProfileConfig cfg;
+  if (!settings.contains("line_profile")) {
+    return cfg;
+  }
+  const auto &j = settings["line_profile"];
+  if (!j.contains("path") || !j["path"].is_string()) {
+    throw std::invalid_argument(
+        "GradientElasticitySession: 'line_profile.path' must be a string.");
+  }
+  cfg.enabled = true;
+  cfg.path = j["path"].get<std::string>();
+  if (j.contains("x0")) {
+    cfg.x0 = j["x0"].get<double>();
+  }
+  if (j.contains("y0")) {
+    cfg.y0 = j["y0"].get<double>();
+  }
+  return cfg;
+}
 
 template <class Stack = pfc::sim::stacks::SpectralCPUStack>
 class GradientElasticitySession {
@@ -90,6 +125,7 @@ public:
                             MPI_Comm comm = MPI_COMM_WORLD)
       : m_settings(with_backend_default(settings_in)),
         m_ctx{.comm = comm, .mpi_rank = rank, .rank0 = (rank == 0)},
+        m_nproc(nproc),
         m_domain(pfc::ui::from_json<pfc::Domain>(m_settings)),
         m_session(
             pfc::ui::make_simulation_session<Stack>(m_settings, rank, nproc, comm)) {
@@ -100,6 +136,7 @@ public:
             : nlohmann::json::object();
     m_physics = Physics::from_json(params, m_domain, inbox);
     m_physics.declare_fields(m_state);
+    m_line_profile = parse_line_profile(m_settings);
 
     auto &modifiers = pfc::ui::default_field_modifier_catalog();
     for (auto &ic :
@@ -154,11 +191,22 @@ public:
     return global;
   }
 
+  /// Solve displacement, derive strain/stress/energy fields (`#117`), write
+  /// requested outputs, and print `SPECTRAL_CHECKSUM` and
+  /// `GRADIENT_ELASTICITY_SUMMARY` lines on rank 0. The summary line carries
+  /// the size-effect observables (peak stresses, total elastic energy) that
+  /// `scripts/gradient_elasticity_size_sweep.py` parses for the size sweep.
   void run() {
-    solve_displacement(fft(), m_physics, g(), ux(), uy());
+    solve_displacement_and_strain(fft(), m_physics, g(), ux(), uy(), exx(), eyy(),
+                                  exy());
+    compute_stress_fields(m_physics, g(), exx(), eyy(), exy(), sxx(), syy(), sxy(),
+                          stress_hydro(), stress_vm(), energy_density());
     write_results();
     const FieldChecksum cs_x = field_checksum("ux");
     const FieldChecksum cs_y = field_checksum("uy");
+    const StressSummary summary = summarize_stress(stress_hydro(), stress_vm(),
+                                                    energy_density(), m_domain,
+                                                    m_ctx.comm);
     if (m_ctx.rank0) {
       std::cout << std::setprecision(17)
                 << "SPECTRAL_CHECKSUM field=ux sum=" << cs_x.sum
@@ -170,13 +218,45 @@ public:
                 << '\n';
       std::cout << "SPECTRAL_CHECKSUM_HEX sum=" << std::hexfloat << cs_x.sum
                 << std::defaultfloat << " sumsq=" << std::hexfloat << cs_x.sumsq
-                << '\n';
+                << std::defaultfloat << '\n';
+      // std::hexfloat leaves the stream in hex-float mode until explicitly
+      // reset (it is not a one-shot manipulator): without the
+      // std::defaultfloat above, GRADIENT_ELASTICITY_SUMMARY below would
+      // print every value as "0x1p+3" instead of decimal, which
+      // scripts/size_sweep.py cannot parse as a plain float.
+      std::cout << std::setprecision(17) << "GRADIENT_ELASTICITY_SUMMARY ell="
+                << m_physics.params.ell << " ell4=" << m_physics.params.ell4
+                << " order=" << m_physics.params.order
+                << " peak_abs_hydrostatic_stress=" << summary.peak_abs_hydrostatic
+                << " peak_von_mises_stress=" << summary.peak_von_mises
+                << " total_elastic_energy=" << summary.total_elastic_energy << '\n';
+    }
+    if (m_line_profile.enabled) {
+      const auto size = pfc::domain::get_size(m_domain);
+      const auto spacing = pfc::domain::get_spacing(m_domain);
+      const double Lx = spacing[0] * static_cast<double>(size[0]);
+      const double Ly = spacing[1] * static_cast<double>(size[1]);
+      const double x0 = std::isfinite(m_line_profile.x0) ? m_line_profile.x0
+                                                          : 0.5 * Lx;
+      const double y0 = std::isfinite(m_line_profile.y0) ? m_line_profile.y0
+                                                          : 0.5 * Ly;
+      write_line_profile(m_line_profile.path, g(), ux(), uy(), stress_hydro(),
+                         stress_vm(), energy_density(), x0, y0, m_nproc);
     }
   }
 
   [[nodiscard]] RealField &g() { return real_field("g"); }
   [[nodiscard]] RealField &ux() { return real_field("ux"); }
   [[nodiscard]] RealField &uy() { return real_field("uy"); }
+  [[nodiscard]] RealField &exx() { return real_field("exx"); }
+  [[nodiscard]] RealField &eyy() { return real_field("eyy"); }
+  [[nodiscard]] RealField &exy() { return real_field("exy"); }
+  [[nodiscard]] RealField &sxx() { return real_field("sxx"); }
+  [[nodiscard]] RealField &syy() { return real_field("syy"); }
+  [[nodiscard]] RealField &sxy() { return real_field("sxy"); }
+  [[nodiscard]] RealField &stress_hydro() { return real_field("stress_hydro"); }
+  [[nodiscard]] RealField &stress_vm() { return real_field("stress_vm"); }
+  [[nodiscard]] RealField &energy_density() { return real_field("energy_density"); }
   [[nodiscard]] pfc::Time &time() noexcept { return m_session.time(); }
   [[nodiscard]] const pfc::Time &time() const noexcept { return m_session.time(); }
   [[nodiscard]] pfc::SimulationState &state() noexcept { return m_state; }
@@ -252,11 +332,13 @@ private:
 
   nlohmann::json m_settings;
   pfc::ui::JsonWiringContext m_ctx{};
+  int m_nproc{1};
   pfc::Domain m_domain{};
   pfc::sim::SimulationSession<Stack> m_session;
   pfc::SimulationState m_state;
   Physics m_physics{};
   std::vector<pfc::ui::NamedResultsWriter> m_writers;
+  LineProfileConfig m_line_profile{};
 };
 
 using GradientElasticityCPUSession =
