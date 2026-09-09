@@ -137,6 +137,23 @@ double cosine_amplitude(const pfc::data::Field<double> &u, int nx) {
   return (den > 0.0) ? num / den : 0.0;
 }
 
+/// |c_m|, the amplitude of grid mode m = k Lx/(2 pi), by direct projection.
+/// Single rank; used to check which modes a step is allowed to populate.
+double mode_coefficient(const pfc::data::Field<double> &u, int m) {
+  const auto n = u.local_size();
+  const auto sp = u.spacing();
+  const double Lx = static_cast<double>(n[0]) * sp[0];
+  const double k = 2.0 * std::numbers::pi * static_cast<double>(m) / Lx;
+  double re = 0.0;
+  double im = 0.0;
+  for (int i = 0; i < n[0]; ++i) {
+    const auto x = u.coords(i, 0, 0);
+    re += u(i, 0, 0) * std::cos(k * x[0]);
+    im += u(i, 0, 0) * std::sin(k * x[0]);
+  }
+  return 2.0 * std::hypot(re, im) / static_cast<double>(n[0]);
+}
+
 /// Amplitude of a single-mode field, from its RMS: for u = A cos(kx + phi),
 /// sqrt(2 <u^2>) = A exactly, whatever the phase. Reading the grid maximum
 /// instead would measure how close a grid point happens to sit to the crest,
@@ -668,6 +685,90 @@ TEST_CASE("Kawahara linear operator: every resolved mode is exactly neutral",
               << " steps=" << std::setprecision(17) << amp);
     CHECK_THAT(amp, WithinAbs(1.0, 1.0e-12));
   }
+}
+
+TEST_CASE("Kawahara nonlinearity populates only the modes u^2 can reach",
+          "[kawahara][operator]") {
+  if (world_size() != 1) {
+    SKIP("single-rank spectral comparison");
+  }
+  // The only nonlinearity is alpha*u*u_x, whose spectral form is
+  // -i(alpha/2) k times the transform of u^2. Starting from a single cosine at
+  // mode m, u^2 = (A^2/2)(1 + cos(2 k x)) exactly, so after one step the field
+  // may contain modes 0, m and 2m -- and nothing else. Ever.
+  //
+  // That makes this a sharp test of the real-space product: if the pointwise
+  // stage reads anything outside the field it owns (transform padding, a
+  // stale buffer, a mis-sized inbox), the garbage is broadband and lights up
+  // every mode at once. A corruption too small to notice in one step is what
+  // a long run integrates into a diverging solution, so it is worth catching
+  // here rather than 7000 steps later.
+  constexpr int N = 512;
+  constexpr double dx = 0.25;
+  constexpr double dt = 0.005;
+  constexpr int m0 = 8;
+  constexpr double amp = 0.2;
+  const auto domain = pfc::domain::create(pfc::GridSize({N, 1, 1}),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing({dx, 1.0, 1.0}));
+  pfc::sim::stacks::SpectralCPUStack stack(domain, 0, 1, MPI_COMM_WORLD);
+  const double Lx = static_cast<double>(N) * dx;
+  const double k0 = 2.0 * std::numbers::pi * static_cast<double>(m0) / Lx;
+
+  // beta = gamma = 0 isolates the nonlinear stage: with no dispersion the
+  // linear symbol is zero and every mode present is one the product put there.
+  json params{{"alpha", 1.5}, {"beta", 0.0}, {"gamma", 0.0}};
+  auto phys = kawahara::KawaharaPhysics<>::from_json(
+      params, domain, stack.fft().get_inbox_bounds());
+  pfc::SimulationState state;
+  phys.declare_fields(state);
+  auto &u = state.get_field<double>("u");
+  u.apply([&](double x, double, double) { return amp * std::cos(k0 * x); });
+
+  pfc::sim::SpectralETDOptions opt;
+  opt.psi_name = "u";
+  opt.dealias = true;
+  pfc::sim::SpectralETDSystem<kawahara::KawaharaPhysics<>> sys(phys, stack.fft(),
+                                                               state, dt, opt);
+  (void)sys.step(0.0);
+
+  CHECK_THAT(mode_coefficient(u, m0), WithinRel(amp, 1.0e-9));
+
+  // The *size* of what the product generates, not only its location. With
+  // beta = gamma = 0 the symbol is zero, phi1 = dt, and ETD1 is exactly one
+  // Euler step, so the second harmonic after one step is known in closed form:
+  //
+  //   u_t = -(alpha/2)(u^2)_x = (alpha A^2 k / 2) sin(2kx)
+  //   =>  amplitude of mode 2m after dt  =  alpha A^2 k dt / 2.
+  //
+  // Checking only which modes appear would pass a nonlinear stage whose
+  // coefficient is off by a factor -- and a wrong nonlinear coefficient is
+  // invisible in any linear test, while it stops a solitary wave from being a
+  // solution and makes it shed and deform over a long run.
+  const double expected_second = 0.5 * 1.5 * amp * amp * k0 * dt;
+  INFO("second harmonic: measured " << std::setprecision(17)
+                                    << mode_coefficient(u, 2 * m0) << ", closed form "
+                                    << expected_second);
+  CHECK_THAT(mode_coefficient(u, 2 * m0), WithinRel(expected_second, 1.0e-9));
+
+  double worst = 0.0;
+  int worst_m = -1;
+  for (int m = 1; m <= N / 2; ++m) {
+    if (m == m0 || m == 2 * m0) continue;
+    const double c = mode_coefficient(u, m);
+    if (c > worst) {
+      worst = c;
+      worst_m = m;
+    }
+  }
+  INFO("largest amplitude outside modes {" << m0 << ", " << 2 * m0
+                                           << "}: " << worst << " at m=" << worst_m
+                                           << " (initial amplitude " << amp << ")");
+  // Measured 2.0e-15 here. The bound is 1e-12: still seven orders below the
+  // second harmonic this step legitimately creates, so anything reading
+  // outside the field is caught, while a different FFT's rounding is not
+  // mistaken for one.
+  REQUIRE(worst < 1.0e-12);
 }
 
 TEST_CASE("KdV soliton initial condition: derived width and rejected signs",
