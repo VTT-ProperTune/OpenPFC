@@ -1,0 +1,31 @@
+{
+    "model": {
+        "name": "surface_diffusion_anisotropic",
+        "params": {
+            "B0": 1.0,
+            "eps_a": 0.5,
+            "m": 6
+        }
+    },
+    "domain": {
+        "Lx": 128,
+        "Ly": 128,
+        "Lz": 1,
+        "dx": 1.0
+    },
+    "timestepping": {
+        "t1": 8.0,
+        "dt": 0.01,
+        "saveat": 0.5
+    },
+    "initial_conditions": {
+        "h0": 0.0,
+        "modes": [
+            {"nx": 16, "ny": 0, "amplitude": 0.05},
+            {"nx": 0, "ny": 16, "amplitude": 0.05}
+        ]
+    },
+    "diagnostics": {
+        "csv": "results/surface_diffusion/nanosurface_anisotropic.csv"
+    }
+}
