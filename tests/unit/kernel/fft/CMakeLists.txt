@@ -14,5 +14,6 @@ if(OpenPFC_ENABLE_HEFFTE)
       ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_comprehensive.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_heap_concept.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_buffer_sizes.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_input_preserved.cpp
   )
 endif()

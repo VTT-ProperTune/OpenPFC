@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/fft/heap_concept.hpp>
 
@@ -173,6 +174,55 @@ struct FFT_Impl : Interface {
 
   detail::FFTWorkspaceStorage<BackendTag> m_ws;
 
+  /**
+   * @brief Copies of the host-path inputs, so the backend cannot eat them.
+   *
+   * @details
+   * `forward` and `backward` take their input by `const&` and callers depend
+   * on that. `SpectralETDSystem::attempt()` depends on it hardest: it forwards
+   * `psi`, then evaluates the pointwise nonlinearity *from the same `psi`*. A
+   * transform that used its input as scratch would leave every spectral
+   * application computing its nonlinear term from a destroyed field.
+   *
+   * HeFFTe 2.4.1 declares the input `input_type const input[]` and then, for
+   * some plan shapes on some FFTW builds, writes to it regardless. Measured
+   * on LUMI with two builds differing only in the FFTW library -- same
+   * source, same compiler, same HeFFTe version, same buffer address -- a
+   * `forward` of a 512-point line left the input untouched against Cray FFTW
+   * 3.3.10.10 and destroyed it against vanilla FFTW 3.3.10 (`input[0]` 0.04
+   * -> 0.32). The transform *output* was correct to 4e-15 in both cases,
+   * which is why this stayed hidden: nothing looks wrong until a second stage
+   * reads the input back, and on the platform this project develops on,
+   * nothing ever did.
+   *
+   * Probing HeFFTe directly against vanilla FFTW, the damage is confined to
+   * **one-dimensional grids**:
+   *
+   *     512 x 1 x 1   input destroyed
+   *     256 x 1 x 1   input destroyed
+   *      64 x 1 x 1   input destroyed
+   *      32 x 32 x 1  input preserved
+   *      16^3, 32^3, 64^3   input preserved
+   *
+   * which is why only the 1-D application (`kawahara`) ever showed it, and
+   * why the 3-D golden checksums stayed green on exactly the platform that
+   * breaks the 1-D ones. The guard is unconditional anyway: the shapes a
+   * backend chooses to scribble on are not something callers should have to
+   * track, and a future 1-D model would otherwise inherit the same trap.
+   *
+   * So the backend gets a copy and the caller keeps its buffer. The cost is
+   * one extra streaming pass per host forward, against an FFT's several, and
+   * `size_inbox()` doubles of memory, lazily sized -- a build that only ever
+   * takes the device path allocates none of it.
+   *
+   * Only `forward` is guarded. `backward` was measured on both FFTW builds
+   * and leaves its input alone, and the device path has not been shown to
+   * have the problem at all. Paying for a copy on either would be guessing;
+   * `test_fft_input_preserved.cpp` asserts the contract on both directions
+   * instead, so a backend that starts breaking it fails there.
+   */
+  RealVector m_in_scratch_real;
+
   FFT_Impl(fft_type fft)
       : m_fft(std::move(fft)), m_ws(m_fft.size_workspace()) {}
 
@@ -213,8 +263,10 @@ struct FFT_Impl : Interface {
     detail::require_equal_size(
         out.size(), size_outbox(),
         "FFT_Impl::forward: complex buffer size ", "size_outbox");
+    m_in_scratch_real.resize(in.size());
     m_fft_time -= MPI_Wtime();
-    m_fft.forward(in.data(), out.data(), m_ws.data_wrk());
+    std::copy(in.begin(), in.end(), m_in_scratch_real.begin());
+    m_fft.forward(m_in_scratch_real.data(), out.data(), m_ws.data_wrk());
     m_fft_time += MPI_Wtime();
   }
 
