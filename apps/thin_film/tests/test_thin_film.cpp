@@ -26,6 +26,9 @@
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
 #include <thin_film/cosine_mode.hpp>
+#include <openpfc_apps/spectral_flux.hpp>
+#include <openpfc_apps/structure_factor.hpp>
+#include <thin_film/nonlinear.hpp>
 #include <thin_film/thin_film_physics.hpp>
 #include <thin_film/thin_film_session.hpp>
 
@@ -232,4 +235,143 @@ int main(int argc, char *argv[]) {
   const int result = Catch::Session().run(argc, argv);
   MPI_Finalize();
   return result;
+}
+
+// ---------------------------------------------------------------------------
+// Nonlinear lubrication (#114)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("Cubic mobility reduces to M0 at the reference thickness",
+          "[thin_film][nonlinear]") {
+  const thin_film::CubicMobility m{2.5, 1.3};
+  REQUIRE_THAT(m(1.3), WithinRel(2.5, 1e-14));
+  REQUIRE_THAT(m(2.6), WithinRel(2.5 * 8.0, 1e-14)); // (2h0)^3 = 8 M0
+  REQUIRE_THAT(m(0.65), WithinRel(2.5 / 8.0, 1e-14));
+  // A ruptured cell must still give a finite, non-negative mobility.
+  REQUIRE(m(0.0) > 0.0);
+  REQUIRE(m(-1.0) > 0.0);
+}
+
+TEST_CASE("Flux stepper reproduces the analytical k^4 decay",
+          "[thin_film][nonlinear][flux]") {
+  if (world_size() != 1) {
+    SKIP("single-rank analytical comparison");
+  }
+  // The whole point of keeping the linear verifier: with a constant mobility
+  // and a small perturbation the nonlinear flux solver must reproduce
+  // exp(-M0 gamma k^4 t) exactly, or the flux path is wrong.
+  constexpr int N = 32;
+  constexpr int nx = 2;
+  constexpr double h0 = 1.0, gamma = 1.0, M0 = 1.0;
+  constexpr double amp = 1.0e-6, dt = 0.01;
+  constexpr int steps = 20;
+
+  const auto domain = pfc::domain::create(pfc::GridSize({N, N, 1}),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing({1.0, 1.0, 1.0}));
+  pfc::sim::stacks::SpectralCPUStack stack(domain, 0, 1, MPI_COMM_WORLD);
+  auto &h = stack.u();
+  const double twopi = 2.0 * std::numbers::pi;
+  const double L = static_cast<double>(N);
+  h.apply([&](double x, double, double) {
+    return h0 + amp * std::cos(twopi * nx * x / L);
+  });
+
+  std::vector<double> k_lap(stack.fft().size_outbox(), 0.0);
+  pfc::fft::kspace::for_each_kpoint(
+      stack.fft().get_outbox_bounds(), domain,
+      [&](std::size_t i, double kx, double ky, double kz, int, int, int) {
+        k_lap[i] = -(kx * kx + ky * ky + kz * kz);
+      });
+
+  // A = 0, so Pi == 0 and p = -gamma lap h. Constant mobility M0.
+  pfc::apps::FluxETD stepper(domain, stack.fft(), dt, [=](double kl) {
+    return -M0 * gamma * kl * kl;
+  });
+  auto potential = [&](pfc::data::Field<std::complex<double>> &h_hat,
+                       pfc::data::Field<double> &, 
+                       pfc::data::Field<std::complex<double>> &out) {
+    h_hat.with_host_view([&](std::complex<double> *hv, std::size_t m) {
+      out.with_host_view([&](std::complex<double> *o, std::size_t) {
+        for (std::size_t i = 0; i < m; ++i) o[i] = -gamma * k_lap[i] * hv[i];
+      });
+    });
+  };
+  auto constant_mobility = [=](double) { return M0; };
+
+  double t = 0.0;
+  for (int s = 0; s < steps; ++s)
+    t = stepper.step(t, h, potential, constant_mobility);
+
+  const double k = twopi * nx / L;
+  const double expected = amp * std::exp(-M0 * gamma * k * k * k * k * t);
+  // Project onto the mode.
+  double num = 0.0, den = 0.0;
+  const auto n = h.local_size();
+  for (int j = 0; j < n[1]; ++j)
+    for (int i = 0; i < n[0]; ++i) {
+      const auto x = h.coords(i, j, 0);
+      const double w = std::cos(twopi * nx * x[0] / L);
+      num += (h(i, j, 0) - h0) * w;
+      den += w * w;
+    }
+  REQUIRE_THAT(num / den, WithinRel(expected, 1e-8));
+}
+
+TEST_CASE("Cubic mobility conserves liquid volume", "[thin_film][nonlinear]") {
+  if (world_size() != 1) {
+    SKIP("single-rank conservation check");
+  }
+  constexpr int N = 32;
+  constexpr double h0 = 1.0, dt = 0.005;
+  const auto domain = pfc::domain::create(pfc::GridSize({N, N, 1}),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing({1.0, 1.0, 1.0}));
+  pfc::sim::stacks::SpectralCPUStack stack(domain, 0, 1, MPI_COMM_WORLD);
+  auto &h = stack.u();
+  const double twopi = 2.0 * std::numbers::pi;
+  h.apply([&](double x, double y, double) {
+    return h0 * (1.0 + 0.2 * std::cos(twopi * 2 * x / N) *
+                           std::cos(twopi * 2 * y / N));
+  });
+
+  std::vector<double> k_lap(stack.fft().size_outbox(), 0.0);
+  pfc::fft::kspace::for_each_kpoint(
+      stack.fft().get_outbox_bounds(), domain,
+      [&](std::size_t i, double kx, double ky, double kz, int, int, int) {
+        k_lap[i] = -(kx * kx + ky * ky + kz * kz);
+      });
+
+  pfc::apps::FluxETD stepper(domain, stack.fft(), dt,
+                             [=](double kl) { return -kl * kl; });
+  auto potential = [&](pfc::data::Field<std::complex<double>> &h_hat,
+                       pfc::data::Field<double> &,
+                       pfc::data::Field<std::complex<double>> &out) {
+    h_hat.with_host_view([&](std::complex<double> *hv, std::size_t m) {
+      out.with_host_view([&](std::complex<double> *o, std::size_t) {
+        for (std::size_t i = 0; i < m; ++i) o[i] = -k_lap[i] * hv[i];
+      });
+    });
+  };
+  const thin_film::CubicMobility mobility{1.0, h0};
+
+  const auto v0 = thin_film::sample_film(h, domain, h0, 0.05, MPI_COMM_WORLD);
+  double t = 0.0;
+  for (int s = 0; s < 40; ++s) t = stepper.step(t, h, potential, mobility);
+  const auto v1 = thin_film::sample_film(h, domain, h0, 0.05, MPI_COMM_WORLD);
+
+  // A divergence form conserves the integral to round-off, whatever M does.
+  REQUIRE_THAT(v1.volume, WithinRel(v0.volume, 1e-11));
+  REQUIRE(v1.max_h != v0.max_h); // and the profile did evolve
+}
+
+TEST_CASE("Gaussian defect is a localized depression", "[thin_film][nonlinear]") {
+  const auto domain = pfc::domain::create(pfc::GridSize({64, 64, 1}),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing({1.0, 1.0, 1.0}));
+  const auto d = thin_film::GaussianDefect::centred(domain, 0.2, 4.0);
+  REQUIRE_THAT(d(32.0, 32.0), WithinRel(-0.2, 1e-12)); // deepest at the centre
+  REQUIRE(std::abs(d(0.0, 0.0)) < 1e-6);               // and local
+  const thin_film::GaussianDefect none{};
+  REQUIRE(none(1.0, 2.0) == 0.0);
 }

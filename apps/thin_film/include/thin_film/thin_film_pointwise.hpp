@@ -28,6 +28,20 @@ namespace thin_film {
 struct ThinFilmPointwise {
   double A{0.05};   ///< disjoining strength
   double h0{1.0};   ///< linearization thickness
+  /**
+   * Precursor thickness. Zero keeps the original two-term potential, which is
+   * unstable at \f$h_0\f$ but has **no stable state at small \f$h\f$**: once
+   * a hole opens, \f$(h_0/h)^9\f$ runs away and the solution diverges. That is
+   * fine for the linear verifier, which never leaves the small-amplitude band,
+   * and fatal for a rupture study.
+   *
+   * A positive value switches to the precursor form
+   * \f$\Pi = A[(h_*\!/h)^9 - (h_*\!/h)^3]\f$, which is repulsive below
+   * \f$h_*\f$ and attractive above it: the film still destabilises at
+   * \f$h_0\f$ (\f$\Pi'(h_0) \approx 3Ah_*^3/h_0^4 > 0\f$) but a rupturing
+   * hole drains to a stable precursor rather than to zero.
+   */
+  double h_star{0.0};
   double Pi0{0.0};  ///< \f$\Pi(h_0)\f$
   double Pip0{0.0}; ///< \f$\Pi'(h_0)\f$
 
@@ -38,6 +52,11 @@ struct ThinFilmPointwise {
   }
 
   [[nodiscard]] OPENPFC_HD double Pi(double h) const {
+    if (h_star > 0.0) {
+      const double v = h_star / clamp_h(h);
+      const double v3 = v * v * v;
+      return A * (v3 * v3 * v3 - v3);
+    }
     const double u = clamp_h(h) / h0;
     const double u3 = u * u * u;
     const double u9 = u3 * u3 * u3;
@@ -46,6 +65,12 @@ struct ThinFilmPointwise {
 
   [[nodiscard]] OPENPFC_HD double Pi_prime(double h) const {
     const double hh = clamp_h(h);
+    if (h_star > 0.0) {
+      const double v = h_star / hh;
+      const double v3 = v * v * v;
+      // d/dh [ (h*/h)^9 - (h*/h)^3 ] = ( -9 (h*/h)^9 + 3 (h*/h)^3 ) / h
+      return A * (-9.0 * v3 * v3 * v3 + 3.0 * v3) / hh;
+    }
     const double u = hh / h0;
     const double u4 = u * u * u * u;
     const double u10 = u4 * u4 * u * u;

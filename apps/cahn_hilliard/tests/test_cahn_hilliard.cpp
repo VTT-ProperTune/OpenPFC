@@ -25,7 +25,7 @@
 #include <cahn_hilliard/cahn_hilliard_session.hpp>
 #include <cahn_hilliard/cosine_mode.hpp>
 #include <cahn_hilliard/fe_cr_thermo.hpp>
-#include <cahn_hilliard/structure_factor.hpp>
+#include <openpfc_apps/structure_factor.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/simulation/simulation_state.hpp>
@@ -522,9 +522,9 @@ TEST_CASE("Structure factor finds the wave number of a single mode",
   pfc::data::Field<std::complex<double>> hat(domain,
                                              stack.fft().get_outbox_bounds(), 0);
   pfc::sim::SpectralETDOps<pfc::HostSpace>::forward(stack.fft(), c, hat);
-  cahn_hilliard::StructureFactor sf;
+  pfc::apps::StructureFactor sf;
   hat.with_host_view([&](std::complex<double> *h, std::size_t) {
-    sf = cahn_hilliard::shell_average(stack.fft().get_outbox_bounds(), domain, h,
+    sf = pfc::apps::shell_average(stack.fft().get_outbox_bounds(), domain, h,
                                       MPI_COMM_WORLD, 64);
   });
 
@@ -548,12 +548,12 @@ TEST_CASE("Coarsening exponent recovers a known power law",
     t.push_back(ti);
     L.push_back(3.7 * std::pow(ti, 1.0 / 3.0));
   }
-  REQUIRE_THAT(cahn_hilliard::coarsening_exponent(t, L),
+  REQUIRE_THAT(pfc::apps::coarsening_exponent(t, L),
                WithinRel(1.0 / 3.0, 1e-9));
   // A t=0 sample is ignored rather than poisoning the log fit.
   t.insert(t.begin(), 0.0);
   L.insert(L.begin(), 0.0);
-  REQUIRE_THAT(cahn_hilliard::coarsening_exponent(t, L),
+  REQUIRE_THAT(pfc::apps::coarsening_exponent(t, L),
                WithinRel(1.0 / 3.0, 1e-9));
-  REQUIRE(cahn_hilliard::coarsening_exponent({1.0}, {2.0}) == 0.0);
+  REQUIRE(pfc::apps::coarsening_exponent({1.0}, {2.0}) == 0.0);
 }
