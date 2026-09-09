@@ -58,10 +58,23 @@
  *
  * ## Scope
  *
- * Host (CPU) only. The device `Ops` layer exposes real-coefficient multiplies,
- * and the gradient needs a complex \f$ik_d\f$, so a GPU flux path needs kernels
- * that do not exist yet. Applications keep their existing constant-mobility HIP
- * twins; the nonlinear science presets are CPU.
+ * `SpectralFlux<MemorySpace>` and `FluxETD<MemorySpace>` run on host *and*
+ * device: every elementwise step (the complex \f$ik_d\f$ gradient, the
+ * dealias mask, the ETD combine) goes through
+ * `pfc::sim::SpectralETDOps<MemorySpace>`, which for `CUDASpace`/`HIPSpace`
+ * dispatches to the real CUDA/HIP kernels behind `combine_raw` — including its
+ * **complex**-coefficient overload (`combine_two_term_{cuda,hip}_impl` with
+ * `const Complex *e, const Complex *w`), which is exactly what a complex
+ * `i k_d` multiply needs. The one piece that is not a diagonal k-space
+ * operator is the real-space mobility \f$M(u)\f$; it is evaluated with the
+ * same device-capable pointwise mechanism the physics nonlinearities use
+ * (`Ops::pointwise`, `OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE`), fused with the
+ * multiply against the gradient in one kernel launch via `MobilityGradPointwise`
+ * (see below). A caller wiring the mobility onto a device build must supply an
+ * `OPENPFC_HD`, trivially-copyable `Mobility` and instantiate
+ * `MobilityGradPointwise<Mobility>` in one `.cu`/`.hip` translation unit,
+ * exactly as a physics functor does; `apps/thin_film/src/gpu/` is the worked
+ * example (`CubicMobility` on `pfc::HIPSpace`).
  */
 
 #include <cmath>
@@ -69,43 +82,74 @@
 #include <cstddef>
 #include <functional>
 #include <numbers>
+#include <span>
 #include <stdexcept>
+#include <type_traits>
 #include <vector>
 
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/data/host_device.hpp>
+#include <openpfc/kernel/execution/memory_space.hpp>
 #include <openpfc/kernel/fft/kspace_iterator.hpp>
 #include <openpfc/kernel/simulation/spectral_etd_ops.hpp>
+#include <openpfc/kernel/simulation/spectral_pointwise.hpp>
+#include <openpfc/runtime/gpu/spectral_etd_ops_gpu.hpp>
 
 namespace pfc::apps {
 
 /**
- * @brief Spectral evaluation of \f$\nabla\cdot[M(u)\nabla p]\f$ on the host.
+ * @brief Device-capable adapter: `M(u) * grad` in one pointwise kernel.
+ *
+ * @details
+ * `pfc::sim::SpectralCell` carries three real inputs per cell (`psi`,
+ * `psi_mf`, `p_star`); `SpectralFlux` repurposes the mean-field slot to carry
+ * the already-transformed real-space gradient, so the mobility evaluation and
+ * its multiply against the gradient are one launch instead of two. `Mobility`
+ * must be trivially copyable and expose `OPENPFC_HD double operator()(double)
+ * const` (a small value struct such as `thin_film::CubicMobility`, or a
+ * capture-by-value lambda for the host-only path).
  */
-class SpectralFlux {
-  using Ops = pfc::sim::SpectralETDOps<pfc::HostSpace>;
+template <class Mobility> struct MobilityGradPointwise {
+  Mobility mobility{};
+
+  [[nodiscard]] OPENPFC_HD double
+  nonlinearity(const pfc::sim::SpectralCell &cell) const {
+    return mobility(cell.psi) * cell.psi_mf;
+  }
+};
+
+/**
+ * @brief Spectral evaluation of \f$\nabla\cdot[M(u)\nabla p]\f$.
+ *
+ * @tparam MemorySpace `HostSpace` (default), `CUDASpace`, or `HIPSpace`.
+ */
+template <class MemorySpace = pfc::HostSpace> class SpectralFlux {
+  using Ops = pfc::sim::SpectralETDOps<MemorySpace>;
 
 public:
-  using Complex = Ops::Complex;
-  using RealField = Ops::RealField;
-  using ComplexField = Ops::ComplexField;
-  using FFT = Ops::FFT;
+  using Complex = typename Ops::Complex;
+  using RealField = typename Ops::RealField;
+  using ComplexField = typename Ops::ComplexField;
+  using FFT = typename Ops::FFT;
+  using real_coeffs = typename Ops::real_coeffs;
+  using complex_scratch = typename Ops::complex_scratch;
 
   SpectralFlux(const pfc::Domain &domain, FFT &fft)
-      : m_domain(domain), m_fft(fft),
-        m_grad_hat(domain, fft.get_outbox_bounds(), 0),
-        m_grad(domain, fft.get_inbox_bounds(), 0),
+      : m_fft(fft), m_grad(domain, fft.get_inbox_bounds(), 0),
         m_flux_hat(domain, fft.get_outbox_bounds(), 0) {
     const auto size = pfc::domain::get_size(domain);
     for (int d = 0; d < 3; ++d) m_active[d] = size[d] > 1;
     const std::size_t n = fft.size_outbox();
-    for (int d = 0; d < 3; ++d) m_k[d].assign(n, 0.0);
+
+    std::vector<double> k[3];
+    for (int d = 0; d < 3; ++d) k[d].assign(n, 0.0);
     // Orszag 2/3 mask. M(u) grad p is a strongly nonlinear product, so the
     // transform of the flux carries wave numbers the grid cannot represent.
     // Without this the aliased content folds back and the run diverges once
     // the profile steepens -- and it does so independently of the timestep,
     // which is how the omission shows itself.
-    m_mask.assign(n, 1.0);
+    std::vector<double> mask_host(n, 1.0);
     const auto dx = pfc::domain::get_spacing(domain);
     double cut[3]{};
     for (int d = 0; d < 3; ++d)
@@ -113,72 +157,121 @@ public:
     pfc::fft::kspace::for_each_kpoint(
         fft.get_outbox_bounds(), domain,
         [&](std::size_t i, double kx, double ky, double kz, int, int, int) {
-          m_k[0][i] = kx;
-          m_k[1][i] = ky;
-          m_k[2][i] = kz;
+          k[0][i] = kx;
+          k[1][i] = ky;
+          k[2][i] = kz;
           const double a[3]{std::abs(kx), std::abs(ky), std::abs(kz)};
           for (int d = 0; d < 3; ++d)
-            if (m_active[d] && a[d] > cut[d]) m_mask[i] = 0.0;
+            if (m_active[d] && a[d] > cut[d]) mask_host[i] = 0.0;
         });
+
+    m_mask = Ops::make_real(n);
+    Ops::upload(m_mask, std::span<const double>(mask_host));
+
+    std::vector<Complex> zero(n, Complex{0.0, 0.0});
+    std::vector<Complex> ones(n, Complex{1.0, 0.0});
+    m_zero_c = Ops::make_complex(n);
+    m_ones_c = Ops::make_complex(n);
+    Ops::upload(m_zero_c, std::span<const Complex>(zero));
+    Ops::upload(m_ones_c, std::span<const Complex>(ones));
+
+    for (int d = 0; d < 3; ++d) {
+      if (!m_active[d]) continue;
+      std::vector<Complex> ik(n);
+      for (std::size_t i = 0; i < n; ++i) ik[i] = Complex{0.0, k[d][i]};
+      m_ik[d] = Ops::make_complex(n);
+      Ops::upload(m_ik[d], std::span<const Complex>(ik));
+    }
+
+    m_grad_hat_scratch = Ops::make_complex(n);
+    m_flux_hat_masked = Ops::make_complex(n);
+    m_out_accum = Ops::make_complex(n);
+    m_geometry = geometry_of(m_grad);
   }
 
   /**
-   * @brief Accumulate \f$\nabla\cdot[M(u)\nabla p]\f$ into @p out_hat.
+   * @brief Overwrite @p out_hat with \f$\nabla\cdot[M(u)\nabla p]\f$.
    *
    * @param p_hat    transform of the potential
    * @param u        real field the mobility depends on
-   * @param mobility callable `double(double u)` returning \f$M(u)\f$
+   * @param mobility callable `OPENPFC_HD double(double u)` returning
+   *                 \f$M(u)\f$; must be trivially copyable (device builds
+   *                 additionally need `MobilityGradPointwise<Mobility>`
+   *                 explicitly instantiated in one device translation unit)
    * @param out_hat  overwritten with the divergence
    */
   template <class Mobility>
   void divergence(ComplexField &p_hat, RealField &u, Mobility &&mobility,
                   ComplexField &out_hat) {
-    const std::size_t n_out = m_fft.size_outbox();
-    out_hat.with_host_view([&](Complex *out, std::size_t) {
-      for (std::size_t i = 0; i < n_out; ++i) out[i] = Complex{0.0, 0.0};
-    });
+    using MobilityT = std::decay_t<Mobility>;
+    static_assert(std::is_trivially_copyable_v<MobilityT>,
+                  "SpectralFlux::divergence: Mobility must be trivially "
+                  "copyable to run through the device pointwise launcher");
+    const MobilityGradPointwise<MobilityT> functor{mobility};
 
+    bool first = true;
     for (int d = 0; d < 3; ++d) {
       if (!m_active[d]) continue;
 
-      // grad_hat = i k_d p_hat
-      p_hat.with_host_view([&](Complex *p, std::size_t) {
-        m_grad_hat.with_host_view([&](Complex *g, std::size_t) {
-          for (std::size_t i = 0; i < n_out; ++i)
-            g[i] = Complex{0.0, m_k[d][i]} * p[i];
-        });
-      });
-      Ops::backward(m_fft, m_grad_hat, m_grad);
+      // grad_hat = i k_d * p_hat  (second combine term zeroed)
+      Ops::combine(p_hat, p_hat, m_ik[d], m_zero_c, m_grad_hat_scratch);
+      Ops::backward(m_fft, m_grad_hat_scratch, m_grad);
 
-      // grad *= M(u), in real space, where the nonlinearity actually lives
-      u.with_host_view([&](const double *uu, std::size_t count) {
-        m_grad.with_host_view([&](double *g, std::size_t) {
-          for (std::size_t i = 0; i < count; ++i) g[i] *= mobility(uu[i]);
-        });
-      });
+      // grad *= M(u), in real space, where the nonlinearity actually lives.
+      // Fused into one kernel: n_out = mobility(psi) * psi_mf, with psi_mf
+      // repurposed to carry the gradient (see MobilityGradPointwise).
+      Ops::pointwise(m_geometry, 0.0, u, &m_grad, nullptr, m_grad, nullptr,
+                     functor);
+
       Ops::forward(m_fft, m_grad, m_flux_hat);
+      Ops::multiply(m_flux_hat, m_mask, m_flux_hat_masked);
 
-      // out_hat += i k_d * dealias(flux_hat)
-      m_flux_hat.with_host_view([&](Complex *f, std::size_t) {
-        out_hat.with_host_view([&](Complex *out, std::size_t) {
-          for (std::size_t i = 0; i < n_out; ++i)
-            out[i] += Complex{0.0, m_k[d][i]} * (m_mask[i] * f[i]);
-        });
-      });
+      // out_hat = i k_d * dealias(flux_hat)  [first active axis]
+      // out_hat += i k_d * dealias(flux_hat) [subsequent axes]
+      if (first) {
+        Ops::combine(p_hat, m_flux_hat_masked, m_zero_c, m_ik[d], m_out_accum);
+        first = false;
+      } else {
+        Ops::combine(out_hat, m_flux_hat_masked, m_ones_c, m_ik[d], m_out_accum);
+      }
+      Ops::swap(out_hat, m_out_accum);
+    }
+    if (first) {
+      // No active axis (degenerate 1x1x1 domain): out_hat must still be
+      // zeroed, matching every other path through this loop.
+      Ops::combine(out_hat, out_hat, m_zero_c, m_zero_c, m_out_accum);
+      Ops::swap(out_hat, m_out_accum);
     }
   }
 
-  [[nodiscard]] const pfc::Domain &domain() const noexcept { return m_domain; }
-
 private:
-  pfc::Domain m_domain;
+  static pfc::sim::PointwiseGeometry geometry_of(const RealField &f) {
+    const auto &o = f.origin();
+    const auto &s = f.spacing();
+    const auto &box = f.box();
+    return pfc::sim::PointwiseGeometry{.nx = box.size[0],
+                                       .ny = box.size[1],
+                                       .nz = box.size[2],
+                                       .low_x = box.low[0],
+                                       .low_y = box.low[1],
+                                       .low_z = box.low[2],
+                                       .origin_x = o[0],
+                                       .origin_y = o[1],
+                                       .origin_z = o[2],
+                                       .dx = s[0],
+                                       .dy = s[1],
+                                       .dz = s[2]};
+  }
+
   FFT &m_fft;
   bool m_active[3]{};
-  std::vector<double> m_k[3];
-  std::vector<double> m_mask;
-  ComplexField m_grad_hat;
+  real_coeffs m_mask;
+  complex_scratch m_ik[3];
+  complex_scratch m_zero_c, m_ones_c;
   RealField m_grad;
   ComplexField m_flux_hat;
+  complex_scratch m_grad_hat_scratch, m_flux_hat_masked, m_out_accum;
+  pfc::sim::PointwiseGeometry m_geometry{};
 };
 
 /**
@@ -190,15 +283,19 @@ private:
  * * `mobility(u)` — the state-dependent \f$M(u)\f$.
  *
  * plus the linear symbol \f$L(k)\f$ used for the exponential integrator.
+ *
+ * @tparam MemorySpace `HostSpace` (default), `CUDASpace`, or `HIPSpace`.
  */
-class FluxETD {
-  using Ops = pfc::sim::SpectralETDOps<pfc::HostSpace>;
+template <class MemorySpace = pfc::HostSpace> class FluxETD {
+  using Ops = pfc::sim::SpectralETDOps<MemorySpace>;
 
 public:
-  using Complex = Ops::Complex;
-  using RealField = Ops::RealField;
-  using ComplexField = Ops::ComplexField;
-  using FFT = Ops::FFT;
+  using Complex = typename Ops::Complex;
+  using RealField = typename Ops::RealField;
+  using ComplexField = typename Ops::ComplexField;
+  using FFT = typename Ops::FFT;
+  using real_coeffs = typename Ops::real_coeffs;
+  using complex_scratch = typename Ops::complex_scratch;
 
   /**
    * @param domain grid geometry
@@ -207,27 +304,36 @@ public:
    * @param L      linear symbol as a function of \f$k_{\mathrm{lap}}\f$
    */
   FluxETD(const pfc::Domain &domain, FFT &fft, double dt,
-          const std::function<double(double)> &L)
+         const std::function<double(double)> &L)
       : m_fft(fft), m_dt(dt), m_flux(domain, fft),
         m_u_hat(domain, fft.get_outbox_bounds(), 0),
         m_p_hat(domain, fft.get_outbox_bounds(), 0),
         m_div_hat(domain, fft.get_outbox_bounds(), 0) {
     const std::size_t n = fft.size_outbox();
-    m_expL.assign(n, 1.0);
-    m_phi1.assign(n, dt);
-    m_L.assign(n, 0.0);
+    std::vector<double> expL(n, 1.0), phi1(n, dt), negL(n, 0.0), ones(n, 1.0);
     pfc::fft::kspace::for_each_kpoint(
         fft.get_outbox_bounds(), domain,
         [&](std::size_t i, double kx, double ky, double kz, int, int, int) {
           const double k_lap = -(kx * kx + ky * ky + kz * kz);
           const double l = L(k_lap);
-          m_L[i] = l;
+          negL[i] = -l;
           const double a = l * dt;
-          m_expL[i] = std::exp(a);
+          expL[i] = std::exp(a);
           // (e^a - 1)/l, by series where the quotient loses precision.
-          m_phi1[i] = (std::abs(a) < 1.0e-8) ? dt * (1.0 + 0.5 * a)
-                                             : (m_expL[i] - 1.0) / l;
+          phi1[i] = (std::abs(a) < 1.0e-8) ? dt * (1.0 + 0.5 * a)
+                                          : (expL[i] - 1.0) / l;
         });
+
+    m_expL = Ops::make_real(n);
+    m_phi1 = Ops::make_real(n);
+    m_negL = Ops::make_real(n);
+    m_ones = Ops::make_real(n);
+    Ops::upload(m_expL, std::span<const double>(expL));
+    Ops::upload(m_phi1, std::span<const double>(phi1));
+    Ops::upload(m_negL, std::span<const double>(negL));
+    Ops::upload(m_ones, std::span<const double>(ones));
+    m_nl_scratch = Ops::make_complex(n);
+    m_candidate = Ops::make_complex(n);
   }
 
   /**
@@ -237,18 +343,15 @@ public:
   double step(double t, RealField &u, Potential &&potential, Mobility &&mobility) {
     Ops::forward(m_fft, u, m_u_hat);
     potential(m_u_hat, u, m_p_hat);
-    m_flux.divergence(m_p_hat, u, mobility, m_div_hat);
+    m_flux.divergence(m_p_hat, u, std::forward<Mobility>(mobility), m_div_hat);
 
-    const std::size_t n = m_fft.size_outbox();
-    m_u_hat.with_host_view([&](Complex *uh, std::size_t) {
-      m_div_hat.with_host_view([&](Complex *div, std::size_t) {
-        for (std::size_t i = 0; i < n; ++i) {
-          // N = full flux divergence minus the part already carried by L.
-          const Complex nl = div[i] - m_L[i] * uh[i];
-          uh[i] = m_expL[i] * uh[i] + m_phi1[i] * nl;
-        }
-      });
-    });
+    // N = full flux divergence minus the part already carried by L:
+    //   nl_hat = div_hat - L * u_hat = (-L)*u_hat + 1*div_hat
+    Ops::combine(m_u_hat, m_div_hat, m_negL, m_ones, m_nl_scratch);
+    // candidate = exp(L dt) * u_hat + phi1(L dt) * nl_hat
+    Ops::combine(m_u_hat, m_nl_scratch, m_expL, m_phi1, m_candidate);
+    Ops::swap(m_u_hat, m_candidate);
+
     Ops::backward(m_fft, m_u_hat, u);
     return t + m_dt;
   }
@@ -258,9 +361,10 @@ public:
 private:
   FFT &m_fft;
   double m_dt;
-  SpectralFlux m_flux;
+  SpectralFlux<MemorySpace> m_flux;
   ComplexField m_u_hat, m_p_hat, m_div_hat;
-  std::vector<double> m_expL, m_phi1, m_L;
+  real_coeffs m_expL, m_phi1, m_negL, m_ones;
+  complex_scratch m_nl_scratch, m_candidate;
 };
 
 } // namespace pfc::apps
