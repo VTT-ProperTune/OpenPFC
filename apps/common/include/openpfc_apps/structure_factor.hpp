@@ -7,6 +7,10 @@
  * @file structure_factor.hpp
  * @brief Azimuthally averaged structure factor and the domain length it gives.
  *
+ * Shared by the applications whose science case is a selected length scale:
+ * Fe-Cr coarsening, thin-film dewetting, surface-diffusion patterning and
+ * higher-order PFC crystal selection all read the same two numbers off it.
+ *
  * @details
  * The observable that turns a picture of a decomposing alloy into a number.
  * For the composition fluctuation \f$\delta c = c - \bar c\f$,
@@ -50,7 +54,7 @@
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/fft/kspace_iterator.hpp>
 
-namespace cahn_hilliard {
+namespace pfc::apps {
 
 /// One azimuthally averaged spectrum plus the scalars derived from it.
 struct StructureFactor {
@@ -168,4 +172,4 @@ shell_average(const pfc::Box3i &outbox, const pfc::Domain &domain,
   return (count * sxy - sx * sy) / denom;
 }
 
-} // namespace cahn_hilliard
+} // namespace pfc::apps
