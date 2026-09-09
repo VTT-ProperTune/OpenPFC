@@ -12,6 +12,46 @@ elastohydrodynamic problem behind compliant bearings, soft contacts, and
 adhesive films — anywhere a thin fluid layer is bounded by something that
 deforms.
 
+The science case asks: **press a localised load onto the plate, then take it
+away — how far does the gap thin under the press, how widely does the
+disturbance spread, and how does the answer change with plate stiffness?** The
+observables are the **central gap $h_{\mathrm{centre}}(t)$** (equivalently the
+central deflection), the **RMS spreading radius** of the disturbance, and the
+**pressure extrema**. Total liquid volume is a fourth, non-negotiable
+observable: the equation is a divergence, so any drift is solver error.
+
+## Problem setup
+
+Two distinct binaries, two distinct models. `ehd_film` is the **verification
+preset**: constant mobility, no load, one cosine mode, and an exact $k^6$
+decay to compare against. It is a numerical oracle and **not a production
+science case**. `ehd_film_nonlinear` is the **science preset**: cubic mobility,
+an applied and then released load, and the diagnostics below. The table
+describes the science preset; the verification preset is described in the
+column beside it.
+
+| Item | Science preset (`ehd_film_nonlinear`) | Verification preset (`ehd_film`) |
+|---|---|---|
+| Use case | A viscous film under a flexible plate receives a localised press that is then lifted off, and the film redistributes | Numerical oracle: exact single-mode $k^6$ bending relaxation |
+| Domain | 2-D periodic patch, $256 \times 256$ cells at $\Delta x = 1$ (code length units) | 2-D periodic patch, $128 \times 128$ cells at $\Delta x = 1$ |
+| Grid | $t \in [0, 600]$ at $\Delta t = 0.5$ (1200 steps), CSV sample every $10$ | $t \in [0, 2]$ at $\Delta t = 0.05$ (40 steps), output every $0.2$ |
+| Boundary conditions | Periodic on both axes | Periodic on both axes |
+| Initial condition | Uniform gap $h(x,y,0) = h_0$; the whole disturbance comes from the load, not the IC | `cosine_mode`: $h = h_0 + 0.08\cos(k\cdot x)$ with $(n_x,n_y) = (4,2)$ |
+| Key physical parameters | $h_0 = 1$, $M_0 = 1$, $\gamma = 10$, $A = 0$ (adhesion off); load $p_0 = 0.5$, $a = 8$, $t_{\mathrm{load}} = 60$; two stiffnesses $B = 640$ and $B = 100$. **All nondimensional grid-unit values, illustrative, not fitted to a material** | $h_0 = 1$, $B = 1$, $M_0 = 1$, $\gamma = 0$, $A = 0$ — chosen so that $\lambda(k) = -M_0Bk^6$ exactly |
+| Observable | Central gap and deflection, pressure extrema $p_{\max}$/$p_{\min}$, RMS spreading radius, displaced volume, total volume drift | Single-mode amplitude against $e^{-M_0Bk^6t}$, two-mode rate ratio of 64, mean gap |
+| Model maturity | numerical verification: **analytical** — the nonlinear flux solver is asserted to reproduce the exact $k^6$ decay at constant mobility, not assumed to · physical completeness: **reduced** — 2-D lubrication plus Kirchhoff bending plus tension plus optional adhesion; no plate inertia, no cavitation, no solid contact · calibration: **none** | numerical verification: **analytical** · physical completeness: **reduced**, as beside · calibration: **none** |
+
+A periodic patch represents a small window of a much larger plate, far from any
+physical edge or support. That is the right idealisation for asking how a
+*local* disturbance decays and spreads; it is the wrong one for asking how the
+plate responds as a structure, because a clamped or simply supported edge — the
+thing that actually sets a bearing's global stiffness — is exactly what
+periodicity removes. Periodicity also means the disturbance must stay small
+compared with the box, or the measured spreading radius is measuring the box.
+That was checked directly rather than assumed: over the full $t \in [0,600]$
+run the RMS spreading radius peaks at $27.4$ (stiff) and $23.1$ (compliant),
+under 22 % of the $128$-unit domain half-width in both cases.
+
 ## Governing equations
 
 $$

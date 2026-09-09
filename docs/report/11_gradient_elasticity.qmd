@@ -12,6 +12,55 @@ elasticity introduces an internal length $\ell$ that regularises exactly those
 features while leaving the far field classical. It is the continuum answer to
 "what happens below the scale where continuum elasticity stops making sense".
 
+The science case turns that into a measurable size effect: **a misfitting
+circular inclusion of radius $R$ sits in a homogeneous matrix with internal
+length $\ell$ — how does the peak stress around it change as $R/\ell$ is
+swept?** The observables are the **peak hydrostatic stress**
+$\lvert\sigma_h\rvert$, the **peak von Mises stress** $\sigma_{\mathrm{vm}}$,
+and the **total elastic energy**, each as a function of $R/\ell$, plus a radial
+line profile of displacement and stress. For this smooth, finite inclusion —
+which has no classical singularity to begin with — the measured direction is
+that peak stress *decreases* monotonically as $R/\ell$ grows, bounded above by
+a closed-form "clamped" limit at $R/\ell \to 0$ and below by the classical
+Eshelby-type relaxed limit at $R/\ell \to \infty$.
+
+## Problem setup
+
+Two presets, and they are not the same experiment. `inclusion.json` and
+`gaussian.json` are **verification presets**: a single Fourier mode, or a
+Gaussian blob, whose displacement field is known in closed form and small
+enough to run in CI. They exist to check the solver and are **not production
+science cases**. `circular_inclusion.json`, driven by
+`scripts/size_sweep.py`, is the science preset; it is not run in CI.
+
+| Item | Verification preset (`inclusion.json`) | Science preset (`circular_inclusion.json` + sweep) |
+|---|---|---|
+| Use case | Correctness check against the exact Fourier solution for a cosine eigenstrain | How much does an internal length $\ell$ change the peak stress and stored energy of a misfitting inclusion, as a function of its size? |
+| Domain | 2-D periodic square, $L_z = 1$, homogeneous isotropic medium | Same medium; the sweep sets $L = 16\max(R,\ell)$ so the periodic-image ratio stays fixed against both length scales |
+| Grid | $64 \times 64 \times 1$ cells at $\Delta x = 1$ | $256^2$ for the shipped preset; $32^2$–$1024^2$ across the sweep, $\Delta x = 1$ throughout |
+| Boundary conditions | Periodic on every axis; the $\mathbf{k}=0$ mode is projected to $\hat{\mathbf{u}} = 0$, which fixes the rigid-body translation a periodic problem leaves undetermined | Same |
+| Initial condition | `cosine_mode`: $g = A\cos(\mathbf{k}\cdot\mathbf{x})$, $A = 1$, $(n_x,n_y) = (4,2)$ | `circular_inclusion`: a $\tanh$-smoothed flat-top disk, $g = \tfrac12\big[1-\tanh((r-R)/w)\big]$, $R = 32$, $w = 4$ |
+| Key physical parameters | $\mu = 1$, $\lambda = 1$, $\ell = 4$, $\varepsilon_0 = 0.02$, fourth-order $\alpha$. **Nondimensional and illustrative — no material is cited anywhere in the application** | $\mu = 1$, $\lambda = 1$, $\ell = 8$, $\varepsilon_0 = 0.01$; $R$ swept over $4$–$128$. $R/\ell$ is the controlling group, and both lengths are in grid-spacing units |
+| Observable | $u_x$, $u_y$ against the closed-form Fourier displacement, and the derived strain, stress and energy density against theirs | Peak $\lvert\sigma_h\rvert$, peak $\sigma_{\mathrm{vm}}$ and total elastic energy against $R/\ell$; a radial line profile of $u$ and stress |
+| Model maturity | numerical verification: **analytical** · physical completeness: **reduced** — isotropic, homogeneous, plane 2-D, no dislocation or defect representation, and the derived stress uses the *classical local* constitutive law evaluated on the already-$\ell$-regularised displacement rather than a full higher-order stress measure · calibration: **none** | numerical verification: **analytical** at both ends of the sweep — a closed-form clamped limit as $R/\ell \to 0$ and the classical Eshelby-type limit as $R/\ell \to \infty$, both derived and unit-tested — and **regression** (monotonicity and bounds) in between · physical completeness: **reduced**, as beside · calibration: **none** |
+
+There is no time loop in this chapter, so "initial condition" means the imposed
+eigenstrain field rather than a starting state. The JSON still carries a
+`timestepping` block because the shared parser requires one; its values are
+not used.
+
+Periodicity means this is not a single inclusion in an infinite matrix. It is
+one member of an infinite square array of identical inclusions, each sitting in
+its neighbours' elastic fields. That matters more here than in the evolution
+chapters, because elastic fields decay as a power of distance rather than
+exponentially, so the images never quite go away. It was quantified rather than
+assumed: doubling the box changes the peak stress by under 2 % at
+$L/\max(R,\ell) = 16$ and by roughly 4–5 % at a ratio of 8, which is why the
+sweep holds the ratio at 16. What periodicity removes outright is any free
+surface, so there are no image forces and no surface relaxation — this model
+cannot say anything about an inclusion near a boundary, which is precisely
+where size effects are usually measured experimentally.
+
 ## Governing equations
 
 A Helmholtz operator applied to the Navier operator:
@@ -84,11 +133,25 @@ solve.
   $\alpha$ factor as designed.
 * **Zero mean.** $\langle\mathbf{u}\rangle = 0$ exactly, from the
   $\mathbf{k}=0$ projection.
+* **Derived fields.** Strain, Cauchy stress and elastic energy density,
+  computed spectrally from the displacement, match the analytical cosine-mode
+  values to $10^{-9}$.
+* **Classical inclusion limit.** At $\ell = 0$ the peak hydrostatic and von
+  Mises stresses around the circular inclusion agree with the classical
+  closed form to within 12 %, the residual being the finite interface width.
+* **Size-effect bounds.** Peak stress decreases monotonically with $R/\ell$
+  and stays between the derived clamped and classical limits.
+* **Periodic-image control.** Doubling the box changes the peak stress by
+  under 2 % at $L/\max(R,\ell) = 16$.
 
 ## Binaries and inputs
 
-`gradient_elasticity` (CPU), `gradient_elasticity_hip`. Presets
-`inclusion.json`, `gaussian.json`.
+`gradient_elasticity` (CPU), `gradient_elasticity_hip`. Verification presets
+`inclusion.json` and `gaussian.json`; science preset
+`circular_inclusion.json`, swept over inclusion size by
+`scripts/size_sweep.py`, which parses the `GRADIENT_ELASTICITY_SUMMARY` line
+each run prints. The CPU–GPU parity test covers $u_x$ and $u_y$ only; the
+derived stress and energy fields are not yet checked against the device path.
 
 ## Scalability
 

@@ -136,13 +136,40 @@ To add a field figure for another application:
 
 ## Adding an application chapter
 
-Copy the structure of an existing chapter: physical setting, governing
+Copy the structure of an existing chapter: physical setting (ending in the
+physical question and its observable), `Problem setup` table, governing
 equations, discrete formulation, solution strategy, verification, binaries and
 inputs, scalability. Give the chapter a `{#sec-...}` label, and add it to the
 `chapters:` list in [`_quarto.yml`](_quarto.yml).
 
+Every application chapter carries the physical-experiment contract from
+issue `#112`:
+
+1. a physical question and a **named** observable, stated *before* the
+   equations;
+2. a `Problem setup` table with rows for use case, domain, grid, boundary
+   conditions, initial condition, key physical parameters, observable and model
+   maturity;
+3. **model maturity on three independent axes**, never collapsed into one word
+   — numerical verification (analytical / manufactured / regression / none),
+   physical completeness (canonical / reduced / extended), and calibration
+   (none / representative / quantitative);
+4. where an application ships both, an explicit statement of which input is the
+   verification preset and that it is not a production science case;
+5. a sentence saying what periodicity, or any other idealisation, means
+   physically *for that problem* and what it excludes — written for that
+   chapter, not copied between them;
+6. physical parameters with units and a reference, or labelled illustrative /
+   nondimensional.
+
+The same block appears in each `apps/<name>/README.md`, so the app and the
+report agree.
+
 Keep the *Verification* section tied to tests that actually exist, and say
-"not measured" rather than estimating a number.
+"not measured" rather than estimating a number. The same rule applies to the
+setup table: describe the domain, boundary condition or observable the code
+really has, and where something cannot be confirmed from the repository, say
+so rather than supplying a plausible value.
 
 Sphinx does not build this directory (it is excluded in `docs/conf.py`), and
 the Markdown link checker only scans `.md`, so `.qmd` files are invisible to

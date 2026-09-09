@@ -13,6 +13,55 @@ the vibrational scales molecular dynamics is bound to. This application is
 parameterised for tungsten and is used for solidification and defect studies in
 three dimensions.
 
+The physical question the shipped configurations pose is a solidification one:
+**place one or more crystalline nuclei in an undercooled melt and watch the
+solid grow — where does the front sit, how fast does it advance, and what
+happens where two differently oriented grains meet?** The observable the
+application actually records is the **tracked solidification-front position**
+along $x$ (the `moving` boundary's `xpos`, checkpointed and restartable),
+together with the conserved global density and the field checksums that pin the
+run. Grain structure is available as field output but is not reduced to a
+number by this application.
+
+## Problem setup
+
+Six JSON presets ship (with matching TOML twins). They are all demonstration or
+performance configurations: **none of them is executed by the test suite**,
+which builds equivalent configurations in C++ instead. The table describes
+`tungsten_moving_bc.json`, the directional-solidification case, and
+`tungsten_single_seed.json`, the smallest one.
+
+| Item | Directional solidification (`tungsten_moving_bc.json`) | Single seed (`tungsten_single_seed.json`) |
+|---|---|---|
+| Use case | A solidification front sweeping through undercooled tungsten, with a grid of differently oriented seeds ahead of it | The smallest runnable case: one BCC nucleus in a melt |
+| Domain | $128 \times 64 \times 64$ cells at $\Delta x = 2\pi/(4\sqrt2) \approx 1.1107$, i.e. $142.2 \times 71.1 \times 71.1$ in reduced PFC length units, origin at the corner | $32^3$ cells at the same spacing, i.e. $35.5^3$, origin at the centre |
+| Grid | Eight cells per BCC lattice constant ($a = 2\pi\sqrt2$ when the correlation peak sits at $\lvert\mathbf{k}\rvert = 1$); $t \in [0, 20000]$ at $\Delta t = 1$, output every 100 | Same spacing; $t \in [0, 10]$ at $\Delta t = 1$, output every step |
+| Boundary conditions | Periodic on all three axes — see below — plus a `moving` density-reservoir band of width 15 that tracks the front and stays 40 units ahead of it | Periodic on all three axes plus a stationary `fixed` reservoir band |
+| Initial condition | Uniform $\psi = -0.10$, then `seed_grid`: a $2 \times 2$ array of BCC seeds of radius 25 at $x = 30$, each jittered in position by $\pm 0.2 R$ and given a random orientation from a fixed RNG seed (42), so the run is deterministic | Uniform $\psi = -0.4$, then `single_seed`: one BCC nucleus built from the six $\{110\}$ wave vectors, amplitude $0.215936$, $\rho_{\mathrm{seed}} = -0.047$ |
+| Key physical parameters | $T = 3300$, $T_0 = 156000$ (the TOML comments label both **kelvin**; only the ratio $T/T_0$ ever enters, through $e^{-T/T_0}$); coexistence densities $n_{\mathrm{sol}} = -0.047$, $n_{\mathrm{vap}} = -0.464$; peak amplitude $B_x = 0.8582$, width $\alpha = 0.5$; polynomial coefficients $p_2,p_3,p_4$ and $q_{20},\dots,q_{40}$. Lengths and times are **reduced PFC units** — the repository contains no conversion to nanometres or seconds | Identical parameter block |
+| Observable | Tracked front position $x_{\mathrm{pos}}$ (checkpointed); `SPECTRAL_CHECKSUM` sum, sum of squares and $L^2$ of $\psi$; binary field dumps | Same checksums; $\psi$ and $\psi_{\mathrm{MF}}$ dumps |
+| Model maturity | numerical verification: **regression** — split-run equivalence to $10^{-12}$, one pinned CPU checksum, CPU/GPU parity; the analytical checks that exist cover the ETD coefficients, not the model · physical completeness: **extended** — a fitted multi-term equation of state with a vapour branch and a mean-field-filtered density, beyond the canonical single-peak PFC · calibration: **representative**, with a caveat: the coefficients are described as a tungsten parameterisation, but **no source is cited anywhere in this repository** for $B_x$, $T_0$, $n_{\mathrm{sol}}$, $n_{\mathrm{vap}}$ or the polynomial coefficients, so they cannot be traced from it | Same |
+
+Two things about this setup are easy to misread.
+
+**"Fixed" and "moving" are not boundary conditions in the usual sense.** The
+FFT treats the domain as periodic on all three axes, always; there is no
+non-periodic path. What `fixed` and `moving` do is overlay a sigmoid density
+band near one end of the box every step, pulling $\psi$ towards
+$\rho_{\mathrm{low}}$ outside the band and $\rho_{\mathrm{high}}$ inside it.
+Physically that band is a reservoir that keeps a melt region available for the
+front to grow into and stops the growing solid from meeting its own periodic
+image head-on. It is a penalty layer inside a periodic box, not a wall. What it
+excludes is a real free surface: there is no vapour interface, no substrate,
+and no container.
+
+**The single-seed preset does not show a seed.** `SingleSeed` hard-codes its
+radius at 64 reduced units, which is larger than the $17.8$-unit half-width of
+the $32^3$ box, so the "seed" fills the entire domain and no melt is left
+around it. That preset is a runnable smoke configuration, not a nucleation
+experiment; the smallest shipped configuration that actually shows a nucleus in
+melt is the $256^3$ `tungsten_single_seed_256_cuda.json`.
+
 ## Governing equations
 
 The dynamics are conserved,
@@ -67,6 +116,13 @@ g(\kappa) \;=\;
 \end{cases}
 $$ {#eq-w-peak}
 
+@eq-w-peak is the $\alpha_{\mathrm{highOrd}} = 0$ form. Every shipped preset
+sets $\alpha_{\mathrm{highOrd}} = 4$, which adds a higher-order term
+$r_{\mathrm{tol}}\,\kappa^{4}$ inside the Gaussian exponent, with
+$r_{\mathrm{tol}}$ fixed by the far-field tolerance `alpha_farTol`. The effect
+is to pull the Gaussian side down faster far from the peak; the shape near
+$\kappa = 0$ is unchanged.
+
 and a mean-field filter
 
 $$
@@ -87,8 +143,15 @@ omitted the run is isothermal.
 
 ## Solution strategy
 
-ETD1 as in @eq-etd1, with dealiasing on, one $\psi$ field and a filtered
+ETD1 as in @eq-etd1, with one $\psi$ field and a filtered
 $\psi_{\mathrm{MF}}$ derived from it each step. Two transforms per step.
+
+Unlike the high-order spectral chapters that follow, **this application does
+not dealias**: `SpectralETDOptions::dealias` defaults to `false` and neither
+the tungsten session nor the JSON path ever turns it on. The polynomial
+nonlinearity does alias, and nothing in the shipped configuration suppresses
+it; the stabiliser $P_{\mathrm{stab}}$ and the resolution are what keep the
+runs usable.
 
 For moving-front studies the application supports a `moving` boundary
 condition that tracks the solidification front along $x$ and shifts the
@@ -103,10 +166,15 @@ re-detecting it at $t=0$.
   uninterrupted run: local fields agree within $10^{-12}$ and the saved front
   state agrees exactly, on one and two MPI ranks
   (`tungsten-moving-restart-2rank`).
-* **Golden regression.** CPU and 4-rank golden checksums are pinned
-  (`tungsten-cpu-golden`, `tungsten-golden-4rank`).
+* **Golden regression.** One CPU checksum is pinned to a literal
+  (`tungsten-cpu-golden`: a 32³, 10-step sine-initial-condition case). The
+  4-rank test (`tungsten-golden-4rank`) checks only that the global checksum is
+  finite and positive — it is a crash guard, not a pinned value.
 * **CPU/GPU agreement.** `SPECTRAL_CHECKSUM` from 1 GCD and 16 GCDs agrees to
-  about $10^{-12}$ relative.
+  about $10^{-12}$ relative. This figure comes from LUMI-G job records quoted
+  in @sec-scalability, not from a committed artefact: the performance baselines
+  in the repository store timings only, so the number cannot be re-checked from
+  a clone.
 * **Fail-closed restart.** A checkpoint missing front state, or one whose
   boundary configuration has changed, is a startup error rather than a silent
   re-detection.
