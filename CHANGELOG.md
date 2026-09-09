@@ -41,6 +41,17 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   both directions so a backend that starts breaking it fails there. No
   measurable cost: 40000 spectral steps time the same either side of the
   change, within run-to-run noise.
+- `tungsten_moving_bc_options.json` can be run at all. It declared
+  `"initial_position": "end"`, a key nothing in the code reads, where
+  `MovingBC` requires a numeric `xpos`; the shipped input aborted on the first
+  line of boundary-condition wiring with `missing or invalid 'xpos' field`.
+  It now carries `xpos = 139.17225402106772`, the end of the domain less the
+  boundary width, the same convention `tungsten_moving_bc.json` uses. Nothing
+  had caught it because no test ever loaded a shipped input -- they all build
+  their JSON inline -- so `tungsten-shipped-inputs` now walks every file in
+  `apps/tungsten/inputs_json/` and constructs what it declares through the
+  same schema and catalog the application uses. The other apps' inputs are
+  still unguarded; the pattern is worth copying.
 
 - `ctest` can be registered in a `--no-heffte` CPU build again (`#105`). The
   Catch2 `-isystem` loop in `tests/CMakeLists.txt` guarded on the unevaluated

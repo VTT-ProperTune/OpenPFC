@@ -43,7 +43,7 @@ Each JSON file follows this structure:
 
 1. `tungsten_fixed_bc.json` - Fixed boundary conditions with seed grid
 2. `tungsten_moving_bc.json` - Moving boundary conditions with seed grid
-3. `tungsten_moving_bc_options.json` - Moving boundary with initial position options
+3. `tungsten_moving_bc_options.json` - Moving boundary, narrow front (`width` 3, `alpha` 10) advancing in larger steps than `tungsten_moving_bc.json`
 4. `tungsten_performance.json` - Performance testing configuration
 5. `tungsten_restart.json` - Restart from checkpoint
 6. `tungsten_single_seed.json` - Single seed initial condition
