@@ -43,7 +43,7 @@ jobs:
 
       - name: Kernel layering (no frontend includes)
         run: |
-          sudo apt-get update
+          bash scripts/ci/apt_update.sh
           sudo apt-get install -y ripgrep
           bash scripts/check_kernel_no_frontend_includes.sh
 
@@ -82,7 +82,7 @@ jobs:
 
       - name: Install dependencies (Ubuntu)
         run: |
-          sudo apt-get update
+          bash scripts/ci/apt_update.sh
           sudo apt-get install -y \
             ${{ matrix.cc }} \
             ${{ matrix.cxx }} \
@@ -180,7 +180,7 @@ jobs:
           submodules: true
       - name: Install dependencies (Ubuntu)
         run: |
-          sudo apt-get update
+          bash scripts/ci/apt_update.sh
           sudo apt-get install -y gcc-11 g++-11 cmake ninja-build \
             libopenmpi-dev openmpi-bin libfftw3-dev libfftw3-mpi-dev \
             nlohmann-json3-dev
@@ -238,7 +238,7 @@ jobs:
 
       - name: Install dependencies (Ubuntu)
         run: |
-          sudo apt-get update
+          bash scripts/ci/apt_update.sh
           sudo apt-get install -y gcc-13 g++-13 cmake ninja-build \
             libopenmpi-dev openmpi-bin libfftw3-dev libfftw3-mpi-dev nlohmann-json3-dev
 
