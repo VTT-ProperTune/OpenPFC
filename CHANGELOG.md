@@ -7,6 +7,28 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+### Added
+
+- `heat3d_fd_convergence_study` (`apps/heat3d`): measures the *observed*
+  order of accuracy of `pfc::gradient::FDGradient<HeatGrads>`'s central FD
+  stencils (orders 2–20) against their *design* order, on a periodic
+  single-Fourier-mode problem swept over `N` in {16, 24, 32, 48, 64}. Every
+  design order 2–12 was reproduced to within a few tenths of a unit
+  (measured table in `apps/heat3d/README.md`); fd_order 12 hits the
+  double-precision round-off floor at N=64, as expected for a 12th-order
+  stencil on a smooth solution. Isolates spatial from temporal error by
+  evolving the semi-discrete ODE with its own *exact* eigenvalue rather
+  than a time-stepping loop (zero time-discretization error by
+  construction) — two dt-based explicit-Euler designs were tried first and
+  both reproduced the "all curves flatten at one floor" failure mode this
+  kind of study is warned about; see `apps/heat3d/include/heat3d/convergence_study.hpp`.
+  Also documents a boundary-shell gap in the `FDCPUStack` +
+  `pfc::sim::steppers::create` pattern (`pfc::sim::for_each_interior` skips
+  a `fd_order/2`-wide shell that only `FDCPUStack::du<G>()` covers), found
+  while building this study. Data: `docs/report/data/heat3d_fd_order_convergence.csv`.
+  Figure: `docs/report/figures/heat3d_fd_order_convergence.svg`. Regression
+  guard: `test_heat3d_fd_convergence.cpp` / ctest `heat3d-fd-convergence`.
+
 ### Fixed
 
 - CI no longer fails on a third-party apt repository it does not use. The

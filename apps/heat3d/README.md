@@ -16,6 +16,7 @@ MPI drivers for the **3D heat equation** \(\partial u/\partial t = D \nabla^2 u\
 | **`heat3d_spectral_pointwise`** | Point-wise spectral RHS + explicit Euler | The **spectral twin** of `heat3d_fd`: identical user-facing time loop, but the residual is built by `pfc::field::SpectralGradient<HeatGrads>` (1 fwd + 3 inv FFTs/step) instead of FD stencils. The same `HeatModel::rhs` is applied cell-by-cell through `pfc::sim::DuField`. |
 | **`heat3d_spectral`** | Implicit Euler in Fourier space | HeFFTe-backed forward + backward FFT per step (`heat3d::SpectralHeatPropagator`). |
 | **`heat3d_spectral_hip`** | Implicit Euler on HIP | HIP twin of `heat3d_spectral`: `HIPSpectralStack` + device multiply of \(1/(1-\Delta t D k_\mathrm{lap})\), 2 FFTs/step. Same CLI as the CPU spectral driver. `HEAT3D_PROFILE_JSON` / `HEAT3D_WARMUP` match `heat3d_fd_hip`. Built when HIP spectral (rocFFT HeFFTe) is on. |
+| **`heat3d_fd_convergence_study`** | Verification, not a physics demo | Not part of the model hierarchy above: sweeps `fd_order` x `N` on a single-Fourier-mode problem and reports the *observed* order of accuracy of `heat3d_fd`'s own `FDGradient` stencil against its *design* order — see [Order of accuracy (FD)](#order-of-accuracy-fd) below. |
 
 All three CPU FD drivers (`scratch`, `manual`, `fd`) compute the **same thing** with the same 7-point central stencil. Tests assert `l2_scratch == l2_manual == l2_compact` to within 1e-7. The higher binaries share `HeatModel` for physics and `heat3d::report` for the `method / timing / l2_error` summary line; `heat3d_fd_scratch` only uses `heat3d::report` and inlines its own physics.
 
@@ -34,6 +35,7 @@ Shared physics, IC, propagator, parser, and reporting headers (live in `include/
 - **[`include/heat3d/spectral_heat_propagator_hip.hpp`](include/heat3d/spectral_heat_propagator_hip.hpp)** — HIP twin: uploads that table once, then each step is a device forward FFT, `multiply_complex_real_hip_impl`, and inverse FFT.
 - **[`include/heat3d/cli.hpp`](include/heat3d/cli.hpp)** — `RunConfig` plus the slim per-binary parsers `parse_fd` / `parse_spectral` and their `_or_print_usage` wrappers. `D` is *not* a CLI knob (it lives in `heat_model.hpp`). Each binary already knows its own discretisation, so the parsers do **not** consume an `argv[1]` discriminator. Header-only, MPI-free, OpenPFC-free; trivially unit-testable.
 - **[`include/heat3d/reporting.hpp`](include/heat3d/reporting.hpp)** — `analytic_gaussian` (closed-form reference solution on \(\mathbb{R}^3\)), `fd_extra_metadata` (FD/OpenMP info string), and the rank-0 `report` template that prints the canonical `method` / `timing` / `l2_error` triplet, shared by all heat3d binaries.
+- **[`include/heat3d/convergence_study.hpp`](include/heat3d/convergence_study.hpp)** — the [Order of accuracy (FD)](#order-of-accuracy-fd) study's shared `run_case(fd_order, N)`: single-Fourier-mode IC, `pfc::gradient::FDGradient<HeatGrads>` bound the same way `heat3d_fd.cpp` binds it, and an *exact* (not time-marched) closed-form evolution to isolate spatial from temporal error. Used by both `heat3d_fd_convergence_study` and `tests/test_heat3d_fd_convergence.cpp`.
 
 Per-binary drivers (live in `src/cpu/`):
 
@@ -70,10 +72,12 @@ Per-binary drivers (live in `src/cpu/`):
   with a single `stencil_step` lambda calling `model.rhs(0.0, HeatGrads{xx, yy, zz})`. Each stage is wrapped in `pfc::runtime::tic(timer, "...")` / `toc(timer, "...")` and `print_timing_summary(timer, 0)` prints a sorted breakdown on rank 0 at the end.
 - **[`src/cpu/heat3d_spectral.cpp`](src/cpu/heat3d_spectral.cpp)** — implicit-Euler spectral driver. Calls `heat3d::SpectralHeatPropagator::step(stack.u())` once per step (forward FFT → diagonal multiply in k-space → inverse FFT). HIP twin: `heat3d_spectral_hip`.
 - **[`src/cpu/heat3d_spectral_pointwise.cpp`](src/cpu/heat3d_spectral_pointwise.cpp)** — point-wise spectral RHS: the **spectral twin** of `heat3d_fd`. Built on `pfc::sim::stacks::SpectralCPUStack` + `pfc::sim::DuField<HeatGrads, SpectralGradient<HeatGrads>>`, so the user-facing time loop reads `du.apply(...)` / `u += dt * du` / `t += dt`; the residual is materialised by `pfc::field::SpectralGradient<HeatGrads>` (1 forward + 3 inverse FFTs/step) instead of a stencil sweep. The `DuField` shim hides halo prep + per-cell evaluation here, where the FD twin (`heat3d_fd`) instead spells those primitives out in `main`.
+- **[`src/cpu/heat3d_fd_convergence_study.cpp`](src/cpu/heat3d_fd_convergence_study.cpp)** — the [Order of accuracy (FD)](#order-of-accuracy-fd) sweep: loops `heat3d::convergence::run_case(fd_order, N)` over every `(fd_order, N)` pair, prints the design-vs-observed-order table, and writes `docs/report/data/heat3d_fd_order_convergence.csv`.
 
 Tests:
 
 - **[`tests/test_heat3d.cpp`](tests/test_heat3d.cpp)** — Catch2 unit tests covering: `heat3d::kD` is pinned to 1.0; `HeatModel` (default IC at the origin, IC override, the `rhs = kD * (xx + yy + zz)` formula); the slim per-binary CLI parsers (happy paths + every rejection case); `fill_implicit_euler_symbol` (DC = 1, first-mode formula, wrapped \(k_y\), size mismatch) and a constant-field fixed point of `SpectralHeatPropagator`; the analytic reference solution; two single-rank integration tests against a padded field / explicit Euler stepper; **two** single-rank cases for the manual driver (smoke + L2-vs-analytic, and parity vs the compact `FDCPUStack` path); and **two** single-rank cases for the from-scratch driver (smoke + L2-vs-analytic, and parity vs the compact path to within 1e-7). Built into the `test_heat3d` executable and registered with CTest as `heat3d-all-tests` whenever `OpenPFC_BUILD_TESTS=ON` and Catch2 is available (set `HEAT3D_ENABLE_TESTS=OFF` to skip). HIP smokes: `heat3d-fd-hip-smoke`, `heat3d-spectral-hip-smoke`.
+- **[`tests/test_heat3d_fd_convergence.cpp`](tests/test_heat3d_fd_convergence.cpp)** — regression guard for [Order of accuracy (FD)](#order-of-accuracy-fd): asserts the observed order of accuracy at `fd_order` 4 and 8 matches the design order within a stated tolerance. Registered as `heat3d-fd-convergence`; pure FD (no HeFFTe needed).
 
 ### Where OpenMP runs (FD)
 
@@ -105,6 +109,7 @@ heat3d_fd_hip              <N> <n_steps> <dt> <fd_order>
 heat3d_spectral_pointwise  <N> <n_steps> <dt>
 heat3d_spectral            <N> <n_steps> <dt>
 heat3d_spectral_hip        <N> <n_steps> <dt>
+heat3d_fd_convergence_study [output.csv]
 ```
 
 - `D` is **not** a CLI knob: it is fixed at `heat3d::kD = 1.0` in [`include/heat3d/heat_model.hpp`](include/heat3d/heat_model.hpp). Edit the literal there if you want to experiment.
@@ -207,6 +212,134 @@ mpirun --bind-to none -n 4 --mca btl tcp,self ./apps/heat3d/heat3d_fd 256 25 1e-
 ```
 
 The **spectral** binaries are unchanged (MPI over ranks only).
+
+## Order of accuracy (FD)
+
+`heat3d_fd` ships central FD stencils at every even order 2–20, but until
+now nothing measured whether raising the order actually buys accuracy.
+`heat3d_fd_convergence_study` does: for each even `fd_order` in {2, 4, 6,
+8, 10, 12} it sweeps `N` in {16, 24, 32, 48, 64} on a periodic domain of
+length \(2\pi\) with the single-Fourier-mode initial condition
+\(u_0(x,y,z) = \cos(3x)\), whose exact PDE solution is
+\(u(x,t) = e^{-9Dt}\cos(3x)\) — chosen (instead of the Gaussian IC the
+other heat3d binaries use) because it is periodic to machine precision at
+*every* grid resolution, so there is no domain-truncation error competing
+with the stencil error being measured.
+
+**How temporal error was kept out of the fit.** Two designs were tried
+and rejected before the one below, because both reproduced the textbook
+failure mode this kind of study is warned about — "the curves all
+flatten at the same floor, and you are measuring the time integrator, not
+the stencil":
+
+1. Explicit Euler with `dt = dt_safety * dx^2 / D` (the standard
+   parabolic-CFL scaling, re-derived at each case's own `dx`). Euler's
+   `O(dt)` global temporal error then scales as `dx^2` — the *same* power
+   as the plain 7-point stencil's own design order — so fd_order 4/6/8/10/12
+   all flattened onto one common `dx^2` floor at fine grids instead of
+   showing their own steeper slopes.
+2. Explicit Euler with *one fixed* `dt` for the whole sweep (independent
+   of `dx`, sized from the finest grid's stability limit). This removes
+   the floor's `dx^2` *growth* at coarse grids, but the floor itself
+   (measured: ≈1.8e-6, matching the predicted `~0.5·D²·m⁴·t·dt·e^{-Dm²t}`
+   for that `dt`) was still far above round-off, and reaching a
+   round-off-level floor this way needs a `dt` some 5 orders of magnitude
+   smaller — i.e. `n_steps = t_final/dt` about 10⁵× larger, since one `dt`
+   is shared by every case. That is minutes turning into most of a day for
+   no benefit: a fixed, non-vanishing `dt` was always going to leave *some*
+   floor.
+
+**What is used instead: no time-stepping loop at all.** `cos(3x)` is an
+*exact* eigenfunction of `pfc::gradient::FDGradient<HeatGrads>`'s stencil
+under periodic wraparound — any linear, shift-invariant stencil is
+diagonalized by the discrete Fourier basis (a standard circulant-matrix
+fact) — so `Lap_FD[u0] = -k_eff² · u0` for one `k_eff` shared by every grid
+point. The study verifies this numerically rather than assuming it: the
+measured `eigenvalue_residual` (RMS of `Lap_FD[u0] - eigenvalue·u0`,
+relative to `u0`) is `~1e-12` to `1e-14` in every case, i.e. round-off, not
+model error. Because `u` stays exactly proportional to `cos(3x)` for *all*
+time under the (spatially discretized, not yet time discretized) ODE, that
+ODE has a closed form, `u(x,t) = u0(x)·exp(D·eigenvalue·t)`, evaluated
+directly with **zero** time-discretization error — not "small", exactly
+zero, by construction. What is left after comparing against the true PDE
+solution is purely the stencil's spatial truncation error. (This mirrors
+`tests/integration/scenarios/time_integration/test_rk3_convergence.cpp` in
+the opposite direction: that test replaces the *spatial* operator by its
+exact eigenvalue action to cleanly isolate a *temporal* order; this study
+replaces the *time* evolution by its exact action to cleanly isolate a
+*spatial* order.) See `apps/heat3d/include/heat3d/convergence_study.hpp`
+for the full derivation and code.
+
+**A cross-check against real time-stepping.** Before discovering that a
+fixed `dt` cannot cheaply reach round-off, design 2 above was run to
+completion. Away from its own floor its numbers agree closely with the
+exact-evolution numbers below — e.g. fd_order 4, N=32: `2.6146e-4` (Euler,
+`dt≈1.93e-6`, 25939 steps) vs `2.6321e-4` (exact evolution) — a 0.7%
+difference consistent with Euler's own residual `O(dt)` error at that
+`dt`, confirming the exact-evolution shortcut is measuring the same thing
+real time-stepping would, just without paying for the steps.
+
+**Measured table** (LUMI, CPU, Release; `docs/report/data/heat3d_fd_order_convergence.csv`
+has the full per-`N` breakdown):
+
+| fd_order (design) | L2 error, N=16 | L2 error, N=64 | observed order (range across N) |
+|---:|---:|---:|---:|
+| 2 | 2.297e-02 | 1.465e-03 | 1.97 – 2.00 |
+| 4 | 3.854e-03 | 1.683e-05 | 3.84 – 3.98 |
+| 6 | 7.817e-04 | 2.333e-07 | 5.71 – 5.96 |
+| 8 | 1.745e-04 | 3.576e-09 | 7.57 – 7.95 |
+| 10 | 4.132e-05 | 5.820e-11 | 9.43 – 9.94 |
+| 12 | 1.019e-05 | 1.013e-12 | 11.28 – 11.84 |
+
+Every design order is reproduced within a few tenths of a unit, tightening
+towards the design value as `N` grows (finite-`N` sub-leading truncation
+terms, not a defect). **fd_order 12 at N=64 sits on the double-precision
+round-off floor**: its L2 error (`1.013e-12`) is within an order of
+magnitude of the measured `eigenvalue_residual` there (`8.95e-13`), so the
+last pairwise ratio for fd_order 12 is measuring floating-point noise as
+much as the stencil — expected and reported rather than hidden, per the
+usual caveat for high-order stencils on fine grids. fd_order 10 stays
+clean (well above its own floor) across the whole `N` range tested.
+`test_heat3d_fd_convergence.cpp` pins fd_order 4 (measured avg ≈3.92) and
+fd_order 8 (measured avg ≈7.80) as a regression guard, using all five grid
+sizes since neither gets near the round-off floor in this range.
+
+**Figure**: `docs/report/figures/heat3d_fd_order_convergence.svg` (log-log
+L2 error vs `dx`, one line per order, dotted reference slopes for orders 2,
+8, 12, and the round-off floor marked). Regenerate after re-running the
+study with:
+
+```bash
+./apps/heat3d/heat3d_fd_convergence_study docs/report/data/heat3d_fd_order_convergence.csv
+python3 docs/report/figures/make_figures.py   # needs matplotlib; see that file's docstring
+```
+
+**A boundary-shell bug found while building this study** (worth knowing if
+you use the `FDCPUStack` + `pfc::sim::steppers::create` pattern
+elsewhere): the first version of this study reused the same construction
+as `test_heat3d.cpp`'s Gaussian `heat3d_gaussian_l2_rms` helper —
+`FDCPUStack` + `pfc::field::create<G>(stack.u(), order)` +
+`pfc::sim::steppers::create`. `FDCPUStack::u()` is an *unpadded* Field
+(`storage_halo() == 0`); binding `FDGradient` to it via the raw-pointer
+constructor restricts the evaluator to `[fd_order/2, N-fd_order/2)` per
+axis, and `pfc::sim::for_each_interior` (what the `steppers::create`
+factory uses) leaves everything outside that interior untouched in `du` —
+a boundary shell of width `fd_order/2` per face is silently **never
+updated** by the Euler step, for every `N` and every `fd_order`.
+`FDCPUStack::du<G>()` covers that shell separately through its face-halo
+buffers, but nothing does if the evaluator + stepper are built and driven
+directly, which is exactly what the existing Gaussian helper (and this
+study's first draft) does. A Gaussian IC decays to ~0 near the domain
+edge, so the frozen shell is invisible in its L2 error; a periodic
+single-mode IC has full amplitude at the edge, so the same construction
+produced a flat ~3–6% error with *no* grid-resolution dependence at all —
+immediately visible, and the tell that something structural (not a tuning
+problem) was wrong. The fix used here is to match `heat3d_fd.cpp`'s own
+construction instead (padded Field + `HaloExchange` + `FDGradient` bound
+to the *padded* field, whose stencil covers the whole owned domain) — see
+`apps/heat3d/include/heat3d/convergence_study.hpp`. Anyone else composing
+`FDCPUStack` with `pfc::sim::steppers::create` directly (rather than via
+`FDCPUStack::du<G>()`) should check for the same gap.
 
 ## See also
 

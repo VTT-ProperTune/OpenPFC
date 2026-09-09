@@ -25,7 +25,10 @@ find_package(OpenMP COMPONENTS CXX)
 #   heat3d_spectral_pointwise  — point-wise spectral RHS + explicit Euler
 #   heat3d_spectral            — implicit-Euler spectral
 #   heat3d_spectral_hip        — implicit-Euler spectral on HIP (2 FFTs/step)
-set(_heat3d_binaries heat3d_fd_scratch heat3d_fd_manual heat3d_fd)
+#   heat3d_fd_convergence_study — FD order-of-accuracy sweep (single-mode,
+#                                N x fd_order) -> docs/report/data CSV
+set(_heat3d_binaries heat3d_fd_scratch heat3d_fd_manual heat3d_fd
+                     heat3d_fd_convergence_study)
 if(OpenPFC_ENABLE_HEFFTE)
   list(APPEND _heat3d_binaries heat3d_spectral_pointwise heat3d_spectral)
 endif()
@@ -143,6 +146,18 @@ if(HEAT3D_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
       Catch2::Catch2
     )
     add_test(NAME heat3d-rhs-pattern COMMAND test_heat3d_rhs_pattern)
+
+    # FD order-of-accuracy regression guard (pure FD, no HeFFTe needed).
+    add_executable(test_heat3d_fd_convergence tests/test_heat3d_fd_convergence.cpp)
+    target_include_directories(test_heat3d_fd_convergence PRIVATE ${HEAT3D_INCLUDE_DIR})
+    target_link_libraries(test_heat3d_fd_convergence PRIVATE
+      OpenPFC
+      openpfc_apps_common
+      ${_heat3d_heffte_tgt}
+      Catch2::Catch2
+    )
+    add_test(NAME heat3d-fd-convergence COMMAND test_heat3d_fd_convergence)
+    set_tests_properties(heat3d-fd-convergence PROPERTIES TIMEOUT 300)
   else()
     message(STATUS "heat3d: Catch2 not found, not building tests")
   endif()
