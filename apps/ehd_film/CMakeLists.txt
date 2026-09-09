@@ -37,6 +37,12 @@ endfunction()
 ehd_film_cpu_executable(ehd_film src/ehd_film.cpp)
 install(TARGETS ehd_film DESTINATION bin)
 
+# Science driver for #116: full nonlinear h^3 mobility, localized load and
+# adhesion through the shared conservative flux stepper. Host only; the flux
+# path has no device kernels (see apps/common/include/openpfc_apps/spectral_flux.hpp).
+ehd_film_cpu_executable(ehd_film_nonlinear src/ehd_film_nonlinear.cpp)
+install(TARGETS ehd_film_nonlinear DESTINATION bin)
+
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
   ehd_film_hip_executable(ehd_film_hip src/hip/ehd_film.cpp)
   install(TARGETS ehd_film_hip DESTINATION bin)

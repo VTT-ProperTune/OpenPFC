@@ -1,0 +1,31 @@
+{
+    "model": {
+        "name": "ehd_film",
+        "params": {
+            "h0": 1.0,
+            "B": 100.0,
+            "M0": 1.0,
+            "gamma": 10.0,
+            "A": 0.0
+        }
+    },
+    "domain": {
+        "Lx": 256,
+        "Ly": 256,
+        "Lz": 1,
+        "dx": 1.0
+    },
+    "timestepping": {
+        "t1": 600.0,
+        "dt": 0.5,
+        "saveat": 10.0
+    },
+    "load": {
+        "p0": 0.5,
+        "a": 8.0,
+        "t_load": 60.0
+    },
+    "diagnostics": {
+        "csv": "results/ehd_film_nonlinear/load_relaxation_compliant.csv"
+    }
+}

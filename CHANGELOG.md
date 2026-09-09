@@ -44,6 +44,27 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   `apps/common/include/openpfc_apps/structure_factor.hpp` now that a second
   application needs it.
 
+- EHD film science upgrade (`#116`): nonlinear compliant lubrication under a
+  flexible plate, `apps/ehd_film/src/ehd_film_nonlinear.cpp`, reusing the
+  shared conservative flux stepper introduced for the `thin_film` science
+  upgrade (`#114`, `apps/common/include/openpfc_apps/spectral_flux.hpp`). The
+  cubic mobility `M(h)=M0(h/h0)^3` replaces the constant-mobility linear
+  model in a full lubrication coupling `p = B∇⁴h - γ∇²h - Π(h) + p_ext(x,y,t)`,
+  with a localized Gaussian load applied and then removed so a run shows
+  loading followed by recovery/redistribution. The existing exact `k^6`
+  pure-bending decay stays the CI verifier, and the nonlinear flux solver is
+  asserted (not assumed) to reproduce it exactly at constant mobility. Two
+  256² science presets (`load_relaxation_stiff.json`,
+  `load_relaxation_compliant.json`, `B=640` vs `B=100` at fixed tension)
+  measure central deflection, pressure extrema, RMS spreading radius and
+  displaced volume vs time, and confirm total volume conservation to
+  round-off (`~7-8e-15` relative) under the nonlinear mobility, tension and
+  the time-dependent load. `EhdFilmPointwise` gained the `h_star`
+  adhesion-safe precursor disjoining form ported from `thin_film` (`#114`).
+  Host (CPU) only; the flux path has no HIP kernels yet, so the existing
+  constant-mobility `ehd_film_hip` binary is unchanged. The adhesive/unstable
+  film comparison (issue's case C) is deferred, along with energy
+  diagnostics and time-periodic loading.
 
 - Fe–Cr Cahn–Hilliard science upgrade (`#113`): Redlich–Kister excess free
   energy with the assessed bcc Cr–Fe interaction, a code-to-physical scale map

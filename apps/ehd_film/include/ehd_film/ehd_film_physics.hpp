@@ -52,6 +52,7 @@ struct EhdFilmSchemaValues {
   double M0{1.0};    ///< mobility at h0
   double gamma{0.0}; ///< tension (0 = bending only)
   double A{0.0};     ///< disjoining strength (0 = no van der Waals)
+  double h_star{0.0};///< precursor thickness; >0 selects the adhesion-safe form
 };
 
 struct EhdFilmParams : EhdFilmSchemaValues {
@@ -61,7 +62,7 @@ struct EhdFilmParams : EhdFilmSchemaValues {
   EhdFilmParams() { recompute_derived(); }
 
   void recompute_derived() {
-    EhdFilmPointwise pw{.A = A, .h0 = h0};
+    EhdFilmPointwise pw{.A = A, .h0 = h0, .h_star = h_star};
     Pi0 = pw.Pi(h0);
     Pip0 = pw.Pi_prime(h0);
   }
@@ -100,6 +101,13 @@ inline pfc::sim::ParameterSchema<EhdFilmSchemaValues> make_ehd_film_schema() {
       .real(&EhdFilmSchemaValues::A,
             {.name = "A",
              .description = "disjoining strength; 0 is no van der Waals",
+             .required = false,
+             .min = 0.0,
+             .default_value = 0.0})
+      .real(&EhdFilmSchemaValues::h_star,
+            {.name = "h_star",
+             .description = "precursor thickness; >0 uses the adhesion-safe "
+                            "disjoining pressure with a stable thin gap",
              .required = false,
              .min = 0.0,
              .default_value = 0.0});
@@ -152,7 +160,8 @@ struct EhdFilmPhysics {
   }
 
   [[nodiscard]] EhdFilmPointwise pointwise() const {
-    return {.A = params.A, .h0 = params.h0, .Pi0 = params.Pi0, .Pip0 = params.Pip0};
+    return {.A = params.A, .h0 = params.h0, .h_star = params.h_star,
+            .Pi0 = params.Pi0, .Pip0 = params.Pip0};
   }
 
   /// Fastest-growing \(k^2\), or 0 when every mode decays.
