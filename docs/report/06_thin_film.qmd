@@ -87,6 +87,29 @@ ETD1 as in @eq-etd1, dealiased.
 `thin_film` (CPU), `thin_film_hip`. Presets: `leveling.json`,
 `dewetting.json`.
 
+## Visualisation
+
+![Growth of the dewetting instability in `dewetting.json`: a film
+($h_0=1$) with a $\pm2\%$ cosine seed near $k_{\max}$ (@eq-tf-growth)
+develops a periodic thickness modulation that deepens over time — a
+$-15\%$ trough and $+9\%$ ridge by $t=84$. This run is stopped before
+true rupture: past this amplitude the disjoining-pressure nonlinearity
+becomes numerically stiff for the explicit-nonlinearity ETD scheme used
+here (the exact cutoff, around $t=90$, is documented in
+`figures/run_field_demos.sh`). `h` cannot go negative, so the colour map
+is sequential, not diverging.
+](figures/thin_film_dewetting_montage.svg){#fig-tf-dewetting}
+
+![Same lubrication model, same mean thickness, sampled at the same time
+($t=84$): `dewetting.json` ($A=0.05$) against `leveling.json` ($A=0$).
+With the disjoining pressure switched off there is nothing to
+destabilise the film — its larger initial roughness ($\pm5\%$) has
+relaxed to $\pm0.2\%$ by $t=84$, exactly as the $A=0$ limit of
+@eq-tf-growth predicts — while the dewetting run's smaller initial
+ripple has instead grown into a substantial modulation. Shared colour
+scale makes that qualitative difference, not just a difference of scale,
+directly visible.](figures/thin_film_comparison.svg){#fig-tf-comparison}
+
 ## Scalability
 
 Not measured.

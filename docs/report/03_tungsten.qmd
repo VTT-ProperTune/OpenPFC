@@ -122,6 +122,22 @@ follow are the ones carrying analytical checks.
 `inputs_json/` and `inputs_toml/`: single seed, fixed and moving boundary
 conditions, restart, and a performance configuration.
 
+## Visualisation
+
+![A tungsten PFC seed, mid-depth slice through the $256^3$ domain of
+`tungsten_single_seed_256_cuda.json`, after 12 time units.
+`SingleSeed`'s hard-coded seed radius (64 reduced length units, see
+`include/openpfc/kernel/simulation/initial_conditions/single_seed.hpp`)
+is why this figure uses the $256^3$ preset rather than the $32^3$
+`tungsten_single_seed.json`: at $32^3$ the seed radius exceeds the
+domain's own half-width, so the "seed" fills the entire periodic box and
+there is no liquid left to show a nucleus in. The colour scale is
+diverging and centred on $n_0=-0.4$, the liquid baseline density, so
+what stands out is where $\psi$ departs from the undercooled liquid, not
+its absolute value. This isothermal case sits close to a coexistence
+point on this timescale — the seed does not visibly grow or shrink, only
+its facet edges relax.](figures/tungsten_seed_panel.svg){#fig-tungsten-seed}
+
 ## Scalability
 
 Measured on LUMI-G from 1 to 32 GCDs at $768^3$; see @sec-scalability. This is
