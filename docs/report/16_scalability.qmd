@@ -169,6 +169,7 @@ The practical readings are:
 | @sec-heat3d (FD HIP) | **Yes** — 1–32 GCDs, $512^3$ |
 | @sec-aluminum | No |
 | @sec-cahn-hilliard, @sec-thin-film, @sec-surface-diffusion, @sec-kawahara, @sec-ehd-film | No |
+| @sec-higher-order-pfc | No — CPU/GPU agreement checked at 1 and 2 GCDs only |
 | @sec-gradient-elasticity | No — not a time-stepping problem |
 | @sec-wave2d, @sec-allen-cahn, @sec-kobayashi | No |
 

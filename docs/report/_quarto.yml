@@ -26,15 +26,16 @@ book:
         - 07_surface_diffusion.qmd
         - 08_kawahara.qmd
         - 09_ehd_film.qmd
-        - 10_gradient_elasticity.qmd
+        - 10_higher_order_pfc.qmd
+        - 11_gradient_elasticity.qmd
     - part: "Finite-difference models"
       chapters:
-        - 11_heat3d.qmd
-        - 12_wave2d.qmd
-        - 13_allen_cahn.qmd
-        - 14_kobayashi.qmd
-    - 15_scalability.qmd
-    - 16_conclusions.qmd
+        - 12_heat3d.qmd
+        - 13_wave2d.qmd
+        - 14_allen_cahn.qmd
+        - 15_kobayashi.qmd
+    - 16_scalability.qmd
+    - 17_conclusions.qmd
 
 format:
   html:
