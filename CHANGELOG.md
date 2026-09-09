@@ -18,6 +18,30 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   runner-image installs now go through `scripts/ci/apt_update.sh`, which drops
   the unused sources before refreshing the index, so only an outage of the
   Ubuntu archives we actually install from can fail the step.
+- A spectral application on a one-dimensional grid computed its nonlinear term
+  from a destroyed field, on FFT backends that use their input as scratch.
+  `SpectralETDSystem::attempt()` transforms `psi` and then evaluates the
+  pointwise nonlinearity from that same `psi`; `FFT_Impl::forward` takes its
+  input by `const&` and every caller relies on that. HeFFTe 2.4.1 declares the
+  input `input_type const input[]` and then writes to it anyway on some FFTW
+  builds. Measured on LUMI with two builds differing *only* in the FFTW
+  library -- same source, same compiler, same HeFFTe version, same buffer
+  address -- a forward of a 512-point line left the input untouched against
+  Cray FFTW 3.3.10.10 and destroyed it against vanilla FFTW 3.3.10
+  (`input[0]` 0.04 to 0.32). The transform *output* is correct to 4e-15 in
+  both cases, which is why this went unnoticed: nothing looks wrong until a
+  second stage reads the input back, and the platform this project develops on
+  never did. Probing HeFFTe directly, the damage is confined to 1-D grids
+  (512x1x1, 256x1x1 and 64x1x1 destroyed; 32x32x1, 16^3, 32^3 and 64^3
+  preserved) -- which is why only `kawahara` showed it and the 3-D golden
+  checksums stayed green on the very platform that breaks the 1-D ones. The host `forward` now hands the backend a copy. Only `forward`
+  is guarded -- `backward` was measured on both builds and leaves its input
+  alone, and the device path has not been shown to have the problem;
+  `tests/unit/kernel/fft/test_fft_input_preserved.cpp` asserts the contract in
+  both directions so a backend that starts breaking it fails there. No
+  measurable cost: 40000 spectral steps time the same either side of the
+  change, within run-to-run noise.
+
 - `ctest` can be registered in a `--no-heffte` CPU build again (`#105`). The
   Catch2 `-isystem` loop in `tests/CMakeLists.txt` guarded on the unevaluated
   string, so `$<INSTALL_INTERFACE:include>` passed the check and expanded to
