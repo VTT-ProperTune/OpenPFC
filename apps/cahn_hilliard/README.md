@@ -13,6 +13,94 @@ Catch2 checks, and a HIP twin when rocFFT HeFFTe is on.
 
 Binaries: `cahn_hilliard` (CPU); `cahn_hilliard_hip` when `OpenPFC_ENABLE_HIP_SPECTRAL` is on. Built when `OpenPFC_ENABLE_HEFFTE=ON`.
 
+## Fe–Cr ageing: problem setup
+
+The science case, as opposed to the compact verifiers below. This is the
+`Problem setup` block the report contract asks every application to carry.
+
+| Item | Description |
+|---|---|
+| **Use case** | Thermal ageing of a ferritic Fe–Cr alloy inside the 475 °C miscibility gap — the mechanism behind "475 °C embrittlement" |
+| **Question** | How does the α/α′ domain length scale evolve from early spinodal amplification to late-stage coarsening, and at what rate? |
+| **Domain** | 2-D periodic representative volume, 256² (early stage) or 512² (coarsening) cells at `dx = 1` code unit = **1.07 nm**, i.e. 273 nm and 547 nm per side |
+| **Boundary conditions** | Periodic on both active axes |
+| **Initial condition** | `seeded_noise`, mean Cr fraction ±0.005, deterministic and decomposition-independent |
+| **Key parameters** | `T = 748.15 K` (475 °C); Redlich–Kister `L0 = 20500 − 9.68 T` J/mol; `Vm = 7.09e-6` m³/mol; `κ = 1e-9` J/m; `D = D0 exp(−Q/RT)` with `D0 = 2e-5` m²/s, `Q = 241` kJ/mol |
+| **Observable** | Characteristic domain length `L(t) = 2π/k₁` from the azimuthally averaged structure factor, plus its growth exponent |
+| **Simulated ageing** | ~1100 h at 475 °C (4000 code time units × 0.278 h) |
+| **Model maturity** | numerical verification: **analytical** (linear growth rate, exact `k⁴` symbol) · physical completeness: **reduced** (no elastic misfit, no magnetic Gibbs-energy term) · calibration: **representative** — see the warning below |
+
+### Why a periodic box
+
+A periodic cell represents an interior volume of bulk material far from any
+free surface or grain boundary. That is the right idealisation for spinodal
+decomposition, which is a bulk instability with no nucleation barrier and no
+preferred site. It excludes exactly what its name implies: surfaces, grain
+boundaries, and any long-range stress field that would couple to the
+composition. Coherent elastic misfit in particular is known to bias α/α′
+morphology and is **not** in this model.
+
+The box must be large compared with the selected wavelength or the statistics
+are meaningless. At `c₀ = 0.5` the model predicts `λ_max ≈ 17.3` code units, so
+512² holds about 30 wavelengths per side.
+
+### Physical scales
+
+The solver integrates in code units with `κ = M = 1`. Their physical meaning
+follows from the energy-density scale `f₀ = RT/Vm`:
+
+```text
+length  l_c = sqrt(kappa/f0)                = 1.068 nm
+time    t_c = l_c^2 |f''(c0)| / D           = 1003 s = 0.278 h   (at c0 = 0.5)
+```
+
+The time scale depends on the free-energy curvature at the alloy composition,
+so it is evaluated per composition rather than once per material.
+
+> **Warning**
+> The thermodynamic and kinetic constants are **representative, not verified
+> against the primary sources digit by digit**. The interaction parameter is
+> the classical bcc Cr–Fe assessment of Andersson & Sundman, CALPHAD **11**
+> (1987) 83–92. Treat the results as semi-quantitative and check the numbers
+> before publishing anything calibrated. Every constant is a JSON parameter so
+> a better assessment can be substituted without touching code.
+
+### One consequence worth knowing
+
+With the assessed interaction, `Fe-32Cr` at 475 °C is **outside** the spinodal —
+it sits in the nucleation-and-growth regime. The app's original representative
+`Omega = 20100 J/mol` is deeper and does place it inside. The science presets
+therefore use `c₀ = 0.45` and `c₀ = 0.50`, which the model's own spinodal
+calculation confirms are unstable. `CahnHilliardParams::spinodal` reports the
+band for whatever coefficients are supplied, and a test asserts this.
+
+### Measured results
+
+`fe_cr_early_stage.json`, 256², 8 ranks:
+
+| Quantity | Predicted | Measured |
+|---|---|---|
+| Fastest-growing wave number | `k_max = 0.3624` | `k_peak = 0.3682` (within one shell) |
+| Mean Cr fraction drift | 0 | `2.1e-15` |
+| Total free energy | decreasing | monotone |
+
+`fe_cr_coarsening.json`, 512², 16 ranks, to 4000 code units ≈ 1114 h:
+
+| `c₀` | Exponent `n` in `L ∝ tⁿ`, fitted over `t ∈ [2000, 4000]` | Final `L` |
+|---|---|---|
+| 0.50 | **0.353** | 39.8 nm after 1114 h |
+| 0.45 | **0.371** | 36.6 nm after 943 h |
+
+The literature comparison is the Lifshitz–Slyozov / Cahn–Hilliard result that
+conserved coarsening follows `L ∝ t^{1/3}`. Both compositions agree within
+about 5–11% over the late window. Fitted over the whole run the exponent drops
+to 0.31, because the early interval is still wavelength selection rather than
+coarsening — which is why the window is stated rather than hidden.
+
+The three regimes the run is meant to show are all visible in the CSV: `L`
+jumps from 4.0 to ~19 code units while the unstable band is selected, holds
+near the selected wavelength, then grows as a power law.
+
 ## Physics
 
 One field `c` (Cr mole fraction) with constant mobility \(M\):

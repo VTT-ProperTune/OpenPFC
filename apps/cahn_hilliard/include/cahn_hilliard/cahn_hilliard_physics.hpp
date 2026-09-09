@@ -44,6 +44,7 @@
 #include <openpfc/kernel/simulation/simulation_state.hpp>
 
 #include <cahn_hilliard/cahn_hilliard_pointwise.hpp>
+#include <cahn_hilliard/fe_cr_thermo.hpp>
 
 namespace cahn_hilliard {
 
@@ -55,21 +56,49 @@ struct CahnHilliardSchemaValues {
   double R{8.314462618}; ///< gas constant (J/(mol K))
   double kappa{1.0};     ///< gradient-energy coefficient (grid units)
   double M{1.0};         ///< mobility (grid units)
+  // Redlich-Kister excess free energy, J/mol, linear in T. Leaving L0_a at 0
+  // keeps the regular-solution behaviour driven by Omega; setting it selects
+  // the assessed binary instead. L1 = 0 makes the two forms identical.
+  double L0_a{0.0};      ///< \f$L_0\f$ constant term (J/mol); 0 disables RK
+  double L0_b{0.0};      ///< \f$L_0\f$ temperature slope (J/(mol K))
+  double L1_a{0.0};      ///< \f$L_1\f$ constant term (J/mol)
+  double L1_b{0.0};      ///< \f$L_1\f$ temperature slope (J/(mol K))
+  // Physical scales. These label the run in nm and seconds; they do not
+  // change the trajectory, which is integrated in code units throughout.
+  double Vm{7.09e-6};    ///< molar volume (m^3/mol)
+  double kappa_phys{1.0e-9}; ///< gradient-energy coefficient (J/m)
+  double D0{2.0e-5};     ///< interdiffusion Arrhenius prefactor (m^2/s)
+  double Q{2.41e5};      ///< interdiffusion activation energy (J/mol)
 };
 
 struct CahnHilliardParams : CahnHilliardSchemaValues {
-  double omega_nd{0.0}; ///< \f$\Omega/(RT)\f$
+  double omega_nd{0.0}; ///< \f$L_0/(RT)\f$ (regular-solution \f$\omega\f$)
+  double l1_nd{0.0};    ///< \f$L_1/(RT)\f$
   double fprime0{0.0};
   double fpp0{0.0};
+  SpinodalRange spinodal{}; ///< derived from the active coefficients
 
   CahnHilliardParams() { recompute_derived(); }
 
   void recompute_derived() {
     const double RT = R * T;
-    omega_nd = (RT > 0.0) ? Omega / RT : 0.0;
-    CahnHilliardPointwise pw{.omega_nd = omega_nd, .c0 = c0};
+    if (L0_a != 0.0 || L0_b != 0.0) {
+      const RedlichKister rk{L0_a, L0_b, L1_a, L1_b};
+      omega_nd = rk.l0_nd(T);
+      l1_nd = rk.l1_nd(T);
+    } else {
+      omega_nd = (RT > 0.0) ? Omega / RT : 0.0;
+      l1_nd = 0.0;
+    }
+    CahnHilliardPointwise pw{.omega_nd = omega_nd, .l1_nd = l1_nd, .c0 = c0};
     fprime0 = pw.f_prime(c0);
     fpp0 = pw.f_double_prime(c0);
+    spinodal = spinodal_range(omega_nd, l1_nd);
+  }
+
+  /// Scales that convert code units to nanometres and seconds.
+  [[nodiscard]] PhysicalScales scales() const {
+    return PhysicalScales{Vm, kappa_phys, D0, Q};
   }
 };
 
@@ -120,7 +149,60 @@ make_cahn_hilliard_schema() {
                                            .description = "mobility in grid units",
                                            .required = false,
                                            .min = 0.0,
-                                           .default_value = 1.0});
+                                           .default_value = 1.0})
+      .real(&CahnHilliardSchemaValues::L0_a,
+            {.name = "L0_a",
+             .description = "Redlich-Kister L0 constant term; nonzero selects "
+                            "the assessed binary over Omega",
+             .required = false,
+             .default_value = 0.0,
+             .units = "J/mol"})
+      .real(&CahnHilliardSchemaValues::L0_b,
+            {.name = "L0_b",
+             .description = "Redlich-Kister L0 temperature slope",
+             .required = false,
+             .default_value = 0.0,
+             .units = "J/(mol K)"})
+      .real(&CahnHilliardSchemaValues::L1_a,
+            {.name = "L1_a",
+             .description = "Redlich-Kister L1 constant term",
+             .required = false,
+             .default_value = 0.0,
+             .units = "J/mol"})
+      .real(&CahnHilliardSchemaValues::L1_b,
+            {.name = "L1_b",
+             .description = "Redlich-Kister L1 temperature slope",
+             .required = false,
+             .default_value = 0.0,
+             .units = "J/(mol K)"})
+      .real(&CahnHilliardSchemaValues::Vm, {.name = "Vm",
+                                            .description = "molar volume",
+                                            .required = false,
+                                            .min = 1.0e-12,
+                                            .default_value = 7.09e-6,
+                                            .units = "m^3/mol"})
+      .real(&CahnHilliardSchemaValues::kappa_phys,
+            {.name = "kappa_phys",
+             .description = "physical gradient-energy coefficient, for the "
+                            "code-to-nm length scale",
+             .required = false,
+             .min = 0.0,
+             .default_value = 1.0e-9,
+             .units = "J/m"})
+      .real(&CahnHilliardSchemaValues::D0,
+            {.name = "D0",
+             .description = "interdiffusion Arrhenius prefactor",
+             .required = false,
+             .min = 0.0,
+             .default_value = 2.0e-5,
+             .units = "m^2/s"})
+      .real(&CahnHilliardSchemaValues::Q,
+            {.name = "Q",
+             .description = "interdiffusion activation energy",
+             .required = false,
+             .min = 0.0,
+             .default_value = 2.41e5,
+             .units = "J/mol"});
   return s;
 }
 
@@ -176,6 +258,7 @@ struct CahnHilliardPhysics {
 
   [[nodiscard]] CahnHilliardPointwise pointwise() const {
     return {.omega_nd = params.omega_nd,
+            .l1_nd = params.l1_nd,
             .c0 = params.c0,
             .fprime0 = params.fprime0,
             .fpp0 = params.fpp0};

@@ -15,6 +15,7 @@
 #include <vector>
 
 #include <cahn_hilliard/cahn_hilliard_physics.hpp>
+#include <cahn_hilliard/structure_factor.hpp>
 #include <openpfc/kernel/fft/kspace_iterator.hpp>
 #include <openpfc/kernel/simulation/spectral_etd_ops.hpp>
 
@@ -23,6 +24,8 @@ namespace cahn_hilliard {
 struct DiagnosticSample {
   double mean{}, mass{}, minimum{}, maximum{}, bulk_energy{}, gradient_energy{};
   double invalid_cells{};
+  /// Structure-factor observables; zero when the spectrum carries no power.
+  double k1{}, domain_length{}, k_peak{}, dominant_wavelength{};
   [[nodiscard]] double total_energy() const { return bulk_energy + gradient_energy; }
 };
 
@@ -88,6 +91,17 @@ public:
     }
     result.bulk_energy = global[1] * cell_volume;
     Ops::forward(m_fft, field, m_hat);
+    // The same transform serves the gradient energy and the structure factor;
+    // shell_average drops k=0, so the mean composition does not have to be
+    // subtracted from the field first.
+    m_hat.with_host_view([&](typename Ops::Complex *hat, std::size_t) {
+      const auto sf = shell_average(m_fft.get_outbox_bounds(), m_domain, hat,
+                                    m_comm, m_sf_bins);
+      result.k1 = sf.k1;
+      result.domain_length = sf.domain_length();
+      result.k_peak = sf.k_peak;
+      result.dominant_wavelength = sf.dominant_wavelength();
+    });
     Ops::multiply(m_hat, m_weights, m_work);
     Ops::backward(m_fft, m_work, m_lap);
     double gradient = 0;
@@ -110,6 +124,7 @@ private:
   RealField m_lap;
   typename Ops::real_coeffs m_weights;
   typename Ops::complex_scratch m_work;
+  int m_sf_bins{64};
 };
 
 /// Rank-zero CSV with collective failure propagation. Never replaces old data.
@@ -126,7 +141,8 @@ public:
         m_out.reset(std::fopen(path.string().c_str(), "wx"));
         if (!m_out) throw std::runtime_error("open failed");
         ok = publish("step,time,mean,mass,min,max,bulk_energy,gradient_energy,"
-                     "total_energy,invalid_cells\n");
+                     "total_energy,invalid_cells,k1,domain_length,k_peak,"
+                     "dominant_wavelength\n");
       } catch (const std::exception &) {
         ok = 0;
       }
@@ -145,7 +161,8 @@ public:
       line << std::setprecision(17) << step << ',' << time << ',' << s.mean << ','
            << s.mass << ',' << s.minimum << ',' << s.maximum << ',' << s.bulk_energy
            << ',' << s.gradient_energy << ',' << s.total_energy() << ','
-           << s.invalid_cells << '\n';
+           << s.invalid_cells << ',' << s.k1 << ',' << s.domain_length << ','
+           << s.k_peak << ',' << s.dominant_wavelength << '\n';
       ok = publish(line.str());
     }
     MPI_Bcast(&ok, 1, MPI_INT, 0, m_comm);
