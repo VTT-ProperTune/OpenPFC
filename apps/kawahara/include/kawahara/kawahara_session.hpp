@@ -19,6 +19,7 @@
 
 #include <kawahara/cosine_mode.hpp>
 #include <kawahara/gaussian_pulse.hpp>
+#include <kawahara/kdv_soliton.hpp>
 #include <kawahara/kawahara_physics.hpp>
 #include <kawahara/wave_packet.hpp>
 #include <kawahara/wave_packet_diagnostics.hpp>
@@ -36,6 +37,7 @@ namespace kawahara {
 inline void register_catalog() {
   pfc::ui::register_field_modifier<CosineMode>("cosine_mode");
   pfc::ui::register_field_modifier<GaussianPulse>("gaussian_pulse");
+  pfc::ui::register_field_modifier<KdVSoliton>("kdv_soliton");
   pfc::ui::register_field_modifier<WavePacket>("wave_packet");
 }
 

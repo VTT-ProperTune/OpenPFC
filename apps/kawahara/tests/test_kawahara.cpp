@@ -12,15 +12,19 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <mpi.h>
 #include <numbers>
 #include <tuple>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
 #include <kawahara/capillary_gravity_mapping.hpp>
 #include <kawahara/kawahara_physics.hpp>
+#include <kawahara/kdv_soliton.hpp>
 #include <kawahara/kawahara_session.hpp>
 #include <kawahara/wave_packet_diagnostics.hpp>
 #include <openpfc/kernel/data/domain.hpp>
@@ -41,6 +45,53 @@ int world_size() {
   MPI_Comm_size(MPI_COMM_WORLD, &n);
   return n;
 }
+
+/**
+ * @brief Dominant wavenumber of whatever is left once the pulse is removed.
+ *
+ * A hard cut around the pulse would inject the spectrum of its own step edges
+ * into exactly the band we are trying to read, so the pulse is suppressed with
+ * a raised-cosine ramp: weight 0 inside `inner` of the peak, rising smoothly
+ * to 1 over `ramp`, measured as a periodic distance. Returns the grid
+ * wavenumber (not index) with the largest masked Fourier amplitude below
+ * `k_max`. Single rank only; the science tests that call it already require it.
+ */
+double tail_dominant_k(const pfc::data::Field<double> &u, double x_peak,
+                       double inner, double ramp, double k_max) {
+  const auto n = u.local_size();
+  const auto sp = u.spacing();
+  const double Lx = static_cast<double>(n[0]) * sp[0];
+  std::vector<double> xs(static_cast<std::size_t>(n[0]));
+  std::vector<double> masked(static_cast<std::size_t>(n[0]));
+  for (int i = 0; i < n[0]; ++i) {
+    const auto x = u.coords(i, 0, 0);
+    double d = std::abs(x[0] - x_peak);
+    d = std::min(d, Lx - d);
+    const double t = std::clamp((d - inner) / ramp, 0.0, 1.0);
+    const double w = 0.5 * (1.0 - std::cos(std::numbers::pi * t));
+    xs[static_cast<std::size_t>(i)] = x[0];
+    masked[static_cast<std::size_t>(i)] = u(i, 0, 0) * w;
+  }
+  const double dk = 2.0 * std::numbers::pi / Lx;
+  double best_k = 0.0;
+  double best_a = -1.0;
+  for (int m = 1; static_cast<double>(m) * dk <= k_max; ++m) {
+    const double k = static_cast<double>(m) * dk;
+    double re = 0.0;
+    double im = 0.0;
+    for (std::size_t i = 0; i < masked.size(); ++i) {
+      re += masked[i] * std::cos(k * xs[i]);
+      im += masked[i] * std::sin(k * xs[i]);
+    }
+    const double a = std::hypot(re, im);
+    if (a > best_a) {
+      best_a = a;
+      best_k = k;
+    }
+  }
+  return best_k;
+}
+
 
 double cosine_phase(const pfc::data::Field<double> &u, int nx) {
   const auto n = u.local_size();
@@ -465,88 +516,215 @@ TEST_CASE("Kawahara wave packet: group/phase velocity vs the dispersion "
   }
 }
 
-TEST_CASE("Kawahara nonlinear pulse: fifth-order term changes the trailing "
-          "radiation vs a third-order-only control",
+TEST_CASE("KdV soliton initial condition: derived width and rejected signs",
+          "[kawahara][ic]") {
+  using kawahara::CapillaryGravityRegime;
+  const CapillaryGravityRegime regime{1.0, 1.0, 0.30};
+  const double alpha = kawahara::alpha_of(regime);
+  const double beta = kawahara::beta_of(regime);
+  const double amp = 0.05;
+
+  // The width is not a free parameter; it is what makes the profile a
+  // solution. Check it against the closed form rather than against itself.
+  const double width = kawahara::kdv_soliton_width(alpha, beta, amp);
+  REQUIRE_THAT(width, WithinRel(std::sqrt(-12.0 * beta / (alpha * amp)), 1e-14));
+  REQUIRE_THAT(kawahara::kdv_soliton_speed(alpha, amp),
+               WithinRel(alpha * amp / 3.0, 1e-14));
+
+  json j{{"type", "kdv_soliton"}, {"amplitude", amp},
+         {"alpha", alpha},        {"beta", beta},
+         {"x0", 32.0}};
+  kawahara::KdVSoliton ic;
+  from_json(j, ic);
+  REQUIRE_THAT(ic.width(), WithinRel(width, 1e-14));
+
+  // Above the critical Bond number beta flips sign and an elevation solitary
+  // wave of this form no longer exists. The input must be refused rather than
+  // silently producing a NaN field.
+  const double beta_above =
+      kawahara::beta_of(CapillaryGravityRegime{1.0, 1.0, 0.40});
+  REQUIRE(beta_above > 0.0);
+  json bad = j;
+  bad["beta"] = beta_above;
+  kawahara::KdVSoliton rejected;
+  REQUIRE_THROWS_AS(from_json(bad, rejected), std::invalid_argument);
+
+  // A depression wave of the same amplitude magnitude does exist there.
+  json depression = bad;
+  depression["amplitude"] = -amp;
+  kawahara::KdVSoliton accepted;
+  REQUIRE_NOTHROW(from_json(depression, accepted));
+}
+
+TEST_CASE("Kawahara: fifth-order dispersion makes a KdV solitary wave radiate",
           "[kawahara][pulse][science]") {
   if (world_size() != 1) {
     SKIP("single-rank spectral comparison");
   }
   using kawahara::CapillaryGravityRegime;
+  // Water below the critical Bond number, so beta < 0 < gamma: the two
+  // dispersive terms compete and the phase velocity changes sign at a finite
+  // wavenumber. This is the regime the whole app exists to show.
   const CapillaryGravityRegime regime{1.0, 1.0, 0.30};
   const double alpha = kawahara::alpha_of(regime);
   const double beta = kawahara::beta_of(regime);
   const double gamma = kawahara::gamma_of(regime);
+  REQUIRE(beta < 0.0);
+  REQUIRE(gamma > 0.0);
+
+  // The app integrates u_t + alpha u u_x - beta u_xxx + gamma u_xxxxx = 0, so
+  // the KdV dispersion coefficient is delta = -beta > 0 and the gamma = 0 run
+  // is ordinary KdV. Its exact solitary wave is
+  //
+  //     u(x, t) = A sech^2[(x - x0 - c t)/W],
+  //     c = alpha A / 3,   W = sqrt(12 delta / (alpha A)),
+  //
+  // and that is what makes it a usable control: it is a *steady* travelling
+  // solution, so a flat peak amplitude and an empty tail are the exact
+  // expected answer rather than an approximation that happens to hold for a
+  // while.
+  //
+  // The previous version of this test started from a Gaussian bump, which
+  // solves neither equation. It steepens under alpha u u_x, and this close to
+  // the critical Bond number the dispersion available to arrest the steepening
+  // is weak (|beta| = 0.017), so the control was integrating the numerical
+  // approach to a gradient singularity. Whether that tipped into NaN depended
+  // on the platform's rounding -- it survived on LUMI/Cray and produced NaN on
+  // ubuntu-24.04/gcc-13. A solitary wave takes the singularity out of the
+  // problem rather than timing the run to stop just short of it.
+  constexpr double amp = 0.05;
+  const double delta = -beta;
+  const double c_soliton = alpha * amp / 3.0;
+  const double width = std::sqrt(12.0 * delta / (alpha * amp));
 
   constexpr int N = 512;
   constexpr double dx = 0.25; // Lx = 128
   constexpr double dt = 0.005;
-  // T=40 (n_steps=8000, as originally chosen here) sits too close to this
-  // control's own wave-breaking time to be a reliable "control": for
-  // u_t+alpha*u*u_x=0 (beta -> 0), a Gaussian bump breaks at
-  // t_break = sigma / (0.6065 * alpha * amp) (the inviscid-Burgers
-  // characteristic-crossing time, 0.6065=exp(-1/2) locating the steepest
-  // slope of a Gaussian). With sigma=6, alpha=alpha_of(regime)=1.5,
-  // amp=0.15 below, t_break ~= 44. beta here is weak (tau=0.30 is close to
-  // the critical 1/3), so it barely delays that estimate -- measured on
-  // this build, the gamma=0 (third-order-only) run is flat to 5 significant
-  // digits out to t~=27 and then starts an accelerating, resolution-
-  // independent (checked at both N=512 and N=1024) amplitude growth that is
-  // the numerical approach to that same breaking singularity. Right at/after
-  // a finite-time singularity, the exact step at which floating-point noise
-  // tips the run into instability is platform-sensitive (different
-  // compiler/libm/FFT rounding), which is why this test passed on LUMI/Cray
-  // but produced a NaN mean_drift_third on ubuntu-24.04/gcc-13 CI. Running
-  // only to T=20 (n_steps=4000) stays inside the flat, pre-breaking regime
-  // with a >=1.35x margin below the observed t~=27 departure from flat and
-  // a >=2x margin below the t_break~=44 estimate, on both tested platforms.
-  constexpr int n_steps = 4000; // T = 20, safely below t_break (see above)
+  constexpr int n_steps = 20000; // T = 100
+  const double Lx = N * dx;
+  const double x0 = 0.25 * Lx;
+
+  // Both scales the run depends on must be on the grid, and the assertions say
+  // so instead of trusting the constants above to have been chosen well.
+  REQUIRE(width / dx > 6.0);
+  const double k_dealias = (2.0 / 3.0) * std::numbers::pi / dx;
+
+  // The solitary wave is resonant with the linear waves whose phase velocity
+  // matches its own: c_p(k) = beta k^2 + gamma k^4 = c. With beta < 0 < gamma
+  // that quadratic in k^2 has exactly one positive root, and it is the
+  // wavenumber the fifth-order term should put a wave train at. Nothing in the
+  // solver knows this number; it comes from the dispersion relation alone,
+  // which is what makes it worth measuring.
+  const double k_res =
+      std::sqrt((-beta + std::sqrt(beta * beta + 4.0 * gamma * c_soliton)) /
+                (2.0 * gamma));
+  INFO("alpha=" << alpha << " beta=" << beta << " gamma=" << gamma
+                << " c_soliton=" << c_soliton << " W=" << width
+                << " k_res=" << k_res << " k_dealias=" << k_dealias);
+  REQUIRE(k_res < 0.5 * k_dealias); // the shed train has to be resolved
+
   const auto domain = pfc::domain::create(pfc::GridSize({N, 1, 1}),
                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                           pfc::GridSpacing({dx, 1.0, 1.0}));
   pfc::sim::stacks::SpectralCPUStack stack(domain, 0, 1, MPI_COMM_WORLD);
-  const double amp = 0.15, sigma = 6.0, x0 = 64.0;
+
+  struct Outcome {
+    double mean_drift{};
+    double peak_ratio{};        ///< final peak amplitude / A
+    double peak_displacement{}; ///< how far the peak moved over the run
+    double tail_rms{};
+    double tail_k{};
+  };
+
+  // The tail window excludes +-3W around the pulse, which holds >99.9% of a
+  // sech^2's area, and ramps to full weight over one resonant wavelength so
+  // the mask contributes no structure at k_res itself.
+  const double tail_inner = 3.0 * width;
+  const double tail_ramp = 2.0 * std::numbers::pi / k_res;
 
   auto run = [&](double gamma_run) {
     json params{{"alpha", alpha}, {"beta", beta}, {"gamma", gamma_run}};
-    auto phys = kawahara::KawaharaPhysics<>::from_json(params, domain,
-                                                       stack.fft().get_inbox_bounds());
+    auto phys = kawahara::KawaharaPhysics<>::from_json(
+        params, domain, stack.fft().get_inbox_bounds());
     pfc::SimulationState state;
     phys.declare_fields(state);
     auto &u = state.get_field<double>("u");
     u.apply([&](double x, double, double) {
-      const double d = x - x0;
-      return amp * std::exp(-d * d / (2.0 * sigma * sigma));
+      double d = x - x0;
+      if (d > 0.5 * Lx) d -= Lx;
+      if (d < -0.5 * Lx) d += Lx;
+      const double s = 1.0 / std::cosh(d / width);
+      return amp * s * s;
     });
     const double mean0 = mean_u(u);
     pfc::sim::SpectralETDOptions opt;
     opt.psi_name = "u";
     opt.dealias = true;
-    pfc::sim::SpectralETDSystem<kawahara::KawaharaPhysics<>> sys(phys, stack.fft(), state,
-                                                                 dt, opt);
+    pfc::sim::SpectralETDSystem<kawahara::KawaharaPhysics<>> sys(
+        phys, stack.fft(), state, dt, opt);
     double t = 0.0;
-    for (int step = 0; step < n_steps; ++step) {
-      t = sys.step(t);
-    }
-    kawahara::PulseDiagnostics diag(MPI_COMM_WORLD, 4.0 * sigma);
+    for (int step = 0; step < n_steps; ++step) t = sys.step(t);
+
+    kawahara::PulseDiagnostics diag(MPI_COMM_WORLD, 2.0 * tail_inner);
     const auto sample = diag.sample(u);
-    return std::pair<double, double>{mean_u(u) - mean0, sample.tail_rms};
+    return Outcome{mean_u(u) - mean0, sample.peak_amplitude / amp,
+                   sample.peak_x - x0, sample.tail_rms,
+                   tail_dominant_k(u, sample.peak_x, tail_inner, tail_ramp,
+                                   k_dealias)};
   };
 
-  const auto [mean_drift_third, tail_third] = run(0.0);
-  const auto [mean_drift_full, tail_full] = run(gamma);
-  INFO("tail_rms third-order-only=" << tail_third << " full=" << tail_full);
-  REQUIRE_THAT(mean_drift_third, WithinAbs(0.0, 1e-9));
-  REQUIRE_THAT(mean_drift_full, WithinAbs(0.0, 1e-9));
-  // The fifth-order term must have a reproducible, nonzero effect on the
-  // trailing dispersive radiation at this amplitude/duration. Measured
-  // |tail_full-tail_third| at T=20 is ~3.5-4.0e-7 (repeatable on both
-  // N=512 and N=1024, i.e. not a resolution/aliasing artifact), roughly
-  // four orders of magnitude above the double-precision noise floor for
-  // this quantity (O(1e-16) relative to an O(0.15)-magnitude field,
-  // accumulated over a few FFTs/step across 4000 steps stays well under
-  // 1e-12 in absolute terms), so 1e-7 leaves a >=3x margin below the
-  // measured effect while remaining far above rounding noise.
-  REQUIRE(std::abs(tail_full - tail_third) > 1.0e-7);
+  const Outcome kdv = run(0.0);
+  const Outcome kawa = run(gamma);
+  INFO("KdV control: peak_ratio=" << kdv.peak_ratio << " moved="
+                                  << kdv.peak_displacement
+                                  << " tail_rms=" << kdv.tail_rms
+                                  << " tail_k=" << kdv.tail_k);
+  INFO("Kawahara:    peak_ratio=" << kawa.peak_ratio << " moved="
+                                  << kawa.peak_displacement
+                                  << " tail_rms=" << kawa.tail_rms
+                                  << " tail_k=" << kawa.tail_k);
+
+  // Both terms in the PDE are x-derivatives, so the k = 0 mode is untouched by
+  // construction and the mean is conserved to rounding, in both runs.
+  REQUIRE_THAT(kdv.mean_drift, WithinAbs(0.0, 1e-12));
+  REQUIRE_THAT(kawa.mean_drift, WithinAbs(0.0, 1e-12));
+
+  // The control is a steady solution: after T = 100 (the pulse has crossed
+  // 1.9 domain lengths) it must still be the same solitary wave.
+  REQUIRE_THAT(kdv.peak_ratio, WithinAbs(1.0, 1e-3));
+  // ... and it travels at the speed the closed form gives. The peak location
+  // is read off grid points, so one cell is the resolution of this check;
+  // measured displacement is 2.50 against a predicted c*T = 2.50.
+  REQUIRE_THAT(kdv.peak_displacement,
+               WithinAbs(c_soliton * dt * n_steps, dx));
+
+  // ... and it leaves nothing behind it. The control's tail RMS is 4.2e-5,
+  // three orders below the pulse amplitude: the residual sech^2 skirt that
+  // survives the mask, not a wave train.
+  REQUIRE(kdv.tail_rms < 1.0e-4);
+  // Whatever little the control does put outside the window is at the largest
+  // scale in the box, nowhere near the resonance (measured k = 0.049, i.e.
+  // the lowest grid mode, against k_res = 1.558).
+  REQUIRE(kdv.tail_k < 0.3 * k_res);
+
+  // Switching gamma on: the solitary wave is no longer a solution, and it pays
+  // for that by radiating. Measured on this build, tail RMS rises to 3.1e-3
+  // (75x the control) and the pulse keeps 72% of its amplitude. The bounds are
+  // deliberately loose around those numbers -- the claim under test is that the
+  // effect is large and one-signed, not that it has a particular value.
+  REQUIRE(kawa.tail_rms > 20.0 * kdv.tail_rms);
+  REQUIRE(kawa.peak_ratio < 0.90);
+  REQUIRE(kawa.peak_ratio > 0.50);
+
+  // The sharp part: the shed wave train sits at the wavenumber where the
+  // linear phase velocity equals the pulse's own speed. That number comes out
+  // of the dispersion relation, and nothing in the solver was told about it.
+  // Measured k = 1.669 against k_res = 1.558, a 7% overshoot -- the pulse
+  // radiates while its own amplitude, and therefore its speed, is still
+  // changing, so an exact match is not expected; 15% keeps the assertion
+  // meaningful (the neighbouring resolved wavenumbers span far more than that)
+  // while allowing for that drift.
+  REQUIRE(std::abs(kawa.tail_k - k_res) < 0.15 * k_res);
 }
 
 int main(int argc, char *argv[]) {
