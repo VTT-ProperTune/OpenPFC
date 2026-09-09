@@ -18,6 +18,7 @@
 #include <mpi.h>
 #include <numbers>
 #include <tuple>
+#include <iomanip>
 #include <sstream>
 #include <utility>
 #include <vector>
@@ -134,6 +135,26 @@ double cosine_amplitude(const pfc::data::Field<double> &u, int nx) {
     }
   }
   return (den > 0.0) ? num / den : 0.0;
+}
+
+/// Amplitude of a single-mode field, from its RMS: for u = A cos(kx + phi),
+/// sqrt(2 <u^2>) = A exactly, whatever the phase. Reading the grid maximum
+/// instead would measure how close a grid point happens to sit to the crest,
+/// which drifts as the mode rotates and has nothing to do with amplitude.
+double mode_amplitude(const pfc::data::Field<double> &u) {
+  double sumsq = 0.0;
+  std::size_t count = 0;
+  const auto n = u.local_size();
+  for (int k = 0; k < n[2]; ++k) {
+    for (int j = 0; j < n[1]; ++j) {
+      for (int i = 0; i < n[0]; ++i) {
+        const double v = u(i, j, k);
+        sumsq += v * v;
+        ++count;
+      }
+    }
+  }
+  return (count > 0) ? std::sqrt(2.0 * sumsq / static_cast<double>(count)) : 0.0;
 }
 
 /// Largest |u| on the field, or a non-finite value if any cell is.
@@ -581,6 +602,72 @@ TEST_CASE("Kawahara grid: the 1-D r2c outbox holds the modes the symbols assume"
     worst = std::max(worst, std::abs(kx[m] - static_cast<double>(m) * dk));
   INFO("largest deviation from k_m = 2*pi*m/Lx: " << worst << " (dk = " << dk << ")");
   REQUIRE(worst < 1.0e-12);
+}
+
+TEST_CASE("Kawahara linear operator: every resolved mode is exactly neutral",
+          "[kawahara][operator]") {
+  if (world_size() != 1) {
+    SKIP("single-rank spectral comparison");
+  }
+  // With alpha = 0 the equation is linear and its symbol is purely imaginary,
+  // L(k) = -i(beta k^3 + gamma k^5). Every Fourier mode must therefore rotate
+  // in phase and keep its amplitude *exactly* -- no mode may grow, at any
+  // wavenumber, ever. That is a property of the operator alone, independent of
+  // the initial condition, the timestep and the number of steps.
+  //
+  // The app already checks this at one carrier wavenumber. It is checked here
+  // across the whole resolved band, including right up against the 2/3
+  // dealiasing cut, because a long nonlinear run that diverges gives no clue
+  // *which* mode went wrong, and a single-mode neutrality sweep does: an
+  // operator that is right at k = 0.05 and wrong at k = 8 will show up here in
+  // milliseconds instead of as a NaN 7000 steps into a science case.
+  using kawahara::CapillaryGravityRegime;
+  const CapillaryGravityRegime regime{1.0, 1.0, 0.30};
+  const double beta = kawahara::beta_of(regime);
+  const double gamma = kawahara::gamma_of(regime);
+
+  constexpr int N = 512;
+  constexpr double dx = 0.25;
+  constexpr double dt = 0.005;
+  constexpr int n_steps = 200;
+  const double Lx = static_cast<double>(N) * dx;
+  const auto domain = pfc::domain::create(pfc::GridSize({N, 1, 1}),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing({dx, 1.0, 1.0}));
+  pfc::sim::stacks::SpectralCPUStack stack(domain, 0, 1, MPI_COMM_WORLD);
+
+  // Modes spanning the band: the longest waves, the scale the science case
+  // radiates at, and the last few the dealiasing keeps.
+  const double dk = 2.0 * std::numbers::pi / Lx;
+  const int m_cut = int((2.0 / 3.0) * (std::numbers::pi / dx) / dk);
+  for (int m : {1, 2, 4, 8, 16, 32, m_cut - 2, m_cut - 1, m_cut}) {
+    const double k = static_cast<double>(m) * dk;
+    const double omega = beta * k * k * k + gamma * std::pow(k, 5);
+
+    json params{{"alpha", 0.0}, {"beta", beta}, {"gamma", gamma}};
+    auto phys = kawahara::KawaharaPhysics<>::from_json(
+        params, domain, stack.fft().get_inbox_bounds());
+    pfc::SimulationState state;
+    phys.declare_fields(state);
+    auto &u = state.get_field<double>("u");
+    u.apply([&](double x, double, double) { return std::cos(k * x); });
+
+    pfc::sim::SpectralETDOptions opt;
+    opt.psi_name = "u";
+    opt.dealias = true;
+    pfc::sim::SpectralETDSystem<kawahara::KawaharaPhysics<>> sys(
+        phys, stack.fft(), state, dt, opt);
+    double t = 0.0;
+    for (int step = 0; step < n_steps; ++step) t = sys.step(t);
+
+    // CHECK, not REQUIRE: one run should report every mode that misbehaves,
+    // not stop at the first.
+    const double amp = mode_amplitude(u);
+    INFO("m=" << m << " (of " << m_cut << " kept by dealiasing) k=" << k
+              << " omega=" << omega << " amplitude after " << n_steps
+              << " steps=" << std::setprecision(17) << amp);
+    CHECK_THAT(amp, WithinAbs(1.0, 1.0e-12));
+  }
 }
 
 TEST_CASE("KdV soliton initial condition: derived width and rejected signs",
