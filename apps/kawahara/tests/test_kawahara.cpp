@@ -27,6 +27,7 @@
 #include <kawahara/capillary_gravity_mapping.hpp>
 #include <kawahara/kawahara_physics.hpp>
 #include <kawahara/kdv_soliton.hpp>
+#include <openpfc/kernel/fft/kspace_iterator.hpp>
 #include <kawahara/kawahara_session.hpp>
 #include <kawahara/wave_packet_diagnostics.hpp>
 #include <openpfc/kernel/data/domain.hpp>
@@ -532,6 +533,54 @@ TEST_CASE("Kawahara wave packet: group/phase velocity vs the dispersion "
   } else {
     REQUIRE(c_p_analytic > 0.0);
   }
+}
+
+TEST_CASE("Kawahara grid: the 1-D r2c outbox holds the modes the symbols assume",
+          "[kawahara][fft]") {
+  if (world_size() != 1) {
+    SKIP("single-rank layout check");
+  }
+  // Every symbol in this app is evaluated by walking the FFT outbox with
+  // for_each_kpoint, which derives k from the *index box* alone. That is only
+  // correct if the transform lays a 1-D real grid out the way the walk
+  // assumes: N/2+1 modes along x at k = 2*pi*m/Lx, one point in y and z.
+  //
+  // If a different FFTW/HeFFTe build chose another layout the code would keep
+  // running and silently apply the wrong dispersion to some modes -- which is
+  // the sort of thing that shows up only as a long run diverging, so it is
+  // worth one cheap explicit check at the grid the science case uses.
+  constexpr int N = 512;
+  constexpr double dx = 0.25;
+  const double Lx = static_cast<double>(N) * dx;
+  const auto domain = pfc::domain::create(pfc::GridSize({N, 1, 1}),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing({dx, 1.0, 1.0}));
+  pfc::sim::stacks::SpectralCPUStack stack(domain, 0, 1, MPI_COMM_WORLD);
+  const auto outbox = stack.fft().get_outbox_bounds();
+
+  CHECK(stack.fft().size_outbox() == std::size_t(N / 2 + 1));
+  CHECK(outbox.low[1] == outbox.high[1]);
+  CHECK(outbox.low[2] == outbox.high[2]);
+
+  std::vector<double> kx;
+  double max_ky = 0.0, max_kz = 0.0;
+  pfc::fft::kspace::for_each_kpoint(
+      outbox, domain,
+      [&](std::size_t, double a, double b, double c, int, int, int) {
+        kx.push_back(a);
+        max_ky = std::max(max_ky, std::abs(b));
+        max_kz = std::max(max_kz, std::abs(c));
+      });
+  REQUIRE(kx.size() == std::size_t(N / 2 + 1));
+  CHECK(max_ky == 0.0);
+  CHECK(max_kz == 0.0);
+
+  const double dk = 2.0 * std::numbers::pi / Lx;
+  double worst = 0.0;
+  for (std::size_t m = 0; m < kx.size(); ++m)
+    worst = std::max(worst, std::abs(kx[m] - static_cast<double>(m) * dk));
+  INFO("largest deviation from k_m = 2*pi*m/Lx: " << worst << " (dk = " << dk << ")");
+  REQUIRE(worst < 1.0e-12);
 }
 
 TEST_CASE("KdV soliton initial condition: derived width and rejected signs",
