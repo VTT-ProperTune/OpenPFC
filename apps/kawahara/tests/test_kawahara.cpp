@@ -18,6 +18,8 @@
 #include <mpi.h>
 #include <numbers>
 #include <tuple>
+#include <sstream>
+#include <utility>
 #include <vector>
 
 #include <nlohmann/json.hpp>
@@ -131,6 +133,22 @@ double cosine_amplitude(const pfc::data::Field<double> &u, int nx) {
     }
   }
   return (den > 0.0) ? num / den : 0.0;
+}
+
+/// Largest |u| on the field, or a non-finite value if any cell is.
+double max_abs_u(const pfc::data::Field<double> &u) {
+  double m = 0.0;
+  const auto n = u.local_size();
+  for (int k = 0; k < n[2]; ++k) {
+    for (int j = 0; j < n[1]; ++j) {
+      for (int i = 0; i < n[0]; ++i) {
+        const double v = u(i, j, k);
+        if (!std::isfinite(v)) return v;
+        m = std::max(m, std::abs(v));
+      }
+    }
+  }
+  return m;
 }
 
 double mean_u(const pfc::data::Field<double> &u) {
@@ -634,6 +652,13 @@ TEST_CASE("Kawahara: fifth-order dispersion makes a KdV solitary wave radiate",
     double peak_displacement{}; ///< how far the peak moved over the run
     double tail_rms{};
     double tail_k{};
+    /// (step, max|u|) sampled through the run; a non-finite entry is where the
+    /// integration stopped being usable. Carried so that a failure says *when*
+    /// and *how fast* the field left the physical range rather than only that
+    /// the final answer is NaN -- 20000 steps is far too many to bisect by
+    /// hand, and the last few samples separate a growing instability from a
+    /// sudden loss.
+    std::vector<std::pair<int, double>> trace;
   };
 
   // The tail window excludes +-3W around the pulse, which holds >99.9% of a
@@ -663,14 +688,27 @@ TEST_CASE("Kawahara: fifth-order dispersion makes a KdV solitary wave radiate",
     pfc::sim::SpectralETDSystem<kawahara::KawaharaPhysics<>> sys(
         phys, stack.fft(), state, dt, opt);
     double t = 0.0;
-    for (int step = 0; step < n_steps; ++step) t = sys.step(t);
+    constexpr int kSample = 1000;
+    std::vector<std::pair<int, double>> trace;
+    trace.emplace_back(0, max_abs_u(u));
+    for (int step = 1; step <= n_steps; ++step) {
+      t = sys.step(t);
+      if (step % kSample == 0 || step == n_steps) {
+        const double m = max_abs_u(u);
+        trace.emplace_back(step, m);
+        if (!std::isfinite(m)) break;
+      }
+    }
 
     kawahara::PulseDiagnostics diag(MPI_COMM_WORLD, 2.0 * tail_inner);
     const auto sample = diag.sample(u);
-    return Outcome{mean_u(u) - mean0, sample.peak_amplitude / amp,
-                   sample.peak_x - x0, sample.tail_rms,
+    return Outcome{mean_u(u) - mean0,
+                   sample.peak_amplitude / amp,
+                   sample.peak_x - x0,
+                   sample.tail_rms,
                    tail_dominant_k(u, sample.peak_x, tail_inner, tail_ramp,
-                                   k_dealias)};
+                                   k_dealias),
+                   std::move(trace)};
   };
 
   const Outcome kdv = run(0.0);
@@ -683,6 +721,19 @@ TEST_CASE("Kawahara: fifth-order dispersion makes a KdV solitary wave radiate",
                                   << kawa.peak_displacement
                                   << " tail_rms=" << kawa.tail_rms
                                   << " tail_k=" << kawa.tail_k);
+
+  // Nothing below is meaningful if the integration lost the field, and a bare
+  // "nan is within 0 of 0" would say nothing about where it went. Fail here
+  // instead, with the trajectory attached.
+  auto trace_text = [](const Outcome &o) {
+    std::ostringstream os;
+    for (const auto &[step, m] : o.trace) os << step << ':' << m << ' ';
+    return os.str();
+  };
+  INFO("KdV control max|u| trace: " << trace_text(kdv));
+  INFO("Kawahara max|u| trace:    " << trace_text(kawa));
+  REQUIRE(std::isfinite(kdv.trace.back().second));
+  REQUIRE(std::isfinite(kawa.trace.back().second));
 
   // Both terms in the PDE are x-derivatives, so the k = 0 mode is untouched by
   // construction and the mean is conserved to rounding, in both runs.
