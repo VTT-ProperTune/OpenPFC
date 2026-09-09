@@ -25,14 +25,26 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
-<<<<<<< HEAD
 - EasyBuild recipes for a LUMI-C module install (`#46`): a CPU HeFFTe 2.4.1
   (FFTW backend, `cpeGNU/25.09`) and OpenPFC 0.2.0 on top of it, under
   `easybuild/easyconfigs/`. Verified end to end on LUMI: both install, and
   `srun -n 4 tungsten` runs a 64³ case from the resulting module. Documented
   as an optional alternative to `scripts/build.sh` in `INSTALL.LUMI.md`.
-=======
->>>>>>> c0f1145d (feat(cahn_hilliard): Fe-Cr ageing with physical units and structure factor)
+- Conservative flux nonlinearity for the applications whose mobility depends on
+  the field inside a divergence (`#114`): `pfc::apps::SpectralFlux` and
+  `pfc::apps::FluxETD` in `apps/common`, evaluating `div(M(u) grad p)`
+  spectrally with Orszag 2/3 dealiasing and an ETD1 update. Host only.
+- `thin_film` science case: full `h^3` lubrication mobility, a precursor
+  disjoining pressure that survives hole formation, and spontaneous versus
+  defect-triggered dewetting presets. A 30 % deep defect brings failure forward
+  by about 40 % (precursor reached at t = 85 against t = 140) and relocates it
+  to the defect. Volume conserved to round-off; the nonlinear solver reproduces
+  the exact `k^4` decay at constant mobility.
+- The structure factor moved from `cahn_hilliard` to
+  `apps/common/include/openpfc_apps/structure_factor.hpp` now that a second
+  application needs it.
+
+
 - Fe–Cr Cahn–Hilliard science upgrade (`#113`): Redlich–Kister excess free
   energy with the assessed bcc Cr–Fe interaction, a code-to-physical scale map
   (1 code length = 1.07 nm, 1 code time = 0.278 h at 475 °C), and
