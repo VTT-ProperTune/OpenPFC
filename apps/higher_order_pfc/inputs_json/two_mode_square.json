@@ -39,5 +39,8 @@
             "amplitude": 0.01,
             "seed": 42
         }
-    ]
+    ],
+    "diagnostics": {
+        "csv": "results/higher_order_pfc/two_mode_square_diagnostics.csv"
+    }
 }

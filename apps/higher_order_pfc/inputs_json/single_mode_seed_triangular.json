@@ -15,32 +15,32 @@
         "Ly": 128,
         "Lz": 1,
         "dx": 0.7853981633974483,
-        "dy": 0.7853981633974483,
+        "dy": 0.45344984105855446,
         "dz": 0.7853981633974483,
         "origin": "corner"
     },
     "timestepping": {
         "t0": 0.0,
-        "t1": 400.0,
+        "t1": 100.0,
         "dt": 0.05,
         "saveat": 20.0
     },
     "fields": [
         {
             "name": "psi",
-            "data": "results/higher_order_pfc/single_mode_%04d.vti"
+            "data": "results/higher_order_pfc/single_mode_seed_triangular_%04d.vti"
         }
     ],
     "initial_conditions": [
         {
             "target": "psi",
-            "type": "seeded_noise",
+            "type": "lattice_seed",
             "psi0": -0.15,
-            "amplitude": 0.01,
-            "seed": 42
+            "amplitude": 0.2,
+            "modes": [[16, 0, 0], [-8, 8, 0], [-8, -8, 0]]
         }
     ],
     "diagnostics": {
-        "csv": "results/higher_order_pfc/single_mode_triangular_diagnostics.csv"
+        "csv": "results/higher_order_pfc/single_mode_seed_triangular_diagnostics.csv"
     }
 }
