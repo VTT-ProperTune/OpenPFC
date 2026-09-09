@@ -901,6 +901,69 @@ TEST_CASE("Kawahara dealiasing keeps exactly the modes below the 2/3 cut",
   }
 }
 
+TEST_CASE("Kawahara linear operator stays neutral over a science-length run",
+          "[kawahara][operator][long]") {
+  if (world_size() != 1) {
+    SKIP("single-rank spectral comparison");
+  }
+  // No application test in this repository runs more than 400 spectral ETD
+  // steps. The science case below runs 20000, fifty times further than
+  // anything else has ever taken this path, so "the operator is correct" as
+  // established by short tests is a claim about a regime the long run leaves
+  // almost immediately.
+  //
+  // This closes that gap in the simplest possible setting: one mode, alpha =
+  // 0, 20000 steps. With a purely imaginary symbol the amplitude is invariant
+  // however many steps are taken, so any drift is the integrator or the
+  // transform accumulating error, with no nonlinearity and no broadband field
+  // to hide it. It costs about a second.
+  using kawahara::CapillaryGravityRegime;
+  const CapillaryGravityRegime regime{1.0, 1.0, 0.30};
+  const double beta = kawahara::beta_of(regime);
+  const double gamma = kawahara::gamma_of(regime);
+
+  constexpr int N = 512;
+  constexpr double dx = 0.25;
+  constexpr double dt = 0.005;
+  constexpr int n_steps = 20000;
+  const double Lx = static_cast<double>(N) * dx;
+  const auto domain = pfc::domain::create(pfc::GridSize({N, 1, 1}),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing({dx, 1.0, 1.0}));
+  pfc::sim::stacks::SpectralCPUStack stack(domain, 0, 1, MPI_COMM_WORLD);
+  const double dk = 2.0 * std::numbers::pi / Lx;
+
+  // A long wave the soliton is mostly made of, and a short one near where the
+  // fifth-order term dominates.
+  for (int m : {8, 32}) {
+    const double k = static_cast<double>(m) * dk;
+    json params{{"alpha", 0.0}, {"beta", beta}, {"gamma", gamma}};
+    auto phys = kawahara::KawaharaPhysics<>::from_json(
+        params, domain, stack.fft().get_inbox_bounds());
+    pfc::SimulationState state;
+    phys.declare_fields(state);
+    auto &u = state.get_field<double>("u");
+    u.apply([&](double x, double, double) { return std::cos(k * x); });
+
+    pfc::sim::SpectralETDOptions opt;
+    opt.psi_name = "u";
+    opt.dealias = true;
+    pfc::sim::SpectralETDSystem<kawahara::KawaharaPhysics<>> sys(
+        phys, stack.fft(), state, dt, opt);
+    double t = 0.0;
+    std::vector<std::pair<int, double>> trace;
+    for (int step = 1; step <= n_steps; ++step) {
+      t = sys.step(t);
+      if (step % 4000 == 0) trace.emplace_back(step, mode_amplitude(u));
+    }
+    std::ostringstream os;
+    os << std::setprecision(12);
+    for (const auto &[step, a] : trace) os << step << ':' << a << ' ';
+    INFO("m=" << m << " k=" << k << " amplitude trace: " << os.str());
+    CHECK_THAT(trace.back().second, WithinAbs(1.0, 1.0e-11));
+  }
+}
+
 TEST_CASE("KdV soliton initial condition: derived width and rejected signs",
           "[kawahara][ic]") {
   using kawahara::CapillaryGravityRegime;
