@@ -7,7 +7,7 @@ but the architecture — a domain decomposition, a distributed field, a
 pluggable spectral or finite-difference stack, and a session that wires them
 from JSON — is not specific to PFC.
 
-This report describes the twelve applications shipped with OpenPFC 0.2. They
+This report describes the thirteen applications shipped with OpenPFC 0.2. They
 span fourth- through tenth-order spatial operators, conserved and
 non-conserved dynamics, dispersive and dissipative behaviour, single-field and
 coupled multi-field systems, and both spectral and finite-difference

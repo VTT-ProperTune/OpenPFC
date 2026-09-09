@@ -1,0 +1,154 @@
+# Higher-order PFC correlation kernel {#sec-higher-order-pfc}
+
+`apps/higher_order_pfc` — the highest-order model in the report: an eighth-order
+free-energy operator driving tenth-order conserved dynamics.
+
+## Physical setting
+
+The correlation peak of @sec-tungsten sits at a single wave number, and that is
+what fixes the lattice constant. A real liquid-state direct correlation
+function has more structure than one peak, and capturing a **second** peak
+gives control over which crystal symmetry is selected — square rather than
+triangular in two dimensions, FCC rather than BCC in three.
+
+This application implements a two-mode kernel to make that control explicit,
+and to serve as the report's limiting case for derivative order.
+
+## Governing equations
+
+Conserved dynamics as in @eq-w-dyn, with
+
+$$
+F[\psi] = \int\Big[\tfrac12\,\psi\,\Lambda(\nabla^2)\,\psi
+                   - \tfrac{g}{3}\psi^3 + \tfrac14\psi^4\Big]\,d\mathbf{x},
+\qquad
+\partial_t\psi = M\nabla^2\frac{\delta F}{\delta\psi}.
+$$ {#eq-hop-energy}
+
+The two-mode kernel is a product of two Swift–Hohenberg factors,
+
+$$
+\Lambda(\nabla^2) \;=\; -\varepsilon
+  \;+\; (1+\nabla^2)^2\Big[\,r_1 + (q_1^2+\nabla^2)^2\Big].
+$$ {#eq-hop-kernel}
+
+Each factor contributes $\nabla^4$, so @eq-hop-kernel contains $(\nabla^2)^4$ —
+**eighth order in space**. Conserved dynamics applies one more Laplacian, so
+the evolution operator runs through $(\nabla^2)^5$: **tenth order**.
+
+## Spectral formulation
+
+With $u = k_{\mathrm{lap}} = -|\mathbf{k}|^2$, writing $a = q_1^2$,
+$A = r_1 + a^2$, $B = 2a$, $C = 1$, the kernel expands to a quartic in $u$:
+
+$$
+\Lambda(u) = (A-\varepsilon) + (B+2A)\,u + (C+2B+A)\,u^2
+             + (2C+B)\,u^3 + C\,u^4 ,
+$$ {#eq-hop-expanded}
+
+and the conserved evolution symbol is one power higher:
+
+$$
+L(u) \;=\; M\,u\,\Lambda(u),
+\qquad
+M_{\mathrm{nl}}(u) \;=\; M\,u,
+\qquad
+N(\psi) \;=\; \psi^3 - g\psi^2 .
+$$ {#eq-hop-symbol}
+
+Both are evaluated by Horner's rule on a coefficient array. The implementation
+carries no special case for $k^8$ or $k^{10}$: a single
+`PolynomialInKLap<N>` helper serves both, and the entire tenth-order operator
+is a five-term loop. This is the report's central architectural claim
+(@sec-methods) at its limit.
+
+Multiplying by $u$ shifts every coefficient up one power, which leaves the
+constant term of $L$ a literal zero. **Mass conservation is therefore exact in
+the strict sense** — $L(k{=}0)$ is bit-exactly $0$, and the test asserts
+`== 0.0` rather than a tolerance.
+
+## Band structure
+
+$\Lambda$ has a minimum wherever a factor of @eq-hop-kernel vanishes: at
+$|\mathbf{k}| = 1$ with depth $-\varepsilon$, and at $|\mathbf{k}| = q_1$ with
+depth $-\varepsilon + (1-q_1^2)^2 r_1$. Setting `n_modes = 1` selects the
+classical fourth-order kernel $-\varepsilon + (1+\nabla^2)^2$, which has one
+minimum only.
+
+Growth requires $\Lambda < 0$, so $r_1$ controls how much of the second band
+survives. For two-dimensional square ordering $q_1 = \sqrt2$ — the $(10)$ and
+$(11)$ families; for three-dimensional FCC, $q_1 = 2/\sqrt3$.
+
+## What the extra terms buy
+
+Both shipped presets run the same seed, box and quench depth to $t = 400$ and
+differ only in the kernel. Fraction of spectral power in each band at the end:
+
+| kernel | $r_1$ | $\lvert k\rvert = 1$ | $\lvert k\rvert = \sqrt2$ |
+|---|---|---|---|
+| single-mode $k^4$ | — | 94.3 % | 0.0 % |
+| two-mode $k^8$ | 0.00 | 3.8 % | 91.0 % |
+| two-mode $k^8$ | **0.02** | **70.9 %** | **21.0 %** |
+| two-mode $k^8$ | 0.05 | 78.4 % | 13.7 % |
+| two-mode $k^8$ | 0.10 | 86.4 % | 6.5 % |
+| two-mode $k^8$ | 0.20 | 92.4 % | 1.2 % |
+
+The fourth-order kernel *cannot* place power at $|\mathbf{k}| = \sqrt2$: it has
+no minimum there. The eighth-order kernel opens that band, and $r_1$ tunes the
+balance continuously, converging back onto the single-mode result as it grows.
+The $|\mathbf{k}| = \sqrt3$ band stays empty throughout, so the ordering is the
+square $(10)+(11)$ family rather than triangular.
+
+Two results here are worth stating plainly because they are easy to assume
+wrongly. At $r_1 = 0$ the two minima are exactly degenerate, and the $\sqrt2$
+family then **wins outright** — its ring carries more modes in two dimensions.
+That is mathematically tidy but is not a square lattice; $r_1 = 0.02$ is the
+value that populates both families. And from random noise on a periodic box the
+outcome is **polycrystalline** — several square-ordered grains at different
+orientations — not a single crystal.
+
+## Solution strategy
+
+ETD1 as in @eq-etd1, dealiased because the local term is cubic.
+
+This model is where the stiffness argument of @sec-methods is sharpest. On the
+shipped grid $|L(k_{\max})| \approx 7\times10^{5}$, so forward Euler would
+require $\Delta t \approx 3\times10^{-6}$. The application runs at
+$\Delta t = 0.05$ — **four orders of magnitude larger** — because ETD
+integrates the linear operator exactly.
+
+The mean density is a control parameter rather than a detail. About a nonzero
+$\bar\psi$ the effective rate is
+$\sigma(k) = Mu\,[\Lambda(u) + n'(\bar\psi)]$ with
+$n'(\psi) = 3\psi^2 - 2g\psi$. At $\bar\psi = -0.05$, $g = 0.5$ that leaves
+$\sigma(|k|{=}1) = 0.19$; at $\bar\psi = -0.15$ only $0.033$, and ordering takes
+roughly six times longer.
+
+## Verification
+
+* **Analytical kernel.** $\Lambda(u)$ matches the factored form to $10^{-12}$
+  over $0 \le |\mathbf{k}| \le 4$, and its five coefficients equal the
+  expansion @eq-hop-expanded.
+* **Tenth order.** $L$ is quintic in $u$ with a nonzero leading coefficient and
+  equals $Mu\Lambda(u)$ pointwise.
+* **Exact conservation.** $L$'s constant term is bit-exactly zero.
+* **Band structure.** Degenerate minima at $r_1 = 0$; the offset is exactly
+  $(1-q_1^2)^2 r_1$ otherwise; the unstable band is exactly where
+  $\Lambda < 0$.
+* **Order comparison.** The $k^8$ kernel destabilises $|\mathbf{k}| = \sqrt2$;
+  the $k^4$ kernel does not.
+* **Growth and stability.** An ETD run reproduces $e^{L(k)t}$ at
+  $|\mathbf{k}| = 1$ to $10^{-6}$, holds the mean to $10^{-13}$, and stays
+  bounded at $\Delta t$ more than 1000× the explicit limit.
+
+## Binaries and inputs
+
+`higher_order_pfc` (CPU), `higher_order_pfc_hip`. Presets
+`two_mode_square.json` and `single_mode_triangular.json`, which differ only in
+the kernel.
+
+## Scalability
+
+Not measured as a curve. The HIP twin has been validated on LUMI-G at 1 and 2
+GCDs, where the conserved sum is bit-identical to the CPU run on one GCD and
+within 9 ULP on two.

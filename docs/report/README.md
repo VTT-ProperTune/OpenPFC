@@ -26,9 +26,9 @@ Python, R, or Jupyter.
 | Path | Contents |
 |---|---|
 | `index.qmd`, `00_*`–`02_*` | preface, abstract, introduction, shared numerical methods |
-| `03_*`–`14_*` | one chapter per application |
-| `15_scalability.qmd` | measured LUMI-G strong-scaling curves |
-| `16_conclusions.qmd` | what is demonstrated, and the gaps |
+| `03_*`–`15_*` | one chapter per application |
+| `16_scalability.qmd` | measured LUMI-G strong-scaling curves |
+| `17_conclusions.qmd` | what is demonstrated, and the gaps |
 | `data/*.csv` | measured timings, transcribed from [`../hpc/lumi_gpu_scaling.md`](../hpc/lumi_gpu_scaling.md) |
 | `figures/*.svg` | committed figures |
 | `figures/make_figures.py` | regenerates the figures from `data/` |

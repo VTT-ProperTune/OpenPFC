@@ -2,7 +2,7 @@
 
 ## What the application set demonstrates
 
-Twelve applications, spanning fourth- through sixth-order spatial operators in
+Thirteen applications, spanning fourth- through tenth-order spatial operators in
 the shipped spectral set, conserved and non-conserved dynamics, dispersive and
 dissipative behaviour, single- and multi-field systems, and both spectral and
 finite-difference discretisations — on one runtime, with one halo/decomposition
@@ -11,9 +11,9 @@ layer and matching CPU and GPU paths.
 The two claims from the abstract hold up, with qualifications worth stating.
 
 **High order is cheap to express.** @sec-surface-diffusion ($k^4$),
-@sec-thin-film ($k^4$), @sec-kawahara ($k^5$, imaginary) and @sec-ehd-film
-($k^6$) differ, in their physics headers, by the polynomial one function
-returns. That is a real architectural result and not a presentational trick:
+@sec-thin-film ($k^4$), @sec-kawahara ($k^5$, imaginary), @sec-ehd-film
+($k^6$) and @sec-higher-order-pfc ($k^{10}$) differ, in their physics headers,
+by the polynomial one function returns. That is a real architectural result and not a presentational trick:
 none of these applications contains a loop over wave numbers, an MPI call, or a
 hand-written GPU kernel.
 
@@ -49,7 +49,7 @@ require running both to a fixed accuracy, which has not been done.
 
 Honest accounting of what this report cannot support:
 
-* **Nine of twelve applications have no scaling measurement.** The spectral
+* **Ten of thirteen applications have no scaling measurement.** The spectral
   ones share a stack with @sec-tungsten and would be expected to track it, but
   expectation is not measurement.
 * **No CPU control.** Without a LUMI-C run at equal node count, the report
