@@ -25,6 +25,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- EasyBuild recipes for a LUMI-C module install (`#46`): a CPU HeFFTe 2.4.1
+  (FFTW backend, `cpeGNU/25.09`) and OpenPFC 0.2.0 on top of it, under
+  `easybuild/easyconfigs/`. Verified end to end on LUMI: both install, and
+  `srun -n 4 tungsten` runs a 64³ case from the resulting module. Documented
+  as an optional alternative to `scripts/build.sh` in `INSTALL.LUMI.md`.
+
+
 - Cray/LUMI site profile for the runtime baker (`#13`): `--site cray`,
   `--host-lib` for stack libraries that share a directory with ordinary system
   libraries (LUMI's `/usr/lib64/libcxi.so.1`, `libxpmem.so.0`), `--runtime` to

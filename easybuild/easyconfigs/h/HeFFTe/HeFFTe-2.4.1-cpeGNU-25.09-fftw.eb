@@ -1,0 +1,62 @@
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# CPU (FFTW backend) HeFFTe for the OpenPFC module install on LUMI.
+# LUMI-EasyBuild-contrib ships HeFFTe only for cpeAMD with the ROCm backend;
+# OpenPFC's documented LUMI toolchain is cpeGNU, so this builds the matching
+# CPU library. For the GPU path use the contrib ROCm easyconfig instead.
+
+easyblock = 'CMakeMake'
+
+name =          'HeFFTe'
+version =       '2.4.1'
+versionsuffix = '-fftw'
+
+homepage = 'https://icl.utk.edu/fft'
+
+whatis = [
+    'Description: Highly Efficient FFT for Exascale (HeFFTe), FFTW backend for cpeGNU',
+]
+
+description = """
+HeFFTe provides distributed multidimensional FFTs. This build uses the FFTW
+backend from cray-fftw and is intended for the CPU OpenPFC module; it does not
+enable the ROCm backend.
+"""
+
+toolchain = {'name': 'cpeGNU', 'version': '25.09'}
+toolchainopts = {'usempi': True, 'openmp': True}
+
+sources = {
+    'download_filename': 'v%(version)s.tar.gz',
+    'filename':          SOURCELOWER_TAR_GZ,
+    'source_urls':       ['https://github.com/icl-utk-edu/heffte/archive/refs/tags/'],
+}
+checksums = ['de2cf26df5d61baac7841525db3f393cb007f79612ac7534fd4757f154ba3e6c']
+
+builddependencies = [
+    ('buildtools', '%(toolchain_version)s', '', True),
+]
+
+dependencies = [
+    ('cray-fftw', EXTERNAL_MODULE),
+]
+
+build_shared_libs = True
+
+# The Cray wrappers already carry MPI; pointing HeFFTe's MPI detection at them
+# avoids a second, inconsistent MPI being discovered.
+configopts  = '-D CMAKE_BUILD_TYPE=Release '
+configopts += '-D CMAKE_CXX_COMPILER=CC '
+configopts += '-D MPI_CXX_COMPILER=CC '
+configopts += '-D Heffte_ENABLE_FFTW=ON '
+configopts += '-D Heffte_ENABLE_AVX=ON '
+configopts += '-D Heffte_ENABLE_ROCM=OFF '
+configopts += '-D Heffte_ENABLE_CUDA=OFF '
+
+sanity_check_paths = {
+    'files': ['lib/libheffte.%s' % SHLIB_EXT],
+    'dirs':  ['include', 'lib/cmake/Heffte'],
+}
+
+moduleclass = 'lib'

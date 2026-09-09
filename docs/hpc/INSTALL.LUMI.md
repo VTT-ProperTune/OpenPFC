@@ -232,7 +232,34 @@ The TOML/JSON option `backend = "cuda"` in examples such as [examples/fft_backen
 
 On LUMI-G, GPU FFTs use rocFFT via HeFFTe inside HIP-specific code paths (e.g. `tungsten_hip`, `create_hip`). Do not expect a `"rocfft"` string in `backend_from_string` for generic CPU/CUDA runtime switching; use the HIP-enabled applications and APIs documented in the repository.
 
-## 7. Further reading
+## 7. Optional: EasyBuild module install (CPU)
+
+Everything above builds OpenPFC from a source checkout, which is the path to
+use for development and for the GPU build. If you only want OpenPFC **as a
+module** on LUMI-C, the repository ships EasyBuild recipes:
+
+```bash
+module load LUMI/25.09 partition/C
+module load EasyBuild-user
+
+eb --robot="$PWD/easybuild/easyconfigs" \
+   easybuild/easyconfigs/o/OpenPFC/OpenPFC-0.2.0-cpeGNU-25.09.eb
+```
+
+That builds a matching CPU HeFFTe (FFTW backend) and then OpenPFC 0.2.0, and
+gives you the shipped applications on `PATH`:
+
+```bash
+module load OpenPFC/0.2.0-cpeGNU-25.09
+srun -n 4 tungsten case.json
+```
+
+Scope and limits are in [`easybuild/README.md`](../../easybuild/README.md).
+In short: CPU (`cpeGNU`) only — the GPU build stays with
+`scripts/build.sh --machine=lumi --with-rocm` — and the recipe installs the
+released **0.2.0** tag rather than the current checkout.
+
+## 8. Further reading
 
 - [INSTALL.md](../../INSTALL.md) — general HeFFTe and OpenPFC options (CUDA, coverage, documentation).
 - [LUMI documentation](https://docs.lumi-supercomputer.eu/) — modules, queues, storage, and PE updates.
