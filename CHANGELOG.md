@@ -56,6 +56,30 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   1100 h of simulated ageing). The reduced regular-solution verifier is the
   `L1 = 0` case of the same expression, not a second code path.
 
+- `gradient_elasticity`: derived stress/strain/energy fields and a
+  misfitting-inclusion size-effect study (`#117`). Every run now also
+  computes, spectrally from the displacement solution: strain (`exx`/`eyy`/
+  `exy`), Cauchy stress (`sxx`/`syy`/`sxy`), the hydrostatic/von-Mises
+  invariants (`stress_hydro`/`stress_vm`), and the elastic energy density
+  (`energy_density`) -- via the classical local constitutive law evaluated
+  on the (already `ell`-regularized) displacement field, documented as such.
+  New `circular_inclusion` field modifier (`tanh`-smoothed flat-top disk of
+  radius `R`) and a `line_profile` JSON block (single-rank line-cut CSV) feed
+  a new `scripts/size_sweep.py` size-effect sweep: peak hydrostatic/von-Mises
+  stress and total elastic energy vs. `R/ell`. For this smooth, finite
+  inclusion (no classical singularity), the measured, physical direction is
+  that peak stress *decreases* monotonically as `R/ell` grows, bounded above
+  by a new closed-form "clamped" limit (`R/ell -> 0`, no elastic relaxation)
+  and below by the classical "relaxed" limit (`R/ell -> infinity`,
+  Eshelby-type) -- both derived, checked by unit tests, and documented in the
+  app README, along with a documented and tested periodic-image control
+  (box doubling changes peak stress by <2% at `L/max(R,ell)=16`; ratio 8
+  measured ~4-5% contamination). The existing `#82` cosine/Gaussian
+  analytical verifiers are untouched and stay green. Deferred: the
+  dislocation/defect regularization benchmark (issue section B) and a
+  systematic 4th-vs-6th-order comparison (section C) beyond the existing
+  `alpha(k)` unit tests -- see the app README's "What `#117` does not
+  cover".
 
 - Cray/LUMI site profile for the runtime baker (`#13`): `--site cray`,
   `--host-lib` for stack libraries that share a directory with ordinary system

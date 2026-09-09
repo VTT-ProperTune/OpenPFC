@@ -17,9 +17,11 @@
 #include <complex>
 #include <mpi.h>
 #include <numbers>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
+#include <gradient_elasticity/gradient_elasticity_diagnostics.hpp>
 #include <gradient_elasticity/gradient_elasticity_physics.hpp>
 #include <gradient_elasticity/gradient_elasticity_session.hpp>
 #include <gradient_elasticity/gradient_elasticity_solve.hpp>
@@ -65,6 +67,100 @@ double max_abs_err_sine(const pfc::data::Field<double> &ux, double amp, double k
     }
   }
   return m;
+}
+
+/// Fill `g` with a `tanh`-smoothed circular inclusion (same formula as
+/// `CircularInclusion::apply`, inlined here so the low-level physics tests
+/// don't need the JSON field-modifier plumbing).
+void fill_circular_inclusion(pfc::data::Field<double> &g, double x0, double y0,
+                             double R, double w) {
+  g.apply([&](double x, double y, double) {
+    const double dx = x - x0;
+    const double dy = y - y0;
+    const double r = std::sqrt(dx * dx + dy * dy);
+    return 0.5 * (1.0 - std::tanh((r - R) / w));
+  });
+}
+
+/// One-shot circular-inclusion solve (displacement, strain, stress, energy)
+/// on an `N x N` periodic square, inclusion centred at the box midpoint.
+/// Single-rank, direct physics/solve calls (no JSON session) so the size
+/// sweep used by the tests below stays fast and self-contained.
+gradient_elasticity::StressSummary run_circular_case(int N, double R, double w,
+                                                      double ell, double mu,
+                                                      double lambda, double eps0,
+                                                      int order = 4) {
+  const auto domain = pfc::domain::create(pfc::GridSize({N, N, 1}),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing({1.0, 1.0, 1.0}));
+  pfc::sim::stacks::SpectralCPUStack stack(domain, 0, 1, MPI_COMM_WORLD);
+  auto phys = gradient_elasticity::GradientElasticityPhysics<>::from_json(
+      json{{"ell", ell}, {"eps0", eps0}, {"mu", mu}, {"lambda", lambda},
+          {"order", order}},
+      domain, stack.fft().get_inbox_bounds());
+  pfc::SimulationState state;
+  phys.declare_fields(state);
+  auto &g = state.get_field<double>("g");
+  auto &ux = state.get_field<double>("ux");
+  auto &uy = state.get_field<double>("uy");
+  auto &exx = state.get_field<double>("exx");
+  auto &eyy = state.get_field<double>("eyy");
+  auto &exy = state.get_field<double>("exy");
+  auto &sxx = state.get_field<double>("sxx");
+  auto &syy = state.get_field<double>("syy");
+  auto &sxy = state.get_field<double>("sxy");
+  auto &stress_hydro = state.get_field<double>("stress_hydro");
+  auto &stress_vm = state.get_field<double>("stress_vm");
+  auto &energy_density = state.get_field<double>("energy_density");
+  const double x0 = 0.5 * static_cast<double>(N);
+  const double y0 = 0.5 * static_cast<double>(N);
+  fill_circular_inclusion(g, x0, y0, R, w);
+  gradient_elasticity::solve_displacement_and_strain(stack.fft(), phys, g, ux, uy,
+                                                     exx, eyy, exy);
+  gradient_elasticity::compute_stress_fields(phys, g, exx, eyy, exy, sxx, syy, sxy,
+                                             stress_hydro, stress_vm,
+                                             energy_density);
+  return gradient_elasticity::summarize_stress(stress_hydro, stress_vm,
+                                               energy_density, domain,
+                                               MPI_COMM_WORLD);
+}
+
+/// Classical (infinite-domain, sharp-boundary) closed form for a 2-D
+/// circular inclusion of radius `R` with dilatational eigenstrain
+/// `eps*=eps0*I`, from axisymmetric elasticity with eigenstrain (derived in
+/// the PR description / app README): stress is spatially uniform inside and
+/// decays as \(1/r^2\) outside; both are independent of `R` -- the classical
+/// theory has no length scale, which is exactly the size effect gradient
+/// elasticity is meant to introduce.
+double classical_inclusion_inside_hydrostatic(double mu, double lambda,
+                                              double eps0) {
+  const double A = eps0 * (lambda + mu) / (lambda + 2.0 * mu);
+  return 2.0 * (lambda + mu) * (A - eps0);
+}
+
+double classical_inclusion_boundary_von_mises(double mu, double lambda,
+                                              double eps0) {
+  const double A = eps0 * (lambda + mu) / (lambda + 2.0 * mu);
+  return std::sqrt(3.0) * 2.0 * mu * A;
+}
+
+/// The *other* closed-form bound of the size-effect curve: the fully
+/// unrelaxed ("clamped") limit `ell -> infinity` (equivalently `R/ell -> 0`).
+/// Every Fourier mode with `k>0` is annihilated as `alpha=1+ell^2 k^2 ->
+/// infinity`, so `u -> 0` identically (the gradient penalty forbids *any*
+/// spatial variation of the displacement). With `u=0`, the elastic strain is
+/// just the negative eigenstrain, `eps^e=-eps0*g*I`, so deep inside the
+/// inclusion (`g=1`) the material cannot relax the misfit at all:
+/// `sigma=-2(lambda+mu)*eps0*I`, a pure equibiaxial (hydrostatic) state, so
+/// the reduced von Mises invariant equals the same magnitude. This is the
+/// *maximum possible* internal stress for this eigenstrain -- gradient
+/// elasticity increases peak stress above the classical value for small
+/// inclusions (`R/ell` small) here, the opposite of the familiar
+/// "regularizes a classical singularity" story: this loading (a smooth,
+/// finite inclusion) has no classical singularity to begin with, so `ell`
+/// instead acts as an increasing constraint on elastic relaxation.
+double clamped_inclusion_hydrostatic(double mu, double lambda, double eps0) {
+  return -2.0 * (lambda + mu) * eps0;
 }
 
 } // namespace
@@ -305,6 +401,217 @@ TEST_CASE("GradientElasticitySession runs a short JSON case",
   session.run();
   REQUIRE_THAT(mean_field(session.ux()), WithinAbs(0.0, 1e-12));
   REQUIRE_THAT(mean_field(session.uy()), WithinAbs(0.0, 1e-12));
+}
+
+TEST_CASE("Spectral strain/stress post-processing matches the analytical "
+          "cosine-mode field",
+          "[gradient_elasticity][spectral][stress][analytical]") {
+  if (world_size() != 1) {
+    SKIP("single-rank spectral comparison");
+  }
+  constexpr int N = 32;
+  constexpr int nx = 2;
+  constexpr int ny = 1;
+  constexpr double amp_g = 1.0;
+  constexpr double mu = 1.3;
+  constexpr double lambda = 0.7;
+  constexpr double eps0 = 0.03;
+  constexpr double ell = 2.0;
+
+  const auto domain = pfc::domain::create(pfc::GridSize({N, N, 1}),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing({1.0, 1.0, 1.0}));
+  pfc::sim::stacks::SpectralCPUStack stack(domain, 0, 1, MPI_COMM_WORLD);
+  auto phys = gradient_elasticity::GradientElasticityPhysics<>::from_json(
+      json{{"ell", ell}, {"eps0", eps0}, {"mu", mu}, {"lambda", lambda}}, domain,
+      stack.fft().get_inbox_bounds());
+  pfc::SimulationState state;
+  phys.declare_fields(state);
+  auto &g = state.get_field<double>("g");
+  auto &ux = state.get_field<double>("ux");
+  auto &uy = state.get_field<double>("uy");
+  auto &exx = state.get_field<double>("exx");
+  auto &eyy = state.get_field<double>("eyy");
+  auto &exy = state.get_field<double>("exy");
+  auto &sxx = state.get_field<double>("sxx");
+  auto &syy = state.get_field<double>("syy");
+  auto &sxy = state.get_field<double>("sxy");
+  auto &stress_hydro = state.get_field<double>("stress_hydro");
+  auto &stress_vm = state.get_field<double>("stress_vm");
+  auto &energy_density = state.get_field<double>("energy_density");
+  const double twopi = 2.0 * std::numbers::pi;
+  const double L = static_cast<double>(N);
+  const double kx = twopi * static_cast<double>(nx) / L;
+  const double ky = twopi * static_cast<double>(ny) / L;
+  g.apply(
+      [&](double x, double y, double) { return amp_g * std::cos(kx * x + ky * y); });
+
+  gradient_elasticity::solve_displacement_and_strain(stack.fft(), phys, g, ux, uy,
+                                                     exx, eyy, exy);
+  gradient_elasticity::compute_stress_fields(phys, g, exx, eyy, exy, sxx, syy, sxy,
+                                             stress_hydro, stress_vm,
+                                             energy_density);
+
+  const double k2 = kx * kx + ky * ky;
+  const double B = phys.cosine_displacement_prefactor(k2) * amp_g;
+  double max_err_exx = 0.0, max_err_eyy = 0.0, max_err_exy = 0.0;
+  double max_err_hydro = 0.0, max_err_vm = 0.0, max_err_w = 0.0;
+  const auto n = g.local_size();
+  for (int k = 0; k < n[2]; ++k) {
+    for (int j = 0; j < n[1]; ++j) {
+      for (int i = 0; i < n[0]; ++i) {
+        const auto x = g.coords(i, j, k);
+        const double phi = kx * x[0] + ky * x[1];
+        const double gv = amp_g * std::cos(phi);
+        // Analytical strain from u = B*(kx,ky)*sin(phi):
+        const double exx_a = B * kx * kx * std::cos(phi);
+        const double eyy_a = B * ky * ky * std::cos(phi);
+        const double exy_a = B * kx * ky * std::cos(phi);
+        const auto s = phys.stress_state(exx_a, eyy_a, exy_a, gv);
+        max_err_exx = std::max(max_err_exx, std::abs(exx(i, j, k) - exx_a));
+        max_err_eyy = std::max(max_err_eyy, std::abs(eyy(i, j, k) - eyy_a));
+        max_err_exy = std::max(max_err_exy, std::abs(exy(i, j, k) - exy_a));
+        max_err_hydro =
+            std::max(max_err_hydro, std::abs(stress_hydro(i, j, k) - s.hydrostatic));
+        max_err_vm = std::max(max_err_vm, std::abs(stress_vm(i, j, k) - s.von_mises));
+        max_err_w = std::max(max_err_w,
+                             std::abs(energy_density(i, j, k) - s.energy_density));
+      }
+    }
+  }
+  REQUIRE_THAT(max_err_exx, WithinAbs(0.0, 1e-9));
+  REQUIRE_THAT(max_err_eyy, WithinAbs(0.0, 1e-9));
+  REQUIRE_THAT(max_err_exy, WithinAbs(0.0, 1e-9));
+  REQUIRE_THAT(max_err_hydro, WithinAbs(0.0, 1e-9));
+  REQUIRE_THAT(max_err_vm, WithinAbs(0.0, 1e-9));
+  REQUIRE_THAT(max_err_w, WithinAbs(0.0, 1e-9));
+}
+
+TEST_CASE("ell=0 recovers the classical analytical circular-inclusion stress",
+          "[gradient_elasticity][spectral][classical][inclusion]") {
+  if (world_size() != 1) {
+    SKIP("single-rank spectral comparison");
+  }
+  // Sharp-inclusion Eshelby-type closed form assumes an infinite matrix and
+  // an infinitely sharp boundary; the numerical case has a periodic box and
+  // a finite tanh interface width, so allow a stated few-percent tolerance
+  // rather than machine precision.
+  constexpr int N = 320;
+  constexpr double R = 40.0;
+  constexpr double w = 1.0; // interface half-width, w/R = 0.025
+  constexpr double mu = 1.0;
+  constexpr double lambda = 1.0;
+  constexpr double eps0 = 0.01;
+
+  const auto summary = run_circular_case(N, R, w, /*ell=*/0.0, mu, lambda, eps0);
+  const double p_classical = std::abs(classical_inclusion_inside_hydrostatic(
+      mu, lambda, eps0));
+  const double vm_classical =
+      classical_inclusion_boundary_von_mises(mu, lambda, eps0);
+
+  // The finite tanh interface width makes the smoothed problem's actual
+  // peak (the field near r=R, where the eigenstrain itself has a gradient)
+  // measurably higher than the idealized-sharp-boundary uniform interior
+  // value: the classical hydrostatic stress is discontinuous across a sharp
+  // boundary (p_in far from 0, p_out=0 immediately outside), so smoothing
+  // that step introduces a boundary-layer effect on top of discretization
+  // error. 10% at w/R=0.025 is the measured, stated tolerance.
+  REQUIRE_THAT(summary.peak_abs_hydrostatic, WithinRel(p_classical, 0.12));
+  REQUIRE_THAT(summary.peak_von_mises, WithinRel(vm_classical, 0.12));
+}
+
+TEST_CASE("Peak inclusion stress decreases monotonically with R/ell, from the "
+          "clamped bound to the classical bound (size-effect curve)",
+          "[gradient_elasticity][spectral][size_effect]") {
+  if (world_size() != 1) {
+    SKIP("single-rank spectral comparison");
+  }
+  // Fixed inclusion radius R, varying ell so R/ell spans well below 1 to
+  // well above 1. This loading (a smooth, *finite* inclusion) has no
+  // classical singularity, so ell does not "regularize a singular peak"
+  // here the way it does for the high-k cosine mode above. Instead ell acts
+  // as an increasing constraint on elastic relaxation: for R/ell -> 0 the
+  // gradient penalty suppresses essentially all spatial variation of u
+  // (every k>0 mode is annihilated as alpha=1+ell^2 k^2 -> infinity), so the
+  // material cannot relax the eigenstrain misfit at all and the internal
+  // stress approaches the *clamped* bound `clamped_inclusion_hydrostatic`
+  // (measured empirically first, then matched to this closed form -- see PR
+  // description). For R/ell -> infinity, ell is negligible and the classical
+  // *relaxed* bound `classical_inclusion_inside_hydrostatic` is recovered
+  // (already checked by the `ell=0` test above). Both bounds are
+  // R-independent closed forms; peak stress should decrease monotonically
+  // from one to the other as R/ell grows. The box is scaled with
+  // max(R, ell), not just R, so periodic images stay controlled at every
+  // ell in the sweep.
+  constexpr double R = 40.0;
+  constexpr double w = 1.0;
+  constexpr double mu = 1.0;
+  constexpr double lambda = 1.0;
+  constexpr double eps0 = 0.01;
+  const std::vector<double> ells = {80.0, 40.0, 10.0, 2.5}; // R/ell: 0.5,1,4,16
+
+  std::vector<double> peak_hydro;
+  for (double ell : ells) {
+    const int N = static_cast<int>(std::lround(8.0 * std::max(R, ell)));
+    peak_hydro.push_back(
+        run_circular_case(N, R, w, ell, mu, lambda, eps0).peak_abs_hydrostatic);
+  }
+  for (std::size_t i = 1; i < peak_hydro.size(); ++i) {
+    REQUIRE(peak_hydro[i] < peak_hydro[i - 1]);
+  }
+  const double p_classical =
+      std::abs(classical_inclusion_inside_hydrostatic(mu, lambda, eps0));
+  const double p_clamped = std::abs(clamped_inclusion_hydrostatic(mu, lambda, eps0));
+  // Smallest R/ell in the sweep: closer to (but not yet at) the clamped
+  // bound; largest R/ell: closer to (but not yet at) the classical bound.
+  // Every measured value must lie strictly between the two closed forms.
+  for (double p : peak_hydro) {
+    REQUIRE(p > p_classical);
+    REQUIRE(p < p_clamped);
+  }
+}
+
+TEST_CASE("Doubling the periodic box leaves the inclusion peak stress "
+          "essentially unchanged",
+          "[gradient_elasticity][spectral][box_size]") {
+  if (world_size() != 1) {
+    SKIP("single-rank spectral comparison");
+  }
+  // #117 requires documented/controlled inclusion-image interaction: repeat
+  // one radius in a larger box (same R, ell, dx; doubled L) and show the
+  // peak stress barely moves.
+  constexpr double R = 12.0;
+  constexpr double w = 1.0;
+  constexpr double ell = 3.0;
+  constexpr double mu = 1.0;
+  constexpr double lambda = 1.0;
+  constexpr double eps0 = 0.01;
+
+  // L/R=8 (as first tried) measurably contaminates the peak stress with
+  // periodic images; L/R=16 -> 32 is the regime where doubling the box
+  // changes the peak by less than the tolerance below. `size_sweep.py
+  // --box-to-radius` defaults to the safer ratio (16). Report all three
+  // ratios (8, 16, 32) via WARN so the convergence trend is visible, not
+  // just asserted.
+  const auto box8 =
+      run_circular_case(8 * static_cast<int>(R), R, w, ell, mu, lambda, eps0);
+  const auto small_box = run_circular_case(16 * static_cast<int>(R), R, w, ell, mu,
+                                           lambda, eps0);
+  const auto large_box = run_circular_case(32 * static_cast<int>(R), R, w, ell, mu,
+                                           lambda, eps0);
+  const auto rel_change = [](double a, double b) { return std::abs(b - a) / a; };
+  WARN("L/R 8->16 relative change: peak_hydro="
+       << rel_change(box8.peak_abs_hydrostatic, small_box.peak_abs_hydrostatic)
+       << " peak_vm="
+       << rel_change(box8.peak_von_mises, small_box.peak_von_mises));
+  WARN("L/R 16->32 relative change: peak_hydro="
+       << rel_change(small_box.peak_abs_hydrostatic, large_box.peak_abs_hydrostatic)
+       << " peak_vm="
+       << rel_change(small_box.peak_von_mises, large_box.peak_von_mises));
+  REQUIRE_THAT(large_box.peak_abs_hydrostatic,
+              WithinRel(small_box.peak_abs_hydrostatic, 0.02));
+  REQUIRE_THAT(large_box.peak_von_mises,
+              WithinRel(small_box.peak_von_mises, 0.02));
 }
 
 int main(int argc, char *argv[]) {

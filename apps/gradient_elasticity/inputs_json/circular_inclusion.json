@@ -1,0 +1,66 @@
+{
+    "model": {
+        "name": "gradient_elasticity",
+        "params": {
+            "mu": 1.0,
+            "lambda": 1.0,
+            "ell": 8.0,
+            "eps0": 0.01,
+            "order": 4
+        }
+    },
+    "domain": {
+        "Lx": 256,
+        "Ly": 256,
+        "Lz": 1,
+        "dx": 1.0,
+        "dy": 1.0,
+        "dz": 1.0,
+        "origin": "corner"
+    },
+    "timestepping": {
+        "t0": 0.0,
+        "t1": 1.0,
+        "dt": 1.0,
+        "saveat": 1.0
+    },
+    "fields": [
+        {
+            "name": "g",
+            "data": "results/gradient_elasticity/inclusion_g_%04d.vti"
+        },
+        {
+            "name": "ux",
+            "data": "results/gradient_elasticity/inclusion_ux_%04d.vti"
+        },
+        {
+            "name": "uy",
+            "data": "results/gradient_elasticity/inclusion_uy_%04d.vti"
+        },
+        {
+            "name": "stress_hydro",
+            "data": "results/gradient_elasticity/inclusion_stress_hydro_%04d.vti"
+        },
+        {
+            "name": "stress_vm",
+            "data": "results/gradient_elasticity/inclusion_stress_vm_%04d.vti"
+        },
+        {
+            "name": "energy_density",
+            "data": "results/gradient_elasticity/inclusion_energy_density_%04d.vti"
+        }
+    ],
+    "initial_conditions": [
+        {
+            "target": "g",
+            "type": "circular_inclusion",
+            "g0": 0.0,
+            "amplitude": 1.0,
+            "radius": 32.0,
+            "interface_width": 4.0
+        }
+    ],
+    "line_profile": {
+        "path": "results/gradient_elasticity/inclusion_line_profile.csv"
+    }
+}
