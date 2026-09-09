@@ -25,11 +25,14 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+<<<<<<< HEAD
 - EasyBuild recipes for a LUMI-C module install (`#46`): a CPU HeFFTe 2.4.1
   (FFTW backend, `cpeGNU/25.09`) and OpenPFC 0.2.0 on top of it, under
   `easybuild/easyconfigs/`. Verified end to end on LUMI: both install, and
   `srun -n 4 tungsten` runs a 64³ case from the resulting module. Documented
   as an optional alternative to `scripts/build.sh` in `INSTALL.LUMI.md`.
+=======
+>>>>>>> c0f1145d (feat(cahn_hilliard): Fe-Cr ageing with physical units and structure factor)
 - Fe–Cr Cahn–Hilliard science upgrade (`#113`): Redlich–Kister excess free
   energy with the assessed bcc Cr–Fe interaction, a code-to-physical scale map
   (1 code length = 1.07 nm, 1 code time = 0.278 h at 475 °C), and
