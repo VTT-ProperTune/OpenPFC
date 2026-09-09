@@ -30,6 +30,22 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   `easybuild/easyconfigs/`. Verified end to end on LUMI: both install, and
   `srun -n 4 tungsten` runs a 64³ case from the resulting module. Documented
   as an optional alternative to `scripts/build.sh` in `INSTALL.LUMI.md`.
+- Surface-diffusion science upgrade (`#115`): an orientation-dependent
+  surface stiffness `B(theta) = B0[1 + eps_a cos(m theta)]`,
+  `theta = atan2(h_y, h_x)` evaluated spectrally, generalising the isotropic
+  Mullins model `dh/dt = -B nabla^4 h` to `dh/dt = div[B(theta)
+  grad(lap h)]`; a self-contained spectral-flux ETD1 stepper
+  (`surface_diffusion_anisotropic`) since the orientation-dependent
+  coefficient cannot be written as a reciprocal-space symbol; and a crossed
+  sinusoidal-corrugation science preset run both isotropically and
+  anisotropically from the same initial surface, reporting RMS roughness,
+  structure-factor dominant wavelength, directional (kx- vs ky-dominated)
+  spectral energy, max `|grad h|` and mean height to CSV. The isotropic
+  `k^4` single/two-mode exact-decay tests are unchanged and remain the
+  numerical oracle; the anisotropic model reduces to them exactly at
+  `eps_a = 0` (checked, not assumed). `(B0, eps_a, m)` are illustrative
+  parameters, not fitted to a measured material `gamma(theta)` — see
+  `apps/surface_diffusion/include/surface_diffusion/anisotropy.hpp`.
 - Conservative flux nonlinearity for the applications whose mobility depends on
   the field inside a divergence (`#114`): `pfc::apps::SpectralFlux` and
   `pfc::apps::FluxETD` in `apps/common`, evaluating `div(M(u) grad p)`

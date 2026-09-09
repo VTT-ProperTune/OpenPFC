@@ -37,6 +37,14 @@ endfunction()
 surface_diffusion_cpu_executable(surface_diffusion src/surface_diffusion.cpp)
 install(TARGETS surface_diffusion DESTINATION bin)
 
+# Science driver for #115: orientation-dependent surface stiffness B(theta)
+# through a self-contained spectral flux stepper. Host only, like thin_film's
+# nonlinear driver -- the directional mobility needs a complex i*k_d multiply
+# the device Ops layer does not expose.
+surface_diffusion_cpu_executable(surface_diffusion_anisotropic
+  src/surface_diffusion_anisotropic.cpp)
+install(TARGETS surface_diffusion_anisotropic DESTINATION bin)
+
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
   surface_diffusion_hip_executable(surface_diffusion_hip
     src/hip/surface_diffusion.cpp)
