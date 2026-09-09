@@ -137,6 +137,30 @@ double cosine_amplitude(const pfc::data::Field<double> &u, int nx) {
   return (den > 0.0) ? num / den : 0.0;
 }
 
+/// <u^2>, the quantity the equation conserves alongside the mean.
+///
+/// Every term in u_t + alpha u u_x - beta u_xxx + gamma u_xxxxx = 0 is
+/// skew-adjoint or conservative on a periodic line, so d/dt of the integral of
+/// u^2 vanishes exactly -- for the fifth-order term as much as the third. It
+/// is the invariant that says whether a long run is still solving the equation
+/// it started with, and unlike a peak amplitude it does not care where the
+/// crest sits relative to the grid.
+double mean_square_u(const pfc::data::Field<double> &u) {
+  double sumsq = 0.0;
+  std::size_t count = 0;
+  const auto n = u.local_size();
+  for (int k = 0; k < n[2]; ++k) {
+    for (int j = 0; j < n[1]; ++j) {
+      for (int i = 0; i < n[0]; ++i) {
+        const double v = u(i, j, k);
+        sumsq += v * v;
+        ++count;
+      }
+    }
+  }
+  return (count > 0) ? sumsq / static_cast<double>(count) : 0.0;
+}
+
 /// |c_m|, the amplitude of grid mode m = k Lx/(2 pi), by direct projection.
 /// Single rank; used to check which modes a step is allowed to populate.
 double mode_coefficient(const pfc::data::Field<double> &u, int m) {
@@ -657,7 +681,12 @@ TEST_CASE("Kawahara linear operator: every resolved mode is exactly neutral",
   // radiates at, and the last few the dealiasing keeps.
   const double dk = 2.0 * std::numbers::pi / Lx;
   const int m_cut = int((2.0 / 3.0) * (std::numbers::pi / dx) / dk);
-  for (int m : {1, 2, 4, 8, 16, 32, m_cut - 2, m_cut - 1, m_cut}) {
+  // Above the 2/3 cut the mask silences the *nonlinear* term but the linear
+  // part still propagates those modes, so they must be neutral too -- a
+  // localized pulse carries small but nonzero content all the way to Nyquist,
+  // and anything that grows there eventually owns the solution.
+  for (int m : {1, 2, 4, 8, 16, 32, m_cut - 1, m_cut, m_cut + 1, m_cut + 40,
+                N / 2 - 1}) {
     const double k = static_cast<double>(m) * dk;
     const double omega = beta * k * k * k + gamma * std::pow(k, 5);
 
@@ -684,6 +713,34 @@ TEST_CASE("Kawahara linear operator: every resolved mode is exactly neutral",
               << " omega=" << omega << " amplitude after " << n_steps
               << " steps=" << std::setprecision(17) << amp);
     CHECK_THAT(amp, WithinAbs(1.0, 1.0e-12));
+  }
+
+  // Nyquist is the one mode that cannot be neutral, and it is worth saying why
+  // rather than quietly leaving it out of the loop. A real field's Nyquist
+  // coefficient is real: there is no second grid point per period to carry a
+  // phase. Multiplying it by exp(-i omega dt) rotates it out of that real
+  // line, and the inverse transform keeps only the projection back onto it, so
+  // the mode decays. That is safe -- it can only lose amplitude, never gain --
+  // and this asserts exactly that, which is the property the solver depends on.
+  {
+    const double k = std::numbers::pi / dx;
+    json params{{"alpha", 0.0}, {"beta", beta}, {"gamma", gamma}};
+    auto phys = kawahara::KawaharaPhysics<>::from_json(
+        params, domain, stack.fft().get_inbox_bounds());
+    pfc::SimulationState state;
+    phys.declare_fields(state);
+    auto &u = state.get_field<double>("u");
+    u.apply([&](double x, double, double) { return std::cos(k * x); });
+    pfc::sim::SpectralETDOptions opt;
+    opt.psi_name = "u";
+    opt.dealias = true;
+    pfc::sim::SpectralETDSystem<kawahara::KawaharaPhysics<>> sys(
+        phys, stack.fft(), state, dt, opt);
+    double t = 0.0;
+    for (int step = 0; step < n_steps; ++step) t = sys.step(t);
+    const double amp = mode_amplitude(u);
+    INFO("Nyquist k=" << k << " amplitude after " << n_steps << " steps=" << amp);
+    CHECK(amp <= 1.0 + 1.0e-12);
   }
 }
 
@@ -769,6 +826,79 @@ TEST_CASE("Kawahara nonlinearity populates only the modes u^2 can reach",
   // outside the field is caught, while a different FFT's rounding is not
   // mistaken for one.
   REQUIRE(worst < 1.0e-12);
+}
+
+TEST_CASE("Kawahara dealiasing keeps exactly the modes below the 2/3 cut",
+          "[kawahara][operator]") {
+  if (world_size() != 1) {
+    SKIP("single-rank spectral comparison");
+  }
+  // Orszag's rule zeros the nonlinear spectrum at |k| >= (2/3)(pi/dx). Nothing
+  // else in this suite exercises it: the linear sweep has no nonlinear term to
+  // mask, and the single-harmonic test generates a mode far below the cut. So
+  // a mask applied to the wrong modes would pass everything and still ruin any
+  // field with content near the cut -- which every localized pulse has.
+  //
+  // Drive the boundary directly. From u = A cos(k_m x) the product creates
+  // mode 2m and nothing else, so choosing m either side of half the cut says
+  // precisely which modes survive: 2m below the cut must come out at the
+  // closed-form amplitude, 2m above it must be *exactly* zero, not small.
+  constexpr int N = 512;
+  constexpr double dx = 0.25;
+  constexpr double dt = 0.005;
+  constexpr double amp = 0.2;
+  constexpr double alpha = 1.5;
+  const auto domain = pfc::domain::create(pfc::GridSize({N, 1, 1}),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing({dx, 1.0, 1.0}));
+  pfc::sim::stacks::SpectralCPUStack stack(domain, 0, 1, MPI_COMM_WORLD);
+  const double Lx = static_cast<double>(N) * dx;
+  const double dk = 2.0 * std::numbers::pi / Lx;
+
+  // Largest kept mode: |k| < (2/3)(pi/dx), strictly.
+  const double k_cut = (2.0 / 3.0) * std::numbers::pi / dx;
+  int m_cut = 0;
+  while ((m_cut + 1) * dk < k_cut) ++m_cut;
+  INFO("cut at k=" << k_cut << ", largest kept mode m=" << m_cut);
+  REQUIRE(m_cut < N / 2);
+
+  for (int m : {m_cut / 2 - 1, m_cut / 2, m_cut / 2 + 1}) {
+    const int harmonic = 2 * m;
+    const bool kept = static_cast<double>(harmonic) * dk < k_cut;
+    const double k = static_cast<double>(m) * dk;
+
+    json params{{"alpha", alpha}, {"beta", 0.0}, {"gamma", 0.0}};
+    auto phys = kawahara::KawaharaPhysics<>::from_json(
+        params, domain, stack.fft().get_inbox_bounds());
+    pfc::SimulationState state;
+    phys.declare_fields(state);
+    auto &u = state.get_field<double>("u");
+    u.apply([&](double x, double, double) { return amp * std::cos(k * x); });
+
+    pfc::sim::SpectralETDOptions opt;
+    opt.psi_name = "u";
+    opt.dealias = true;
+    pfc::sim::SpectralETDSystem<kawahara::KawaharaPhysics<>> sys(
+        phys, stack.fft(), state, dt, opt);
+    (void)sys.step(0.0);
+
+    const double measured = mode_coefficient(u, harmonic);
+    const double closed_form = 0.5 * alpha * amp * amp * k * dt;
+    INFO("m=" << m << " -> harmonic " << harmonic << " of " << m_cut
+              << " kept: expected " << (kept ? "closed form" : "exactly zero")
+              << ", measured " << std::setprecision(17) << measured
+              << " (closed form " << closed_form << ")");
+    if (kept) {
+      CHECK_THAT(measured, WithinRel(closed_form, 1.0e-9));
+    } else {
+      // Round-off, not leakage: measured 7.5e-17 against a closed form of
+      // 6.3e-4, i.e. 1.2e-13 of what an unmasked mode would carry.
+      CHECK(measured < 1.0e-11 * closed_form);
+    }
+    // The primary mode is carried by the linear part, which is zero here, so
+    // it must come through untouched whether or not its harmonic was masked.
+    CHECK_THAT(mode_coefficient(u, m), WithinRel(amp, 1.0e-9));
+  }
 }
 
 TEST_CASE("KdV soliton initial condition: derived width and rejected signs",
@@ -895,7 +1025,8 @@ TEST_CASE("Kawahara: fifth-order dispersion makes a KdV solitary wave radiate",
     /// the final answer is NaN -- 20000 steps is far too many to bisect by
     /// hand, and the last few samples separate a growing instability from a
     /// sudden loss.
-    std::vector<std::pair<int, double>> trace;
+    std::vector<std::pair<int, double>> trace;   ///< (step, max|u|)
+    std::vector<std::pair<int, double>> l2trace; ///< (step, <u^2>/<u^2>(0))
   };
 
   // The tail window excludes +-3W around the pulse, which holds >99.9% of a
@@ -927,12 +1058,16 @@ TEST_CASE("Kawahara: fifth-order dispersion makes a KdV solitary wave radiate",
     double t = 0.0;
     constexpr int kSample = 1000;
     std::vector<std::pair<int, double>> trace;
+    std::vector<std::pair<int, double>> l2trace;
+    const double ms0 = mean_square_u(u);
     trace.emplace_back(0, max_abs_u(u));
+    l2trace.emplace_back(0, 1.0);
     for (int step = 1; step <= n_steps; ++step) {
       t = sys.step(t);
       if (step % kSample == 0 || step == n_steps) {
         const double m = max_abs_u(u);
         trace.emplace_back(step, m);
+        l2trace.emplace_back(step, mean_square_u(u) / ms0);
         if (!std::isfinite(m)) break;
       }
     }
@@ -945,7 +1080,7 @@ TEST_CASE("Kawahara: fifth-order dispersion makes a KdV solitary wave radiate",
                    sample.tail_rms,
                    tail_dominant_k(u, sample.peak_x, tail_inner, tail_ramp,
                                    k_dealias),
-                   std::move(trace)};
+                   std::move(trace), std::move(l2trace)};
   };
 
   const Outcome kdv = run(0.0);
@@ -967,10 +1102,31 @@ TEST_CASE("Kawahara: fifth-order dispersion makes a KdV solitary wave radiate",
     for (const auto &[step, m] : o.trace) os << step << ':' << m << ' ';
     return os.str();
   };
+  auto l2_text = [](const Outcome &o) {
+    std::ostringstream os;
+    os << std::setprecision(10);
+    for (const auto &[step, r] : o.l2trace) os << step << ':' << r << ' ';
+    return os.str();
+  };
   INFO("KdV control max|u| trace: " << trace_text(kdv));
   INFO("Kawahara max|u| trace:    " << trace_text(kawa));
+  INFO("KdV control <u^2> ratio:  " << l2_text(kdv));
+  INFO("Kawahara <u^2> ratio:     " << l2_text(kawa));
   REQUIRE(std::isfinite(kdv.trace.back().second));
   REQUIRE(std::isfinite(kawa.trace.back().second));
+
+  // Both runs solve a conservative equation, so the integral of u^2 is an
+  // invariant, not a diagnostic that happens to look steady. Checking it is
+  // how a long run says it is still solving the equation it started with;
+  // a peak amplitude cannot, because it moves on and off grid points.
+  // ETD1 is first order, so it does not conserve the invariant exactly: the
+  // ratio creeps up linearly, by 8.0e-9 per step, reaching 1.00016 for the
+  // control after 20000 steps. That is the integrator's own error and is what
+  // the bound below is set from -- generously, since the point is to catch a
+  // run that has stopped solving the equation, and CI's failing run had
+  // doubled max|u| well before it produced a NaN.
+  CHECK_THAT(kdv.l2trace.back().second, WithinAbs(1.0, 1.0e-3));
+  CHECK_THAT(kawa.l2trace.back().second, WithinAbs(1.0, 1.0e-3));
 
   // Both terms in the PDE are x-derivatives, so the k = 0 mode is untouched by
   // construction and the mean is conserved to rounding, in both runs.
