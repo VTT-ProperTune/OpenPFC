@@ -56,7 +56,8 @@ if(HIGHER_ORDER_PFC_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
   find_package(Catch2 QUIET)
   if(TARGET Catch2::Catch2)
     higher_order_pfc_cpu_executable(test_higher_order_pfc
-      tests/test_higher_order_pfc.cpp)
+      tests/test_higher_order_pfc.cpp
+      tests/test_order_parameter.cpp)
     target_link_libraries(test_higher_order_pfc PRIVATE Catch2::Catch2)
     include(CTest)
     add_test(NAME higher-order-pfc-all-tests COMMAND test_higher_order_pfc)

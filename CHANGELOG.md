@@ -65,6 +65,28 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   constant-mobility `ehd_film_hip` binary is unchanged. The adhesive/unstable
   film comparison (issue's case C) is deferred, along with energy
   diagnostics and time-periodic loading.
+- `higher_order_pfc` crystal-selection benchmark (`#118`): a real-space
+  bond-orientational order metric (`order_parameter.hpp`, \(\psi_4\)/\(\psi_6\)
+  from detected density peaks) so square-vs-triangular selection is verified
+  structurally, not inferred from reciprocal-space ring power alone.
+  \(\psi_4\)/\(\psi_6\) are checked to \(10^{-9}\) against analytically
+  constructed ideal square and triangular lattices — the key acceptance test.
+  Cites the primary two-mode-PFC source, Wu, Adland & Karma, *Phys. Rev. E*
+  **81**, 061601 (2010) (arXiv:1001.1349), and maps OpenPFC's kernel to it
+  term by term; calibration is labelled representative, not quantitative (see
+  the app README for exactly what was and was not verified against the
+  primary source from this machine). Five 2D cases (`lattice_seed.hpp` adds
+  the controlled single-crystal seed IC; `diagnostics.hpp` adds free-energy
+  density + reciprocal peaks + \(\psi_4\)/\(\psi_6\) to a CSV) show the
+  two-mode `q1=√2, r1=0.02` kernel selecting real-space square order
+  (\(\psi_4\) local \(0.81\), mean neighbours \(4.04\)) against the
+  single-mode kernel's triangular order (\(\psi_6\) local \(0.85\), mean
+  neighbours \(5.87\)) from the same box/seed/quench, and confirms that the
+  degenerate `r1=0` kernel's \(\sqrt2\)-ring-dominated pattern is real-space
+  **triangular**, not square, despite the reciprocal-space power distribution
+  alone suggesting otherwise. Two `lattice_seed` single-crystal runs hold
+  their imposed symmetry to \(\psi_4\)/\(\psi_6=1.000\) over 2000 ETD steps.
+  3D crystal selection is deferred; see the PR.
 
 - Fe–Cr Cahn–Hilliard science upgrade (`#113`): Redlich–Kister excess free
   energy with the assessed bcc Cr–Fe interaction, a code-to-physical scale map
