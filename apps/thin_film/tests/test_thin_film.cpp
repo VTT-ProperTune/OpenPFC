@@ -12,15 +12,18 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include <algorithm>
 #include <cmath>
 #include <mpi.h>
 #include <numbers>
 #include <stdexcept>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/simulation/simulation_state.hpp>
 #include <openpfc/kernel/simulation/spectral_etd_system.hpp>
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
@@ -28,6 +31,7 @@
 #include <thin_film/cosine_mode.hpp>
 #include <openpfc_apps/spectral_flux.hpp>
 #include <openpfc_apps/structure_factor.hpp>
+#include <thin_film/fd_flux.hpp>
 #include <thin_film/nonlinear.hpp>
 #include <thin_film/thin_film_physics.hpp>
 #include <thin_film/thin_film_session.hpp>
@@ -374,4 +378,338 @@ TEST_CASE("Gaussian defect is a localized depression", "[thin_film][nonlinear]")
   REQUIRE(std::abs(d(0.0, 0.0)) < 1e-6);               // and local
   const thin_film::GaussianDefect none{};
   REQUIRE(none(1.0, 2.0) == 0.0);
+}
+
+// ---------------------------------------------------------------------------
+// Conservative face-flux FD solver (#124): the two-method flagship.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+/// Common single-rank FD fixture: `N x N`, `dx = 1`, decomposition of one.
+struct FDFixture {
+  static constexpr int N = 32;
+  pfc::Domain domain = pfc::domain::create(pfc::GridSize({N, N, 1}),
+                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                           pfc::GridSpacing({1.0, 1.0, 1.0}));
+  pfc::decomposition::Decomposition decomp = pfc::decomposition::create(domain, 1);
+  pfc::Box3i box = pfc::decomposition::local_box(decomp, 0);
+  int nx = box.size[0];
+  int ny = box.size[1];
+};
+
+std::vector<double> cosine_field(const FDFixture &fx, double h0, double amp, int mx,
+                                 int my) {
+  std::vector<double> h(static_cast<std::size_t>(fx.nx) *
+                        static_cast<std::size_t>(fx.ny));
+  const double twopi = 2.0 * std::numbers::pi;
+  for (int iy = 0; iy < fx.ny; ++iy) {
+    for (int ix = 0; ix < fx.nx; ++ix) {
+      const double w = std::cos(twopi * mx * ix / fx.N) * std::cos(twopi * my * iy / fx.N);
+      h[static_cast<std::size_t>(ix) + static_cast<std::size_t>(iy) * fx.nx] =
+          h0 * (1.0 + amp * w);
+    }
+  }
+  return h;
+}
+
+double sum_vec(const std::vector<double> &v) {
+  double s = 0.0;
+  for (double x : v) s += x;
+  return s;
+}
+
+} // namespace
+
+TEST_CASE("FD flux divergence sums to zero to round-off, before any timestep",
+          "[thin_film][fd][mass]") {
+  if (world_size() != 1) {
+    SKIP("single-rank FD fixture");
+  }
+  FDFixture fx;
+  auto h = cosine_field(fx, /*h0=*/1.0, /*amp=*/0.2, /*mx=*/3, /*my=*/2);
+
+  thin_film::ThinFilmParams p; // defaults: h0=1, gamma=1, M0=1, A=0.05
+  const thin_film::ThinFilmPointwise pw{.A = p.A, .h0 = p.h0, .h_star = p.h_star,
+                                        .Pi0 = p.Pi0, .Pip0 = p.Pip0};
+  const thin_film::CubicMobility mobility{p.M0, p.h0};
+
+  thin_film::FDFluxSolver solver(fx.domain, fx.decomp, 0, MPI_COMM_WORLD, h,
+                                 /*order=*/2);
+  std::vector<double> dhdt(h.size());
+  solver.compute_rhs(h, p.gamma, pw, mobility, thin_film::FaceMobility::Harmonic,
+                     dhdt);
+
+  // The divergence form telescopes exactly: every interior face flux is
+  // added once and subtracted once, so the sum over all cells is zero to
+  // round-off *before any timestep is taken* -- this is a statement about
+  // the spatial discretization, not about dt.
+  REQUIRE_THAT(sum_vec(dhdt), WithinAbs(0.0, 1e-10));
+
+  // And volume stays put over many explicit steps, whatever dt is (subject
+  // to the scheme's own stability limit).
+  const auto v0 = thin_film::sample_film_fd(h, fx.domain, p.h0, 0.05, MPI_COMM_WORLD);
+  for (int s = 0; s < 50; ++s) {
+    solver.step(h, /*dt=*/1.0e-3, p.gamma, pw, mobility,
+               thin_film::FaceMobility::Harmonic);
+  }
+  const auto v1 = thin_film::sample_film_fd(h, fx.domain, p.h0, 0.05, MPI_COMM_WORLD);
+  REQUIRE_THAT(v1.volume, WithinRel(v0.volume, 1.0e-9));
+  REQUIRE(v1.max_h != v0.max_h); // and the profile did evolve
+}
+
+TEST_CASE("FD reproduces the analytical k^4 decay at constant mobility",
+          "[thin_film][fd][dispersion]") {
+  if (world_size() != 1) {
+    SKIP("single-rank analytical comparison");
+  }
+  // Bypass CubicMobility with a constant-mobility lambda, exactly as the
+  // spectral test does -- this isolates the FD curvature/flux operators
+  // from the h^3 nonlinearity, so any mismatch against exp(-M0 gamma k^4 t)
+  // is discretization error in those operators, not the nonlinearity.
+  FDFixture fx;
+  constexpr double h0 = 1.0, gamma = 1.0, M0 = 1.0;
+  constexpr double amp = 1.0e-4, dt = 1.0e-3;
+  constexpr int steps = 200;
+  constexpr int mode = 2;
+  auto h = cosine_field(fx, h0, amp, mode, 0);
+
+  const thin_film::ThinFilmPointwise pw{.A = 0.0, .h0 = h0}; // A=0: Pi == 0
+  const auto constant_mobility = [](double) { return M0; };
+
+  thin_film::FDFluxSolver solver(fx.domain, fx.decomp, 0, MPI_COMM_WORLD, h,
+                                 /*order=*/2);
+  for (int s = 0; s < steps; ++s) {
+    solver.step(h, dt, gamma, pw, constant_mobility, thin_film::FaceMobility::Harmonic);
+  }
+
+  const double twopi = 2.0 * std::numbers::pi;
+  const double k = twopi * mode / fx.N;
+  const double expected = amp * std::exp(-M0 * gamma * k * k * k * k * dt * steps);
+  double num = 0.0, den = 0.0;
+  for (int iy = 0; iy < fx.ny; ++iy) {
+    for (int ix = 0; ix < fx.nx; ++ix) {
+      const double w = std::cos(twopi * mode * ix / fx.N);
+      num += (h[static_cast<std::size_t>(ix) + static_cast<std::size_t>(iy) * fx.nx] -
+             h0) *
+             w;
+      den += w * w;
+    }
+  }
+  // Order-2 central differences on a coarse grid (32 points, wavelength 16
+  // points) carry an O((k dx)^2) discretization error the spectral method
+  // does not have; 5% captures that while still catching a wrong sign,
+  // missing factor, or wrong exponent in the FD operators.
+  REQUIRE_THAT(num / den, WithinRel(expected, 0.05));
+}
+
+TEST_CASE("FD reproduces the analytical unstable growth rate with the "
+          "disjoining pressure linearized in",
+          "[thin_film][fd][dispersion]") {
+  if (world_size() != 1) {
+    SKIP("single-rank analytical comparison");
+  }
+  // Mirrors the spectral suite's "ETD conserves volume and matches linear
+  // growth/decay": constant mobility, but now A != 0 so the destabilizing
+  // Pi'(h0) term is exercised too, not just the stabilizing curvature term
+  // the k^4-decay test above isolates. lambda(k) = M0 k^2 (Pip0 - gamma k^2)
+  // is the same formula `ThinFilmPhysics::linear_symbol` encodes for the
+  // spectral path; here it is the FD flux/curvature operators being
+  // checked against it instead.
+  FDFixture fx;
+  constexpr double h0 = 1.0, gamma = 1.0, M0 = 1.0, A = 0.05;
+  constexpr double amp = 1.0e-4, dt = 1.0e-3;
+  constexpr int steps = 200;
+  constexpr int mode = 2;
+  auto h = cosine_field(fx, h0, amp, mode, 0);
+
+  thin_film::ThinFilmParams p;
+  thin_film::apply_thin_film_json({{"h0", h0}, {"gamma", gamma}, {"M0", M0}, {"A", A}},
+                                  p);
+  const thin_film::ThinFilmPointwise pw{.A = p.A, .h0 = p.h0, .h_star = p.h_star,
+                                        .Pi0 = p.Pi0, .Pip0 = p.Pip0};
+  const auto constant_mobility = [](double) { return M0; };
+
+  thin_film::FDFluxSolver solver(fx.domain, fx.decomp, 0, MPI_COMM_WORLD, h,
+                                 /*order=*/2);
+  for (int s = 0; s < steps; ++s) {
+    solver.step(h, dt, gamma, pw, constant_mobility, thin_film::FaceMobility::Harmonic);
+  }
+
+  const double twopi = 2.0 * std::numbers::pi;
+  const double k = twopi * mode / fx.N;
+  const double lambda = M0 * k * k * (p.Pip0 - gamma * k * k);
+  REQUIRE(lambda > 0.0); // this mode must be unstable, or the test proves nothing
+  const double expected = amp * std::exp(lambda * dt * steps);
+  double num = 0.0, den = 0.0;
+  for (int iy = 0; iy < fx.ny; ++iy) {
+    for (int ix = 0; ix < fx.nx; ++ix) {
+      const double w = std::cos(twopi * mode * ix / fx.N);
+      num += (h[static_cast<std::size_t>(ix) + static_cast<std::size_t>(iy) * fx.nx] -
+             h0) *
+             w;
+      den += w * w;
+    }
+  }
+  REQUIRE_THAT(num / den, WithinRel(expected, 0.05));
+}
+
+TEST_CASE("FD face mobility: harmonic mean stays non-negative through rupture, "
+          "arithmetic mean does not",
+          "[thin_film][fd][positivity]") {
+  if (world_size() != 1) {
+    SKIP("single-rank rupture drive");
+  }
+  // A deep, localized precursor-form defect (same shape as the science
+  // case's defect-triggered dewetting, `thin_film_defect.json`, just deeper
+  // and on a much smaller grid) driven forward long enough to cross into
+  // the precursor. This is the actual claim the application makes about
+  // the face-mobility choice -- checked here, not just asserted in the
+  // README -- and it was calibrated against exactly this behaviour with
+  // `apps/thin_film/inputs_json/thin_film_fd_probe2*.json` on a real run:
+  // harmonic settles just above `h_star`; arithmetic overflows once the
+  // dip gets close to it (there, at t ~ 24 of 30; here, well inside the
+  // step budget below).
+  constexpr int N = 32;
+  const auto domain = pfc::domain::create(pfc::GridSize({N, N, 1}),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing({0.5, 0.5, 0.5}));
+  const auto decomp = pfc::decomposition::create(domain, 1);
+  const auto box = pfc::decomposition::local_box(decomp, 0);
+  const int nx = box.size[0], ny = box.size[1];
+
+  thin_film::ThinFilmParams p;
+  thin_film::apply_thin_film_json({{"A", 8.6022}, {"h_star", 0.15}}, p);
+  const thin_film::ThinFilmPointwise pw{.A = p.A, .h0 = p.h0, .h_star = p.h_star,
+                                        .Pi0 = p.Pi0, .Pip0 = p.Pip0};
+  const thin_film::CubicMobility mobility{p.M0, p.h0};
+  const auto defect = thin_film::GaussianDefect::centred(domain, /*amplitude=*/0.87,
+                                                         /*sigma=*/3.0);
+  constexpr double dt = 5.0e-4;
+  constexpr int steps = 50000;
+
+  auto run = [&](thin_film::FaceMobility kind) {
+    std::vector<double> h(static_cast<std::size_t>(nx) * static_cast<std::size_t>(ny));
+    for (int iy = 0; iy < ny; ++iy) {
+      for (int ix = 0; ix < nx; ++ix) {
+        const double x = ix * 0.5, y = iy * 0.5;
+        h[static_cast<std::size_t>(ix) + static_cast<std::size_t>(iy) * nx] =
+            p.h0 * (1.0 + defect(x, y));
+      }
+    }
+    thin_film::FDFluxSolver solver(domain, decomp, 0, MPI_COMM_WORLD, h, /*order=*/2);
+    double min_h = *std::min_element(h.begin(), h.end());
+    for (int s = 0; s < steps; ++s) {
+      solver.step(h, dt, p.gamma, pw, mobility, kind);
+      min_h = std::min(min_h, *std::min_element(h.begin(), h.end()));
+      if (!std::isfinite(min_h)) break;
+    }
+    return min_h;
+  };
+
+  const double min_harmonic = run(thin_film::FaceMobility::Harmonic);
+  const double min_arithmetic = run(thin_film::FaceMobility::Arithmetic);
+
+  REQUIRE(std::isfinite(min_harmonic));
+  REQUIRE(min_harmonic > -1.0e-9); // stays non-negative to round-off
+  REQUIRE(min_harmonic < 0.5 * p.h0); // and it actually got close to rupture
+  // The arithmetic mean only halves the flux out of a near-empty cell; it
+  // does not have to stop that cell from being driven below zero, and in
+  // this case it does not: the run overflows before the loop ends.
+  REQUIRE_FALSE(std::isfinite(min_arithmetic));
+}
+
+TEST_CASE("FD and spectral agree in the smooth pre-rupture regime",
+          "[thin_film][fd][spectral][agreement]") {
+  if (world_size() != 1) {
+    SKIP("single-rank cross-validation");
+  }
+  // Same equation, same IC, same domain, both methods still small-amplitude
+  // (no precursor engaged): this is the cross-validation the two-method
+  // story depends on. Growth is exponential here, so the two solutions
+  // should differ only by discretization error, not by O(1) physics.
+  constexpr int N = 64;
+  constexpr double h0 = 1.0, gamma = 1.0, M0 = 1.0, A = 0.05;
+  constexpr double amp = 1.0e-3, dt = 2.0e-3;
+  constexpr int steps = 100;
+  constexpr int mode = 2;
+
+  thin_film::ThinFilmParams p;
+  thin_film::apply_thin_film_json({{"h0", h0}, {"gamma", gamma}, {"M0", M0}, {"A", A}},
+                                  p);
+  const thin_film::ThinFilmPointwise pw{.A = p.A, .h0 = p.h0, .h_star = p.h_star,
+                                        .Pi0 = p.Pi0, .Pip0 = p.Pip0};
+  const thin_film::CubicMobility mobility{p.M0, p.h0};
+  const double twopi = 2.0 * std::numbers::pi;
+
+  // FD.
+  const auto domain = pfc::domain::create(pfc::GridSize({N, N, 1}),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing({1.0, 1.0, 1.0}));
+  const auto decomp = pfc::decomposition::create(domain, 1);
+  const auto box = pfc::decomposition::local_box(decomp, 0);
+  const int nx = box.size[0], ny = box.size[1];
+  std::vector<double> h_fd(static_cast<std::size_t>(nx) *
+                           static_cast<std::size_t>(ny));
+  for (int iy = 0; iy < ny; ++iy)
+    for (int ix = 0; ix < nx; ++ix)
+      h_fd[static_cast<std::size_t>(ix) + static_cast<std::size_t>(iy) * nx] =
+          h0 * (1.0 + amp * std::cos(twopi * mode * ix / N));
+  thin_film::FDFluxSolver fd_solver(domain, decomp, 0, MPI_COMM_WORLD, h_fd,
+                                    /*order=*/2);
+  for (int s = 0; s < steps; ++s) {
+    fd_solver.step(h_fd, dt, p.gamma, pw, mobility, thin_film::FaceMobility::Harmonic);
+  }
+  const auto fd_sample =
+      thin_film::sample_film_fd(h_fd, domain, h0, 0.05, MPI_COMM_WORLD);
+
+  // Spectral.
+  pfc::sim::stacks::SpectralCPUStack stack(domain, 0, 1, MPI_COMM_WORLD);
+  auto &h_spec = stack.u();
+  h_spec.apply([&](double x, double, double) {
+    return h0 * (1.0 + amp * std::cos(twopi * mode * x / N));
+  });
+  const double k_lap_scale = -(twopi * mode / N) * (twopi * mode / N);
+  (void)k_lap_scale;
+  std::vector<double> k_lap(stack.fft().size_outbox(), 0.0);
+  pfc::fft::kspace::for_each_kpoint(
+      stack.fft().get_outbox_bounds(), domain,
+      [&](std::size_t i, double kx, double ky, double kz, int, int, int) {
+        k_lap[i] = -(kx * kx + ky * ky + kz * kz);
+      });
+  pfc::apps::FluxETD stepper(domain, stack.fft(), dt, [=](double kl) {
+    return -M0 * gamma * kl * kl - M0 * p.Pip0 * kl;
+  });
+  auto potential = [&](pfc::data::Field<std::complex<double>> &h_hat,
+                       pfc::data::Field<double> &hh,
+                       pfc::data::Field<std::complex<double>> &out) {
+    std::vector<double> pi_real(hh.local_size()[0] * hh.local_size()[1]);
+    hh.with_host_view([&](double *hv, std::size_t cnt) {
+      for (std::size_t i = 0; i < cnt; ++i) pi_real[i] = pw.Pi(hv[i]);
+    });
+    pfc::data::Field<double> pi_field(domain, stack.fft().get_inbox_bounds(), 0);
+    pi_field.with_host_view([&](double *pv, std::size_t cnt) {
+      for (std::size_t i = 0; i < cnt; ++i) pv[i] = pi_real[i];
+    });
+    pfc::data::Field<std::complex<double>> pi_hat(domain, stack.fft().get_outbox_bounds(),
+                                                  0);
+    pfc::sim::SpectralETDOps<pfc::HostSpace>::forward(stack.fft(), pi_field, pi_hat);
+    h_hat.with_host_view([&](std::complex<double> *hvv, std::size_t m) {
+      pi_hat.with_host_view([&](std::complex<double> *pvv, std::size_t) {
+        out.with_host_view([&](std::complex<double> *o, std::size_t) {
+          for (std::size_t i = 0; i < m; ++i) o[i] = -gamma * k_lap[i] * hvv[i] - pvv[i];
+        });
+      });
+    });
+  };
+  double t = 0.0;
+  for (int s = 0; s < steps; ++s) t = stepper.step(t, h_spec, potential, mobility);
+  const auto spec_sample = thin_film::sample_film(h_spec, domain, h0, 0.05, MPI_COMM_WORLD);
+
+  // Both are unstable-mode growth from the same IC; require them to agree to
+  // a couple of percent in the two headline observables this application
+  // reports -- min thickness and total volume -- while amplitude is still
+  // small (no precursor engaged on either side).
+  REQUIRE_THAT(fd_sample.min_h, WithinRel(spec_sample.min_h, 0.02));
+  REQUIRE_THAT(fd_sample.volume, WithinRel(spec_sample.volume, 1.0e-6));
 }

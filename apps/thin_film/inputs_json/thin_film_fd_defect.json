@@ -1,0 +1,36 @@
+{
+    "model": {
+        "name": "thin_film",
+        "params": {
+            "h0": 1.0,
+            "gamma": 1.0,
+            "M0": 1.0,
+            "A": 8.6022,
+            "h_star": 0.15
+        }
+    },
+    "domain": {
+        "Lx": 512,
+        "Ly": 512,
+        "Lz": 1,
+        "dx": 0.5
+    },
+    "timestepping": {
+        "t1": 300.0,
+        "dt": 0.001,
+        "saveat": 5.0
+    },
+    "initial_conditions": {
+        "amplitude": 0.002,
+        "seed": 2024,
+        "defect_amplitude": 0.3,
+        "defect_sigma": 3.0
+    },
+    "fd": {
+        "face_mobility": "harmonic",
+        "order": 2
+    },
+    "diagnostics": {
+        "csv": "results/fd_defect/diagnostics.csv"
+    }
+}
