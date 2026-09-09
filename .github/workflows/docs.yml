@@ -93,7 +93,7 @@ jobs:
 
       - name: Install Doxygen and Ninja
         run: |
-          sudo apt-get update
+          bash scripts/ci/apt_update.sh
           sudo apt-get install -y doxygen ninja-build
 
       - name: Install uv and Python

@@ -9,6 +9,15 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Fixed
 
+- CI no longer fails on a third-party apt repository it does not use. The
+  GitHub runner images carry apt sources for Google Chrome and Microsoft
+  prod; on 2026-09-09 Chrome served a `Packages.gz` whose hash disagreed with
+  its own `Release` file, `apt-get update` exited 100, and every workflow that
+  installs a package died on its first line. Because the build matrix is gated
+  on the Code Quality job, healthy branches reported a red pipeline. All
+  runner-image installs now go through `scripts/ci/apt_update.sh`, which drops
+  the unused sources before refreshing the index, so only an outage of the
+  Ubuntu archives we actually install from can fail the step.
 - `ctest` can be registered in a `--no-heffte` CPU build again (`#105`). The
   Catch2 `-isystem` loop in `tests/CMakeLists.txt` guarded on the unevaluated
   string, so `$<INSTALL_INTERFACE:include>` passed the check and expanded to
