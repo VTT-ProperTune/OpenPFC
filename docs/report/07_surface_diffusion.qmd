@@ -1,0 +1,74 @@
+# Surface diffusion {#sec-surface-diffusion}
+
+`apps/surface_diffusion` — the simplest fourth-order model in the report, and
+the one with an exact solution for every mode.
+
+## Physical setting
+
+A rough solid surface held at temperature smooths itself: curvature raises the
+local chemical potential, adatoms diffuse along the surface from peaks to
+valleys, and the profile flattens. Mullins derived the small-slope limit in
+1957. Industrially this is thermal annealing of nanoscale roughness, and the
+practical question is how long a given feature size takes to disappear.
+
+## Governing equations
+
+For a small-slope height profile $h$,
+
+$$
+\partial_t h \;=\; -B\,\nabla^4 h .
+$$ {#eq-sd-pde}
+
+The chain behind it is: curvature $\to$ chemical potential
+$\mu \propto -\nabla^2 h$, surface flux $\propto -\nabla\mu$, mass conservation
+$\partial_t h = -\nabla\cdot\mathbf{j}$. Two Laplacians from the potential and
+the divergence give $\nabla^4$.
+
+## Spectral formulation
+
+The equation is linear, so the transform diagonalises it completely. With
+$u = k_{\mathrm{lap}}$,
+
+$$
+L(k) \;=\; -B\,u^2 \;=\; -B|\mathbf{k}|^4 ,
+\qquad N \equiv 0 .
+$$ {#eq-sd-symbol}
+
+Every Fourier mode is therefore independent and decays exactly:
+
+$$
+h_{\mathbf{k}}(t) \;=\; h_{\mathbf{k}}(0)\,e^{-B|\mathbf{k}|^4 t}.
+$$ {#eq-sd-exact}
+
+The $|\mathbf{k}|^4$ in the exponent is the physical content. Halving a feature's
+wavelength makes it decay **sixteen times** faster, so an annealing surface
+loses its fine structure long before its long-wavelength shape changes. A
+two-wavelength initial condition separates visibly within a fraction of the
+long mode's lifetime.
+
+## Solution strategy
+
+ETD1 as in @eq-etd1 with $N \equiv 0$, which reduces @eq-etd1 to
+$\hat h^{\,n+1} = e^{L\Delta t}\hat h^{\,n}$ — exact for any $\Delta t$, to
+round-off. Dealiasing is off: there is no nonlinearity to alias.
+
+This makes the application a useful correctness probe for the spectral stack
+itself. Any deviation from @eq-sd-exact is a defect in the transform,
+the decomposition, or the symbol — not discretisation error.
+
+## Verification
+
+* **Exact single-mode decay.** $h_k(t) = h_k(0)e^{-Bk^4t}$ to round-off.
+* **Multi-wavelength separation.** Two modes decay with the ratio predicted by
+  $k^4$.
+* **Mean preservation.** $\mathbf{k}=0$ is untouched, so the mean height is
+  exactly constant.
+
+## Binaries and inputs
+
+`surface_diffusion` (CPU), `surface_diffusion_hip`. Preset
+`smoothing.json` (multi-wavelength).
+
+## Scalability
+
+Not measured.

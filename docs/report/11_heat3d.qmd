@@ -1,0 +1,91 @@
+# Heat equation in three dimensions {#sec-heat3d}
+
+`apps/heat3d` — the reference application for comparing discretisations,
+because it ships several of them for the *same* PDE.
+
+## Physical setting
+
+Linear diffusion. The physics is not the point: this application exists so that
+finite-difference order, spectral treatment, timing, and scaling can be
+compared without the comparison being confounded by a difference in the
+problem.
+
+## Governing equations
+
+$$
+\partial_t u \;=\; D\,\nabla^2 u
+$$ {#eq-h3-pde}
+
+on a periodic box, with a single fixed $D$ shared by every binary so their
+errors against the analytic solution are directly comparable.
+
+For a single Fourier mode the exact solution is
+
+$$
+u_{\mathbf{k}}(t) \;=\; u_{\mathbf{k}}(0)\,e^{-D|\mathbf{k}|^2 t},
+$$ {#eq-h3-exact}
+
+which every driver is measured against.
+
+## Finite-difference formulation
+
+Centred stencils of even order $2m$ approximate the Laplacian,
+
+$$
+\partial_{xx}u\big|_i \;\approx\; \frac{1}{\Delta x^2}\sum_{j=-m}^{m} a_j\,u_{i+j},
+$$ {#eq-h3-stencil}
+
+with $m$ ghost cells exchanged per face before each evaluation. Orders 2
+through 20 are available. Time stepping is explicit, subject to @eq-cfl.
+
+## Spectral formulation
+
+The spectral drivers use the same reciprocal-space convention as the rest of
+the report. With $u = k_{\mathrm{lap}}$ the operator is simply $L(k) = D\,u$,
+and the implicit Euler driver applies
+
+$$
+\hat u^{\,n+1} \;=\; \frac{\hat u^{\,n}}{1 - \Delta t\,D\,u},
+$$ {#eq-h3-implicit}
+
+which is two transforms per step and unconditionally stable.
+
+## The five drivers
+
+| Binary | Discretisation | Purpose |
+|---|---|---|
+| `heat3d_fd_scratch` | hand-written stencil | teaching: no framework abstractions |
+| `heat3d_fd_manual` | fixed second order | manual halo management |
+| `heat3d_fd` | orders 2–20 | convergence and order studies |
+| `heat3d_spectral` | pointwise RHS | spectral evaluation of the RHS |
+| `heat3d_spectral_pointwise` | implicit Euler, @eq-h3-implicit | unconditionally stable reference |
+
+GPU twins `heat3d_fd_hip` and `heat3d_spectral_hip` mirror the FD and spectral
+paths on device. **These two are what make @sec-scalability a method
+comparison rather than an application comparison** — same equation, same
+grids, same machine, two discretisations.
+
+## Solution strategy
+
+Explicit stepping for the FD drivers under @eq-cfl; implicit Euler in Fourier
+space for the spectral drivers, at two transforms per step.
+
+The trade is the usual one. The FD step is cheap and local — a stencil plus a
+halo exchange with nearest neighbours — but the stable timestep shrinks as
+$\Delta x^2$. The spectral step is unconditionally stable but costs two
+all-to-all transforms, which is global communication. Which wins depends on the
+accuracy required and on how well the machine's network carries an FFT
+transpose; @sec-scalability measures exactly that.
+
+## Verification
+
+* **Analytic $L^2$ error.** Every driver is compared against @eq-h3-exact.
+* **Observed order.** Measured convergence matches the design order of the
+  stencil.
+* **CPU/GPU agreement.** `HEAT3D_HIP_CHECKSUM` agrees between 1 and 16 GCDs to
+  about $5\times10^{-15}$ relative; the spectral twin agrees to about
+  $3\times10^{-16}$.
+
+## Scalability
+
+Measured on LUMI-G for both HIP twins, 1–32 GCDs. See @sec-scalability.

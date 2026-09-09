@@ -44,6 +44,9 @@ exclude_patterns = [
     "archive/OPENPFC_REFACTORING_EXECUTION_PLAN.md",
     "archive/0.2_migration_map.md",
     "archive/refactoring_roadmap.md",
+    # Quarto applications report: rendered by `quarto render docs/report`,
+    # not by Sphinx. Its build output must never be picked up as source.
+    "report/**",
 ]
 suppress_warnings = ["toc.not_included"]
 

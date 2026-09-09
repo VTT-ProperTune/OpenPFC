@@ -1,0 +1,83 @@
+# Kawahara capillary–gravity waves {#sec-kawahara}
+
+`apps/kawahara` — the only *dispersive* model in the report: fifth order, and
+its linear symbol is purely imaginary.
+
+## Physical setting
+
+Long weakly nonlinear waves on a shallow fluid layer where surface tension and
+gravity both matter. Where the Korteweg–de Vries equation keeps only
+third-order dispersion, Kawahara (1972) retains the fifth-order term as well.
+When the two have opposite signs they compete, and the resulting dispersion
+relation is non-monotonic — waves of different length can travel in opposite
+directions.
+
+## Governing equations
+
+$$
+\partial_t u \;+\; \alpha\,u\,\partial_x u
+  \;-\; \beta\,\partial_x^3 u
+  \;+\; \gamma\,\partial_x^5 u \;=\; 0 .
+$$ {#eq-kw-pde}
+
+::: {.callout-note}
+## Sign convention
+
+This application defines $\beta$ with a minus sign in @eq-kw-pde. To use a
+coefficient $b$ multiplying $+u_{xxx}$, set $\beta = -b$.
+:::
+
+## Spectral formulation
+
+Odd derivatives transform to odd powers of $ik$, so the symbol is **purely
+imaginary**:
+
+$$
+L(k) \;=\; -i\,\omega(k), \qquad \omega(k) \;=\; \beta k^3 + \gamma k^5 .
+$$ {#eq-kw-symbol}
+
+The quadratic flux $\alpha u\,\partial_x u = \tfrac{\alpha}{2}\partial_x(u^2)$
+is evaluated as $N = u^2$ with
+
+$$
+M_{\mathrm{nl}}(k) \;=\; -i\,\frac{\alpha}{2}\,k_x .
+$$ {#eq-kw-nl}
+
+This is the qualitative difference from every other spectral chapter here.
+An even-order dissipative operator has $L$ real and negative: $|e^{L\Delta t}|<1$
+and modes **decay**. Here $L$ is imaginary, so $|e^{L\Delta t}| = 1$ exactly and
+modes **rotate** — the amplitude of each Fourier component is preserved and only
+its phase advances. ETD is not damping anything; it is applying an exact phase
+rotation.
+
+The phase velocity follows from @eq-kw-symbol:
+
+$$
+c_p(k) \;=\; \frac{\omega(k)}{k} \;=\; \beta k^2 + \gamma k^4 ,
+$$ {#eq-kw-phase}
+
+which changes sign at $k^2 = -\beta/\gamma$ when $\beta\gamma < 0$. Below that
+wave number waves travel one way, above it the other. The defaults
+$\alpha = 1$, $\beta = 1$, $\gamma = -1$ put the model in this competing
+regime.
+
+## Solution strategy
+
+ETD1 as in @eq-etd1, dealiased — the quadratic nonlinearity doubles the
+highest wave number present, so the 2/3 rule is required.
+
+## Verification
+
+* **Phase velocity.** A single mode advances at $c_p(k)$ from
+  @eq-kw-phase, checked independently for the $k^3$ and $k^5$ branches.
+* **Manufactured solutions.** Independent manufactured-solution tests for
+  third- and fifth-order dispersion.
+* **Mean preservation.** The $\mathbf{k}=0$ mode is untouched.
+
+## Binaries and inputs
+
+`kawahara` (CPU), `kawahara_hip`. Preset `pulse.json` (256-point line).
+
+## Scalability
+
+Not measured.

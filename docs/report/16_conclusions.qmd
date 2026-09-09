@@ -1,0 +1,76 @@
+# Conclusions {#sec-conclusions}
+
+## What the application set demonstrates
+
+Twelve applications, spanning fourth- through sixth-order spatial operators in
+the shipped spectral set, conserved and non-conserved dynamics, dispersive and
+dissipative behaviour, single- and multi-field systems, and both spectral and
+finite-difference discretisations — on one runtime, with one halo/decomposition
+layer and matching CPU and GPU paths.
+
+The two claims from the abstract hold up, with qualifications worth stating.
+
+**High order is cheap to express.** @sec-surface-diffusion ($k^4$),
+@sec-thin-film ($k^4$), @sec-kawahara ($k^5$, imaginary) and @sec-ehd-film
+($k^6$) differ, in their physics headers, by the polynomial one function
+returns. That is a real architectural result and not a presentational trick:
+none of these applications contains a loop over wave numbers, an MPI call, or a
+hand-written GPU kernel.
+
+The qualification is that high order is *not* cheap to integrate. The stiffness
+grows as $\Delta x^{-n}$, and the reason these models run at useful timesteps
+is @eq-etd1, not the spectral transform by itself. An explicit integrator on
+the sixth-order operator of @sec-ehd-film would need a timestep smaller by
+orders of magnitude.
+
+**The same source scales.** @sec-scalability reports three measured curves out
+to 32 GCDs across four nodes, with checksums agreeing between 1 and 16 GCDs to
+between $10^{-12}$ and $3\times10^{-16}$. The application sources are unchanged
+between the one-GCD and 32-GCD runs.
+
+The qualification is that all three curves fall below 50% efficiency by 24–32
+GCDs at these grid sizes, and the report contains no weak-scaling study, which
+is the measurement that would actually justify a larger simulation.
+
+## The method comparison
+
+The most useful single result is the pair of Heat3D curves, because they solve
+the same PDE. Halo exchange strong-scales better than a distributed transpose —
+78% against 59% at one node — for the structural reason that nearest-neighbour
+communication stays local as ranks are added while an all-to-all transpose does
+not.
+
+This does not make finite differences the better method. The spectral driver is
+unconditionally stable and takes a much larger timestep; the comparison here
+measures cost per step, not time to solution. Establishing the latter would
+require running both to a fixed accuracy, which has not been done.
+
+## Gaps
+
+Honest accounting of what this report cannot support:
+
+* **Nine of twelve applications have no scaling measurement.** The spectral
+  ones share a stack with @sec-tungsten and would be expected to track it, but
+  expectation is not measurement.
+* **No CPU control.** Without a LUMI-C run at equal node count, the report
+  cannot quantify what the GPU path buys.
+* **No weak scaling.** Every curve holds the problem fixed.
+* **No time-to-solution comparison** between the spectral and FD paths at
+  matched accuracy — the comparison a user actually needs when choosing.
+* **The two PFC applications have no analytical verification**, only regression
+  and self-consistency. This is inherent to a realistic equation of state, but
+  it means their correctness rests on pinned checksums rather than closed-form
+  agreement.
+
+## Suggested next measurements
+
+In order of what would most improve this report:
+
+1. **A weak-scaling study** on `tungsten_hip` — fixed cells per GCD, growing
+   grid. This is the curve that says whether a larger science run is feasible,
+   and it is the one currently missing.
+2. **Time-to-solution at matched accuracy** for the two Heat3D drivers, which
+   would turn @sec-scalability's method comparison into actionable guidance.
+3. **A LUMI-C CPU control** at equal node count for one model.
+4. **One scaling point for a second spectral application** — enough to test
+   whether the shared-stack expectation actually holds.

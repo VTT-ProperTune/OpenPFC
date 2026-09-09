@@ -1,0 +1,92 @@
+# Thin-film dewetting and coating {#sec-thin-film}
+
+`apps/thin_film` — conserved fourth-order lubrication flow.
+
+## Physical setting
+
+A thin liquid film on a solid substrate. Two effects compete: surface tension
+flattens the free surface, and van der Waals interaction with the substrate
+either thins or thickens the film depending on its local height. Whether a
+coating levels into a uniform layer or breaks up into droplets is decided by
+which one wins at which wavelength — a question with obvious relevance to
+coating processes and to the stability of deposited layers.
+
+## Governing equations
+
+One conserved thickness field $h$ with constant mobility $M_0$:
+
+$$
+\partial_t h \;=\; \nabla\cdot\big[M_0\nabla p\big],
+\qquad
+p \;=\; -\gamma\nabla^2 h \;-\; \Pi(h),
+$$ {#eq-tf-pde}
+
+with the disjoining pressure
+
+$$
+\Pi(h) \;=\; A\left[\left(\frac{h_0}{h}\right)^{3}
+                   -\left(\frac{h_0}{h}\right)^{9}\right].
+$$ {#eq-tf-disjoining}
+
+::: {.callout-warning}
+## Sign convention
+
+Some textbook flux forms carry a leading minus that would make the capillary
+$k^4$ term *destabilising*. @eq-tf-pde is the standard lubrication balance —
+flow down the pressure gradient — so short wavelengths damp, which is the
+physically correct behaviour.
+:::
+
+Cubic mobility $M \propto h^3$ is a local-flux nonlinearity and is deliberately
+left out of this slice; $M_0 = M(h_0)$ is exact for the linear band, which is
+what the verification targets.
+
+## Spectral formulation
+
+With $u = k_{\mathrm{lap}}$,
+
+$$
+L(k) \;=\; -M_0\gamma\,u^2 \;-\; M_0\,\Pi'(h_0)\,u ,
+\qquad
+M_{\mathrm{nl}}(k) \;=\; -M_0\,u .
+$$ {#eq-tf-symbol}
+
+In terms of $|\mathbf{k}| = k$ the linear growth rate is
+
+$$
+\lambda(k) \;=\; M_0 k^2\big(\Pi'(h_0) - \gamma k^2\big),
+$$ {#eq-tf-growth}
+
+which is the whole story of the model in one line. The $-\gamma k^4$ term is
+capillary damping and always stabilises. The $+\Pi'(h_0)k^2$ term destabilises
+when $\Pi'(h_0) > 0$. Their balance selects a fastest-growing wavelength
+$k_{\max}^2 = \Pi'(h_0)/(2\gamma)$, which is the observed droplet spacing in
+dewetting.
+
+Setting $A = 0$ removes the disjoining pressure entirely and leaves
+$\lambda(k) = -M_0\gamma k^4$: every mode decays, and the film levels. That is
+the coating limit, and it is a clean analytical target because the decay is
+exact.
+
+## Solution strategy
+
+ETD1 as in @eq-etd1, dealiased.
+
+## Verification
+
+* **Exact $k^4$ levelling.** With $A=0$, a single mode decays as
+  $e^{-M_0\gamma k^4 t}$.
+* **Two-mode ratio.** The relative decay of two modes matches the $k^4$
+  prediction.
+* **Dewetting band.** With $A>0$, modes inside the unstable band grow and
+  those outside decay, with the crossover at the predicted wave number.
+* **Mass conservation.** Mean thickness is preserved.
+
+## Binaries and inputs
+
+`thin_film` (CPU), `thin_film_hip`. Presets: `leveling.json`,
+`dewetting.json`.
+
+## Scalability
+
+Not measured.

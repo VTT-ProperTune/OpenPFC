@@ -1,0 +1,86 @@
+# Kobayashi dendritic solidification {#sec-kobayashi}
+
+`apps/kobayashi` — coupled phase field and temperature, with anisotropic
+surface energy. The most physically involved finite-difference application in
+the set.
+
+## Physical setting
+
+A crystal growing into an undercooled melt. Latent heat released at the moving
+interface warms the surrounding liquid and suppresses further growth there,
+while protrusions reach into colder melt and grow faster. That feedback is the
+origin of dendrites, and the direction they select comes from the anisotropy of
+the interfacial energy.
+
+Two-way coupling is essential: the phase field moves the temperature through
+latent heat, and the temperature moves the phase field through the driving
+force.
+
+## Governing equations
+
+$$
+\tau\,\partial_t\phi \;=\;
+    \partial_y\big(\epsilon\,\epsilon'\,\partial_x\phi\big)
+  - \partial_x\big(\epsilon\,\epsilon'\,\partial_y\phi\big)
+  + \epsilon^2\nabla^2\phi
+  + \phi(1-\phi)\!\left(\phi - \tfrac12 + M(T)\right),
+$$ {#eq-kb-phi}
+
+$$
+\partial_t T \;=\; \nabla^2 T \;+\; \kappa\,\partial_t\phi .
+$$ {#eq-kb-temp}
+
+The interfacial energy $\epsilon$ depends on the orientation of the interface
+normal, and $\epsilon'$ is its derivative with respect to that angle. The first
+two terms of @eq-kb-phi are the anisotropy: they vanish for isotropic
+$\epsilon$ and are what makes dendrite arms select particular directions rather
+than growing as a disc.
+
+$M(T)$ is the temperature-dependent driving force, and $\kappa$ is the latent
+heat coefficient coupling @eq-kb-phi back into @eq-kb-temp.
+
+## Finite-difference formulation
+
+Second-order centred stencils on a periodic torus in $x$ and $y$. The
+anisotropy terms need the interface normal, so gradients of $\phi$ are
+evaluated before the divergence-like terms are assembled.
+
+The latent heat term is applied as
+
+$$
+T^{\,n+1} \;=\; T^{\,n} + \Delta t\,\nabla^2_h T^{\,n}
+                 \;+\; \kappa\big(\phi^{\,n+1}-\phi^{\,n}\big),
+$$ {#eq-kb-latent}
+
+that is, using the *already updated* $\phi$ rather than a separate time
+derivative. This is a sequential rather than simultaneous update of the two
+fields, and it is deliberate: it matches the reference Julia implementation
+this application was validated against, so the two can be compared
+step-for-step.
+
+## Solution strategy
+
+Explicit stepping. Halo exchange for two field groups per step — state and
+auxiliary — unless extended halos are requested, in which case a single wider
+exchange covers both. The GPU drivers keep working arrays resident on device
+and stage $\phi$ and $T$ to the host only for PNG output and verification.
+
+## Verification
+
+* **Reference agreement.** Checksums pinned against the reference
+  implementation.
+* **CPU–GPU parity.** The CUDA 32²/4-step pin matches the CPU OpenMP pin;
+  `sum_T` differs by 1 ULP.
+* **Multi-rank.** A two-rank variant is registered when MPI suites are on.
+
+## Binaries and inputs
+
+`kobayashi_fd_manual` (MPI halos), `kobayashi_fd_openmp` (torus wrap plus
+OpenMP), plus CUDA and HIP drivers. Command-line driven, with PNG snapshots of
+$\phi$.
+
+## Scalability
+
+Not measured on LUMI-G. A 1-versus-2-GPU CUDA workflow exists for an H100
+partition, but it is a two-point comparison rather than a strong-scaling curve
+and is not reported here as one.

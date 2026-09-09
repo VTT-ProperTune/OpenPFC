@@ -1,0 +1,86 @@
+# Aluminium PFC {#sec-aluminum}
+
+`apps/aluminumNew` — a compact PFC application in the same family as
+@sec-tungsten, parameterised for aluminium and built around a moving frame.
+
+## Physical setting
+
+The same phase-field crystal picture as @sec-tungsten: a conserved periodic
+density whose minima are lattice sites. The differences are the equation of
+state, an FCC seeding initial condition (`seed_grid_fcc`), and a moving-frame
+formulation aimed at directional solidification, where the interesting physics
+is a front travelling through the domain rather than a bulk relaxation.
+
+## Governing equations
+
+Conserved PFC dynamics, as in @eq-w-dyn:
+
+$$
+\partial_t \psi \;=\; \nabla^2 \frac{\delta F}{\delta \psi}.
+$$
+
+The free energy has the same structure as @eq-w-energy — a quadratic
+correlation term plus a local polynomial in $\psi$ and the mean-field density
+— with the aluminium coefficients $\bar p_2,\bar p_3,\bar p_4$ and
+$\bar q_{20},\dots,\bar q_{40}$.
+
+## Spectral formulation
+
+$$
+L(k) \;=\; u\,C(k), \qquad M_{\mathrm{nl}}(k) \;=\; u ,
+\qquad u = k_{\mathrm{lap}} = -|\mathbf{k}|^2 .
+$$ {#eq-al-symbol}
+
+Alongside $C(k)$ the model carries a separate **correlation kernel** $P(k)$
+applied to the density each step. The pointwise nonlinearity is therefore a
+function of four arguments rather than two,
+
+$$
+N \;=\; N\big(\psi,\ \psi_{\mathrm{MF}},\ (P*\psi),\ T_{\mathrm{var}}(x,t)\big),
+$$ {#eq-al-nl}
+
+where $(P*\psi)$ is the kernel-filtered density — a convolution in real space,
+hence a multiply in reciprocal space — and $T_{\mathrm{var}}$ is the imposed
+temperature field.
+
+## Moving frame and thermal drive
+
+The temperature varies in space and time as a travelling profile,
+
+$$
+T_{\mathrm{var}}(x,t) \;=\;
+  T_0 + G_{\mathrm{grid}}\big(x - x_{\mathrm{initial}} - V_{\mathrm{grid}}\,t\big),
+$$ {#eq-al-temp}
+
+clamped between `T_min` and `T_max`. A gradient $G_{\mathrm{grid}}$ pulled
+through the domain at speed $V_{\mathrm{grid}}$ is the standard
+directional-solidification setup: the front settles at the position where the
+local temperature matches the interface condition, and then travels with the
+gradient. Setting $G_{\mathrm{grid}}=0$ recovers an isothermal run at
+`T_const`.
+
+## Solution strategy
+
+ETD1 as in @eq-etd1, dealiased, with the mean-field filter and the correlation
+kernel evaluated as reciprocal-space multiplies. Two transforms per step plus
+the kernel application.
+
+## Verification
+
+* **Regression.** Pinned checksums for the shipped case across CPU and GPU
+  builds.
+* **Schema.** JSON round-trip and range validation on every parameter.
+
+Like @sec-tungsten this model has no closed-form reference; coverage is
+regression and schema rather than analytical.
+
+## Binaries and inputs
+
+`aluminum_etd` (CPU), `aluminum_etd_cuda`, `aluminum_etd_hip`. Preset
+`inputs_json/smoke.json`, plus `aluminumNew.json`.
+
+## Scalability
+
+Not measured. The application shares the spectral ETD stack with
+@sec-tungsten, so its per-step cost is expected to track the tungsten curve at
+equal grid size, but that has not been verified and no curve is reported here.

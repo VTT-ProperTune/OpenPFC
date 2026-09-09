@@ -1,0 +1,8 @@
+# Single-GCD sizing sweep, tungsten_hip, LUMI-G dev-g (2026-09-06).
+# Source: docs/hpc/lumi_gpu_scaling.md.
+nx,job,wall_step_ms
+256,21759671,20
+384,21759672,79
+512,21759709,232
+640,21759710,466
+768,21759720,847

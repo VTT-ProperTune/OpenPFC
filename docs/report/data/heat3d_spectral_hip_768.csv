@@ -1,0 +1,10 @@
+# Strong scaling, heat3d_spectral_hip, 768^3, LUMI-G standard-g, 20 steps, dt=0.01 (2026-09-06).
+# Source: docs/hpc/lumi_gpu_scaling.md. HeFFTe slabs, GPU-aware p2p_plined.
+gcds,nodes,job,wall_step_ms
+1,1,21773962,416
+2,1,21774367,204
+4,1,21774368,127
+8,1,21774369,88
+16,2,21773966,50
+24,3,21773967,39
+32,4,21773968,34

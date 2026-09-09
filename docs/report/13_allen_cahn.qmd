@@ -1,0 +1,77 @@
+# Allen–Cahn {#sec-allen-cahn}
+
+`apps/allen_cahn` — non-conserved phase-field dynamics, and the smallest
+complete application in the report.
+
+## Physical setting
+
+A two-phase system relaxing toward equilibrium by moving its interfaces.
+Unlike the Cahn–Hilliard model of @sec-cahn-hilliard, the order parameter here
+is **not** conserved: a grain can shrink and vanish. This is the standard model
+for curvature-driven grain growth.
+
+## Governing equations
+
+$$
+\partial_t \phi \;=\; M\nabla^2\phi
+                 \;-\; \frac{1}{\varepsilon^2}\big(\phi^3 - \phi\big)
+                 \;+\; F ,
+$$ {#eq-ac-pde}
+
+where $\varepsilon$ sets the interface width, the double-well term
+$\phi^3-\phi$ drives $\phi$ toward $\pm1$, and $F$ is an optional constant
+driving force.
+
+## Conserved versus non-conserved
+
+The contrast with @eq-ch-pde is the clearest illustration in this report of
+what the outer $\nabla^2$ does. Cahn–Hilliard reads
+$\partial_t c = M\nabla^2(\dots)$ and is conserved: in reciprocal space every
+term carries the factor $u$, so the $\mathbf{k}=0$ mode is annihilated and the
+mean cannot move.
+
+@eq-ac-pde has no outer Laplacian on the reaction term. Its $\mathbf{k}=0$
+component is $-\varepsilon^{-2}(\phi^3-\phi) + F$, which is generally nonzero,
+so $\langle\phi\rangle$ evolves freely. Physically: Cahn–Hilliard *redistributes*
+a fixed amount of solute, Allen–Cahn *converts* one phase into another.
+
+The consequence for verification is that the natural check is not conservation
+but the growth of a favoured phase — which is what the test asserts.
+
+## Finite-difference formulation
+
+A second-order five-point Laplacian in $x$ and $y$ on a periodic slab, with
+separated halo exchange, and explicit forward Euler:
+
+$$
+\phi^{\,n+1}_i \;=\; \phi^{\,n}_i \;+\; \Delta t\left[
+   M\,(\nabla^2_h\phi^{\,n})_i
+ - \frac{1}{\varepsilon^2}\big((\phi^{\,n}_i)^3 - \phi^{\,n}_i\big)
+ + F \right].
+$$ {#eq-ac-update}
+
+Two stability limits apply: the diffusive condition @eq-cfl, and a reaction
+condition $\Delta t \lesssim \varepsilon^2$ from the stiff double well. A sharp
+interface is therefore expensive, which is the usual phase-field trade-off and
+the reason $\varepsilon$ is a numerical as well as a physical parameter.
+
+## Solution strategy
+
+Explicit Euler with separated halos, so the stencil evaluation and the halo
+exchange are distinct phases. Optional PNG snapshots of $\phi$.
+
+## Verification
+
+* **Superlevel-set growth.** The area with $\phi$ above a threshold grows by at
+  least a prescribed factor between $t=0$ and the end of the run — the
+  non-conserved counterpart to a conservation check.
+* **CPU–GPU parity.** Where CUDA/HIP twins are built.
+
+## Binaries and inputs
+
+`allen_cahn` (CPU), plus CUDA/HIP twins. Command-line driven; this application
+does not use the JSON session path.
+
+## Scalability
+
+Not measured.
