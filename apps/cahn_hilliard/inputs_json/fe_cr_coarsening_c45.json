@@ -1,0 +1,52 @@
+{
+    "model": {
+        "name": "cahn_hilliard",
+        "params": {
+            "c0": 0.45,
+            "T": 748.15,
+            "kappa": 1.0,
+            "M": 1.0,
+            "L0_a": 20500.0,
+            "L0_b": -9.68,
+            "L1_a": 0.0,
+            "L1_b": 0.0,
+            "Vm": 7.09e-06,
+            "kappa_phys": 1e-09,
+            "D0": 2e-05,
+            "Q": 241000.0
+        }
+    },
+    "domain": {
+        "Lx": 512,
+        "Ly": 512,
+        "Lz": 1,
+        "dx": 1.0,
+        "dy": 1.0,
+        "dz": 1.0,
+        "origin": "corner"
+    },
+    "timestepping": {
+        "t0": 0.0,
+        "t1": 4000.0,
+        "dt": 0.5,
+        "saveat": 100.0
+    },
+    "fields": [
+        {
+            "name": "c",
+            "data": "results/fe_cr_coarsening_45/c_%04d.vti"
+        }
+    ],
+    "diagnostics": {
+        "csv": "results/fe_cr_coarsening_45/diagnostics.csv"
+    },
+    "initial_conditions": [
+        {
+            "target": "c",
+            "type": "seeded_noise",
+            "c0": 0.45,
+            "amplitude": 0.005,
+            "seed": 1234
+        }
+    ]
+}
