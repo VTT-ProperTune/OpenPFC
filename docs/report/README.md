@@ -60,10 +60,14 @@ the scalability figures, only the SVGs are committed; the multi-megabyte raw
 To regenerate them from scratch:
 
 ```bash
+# Pick two directories of your own first; nothing below is shared state.
+build_dir=/flash/project_462001519/juaho/build/report-figures
+field_data_dir=/flash/project_462001519/juaho/tmp-shared/report-figures
+
 # 1. Build (see AGENT_NOTES.md / the root README for the shared LUMI
 #    allocation rules — do not call salloc/sbatch yourself):
 ./scripts/build.sh --machine=lumi --cpu --no-submit --no-test \
-    --build-dir=<your unique build dir>
+    --build-dir="$build_dir"
 
 # 2. Run the three demo applications (cahn_hilliard, thin_film, tungsten)
 #    and write their .vti/.bin output somewhere. On the shared LUMI
@@ -71,12 +75,12 @@ To regenerate them from scratch:
 SLURM_JOB_ID=$(cat /flash/project_462001519/juaho/shared_job_id.txt) \
 TMPDIR=/flash/project_462001519/juaho/tmp-shared \
 RUNNER="srun --overlap -n 1" \
-FIELD_DATA_DIR=/flash/project_462001519/juaho/tmp-shared/<your-unique-dir> \
-    docs/report/figures/run_field_demos.sh <your build dir>
+FIELD_DATA_DIR="$field_data_dir" \
+    docs/report/figures/run_field_demos.sh "$build_dir"
 
 # 3. Render the SVGs (needs matplotlib + numpy; see above for why
 #    cray-python is not enough):
-FIELD_DATA_DIR=/flash/project_462001519/juaho/tmp-shared/<your-unique-dir> \
+FIELD_DATA_DIR="$field_data_dir" \
     /flash/project_462001519/juaho/venv-pytest/bin/python \
     docs/report/figures/make_field_figures.py
 ```
