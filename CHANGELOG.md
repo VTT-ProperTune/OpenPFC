@@ -69,6 +69,27 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- `thin_film_fd` (`#124`): a conservative face-flux finite-difference solver
+  for the same `h^3` lubrication equation as `thin_film_nonlinear`, distributed
+  via `pfc::decomposition` + `pfc::comm::SparseExchange` (the `apps/allen_cahn`
+  pattern). Forming the flux at cell faces makes mass conservation exact to
+  round-off for any timestep (telescoping, not a `k=0`-mode argument) and,
+  with a harmonic-mean face mobility, keeps the film positive through
+  rupture where the spectral solver structurally cannot: on the 512²,
+  `dx=0.5` science case, the spontaneous run reaches a stable precursor
+  plateau (`min h ~ 0.151`-`0.152`, never crossing `h*=0.15`) with 19.6 % hole
+  area and its hole count falling from 227 to 204 between `t=345` and
+  `t=400` (coalescence), volume conserved to `1.3e-15` relative. The
+  arithmetic-mean face average was measured too, as a negative control: it
+  overflows within 5 time units of approaching `h*`. A controlled
+  single-Fourier-mode comparison against the spectral solver agrees to 2 %
+  in `min h` and `1e-6` relative in volume; the broadband-noise flagship
+  comparison shows a real, explained timing offset (near-Nyquist noise damps
+  ~6x slower in the 2nd-order FD operator than in the spectral scheme's
+  exact/dealiased treatment). Stable timestep measured directly:
+  `dt=0.001` at this resolution; `dt>=0.003` overflows. Curvature-operator
+  order 2 vs 4 compared directly (~1 % difference, not resolution-starved).
+  See `apps/thin_film/README.md`, "Two methods, one problem".
 - EasyBuild recipes for a LUMI-C module install (`#46`): a CPU HeFFTe 2.4.1
   (FFTW backend, `cpeGNU/25.09`) and OpenPFC 0.2.0 on top of it, under
   `easybuild/easyconfigs/`. Verified end to end on LUMI: both install, and

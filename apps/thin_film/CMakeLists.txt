@@ -42,6 +42,13 @@ install(TARGETS thin_film DESTINATION bin)
 thin_film_cpu_executable(thin_film_nonlinear src/thin_film_nonlinear.cpp)
 install(TARGETS thin_film_nonlinear DESTINATION bin)
 
+# Two-method flagship (#124): the same h^3 lubrication equation, integrated by
+# a conservative face-flux FD scheme (MPI Cartesian decomposition + halo
+# exchange) instead of spectral ETD, so it can be pushed through rupture
+# where thin_film_nonlinear structurally cannot. Same JSON case files.
+thin_film_cpu_executable(thin_film_fd src/thin_film_fd.cpp)
+install(TARGETS thin_film_fd DESTINATION bin)
+
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
   thin_film_hip_executable(thin_film_hip src/hip/thin_film.cpp)
   install(TARGETS thin_film_hip DESTINATION bin)
