@@ -74,6 +74,14 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   `apps/tungsten/inputs_json/` and constructs what it declares through the
   same schema and catalog the application uses. The other apps' inputs are
   still unguarded; the pattern is worth copying.
+- The finite-difference convergence study no longer breaks the REUSE lint. It
+  wrote an SPDX header into the CSV it generates, and the linter read those
+  string literals as a second, malformed license declaration for the source
+  file itself. Everything under `docs/report/` is already covered by the
+  `REUSE.toml` annotation and the sibling data CSVs carry a plain provenance
+  comment, so the header was redundant; the generator and the committed CSV
+  now carry that comment instead. Regenerating the CSV reproduces the
+  committed data byte for byte.
 
 - `ctest` can be registered in a `--no-heffte` CPU build again (`#105`). The
   Catch2 `-isystem` loop in `tests/CMakeLists.txt` guarded on the unevaluated

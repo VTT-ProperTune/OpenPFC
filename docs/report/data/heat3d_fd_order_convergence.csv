@@ -1,5 +1,4 @@
-# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
-# SPDX-License-Identifier: AGPL-3.0-or-later
+# Finite-difference order convergence for the 3D Laplacian, from heat3d_fd_convergence_study.
 fd_order,design_order,N,dx,eigenvalue,eigenvalue_residual,l2_error,observed_order
 2,2,16,3.9269908170e-01,-8.0060474003e+00,4.1306532055e-14,2.2973362182e-02,
 2,2,24,2.6179938780e-01,-8.5467708320e+00,1.6824530513e-12,1.0334048779e-02,1.9703082032e+00

@@ -102,8 +102,13 @@ int main(int argc, char **argv) {
     MPI_Finalize();
     return 1;
   }
-  csv << "# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd\n";
-  csv << "# SPDX-License-Identifier: AGPL-3.0-or-later\n";
+  // No SPDX header in the output: everything under docs/report/ is covered by
+  // the REUSE.toml annotation, and the sibling data CSVs carry a provenance
+  // comment instead. Emitting the tags here also made the REUSE linter read
+  // these string literals as a second, malformed license declaration for this
+  // source file.
+  csv << "# Finite-difference order convergence for the 3D Laplacian, from "
+         "heat3d_fd_convergence_study.\n";
   csv << "fd_order,design_order,N,dx,eigenvalue,eigenvalue_residual,l2_error,observed_order\n";
   csv << std::scientific << std::setprecision(10);
 
