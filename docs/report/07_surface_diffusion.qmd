@@ -1,7 +1,8 @@
 # Surface diffusion {#sec-surface-diffusion}
 
 `apps/surface_diffusion` — the simplest fourth-order model in the report, and
-the one with an exact solution for every mode.
+the one with an exact solution for every mode; plus an anisotropic science
+driver built on top of it.
 
 ## Physical setting
 
@@ -10,6 +11,55 @@ local chemical potential, adatoms diffuse along the surface from peaks to
 valleys, and the profile flattens. Mullins derived the small-slope limit in
 1957. Industrially this is thermal annealing of nanoscale roughness, and the
 practical question is how long a given feature size takes to disappear.
+
+Real crystalline surfaces do not smooth isotropically, and the science case
+asks what that changes: **anneal a patterned nanosurface whose ridges run in
+two perpendicular directions, once with an orientation-independent surface
+stiffness and once with a sixfold one — does the anneal preferentially erase
+one ridge set?** The observable that answers it is the **directional split of
+spectral energy**, `energy_kx_frac` against `energy_ky_frac`: the fraction of
+surviving spectral power carried by $k_x$-dominated versus $k_y$-dominated
+modes. Supporting observables are the **RMS roughness**, the **maximum
+gradient** $\max\lvert\nabla h\rvert$, the structure-factor dominant
+wavelength, and the mean height, which is conserved.
+
+## Problem setup
+
+Two binaries. `surface_diffusion` is the **verification preset**: the linear
+isotropic Mullins model, whose every Fourier mode has a closed-form solution.
+It is the numerical oracle for the whole spectral stack and is **not a
+production science case**. `surface_diffusion_anisotropic` is the **science
+preset**; it is CPU-only, because an orientation-dependent coefficient cannot
+be written as a reciprocal-space symbol and the device operator layer does not
+expose the complex $ik_d$ multiply it needs.
+
+| Item | Science preset (`surface_diffusion_anisotropic`) | Verification preset (`surface_diffusion`) |
+|---|---|---|
+| Use case | Annealing of a patterned nanoscale surface — a lithographically ruled or deposited crossed ridge pattern — under isotropic versus anisotropic surface diffusion | Numerical oracle: exact single- and two-mode $k^4$ decay |
+| Domain | 2-D periodic slab, $128 \times 128$ cells at $\Delta x = 1$, $L_z = 1$ | 2-D periodic slab, $128 \times 128$ cells at $\Delta x = 1$ |
+| Grid | 16 corrugation periods per axis, 8 cells per period; $t \in [0, 8]$ at $\Delta t = 0.01$ (800 steps), sampled every $0.5$ | $t \in [0, 5]$ at $\Delta t = 0.05$, output every $0.5$ |
+| Boundary conditions | Periodic in $x$ and $y$ | Periodic in $x$ and $y$ |
+| Initial condition | Crossed sinusoidal corrugation, $h = A[\cos(2\pi n_x x/L_x) + \cos(2\pi n_y y/L_y)]$ with $A = 0.05$, $n_x = n_y = 16$ — the *same* surface for both runs | Three superposed cosine modes at $(n_x,n_y) = (2,1)$, $(8,4)$, $(16,8)$ with amplitudes $0.08$, $0.05$, $0.03$ |
+| Key physical parameters | $B_0 = 1$, anisotropy strength $\epsilon_a = 0$ (isotropic run) or $0.5$ (anisotropic run), symmetry order $m = 6$. Grid units; **illustrative, not fitted** | $B = 1$, grid units, unfitted |
+| Observable | `energy_kx_frac` / `energy_ky_frac`; RMS roughness; $\max\lvert\nabla h\rvert$; dominant wavelength; mean height | Mode amplitude against $e^{-Bk^4t}$; two-mode rate ratio $(k_2/k_1)^4 = 16$ |
+| Model maturity | numerical verification: **analytical** — the anisotropic stepper is checked to reduce exactly to the isotropic oracle at $\epsilon_a = 0$, and a single-orientation run's decay rate is checked against $B(\theta)k^4$ for both the stiff and the soft orientation · physical completeness: **reduced** — still a small-slope height function, and the orientation dependence is imposed directly on the *kinetic* coefficient rather than derived from a fitted $\gamma(\theta)$ through the Herring relation · calibration: **none**; $(B_0, \epsilon_a, m)$ are illustrative and $\epsilon_a$ must not be read as a calibrated anisotropy strength | numerical verification: **analytical** (exact $k^4$ decay) · physical completeness: **reduced** (isotropic small-slope Mullins only) · calibration: **none** |
+
+Periodicity here means the simulated patch is an interior window of a repeated
+surface pattern, not a finite chip or a facet with edges. For an annealing
+study that is a reasonable idealisation of the middle of a large patterned
+area, and a poor one for anything edge-driven: there is no step bunching from a
+miscut edge, no mask boundary, and no substrate underneath to diffuse into. The
+model is also single-valued in height throughout, so it cannot represent an
+overhang, a facet that steepens past vertical, or true faceting in the
+crystallographic sense — $\theta$ is the orientation of the local surface
+*gradient*, not of a crystal plane.
+
+**Why $m = 6$ and not $m = 4$.** The crossed corrugation's two ridge sets sit
+at $\theta = 0$ and $\theta = \pi/2$. A fourfold stiffness treats those as the
+same orientation, since $\cos(4\cdot 0) = \cos(4\cdot\pi/2)$, so it would show
+no directional effect on this particular surface; a sixfold one does, since
+$\cos(6\cdot 0) = 1 \ne \cos(6\cdot\pi/2) = -1$. Fourfold symmetry is fully
+implemented and unit-tested; it is simply not the demonstration case here.
 
 ## Governing equations
 
@@ -46,9 +96,72 @@ loses its fine structure long before its long-wavelength shape changes. A
 two-wavelength initial condition separates visibly within a fraction of the
 long mode's lifetime.
 
+## Anisotropic surface stiffness
+
+Surface free energy depends on orientation, and by the Herring relation the
+stiffness that controls diffusive smoothing is
+$\tilde\gamma(\theta) = \gamma(\theta) + \gamma''(\theta)$ (Mullins 1957;
+Rettori & Villain, *J. Phys. France* **49**, 257 (1988); Bonzel & Preuss,
+*Surf. Sci.* **336**, 209 (1995)). The application does **not** differentiate a
+literature $\gamma(\theta)$ to obtain $\tilde\gamma$. It imposes the same
+periodic functional form directly on the kinetic coefficient,
+
+$$
+B(\theta) \;=\; B_0\big[1 + \epsilon_a\cos(m\theta)\big],
+\qquad \theta = \operatorname{atan2}(h_y, h_x),
+$$ {#eq-sd-aniso}
+
+with $h_x$, $h_y$ evaluated spectrally, and generalises @eq-sd-pde to the
+divergence form
+
+$$
+\partial_t h \;=\; \nabla\cdot\big[B(\theta)\,\nabla(\nabla^2 h)\big]
+\;\xrightarrow{\ \epsilon_a \to 0\ }\;
+-B_0\nabla^4 h .
+$$ {#eq-sd-aniso-pde}
+
+Because $B$ depends on the field's own gradient this is no longer a
+reciprocal-space symbol, so the science driver uses a self-contained
+spectral-flux stepper that integrates the constant-$B_0$ part exactly and
+treats the orientation-dependent remainder explicitly. At $\epsilon_a = 0$ the
+remainder is zero to round-off and the stepper reproduces the oracle's exact
+trajectory — checked, not assumed.
+
+### Measured orientation selection
+
+Both runs start from the identical crossed corrugation (RMS roughness $0.05$,
+$\max\lvert\nabla h\rvert = 0.0555$, energy split exactly 0.5/0.5) and run to
+$t = 8$.
+
+| Observable at $t = 8$ | Isotropic ($\epsilon_a = 0$) | Anisotropic ($\epsilon_a = 0.5$, $m = 6$) |
+|---|---|---|
+| RMS roughness | 0.002382 | 0.001549 |
+| $\max\lvert\nabla h\rvert$ | 0.002646 | 0.001704 |
+| `energy_kx_frac` / `energy_ky_frac` | 0.500 / 0.500 | 0.249 / 0.751 |
+| Mean height | $-1.4\times10^{-17}$ | $-1.2\times10^{-18}$ |
+
+The isotropic run holds 0.500/0.500 at every sample, which is both the physical
+statement (in a linear model $\lvert\mathbf{k}\rvert$ sets the rate and
+orientation does not) and a useful internal check. The anisotropic run's split
+moves monotonically away from 1:1 at every sample: the softer $\theta = \pi/2$
+orientation increasingly dominates the surviving spectral content as the
+stiffer $\theta = 0$ orientation is preferentially damped. The dominant
+wavelength from the orientation-blind structure factor is 7.758 in *both* runs,
+which is exactly why the directional split, and not the structure factor alone,
+is the observable that shows the anisotropy.
+
+One caveat measured directly from these runs rather than assumed: a
+single-orientation unit test shows the *isolated* stiff and soft decay rates
+differing by a factor of three at these parameters, but the *combined* crossed
+corrugation shows a much smaller net effect at short times, because each
+orientation's local $B(\theta)$ is set by the combined gradient of both ridge
+sets. The 3:1 final split above is the honest coupled-system number; the
+isolated single-mode ratio is not a prediction for a mixed pattern.
+
 ## Solution strategy
 
-ETD1 as in @eq-etd1 with $N \equiv 0$, which reduces @eq-etd1 to
+For the isotropic verifier, ETD1 as in @eq-etd1 with $N \equiv 0$, which
+reduces @eq-etd1 to
 $\hat h^{\,n+1} = e^{L\Delta t}\hat h^{\,n}$ — exact for any $\Delta t$, to
 round-off. Dealiasing is off: there is no nonlinearity to alias.
 
@@ -63,11 +176,28 @@ the decomposition, or the symbol — not discretisation error.
   $k^4$.
 * **Mean preservation.** $\mathbf{k}=0$ is untouched, so the mean height is
   exactly constant.
+* **Exact reduction at $\epsilon_a = 0$.** $B(\theta)$ collapses to $B_0$, and
+  the anisotropic stepper reproduces $e^{-B_0k^4t}$ to $10^{-6}$.
+* **Claimed symmetry.** $B(\theta)$ really has the fourfold or sixfold symmetry
+  it advertises, including that $m = 4$ makes $\theta = 0$ and $\theta = \pi/2$
+  equivalent while $m = 6$ does not.
+* **Single-orientation rate.** A run containing only $x$-ridges decays at
+  $B_0(1+\epsilon_a)k^4$ and one containing only $y$-ridges at
+  $B_0(1-\epsilon_a)k^4$, each to within $5\times10^{-3}$.
+* **Orientation selection.** A crossed corrugation decays with equal $x$ and
+  $y$ amplitudes isotropically and unequal ones anisotropically — the
+  qualitative claim, made quantitative.
 
 ## Binaries and inputs
 
-`surface_diffusion` (CPU), `surface_diffusion_hip`. Preset
-`smoothing.json` (multi-wavelength).
+`surface_diffusion` (CPU verifier), `surface_diffusion_hip` (isotropic only),
+and `surface_diffusion_anisotropic` (CPU science driver). Presets:
+`smoothing.json` (multi-wavelength annealing demo, verifier) and the pair
+`nanosurface_isotropic.json` / `nanosurface_anisotropic.json`, which share an
+initial surface and differ only in $\epsilon_a$. The anisotropic driver reads a
+simpler standalone JSON shape than the session-based verifier: `model.params`
+is $B_0$, $\epsilon_a$, $m$; `domain` requires `Lz: 1`; `initial_conditions` is
+a single object with `h0` and a `modes` array.
 
 ## Scalability
 

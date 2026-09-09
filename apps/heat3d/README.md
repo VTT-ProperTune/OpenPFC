@@ -22,6 +22,43 @@ All three CPU FD drivers (`scratch`, `manual`, `fd`) compute the **same thing** 
 
 Initial condition matches the diffusion examples: \(u(\mathbf{x},0)=\exp(-|\mathbf{x}|^2/(4D))\) with origin at \((0,0,0)\). The diffusion coefficient \(D\) is **hard-pinned** to `1.0` via `heat3d::kD` in [`include/heat3d/heat_model.hpp`](include/heat3d/heat_model.hpp) so all heat3d binaries share one fixed value (and their L2 outputs stay directly comparable). To experiment with a different coefficient, change the literal there and rebuild.
 
+## Problem setup
+
+The `Problem setup` block the report contract (`#112`) asks every application
+to carry. There is no science preset here and no JSON: this application is
+entirely a verification and benchmarking instrument, and **no configuration of
+it is a production science case**.
+
+| Item | Description |
+|---|---|
+| **Use case** | Method comparison on one fixed PDE: several finite-difference orders and two spectral treatments of the same diffusion problem |
+| **Question** | For one fixed problem, how do a stencil of order `2m` and a spectral solve compare in accuracy, cost per step, and scaling? |
+| **Domain** | Uniform periodic brick `[0,N)^3`, `dx = dy = dz = 1`, coordinate origin at index `(0,0,0)` |
+| **Grid/time** | `N n_steps dt [fd_order]` on the command line; `N >= 8`, `dt > 0`, `fd_order` even in `[2,20]`. No output cadence: the drivers write no snapshots, only an end-of-run summary line |
+| **Boundary conditions** | Periodic on all three axes. `HeatModel::boundary_value` exists but is empty by default and no driver populates it -- there is no Dirichlet or Neumann path here |
+| **Initial condition** | `u(x,0) = exp(-|x|^2/(4D))`, anchored at the coordinate origin. Because that origin is the **corner** cell, the box holds one octant of the Gaussian and the periodic wrap truncates it |
+| **Key physical parameters** | `D = heat3d::kD = 1.0` exactly, a compile-time constant shared by every binary so their errors are directly comparable. Nondimensional; no SI unit appears anywhere in this app |
+| **Observable** | `l2_error_vs_R3_analytic_rms` against the closed-form `R^3` Gaussian `(1+t)^(-3/2) exp(-|x|^2/(4D(1+t)))`; `timing_s` / `avg_step_time_s`; `HEAT3D_HIP_CHECKSUM` and `HEAT3D_SPECTRAL_HIP_CHECKSUM` from the device binaries |
+| **Model maturity** | numerical verification: **analytical** -- every driver is compared against the closed-form Gaussian, and the implicit-Euler symbol, the constant-field fixed point and the reference solution each have their own closed-form checks. Physical completeness: **canonical** -- this *is* the heat equation, with nothing left out. Calibration: **none**, by design |
+
+### Why periodic, and the reference mismatch
+
+The domain is periodic but the reference is the *infinite-domain* Gaussian,
+which never wraps. For a localized bump the mismatch is small -- at `D = 1` the
+profile is already below `1e-7` eight cells from its peak -- but it is not
+zero, and it contributes to the reported error even when the numerics are
+perfectly consistent. The reported number is therefore an upper bound on
+discretization error, not a clean measurement of it. That is acceptable because
+every driver carries the same offset, which is exactly why `D` is pinned and
+the grid is identical across binaries.
+
+### What is *not* verified
+
+No test performs a grid-refinement study or fits an observed convergence order.
+The only order-related check asserts that the `L2` error at `fd_order` 8 and 10
+is below the second-order value on the same grid -- monotonicity, not an
+observed-order match to the design order.
+
 ## Build
 
 Enabled with `OpenPFC_BUILD_APPS=ON` (default). Requires HeFFTe (the spectral binaries use the same FFT stack as the library). When CMake finds OpenMP for C++, the CPU binaries link it so the FD paths can use hybrid **MPI + OpenMP**: the compact driver's interior loop runs under a single `omp parallel for collapse(2)` inside `pfc::field::for_each_interior`; the manual driver opts into the same parallelisation explicitly via `pfc::field::for_each_inner_omp` and `pfc::field::for_each_owned_omp`; the from-scratch driver runs serial (it stays single-threaded on purpose so the bare loops do not need OMP-aware indexing). Set `OMP_NUM_THREADS` to control the thread count for the compact and manual drivers.

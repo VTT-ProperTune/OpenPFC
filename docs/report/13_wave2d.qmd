@@ -9,6 +9,45 @@ Acoustic propagation on a two-dimensional slab. The application is the
 smallest shipped example of two prognostic fields advanced together, and of a
 domain that is periodic in one direction and physically bounded in the other.
 
+The physical question is a waveguide question: **release a pulse in a slab
+bounded by two walls — how does it reflect, and does the character of the
+reflection depend on whether the wall is rigid or pressure-releasing?** A
+Dirichlet wall inverts the reflected pulse; a Neumann wall does not. The
+observable the application actually reports is the **interior RMS of the
+displacement field**, `global_rms_u_interior`, together with the CFL number
+$c\Delta t/\Delta x$ it ran at. Snapshots of $u$ can be written as VTK for
+visual inspection of the reflection itself.
+
+## Problem setup
+
+Command-line driven, no JSON, and no science preset: every configuration of
+this application is a demonstration or a test. It is worth being explicit that
+the application **reports no error against any reference solution** — unlike
+@sec-heat3d, its summary line carries an amplitude, not an accuracy.
+
+| Item | Description |
+|---|---|
+| Use case | A pulse reflecting between the two walls of an acoustic slab, as the smallest coupled two-field example in the report |
+| Domain | $N_x \times N_y \times 1$ slab with $\Delta x = \Delta y = 1$, origin at $(0,0,0)$. Defaults $N_x = N_y = 64$ |
+| Grid | `Nx Ny n_steps dt [fd_order] y_bc [u_wall]`; defaults 200 steps at $\Delta t = 0.01$, second order. `fd_order` must be even in $[2,20]$ for `wave2d_fd`; the manual and device drivers are fixed at second order. VTK output cadence is `--vtk-every`, default every step |
+| Boundary conditions | **Periodic in $x$** by MPI halo exchange; **physical in $y$**, either homogeneous Dirichlet ($u = u_{\mathrm{wall}}$ and $v = 0$ on the wall, imposed by an odd mirror of the ghost cells *and* by writing the owned boundary cells directly) or homogeneous Neumann (even mirror). The $y$ correction runs after the unconditional periodic exchange and overwrites the ghost values it produced |
+| Initial condition | A centred Gaussian bump in $u$ with $v = 0$: $\sigma = 0.12\min(N_x,N_y)$, centred at $(\tfrac12(N_x-1), \tfrac12(N_y-1))$. Each test picks its own $\sigma$; there is no single canonical parameter set across the application |
+| Key physical parameters | Wave speed $c = 1$ exactly, a compile-time constant not exposed on the command line. $u_{\mathrm{wall}}$ defaults to 0 and only affects Dirichlet runs. Nondimensional throughout |
+| Observable | `global_rms_u_interior`; `cfl_c_dt_dx`; `timing_s` and `avg_step_time_s`; optional VTK series of $u$ |
+| Model maturity | numerical verification: **manufactured** and **regression** — the temporal order of the RK2 and RK4 steppers is measured against a self-generated fine-timestep RK4 reference, not a closed form, and the remaining coverage is a pinned CPU checksum, CPU-vs-device parity, and boundary ghost values checked by hand · physical completeness: **canonical** — this is the constant-coefficient scalar wave equation, with no damping, no heterogeneous medium and no source term · calibration: **none** |
+
+The two directions mean different things, which is the point of the
+application. Periodicity in $x$ makes the slab infinitely long, or equivalently
+a ring: a pulse that leaves the right edge arrives at the left, so there is no
+along-slab attenuation and no far field. The $y$ walls are the physically
+interesting idealisation. Dirichlet is a pressure-release boundary — the
+reflected pulse comes back inverted — and Neumann is a rigid one, reflecting
+without inversion. **Neither absorbs.** There is no radiation condition and no
+absorbing layer anywhere in the application, so energy put into the slab never
+leaves it, and a long run is a reverberant box rather than a propagation
+experiment. Anything about how a wave escapes into open water or open air is
+outside this model.
+
 ## Governing equations
 
 The second-order wave equation $u_{tt} = c^2\nabla^2 u$ is written as a
@@ -28,10 +67,13 @@ application reuses.
 
 ## Boundary conditions
 
-Periodic in $x$, handled by MPI halo exchange. In $y$ the slab is physically
-bounded, with homogeneous **Dirichlet** ($u = 0$) or **Neumann**
+Periodic in $x$, handled by MPI halo exchange. In $y$ the slab is
+physically bounded, with **Dirichlet**
+($u = u_{\mathrm{wall}}$, default 0, and $v = 0$ on the wall) or **Neumann**
 ($\partial_y u = 0$) conditions applied as a ghost-cell correction after the
-periodic exchange.
+periodic exchange. Both are second-order cell-centred mirrors — odd about
+$u_{\mathrm{wall}}$ for Dirichlet, even for Neumann — and a mirrored index that
+would fall outside the local extent is an error rather than a clamp.
 
 The ordering matters: the exchange is unconditional and the physical
 correction overwrites the ghost values it produced on the boundary faces. This
@@ -59,11 +101,28 @@ spectral chapters.
 
 ## Verification
 
-* **Runge–Kutta convergence.** Observed temporal order matches the scheme.
+* **Runge–Kutta convergence.** Observed temporal order matches the scheme:
+  halving $\Delta t$ reduces the error by roughly 4 for RK2 and by at least 8
+  for RK4. The reference is *manufactured* — a fine-timestep RK4 run of the
+  same code, not a closed-form solution — and the shipped drivers step with
+  explicit Euler rather than either of these, so this measures the steppers,
+  not the binaries.
+* **Boundary mirrors.** The Dirichlet and Neumann ghost values are checked
+  against hand-computed numbers, and an insufficient local extent is asserted
+  to throw rather than silently produce wrong ghosts.
+* **Golden checksum.** One pinned CPU literal (`wave2d-cpu-golden`), tied to a
+  named machine and toolchain in its own comment.
+* **Cross-implementation parity.** The padded manual path and the separated
+  second-order path agree to $10^{-9}$.
 * **Operator evaluation.** The Laplacian evaluator is checked against known
   inputs.
-* **RHS structure.** Structural tests on the right-hand side pattern.
+* **RHS structure.** Structural tests on the right-hand side pattern — API
+  contracts rather than physics.
 * **CPU–GPU parity.** Where GPU twins are built.
+
+There is no analytical check anywhere in this application. Nothing compares the
+computed field to a closed-form solution of @eq-w2-pde, and the CFL bound
+@eq-w2-cfl is a textbook statement, not something the suite measures.
 
 ## Binaries and inputs
 

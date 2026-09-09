@@ -92,6 +92,45 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Changed
 
+- Every application chapter in `docs/report/` and the app READMEs that lacked
+  one now carry the physical-experiment contract (`#112`). The report was
+  strong on operators and weak on experiments: a reader could see `L(k)`
+  without being told what object was being simulated, on what domain, from
+  what initial state, or how mature the model was. Each chapter now opens with
+  a physical question and a *named* observable, then a `Problem setup` table
+  (use case, domain, grid, boundary conditions, initial condition, key
+  physical parameters, observable, maturity), then the equations. Model
+  maturity is reported on three independent axes — numerical verification,
+  physical completeness, calibration — because collapsing them into one word
+  hides the common case of an exactly verified model with invented parameters.
+  Where an application ships both, the verification preset is named and
+  explicitly not presented as a production science case. Periodicity is
+  explained per chapter rather than boilerplate: what it means for a spinodal
+  alloy is not what it means for a dendrite in a box with no heat sink.
+  Existing provenance notes (Andersson–Sundman Fe–Cr, Wu–Adland–Karma
+  two-mode PFC, the surface-stiffness form, the capillary–gravity mapping) are
+  folded into the calibration axis rather than restated or softened.
+- The same pass corrected report claims that were untrue of `master`. The most
+  consequential: `heat3d_spectral` and `heat3d_spectral_pointwise` had their
+  descriptions transposed (the former is the implicit-Euler driver, the latter
+  the explicit one); `tungsten` and `aluminumNew` were described as dealiased
+  when `SpectralETDOptions::dealias` defaults to `false` and neither session
+  enables it; `aluminumNew`'s temperature profile was given with a spurious
+  `T0` offset and a `T_min`/`T_max` clamp that no code performs; `thin_film`
+  listed a two-mode `k^4` ratio test that does not exist for that application;
+  `tungsten-golden-4rank` was called a pinned checksum when it only asserts
+  finiteness; and heat3d's "observed order matches design order" was not
+  supported by any test. Also documented, rather than fixed here: `aluminumNew`
+  requires `T_min`/`T_max` and never reads them, and
+  `tungsten_moving_bc_options.json` cannot load because `MovingBC` requires an
+  `xpos` the file does not have.
+- Chapters left stale by the per-application science upgrades (`#113`–`#118`)
+  were brought current, since the setup tables would otherwise contradict the
+  prose beside them: Fe–Cr Redlich–Kister thermodynamics and the coarsening
+  measurements, the `h^3` lubrication rupture case, the anisotropic
+  surface-stiffness driver, the nonlinear compliant-lubrication load case, the
+  real-space \(\psi_4\)/\(\psi_6\) crystal-selection benchmark, and the
+  inclusion size-effect sweep.
 - LUMI HIP work uses a clean `origin/master` clone at
   `/flash/project_462001519/juaho/dev/openpfc-master` and build tree
   `/flash/project_462001519/juaho/build/openpfc-lumi-rocm-master`. Stop

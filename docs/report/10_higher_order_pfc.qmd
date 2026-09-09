@@ -14,6 +14,55 @@ triangular in two dimensions, FCC rather than BCC in three.
 This application implements a two-mode kernel to make that control explicit,
 and to serve as the report's limiting case for derivative order.
 
+The physical question is a selection question: **quench a two-dimensional
+liquid at fixed mean density and fixed quench depth, change only the shape of
+the correlation kernel, and ask which crystal symmetry the system picks.** Two
+observables answer it. The reciprocal-space one is the **fraction of spectral
+power in the $|\mathbf{k}|=1$ and $|\mathbf{k}|=q_1$ rings**. The real-space
+one — added later, because the first can mislead — is the **bond-orientational
+order parameter $\psi_4$ and $\psi_6$**, computed from detected density peaks:
+$\psi_4 \to 1$ for square order, $\psi_6 \to 1$ for triangular. The
+`mean_neighbours` count (4 for square, 6 for triangular) is a third, blunt but
+unambiguous, check.
+
+## Problem setup
+
+Five presets ship, and they divide into two experiments. The three
+**noise-seeded** presets are the selection benchmark proper: identical box,
+identical seed, identical quench, differing only in the kernel. The two
+**lattice-seeded** presets are controls — they start from a perfect single
+crystal of a chosen symmetry and ask whether the kernel holds it. None of the
+five runs in CI; the automated coverage is the Catch2 suite plus a 64², 20-step
+device smoke test (`tests/two_mode_hip_smoke.json`).
+
+| Item | Description |
+|---|---|
+| Use case | Crystal-symmetry selection in a 2-D periodic solid: does a second correlation peak make square order win over the single-mode kernel's triangular default? |
+| Domain | 2-D periodic, $128 \times 128$ cells. Square box $L_x = L_y = 32\pi$ ($\Delta x = \Delta y = 2\pi/8$) for the noise-seeded and square-seeded cases; a deliberately non-square box $L_x = 32\pi$, $L_y = 32\pi/\sqrt3$ for the triangular single-crystal seed, so the triangular unit cell is commensurate |
+| Grid | Noise-seeded runs: $t \in [0, 400]$ at $\Delta t = 0.05$ (8000 steps), sampled every $20$. Lattice-seeded controls: $t \in [0, 100]$ (2000 steps) |
+| Boundary conditions | Periodic on both active axes ($L_z = 1$) |
+| Initial condition | `seeded_noise` — decomposition-independent hashed noise of amplitude $0.01$ about $\bar\psi = -0.15$, `seed = 42`; or `lattice_seed` — an explicit sum of 2–3 plane waves at the target symmetry's reciprocal vectors, amplitude $0.2$ |
+| Key physical parameters | $\varepsilon = 0.25$ (quench depth), $q_1 = \sqrt2$ (second peak), $r_1 = 0.02$ (square) / $0$ (degenerate), $M = 1$, $g = 0.5$, $\bar\psi = -0.15$. **All nondimensional PFC model parameters.** The kernel's functional form and the $q_1$ values are taken from Wu, Adland & Karma, *Phys. Rev. E* **81**, 061601 (2010); the particular $(\varepsilon, r_1, \bar\psi)$ used here are chosen to expose the mechanism, not fitted to that paper's phase diagram |
+| Observable | Free-energy density; reciprocal-space ring power $S(1)$ and $S(q_1)$ and the peak wave number $k_{\mathrm{peak}}$; real-space $\psi_4$/$\psi_6$ (global and local) and mean neighbour count |
+| Model maturity | numerical verification: **analytical** — the kernel matches its factored form to $10^{-12}$, the conserved symbol's constant term is bit-exactly zero, and $\psi_4$/$\psi_6$ are checked to $10^{-9}$ against analytically constructed ideal square and triangular lattices · physical completeness: **reduced** — two dimensions, one order parameter, no elastic or thermal coupling, no vapour phase · calibration: **representative**, not quantitative. The app README states explicitly which parts of the primary source were verified from this machine (the kernel structure and $q_1$ ratios, from the arXiv rendering) and which were not (the paper's quantitative phase diagram and elastic-constant fits) |
+
+Periodicity does more work here than in most chapters, and it is not neutral.
+A periodic box forces the crystal to be commensurate with itself: a lattice
+whose natural spacing does not divide the box length is strained into fitting,
+which biases the very symmetry competition the experiment is measuring. That is
+why the triangular single-crystal control runs in a $32\pi \times 32\pi/\sqrt3$
+box rather than a square one. Periodicity also removes every free surface, so
+there is no vapour, no substrate, and no surface nucleation: solidification
+here is homogeneous throughout the volume. The visible consequence is that a
+noise-seeded run ends up **polycrystalline** — several correctly ordered grains
+at different orientations — and the grain boundaries between them have nowhere
+to go, because a periodic box cannot expel them. Single-crystal statements in
+this chapter come from the `lattice_seed` controls, not from the noise runs.
+
+Both diagnostics are single-rank only. The real-space peak detection needs the
+whole grid on one process, and on more than one rank the CSV reports
+`n_peaks = 0` and NaN order parameters rather than a plausible partial answer.
+
 ## Governing equations
 
 Conserved dynamics as in @eq-w-dyn, with
@@ -107,6 +156,29 @@ value that populates both families. And from random noise on a periodic box the
 outcome is **polycrystalline** — several square-ordered grains at different
 orientations — not a single crystal.
 
+## Reading the symmetry in real space
+
+The table above is reciprocal-space power, and reciprocal-space power alone can
+be read wrongly. The degenerate $r_1 = 0$ case is the cautionary example: its
+spectral weight sits almost entirely on the $\sqrt2$ ring, which invites the
+conclusion that it has ordered onto the $(11)$ family. Peak detection plus a
+bond-orientational order parameter says otherwise. Measured on the shipped
+presets, single rank:
+
+| preset | $k_{\mathrm{peak}}$ | $\psi_4$ (global, local) | $\psi_6$ (global, local) | mean neighbours | real-space verdict |
+|---|---|---|---|---|---|
+| `single_mode_triangular` | 1.031 | 0.014, 0.094 | 0.335, 0.852 | 5.87 | triangular, polycrystalline |
+| `two_mode_square` | 1.031 | **0.341, 0.806** | 0.022, 0.247 | 4.04 | square, mostly one orientation |
+| `two_mode_degenerate` | 1.406 ($\approx\sqrt2$) | 0.005, 0.122 | **0.792, 0.896** | 5.70 | **triangular**, despite the $\sqrt2$ ring |
+| `two_mode_seed_square` | 1.031 | 1.000, 1.000 | $\approx 0$ | 4.00 | imposed square held exactly |
+| `single_mode_seed_triangular` | 1.028 | $\approx 0$ | 1.000, 1.000 | 6.00 | imposed triangular held exactly |
+
+The gap between the global and local $\psi_n$ is the polycrystallinity: a local
+value near $0.85$ with a global value near $0.01$ means every neighbourhood is
+well ordered and the orientations disagree. The two seeded controls hold their
+imposed symmetry to $1.000$ over 2000 ETD steps, which is what makes the
+noise-seeded numbers interpretable rather than merely suggestive.
+
 ## Solution strategy
 
 ETD1 as in @eq-etd1, dealiased because the local term is cubic.
@@ -140,12 +212,22 @@ roughly six times longer.
 * **Growth and stability.** An ETD run reproduces $e^{L(k)t}$ at
   $|\mathbf{k}| = 1$ to $10^{-6}$, holds the mean to $10^{-13}$, and stays
   bounded at $\Delta t$ more than 1000× the explicit limit.
+* **Order parameter against exact lattices.** $\psi_4$ and $\psi_6$ are checked
+  to $10^{-9}$ on analytically constructed ideal square and triangular
+  lattices, including under rotation, and a two-grain mix is checked to
+  suppress the global value while leaving the local one above $0.9$. This is
+  what licenses the real-space column of the table above.
+* **Free-energy density.** On a constant field the sampled free energy matches
+  the elementary $k=0$ formula to $10^{-9}$.
 
 ## Binaries and inputs
 
-`higher_order_pfc` (CPU), `higher_order_pfc_hip`. Presets
-`two_mode_square.json` and `single_mode_triangular.json`, which differ only in
-the kernel.
+`higher_order_pfc` (CPU), `higher_order_pfc_hip`. Five presets. The selection
+benchmark is `single_mode_triangular.json`, `two_mode_square.json` and
+`two_mode_degenerate.json`, which share box, seed and quench depth and differ
+only in the kernel; `two_mode_seed_square.json` and
+`single_mode_seed_triangular.json` are the single-crystal controls. None is run
+by CI: the automated coverage is the Catch2 suite plus a 64² device smoke test.
 
 ## Scalability
 

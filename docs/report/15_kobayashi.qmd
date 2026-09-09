@@ -16,6 +16,46 @@ Two-way coupling is essential: the phase field moves the temperature through
 latent heat, and the temperature moves the phase field through the driving
 force.
 
+The question is a morphology question: **drop a nucleus into an undercooled
+melt with a sixfold anisotropic interfacial energy — does it grow as a disc, or
+does it throw out arms in the six directions the anisotropy prefers?** The
+observable the application actually reports is the **solidified area**: $\phi$
+runs between 0 and 1, so the printed `sum_phi`, multiplied by the cell area, is
+exactly the area of solid, and `sum_T` is proportional to the domain's total
+enthalpy. The morphology itself is inspected in the PNG series. The application
+does **not** measure tip velocity, tip radius or arm spacing, so none of those
+are reported here.
+
+## Problem setup
+
+Command-line driven, no JSON, and no science preset. The model constants below
+are compile-time values, not command-line arguments; changing them means
+editing `defaults.hpp` and rebuilding.
+
+| Item | Description |
+|---|---|
+| Use case | A single crystalline nucleus growing into an undercooled melt, with anisotropic interfacial energy selecting the growth directions |
+| Domain | $N_x \times N_y \times 1$ slab; $\Delta y = \Delta x$ always, so the grid is isotropic by construction. Defaults $256 \times 256$ at $\Delta x = 0.03$, i.e. a $7.68 \times 7.68$ box in the model's own length unit |
+| Grid | `Nx Ny n_steps dt dx [output_dir]`; defaults 2000 steps at $\Delta t = 10^{-4}$. Output cadence is compiled in: a progress line every 200 steps and a PNG every 2000, plus one at step 0 and a final one |
+| Boundary conditions | Periodic torus in $x$ and $y$, implemented as a halo exchange in every driver — including the OpenMP one, which uses the same mechanism at one rank rather than a separate index-wrapping path. There is no non-periodic option |
+| Initial condition | A solid nucleus: $\phi = 1$ where $(g_i - N_x/2)^2 + (g_j - N_y/2)^2 < 5$ and $\phi = 0$ elsewhere — a disc of radius about 2.2 cells at the integer-truncated centre — with $T = 0$ everywhere. Deterministic; no noise |
+| Key physical parameters | $\tau = 3\times10^{-4}$, $\bar\epsilon = 0.01$, $\kappa = 1.8$, anisotropy strength $\delta = 0.02$ at mode number 6, offset $\theta_0 = 0.2$, $\alpha = 0.9$, $\gamma = 10$, $T_{\mathrm{eq}} = 1$, with $\epsilon(\theta) = \bar\epsilon[1 + \delta\cos(6(\theta-\theta_0))]$ and $M(T) = (\alpha/\pi)\arctan(\gamma(T_{\mathrm{eq}}-T))$. **All dimensionless**, and the source states they reproduce a reference implementation rather than a measured material |
+| Observable | `sum_phi` (the solidified area, up to the cell area), `sumsq_phi`, `sum_T`, `sumsq_T`, field extrema, and `wall_loop_max_s`, printed in both decimal and hexadecimal form; PNG snapshots of $\phi$ |
+| Model maturity | numerical verification: **regression** only — checksums pinned across backends and rank counts, and OpenMP thread-count determinism. There is no analytical or manufactured-solution check for this model anywhere in the repository · physical completeness: **canonical** — the standard anisotropic phase-field/thermal coupling, with no solute field, no melt convection, and one thermal diffusivity shared by solid and liquid · calibration: **none** |
+
+The periodic torus has a consequence here that it does not have in the other
+chapters, and it is not cosmetic. Integrating @eq-kb-temp over a periodic
+domain annihilates the Laplacian, leaving
+$\mathrm{d}\langle T\rangle/\mathrm{d}t = \kappa\,\mathrm{d}\langle\phi\rangle/\mathrm{d}t$
+exactly: **the box has no heat sink at all.** Every unit of latent heat the
+dendrite releases stays inside, the melt warms in exact proportion to the
+solidified fraction, and the undercooling that drives growth is consumed as
+growth proceeds. Physically the run is one dendrite in an infinite array of
+identical dendrites on a lattice of spacing $N_x\Delta x$, each warming its
+neighbours; it is not a dendrite in an unbounded, thermostatted melt. Growth
+therefore self-limits, and any reading of the late-time morphology has to
+account for that rather than treating it as a steady-state tip.
+
 ## Governing equations
 
 $$
@@ -56,7 +96,8 @@ that is, using the *already updated* $\phi$ rather than a separate time
 derivative. This is a sequential rather than simultaneous update of the two
 fields, and it is deliberate: it matches the reference Julia implementation
 this application was validated against, so the two can be compared
-step-for-step.
+step-for-step. That reference script is not part of this repository, so the
+comparison is a historical statement rather than something a clone can rerun.
 
 ## Solution strategy
 
@@ -67,16 +108,29 @@ and stage $\phi$ and $T$ to the host only for PNG output and verification.
 
 ## Verification
 
-* **Reference agreement.** Checksums pinned against the reference
-  implementation.
-* **CPU–GPU parity.** The CUDA 32²/4-step pin matches the CPU OpenMP pin;
-  `sum_T` differs by 1 ULP.
-* **Multi-rank.** A two-rank variant is registered when MPI suites are on.
+* **Cross-backend checksums.** A $32^2$, four-step configuration is pinned in
+  hexadecimal for the CPU, CUDA and HIP paths. To be precise about what this
+  does and does not establish: the pins are taken from prior runs of **this**
+  code on named machines, not from a run of the external reference
+  implementation, which is not in the repository. They verify that the
+  backends agree with each other and stay put over time; they do not verify
+  the model against anything outside it.
+* **CPU–GPU parity.** The CUDA pin matches the CPU OpenMP pin exactly on
+  `sum_phi`, `sumsq_phi` and `sumsq_T`, with `sum_T` differing by 1 ULP.
+* **Thread determinism.** The OpenMP driver produces bitwise-identical fields
+  at 1 and 4 threads.
+* **Multi-rank.** A two-rank variant of the checksum test is registered when
+  MPI suites are on.
+
+There is no analytical or manufactured-solution check for this model. Its
+correctness rests entirely on pinned checksums and on the discretisation having
+been matched, historically, to an external script.
 
 ## Binaries and inputs
 
-`kobayashi_fd_manual` (MPI halos), `kobayashi_fd_openmp` (torus wrap plus
-OpenMP), plus CUDA and HIP drivers. Command-line driven, with PNG snapshots of
+`kobayashi_fd_manual` (MPI halos), `kobayashi_fd_openmp` (single process,
+OpenMP over the two passes, using the same halo-exchange periodic wrap as the
+MPI driver at one rank), plus CUDA and HIP drivers. Command-line driven, with PNG snapshots of
 $\phi$.
 
 ## Scalability

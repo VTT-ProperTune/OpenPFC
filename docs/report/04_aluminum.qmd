@@ -11,6 +11,47 @@ state, an FCC seeding initial condition (`seed_grid_fcc`), and a moving-frame
 formulation aimed at directional solidification, where the interesting physics
 is a front travelling through the domain rather than a bulk relaxation.
 
+The question the application is built to answer is the directional-solidification
+one: **pull a temperature gradient through an aluminium melt at a fixed speed —
+where does the front settle, and what grain structure does it leave behind?**
+The observable is again the front position, together with the per-cell free
+energy this application computes and the field checksums.
+
+That said, the shipped configuration does **not** ask that question. Both
+`aluminumNew.json` and `inputs_json/smoke.json` set
+$G_{\mathrm{grid}} = V_{\mathrm{grid}} = 0$, which switches the thermal drive
+off entirely and leaves an isothermal run. The moving-frame machinery described
+below is present and tested, but no shipped preset exercises it.
+
+## Problem setup
+
+Two inputs ship. `aluminumNew.json` is a large demonstration case;
+`inputs_json/smoke.json` is a $16^3$ sanity file that is not referenced by
+CMake or by any test. Neither is a verification preset: the pinned checksum in
+the test suite runs a **separate synthetic $32^3$ configuration built in C++**
+(`X0 = 8`, radius 4, `rseed = 42`), not either of these files.
+
+| Item | Description |
+|---|---|
+| Use case | An aluminium melt with a row of FCC seeds, intended for directional solidification; as shipped, an isothermal seeded-growth run |
+| Domain | $1024 \times 2048 \times 256$ cells at $\Delta x = 2\pi\sqrt3/8 \approx 1.3603$, i.e. $1393 \times 2786 \times 348$ in reduced PFC length units, origin at the corner. Eight cells per FCC lattice constant ($a = 2\pi\sqrt3$ with the peak at $\lvert\mathbf{k}\rvert = 1$) |
+| Grid | $t \in [0, 2000]$ at $\Delta t = 1$ (2000 steps), field dump every 200 |
+| Boundary conditions | Periodic on all three axes (the FFT has no other mode), plus a stationary `fixed` density-reservoir band pulling $\psi$ between $-1.297$ and $-0.006$ near the high-$x$ end |
+| Initial condition | Uniform $\psi = -0.006$, then `seed_grid_fcc`: a $2 \times 1$ row of FCC seeds of radius 120 at $x = 130$, amplitude $0.4$, $\rho = -0.036$, each jittered by $\pm 0.2R$ and randomly oriented. Each seed is built from the four $\langle 111\rangle$ wave vectors, in contrast to @sec-tungsten's six $\{110\}$ vectors |
+| Key physical parameters | $T_{\mathrm{const}} = 980$, $T_0 = 89285$ (no unit is stated anywhere in this application, unlike @sec-tungsten's TOML comments); $n_{\mathrm{sol}} = -0.036$, $n_{\mathrm{vap}} = -1.297$; $B_x = 0.8179$, $\alpha = 0.20$; barred polynomial coefficients. $G_{\mathrm{grid}} = V_{\mathrm{grid}} = 0$: **the shipped run is isothermal**. Lengths and times are reduced PFC units with no SI mapping in the repository |
+| Observable | `SPECTRAL_CHECKSUM` sum, sum of squares and $L^2$ of $\psi$; the summed free energy (`last_free_energy_sum`), which this application computes per cell and @sec-tungsten does not; binary field dumps |
+| Model maturity | numerical verification: **regression** — the operators and the pointwise nonlinearity are checked to $10^{-14}$ against an independently written reference formula, and one synthetic case is pinned; there is no closed-form solution of the model · physical completeness: **extended** — the tungsten equation of state plus a separate correlation kernel $P(k)$ and a travelling temperature field · calibration: **representative**, with the same caveat as @sec-tungsten: no source is cited anywhere in the repository for any of the aluminium coefficients |
+
+Periodicity plus the reservoir band means the same thing here as in
+@sec-tungsten: a melt column that the solid can grow into, with no free
+surface, no crucible and no container wall. What is specific to this
+application is the $x$ direction. The domain is deliberately long and thin
+($1024 \times 2048$ cells in the plane), which is the geometry of a
+directional-solidification cell rather than a bulk sample, and the front is
+tracked along $x$ with the temperature field unwrapped relative to it. Nothing
+in the model represents convection in the melt, solute partitioning, or a
+second chemical component.
+
 ## Governing equations
 
 Conserved PFC dynamics, as in @eq-w-dyn:
@@ -45,30 +86,57 @@ temperature field.
 
 ## Moving frame and thermal drive
 
-The temperature varies in space and time as a travelling profile,
+The temperature *departure* from the base value varies in space and time as a
+travelling profile,
 
 $$
 T_{\mathrm{var}}(x,t) \;=\;
-  T_0 + G_{\mathrm{grid}}\big(x - x_{\mathrm{initial}} - V_{\mathrm{grid}}\,t\big),
+  G_{\mathrm{grid}}\big(\tilde x - x_{\mathrm{initial}} - V_{\mathrm{grid}}\,t\big),
 $$ {#eq-al-temp}
 
-clamped between `T_min` and `T_max`. A gradient $G_{\mathrm{grid}}$ pulled
-through the domain at speed $V_{\mathrm{grid}}$ is the standard
-directional-solidification setup: the front settles at the position where the
-local temperature matches the interface condition, and then travels with the
-gradient. Setting $G_{\mathrm{grid}}=0$ recovers an isothermal run at
-`T_const`.
+where $\tilde x$ is the $x$ coordinate unwrapped relative to the tracked front
+position, so the profile follows the front around the periodic box rather than
+jumping when it wraps. The pointwise nonlinearity then uses
+$T_{\mathrm{const}} + T_{\mathrm{var}}$, not $T_0 + T_{\mathrm{var}}$: $T_0$
+is the reference temperature that the ratio $T/T_0$ is formed against, not an
+offset.
+
+A gradient $G_{\mathrm{grid}}$ pulled through the domain at speed
+$V_{\mathrm{grid}}$ is the standard directional-solidification setup: the front
+settles where the local temperature matches the interface condition, and then
+travels with the gradient. Setting $G_{\mathrm{grid}} = 0$ — the shipped value
+— recovers an isothermal run at `T_const`.
+
+::: {.callout-warning}
+## `T_min` and `T_max` do nothing
+
+The schema declares `T_min` and `T_max` as required parameters and every
+shipped input and test supplies them, but **no code reads them**. There is no
+clamping of the temperature field anywhere in the application. They are
+vestigial, and a reader should not assume the travelling profile is bounded.
+:::
 
 ## Solution strategy
 
-ETD1 as in @eq-etd1, dealiased, with the mean-field filter and the correlation
-kernel evaluated as reciprocal-space multiplies. Two transforms per step plus
-the kernel application.
+ETD1 as in @eq-etd1, with the mean-field filter and the correlation kernel
+evaluated as reciprocal-space multiplies. Two transforms per step plus the
+kernel application.
+
+As in @sec-tungsten, **dealiasing is off**: the shared option defaults to
+`false` and this application never enables it.
 
 ## Verification
 
-* **Regression.** Pinned checksums for the shipped case across CPU and GPU
-  builds.
+* **Reference-formula agreement.** The mean-field filter, the correlation
+  kernel, the linear symbol, the nonlinearity and the free-energy density all
+  match an independently written reference formula to $10^{-14}$. This is the
+  strongest check the application has, and it is a code-to-code equivalence,
+  not a closed-form solution.
+* **Pinned checksum.** One literal is pinned, for a synthetic $32^3$
+  five-step `seed_grid_fcc` case built in the test — **not** for either shipped
+  input file.
+* **CPU/GPU parity.** A live CPU run and a live device run agree to $10^{-10}$.
+  There is no separately pinned GPU literal.
 * **Schema.** JSON round-trip and range validation on every parameter.
 
 Like @sec-tungsten this model has no closed-form reference; coverage is

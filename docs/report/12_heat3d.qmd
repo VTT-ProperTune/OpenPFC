@@ -10,6 +10,42 @@ finite-difference order, spectral treatment, timing, and scaling can be
 compared without the comparison being confounded by a difference in the
 problem.
 
+The question is therefore methodological rather than physical: **for one fixed
+diffusion problem, how do a stencil of order $2m$ and a spectral solve compare
+in accuracy, cost per step, and scaling?** The named observable is the **RMS
+$L^2$ error against the infinite-domain Gaussian reference**,
+`l2_error_vs_R3_analytic_rms`, which every binary prints in the same format,
+together with `avg_step_time_s`.
+
+## Problem setup
+
+There is no JSON here; every binary takes the same positional arguments. Nor is
+there a science preset: this application is entirely a verification and
+benchmarking instrument, and no configuration of it is a production science
+case.
+
+| Item | Description |
+|---|---|
+| Use case | Method comparison on one fixed PDE: several finite-difference orders and two spectral treatments of the same diffusion problem |
+| Domain | Uniform periodic brick $[0,N)^3$ with $\Delta x = \Delta y = \Delta z = 1$ and the coordinate origin at index $(0,0,0)$ |
+| Grid | $N$, the number of steps and $\Delta t$ are command-line arguments (`N n_steps dt [fd_order]`); $N \ge 8$, $\Delta t > 0$, and `fd_order` must be even in $[2, 20]$. There is no output cadence — the drivers write no snapshots, only an end-of-run summary line |
+| Boundary conditions | Periodic on all three axes. A `boundary_value` hook exists on the model but is empty by default and no driver populates it; there is no Dirichlet or Neumann path in this application |
+| Initial condition | $u(\mathbf{x},0) = \exp(-\lvert\mathbf{x}\rvert^2/4D)$, anchored at the coordinate origin. Because that origin is the *corner* cell, the box holds one octant of the Gaussian and the periodic wrap truncates it |
+| Key physical parameters | $D = 1$ exactly, and **not settable at all** — it is a compile-time constant shared by every binary so that their errors are directly comparable. Everything is nondimensional; no SI unit appears anywhere in the application |
+| Observable | `l2_error_vs_R3_analytic_rms` against @eq-h3-exact; `timing_s` and `avg_step_time_s`; `HEAT3D_HIP_CHECKSUM` / `HEAT3D_SPECTRAL_HIP_CHECKSUM` from the device binaries |
+| Model maturity | numerical verification: **analytical** — every driver is compared against the closed-form $\mathbb{R}^3$ Gaussian, and the implicit-Euler symbol, the constant-field fixed point and the reference solution itself all have their own closed-form checks · physical completeness: **canonical** — this *is* the heat equation, with nothing left out · calibration: **none**, by design |
+
+The idealisation that matters here is a mismatch rather than an omission. The
+domain is periodic, but the reference solution the error is measured against is
+the *infinite-domain* Gaussian, which never wraps. For a localised bump that
+mismatch is small — with $D = 1$ the profile is already below $10^{-7}$ eight
+cells from its peak — but it is not zero, and it contributes to the reported
+error even when the numerics are perfectly consistent. The reported number is
+therefore an upper bound on the discretisation error, not a clean measurement
+of it. That is acceptable because the comparison is between drivers that all
+carry the same offset, which is exactly why $D$ is pinned and the grid is
+identical.
+
 ## Governing equations
 
 $$
@@ -20,12 +56,17 @@ on a periodic box, with a single fixed $D$ shared by every binary so their
 errors against the analytic solution are directly comparable.
 
 For a single Fourier mode the exact solution is
+$u_{\mathbf{k}}(t) = u_{\mathbf{k}}(0)e^{-D|\mathbf{k}|^2t}$, which is what the
+spectral symbol reproduces mode by mode. The drivers, however, are not measured
+against a single mode: they are measured against the closed-form Gaussian
+solution on $\mathbb{R}^3$,
 
 $$
-u_{\mathbf{k}}(t) \;=\; u_{\mathbf{k}}(0)\,e^{-D|\mathbf{k}|^2 t},
+u(\mathbf{x},t) \;=\; (1+t)^{-3/2}
+   \exp\!\left(-\frac{|\mathbf{x}|^2}{4D(1+t)}\right),
 $$ {#eq-h3-exact}
 
-which every driver is measured against.
+which is the $t$-evolution of the shipped initial condition.
 
 ## Finite-difference formulation
 
@@ -50,25 +91,30 @@ $$ {#eq-h3-implicit}
 
 which is two transforms per step and unconditionally stable.
 
-## The five drivers
+## The drivers
 
 | Binary | Discretisation | Purpose |
 |---|---|---|
-| `heat3d_fd_scratch` | hand-written stencil | teaching: no framework abstractions |
-| `heat3d_fd_manual` | fixed second order | manual halo management |
-| `heat3d_fd` | orders 2–20 | convergence and order studies |
-| `heat3d_spectral` | pointwise RHS | spectral evaluation of the RHS |
-| `heat3d_spectral_pointwise` | implicit Euler, @eq-h3-implicit | unconditionally stable reference |
+| `heat3d_fd_scratch` | hand-written stencil, fixed second order | teaching: no framework abstractions |
+| `heat3d_fd_manual` | fixed second order | manual halo management, with overlap |
+| `heat3d_fd` | orders 2–20 | resolution and order studies |
+| `heat3d_spectral_pointwise` | spectral RHS, explicit Euler | the spectral twin of `heat3d_fd`: same time loop, residual built by transform instead of stencil |
+| `heat3d_spectral` | implicit Euler in Fourier space, @eq-h3-implicit | unconditionally stable reference |
+| `heat3d_fd_hip` | orders 2–20 on device | GPU twin of `heat3d_fd` |
+| `heat3d_spectral_hip` | implicit Euler on device | GPU twin of `heat3d_spectral` |
 
-GPU twins `heat3d_fd_hip` and `heat3d_spectral_hip` mirror the FD and spectral
-paths on device. **These two are what make @sec-scalability a method
-comparison rather than an application comparison** — same equation, same
-grids, same machine, two discretisations.
+The two spectral binaries are easy to confuse and the names are not helpful:
+`heat3d_spectral` is the *implicit* one, and `heat3d_spectral_pointwise` is the
+explicit-Euler one that merely evaluates the right-hand side spectrally. The
+device twins mirror the FD and implicit-spectral paths, and **they are what
+make @sec-scalability a method comparison rather than an application
+comparison** — same equation, same grids, same machine, two discretisations.
 
 ## Solution strategy
 
-Explicit stepping for the FD drivers under @eq-cfl; implicit Euler in Fourier
-space for the spectral drivers, at two transforms per step.
+Explicit stepping for the FD drivers and for `heat3d_spectral_pointwise`,
+all under @eq-cfl; implicit Euler in Fourier space for `heat3d_spectral` and
+its device twin, at two transforms per step.
 
 The trade is the usual one. The FD step is cheap and local — a stencil plus a
 halo exchange with nearest neighbours — but the stable timestep shrinks as
@@ -80,8 +126,14 @@ transpose; @sec-scalability measures exactly that.
 ## Verification
 
 * **Analytic $L^2$ error.** Every driver is compared against @eq-h3-exact.
-* **Observed order.** Measured convergence matches the design order of the
-  stencil.
+* **Error decreases with stencil order.** The $L^2$ error at `fd_order` 8 and
+  10 is below the second-order value on the same grid. This is a monotonicity
+  check, not a convergence-order measurement: nothing in the suite performs a
+  grid-refinement study or fits an observed order, so the report does not claim
+  that measured order matches design order.
+* **Cross-implementation parity.** The from-scratch, manual and compact FD
+  drivers produce the same $L^2$ error to $10^{-7}$, which is what makes the
+  three-level teaching hierarchy meaningful.
 * **CPU/GPU agreement.** `HEAT3D_HIP_CHECKSUM` agrees between 1 and 16 GCDs to
   about $5\times10^{-15}$ relative; the spectral twin agrees to about
   $3\times10^{-16}$.

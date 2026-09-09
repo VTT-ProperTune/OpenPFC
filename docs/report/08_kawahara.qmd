@@ -12,6 +12,124 @@ When the two have opposite signs they compete, and the resulting dispersion
 relation is non-monotonic — waves of different length can travel in opposite
 directions.
 
+Two physical questions follow, and the application answers them with separate
+runs. The first is linear and kinematic: **release a wave packet on such a
+layer — at what speed does its envelope travel, and at what speed do the
+crests inside it travel?** Below the crossover those two answers have the same
+sign and above it they do not. The observables are the **group velocity**,
+measured from the drift of the envelope centroid, and the **phase velocity**,
+measured from the phase of the carrier's own Fourier coefficient.
+
+The second question is nonlinear: **what does the fifth-order term actually
+do?** Switching $\gamma$ off reduces the equation to KdV, which has an exact
+solitary wave that propagates forever unchanged. Running the *same* solitary
+wave with $\gamma$ restored makes every departure from that behaviour
+attributable to $\gamma$ alone. The observables are the **solitary-wave peak
+amplitude and propagation speed**, the **RMS amplitude of the trailing
+radiation**, and the **dominant wavenumber of that radiation**, which linear
+theory predicts from the resonance $c_p(k) = c$.
+
+## Problem setup
+
+Three configurations, and they are not interchangeable. `pulse.json` and the
+mode tests are the **verification preset**: arbitrary hand-picked coefficients,
+exercised against closed-form phase and amplitude. They are a numerical oracle
+and **not a production science case**. Science cases A and B use coefficients
+derived from a documented capillary–gravity mapping.
+
+| Item | Verification preset | Science case A (wave packet) | Science case B (solitary wave) |
+|---|---|---|---|
+| Use case | Exercise $L(k) = -i(\beta k^3 + \gamma k^5)$ against independently derived phase | Capillary–gravity wave-packet dispersion just below the critical Bond number | Loss of KdV integrability to fifth-order dispersion, at the same Bond number |
+| Domain | 1-D periodic line, $N_x = 64$–$256$; $L_x = 64\pi$ for `pulse.json` | 1-D periodic line, $N_x = 2560$, $L_x = 800$ | 1-D periodic line, $N_x = 512$, $L_x = 128$ |
+| Grid | $\Delta x = \pi/4$ to $\pi/2$; $N_y = N_z = 1$ throughout | $\Delta x = 0.3125$; $t \in [0, 250]$, sampled every 5 | $\Delta x = 0.25$ — 13 points across the solitary wave and 16 across the radiated wavelength; $t \in [0, 100]$ at $\Delta t = 0.005$ |
+| Boundary conditions | Periodic; the spectral stack has no other mode | Periodic, but sized so the packet never reaches the boundary, with an `edge_fraction` sentinel checking that every sample | Periodic, and the radiation *does* wrap before $t = 100$ — see below |
+| Initial condition | `cosine_mode`, or `gaussian_pulse` ($A = 0.4$, $\sigma = 6$, centred) | `wave_packet`: Gaussian-envelope carrier, $\sigma = 15$, $x_0 = 150$, at $k_0 = 0.6990$ (below crossover) or $k_0 = 2.0028$ (above), each an exact grid mode | `kdv_soliton`: $A\,\mathrm{sech}^2((x-x_0-ct)/W)$ with $A = 0.05$, $x_0 = 32$; $c$ and $W$ are **derived from $\alpha$ and $\beta$**, so an input cannot silently stop being a solution |
+| Key physical parameters | $\alpha = 1$, $\beta = 1$, $\gamma = -1$ — nondimensional and hand-picked, with no physical mapping | $h = g = 1$, $\tau = 0.30$ giving $\alpha = 1.5$, $\beta = -1/60$, $\gamma = 1/90$; $\alpha$ is then set to 0 to isolate the linear dispersion | Same mapping, full $\alpha = 1.5$, $\beta = -1/60$; $\gamma = 0$ (control) against $\gamma = 1/90$ |
+| Observable | Phase and amplitude against the analytical cosine solution; mean $u$ | Group velocity from envelope centroid drift, phase velocity from the carrier mode, packet width, `edge_fraction` | Peak amplitude, peak position, trailing-radiation RMS, dominant radiation wavenumber, mean $u$ |
+| Model maturity | numerical verification: **analytical** · physical completeness: **canonical** — the Kawahara equation exercised as an equation · calibration: **none** | numerical verification: **analytical** for the phase velocity, **regression** for the group velocity · physical completeness: **reduced** — 1-D, weakly nonlinear, long-wave asymptotics · calibration: **representative**, see below | numerical verification: **analytical** — amplitude, width, speed and radiation wavenumber all come from closed forms, not stored values — plus **regression** for the tail RMS · physical completeness: **reduced**, as beside · calibration: **representative** |
+
+Periodicity means a closed ring of fluid rather than an open channel: no
+wavemaker, no inflow, no outflow. Because $L(k)$ is purely imaginary the model
+has no dissipation at all, so nothing that leaves one end is ever absorbed — it
+re-enters at the other. The two science cases handle that differently, and the
+difference is worth stating rather than glossing. Case A is sized from the
+analytical group velocity so the packet cannot approach the boundary, and the
+`edge_fraction` sentinel proves it: the envelope in the outer 5 % of the domain
+stays below $10^{-7}$ of the peak at every sample. **Case B makes no such
+claim** — its radiation does wrap before $t = 100$. That is harmless for the
+observables it uses, because whole-domain tail RMS and its dominant wavenumber
+do not care where in the box the radiation sits, but no no-wrap statement can
+be made for it. What the idealisation excludes throughout is everything a real
+channel has and this model does not: viscous damping, a bottom boundary layer,
+sidewalls, and wave breaking.
+
+### Capillary–gravity parameter mapping
+
+Depth $h$, gravity $g$ and Bond number $\tau = T/(\rho g h^2)$ map to the
+equation's coefficients, in a frame moving at the linear long-wave speed
+$c_0 = \sqrt{gh}$, as
+
+$$
+\alpha = \frac{3c_0}{2h}, \qquad
+\beta  = \frac{c_0h^2}{6}\,(3\tau - 1), \qquad
+\gamma = \frac{c_0h^4}{90}.
+$$ {#eq-kw-map}
+
+$\gamma$ is always positive; $\beta$ is negative — competing dispersion, with a
+real crossover at $k_c = \sqrt{-\beta/\gamma}$ — below the critical Bond number
+$\tau = 1/3$, and positive above it.
+
+::: {.callout-warning}
+## Provenance of @eq-kw-map
+
+This mapping was assembled from secondary and tertiary literature summaries,
+not from the primary sources, which were not accessible from the machine the
+work was done on. The prefactors recur consistently across the independent
+secondary sources consulted, but they have not been re-derived from the Euler
+water-wave equations or checked against a primary paper here. Treat it as
+**representative** of the documented capillary–gravity regime, not as a
+quantitative, primary-source-verified calibration.
+:::
+
+### Measured: wave-packet dispersion
+
+At $\tau = 0.30$ the crossover sits at $k_c \approx 1.2247$, and the two
+carriers straddle it.
+
+| $k_0$ | side | $d\omega/dk$ analytic | $v_g$ measured | $c_p$ analytic | $c_p$ measured | max `edge_fraction` |
+|---|---|---|---|---|---|---|
+| 0.6990 | below $k_c$ | $-0.011167$ | $-0.010915$ (2.3 %) | $-0.005491$ | $-0.005491$ ($\sim10^{-14}$) | $9.3\times10^{-9}$ |
+| 2.0028 | above $k_c$ | $0.693258$ | $0.696118$ (0.4 %) | $0.111911$ | $0.111911$ ($\sim10^{-14}$) | $1.0\times10^{-8}$ |
+
+The phase velocity agrees to machine precision, as it must: the carrier is an
+exact grid mode and the linear ETD step advances it exactly. The group velocity
+agrees to a few percent, which is the accuracy of the narrowband envelope
+extraction rather than of the solver.
+
+### Measured: a solitary wave forced to radiate
+
+With $\gamma = 0$ the equation is KdV with dispersion coefficient
+$\delta = -\beta$, and the `kdv_soliton` initial condition is its exact
+travelling solution. That is the control: it should propagate indefinitely
+unchanged, so every departure in the $\gamma \ne 0$ run is attributable to
+$\gamma$. The solitary wave is resonant with the linear waves whose phase
+velocity equals its own, $c_p(k) = \beta k^2 + \gamma k^4 = c$, which for
+$\beta < 0 < \gamma$ has exactly one positive root — here
+$k_{\mathrm{res}} = 1.5579$. Nothing in the solver is told that number.
+
+| Quantity at $t = 100$ | KdV control ($\gamma = 0$) | Full Kawahara ($\gamma = 1/90$) |
+|---|---|---|
+| Peak amplitude | 0.050007 (from 0.05) | 0.035986 |
+| Distance travelled | 2.50, against $cT = 2.50$ | — |
+| Trailing RMS | $4.19\times10^{-5}$ (the $\mathrm{sech}^2$ skirt) | $3.13\times10^{-3}$ (75×) |
+| Dominant tail wavenumber | 0.049 — the lowest mode in the box, i.e. no wave train | 1.669, against $k_{\mathrm{res}} = 1.5579$ (7 %) |
+
+The control is steady to 1.4 parts in $10^4$ over 20000 steps and travels
+exactly the distance the closed form says it should. The full run gives up 28 %
+of its amplitude to radiation, and that radiation appears at the wavenumber the
+dispersion relation predicts. The 7 % overshoot is consistent with the pulse
+radiating while its own amplitude, and therefore its speed, is still changing.
+
 ## Governing equations
 
 $$
@@ -72,11 +190,32 @@ highest wave number present, so the 2/3 rule is required.
   @eq-kw-phase, checked independently for the $k^3$ and $k^5$ branches.
 * **Manufactured solutions.** Independent manufactured-solution tests for
   third- and fifth-order dispersion.
-* **Mean preservation.** The $\mathbf{k}=0$ mode is untouched.
+* **Mean preservation.** The $\mathbf{k}=0$ mode is untouched — both terms in
+  the PDE are $x$-derivatives, so this holds by construction; measured drift is
+  a relative $2\times10^{-15}$.
+* **Parameter mapping.** @eq-kw-map's coefficients and crossover are checked
+  against hand-computed values.
+* **Diagnostics self-test.** The envelope diagnostics recover the centroid,
+  width and amplitude of a known static Gaussian-envelope carrier.
+* **Group and phase velocity.** Measured against $d\omega/dk$ and $\omega/k$
+  for carriers on both sides of the crossover, with the `edge_fraction`
+  no-wrap check enforced automatically.
+* **Solitary-wave control.** The $\gamma = 0$ run is asserted to be an exact
+  KdV solitary wave — steady peak amplitude, closed-form speed, no wave train
+  behind it — and switching $\gamma$ on is asserted to cost it 28 % of its
+  amplitude, raise the trailing RMS 75-fold, and shed a wave train within 7 %
+  of the resonant wavenumber.
 
 ## Binaries and inputs
 
-`kawahara` (CPU), `kawahara_hip`. Preset `pulse.json` (256-point line).
+`kawahara` (CPU), `kawahara_hip`. Verification preset `pulse.json`
+(256-point line). Science presets
+`wave_packet_below_crossover.json` / `wave_packet_above_crossover.json`
+(case A) and `nonlinear_pulse_kdv_only.json` /
+`nonlinear_pulse_kawahara.json` (case B). Both science cases are 1-D lines and
+therefore single-rank: HeFFTe cannot split $N_y = N_z = 1$ across several
+processes. The diagnostics and wave-packet path is CPU-only; it is not wired
+onto the HIP session.
 
 ## Scalability
 

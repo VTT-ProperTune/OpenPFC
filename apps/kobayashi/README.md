@@ -7,12 +7,53 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 Coupled **phase field** \(\phi\) and **temperature** \(T\) after Kobayashi (Physica D, 1993), using the same explicit finite-difference layout as the historical Julia script `kobayashi_v1` (Biner-style terms, periodic torus in **x** and **y**).
 
+## Problem setup
+
+The `Problem setup` block the report contract (`#112`) asks every application
+to carry. Command-line driven, no JSON, and no science preset. The model
+constants are compile-time values in
+[`include/kobayashi/defaults.hpp`](include/kobayashi/defaults.hpp), not
+command-line arguments.
+
+| Item | Description |
+|---|---|
+| **Use case** | A single crystalline nucleus growing into an undercooled melt, with anisotropic interfacial energy selecting the growth directions |
+| **Question** | Does the nucleus grow as a disc, or throw out arms in the six directions the anisotropy prefers? |
+| **Domain** | `Nx x Ny x 1` slab; `dy = dx` always, so the grid is isotropic by construction. Defaults `256 x 256` at `dx = 0.03`, i.e. a `7.68 x 7.68` box in the model's own length unit |
+| **Grid/time** | `Nx Ny n_steps dt dx [output_dir]` (plus `--output`, `--warmup`); defaults 2000 steps at `dt = 1e-4`. Output cadence is compiled in: a progress line every `kNprint = 200` steps and a PNG every `kNsave = 2000`, plus one at step 0 and `phi_final.png` |
+| **Boundary conditions** | Periodic torus in x and y, implemented as a halo exchange in **every** driver -- including the OpenMP one, which uses the same mechanism at one rank rather than a separate index-wrapping path. No non-periodic option exists |
+| **Initial condition** | `phi = 1` where `(gi - Nx/2)^2 + (gj - Ny/2)^2 < kSeed = 5` and `phi = 0` elsewhere -- a disc of radius about 2.24 cells at the integer-truncated centre -- with `T = 0` everywhere. Deterministic; no noise |
+| **Key physical parameters** | `tau = 3e-4`, `epsilon_bar = 0.01`, `kappa = 1.8`, anisotropy strength `delta = 0.02` at mode number 6, offset `theta0 = 0.2`, `alpha = 0.9`, `gamma = 10`, `T_eq = 1`, with `epsilon(theta) = epsilon_bar*(1 + delta*cos(6*(theta - theta0)))` and `M(T) = (alpha/pi)*atan(gamma*(T_eq - T))`. **All dimensionless**, reproducing a reference implementation rather than a measured material |
+| **Observable** | `sum_phi` -- since `phi` runs in `[0,1]`, this times the cell area is exactly the solidified area -- plus `sumsq_phi`, `sum_T`, `sumsq_T`, field extrema and `wall_loop_max_s`, printed in decimal (`KOBAYASHI_VERIFY`) and hexadecimal (`KOBAYASHI_VERIFY_HEX`); PNG snapshots of `phi`. **Tip velocity, tip radius and arm spacing are not measured.** |
+| **Model maturity** | numerical verification: **regression** only -- checksums pinned across backends and rank counts, plus OpenMP thread determinism. There is no analytical or manufactured-solution check for this model anywhere in the repository. Physical completeness: **canonical** -- the standard anisotropic phase-field/thermal coupling, with no solute field, no melt convection, and one thermal diffusivity shared by solid and liquid. Calibration: **none** |
+
+### Why periodic, and what it costs
+
+The torus has a consequence here that it does not have elsewhere. Integrating
+the temperature equation over a periodic domain annihilates the Laplacian,
+leaving `d<T>/dt = kappa * d<phi>/dt` exactly: **the box has no heat sink at
+all.** Every unit of latent heat the dendrite releases stays inside, the melt
+warms in exact proportion to the solidified fraction, and the undercooling that
+drives growth is consumed as growth proceeds. Physically the run is one
+dendrite in an infinite array of identical dendrites on a lattice of spacing
+`Nx*dx`, each warming its neighbours -- not a dendrite in an unbounded,
+thermostatted melt. Growth self-limits, and late-time morphology must be read
+with that in mind rather than as a steady-state tip.
+
+### What the pinned checksums do and do not establish
+
+The hex pins are taken from prior runs of **this** code on named machines
+(Tohtori, LUMI-G), not from a run of the historical Julia `kobayashi_v1`
+script, which is not part of this repository. They verify that the backends
+agree with each other and stay put over time; they do not verify the model
+against anything outside it.
+
 ## Binaries
 
 | Target | Description |
 |--------|-------------|
 | `kobayashi_fd_manual` | Two-pass explicit Euler per step on Field with halos (`Field<double, HostSpace>`); periodic **MPI halos** (`nz = 1`). |
-| `kobayashi_fd_openmp` | Same discrete splitting on a **single full grid**; periodic **torus via index wrapping** (no halos, no MPI); **OpenMP** `collapse(2)` over the two passes per step. Requires OpenMP at build time. |
+| `kobayashi_fd_openmp` | Same discrete splitting in a **single process**; periodic XY via the **same** `FDPaddedCPUStack` + `HaloExchange` self-wrap the MPI driver uses at `nproc=1` (MPI is initialised inside the engine if the process has not already done so); **OpenMP** `collapse(2)` over the two passes per step. Requires OpenMP at build time. |
 | `kobayashi_fd_cuda` | Same physics as **`kobayashi_fd_manual`**, **two CUDA kernels per step**. Halos use **`pfc::comm::HaloExchange<CUDASpace>`** on device-resident Fields (state then aux, `Axes2D()` so the `nz=1` slab skips ±Z). Rank 0 prints **`KOBAYASHI_CUDA_HALO_MODE`**. Build with **`-DOpenPFC_ENABLE_CUDA=ON`**. |
 | `kobayashi_fd_hip` | Same MPI + halo pattern as **`kobayashi_fd_manual`**, with **two HIP kernels per step**. Halos use **`pfc::comm::HaloExchange<HIPSpace>`** on device-resident Fields (state then aux, same groups as the CPU driver). Rank 0 prints **`KOBAYASHI_HIP_HALO_MODE`**. Each MPI rank calls **`hipSetDevice(local_rank % device_count)`** where `local_rank` is the **shared-memory** rank (`MPI_COMM_TYPE_SHARED`). Build with **`-DOpenPFC_ENABLE_HIP=ON`**. |
 
@@ -42,7 +83,7 @@ Field tempr = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 ## Usage (`kobayashi_fd_manual`)
 
 ```bash
-# Defaults = Julia script (256³ grid, 2000 steps, dt=1e-4, dx=0.03, results/kobayashi_v1/)
+# Defaults = Julia script (256x256 grid; nz is always 1, 2000 steps, dt=1e-4, dx=0.03)
 mpirun -n 4 ./kobayashi_fd_manual
 
 # Explicit grid and output directory

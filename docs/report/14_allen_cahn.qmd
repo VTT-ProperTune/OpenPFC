@@ -10,6 +10,44 @@ Unlike the Cahn–Hilliard model of @sec-cahn-hilliard, the order parameter here
 is **not** conserved: a grain can shrink and vanish. This is the standard model
 for curvature-driven grain growth.
 
+The question the shipped run asks is deliberately coarse: **seed one grain of
+the favoured phase in a matrix of the other and drive the transformation — does
+the favoured phase actually take over?** The named observable is the
+**superlevel-set area** $A(t) = \lvert\{\phi > 0\}\rvert$, the number of cells
+in the growing phase, reported as the ratio $A(t_1)/A(0)$. It is the
+non-conserved counterpart of a mass check: Cahn–Hilliard's mean must not move,
+and Allen–Cahn's area must.
+
+## Problem setup
+
+Command-line driven, no JSON, and no science preset. There is one further thing
+worth stating plainly: **no ctest runs this binary.** The area criterion below
+is enforced by the program's own exit code when a user runs it; the automated
+suite exercises the update function through fixed small configurations
+instead.
+
+| Item | Description |
+|---|---|
+| Use case | A single grain of the favoured phase growing into a matrix of the other under a constant driving force |
+| Domain | $n_x \times n_y \times 1$ slab with $\Delta x = \Delta y = 1$, hard-coded — the spacing is not a command-line argument. Defaults $64 \times 64$ |
+| Grid | `nx ny n_steps [dt] [M] [epsilon] [driving_force] [png_initial] [png_final]`; defaults 5000 steps at $\Delta t = 9\times10^{-5}$. There is no output cadence: at most two PNG snapshots, the initial and the final state |
+| Boundary conditions | Periodic in $x$ and $y$, by separated-layout halo exchange. There is no non-periodic option |
+| Initial condition | A single Gaussian nucleus, $\phi = -1 + 2\exp(-r^2/2\sigma^2)$ centred in the slab, with $\sigma = \max(2,\ 0.055\min(n_x,n_y))$ — about 5.5 % of the shorter side. Deterministic; no noise anywhere |
+| Key physical parameters | $M = 8.0$, $\varepsilon = 0.19$, $F = 10.0$. **Nondimensional and illustrative**; the application states no units and cites no reference model. $\varepsilon$ is as much a numerical parameter as a physical one, since it sets both the interface width and the stiff reaction timestep limit |
+| Observable | $A(t_1)/A(0)$ for $A = \lvert\{\phi > 0\}\rvert$, which the program prints and uses as its exit status (failure unless $A(t_1) \ge 5A(0)$); global $\min\phi$, $\max\phi$ and $\sum\phi$; `avg_step_time_s`; optional grayscale PNGs |
+| Model maturity | numerical verification: **regression** only — one pinned CPU checksum tied to a named machine and toolchain, plus CPU-vs-CUDA agreement to $10^{-9}$ and CPU-vs-HIP to $10^{-4}$. There is no analytical or manufactured-solution check anywhere in this application · physical completeness: **canonical** — the standard non-conserved double-well model with a constant driving force, with no elastic, thermal or solutal coupling · calibration: **none** |
+
+Periodicity means the grain grows inside an infinite square array of identical
+grains rather than in an unbounded matrix. There is no free surface and no
+container, so nothing pins the interface and there is no curvature-driven drift
+towards a wall — which is the right idealisation for asking whether a favoured
+phase grows at all. It also puts a ceiling on how long the experiment means
+anything: once the growing phase spans a substantial fraction of the box it
+begins to meet its own image, and the area ratio stops describing an isolated
+grain. The 5× criterion is a coarse growth check rather than a measurement of
+interface velocity, and the application does **not** verify that the seed has
+stayed clear of its own images.
+
 ## Governing equations
 
 $$
@@ -62,10 +100,15 @@ exchange are distinct phases. Optional PNG snapshots of $\phi$.
 
 ## Verification
 
-* **Superlevel-set growth.** The area with $\phi$ above a threshold grows by at
-  least a prescribed factor between $t=0$ and the end of the run — the
-  non-conserved counterpart to a conservation check.
-* **CPU–GPU parity.** Where CUDA/HIP twins are built.
+* **Superlevel-set growth.** The area with $\phi$ above zero grows by at least
+  a factor of five between $t=0$ and the end of the run — the non-conserved
+  counterpart to a conservation check. This is enforced by the program's exit
+  code, not by a ctest.
+* **Golden checksum.** One pinned CPU literal for a $32^2$, 20-step
+  configuration, annotated with the machine and toolchain it was taken on.
+* **CPU–GPU parity.** CPU against CUDA to $10^{-9}$, and CPU against HIP to
+  $10^{-4}$ — the looser HIP bound is documented as rounding accumulated in the
+  nonlinear term.
 
 ## Binaries and inputs
 

@@ -13,6 +13,41 @@ This application integrates the 2D wave equation
 - **Physical y boundaries**: homogeneous Dirichlet (`u=u_\mathrm{wall}`, `v=0` on the wall)
   or homogeneous Neumann (zero normal derivative of `u`, implemented via mirrored face halos).
 
+## Problem setup
+
+The `Problem setup` block the report contract (`#112`) asks every application
+to carry. Command-line driven, no JSON, and no science preset: every
+configuration is a demonstration or a test. Note also that the application
+**reports no error against any reference solution** -- unlike `heat3d`, its
+summary line carries an amplitude, not an accuracy.
+
+| Item | Description |
+|---|---|
+| **Use case** | A pulse reflecting between the two walls of an acoustic slab; the smallest coupled two-field example in the tree |
+| **Question** | How does the pulse reflect, and does the character of the reflection depend on whether the wall is rigid (Neumann) or pressure-releasing (Dirichlet)? |
+| **Domain** | `Nx x Ny x 1` slab, `dx = dy = 1`, origin `(0,0,0)`. Defaults `Nx = Ny = 64` |
+| **Grid/time** | `Nx Ny n_steps dt [fd_order] y_bc [u_wall]`; defaults 200 steps at `dt = 0.01`, second order. `fd_order` even in `[2,20]` for `wave2d_fd`; the manual and device drivers are fixed at second order. VTK cadence is `--vtk-every` (default 1) |
+| **Boundary conditions** | **Periodic in x** by MPI halo exchange; **physical in y**, either Dirichlet (`u = u_wall`, `v = 0` on the wall, imposed by an odd ghost mirror *and* by writing the owned boundary cells) or Neumann (even mirror). The y correction runs after the unconditional periodic exchange and overwrites the ghosts it produced |
+| **Initial condition** | Centred Gaussian bump in `u` with `v = 0`: `sigma = 0.12*min(Nx,Ny)`, centre `(0.5*(Nx-1), 0.5*(Ny-1))`. Each test picks its own `sigma`; there is no single canonical parameter set |
+| **Key physical parameters** | Wave speed `c = wave2d::kC = 1.0`, a compile-time constant not exposed on the command line. `u_wall` defaults to 0 and only affects Dirichlet runs. Nondimensional throughout |
+| **Observable** | `global_rms_u_interior`; `cfl_c_dt_dx`; `timing_s` / `avg_step_time_s`; optional VTK series of `u` |
+| **Model maturity** | numerical verification: **manufactured** and **regression** -- RK2/RK4 temporal order is measured against a self-generated fine-timestep RK4 reference, not a closed form; the rest is a pinned CPU checksum, CPU-vs-device parity, cross-implementation parity and hand-checked boundary ghosts. There is **no analytical check** anywhere in this app. Physical completeness: **canonical** -- the constant-coefficient scalar wave equation, with no damping, no heterogeneous medium and no source. Calibration: **none** |
+
+### What the two directions mean physically
+
+Periodicity in x makes the slab infinitely long, or equivalently a ring: a
+pulse leaving the right edge arrives at the left, so there is no along-slab
+attenuation and no far field. The y walls are the physically interesting
+idealization: Dirichlet is a pressure-release boundary and the reflected pulse
+comes back inverted; Neumann is a rigid one and it does not. **Neither
+absorbs.** There is no radiation condition and no absorbing layer anywhere in
+this app, so energy put into the slab never leaves it, and a long run is a
+reverberant box rather than a propagation experiment.
+
+Note also that the RK convergence test exercises the RK2/RK4 steppers, while
+the shipped drivers step with explicit Euler -- that test measures the
+steppers, not the binaries.
+
 ## Binaries
 
 | Target | Description |

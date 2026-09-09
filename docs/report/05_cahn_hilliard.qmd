@@ -12,6 +12,75 @@ is that this is the mechanism behind "475 °C embrittlement" in ferritic
 stainless steels, and the length scale of the resulting microstructure sets the
 mechanical consequence.
 
+The question the science presets ask is therefore quantitative: **how does the
+$\alpha/\alpha'$ domain size evolve from early band selection through
+late-stage coarsening, and at what rate?** The named observable is the
+**characteristic domain length $L(t) = 2\pi/k_1$**, where $k_1$ is the first
+moment of the azimuthally averaged structure factor, together with its growth
+exponent. Two supporting observables come out of the same diagnostics: the
+**selected wave number $k_{\mathrm{peak}}$** at early times, which linear
+theory predicts, and the mean composition, which must not move at all.
+
+## Problem setup
+
+This application ships both kinds of preset and the difference matters. The
+**verification presets** are `fe_cr_spinodal.json` — a single Fourier mode
+whose growth rate is known in closed form — and `coarsening.json`, a broadband
+illustrative case. Both use the older regular-solution free energy with
+$\Omega = 20.1\,\mathrm{kJ\,mol^{-1}}$ at $c_0 = 0.32$ and grid-unit $\kappa$
+and $M$: they are **not calibrated Fe–Cr timescales and not production science
+cases**. The **science presets** are `fe_cr_early_stage.json` and the two
+`fe_cr_coarsening` files, which use the assessed Redlich–Kister thermodynamics
+and carry a code-to-physical scale map. The table describes the science
+presets.
+
+| Item | Description |
+|---|---|
+| Use case | Thermal ageing of a ferritic Fe–Cr alloy inside the 475 °C miscibility gap — the mechanism behind "475 °C embrittlement" |
+| Domain | 2-D periodic representative volume: $256^2$ (early stage) or $512^2$ (coarsening) cells at $\Delta x = 1$ code unit $= 1.068\ \mathrm{nm}$, i.e. 273 nm and 547 nm per side |
+| Grid | Early stage: $t \in [0, 400]$ at $\Delta t = 0.5$, sampled every 20. Coarsening: $t \in [0, 4000]$ at $\Delta t = 0.5$, sampled every 100 — about 1114 h of ageing at 475 °C, since one code time unit is $1003\ \mathrm{s} = 0.278\ \mathrm{h}$ at $c_0 = 0.5$ |
+| Boundary conditions | Periodic on both active axes |
+| Initial condition | `seeded_noise`: deterministic hashed noise bounded by $\pm 0.005$ about the mean Cr fraction, with the global mean removed by an exact integer reduction, so the initial field is identical on any number of MPI ranks |
+| Key physical parameters | $T = 748.15\ \mathrm{K}$ (475 °C); Redlich–Kister $L_0 = 20500 - 9.68\,T\ \mathrm{J\,mol^{-1}}$, $L_1 = 0$; $V_m = 7.09\times10^{-6}\ \mathrm{m^3\,mol^{-1}}$; $\kappa = 10^{-9}\ \mathrm{J\,m^{-1}}$; $D = D_0e^{-Q/RT}$ with $D_0 = 2\times10^{-5}\ \mathrm{m^2\,s^{-1}}$ and $Q = 241\ \mathrm{kJ\,mol^{-1}}$. Compositions $c_0 = 0.50$ and $c_0 = 0.45$ |
+| Observable | Domain length $L(t) = 2\pi/k_1$ and its growth exponent; early-stage $k_{\mathrm{peak}}$; mean composition (conserved); total free energy (must decrease) |
+| Model maturity | numerical verification: **analytical** — the linear growth rate, the $L(k)$ symbol, the gradient energy and a synthetic power-law fit are all checked against closed forms · physical completeness: **reduced** — one composition field, no coherent elastic misfit, no magnetic contribution to the bcc Gibbs energy · calibration: **representative**. The interaction parameter is the classical bcc Cr–Fe assessment of Andersson & Sundman, *CALPHAD* **11** (1987) 83–92, but the application states plainly that its thermodynamic and kinetic constants are *"representative, not verified against the primary sources digit by digit"*. Treat the numbers as semi-quantitative |
+
+A periodic cell represents an interior volume of bulk material far from any
+free surface or grain boundary. That is the right idealisation for spinodal
+decomposition specifically, because it is a bulk instability with no nucleation
+barrier and no preferred site — there is nothing for a surface to do here that
+the bulk is not already doing everywhere. What it excludes is exactly what its
+name implies: free surfaces, grain boundaries, and any long-range stress field
+that could couple to composition. Coherent elastic misfit in particular is
+known to bias $\alpha/\alpha'$ morphology and is **not** in this model. The box
+must also be large compared with the selected wavelength, or the structure
+factor is measuring the box rather than the alloy: at $c_0 = 0.5$ the model
+predicts $\lambda_{\max} \approx 17.3$ code units, so $512^2$ holds about 30
+wavelengths per side.
+
+### One consequence worth knowing
+
+With the assessed Redlich–Kister interaction, Fe–32Cr at 475 °C is **outside**
+the spinodal — it sits in the nucleation-and-growth regime, where this model
+does not apply. The older representative $\Omega = 20.1\ \mathrm{kJ\,mol^{-1}}$
+is deeper and does place it inside, which is why the verification presets can
+keep using $c_0 = 0.32$ while the science presets moved to $c_0 = 0.45$ and
+$c_0 = 0.50$. The model computes its own spinodal band for whatever
+coefficients it is given, and a test asserts this.
+
+### Measured
+
+| Quantity | Predicted | Measured |
+|---|---|---|
+| Early-stage fastest-growing wave number | $k_{\max} = 0.3624$ | $k_{\mathrm{peak}} = 0.3682$, within one shell |
+| Coarsening exponent $n$ in $L \propto t^{n}$, $c_0 = 0.50$, fitted over $t \in [2000, 4000]$ | $1/3$ (Lifshitz–Slyozov) | $0.353$, reaching $L = 39.8\ \mathrm{nm}$ after 1114 h |
+| Coarsening exponent, $c_0 = 0.45$ | $1/3$ | $0.371$, reaching $36.6\ \mathrm{nm}$ after 943 h |
+| Mean Cr fraction drift | $0$ | $2.1\times10^{-15}$ |
+
+The fitting window is stated rather than hidden: over the whole run the
+exponent drops to $0.31$, because the early interval is still wavelength
+selection rather than coarsening.
+
 ## Governing equations
 
 One conserved composition field $c$ (Cr mole fraction):
@@ -27,11 +96,28 @@ f(c) \;=\; \omega\,c(1-c) \;+\; c\ln c \;+\; (1-c)\ln(1-c),
 \qquad \omega = \frac{\Omega}{RT}.
 $$ {#eq-ch-f}
 
-The defaults $T = 748.15\,\mathrm{K}$ and
-$\Omega = 20.1\,\mathrm{kJ\,mol^{-1}}$ place Fe–32Cr inside the spinodal. This
-is a documented representative miscibility-gap model, not a CALPHAD
-assessment, and the report does not claim quantitative agreement with a
-thermodynamic database.
+The excess term is a Redlich–Kister expansion in the general case,
+
+$$
+f_{\mathrm{ex}}(c) \;=\; \frac{c(1-c)}{RT}\sum_{i\ge 0} L_i\,(2c-1)^i ,
+\qquad L_i = L_{i,a} + L_{i,b}\,T ,
+$$ {#eq-ch-rk}
+
+of which @eq-ch-f is the $L_0 = \Omega$, $L_{i>0} = 0$ special case — the same
+expression, not a second code path, and a test asserts the reduction. The
+science presets use the assessed bcc Cr–Fe interaction
+$L_0 = 20500 - 9.68\,T\ \mathrm{J\,mol^{-1}}$ with $L_1 = 0$ (Andersson &
+Sundman, *CALPHAD* **11** (1987) 83–92); the verification presets use the
+older representative $\Omega = 20.1\,\mathrm{kJ\,mol^{-1}}$ at
+$T = 748.15\,\mathrm{K}$, which is deeper and keeps Fe–32Cr inside the
+spinodal.
+
+Neither is a CALPHAD assessment carried out here. The coefficients are
+representative and have not been verified against the primary sources digit by
+digit, the magnetic contribution to the bcc Gibbs energy is omitted, and the
+report does not claim quantitative agreement with a thermodynamic database.
+Every constant is a JSON parameter precisely so a better assessment can be
+substituted without touching code.
 
 ## Spectral formulation
 
@@ -88,6 +174,18 @@ current-state total energy including the spectral gradient contribution.
   value on distributed grids.
 * **Decomposition independence.** Seeded noise produces the same field and the
   same mean on any number of ranks.
+* **Redlich–Kister reduction.** With $L_1 = 0$ the expansion reproduces the
+  regular-solution expressions exactly, and its first and second derivatives
+  match finite differences.
+* **Spinodal band.** The computed band agrees with the closed-form roots when
+  $L_1 = 0$, and a shallow interaction is correctly reported as having no
+  miscibility gap.
+* **Physical scales.** The code-to-physical length and time conversion is
+  checked against its closed form, with a sanity bound that caught an incorrect
+  first derivation.
+* **Structure factor.** The diagnostic recovers the wave number of a single
+  known mode, and the exponent fit recovers $1/3$ exactly from a synthetic
+  $L \propto t^{1/3}$ series.
 
 ## Binaries and inputs
 
