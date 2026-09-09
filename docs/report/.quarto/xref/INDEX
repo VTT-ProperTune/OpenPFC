@@ -1,0 +1,80 @@
+{
+  "index.qmd": {
+    "index.html": "5c535609"
+  },
+  "00_abstract.qmd": {
+    "00_abstract.html": "37ab557a"
+  },
+  "01_introduction.qmd": {
+    "01_introduction.html": "1743ad12"
+  },
+  "02_numerical_methods.qmd": {
+    "02_numerical_methods.html": "8dad9d02"
+  },
+  "03_tungsten.qmd": {
+    "03_tungsten.html": "80d43787"
+  },
+  "04_aluminum.qmd": {
+    "04_aluminum.html": "a32c83ed"
+  },
+  "05_cahn_hilliard.qmd": {
+    "05_cahn_hilliard.html": "722ce7cd"
+  },
+  "06_thin_film.qmd": {
+    "06_thin_film.html": "c2ffb3cf"
+  },
+  "07_surface_diffusion.qmd": {
+    "07_surface_diffusion.html": "356d30e2"
+  },
+  "08_kawahara.qmd": {
+    "08_kawahara.html": "6854a8ea"
+  },
+  "09_ehd_film.qmd": {
+    "09_ehd_film.html": "b8f2385e"
+  },
+  "10_gradient_elasticity.qmd": {
+    "10_gradient_elasticity.html": "6dfe7bb3"
+  },
+  "11_heat3d.qmd": {
+    "11_heat3d.html": "69db8e38"
+  },
+  "12_wave2d.qmd": {
+    "12_wave2d.html": "a4f97d8c"
+  },
+  "13_allen_cahn.qmd": {
+    "13_allen_cahn.html": "cc4eb3ff"
+  },
+  "14_kobayashi.qmd": {
+    "14_kobayashi.html": "8398746d"
+  },
+  "15_scalability.qmd": {
+    "15_scalability.html": "10f925cf"
+  },
+  "16_conclusions.qmd": {
+    "16_conclusions.html": "f73feee5"
+  },
+  "10_higher_order_pfc.qmd": {
+    "10_higher_order_pfc.html": "30a43f18"
+  },
+  "11_gradient_elasticity.qmd": {
+    "11_gradient_elasticity.html": "518ec161"
+  },
+  "12_heat3d.qmd": {
+    "12_heat3d.html": "babc31d2"
+  },
+  "13_wave2d.qmd": {
+    "13_wave2d.html": "f2a502d3"
+  },
+  "14_allen_cahn.qmd": {
+    "14_allen_cahn.html": "86289a71"
+  },
+  "15_kobayashi.qmd": {
+    "15_kobayashi.html": "162df135"
+  },
+  "16_scalability.qmd": {
+    "16_scalability.html": "c821f808"
+  },
+  "17_conclusions.qmd": {
+    "17_conclusions.html": "e18b1c13"
+  }
+}

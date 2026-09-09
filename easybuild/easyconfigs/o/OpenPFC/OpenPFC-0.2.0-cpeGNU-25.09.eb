@@ -1,0 +1,73 @@
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Module install of OpenPFC 0.2.0 on LUMI-C. This is the alternative to
+# `scripts/build.sh --machine=lumi`; see docs/hpc/INSTALL.LUMI.md.
+
+easyblock = 'CMakeMake'
+
+name =    'OpenPFC'
+version = '0.2.0'
+
+homepage = 'https://github.com/VTT-ProperTune/OpenPFC'
+
+whatis = [
+    'Description: OpenPFC - framework for phase field crystal and structured-grid PDE simulations',
+]
+
+description = """
+OpenPFC solves PDEs on structured, periodic, MPI-distributed grids with
+spectral and finite-difference stacks. This module is the CPU (cpeGNU) build
+with the FFTW HeFFTe backend; it provides the shipped applications, the
+headers, and the CMake package for building against OpenPFC.
+
+GPU (HIP) builds are not provided by this easyconfig; use
+`scripts/build.sh --machine=lumi --with-rocm` for those.
+"""
+
+toolchain = {'name': 'cpeGNU', 'version': '25.09'}
+toolchainopts = {'usempi': True, 'openmp': True}
+
+sources = {
+    'download_filename': 'v%(version)s.tar.gz',
+    'filename':          SOURCELOWER_TAR_GZ,
+    'source_urls':       ['https://github.com/VTT-ProperTune/OpenPFC/archive/refs/tags/'],
+}
+checksums = ['dbf625ec393c86f7e0e2f026bfe7e94e691ad360108267abcf37ef04ffe0350e']
+
+builddependencies = [
+    ('buildtools', '%(toolchain_version)s', '', True),
+]
+
+dependencies = [
+    ('HeFFTe', '2.4.1', '-fftw'),
+    ('cray-fftw', EXTERNAL_MODULE),
+]
+
+# nlohmann_json and tomlplusplus are header-only and are fetched by CMake's
+# FetchContent during configure, so the build node needs outbound network.
+# Tests additionally fetch Catch2 and are left off for the module build; run
+# them from a source checkout with scripts/build.sh instead.
+# LUMI buildtools ships CMake 4.x, which no longer accepts
+# cmake_minimum_required below 3.5. The nlohmann_json 3.11.2 that OpenPFC
+# 0.2.0 fetches still declares one, so configure needs CMake's documented
+# escape hatch. Removing this depends on OpenPFC pinning a newer json.
+configopts  = '-D CMAKE_POLICY_VERSION_MINIMUM=3.5 '
+configopts += '-D CMAKE_BUILD_TYPE=Release '
+configopts += '-D CMAKE_C_COMPILER=cc '
+configopts += '-D CMAKE_CXX_COMPILER=CC '
+configopts += '-D OpenPFC_ENABLE_HEFFTE=ON '
+configopts += '-D OpenPFC_BUILD_APPS=ON '
+configopts += '-D OpenPFC_BUILD_EXAMPLES=OFF '
+configopts += '-D OpenPFC_BUILD_TESTS=OFF '
+
+sanity_check_paths = {
+    'files': ['bin/tungsten', 'lib/libopenpfc.a'],
+    'dirs':  ['include/openpfc', 'lib/cmake'],
+}
+
+sanity_check_commands = [
+    'tungsten --help 2>&1 | head -1',
+]
+
+moduleclass = 'phys'
