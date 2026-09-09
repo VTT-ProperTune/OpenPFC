@@ -138,6 +138,87 @@ def figure_sizing():
     return out
 
 
+# Okabe-Ito qualitative palette: colour-blind-safe, distinguishable in
+# greyscale print (paired with a distinct marker per order below).
+ORDER_COLORS = {
+    2: "#E69F00",
+    4: "#0072B2",
+    6: "#009E73",
+    8: "#D55E00",
+    10: "#CC79A7",
+    12: "#000000",
+}
+ORDER_MARKERS = {2: "o", 4: "s", 6: "^", 8: "D", 10: "v", 12: "P"}
+
+
+def figure_heat3d_fd_order_convergence():
+    """Log-log L2 error vs dx, one line per FD order, with reference slopes.
+
+    Reads `heat3d_fd_order_convergence.csv` (written by
+    `heat3d_fd_convergence_study`, see `apps/heat3d/README.md`): a single
+    Fourier mode, swept over fd_order x N. No compute engine here --
+    plotting only.
+    """
+    rows = read("heat3d_fd_order_convergence.csv")
+    by_order = {}
+    for r in rows:
+        by_order.setdefault(int(r["fd_order"]), []).append(r)
+
+    fig, ax = plt.subplots(figsize=(6.4, 5.2))
+
+    err_all = [float(r["l2_error"]) for r in rows if float(r["l2_error"]) > 0]
+    curves = {}
+    for order in sorted(by_order):
+        pts = sorted(by_order[order], key=lambda r: -float(r["dx"]))
+        dx = [float(r["dx"]) for r in pts]
+        err = [float(r["l2_error"]) for r in pts]
+        curves[order] = (dx, err)
+        color = ORDER_COLORS.get(order, "#4a4f55")
+        marker = ORDER_MARKERS.get(order, "o")
+        ax.plot(dx, err, marker=marker, color=color, lw=1.6, ms=5.5,
+                label=f"order {order}")
+
+    # Reference slope triangles anchored to each curve's own coarsest
+    # (dx, error) point, so the dotted line touches real data and the eye
+    # can read the *slope* off the figure directly -- not an offset guess.
+    for order in (2, 8, 12):
+        if order not in curves:
+            continue
+        dx, err = curves[order]
+        x0, y0 = dx[0], err[0]
+        x1 = dx[-2]  # stop one point short of the round-off floor, if any
+        y1 = y0 * (x1 / x0) ** order
+        ax.plot([x0, x1], [y0, y1], ls=":", color="#8a8f98", lw=1.1, zorder=0)
+        ax.annotate(f"slope {order}", xy=(x1, y1), xytext=(4, -2),
+                    textcoords="offset points", fontsize=7.5, color="#6b7076")
+
+    # The order-12 curve's finest point sits at the double-precision
+    # round-off floor (see apps/heat3d/README.md): mark it rather than let
+    # readers mistake the flattening for a stencil defect.
+    floor = min(err_all) if err_all else None
+    if floor is not None:
+        ax.axhline(floor, ls=(0, (1, 2)), color="#8a8f98", lw=1.0, zorder=0)
+        ax.text(0.02, 0.025, "round-off floor (order 12, N=64)", transform=ax.transAxes,
+                fontsize=7.5, color="#6b7076", ha="left", va="bottom")
+
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlabel("dx (grid spacing)")
+    ax.set_ylabel("L2 error vs single-mode analytic solution")
+    ax.set_title("heat3d_fd: FD order-of-accuracy sweep", loc="left", fontsize=11)
+    style(ax)
+    ax.legend(frameon=False, fontsize=8.5, loc="lower right", ncol=2)
+    if err_all:
+        ax.set_ylim(min(err_all) * 0.3, max(err_all) * 3.0)
+
+    fig.tight_layout()
+    out = HERE / "heat3d_fd_order_convergence.svg"
+    fig.savefig(out, format="svg", bbox_inches="tight")
+    plt.close(fig)
+    return out
+
+
 if __name__ == "__main__":
-    for path in (figure_speedup(), figure_sizing()):
+    figures = (figure_speedup(), figure_sizing(), figure_heat3d_fd_order_convergence())
+    for path in figures:
         print("wrote", path.relative_to(HERE.parent.parent.parent))
