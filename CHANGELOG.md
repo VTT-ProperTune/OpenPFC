@@ -120,6 +120,21 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   `dt=0.001` at this resolution; `dt>=0.003` overflows. Curvature-operator
   order 2 vs 4 compared directly (~1 % difference, not resolution-starved).
   See `apps/thin_film/README.md`, "Two methods, one problem".
+- Field-visualisation pipeline for the applications report
+  (`docs/report/figures/field_io.py`, `field_plots.py`,
+  `make_field_figures.py`): reads OpenPFC's own field output — `.vti` (VTK
+  ImageData, appended raw or base64) and headerless `.bin` MPI-IO dumps — and
+  renders single-panel, time-series montage, and paired-comparison figures
+  with a perceptually-uniform sequential map for one-sided fields and a
+  diverging map centred on a physically meaningful midpoint for signed ones.
+  Demonstrated end to end on three real LUMI runs (`run_field_demos.sh` is
+  the recipe): Fe-32Cr spinodal decomposition and coarsening
+  (`cahn_hilliard`), a dewetting lubricating film (`thin_film`), and a
+  tungsten PFC seed nucleus sliced from a 256³ run (`tungsten`, reading the
+  raw `.bin` path). Five committed SVGs are now shown, with interpretive
+  captions, in the `@sec-cahn-hilliard`, `@sec-thin-film`, and
+  `@sec-tungsten` chapters.
+
 - EasyBuild recipes for a LUMI-C module install (`#46`): a CPU HeFFTe 2.4.1
   (FFTW backend, `cpeGNU/25.09`) and OpenPFC 0.2.0 on top of it, under
   `easybuild/easyconfigs/`. Verified end to end on LUMI: both install, and

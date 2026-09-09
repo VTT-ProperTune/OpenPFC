@@ -95,6 +95,33 @@ current-state total energy including the spectral gradient contribution.
 (single-mode verification) and `coarsening.json` (seeded broadband
 coarsening with diagnostics).
 
+## Visualisation
+
+![Broadband spinodal decomposition of Fe–32Cr from `coarsening.json`
+(seeded noise, $c_0=0.32$). The composition is essentially uniform at
+$t=0$; by $t=5$ the spinodal instability has already carved the field
+into a fine mottled pattern (`diagnostics.csv` records $c$ spanning
+$[0.14,0.87]$ at that point), and coarsening then slowly reduces the
+domain count from $t=10$ through $t=100$ while conserving the mean
+composition exactly. The colour scale is diverging and centred on $c_0$,
+not on 0.5, because departure from the alloy's own mean composition is
+the physically meaningful signal, not the absolute composition.
+](figures/cahn_hilliard_coarsening_montage.svg){#fig-ch-coarsening}
+
+![The same alloy at the same time ($t=10$), from the two shipped
+presets. `fe_cr_spinodal.json` seeds one Fourier mode near $k_{\max}$
+(@eq-ch-growth) and grows a single, still-sinusoidal stripe pattern;
+`coarsening.json` seeds broadband noise and has already nucleated many
+separate domains. Same physics, same clock, different morphology — the
+initial condition, not the equation, decides what a spinodal micrograph
+looks like. $t=10$, not `fe_cr_spinodal.json`'s full $t_1=20$, is
+deliberate: this single-mode case keeps growing past the point where $c$
+should saturate inside $[0,1]$, and by $t\approx12$ it has overshot those
+physical bounds (ETD1 here is not unconditionally stable at large
+amplitude, matching the stability caveat in the Verification section
+above) — $t=10$ is the latest sample that is still physically sane for
+both runs.](figures/cahn_hilliard_comparison.svg){#fig-ch-comparison}
+
 ## Scalability
 
 Not measured. Shares the spectral ETD stack with @sec-tungsten.
