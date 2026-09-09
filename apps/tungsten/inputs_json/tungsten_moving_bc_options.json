@@ -2,8 +2,8 @@
     "model": {
         "name": "tungsten",
         "params": {
-            "n0": -0.10,
-            "alpha": 0.50,
+            "n0": -0.1,
+            "alpha": 0.5,
             "n_sol": -0.047,
             "n_vap": -0.464,
             "T": 3300.0,
@@ -62,12 +62,12 @@
         {
             "target": "psi",
             "type": "moving",
-            "initial_position": "end",
             "rho_low": -0.464,
-            "rho_high": -0.10,
+            "rho_high": -0.1,
             "width": 3.0,
             "alpha": 10.0,
-            "disp": 80
+            "disp": 80,
+            "xpos": 139.17225402106772
         }
     ]
 }

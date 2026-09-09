@@ -104,11 +104,17 @@ if(TUNGSTEN_ENABLE_TESTS)
   find_package(Catch2 REQUIRED)
   if(TARGET Catch2::Catch2)
     tungsten_cpu_executable(test_tungsten tests/test_tungsten.cpp
-                                          tests/test_tungsten_physics.cpp)
+                                          tests/test_tungsten_physics.cpp
+                                          tests/test_tungsten_inputs.cpp)
     target_link_libraries(test_tungsten PRIVATE Catch2::Catch2)
+    # The shipped inputs are part of the product, so a test loads them from the
+    # source tree rather than from a copy that could drift.
+    target_compile_definitions(test_tungsten PRIVATE
+      TUNGSTEN_INPUTS_JSON_DIR="${CMAKE_CURRENT_SOURCE_DIR}/inputs_json")
     include(CTest)
     # Run all tungsten tests in a single invocation to avoid per-test MPI overhead
     add_test(NAME tungsten-all-tests COMMAND test_tungsten)
+    add_test(NAME tungsten-shipped-inputs COMMAND test_tungsten "[inputs]")
     add_test(NAME tungsten-cpu-golden COMMAND test_tungsten "[etd_cpu_golden]")
     add_test(NAME tungsten-etd-cpu-golden COMMAND test_tungsten "[etd_cpu_golden]")
     if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
