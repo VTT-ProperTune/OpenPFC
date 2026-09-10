@@ -413,12 +413,113 @@ def figure_heat3d_method_comparison():
     return out
 
 
+def figure_heat3d_spectral_content():
+    """Accuracy against spectral content, and the equal-accuracy crossover.
+
+    Reads `heat3d_spectral_content_map.csv` and
+    `heat3d_spectral_content_crossover.csv` (written by
+    `heat3d_spectral_content_study`, see `apps/heat3d/README.md`).
+
+    Left: the semi-analytic L2 error of each FD order for a field whose
+    amplitude spectrum is down to 1e-3 of its peak at a fraction f of
+    Nyquist. The spectral operator is exact for every f, so it cannot be
+    drawn on a log axis at all -- it is the x axis. The star on each curve
+    marks that order's crossover fraction, cbrt(cost_fd / cost_spectral):
+    to the left of its own star an order is buying accuracy the spectral
+    path would charge more for, to the right it is not.
+
+    Right: the same statement as a cost. For each accuracy target, the
+    cheapest grid the order may use, priced by the measured per-step costs
+    at N^3. Crossing the dashed line at 1 is the whole result: below it FD
+    is cheaper, above it spectral is.
+    """
+    rows = read("heat3d_spectral_content_map.csv")
+    by_order = {}
+    for r in rows:
+        by_order.setdefault(int(r["fd_order"]), []).append(
+            (float(r["content_fraction"]), float(r["l2_error"])))
+
+    cross = read("heat3d_spectral_content_crossover.csv")
+    cost = {int(r["fd_order"]): float(r["wall_step_ms"]) for r in cross}
+    spectral_cost = cost[0]
+
+    fig, (ax, ax2) = plt.subplots(1, 2, figsize=(10.6, 4.4))
+
+    for order in sorted(by_order):
+        pts = sorted(by_order[order])
+        f = [p[0] for p in pts]
+        err = [p[1] for p in pts]
+        color = ORDER_COLORS.get(order, "#4a4f55")
+        ax.plot(f, err, marker=ORDER_MARKERS.get(order, "o"), color=color,
+                lw=1.6, ms=4.5, label=f"FD-{order}")
+        # Where this order stops being the cheaper route to a fixed accuracy.
+        f_star = (cost[order] / spectral_cost) ** (1.0 / 3.0)
+        eps_tie = None
+        for (fa, ea), (fb, eb) in zip(pts, pts[1:]):
+            if fa <= f_star <= fb:      # log-linear interpolation in f
+                w = (f_star - fa) / (fb - fa)
+                eps_tie = ea * (eb / ea) ** w
+                break
+        if eps_tie is not None:
+            ax.plot([f_star], [eps_tie], marker="*", ms=16, color=color,
+                    markeredgecolor="#222222", markeredgewidth=0.8, zorder=5)
+
+    ax.set_yscale("log")
+    ax.set_xlim(0.05, 0.95)
+    ax.set_xlabel("content fraction of Nyquist $f$")
+    ax.set_ylabel("$L^2$ error vs the exact solution")
+    ax.set_title("Accuracy against spectral content", loc="left", fontsize=11)
+    ax.text(0.04, 0.10,
+            "spectral: exact for every $f$\n"
+            "stars: where each order ties spectral on cost",
+            transform=ax.transAxes, fontsize=8, color="#4a4f55",
+            va="bottom", ha="left")
+    style(ax)
+    ax.legend(frameon=False, fontsize=8.5, loc="lower right", ncol=2)
+
+    series = {}
+    for r in cross:
+        if r["method"] != "fd":
+            continue
+        series.setdefault(int(r["fd_order"]), []).append(
+            (float(r["target_l2"]), float(r["relative_cost"])))
+    for order in sorted(series):
+        pts = sorted(series[order])
+        eps = [p[0] for p in pts]
+        rel = [p[1] for p in pts]
+        ax2.plot(eps, rel, marker=ORDER_MARKERS.get(order, "o"),
+                 color=ORDER_COLORS.get(order, "#4a4f55"), lw=1.6, ms=4.5,
+                 label=f"FD-{order}")
+    ax2.axhline(1.0, color="#7a7a7a", linestyle="--", linewidth=1.2)
+    ax2.set_xscale("log")
+    ax2.set_yscale("log")
+    ax2.invert_xaxis()          # tighter targets to the right
+    ax2.set_ylim(1e-2, 1e6)
+    ax2.set_xlabel("accuracy target ($L^2$), tighter to the right")
+    ax2.set_ylabel("cost at equal accuracy (spectral = 1)")
+    ax2.set_title("Which operator is cheaper for a given accuracy",
+                  loc="left", fontsize=11)
+    ax2.text(0.97, 0.04, "finite difference cheaper", transform=ax2.transAxes,
+             fontsize=8.5, color="#4a4f55", ha="right", va="bottom")
+    ax2.text(0.97, 0.96, "spectral cheaper", transform=ax2.transAxes,
+             fontsize=8.5, color="#4a4f55", ha="right", va="top")
+    style(ax2)
+    ax2.legend(frameon=False, fontsize=8.5, loc="upper left", ncol=2)
+
+    fig.tight_layout()
+    out = HERE / "heat3d_spectral_content.svg"
+    fig.savefig(out, format="svg", bbox_inches="tight")
+    plt.close(fig)
+    return out
+
+
 if __name__ == "__main__":
     figures = (figure_speedup(), figure_sizing(),
                figure_heat3d_fd_order_convergence(),
                figure_tungsten_dealias_resolution(),
                figure_tungsten_weak_16n(),
                figure_tungsten_strong_1280(),
-               figure_heat3d_method_comparison())
+               figure_heat3d_method_comparison(),
+               figure_heat3d_spectral_content())
     for path in figures:
         print("wrote", path.relative_to(HERE.parent.parent.parent))

@@ -17,6 +17,7 @@ MPI drivers for the **3D heat equation** \(\partial u/\partial t = D \nabla^2 u\
 | **`heat3d_spectral`** | Implicit Euler in Fourier space | HeFFTe-backed forward + backward FFT per step (`heat3d::SpectralHeatPropagator`). |
 | **`heat3d_spectral_hip`** | Implicit Euler on HIP | HIP twin of `heat3d_spectral`: `HIPSpectralStack` + device multiply of \(1/(1-\Delta t D k_\mathrm{lap})\), 2 FFTs/step. Same CLI as the CPU spectral driver. `HEAT3D_PROFILE_JSON` / `HEAT3D_WARMUP` match `heat3d_fd_hip`. Built when HIP spectral (rocFFT HeFFTe) is on. |
 | **`heat3d_fd_convergence_study`** | Verification, not a physics demo | Not part of the model hierarchy above: sweeps `fd_order` x `N` on a single-Fourier-mode problem and reports the *observed* order of accuracy of `heat3d_fd`'s own `FDGradient` stencil against its *design* order — see [Order of accuracy (FD)](#order-of-accuracy-fd) below. |
+| **`heat3d_spectral_content_study`** | Verification + a method recommendation | Also not part of the hierarchy: answers *which* spatial operator is the cheaper route to a given accuracy, as a function of how much of Nyquist the field's content reaches — see [Spectral against finite difference: where each wins](#spectral-against-finite-difference-where-each-wins) below. |
 
 All three CPU FD drivers (`scratch`, `manual`, `fd`) compute the **same thing** with the same 7-point central stencil. Tests assert `l2_scratch == l2_manual == l2_compact` to within 1e-7. The higher binaries share `HeatModel` for physics and `heat3d::report` for the `method / timing / l2_error` summary line; `heat3d_fd_scratch` only uses `heat3d::report` and inlines its own physics.
 
@@ -73,6 +74,7 @@ Shared physics, IC, propagator, parser, and reporting headers (live in `include/
 - **[`include/heat3d/cli.hpp`](include/heat3d/cli.hpp)** — `RunConfig` plus the slim per-binary parsers `parse_fd` / `parse_spectral` and their `_or_print_usage` wrappers. `D` is *not* a CLI knob (it lives in `heat_model.hpp`). Each binary already knows its own discretisation, so the parsers do **not** consume an `argv[1]` discriminator. Header-only, MPI-free, OpenPFC-free; trivially unit-testable.
 - **[`include/heat3d/reporting.hpp`](include/heat3d/reporting.hpp)** — `analytic_gaussian` (closed-form reference solution on \(\mathbb{R}^3\)), `fd_extra_metadata` (FD/OpenMP info string), and the rank-0 `report` template that prints the canonical `method` / `timing` / `l2_error` triplet, shared by all heat3d binaries.
 - **[`include/heat3d/convergence_study.hpp`](include/heat3d/convergence_study.hpp)** — the [Order of accuracy (FD)](#order-of-accuracy-fd) study's shared `run_case(fd_order, N)`: single-Fourier-mode IC, `pfc::gradient::FDGradient<HeatGrads>` bound the same way `heat3d_fd.cpp` binds it, and an *exact* (not time-marched) closed-form evolution to isolate spatial from temporal error. Used by both `heat3d_fd_convergence_study` and `tests/test_heat3d_fd_convergence.cpp`.
+- **[`include/heat3d/spectral_content_study.hpp`](include/heat3d/spectral_content_study.hpp)** — the [Spectral against finite difference](#spectral-against-finite-difference-where-each-wins) study: the FD Laplacian's symbol and its cancellation-free dispersion defect, the closed-form L2 error map against spectral content, the equal-accuracy crossover predicate, and `run_validation()` (real RK4 runs of the shipped FD stack). Used by both `heat3d_spectral_content_study` and `tests/test_heat3d_spectral_content.cpp`.
 
 Per-binary drivers (live in `src/cpu/`):
 
@@ -110,6 +112,7 @@ Per-binary drivers (live in `src/cpu/`):
 - **[`src/cpu/heat3d_spectral.cpp`](src/cpu/heat3d_spectral.cpp)** — implicit-Euler spectral driver. Calls `heat3d::SpectralHeatPropagator::step(stack.u())` once per step (forward FFT → diagonal multiply in k-space → inverse FFT). HIP twin: `heat3d_spectral_hip`.
 - **[`src/cpu/heat3d_spectral_pointwise.cpp`](src/cpu/heat3d_spectral_pointwise.cpp)** — point-wise spectral RHS: the **spectral twin** of `heat3d_fd`. Built on `pfc::sim::stacks::SpectralCPUStack` + `pfc::sim::DuField<HeatGrads, SpectralGradient<HeatGrads>>`, so the user-facing time loop reads `du.apply(...)` / `u += dt * du` / `t += dt`; the residual is materialised by `pfc::field::SpectralGradient<HeatGrads>` (1 forward + 3 inverse FFTs/step) instead of a stencil sweep. The `DuField` shim hides halo prep + per-cell evaluation here, where the FD twin (`heat3d_fd`) instead spells those primitives out in `main`.
 - **[`src/cpu/heat3d_fd_convergence_study.cpp`](src/cpu/heat3d_fd_convergence_study.cpp)** — the [Order of accuracy (FD)](#order-of-accuracy-fd) sweep: loops `heat3d::convergence::run_case(fd_order, N)` over every `(fd_order, N)` pair, prints the design-vs-observed-order table, and writes `docs/report/data/heat3d_fd_order_convergence.csv`.
+- **[`src/cpu/heat3d_spectral_content_study.cpp`](src/cpu/heat3d_spectral_content_study.cpp)** — the [Spectral against finite difference](#spectral-against-finite-difference-where-each-wins) study: prints the error map, the crossover fractions and the equal-accuracy cost ladder, runs the validation cases, and writes `docs/report/data/heat3d_spectral_content_{map,crossover,validation}.csv`.
 
 Tests:
 
@@ -147,6 +150,7 @@ heat3d_spectral_pointwise  <N> <n_steps> <dt>
 heat3d_spectral            <N> <n_steps> <dt>
 heat3d_spectral_hip        <N> <n_steps> <dt>
 heat3d_fd_convergence_study [output.csv]
+heat3d_spectral_content_study [--data-dir DIR] [--no-validate]
 ```
 
 - `D` is **not** a CLI knob: it is fixed at `heat3d::kD = 1.0` in [`include/heat3d/heat_model.hpp`](include/heat3d/heat_model.hpp). Edit the literal there if you want to experiment.
@@ -377,6 +381,64 @@ to the *padded* field, whose stencil covers the whole owned domain) — see
 `apps/heat3d/include/heat3d/convergence_study.hpp`. Anyone else composing
 `FDCPUStack` with `pfc::sim::steppers::create` directly (rather than via
 `FDCPUStack::du<G>()`) should check for the same gap.
+
+## Spectral against finite difference: where each wins
+
+The order sweep above is the *single-mode* accuracy measurement, and one
+smooth mode is the most favourable case a high-order stencil can be handed.
+It says nothing about a field carrying real content near the grid scale, so
+on its own it cannot decide between the FD and spectral paths.
+`heat3d_spectral_content_study` closes that, and the derivation lives in
+[`include/heat3d/spectral_content_study.hpp`](include/heat3d/spectral_content_study.hpp).
+
+**The idea.** The heat equation is linear on a periodic box, so every
+operator is diagonal in the Fourier basis and each mode decays independently:
+exactly as `exp(-D|k|^2 t)`, and under FD as `exp(D*lambda_p(k)*t)` with the
+stencil's own symbol. The spectral operator uses `-|k|^2` itself, so its
+spatial error is *identically zero*. By Parseval the L2 error of **any**
+initial field is therefore a closed-form sum over that field's spectrum — no
+simulation required to draw the map.
+
+**The parameter.** The initial condition is a separable, Nyquist-truncated
+periodic Gaussian, and `f` is the fraction of Nyquist at which its amplitude
+spectrum has fallen to `1e-3` of its peak. The map turns out to depend on
+`f` alone, not on the grid — which is what makes `f` the right axis, and is
+pinned by `tests/test_heat3d_spectral_content.cpp`.
+
+**The result.** Under an `N^3` cost model at a fixed step count, FD order `p`
+is the cheaper route to accuracy `eps` iff the coarsest grid it can use still
+keeps the content above `cbrt(cost_fd / cost_spectral)` of Nyquist. With the
+measured per-step costs (`docs/report/data/heat3d_method_cost.csv`) that
+threshold is 0.32 (FD-2) to 0.49 (FD-12): a 32x cheaper step buys only
+`32^(1/3) = 3.2x` in grid spacing. The crossover in accuracy is at
+`L2 ~ 6e-7`, owned by FD-12; below `1e-2` FD-2 costs a twentieth of the
+spectral path. The full tables are in `docs/report/16_scalability.qmd`.
+
+**Validated, not asserted.** Ten points of the map were re-measured by
+running the shipped FD stack (padded `Field` + `HaloExchange` +
+`FDGradient<HeatGrads>`) under RK4 against the exact solution of the same
+sampled field. Prediction and measurement agree to between eight and ten
+significant figures.
+
+**One implementation note worth stealing.** The map needs the stencil's
+dispersion *defect* `theta^2 + lambda_p*h^2`, which for order 12 at
+`theta = 0.1` is `1.2e-19` while the two terms being subtracted are `1e-2`:
+computed directly it is pure round-off. The way out is that the order-`2M`
+central second-difference stencil is **exactly** the series
+`(2 asin(delta/2))^2 = sum_m a_m delta^(2m)` truncated at `m = M`, with
+`delta^2 = 2 - 2cos(theta)` and `a_m = 2/(m^2 * C(2m,m))`. The defect is then
+the tail of that series — all-positive terms, no cancellation at all. The
+test pins the identity against the shipped `EvenCentralD2` tables, so a
+future edit to `fd_stencils.hpp` cannot break it silently.
+
+Reproduce (single rank, login node, no allocation needed):
+
+```bash
+./apps/heat3d/heat3d_spectral_content_study            # writes three CSVs
+python3 docs/report/figures/make_figures.py            # needs matplotlib
+```
+
+**Figure**: `docs/report/figures/heat3d_spectral_content.svg`.
 
 ## See also
 

@@ -243,7 +243,7 @@ methods can be compared without changing anything else.
 ![Left: what one step costs on the same grid and hardware, the only difference
 being the spatial operator. Right: how each method strong-scales to 16 nodes.
 The panels answer different questions — cheap per step is not the same as
-cheap per unit accuracy.](figures/heat3d_method_comparison.svg){#fig-method-comparison}
+cheap per unit accuracy, which is @sec-scal-accuracy.](figures/heat3d_method_comparison.svg){#fig-method-comparison}
 
 ### Cost at equal grid
 
@@ -282,37 +282,179 @@ holds 28 million cells, so the transpose has not yet become the dominant term;
 the crossover where it would is beyond the range measured here. FD-8 scales
 slightly *worse* than FD-2, which is the wider halo showing up.
 
-### Accuracy, and why the three axes do not combine into a verdict
+### Accuracy, and where each operator is the cheaper way to get it {#sec-scal-accuracy}
 
-@sec-heat3d's convergence study measures the third axis: every design order
-from 2 to 12 recovers its order, and the spectral operator is exact to
-round-off for a resolved smooth field.
+@sec-heat3d's order-convergence study measures the third axis for one field:
+every design order from 2 to 12 recovers its order, and the spectral operator
+is exact to round-off. That study evolves a **single Fourier mode**, which is
+the most favourable case a high-order stencil can be handed — its error
+constant multiplies a high derivative that one smooth mode barely has. Read
+literally it says FD-4 reaches $L^2 = 10^{-6}$ at $N=129$ for 0.02 ms per step
+against the spectral path's 214 ms, and earlier versions of this chapter
+declined to turn that into a recommendation for exactly that reason.
 
-It is tempting to combine the three into a single recommendation, and the
-arithmetic looks decisive. Taking the measured error constants and asking what
-grid each method needs for an $L^2$ error of $10^{-6}$: FD-2 needs $N=2445$
-and 92 ms per step, FD-4 needs $N=129$ and 0.02 ms, while spectral reaches
-round-off at $N=1024$ for 214 ms. On that basis high-order finite differences
-win by orders of magnitude.
+The question is now answered for fields of arbitrary spectral content, by
+`heat3d_spectral_content_study`.
 
-**That comparison should not be trusted as a general result.** The convergence
-study evolves a *single Fourier mode* — the smoothest field there is, and the
-most favourable possible case for a high-order stencil, whose error constant
-depends on derivatives the mode simply does not have. It says nothing about a
-PFC crystal carrying real content at $2k_0$ and $3k_0$ (@sec-tungsten-dealias),
-or a dendrite tip, or a rupturing film. For fields with content near the grid
-scale the required resolution, and therefore the ranking, changes.
+#### Why a closed form exists, and what $f$ means
 
-What the measurements do support, without qualification:
+`heat3d` solves $\partial_t u = D\nabla^2 u$ on a periodic box. That is linear
+and constant-coefficient, so every operator in sight is diagonal in the
+discrete Fourier basis and each mode evolves independently: the true PDE
+decays mode $\mathbf k$ as $e^{-D|\mathbf k|^2t}$, the semi-discrete FD system
+as $e^{D\lambda_p(\mathbf k)t}$ with the stencil's own symbol $\lambda_p$, and
+the spectral operator uses $-|\mathbf k|^2$ itself — so its spatial error is
+*identically zero*, not merely small. By Parseval the $L^2$ error of **any**
+initial field is then a closed-form sum over that field's own spectrum. No
+simulation is needed to draw the map; simulations are needed to check it, and
+that is done below.
 
-* At **equal grid**, finite differences are one to two orders of magnitude
-  cheaper per step, and higher order costs roughly linearly in stencil width.
-* At **equal grid**, both methods strong-scale to 16 nodes at 80–85%, so
-  parallel efficiency is not a reason to prefer one over the other in this
-  range.
-* **Which is cheaper for a given accuracy depends on the spectral content of
-  the solution**, and this report measures that only for a single smooth mode.
-  A broadband-field version of the same study is the obvious next measurement.
+The initial condition is a Gaussian, whose width sweeps the spectrum
+continuously from "everything at low $k$" to "content against Nyquist". The
+one parameter is stated precisely:
+
+> $f$ is the fraction of the Nyquist wavenumber at which the initial
+> **amplitude** spectrum has fallen to $10^{-3}$ of its peak.
+
+So $f = 0.2$ is a smooth blob on a grid several times finer than it needs, and
+$f = 0.9$ is a field whose content runs right up to the grid scale. The field
+is diffused for a dimensionless time $\tau = D t k_c^2 = 1$, i.e. until the
+content-edge mode has decayed by $1/e$; over $\tau \in [0.5, 2]$ every number
+below moves by less than a factor two, and the crossover does not depend on
+$\tau$ at all. The map turns out to be independent of the grid $N$ as well
+(pinned in `test_heat3d_spectral_content.cpp`), which is what makes $f$ — and
+not a resolution — the right axis.
+
+![Left: the $L^2$ error of each FD order against the fraction of Nyquist the
+field's content reaches. The spectral operator is exact for every $f$, so it
+is the $x$ axis rather than a curve. Stars mark where each order stops being
+the cheaper route to a fixed accuracy. Right: the same statement priced, using
+the measured per-step costs and an $N^3$ model — crossing the dashed line is
+the result.](figures/heat3d_spectral_content.svg){#fig-spectral-content}
+
+#### The crossover
+
+Since $k_c$ is fixed by the physics, a method that tolerates content only up
+to $f^*$ of Nyquist needs $N \propto 1/f^*$. **Assuming the cost of a fixed
+number of steps scales as $N^3$**, the equal-accuracy cost of FD order $p$ is
+$c_p/(f^*_p)^3$ against $c_\mathrm{spec}$, and the whole comparison collapses
+to one line:
+
+$$\text{FD-}p\ \text{is cheaper} \iff f^*_p(\varepsilon) > \sqrt[3]{c_p / c_\mathrm{spec}}.$$
+
+That threshold is *pure cost arithmetic* — no numerics enter it. With the
+per-step costs measured above it is remarkably narrow:
+
+| order | per-step cost | crossover fraction | $L^2$ where it ties spectral |
+|---|---|---|---|
+| FD-2 | 6.73 ms | 0.316 | $1.4\times10^{-3}$ |
+| FD-4 | 11.46 ms | 0.377 | $1.1\times10^{-4}$ |
+| FD-6 | 15.01 ms | 0.413 | $1.7\times10^{-5}$ |
+| FD-8 | 18.64 ms | 0.443 | $4.3\times10^{-6}$ |
+| FD-12 | 24.69 ms | 0.487 | $6.5\times10^{-7}$ |
+
+The reason the thresholds are so close together despite a 32× spread in
+per-step cost is the cube root: **a 32× cheaper step buys only
+$32^{1/3} = 3.2\times$ in grid spacing.** The per-step table, read on its own,
+badly overstates how much protection finite differences have.
+
+Priced out against a ladder of accuracy targets (spectral $= 1$):
+
+| target $L^2$ | FD-2 | FD-4 | FD-6 | FD-8 | FD-12 | cheapest |
+|---|---|---|---|---|---|---|
+| $10^{-2}$ | **0.051** | 0.054 | 0.070 | 0.087 | 0.115 | FD-2 |
+| $10^{-3}$ | 1.7 | 0.17 | 0.10 | **0.090** | 0.115 | FD-8 |
+| $10^{-4}$ | 54 | 1.1 | 0.38 | 0.27 | **0.21** | FD-12 |
+| $10^{-5}$ | $1.7\times10^{3}$ | 6.1 | 1.3 | 0.71 | **0.45** | FD-12 |
+| $10^{-6}$ | $5.4\times10^{4}$ | 34 | 4.2 | 1.8 | **0.89** | FD-12 |
+| $10^{-7}$ | $1.7\times10^{6}$ | 194 | 14 | 4.4 | 1.7 | **spectral** |
+| $10^{-8}$ | $3.2\times10^{7}$ | $1.1\times10^{3}$ | 43 | 11 | 3.1 | **spectral** |
+| $10^{-10}$ | — | $3.5\times10^{4}$ | 435 | 60 | 10 | **spectral** |
+
+Three things follow, and they are the recommendation the chapter previously
+could not give.
+
+**Loose tolerances belong to finite differences, by a wide margin.** At
+$10^{-2}$ FD-2 costs a twentieth of the spectral path, and the *lowest* order
+is the right one — going higher only pays for accuracy nobody asked for. Most
+of what these applications are used for lives here.
+
+**The crossover is at $L^2 \approx 6\times10^{-7}$, and it belongs to FD-12.**
+For any target tighter than that, no finite-difference order in the shipped
+table is the cheaper way to reach it. The transition is not sharp in cost:
+FD-12 is still 0.89× at $10^{-6}$ and 1.7× at $10^{-7}$. It *is* sharp in
+which order to pick — the optimal order climbs from 2 to 8 to 12 between
+$10^{-2}$ and $10^{-4}$ and then runs out of table.
+
+**Broadband fields belong to the spectral path regardless of tolerance.** The
+crossover fractions sit between a third and a half of Nyquist, so a field
+whose content genuinely reaches the grid scale is already past every one of
+them. At $f = 0.5$ the *best* stencil here manages $8.6\times10^{-7}$, and at
+$f = 0.9$ it manages $2.2\times10^{-4}$ — those are the floors, not the costs
+of reaching something better. This is not a hypothetical regime: at the
+dealias-safe spacing of @sec-tungsten-dealias, six points per lattice period,
+the crystal's third harmonic sits *exactly* on Nyquist, i.e. $f = 1$.
+
+Two caveats on the arithmetic, both pointing the same way. The $N^3$ model
+counts a fixed number of steps, which is generous to finite differences:
+`heat3d_fd` is explicit, so its stable $\Delta t$ also falls as $\Delta x^2$
+while `heat3d_spectral` is unconditionally stable, and at fixed physical end
+time the FD refinement penalty is nearer $N^5$. And the per-step costs are
+measured at $1024^3$ on 8 GCDs; the spectral step's all-to-all would degrade
+relative to a local stencil at much larger rank counts than @sec-scal-methods
+reaches. Every crossover above is therefore a *lower* bound on how often the
+spectral path wins.
+
+#### Validation
+
+A semi-analytic result nobody checked is a guess with more decimal places, so
+ten points on the map were re-measured by running the shipped FD stack for
+real — the same `pfc::data::Field`, `pfc::comm::HaloExchange` and
+`pfc::gradient::FDGradient<HeatGrads>` the production driver uses — and
+comparing against the exact solution of the same sampled field. Classical RK4
+is used in time rather than the driver's forward Euler, because the quantity
+under test is a spatial error as small as $10^{-8}$ that Euler's $O(\Delta t)$
+would swamp; each point is run twice, at $n$ and $2n$ steps, and the two
+agreeing is the evidence that $\Delta t$ is not what is being measured.
+
+| order | $N$ | $f$ | predicted | measured | measured/predicted |
+|---|---|---|---|---|---|
+| 2 | 64 | 0.30 | $1.278755\times10^{-3}$ | $1.278755\times10^{-3}$ | 1.0000000000 |
+| 2 | 64 | 0.60 | $5.049084\times10^{-3}$ | $5.049084\times10^{-3}$ | 1.0000000000 |
+| 4 | 64 | 0.30 | $4.375440\times10^{-5}$ | $4.375440\times10^{-5}$ | 1.0000000003 |
+| 4 | 64 | 0.60 | $6.410647\times10^{-4}$ | $6.410647\times10^{-4}$ | 1.0000000000 |
+| 6 | 64 | 0.40 | $1.383657\times10^{-5}$ | $1.383657\times10^{-5}$ | 1.0000000000 |
+| 8 | 64 | 0.30 | $2.193288\times10^{-7}$ | $2.193288\times10^{-7}$ | 1.0000000037 |
+| 8 | 64 | 0.60 | $3.864972\times10^{-5}$ | $3.864972\times10^{-5}$ | 1.0000000000 |
+| 12 | 64 | 0.40 | $7.844075\times10^{-8}$ | $7.844075\times10^{-8}$ | 0.9999999963 |
+| 12 | 64 | 0.60 | $5.541376\times10^{-6}$ | $5.541376\times10^{-6}$ | 1.0000000000 |
+| 4 | 96 | 0.30 | $4.375440\times10^{-5}$ | $4.375440\times10^{-5}$ | 1.0000000003 |
+
+**Prediction and measurement agree to between eight and ten significant
+figures at every point**, on both sides of the crossover, with the worst
+disagreement $3.7\times10^{-9}$ relative. The residual is round-off plus the
+leftover RK4 term: doubling the step count on that worst point takes it from
+$3.7\times10^{-9}$ to $5.6\times10^{-10}$, which is the temporal part going
+away and leaving round-off behind. The last row is
+the same $f$ on a different grid, which is the $N$-independence of the map
+showing up in the runs and not only in the arithmetic.
+
+#### What this settles and what it does not
+
+It settles the **linear** question completely, and only that. The heat
+equation has no nonlinear term, so nothing here says anything about aliasing:
+a spectral method applied to a cubic nonlinearity folds unresolved product
+modes back into the solution, which is a different failure with a different
+remedy (the $2/3$ mask) and is measured separately in @sec-tungsten-dealias.
+Nor does it cover boundary conditions — everything above is periodic, where
+the spectral operator is at its best — or any cost that is not per-step wall
+time.
+
+What it does cover transfers directly, because the crossover threshold is cost
+arithmetic and the error map is a property of the field's spectrum: for any
+constant-coefficient operator on a periodic box, compare the fraction of
+Nyquist your field's content reaches against the cube root of the per-step
+cost ratio, and that is your answer.
 
 ## Coverage and gaps
 
@@ -331,17 +473,17 @@ The unmeasured spectral applications share the ETD stack with @sec-tungsten
 and would be expected to behave similarly at equal grid size, but that
 expectation has not been tested and no curve is claimed for them.
 
-The weak-scaling gap this section used to name is now closed
+Two gaps this section used to name are now closed. The weak-scaling one
 (@sec-scal-weak): the tungsten model is measured to 16 nodes at constant work
-per GCD, ending on 8.59 billion cells.
+per GCD, ending on 8.59 billion cells. And the accuracy one
+(@sec-scal-accuracy): cost at equal accuracy is now measured for fields of
+arbitrary spectral content, not just for a single smooth mode, and validated
+against real runs to eight significant figures.
 
-Three gaps remain, named explicitly:
+Two gaps remain, named explicitly:
 
 * There is **no LUMI-C CPU control**, so the report still cannot say what the
   GPU path buys over CPU at equal node count.
-* The **method comparison is accuracy-limited to a single smooth mode**
-  (@sec-scal-methods). Cost at equal grid and scaling at equal grid are
-  measured; cost at equal accuracy for a broadband field is not.
 * The **memory boundary is characterised but not diagnosed**
   (@sec-scal-memory). $2048^3$ is known to need 16 nodes, and the failure is
   known to be host-side, but the transient allocation responsible has not been
