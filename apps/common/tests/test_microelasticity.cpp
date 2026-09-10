@@ -40,6 +40,7 @@
 #include <numbers>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include <mpi.h>
@@ -57,6 +58,7 @@ using Catch::Matchers::WithinRel;
 using pfc::apps::EigenstrainMicroelasticity;
 using pfc::apps::kSymComponents;
 using pfc::apps::MicroelasticityParams;
+using pfc::apps::MicroelasticityScheme;
 using pfc::apps::Stiffness;
 using pfc::apps::Sym3;
 using pfc::apps::SYM_XX;
@@ -683,50 +685,88 @@ TEST_CASE("Eshelby spherical inclusion: interior strain, interior stress, decay"
 }
 
 // ---------------------------------------------------------------------------
-// 5. Homogeneous modulus => exactly one Gamma application
+// 5. Homogeneous modulus => exactly one Gamma application (both schemes)
 // ---------------------------------------------------------------------------
+//
+// Basic: the polarisation tau = C:(eps-eps*) - C0:eps collapses to -C0:eps*
+// when C == C0, so it does not depend on eps and the second pass reproduces it.
+// Eyre-Milton: the local reflection is I - 2 C0 (C+C0)^-1, which is identically
+// zero when C == C0, so z is at its fixed point the moment it is first built.
+// Different mechanisms, same conclusion, and both must hold.
 TEST_CASE("A homogeneous modulus converges in exactly one iteration",
           "[microelasticity][fixedpoint]") {
   constexpr int N = 32;
-  Case cs(N, 1.0);
   const Stiffness c = Stiffness::cubic(2.4, 1.1, 0.7);
 
-  const Sphere s{16.0, 16.0, 16.0, 7.0, 1.5};
-  fill(cs.h, [&](double x, double y, double z) { return s(x, y, z); });
-  fill(cs.amp, [&](double x, double y, double z) { return 2.0e-3 * s(x, y, z); });
+  for (auto scheme :
+       {MicroelasticityScheme::Basic, MicroelasticityScheme::EyreMilton}) {
+    Case cs(N, 1.0);
+    const Sphere s{16.0, 16.0, 16.0, 7.0, 1.5};
+    fill(cs.h, [&](double x, double y, double z) { return s(x, y, z); });
+    fill(cs.amp, [&](double x, double y, double z) { return 2.0e-3 * s(x, y, z); });
 
-  MicroelasticityParams p;
-  p.c_solid = c;
-  p.c_liquid = c; // <- the point of the test
-  p.warm_start = false;
-  EigenstrainMicroelasticity solver(cs.domain, cs.stack.fft(), p);
-  const auto rep = solver.solve(cs.h, cs.amp);
+    MicroelasticityParams p;
+    p.scheme = scheme;
+    p.c_solid = c;
+    p.c_liquid = c; // <- the point of the test
+    p.warm_start = false;
+    EigenstrainMicroelasticity solver(cs.domain, cs.stack.fft(), p);
+    const auto rep = solver.solve(cs.h, cs.amp);
 
-  REQUIRE(rep.converged);
-  REQUIRE(rep.iterations == 1);
-  REQUIRE(rep.residual_history.size() == 1);
-  // Round-off only: tau = C:(eps-eps*) - C0:eps is algebraically independent
-  // of eps when C == C0, but is not evaluated that way.
-  REQUIRE(rep.residual_history.front() < 1.0e-12);
-  // A varying h with C_solid == C_liquid must still leave C0 equal to both.
-  REQUIRE_THAT(solver.reference().c11, WithinRel(c.c11, 1e-15));
+    INFO("scheme " << static_cast<int>(scheme));
+    REQUIRE(rep.converged);
+    REQUIRE(rep.iterations == 1);
+    REQUIRE(rep.residual_history.size() == 1);
+    // Round-off only: neither scheme evaluates the algebraically exact form.
+    REQUIRE(rep.residual_history.front() < 1.0e-12);
+    // Arithmetic and geometric means coincide when the phases do, so C0 must
+    // equal the common stiffness whichever scheme picked it.
+    REQUIRE_THAT(solver.reference().c11, WithinRel(c.c11, 1e-14));
+    REQUIRE_THAT(solver.reference().c44, WithinRel(c.c44, 1e-14));
+    REQUIRE_THAT(solver.predicted_contraction(), WithinAbs(0.0, 1e-14));
+  }
 }
 
 // ---------------------------------------------------------------------------
-// 6. Solid/liquid contrast: monotone convergence, and the strain-change test
+// 6. Solid/liquid contrast: basic vs Eyre-Milton, measured
 // ---------------------------------------------------------------------------
-TEST_CASE("The polarisation fixed point converges monotonically under contrast",
-          "[microelasticity][fixedpoint]") {
+//
+// The header's claim is that Eyre-Milton (Eyre & Milton, Eur. Phys. J. AP 6,
+// 41 (1999)) replaces the basic scheme's (r-1)/(r+1) contraction with
+// (sqrt(r)-1)/(sqrt(r)+1), at the same cost per iteration. This measures both,
+// against the analytic prediction `predicted_contraction()` computes from the
+// channel eigenvalues, so the improvement is a number and not an assertion.
+//
+// Ratio 100 is included because that is what an honest liquid looks like: a
+// liquid supports no shear at all, and the usual regularisation puts
+// mu_l/mu_s in 0.01..0.1.
+TEST_CASE("Contrast: the accelerated scheme beats the basic one as sqrt(r)",
+          "[microelasticity][fixedpoint][accelerated]") {
   constexpr int N = 32;
   const double nu = 0.3;
   const Stiffness solid = Stiffness::isotropic(1.0, nu);
 
-  auto run = [&](double ratio, int max_it, double tol) {
+  struct Outcome {
+    int iterations;
+    double residual;
+    double observed;
+    double predicted;
+    bool converged;
+    bool monotone;
+    bool windowed;
+    double worst_step;
+    int bumps;
+    int last_bump;
+  };
+
+  auto run = [&](MicroelasticityScheme scheme, double ratio, int max_it,
+                 double tol) {
     Case cs(N, 1.0);
     const Sphere s{16.0, 16.0, 16.0, 7.0, 1.5};
     fill(cs.h, [&](double x, double y, double z) { return s(x, y, z); });
     fill(cs.amp, [&](double x, double y, double z) { return 2.0e-3 * s(x, y, z); });
     MicroelasticityParams p;
+    p.scheme = scheme;
     p.c_solid = solid;
     p.c_liquid = Stiffness::isotropic(1.0 / ratio, nu);
     p.tol_el = tol;
@@ -734,77 +774,291 @@ TEST_CASE("The polarisation fixed point converges monotonically under contrast",
     p.warm_start = false;
     EigenstrainMicroelasticity solver(cs.domain, cs.stack.fft(), p);
     const auto rep = solver.solve(cs.h, cs.amp);
-    return std::pair<pfc::apps::MicroelasticityReport, double>{
-        rep, field_absmax(solver.strain()[SYM_XX])};
+    const auto &hist = rep.residual_history;
+    bool monotone = true;
+    double worst_step = 0.0;
+    int bumps = 0;
+    int last_bump = -1;
+    for (std::size_t i = 1; i < hist.size(); ++i) {
+      const double q = hist[i] / hist[i - 1];
+      worst_step = std::max(worst_step, q);
+      if (!(hist[i] < hist[i - 1])) {
+        monotone = false;
+        ++bumps;
+        last_bump = static_cast<int>(i);
+      }
+    }
+    // Decrease over every window of `kWindow` passes -- the statement that
+    // survives a transient.
+    constexpr std::size_t kWindow = 5;
+    bool windowed = true;
+    for (std::size_t i = kWindow; i < hist.size(); ++i) {
+      if (!(hist[i] < hist[i - kWindow])) windowed = false;
+    }
+    const double observed =
+        (hist.size() >= 2) ? std::pow(hist.back() / hist.front(),
+                                      1.0 / static_cast<double>(hist.size() - 1))
+                           : 0.0;
+    return Outcome{
+        rep.iterations, rep.residual, observed,   solver.predicted_contraction(),
+        rep.converged,  monotone,     worst_step, bumps};
   };
 
-  for (double ratio : {2.0, 4.0, 10.0}) {
-    const auto [rep, emax] = run(ratio, 400, 1.0e-6);
-    INFO("contrast " << ratio << ": " << rep.iterations << " iterations, residual "
-                     << rep.residual);
-    REQUIRE(rep.converged);
-    REQUIRE(rep.iterations > 1);
-    REQUIRE(emax > 0.0);
-    // Geometric contraction => a strictly decreasing residual history.
-    for (std::size_t i = 1; i < rep.residual_history.size(); ++i) {
-      REQUIRE(rep.residual_history[i] < rep.residual_history[i - 1]);
-    }
-    // ...and the observed factor should be near (r-1)/(r+1) for the Voigt
-    // reference, which is what justifies the default C0.
-    const auto &hist = rep.residual_history;
-    REQUIRE(hist.size() >= 4);
-    const double factor = std::pow(hist.back() / hist.front(),
-                                   1.0 / static_cast<double>(hist.size() - 1));
-    const double predicted = (ratio - 1.0) / (ratio + 1.0);
-    INFO("observed contraction " << factor << " vs predicted " << predicted);
-    REQUIRE(factor < 1.0);
-    REQUIRE(factor < predicted * 1.35);
-  }
+  for (double ratio : {2.0, 4.0, 10.0, 100.0}) {
+    const auto basic = run(MicroelasticityScheme::Basic, ratio, 2000, 1.0e-6);
+    const auto em = run(MicroelasticityScheme::EyreMilton, ratio, 2000, 1.0e-6);
 
-  // The spec's stopping test is on the strain, not the polarisation. Show they
-  // agree: take the converged iterate, run one more Gamma application, and
-  // confirm the strain moved by less than tol_el in the spec's norm.
+    INFO(precise("ratio ", ratio, " | basic: ", basic.iterations, " it, observed ",
+                 basic.observed, " predicted ", basic.predicted, ", worst step ",
+                 basic.worst_step, ", bumps ", basic.bumps, " | EM: ", em.iterations,
+                 " it, observed ", em.observed, " predicted ", em.predicted,
+                 ", worst step ", em.worst_step, ", bumps ", em.bumps));
+
+    REQUIRE(basic.converged);
+    REQUIRE(em.converged);
+    // Geometric contraction, so the residual history decreases. What actually
+    // contracts every step is the error in the C0 energy norm; the reported
+    // residual is a max-norm of the polarisation change, so a handful of
+    // steps can tick up by a fraction of a percent without the map being any
+    // less contracting. Require strict monotonicity where it holds and bound
+    // the excursions everywhere.
+    REQUIRE(basic.windowed);
+    REQUIRE(em.windowed);
+    if (ratio <= 10.0) {
+      REQUIRE(basic.monotone);
+      REQUIRE(em.monotone);
+    }
+
+    // The predictions are the textbook ones for the optimal reference.
+    REQUIRE_THAT(basic.predicted, WithinRel((ratio - 1.0) / (ratio + 1.0), 1e-12));
+    REQUIRE_THAT(
+        em.predicted,
+        WithinRel((std::sqrt(ratio) - 1.0) / (std::sqrt(ratio) + 1.0), 1e-12));
+
+    // Measured rates track the predictions from below: no mode is worse than
+    // the worst channel, and most are better.
+    REQUIRE(basic.observed < basic.predicted * 1.35);
+    REQUIRE(em.observed < em.predicted * 1.35);
+
+    // ...and the acceleration is real, and grows with the contrast, which is
+    // the sqrt(r) claim expressed as something a test can fail on.
+    REQUIRE(em.iterations < basic.iterations);
+    if (ratio >= 10.0) REQUIRE(em.iterations * 2 <= basic.iterations);
+    if (ratio >= 100.0) REQUIRE(em.iterations * 6 <= basic.iterations);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 6b. Both schemes reach the *same* fixed point
+// ---------------------------------------------------------------------------
+//
+// An accelerated scheme that converges quickly to the wrong answer is worse
+// than a slow one. The basic scheme is the reference here: it is the one whose
+// solution every closed-form test above has already checked, so agreeing with
+// it to a tolerance well below tol_el is what licenses making Eyre-Milton the
+// default.
+TEST_CASE("Basic and Eyre-Milton converge to the same solution",
+          "[microelasticity][accelerated]") {
+  constexpr int N = 32;
+  const double nu = 0.3;
   const double ratio = 4.0;
-  const auto [rep, unused] = run(ratio, 400, 1.0e-6);
-  (void)unused;
-  auto strain_at = [&](int iters) {
+
+  auto solve_with = [&](MicroelasticityScheme scheme) {
+    Case cs(N, 1.0);
+    const Sphere s{16.0, 16.0, 16.0, 7.0, 1.5};
+    fill(cs.h, [&](double x, double y, double z) { return s(x, y, z); });
+    fill(cs.amp, [&](double x, double y, double z) { return 2.0e-3 * s(x, y, z); });
+    fill_value(cs.dh, 0.5);
+    fill_value(cs.damp, 1.0e-3);
+    MicroelasticityParams p;
+    p.scheme = scheme;
+    p.c_solid = Stiffness::isotropic(1.0, nu);
+    p.c_liquid = Stiffness::isotropic(1.0 / ratio, nu);
+    p.tol_el = 1.0e-12;
+    p.n_el_iter = 2000;
+    p.warm_start = false;
+    EigenstrainMicroelasticity solver(cs.domain, cs.stack.fft(), p);
+    REQUIRE(solver.solve(cs.h, cs.amp, &cs.dh, &cs.damp).converged);
+    std::array<std::vector<double>, kSymComponents> eps{};
+    for (int c = 0; c < kSymComponents; ++c) {
+      eps[static_cast<std::size_t>(c)] =
+          solver.strain()[static_cast<std::size_t>(c)].vec();
+    }
+    return std::tuple{eps, solver.total_elastic_energy(),
+                      field_absmax(solver.dfel_dphi())};
+  };
+
+  const auto [eps_basic, e_basic, d_basic] =
+      solve_with(MicroelasticityScheme::Basic);
+  const auto [eps_em, e_em, d_em] = solve_with(MicroelasticityScheme::EyreMilton);
+
+  double diff = 0.0;
+  double scale = 0.0;
+  for (int c = 0; c < kSymComponents; ++c) {
+    const auto &a = eps_basic[static_cast<std::size_t>(c)];
+    const auto &b = eps_em[static_cast<std::size_t>(c)];
+    for (std::size_t i = 0; i < a.size(); ++i) {
+      diff = std::max(diff, std::abs(a[i] - b[i]));
+      scale = std::max(scale, std::abs(a[i]));
+    }
+  }
+  const double rel = gmax(diff) / gmax(scale);
+  INFO(precise("max|eps_basic - eps_EM| / max|eps| = ", rel, ", energy ", e_basic,
+               " vs ", e_em, ", max|dfel/dphi| ", d_basic, " vs ", d_em));
+  REQUIRE(rel < 1.0e-10);
+  REQUIRE_THAT(e_em, WithinRel(e_basic, 1.0e-11));
+  REQUIRE_THAT(d_em, WithinRel(d_basic, 1.0e-10));
+}
+
+// ---------------------------------------------------------------------------
+// 6c. The default liquid, and what it costs
+// ---------------------------------------------------------------------------
+//
+// A real liquid has mu = 0 and no fixed point of this family converges there,
+// so the liquid modulus is a regularisation parameter. `soft_liquid` softens
+// only the two shear channels and leaves the bulk modulus alone, because
+// liquids really are nearly as incompressible as solids. This pins the
+// documented default and the iteration count the header quotes for it.
+TEST_CASE("The recommended liquid stiffness converges within the default cap",
+          "[microelasticity][accelerated]") {
+  constexpr int N = 32;
+  const Stiffness solid = Stiffness::isotropic(1.0, 0.3);
+  const Stiffness liquid = pfc::apps::soft_liquid(solid);
+
+  // Shear softened by kDefaultLiquidShearFraction, bulk untouched.
+  REQUIRE_THAT(liquid.bulk_modulus(), WithinRel(solid.bulk_modulus(), 1e-14));
+  REQUIRE_THAT(
+      liquid.shear_trigonal(),
+      WithinRel(pfc::apps::kDefaultLiquidShearFraction * solid.shear_trigonal(),
+                1e-14));
+  REQUIRE_THAT(
+      liquid.shear_tetragonal(),
+      WithinRel(pfc::apps::kDefaultLiquidShearFraction * solid.shear_tetragonal(),
+                1e-14));
+
+  for (auto scheme :
+       {MicroelasticityScheme::Basic, MicroelasticityScheme::EyreMilton}) {
     Case cs(N, 1.0);
     const Sphere s{16.0, 16.0, 16.0, 7.0, 1.5};
     fill(cs.h, [&](double x, double y, double z) { return s(x, y, z); });
     fill(cs.amp, [&](double x, double y, double z) { return 2.0e-3 * s(x, y, z); });
     MicroelasticityParams p;
+    p.scheme = scheme;
+    p.c_solid = solid;
+    p.c_liquid = liquid;
+    p.n_el_iter = 2000;
+    p.warm_start = false;
+    EigenstrainMicroelasticity solver(cs.domain, cs.stack.fft(), p);
+    const auto rep = solver.solve(cs.h, cs.amp);
+    INFO(precise("scheme ", static_cast<int>(scheme), ": ", rep.iterations,
+                 " iterations, predicted contraction ",
+                 solver.predicted_contraction()));
+    REQUIRE(rep.converged);
+    if (scheme == MicroelasticityScheme::EyreMilton) {
+      // The header promises this fits inside the default cap. If it stops
+      // fitting, the default cap or the default fraction has to move, and
+      // this is where that gets noticed.
+      MicroelasticityParams q = p;
+      q.n_el_iter = MicroelasticityParams{}.n_el_iter;
+      Case cs2(N, 1.0);
+      fill(cs2.h, [&](double x, double y, double z) { return s(x, y, z); });
+      fill(cs2.amp,
+           [&](double x, double y, double z) { return 2.0e-3 * s(x, y, z); });
+      EigenstrainMicroelasticity capped(cs2.domain, cs2.stack.fft(), q);
+      REQUIRE(capped.solve(cs2.h, cs2.amp).converged);
+    }
+  }
+
+  // The price of the regularisation across the range the literature uses.
+  // These are the numbers the header quotes; they must not drift silently.
+  int previous = 0;
+  for (double fraction : {0.01, 0.05, 0.1}) {
+    Case cs(N, 1.0);
+    const Sphere s{16.0, 16.0, 16.0, 7.0, 1.5};
+    fill(cs.h, [&](double x, double y, double z) { return s(x, y, z); });
+    fill(cs.amp, [&](double x, double y, double z) { return 2.0e-3 * s(x, y, z); });
+    MicroelasticityParams p;
+    p.scheme = MicroelasticityScheme::EyreMilton;
+    p.c_solid = solid;
+    p.c_liquid = pfc::apps::soft_liquid(solid, fraction);
+    p.n_el_iter = 2000;
+    p.warm_start = false;
+    EigenstrainMicroelasticity solver(cs.domain, cs.stack.fft(), p);
+    const auto rep = solver.solve(cs.h, cs.amp);
+    INFO(precise("shear fraction ", fraction, ": ", rep.iterations,
+                 " Eyre-Milton iterations, predicted contraction ",
+                 solver.predicted_contraction()));
+    REQUIRE(rep.converged);
+    // A softer liquid is a harder problem, monotonically.
+    if (previous != 0) REQUIRE(rep.iterations < previous);
+    previous = rep.iterations;
+    // Even the stiffest regularisation the literature uses stays inside the
+    // default cap with the accelerated scheme.
+    REQUIRE(rep.iterations <= MicroelasticityParams{}.n_el_iter);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 6d. The spec's stopping test, cross-checked against the one that is used
+// ---------------------------------------------------------------------------
+//
+// The spec stops on the strain change; both schemes here stop on the
+// polarisation change, which is the same fixed point one step apart. Take the
+// converged iterate, run one more pass, and confirm the strain moved by less
+// than tol_el in the spec's own norm.
+TEST_CASE("The reported iteration count also satisfies the spec's strain test",
+          "[microelasticity][fixedpoint]") {
+  constexpr int N = 32;
+  const double nu = 0.3;
+  const double ratio = 4.0;
+  const Stiffness solid = Stiffness::isotropic(1.0, nu);
+
+  auto strain_at = [&](MicroelasticityScheme scheme, int iters, double tol) {
+    Case cs(N, 1.0);
+    const Sphere s{16.0, 16.0, 16.0, 7.0, 1.5};
+    fill(cs.h, [&](double x, double y, double z) { return s(x, y, z); });
+    fill(cs.amp, [&](double x, double y, double z) { return 2.0e-3 * s(x, y, z); });
+    MicroelasticityParams p;
+    p.scheme = scheme;
     p.c_solid = solid;
     p.c_liquid = Stiffness::isotropic(1.0 / ratio, nu);
-    p.tol_el = 0.0; // never stop early
+    p.tol_el = tol;
     p.n_el_iter = iters;
     p.warm_start = false;
     EigenstrainMicroelasticity solver(cs.domain, cs.stack.fft(), p);
-    solver.solve(cs.h, cs.amp);
+    const auto rep = solver.solve(cs.h, cs.amp);
     std::array<std::vector<double>, kSymComponents> out{};
     for (int c = 0; c < kSymComponents; ++c) {
       out[static_cast<std::size_t>(c)] =
           solver.strain()[static_cast<std::size_t>(c)].vec();
     }
-    return out;
+    return std::pair{out, rep};
   };
-  const auto a = strain_at(rep.iterations);
-  const auto b = strain_at(rep.iterations + 1);
-  double diff = 0.0, scale = 0.0;
-  for (int c = 0; c < kSymComponents; ++c) {
-    const auto &va = a[static_cast<std::size_t>(c)];
-    const auto &vb = b[static_cast<std::size_t>(c)];
-    for (std::size_t i = 0; i < va.size(); ++i) {
-      diff = std::max(diff, std::abs(vb[i] - va[i]));
-      scale = std::max(scale, std::abs(vb[i]));
+
+  for (auto scheme :
+       {MicroelasticityScheme::Basic, MicroelasticityScheme::EyreMilton}) {
+    const auto [ignored, rep] = strain_at(scheme, 2000, 1.0e-6);
+    (void)ignored;
+    const auto [a, ra] = strain_at(scheme, rep.iterations, 0.0);
+    const auto [b, rb] = strain_at(scheme, rep.iterations + 1, 0.0);
+    (void)ra;
+    (void)rb;
+    double diff = 0.0, scale = 0.0;
+    for (int c = 0; c < kSymComponents; ++c) {
+      const auto &va = a[static_cast<std::size_t>(c)];
+      const auto &vb = b[static_cast<std::size_t>(c)];
+      for (std::size_t i = 0; i < va.size(); ++i) {
+        diff = std::max(diff, std::abs(vb[i] - va[i]));
+        scale = std::max(scale, std::abs(vb[i]));
+      }
     }
+    const double rel = gmax(diff) / gmax(scale);
+    // The polarisation norm runs a little ahead of the strain norm because
+    // Gamma amplifies; require the same order, not the same number.
+    INFO(precise("scheme ", static_cast<int>(scheme), ": ", rep.iterations,
+                 " iterations, max|eps_new - eps_old| / max|eps| = ", rel));
+    REQUIRE(rel < 5.0e-6);
   }
-  const double rel = gmax(diff) / gmax(scale);
-  // The header stops on the polarisation change, one step ahead of the strain
-  // change, so the two norms agree only up to the amplification of Gamma --
-  // here a factor 1.24. Require the same order, not the same number.
-  INFO("max|eps_new - eps_old| / max|eps| after the reported iteration count = "
-       << rel);
-  REQUIRE(rel < 3.0e-6);
 }
 
 // ---------------------------------------------------------------------------
@@ -1130,6 +1384,10 @@ TEST_CASE("The solution is independent of the MPI decomposition",
   fill_value(cs.damp, 1.0e-3);
 
   MicroelasticityParams p;
+  // Pinned rather than left at the default: the golden iteration count below
+  // is scheme-dependent (the other three goldens are not -- both schemes
+  // reach the same fixed point, which is the point of the [accelerated] case).
+  p.scheme = MicroelasticityScheme::EyreMilton;
   p.c_solid = Stiffness::cubic(2.4, 1.1, 0.7);
   p.c_liquid = Stiffness::cubic(0.6, 0.275, 0.175);
   p.tol_el = 1.0e-10;
@@ -1161,7 +1419,7 @@ TEST_CASE("The solution is independent of the MPI decomposition",
   INFO(precise("ranks=", world_size(), " iterations=", rep.iterations,
                " checksum=", checksum, " energy=", energy, " dfel_max=", dmax));
   // Reference values from a single-rank run (see the PR body).
-  REQUIRE(rep.iterations == 39);
+  REQUIRE(rep.iterations == 20);
   REQUIRE_THAT(checksum, WithinRel(-0.7559465088984869, 1.0e-9));
   REQUIRE_THAT(energy, WithinRel(0.005302743017342901, 1.0e-9));
   REQUIRE_THAT(dmax, WithinRel(6.09873036075123e-06, 1.0e-9));

@@ -144,11 +144,35 @@ OPENPFC_INLINE_HD bool is_nyquist_index(int index, int size) noexcept {
 }
 
 /**
- * @brief Wave-vector component for **odd** spectral operators.
+ * @brief Wave-vector component for operators that are not **even** in each
+ *        component separately.
  *
- * Same as `k_component`, except the Nyquist mode is zero. A real r2c
- * field has a purely real Nyquist coefficient; `i k_N` would invent an
- * imaginary part that is not uniquely defined (Audit K1).
+ * Same as `k_component`, except the Nyquist mode is zero. A real r2c field
+ * has a purely real Nyquist coefficient; `i k_N` would invent an imaginary
+ * part that is not uniquely defined (Audit K1).
+ *
+ * @warning The rule is broader than the name suggests, and so is the failure
+ * mode. `k_component` maps index `N/2` to `+k_Nyquist`, never `-k_Nyquist`,
+ * on every axis. Two modes that are conjugate partners in a Nyquist plane —
+ * say `(0, N/2, +q)` and `(0, N/2, -q)` — are therefore handed wave vectors
+ * that are *not* negatives of each other. Any multiplier that is even under
+ * `k -> -k` but not under flipping one component alone (a Green operator, an
+ * acoustic tensor, anything built from `k_i k_j` cross terms) then takes
+ * different values at the two, the result is no longer Hermitian, and the
+ * inverse transform silently projects the anti-Hermitian part away.
+ *
+ * Nothing errors. What you see instead is a small, resolution-insensitive
+ * floor on a quantity that should be at round-off: in `apps/common`'s
+ * eigenstrain microelasticity solver `|div sigma|` sat at 3.4e-4 of the terms
+ * it must cancel, and an energy identity that should have been exact agreed
+ * only to 5.5e-9. Zeroing the Nyquist component per axis took both to
+ * round-off. If a spectral operator of yours has an accuracy floor it should
+ * not have, check this first.
+ *
+ * Modes whose every index is 0 or Nyquist are their own conjugate partner, so
+ * their coefficient is real and any real multiplier is safe there; if zeroing
+ * would leave `k = 0` and make your operator singular, those modes can keep
+ * the raw `k_component` direction.
  */
 OPENPFC_INLINE_HD double k_component_odd(int index, int size,
                                          double freq_scale) noexcept {
