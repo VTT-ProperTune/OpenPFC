@@ -92,6 +92,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Changed
 
+- `docs/report/12_heat3d.qmd` reports the measured orders of accuracy from
+  `heat3d_fd_convergence_study` (2.00, 3.98, 5.96, 7.95, 9.94, 11.84 against
+  design 2 to 12) in place of the monotonicity check it used to describe, and
+  embeds `heat3d_fd_order_convergence.svg` -- which was committed with the
+  study but never referenced from any chapter, so nothing displayed it.
+
 - Every application chapter in `docs/report/` and the app READMEs that lacked
   one now carry the physical-experiment contract (`#112`). The report was
   strong on operators and weak on experiments: a reader could see `L(k)`
