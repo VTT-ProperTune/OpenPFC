@@ -218,7 +218,56 @@ def figure_heat3d_fd_order_convergence():
     return out
 
 
+def figure_tungsten_dealias_resolution():
+    """How much the 2/3 dealias mask changes tungsten, against resolution.
+
+    Reads `tungsten_dealias_resolution.csv` (written by
+    `tungsten_dealias_study`, see `apps/tungsten/README.md`): the same seeded
+    solidification run twice at each spacing, mask off and mask on. The point
+    of the plot is that the gap between the two collapses once the grid clears
+    six points per lattice period -- below that the grid cannot represent the
+    crystal's own harmonics, so neither answer is right.
+    """
+    rows = sorted(read("tungsten_dealias_resolution.csv"),
+                  key=lambda r: float(r["points_per_lattice"]))
+    ppl = [float(r["points_per_lattice"]) for r in rows]
+    dpower = [100.0 * float(r["rel_dpower"]) for r in rows]
+    dmax = [100.0 * float(r["rel_dmax"]) for r in rows]
+    dk1 = [100.0 * float(r["rel_dk1"]) for r in rows]
+
+    fig, ax = plt.subplots(figsize=(6.4, 4.6))
+    ax.semilogy(ppl, dpower, "o-", color=COLORS["tungsten"], linewidth=1.8,
+                label="spectral power")
+    ax.semilogy(ppl, dmax, "s-", color=COLORS["fd"], linewidth=1.6,
+                label=r"peak density $\max\psi$")
+    ax.semilogy(ppl, dk1, "^-", color=COLORS["spectral"], linewidth=1.6,
+                label=r"selected wavenumber $k_1$")
+
+    ax.axvline(6.0, color="#7a7a7a", linestyle="--", linewidth=1.0)
+    ax.annotate(r"$\Delta x=\pi/3$: third harmonic fits under Nyquist" "\n"
+                r"and the 2/3 cut clears $2k_0$",
+                xy=(6.0, max(dpower)), xytext=(6.12, max(dpower) * 0.9),
+                fontsize=7.5, color="#4a4a4a", va="top")
+    ax.axvline(8.0, color="#7a7a7a", linestyle=":", linewidth=1.0)
+    ax.annotate(r"$\Delta x=\pi/4$: 1/2 rule, cubic term exactly dealiased",
+                xy=(8.0, max(dpower)), xytext=(7.9, max(dpower) * 0.9),
+                fontsize=7.5, color="#4a4a4a", va="top", ha="right")
+
+    ax.set_xlabel("grid points per lattice period")
+    ax.set_ylabel("difference, mask on vs mask off  [%]")
+    ax.set_title("Tungsten PFC: what dealiasing changes, by resolution")
+    ax.grid(True, which="both", **GRID)
+    ax.legend(frameon=False, fontsize=8, loc="lower left")
+
+    out = HERE / "tungsten_dealias_resolution.svg"
+    fig.savefig(out, format="svg", bbox_inches="tight")
+    plt.close(fig)
+    return out
+
+
 if __name__ == "__main__":
-    figures = (figure_speedup(), figure_sizing(), figure_heat3d_fd_order_convergence())
+    figures = (figure_speedup(), figure_sizing(),
+               figure_heat3d_fd_order_convergence(),
+               figure_tungsten_dealias_resolution())
     for path in figures:
         print("wrote", path.relative_to(HERE.parent.parent.parent))

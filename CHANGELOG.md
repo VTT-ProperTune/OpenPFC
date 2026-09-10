@@ -9,6 +9,23 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- `tungsten_dealias_study` and `tungsten/resolution.hpp`: what running the
+  cubic PFC nonlinearity undealiased actually costs. The crystal sits at
+  `k0 = 1` and carries real content at `2k0` and `3k0`, so a grid must both
+  fit the third harmonic under Nyquist and keep the 2/3 cut above the second.
+  Both conditions reduce to `dx <= pi/3` (six points per lattice period), and
+  every shipped preset uses `dx = 1.1107`, 6.1% coarser -- failing both at
+  once, so the mask cannot simply be switched on. Measured over the same
+  seeded solidification run twice at each spacing: the mask changes total
+  spectral power by 1.70% at the shipped resolution and by 0.009% at eight
+  points per period, a factor of 190, which is the signature of a
+  discretisation artefact rather than a modelling choice. The selected
+  wavenumber -- the lattice constant, and the observable these runs are
+  normally read for -- moves by at most 5e-4 at any resolution. Reported in
+  the tungsten chapter with a figure; `[resolution]` pins the grid criteria in
+  a test that runs instantly, since the study itself takes minutes and CI does
+  not call it.
+
 - `heat3d_fd_convergence_study` (`apps/heat3d`): measures the *observed*
   order of accuracy of `pfc::gradient::FDGradient<HeatGrads>`'s central FD
   stencils (orders 2–20) against their *design* order, on a periodic
