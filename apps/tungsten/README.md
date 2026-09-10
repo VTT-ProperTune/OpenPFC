@@ -66,6 +66,7 @@ the file throws at startup. It documents a feature that does not exist.
 | `tungsten_hip` | HIP spectral — `TungstenHIPSession` |
 | `tungsten_etd_hip` | HIP spectral — alias of `tungsten_hip` |
 | `verify_gpu_aware_mpi` | HIP + MPI device-buffer check |
+| `tungsten_dealias_study` | Always — resolution study, see below. Minutes, not a test |
 
 Install path when using `cmake --install`: `<prefix>/bin/`.
 
@@ -135,7 +136,46 @@ fall on the same step.
 | Session aliases + catalog registration | `include/tungsten/tungsten_session.hpp` (`pfc::ui::SpectralETDSession`) |
 | ICs / BCs / writers | Framework catalogs: `constant`, `single_seed`, `seed_grid` ICs; `fixed` / `moving` BCs from `apps/common` (`tungsten::register_catalog()`); `fields[]` writers (`binary`, `vtk`, `hdf5`) |
 | Device instantiation of the nonlinearity | `src/gpu/tungsten_pointwise.inc` (stamped into `.cu` / `.hip`) |
+| Grid criteria for dealiasing | `include/tungsten/resolution.hpp`, pinned by `test_tungsten_resolution.cpp` (`[resolution]`) |
+| Resolution study | `src/cpu/tungsten_dealias_study.cpp` -> `docs/report/data/tungsten_dealias_resolution.csv` |
 | `main()` | `src/{cpu,cuda,hip}/tungsten.cpp` via `pfc::ui::run_json_session_main` |
+
+## Dealiasing and resolution
+
+This app runs its cubic nonlinearity **undealiased**, and the shipped grid is
+6.1% too coarse to change that safely. The crystal sits at \(k_0=1\) and
+carries real content at \(2k_0\) and \(3k_0\); with \(\Delta x=1.1107\),
+\(k_{\mathrm{Ny}}=2.828\), so the third harmonic at 3.0 folds back onto
+\(k=2.657\) — and the 2/3 cut at 1.886 sits *below* the second harmonic at
+2.0, so switching the mask on would delete part of the crystal instead of
+fixing anything. Both conditions clear at \(\Delta x\le\pi/3\), six points
+per lattice period.
+
+Measured with `tungsten_dealias_study` (same seeded solidification, same IC,
+same 1000 steps, mask off then on):
+
+| points / period | \(\Delta x\) | \(\Delta\) power | \(\Delta\max\psi\) | \(\Delta k_1\) |
+|---|---|---|---|---|
+| 5.66 (**shipped**) | 1.1107 | 1.70 % | 1.07 % | 9e-06 |
+| 6.00 | 1.0472 | 1.27 % | 1.04 % | 1.4e-04 |
+| 6.67 | 0.9425 | 0.48 % | 0.29 % | 4.7e-04 |
+| 8.00 | 0.7854 | **0.009 %** | 0.018 % | 2.5e-06 |
+
+So results here carry a ~2% uncertainty on amplitudes and spectral power, and
+essentially none on the selected wavenumber \(k_1\) — the lattice constant,
+which is what these runs are normally read for. The \(k_1\) column is scatter
+between two nearly identical runs, not a trend.
+
+Regenerate the data (minutes, single rank):
+
+```bash
+./apps/tungsten/tungsten_dealias_study \
+  ../docs/report/data/tungsten_dealias_resolution.csv 1000
+python3 docs/report/figures/make_figures.py
+```
+
+See the resolution section of the tungsten chapter in the applications report
+for the full discussion.
 
 ## See also
 

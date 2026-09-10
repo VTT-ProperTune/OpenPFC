@@ -148,10 +148,10 @@ $\psi_{\mathrm{MF}}$ derived from it each step. Two transforms per step.
 
 Unlike the high-order spectral chapters that follow, **this application does
 not dealias**: `SpectralETDOptions::dealias` defaults to `false` and neither
-the tungsten session nor the JSON path ever turns it on. The polynomial
-nonlinearity does alias, and nothing in the shipped configuration suppresses
-it; the stabiliser $P_{\mathrm{stab}}$ and the resolution are what keep the
-runs usable.
+the tungsten session nor the JSON path ever turns it on. What that costs is
+measured in @sec-tungsten-dealias below, and the answer is not the one the
+sentence above invites — the flag cannot simply be switched on at the shipped
+resolution.
 
 For moving-front studies the application supports a `moving` boundary
 condition that tracks the solidification front along $x$ and shifts the
@@ -159,6 +159,74 @@ computational window to follow it. The tracked front state — the unwrapped
 position, the scan index, and a first-detection flag — is part of the
 checkpoint, so a restarted two-leg run continues the same interface rather than
 re-detecting it at $t=0$.
+
+## Resolution and the dealiasing question {#sec-tungsten-dealias}
+
+The nonlinearity is cubic, $\bar p_3\psi^2+\bar p_4\psi^3$, and the
+correlation kernel is a function of $|k|-1$, so the crystal sits at
+$k_0=1$ and carries genuine content at $2k_0$ and $3k_0$. Whether a grid can
+represent that honestly turns on two conditions, both set by
+$k_{\mathrm{Ny}}=\pi/\Delta x$:
+
+1. the third harmonic must fit under Nyquist, $3k_0\le k_{\mathrm{Ny}}$,
+   or it folds back onto a resolved mode;
+2. the 2/3 dealiasing cut must clear the second harmonic,
+   $2k_0\le\frac{2}{3}k_{\mathrm{Ny}}$, or switching the mask on deletes part
+   of the crystal itself.
+
+Both reduce to $\Delta x\le\pi/3$, six grid points per lattice period. **Every
+shipped preset uses $\Delta x=1.1107$, which is 6.1% coarser than that**, and
+therefore fails both at once: with the mask off the third harmonic aliases from
+$3.0$ back onto $k=2.657$; with it on, the cut at $1.886$ sits below the
+crystal's own second harmonic at $2.0$. There is no good side to the
+comparison at this spacing — which is why the honest fix is resolution, not
+the flag.
+
+`tungsten_dealias_study` measures it: the same seeded solidification, the same
+initial condition, the same 1000 steps, run twice at each spacing with the mask
+off and on.
+
+| points / period | $\Delta x$ | $3k_0$ resolved | mask spares $2k_0$ | $\Delta$ power | $\Delta\max\psi$ | $\Delta k_1$ |
+|---|---|---|---|---|---|---|
+| 5.66 (**shipped**) | 1.1107 | no | no | 1.70 % | 1.07 % | 9e-06 |
+| 6.00 | 1.0472 | yes | yes | 1.27 % | 1.04 % | 1.4e-04 |
+| 6.67 | 0.9425 | yes | yes | 0.48 % | 0.29 % | 4.7e-04 |
+| 8.00 | 0.7854 | yes | yes | **0.009 %** | 0.018 % | 2.5e-06 |
+
+![What the 2/3 dealias mask changes in a tungsten solidification, against grid
+resolution. Below six points per lattice period the grid cannot represent the
+crystal's own harmonics, so neither mask setting is right; by eight points the
+two agree to one part in $10^4$. The $k_1$ curve is not a
+trend — see the text.](figures/tungsten_dealias_resolution.svg){#fig-tungsten-dealias}
+
+Reading that across:
+
+* **At the shipped resolution the choice is worth about 2%** in total spectral
+  power and 1% in peak density. That is not nothing, and nothing in the
+  repository currently states it.
+* **It is a discretisation artefact, not a modelling choice.** Going from 5.66
+  to 8 points per period collapses the discrepancy by a factor of 190, to
+  0.009%. At adequate resolution the mask has nothing to remove and nothing to
+  repair, which is exactly what an aliasing artefact should do.
+* **The headline observable is robust.** The selected wavenumber $k_1$ — the
+  lattice constant, which is what a PFC run is usually read for — differs by at
+  most $5\times10^{-4}$ relative at any resolution, two to three orders below
+  the power and amplitude differences. Its variation across the table is
+  non-monotone and shows no trend: at these magnitudes it is scatter between
+  two nearly identical runs, not a resolution effect. Existing tungsten results
+  are not in question on this point.
+
+What the results published here therefore carry is a **$\sim$2% discretisation
+uncertainty on amplitudes and spectral power**, and no meaningful uncertainty
+on the selected wavenumber. Moving the presets to $\Delta x\le\pi/4$ would
+remove it at 2.8$\times$ the cost per step in 3-D; that trade has not been
+made here, but it is now a decision with numbers attached rather than an
+inherited default.
+
+Exact dealiasing of a *cubic* term is the 1/2 rule, $2k_0\le\frac12
+k_{\mathrm{Ny}}$, i.e. eight points per period — the same spacing at which the
+measured difference disappears. `tungsten/resolution.hpp` holds these criteria
+as testable predicates rather than prose, and `[resolution]` pins them.
 
 ## Verification
 

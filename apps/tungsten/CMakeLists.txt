@@ -100,12 +100,17 @@ endif()
 # ---- tests -----------------------------------------------------------------
 option(TUNGSTEN_ENABLE_TESTS "Enable building Tungsten tests" ON)
 
+# Resolution study for the 2/3 dealias question. Not a test: it runs four
+# 64^3-to-96^3 solidifications twice over and takes minutes.
+tungsten_cpu_executable(tungsten_dealias_study src/cpu/tungsten_dealias_study.cpp)
+
 if(TUNGSTEN_ENABLE_TESTS)
   find_package(Catch2 REQUIRED)
   if(TARGET Catch2::Catch2)
     tungsten_cpu_executable(test_tungsten tests/test_tungsten.cpp
                                           tests/test_tungsten_physics.cpp
-                                          tests/test_tungsten_inputs.cpp)
+                                          tests/test_tungsten_inputs.cpp
+                                          tests/test_tungsten_resolution.cpp)
     target_link_libraries(test_tungsten PRIVATE Catch2::Catch2)
     # The shipped inputs are part of the product, so a test loads them from the
     # source tree rather than from a copy that could drift.
