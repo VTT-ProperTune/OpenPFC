@@ -11,11 +11,18 @@ Production aluminum binary: JSON/TOML → `pfc::ui::SpectralETDSession<AluminumP
 
 The `Problem setup` block the report contract (`#112`) asks every application
 to carry, for the shipped demonstration case
-[`aluminumNew.json`](aluminumNew.json). Neither shipped input is a verification
+[`aluminumNew.json`](aluminumNew.json). No shipped input is a verification
 preset: the pinned checksum in the test suite runs a **separate synthetic
-`32^3` configuration built in C++** (`X0 = 8`, radius 4, `rseed = 42`), not
-either file. `inputs_json/smoke.json` is a `16^3` sanity file that no test or
-CMake rule references.
+`32^3` configuration built in C++** (`X0 = 8`, radius 4, `rseed = 42`), not any
+of them. `inputs_json/smoke.json` is a `16^3` sanity file that no test or
+CMake rule references, and its initial condition is a *constant* field --
+there is no seed in it and it never develops structure.
+[`inputs_json/fcc_seed_nucleus.json`](inputs_json/fcc_seed_nucleus.json) is a
+`192^3` single-seed case that runs on one core in a few minutes; see "The
+isothermal case is a nucleation threshold, not growth" below.
+`tests/test_aluminum_inputs.cpp` (ctest `aluminum-shipped-inputs`) checks that
+every file under `inputs_json/` still loads through the schema and the
+initial-condition catalog. That is a rot check, not a physics check.
 
 | Item | Description |
 |---|---|
@@ -28,6 +35,47 @@ CMake rule references.
 | **Key physical parameters** | `T_const = 980`, `T0 = 89285` (no unit is stated anywhere in this app); `n_sol = -0.036`, `n_vap = -1.297`; `Bx = 0.81790`, `alpha = 0.20`; barred polynomial coefficients. **`G_grid = V_grid = 0`, so the shipped run is isothermal** -- the moving-frame machinery is present and tested but no shipped preset exercises it. Reduced PFC units throughout, with no SI mapping in this repository |
 | **Observable** | `SPECTRAL_CHECKSUM` `sum`/`sumsq`/`l2` of `psi`; the summed free energy (`last_free_energy_sum`), which this app computes per cell and `tungsten` does not; binary field dumps |
 | **Model maturity** | numerical verification: **regression** -- the operators, the pointwise nonlinearity and the free-energy density are checked to `1e-14` against an independently written reference formula, and one synthetic case is pinned; there is no closed-form solution of the model. Physical completeness: **extended** -- the tungsten equation of state plus a separate correlation kernel `P(k)` and a travelling temperature field. Calibration: **representative**, with the same caveat as tungsten: no source is cited anywhere in this repository for any aluminium coefficient |
+
+### The isothermal case is nucleation, not steady growth
+
+Every shipped input sets `G_grid = V_grid = 0`, so the thermal drive is off and
+the run is isothermal. It is tempting to describe what is left as seeded
+growth. That is not what happens. Measured on
+[`inputs_json/fcc_seed_nucleus.json`](inputs_json/fcc_seed_nucleus.json)
+(`192^3`, one randomly oriented FCC seed, `n0 = -0.006`, `T_const = 980`),
+run as shipped and again with only the seed radius changed, each continued to
+`t = 1000`:
+
+| seed radius | effective radius over time | envelope amplitude | outcome |
+|---|---|---|---|
+| 60 | 59.6 -> 52.0 (minimum, `t ~ 500`) -> 54.6 at `t = 1000`, still accelerating | 0.86 -> 1.06, rising throughout | **survives and grows** |
+| 50 | 49.6 -> 41.4 (`t = 200`) -> 26.1 (`t = 600`) | 0.86 -> 0.24, collapsing | dissolves by `t ~ 700` |
+| 40 | 39.6 -> 29.9 (`t = 200`) | 0.85 -> 0.31 | dissolves |
+| 30 | 29.6 -> gone | 0.84 -> 0.03 | dissolved by `t = 200` |
+
+Every seed shrinks at first, and that is the mechanism rather than an
+artefact: `SeedFCC` writes a diffuse profile (amplitude 0.4, peak `psi` 3.16)
+that must relax onto the model's own much larger solid amplitude (peak `psi`
+near 5), and the radius a seed spends paying for that relaxation decides
+whether anything is left to grow. So the melt is only just undercooled, growth
+is slow and starts late, and the critical radius at these parameters lies
+between 50 and 60 reduced units -- about five FCC lattice constants
+(`a = 2*pi*sqrt(3) = 10.88`).
+
+Radii here are the volume where `|psi - n0|`, box-blurred over one lattice
+constant, exceeds half its own 99.9th percentile, converted to a
+sphere-equivalent radius; the envelope amplitude is that percentile. Rendered
+in the applications report as
+`docs/report/figures/aluminum_fcc_nucleus_comparison.svg` (at `t = 200`, where
+the shipped preset stops); the run recipe is in
+`docs/report/figures/run_field_demos.sh`.
+
+Do not shrink the box below `192^3` without re-checking the melt. At `128^3`
+the same radius-60 nucleus leaves only about 70 reduced units between its own
+periodic images, and the melt around it fills with a visible interference
+pattern from that self-interaction. At `192^3` it does not: beyond 100 reduced
+units from the seed centre `|psi - n0|` peaks at 0.106 against the crystal's
+4.4.
 
 ### Why periodic
 

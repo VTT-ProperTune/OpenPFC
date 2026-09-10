@@ -22,7 +22,8 @@ line profile of displacement and stress. For this smooth, finite inclusion —
 which has no classical singularity to begin with — the measured direction is
 that peak stress *decreases* monotonically as $R/\ell$ grows, bounded above by
 a closed-form "clamped" limit at $R/\ell \to 0$ and below by the classical
-Eshelby-type relaxed limit at $R/\ell \to \infty$.
+Eshelby-type relaxed limit at $R/\ell \to \infty$. @fig-ge-inclusion shows both
+ends of that statement as fields rather than as numbers.
 
 ## Problem setup
 
@@ -152,6 +153,32 @@ solve.
 `scripts/size_sweep.py`, which parses the `GRADIENT_ELASTICITY_SUMMARY` line
 each run prints. The CPU–GPU parity test covers $u_x$ and $u_y$ only; the
 derived stress and energy fields are not yet checked against the device path.
+
+## Visualisation
+
+![Hydrostatic stress around the misfitting inclusion of
+`circular_inclusion.json` ($256^2$ box, $R = 32$, $\varepsilon_0 = 0.01$),
+solved once with the shipped $\ell = 8$ and once with $\ell = 0$, on a shared
+diverging colour scale centred on zero so that compression and tension are
+distinguishable by sign. Look at the rim, not the core. Classically (right)
+the inclusion is a nearly uniform patch of compression with a smooth edge and
+no tensile region anywhere in the field. Switching on the internal length
+(left) inserts an oscillatory boundary layer of width $\sim\ell$ at the
+interface: a tensile ring just outside the inclusion and a deeper compressive
+ring just inside it. That layer is what raises the peak
+$\lvert\sigma_h\rvert$ from $0.0147$ to $0.0213$, a 45 % increase, and it is
+the direction worth pausing on — gradient elasticity regularises fields that
+were singular, but a $\tanh$-smoothed disk has no singularity to regularise,
+so the $(1+\ell^2k^2)$ factor only stiffens the medium at the short
+wavelengths the interface is built from. This is the $R/\ell = 4$ end of the
+size effect described above, against the $R/\ell \to \infty$ classical limit;
+the far field is indistinguishable between the two panels, which is the other
+half of what the model promises. One caveat on the two peak numbers: the
+shipped preset's $256^2$ box puts $L/\max(R,\ell)$ at 8, not the 16 that
+`size_sweep.py` holds, so each carries the few per cent of periodic-image
+error quantified above. Both panels share the box, so the comparison between
+them is unaffected.
+](figures/gradient_elasticity_inclusion_comparison.svg){#fig-ge-inclusion}
 
 ## Scalability
 

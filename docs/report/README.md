@@ -52,6 +52,8 @@ Python but not matplotlib, so use a virtual environment.
 
 Chapters `03_tungsten.qmd`, `05_cahn_hilliard.qmd`, `06_thin_film.qmd`,
 `07_surface_diffusion.qmd`, and `09_ehd_film.qmd`
+Chapters `03_tungsten.qmd`, `04_aluminum.qmd`, `05_cahn_hilliard.qmd`,
+`06_thin_film.qmd`, `10_higher_order_pfc.qmd` and `11_gradient_elasticity.qmd`
 show real simulation output — a "Visualisation" section near the end of
 each — rendered by `figures/field_io.py` (readers) and `figures/field_plots.py`
 (panels, montages, comparisons) from real runs, not synthesised data. As with
@@ -83,6 +85,14 @@ before adding another:
   run; the Allen–Cahn one is checkable, since the superlevel-set areas
   recovered from the PNGs are the same integers the program printed.
 
+One reader-facing wart to know about before choosing axis units: `pfc::VTKWriter`
+writes `Origin="0 0 0" Spacing="1 1 1"` into every `.vti` regardless of the
+domain's real `origin` and `dx`, and names every array `Field`. A `.vti` can
+therefore only be plotted in *grid cells*. Where a figure needs physical
+coordinates — the tungsten and aluminium PFC panels, whose axes are in reduced
+PFC length units — the run writes `.bin` instead and the figure supplies a
+`field_io.GridSpec` out of band.
+
 To regenerate them from scratch:
 
 ```bash
@@ -100,6 +110,14 @@ field_data_dir=/flash/project_462001519/juaho/tmp-shared/report-figures
 #    somewhere. On the shared LUMI allocation:
 #    kawahara, wave2d, allen_cahn, kobayashi) and write their
 #    .vti/.bin/.png output somewhere. On the shared LUMI allocation:
+#    higher_order_pfc, gradient_elasticity, aluminumNew) and write their
+#    .vti/.bin output somewhere. Every run is single rank; the two
+#    expensive ones are tungsten (256^3) and aluminium (192^3, twice), a
+#    few minutes each. On a LUMI login node, with no launcher at all:
+RUNNER="" FIELD_DATA_DIR="$field_data_dir" \
+    docs/report/figures/run_field_demos.sh "$build_dir"
+
+#    Or on the shared LUMI allocation:
 SLURM_JOB_ID=$(cat /flash/project_462001519/juaho/shared_job_id.txt) \
 TMPDIR=/flash/project_462001519/juaho/tmp-shared \
 RUNNER="srun --overlap -n 1" \
@@ -119,6 +137,13 @@ shipped preset's `t1`/`saveat` past what the default JSON input uses,
 while the `surface_diffusion` and `ehd_film` pairs deliberately do not,
 and the tungsten run uses the 256³ preset rather than the 32³ one because
 `SingleSeed`'s seed radius does not fit inside the smaller domain). Read
+chosen (in particular: two of the thin-film runs deliberately extend the
+shipped preset's `t1`/`saveat` past what the default JSON input uses; the
+tungsten run uses the 256³ preset rather than the 32³ one because
+`SingleSeed`'s seed radius does not fit inside the smaller domain; the
+gradient-elasticity and aluminium pairs each vary exactly one parameter —
+the internal length, the seed radius — against an otherwise identical run,
+which is what makes them comparisons rather than two pictures). Read
 those comments before changing a parameter — the values are not arbitrary,
 several were chosen to stay just inside a numerical-stability boundary that
 chosen. A few examples of what those comments contain: two thin-film runs
@@ -132,6 +157,9 @@ image inside the run. Read those comments before changing a parameter — the
 values are not arbitrary, several were chosen to stay just inside a
 numerical-stability boundary or a domain-size boundary that
 `make_field_figures.py`'s docstrings also explain.
+several were chosen to stay just inside a numerical-stability boundary, or
+outside a periodic-image artefact, that `make_field_figures.py`'s docstrings
+also explain.
 
 **Before committing a regenerated figure**, render a PNG copy and look at
 it — do not commit an SVG you have not visually inspected:

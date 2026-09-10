@@ -179,6 +179,9 @@ well ordered and the orientations disagree. The two seeded controls hold their
 imposed symmetry to $1.000$ over 2000 ETD steps, which is what makes the
 noise-seeded numbers interpretable rather than merely suggestive.
 
+The first two rows of that table are what @fig-hop-lattice shows directly: the
+same box, the same noise, two kernels, two lattices.
+
 ## Solution strategy
 
 ETD1 as in @eq-etd1, dealiased because the local term is cubic.
@@ -228,6 +231,28 @@ benchmark is `single_mode_triangular.json`, `two_mode_square.json` and
 only in the kernel; `two_mode_seed_square.json` and
 `single_mode_seed_triangular.json` are the single-crystal controls. None is run
 by CI: the automated coverage is the Catch2 suite plus a 64² device smoke test.
+
+## Visualisation
+
+![The central $64\times64$ cells of the two noise-seeded presets at $t=400$,
+on a shared colour scale. The runs are identical apart from the correlation
+kernel: same $128^2$ periodic box, same `seeded_noise` initial condition
+(seed 42, amplitude $0.01$ about $\bar\psi = -0.15$), same quench
+($\varepsilon = 0.25$, $g = 0.5$), same $t_1 = 400$. Count the neighbours
+around any bright peak — six at $60°$ on the left, where the single-mode
+$k^4$ kernel has only the $|\mathbf{k}| = 1$ band; four at $90°$ on the
+right, where the second band at $|\mathbf{k}| = \sqrt2$ is open and
+$r_1 = 0.02$ keeps both square families populated. That is the whole claim of
+this chapter in one picture, and it is a real-space claim, not the
+ring-power inference the table above warns about. Only the central quarter of
+each field is shown: the lattice period is 8 cells, so the whole box reduces
+to a texture at print size. What the crop hides is that both fields are
+polycrystalline — the faint seams where the packing slips are grain
+boundaries, and it is exactly those misorientations that pull the global
+$\psi_n$ in the table far below the local one. The colour scale is diverging
+and centred on $\bar\psi = -0.15$, the conserved mean, because a PFC density
+means nothing except as a departure from its own
+mean.](figures/higher_order_pfc_lattice_comparison.svg){#fig-hop-lattice}
 
 ## Scalability
 
