@@ -23,27 +23,48 @@ is @eq-etd1, not the spectral transform by itself. An explicit integrator on
 the sixth-order operator of @sec-ehd-film would need a timestep smaller by
 orders of magnitude.
 
-**The same source scales.** @sec-scalability reports three measured curves out
-to 32 GCDs across four nodes, with checksums agreeing between 1 and 16 GCDs to
+**The same source scales.** @sec-scalability reports measured curves out to
+128 GCDs across 16 nodes, with checksums agreeing between 1 and 16 GCDs to
 between $10^{-12}$ and $3\times10^{-16}$. The application sources are unchanged
-between the one-GCD and 32-GCD runs.
+between the one-GCD and the 128-GCD runs. Strong scaling holds 82% efficiency
+over a fourfold increase in ranks at $1280^3$; weak scaling at constant work
+per GCD reaches 8.59 billion cells on 16 nodes at 49.6%.
 
-The qualification is that all three curves fall below 50% efficiency by 24–32
-GCDs at these grid sizes, and the report contains no weak-scaling study, which
-is the measurement that would actually justify a larger simulation.
+Two qualifications, both measured rather than suspected. The earlier $768^3$
+curves that fell below 50% by four nodes were **grid-limited, not
+code-limited** — the same code at $1280^3$ scales to sixteen. And on a
+slab-decomposed spectral model the rank count must divide the slab axis: at
+$1280^3$, twelve nodes runs the same problem 1.8 times *slower* than ten,
+because $1280/96$ is not an integer (@sec-scal-strong16). That is a larger
+effect than anything else in the chapter.
 
 ## The method comparison
 
-The most useful single result is the pair of Heat3D curves, because they solve
-the same PDE. Halo exchange strong-scales better than a distributed transpose —
-78% against 59% at one node — for the structural reason that nearest-neighbour
-communication stays local as ranks are added while an all-to-all transpose does
-not.
+The most useful single result is the pair of Heat3D drivers, because they solve
+the same PDE with everything else held fixed.
 
-This does not make finite differences the better method. The spectral driver is
-unconditionally stable and takes a much larger timestep; the comparison here
-measures cost per step, not time to solution. Establishing the latter would
-require running both to a fixed accuracy, which has not been done.
+Within one node at $768^3$, halo exchange strong-scales better than a
+distributed transpose — 78% against 59% — for the structural reason that
+nearest-neighbour communication stays local as ranks are added while an
+all-to-all does not. **That advantage does not survive the move to a larger
+problem across nodes.** At $1536^3$ over 4 to 16 nodes the spectral path holds
+83.3%, second-order FD 85.3% and eighth-order FD 80.5% (@sec-scal-methods):
+within five points of each other, with the wider FD halo costing more than the
+transpose. At that size each rank still holds 28 million cells and the
+transpose is not yet the dominant term. Parallel efficiency is therefore *not*
+a reason to prefer one discretisation over the other in this range, which is
+the opposite of what the one-node numbers suggest.
+
+What separates them is cost per step, and there the gap is large and
+one-sided: at equal grid the spectral step costs 32 times a second-order FD
+step and 8.7 times a twelfth-order one.
+
+None of that makes finite differences the better method, because cost per step
+is not time to solution. The spectral operator is exact for a resolved smooth
+field while a stencil of order $p$ carries an $O(\Delta x^p)$ error, so the
+two reach a given accuracy on different grids. Which is cheaper depends on the
+spectral content of the solution, and this report measures that only for a
+single smooth mode — see the gap named below.
 
 ## Gaps
 
@@ -54,9 +75,15 @@ Honest accounting of what this report cannot support:
   expectation is not measurement.
 * **No CPU control.** Without a LUMI-C run at equal node count, the report
   cannot quantify what the GPU path buys.
-* **No weak scaling.** Every curve holds the problem fixed.
-* **No time-to-solution comparison** between the spectral and FD paths at
-  matched accuracy — the comparison a user actually needs when choosing.
+* **The method comparison is accuracy-limited to a single smooth mode.** Cost
+  at equal grid and scaling at equal grid are measured (@sec-scal-methods);
+  cost at equal *accuracy* rests on a convergence study that evolves one
+  Fourier mode, which is the most favourable case a high-order stencil can
+  have. The chapter says so rather than publishing the ranking that follows
+  from it.
+* **The memory boundary is characterised but not diagnosed.** $2048^3$ is known
+  to need 16 nodes and the failure is known to be host-side, but the transient
+  allocation responsible has not been traced (@sec-scal-memory).
 * **The two PFC applications have no analytical verification**, only regression
   and self-consistency. This is inherent to a realistic equation of state, but
   it means their correctness rests on pinned checksums rather than closed-form
@@ -66,11 +93,13 @@ Honest accounting of what this report cannot support:
 
 In order of what would most improve this report:
 
-1. **A weak-scaling study** on `tungsten_hip` — fixed cells per GCD, growing
-   grid. This is the curve that says whether a larger science run is feasible,
-   and it is the one currently missing.
-2. **Time-to-solution at matched accuracy** for the two Heat3D drivers, which
-   would turn @sec-scalability's method comparison into actionable guidance.
-3. **A LUMI-C CPU control** at equal node count for one model.
-4. **One scaling point for a second spectral application** — enough to test
+1. **Accuracy at matched cost for a broadband field.** @sec-heat3d is linear,
+   so every initial condition has an exact solution and the error of each
+   discretisation is computable for *any* spectral content, not just one mode.
+   Sweeping that content is what turns @sec-scalability's method comparison
+   from two measured axes into actionable guidance.
+2. **A LUMI-C CPU control** at equal node count for one model.
+3. **One scaling point for a second spectral application** — enough to test
    whether the shared-stack expectation actually holds.
+4. **Diagnosing the host-side memory spike** that puts a 16-node floor under
+   $2048^3$.

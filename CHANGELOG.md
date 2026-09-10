@@ -270,6 +270,16 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   copy that nothing reads can disagree with the one that does. Unknown keys
   are ignored, so inputs carrying the removed seven still load. Guards:
   `[schema]` and `[temperature]` in `aluminumTest`.
+- The report's abstract, introduction and conclusions describe the report that
+  now exists. They still claimed scaling "out to 32 GCDs across four nodes",
+  listed "no weak-scaling study" as a gap *and* as the top suggested next
+  measurement, and generalised a one-node result -- halo exchange scaling
+  better than a distributed transpose, 78% against 59% -- that the 16-node
+  data contradicts: at 1536^3 across 4 to 16 nodes the spectral path, FD-2 and
+  FD-8 land within five points of each other. Front and back matter now match
+  the body, the closed gaps are removed, and the gaps that remain are the real
+  ones: no CPU control, accuracy measured only for a single smooth mode, and a
+  memory boundary characterised but not diagnosed.
 
 - `wave2d`'s advertised observable, `global_rms_u_interior`, was identically
   zero for every configuration on both CPU drivers. The interior visitor
