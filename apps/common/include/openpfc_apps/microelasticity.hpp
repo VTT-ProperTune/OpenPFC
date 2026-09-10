@@ -65,49 +65,97 @@
  * modulus is inhomogeneous, and here it always is: the liquid is soft and the
  * solid is stiff, that contrast is the whole reason the elastic field is
  * interesting, and it is exactly what makes this *not* a one-shot solve. The
- * fix is the Hu & Chen (2001) polarisation fixed point — evaluate
- * \f$\boldsymbol\tau\f$ in real space where the modulus lives, apply
- * \f$\Gamma\f$ in Fourier space where the Green operator lives, repeat. The
- * scheme is a Neumann series whose contraction factor is
- * \f$\lVert(\mathbf C-\mathbf C_0)\mathbf C_0^{-1}\rVert\f$, which is why
- * \f$\mathbf C_0\f$ defaults to the Voigt (arithmetic) average of the two
- * phases: for a two-phase medium that is the choice that minimises the factor,
- * giving \f$(r-1)/(r+1)\f$ for a stiffness ratio \f$r\f$. Measured on a
- * \f$32^3\f$ grid with a tanh solid sphere (R = 7, w = 1.5), isotropic
- * \f$\nu = 0.3\f$, cold start, `tol_el = 1e-6`:
+ * fix is a fixed point — evaluate \f$\boldsymbol\tau\f$ in real space where
+ * the modulus lives, apply \f$\Gamma\f$ in Fourier space where the Green
+ * operator lives, repeat. Two of them are implemented
+ * (`MicroelasticityScheme`), they cost exactly the same per iteration, and
+ * they converge to the same answer; the difference is how fast.
  *
- * | \f$C_{\text{solid}}/C_{\text{liquid}}\f$ | 1 | 2 | 4 | 10 |
- * |---|---|---|---|---|
- * | iterations | 1 | 11 | 22 | 53 |
- * | observed contraction | — | 0.265 | 0.524 | 0.767 |
- * | \f$(r-1)/(r+1)\f$ | — | 0.333 | 0.600 | 0.818 |
+ * ## How fast, and why the plain scheme is not enough
  *
- * The bound is tight enough to be predictive, and the consequence is blunt:
- * the default cap `n_el_iter = 20` covers a stiffness ratio of about 3 and no
- * more. That is a property of the plain fixed point, not of this
- * implementation. A caller running at ratio 10 must raise the cap (and pay
- * ~53 × 12 transforms per solve), lag the solve over several phase-field
- * steps (`n_el_substep` in the spec — it is quasi-static, so this is
- * legitimate), or warm-start from the previous step, which is the default and
- * cuts the count sharply once the interface is only moving a cell per step.
- * `MicroelasticityReport::converged` is returned rather than thrown, so the driver
- * decides.
+ * The Hu & Chen (2001) scheme is a Neumann series, contracting at
+ * \f$\lVert(\mathbf C-\mathbf C_0)\mathbf C_0^{-1}\rVert\f$, minimised by
+ * taking \f$\mathbf C_0\f$ to be the Voigt (arithmetic) mean and equal to
+ * \f$(r-1)/(r+1)\f$ for a stiffness ratio \f$r\f$. That tends to 1 as
+ * \f$r\to\infty\f$ *like* \f$1 - 2/r\f$, and the contrast between a solid and
+ * a liquid is not small: a liquid supports no shear at all, so the honest
+ * range is \f$r = 10\ldots100\f$ (see `kDefaultLiquidShearFraction`). At one
+ * elastic solve per phase-field step in a 3-D dendrite run, several hundred
+ * Green applications per step is not a cost anyone can pay.
+ *
+ * The Eyre–Milton scheme (Eyre & Milton, *Eur. Phys. J. AP* **6**, 41 (1999))
+ * fixes this. It rewrites *both* the constitutive law and the
+ * equilibrium/compatibility conditions as reflections and alternates them
+ * (see `run_eyre_milton` for the derivation); the denominator of the local
+ * gain becomes \f$\lambda+\lambda_0\f$ instead of \f$\lambda_0\f$, the
+ * optimal reference becomes the *geometric* mean, and the contraction becomes
+ * \f$(\sqrt r-1)/(\sqrt r+1)\f$. The square root is the whole point. It is
+ * the default here.
+ *
+ * Measured on a \f$32^3\f$ grid with a tanh solid sphere (R = 7, w = 1.5),
+ * isotropic \f$\nu = 0.3\f$, uniform stiffness scaling, cold start,
+ * `tol_el = 1e-6`:
+ *
+ * | \f$r = C_{\text{solid}}/C_{\text{liquid}}\f$ | 1 | 2 | 4 | 10 | 100 |
+ * |---|---|---|---|---|---|
+ * | `Basic` iterations | 1 | 11 | 22 | 53 | 466 |
+ * | `Basic` observed contraction | — | 0.265 | 0.524 | 0.767 | 0.970 |
+ * | \f$(r-1)/(r+1)\f$ | 0 | 0.333 | 0.600 | 0.818 | 0.980 |
+ * | **`EyreMilton` iterations** | **1** | **7** | **12** | **20** | **66** |
+ * | `EyreMilton` observed contraction | — | 0.118 | 0.262 | 0.453 | 0.793 |
+ * | \f$(\sqrt r-1)/(\sqrt r+1)\f$ | 0 | 0.172 | 0.333 | 0.519 | 0.818 |
+ *
+ * Both predictions bound the measurement from above and track it closely
+ * (the observed rate is a little better because the worst channel does not
+ * dominate every mode), which is what makes the square root a fact about this
+ * code and not a citation. `predicted_contraction()` returns the analytic
+ * number for the configured scheme; `test_microelasticity.cpp` regenerates
+ * every entry of this table and asserts against it.
+ *
+ * For the liquid this header actually recommends — bulk modulus kept, shear
+ * softened by `kDefaultLiquidShearFraction` — the accelerated scheme needs
+ * **16** iterations against the basic scheme's **44**. `Basic` remains
+ * selectable: it is the reference the accelerated scheme is validated
+ * against, and the two agree to 7e-13 in the strain.
+ *
+ * Other ways to buy back cost, all still available: lag the solve over
+ * several phase-field steps (`n_el_substep` in the spec — it is quasi-static,
+ * so this is legitimate), or warm-start from the previous step, which is the
+ * default and cuts the count sharply once the interface is only moving a cell
+ * per step. `MicroelasticityReport::converged` is returned rather than
+ * thrown, so the driver decides.
  *
  * ## What the iteration count means here
  *
+ * `iterations` counts \f$\Gamma\f$ applications, so the number is directly
+ * comparable between the two schemes and is what the table above reports.
+ *
  * The spec's stopping test is the relative change of the strain between
- * successive passes. This implementation tests the relative change of the
- * *polarisation* instead, measured in real space **before** the transforms.
- * The two are the same fixed point one step apart —
- * \f$\varepsilon_{n+1}-\varepsilon_n = -\Gamma:(\tau_n - \tau_{n-1})\f$ with
- * \f$\Gamma\f$ linear and bounded — but testing on \f$\tau\f$ costs no FFTs,
- * so the pass that merely *confirms* convergence is free. That is what makes
- * the homogeneous case cost exactly one \f$\Gamma\f$ application and report
- * `iterations == 1`: with \f$\mathbf C \equiv \mathbf C_0\f$ the polarisation
- * collapses to \f$-\mathbf C_0:\boldsymbol\varepsilon^{*}\f$, independent of
- * \f$\boldsymbol\varepsilon\f$, so the second pass reproduces it exactly and
- * exits before touching the FFT. `MicroelasticityReport::residual_history` records
- * every measured residual so a caller (or a test) can check monotonicity.
+ * successive passes. Both schemes here test the relative change of the
+ * *polarisation* \f$\boldsymbol\tau = \boldsymbol\sigma -
+ * \mathbf C_0:\boldsymbol\varepsilon\f$ instead — the same quantity in both,
+ * which is why their iteration counts mean the same thing. The two norms are
+ * the same fixed point one step apart
+ * (\f$\varepsilon_{n+1}-\varepsilon_n = -\Gamma:(\tau_n - \tau_{n-1})\f$ with
+ * \f$\Gamma\f$ linear and bounded), and the suite checks directly that the
+ * strain change after the reported count is below `tol_el`. For `Basic` the
+ * test is applied in real space *before* the transforms, so the pass that
+ * merely confirms convergence is free.
+ *
+ * A homogeneous modulus costs exactly one \f$\Gamma\f$ application in both
+ * schemes, for different reasons: in `Basic` the polarisation collapses to
+ * \f$-\mathbf C_0:\boldsymbol\varepsilon^{*}\f$, independent of
+ * \f$\boldsymbol\varepsilon\f$, so the second pass reproduces it and exits
+ * before touching the FFT; in `EyreMilton` the local reflection
+ * \f$\mathbf I - 2\mathbf C_0(\mathbf C+\mathbf C_0)^{-1}\f$ is identically
+ * zero, so the state is at its fixed point as soon as it is first built.
+ * `MicroelasticityReport::residual_history` records every measured residual
+ * so a caller (or a test) can check the decay. It is strictly monotone up to
+ * \f$r=10\f$; at \f$r=100\f$ the accelerated scheme shows a few
+ * single-iteration excursions (the quantity that contracts every step is the
+ * error in the \f$\mathbf C_0\f$ energy norm, not the max-norm of the
+ * polarisation increment), while still falling over every five-iteration
+ * window.
  *
  * ## Eigenstrain model
  *
@@ -282,6 +330,32 @@ struct Stiffness {
     return Stiffness{c11_, c12_, c44_};
   }
 
+  /**
+   * @brief Cubic stiffness from its three eigenvalue channels.
+   *
+   * @details
+   * A cubic \f$\mathbf C\f$ with axes along the grid is diagonal in three
+   * mutually orthogonal subspaces of symmetric tensors, and this is the form
+   * in which every question about *contrast* has a clean answer:
+   *
+   * | channel | subspace | eigenvalue |
+   * |---|---|---|
+   * | hydrostatic | \f$\delta_{ij}\f$ (dim 1) | \f$3K = c_{11}+2c_{12}\f$ |
+   * | tetragonal shear | traceless diagonal (dim 2) | \f$2\mu' = c_{11}-c_{12}\f$ |
+   * | trigonal shear | off-diagonal (dim 3) | \f$2\mu'' = 2c_{44}\f$ |
+   *
+   * Two cubic tensors sharing axes therefore commute, so their geometric mean
+   * (which the Eyre–Milton reference needs) is just the channelwise geometric
+   * mean, and the contraction factor of either fixed point is the worst
+   * channel. `bulk_modulus()`, `shear_tetragonal()` and `shear_trigonal()`
+   * read the channels back out.
+   */
+  [[nodiscard]] static Stiffness from_channels(double bulk, double mu_tetragonal,
+                                               double mu_trigonal) noexcept {
+    return Stiffness{bulk + 4.0 * mu_tetragonal / 3.0,
+                     bulk - 2.0 * mu_tetragonal / 3.0, mu_trigonal};
+  }
+
   /// Zener anisotropy ratio \f$2c_{44}/(c_{11}-c_{12})\f$; 1 means isotropic.
   [[nodiscard]] double zener() const noexcept { return 2.0 * c44 / (c11 - c12); }
 
@@ -289,6 +363,19 @@ struct Stiffness {
   /// isotropic).
   [[nodiscard]] double bulk_modulus() const noexcept {
     return (c11 + 2.0 * c12) / 3.0;
+  }
+
+  /// \f$\mu' = (c_{11}-c_{12})/2\f$, the tetragonal-shear channel.
+  [[nodiscard]] double shear_tetragonal() const noexcept {
+    return 0.5 * (c11 - c12);
+  }
+
+  /// \f$\mu'' = c_{44}\f$, the trigonal-shear channel.
+  [[nodiscard]] double shear_trigonal() const noexcept { return c44; }
+
+  /// The three eigenvalues, in the order of `from_channels`'s table.
+  [[nodiscard]] std::array<double, 3> eigenvalues() const noexcept {
+    return {c11 + 2.0 * c12, c11 - c12, 2.0 * c44};
   }
 
   /// \f$\sigma_{ij} = C_{ijkl}\varepsilon_{kl}\f$.
@@ -303,6 +390,38 @@ struct Stiffness {
     return s;
   }
 
+  /**
+   * @brief \f$\boldsymbol\varepsilon\f$ from \f$\boldsymbol\sigma\f$, i.e. the
+   *        compliance \f$\mathbf C^{-1}:\boldsymbol\sigma\f$.
+   *
+   * Closed form, from the channel decomposition above: the normal block is
+   * \f$(c_{11}-c_{12})\mathbf I + c_{12}\mathbf J\f$ whose inverse is
+   * \f$[\mathbf I - c_{12}\mathbf J/(c_{11}+2c_{12})]/(c_{11}-c_{12})\f$, and
+   * the shears invert one at a time. Needed by the Eyre–Milton local step,
+   * which solves \f$(\mathbf C+\mathbf C_0):\boldsymbol\varepsilon = \ldots\f$
+   * once per cell.
+   *
+   * @throws std::invalid_argument if any channel eigenvalue vanishes.
+   */
+  [[nodiscard]] Sym3 solve(const Sym3 &s) const {
+    const double d = c11 - c12;
+    const double t = c11 + 2.0 * c12;
+    if (d == 0.0 || t == 0.0 || c44 == 0.0) {
+      throw std::invalid_argument(
+          "Stiffness::solve: singular stiffness (a channel eigenvalue is zero)");
+    }
+    const double tr = s[SYM_XX] + s[SYM_YY] + s[SYM_ZZ];
+    const double shift = c12 * tr / t;
+    Sym3 e;
+    e[SYM_XX] = (s[SYM_XX] - shift) / d;
+    e[SYM_YY] = (s[SYM_YY] - shift) / d;
+    e[SYM_ZZ] = (s[SYM_ZZ] - shift) / d;
+    e[SYM_YZ] = s[SYM_YZ] / (2.0 * c44);
+    e[SYM_XZ] = s[SYM_XZ] / (2.0 * c44);
+    e[SYM_XY] = s[SYM_XY] / (2.0 * c44);
+    return e;
+  }
+
   /// Componentwise \f$\alpha A + \beta B\f$; the Voigt average is `blend(a, .5, b,
   /// .5)`.
   [[nodiscard]] static Stiffness blend(const Stiffness &a, double wa,
@@ -310,6 +429,129 @@ struct Stiffness {
     return Stiffness{wa * a.c11 + wb * b.c11, wa * a.c12 + wb * b.c12,
                      wa * a.c44 + wb * b.c44};
   }
+
+  /**
+   * @brief The tensor geometric mean \f$(\mathbf A\mathbf B)^{1/2}\f$.
+   *
+   * Exact, not a heuristic: aligned cubic tensors commute, so the geometric
+   * mean is the channelwise geometric mean of the eigenvalues. This is the
+   * reference medium the Eyre–Milton scheme wants, and it is what turns the
+   * contraction factor from \f$(r-1)/(r+1)\f$ into
+   * \f$(\sqrt r-1)/(\sqrt r+1)\f$. A non-positive channel (which a physical
+   * stiffness cannot have) falls back to the arithmetic mean for that channel.
+   */
+  [[nodiscard]] static Stiffness geometric_mean(const Stiffness &a,
+                                                const Stiffness &b) noexcept {
+    const auto ea = a.eigenvalues();
+    const auto eb = b.eigenvalues();
+    std::array<double, 3> g{};
+    for (int i = 0; i < 3; ++i) {
+      g[static_cast<std::size_t>(i)] =
+          (ea[static_cast<std::size_t>(i)] > 0.0 &&
+           eb[static_cast<std::size_t>(i)] > 0.0)
+              ? std::sqrt(ea[static_cast<std::size_t>(i)] *
+                          eb[static_cast<std::size_t>(i)])
+              : 0.5 * (ea[static_cast<std::size_t>(i)] +
+                       eb[static_cast<std::size_t>(i)]);
+    }
+    return from_channels(g[0] / 3.0, 0.5 * g[1], 0.5 * g[2]);
+  }
+};
+
+/**
+ * @brief Default shear softening of the liquid, and the reasoning behind it.
+ *
+ * A real liquid has \f$\mu = 0\f$: it supports no shear at all. A phase-field
+ * elastic solve cannot use that number. With \f$\mu_l = 0\f$ the local
+ * stiffness is singular in two of its three channels, `Stiffness::solve`
+ * throws, the elastic energy density and the modulus-contrast term of eq. (7)
+ * lose meaning inside the liquid, and — the practical killer — the contrast
+ * ratio is infinite, so *every* fixed point of this family has contraction
+ * factor 1 and none of them converges. The liquid modulus is therefore a
+ * regularisation parameter, not a material constant, and the honest thing is
+ * to say so and to price it.
+ *
+ * The usual range in the literature is \f$\mu_l/\mu_s \in [0.01, 0.1]\f$.
+ * This header's default is **0.05** — contrast 20 in the two shear channels
+ * — and the measured price, on the \f$32^3\f$ tanh sphere of the table in the
+ * file header, cold start, `tol_el = 1e-6`:
+ *
+ * | \f$\mu_l/\mu_s\f$ | 0.01 | **0.05** | 0.1 |
+ * |---|---|---|---|
+ * | `EyreMilton` iterations | 32 | **16** | 12 |
+ *
+ * with `Basic` needing 44 at the default against `EyreMilton`'s 16. The soft
+ * end of the range is what sets `n_el_iter = 50`: 0.01 costs 32 accelerated
+ * iterations, so the capstone spec's cap of 20 would not cover the range this
+ * header claims to support.
+ *
+ * The *bulk* modulus is left alone (`bulk_fraction = 1`), and that is the
+ * physics, not a convenience: liquids are very nearly as incompressible as
+ * the solids they come from (water and steel differ by a factor of ~100 in
+ * shear and ~2 in bulk), so softening the hydrostatic channel would be a
+ * larger lie than softening the shear one, and it would add a third contrast
+ * channel to the iteration for nothing. For a dilatational eigenstrain it
+ * also happens to be the channel that carries the driving force.
+ */
+inline constexpr double kDefaultLiquidShearFraction = 0.05;
+
+/**
+ * @brief Build the liquid stiffness from the solid's, softening only shear.
+ *
+ * @param solid          the solid phase stiffness
+ * @param shear_fraction \f$\mu_l/\mu_s\f$ in both shear channels
+ * @param bulk_fraction  \f$K_l/K_s\f$; 1 by default (see
+ *                       `kDefaultLiquidShearFraction`)
+ */
+[[nodiscard]] inline Stiffness
+soft_liquid(const Stiffness &solid,
+            double shear_fraction = kDefaultLiquidShearFraction,
+            double bulk_fraction = 1.0) {
+  if (shear_fraction <= 0.0 || bulk_fraction <= 0.0) {
+    throw std::invalid_argument("soft_liquid: fractions must be positive");
+  }
+  return Stiffness::from_channels(bulk_fraction * solid.bulk_modulus(),
+                                  shear_fraction * solid.shear_tetragonal(),
+                                  shear_fraction * solid.shear_trigonal());
+}
+
+/**
+ * @brief Which fixed point to run.
+ *
+ * @details
+ * Both converge to the *same* solution — that is asserted in
+ * `test_microelasticity.cpp`, not assumed — and both cost one Green-operator
+ * application (12 transforms) plus one local pass per iteration. They differ
+ * only in how fast the error decays with the stiffness contrast \f$r\f$:
+ *
+ * | | reference \f$\mathbf C_0\f$ | contraction | its. at \f$r=100\f$ |
+ * |---|---|---|---|
+ * | `Basic` | arithmetic (Voigt) mean | \f$(r-1)/(r+1)\f$ | 466 |
+ * | `EyreMilton` | geometric mean | \f$(\sqrt r-1)/(\sqrt r+1)\f$ | 66 |
+ *
+ * The square root is the whole point. A liquid supports no shear, so an
+ * honest solid/liquid contrast is 10–100 (see `kDefaultLiquidShearFraction`)
+ * and the basic scheme is simply not affordable there at one elastic solve
+ * per phase-field step. `EyreMilton` was measured faster at every contrast
+ * tried, including \f$r=2\f$, so `Basic` is kept for one reason only: it is
+ * the reference the accelerated scheme is validated against, and the suite
+ * asserts the two agree to 7e-13 in the strain rather than assuming it.
+ *
+ * (Moulinec & Suquet's augmented-Lagrangian scheme reaches the same
+ * \f$\sqrt r\f$ rate and would have been an acceptable alternative.
+ * Eyre–Milton was chosen because its global half is literally the Green
+ * application this header already had — \f$\mathbf y = \mathbf z +
+ * 2\mathbf C_0:W(\mathbf z)\f$ — so it adds one local 6×6 solve and no new
+ * FFT machinery, no extra field of state, and no penalty parameter to tune.)
+ */
+enum class MicroelasticityScheme : int {
+  /// Neumann series on \f$\boldsymbol\tau\f$ (Hu & Chen 2001; Moulinec &
+  /// Suquet 1994).
+  Basic = 0,
+  /// Alternating reflections on \f$\boldsymbol\sigma\pm\mathbf C_0
+  /// :\boldsymbol\varepsilon\f$ (Eyre & Milton, *Eur. Phys. J. AP* **6**, 41
+  /// (1999)).
+  EyreMilton = 1
 };
 
 /// Configuration of the fixed point and the reference medium.
@@ -321,14 +563,28 @@ struct MicroelasticityParams {
   Sym3 eigenstrain_pattern{Sym3::identity()};
   /// \f$\hat\varepsilon(\mathbf 0)\f$ — zero is a free (unloaded) periodic body.
   Sym3 applied_strain{};
+  /// Which fixed point to run; see `MicroelasticityScheme`.
+  MicroelasticityScheme scheme{MicroelasticityScheme::EyreMilton};
   /// Relative polarisation change at which the fixed point is declared converged.
   double tol_el{1.0e-6};
-  /// Hard cap on \f$\Gamma\f$ applications.
-  int n_el_iter{20};
   /**
-   * @brief Reference medium. Left at its default (all zeros) the Voigt
-   *        average \f$(\mathbf C_s+\mathbf C_l)/2\f$ is used, which is the
-   *        contraction-optimal choice for a two-phase medium.
+   * @brief Hard cap on \f$\Gamma\f$ applications.
+   *
+   * 50, not the capstone spec's 20. The spec's number was written for the
+   * basic scheme without naming a contrast, and at the contrast a liquid
+   * actually has it does not cover the range: the default liquid needs 16
+   * accelerated iterations (44 basic), and the soft end of the literature
+   * range, \f$\mu_l/\mu_s = 0.01\f$, needs 32. 50 leaves headroom over the
+   * whole documented range with the default scheme. Raised deliberately and
+   * priced in the tables above, not tuned quietly to make a run pass.
+   */
+  int n_el_iter{50};
+  /**
+   * @brief Reference medium. Left at its default (all zeros) the
+   *        contraction-optimal choice for the selected scheme is used: the
+   *        arithmetic (Voigt) mean \f$(\mathbf C_s+\mathbf C_l)/2\f$ for
+   *        `Basic`, the geometric mean \f$(\mathbf C_s\mathbf C_l)^{1/2}\f$
+   *        for `EyreMilton`.
    */
   Stiffness reference{0.0, 0.0, 0.0};
   /// Reuse the previous solution as the initial iterate (big win in a time loop).
@@ -364,7 +620,7 @@ public:
                              MicroelasticityParams params)
       : m_fft(fft), m_params(params),
         m_c0(is_zero(params.reference)
-                 ? Stiffness::blend(params.c_solid, 0.5, params.c_liquid, 0.5)
+                 ? optimal_reference(params.scheme, params.c_solid, params.c_liquid)
                  : params.reference),
         m_strain(make_sym(domain, fft)), m_stress(make_sym(domain, fft)),
         m_tau(make_sym(domain, fft)), m_tau_prev(make_sym(domain, fft)),
@@ -391,8 +647,61 @@ public:
     build_green_operator(domain, fft);
   }
 
-  /// Reference medium actually in use (Voigt average unless overridden).
+  /// Reference medium actually in use (scheme-optimal unless overridden).
   [[nodiscard]] const Stiffness &reference() const noexcept { return m_c0; }
+
+  /**
+   * @brief The contraction-optimal reference for a scheme and a phase pair.
+   *
+   * Arithmetic mean for `Basic` (minimises
+   * \f$\max\lVert(\mathbf C-\mathbf C_0)\mathbf C_0^{-1}\rVert\f$), geometric
+   * mean for `EyreMilton` (minimises
+   * \f$\max\lVert(\mathbf C-\mathbf C_0)(\mathbf C+\mathbf C_0)^{-1}\rVert\f$).
+   */
+  [[nodiscard]] static Stiffness
+  optimal_reference(MicroelasticityScheme scheme, const Stiffness &c_solid,
+                    const Stiffness &c_liquid) noexcept {
+    return (scheme == MicroelasticityScheme::EyreMilton)
+               ? Stiffness::geometric_mean(c_solid, c_liquid)
+               : Stiffness::blend(c_solid, 0.5, c_liquid, 0.5);
+  }
+
+  /**
+   * @brief Asymptotic contraction factor predicted for the configured scheme.
+   *
+   * @details
+   * The local stiffness sweeps \f$h\mathbf C_s + (1-h)\mathbf C_l\f$ as
+   * \f$h\f$ runs over \f$[0,1]\f$, and both schemes' error operators are
+   * monotone in each channel eigenvalue, so the worst case sits at one of the
+   * two endpoints. Per channel eigenvalue \f$\lambda\f$ against the
+   * reference's \f$\lambda_0\f$ the factor is
+   * \f$|\lambda-\lambda_0|/\lambda_0\f$ for `Basic` and
+   * \f$|\lambda-\lambda_0|/(\lambda+\lambda_0)\f$ for `EyreMilton`; the answer
+   * is the maximum over the three channels and the two phases. With the
+   * optimal reference these reduce to \f$(r-1)/(r+1)\f$ and
+   * \f$(\sqrt r-1)/(\sqrt r+1)\f$ for a uniform channel ratio \f$r\f$.
+   *
+   * A prediction, not a measurement: the observed rate is a little better
+   * because the worst channel does not dominate every mode. The test suite
+   * checks the measured rate against this number.
+   */
+  [[nodiscard]] double predicted_contraction() const noexcept {
+    const auto e0 = m_c0.eigenvalues();
+    const auto es = m_params.c_solid.eigenvalues();
+    const auto el = m_params.c_liquid.eigenvalues();
+    double worst = 0.0;
+    for (int i = 0; i < 3; ++i) {
+      const auto idx = static_cast<std::size_t>(i);
+      for (const double lam : {es[idx], el[idx]}) {
+        const double num = std::abs(lam - e0[idx]);
+        const double den = (m_params.scheme == MicroelasticityScheme::EyreMilton)
+                               ? (lam + e0[idx])
+                               : e0[idx];
+        if (den > 0.0) worst = std::max(worst, num / den);
+      }
+    }
+    return worst;
+  }
   [[nodiscard]] const MicroelasticityParams &params() const noexcept {
     return m_params;
   }
@@ -445,32 +754,10 @@ public:
       }
     }
 
-    MicroelasticityReport report;
-    for (int it = 1; it <= m_params.n_el_iter; ++it) {
-      build_polarisation(h, amp);
-      if (it > 1) {
-        const double res = relative_change();
-        report.residual = res;
-        report.residual_history.push_back(res);
-        if (res < m_params.tol_el) {
-          report.converged = true;
-          break;
-        }
-      }
-      swap_tau();
-      apply_green_operator();
-      report.iterations = it;
-    }
-    if (!report.converged) {
-      // The cap was hit before the confirming pass. Measure once more so the
-      // caller sees an honest residual rather than the stale previous one; it
-      // is a real-space pass, no transforms.
-      build_polarisation(h, amp);
-      const double res = relative_change();
-      report.residual = res;
-      report.residual_history.push_back(res);
-      report.converged = res < m_params.tol_el;
-    }
+    const MicroelasticityReport report =
+        (m_params.scheme == MicroelasticityScheme::EyreMilton)
+            ? run_eyre_milton(h, amp)
+            : run_basic(h, amp);
 
     m_has_solution = true;
     finalise(h, amp, dh_dphi, damp_dphi);
@@ -499,6 +786,172 @@ public:
   }
 
 private:
+  /**
+   * @brief Neumann-series fixed point (Hu & Chen 2001).
+   *
+   * The stopping test is on \f$\boldsymbol\tau\f$, measured before the
+   * transforms, so the pass that only confirms convergence costs no FFTs —
+   * see the file-level note. `iterations` counts \f$\Gamma\f$ applications.
+   */
+  MicroelasticityReport run_basic(const RealField &h, const RealField &amp) {
+    MicroelasticityReport report;
+    for (int it = 1; it <= m_params.n_el_iter; ++it) {
+      build_polarisation(h, amp);
+      if (it > 1) {
+        const double res = relative_change();
+        report.residual = res;
+        report.residual_history.push_back(res);
+        if (res < m_params.tol_el) {
+          report.converged = true;
+          break;
+        }
+      }
+      swap_tau();
+      apply_green_operator(m_tau_prev, m_strain);
+      report.iterations = it;
+    }
+    if (!report.converged) {
+      // The cap was hit before the confirming pass. Measure once more so the
+      // caller sees an honest residual rather than the stale previous one; it
+      // is a real-space pass, no transforms.
+      build_polarisation(h, amp);
+      const double res = relative_change();
+      report.residual = res;
+      report.residual_history.push_back(res);
+      report.converged = res < m_params.tol_el;
+    }
+    return report;
+  }
+
+  /**
+   * @brief Eyre–Milton accelerated fixed point.
+   *
+   * @details
+   * Two conditions define the solution: a *local* one,
+   * \f$\boldsymbol\sigma = \mathbf C:(\boldsymbol\varepsilon -
+   * \boldsymbol\varepsilon^{*})\f$, and a *global* one,
+   * \f$\boldsymbol\varepsilon - \bar{\boldsymbol\varepsilon}\f$ compatible and
+   * \f$\boldsymbol\sigma\f$ divergence-free. Written in the variables
+   *
+   * \f[
+   *   \mathbf y = \boldsymbol\sigma + \mathbf C_0:\boldsymbol\varepsilon,
+   *   \qquad
+   *   \mathbf z = \boldsymbol\sigma - \mathbf C_0:\boldsymbol\varepsilon,
+   * \f]
+   *
+   * *each* condition becomes a reflection, and the scheme alternates them
+   * (Eyre & Milton 1999; a Peaceman–Rachford splitting).
+   *
+   * **Global reflection.** \f$\mathcal K\f$ (compatible zero-mean strains) and
+   * \f$\mathcal S\f$ (self-equilibrated stresses) are orthogonal complements
+   * in the \f$\mathbf C_0\f$ inner product, and \f$\Gamma_0\mathbf C_0\f$ is
+   * the projector onto \f$\mathcal K\f$. Splitting \f$\mathbf z\f$ along them
+   * and reassembling gives
+   * \f$\mathbf y = \mathbf z - 2\mathbf C_0\Gamma_0\mathbf z
+   * + 2\mathbf C_0:\bar{\boldsymbol\varepsilon}
+   * = \mathbf z + 2\,\mathbf C_0 : W(\mathbf z)\f$, where
+   * \f$W = \bar{\boldsymbol\varepsilon} - \Gamma_0\f$ is exactly the Green
+   * application the basic scheme already performs. So the accelerated scheme
+   * reuses `apply_green_operator` unchanged and costs the same 12 transforms.
+   *
+   * **Local reflection.** \f$\mathbf y = (\mathbf C+\mathbf C_0):
+   * \boldsymbol\varepsilon - \mathbf C:\boldsymbol\varepsilon^{*}\f$ inverts
+   * pointwise, and \f$\mathbf z = \mathbf y - 2\mathbf C_0:
+   * \boldsymbol\varepsilon\f$. Its gain per channel is
+   * \f$(\lambda-\lambda_0)/(\lambda+\lambda_0)\f$ — the sum in the
+   * denominator is where the square root comes from — while the global
+   * reflection has unit norm, so the composition contracts at
+   * \f$(\sqrt r-1)/(\sqrt r+1)\f$ with \f$\mathbf C_0\f$ the geometric mean.
+   *
+   * The fixed point is the same as the basic scheme's: substituting a true
+   * solution reproduces \f$\mathbf y\f$ exactly. The state is \f$\mathbf z\f$,
+   * which *is* the basic scheme's polarisation
+   * \f$\boldsymbol\tau = \boldsymbol\sigma - \mathbf C_0:\boldsymbol
+   * \varepsilon\f$, so the residual is the same quantity in both schemes and
+   * the iteration counts are directly comparable. A homogeneous modulus makes
+   * the local reflection identically zero, so \f$\mathbf z\f$ is already at
+   * its fixed point after the initial polarisation and one pass converges.
+   */
+  MicroelasticityReport run_eyre_milton(const RealField &h, const RealField &amp) {
+    MicroelasticityReport report;
+    build_polarisation(h, amp); // m_tau = z^0
+    for (int it = 1; it <= m_params.n_el_iter; ++it) {
+      swap_tau();                                   // m_tau_prev = z
+      apply_green_operator(m_tau_prev, m_strain);   // m_strain = W(z)
+      const double res = eyre_milton_local(h, amp); // -> m_strain = eps, m_tau = z'
+      report.iterations = it;
+      report.residual = res;
+      report.residual_history.push_back(res);
+      if (res < m_params.tol_el) {
+        report.converged = true;
+        break;
+      }
+    }
+    return report;
+  }
+
+  /**
+   * @brief The local half of one Eyre–Milton pass; returns the relative change.
+   *
+   * Reads `m_tau_prev` (\f$\mathbf z\f$) and `m_strain` (\f$W(\mathbf z)\f$),
+   * writes `m_strain` (\f$\boldsymbol\varepsilon\f$) and `m_tau`
+   * (\f$\mathbf z'\f$). One cell at a time, so the aliasing on `m_strain` is
+   * safe.
+   */
+  double eyre_milton_local(const RealField &h, const RealField &amp) {
+    const double *hp = h.data();
+    const double *ap = amp.data();
+    const Sym3 &pattern = m_params.eigenstrain_pattern;
+    std::array<const double *, kSymComponents> zin{};
+    std::array<double *, kSymComponents> zout{};
+    std::array<double *, kSymComponents> eps{};
+    for (int c = 0; c < kSymComponents; ++c) {
+      const auto ci = static_cast<std::size_t>(c);
+      zin[ci] = m_tau_prev[ci].data();
+      zout[ci] = m_tau[ci].data();
+      eps[ci] = m_strain[ci].data();
+    }
+    double diff = 0.0;
+    double scale = 0.0;
+    for (std::size_t i = 0; i < m_n_local; ++i) {
+      Sym3 z;
+      Sym3 w;
+      for (int c = 0; c < kSymComponents; ++c) {
+        const auto ci = static_cast<std::size_t>(c);
+        z[c] = zin[ci][i];
+        w[c] = eps[ci][i]; // currently holds W(z)
+      }
+      const Stiffness ci_local = stiffness_at(hp[i]);
+      const Sym3 c0w = m_c0.contract(w);
+      Sym3 y;
+      for (int c = 0; c < kSymComponents; ++c) y[c] = z[c] + 2.0 * c0w[c];
+
+      Sym3 estar;
+      for (int c = 0; c < kSymComponents; ++c) estar[c] = ap[i] * pattern[c];
+      const Sym3 c_estar = ci_local.contract(estar);
+      Sym3 rhs;
+      for (int c = 0; c < kSymComponents; ++c) rhs[c] = y[c] + c_estar[c];
+
+      const Sym3 e = Stiffness::blend(ci_local, 1.0, m_c0, 1.0).solve(rhs);
+      const Sym3 c0e = m_c0.contract(e);
+      for (int c = 0; c < kSymComponents; ++c) {
+        const auto ci = static_cast<std::size_t>(c);
+        const double zn = y[c] - 2.0 * c0e[c];
+        diff = std::max(diff, std::abs(zn - z[c]));
+        scale = std::max(scale, std::abs(zn));
+        zout[ci][i] = zn;
+        eps[ci][i] = e[c];
+      }
+    }
+    for (auto &f : m_tau) f.note_host_write();
+    for (auto &f : m_strain) f.note_host_write();
+
+    double local[2] = {diff, scale};
+    double global[2] = {0.0, 0.0};
+    MPI_Allreduce(local, global, 2, MPI_DOUBLE, MPI_MAX, m_params.comm);
+    return (global[1] > 0.0) ? global[0] / global[1] : 0.0;
+  }
+
   static bool is_zero(const Stiffness &s) noexcept {
     return s.c11 == 0.0 && s.c12 == 0.0 && s.c44 == 0.0;
   }
@@ -671,10 +1124,16 @@ private:
     return global[0] / global[1];
   }
 
-  /// One \f$\Gamma\f$ application: 6 forward transforms, the Green multiply, 6 back.
-  void apply_green_operator() {
+  /**
+   * @brief \f$W(\tau) = \bar{\boldsymbol\varepsilon} - \Gamma_0:\tau\f$.
+   *
+   * Six forward transforms, the Green multiply, six back. Both schemes call
+   * this and nothing else touches the FFT, which is why they cost the same
+   * per iteration.
+   */
+  void apply_green_operator(SymRealFields &in, SymRealFields &out) {
     for (int c = 0; c < kSymComponents; ++c) {
-      m_fft.forward(m_tau_prev[static_cast<std::size_t>(c)].vec(),
+      m_fft.forward(in[static_cast<std::size_t>(c)].vec(),
                     m_hat[static_cast<std::size_t>(c)].vec());
     }
 
@@ -720,7 +1179,7 @@ private:
     if (m_zero_mode != static_cast<std::size_t>(-1)) {
       // HeFFTe scales on the backward transform only, so the k = 0 coefficient
       // that produces a mean of E_applied is N_global * E_applied.
-      const auto gs = m_strain[0].global_size();
+      const auto gs = out[0].global_size();
       const double n_global = static_cast<double>(gs[0]) *
                               static_cast<double>(gs[1]) *
                               static_cast<double>(gs[2]);
@@ -733,8 +1192,8 @@ private:
     for (int c = 0; c < kSymComponents; ++c) {
       m_hat[static_cast<std::size_t>(c)].note_host_write();
       m_fft.backward(m_hat[static_cast<std::size_t>(c)].vec(),
-                     m_strain[static_cast<std::size_t>(c)].vec());
-      m_strain[static_cast<std::size_t>(c)].note_host_write();
+                     out[static_cast<std::size_t>(c)].vec());
+      out[static_cast<std::size_t>(c)].note_host_write();
     }
   }
 

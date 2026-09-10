@@ -28,18 +28,42 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   no plasticity; a device path is separate work because the pointwise
   six-component contraction with a spatially varying stiffness has no
   `SpectralETDOps` kernel behind it the way `spectral_flux.hpp`'s elementwise
-  work does. Convergence is the plain fixed point's: with `C0` the Voigt
-  average the measured contraction is 0.265 / 0.524 / 0.767 at stiffness ratio
-  2 / 4 / 10 against the predicted `(r-1)/(r+1)` = 0.333 / 0.600 / 0.818, so
-  reaching `tol_el = 1e-6` from a cold start costs 11 / 22 / 53 iterations and
-  the default `n_el_iter = 20` covers a ratio of about 3 -- documented rather
-  than papered over, with warm start on by default and `converged` returned to
-  the caller. A homogeneous modulus costs exactly one Green-operator
-  application; the stopping test is on the polarisation, measured before the
-  transforms, so the pass that only confirms convergence is free.
+  work does. Two fixed points are provided and the accelerated one is the
+  default, because the plain one cannot carry the application: a liquid
+  supports no shear, so an honest solid/liquid stiffness ratio is 10 to 100,
+  and the Hu & Chen Neumann series contracts at only `(r-1)/(r+1)`. The
+  **Eyre-Milton scheme** (Eyre & Milton, *Eur. Phys. J. AP* **6**, 41 (1999))
+  rewrites both the constitutive law and the equilibrium/compatibility
+  conditions as reflections on `sigma +- C0:eps` and alternates them; the
+  denominator of the local gain becomes `lambda + lambda_0` rather than
+  `lambda_0`, the optimal reference becomes the geometric rather than the
+  arithmetic mean, and the contraction becomes `(sqrt(r)-1)/(sqrt(r)+1)`. Its
+  global half turns out to be exactly the Green application the basic scheme
+  already performs (`y = z + 2 C0:W(z)`), so it costs one extra local 6x6
+  solve per cell and not one extra transform -- which is why it was preferred
+  to Moulinec & Suquet's augmented Lagrangian, which reaches the same rate but
+  needs another field of state and a penalty parameter. Measured on a 32^3
+  tanh sphere, cold start, `tol_el = 1e-6`, at ratio 1 / 2 / 4 / 10 / 100:
+  basic **1 / 11 / 22 / 53 / 466** iterations at contraction — / 0.265 / 0.524
+  / 0.767 / 0.970 against the predicted 0 / 0.333 / 0.600 / 0.818 / 0.980;
+  Eyre-Milton **1 / 7 / 12 / 20 / 66** at — / 0.118 / 0.262 / 0.453 / 0.793
+  against the predicted 0 / 0.172 / 0.333 / 0.519 / 0.818. Seven times fewer
+  iterations at ratio 100, and both predictions bound their measurement from
+  above, which is what makes the square root a fact about this code rather
+  than a citation. The two schemes agree to 7e-13 in the strain, asserted, so
+  the accelerated one is checked against the reference every CI run rather
+  than trusted. `soft_liquid()` builds the liquid stiffness from the solid's
+  by softening only the two shear channels and leaving the bulk modulus alone
+  -- liquids really are nearly as incompressible as solids -- with a
+  documented default `mu_l/mu_s = 0.05` costing 16 accelerated iterations
+  against 44 basic, and 32 at the soft end of the literature range (0.01).
+  That range is what sets `n_el_iter = 50` rather than the capstone spec's 20,
+  raised deliberately and priced in the header rather than tuned quietly.
+  A homogeneous modulus costs exactly one Green-operator application in both
+  schemes, for two different reasons, and both are asserted.
   `apps/common/tests/test_microelasticity.cpp` (new ctest
-  `apps-common-microelasticity`, ~2 s on one rank) is ten cases against closed
-  forms, not baselines: the single-mode Green operator to 1e-14 (isotropic,
+  `apps-common-microelasticity`, ~5 s on one rank) is thirteen cases against
+  closed forms, not baselines: the single-mode Green operator to 1e-14 (isotropic,
   against the analytic `3K/(lambda+2mu) k_m k_n/k^2`) and to 1e-13 (cubic,
   against an independently coded Gaussian-elimination solve of the acoustic
   tensor); the exact dilatation identity `tr(eps) = 3 alpha (a - <a>)` with
@@ -63,7 +87,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   zeroed per axis (`k_component_odd`'s rule), after which both dropped to
   round-off. Self-conjugate corner modes, where zeroing would make `k` vanish
   and the acoustic tensor singular, keep the raw direction; their coefficient
-  is real, so it is safe.
+  is real, so it is safe. The trap is not specific to elasticity -- it catches
+  *any* operator that is even under `k -> -k` but not under flipping one
+  component alone -- so it is now written up at `k_component_odd` in
+  `kernel/fft/kspace.hpp`, symptom first: a small, resolution-insensitive
+  accuracy floor on a quantity that should be at round-off, with no error
+  anywhere.
 
 - **Where spectral beats finite difference, and where it does not**
   (`heat3d_spectral_content_study`, `apps/heat3d`). The scalability chapter
