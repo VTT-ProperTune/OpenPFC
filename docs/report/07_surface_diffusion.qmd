@@ -145,7 +145,9 @@ statement (in a linear model $\lvert\mathbf{k}\rvert$ sets the rate and
 orientation does not) and a useful internal check. The anisotropic run's split
 moves monotonically away from 1:1 at every sample: the softer $\theta = \pi/2$
 orientation increasingly dominates the surviving spectral content as the
-stiffer $\theta = 0$ orientation is preferentially damped. The dominant
+stiffer $\theta = 0$ orientation is preferentially damped. @fig-sd-nanosurface
+shows what that 3:1 number looks like as a surface — an egg-crate that stays an
+egg-crate against one that has become a set of stripes. The dominant
 wavelength from the orientation-blind structure factor is 7.758 in *both* runs,
 which is exactly why the directional split, and not the structure factor alone,
 is the observable that shows the anisotropy.
@@ -197,7 +199,32 @@ and `surface_diffusion_anisotropic` (CPU science driver). Presets:
 initial surface and differ only in $\epsilon_a$. The anisotropic driver reads a
 simpler standalone JSON shape than the session-based verifier: `model.params`
 is $B_0$, $\epsilon_a$, $m$; `domain` requires `Lz: 1`; `initial_conditions` is
-a single object with `h0` and a `modes` array.
+a single object with `h0` and a `modes` array. It accepts one key from the
+session shape unchanged: an optional `fields[]` entry naming a `.vti` path,
+which writes a snapshot of $h$ at every `saveat` alongside the diagnostics CSV.
+Both `nanosurface_*.json` presets use it; omitting it restores the previous
+CSV-only behaviour.
+
+## Visualisation
+
+![Both panels are the same surface annealed for the same time, from the same
+crossed corrugation (16 periods per axis, amplitude $0.05$ each): the only
+difference between the runs is $\epsilon_a$. Isotropically
+($\epsilon_a = 0$, left) the symbol depends on $\lvert\mathbf{k}\rvert$
+alone, so both ridge sets decay at one rate and the egg-crate pattern
+survives, merely fainter. With sixfold anisotropy ($\epsilon_a = 0.5$,
+$m = 6$, right) the surface has instead turned into stripes: the
+$x$-varying ridges, whose gradient points along $x$ and so samples the
+stiff end of $B(\theta)$ near $\theta = 0$, have been erased, while the
+$y$-varying ridges near the soft $\theta = \pi/2$ remain. This is the
+`energy_kx_frac`/`energy_ky_frac` = 0.249/0.751 of the table above, drawn.
+The shared diverging scale, centred on the conserved mean height $h = 0$,
+also carries the amplitude difference — the anisotropic surface is the
+flatter of the two, RMS $0.00155$ against $0.00238$. Neither number follows
+from the isolated single-orientation rates, for the reason given above:
+$\theta$ here is the orientation of the *combined* gradient of both ridge
+sets, so the two orientations do not decay
+independently.](figures/surface_diffusion_nanosurface_comparison.svg){#fig-sd-nanosurface}
 
 ## Scalability
 

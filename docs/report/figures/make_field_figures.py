@@ -4,7 +4,7 @@
 
 """Regenerate the field-visualisation figures for the applications report.
 
-Reads the `.vti` / `.bin` output of three real runs (see
+Reads the `.vti` / `.bin` output of a handful of real runs (see
 `run_field_demos.sh` for how to reproduce them) and renders SVGs into this
 directory using `field_io.py` (readers) and `field_plots.py` (panels,
 montages, comparisons). The report itself has no compute engine: it reads
@@ -218,12 +218,106 @@ def figure_tungsten_seed_panel():
     return out, fig
 
 
+def figure_surface_diffusion_comparison():
+    """Isotropic vs anisotropic anneal of the *same* nanosurface, at t=8.
+
+    `nanosurface_isotropic.json` and `nanosurface_anisotropic.json` start
+    from the identical crossed corrugation -- 16 periods along x superposed
+    on 16 periods along y, amplitude 0.05 each -- and differ in exactly one
+    number, the anisotropy strength `eps_a`. Everything visible between the
+    two panels is therefore the anisotropy.
+
+    Isotropically the linear symbol depends only on |k|, so both ridge sets
+    decay at the same rate and the egg-crate pattern survives, only fainter.
+    With `eps_a=0.5, m=6`, `B(theta) = B_0[1 + eps_a cos(m theta)]` makes
+    the two orientations inequivalent: the x-varying ridges, whose gradient
+    points along x and so samples the stiff end of B near theta=0, are
+    erased, while the y-varying ridges near the soft theta=pi/2
+    (cos(3 pi) = -1) survive. The right panel is what
+    `energy_ky_frac = 0.751` in `nanosurface_anisotropic.csv` looks like as
+    a surface.
+
+    Do not read the panel amplitudes off the isolated single-orientation
+    rates B_0(1 +- eps_a)k^4: theta is the orientation of the *combined*
+    gradient of both ridge sets, so the two do not decay independently
+    (`docs/report/07_surface_diffusion.qmd` makes the same point about the
+    measured 3:1 split).
+
+    t=8 is the shipped `t1`, not an extension: h decays as exp(-B k^4 t),
+    so the +-0.1 initial corrugation is down to +-0.005 here and running
+    further leaves nothing to see. `h` is a signed height about a conserved
+    mean of zero, so the map is diverging and centred on 0 -- the shared
+    scale also carries the *amplitude* difference (RMS roughness 0.00238 vs
+    0.00155), which a per-panel autoscale would have hidden.
+    """
+    run_dir = DATA_DIR / "surface_diffusion_nanosurface" / "results" / "surface_diffusion"
+    isotropic = read_vti(run_dir / "nanosurface_isotropic_0016.vti", time=8.0)
+    anisotropic = read_vti(run_dir / "nanosurface_anisotropic_0016.vti", time=8.0)
+    fig = render_comparison(
+        isotropic,
+        anisotropic,
+        kind="diverging",
+        center=0.0,
+        label_a="isotropic ($\\epsilon_a=0$)",
+        label_b="anisotropic ($\\epsilon_a=0.5$, $m=6$)",
+        suptitle="Same corrugated surface, same t=8: sixfold stiffness picks an orientation",
+        cbar_label="surface height h",
+        axis_units="grid units",
+    )
+    out = HERE / "surface_diffusion_nanosurface_comparison.svg"
+    fig.savefig(out, format="svg", bbox_inches="tight")
+    return out, fig
+
+
+def figure_ehd_film_comparison():
+    """Compliant vs stiff plate under the same load, at the instant it lifts.
+
+    `load_relaxation_compliant.json` (B=100) and
+    `load_relaxation_stiff.json` (B=640) apply the identical Gaussian press
+    (p0=0.5, width a=8) over 0 <= t < 60 to an initially uniform gap
+    h0=1, and differ only in the plate's bending stiffness. Save index 6 is
+    t=60, the moment the load comes off -- also where both runs' CSV records
+    their minimum central gap, so this is the deepest the dent ever gets.
+
+    The two panels answer the chapter's question in one look. The compliant
+    plate dents *deeper* (h_centre 0.659 against 0.747) and *narrower* (RMS
+    spreading radius 12.3 against 14.2); the stiff plate spreads the same
+    displaced volume over a wider, shallower depression, ringed by the
+    slight bulge where the liquid pushed out has to go. Both dents sit well
+    inside the 256-cell periodic box, which is the visual form of the
+    chapter's claim that the measured spreading radius is measuring the
+    disturbance and not the domain.
+
+    A gap thickness cannot go negative, so the map is sequential; the shared
+    scale is what makes "deeper" and "shallower" comparable rather than two
+    separately autoscaled blobs that would look identical.
+    """
+    run_dir = DATA_DIR / "ehd_film_load" / "results" / "ehd_film_nonlinear"
+    compliant = read_vti(run_dir / "load_relaxation_compliant_0006.vti", time=60.0)
+    stiff = read_vti(run_dir / "load_relaxation_stiff_0006.vti", time=60.0)
+    fig = render_comparison(
+        compliant,
+        stiff,
+        kind="sequential",
+        label_a="compliant plate ($B=100$)",
+        label_b="stiff plate ($B=640$)",
+        suptitle="Same press, same instant t=60: plate stiffness sets depth against width",
+        cbar_label="gap thickness h",
+        axis_units="grid units",
+    )
+    out = HERE / "ehd_film_load_comparison.svg"
+    fig.savefig(out, format="svg", bbox_inches="tight")
+    return out, fig
+
+
 FIGURES = [
     figure_cahn_hilliard_coarsening_montage,
     figure_cahn_hilliard_comparison,
     figure_thin_film_dewetting_montage,
     figure_thin_film_comparison,
     figure_tungsten_seed_panel,
+    figure_surface_diffusion_comparison,
+    figure_ehd_film_comparison,
 ]
 
 

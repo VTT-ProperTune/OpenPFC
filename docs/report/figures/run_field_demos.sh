@@ -26,9 +26,13 @@
 #                     (SLURM_JOB_ID/TMPDIR are read from the environment by
 #                     srun itself; export them before calling this script.)
 #
-# All three apps here (cahn_hilliard, thin_film, tungsten) are single-field,
-# single-rank spectral-ETD demos: `-n 1` is enough and keeps the run trivial
-# to place in its own output directory.
+# Every app here is a single-field, single-rank demo: `-n 1` is enough and
+# keeps each run trivial to place in its own output directory. Three of them
+# (cahn_hilliard, thin_film, tungsten) go through the JSON
+# `SpectralETDSession`; the other two (surface_diffusion_anisotropic,
+# ehd_film_nonlinear) are standalone science drivers whose `fields[]` output
+# is written by `openpfc_apps/field_snapshots.hpp` instead, using the same
+# JSON spelling.
 
 set -Eeuo pipefail
 
@@ -125,6 +129,45 @@ json.dump(d, open("'"$DATA_DIR"'/tungsten_seed/run_config.json", "w"), indent=2)
 '
 echo "==> tungsten_seed (256^3, t1=12)"
 (cd "$DATA_DIR/tungsten_seed" && $RUNNER "$BUILD_DIR/apps/tungsten/tungsten" run_config.json)
+
+# --- surface_diffusion: isotropic vs anisotropic nanosurface anneal --------
+# The shipped science pair, run unmodified: both presets start from the
+# *identical* crossed corrugation (16 periods per axis, amplitude 0.05) and
+# differ only in eps_a, so any difference in the final surface is the
+# anisotropy and nothing else. They write distinct filenames
+# (nanosurface_isotropic_%04d.vti / nanosurface_anisotropic_%04d.vti) so both
+# share one results/surface_diffusion/ directory.
+#
+# Unlike the thin_film runs above, `t1` is NOT extended past the shipped
+# value: t1=8 is already where the two runs differ most before the surface
+# flattens into round-off. h decays as exp(-B k^4 t) and by t=8 the initial
+# +-0.1 corrugation is down to +-0.005 -- the orientation contrast is still
+# clearly visible, but running much further leaves nothing to look at.
+run_case surface_diffusion surface_diffusion_anisotropic \
+  "$REPO_ROOT/apps/surface_diffusion/inputs_json/nanosurface_isotropic.json" \
+  surface_diffusion_nanosurface results/surface_diffusion
+run_case surface_diffusion surface_diffusion_anisotropic \
+  "$REPO_ROOT/apps/surface_diffusion/inputs_json/nanosurface_anisotropic.json" \
+  surface_diffusion_nanosurface results/surface_diffusion
+
+# --- ehd_film: compliant vs stiff plate under the same load ----------------
+# The shipped science pair, again run unmodified and into one directory
+# (load_relaxation_compliant_%04d.vti / load_relaxation_stiff_%04d.vti).
+# Same Gaussian load (p0=0.5, a=8) held over 0 <= t < 60 then released; the
+# only difference between the two is the bending stiffness B (100 vs 640).
+#
+# The figure is rendered from save index 6, i.e. t=60 -- the instant the load
+# comes off, which is also where the diagnostics CSV records `h_center`'s
+# minimum in both runs. Later saves show the dent healing, not the stiffness
+# contrast at its clearest. Do not shorten `t1`: the 600-unit tail is what
+# the chapter's spreading-radius claim (peaks under 22% of the domain
+# half-width) is measured over.
+run_case ehd_film ehd_film_nonlinear \
+  "$REPO_ROOT/apps/ehd_film/inputs_json/load_relaxation_compliant.json" \
+  ehd_film_load results/ehd_film_nonlinear
+run_case ehd_film ehd_film_nonlinear \
+  "$REPO_ROOT/apps/ehd_film/inputs_json/load_relaxation_stiff.json" \
+  ehd_film_load results/ehd_film_nonlinear
 
 echo
 echo "Done. Data written under: $DATA_DIR"

@@ -25,6 +25,12 @@
             {"nx": 0, "ny": 16, "amplitude": 0.05}
         ]
     },
+    "fields": [
+        {
+            "name": "h",
+            "data": "results/surface_diffusion/nanosurface_isotropic_%04d.vti"
+        }
+    ],
     "diagnostics": {
         "csv": "results/surface_diffusion/nanosurface_isotropic.csv"
     }

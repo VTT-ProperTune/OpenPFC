@@ -50,7 +50,8 @@ Python but not matplotlib, so use a virtual environment.
 
 ## Field-visualisation figures
 
-Chapters `03_tungsten.qmd`, `05_cahn_hilliard.qmd`, and `06_thin_film.qmd`
+Chapters `03_tungsten.qmd`, `05_cahn_hilliard.qmd`, `06_thin_film.qmd`,
+`07_surface_diffusion.qmd`, and `09_ehd_film.qmd`
 show real simulation output — a "Visualisation" section near the end of
 each — rendered by `figures/field_io.py` (readers) and `figures/field_plots.py`
 (panels, montages, comparisons) from real runs, not synthesised data. As with
@@ -69,9 +70,9 @@ field_data_dir=/flash/project_462001519/juaho/tmp-shared/report-figures
 ./scripts/build.sh --machine=lumi --cpu --no-submit --no-test \
     --build-dir="$build_dir"
 
-# 2. Run the three demo applications (cahn_hilliard, thin_film, tungsten)
-#    and write their .vti/.bin output somewhere. On the shared LUMI
-#    allocation:
+# 2. Run the demo applications (cahn_hilliard, thin_film, tungsten,
+#    surface_diffusion, ehd_film) and write their .vti/.bin output
+#    somewhere. On the shared LUMI allocation:
 SLURM_JOB_ID=$(cat /flash/project_462001519/juaho/shared_job_id.txt) \
 TMPDIR=/flash/project_462001519/juaho/tmp-shared \
 RUNNER="srun --overlap -n 1" \
@@ -86,8 +87,9 @@ FIELD_DATA_DIR="$field_data_dir" \
 ```
 
 `run_field_demos.sh` documents, next to each run, why its parameters were
-chosen (in particular: two of the three runs deliberately extend the
+chosen (in particular: the two `thin_film` runs deliberately extend the
 shipped preset's `t1`/`saveat` past what the default JSON input uses,
+while the `surface_diffusion` and `ehd_film` pairs deliberately do not,
 and the tungsten run uses the 256³ preset rather than the 32³ one because
 `SingleSeed`'s seed radius does not fit inside the smaller domain). Read
 those comments before changing a parameter — the values are not arbitrary,
@@ -115,6 +117,11 @@ To add a field figure for another application:
    this for free — an extension of `.vti`/`.vtk` selects the VTK writer) or
    read the raw `.bin` dump it already writes; add the run to
    `run_field_demos.sh` (or a similar recipe) so the figure is reproducible.
+   An application with its own `main()` rather than a session — the science
+   drivers of `surface_diffusion` and `ehd_film` — reads the same `fields[]`
+   key through `apps/common/include/openpfc_apps/field_snapshots.hpp`, which
+   is two calls: build the writer after the field exists, then write a
+   snapshot wherever the driver already samples its diagnostics.
 2. **Read it.** `field_io.read_vti(path)` returns a `Field2D` directly. For a
    `.bin` dump, build a `field_io.GridSpec` from the run's JSON `domain`
    (`nx`/`ny`/`nz` are grid *point counts* — `domain.Lx` etc., not physical
