@@ -9,6 +9,62 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- **3-D eigenstrain microelasticity on the FFT stack**
+  (`apps/common/include/openpfc_apps/microelasticity.hpp`). A reusable
+  quasi-static elastic solver for phase-field applications whose transforming
+  phase carries a lattice misfit: `div sigma = 0` with
+  `sigma = C(phi):(eps - eps*)`, inverted by the Fourier Green operator of a
+  homogeneous reference `C0` (Khachaturyan 1983), and iterated over the
+  polarisation `tau = sigma - C0:eps` (Hu & Chen 2001) because the liquid is
+  soft and the solid is stiff, which makes the problem inhomogeneous and the
+  solve not one-shot. Cubic and isotropic `C`; the eigenstrain is one scalar
+  amplitude field times a constant symmetric pattern, which covers the
+  dilatational `h(phi) eps0 delta_ij` the alloy capstone needs. Returns the
+  strain, the stress, `f_el`, and `d f_el/d phi` with **both** terms of the
+  capstone's eq. (7) -- the transformation work `-sigma : d eps*/d phi` and
+  the modulus contrast `(1/2)(eps-eps*):dC/dphi:(eps-eps*)`, the second being
+  the one that is small, easy to drop, and wrong to drop, since it lives
+  exactly where the stiffness varies. Host only, periodic only, small strain,
+  no plasticity; a device path is separate work because the pointwise
+  six-component contraction with a spatially varying stiffness has no
+  `SpectralETDOps` kernel behind it the way `spectral_flux.hpp`'s elementwise
+  work does. Convergence is the plain fixed point's: with `C0` the Voigt
+  average the measured contraction is 0.265 / 0.524 / 0.767 at stiffness ratio
+  2 / 4 / 10 against the predicted `(r-1)/(r+1)` = 0.333 / 0.600 / 0.818, so
+  reaching `tol_el = 1e-6` from a cold start costs 11 / 22 / 53 iterations and
+  the default `n_el_iter = 20` covers a ratio of about 3 -- documented rather
+  than papered over, with warm start on by default and `converged` returned to
+  the caller. A homogeneous modulus costs exactly one Green-operator
+  application; the stopping test is on the polarisation, measured before the
+  transforms, so the pass that only confirms convergence is free.
+  `apps/common/tests/test_microelasticity.cpp` (new ctest
+  `apps-common-microelasticity`, ~2 s on one rank) is ten cases against closed
+  forms, not baselines: the single-mode Green operator to 1e-14 (isotropic,
+  against the analytic `3K/(lambda+2mu) k_m k_n/k^2`) and to 1e-13 (cubic,
+  against an independently coded Gaussian-elimination solve of the acoustic
+  tensor); the exact dilatation identity `tr(eps) = 3 alpha (a - <a>)` with
+  `alpha = (1+nu)/(3(1-nu))` derived from the Eshelby tensor; Eshelby's
+  spherical inclusion, whose interior strain and stress match the closed form
+  to 3.3e-16 and 6.7e-16 relative because the periodic `<eps> = 0` condition
+  turns them into an exact statement, with the genuinely shape-sensitive
+  checks (interior uniformity, 3.0% at R = 8 dx and 0.74% at R = 16 dx, and
+  the `r^-3` far-field decay, fitted exponent -2.913) reported separately;
+  `div sigma = 0` at 1e-12 of the terms that must cancel; the elastic energy
+  against `-(1/2) int sigma:eps*` in closed form to 4e-14 and against the
+  Eshelby energy `V_i E eps*^2/(1-nu)` with its exact finite-cell factor
+  `1 + alpha f/(1-alpha)`; and `d f_el/d phi` against a central difference of
+  the *fully re-converged* energy, which also tests the Hellmann-Feynman claim
+  that the partial derivative at frozen strain is the total one. One bug worth
+  recording: `k_component` maps index `N/2` to `+k_Nyquist` on every axis, so
+  conjugate-partner modes in a Nyquist plane were handed different `Gamma`
+  directions, the resulting `eps_hat` was not Hermitian, and the inverse
+  transform silently projected the difference away -- `|div sigma|` sat at
+  3.4e-4 and the energy closed form at 5.5e-9 until the Nyquist component was
+  zeroed per axis (`k_component_odd`'s rule), after which both dropped to
+  round-off. Self-conjugate corner modes, where zeroing would make `k` vanish
+  and the acoustic tensor singular, keep the raw direction; their coefficient
+  is real, so it is safe.
+
 - **Where spectral beats finite difference, and where it does not**
   (`heat3d_spectral_content_study`, `apps/heat3d`). The scalability chapter
   had cost per step and parallel scaling measured for both spatial operators

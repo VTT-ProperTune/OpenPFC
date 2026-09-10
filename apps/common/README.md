@@ -17,3 +17,11 @@ PFC directional-solidification BCs relocated from the kernel.
 | `openpfc_apps/fixed_bc.hpp` | sigmoid density band (tungsten / aluminum JSON App) |
 | `openpfc_apps/moving_bc.hpp` | front-tracking band (same apps) |
 | `openpfc_apps/solidification_bc_json.hpp` | JSON + `register_solidification_bcs()` |
+| `openpfc_apps/microelasticity.hpp` | quasi-static eigenstrain elasticity: Fourier Green operator, Hu-Chen polarisation fixed point, `f_el` and `d f_el/d phi` (host, periodic) |
+
+`microelasticity.hpp` is the one header here that carries physics rather than
+plumbing, so it has its own Catch2 suite (`tests/test_microelasticity.cpp`,
+ctest name `apps-common-microelasticity`, ~2 s single rank). Its oracles are
+closed forms — Eshelby's spherical inclusion, an exact dilatation identity,
+and a finite difference of the re-converged elastic energy — not stored
+baselines. See the header's `@details` block for what the solver does not do.
