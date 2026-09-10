@@ -61,10 +61,24 @@ step and 8.7 times a twelfth-order one.
 
 None of that makes finite differences the better method, because cost per step
 is not time to solution. The spectral operator is exact for a resolved smooth
-field while a stencil of order $p$ carries an $O(\Delta x^p)$ error, so the
-two reach a given accuracy on different grids. Which is cheaper depends on the
-spectral content of the solution, and this report measures that only for a
-single smooth mode — see the gap named below.
+field while a stencil of order $p$ carries an $O(\Delta x^p)$ error, so the two
+reach a given accuracy on different grids.
+
+@sec-scal-accuracy settles which is cheaper, and the answer is a single
+inequality: **a finite-difference stencil of order $p$ beats the spectral path
+only if the solution's content stays below $\sqrt[3]{c_p/c_{\mathrm{spectral}}}$
+of the Nyquist wavenumber** — between a third and a half, for every order
+shipped. The cube root is the point. Cost grows as $N^3$, so the spectral
+step's 32-fold disadvantage per step buys finite differences only a factor
+$32^{1/3}=3.2$ in grid spacing; despite a 32-fold spread in per-step cost, all
+five orders cross over within a narrow band of resolutions. Read alone, the
+per-step cost table badly overstates how much that cheapness protects them.
+
+The practical reading: at loose tolerances finite differences win outright; the
+accuracy crossover sits at $L^2\approx6\times10^{-7}$; and a field whose content
+genuinely reaches the grid scale — a phase-field crystal carrying harmonics at
+$2k_0$ and $3k_0$, a dendrite tip — is past every threshold at every tolerance.
+That is the regime most of this report's applications live in.
 
 ## Gaps
 
@@ -75,12 +89,12 @@ Honest accounting of what this report cannot support:
   expectation is not measurement.
 * **No CPU control.** Without a LUMI-C run at equal node count, the report
   cannot quantify what the GPU path buys.
-* **The method comparison is accuracy-limited to a single smooth mode.** Cost
-  at equal grid and scaling at equal grid are measured (@sec-scal-methods);
-  cost at equal *accuracy* rests on a convergence study that evolves one
-  Fourier mode, which is the most favourable case a high-order stencil can
-  have. The chapter says so rather than publishing the ranking that follows
-  from it.
+* **The method comparison is settled only for a linear operator.**
+  @sec-scal-accuracy answers it exactly for the heat equation, where every
+  initial condition has a closed-form solution. Nonlinear models add aliasing,
+  which @sec-tungsten-dealias measures separately for one model at one set of
+  parameters; the two results have not been combined into guidance for a
+  nonlinear solver.
 * **The memory boundary is characterised but not diagnosed.** $2048^3$ is known
   to need 16 nodes and the failure is known to be host-side, but the transient
   allocation responsible has not been traced (@sec-scal-memory).
@@ -93,12 +107,12 @@ Honest accounting of what this report cannot support:
 
 In order of what would most improve this report:
 
-1. **Accuracy at matched cost for a broadband field.** @sec-heat3d is linear,
-   so every initial condition has an exact solution and the error of each
-   discretisation is computable for *any* spectral content, not just one mode.
-   Sweeping that content is what turns @sec-scalability's method comparison
-   from two measured axes into actionable guidance.
-2. **A LUMI-C CPU control** at equal node count for one model.
+1. **A LUMI-C CPU control** at equal node count for one model — the last
+   unmeasured axis of the scaling story.
+2. **The nonlinear half of the method comparison.** @sec-scal-accuracy settles
+   the linear case in closed form; combining it with the aliasing cost measured
+   in @sec-tungsten-dealias would give the same guidance for a nonlinear
+   solver, where most of these applications actually operate.
 3. **One scaling point for a second spectral application** — enough to test
    whether the shared-stack expectation actually holds.
 4. **Diagnosing the host-side memory spike** that puts a 16-node floor under
