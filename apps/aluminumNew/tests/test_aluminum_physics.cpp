@@ -17,11 +17,9 @@ using nlohmann::json;
 
 namespace {
 
+/// Every field the schema declares, and nothing it does not.
 json aluminum_params_json() {
-  return {{"n0", -0.0060},
-          {"alpha", 0.20},
-          {"n_sol", -0.036},
-          {"n_vap", -1.297},
+  return {{"alpha", 0.20},
           {"T_const", 980.0},
           {"T_min", 780.0},
           {"T_max", 1280.0},
@@ -30,12 +28,8 @@ json aluminum_params_json() {
           {"G_grid", 0.0},
           {"V_grid", 0.0},
           {"x_initial", 130.0},
-          {"alpha_farTol", 0.001},
-          {"alpha_highOrd", 0},
           {"lambda", 0.22},
           {"stabP", 0.0},
-          {"shift_u", 1.0},
-          {"shift_s", 0.0},
           {"p2_bar", 0.8286531831},
           {"p3_bar", -0.04204863},
           {"p4_bar", 0.007533},
@@ -67,12 +61,12 @@ TEST_CASE("AluminumPhysics schema round-trips JSON params",
           "[aluminum][physics][schema]") {
   auto schema = aluminum::AluminumPhysics<>::schema();
   json j = aluminum_params_json();
-  j["n0"] = -0.01;
+  j["alpha"] = 0.25;
   const auto vals = schema.parse(j);
-  REQUIRE(vals.n0 == Approx(-0.01));
+  REQUIRE(vals.alpha == Approx(0.25));
   aluminum::AluminumParams p;
   aluminum::apply_schema_values(vals, p);
-  REQUIRE(p.n0 == Approx(-0.01));
+  REQUIRE(p.alpha == Approx(0.25));
   REQUIRE(p.tau_const == Approx(980.0 / 89285.0));
   REQUIRE(p.q4_bar == Approx(p.q40_bar));
   REQUIRE(p.m_xpos == Approx(130.0));
@@ -83,6 +77,103 @@ TEST_CASE("AluminumPhysics schema rejects missing G_grid",
   json j = aluminum_params_json();
   j.erase("G_grid");
   REQUIRE_THROWS_AS(aluminum::make_aluminum_schema().parse(j),
+                    std::invalid_argument);
+}
+
+/**
+ * @brief `required` has to mean required at the door the app actually uses.
+ *
+ * `from_json` used to skip the schema entirely for `"params": {}`, so a
+ * configuration could declare nothing and silently inherit the C++ member
+ * initialisers — uncited coefficients that no input file records. The schema
+ * said all twenty-five fields were required; the loader disagreed with it.
+ */
+TEST_CASE("AluminumPhysics::from_json enforces its own schema",
+          "[aluminum][physics][schema]") {
+  const auto domain = pfc::domain::create({8, 8, 8});
+  const auto box = pfc::Box3i::from_bounds({0, 0, 0}, {7, 7, 7});
+
+  SECTION("an empty params block is rejected, not defaulted") {
+    REQUIRE_THROWS_AS(
+        aluminum::AluminumPhysics<>::from_json(json::object(), domain, box),
+        std::invalid_argument);
+  }
+  SECTION("a missing params block is rejected too") {
+    REQUIRE_THROWS_AS(
+        aluminum::AluminumPhysics<>::from_json(json(), domain, box),
+        std::invalid_argument);
+  }
+  SECTION("one missing field is enough") {
+    json j = aluminum_params_json();
+    j.erase("Bx");
+    REQUIRE_THROWS_AS(aluminum::AluminumPhysics<>::from_json(j, domain, box),
+                      std::invalid_argument);
+  }
+  SECTION("a complete block still loads and is used") {
+    json j = aluminum_params_json();
+    j["Bx"] = 0.5;
+    const auto phys = aluminum::AluminumPhysics<>::from_json(j, domain, box);
+    REQUIRE(phys.params.Bx == Approx(0.5));
+  }
+}
+
+/**
+ * @brief `T_min` / `T_max` clamp the temperature instead of doing nothing.
+ *
+ * Before 0.2 both were declared required and read nowhere, so a
+ * `G_grid != 0` run drove `T_const + T_var` arbitrarily far along `x` with
+ * nothing to stop it. Every shipped preset is isothermal, so the clamp does
+ * not move any pinned checksum.
+ */
+TEST_CASE("AluminumPhysics clamps the temperature into [T_min, T_max]",
+          "[aluminum][physics][temperature]") {
+  const double t_hot = 1280.0 - 980.0;  //  T_max - T_const =  300
+  const double t_cold = 780.0 - 980.0;  //  T_min - T_const = -200
+
+  aluminum::AluminumPhysics<> phys;
+  json j = aluminum_params_json();
+  j["G_grid"] = 10.0; // steep enough to run off both ends of the window
+  aluminum::apply_aluminum_json(j, phys.params);
+  phys.domain = pfc::domain::create({128, 8, 8});
+  const auto pw = phys.pointwise();
+
+  // Both directions, on the departure the moving-frame profile produces.
+  REQUIRE(pw.clamp_temperature(970.0) == Approx(t_hot));
+  REQUIRE(pw.clamp_temperature(-1300.0) == Approx(t_cold));
+  REQUIRE(pw.clamp_temperature(100.0) == Approx(100.0)); // inside: untouched
+
+  // And through the profile itself. Open the window wide to see what the
+  // unclamped profile would have done at the same point.
+  json wide = j;
+  wide["T_min"] = -1.0e9;
+  wide["T_max"] = 1.0e9;
+  aluminum::AluminumPhysics<> unbounded;
+  aluminum::apply_aluminum_json(wide, unbounded.params);
+  unbounded.domain = phys.domain;
+  const double raw = unbounded.temperature_variation(10.0, 0.0);
+  INFO("unclamped departure at x=10 is " << raw);
+  REQUIRE(raw < t_cold);
+  REQUIRE(phys.temperature_variation(10.0, 0.0) == Approx(t_cold));
+
+  // The clamp is on the *absolute* temperature, so it is the nonlinearity
+  // that sees the bounded value, not just the reported one.
+  REQUIRE(phys.nonlinearity(0.1, 0.05, 0.2,
+                            phys.temperature_variation(10.0, 0.0)) ==
+          Approx(phys.nonlinearity(0.1, 0.05, 0.2, t_cold)));
+}
+
+TEST_CASE("AluminumPhysics rejects a temperature window that cannot clamp",
+          "[aluminum][physics][temperature][schema]") {
+  json inverted = aluminum_params_json();
+  inverted["T_min"] = 1280.0;
+  inverted["T_max"] = 780.0;
+  aluminum::AluminumParams p;
+  REQUIRE_THROWS_AS(aluminum::apply_aluminum_json(inverted, p),
+                    std::invalid_argument);
+
+  json off_window = aluminum_params_json();
+  off_window["T_const"] = 1500.0;
+  REQUIRE_THROWS_AS(aluminum::apply_aluminum_json(off_window, p),
                     std::invalid_argument);
 }
 

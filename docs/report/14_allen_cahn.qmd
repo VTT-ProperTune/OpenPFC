@@ -10,50 +10,54 @@ Unlike the Cahn–Hilliard model of @sec-cahn-hilliard, the order parameter here
 is **not** conserved: a grain can shrink and vanish. This is the standard model
 for curvature-driven grain growth.
 
-The question the shipped run asks is deliberately coarse: **seed one grain of
-the favoured phase in a matrix of the other and drive the transformation — does
-the favoured phase actually take over?** The named observable is the
-**superlevel-set area** $A(t) = \lvert\{\phi > 0\}\rvert$, the number of cells
-in the growing phase, reported as the ratio $A(t_1)/A(0)$. It is the
-non-conserved counterpart of a mass check: Cahn–Hilliard's mean must not move,
-and Allen–Cahn's area must. @fig-allen-cahn-growth shows it happening, with
-the measured ratio printed on each panel.
+The question the shipped run asks: **seed one grain of the favoured phase in
+a matrix of the other and drive the transformation — does the front move at
+the speed the sharp-interface theory says it should?** The measured quantity
+is the **interface velocity** $\mathrm{d}R/\mathrm{d}t$, where
+$R = \sqrt{A/\pi}$ is the equivalent radius of the superlevel-set area
+$A(t) = \lvert\{\phi > 0\}\rvert$. Growth of $A$ is the non-conserved
+counterpart of a mass check — Cahn–Hilliard's mean must not move, and
+Allen–Cahn's area must — but the *ratio* $A(t_1)/A(0)$ that this chapter once
+reported is grid-dependent, and $\mathrm{d}R/\mathrm{d}t$ is not.
+@fig-allen-cahn-growth shows it happening.
 
 ## Problem setup
 
 Command-line driven, no JSON, and no science preset. There is one further thing
-worth stating plainly: **no ctest runs this binary.** The area criterion below
-is enforced by the program's own exit code when a user runs it; the automated
-suite exercises the update function through fixed small configurations
-instead.
+worth stating plainly: **no ctest runs this binary.** The velocity criterion
+below reaches the program's exit code only when a user passes `--strict`; the
+automated suite runs the same update function and the same criterion through
+`allen-cahn-interface-kinetics`, at two grid sizes, and additionally pins the
+shipped preset itself.
 
 | Item | Description |
 |---|---|
 | Use case | A single grain of the favoured phase growing into a matrix of the other under a constant driving force |
-| Domain | $n_x \times n_y \times 1$ slab with $\Delta x = \Delta y = 1$, hard-coded — the spacing is not a command-line argument. Defaults $64 \times 64$ |
-| Grid | `nx ny n_steps [dt] [M] [epsilon] [driving_force] [png_initial] [png_final]`; defaults 5000 steps at $\Delta t = 9\times10^{-5}$. There is no output cadence: at most two PNG snapshots, the initial and the final state |
+| Domain | $n_x \times n_y \times 1$ slab with $\Delta x = \Delta y = 1$, hard-coded — the spacing is not a command-line argument. Defaults $256 \times 256$. The fixed spacing is load-bearing: the interface can only be resolved by enlarging $\varepsilon\sqrt{2M}$, never by refining the grid |
+| Grid | `nx ny n_steps [dt] [M] [epsilon] [driving_force] [png_initial] [png_final]`; defaults 5000 steps at $\Delta t = 5\times10^{-3}$, 16 % of the explicit-Euler diffusive limit. There is no output cadence: at most two PNG snapshots, the initial and the final state |
 | Boundary conditions | Periodic in $x$ and $y$, by separated-layout halo exchange. There is no non-periodic option |
 | Initial condition | A single Gaussian nucleus, $\phi = -1 + 2\exp(-r^2/2\sigma^2)$ centred in the slab, with $\sigma = \max(2,\ 0.055\min(n_x,n_y))$ — about 5.5 % of the shorter side. Deterministic; no noise anywhere |
-| Key physical parameters | $M = 8.0$, $\varepsilon = 0.19$, $F = 10.0$. **Nondimensional and illustrative**; the application states no units and cites no reference model. $\varepsilon$ is as much a numerical parameter as a physical one, since it sets both the interface width and the stiff reaction timestep limit |
-| Observable | $A(t_1)/A(0)$ for $A = \lvert\{\phi > 0\}\rvert$, which the program prints and uses as its exit status (failure unless $A(t_1) \ge 5A(0)$); global $\min\phi$, $\max\phi$ and $\sum\phi$; `avg_step_time_s`; optional grayscale PNGs |
-| Model maturity | numerical verification: **regression** only — one pinned CPU checksum tied to a named machine and toolchain, plus CPU-vs-CUDA agreement to $10^{-9}$ and CPU-vs-HIP to $10^{-4}$. There is no analytical or manufactured-solution check anywhere in this application · physical completeness: **canonical** — the standard non-conserved double-well model with a constant driving force, with no elastic, thermal or solutal coupling · calibration: **none** |
+| Key physical parameters | $M = 8.0$, $\varepsilon = 0.75$, $F = 0.25$. **Nondimensional and illustrative**; the application states no units and cites no reference model. $\varepsilon$ is as much a numerical parameter as a physical one: it sets the interface width, the stiff reaction timestep limit *and*, through $F\varepsilon^2$, the distance to the bistability ceiling. The three are chosen jointly — see @sec-ac-two-limits |
+| Observable | $\mathrm{d}R/\mathrm{d}t$ over the second half of the run for $R = \sqrt{A/\pi}$, $A = \lvert\{\phi > 0\}\rvert$ sampled at $t = 0, t_1/2, 3t_1/4, t_1$, compared with the curvature-corrected sharp-interface law to $\pm 25\,\%$; the critical radius $M/v$; the interface width in cells; the distance to the bistability ceiling; global $\min\phi$, $\max\phi$ and $\sum\phi$; `avg_step_time_s`; optional grayscale PNGs. The verdict prints as `physics_check=` and reaches the exit status only under `--strict` |
+| Model maturity | numerical verification: **analytical** and **regression** — the measured interface velocity is compared with the sharp-interface solvability result plus the curvature term, and agrees to $1.6\,\%$ at the shipped preset and to $2.3\,\%$ on every grid from $128^2$ to $512^2$ (`docs/report/data/allen_cahn_resolution_margin.csv`); plus one pinned CPU checksum tied to a named machine and toolchain, CPU-vs-CUDA agreement to $10^{-9}$ and CPU-vs-HIP to $10^{-4}$. There is no manufactured-solution check · physical completeness: **canonical** — the standard non-conserved double-well model with a constant driving force, with no elastic, thermal or solutal coupling · calibration: **none** |
 
 Periodicity means the grain grows inside an infinite square array of identical
 grains rather than in an unbounded matrix. There is no free surface and no
-container, so nothing pins the interface and there is no curvature-driven drift
-towards a wall — which is the right idealisation for asking whether a favoured
-phase grows at all. It also puts a ceiling on how long the experiment means
-anything: once the growing phase spans a substantial fraction of the box it
-begins to meet its own image, and the area ratio stops describing an isolated
-grain. The 5× criterion is a coarse growth check rather than a measurement of
-interface velocity, and the application does **not** verify that the seed has
-stayed clear of its own images. It is also **grid-dependent**, which is worth
-knowing before reading a pass or a fail as a statement about the physics: the
-seed radius scales with the grid ($\sigma \propto \min(n_x,n_y)$) but the
-interface advances at a velocity that does not, so the area ratio reached in a
-fixed number of steps falls as the grid grows. At the shipped defaults the
-run passes ($6.1\times$ at $64^2$, 5000 steps) and the same 5000 steps on a
-$256^2$ grid fails ($2.5\times$) while solving the same problem no worse.
+container, so nothing pins the interface and there is no drift towards a wall
+— which is the right idealisation for asking whether a favoured phase grows at
+all. It also puts a ceiling on how long the experiment means anything: once
+the growing phase spans a substantial fraction of the box it begins to meet
+its own image, and the application does **not** verify that the seed has
+stayed clear of its own images.
+
+The criterion used to be a coarse area ratio, $A(t_1) \ge 5A(0)$, and it was
+**grid-dependent**: the seed radius scales with the grid
+($\sigma \propto \min(n_x,n_y)$) but the interface velocity does not, so the
+same physics scored $6.1\times$ at $64^2$, $3.5\times$ at $128^2$ and
+$2.5\times$ at $256^2$ — pass, fail, fail. $\mathrm{d}R/\mathrm{d}t$ replaces
+it, read off the second half of the run because the Gaussian initial
+condition is far from the equilibrium $\tanh$ and its collapse moves the
+contour by a distance that scales with the seed.
 
 ## Governing equations
 
@@ -105,14 +109,82 @@ the reason $\varepsilon$ is a numerical as well as a physical parameter.
 Explicit Euler with separated halos, so the stencil evaluation and the halo
 exchange are distinct phases. Optional PNG snapshots of $\phi$.
 
+## The two limits that set the preset {#sec-ac-two-limits}
+
+These are coupled, and the coupling is the reason the shipped preset changed
+in 0.2 rather than being nudged. Measurements:
+`docs/report/data/allen_cahn_resolution_margin.csv`.
+
+**The interface must span cells.** Its equilibrium half-width is
+$\delta = \varepsilon\sqrt{2M}$, measured in cells because $\Delta x = 1$ is
+hard-coded — so resolving it means enlarging $\delta$, not refining the grid.
+Below about $1.5$ cells the front is pinned by the lattice. At $\delta = 0.76$
+cells, the pre-0.2 value, the measured speed is $32\,\%$ below the continuum
+law at a safe driving force; at $1.5$ cells the error is $0.05\,\%$ and at
+$2.0$ cells $1.2\,\%$.
+
+**The driving force has a ceiling.** A front exists only while
+$F\varepsilon^2 < 2/(3\sqrt3) = 0.385$; above it there is no metastable
+$\phi < 0$ phase and the box decays wholesale. Approaching it is bad well
+before crossing it. At $94\,\%$ of the ceiling — the pre-0.2 value — the
+matrix well has moved from $\phi = -1$ to $\phi = -0.69$ and retains
+$1.5\,\%$ of the symmetric barrier depth, and the $F\varepsilon^2 \to 0$ law
+@eq-ac-velocity is $26\,\%$ slow.
+
+**Why they cannot be fixed separately.** The pre-0.2 preset measured
+$+9\,\%$ against @eq-ac-velocity, which reads as agreement and is not: it is
+the lattice slowing the front by $\sim 12\,\%$ against the finite tilt
+speeding the continuum front by $\sim 26\,\%$. Backing $F$ off at
+$\varepsilon = 0.19$ removes only the second, so the residual walks from
+$+17\,\%$ at the ceiling to $-65\,\%$ at a quarter of it. There is no safe
+driving force at a $0.76$-cell interface. The 0.2 preset resolves the
+interface first — $\varepsilon = 0.75$, $\delta = 3.0$ cells — and can then
+afford $F = 0.25$, a factor $2.7$ under the ceiling.
+
+The grid moved with them. A resolved interface at a safe driving force has a
+critical nucleus $R^\* = M/v = 7.1$ cells against $0.70$ before, and the seed
+$\sigma = 0.055\min(n_x,n_y)$ is only $4.1$ cells at $64^2$: the old default
+grid would now dissolve its own seed. $256^2$ gives a $16.7$-cell seed.
+
+## The prediction, with curvature {#sec-ac-curvature}
+
+The measured object is a growing disc, and Allen–Cahn moves an interface by
+mean curvature as well as by the bulk driving force:
+
+$$
+\frac{\mathrm{d}R}{\mathrm{d}t} \;=\; \tfrac{3}{2} F \varepsilon \sqrt{2M}
+                                    \;-\; \frac{M}{R} .
+$$ {#eq-ac-velocity}
+
+The first term is the solvability result: project the travelling wave onto
+$\phi'$ in @eq-ac-pde, with $\phi = -\tanh(\xi/\delta)$ giving
+$\int\phi'^2 = 4/3\delta$ and $\int\phi' = -2$. The second was ignored while
+$F = 10$ made $M/R$ about $6\,\%$ of the answer. It is not ignorable at a
+driving force far enough under the ceiling to be safe: $M/R$ is $20\,\%$ here,
+and it does **not** shrink with the grid, because the seed scales with the box
+and so $R/R^\*$ is nearly grid-independent. Comparing a disc with a flat-front
+law leaves a $20\,\%$ bias that looks exactly like a grid dependence and that
+no amount of refinement removes.
+
 ## Verification
 
-* **Superlevel-set growth.** The area with $\phi$ above zero grows by at least
-  a factor of five between $t=0$ and the end of the run — the non-conserved
-  counterpart to a conservation check. This is enforced by the program's exit
-  code, not by a ctest.
+* **Interface velocity against @eq-ac-velocity.** Measured over the second
+  half of the run and required to land within $\pm 25\,\%$ of the
+  curvature-corrected prediction, after the two quarter velocities agree to
+  $25\,\%$ so the front is known to be steady. Residual at the shipped
+  preset: $1.6\,\%$; at most $2.3\,\%$ on any grid from $128^2$ to $512^2$.
+  The verdict prints as `physics_check=` and reaches the process exit status
+  only under `--strict`.
+* **Grid independence.** `allen-cahn-interface-kinetics` runs $256^2$ and
+  $384^2$ and requires both to reach the same verdict and to sit the same
+  distance from their own predictions, to $3\,\%$.
+* **Preset guards.** The same test pins the shipped preset itself: interface
+  width at least 2 cells, driving force at most half the bistability ceiling,
+  seed radius at least twice the critical radius, timestep at most a quarter
+  of the stability limit.
 * **Golden checksum.** One pinned CPU literal for a $32^2$, 20-step
   configuration, annotated with the machine and toolchain it was taken on.
+  It sets every parameter explicitly and did not move with the preset.
 * **CPU–GPU parity.** CPU against CUDA to $10^{-9}$, and CPU against HIP to
   $10^{-4}$ — the looser HIP bound is documented as rounding accumulated in the
   nonlinear term.
@@ -124,7 +196,12 @@ does not use the JSON session path.
 
 ## Visualisation
 
-![One grain growing, with the application's own observable written on it. The
+![One grain growing, with the application's own observable written on it.
+**Rendered at the pre-0.2 preset** ($\varepsilon = 0.19$, $F = 10$), which is
+what the run recorded in `run_field_demos.sh` still uses; it is kept because
+it is the clearest picture in the report of what sitting 6 % under the
+bistability ceiling does to a double well — see the well-shift note below,
+and @sec-ac-two-limits. The
 five panels are five *separate runs* at increasing `n_steps`, because this
 application has no output cadence — it writes at most two PNGs, the initial
 and the final state — but the initial condition is deterministic and there is
@@ -137,7 +214,9 @@ which is why the radius grows roughly linearly while the area grows roughly
 quadratically. Two details are real rather than artefacts. The matrix is
 darkest at $t = 0$ and lighter afterwards because the driving force $F = 10$
 shifts both wells: $\phi$ actually relaxes to $-0.69$ and $+1.15$, not
-$\pm1$. The grain interior is flat because the PNG the application writes
+$\pm1$ — which is exactly the 94-%-of-the-ceiling symptom the 0.2 preset
+moved away from; at $\varepsilon = 0.75$, $F = 0.25$ the wells sit at $-0.92$
+and $+1.06$. The grain interior is flat because the PNG the application writes
 clips at $\phi = 1$, so anything above that is saturated and unrecoverable —
 harmless here, since the subject of the figure is the interface and the
 level set that defines the observable sits in the middle of the recoverable

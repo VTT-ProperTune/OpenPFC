@@ -22,6 +22,8 @@
  */
 
 #include <cmath>
+#include <stdexcept>
+#include <string>
 #include <nlohmann/json.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/domain.hpp>
@@ -34,26 +36,51 @@
 
 namespace aluminum {
 
-/** Public JSON-shaped values for `ParameterSchema` (`aluminumNew.json`). */
+/**
+ * @brief Public JSON-shaped values for `ParameterSchema` (`aluminumNew.json`).
+ *
+ * Every field here is **read by the model**. That was not true before 0.2:
+ * nine of the twenty-five declared fields were `required` and consumed
+ * nowhere, which meant a configuration could not be read as a statement of
+ * what the run would do. They were resolved one of two ways.
+ *
+ * *Implemented* — `T_min` / `T_max` now clamp the temperature (see
+ * `AluminumPointwise::clamp_temperature`). The pair names an obvious bound
+ * on a quantity the model already computes, the shipped values bracket
+ * `T_const = 980`, and the moving-frame profile `T_const + G(x - x0 - Vt)`
+ * is otherwise unbounded along a 1393-unit domain. Every shipped preset has
+ * `G_grid = 0`, so the clamp is a no-op on them and no pinned result moved.
+ *
+ * *Removed* — the other seven named nothing this model computes:
+ * - `alpha_farTol`, `alpha_highOrd` parametrise **tungsten's** `C2`
+ *   construction. The FCC dual-Gaussian peak here (`fcc_correlation_peak`)
+ *   has no far-field tolerance and no higher-order exponent to set.
+ * - `shift_u`, `shift_s` are the vapour shift that *produced* the `p*_bar` /
+ *   `q*_bar` coefficients. The `_bar` names say the shift is already
+ *   applied; supplying it again suggested the app re-derived them.
+ * - `n0`, `n_sol`, `n_vap` are real quantities, but they act in the
+ *   `initial_conditions` and `boundary_conditions` blocks, which carry their
+ *   own copies (`constant.n0`, `seed_grid_fcc.rho`, `fixed.rho_low/high`).
+ *   A second copy under `model.params` that nothing reads is worse than an
+ *   unused parameter: it can disagree with the one that acts.
+ *
+ * Unknown keys are ignored by `ParameterSchema`, so inputs that still carry
+ * the removed seven load unchanged.
+ */
 struct AluminumSchemaValues {
-  double n0{-0.0060};
-  double n_sol{-0.036};
-  double n_vap{-1.297};
   double T0{89285.0};
   double Bx{0.817900686921996};
   double T_const{980.0};
+  /** Upper clamp on `T_const + T_var`; must exceed `T_min`. */
   double T_max{1280.0};
+  /** Lower clamp on `T_const + T_var`; must be below `T_max`. */
   double T_min{780.0};
   double G_grid{0.0};
   double V_grid{0.0};
   double x_initial{130.0};
   double alpha{0.20};
-  double alpha_farTol{0.001};
-  int alpha_highOrd{0};
   double lambda{0.22};
   double stabP{0.0};
-  double shift_u{1.0};
-  double shift_s{0.0};
   double p2_bar{0.8286531831};
   double p3_bar{-0.04204863};
   double p4_bar{0.007533};
@@ -84,8 +111,37 @@ struct AluminumParams : AluminumSchemaValues {
   }
 };
 
+/**
+ * @brief Cross-field validation `ParameterSchema` cannot express.
+ *
+ * The schema checks one field at a time, so it can bound `T_min` but not
+ * relate it to `T_max` or to `T_const`. Since 0.2 those bounds actually
+ * clamp the temperature, an inverted or non-bracketing pair silently
+ * freezes the whole domain at one end of the range rather than being
+ * harmlessly ignored — so it has to be rejected here.
+ *
+ * @throws std::invalid_argument if `T_min < T_max` does not hold, or if
+ *         `T_const` sits outside `[T_min, T_max]`.
+ */
+inline void validate_temperature_window(const AluminumSchemaValues &v) {
+  if (!(v.T_min < v.T_max)) {
+    throw std::invalid_argument(
+        "Invalid configuration: T_min (" + std::to_string(v.T_min) +
+        ") must be strictly below T_max (" + std::to_string(v.T_max) +
+        "); they clamp the temperature field.");
+  }
+  if (v.T_const < v.T_min || v.T_const > v.T_max) {
+    throw std::invalid_argument(
+        "Invalid configuration: T_const (" + std::to_string(v.T_const) +
+        ") is outside the clamp window [" + std::to_string(v.T_min) + ", " +
+        std::to_string(v.T_max) +
+        "]; the whole domain would sit pinned at one end of it.");
+  }
+}
+
 inline void apply_schema_values(const AluminumSchemaValues &v,
                                 AluminumParams &p) {
+  validate_temperature_window(v);
   static_cast<AluminumSchemaValues &>(p) = v;
   p.recompute_derived();
 }
@@ -93,24 +149,17 @@ inline void apply_schema_values(const AluminumSchemaValues &v,
 inline pfc::sim::ParameterSchema<AluminumSchemaValues> make_aluminum_schema() {
   pfc::sim::ParameterSchema<AluminumSchemaValues> s;
   s.model_name("Aluminum")
-      .real(&AluminumSchemaValues::n0, {.name = "n0", .description = "average density", .required = true})
-      .real(&AluminumSchemaValues::n_sol, {.name = "n_sol", .description = "solid coexistence density", .required = true})
-      .real(&AluminumSchemaValues::n_vap, {.name = "n_vap", .description = "vapor coexistence density", .required = true})
       .real(&AluminumSchemaValues::T0, {.name = "T0", .description = "reference temperature", .required = true, .min = 0.0})
       .real(&AluminumSchemaValues::Bx, {.name = "Bx", .description = "peak coefficient", .required = true})
       .real(&AluminumSchemaValues::T_const, {.name = "T_const", .description = "constant temperature", .required = true})
-      .real(&AluminumSchemaValues::T_max, {.name = "T_max", .description = "max temperature", .required = true})
-      .real(&AluminumSchemaValues::T_min, {.name = "T_min", .description = "min temperature", .required = true})
+      .real(&AluminumSchemaValues::T_max, {.name = "T_max", .description = "upper clamp on T_const + T_var", .required = true})
+      .real(&AluminumSchemaValues::T_min, {.name = "T_min", .description = "lower clamp on T_const + T_var", .required = true})
       .real(&AluminumSchemaValues::G_grid, {.name = "G_grid", .description = "thermal gradient", .required = true})
       .real(&AluminumSchemaValues::V_grid, {.name = "V_grid", .description = "frame velocity", .required = true})
       .real(&AluminumSchemaValues::x_initial, {.name = "x_initial", .description = "initial front position", .required = true})
-      .real(&AluminumSchemaValues::alpha, {.name = "alpha", .description = "C2 peak width", .required = true})
-      .real(&AluminumSchemaValues::alpha_farTol, {.name = "alpha_farTol", .description = "k=1 far tolerance", .required = true})
-      .integer(&AluminumSchemaValues::alpha_highOrd, {.name = "alpha_highOrd", .description = "higher-order Gaussian power", .required = true})
+      .real(&AluminumSchemaValues::alpha, {.name = "alpha", .description = "FCC correlation peak width", .required = true})
       .real(&AluminumSchemaValues::lambda, {.name = "lambda", .description = "mean-field filter strength", .required = true})
       .real(&AluminumSchemaValues::stabP, {.name = "stabP", .description = "ETD stabilization", .required = true})
-      .real(&AluminumSchemaValues::shift_u, {.name = "shift_u", .description = "vapor shift u", .required = true})
-      .real(&AluminumSchemaValues::shift_s, {.name = "shift_s", .description = "vapor shift s", .required = true})
       .real(&AluminumSchemaValues::p2_bar, {.name = "p2_bar", .description = "shifted p2", .required = true})
       .real(&AluminumSchemaValues::p3_bar, {.name = "p3_bar", .description = "shifted p3", .required = true})
       .real(&AluminumSchemaValues::p4_bar, {.name = "p4_bar", .description = "shifted p4", .required = true})
@@ -155,16 +204,28 @@ struct AluminumPhysics {
     return make_aluminum_schema();
   }
 
-  /// JSON `model.params` + geometry → physics (used by `SpectralETDSession`).
+  /**
+   * @brief JSON `model.params` + geometry → physics (for `SpectralETDSession`).
+   *
+   * The parse is unconditional. It used to be guarded by
+   * `!params_json.is_null() && !params_json.empty()`, which meant
+   * `"params": {}` — or no `model.params` block at all — quietly took the
+   * C++ member initialisers while the schema declared every field
+   * `required`. For a calibrated material model that is the wrong default in
+   * both directions: a run's parameters were not recoverable from its input
+   * file, and the struct defaults are an uncited second copy of coefficients
+   * the repository cites no source for. `required` now means required, and
+   * an empty block reports all of the missing fields at once.
+   *
+   * @throws std::invalid_argument listing every missing or invalid field.
+   */
   static AluminumPhysics from_json(const nlohmann::json &params_json,
                                    const pfc::Domain &domain_in,
                                    const pfc::Box3i &box_in) {
     AluminumPhysics p;
     p.domain = domain_in;
     p.box = box_in;
-    if (!params_json.is_null() && !params_json.empty()) {
-      apply_aluminum_json(params_json, p.params);
-    }
+    apply_aluminum_json(params_json, p.params);
     return p;
   }
 
@@ -208,6 +269,8 @@ struct AluminumPhysics {
             .q4_bar = params.q4_bar,
             .T0 = params.T0,
             .T_const = params.T_const,
+            .T_min = params.T_min,
+            .T_max = params.T_max,
             .stabP = params.stabP,
             .G_grid = params.G_grid,
             .V_grid = params.V_grid,

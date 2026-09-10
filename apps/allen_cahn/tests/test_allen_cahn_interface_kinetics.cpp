@@ -18,6 +18,12 @@
  * condition is far from the equilibrium `tanh` and its collapse moves the
  * contour by a distance that scales with the seed, so a whole-run average
  * inherits the same grid dependence the area ratio had.
+ *
+ * Since 0.2 this file also pins the *preset*, not just the criterion. A
+ * canonical demonstration whose interface is 0.76 cells wide and whose
+ * driving force is 6% under the bistability ceiling is not a demonstration
+ * of Allen–Cahn; it is a demonstration of two large errors cancelling. See
+ * `docs/report/data/allen_cahn_resolution_margin.csv` for the measurements.
  */
 
 #define CATCH_CONFIG_RUNNER
@@ -25,6 +31,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <iostream>
@@ -113,18 +120,66 @@ TEST_CASE("equivalent_radius inverts the area of a disc",
 
 TEST_CASE("sharp-interface velocity follows (3/2) F eps sqrt(2M)",
           "[AllenCahn][kinetics][unit]") {
-  // Shipped preset: M = 8, eps = 0.19, F = 10.
-  REQUIRE_THAT(allen_cahn::sharp_interface_velocity(8.0, 0.19, 10.0),
-               WithinRel(1.5 * 10.0 * 0.19 * 4.0, 1e-12));
+  // Shipped preset: M = 8, eps = 0.75, F = 0.25.
+  REQUIRE_THAT(allen_cahn::sharp_interface_velocity(8.0, 0.75, 0.25),
+               WithinRel(1.5 * 0.25 * 0.75 * 4.0, 1e-12));
   // Linear in the driving force, so no driving force means no front.
-  REQUIRE_THAT(allen_cahn::sharp_interface_velocity(8.0, 0.19, 0.0),
+  REQUIRE_THAT(allen_cahn::sharp_interface_velocity(8.0, 0.75, 0.0),
                WithinAbs(0.0, 1e-15));
-  // Interface half-width, in cells: below one the front is lattice-limited.
-  REQUIRE_THAT(allen_cahn::interface_width_cells(8.0, 0.19, 1.0),
-               WithinRel(0.76, 1e-9));
-  // The shipped preset sits just under the bistability limit — 6% of margin.
-  REQUIRE(10.0 < allen_cahn::max_bistable_driving_force(0.19));
-  REQUIRE(10.0 > 0.9 * allen_cahn::max_bistable_driving_force(0.19));
+  // Interface half-width, in cells.
+  REQUIRE_THAT(allen_cahn::interface_width_cells(8.0, 0.75, 1.0),
+               WithinRel(3.0, 1e-9));
+  // Curvature correction: a disc of radius R moves at v_flat - M/R, so a
+  // disc of exactly the critical radius does not move at all.
+  const double v_flat = allen_cahn::sharp_interface_velocity(8.0, 0.75, 0.25);
+  const double r_star = allen_cahn::critical_radius_cells(8.0, 0.75, 0.25, 1.0);
+  REQUIRE_THAT(r_star, WithinRel(8.0 / v_flat, 1e-12));
+  REQUIRE_THAT(allen_cahn::curvature_corrected_velocity(v_flat, 8.0, r_star),
+               WithinAbs(0.0, 1e-12));
+  REQUIRE(allen_cahn::curvature_corrected_velocity(v_flat, 8.0, 0.5 * r_star) < 0.0);
+  // A flat front (R -> infinity) recovers the uncorrected law.
+  REQUIRE_THAT(allen_cahn::curvature_corrected_velocity(v_flat, 8.0, 1e12),
+               WithinRel(v_flat, 1e-9));
+}
+
+/**
+ * @brief The shipped preset has to be a preset a reader can trust.
+ *
+ * Both halves of this failed before the 0.2 preset move (`eps = 0.19`,
+ * `F = 10`, `64^2`): the interface was 0.76 cells wide and the driving force
+ * sat at 94% of the bistability ceiling. Neither was fixable alone — see
+ * "a sub-grid interface needs a near-critical driving force" below.
+ */
+TEST_CASE("the shipped preset resolves its interface and keeps a margin",
+          "[AllenCahn][kinetics][unit][preset]") {
+  const allen_cahn::RunConfig cfg;
+  constexpr double dx = 1.0;
+
+  // 1. The interface spans enough cells for the discrete Laplacian to see it.
+  const double width = allen_cahn::interface_width_cells(cfg.M, cfg.epsilon, dx);
+  INFO("interface width = " << width << " cells");
+  REQUIRE(width >= allen_cahn::RunConfig::kMinInterfaceWidthCells);
+
+  // 2. The double well is still a double well, with room to spare.
+  const double fraction =
+      allen_cahn::driving_force_fraction(cfg.epsilon, cfg.driving_force);
+  INFO("F eps^2 is at " << 100.0 * fraction << "% of the bistability ceiling");
+  REQUIRE(fraction < 1.0);
+  REQUIRE(fraction <= allen_cahn::RunConfig::kMaxDrivingForceFraction);
+
+  // 3. The seed the app plants at the default grid is supercritical, so the
+  //    demonstration demonstrates growth rather than dissolution. Buying
+  //    margin in (2) costs exactly this: R* scales as 1/F.
+  const double r0 = allen_cahn::seed_radius_cells(cfg.nx_glob, cfg.ny_glob);
+  const double r_star =
+      allen_cahn::critical_radius_cells(cfg.M, cfg.epsilon, cfg.driving_force, dx);
+  INFO("seed radius " << r0 << " cells vs critical radius " << r_star);
+  REQUIRE(r0 > 2.0 * r_star);
+
+  // 4. Explicit Euler is stable with room to spare at the shipped dt.
+  const double dt_diffusive = dx * dx / (4.0 * cfg.M);
+  const double dt_reaction = cfg.epsilon * cfg.epsilon;
+  REQUIRE(cfg.dt < 0.25 * std::min(dt_diffusive, dt_reaction));
 }
 
 TEST_CASE("a run too short to measure is skipped, not failed",
@@ -143,17 +198,26 @@ TEST_CASE("a run too short to measure is skipped, not failed",
 
 TEST_CASE("a seed that does not grow fails the check",
           "[AllenCahn][kinetics][unit]") {
+  // Explicit parameters rather than the shipped preset: this exercises the
+  // analyser, and it should not have to be re-tuned every time the preset
+  // moves. Fast front, so the curvature correction is small and the numbers
+  // below stay readable: v_flat = 11.4, R* = M/v = 0.70 cells.
   allen_cahn::RunConfig cfg;
   cfg.n_steps = 5000;
+  cfg.dt = 0.00009;
+  cfg.M = 8.0;
+  cfg.epsilon = 0.19;
+  cfg.driving_force = 10.0;
   allen_cahn::AreaSamples a;
   a.initial = 52;
   a.half = 52;
   a.three_quarter = 52;
   a.final_ = 52;
   const auto k = allen_cahn::analyse_interface_kinetics(a, cfg, kDx);
-  // The theory says this front should have advanced ~2.6 cells over the last
+  // The theory says this front should have advanced ~2.4 cells over the last
   // half of the run. It advanced none, so this is the physics failing, not
   // the run being too short.
+  REQUIRE(k.v_predicted > 0.0);
   REQUIRE(k.verdict == allen_cahn::CheckVerdict::Fail);
   REQUIRE_THAT(k.v_late, WithinAbs(0.0, 1e-15));
 
@@ -165,17 +229,39 @@ TEST_CASE("a seed that does not grow fails the check",
   REQUIRE(unmeasurable.verdict == allen_cahn::CheckVerdict::Skipped);
 
   // A front that advances steadily, by more than a cell, but at well under
-  // half the predicted speed is a genuine failure — not a measurement floor.
+  // the predicted speed is a genuine failure — not a measurement floor.
   a.half = 100;          // R = 5.642
   a.three_quarter = 121; // R = 6.206
   a.final_ = 144;        // R = 6.770, so dR = 1.13 cells over the last half
   const auto slow = allen_cahn::analyse_interface_kinetics(a, cfg, kDx);
   REQUIRE(slow.steady);
   REQUIRE(slow.r_final - slow.r_half > allen_cahn::RunConfig::kMinMeasurableAdvanceCells);
-  REQUIRE(slow.v_late < allen_cahn::RunConfig::kVelocityBandLo * slow.v_theory);
+  REQUIRE(slow.v_late < allen_cahn::RunConfig::kVelocityBandLo * slow.v_predicted);
   REQUIRE(slow.verdict == allen_cahn::CheckVerdict::Fail);
   REQUIRE(slow.reason.find("outside the sharp-interface band") !=
           std::string::npos);
+}
+
+TEST_CASE("a subcritical seed is reported as dissolved, not as a slow front",
+          "[AllenCahn][kinetics][unit]") {
+  // Explicit parameters, so this keeps testing the analyser if the preset
+  // moves again: M = 8, eps = 0.75, F = 0.25 gives v_flat = 1.125 and a
+  // critical radius M/v = 7.11 cells.
+  allen_cahn::RunConfig cfg;
+  cfg.n_steps = 5000;
+  cfg.dt = 0.005;
+  cfg.M = 8.0;
+  cfg.epsilon = 0.75;
+  cfg.driving_force = 0.25;
+  allen_cahn::AreaSamples a;
+  a.initial = 52; // R0 = 4.07 cells, against a critical radius of 7.11
+  a.half = 20;
+  a.three_quarter = 4;
+  a.final_ = 0;
+  const auto k = allen_cahn::analyse_interface_kinetics(a, cfg, kDx);
+  REQUIRE(k.r_initial < k.r_critical);
+  REQUIRE(k.verdict == allen_cahn::CheckVerdict::Fail);
+  REQUIRE(k.reason.find("below the critical radius") != std::string::npos);
 }
 
 TEST_CASE("an empty seed fails rather than dividing by zero",
@@ -188,35 +274,105 @@ TEST_CASE("an empty seed fails rather than dividing by zero",
   REQUIRE(k.reason.find("N0 == 0") != std::string::npos);
 }
 
-TEST_CASE("the pass criterion is the same at 64^2 and 128^2",
+/**
+ * @brief The criterion has to describe the physics at every box size.
+ *
+ * Two grids, and the quantity that must agree is `v_late / v_predicted`, not
+ * `v_late` itself: the seed scales with the box, so a bigger box measures a
+ * bigger disc, and a bigger disc really does grow faster (`v = v_flat -
+ * M/R`). Requiring the raw speeds to match would be requiring the physics to
+ * be wrong.
+ *
+ * The old preset hid this. At `eps = 0.19, F = 10` the raw speeds at `64^2`
+ * and `128^2` agree to 0.3% — but only because `M/R` was 6% of a very fast
+ * front there; extend the same comparison to `512^2` and the raw speeds
+ * spread by 10% while the residual against the flat law grows monotonically
+ * from `+19%` to `+22%`. The pair the old test picked was the one pair that
+ * happened to agree.
+ */
+TEST_CASE("the pass criterion is the same at 256^2 and 384^2",
           "[AllenCahn][kinetics][integration]") {
   int nproc = 1;
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
   REQUIRE(nproc == 1);
 
-  allen_cahn::RunConfig small;
-  small.nx_glob = 64;
-  small.ny_glob = 64;
+  allen_cahn::RunConfig small; // shipped preset: 256^2
   allen_cahn::RunConfig large;
-  large.nx_glob = 128;
-  large.ny_glob = 128;
+  large.nx_glob = 384;
+  large.ny_glob = 384;
 
   const auto k_small =
       allen_cahn::analyse_interface_kinetics(run_and_sample(small), small, kDx);
   const auto k_large =
       allen_cahn::analyse_interface_kinetics(run_and_sample(large), large, kDx);
 
-  std::cout << "interface velocity 64^2: " << k_small.v_late
-            << "  128^2: " << k_large.v_late
-            << "  theory: " << k_small.v_theory << '\n';
+  std::cout << "interface velocity 256^2: " << k_small.v_late << " (predicted "
+            << k_small.v_predicted << ")  384^2: " << k_large.v_late
+            << " (predicted " << k_large.v_predicted
+            << ")  flat-front law: " << k_small.v_theory << '\n';
 
   // The whole point: same physics, same verdict, whatever the box size.
   REQUIRE(k_small.verdict == allen_cahn::CheckVerdict::Pass);
   REQUIRE(k_large.verdict == allen_cahn::CheckVerdict::Pass);
 
-  // And the measured speeds agree, which the area ratio never did (6.08 vs
-  // 3.50 for these two grids).
-  REQUIRE_THAT(k_large.v_late, WithinRel(k_small.v_late, 0.10));
+  // Both grids sit on the curvature-corrected law to a few percent. Measured
+  // on this machine: +1.6% and +1.3%.
+  REQUIRE_THAT(k_small.v_late, WithinRel(k_small.v_predicted, 0.05));
+  REQUIRE_THAT(k_large.v_late, WithinRel(k_large.v_predicted, 0.05));
+
+  // ... and they agree with *each other* on how far off the law they are,
+  // which the raw speeds (0.89 vs 0.95, 6.6% apart) do not.
+  const double bias_small = k_small.v_late / k_small.v_predicted;
+  const double bias_large = k_large.v_late / k_large.v_predicted;
+  REQUIRE_THAT(bias_large, WithinRel(bias_small, 0.03));
+}
+
+/**
+ * @brief Why the bistability margin could not be fixed on its own.
+ *
+ * The pre-0.2 preset sat 6% under the bistability ceiling. The obvious fix —
+ * leave `eps = 0.19` and back the driving force off — does not work, and
+ * this is the measurement that says so. At a 0.76-cell interface the lattice
+ * pins the front: at the *same* margin fraction the shipped preset now uses,
+ * a seed on a `64^2` box barely moves and the check fails, where the
+ * resolved preset tracks the continuum law to 2%. The resolution had to be
+ * fixed first, and fixing it is what made the margin affordable.
+ */
+TEST_CASE("a sub-grid interface needs a near-critical driving force",
+          "[AllenCahn][kinetics][integration]") {
+  int nproc = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  REQUIRE(nproc == 1);
+
+  const allen_cahn::RunConfig shipped;
+  const double fraction = allen_cahn::driving_force_fraction(
+      shipped.epsilon, shipped.driving_force);
+
+  allen_cahn::RunConfig subgrid; // the pre-0.2 geometry
+  subgrid.nx_glob = 64;
+  subgrid.ny_glob = 64;
+  // 20000 steps, four times the shipped run: long enough that "the front did
+  // not move" cannot be blamed on the run being short.
+  subgrid.n_steps = 20000;
+  subgrid.dt = 0.00009;
+  subgrid.M = 8.0;
+  subgrid.epsilon = 0.19;
+  // Same distance from the ceiling as the shipped preset, at the old eps.
+  subgrid.driving_force =
+      fraction * allen_cahn::max_bistable_driving_force(subgrid.epsilon);
+
+  REQUIRE(allen_cahn::interface_width_cells(subgrid.M, subgrid.epsilon, kDx) <
+          allen_cahn::RunConfig::kMinInterfaceWidthCells);
+
+  const auto k =
+      allen_cahn::analyse_interface_kinetics(run_and_sample(subgrid), subgrid, kDx);
+  std::cout << "sub-grid interface (0.76 cells) at the shipped margin: v_late="
+            << k.v_late << " vs predicted " << k.v_predicted << '\n';
+
+  // Not a pass. The front is there, it is just not moving at the speed the
+  // continuum law says it should.
+  REQUIRE(k.verdict != allen_cahn::CheckVerdict::Pass);
+  REQUIRE(k.v_late < 0.75 * k.v_predicted);
 }
 
 int main(int argc, char *argv[]) {

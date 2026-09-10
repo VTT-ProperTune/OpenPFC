@@ -11,7 +11,8 @@
  * @details
  * Temperature varies along x in a frame moving with the solidification front:
  * \f$T_{\mathrm{var}}(x,t) = G\,(x' - x_0 - V t)\f$ with \f$x'\f$ the periodic
- * unwrap of \f$x\f$ against the front position. Every constant the kernel
+ * unwrap of \f$x\f$ against the front position, held inside
+ * \f$[T_{\min}, T_{\max}]\f$ by `clamp_temperature`. Every constant the kernel
  * needs is stored by value so the functor can be passed to a GPU kernel;
  * `AluminumPhysics::pointwise()` fills it from `AluminumParams`.
  *
@@ -37,6 +38,9 @@ struct AluminumPointwise {
   double q4_bar{};
   double T0{1.0};
   double T_const{};
+  /// Clamp window on the absolute temperature; inactive unless T_min < T_max.
+  double T_min{};
+  double T_max{};
   double stabP{};
   double G_grid{};
   double V_grid{};
@@ -44,11 +48,42 @@ struct AluminumPointwise {
   double front_x{};  ///< current front position (`m_xpos`)
   double length_x{}; ///< periodic length of the domain along x
 
+  /**
+   * @brief Hold the absolute temperature inside `[T_min, T_max]`.
+   *
+   * @param t_var departure from `T_const`, as `temperature_variation` builds
+   *              it; returns the departure again, clamped.
+   *
+   * The profile `T_const + G (x - x0 - V t)` is a straight line in `x` with
+   * no bound of its own, so on a domain 1393 reduced units long any
+   * non-trivial `G` drives it arbitrarily far from `T_const`. `T_min` and
+   * `T_max` were declared required and read nowhere until 0.2; this is what
+   * they now mean. Both shipped presets are isothermal (`G_grid = 0`), so
+   * every pinned checksum is unaffected.
+   *
+   * Inactive when `T_max <= T_min` — that combination is rejected at load
+   * time by `validate_temperature_window`, so it can only arise from a
+   * hand-built `AluminumPointwise`, where doing nothing is the safe answer.
+   */
+  OPENPFC_HD double clamp_temperature(double t_var) const {
+    if (!(T_min < T_max)) {
+      return t_var;
+    }
+    const double t_abs = T_const + t_var;
+    if (t_abs < T_min) {
+      return T_min - T_const;
+    }
+    if (t_abs > T_max) {
+      return T_max - T_const;
+    }
+    return t_var;
+  }
+
   OPENPFC_HD double temperature_variation(double x, double t) const {
     const double fullruns = std::floor(front_x / length_x) * length_x;
     const double steppoint = std::fmod(front_x, length_x);
     const double dist = x + fullruns - (x > steppoint) * length_x;
-    return G_grid * (dist - x_initial - V_grid * t);
+    return clamp_temperature(G_grid * (dist - x_initial - V_grid * t));
   }
 
   OPENPFC_HD double nonlinearity(double psi, double psi_mf, double p_star,

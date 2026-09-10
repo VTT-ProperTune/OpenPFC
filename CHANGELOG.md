@@ -161,6 +161,82 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Fixed
 
+- The shipped `allen_cahn` preset demonstrated Allen-Cahn arithmetic rather
+  than Allen-Cahn physics, and the two halves of that could not be fixed
+  separately. Its interface was `eps*sqrt(2M) = 0.76` cells wide -- sub-grid,
+  so the front was pinned by the lattice -- and its driving force sat 6%
+  under the bistability ceiling `F eps^2 < 2/(3 sqrt 3)`, close enough that
+  `driving_force = 20` or `epsilon = 0.3` flips the whole box. It measured
+  `+9%` against the sharp-interface law, which looked like agreement and was
+  two errors of opposite sign cancelling: the lattice slowing the front by
+  ~12% and the finite tilt (the law is the `F eps^2 -> 0` limit) speeding the
+  continuum front by ~26%. The obvious repair -- back the driving force off
+  and leave `eps` alone -- makes it worse, not better: at 0.76 cells the
+  residual walks from `+17%` at the ceiling to `-65%` at a quarter of it, so
+  there is no safe driving force at that resolution. Measured across
+  interface width, margin and grid in
+  `docs/report/data/allen_cahn_resolution_margin.csv`.
+
+  The preset is now `epsilon = 0.75`, `driving_force = 0.25`, `M = 8.0`
+  unchanged, `dt = 0.005`, `256^2`: a 3.0-cell interface and `F eps^2 = 0.141`
+  a factor 2.7 under the ceiling. `M` is kept and the other two are round
+  quarters, so the preset stays recognisable. The grid had to move with them
+  -- a resolved interface at a safe driving force has a critical nucleus
+  `R* = M/v` of 7.1 cells against 0.70 before, and the seed
+  `sigma = 0.055*min(nx,ny)` is only 4.1 cells at `64^2`, so the old default
+  grid now dissolves its own seed rather than growing it.
+
+  The pass criterion moved with the preset, because a slower front makes the
+  curvature term matter: a disc obeys `dR/dt = (3/2) F eps sqrt(2M) - M/R`,
+  and `M/R` is 20% of the answer here and does *not* shrink with the grid
+  (the seed scales with the box, so `R/R*` is nearly grid-independent).
+  Comparing a disc against a flat-front law left a 20% bias that looked like
+  a grid dependence; with the curvature term the residual is 1.6% at the
+  shipped preset and at most 2.3% from `128^2` to `512^2`, so the accepted
+  band tightens from a factor of two to +/-25%. The app also prints `R*`, the
+  distance to the bistability ceiling as a percentage, and warns below a
+  2-cell interface, above half the ceiling, and on a subcritical seed.
+
+  No golden moved: `allen-cahn-cpu-golden` and the CPU-vs-CUDA/HIP parity
+  tests all set every parameter explicitly rather than reading the defaults,
+  and the seed width at their `32^2` is on the `max(2, ...)` floor either
+  way. What did move is `allen-cahn-interface-kinetics`, which now runs
+  `256^2`/`384^2` instead of `64^2`/`128^2` and compares each grid with its
+  own curvature-corrected prediction rather than comparing the two raw
+  speeds -- the old pair agreed to 0.3% by luck, and extending the same
+  comparison to `512^2` spreads them by 10%. Two new cases pin the preset
+  itself (interface width, margin, supercritical seed, dt headroom) and the
+  coupling that forced the joint fix.
+
+- `AluminumPhysics::from_json` skipped its own schema. A guard
+  `if (!params_json.is_null() && !params_json.empty())` meant `"params": {}`
+  -- which is exactly what `apps/aluminumNew/inputs_json/smoke.json` shipped
+  -- silently took the C++ member initialisers while all 25 schema fields
+  were declared `required`. For a calibrated material model that is wrong in
+  both directions: a run's parameters were not recoverable from its input
+  file, and the struct defaults are an uncited second copy of coefficients
+  this repository cites no source for. The parse is unconditional now; an
+  empty or absent `model.params` reports every missing field at once, and
+  `smoke.json` spells all of them out.
+
+  Nine of those 25 fields -- not the four the README named -- were read
+  nowhere. `T_min` and `T_max` are now implemented: they clamp
+  `T_const + T_var`, which the moving-frame profile
+  `T_const + G(x - x0 - Vt)` otherwise leaves unbounded along a 1393-unit
+  domain, and an inverted window or a `T_const` outside it is rejected at
+  load time instead of silently pinning the domain at one end. Every shipped
+  preset is isothermal (`G_grid = V_grid = 0`), so the clamp is a no-op on
+  all of them and the pinned `aluminum-etd-cpu-golden` checksum is unchanged.
+  The other seven named nothing this model computes and were removed from the
+  schema: `alpha_farTol` and `alpha_highOrd` parametrise *tungsten's* `C2`,
+  not the FCC dual-Gaussian peak; `shift_u` and `shift_s` are the vapour
+  shift that produced the `p*_bar`/`q*_bar` coefficients, already applied
+  offline; and `n0`, `n_sol`, `n_vap` are duplicates of values that act in
+  the `initial_conditions` and `boundary_conditions` blocks, where a second
+  copy that nothing reads can disagree with the one that does. Unknown keys
+  are ignored, so inputs carrying the removed seven still load. Guards:
+  `[schema]` and `[temperature]` in `aluminumTest`.
+
 - `wave2d`'s advertised observable, `global_rms_u_interior`, was identically
   zero for every configuration on both CPU drivers. The interior visitor
   trimmed the stencil half-width off each axis of each rank's owned box, and
