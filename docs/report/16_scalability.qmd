@@ -145,28 +145,182 @@ that is a different PDE with a different operator and a different amount of
 work per step.
 :::
 
-## Where the curves stop being useful
+## Where the 768³ curves stop being useful
 
 All three fall below 50% efficiency by 24–32 GCDs. At $768^3$ on 32 GCDs each
 rank holds roughly $14$ million cells, and for the spectral models the
 transpose has become a substantial share of the step.
 
-The practical readings are:
+That is a statement about the grid, not about the code. The sections below
+repeat the exercise at grids large enough to keep 16 nodes busy, and the
+curves look quite different.
 
-* **Up to one node (8 GCDs)** every model is worth the resources.
-* **Two to four nodes** remain worthwhile for the largest grids, especially for
-  the FD path.
-* **Beyond that**, at these grid sizes, further ranks buy progressively less.
-  Extending the curve is better spent on a larger grid — weak scaling — than on
-  more ranks at fixed size.
+## Sixteen nodes {#sec-scal-16n}
+
+Two studies at 128 GCDs, both on `tungsten_hip`, both with I/O off and
+`wall_step` taken as the median over accepted steps after five warm-up steps,
+using the **slowest rank** at each step — a step is not finished until every
+rank is, so a mean across ranks would flatter an imbalanced run.
+
+### Weak scaling: constant work per GCD {#sec-scal-weak}
+
+The local block is held at exactly $2048\times2048\times16$ cells — 67.1
+million per GCD — and $L_z$ grows with the rank count. OpenPFC decomposes into
+$z$-slabs, so growing only $L_z$ keeps the local shape *exactly* constant
+rather than approximately; a cubic ladder would need $N\propto P^{1/3}$ and
+land on non-power-of-two transform sizes with unequal local blocks. The final
+point is $2048^3$: **8.59 billion cells on 16 nodes**.
+
+| nodes | GCDs | grid | wall/step | weak efficiency |
+|---|---|---|---|---|
+| 1 | 8 | $2048^2\times128$ | 204.5 ms | 100% |
+| 2 | 16 | $2048^2\times256$ | 214.1 ms | 95.6% |
+| 4 | 32 | $2048^2\times512$ | 315.9 ms | 64.7% |
+| 8 | 64 | $2048^2\times1024$ | 398.1 ms | 51.4% |
+| 16 | 128 | $2048^3$ | 412.4 ms | **49.6%** |
+
+![Weak scaling of the tungsten PFC model to 16 nodes at constant 67.1 M cells
+per GCD. Perfect weak scaling is the flat dashed line. The cost is paid almost
+entirely between 2 and 4 nodes, where the all-to-all leaves the node and enters
+the fabric; from 4 to 16 nodes a further $4\times$ in ranks costs only 15
+percentage points.](figures/tungsten_weak_16n.svg){#fig-weak-16n}
+
+The shape is more informative than the endpoint. Inside one node the transpose
+is nearly free (95.6% at 2 nodes). Crossing onto the interconnect costs about
+30 percentage points in one step. After that the curve is almost flat —
+64.7% → 51.4% → 49.6% while the rank count quadruples — which is the
+behaviour a distributed FFT should have once its all-to-all is already
+inter-node.
+
+### Strong scaling, and a divisibility trap {#sec-scal-strong16}
+
+Fixed $1280^3$, 4 → 16 nodes.
+
+| nodes | GCDs | $z$-planes per rank | wall/step | speedup | efficiency |
+|---|---|---|---|---|---|
+| 4 | 32 | 40 | 296.8 ms | 1.00× | 100% |
+| 8 | 64 | 20 | 174.5 ms | 1.70× | 85.0% |
+| 10 | 80 | 16 | 141.2 ms | 2.10× | 84.1% |
+| 12 | 96 | **13.33** | 258.7 ms | 1.15× | **38.3%** |
+| 16 | 128 | 10 | 90.5 ms | 3.28× | **82.0%** |
+
+![Strong scaling at $1280^3$. Filled points are rank counts that divide the
+1280 $z$-planes evenly; the hollow point is the one that does not. Twelve
+nodes is slower than eight *and* than ten — the same problem runs 1.8× faster
+on 10 nodes than on 12.](figures/tungsten_strong_1280.svg){#fig-strong-1280}
+
+**82% efficiency at 16 nodes** over a $4\times$ range in ranks, against a
+$768^3$ curve that fell below 50% by four nodes. The model was simply too
+small before.
+
+The 12-node point is not noise. $1280 = 2^8\cdot5$ divides 32, 64, 80 and 128
+exactly, giving 40, 20, 16 and 10 planes per rank, but $1280/96 = 13.33$: some
+ranks get 13 planes and some 14, and every step waits for the slowest. The
+10-node run was added specifically to test that explanation — $1280/80 = 16$
+exactly — and it lands back on the curve at 84.1%. **On a slab-decomposed
+spectral code, choose a rank count that divides the slab axis.** It is worth
+more than a node.
+
+### A memory boundary worth knowing {#sec-scal-memory}
+
+$2048^3$ **cannot run below 16 nodes at all.** The strong-scaling ladder was
+first attempted at that size and was OOM-killed at 32, 64 and 96 GCDs,
+surviving only at 128. The kill is host-side rather than device-side: sampled
+`MaxRSS` per task was 6.7–7.1 GB for the runs that died against 5.5 GB for the
+one that lived, which points at a transient spike during transform setup that
+the sampler does not catch. The practical rule from the sizing sweep is about
+115 bytes per cell for this stack, and roughly 67 million cells per GCD is the
+largest that reliably fits — which is exactly the weak-scaling design point
+above.
+
+## Spectral against finite difference {#sec-scal-methods}
+
+@sec-heat3d is the one application carrying both a spectral and a
+finite-difference solver for the same PDE, with a GPU twin of each and a
+runtime `fd_order`. That makes it the only place in this report where the two
+methods can be compared without changing anything else.
+
+![Left: what one step costs on the same grid and hardware, the only difference
+being the spatial operator. Right: how each method strong-scales to 16 nodes.
+The panels answer different questions — cheap per step is not the same as
+cheap per unit accuracy.](figures/heat3d_method_comparison.svg){#fig-method-comparison}
+
+### Cost at equal grid
+
+$1024^3$ on one node:
+
+| method | wall/step | relative to FD-2 |
+|---|---|---|
+| FD, order 2 | 6.73 ms | 1.0× |
+| FD, order 4 | 11.46 ms | 1.7× |
+| FD, order 6 | 15.01 ms | 2.2× |
+| FD, order 8 | 18.64 ms | 2.8× |
+| FD, order 12 | 24.69 ms | 3.7× |
+| **spectral** | **213.82 ms** | **31.8×** |
+
+Finite-difference cost grows roughly linearly in stencil width, as the flop
+count and halo depth do. The spectral step costs 32 times a second-order step
+and still 8.7 times a twelfth-order one, which is the price of two global
+transforms and the all-to-all between them.
+
+### Scaling at equal grid
+
+$1536^3$, 4 → 16 nodes. $1536 = 2^9\cdot3$ divides 32, 64, 96 and 128 exactly,
+so the divisibility effect of @sec-scal-strong16 cannot contaminate this
+comparison.
+
+| method | 4 nodes | 8 | 12 | 16 | efficiency at 16 |
+|---|---|---|---|---|---|
+| spectral | 283.4 ms | 168.0 | 112.8 | 85.0 | 83.3% |
+| FD-2 | 5.91 ms | 2.99 | 2.11 | 1.73 | **85.3%** |
+| FD-8 | 15.66 ms | 8.45 | 6.07 | 4.86 | 80.5% |
+
+The expected result was that the spectral all-to-all would scale visibly worse
+than a local stencil. **It does not.** All three land within five percentage
+points of each other at 16 nodes. At $1536^3$ on 128 GCDs each rank still
+holds 28 million cells, so the transpose has not yet become the dominant term;
+the crossover where it would is beyond the range measured here. FD-8 scales
+slightly *worse* than FD-2, which is the wider halo showing up.
+
+### Accuracy, and why the three axes do not combine into a verdict
+
+@sec-heat3d's convergence study measures the third axis: every design order
+from 2 to 12 recovers its order, and the spectral operator is exact to
+round-off for a resolved smooth field.
+
+It is tempting to combine the three into a single recommendation, and the
+arithmetic looks decisive. Taking the measured error constants and asking what
+grid each method needs for an $L^2$ error of $10^{-6}$: FD-2 needs $N=2445$
+and 92 ms per step, FD-4 needs $N=129$ and 0.02 ms, while spectral reaches
+round-off at $N=1024$ for 214 ms. On that basis high-order finite differences
+win by orders of magnitude.
+
+**That comparison should not be trusted as a general result.** The convergence
+study evolves a *single Fourier mode* — the smoothest field there is, and the
+most favourable possible case for a high-order stencil, whose error constant
+depends on derivatives the mode simply does not have. It says nothing about a
+PFC crystal carrying real content at $2k_0$ and $3k_0$ (@sec-tungsten-dealias),
+or a dendrite tip, or a rupturing film. For fields with content near the grid
+scale the required resolution, and therefore the ranking, changes.
+
+What the measurements do support, without qualification:
+
+* At **equal grid**, finite differences are one to two orders of magnitude
+  cheaper per step, and higher order costs roughly linearly in stencil width.
+* At **equal grid**, both methods strong-scale to 16 nodes at 80–85%, so
+  parallel efficiency is not a reason to prefer one over the other in this
+  range.
+* **Which is cheaper for a given accuracy depends on the spectral content of
+  the solution**, and this report measures that only for a single smooth mode.
+  A broadband-field version of the same study is the obvious next measurement.
 
 ## Coverage and gaps
 
 | Application | Scaling measured |
 |---|---|
-| @sec-tungsten | **Yes** — 1–32 GCDs, $768^3$ |
-| @sec-heat3d (spectral HIP) | **Yes** — 1–32 GCDs, $768^3$ |
-| @sec-heat3d (FD HIP) | **Yes** — 1–32 GCDs, $512^3$ |
+| @sec-tungsten | **Yes** — strong 1–128 GCDs ($768^3$, $1280^3$); weak 8–128 GCDs to $2048^3$ |
+| @sec-heat3d (spectral HIP) | **Yes** — 1–32 GCDs ($768^3$); 32–128 GCDs ($1536^3$) |
+| @sec-heat3d (FD HIP) | **Yes** — 1–32 GCDs ($512^3$); 32–128 GCDs ($1536^3$, orders 2 and 8) |
 | @sec-aluminum | No |
 | @sec-cahn-hilliard, @sec-thin-film, @sec-surface-diffusion, @sec-kawahara, @sec-ehd-film | No |
 | @sec-higher-order-pfc | No — CPU/GPU agreement checked at 1 and 2 GCDs only |
@@ -177,8 +331,18 @@ The unmeasured spectral applications share the ETD stack with @sec-tungsten
 and would be expected to behave similarly at equal grid size, but that
 expectation has not been tested and no curve is claimed for them.
 
-Two gaps are worth naming explicitly. There is **no LUMI-C CPU control**, so
-the report cannot say what the GPU path buys over CPU at equal node count. And
-there is **no weak-scaling study**: every curve here holds the problem fixed,
-which is the harder test but not the one that matters for running a bigger
-simulation.
+The weak-scaling gap this section used to name is now closed
+(@sec-scal-weak): the tungsten model is measured to 16 nodes at constant work
+per GCD, ending on 8.59 billion cells.
+
+Three gaps remain, named explicitly:
+
+* There is **no LUMI-C CPU control**, so the report still cannot say what the
+  GPU path buys over CPU at equal node count.
+* The **method comparison is accuracy-limited to a single smooth mode**
+  (@sec-scal-methods). Cost at equal grid and scaling at equal grid are
+  measured; cost at equal accuracy for a broadband field is not.
+* The **memory boundary is characterised but not diagnosed**
+  (@sec-scal-memory). $2048^3$ is known to need 16 nodes, and the failure is
+  known to be host-side, but the transient allocation responsible has not been
+  traced.

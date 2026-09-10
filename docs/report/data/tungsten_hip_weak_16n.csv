@@ -1,0 +1,12 @@
+# Weak scaling, tungsten_hip, LUMI-G standard-g, 25 steps, dt=1 (2026-09-10).
+# Constant local block: 2048 x 2048 x 16 planes per GCD, so Lz = 16 * gcds.
+# The last point (2048^3 on 128 GCDs) is the same problem strong scaling ends
+# on; the two studies meet there and agree to 1.1%.
+# wall_step_ms is the median over accepted steps after 5 warm-up, taking the
+# slowest rank per step.
+gcds,nodes,job,lx,ly,lz,cells_per_rank,wall_step_ms
+8,1,21886645,2048,2048,128,67108864,204.55
+16,2,21886646,2048,2048,256,67108864,214.08
+32,4,21886648,2048,2048,512,67108864,315.92
+64,8,21886649,2048,2048,1024,67108864,398.06
+128,16,21886650,2048,2048,2048,67108864,412.39
