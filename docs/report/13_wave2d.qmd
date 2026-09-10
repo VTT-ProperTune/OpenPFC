@@ -12,28 +12,43 @@ domain that is periodic in one direction and physically bounded in the other.
 The physical question is a waveguide question: **release a pulse in a slab
 bounded by two walls — how does it reflect, and does the character of the
 reflection depend on whether the wall is rigid or pressure-releasing?** A
-Dirichlet wall inverts the reflected pulse; a Neumann wall does not. The
-observable the application actually reports is the **interior RMS of the
+Dirichlet wall inverts the reflected pulse; a Neumann wall does not.
+@fig-wave2d-walls is that question answered from a pair of runs. The
+observable the application nominally reports is the **interior RMS of the
 displacement field**, `global_rms_u_interior`, together with the CFL number
-$c\Delta t/\Delta x$ it ran at. Snapshots of $u$ can be written as VTK for
-visual inspection of the reflection itself.
+$c\Delta t/\Delta x$ it ran at; see the note below on what that number
+actually contains. Snapshots of $u$ can be written as VTK for visual
+inspection of the reflection itself, which is what the figure uses.
+
+::: {.callout-warning}
+## `global_rms_u_interior` is always zero
+
+The interior sum skips `half_width` cells on *every* axis, including $z$ —
+and this application is an $n_z = 1$ slab, so the $z$ loop is empty and the
+reduction runs over no cells at all. Both CPU drivers therefore print
+`global_rms_u_interior=0` for every configuration, which is what a run of
+either binary in this repository does today. The field itself is correct;
+only this summary line is not. Until it is fixed, the VTK series is the only
+thing this application reports about its solution.
+:::
 
 ## Problem setup
 
 Command-line driven, no JSON, and no science preset: every configuration of
 this application is a demonstration or a test. It is worth being explicit that
 the application **reports no error against any reference solution** — unlike
-@sec-heat3d, its summary line carries an amplitude, not an accuracy.
+@sec-heat3d, its summary line was meant to carry an amplitude, not an
+accuracy, and as noted above it currently carries neither.
 
 | Item | Description |
 |---|---|
 | Use case | A pulse reflecting between the two walls of an acoustic slab, as the smallest coupled two-field example in the report |
 | Domain | $N_x \times N_y \times 1$ slab with $\Delta x = \Delta y = 1$, origin at $(0,0,0)$. Defaults $N_x = N_y = 64$ |
-| Grid | `Nx Ny n_steps dt [fd_order] y_bc [u_wall]`; defaults 200 steps at $\Delta t = 0.01$, second order. `fd_order` must be even in $[2,20]$ for `wave2d_fd`; the manual and device drivers are fixed at second order. VTK output cadence is `--vtk-every`, default every step |
+| Grid | `Nx Ny n_steps dt [fd_order] y_bc [u_wall]`; defaults 200 steps at $\Delta t = 0.01$, second order. `fd_order` must be even in $[2,20]$ for `wave2d_fd`; the manual and device drivers are fixed at second order. In practice only order 2 runs: the halo width must fit in *every* owned dimension and this is an $n_z = 1$ slab, so order 4 and above abort in `pfc::halo::create_padded_face_types_6` before the first step. VTK output cadence is `--vtk-every`, default every step |
 | Boundary conditions | **Periodic in $x$** by MPI halo exchange; **physical in $y$**, either homogeneous Dirichlet ($u = u_{\mathrm{wall}}$ and $v = 0$ on the wall, imposed by an odd mirror of the ghost cells *and* by writing the owned boundary cells directly) or homogeneous Neumann (even mirror). The $y$ correction runs after the unconditional periodic exchange and overwrites the ghost values it produced |
 | Initial condition | A centred Gaussian bump in $u$ with $v = 0$: $\sigma = 0.12\min(N_x,N_y)$, centred at $(\tfrac12(N_x-1), \tfrac12(N_y-1))$. Each test picks its own $\sigma$; there is no single canonical parameter set across the application |
 | Key physical parameters | Wave speed $c = 1$ exactly, a compile-time constant not exposed on the command line. $u_{\mathrm{wall}}$ defaults to 0 and only affects Dirichlet runs. Nondimensional throughout |
-| Observable | `global_rms_u_interior`; `cfl_c_dt_dx`; `timing_s` and `avg_step_time_s`; optional VTK series of $u$ |
+| Observable | `global_rms_u_interior` (always 0 today — see the note in *Physical setting*); `cfl_c_dt_dx`; `timing_s` and `avg_step_time_s`; optional VTK series of $u$ |
 | Model maturity | numerical verification: **manufactured** and **regression** — the temporal order of the RK2 and RK4 steppers is measured against a self-generated fine-timestep RK4 reference, not a closed form, and the remaining coverage is a pinned CPU checksum, CPU-vs-device parity, and boundary ghost values checked by hand · physical completeness: **canonical** — this is the constant-coefficient scalar wave equation, with no damping, no heterogeneous medium and no source term · calibration: **none** |
 
 The two directions mean different things, which is the point of the
@@ -129,6 +144,26 @@ computed field to a closed-form solution of @eq-w2-pde, and the CFL bound
 `wave2d_fd_manual`, `wave2d_fd`, plus `wave2d_cuda` / `wave2d_hip` when
 enabled. Command-line driven, with optional VTK output (`--vtk`,
 `--vtk-every`).
+
+## Visualisation
+
+![One Gaussian pulse, released at the centre of a $192\times96$ slab that is
+periodic in $x$ and walled in $y$, run twice with **nothing changed but
+`y_bc`**, and sampled at the same $t = 50$. The outgoing ring is identical in
+both panels — same initial condition, same stepper, same 1000 steps — so
+every difference is the wall. Look along the top and bottom edges. On the
+left the Dirichlet (pressure-release) wall pins $u$ to zero and returns the
+crest as a **trough**: the two darkest blue lobes, at $y \approx 15$ and
+$y \approx 85$, are the reflected wave, inverted. On the right the Neumann
+(rigid) wall returns it as a **crest**, and because the reflected and
+incident waves add there, the deepest red in the figure sits against the
+wall at nearly twice the incident amplitude. The colour scale is diverging
+and centred on $u = 0$, and is shared between the panels, which is what
+makes "inverted" legible as a colour flip rather than as two separately
+normalised pictures. $t = 50$ rather than the end of the run: by $t = 70$
+the two reflections have crossed in the middle and the slab is a reverberant
+box, which is a different
+question.](figures/wave2d_wall_reflection.svg){#fig-wave2d-walls}
 
 ## Scalability
 

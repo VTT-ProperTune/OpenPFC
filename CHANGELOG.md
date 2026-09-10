@@ -33,6 +33,37 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   test presets rely on; a malformed one is rejected rather than silently
   ignored, since a preset that believes it is writing output and is not stays
   invisible until a figure is missing. Covered by `ctest -R field_snapshots`.
+- Field figures for the four application chapters that had none:
+  `08_kawahara`, `13_wave2d`, `14_allen_cahn`, `15_kobayashi`, each rendered
+  from a real single-rank run recorded in
+  `docs/report/figures/run_field_demos.sh`. Kawahara is one-dimensional, so
+  `field_plots.py` grows a line-plot pair (`render_line_panel`,
+  `render_line_comparison`) alongside the existing image renderers: a
+  `512 x 1 x 1` snapshot drawn as an image is a one-pixel stripe, and the
+  thing that figure shows -- a wave train shed at a few percent of the pulse
+  height -- is an amplitude, which a linear axis reads and a colour bar does
+  not. Lines use the Okabe-Ito palette paired with distinct dash patterns, so
+  they survive colour-blind vision and a greyscale print.
+  `field_io.read_gray_png` inverts `pfc::io::write_mpi_scalar_field_png_xy`'s
+  fixed affine map, which is the only field output `apps/allen_cahn` and
+  `apps/kobayashi` produce -- checkably so: the superlevel-set areas recovered
+  from the Allen-Cahn PNGs are the same integers the program prints for its
+  own exit-code criterion.
+
+- Three discrepancies between what an application chapter claimed and what
+  its binary actually does, found while rendering those figures and now
+  recorded in the chapters and in `docs/report/README.md` rather than left
+  implicit. `wave2d`'s advertised observable `global_rms_u_interior` is
+  always exactly zero, because the interior reduction skips `half_width`
+  cells on every axis including `z` and the application is an `nz == 1`
+  slab, so the loop covers no cells; `wave2d_fd`'s advertised even FD orders
+  2..20 are in practice order 2 only, since a wider halo cannot fit in that
+  same `nz == 1` slab and orders 4 and up abort before the first step; and
+  every `.vti` the JSON session pipeline writes carries `Spacing="1 1 1"`
+  regardless of the run's `domain.dx`, because `pfc::apply_writer_domain`
+  never calls `VTKWriter::set_spacing`. None of these is fixed here -- the
+  fields themselves are correct in all three cases -- but a reader of the
+  report should not have to rediscover them.
 
 - `tungsten_dealias_study` and `tungsten/resolution.hpp`: what running the
   cubic PFC nonlinearity undealiased actually costs. The crystal sits at

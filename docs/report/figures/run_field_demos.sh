@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Regenerate the raw field data (.vti / .bin) used by make_field_figures.py.
+# Regenerate the raw field data (.vti / .bin / .png) used by make_field_figures.py.
 #
 # This is the "run recipe" for the field-visualisation figures: the report
 # commits the rendered SVGs, not multi-megabyte simulation output, so a
@@ -33,6 +33,15 @@
 # ehd_film_nonlinear) are standalone science drivers whose `fields[]` output
 # is written by `openpfc_apps/field_snapshots.hpp` instead, using the same
 # JSON spelling.
+# Every run here is single-rank (`-n 1`): the spectral-ETD demos are small
+# enough not to need more, `apps/kawahara`'s cases are 1-D lines that HeFFTe
+# cannot split at all (`Ny = Nz = 1`), and the finite-difference CLI demos
+# are cheap. One rank also keeps each run trivial to place in its own output
+# directory.
+#
+# Three of the runs below (wave2d, allen_cahn, kobayashi) are command-line
+# applications with no JSON input at all, so they take positional arguments
+# rather than a config file and $RUNNER is applied to them directly.
 
 set -Eeuo pipefail
 
@@ -168,6 +177,100 @@ run_case ehd_film ehd_film_nonlinear \
 run_case ehd_film ehd_film_nonlinear \
   "$REPO_ROOT/apps/ehd_film/inputs_json/load_relaxation_stiff.json" \
   ehd_film_load results/ehd_film_nonlinear
+# --- kawahara: a KdV solitary wave forced to radiate ----------------------
+# The two shipped science-case-B inputs, unmodified: `gamma=0` (an exact KdV
+# solitary wave, the control) and `gamma=1/90` (the full Kawahara equation).
+# Nothing needs patching here -- both already write `.vti` every `saveat=2`
+# to t1=100, and their filenames differ, so one output directory holds both.
+# 1-D: `Ny = Nz = 1` means HeFFTe cannot decompose these across ranks.
+run_case kawahara kawahara \
+  "$REPO_ROOT/apps/kawahara/inputs_json/nonlinear_pulse_kdv_only.json" \
+  kawahara_solitary results/kawahara
+run_case kawahara kawahara \
+  "$REPO_ROOT/apps/kawahara/inputs_json/nonlinear_pulse_kawahara.json" \
+  kawahara_solitary results/kawahara
+
+# --- wave2d: a pulse reflecting off a pressure-release and a rigid wall ----
+# Same grid, same pulse, same steps; only `y_bc` changes. The figure is the
+# A-vs-B comparison, so the two runs MUST agree in everything else.
+#
+# Parameter choices, none of them arbitrary:
+#   192x96   the pulse (sigma = 0.12*min(Nx,Ny) = 11.5) needs room to reach
+#            the y walls and come back without also wrapping in the periodic
+#            x direction; a 2:1 slab gives 96 grid units of x headroom while
+#            the wall is only 48 away.
+#   fd_order 2, not higher. `wave2d_fd` advertises even orders 2..20, but the
+#            halo width must fit in *every* owned dimension, and this is an
+#            nz == 1 slab: order 4 (halo width 2) aborts in
+#            pfc::halo::create_padded_face_types_6 before the first step.
+#   dt=0.05  the drivers step with explicit Euler, which for this
+#            (imaginary-eigenvalue) system is weakly unstable rather than
+#            conditionally stable: the amplification per step is
+#            sqrt(1 + (dt*omega)^2) for every mode. At dt=0.05 the growth
+#            accumulated over 1400 steps is a couple of percent on the
+#            physical pulse and stays in the last digits on the grid-scale
+#            modes, which have no amplitude in a smooth Gaussian to begin
+#            with. Raising dt makes the grid-scale noise visible.
+#   1400 steps (t=70) with --vtk-every 200: the figure uses step 1000 (t=50),
+#            after the reflection and before the two reflected fronts cross.
+mkdir -p "$DATA_DIR/wave2d_walls/results/wave2d"
+for bc in dirichlet neumann; do
+  echo "==> wave2d_walls ($bc)"
+  (cd "$DATA_DIR/wave2d_walls" && $RUNNER "$BUILD_DIR/apps/wave2d/wave2d_fd" \
+    192 96 1400 0.05 2 "$bc" 0 \
+    --vtk "results/wave2d/${bc}_u_%04d.vti" --vtk-every 200)
+done
+
+# --- allen_cahn: a favoured grain growing into the matrix -----------------
+# This application has no output cadence: it writes at most two grayscale
+# PNGs per run, the initial state and the final one, and nothing in between.
+# A time series therefore means several runs at increasing `n_steps`. The
+# initial condition is a deterministic Gaussian nucleus with no noise
+# anywhere in the model, so these four runs sample one trajectory.
+#
+# 256^2 rather than the default 64^2: at 64^2 the grain has consumed the
+# whole periodic box by 40000 steps (superlevel area saturates at 4096 =
+# all cells), so the late panels would show the box, not a grain. Note that
+# the program's own 5x-area exit criterion is grid-dependent for the same
+# reason -- it passes at the default 64^2/5000 steps (6.1x) and fails at
+# 256^2/5000 steps (2.5x); these runs go to 40000 steps, where 256^2
+# reaches 16.7x.
+#
+# `|| true` below is deliberate and is the only place in this script that
+# ignores an exit code. `allen_cahn` uses its exit status *as* the 5x-area
+# criterion, so a run that stops early on purpose -- which is exactly what
+# the first three frames of a time series are -- reports failure by design
+# (10000 steps reaches 3.8x). The PNGs are written before the check, so
+# they are complete regardless. Do not copy this pattern to the other runs:
+# for them a nonzero status means the run actually failed.
+mkdir -p "$DATA_DIR/allen_cahn_growth"
+for n_steps in 10000 20000 30000 40000; do
+  tag=$(printf "%05d" "$n_steps")
+  echo "==> allen_cahn_growth ($n_steps steps)"
+  (cd "$DATA_DIR/allen_cahn_growth" && $RUNNER "$BUILD_DIR/apps/allen_cahn/allen_cahn" \
+    256 256 "$n_steps" 0.00009 8.0 0.19 10.0 phi_s00000.png "phi_s${tag}.png") || true
+done
+
+# --- kobayashi: an anisotropic dendrite growing into undercooled melt ------
+# Positional arguments are `Nx Ny n_steps dt dx [output_dir]`; the PNG
+# cadence is compiled in (`kNsave = 2000`), so 10000 steps gives frames at
+# steps 0, 2000, ..., 10000 plus a final one.
+#
+# 512^2 rather than the default 256^2, and this one is worth being precise
+# about. The box is a periodic torus with no heat sink, so latent heat
+# accumulates and growth self-limits when <T> reaches T_eq -- that happens
+# at a solid *fraction* of about 1/kappa = 0.56 regardless of box size. At
+# 256^2 the dendrite reaches that fraction by t=0.8, but only by running its
+# arms into the periodic boundary and merging with its own images: the last
+# two frames show a lattice, not a dendrite. Quadrupling the melt volume
+# (same dx, so the same physics and the same tip scale) keeps the six arms
+# clear of the boundary for the whole run. Costs about six minutes on one
+# login-node core.
+mkdir -p "$DATA_DIR/kobayashi_dendrite/results/kobayashi"
+echo "==> kobayashi_dendrite (512^2, 10000 steps)"
+(cd "$DATA_DIR/kobayashi_dendrite" && $RUNNER \
+  "$BUILD_DIR/apps/kobayashi/kobayashi_fd_manual" 512 512 10000 1.0e-4 0.03 \
+  results/kobayashi)
 
 echo
 echo "Done. Data written under: $DATA_DIR"

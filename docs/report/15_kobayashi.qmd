@@ -22,9 +22,10 @@ does it throw out arms in the six directions the anisotropy prefers?** The
 observable the application actually reports is the **solidified area**: $\phi$
 runs between 0 and 1, so the printed `sum_phi`, multiplied by the cell area, is
 exactly the area of solid, and `sum_T` is proportional to the domain's total
-enthalpy. The morphology itself is inspected in the PNG series. The application
-does **not** measure tip velocity, tip radius or arm spacing, so none of those
-are reported here.
+enthalpy. The morphology itself is inspected in the PNG series —
+@fig-kobayashi-dendrite is that series, and it answers the question in the
+first panel. The application does **not** measure tip velocity, tip radius or
+arm spacing, so none of those are reported here.
 
 ## Problem setup
 
@@ -132,6 +133,32 @@ been matched, historically, to an external script.
 OpenMP over the two passes, using the same halo-exchange periodic wrap as the
 MPI driver at one rank), plus CUDA and HIP drivers. Command-line driven, with PNG snapshots of
 $\phi$.
+
+## Visualisation
+
+![Six arms, not a disc. A 2.2-cell nucleus (invisible at this scale, so
+$t=0$ is not shown) in a $512^2$ box at $\Delta x = 0.03$, sampled every
+2000 steps. Nothing in the model prescribes the number of arms or their
+orientation: they follow from
+$\epsilon(\theta) = \bar\epsilon[1 + \delta\cos(6(\theta-\theta_0))]$
+alone, and the side branches from the same instability acting on the arms
+themselves. The percentage above each panel is the application's own
+observable, `sum_phi` divided by the cell count. Read the sequence, not just
+the last frame: the fraction rises 2.4 → 7.6 → 16.0 → 27.8 → 43.2 %, and it
+cannot pass 55.6 %. That number is $1/\kappa$ and it is a *property of the
+box*, not of the material — integrating @eq-kb-temp over the periodic torus
+gives
+$\mathrm{d}\langle T\rangle/\mathrm{d}t = \kappa\,\mathrm{d}\langle\phi\rangle/\mathrm{d}t$
+exactly, so with no heat sink the melt warms in strict proportion to what has
+frozen and growth stops when $\langle T\rangle$ reaches $T_{\mathrm{eq}}=1$.
+This run confirms the identity on its own numbers: at $t=1$ the solid
+fraction is 0.4319 and the printed $\langle T\rangle$ is
+$0.7773 = 1.8\times0.4319$. By that last panel the arms have also reached
+the periodic boundary, so $t=1$ is where a reader should stop treating this
+as one dendrite in a melt and start treating it as a lattice of them. The
+colour map is sequential because $\phi$ is one-sided — 0 is liquid, 1 is
+solid, and there is no meaningful midpoint to diverge
+about.](figures/kobayashi_dendrite_montage.svg){#fig-kobayashi-dendrite}
 
 ## Scalability
 

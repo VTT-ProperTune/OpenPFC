@@ -32,9 +32,9 @@ Python, R, or Jupyter.
 | `data/*.csv` | measured timings, transcribed from [`../hpc/lumi_gpu_scaling.md`](../hpc/lumi_gpu_scaling.md) |
 | `figures/*.svg` | committed figures |
 | `figures/make_figures.py` | regenerates the scalability figures from `data/` |
-| `figures/field_io.py`, `figures/field_plots.py` | field-visualisation library: read `.vti`/`.bin` field output, render panels/montages/comparisons |
+| `figures/field_io.py`, `figures/field_plots.py` | field-visualisation library: read `.vti`/`.bin`/grayscale-`.png` field output, render panels/montages/comparisons/line plots |
 | `figures/make_field_figures.py` | regenerates the field-visualisation figures from a run of `run_field_demos.sh` |
-| `figures/run_field_demos.sh` | run recipe: reproduces the raw `.vti`/`.bin` output the field figures are rendered from |
+| `figures/run_field_demos.sh` | run recipe: reproduces the raw `.vti`/`.bin`/`.png` output the field figures are rendered from |
 
 ## Updating the scalability figures
 
@@ -57,6 +57,31 @@ each — rendered by `figures/field_io.py` (readers) and `figures/field_plots.py
 (panels, montages, comparisons) from real runs, not synthesised data. As with
 the scalability figures, only the SVGs are committed; the multi-megabyte raw
 `.vti`/`.bin` output used to render them is not.
+Several application chapters show real simulation output — a "Visualisation"
+section near the end of each — rendered by `figures/field_io.py` (readers) and
+`figures/field_plots.py` (panels, montages, comparisons, line plots) from real
+runs, not synthesised data. As with the scalability figures, only the SVGs are
+committed; the multi-megabyte raw `.vti`/`.bin`/`.png` output used to render
+them is not.
+
+Two of these figures are not 2-D images, and the reason is worth knowing
+before adding another:
+
+* `08_kawahara.qmd` is a **one-dimensional** application, so its figure is a
+  line plot (`render_line_comparison`). A `512 x 1 x 1` snapshot drawn through
+  `render_panel` would be a one-pixel stripe, and the thing being shown — a
+  shed wave train at a few percent of the pulse height — is an amplitude,
+  which a linear axis reads far better than a colour bar.
+* `14_allen_cahn.qmd` and `15_kobayashi.qmd` are command-line applications
+  that never touch the JSON session pipeline, so they write no `.vti` and no
+  `.bin` at all. Their only field output is the 8-bit grayscale PNG that
+  `pfc::io::write_mpi_scalar_field_png_xy` emits, with a fixed affine map and
+  caller-supplied clip bounds. `field_io.read_gray_png` inverts that map, so
+  the figure is rendered from the run's own data rather than from a picture
+  of it — at the cost of 1/255-of-range quantisation and of losing anything
+  the writer clipped. Both figure docstrings say what that costs for their
+  run; the Allen–Cahn one is checkable, since the superlevel-set areas
+  recovered from the PNGs are the same integers the program printed.
 
 To regenerate them from scratch:
 
@@ -73,6 +98,8 @@ field_data_dir=/flash/project_462001519/juaho/tmp-shared/report-figures
 # 2. Run the demo applications (cahn_hilliard, thin_film, tungsten,
 #    surface_diffusion, ehd_film) and write their .vti/.bin output
 #    somewhere. On the shared LUMI allocation:
+#    kawahara, wave2d, allen_cahn, kobayashi) and write their
+#    .vti/.bin/.png output somewhere. On the shared LUMI allocation:
 SLURM_JOB_ID=$(cat /flash/project_462001519/juaho/shared_job_id.txt) \
 TMPDIR=/flash/project_462001519/juaho/tmp-shared \
 RUNNER="srun --overlap -n 1" \
@@ -94,6 +121,16 @@ and the tungsten run uses the 256³ preset rather than the 32³ one because
 `SingleSeed`'s seed radius does not fit inside the smaller domain). Read
 those comments before changing a parameter — the values are not arbitrary,
 several were chosen to stay just inside a numerical-stability boundary that
+chosen. A few examples of what those comments contain: two thin-film runs
+deliberately extend the shipped preset's `t1`/`saveat` past what the default
+JSON input uses; the tungsten run uses the 256³ preset rather than the 32³
+one because `SingleSeed`'s seed radius does not fit inside the smaller
+domain; `wave2d` must run at `fd_order` 2 because a wider halo does not fit
+in an `nz == 1` slab; and the Allen–Cahn and Kobayashi runs use larger grids
+than their defaults so the growing phase does not meet its own periodic
+image inside the run. Read those comments before changing a parameter — the
+values are not arbitrary, several were chosen to stay just inside a
+numerical-stability boundary or a domain-size boundary that
 `make_field_figures.py`'s docstrings also explain.
 
 **Before committing a regenerated figure**, render a PNG copy and look at
@@ -122,22 +159,44 @@ To add a field figure for another application:
    key through `apps/common/include/openpfc_apps/field_snapshots.hpp`, which
    is two calls: build the writer after the field exists, then write a
    snapshot wherever the driver already samples its diagnostics.
+   read the raw `.bin` dump it already writes. A command-line application
+   with no JSON path may write only grayscale PNGs; that is still real data
+   (see step 2). Add the run to `run_field_demos.sh` (or a similar recipe) so
+   the figure is reproducible.
 2. **Read it.** `field_io.read_vti(path)` returns a `Field2D` directly. For a
    `.bin` dump, build a `field_io.GridSpec` from the run's JSON `domain`
    (`nx`/`ny`/`nz` are grid *point counts* — `domain.Lx` etc., not physical
    lengths — `dx`/`dy`/`dz`, and `origin`, `"corner"` or `"center"`) and call
    `field_io.read_bin` (3D array) or `field_io.slice_bin` (a 2D slice of a 3D
-   field, e.g. for a PFC density — see the tungsten example).
+   field, e.g. for a PFC density — see the tungsten example). For a
+   grayscale PNG, `field_io.read_gray_png` inverts the writer's affine map;
+   you must pass the same `vmin`/`vmax` the application passed
+   (`(-1, 1)` for Allen–Cahn, `(0, 1)` for Kobayashi) or the recovered
+   values are wrong.
+
+   **Beware the `.vti` extent.** `pfc::apply_writer_domain` calls only the
+   three-argument `set_domain`, never `VTKWriter::set_spacing`/`set_origin`,
+   so every `.vti` the JSON session writes carries `Spacing="1 1 1"`
+   regardless of the run's `domain.dx`. That is invisible at `dx = 1` and
+   wrong by a factor of four for, say, `apps/kawahara`'s `dx = 0.25` inputs.
+   Pass the run's own `dx` through `field_io.with_spacing` when a figure's
+   axis is in physical units.
 3. **Decide sequential vs diverging.** One-sided quantities (a thickness, a
    magnitude) are `kind="sequential"`. Signed quantities around a physically
    meaningful midpoint (a composition around its mean, a PFC density around
    its baseline) are `kind="diverging"` with an explicit `center` — never a
    plain rainbow map.
-4. **Render.** `field_plots.render_panel` (one field), `render_montage` (a
-   time series, shared colour scale), or `render_comparison` (two fields,
-   shared colour scale) — see `make_field_figures.py` for worked examples of
-   each, including how each one's caption explains what the reader is
-   looking at and why, not just "field at t=100".
+4. **Render.** For a 2-D field: `field_plots.render_panel` (one field),
+   `render_montage` (a time series, shared colour scale), or
+   `render_comparison` (two fields, shared colour scale). For a 1-D field
+   (`Lx x 1 x 1`): `render_line_panel` (several profiles on one axes) or
+   `render_line_comparison` (two runs, shared x and y axes) — never an image
+   renderer, which would draw a one-pixel stripe. Line colours come from the
+   Okabe–Ito set and are paired with distinct dash patterns, so the curves
+   survive both colour-blind vision and a greyscale print. See
+   `make_field_figures.py` for worked examples of each, including how each
+   one's caption explains what the reader is looking at and why, not just
+   "field at t=100".
 5. **Add a "Visualisation" section** to the application's chapter, between
    "Binaries and inputs" and "Scalability", following the existing three.
 

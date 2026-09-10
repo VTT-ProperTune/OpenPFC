@@ -4,14 +4,21 @@
 
 """Render OpenPFC field snapshots as publication-quality figures.
 
-Three entry points, all returning a `matplotlib.figure.Figure` the caller
-saves:
+Five entry points, all returning a `matplotlib.figure.Figure` the caller
+saves. Three render a 2-D field as an image:
 
 - `render_panel` -- one field, one axes, a colour bar.
 - `render_montage` -- a time series as a row of panels sharing one colour
   bar, so morphology evolution is visible in a single figure.
 - `render_comparison` -- two fields (typically two runs) side by side on a
   *shared* colour scale, for A-vs-B comparisons.
+
+Two render a **one-dimensional** field as a line plot, for the applications
+whose domain is `Lx x 1 x 1` (`apps/kawahara`), where an image of a
+one-pixel-tall field would be unreadable:
+
+- `render_line_panel` -- several 1-D profiles overlaid on one axes.
+- `render_line_comparison` -- two runs side by side on shared x and y axes.
 
 Colour map policy (see module docstring in `field_io.py` for the data
 side): a field is either "sequential" (one-sided, e.g. a film thickness
@@ -216,4 +223,181 @@ def render_comparison(
     cbar = fig.colorbar(im, cax=cbar_ax)
     cbar.set_label(cbar_label, fontsize=LABEL_FS)
     cbar.ax.tick_params(labelsize=TICK_FS)
+    return fig
+
+
+# --------------------------------------------------------------------------
+# 1-D line renderers
+# --------------------------------------------------------------------------
+#
+# Why these exist. `apps/kawahara` is a one-dimensional application: its
+# domain is `Lx x 1 x 1` and its `.vti` snapshots are single rows. Rendering
+# a 1-pixel-tall image through `render_panel` would be technically correct
+# and visually useless -- and worse, it would hide the very thing the
+# chapter is about, because the interesting signal there (a shed dispersive
+# wave train whose RMS is under a tenth of the pulse height) is an
+# *amplitude*, and amplitude is what a colour bar reads worst. A line plot
+# puts u on a linear axis, where a 10% ripple is 10% of the frame.
+#
+# Colour discipline for lines follows `make_figures.py` (which draws the
+# scalability curves): a small ordered palette that is colour-blind-safe
+# (Okabe-Ito, the standard eight-colour set), ordered so consecutive entries
+# also differ in luminance, and paired one-for-one with dash patterns so a
+# greyscale print never has to separate two curves on hue alone.
+
+# Okabe & Ito (2008). Ordered so that consecutive entries also step up in
+# luminance -- blue L*=46, vermillion L*=54, bluish green L*=58, orange
+# L*=71, reddish purple L*=61 -- but note vermillion and bluish green are
+# only four L* apart, which greyscale will not separate reliably. That is
+# what LINE_STYLES is for: every curve gets a different dash pattern as
+# well as a different hue, so the encoding never rests on colour alone.
+LINE_COLORS = ("#0072B2", "#D55E00", "#009E73", "#E69F00", "#CC79A7")
+LINE_STYLES = ("-", "--", "-.", ":", (0, (3, 1, 1, 1, 1, 1)))
+
+
+def line_profile(field: Field2D):
+    """Extract `(x, u)` from a 1-D `Field2D` (a `Lx x 1 x 1` snapshot).
+
+    `read_vti` squeezes a `Ly == Lz == 1` domain to a `(1, nx)` array, so the
+    single row *is* the profile.
+
+    `x` is **node-centred**: sample `i` sits at `xmin + i*dx`, which is
+    what the solver itself uses -- `pfc::data::Field::coords` returns
+    `origin + (low + i) * spacing`, so the first sample is at the origin and
+    not half a cell in from it. This matters because it is exactly the
+    convention `Field2D.extent` does *not* use: `extent` spans
+    `n * dx` because `imshow` draws pixels as cells, and taking the naive
+    `(i + 1/2) * dx` from it would shift every curve by half a cell. That is
+    invisible on a single curve and a systematic bias the moment the figure
+    is read for where a pulse is.
+    """
+    import numpy as np
+
+    data = field.data
+    if data.ndim != 2 or data.shape[0] != 1:
+        raise ValueError(
+            f"line_profile expects a 1-D field of shape (1, nx), got {data.shape}"
+        )
+    u = data[0]
+    xmin, xmax = field.extent[0], field.extent[1]
+    n = u.size
+    dx = (xmax - xmin) / n
+    x = xmin + np.arange(n) * dx
+    return x, u
+
+
+def _style_line_axes(ax, xlabel: str, ylabel: str):
+    ax.set_xlabel(xlabel, fontsize=LABEL_FS)
+    ax.set_ylabel(ylabel, fontsize=LABEL_FS)
+    ax.tick_params(labelsize=TICK_FS)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    ax.grid(True, which="major", axis="both", color="0.9", linewidth=0.6)
+    ax.set_axisbelow(True)
+
+
+def _draw_profiles(ax, fields: Sequence[Field2D], labels: Optional[Sequence[str]]):
+    for i, f in enumerate(fields):
+        x, u = line_profile(f)
+        label = (
+            labels[i] if labels is not None
+            else (f"t={f.time:g}" if f.time is not None else f"#{i}")
+        )
+        ax.plot(
+            x, u,
+            color=LINE_COLORS[i % len(LINE_COLORS)],
+            linestyle=LINE_STYLES[i % len(LINE_STYLES)],
+            linewidth=1.4,
+            label=label,
+        )
+
+
+def render_line_panel(
+    fields: Sequence[Field2D],
+    *,
+    labels: Optional[Sequence[str]] = None,
+    title: str = "",
+    xlabel: str = "x",
+    ylabel: str = "u",
+    ylim=None,
+    figsize=(6.4, 3.4),
+) -> plt.Figure:
+    """Several 1-D profiles of the same field, overlaid on one axes.
+
+    The line analogue of `render_panel`: one run, several times (or several
+    parameter values) on a shared pair of axes. `title` should say what the
+    reader is looking at, as for the image renderers.
+    """
+    fig, ax = plt.subplots(figsize=figsize)
+    _draw_profiles(ax, fields, labels)
+    _style_line_axes(ax, xlabel, ylabel)
+    if ylim is not None:
+        ax.set_ylim(*ylim)
+    ax.set_title(title, loc="left", fontsize=TITLE_FS)
+    ax.legend(fontsize=TICK_FS, frameon=False, loc="best")
+    fig.tight_layout()
+    return fig
+
+
+def render_line_comparison(
+    fields_a: Sequence[Field2D],
+    fields_b: Sequence[Field2D],
+    *,
+    label_a: str,
+    label_b: str,
+    labels: Optional[Sequence[str]] = None,
+    suptitle: str = "",
+    xlabel: str = "x",
+    ylabel: str = "u",
+    ylim=None,
+    annotate_a: Optional[str] = None,
+    annotate_b: Optional[str] = None,
+    figsize=(9.0, 3.6),
+) -> plt.Figure:
+    """Two 1-D runs side by side on **shared x and y axes** (A-vs-B lines).
+
+    The line analogue of `render_comparison`, and the reason it shares axes
+    is the same: this figure exists to answer "is run A different from run
+    B", and that question is only answerable by eye if a millimetre means
+    the same amplitude in both panels. `ylim` defaults to the union of both
+    runs' data with a small margin, so neither panel is silently rescaled to
+    flatter its own run.
+
+    The same time (or parameter) in both panels gets the same colour *and*
+    the same dash pattern, so the reader tracks a curve across the panels
+    without consulting two legends -- only the left panel carries one.
+    `annotate_a`/`annotate_b` place one short note inside a panel for a
+    feature worth pointing at directly (e.g. "no wave train here").
+    """
+    import numpy as np
+
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=figsize, sharex=True, sharey=True)
+    _draw_profiles(axa, fields_a, labels)
+    _draw_profiles(axb, fields_b, labels)
+
+    if ylim is None:
+        both = np.concatenate(
+            [f.data.ravel() for f in list(fields_a) + list(fields_b)]
+        )
+        lo, hi = float(both.min()), float(both.max())
+        pad = 0.08 * (hi - lo) if hi > lo else 1.0
+        ylim = (lo - pad, hi + pad)
+    axa.set_ylim(*ylim)
+
+    for ax, label in ((axa, label_a), (axb, label_b)):
+        _style_line_axes(ax, xlabel, ylabel)
+        ax.set_title(label, loc="left", fontsize=TITLE_FS)
+    axb.set_ylabel("")
+
+    for ax, note in ((axa, annotate_a), (axb, annotate_b)):
+        if note:
+            ax.annotate(
+                note, xy=(0.98, 0.04), xycoords="axes fraction",
+                ha="right", va="bottom", fontsize=TICK_FS, color="0.35",
+            )
+
+    axa.legend(fontsize=TICK_FS, frameon=False, loc="upper right")
+    if suptitle:
+        fig.suptitle(suptitle, x=0.01, ha="left", fontsize=TITLE_FS + 0.5)
+    fig.tight_layout()
     return fig
