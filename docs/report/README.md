@@ -17,6 +17,39 @@ quarto render docs/report            # HTML into docs/report/_output/
 quarto render docs/report --to pdf   # PDF (needs a LaTeX toolchain)
 ```
 
+Build output (`_output/`, `.quarto/`) is **not** committed. It was, once, and
+then sat stale for months because nothing regenerated it; render locally
+instead.
+
+### Rendering on LUMI
+
+Nothing needed is available as a module, but all three pieces install into
+`$HOME` without root:
+
+```bash
+# 1. Quarto itself
+v=1.10.18
+curl -sL -o /tmp/quarto.tar.gz \
+  "https://github.com/quarto-dev/quarto-cli/releases/download/v${v}/quarto-${v}-linux-amd64.tar.gz"
+mkdir -p ~/.local/opt ~/.local/bin && tar xzf /tmp/quarto.tar.gz -C ~/.local/opt/
+ln -sf ~/.local/opt/quarto-${v}/bin/quarto ~/.local/bin/quarto
+
+# 2. A LaTeX toolchain, for the PDF only
+quarto install tinytex
+export PATH="$HOME/.TinyTeX/bin/x86_64-linux:$HOME/.local/bin:$PATH"
+```
+
+The third piece is `rsvg-convert`, which Quarto's PDF path shells out to in
+order to turn the committed SVG figures into PDF. LUMI has no librsvg, but
+`cairosvg` does the same job; a shim on `PATH` accepting the flags Quarto
+actually passes (`-f pdf -a -o OUT IN`) is enough. HTML needs neither TinyTeX
+nor the shim.
+
+**Render the PDF before believing the report is sound.** The markdown checkers
+and the HTML render both tolerate math that LaTeX rejects — MathJax quietly
+accepts `$R^\*$`, LuaTeX stops with `Missing { inserted`. That exact error has
+now reached the repository twice, in two different chapters. Write `^{*}`.
+
 The report has **no compute engine**: `engine: markdown` in
 [`_quarto.yml`](_quarto.yml). It renders with `quarto` alone and needs no
 Python, R, or Jupyter.

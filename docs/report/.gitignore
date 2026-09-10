@@ -2,3 +2,5 @@
 _output/
 
 /.quarto/
+
+**/*.quarto_ipynb
