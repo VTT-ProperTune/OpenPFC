@@ -18,6 +18,12 @@ OpenPFC applications write fields in two formats (see
 - **Raw binary (`.bin`)**: a headerless Fortran-ordered `double` brick
   (`pfc::BinaryWriter` / MPI-IO). The caller must supply the grid shape and
   spacing out of band (there is no metadata in the file).
+- **8-bit grayscale PNG**: the *only* field output of the command-line
+  applications that never touch the JSON session pipeline (`apps/allen_cahn`,
+  `apps/kobayashi`). `pfc::io::write_mpi_scalar_field_png_xy` applies a
+  fixed affine map with caller-supplied clip bounds, so the file is an
+  invertible (if quantised) record of the field, not merely a picture of it
+  -- see `read_gray_png`.
 
 Only single-piece (single-MPI-rank) `.vti` files are handled: the figures in
 this report are all rendered from `-n 1` runs. A `.pvti` master plus
@@ -258,3 +264,114 @@ def read_series(paths_and_times: list[tuple[Path, float]], *, reader="vti") -> l
     if reader != "vti":
         raise ValueError("read_series only supports the .vti reader; build .bin series by hand")
     return [read_vti(p, time=t) for p, t in paths_and_times]
+
+
+# --------------------------------------------------------------------------
+# grayscale-PNG reader
+# --------------------------------------------------------------------------
+
+
+def read_gray_png(
+    path: Path | str,
+    *,
+    vmin: float,
+    vmax: float,
+    grid: Optional[GridSpec] = None,
+    name: str = "Field",
+    time: Optional[float] = None,
+) -> Field2D:
+    """Recover a scalar field from an 8-bit grayscale PNG written by OpenPFC.
+
+    `apps/allen_cahn` and `apps/kobayashi` are command-line applications that
+    do not use the JSON session pipeline, so they emit no `.vti`/`.bin` at
+    all: their only field output is `pfc::io::write_mpi_scalar_field_png_xy`
+    (`src/openpfc/frontend/io/png_writer.cpp`). That writer applies a *fixed,
+    documented* affine map, so the PNG is an invertible record of the run
+    rather than a picture of one:
+
+        g = round(255 * clamp((f - vmin) / (vmax - vmin), 0, 1))
+
+    with the clip bounds passed by the application -- `(-1, 1)` for
+    Allen-Cahn's `phi` and `(0, 1)` for Kobayashi's. This function inverts
+    it, `f = vmin + (vmax - vmin) * g / 255`, so the caller MUST pass the
+    same bounds the run used or the recovered values are wrong.
+
+    Two honest limitations, which the figures using this reader state in
+    their captions. First, the recovered field is quantised to 1/255 of
+    `vmax - vmin` -- negligible for a figure, and small enough that the
+    Allen-Cahn superlevel-set areas recovered here come out as the same
+    integers the program prints for its own exit criterion. Second, any
+    value the run pushed outside `[vmin, vmax]` was *saturated* by the
+    writer and cannot be recovered. That one is not hypothetical: Kobayashi
+    keeps `phi` in `[0, 1]` by construction, but Allen-Cahn's constant
+    driving force shifts both wells, so its `phi` really does reach `+1.15`
+    and the grain interior comes back flattened to `+1`. Check the run's own
+    printed min/max against the clip bounds before trusting a figure that
+    depends on interior values.
+
+    Row order needs no flip: the writer indexes the gathered image as
+    `global[gx + gy * nx_glob]` and PNG stores row 0 first, so row `iy` of
+    the file is grid row `iy`, which is exactly what `imshow(origin="lower")`
+    wants. `grid` supplies physical extent and origin; without it the extent
+    is the pixel index range.
+    """
+    import matplotlib.image as mpimg
+
+    img = mpimg.imread(str(path))
+    if img.ndim == 3:
+        # Pillow hands back RGB(A) for some PNG flavours; the writer emits a
+        # single 8-bit channel, so all channels are identical -- take one.
+        img = img[..., 0]
+    # matplotlib returns float in [0, 1] for 8-bit PNGs; be tolerant of a
+    # uint8 array in case a future matplotlib/Pillow changes that.
+    if img.dtype == np.uint8:
+        level = img.astype(np.float64) / 255.0
+    else:
+        level = img.astype(np.float64)
+    data = vmin + (vmax - vmin) * level
+
+    ny, nx = data.shape
+    if grid is None:
+        extent = (0.0, float(nx), 0.0, float(ny))
+    else:
+        if (grid.nx, grid.ny) != (nx, ny):
+            raise ValueError(
+                f"{path}: PNG is {nx}x{ny} but GridSpec says {grid.nx}x{grid.ny}"
+            )
+        extent = grid.axis_extent(grid.nx, grid.dx) + grid.axis_extent(grid.ny, grid.dy)
+    return Field2D(data=data, extent=extent, name=name, time=time)
+
+
+def with_spacing(
+    field: Field2D,
+    *,
+    dx: float,
+    dy: float = 1.0,
+    origin: str = "corner",
+) -> Field2D:
+    """Restate a `.vti` field's extent in physical units.
+
+    **Why this is needed.** The JSON session pipeline configures its writers
+    through `pfc::apply_writer_domain`
+    (`include/openpfc/kernel/simulation/results_writer_domain.hpp`), which
+    calls only the three-argument `set_domain(global, local, offset)` and
+    never `VTKWriter::set_spacing` / `set_origin`. Every `.vti` it emits
+    therefore carries `Origin="0 0 0" Spacing="1 1 1"` no matter what the
+    run's `domain.dx` and `domain.origin` say, so `read_vti`'s extent is in
+    *grid indices*, not physical length. That is invisible for the shipped
+    presets with `dx = 1` (Cahn-Hilliard, thin film) and wrong by a factor
+    of four for, say, `apps/kawahara`'s `dx = 0.25` solitary-wave inputs,
+    whose chapter quotes positions and wavelengths in physical units.
+
+    Rather than silently plotting index units under a physical axis label,
+    a figure that needs physical `x` passes the run's own `domain.dx`
+    through here. Fixing the writer is the real cure; this keeps the
+    figures honest until then.
+    """
+    ny, nx = field.data.shape  # not derived from `extent`: that is the bug
+    grid = GridSpec(nx=nx, ny=ny, dx=dx, dy=dy, origin=origin)
+    extent = grid.axis_extent(nx, dx) + grid.axis_extent(ny, dy)
+    return Field2D(
+        data=field.data, extent=extent, name=field.name, time=field.time,
+        units=field.units,
+    )

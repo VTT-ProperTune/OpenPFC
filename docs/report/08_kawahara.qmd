@@ -129,6 +129,9 @@ exactly the distance the closed form says it should. The full run gives up 28 %
 of its amplitude to radiation, and that radiation appears at the wavenumber the
 dispersion relation predicts. The 7 % overshoot is consistent with the pulse
 radiating while its own amplitude, and therefore its speed, is still changing.
+@fig-kawahara-radiation shows the two runs' profiles directly, and is the
+figure to read alongside this table: every number in the right-hand column is
+visible in it.
 
 ## Governing equations
 
@@ -216,6 +219,30 @@ highest wave number present, so the 2/3 rule is required.
 therefore single-rank: HeFFTe cannot split $N_y = N_z = 1$ across several
 processes. The diagnostics and wave-packet path is CPU-only; it is not wired
 onto the HIP session.
+
+## Visualisation
+
+![Two runs of the *same* solitary wave, differing only in $\gamma$, drawn as
+line plots because this is the report's only one-dimensional application — a
+$512\times1\times1$ snapshot rendered as an image would be a one-pixel stripe,
+and the signal here is an amplitude. **Left**, the $\gamma = 0$ control. It is
+an exact solution of the equation it is being integrated against, so the three
+curves lie almost on top of each other: after 20000 steps the peak is unchanged
+to 1.4 parts in $10^4$, the line either side of the pulse is flat, and the only
+visible motion is the 2.50 length units the closed form says the wave should
+travel. That is what makes the right-hand panel readable as physics rather than
+as drift. **Right**, the same wave with $\gamma = 1/90$ restored. The pulse has
+given up 28 % of its height by $t = 100$ and the line behind and ahead of it is
+filled with a wave train at $k = 1.669$, within 7 % of the resonance
+$c_p(k) = c$ at $k_{\mathrm{res}} = 1.5579$ that linear theory predicts and
+that nothing in the solver is told. Note *where* the wave train sits: the
+resonant waves have group velocity
+$\mathrm{d}\omega/\mathrm{d}k = 3\beta k^2 + 5\gamma k^4 = 0.206$ at
+$k_{\mathrm{res}}$, eight times the pulse's own speed $c = 0.025$, so the
+radiation outruns its source and, by $t = 100$, has wrapped the periodic line —
+which is why the observable is a whole-domain RMS and why no no-wrap claim is
+made for this case. Both panels share one $u$ axis, so a millimetre is the same
+amplitude in each.](figures/kawahara_solitary_radiation.svg){#fig-kawahara-radiation}
 
 ## Scalability
 

@@ -16,7 +16,8 @@ the favoured phase actually take over?** The named observable is the
 **superlevel-set area** $A(t) = \lvert\{\phi > 0\}\rvert$, the number of cells
 in the growing phase, reported as the ratio $A(t_1)/A(0)$. It is the
 non-conserved counterpart of a mass check: Cahn–Hilliard's mean must not move,
-and Allen–Cahn's area must.
+and Allen–Cahn's area must. @fig-allen-cahn-growth shows it happening, with
+the measured ratio printed on each panel.
 
 ## Problem setup
 
@@ -46,7 +47,13 @@ anything: once the growing phase spans a substantial fraction of the box it
 begins to meet its own image, and the area ratio stops describing an isolated
 grain. The 5× criterion is a coarse growth check rather than a measurement of
 interface velocity, and the application does **not** verify that the seed has
-stayed clear of its own images.
+stayed clear of its own images. It is also **grid-dependent**, which is worth
+knowing before reading a pass or a fail as a statement about the physics: the
+seed radius scales with the grid ($\sigma \propto \min(n_x,n_y)$) but the
+interface advances at a velocity that does not, so the area ratio reached in a
+fixed number of steps falls as the grid grows. At the shipped defaults the
+run passes ($6.1\times$ at $64^2$, 5000 steps) and the same 5000 steps on a
+$256^2$ grid fails ($2.5\times$) while solving the same problem no worse.
 
 ## Governing equations
 
@@ -114,6 +121,30 @@ exchange are distinct phases. Optional PNG snapshots of $\phi$.
 
 `allen_cahn` (CPU), plus CUDA/HIP twins. Command-line driven; this application
 does not use the JSON session path.
+
+## Visualisation
+
+![One grain growing, with the application's own observable written on it. The
+five panels are five *separate runs* at increasing `n_steps`, because this
+application has no output cadence — it writes at most two PNGs, the initial
+and the final state — but the initial condition is deterministic and there is
+no noise anywhere in the model, so they sample one trajectory rather than
+five. What to read: the $\phi = 0$ contour is the white ring, and the number
+above each panel is $A(t)/A(0)$ for the area inside it, taken from the run's
+own printed line. The favoured phase does take over — 16.7× the seed area
+after 40000 steps — and it does so at a nearly constant interface *velocity*,
+which is why the radius grows roughly linearly while the area grows roughly
+quadratically. Two details are real rather than artefacts. The matrix is
+darkest at $t = 0$ and lighter afterwards because the driving force $F = 10$
+shifts both wells: $\phi$ actually relaxes to $-0.69$ and $+1.15$, not
+$\pm1$. The grain interior is flat because the PNG the application writes
+clips at $\phi = 1$, so anything above that is saturated and unrecoverable —
+harmless here, since the subject of the figure is the interface and the
+level set that defines the observable sits in the middle of the recoverable
+range. $256^2$ rather than the default $64^2$: at $64^2$ the grain has eaten
+the whole periodic box by 40000 steps, which is the self-interaction ceiling
+this chapter warns about, and the last panel would be a picture of the box.
+](figures/allen_cahn_growth_montage.svg){#fig-allen-cahn-growth}
 
 ## Scalability
 
