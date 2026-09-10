@@ -60,7 +60,7 @@ the methods, not two different problems.
 | Phase-field crystal | @sec-tungsten, @sec-aluminum | Production PFC, mean-field ETD, moving frames |
 | High-order spectral | @sec-cahn-hilliard – @sec-gradient-elasticity | $k^4$ to $k^{10}$ operators, each with an analytical check |
 | Finite difference | @sec-heat3d – @sec-kobayashi | Stencils, coupled fields, mixed boundaries |
-| Scalability | @sec-scalability | Measured LUMI-G curves, 1–32 GCDs |
+| Scalability | @sec-scalability | Measured LUMI-G curves, 1–128 GCDs (16 nodes): strong, weak, and spectral against finite difference |
 
 Every chapter ends with a *Verification* section listing what the test suite
 actually asserts. The intent is that no statement in this report has to be

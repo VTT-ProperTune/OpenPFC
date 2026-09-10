@@ -23,9 +23,13 @@ comparable in effort. What high order does cost is stiffness, and the report
 is explicit about how exponential time differencing absorbs it.
 
 The second is that **the same application source runs on a laptop core and on
-32 GPUs**. Chapter @sec-scalability reports measured strong-scaling curves for
-three models on LUMI-G, out to 32 GCDs across four nodes, together with the
-point at which each curve stops being worth extending.
+sixteen nodes of a GPU supercomputer**. Chapter @sec-scalability reports
+measured curves on LUMI-G out to 128 GCDs across 16 nodes: strong scaling at
+82% efficiency over a fourfold increase in ranks, and weak scaling at constant
+work per GCD ending on 8.59 billion cells. The application sources are
+unchanged between the one-GCD and the 128-GCD runs. The chapter also compares
+the spectral and finite-difference paths on the same equation, and is explicit
+about the one axis of that comparison the measurements do not settle.
 
 Neither claim is asserted without a number behind it. Where a property has not
 been measured, the report says so.
