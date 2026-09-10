@@ -121,6 +121,19 @@ public:
   void set_spacing(const std::array<double, 3> &spacing);
 
   /**
+   * @brief Set origin and spacing in one call (`ResultsWriter` hook)
+   *
+   * Lets `pfc::apply_writer_domain` push the run's real `Domain` geometry into
+   * the `.vti` header without every session having to remember to call
+   * `set_origin` / `set_spacing` itself.
+   */
+  void set_geometry(const std::array<double, 3> &origin,
+                    const std::array<double, 3> &spacing) override {
+    set_origin(origin);
+    set_spacing(spacing);
+  }
+
+  /**
    * @brief Set field name for VTK output
    */
   void set_field_name(const std::string &name) { m_field_name = name; }

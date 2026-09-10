@@ -19,7 +19,10 @@ public:
   std::array<int, 3> global{};
   std::array<int, 3> local{};
   std::array<int, 3> offset{};
+  std::array<double, 3> origin{};
+  std::array<double, 3> spacing{};
   bool set = false;
+  bool geometry_set = false;
 
   void set_domain(const std::array<int, 3> &arr_global,
                   const std::array<int, 3> &arr_local,
@@ -29,6 +32,12 @@ public:
     offset = arr_offset;
     set = true;
   }
+  void set_geometry(const std::array<double, 3> &arr_origin,
+                    const std::array<double, 3> &arr_spacing) override {
+    origin = arr_origin;
+    spacing = arr_spacing;
+    geometry_set = true;
+  }
   MPI_Status write(int, pfc::field::FieldView<double>) override { return MPI_Status{}; }
   MPI_Status write(int, pfc::field::FieldView<std::complex<double>>) override { return MPI_Status{}; }
 };
@@ -37,9 +46,11 @@ public:
 
 TEST_CASE("apply_writer_domain uses Domain and owned Box3i",
           "[simulation][io][unit]") {
+  // Non-unit spacing and a shifted origin: the geometry a `dx = 1` run
+  // cannot distinguish from the writer's defaults.
   auto domain = pfc::domain::create(pfc::GridSize({16, 8, 4}),
-                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+                                    pfc::PhysicalOrigin({-2.0, 0.5, 7.0}),
+                                    pfc::GridSpacing({0.25, 0.5, 2.0}));
   const pfc::Box3i owned = pfc::Box3i::from_bounds({4, 0, 0}, {11, 7, 3});
   RecordingWriter writer;
   pfc::apply_writer_domain(writer, domain, owned);
@@ -47,12 +58,15 @@ TEST_CASE("apply_writer_domain uses Domain and owned Box3i",
   REQUIRE(writer.global == std::array<int, 3>{16, 8, 4});
   REQUIRE(writer.local == std::array<int, 3>{8, 8, 4});
   REQUIRE(writer.offset == std::array<int, 3>{4, 0, 0});
+  REQUIRE(writer.geometry_set);
+  REQUIRE(writer.origin == std::array<double, 3>{-2.0, 0.5, 7.0});
+  REQUIRE(writer.spacing == std::array<double, 3>{0.25, 0.5, 2.0});
 }
 
 TEST_CASE("apply_writer_domain uses Field geometry", "[simulation][io][unit]") {
   auto domain = pfc::domain::create(pfc::GridSize({8, 8, 8}),
                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+                                    pfc::GridSpacing({0.125, 0.125, 0.125}));
   const pfc::Box3i owned = pfc::Box3i::from_bounds({0, 0, 0}, {7, 7, 7});
   pfc::data::Field<double> field(domain, owned, 0);
   RecordingWriter writer;
@@ -61,4 +75,6 @@ TEST_CASE("apply_writer_domain uses Field geometry", "[simulation][io][unit]") {
   REQUIRE(writer.global == std::array<int, 3>{8, 8, 8});
   REQUIRE(writer.local == std::array<int, 3>{8, 8, 8});
   REQUIRE(writer.offset == std::array<int, 3>{0, 0, 0});
+  REQUIRE(writer.geometry_set);
+  REQUIRE(writer.spacing == std::array<double, 3>{0.125, 0.125, 0.125});
 }

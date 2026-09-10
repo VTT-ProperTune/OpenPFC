@@ -7,7 +7,11 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <openpfc/frontend/io/vtk_writer.hpp>
+#include <openpfc/kernel/data/box3i.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
+#include <openpfc/kernel/simulation/results_writer_domain.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -1007,4 +1011,63 @@ TEST_CASE("test_vtk_writer_complexfield_collective_error_agreement",
   // ALL ranks should throw std::runtime_error due to collective error agreement
   // This verifies that the collective error agreement prevents deadlock
   REQUIRE_THROWS_AS(writer.write(1, data), std::runtime_error);
+}
+
+// ---------------------------------------------------------------------------
+// Defect: `pfc::apply_writer_domain` set only the index geometry, so every
+// `.vti` written through a JSON session claimed `Spacing="1 1 1"` whatever the
+// run's dx was. Harmless at dx = 1, wrong by 4x for a dx = 0.25 run — and the
+// error is invisible in the file, which just renders at the wrong scale.
+// ---------------------------------------------------------------------------
+TEST_CASE("apply_writer_domain writes the run's spacing and origin into the .vti",
+          "[vtk_writer][io][geometry]") {
+  VTKWriterTestFixture fixture;
+
+  if (fixture.m_num_ranks > 1) {
+    SKIP("Geometry forwarding test requires single MPI rank");
+  }
+
+  constexpr int n = 4;
+  auto domain = pfc::domain::create(pfc::GridSize({n, n, n}),
+                                    pfc::PhysicalOrigin({-1.5, -1.5, -1.5}),
+                                    pfc::GridSpacing({0.25, 0.25, 0.25}));
+  const pfc::Box3i owned = pfc::Box3i::from_bounds({0, 0, 0}, {n - 1, n - 1, n - 1});
+
+  VTKWriter writer("test_domain_spacing_0001.vti");
+  pfc::apply_writer_domain(writer, domain, owned);
+
+  auto data = fixture.create_test_data(static_cast<std::size_t>(n * n * n));
+  writer.write(1, data);
+
+  REQUIRE(fixture.file_exists("test_domain_spacing_0001.vti"));
+  REQUIRE(fixture.file_contains("test_domain_spacing_0001.vti",
+                                "Spacing=\"0.25 0.25 0.25\""));
+  REQUIRE(fixture.file_contains("test_domain_spacing_0001.vti",
+                                "Origin=\"-1.5 -1.5 -1.5\""));
+}
+
+TEST_CASE("apply_writer_domain forwards Field geometry too",
+          "[vtk_writer][io][geometry]") {
+  VTKWriterTestFixture fixture;
+
+  if (fixture.m_num_ranks > 1) {
+    SKIP("Geometry forwarding test requires single MPI rank");
+  }
+
+  constexpr int n = 4;
+  auto domain = pfc::domain::create(pfc::GridSize({n, n, n}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({0.5, 0.5, 0.5}));
+  const pfc::Box3i owned = pfc::Box3i::from_bounds({0, 0, 0}, {n - 1, n - 1, n - 1});
+  pfc::data::Field<double> field(domain, owned, 0);
+
+  VTKWriter writer("test_field_spacing_0001.vti");
+  pfc::apply_writer_domain(writer, field);
+
+  auto data = fixture.create_test_data(static_cast<std::size_t>(n * n * n));
+  writer.write(1, data);
+
+  REQUIRE(fixture.file_exists("test_field_spacing_0001.vti"));
+  REQUIRE(fixture.file_contains("test_field_spacing_0001.vti",
+                                "Spacing=\"0.5 0.5 0.5\""));
 }

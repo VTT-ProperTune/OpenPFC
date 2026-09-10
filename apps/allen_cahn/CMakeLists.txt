@@ -99,6 +99,21 @@ if(ALLEN_CAHN_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     set_tests_properties(allen-cahn-cpu-golden PROPERTIES
       ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
 
+    # Grid-independence of the pass criterion. Runs the shipped update at two
+    # grid sizes, so it is the slowest test here (a few seconds) rather than a
+    # pure unit test.
+    add_executable(test_allen_cahn_interface_kinetics
+      tests/test_allen_cahn_interface_kinetics.cpp)
+    target_include_directories(test_allen_cahn_interface_kinetics PRIVATE
+      ${ALLEN_CAHN_INCLUDE_DIR})
+    target_link_libraries(test_allen_cahn_interface_kinetics PRIVATE
+      OpenPFC openpfc_apps_common Catch2::Catch2 ${_allen_cahn_heffte_tgt})
+    allen_cahn_link_libstdcxx(test_allen_cahn_interface_kinetics)
+    add_test(NAME allen-cahn-interface-kinetics
+             COMMAND test_allen_cahn_interface_kinetics)
+    set_tests_properties(allen-cahn-interface-kinetics PROPERTIES
+      ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+
     if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
       add_executable(test_allen_cahn_cpu_vs_cuda
         tests/test_allen_cahn_cpu_vs_cuda.cpp

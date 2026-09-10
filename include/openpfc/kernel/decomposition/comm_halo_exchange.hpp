@@ -145,14 +145,24 @@ public:
     const int ny = m_subdomain_box.size[1];
     const int nz = m_subdomain_box.size[2];
 
-    m_face_types = halo::create_padded_face_types_6(
-        nx, ny, nz, m_halo_width, exchange::detail::get_mpi_type<T>());
-
-    // Compute neighbors from decomposition
+    // Resolve the active slots *before* building MPI types: a thin axis
+    // (nz == 1 under Axes2D) cannot host an hw-thick send slab, and there is
+    // no reason to demand that it could when no message ever travels along
+    // it. Building only the active slots is what lets a 2-D slab app run at
+    // fd_order > 2.
     const std::array<Int3, 6> dirs_canon = {
         {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}}};
     for (std::size_t i = 0; i < 6; ++i) {
       m_active[i] = m_dirs.contains(dirs_canon[i]);
+    }
+
+    m_face_types =
+        halo::create_padded_face_types_6(nx, ny, nz, m_halo_width,
+                                         exchange::detail::get_mpi_type<T>(),
+                                         m_active);
+
+    // Compute neighbors from decomposition
+    for (std::size_t i = 0; i < 6; ++i) {
       m_neighbors.push_back(
           decomposition::get_neighbor_rank(decomp, m_rank, dirs_canon[i]));
     }

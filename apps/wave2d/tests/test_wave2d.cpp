@@ -28,12 +28,15 @@
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
 #include <openpfc/kernel/decomposition/stage_preparation.hpp>
 #include <openpfc/kernel/field/brick_iteration.hpp>
+#include <openpfc/kernel/field/fd_apply.hpp>
+#include <openpfc/kernel/field/fd_stencils.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/simulation/checkpoint_service.hpp>
 #include <openpfc/kernel/simulation/simulation_state.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
 
 #include <wave2d/cli.hpp>
+#include <wave2d/reporting.hpp>
 #include <wave2d/wave_boundary.hpp>
 #include <wave2d/wave_model.hpp>
 #include <wave2d/wave_step_separated.hpp>
@@ -470,6 +473,205 @@ TEST_CASE("wave2d CPU golden matches CPU-vs-CUDA config",
   REQUIRE_THAT(sumsq_u, WithinRel(28.256988690744471, 1e-10));
   REQUIRE_THAT(sum_v, WithinAbs(0.0018563899833072017, 1e-12));
   REQUIRE_THAT(sumsq_v, WithinAbs(0.0042855033181676445, 1e-12));
+}
+
+// ---------------------------------------------------------------------------
+// Defect: `global_rms_u_interior` was identically 0 for every configuration.
+// The interior visitor trimmed the FD half-width off *every* axis of *every*
+// rank's owned box. z has one layer, so `[hw, 1 - hw)` is empty and the
+// reduction summed nothing — a printed `0` that meant "no cells", not "the
+// field is zero". These pin both halves of the fix: the slab's z axis is not
+// trimmed, and the trim happens in global index space so the answer does not
+// depend on how many ranks the run used.
+// ---------------------------------------------------------------------------
+
+TEST_CASE("interior_margin leaves a degenerate axis alone", "[wave2d][reporting]") {
+  REQUIRE(wave2d::interior_margin(64, 2) == 2);
+  REQUIRE(wave2d::interior_margin(5, 2) == 2);
+  // 2*margin would consume the whole axis: trim nothing rather than everything.
+  REQUIRE(wave2d::interior_margin(4, 2) == 0);
+  REQUIRE(wave2d::interior_margin(1, 2) == 0);
+  REQUIRE(wave2d::interior_margin(1, 1) == 0);
+}
+
+TEST_CASE("interior reduction is non-empty on the nz==1 slab wave2d runs",
+          "[wave2d][reporting]") {
+  int nproc = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  if (nproc != 1) return;
+
+  constexpr int Nx = 16;
+  constexpr int Ny = 16;
+  constexpr int hw = 2; // fd_order 4
+  auto domain = pfc::domain::create(pfc::GridSize({Nx, Ny, 1}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = pfc::decomposition::create(domain, 1);
+  auto u = pfc::data::field_from_subdomain<double>(decomp, 0, hw);
+  u.apply([](double, double, double) { return 1.0; });
+
+  const auto s = wave2d::interior_stats(u, hw);
+  // x and y lose a 2-cell shell at each end; the single z layer is kept.
+  REQUIRE(s.count == static_cast<std::int64_t>(Nx - 2 * hw) * (Ny - 2 * hw));
+  REQUIRE(s.count > 0);
+  REQUIRE_THAT(std::sqrt(s.sum_sq / static_cast<double>(s.count)),
+               WithinAbs(1.0, 1e-15));
+}
+
+TEST_CASE("interior reduction does not change with the rank count",
+          "[wave2d][reporting]") {
+  // `interior_stats` is rank-local, so a multi-rank decomposition can be
+  // summed here without any MPI traffic. Trimming each rank's *owned* box
+  // instead of the global one would eat a shell at every subdomain seam and
+  // make this sum shrink as ranks are added.
+  constexpr int Nx = 24;
+  constexpr int Ny = 16;
+  constexpr int hw = 2;
+  auto domain = pfc::domain::create(pfc::GridSize({Nx, Ny, 1}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  const auto seed = [](double x, double y, double) {
+    return 1.0 + 0.25 * x - 0.5 * y;
+  };
+
+  auto decomp1 = pfc::decomposition::create(domain, 1);
+  auto u1 = pfc::data::field_from_subdomain<double>(decomp1, 0, hw);
+  u1.apply(seed);
+  const auto single = wave2d::interior_stats(u1, hw);
+  REQUIRE(single.count == static_cast<std::int64_t>(Nx - 2 * hw) * (Ny - 2 * hw));
+
+  for (int ranks : {2, 4}) {
+    auto decompN = pfc::decomposition::create(domain, ranks);
+    wave2d::InteriorStats total;
+    for (int r = 0; r < ranks; ++r) {
+      auto ur = pfc::data::field_from_subdomain<double>(decompN, r, hw);
+      ur.apply(seed);
+      const auto s = wave2d::interior_stats(ur, hw);
+      total.sum_sq += s.sum_sq;
+      total.count += s.count;
+    }
+    INFO("ranks = " << ranks);
+    REQUIRE(total.count == single.count);
+    REQUIRE_THAT(total.sum_sq, WithinRel(single.sum_sq, 1e-12));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Defect: `wave2d_fd` advertised even fd_order 2..20 and aborted at order 4
+// with "owned extents 64x64x1 cannot host halo_width=2 owned send slabs".
+// The +/-Z faces of an nz==1 slab carry nothing the Laplacian reads, so the
+// exchanger should not demand that z be able to host a send slab.
+// ---------------------------------------------------------------------------
+
+TEST_CASE("fd_order > 2 halo exchange constructs on an nz==1 slab",
+          "[wave2d][halo]") {
+  int rank = 0;
+  int nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  if (nproc != 1) return;
+
+  constexpr int Nx = 64;
+  constexpr int Ny = 64;
+  auto domain = pfc::domain::create(pfc::GridSize({Nx, Ny, 1}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = pfc::decomposition::create(domain, 1);
+
+  comm::HaloExchangeOptions in_plane;
+  in_plane.directions = pfc::halo::presets::Axes2D();
+
+  // Every advertised order, not just the one that used to work.
+  for (int fd_order = 2; fd_order <= 20; fd_order += 2) {
+    pfc::field::fd::EvenCentralD2View stencil{};
+    INFO("fd_order = " << fd_order);
+    REQUIRE(pfc::field::fd::lookup_even_central_d2(fd_order, &stencil));
+    auto u = pfc::data::field_from_subdomain<double>(decomp, rank,
+                                                     stencil.half_width);
+    REQUIRE_NOTHROW(comm::HaloExchange<HostSpace, double>(u, decomp, rank,
+                                                           MPI_COMM_WORLD,
+                                                           in_plane));
+  }
+
+  // Asking for +/-Z on a 1-thick z is still an error, and still says why.
+  auto u4 = pfc::data::field_from_subdomain<double>(decomp, rank, 2);
+  REQUIRE_THROWS_AS((comm::HaloExchange<HostSpace, double>(u4, decomp, rank,
+                                                            MPI_COMM_WORLD)),
+                    std::invalid_argument);
+}
+
+TEST_CASE("fd_order 4 steps the 2-D slab and reports a finite interior RMS",
+          "[wave2d][integration]") {
+  int rank = 0;
+  int nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  if (nproc != 1) return;
+
+  constexpr int Nx = 32;
+  constexpr int Ny = 32;
+  constexpr int n_steps = 20;
+  constexpr double dt = 0.01;
+
+  pfc::field::fd::EvenCentralD2View stencil{};
+  REQUIRE(pfc::field::fd::lookup_even_central_d2(4, &stencil));
+  const int hw = stencil.half_width;
+  REQUIRE(hw == 2);
+
+  auto domain = pfc::domain::create(pfc::GridSize({Nx, Ny, 1}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = pfc::decomposition::create(domain, 1);
+  auto u = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+  auto v = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+  auto lap = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+
+  comm::HaloExchangeOptions in_plane;
+  in_plane.directions = pfc::halo::presets::Axes2D();
+  comm::HaloExchange<HostSpace, double> halo_u(u, decomp, rank, MPI_COMM_WORLD,
+                                               in_plane);
+
+  const double xc = 0.5 * (Nx - 1);
+  const double yc = 0.5 * (Ny - 1);
+  const double sigma = 0.12 * std::min(Nx, Ny);
+  u.apply([&](double x, double y, double) {
+    const double dxc = x - xc;
+    const double dyc = y - yc;
+    return std::exp(-(dxc * dxc + dyc * dyc) / (2.0 * sigma * sigma));
+  });
+  v.apply([](double, double, double) { return 0.0; });
+
+  const double inv_den = 1.0 / static_cast<double>(stencil.denom);
+  const auto sy_stride = static_cast<std::ptrdiff_t>(u.padded_extent(0));
+  const auto sz_stride = static_cast<std::ptrdiff_t>(u.padded_extent(0)) *
+                         static_cast<std::ptrdiff_t>(u.padded_extent(1));
+
+  for (int step = 0; step < n_steps; ++step) {
+    halo_u.exchange();
+    wave2d::fill_y_physical_ghosts_padded(u, wave2d::YBoundaryKind::Dirichlet, Ny,
+                                          0.0);
+    u.for_each_owned([&](int i, int j, int k) {
+      const double *core = u.data();
+      const auto c = static_cast<std::ptrdiff_t>(u.idx(i, j, k));
+      const double dxx = pfc::field::fd::apply_d2_along<0>(stencil, core, c, 1,
+                                                            sy_stride, sz_stride);
+      const double dyy = pfc::field::fd::apply_d2_along<1>(stencil, core, c, 1,
+                                                            sy_stride, sz_stride);
+      lap(i, j, k) = inv_den * (dxx + dyy);
+    });
+    u.for_each_owned([&](int i, int j, int k) {
+      const double v0 = v(i, j, k);
+      u(i, j, k) += dt * v0;
+      v(i, j, k) += dt * wave2d::kC * wave2d::kC * lap(i, j, k);
+    });
+    wave2d::enforce_dirichlet_y_walls_owned(u, v, Ny, 0.0);
+  }
+
+  const auto s = wave2d::interior_stats(u, hw);
+  REQUIRE(s.count == static_cast<std::int64_t>(Nx - 2 * hw) * (Ny - 2 * hw));
+  const double rms = std::sqrt(s.sum_sq / static_cast<double>(s.count));
+  REQUIRE(std::isfinite(rms));
+  REQUIRE(rms > 0.0);
 }
 
 int main(int argc, char *argv[]) {

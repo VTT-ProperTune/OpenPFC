@@ -37,7 +37,7 @@ using wave2d::YBoundaryKind;
 
 namespace {
 
-void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
+int run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
   WaveModel model;
   model.inv_dx2 = 1.0;
   model.inv_dy2 = 1.0;
@@ -114,19 +114,11 @@ void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
   }
   const double max_elapsed = runtime::toc(timer);
 
-  const auto u_sz = u.local_size();
-  const int skip = hw;
-  wave2d::report(rank, nproc, cfg, "fd_manual", "manual 5-point + padded halos",
-                 max_elapsed, "(y physical BC; interior RMS u)", [&](auto &&cb) {
-                   for (int k = skip; k < u_sz[2] - skip; ++k) {
-                     for (int j = skip; j < u_sz[1] - skip; ++j) {
-                       for (int i = skip; i < u_sz[0] - skip; ++i) {
-                         const auto p = u.coords(i, j, k);
-                         cb(p[0], p[1], p[2], u(i, j, k));
-                       }
-                     }
-                   }
-                 });
+  const bool observable_ok =
+      wave2d::report(rank, nproc, cfg, "fd_manual", "manual 5-point + padded halos",
+                     max_elapsed, "(y physical BC; interior RMS u)",
+                     wave2d::interior_stats(u, hw));
+  return observable_ok ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 } // namespace
@@ -137,7 +129,6 @@ int main(int argc, char **argv) {
         const auto cfg =
             wave2d::parse_manual_or_print_usage(app_argc, app_argv, rank);
         if (!cfg) return EXIT_FAILURE;
-        run_fd_manual(*cfg, rank, nproc);
-        return EXIT_SUCCESS;
+        return run_fd_manual(*cfg, rank, nproc);
       });
 }
