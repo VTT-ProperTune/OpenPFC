@@ -33,3 +33,15 @@ add_test(NAME png_writer COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 1
 add_test(NAME png_writer_parallel COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
                  ${MPIEXEC_PREFLAGS} $<TARGET_FILE:test_png_writer> ${MPIEXEC_POSTFLAGS})
 set_tests_properties(png_writer png_writer_parallel PROPERTIES RUN_SERIAL TRUE)
+
+# `openpfc_apps/field_snapshots.hpp` lives in apps/common (it is shared by the
+# standalone science drivers, not by the library), so this target needs that
+# include path and nlohmann_json explicitly.
+add_executable(test_field_snapshots test_field_snapshots.cpp)
+target_include_directories(test_field_snapshots PRIVATE
+    ${CMAKE_SOURCE_DIR}/apps/common/include)
+target_link_libraries(test_field_snapshots PRIVATE openpfc Catch2::Catch2
+    MPI::MPI_CXX nlohmann_json::nlohmann_json)
+add_test(NAME field_snapshots COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 1
+                 ${MPIEXEC_PREFLAGS} $<TARGET_FILE:test_field_snapshots> ${MPIEXEC_POSTFLAGS})
+set_tests_properties(field_snapshots PROPERTIES RUN_SERIAL TRUE)

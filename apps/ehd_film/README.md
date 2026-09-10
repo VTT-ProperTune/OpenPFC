@@ -159,7 +159,14 @@ stiff plate; VTK of `h` goes to `results/ehd_film/`. JSON `model.params`:
 `load.p0` / `load.a` / `load.t_load` (Gaussian load, centred, see above)
 and `diagnostics.csv` (one row per `saveat` with `time`, `h_center`,
 `deflection_center`, `p_max`, `p_min`, `spreading_radius`,
-`displaced_volume`, `volume`, `volume_rel_drift`).
+`displaced_volume`, `volume`, `volume_rel_drift`). It also accepts the
+session's `fields` key —
+`fields: [{"name": "h", "data": "results/ehd_film_nonlinear/<case>_%04d.vti"}]`
+— which writes a VTK snapshot of the gap at every `saveat`, indexed by save
+and not by step (`_0000` is `t=0`). Both `load_relaxation_*.json` presets set
+it; `docs/report/09_ehd_film.qmd` renders the compliant-against-stiff
+comparison from those snapshots. Omit the key and the driver writes
+diagnostics only, as it did before.
 
 ## Tests
 

@@ -48,6 +48,7 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/fft/kspace_iterator.hpp>
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
+#include <openpfc_apps/field_snapshots.hpp>
 #include <openpfc_apps/spectral_flux.hpp>
 
 #include <ehd_film/ehd_film_physics.hpp>
@@ -193,6 +194,15 @@ int main(int argc, char *argv[]) {
       });
     };
 
+    // Optional `.vti` snapshots of the gap itself (`fields[]`). The
+    // diagnostics CSV reduces the dent to a handful of scalars; the
+    // snapshots are what show its shape, and how far the disturbance has
+    // spread relative to the periodic box. See
+    // openpfc_apps/field_snapshots.hpp.
+    auto snapshots =
+        pfc::apps::make_field_snapshot_writer(cfg, "h", h, MPI_COMM_WORLD);
+    int snapshot_index = 0;
+
     // Diagnostics CSV, rank 0, never overwriting.
     std::unique_ptr<std::FILE, int (*)(std::FILE *)> out(nullptr, std::fclose);
     if (rank == 0 && cfg.contains("diagnostics")) {
@@ -228,6 +238,7 @@ int main(int argc, char *argv[]) {
                                                           p_real_diag);
       auto s = ehd_film::sample_ehd_film(h, p_real_diag, domain, p.h0,
                                          MPI_COMM_WORLD);
+      pfc::apps::write_field_snapshot(snapshots.get(), snapshot_index++, h);
       if (volume0 < 0.0) volume0 = s.volume;
       const double drift = (volume0 != 0.0) ? (s.volume - volume0) / volume0 : 0.0;
       h_center_min = std::min(h_center_min, s.h_center);

@@ -9,6 +9,31 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- Field figures for the two application chapters that had none, rendered from
+  real single-rank runs of the shipped science presets: `07_surface_diffusion`
+  gets the isotropic-against-anisotropic nanosurface anneal (the same crossed
+  corrugation after the same anneal, one keeping its egg-crate and the other
+  reduced to stripes — `energy_kx_frac`/`energy_ky_frac` = 0.249/0.751 drawn as
+  a surface), and `09_ehd_film` gets the compliant-against-stiff plate at the
+  instant the load lifts (the deepest either dent gets: `h_centre` 0.659 with
+  radius 12.3 against 0.747 with radius 14.2, on one shared scale). Both runs
+  are in `docs/report/figures/run_field_demos.sh` and neither extends the
+  shipped preset's `t1`.
+
+  Getting them needed a real change to the two applications, not just to the
+  report: `surface_diffusion_anisotropic` and `ehd_film_nonlinear` are the two
+  science drivers that own their `main()` rather than running on
+  `SpectralETDSession`, and neither had ever had a field writer — their science
+  presets could only be read through the diagnostics CSV. Both now honour the
+  session's own `fields[]` spelling through the new
+  `apps/common/include/openpfc_apps/field_snapshots.hpp`, and the four presets
+  `nanosurface_isotropic.json`, `nanosurface_anisotropic.json`,
+  `load_relaxation_compliant.json` and `load_relaxation_stiff.json` set it.
+  Omitting the key keeps the previous CSV-only behaviour, which is what the
+  test presets rely on; a malformed one is rejected rather than silently
+  ignored, since a preset that believes it is writing output and is not stays
+  invisible until a figure is missing. Covered by `ctest -R field_snapshots`.
+
 - `tungsten_dealias_study` and `tungsten/resolution.hpp`: what running the
   cubic PFC nonlinearity undealiased actually costs. The crystal sits at
   `k0 = 1` and carries real content at `2k0` and `3k0`, so a grid must both

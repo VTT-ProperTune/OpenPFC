@@ -50,7 +50,9 @@ periodicity removes. Periodicity also means the disturbance must stay small
 compared with the box, or the measured spreading radius is measuring the box.
 That was checked directly rather than assumed: over the full $t \in [0,600]$
 run the RMS spreading radius peaks at $27.4$ (stiff) and $23.1$ (compliant),
-under 22 % of the $128$-unit domain half-width in both cases.
+under 22 % of the $128$-unit domain half-width in both cases — and
+@fig-ehd-load shows the same thing without a number, as a dent that occupies a
+small patch of an otherwise undisturbed box.
 
 ## Governing equations
 
@@ -115,7 +117,31 @@ ETD1 as in @eq-etd1, dealiased.
 
 ## Binaries and inputs
 
-`ehd_film` (CPU), `ehd_film_hip`. Preset `relaxation.json`.
+`ehd_film` (CPU) and `ehd_film_hip` run the verification preset,
+`relaxation.json`. `ehd_film_nonlinear` (CPU) runs the science presets, the
+pair `load_relaxation_compliant.json` / `load_relaxation_stiff.json`, which
+share a load and differ only in $B$. Like the verifier's input, theirs may
+carry an optional `fields[]` entry naming a `.vti` path; both presets use
+it, and the snapshots are written at the same `saveat` cadence as the
+diagnostics CSV rows.
+
+## Visualisation
+
+![The same Gaussian press ($p_0=0.5$, width $a=8$) held on both plates over
+$0 \le t < 60$ and sampled at $t=60$, the instant it lifts — which is also
+where both runs' CSV records their minimum central gap, so this is the
+deepest either dent ever gets. The only difference between the two runs is
+the bending stiffness. The compliant plate ($B=100$) yields into a deeper,
+tighter well ($h_{\mathrm{centre}} = 0.659$, RMS spreading radius $12.3$);
+the stiff plate ($B=640$) distributes almost the same displaced volume
+($106$ against $111$) into a shallower, wider depression
+($h_{\mathrm{centre}} = 0.747$, radius $14.2$). Both are ringed by the
+bulge where the displaced liquid has gone: @eq-ehd-pde evolves $h$ as a
+divergence, so whatever leaves the centre has to appear somewhere. The
+colour map is sequential because a gap thickness is one-sided, and the
+scale is shared, so
+"deeper" and "wider" are read off the same
+ruler.](figures/ehd_film_load_comparison.svg){#fig-ehd-load}
 
 ## Scalability
 

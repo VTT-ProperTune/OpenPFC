@@ -145,6 +145,14 @@ a standalone driver, not a `SpectralETDSession`): `model.params` is `B0`,
 modes:[{nx,ny,amplitude}, ...]}` (each mode a plane cosine, summed); optional
 `diagnostics.csv` writes the observables table below every `saveat`.
 
+One key is shared with the session shape: an optional
+`fields: [{"name": "h", "data": "results/surface_diffusion/<case>_%04d.vti"}]`
+writes a VTK snapshot of the surface at every `saveat`, indexed by save and
+not by step (`_0000` is `t=0`). Both `nanosurface_*.json` presets set it, so
+the orientation split in the CSV can also be looked at as a surface —
+`docs/report/07_surface_diffusion.qmd` renders exactly that. Omit the key and
+the driver writes diagnostics only, as it did before.
+
 ## Measured orientation selection (LUMI, CPU, 2026-09-09)
 
 Both presets start from the identical crossed corrugation (\(n_x=n_y=16\),

@@ -25,6 +25,12 @@
         "a": 8.0,
         "t_load": 60.0
     },
+    "fields": [
+        {
+            "name": "h",
+            "data": "results/ehd_film_nonlinear/load_relaxation_stiff_%04d.vti"
+        }
+    ],
     "diagnostics": {
         "csv": "results/ehd_film_nonlinear/load_relaxation_stiff.csv"
     }
