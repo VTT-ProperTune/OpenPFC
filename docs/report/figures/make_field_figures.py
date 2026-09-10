@@ -6,6 +6,7 @@
 
 Reads the `.vti` / `.bin` output of a handful of real runs (see
 Reads the `.vti` / `.bin` / `.png` output of real runs (see
+Reads the `.vti` / `.bin` output of a set of real runs (see
 `run_field_demos.sh` for how to reproduce them) and renders SVGs into this
 directory using `field_io.py` (readers) and `field_plots.py` (panels,
 montages, comparisons, line plots). The report itself has no compute
@@ -34,12 +35,39 @@ from field_io import (  # noqa: E402
 from field_plots import (  # noqa: E402
     render_comparison, render_line_comparison, render_montage, render_panel,
 )
+from field_io import Field2D, GridSpec, read_vti, slice_bin  # noqa: E402
+from field_plots import render_comparison, render_montage, render_panel  # noqa: E402
 
 DATA_DIR = Path(os.environ.get("FIELD_DATA_DIR", Path.cwd() / "_field_demo_data"))
 
 
 def _vti_series(run_dir: Path, pattern: str, times):
     return [read_vti(run_dir / pattern.format(i), time=t) for i, t in times]
+
+
+def _center_crop(field: Field2D, n: int) -> Field2D:
+    """The central `n` x `n` cells of a field, with the extent kept honest.
+
+    Needed where the *local* structure is the claim and the whole field is
+    too finely patterned to read at print size -- a lattice whose period is
+    a handful of cells, for instance. `field_plots` has no crop of its own
+    (its three entry points all render a whole `Field2D`), so slicing the
+    array and recomputing the extent from the original one's cell size is
+    the way to hand it a smaller field without lying about coordinates.
+    """
+    ny, nx = field.data.shape
+    if n > nx or n > ny:
+        raise ValueError(f"cannot crop {n}x{n} out of a {nx}x{ny} field")
+    i0, j0 = (nx - n) // 2, (ny - n) // 2
+    x0, x1, y0, y1 = field.extent
+    dx, dy = (x1 - x0) / nx, (y1 - y0) / ny
+    return Field2D(
+        data=field.data[j0:j0 + n, i0:i0 + n],
+        extent=(x0 + i0 * dx, x0 + (i0 + n) * dx, y0 + j0 * dy, y0 + (j0 + n) * dy),
+        name=field.name,
+        time=field.time,
+        units=field.units,
+    )
 
 
 def figure_cahn_hilliard_coarsening_montage():
@@ -321,6 +349,57 @@ def figure_kawahara_solitary_radiation():
         annotate_b="tail RMS 3.13e-03 (75×), peak down 28%",
     )
     out = HERE / "kawahara_solitary_radiation.svg"
+def figure_higher_order_pfc_lattice_comparison():
+    """Which 2D lattice the PFC correlation kernel selects, out of pure noise.
+
+    The crystal-selection claim of `apps/higher_order_pfc` in one picture:
+    same 128x128 periodic box, same `seeded_noise` initial condition (seed
+    42, amplitude 0.01 about psi_bar=-0.15), same quench (eps=0.25, g=0.5),
+    same t1=400. The only difference between the two panels is the
+    correlation kernel -- `single_mode_triangular.json` has one band, at
+    |k|=1; `two_mode_square.json` adds a second at |k|=q1=sqrt(2) with
+    r1=0.02 -- and the lattice that grows out of the noise changes with it.
+
+    Why a 64x64 detail and not the whole box: the lattice period is 8 cells
+    (|k|=1 sits on grid mode 16 of 128), so at print size the whole field
+    is a texture rather than a countable arrangement of peaks. The central
+    quarter is where a reader can actually count neighbours around a bright
+    peak -- six at 60 degrees on the left, four at 90 on the right -- which
+    is the whole point. What the crop hides is that both runs are
+    *polycrystalline*: the diagnostics for these exact runs report
+    psi6=(global 0.335, local 0.852) for the single-mode case and
+    psi4=(0.341, 0.806) for the two-mode one, and a global average well
+    below the local one means grains at different orientations partially
+    cancelling. Grain boundaries are visible in the detail as the faint
+    seams where the packing slips.
+
+    The colour scale is diverging and centred on psi_bar=-0.15, the
+    conserved mean density, because a PFC density is only meaningful as a
+    departure from its own mean: the peaks are lattice sites, the troughs
+    the interstitial space between them.
+    """
+    tri = read_vti(
+        DATA_DIR / "higher_order_pfc_single_mode" / "results" / "higher_order_pfc"
+        / "single_mode_0020.vti",
+        time=400.0,
+    )
+    square = read_vti(
+        DATA_DIR / "higher_order_pfc_two_mode" / "results" / "higher_order_pfc"
+        / "two_mode_0020.vti",
+        time=400.0,
+    )
+    fig = render_comparison(
+        _center_crop(tri, 64),
+        _center_crop(square, 64),
+        kind="diverging",
+        center=-0.15,
+        label_a="single-mode $k^4$: six neighbours (triangular)",
+        label_b="two-mode $k^8$, $r_1{=}0.02$: four (square)",
+        suptitle="Same box, same noise, same quench, $t=400$: the kernel picks the lattice",
+        cbar_label="density $\\psi$",
+        axis_units="grid cells",
+    )
+    out = HERE / "higher_order_pfc_lattice_comparison.svg"
     fig.savefig(out, format="svg", bbox_inches="tight")
     return out, fig
 
@@ -365,6 +444,62 @@ def figure_wave2d_wall_reflection():
         figsize=(9.2, 3.4),
     )
     out = HERE / "wave2d_wall_reflection.svg"
+def figure_gradient_elasticity_inclusion_comparison():
+    """What an internal length does to the stress around a misfitting inclusion.
+
+    `circular_inclusion.json`'s 256^2 box, a tanh-smoothed disk of radius
+    R=32 with a dilatational eigenstrain eps0=0.01, solved once (this
+    application has no time loop). Left: the shipped ell=8, i.e. R/ell=4.
+    Right: the same problem with ell=0, the classical Navier limit the
+    Verification section tests against. Everything else -- R, the box, the
+    moduli, the interface width -- is identical, so the pair is a
+    size-effect statement, not two unrelated pictures.
+
+    What to look at is the *rim*, not the core. Classically the inclusion
+    is a nearly uniform patch of compression with a smooth edge and no
+    tensile region at all (the whole field is negative). Switching the
+    internal length on adds an oscillatory boundary layer of width ~ell at
+    the interface: a tensile ring outside the inclusion and a deeper
+    compressive ring just inside it. That layer is why the peak
+    |sigma_h| goes *up*, from 0.01466 to 0.02133 (+45%), and it is the
+    counter-intuitive direction worth pausing on -- gradient elasticity
+    regularises fields that were singular, but this inclusion has no
+    singularity to regularise, so the (1 + ell^2 k^2) factor simply
+    stiffens the medium at the short wavelengths the interface is made of.
+    The far field is untouched, exactly as the model promises.
+
+    The colour scale is diverging and centred on zero because the sign of
+    the hydrostatic stress is the physics: negative is compression,
+    positive tension, and whether a tensile ring exists at all is the
+    difference between the two panels.
+
+    One caveat on those two peak numbers. `scripts/size_sweep.py` sizes its
+    box as L = 16*max(R, ell); the shipped `circular_inclusion.json` is
+    256^2 with R=32, so it sits at a ratio of 8, where the chapter's own
+    periodic-image control measures a few per cent of error on the peak.
+    Both panels use the same box, so the comparison between them is clean;
+    the absolute values are not sweep-grade.
+    """
+    gradient = read_vti(
+        DATA_DIR / "gradient_elasticity_gradient" / "results" / "gradient_elasticity"
+        / "inclusion_stress_hydro_0000.vti"
+    )
+    classical = read_vti(
+        DATA_DIR / "gradient_elasticity_classical" / "results" / "gradient_elasticity"
+        / "inclusion_stress_hydro_0000.vti"
+    )
+    fig = render_comparison(
+        gradient,
+        classical,
+        kind="diverging",
+        center=0.0,
+        label_a="$\\ell=8$ ($R/\\ell=4$): peak $0.0213$, tensile ring",
+        label_b="$\\ell=0$ (classical): peak $0.0147$",
+        suptitle="Misfitting inclusion, $R=32$: the internal length rebuilds the interface",
+        cbar_label="hydrostatic stress $\\sigma_h$",
+        axis_units="cells, $\\Delta x = 1$",
+    )
+    out = HERE / "gradient_elasticity_inclusion_comparison.svg"
     fig.savefig(out, format="svg", bbox_inches="tight")
     return out, fig
 
@@ -527,6 +662,87 @@ def figure_kobayashi_dendrite_montage():
         panel_size=(2.5, 2.7),
     )
     out = HERE / "kobayashi_dendrite_montage.svg"
+def figure_aluminum_fcc_nucleus_comparison():
+    """Is an FCC seed in an aluminium melt above or below the critical size?
+
+    `inputs_json/fcc_seed_nucleus.json`: 192^3 cells at dx = 2*pi*sqrt(3)/8,
+    i.e. 261 reduced length units per side and 24 FCC lattice constants
+    (a = 2*pi*sqrt(3) = 10.88), holding one randomly oriented FCC seed in a
+    melt at n0=-0.006, isothermal at T_const=980 (G_grid = V_grid = 0, as
+    in every shipped aluminium input). Two runs, identical but for the seed
+    radius, both at t=200, both sliced through mid-depth.
+
+    Both seeds shrink at first, and that is the point: `seed_grid_fcc`
+    writes a diffuse profile (amplitude 0.4, peak psi 3.16) that has to
+    relax onto the model's own much larger solid amplitude, and the radius
+    it loses paying for that relaxation is what decides its fate. The
+    radius-60 seed survives the transient: its effective radius falls from
+    59.6 to a minimum of 52.0 around t=500, then turns around and *grows*
+    (54.6 at t=1000, dr/dt still rising), while the peak density climbs
+    3.16 -> 4.69 -> 5.00. The radius-30 seed does not: its envelope decays
+    monotonically -- 0.84, 0.50, 0.29, 0.11, 0.03 at t=0,50,100,150,200 --
+    and by t=200 the box is uniform melt again. Radius 50 is on the losing
+    side too, taking until t~700 to vanish, so the critical radius at these
+    parameters sits between 50 and 60 reduced units: about five FCC lattice
+    constants. (Radii measured as the volume where |psi - n0|, box-blurred
+    over one lattice constant, exceeds half its own 99.9th percentile, then
+    turned into a sphere-equivalent radius. All four radii were run to
+    t=1000 to establish this; the shipped preset stops at t=200 because
+    that is where the figure is taken.)
+
+    This is worth a figure because it sharpens the natural reading of the
+    application. The shipped aluminium configuration is usually described
+    as a seeded *growth* run. With the thermal drive off it is really a
+    *nucleation* one: the melt is barely undercooled, growth is slow and
+    only begins after a long amplitude transient, and whether a seed grows
+    at all depends on its radius.
+
+    Read from `.bin` rather than `.vti` on purpose: `pfc::VTKWriter` emits
+    `Origin="0 0 0" Spacing="1 1 1"` whatever the domain's real origin and
+    dx, so a `.vti` can only be plotted in cells. The raw brick plus an
+    explicit `GridSpec` puts reduced PFC length units on the axes, in which
+    the reader can measure the lattice spacing off the figure. The colour
+    scale is diverging and centred on n0=-0.006, the melt density: what
+    should stand out is where psi departs from the surrounding liquid.
+
+    Two presentation choices, both deliberate. The central 144 of 192 cells
+    are shown, because the outer ring is undisturbed melt -- beyond 100
+    reduced units from the centre, |psi - n0| peaks at 0.106 against the
+    crystal's 4.4, so it contributes nothing but white space. And the
+    colour limits are clamped to +-2.0 rather than the data range: the
+    solid's density peaks reach 4.42 but only on 0.9% of cells, and letting
+    them set the scale washes the whole lattice out to pale pink. Clipping
+    that 0.9% is what makes the lattice sites countable; the numbers the
+    reader might want off the scale are in this docstring and the caption
+    instead.
+    """
+    grid = GridSpec(
+        nx=192, ny=192, nz=192,
+        dx=1.3603495232, dy=1.3603495232, dz=1.3603495232,
+        origin="corner",
+    )
+    supercritical = slice_bin(
+        DATA_DIR / "aluminum_supercritical" / "results" / "aluminum" / "psi_0004.bin",
+        grid, axis="z", name="psi", time=200.0,
+    )
+    subcritical = slice_bin(
+        DATA_DIR / "aluminum_subcritical" / "results" / "aluminum" / "psi_0004.bin",
+        grid, axis="z", name="psi", time=200.0,
+    )
+    fig = render_comparison(
+        _center_crop(supercritical, 144),
+        _center_crop(subcritical, 144),
+        kind="diverging",
+        center=-0.006,
+        vmin=-2.0,
+        vmax=2.0,
+        label_a="seed radius 60: a stable nucleus",
+        label_b="seed radius 30: re-melted",
+        suptitle="Aluminium FCC seed at $t=200$, isothermal, mid-depth slice",
+        cbar_label="density $\\psi$",
+        axis_units="reduced PFC units",
+    )
+    out = HERE / "aluminum_fcc_nucleus_comparison.svg"
     fig.savefig(out, format="svg", bbox_inches="tight")
     return out, fig
 
@@ -543,6 +759,9 @@ FIGURES = [
     figure_wave2d_wall_reflection,
     figure_allen_cahn_growth_montage,
     figure_kobayashi_dendrite_montage,
+    figure_higher_order_pfc_lattice_comparison,
+    figure_gradient_elasticity_inclusion_comparison,
+    figure_aluminum_fcc_nucleus_comparison,
 ]
 
 

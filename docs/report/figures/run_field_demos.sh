@@ -18,7 +18,13 @@
 #   FIELD_DATA_DIR   Where run output is written (default: ./_field_demo_data
 #                     next to wherever you invoke this from). Point this at
 #                     shared/fast storage on a cluster.
-#   RUNNER            Launcher command (default: "mpirun -n 1"). On LUMI,
+#   RUNNER            Launcher command (default: "mpirun -n 1"). Set it to
+#                     the empty string to run the binaries directly, with no
+#                     launcher at all -- which is what a LUMI login node
+#                     needs, since it has srun but no mpirun and these runs
+#                     are single rank anyway. (Empty is honoured: the
+#                     default below uses `${RUNNER-...}`, not
+#                     `${RUNNER:-...}`.) On LUMI,
 #                     with the shared allocation described in AGENT_NOTES.md:
 #                       SLURM_JOB_ID=<job> TMPDIR=<shared tmp> \
 #                       RUNNER="srun --overlap -n 1" \
@@ -42,6 +48,15 @@
 # Three of the runs below (wave2d, allen_cahn, kobayashi) are command-line
 # applications with no JSON input at all, so they take positional arguments
 # rather than a config file and $RUNNER is applied to them directly.
+# Every run here is single rank (`-n 1`): enough for these grid sizes, and it
+# keeps each run trivial to place in its own output directory. It is also a
+# hard requirement for `higher_order_pfc`, whose real-space order metric needs
+# the whole grid on one rank (see `apps/higher_order_pfc/diagnostics.hpp`).
+#
+# Rough single-core cost on a LUMI login node, for planning: the four 2-D runs
+# (cahn_hilliard x2, thin_film x2) are seconds; higher_order_pfc x2 and
+# gradient_elasticity x2 are seconds to tens of seconds; tungsten (256^3) and
+# aluminum (192^3 x2) are the expensive ones, a few minutes each.
 
 set -Eeuo pipefail
 
@@ -55,7 +70,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 BUILD_DIR="${1:-build}"
 BUILD_DIR="$(cd "$BUILD_DIR" && pwd)"
 DATA_DIR="${FIELD_DATA_DIR:-$(pwd)/_field_demo_data}"
-RUNNER="${RUNNER:-mpirun -n 1}"
+RUNNER="${RUNNER-mpirun -n 1}"
 
 mkdir -p "$DATA_DIR"
 
@@ -271,6 +286,98 @@ echo "==> kobayashi_dendrite (512^2, 10000 steps)"
 (cd "$DATA_DIR/kobayashi_dendrite" && $RUNNER \
   "$BUILD_DIR/apps/kobayashi/kobayashi_fd_manual" 512 512 10000 1.0e-4 0.03 \
   results/kobayashi)
+# --- higher_order_pfc: which lattice does the kernel select? --------------
+# Both inputs shipped, unmodified: same 128^2 box, same `seeded_noise` IC
+# (seed 42, amplitude 0.01), same quench (eps=0.25, g=0.5, psi_bar=-0.15),
+# same t1=400. The *only* difference is the correlation kernel --
+# `single_mode_triangular.json` is n_modes=1 (one band, at |k|=1) and
+# `two_mode_square.json` is n_modes=2 with q1=sqrt(2), r1=0.02 (a second band
+# at |k|=sqrt(2)). That is exactly the matched-conditions comparison
+# `apps/higher_order_pfc/README.md` tabulates, so do not "tidy up" either
+# file's parameters: the point of the figure is that everything except the
+# kernel is identical.
+#
+# Do NOT substitute the two `lattice_seed` presets. Those impose the target
+# symmetry as their initial condition, so a figure of them shows only that
+# the kernel does not destroy what it was handed; these two grow their
+# lattice out of undifferentiated noise, which is the claim worth a picture.
+#
+# Single rank is mandatory here, not just convenient (see the header note).
+run_case higher_order_pfc higher_order_pfc \
+  "$REPO_ROOT/apps/higher_order_pfc/inputs_json/single_mode_triangular.json" \
+  higher_order_pfc_single_mode results/higher_order_pfc
+run_case higher_order_pfc higher_order_pfc \
+  "$REPO_ROOT/apps/higher_order_pfc/inputs_json/two_mode_square.json" \
+  higher_order_pfc_two_mode results/higher_order_pfc
+
+# --- gradient_elasticity: what the internal length does to an inclusion ---
+# `circular_inclusion.json` shipped as-is (256^2, R=32, ell=8, so R/ell=4),
+# plus one patched copy with ell=0. This is a one-shot elliptic solve, not a
+# time loop, so there is no t1/saveat to extend -- the only knob the figure
+# needs is ell, and ell=0 is the classical Navier limit the Verification
+# section already tests against. Holding R, the box, eps0 and the moduli
+# fixed is what makes the pair a size-effect statement (R/ell = 4 against
+# R/ell -> infinity) rather than two unrelated pictures.
+#
+# The ell=0 copy also drops `line_profile`, which would otherwise overwrite
+# the shipped run's CSV in a shared directory; the two runs are kept in
+# separate directories anyway because both write `inclusion_*_%04d.vti`.
+run_case gradient_elasticity gradient_elasticity \
+  "$REPO_ROOT/apps/gradient_elasticity/inputs_json/circular_inclusion.json" \
+  gradient_elasticity_gradient results/gradient_elasticity
+mkdir -p "$DATA_DIR/gradient_elasticity_classical/results/gradient_elasticity"
+echo "==> gradient_elasticity (classical limit, ell=0)"
+python3 -c '
+import json
+d = json.load(open("'"$REPO_ROOT"'/apps/gradient_elasticity/inputs_json/circular_inclusion.json"))
+d["model"]["params"]["ell"] = 0.0
+d.pop("line_profile", None)
+json.dump(d, open("'"$DATA_DIR"'/gradient_elasticity_classical/classical.json", "w"), indent=2)
+'
+(cd "$DATA_DIR/gradient_elasticity_classical" \
+  && $RUNNER "$BUILD_DIR/apps/gradient_elasticity/gradient_elasticity" classical.json)
+
+# --- aluminumNew: is the FCC seed above or below the critical size? -------
+# `inputs_json/fcc_seed_nucleus.json` (192^3, one FCC seed of radius 60) run
+# twice: as shipped, and with the seed radius dropped to 30. Everything else
+# -- box, mean density n0=-0.006, T_const=980, rseed, t1 -- is held fixed, so
+# the pair isolates the seed radius.
+#
+# Why not `inputs_json/smoke.json`: it is a 16^3 *constant* field with no
+# seed at all, so every frame it writes is a uniform grey square. And not
+# `aluminumNew.json` either: 1024x2048x256 is half a billion cells, far past
+# what this script is meant to run.
+#
+# Why 192^3 and not something cheaper: at 128^3 the same radius-60 nucleus
+# leaves only ~70 reduced units between its own periodic images, and the
+# melt around it fills with a visible interference pattern from that
+# self-interaction. At 192^3 (261 reduced units per side) it does not:
+# beyond 100 reduced units from the seed centre |psi - n0| peaks at 0.106
+# against the crystal's 4.4, and averages 0.004. Do not shrink the box
+# without re-checking that.
+#
+# Output is redirected from `.vti` to `.bin` deliberately: `pfc::VTKWriter`
+# writes `Origin="0 0 0" Spacing="1 1 1"` regardless of the domain's real
+# `origin`/`dx`, so a `.vti` can only be plotted in grid cells. Reading the
+# raw brick with an explicit `field_io.GridSpec` is what lets the figure
+# carry reduced PFC length units, in which the FCC lattice constant
+# a = 2*pi*sqrt(3) = 10.88 is a number the reader can measure off the axes.
+for al_case in supercritical:60 subcritical:30; do
+  al_name="${al_case%%:*}"
+  al_radius="${al_case##*:}"
+  mkdir -p "$DATA_DIR/aluminum_$al_name/results/aluminum"
+  echo "==> aluminum_$al_name (192^3, seed radius $al_radius, t1=200)"
+  python3 -c '
+import json, sys
+radius = float(sys.argv[1])
+d = json.load(open("'"$REPO_ROOT"'/apps/aluminumNew/inputs_json/fcc_seed_nucleus.json"))
+d["initial_conditions"][1]["radius"] = radius
+d["fields"] = [{"name": "psi", "data": "results/aluminum/psi_%04d.bin"}]
+json.dump(d, open("'"$DATA_DIR"'/aluminum_'"$al_name"'/run_config.json", "w"), indent=2)
+' "$al_radius"
+  (cd "$DATA_DIR/aluminum_$al_name" \
+    && $RUNNER "$BUILD_DIR/apps/aluminumNew/aluminumNew" run_config.json)
+done
 
 echo
 echo "Done. Data written under: $DATA_DIR"

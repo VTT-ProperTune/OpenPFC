@@ -64,6 +64,42 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   never calls `VTKWriter::set_spacing`. None of these is fixed here -- the
   fields themselves are correct in all three cases -- but a reader of the
   report should not have to rediscover them.
+- Field figures for the three crystal-selection chapters of the applications
+  report, each rendered from a real single-rank run added to
+  `docs/report/figures/run_field_demos.sh`. `10_higher_order_pfc`: the two
+  noise-seeded presets at `t=400`, side by side and cropped to the central
+  `64^2` cells, where the six-neighbour triangular packing of the single-mode
+  `k^4` kernel and the four-neighbour square packing of the two-mode `k^8`
+  one can be counted directly -- the chapter's central claim as a real-space
+  picture rather than the ring-power inference it warns about.
+  `11_gradient_elasticity`: hydrostatic stress around the `circular_inclusion`
+  disk at `ell=8` against the same problem at `ell=0`, showing the
+  oscillatory boundary layer of width `~ell` that raises the peak
+  `|sigma_h|` from 0.0147 to 0.0213. `04_aluminum`: an FCC seed in an
+  isothermal melt at two radii, one above and one below the critical size.
+
+- `apps/aluminumNew/inputs_json/fcc_seed_nucleus.json`: a `192^3` single-FCC-seed
+  aluminium preset that runs on one core in a few minutes, added because the
+  only other shipped inputs are a half-billion-cell demonstration case and a
+  `16^3` *constant* field with no seed in it -- neither of which can be shown.
+  Sweeping the seed radius over 30/40/50/60 to `t=1000` measures a **critical
+  radius**: every seed shrinks at first, because `SeedFCC` writes a diffuse
+  profile (peak `psi` 3.16) that must relax onto the model's own solid
+  amplitude (peak `psi` near 5), and the radius spent paying for that
+  relaxation decides the outcome. Radius 60 bottoms out at 52 reduced units
+  around `t=500` and then grows; radius 50 dissolves by `t~700`; radius 30 is
+  gone by `t=200`. At `T_const = 980`, `n0 = -0.006` the critical radius is
+  therefore between 50 and 60 reduced units, about five FCC lattice constants.
+  The isothermal aluminium case is a nucleation experiment, *not* the steady
+  "seeded growth" run the chapter and the app README described; both now say
+  so.
+
+- `apps/aluminumNew/tests/test_aluminum_inputs.cpp` (ctest
+  `aluminum-shipped-inputs`), the aluminium twin of the tungsten shipped-input
+  guard: every file in `inputs_json/` is parsed through the aluminium schema
+  and every initial condition constructed through the catalog the binaries
+  use, so a renamed or dropped key fails a test instead of an unlucky reader's
+  run.
 
 - `tungsten_dealias_study` and `tungsten/resolution.hpp`: what running the
   cubic PFC nonlinearity undealiased actually costs. The crystal sits at

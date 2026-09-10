@@ -17,23 +17,40 @@ where does the front settle, and what grain structure does it leave behind?**
 The observable is again the front position, together with the per-cell free
 energy this application computes and the field checksums.
 
-That said, the shipped configuration does **not** ask that question. Both
-`aluminumNew.json` and `inputs_json/smoke.json` set
-$G_{\mathrm{grid}} = V_{\mathrm{grid}} = 0$, which switches the thermal drive
-off entirely and leaves an isothermal run. The moving-frame machinery described
-below is present and tested, but no shipped preset exercises it.
+That said, no shipped configuration asks that question. Every shipped input
+sets $G_{\mathrm{grid}} = V_{\mathrm{grid}} = 0$, which switches the thermal
+drive off entirely and leaves an isothermal run. The moving-frame machinery
+described below is present and tested, but no shipped preset exercises it.
+
+What the isothermal parameters *do* demonstrate, measured rather than assumed,
+is **nucleation** — see @fig-al-nucleus and the Visualisation section. At
+$T_{\mathrm{const}} = 980$ and $n_0 = -0.006$ the melt is barely undercooled,
+and `seed_grid_fcc` writes a diffuse seed that must first relax onto the
+model's own solid amplitude. A seed of radius 60 (reduced units) survives that
+transient, bottoms out at an effective radius of 52 around $t = 500$ and then
+grows; one of radius 50 does not, and has dissolved by $t \approx 700$. So the
+shipped isothermal case is a critical-radius experiment, not the steady seeded
+growth its geometry suggests, and this chapter says growth only where it means
+it.
 
 ## Problem setup
 
-Two inputs ship. `aluminumNew.json` is a large demonstration case;
-`inputs_json/smoke.json` is a $16^3$ sanity file that is not referenced by
-CMake or by any test. Neither is a verification preset: the pinned checksum in
-the test suite runs a **separate synthetic $32^3$ configuration built in C++**
-(`X0 = 8`, radius 4, `rseed = 42`), not either of these files.
+Three inputs ship. `aluminumNew.json` is a large demonstration case
+($1024 \times 2048 \times 256$);
+`inputs_json/fcc_seed_nucleus.json` is a $192^3$ single-seed case small enough
+to run on one core in a few minutes, and is what @fig-al-nucleus is rendered
+from; `inputs_json/smoke.json` is a $16^3$ sanity file, not referenced by CMake
+or by any test, whose initial condition is a **constant** field — it contains
+no seed and never develops any structure. None of the three is a verification
+preset: the pinned checksum in the test suite runs a **separate synthetic
+$32^3$ configuration built in C++** (`X0 = 8`, radius 4, `rseed = 42`), not any
+of these files. `tests/test_aluminum_inputs.cpp` does check that all three load
+through the schema and the initial-condition catalog, which is a rot check, not
+a physics check.
 
 | Item | Description |
 |---|---|
-| Use case | An aluminium melt with a row of FCC seeds, intended for directional solidification; as shipped, an isothermal seeded-growth run |
+| Use case | An aluminium melt with a row of FCC seeds, intended for directional solidification; as shipped, an isothermal run in which a seed relaxes towards coexistence rather than growing |
 | Domain | $1024 \times 2048 \times 256$ cells at $\Delta x = 2\pi\sqrt3/8 \approx 1.3603$, i.e. $1393 \times 2786 \times 348$ in reduced PFC length units, origin at the corner. Eight cells per FCC lattice constant ($a = 2\pi\sqrt3$ with the peak at $\lvert\mathbf{k}\rvert = 1$) |
 | Grid | $t \in [0, 2000]$ at $\Delta t = 1$ (2000 steps), field dump every 200 |
 | Boundary conditions | Periodic on all three axes (the FFT has no other mode), plus a stationary `fixed` density-reservoir band pulling $\psi$ between $-1.297$ and $-0.006$ near the high-$x$ end |
@@ -144,8 +161,44 @@ regression and schema rather than analytical.
 
 ## Binaries and inputs
 
-`aluminum_etd` (CPU), `aluminum_etd_cuda`, `aluminum_etd_hip`. Preset
-`inputs_json/smoke.json`, plus `aluminumNew.json`.
+`aluminum_etd` (CPU), `aluminum_etd_cuda`, `aluminum_etd_hip`. Presets
+`inputs_json/fcc_seed_nucleus.json` ($192^3$, one FCC seed, a few minutes on
+one core) and `inputs_json/smoke.json` ($16^3$, constant field), plus the large
+`aluminumNew.json`. `tests/test_aluminum_inputs.cpp` walks `inputs_json/` and
+constructs what each file declares — the model parameters through the aluminium
+schema, and each initial condition through the catalog the binaries use — so a
+key that is renamed or dropped fails a test rather than an unlucky reader's
+run. It does not step a simulation.
+
+## Visualisation
+
+![Mid-depth slice through `inputs_json/fcc_seed_nucleus.json` at $t = 200$: a
+$192^3$ box ($261$ reduced length units, 24 FCC lattice constants
+$a = 2\pi\sqrt3 = 10.88$ per side) holding one randomly oriented FCC seed in a
+melt at $n_0 = -0.006$, isothermal at $T_{\mathrm{const}} = 980$. The two
+panels differ only in the seed radius, and share a colour scale centred on
+$n_0$ so what stands out is departure from the surrounding liquid. Both seeds
+shrink at first, and that is the mechanism: `seed_grid_fcc` writes a diffuse
+profile (amplitude $0.4$, peak $\psi = 3.16$) that has to relax onto the
+model's own much larger solid amplitude, and the radius a seed spends paying
+for that relaxation decides its fate. Left, radius $60$: it survives. The
+effective radius falls from $59.6$ to a minimum of $52.0$ around $t = 500$,
+then turns around and grows ($54.6$ at $t = 1000$, still accelerating), while
+the peak density climbs $3.16 \to 4.69 \to 5.00$. Right, radius $30$: it does
+not. Its envelope decays $0.84 \to 0.50 \to 0.29 \to 0.11 \to 0.03$ over the
+five dumps and by $t = 200$ the box is uniform melt again. Radius $50$ loses as
+well, taking until $t \approx 700$ to vanish, so the critical radius at these
+parameters lies between $50$ and $60$ reduced units — about five FCC lattice
+constants. The banding across the left-hand crystal is not a defect
+structure — the seed's orientation is random (`seed_grid_fcc` draws three Euler
+angles), so a coordinate-aligned slice cuts its lattice planes obliquely. Two
+presentation choices worth knowing: the central $144$ of $192$ cells are shown,
+because beyond $100$ reduced units from the centre
+$\lvert\psi - n_0\rvert$ peaks at $0.106$ against the crystal's $4.42$ and the
+outer ring is white space; and the colour limits are clamped at $\pm 2$, which
+clips the $0.9\,\%$ of cells carrying the brightest density peaks but is what
+makes the individual lattice sites countable rather than a pale
+smear.](figures/aluminum_fcc_nucleus_comparison.svg){#fig-al-nucleus}
 
 ## Scalability
 
