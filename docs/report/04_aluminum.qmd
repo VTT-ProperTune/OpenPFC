@@ -41,12 +41,14 @@ Three inputs ship. `aluminumNew.json` is a large demonstration case
 to run on one core in a few minutes, and is what @fig-al-nucleus is rendered
 from; `inputs_json/smoke.json` is a $16^3$ sanity file, not referenced by CMake
 or by any test, whose initial condition is a **constant** field — it contains
-no seed and never develops any structure. None of the three is a verification
-preset: the pinned checksum in the test suite runs a **separate synthetic
-$32^3$ configuration built in C++** (`X0 = 8`, radius 4, `rseed = 42`), not any
-of these files. `tests/test_aluminum_inputs.cpp` does check that all three load
-through the schema and the initial-condition catalog, which is a rot check, not
-a physics check.
+no seed and never develops any structure. `smoke.json` used to carry an empty
+`model.params` block and rely on the loader skipping the schema entirely; it
+now spells every parameter out, because the loader no longer skips it. None of
+the three is a verification preset: the pinned checksum in the test suite runs
+a **separate synthetic $32^3$ configuration built in C++** (`X0 = 8`, radius 4,
+`rseed = 42`), not any of these files. `tests/test_aluminum_inputs.cpp` does
+check that all three load through the schema and the initial-condition
+catalog, which is a rot check, not a physics check.
 
 | Item | Description |
 |---|---|
@@ -55,7 +57,7 @@ a physics check.
 | Grid | $t \in [0, 2000]$ at $\Delta t = 1$ (2000 steps), field dump every 200 |
 | Boundary conditions | Periodic on all three axes (the FFT has no other mode), plus a stationary `fixed` density-reservoir band pulling $\psi$ between $-1.297$ and $-0.006$ near the high-$x$ end |
 | Initial condition | Uniform $\psi = -0.006$, then `seed_grid_fcc`: a $2 \times 1$ row of FCC seeds of radius 120 at $x = 130$, amplitude $0.4$, $\rho = -0.036$, each jittered by $\pm 0.2R$ and randomly oriented. Each seed is built from the four $\langle 111\rangle$ wave vectors, in contrast to @sec-tungsten's six $\{110\}$ vectors |
-| Key physical parameters | $T_{\mathrm{const}} = 980$, $T_0 = 89285$ (no unit is stated anywhere in this application, unlike @sec-tungsten's TOML comments); $n_{\mathrm{sol}} = -0.036$, $n_{\mathrm{vap}} = -1.297$; $B_x = 0.8179$, $\alpha = 0.20$; barred polynomial coefficients. $G_{\mathrm{grid}} = V_{\mathrm{grid}} = 0$: **the shipped run is isothermal**. Lengths and times are reduced PFC units with no SI mapping in the repository |
+| Key physical parameters | $T_{\mathrm{const}} = 980$ held inside $[T_{\min}, T_{\max}] = [780, 1280]$, $T_0 = 89285$ (no unit is stated anywhere in this application, unlike @sec-tungsten's TOML comments); $B_x = 0.8179$, $\alpha = 0.20$; barred polynomial coefficients. The coexistence densities $-0.036$ and $-1.297$ are set in the initial- and boundary-condition blocks, not in `model.params`. $G_{\mathrm{grid}} = V_{\mathrm{grid}} = 0$: **the shipped run is isothermal**, so the temperature clamp is a no-op on every shipped preset. Lengths and times are reduced PFC units with no SI mapping in the repository |
 | Observable | `SPECTRAL_CHECKSUM` sum, sum of squares and $L^2$ of $\psi$; the summed free energy (`last_free_energy_sum`), which this application computes per cell and @sec-tungsten does not; binary field dumps |
 | Model maturity | numerical verification: **regression** — the operators and the pointwise nonlinearity are checked to $10^{-14}$ against an independently written reference formula, and one synthetic case is pinned; there is no closed-form solution of the model · physical completeness: **extended** — the tungsten equation of state plus a separate correlation kernel $P(k)$ and a travelling temperature field · calibration: **representative**, with the same caveat as @sec-tungsten: no source is cited anywhere in the repository for any of the aluminium coefficients |
 
@@ -124,13 +126,30 @@ settles where the local temperature matches the interface condition, and then
 travels with the gradient. Setting $G_{\mathrm{grid}} = 0$ — the shipped value
 — recovers an isothermal run at `T_const`.
 
-::: {.callout-warning}
-## `T_min` and `T_max` do nothing
+@eq-al-temp is a straight line in $x$ with no bound of its own, so on a domain
+$1393$ reduced units long any non-trivial $G_{\mathrm{grid}}$ drives
+$T_{\mathrm{const}} + T_{\mathrm{var}}$ arbitrarily far from
+$T_{\mathrm{const}}$. Since 0.2 it is held inside
+$[T_{\min}, T_{\max}] = [780, 1280]$, and an inverted window, or a
+$T_{\mathrm{const}}$ outside it, is rejected at load time rather than
+silently pinning the whole domain at one end. Because every shipped preset is
+isothermal the clamp is a no-op on all of them, and no pinned checksum moved.
 
-The schema declares `T_min` and `T_max` as required parameters and every
-shipped input and test supplies them, but **no code reads them**. There is no
-clamping of the temperature field anywhere in the application. They are
-vestigial, and a reader should not assume the travelling profile is bounded.
+::: {.callout-note}
+## What `required` used to mean here
+
+Until 0.2 `T_{\min}` and `T_{\max}` were declared **required** and read
+nowhere — and so were seven other fields, nine of the twenty-five in total.
+`AluminumPhysics::from_json` also skipped the schema whenever
+`model.params` was empty, which is exactly what `inputs_json/smoke.json`
+shipped, so a configuration could declare nothing and quietly inherit the C++
+struct defaults. The parse is now unconditional, `T_{\min}`/`T_{\max}` clamp
+the temperature, and the seven that named nothing this model computes
+(`alpha_farTol`, `alpha_highOrd` — tungsten's $C_2$; `shift_u`, `shift_s` —
+the vapour shift already baked into the barred coefficients; `n0`,
+`n_{\mathrm{sol}}`, `n_{\mathrm{vap}}` — duplicates of values that act in
+the initial- and boundary-condition blocks) were removed from the schema.
+Unknown keys are ignored, so older inputs still load.
 :::
 
 ## Solution strategy
@@ -154,7 +173,10 @@ As in @sec-tungsten, **dealiasing is off**: the shared option defaults to
   input file.
 * **CPU/GPU parity.** A live CPU run and a live device run agree to $10^{-10}$.
   There is no separately pinned GPU literal.
-* **Schema.** JSON round-trip and range validation on every parameter.
+* **Schema.** JSON round-trip and range validation on every parameter, and
+  the loader is held to it: an empty or absent `model.params` is a load
+  failure, not a silent fall-back to the C++ struct defaults. Every field the
+  schema declares is read by the model.
 
 Like @sec-tungsten this model has no closed-form reference; coverage is
 regression and schema rather than analytical.

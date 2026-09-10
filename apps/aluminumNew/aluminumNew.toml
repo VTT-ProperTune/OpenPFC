@@ -8,17 +8,11 @@
 name = "aluminum"
 
 [model.params]
-# Average density
-n0 = -0.0060
-
 # Correlation function width
 alpha = 0.20
 
-# Phase coexistence densities
-n_sol = -0.036
-n_vap = -1.297
-
-# Temperature parameters
+# Temperature parameters. T_min / T_max clamp T_const + T_var (they were
+# declared required and read nowhere before 0.2; see apps/aluminumNew/README.md).
 T_const = 980
 T_min = 780
 T_max = 1280
@@ -30,19 +24,14 @@ G_grid = 0
 V_grid = 0
 x_initial = 130
 
-# Correlation function parameters
-alpha_farTol = 0.001
-alpha_highOrd = 0
-
 # Mean-field filtering
 lambda = 0.22
 
 # Numerical stability
 stabP = 0.0
 
-# Vapor model parameters
-shift_u = 1.0
-shift_s = 0.0
+# Shifted (barred) free-energy coefficients. The vapour shift that produced
+# them is applied offline; shift_u / shift_s are no longer inputs.
 p2_bar = 0.8286531831
 p3_bar = -0.04204863
 p4_bar = 0.007533

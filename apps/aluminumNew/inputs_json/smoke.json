@@ -1,5 +1,28 @@
 {
-    "model": {"name": "aluminum", "params": {}},
+    "model": {
+        "name": "aluminum",
+        "params": {
+            "T0": 89285.0,
+            "Bx": 0.817900686921996,
+            "T_const": 980.0,
+            "T_min": 780.0,
+            "T_max": 1280.0,
+            "G_grid": 0.0,
+            "V_grid": 0.0,
+            "x_initial": 130.0,
+            "alpha": 0.20,
+            "lambda": 0.22,
+            "stabP": 0.0,
+            "p2_bar": 0.8286531831,
+            "p3_bar": -0.04204863,
+            "p4_bar": 0.007533,
+            "q20_bar": 0.016531729105214,
+            "q21_bar": 5.467,
+            "q30_bar": 1.7152418049986,
+            "q31_bar": 0.45,
+            "q40_bar": 0.787482
+        }
+    },
     "domain": {"Lx": 16, "Ly": 16, "Lz": 16, "dx": 1.3603495232, "dy": 1.3603495232, "dz": 1.3603495232, "origin": "corner"},
     "timestepping": {"t0": 0.0, "t1": 0.1, "dt": 0.01, "saveat": 0.05},
     "initial_conditions": [{"target": "psi", "type": "constant", "n0": -0.006}],

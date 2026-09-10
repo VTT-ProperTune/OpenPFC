@@ -1,0 +1,37 @@
+# apps/allen_cahn: interface resolution against bistability margin. LUMI login node, single rank, dx = 1.
+# v_flat = (3/2) F eps sqrt(2M) is the flat-front sharp-interface law the app prints.
+# R_crit = M / v_flat; v_curvature_corrected = v_flat (1 - R_crit / R_mean) with R_mean = (R_half + R_final) / 2,
+# which is what a growing disc obeys (Allen-Cahn moves an interface by curvature as well as by the driving force).
+# margin_fraction = F eps^2 / (2/(3 sqrt 3)); 1.0 is the bistability ceiling, above which there is no second phase.
+# delta_cells = eps sqrt(2M) / dx is the interface half-width in grid cells.
+#
+# Studies:
+#   width-at-fixed-margin  interface width varied at a fixed margin_fraction of 0.365, 256^2. The lattice error
+#                          collapses from -32% at 0.76 cells to +0.05% at 1.5 cells and stays within 2.3% above it.
+#   old-preset-grid        the pre-0.2 preset (eps=0.19, F=10) across grids: the residual against the corrected
+#                          law grows monotonically from +19% to +22%, i.e. it never converges.
+#   new-preset-grid        the 0.2 preset (eps=0.75, F=0.25): 0.07% to 2.3% on every grid from 128^2 to 512^2.
+#   margin-at-old-width    driving force backed off at the old 0.76-cell interface: the residual walks from +17%
+#                          at the ceiling to -65% at a quarter of it. The 6% margin was buying the agreement.
+study,nx,steps,dt,M,eps,F,delta_cells,margin_fraction,R_half,R_final,R_crit,v_measured,v_flat,v_curvature_corrected,rel_error_flat,rel_error_corrected
+width-at-fixed-margin,256,20000,9e-05,8.0,0.19,3.896,0.76,0.3654,20.7143,23.2073,1.8012,2.77005,4.44144,4.077155,-0.3763,-0.3206
+width-at-fixed-margin,256,5000,0.0012,8.0,0.375,1.0,1.5,0.3654,23.2621,29.0982,3.5556,1.94535,2.25,1.944425,-0.1354,0.0005
+width-at-fixed-margin,256,5000,0.002,8.0,0.5,0.5625,2.0,0.3654,24.2273,31.3113,4.7407,1.41678,1.6875,1.399412,-0.1604,0.0124
+width-at-fixed-margin,256,5000,0.005,8.0,0.75,0.25,3.0,0.3654,27.1984,38.3815,7.1111,0.894648,1.125,0.881023,-0.2048,0.0155
+width-at-fixed-margin,256,5000,0.005,8.0,1.0,0.140625,4.0,0.3654,23.0698,30.003,9.4815,0.554659,0.84375,0.542277,-0.3426,0.0228
+old-preset-grid,64,5000,9e-05,8.0,0.19,10.0,0.76,0.9379,7.22515,10.0293,0.7018,12.4627,11.4,10.472703,0.0932,0.19
+old-preset-grid,128,5000,9e-05,8.0,0.19,10.0,0.76,0.9379,12.7162,15.5126,0.7018,12.4287,11.4,10.833203,0.0902,0.1473
+old-preset-grid,192,5000,9e-05,8.0,0.19,10.0,0.76,0.9379,18.2295,21.0799,0.7018,12.6682,11.4,10.992973,0.1112,0.1524
+old-preset-grid,256,5000,9e-05,8.0,0.19,10.0,0.76,0.9379,23.6422,26.5829,0.7018,13.0697,11.4,11.081434,0.1465,0.1794
+old-preset-grid,384,5000,9e-05,8.0,0.19,10.0,0.76,0.9379,34.724,37.7122,0.7018,13.2807,11.4,11.179116,0.165,0.188
+old-preset-grid,512,5000,9e-05,8.0,0.19,10.0,0.76,0.9379,45.7794,48.8603,0.7018,13.6927,11.4,11.230938,0.2011,0.2192
+new-preset-grid,128,5000,0.005,8.0,0.75,0.25,3.0,0.3654,13.1106,21.3797,7.1111,0.661532,1.125,0.661101,-0.412,0.0007
+new-preset-grid,192,5000,0.005,8.0,0.75,0.25,3.0,0.3654,21.2003,31.7153,7.1111,0.841197,1.125,0.822632,-0.2523,0.0226
+new-preset-grid,256,5000,0.005,8.0,0.75,0.25,3.0,0.3654,27.1984,38.3815,7.1111,0.894648,1.125,0.881023,-0.2048,0.0155
+new-preset-grid,384,5000,0.005,8.0,0.75,0.25,3.0,0.3654,37.6108,49.5331,7.1111,0.953791,1.125,0.941396,-0.1522,0.0132
+new-preset-grid,512,5000,0.005,8.0,0.75,0.25,3.0,0.3654,47.3382,59.7508,7.1111,0.993015,1.125,0.975592,-0.1173,0.0179
+margin-at-old-width,256,20000,9e-05,8.0,0.19,10.0,0.76,0.9379,32.5279,44.3383,0.7018,13.1227,11.4,11.191846,0.1511,0.1725
+margin-at-old-width,256,20000,9e-05,8.0,0.19,7.5,0.76,0.7034,26.4869,33.5112,0.9357,7.80474,8.55,8.283325,-0.0872,-0.0578
+margin-at-old-width,256,20000,9e-05,8.0,0.19,5.331,0.76,0.5,22.7642,27.0811,1.3164,4.79656,6.07734,5.756347,-0.2107,-0.1667
+margin-at-old-width,256,20000,9e-05,8.0,0.19,3.896,0.76,0.3654,20.7143,23.2073,1.8012,2.77005,4.44144,4.077155,-0.3763,-0.3206
+margin-at-old-width,256,20000,9e-05,8.0,0.19,2.665,0.76,0.25,18.9487,19.7708,2.6332,0.913435,3.0381,2.624872,-0.6993,-0.652

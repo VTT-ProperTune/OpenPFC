@@ -32,7 +32,7 @@ initial-condition catalog. That is a rot check, not a physics check.
 | **Grid/time** | `t` in `[0, 2000]`, `dt = 1` (2000 steps), field dump every 200 |
 | **Boundary conditions** | Periodic on all three axes (the FFT has no other mode), plus a stationary `fixed` sigmoid density-reservoir band pulling `psi` between `-1.297` and `-0.006` near the high-`x` end -- see "Why periodic" below |
 | **Initial condition** | Uniform `psi = -0.006`, then `seed_grid_fcc`: a `2 x 1` row of FCC seeds of radius 120 at `x = 130`, amplitude 0.4, `rho = -0.036`, each jittered by `+/-0.2 R` and randomly oriented. Each seed is built from four `<111>` wave vectors, unlike tungsten's six `{110}` |
-| **Key physical parameters** | `T_const = 980`, `T0 = 89285` (no unit is stated anywhere in this app); `n_sol = -0.036`, `n_vap = -1.297`; `Bx = 0.81790`, `alpha = 0.20`; barred polynomial coefficients. **`G_grid = V_grid = 0`, so the shipped run is isothermal** -- the moving-frame machinery is present and tested but no shipped preset exercises it. Reduced PFC units throughout, with no SI mapping in this repository |
+| **Key physical parameters** | `T_const = 980` clamped into `[T_min, T_max] = [780, 1280]`, `T0 = 89285` (no unit is stated anywhere in this app); `Bx = 0.81790`, `alpha = 0.20`; barred polynomial coefficients. The coexistence densities `-0.036` / `-1.297` live in the `initial_conditions` / `boundary_conditions` blocks, not in `model.params`. **`G_grid = V_grid = 0`, so the shipped run is isothermal** -- the moving-frame machinery is present and tested but no shipped preset exercises it, and the temperature clamp is therefore a no-op on every shipped preset. Reduced PFC units throughout, with no SI mapping in this repository |
 | **Observable** | `SPECTRAL_CHECKSUM` `sum`/`sumsq`/`l2` of `psi`; the summed free energy (`last_free_energy_sum`), which this app computes per cell and `tungsten` does not; binary field dumps |
 | **Model maturity** | numerical verification: **regression** -- the operators, the pointwise nonlinearity and the free-energy density are checked to `1e-14` against an independently written reference formula, and one synthetic case is pinned; there is no closed-form solution of the model. Physical completeness: **extended** -- the tungsten equation of state plus a separate correlation kernel `P(k)` and a travelling temperature field. Calibration: **representative**, with the same caveat as tungsten: no source is cited anywhere in this repository for any aluminium coefficient |
 
@@ -86,21 +86,50 @@ directional-solidification cell rather than a bulk sample. Nothing in the model
 represents convection in the melt, solute partitioning, or a second chemical
 component.
 
-### Caveat: `T_min` and `T_max` do nothing
+### `model.params` is enforced, and every field in it is read
 
-The schema declares both as **required** and every shipped input and test
-supplies them, but no code reads them. There is no clamping of the temperature
-field anywhere in this application. `alpha_farTol` and `alpha_highOrd` are
-likewise required but unused here -- the FCC correlation peak does not
-reference them (they do matter for `apps/tungsten`).
+Two things were wrong here before 0.2, and they were the same thing seen from
+two sides.
 
-### Caveat: the temperature profile
+**The loader skipped the schema.** `AluminumPhysics::from_json` was guarded by
+`if (!params_json.is_null() && !params_json.empty())`, so `"params": {}` --
+which is what `inputs_json/smoke.json` shipped -- took the C++ member
+initialisers while the schema declared all twenty-five fields `required`. For
+a calibrated material model that is the wrong default in both directions: the
+parameters of a run were not recoverable from its input file, and the struct
+defaults are an uncited second copy of coefficients this repository cites no
+source for. The parse is now unconditional; an empty or absent `model.params`
+reports every missing field at once, and `smoke.json` spells them out.
+
+**Nine of the twenty-five fields were read nowhere** -- not the four the
+`T_min`/`T_max` caveat used to name. They were resolved two ways:
+
+| Field | Resolution |
+|---|---|
+| `T_min`, `T_max` | **Implemented.** They now clamp `T_const + T_var` (see below). |
+| `alpha_farTol`, `alpha_highOrd` | **Removed.** They parametrise *tungsten's* `C2`; the FCC dual-Gaussian peak here has no far-field tolerance and no higher-order exponent. |
+| `shift_u`, `shift_s` | **Removed.** They are the vapour shift that *produced* the `p*_bar` / `q*_bar` coefficients; the `_bar` names say it is already applied. |
+| `n0`, `n_sol`, `n_vap` | **Removed** from `model.params`. They act in the `initial_conditions` and `boundary_conditions` blocks, which carry their own copies (`constant.n0`, `seed_grid_fcc.rho`, `fixed.rho_low`/`rho_high`). A second copy that nothing reads can disagree with the one that acts. |
+
+Unknown keys are ignored, so an input that still carries the removed seven
+loads unchanged -- but it no longer implies that they do anything.
+
+### The temperature profile, and its clamp
 
 `temperature_variation(x, t)` returns `G_grid * (x_unwrapped - x_initial -
-V_grid * t)` -- a departure, with no `T0` offset and no clamp. The pointwise
-nonlinearity then uses `T_const + T_var`. `x_unwrapped` is `x` unwrapped
-relative to the tracked front position, so the profile follows the front around
-the periodic box.
+V_grid * t)` -- a departure, with no `T0` offset. `x_unwrapped` is `x`
+unwrapped relative to the tracked front position, so the profile follows the
+front around the periodic box. The pointwise nonlinearity then uses
+`T_const + T_var`.
+
+That is a straight line in `x` with no bound of its own, so on a domain 1393
+reduced units long any non-trivial `G_grid` drives it arbitrarily far from
+`T_const`. `clamp_temperature` now holds `T_const + T_var` inside
+`[T_min, T_max]`, and `T_min < T_max` with `T_const` inside the window is
+checked at load time (`validate_temperature_window`) rather than silently
+freezing the domain at one end. **Both shipped presets are isothermal
+(`G_grid = V_grid = 0`), so the clamp is a no-op on them and no pinned
+checksum moved.**
 
 ## Build
 

@@ -2,10 +2,7 @@
     "model": {
         "name": "aluminum",
         "params": {
-            "n0": -0.0060,
             "alpha": 0.20,
-            "n_sol": -0.036,
-            "n_vap": -1.297,
             "T_const": 980,
             "T_min": 780,
             "T_max": 1280,
@@ -14,12 +11,8 @@
             "G_grid": 0,
             "V_grid": 0,
             "x_initial": 130,
-            "alpha_farTol": 0.001,
-            "alpha_highOrd": 0,
             "lambda": 0.22,
             "stabP": 0.0,
-            "shift_u": 1.0,
-            "shift_s": 0.0,
             "p2_bar": 0.8286531831,
             "p3_bar": -0.04204863,
             "p4_bar": 0.007533,

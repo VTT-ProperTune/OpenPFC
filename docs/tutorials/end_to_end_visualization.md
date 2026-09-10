@@ -29,7 +29,7 @@ Goal: two PNG files (initial and final field) without writing JSON.
    ```bash
    cd build
    mkdir -p png_out
-   mpirun -n 4 ./apps/allen_cahn/allen_cahn 128 128 5000 0.00009 8.0 0.19 10.0 \
+   mpirun -n 4 ./apps/allen_cahn/allen_cahn 256 256 5000 0.005 8.0 0.75 0.25 \
      png_out/initial.png png_out/final.png
    ```
 

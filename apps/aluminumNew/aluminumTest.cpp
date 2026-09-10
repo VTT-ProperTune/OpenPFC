@@ -19,18 +19,17 @@ using json = nlohmann::json;
 namespace {
 pfc::MPI_Worker g_mpi(0, nullptr, MPI_COMM_WORLD, false);
 
+/// Every field the schema declares, and nothing it does not. The schema is
+/// enforced since 0.2, so an incomplete block here is a load failure.
 json aluminum_params_json() {
-  return {{"n0", -0.0060},           {"alpha", 0.20},
-          {"n_sol", -0.036},         {"n_vap", -1.297},
-          {"T_const", 980.0},        {"T_min", 780.0},
-          {"T_max", 1280.0},         {"T0", 89285.0},
-          {"Bx", 0.817900686921996}, {"G_grid", 0.0},
-          {"V_grid", 0.0},           {"x_initial", 130.0},
-          {"alpha_farTol", 0.001},   {"alpha_highOrd", 0},
-          {"lambda", 0.22},          {"stabP", 0.0},
-          {"shift_u", 1.0},          {"shift_s", 0.0},
-          {"p2_bar", 0.8286531831},  {"p3_bar", -0.04204863},
-          {"p4_bar", 0.007533},      {"q20_bar", 0.016531729105214},
+  return {{"alpha", 0.20},           {"T_const", 980.0},
+          {"T_min", 780.0},          {"T_max", 1280.0},
+          {"T0", 89285.0},           {"Bx", 0.817900686921996},
+          {"G_grid", 0.0},           {"V_grid", 0.0},
+          {"x_initial", 130.0},      {"lambda", 0.22},
+          {"stabP", 0.0},            {"p2_bar", 0.8286531831},
+          {"p3_bar", -0.04204863},   {"p4_bar", 0.007533},
+          {"q20_bar", 0.016531729105214},
           {"q21_bar", 5.467},        {"q30_bar", 1.7152418049986},
           {"q31_bar", 0.45},         {"q40_bar", 0.787482}};
 }
