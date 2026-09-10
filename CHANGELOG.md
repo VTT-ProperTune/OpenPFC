@@ -9,6 +9,38 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- **Where spectral beats finite difference, and where it does not**
+  (`heat3d_spectral_content_study`, `apps/heat3d`). The scalability chapter
+  had cost per step and parallel scaling measured for both spatial operators
+  but accuracy measured only for a single Fourier mode -- the most favourable
+  possible case for a high-order stencil -- so it declined to give a
+  recommendation. That is now closed. Because the heat equation is linear on
+  a periodic box, the L2 error of *any* initial field is a closed-form sum
+  over that field's own spectrum, so accuracy is mapped against one
+  parameter: `f`, the fraction of Nyquist at which the initial amplitude
+  spectrum is down to 1e-3 of its peak. Under an N^3 cost model at a fixed
+  step count, FD order p is the cheaper route to a given accuracy iff the
+  coarsest grid it can use keeps the content above `cbrt(c_fd/c_spectral)` of
+  Nyquist -- pure cost arithmetic, 0.32 (FD-2) to 0.49 (FD-12) with the
+  measured costs, because a 32x cheaper step buys only 32^(1/3) = 3.2x in
+  grid spacing. The crossover in accuracy is at L2 ~ 6e-7, owned by FD-12:
+  looser than that, finite differences win outright (FD-2 costs a twentieth
+  of the spectral path at 1e-2); tighter, no shipped stencil order is the
+  cheaper way there. Broadband fields are past every threshold regardless of
+  tolerance -- at the dealias-safe tungsten spacing the crystal's third
+  harmonic sits exactly on Nyquist. Ten points of the map were re-measured by
+  running the shipped FD stack (padded `Field` + `HaloExchange` +
+  `FDGradient<HeatGrads>`) under RK4 against the exact solution: prediction
+  and measurement agree to between eight and ten significant figures, worst
+  case 3.7e-9 relative. Implementation note: the stencil's dispersion defect
+  cannot be computed by subtraction (order 12 at theta=0.1 gives 1.2e-19 from
+  two terms of size 1e-2), so it is computed as the tail of the identity that
+  the order-2M central second difference is exactly
+  `(2 asin(delta/2))^2 = sum a_m delta^(2m)` truncated at m = M -- an
+  all-positive series with no cancellation. `test_heat3d_spectral_content.cpp`
+  pins that identity against the shipped `EvenCentralD2` tables, the map's
+  grid-independence, and the crossover predicate.
+
 - Scaling to 16 nodes, and a spectral-versus-finite-difference comparison, in
   the scalability chapter. Weak scaling of `tungsten_hip` at exactly 67.1 M
   cells per GCD from 1 to 16 nodes, ending on 8.59 billion cells at 49.6%
@@ -24,11 +56,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   For heat3d, the only app with both solvers on one PDE: at equal grid the
   spectral step costs 32x a second-order FD step and 8.7x a twelfth-order one,
   yet all three strong-scale to 80-85% at 16 nodes, so parallel efficiency is
-  not a reason to prefer either in this range. The chapter deliberately
-  declines to turn cost, scaling and accuracy into a single verdict: the
-  convergence study evolves one smooth Fourier mode, the most favourable case
-  a high-order stencil can get, and that ranking does not transfer to fields
-  with content near the grid scale.
+  not a reason to prefer either in this range. At the time this landed the
+  chapter deliberately declined to turn cost, scaling and accuracy into a
+  single verdict, because the convergence study evolved one smooth Fourier
+  mode and that ranking does not transfer to fields with content near the
+  grid scale; the accuracy axis has since been measured properly (see the
+  spectral-content entry above) and the chapter now gives the
+  recommendation.
 
 - Field figures for the two application chapters that had none, rendered from
   real single-rank runs of the shipped science presets: `07_surface_diffusion`

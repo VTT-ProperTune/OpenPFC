@@ -102,6 +102,7 @@ which is two transforms per step and unconditionally stable.
 | `heat3d_spectral` | implicit Euler in Fourier space, @eq-h3-implicit | unconditionally stable reference |
 | `heat3d_fd_hip` | orders 2–20 on device | GPU twin of `heat3d_fd` |
 | `heat3d_spectral_hip` | implicit Euler on device | GPU twin of `heat3d_spectral` |
+| `heat3d_spectral_content_study` | none (closed form) + RK4 validation runs | accuracy of each operator against the field's own spectral content, and the equal-accuracy crossover (@sec-scal-accuracy) |
 
 The two spectral binaries are easy to confuse and the names are not helpful:
 `heat3d_spectral` is the *implicit* one, and `heat3d_spectral_pointwise` is the
@@ -142,6 +143,16 @@ transpose; @sec-scalability measures exactly that.
   stencil, from 0.2% at second order to 1.3% at twelfth: that is the
   round-off floor asserting itself, not a defect in the stencils.
   See @fig-heat3d-fd-order.
+* **Accuracy against spectral content.** The order sweep above uses one
+  smooth mode, which flatters a high-order stencil. Because the heat equation
+  is linear on a periodic box, the $L^2$ error of *any* initial field is a
+  closed-form sum over that field's spectrum, and
+  `heat3d_spectral_content_study` evaluates it for a Gaussian whose width
+  sweeps the content from low $k$ up to Nyquist. Ten points of that map were
+  re-measured by running the shipped FD stack under RK4: prediction and
+  measurement agree to between eight and ten significant figures. The
+  resulting recommendation -- which operator is cheaper for a given accuracy,
+  and where the crossover sits -- is @sec-scal-accuracy.
 * **Cross-implementation parity.** The from-scratch, manual and compact FD
   drivers produce the same $L^2$ error to $10^{-7}$, which is what makes the
   three-level teaching hierarchy meaningful.

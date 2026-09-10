@@ -27,8 +27,11 @@ find_package(OpenMP COMPONENTS CXX)
 #   heat3d_spectral_hip        — implicit-Euler spectral on HIP (2 FFTs/step)
 #   heat3d_fd_convergence_study — FD order-of-accuracy sweep (single-mode,
 #                                N x fd_order) -> docs/report/data CSV
+#   heat3d_spectral_content_study — accuracy vs the field's own spectral
+#                                content: semi-analytic map + RK4 validation
+#                                runs -> docs/report/data CSVs
 set(_heat3d_binaries heat3d_fd_scratch heat3d_fd_manual heat3d_fd
-                     heat3d_fd_convergence_study)
+                     heat3d_fd_convergence_study heat3d_spectral_content_study)
 if(OpenPFC_ENABLE_HEFFTE)
   list(APPEND _heat3d_binaries heat3d_spectral_pointwise heat3d_spectral)
 endif()
@@ -158,6 +161,21 @@ if(HEAT3D_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     )
     add_test(NAME heat3d-fd-convergence COMMAND test_heat3d_fd_convergence)
     set_tests_properties(heat3d-fd-convergence PROPERTIES TIMEOUT 300)
+
+    # Closed-form half of the spectral-vs-FD accuracy study: the stencil
+    # symbol, its dispersion defect, the error map's design orders and
+    # grid-independence, and the crossover predicate. Pure arithmetic, so
+    # it is fast enough for CI unlike the driver it guards.
+    add_executable(test_heat3d_spectral_content tests/test_heat3d_spectral_content.cpp)
+    target_include_directories(test_heat3d_spectral_content PRIVATE ${HEAT3D_INCLUDE_DIR})
+    target_link_libraries(test_heat3d_spectral_content PRIVATE
+      OpenPFC
+      openpfc_apps_common
+      ${_heat3d_heffte_tgt}
+      Catch2::Catch2
+    )
+    add_test(NAME heat3d-spectral-content COMMAND test_heat3d_spectral_content)
+    set_tests_properties(heat3d-spectral-content PROPERTIES TIMEOUT 300)
   else()
     message(STATUS "heat3d: Catch2 not found, not building tests")
   endif()
