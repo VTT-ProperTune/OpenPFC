@@ -1,0 +1,11 @@
+# Cost per step at equal grid, heat3d on LUMI-G, N=1024, 8 GCDs (one node),
+# 25 steps, dt=0.01 (2026-09-10). Same PDE, same grid, same hardware: the only
+# difference is the spatial operator. fd_order 0 denotes the spectral path.
+# wall_step_ms is the median over accepted steps after 5 warm-up.
+method,fd_order,job,wall_step_ms
+spectral,0,21887744,213.82
+fd,2,21887745,6.73
+fd,4,21887746,11.46
+fd,6,21887747,15.01
+fd,8,21887748,18.64
+fd,12,21887749,24.69

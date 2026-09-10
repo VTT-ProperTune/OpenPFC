@@ -265,9 +265,160 @@ def figure_tungsten_dealias_resolution():
     return out
 
 
+def figure_tungsten_weak_16n():
+    """Weak scaling to 16 nodes: constant work per GCD, growing problem.
+
+    Reads `tungsten_hip_weak_16n.csv`. The local block is exactly
+    2048 x 2048 x 16 at every point -- OpenPFC decomposes into z-slabs, so
+    growing only Lz keeps it constant rather than approximately constant,
+    which is what a cubic ladder would give. Perfect weak scaling is a flat
+    line at the 1-node time.
+    """
+    rows = sorted(read("tungsten_hip_weak_16n.csv"), key=lambda r: int(r["gcds"]))
+    nodes = [int(r["nodes"]) for r in rows]
+    t = [float(r["wall_step_ms"]) for r in rows]
+    eff = [100.0 * t[0] / v for v in t]
+
+    fig, (ax, ax2) = plt.subplots(1, 2, figsize=(9.6, 4.0))
+    ax.plot(nodes, t, "o-", color=COLORS["tungsten"], linewidth=1.8)
+    ax.axhline(t[0], color="#7a7a7a", linestyle="--", linewidth=1.0)
+    ax.annotate("ideal (flat)", xy=(nodes[0], t[0]), xytext=(6, 6),
+                textcoords="offset points", fontsize=8, color="#4a4a4a")
+    ax.set_xscale("log", base=2); ax.set_xticks(nodes); ax.set_xticklabels(nodes)
+    ax.set_xlabel("nodes (8 GCDs each)"); ax.set_ylabel("wall time per step [ms]")
+    ax.set_title("Constant 67.1M cells per GCD")
+    ax.grid(True, which="both", **GRID)
+
+    ax2.plot(nodes, eff, "o-", color=COLORS["tungsten"], linewidth=1.8)
+    for x, y, r in zip(nodes, eff, rows):
+        ax2.annotate(f"{y:.0f}%", xy=(x, y), xytext=(0, -14),
+                     textcoords="offset points", fontsize=7.5, ha="center")
+    ax2.set_xscale("log", base=2); ax2.set_xticks(nodes); ax2.set_xticklabels(nodes)
+    ax2.set_ylim(0, 110)
+    ax2.set_xlabel("nodes"); ax2.set_ylabel("weak-scaling efficiency [%]")
+    ax2.set_title(r"$8.59\times10^{9}$ cells at 16 nodes")
+    ax2.grid(True, which="both", **GRID)
+    fig.suptitle("Tungsten PFC weak scaling, LUMI-G", y=1.02)
+
+    out = HERE / "tungsten_weak_16n.svg"
+    fig.savefig(out, format="svg", bbox_inches="tight")
+    plt.close(fig)
+    return out
+
+
+def figure_tungsten_strong_1280():
+    """Strong scaling at 1280^3, and what happens when the grid does not divide.
+
+    Reads `tungsten_hip_strong_1280.csv`. Points where the z-planes divide
+    evenly among the ranks are filled; the one that does not (96 GCDs,
+    1280/96 = 13.33) is hollow and annotated, because it is slower than both
+    its neighbours and that is the point of the figure.
+    """
+    rows = sorted(read("tungsten_hip_strong_1280.csv"), key=lambda r: int(r["gcds"]))
+    g = [int(r["gcds"]) for r in rows]
+    t = [float(r["wall_step_ms"]) for r in rows]
+    ok = [r["divides"] == "1" for r in rows]
+    base_t, base_g = t[0], g[0]
+    speedup = [base_t / v for v in t]
+
+    fig, ax = plt.subplots(figsize=(6.4, 4.6))
+    ideal = [x / base_g for x in g]
+    ax.plot(g, ideal, "--", color="#7a7a7a", linewidth=1.0, label="ideal")
+    good = [(x, y) for x, y, k in zip(g, speedup, ok) if k]
+    bad = [(x, y) for x, y, k in zip(g, speedup, ok) if not k]
+    ax.plot([p[0] for p in good], [p[1] for p in good], "o-",
+            color=COLORS["tungsten"], linewidth=1.8, label="z-planes divide evenly")
+    if bad:
+        ax.plot([p[0] for p in bad], [p[1] for p in bad], "o", markersize=9,
+                markerfacecolor="white", markeredgecolor=COLORS["fd"],
+                markeredgewidth=1.8, label="does not divide")
+        bx, by = bad[0]
+        ax.annotate("1280/96 = 13.33:\nranks get 13 or 14 planes,\nevery step waits for the slowest",
+                    xy=(bx, by), xytext=(bx * 0.62, by * 1.9), fontsize=7.5,
+                    color="#4a4a4a",
+                    arrowprops=dict(arrowstyle="->", color="#7a7a7a", linewidth=0.8))
+    for x, y, k in zip(g, speedup, ok):
+        if k:
+            ax.annotate(f"{100 * y / (x / base_g):.0f}%", xy=(x, y), xytext=(4, -10),
+                        textcoords="offset points", fontsize=7.5)
+    ax.set_xscale("log", base=2); ax.set_xticks(g)
+    ax.set_xticklabels([f"{x}\n({x // 8}n)" for x in g])
+    ax.set_xlabel("GCDs (nodes)"); ax.set_ylabel(f"speedup vs {base_g} GCDs")
+    ax.set_title(r"Tungsten PFC strong scaling, $1280^3$, LUMI-G")
+    ax.grid(True, which="both", **GRID)
+    ax.legend(frameon=False, fontsize=8, loc="upper left")
+
+    out = HERE / "tungsten_strong_1280.svg"
+    fig.savefig(out, format="svg", bbox_inches="tight")
+    plt.close(fig)
+    return out
+
+
+def figure_heat3d_method_comparison():
+    """Spectral against finite difference: cost at equal grid, and scaling.
+
+    Reads `heat3d_method_cost.csv` and `heat3d_method_strong_1536.csv`. Left:
+    what one step costs on the same grid and hardware, the only difference
+    being the spatial operator. Right: how each method strong-scales to 16
+    nodes. The two panels answer different questions and the chapter is
+    careful not to conflate them -- cheap per step is not the same as cheap
+    per unit accuracy.
+    """
+    cost = read("heat3d_method_cost.csv")
+    spec_cost = next(float(r["wall_step_ms"]) for r in cost if r["method"] == "spectral")
+    fd = sorted((r for r in cost if r["method"] == "fd"), key=lambda r: int(r["fd_order"]))
+    orders = [int(r["fd_order"]) for r in fd]
+    times = [float(r["wall_step_ms"]) for r in fd]
+
+    fig, (ax, ax2) = plt.subplots(1, 2, figsize=(10.0, 4.2))
+    ax.plot(orders, times, "o-", color=COLORS["fd"], linewidth=1.8,
+            label="finite difference")
+    ax.axhline(spec_cost, color=COLORS["spectral"], linestyle="--", linewidth=1.6,
+               label="spectral")
+    ax.annotate(f"spectral {spec_cost:.0f} ms\n= {spec_cost / times[0]:.0f}x FD-2",
+                xy=(orders[-1], spec_cost), xytext=(orders[-1], spec_cost * 0.42),
+                fontsize=8, color="#4a4a4a", ha="right")
+    ax.set_yscale("log")
+    ax.set_xticks(orders)
+    ax.set_xlabel("finite-difference order"); ax.set_ylabel("wall time per step [ms]")
+    ax.set_title(r"Cost at equal grid ($1024^3$, 8 GCDs)")
+    ax.grid(True, which="both", **GRID)
+    ax.legend(frameon=False, fontsize=8, loc="center right")
+
+    strong = read("heat3d_method_strong_1536.csv")
+    series = {}
+    for r in strong:
+        key = "spectral" if r["method"] == "spectral" else f"FD-{r['fd_order']}"
+        series.setdefault(key, []).append((int(r["gcds"]), float(r["wall_step_ms"])))
+    style = {"spectral": (COLORS["spectral"], "o-"), "FD-2": (COLORS["fd"], "s-"),
+             "FD-8": (COLORS["tungsten"], "^-")}
+    for key in ("spectral", "FD-2", "FD-8"):
+        pts = sorted(series[key])
+        g = [p[0] for p in pts]; t = [p[1] for p in pts]
+        eff = [100.0 * t[0] / v / (x / g[0]) for x, v in zip(g, t)]
+        c, m = style[key]
+        ax2.plot([x // 8 for x in g], eff, m, color=c, linewidth=1.7, label=key)
+    ax2.axhline(100, color="#7a7a7a", linestyle="--", linewidth=1.0)
+    ax2.set_xscale("log", base=2)
+    ax2.set_xticks([4, 8, 12, 16]); ax2.set_xticklabels([4, 8, 12, 16])
+    ax2.set_ylim(0, 115)
+    ax2.set_xlabel("nodes"); ax2.set_ylabel("strong-scaling efficiency [%]")
+    ax2.set_title(r"Strong scaling, $1536^3$, 4$\to$16 nodes")
+    ax2.grid(True, which="both", **GRID)
+    ax2.legend(frameon=False, fontsize=8, loc="lower left")
+
+    out = HERE / "heat3d_method_comparison.svg"
+    fig.savefig(out, format="svg", bbox_inches="tight")
+    plt.close(fig)
+    return out
+
+
 if __name__ == "__main__":
     figures = (figure_speedup(), figure_sizing(),
                figure_heat3d_fd_order_convergence(),
-               figure_tungsten_dealias_resolution())
+               figure_tungsten_dealias_resolution(),
+               figure_tungsten_weak_16n(),
+               figure_tungsten_strong_1280(),
+               figure_heat3d_method_comparison())
     for path in figures:
         print("wrote", path.relative_to(HERE.parent.parent.parent))

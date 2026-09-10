@@ -1,0 +1,17 @@
+# Strong scaling by method, heat3d on LUMI-G standard-g, 1536^3, 25 steps
+# (2026-09-10). 1536 = 2^9 * 3 divides 32, 64, 96 and 128 exactly, so the
+# divisibility effect seen in the tungsten curve cannot contaminate this
+# comparison. fd_order 0 denotes the spectral path.
+method,fd_order,gcds,nodes,job,wall_step_ms
+spectral,0,32,4,21887758,283.38
+spectral,0,64,8,21887762,167.96
+spectral,0,96,12,21887765,112.83
+spectral,0,128,16,21887768,85.01
+fd,2,32,4,21887760,5.91
+fd,2,64,8,21887763,2.99
+fd,2,96,12,21887766,2.11
+fd,2,128,16,21887769,1.73
+fd,8,32,4,21887761,15.66
+fd,8,64,8,21887764,8.45
+fd,8,96,12,21887767,6.07
+fd,8,128,16,21887770,4.86

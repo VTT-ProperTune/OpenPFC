@@ -1,0 +1,11 @@
+# Strong scaling, tungsten_hip, 1280^3, LUMI-G standard-g, 25 steps (2026-09-10).
+# 1280 = 2^8 * 5. It divides 32, 64, 80 and 128 exactly (40, 20, 16 and 10
+# z-planes per rank) but not 96 (13.33), and OpenPFC decomposes into z-slabs.
+# The 96-GCD point is kept because that is the finding: the same problem runs
+# 1.8x faster on 10 nodes than on 12.
+gcds,nodes,job,planes_per_rank,divides,wall_step_ms
+32,4,21887398,40,1,296.83
+64,8,21887399,20,1,174.51
+80,10,21887750,16,1,141.19
+96,12,21887400,13.33,0,258.67
+128,16,21887401,10,1,90.49

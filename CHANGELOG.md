@@ -9,6 +9,27 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- Scaling to 16 nodes, and a spectral-versus-finite-difference comparison, in
+  the scalability chapter. Weak scaling of `tungsten_hip` at exactly 67.1 M
+  cells per GCD from 1 to 16 nodes, ending on 8.59 billion cells at 49.6%
+  efficiency -- the curve is flat inside a node (95.6% at 2), pays ~30 points
+  crossing onto the fabric, then loses only 15 more over a further 4x in
+  ranks. Strong scaling at 1280^3 reaches 82% at 16 nodes, against a 768^3
+  curve that fell below 50% by four; the earlier curves were grid-limited, not
+  code-limited. A 12-node point sits at 38% because 1280/96 = 13.33 and
+  OpenPFC decomposes into z-slabs -- a 10-node run (1280/80 = 16 exactly) was
+  added to test that and lands back on the curve at 84.1%, so the rule is to
+  pick a rank count that divides the slab axis. 2048^3 is recorded as needing
+  at least 16 nodes: it was OOM-killed host-side at 32, 64 and 96 GCDs.
+  For heat3d, the only app with both solvers on one PDE: at equal grid the
+  spectral step costs 32x a second-order FD step and 8.7x a twelfth-order one,
+  yet all three strong-scale to 80-85% at 16 nodes, so parallel efficiency is
+  not a reason to prefer either in this range. The chapter deliberately
+  declines to turn cost, scaling and accuracy into a single verdict: the
+  convergence study evolves one smooth Fourier mode, the most favourable case
+  a high-order stencil can get, and that ranking does not transfer to fields
+  with content near the grid scale.
+
 - Field figures for the two application chapters that had none, rendered from
   real single-rank runs of the shipped science presets: `07_surface_diffusion`
   gets the isotropic-against-anisotropic nanosurface anneal (the same crossed
