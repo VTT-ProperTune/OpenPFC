@@ -142,7 +142,7 @@ interface first — $\varepsilon = 0.75$, $\delta = 3.0$ cells — and can then
 afford $F = 0.25$, a factor $2.7$ under the ceiling.
 
 The grid moved with them. A resolved interface at a safe driving force has a
-critical nucleus $R^\* = M/v = 7.1$ cells against $0.70$ before, and the seed
+critical nucleus $R^{*} = M/v = 7.1$ cells against $0.70$ before, and the seed
 $\sigma = 0.055\min(n_x,n_y)$ is only $4.1$ cells at $64^2$: the old default
 grid would now dissolve its own seed. $256^2$ gives a $16.7$-cell seed.
 
@@ -162,7 +162,7 @@ $\int\phi'^2 = 4/3\delta$ and $\int\phi' = -2$. The second was ignored while
 $F = 10$ made $M/R$ about $6\,\%$ of the answer. It is not ignorable at a
 driving force far enough under the ceiling to be safe: $M/R$ is $20\,\%$ here,
 and it does **not** shrink with the grid, because the seed scales with the box
-and so $R/R^\*$ is nearly grid-independent. Comparing a disc with a flat-front
+and so $R/R^{*}$ is nearly grid-independent. Comparing a disc with a flat-front
 law leaves a $20\,\%$ bias that looks exactly like a grid dependence and that
 no amount of refinement removes.
 

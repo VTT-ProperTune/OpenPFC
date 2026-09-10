@@ -195,6 +195,15 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Fixed
 
+- The applications report renders. `docs/report/14_allen_cahn.qmd` contained
+  `$R^\*$`; a backslash-escaped asterisk is invalid in math mode and LuaTeX
+  stops on it with `Missing { inserted`. MathJax accepts it silently, so
+  neither the HTML render nor the markdown checkers noticed -- only a PDF
+  render finds this, which is why the same mistake had already reached the
+  repository once before in the thin-film chapter. Both formats now build:
+  19 HTML pages and a 111-page PDF, with no unresolved cross-references in
+  either.
+
 - The shipped `allen_cahn` preset demonstrated Allen-Cahn arithmetic rather
   than Allen-Cahn physics, and the two halves of that could not be fixed
   separately. Its interface was `eps*sqrt(2M) = 0.76` cells wide -- sub-grid,
