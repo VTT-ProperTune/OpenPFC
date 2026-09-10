@@ -30,7 +30,7 @@ summary line carries an amplitude, not an accuracy.
 | **Boundary conditions** | **Periodic in x** by MPI halo exchange; **physical in y**, either Dirichlet (`u = u_wall`, `v = 0` on the wall, imposed by an odd ghost mirror *and* by writing the owned boundary cells) or Neumann (even mirror). The y correction runs after the unconditional periodic exchange and overwrites the ghosts it produced |
 | **Initial condition** | Centred Gaussian bump in `u` with `v = 0`: `sigma = 0.12*min(Nx,Ny)`, centre `(0.5*(Nx-1), 0.5*(Ny-1))`. Each test picks its own `sigma`; there is no single canonical parameter set |
 | **Key physical parameters** | Wave speed `c = wave2d::kC = 1.0`, a compile-time constant not exposed on the command line. `u_wall` defaults to 0 and only affects Dirichlet runs. Nondimensional throughout |
-| **Observable** | `global_rms_u_interior`; `cfl_c_dt_dx`; `timing_s` / `avg_step_time_s`; optional VTK series of `u` |
+| **Observable** | `global_rms_u_interior` with the `interior_cells` count it was averaged over; `cfl_c_dt_dx`; `timing_s` / `avg_step_time_s`; optional VTK series of `u`. "Interior" is the **global** interior: a `fd_order/2`-wide shell is trimmed off each global axis that can spare one, so the z axis of this `nz == 1` slab is kept whole and the value does not depend on the rank count. A configuration whose interior is empty prints `global_rms_u_interior=undefined interior_cells=0` and exits non-zero rather than printing a `0` that means "nothing was summed" |
 | **Model maturity** | numerical verification: **manufactured** and **regression** -- RK2/RK4 temporal order is measured against a self-generated fine-timestep RK4 reference, not a closed form; the rest is a pinned CPU checksum, CPU-vs-device parity, cross-implementation parity and hand-checked boundary ghosts. There is **no analytical check** anywhere in this app. Physical completeness: **canonical** -- the constant-coefficient scalar wave equation, with no damping, no heterogeneous medium and no source. Calibration: **none** |
 
 ### What the two directions mean physically
@@ -53,7 +53,7 @@ steppers, not the binaries.
 | Target | Description |
 |--------|-------------|
 | `wave2d_fd_manual` | Second-order central stencil on `Field`, non-blocking halos, laboratory-style loop. |
-| `wave2d_fd` | Same BC model; spatial accuracy `fd_order` 2,4,…,20 via tabulated central stencils. |
+| `wave2d_fd` | Same BC model; spatial accuracy `fd_order` 2,4,…,20 via tabulated central stencils. Every advertised order runs: the halo exchange is restricted to the in-plane `±X`/`±Y` faces (`halo::presets::Axes2D()`), because a 1-thick z cannot host a `fd_order/2`-thick send slab and the Laplacian never reads `k±1` anyway. |
 | `wave2d_cuda` | Device path (optional): same positional CLI as `wave2d_fd_manual` plus optional `--vtk` / `--vtk-every`; host orchestrates halos + y-face patch, CUDA kernel for Laplacian + Euler. |
 | `wave2d_hip` | HIP analogue of `wave2d_cuda` (same CLI and VTK options). Halos use `SparseExchange<HIPSpace>` on device Fields; y-face BC patches stay on device. Rank 0 prints `WAVE2D_HIP_HALO_MODE`. |
 

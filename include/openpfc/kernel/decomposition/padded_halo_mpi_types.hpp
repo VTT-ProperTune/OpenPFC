@@ -100,18 +100,28 @@ inline int checked_padded_extent(int n, int hw) {
  * appropriate `(hw, ...)` offsets baked into the start vectors.
  *
  * When `halo_width > 0`, each owned extent must be `>= halo_width` so the
- * owned send slab fits inside the core. Same per-axis fit rule as
- * non-padded `create_face_types_6`. The Field `> 2*hw` interior rule
- * does **not** apply here (`pfc::data::Field` with equal storage and
- * iteration halo).
+ * owned send slab fits inside the core — but only along an axis that
+ * actually exchanges. An axis whose two face slots are switched off in
+ * @p active carries no slab and is therefore never measured against
+ * `halo_width`; that is what lets an `Axes2D()` exchanger run on an
+ * `nz == 1` slab with `hw > 1` (a 2-D app raising its FD order). The
+ * Field `> 2*hw` interior rule does **not** apply here
+ * (`pfc::data::Field` with equal storage and iteration halo).
+ *
+ * @param active Per-slot switch in the canonical order +X, -X, +Y, -Y,
+ *        +Z, -Z. Inactive slots are neither validated nor built and come
+ *        back default-constructed (`MPI_DATATYPE_NULL`); the caller must
+ *        not post them. Defaults to all six.
  *
  * @throws std::invalid_argument if `halo_width < 0`, owned extents are
- *         non-positive, or (when `halo_width > 0`) any owned axis is
- *         `< halo_width`
+ *         non-positive, or (when `halo_width > 0`) an owned axis with an
+ *         active face is `< halo_width`
  */
 inline std::array<FaceTypes, 6>
 create_padded_face_types_6(int nx, int ny, int nz, int halo_width,
-                           MPI_Datatype element_type) {
+                           MPI_Datatype element_type,
+                           const std::array<bool, 6> &active = {true, true, true,
+                                                                true, true, true}) {
   if (halo_width < 0) {
     throw std::invalid_argument(
         "pfc::halo::create_padded_face_types_6: halo_width must be "
@@ -125,12 +135,24 @@ create_padded_face_types_6(int nx, int ny, int nz, int halo_width,
         std::to_string(nx) + "x" + std::to_string(ny) + "x" + std::to_string(nz) +
         ")");
   }
-  if (halo_width > 0 && (nx < halo_width || ny < halo_width || nz < halo_width)) {
-    throw std::invalid_argument(
-        std::string("pfc::halo::create_padded_face_types_6: owned extents ") +
-        std::to_string(nx) + "x" + std::to_string(ny) + "x" + std::to_string(nz) +
-        " cannot host halo_width=" + std::to_string(halo_width) +
-        " owned send slabs (need >= halo_width points per owned dimension)");
+  if (halo_width > 0) {
+    // Slot i sits on axis i/2, so an axis is only load-bearing when at
+    // least one of its two slots is active.
+    const std::array<int, 3> extent = {nx, ny, nz};
+    for (int slot = 0; slot < 6; ++slot) {
+      const auto s = static_cast<std::size_t>(slot);
+      if (!active[s] || extent[static_cast<std::size_t>(slot / 2)] >= halo_width) {
+        continue;
+      }
+      throw std::invalid_argument(
+          std::string("pfc::halo::create_padded_face_types_6: owned extents ") +
+          std::to_string(nx) + "x" + std::to_string(ny) + "x" + std::to_string(nz) +
+          " cannot host halo_width=" + std::to_string(halo_width) +
+          " owned send slabs on axis " + std::to_string(slot / 2) +
+          " (need >= halo_width points per exchanging owned dimension; drop "
+          "that axis from the halo direction set if the stencil never reads "
+          "it, e.g. Axes2D() for an nz == 1 slab)");
+    }
   }
 
   const int hw = halo_width;

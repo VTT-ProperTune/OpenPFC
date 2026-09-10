@@ -227,6 +227,30 @@ public:
                           const std::array<int, 3> &arr_offset) = 0;
 
   /**
+   * @brief Configure the physical geometry of the grid
+   *
+   * `set_domain()` says how many cells there are and who owns which; this
+   * says how big a cell is and where the grid starts. Formats that record
+   * physical coordinates need both — a `.vti` whose `Spacing` does not match
+   * the run's `dx` renders at the wrong scale in ParaView, and every length
+   * measured off it is wrong by the same factor.
+   *
+   * The default is a deliberate no-op so that index-only sinks
+   * (`BinaryWriter`, in-memory writers) need not implement it. Override it
+   * wherever the file format has a place to put the numbers.
+   *
+   * @param[in] origin Physical coordinate of global grid index (0, 0, 0)
+   * @param[in] spacing Physical cell size along each axis
+   *
+   * @see pfc::apply_writer_domain - forwards `Domain` geometry to both calls
+   */
+  virtual void set_geometry(const std::array<double, 3> &origin,
+                            const std::array<double, 3> &spacing) {
+    (void)origin;
+    (void)spacing;
+  }
+
+  /**
    * @brief Write a real-valued field to file at specified time step
    *
    * Writes the local portion of a real field view (double precision) to the output

@@ -89,12 +89,31 @@ int main(int argc, char *argv[]) {
         pfc::comm::SparseExchange<pfc::HostSpace, double> exchanger(
             u.data(), u.size(), decomp, rank, MPI_COMM_WORLD, halo_width);
 
+        // Sample the seed area part-way through as well as at the end: the
+        // interface velocity is only meaningful once the Gaussian IC has
+        // relaxed to the equilibrium profile, so the criterion reads the last
+        // half of the run and needs the quarter marks to tell whether the
+        // front had actually settled by then.
+        allen_cahn::AreaSamples areas;
+        areas.initial = allen_cahn::global_area_cells(MPI_COMM_WORLD, n_local_initial);
+        const int step_half = cfg.n_steps / 2;
+        const int step_three_quarter = (3 * cfg.n_steps) / 4;
+
         MPI_Barrier(MPI_COMM_WORLD);
         const double step_t0 = MPI_Wtime();
         for (int step = 0; step < cfg.n_steps; ++step) {
           allen_cahn::step_explicit_euler_cpu(&u, &lap, &face_halos, &exchanger, nx, ny,
                                               nz, inv_dx2, inv_dy2, cfg.dt, cfg.M,
                                               inv_eps2, cfg.driving_force);
+          const int done = step + 1;
+          if (done == step_half || done == step_three_quarter) {
+            const std::int64_t n = allen_cahn::global_area_cells(
+                MPI_COMM_WORLD,
+                allen_cahn::count_cells_above(
+                    u, allen_cahn::RunConfig::kLevelSetThreshold));
+            if (done == step_half) areas.half = n;
+            if (done == step_three_quarter) areas.three_quarter = n;
+          }
         }
         MPI_Barrier(MPI_COMM_WORLD);
         const double step_elapsed_s = MPI_Wtime() - step_t0;
@@ -138,13 +157,23 @@ int main(int argc, char *argv[]) {
         }
         allen_cahn::report_step_timing(MPI_COMM_WORLD, rank, cfg.n_steps, step_elapsed_s);
 
-        const std::int64_t n_local_final =
-            allen_cahn::count_cells_above(u, allen_cahn::RunConfig::kLevelSetThreshold);
-        const bool growth_ok = allen_cahn::verify_level_set_area_growth(
-            MPI_COMM_WORLD, rank, n_local_initial, n_local_final,
-            allen_cahn::RunConfig::kMinLevelSetAreaGrowthFactor,
-            allen_cahn::RunConfig::kLevelSetThreshold);
+        areas.final_ = allen_cahn::global_area_cells(
+            MPI_COMM_WORLD,
+            allen_cahn::count_cells_above(u,
+                                          allen_cahn::RunConfig::kLevelSetThreshold));
+        const auto kinetics = allen_cahn::analyse_interface_kinetics(areas, cfg, dx);
+        allen_cahn::report_interface_kinetics(rank, areas, cfg, kinetics);
 
-        return growth_ok ? EXIT_SUCCESS : EXIT_FAILURE;
+        // The exit status answers "did the run finish?", not "did the physics
+        // agree?". A deliberately short run, or a parameter set outside the
+        // regime the check knows how to judge, is not a broken program. Pass
+        // --strict when you want the verdict to gate a script.
+        if (cfg.strict && kinetics.verdict == allen_cahn::CheckVerdict::Fail) {
+          if (rank == 0) {
+            std::cerr << "allen_cahn: --strict and physics_check=FAIL\n";
+          }
+          return EXIT_FAILURE;
+        }
+        return EXIT_SUCCESS;
       });
 }

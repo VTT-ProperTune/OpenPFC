@@ -73,6 +73,91 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Fixed
 
+- `wave2d`'s advertised observable, `global_rms_u_interior`, was identically
+  zero for every configuration on both CPU drivers. The interior visitor
+  trimmed the stencil half-width off each axis of each rank's owned box, and
+  the app is an `nz == 1` slab: `[hw, 1 - hw)` in z is empty, so the reduction
+  summed no cells and printed the `0` that an empty sum and a genuinely zero
+  field share. Nothing caught it because nothing distinguished the two. The
+  observable now trims only axes that can spare the shell -- the slab's single
+  z layer is kept, because z is not a dimension this model has -- and trims in
+  *global* index space rather than per rank, so the number no longer shrinks
+  as ranks are added and eat a shell at every subdomain seam. `report()` also
+  carries the visited count: the run line prints `interior_cells=`, an empty
+  interior prints `global_rms_u_interior=undefined interior_cells=0` and exits
+  non-zero, and the reduction can no longer report nothing as if it were zero.
+  `wave2d_fd` at order 2 and `wave2d_fd_manual` now agree to the last digit
+  (0.219101 for the 64x64x50 preset), which is the cross-check the observable
+  was supposed to provide all along. Guards: `[reporting]` in `test_wave2d`
+  pins the degenerate-axis rule and sums a 2- and a 4-rank decomposition to
+  the 1-rank answer.
+
+- `wave2d_fd` advertised even FD orders 2 to 20 and only order 2 ran. Order 4
+  aborted before its first step with `create_padded_face_types_6: owned
+  extents 64x64x1 cannot host halo_width=2 owned send slabs`: a 1-thick owned
+  z extent cannot provide a 2-thick send slab. It was never asked to -- the
+  Laplacian reads x and y only -- but the face-type builder validated all
+  three axes whatever direction set the exchanger had been given, contradicting
+  its own documented contract that "orthogonal thin axes (e.g. `nz == 1` for
+  Axes2D) remain valid". `create_padded_face_types_6` now takes the active-slot
+  mask, builds and validates only the slots that will carry a message, and
+  `HostFacesHalo` resolves that mask before asking for types. `wave2d_fd` asks
+  for `halo::presets::Axes2D()`, which is what the preset was written for, and
+  all ten advertised orders run. Rejecting orders 4-20 at parse time was the
+  alternative; making them work was preferable because the y-ghost fill was
+  already general in the halo width, so the stencils were the only thing
+  standing between the app and the accuracy its usage line promised. Guard:
+  `[halo]` in `test_wave2d` constructs the exchanger at every advertised order
+  and steps a 32x32 slab at order 4, and still requires that asking for the
+  z faces on a 1-thick z is an error.
+
+- Every `.vti` written through a JSON session claimed `Spacing="1 1 1"`.
+  `pfc::apply_writer_domain` set the index geometry -- global size, local size,
+  offset -- and dropped the physical geometry the `Domain` was carrying right
+  next to it, even though `VTKWriter::set_spacing` / `set_origin` existed and
+  every hand-written call site already used them. Harmless for the `dx = 1`
+  presets and wrong by 4x for a `dx = 0.25` run, in a way nothing in the file
+  reveals: ParaView simply renders at the wrong scale and every length measured
+  off it inherits the error. `ResultsWriter` gains a `set_geometry(origin,
+  spacing)` hook, defaulting to a no-op so index-only sinks such as
+  `BinaryWriter` need not implement it, `VTKWriter` overrides it, and
+  `apply_writer_domain` forwards what the `Domain` already knows. No committed
+  test or golden file depended on the old value -- the two existing spacing
+  assertions in `test_vtk_writer` set the spacing themselves. Guard: two
+  `[geometry]` cases write a real `.vti` through `apply_writer_domain` at
+  `dx = 0.25` and `dx = 0.5` and read the header back.
+
+- `allen_cahn`'s pass criterion measured the grid rather than the physics, and
+  doubled as the process exit status. It required the superlevel area to reach
+  5x its initial value, but the seed radius scales with the grid
+  (`sigma = 0.055*min(nx,ny)`) while the interface speed does not, so
+  `((R0 + v t)/R0)^2` shrinks as the box grows: the same physics scored 6.08x
+  at 64^2, 3.50x at 128^2 and 2.55x at 256^2 -- pass, fail, fail. The criterion
+  is now the interface velocity `dR/dt`, with `R = sqrt(A/pi)` the equivalent
+  radius of the same superlevel area, measured over the *second half* of the
+  run and compared with the sharp-interface solvability result
+  `v = (3/2) F eps sqrt(2M)`. The second half because the Gaussian initial
+  condition is far from the equilibrium `tanh` and its collapse moves the
+  contour by a distance that scales with the seed -- a whole-run average
+  inherits exactly the grid dependence the area ratio had. Measured that way
+  the three grids agree to 5% (12.4 / 12.8 / 13.1 against a prediction of
+  11.4). The accepted band is a factor of two either way rather than a
+  percentage, because the shipped preset's interface is `eps*sqrt(2M) = 0.76`
+  cells wide -- under one grid spacing, so the front is lattice-limited and
+  sits tens of percent off the continuum law (`+11%` at the defaults, `-35%`
+  at `driving_force = 5`); the app now prints that width and warns. It also
+  prints the bistability limit `F eps^2 < 2/(3 sqrt 3)`, which the shipped
+  parameters clear by 6% and which `driving_force = 20` or `epsilon = 0.3`
+  crosses, flipping the whole domain instead of growing a grain -- previously
+  reported as an area ratio of 75.85 and a pass. The verdict prints as
+  `physics_check=PASS|FAIL|SKIPPED` and no longer sets the exit status: a run
+  too short to have outrun the transient, or one whose predicted advance is
+  under a cell, is skipped rather than failed, and the exit status answers
+  "did the run finish?". `--strict` opts back in to gating on a `FAIL`. Guard:
+  the new `allen-cahn-interface-kinetics` ctest -- the app had none -- runs the
+  shipped update at 64^2 and 128^2 and requires the same verdict and speeds
+  within 10%.
+
 - CI no longer fails on a third-party apt repository it does not use. The
   GitHub runner images carry apt sources for Google Chrome and Microsoft
   prod; on 2026-09-09 Chrome served a `Packages.gz` whose hash disagreed with

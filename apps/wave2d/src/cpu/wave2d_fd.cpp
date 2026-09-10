@@ -66,7 +66,14 @@ int run_fd(const RunConfig &cfg, int rank, int nproc) {
   pfc::data::Field<double, pfc::HostSpace> lap =
       pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 
-  comm::HaloExchange<HostSpace, double> halo_u(u, decomp, rank, MPI_COMM_WORLD);
+  // The slab is nz == 1 and the Laplacian never reads k+/-1, so the +/-Z faces
+  // carry nothing. Saying so is not an optimisation: a 1-thick owned z extent
+  // cannot host an hw-thick send slab, and demanding that it could is what
+  // used to abort every fd_order > 2 run before its first step.
+  comm::HaloExchangeOptions halo_opt;
+  halo_opt.directions = pfc::halo::presets::Axes2D();
+  comm::HaloExchange<HostSpace, double> halo_u(u, decomp, rank, MPI_COMM_WORLD,
+                                               halo_opt);
 
   const double inv_den = 1.0 / static_cast<double>(stencil.denom);
   const double sx = model.inv_dx2 * inv_den;
@@ -143,21 +150,11 @@ int run_fd(const RunConfig &cfg, int rank, int nproc) {
   }
   const double max_elapsed = runtime::toc(timer);
 
-  const int skip = hw;
-  const auto local_size = u.local_size();
-  wave2d::report(rank, nproc, cfg, "fd", wave2d::fd_extra_metadata(cfg), max_elapsed,
-                 "(runtime FD order; y physical BC; interior RMS u)",
-                 [&](auto &&cb) {
-                   for (int k = skip; k < local_size[2] - skip; ++k) {
-                     for (int j = skip; j < local_size[1] - skip; ++j) {
-                       for (int i = skip; i < local_size[0] - skip; ++i) {
-                         const auto p = u.coords(i, j, k);
-                         cb(p[0], p[1], p[2], u(i, j, k));
-                       }
-                     }
-                   }
-                 });
-  return EXIT_SUCCESS;
+  const bool observable_ok =
+      wave2d::report(rank, nproc, cfg, "fd", wave2d::fd_extra_metadata(cfg),
+                     max_elapsed, "(runtime FD order; y physical BC; interior RMS u)",
+                     wave2d::interior_stats(u, hw));
+  return observable_ok ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 } // namespace
