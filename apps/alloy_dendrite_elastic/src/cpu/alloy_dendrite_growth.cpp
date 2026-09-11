@@ -359,8 +359,14 @@ int run(int argc, char **argv, int rank, int nproc) {
             << "  steadiness    dV/V = " << 100.0 * res.v_drift
             << " %, drho/rho = " << 100.0 * res.rho_drift
             << " % across the fit window\n"
+            << "    rho/rho     " << res.rho_rel[0] << ", " << res.rho_rel[1]
+            << ", " << res.rho_rel[2] << ", " << res.rho_rel[3]
+            << "  at 0.5, 1, 1.5, 2 tip radii, spread "
+            << 100.0 * res.rho_rel_spread << " %\n"
             << "  selection     sigma* = 2 d0 D / (V rho^2) = " << res.sigma_star
-            << "\n"
+            << "  (cell window)\n"
+            << "                sigma* = " << res.sigma_star_rel
+            << "  (one-radius window; this is the quotable one)\n"
             << "  Ivantsov      V rho = " << res.v_rho << " vs 2 D P(Omega_eff) = "
             << res.v_rho_ivantsov << "\n";
   if (res.el_solves > 0) {

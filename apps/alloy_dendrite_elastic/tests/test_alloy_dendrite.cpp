@@ -692,6 +692,65 @@ TEST_CASE("selection and Ivantsov helpers", "[unit][diagnostics]") {
     }
     REQUIRE(scan.spread < 1e-9);
   }
+
+  SECTION("the rho-relative scan measures the shape, not the estimator") {
+    // Same resolved parabola, but the windows are now 0.5, 1, 1.5 and 2 tip
+    // radii rather than 3, 5, 8 and 12 cells. On an exact parabola both
+    // scans must be flat; the point of the relative one is what happens on
+    // a shape that is *not* a parabola away from the tip, which is the case
+    // on a real dendrite and which a cell-based window cannot distinguish
+    // from a resolution error.
+    const int nx = 200;
+    const int ny = 161;
+    const double dx = 0.4;
+    const double rho = 6.0;
+    const double x_tip = 60.0;
+    const double y_tip = 80.0 * dx;
+    std::vector<double> phi(static_cast<std::size_t>(nx * ny), 0.0);
+    for (int j = 0; j < ny; ++j) {
+      const double dy = static_cast<double>(j) * dx - y_tip;
+      const double xc = x_tip - dy * dy / (2.0 * rho);
+      for (int i = 0; i < nx; ++i) {
+        const double t = (xc - static_cast<double>(i) * dx) / dx;
+        phi[static_cast<std::size_t>(i + j * nx)] = std::fmax(-1.0, std::fmin(1.0, t));
+      }
+    }
+    const auto rs = alloy_dendrite::measure_tip_scan_relative(
+        phi, nx, ny, dx, dx, 20, 80, alloy_dendrite::kTipWindowRelDefaults);
+    for (int q = 0; q < alloy_dendrite::kTipWindowCount; ++q) {
+      INFO("window " << alloy_dendrite::kTipWindowRelDefaults[q]
+                     << " rho -> half-width " << rs.halfwidth[q] << " cells");
+      REQUIRE(rs.rho[q] == Approx(rho).epsilon(1e-9));
+      // The half-widths must actually track rho: 0.5 rho at dx = 0.4 is
+      // 7.5 -> 8 cells, 2 rho is 30. If they did not, the scan would be a
+      // cell scan wearing a different label.
+      REQUIRE(rs.halfwidth[q] ==
+              std::lround(alloy_dendrite::kTipWindowRelDefaults[q] * rho / dx));
+    }
+    REQUIRE(rs.spread < 1e-9);
+
+    // A tip that is a parabola only near the apex and a straight stem
+    // further out: the relative scan must *see* that, i.e. report a spread
+    // that grows with the window, because that is the physical statement a
+    // dendrite tip measurement has to make.
+    std::vector<double> bent(static_cast<std::size_t>(nx * ny), 0.0);
+    for (int j = 0; j < ny; ++j) {
+      const double dy = static_cast<double>(j) * dx - y_tip;
+      const double a = std::fabs(dy);
+      // parabola inside one radius, straight flank outside it
+      const double off = (a < rho) ? dy * dy / (2.0 * rho)
+                                   : rho / 2.0 + (a - rho) * 1.5;
+      const double xc = x_tip - off;
+      for (int i = 0; i < nx; ++i) {
+        const double t = (xc - static_cast<double>(i) * dx) / dx;
+        bent[static_cast<std::size_t>(i + j * nx)] = std::fmax(-1.0, std::fmin(1.0, t));
+      }
+    }
+    const auto rb = alloy_dendrite::measure_tip_scan_relative(
+        bent, nx, ny, dx, dx, 20, 80, alloy_dendrite::kTipWindowRelDefaults);
+    REQUIRE(rb.rho[0] == Approx(rho).epsilon(1e-6)); // 0.5 rho is inside the cap
+    REQUIRE(rb.spread > 0.1);                        // 2 rho is well outside it
+  }
 }
 
 #if ALLOY_DENDRITE_HAVE_ELASTICITY
