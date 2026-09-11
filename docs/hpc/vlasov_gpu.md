@@ -39,7 +39,7 @@ goes.
 # HIP tree (the flag is --with-rocm; there is no --hip)
 ./scripts/build.sh --machine=lumi --with-rocm --no-submit --no-test --jobs=32 \
     --cmake-arg=-DOpenPFC_BUILD_TESTS=ON \
-    --build-dir=/flash/project_462001519/<user>/build/<unique>
+    --build-dir=/flash/project_462001519/$USER/build/openpfc-lumi-rocm
 
 # one GCD
 srun -n 1 --gpus-per-node=8 vlasov_hip_parity --nx=32 --nvx=32 --nvy=32 --steps=20
