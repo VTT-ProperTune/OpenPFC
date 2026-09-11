@@ -202,6 +202,18 @@ using SecondDerivs = std::conditional_t<Dim == 3, SecondDerivs3, SecondDerivs2>;
  *       anisotropy and whose surface-stiffness disagree, which is worse
  *       than either convention used consistently.
  *
+ * @note **Crystal frame.** The quartic is not taken on the lab normal.
+ *       With `θ_c` the in-plane rotation of the `<100>` axes (about `z`
+ *       in 3-D), `n' = R(θ_c)^T n` and `a_s` uses `sum n_i'^4`. The
+ *       Cahn–Hoffman flux is a vector, so it is formed in the crystal
+ *       frame and rotated back with `R`, not `R^T`:
+ *
+ *           g' = R^T g,   A = R A'(g')
+ *
+ *       `θ_c = 0` skips the rotation entirely, so the cubic-axis unit
+ *       tests keep their last bits. A second grain (bicrystal) passes a
+ *       per-cell `θ_c` rather than a second `a_s`.
+ *
  * @note Two ceilings on `eps4` worth knowing. `a_s > 0` needs
  *       `eps4 < 1/3` (3-D) -- below that the interface width of the soft
  *       orientation goes through zero. Long before that, the 2-D
@@ -220,36 +232,52 @@ struct AnisotropyPoint {
 
 template <int Dim>
 [[nodiscard]] inline AnisotropyPoint
-evaluate_anisotropy(const ModelParams &p, double gx, double gy, double gz) noexcept {
+evaluate_anisotropy(const ModelParams &p, double gx, double gy, double gz,
+                    double theta_c) noexcept {
   AnisotropyPoint out;
   out.W = p.W0;
   out.tau = p.tau0;
   if (p.eps4 == 0.0) {
     return out;
   }
-  const double g2 = gx * gx + gy * gy + (Dim == 3 ? gz * gz : 0.0);
+  // Crystal-frame rotation about z: n' = R(θ_c)^T n. θ_c = 0 is skipped so
+  // the lab-frame cubic-axis checks keep their last bits.
+  const bool rotate = (theta_c != 0.0);
+  const double cth = rotate ? std::cos(theta_c) : 1.0;
+  const double sth = rotate ? std::sin(theta_c) : 0.0;
+  const double gx_c = rotate ? (cth * gx + sth * gy) : gx;
+  const double gy_c = rotate ? (-sth * gx + cth * gy) : gy;
+  const double gz_c = gz;
+  const double g2 = gx_c * gx_c + gy_c * gy_c + (Dim == 3 ? gz_c * gz_c : 0.0);
   if (g2 < kGradNormFloor2) {
     return out;
   }
-  const double g4sum =
-      gx * gx * gx * gx + gy * gy * gy * gy + (Dim == 3 ? gz * gz * gz * gz : 0.0);
+  const double g4sum = gx_c * gx_c * gx_c * gx_c + gy_c * gy_c * gy_c * gy_c +
+                       (Dim == 3 ? gz_c * gz_c * gz_c * gz_c : 0.0);
   const double inv_g2 = 1.0 / g2;
   const double inv_g4 = inv_g2 * inv_g2;
-  const double s = g4sum * inv_g4; // sum n_i^4
-  // Normalised Karma-Rappel: a_s = (1-3 eps4) + 4 eps4 sum n_i^4, so that in
-  // 2-D a_s = 1 + eps4 cos 4 theta exactly. See the note above.
+  const double s = g4sum * inv_g4; // sum n_i'^4
+  // Normalised Karma-Rappel: a_s = (1-3 eps4) + 4 eps4 sum n_i'^4, so that in
+  // 2-D a_s = 1 + eps4 cos 4 (theta - theta_c) exactly. See the note above.
   out.a_s = (1.0 - 3.0 * p.eps4) + 4.0 * p.eps4 * s;
   out.W = p.W0 * out.a_s;
   out.tau = p.tau0 * out.a_s * out.a_s;
-  // A_i = |grad phi|^2 W dW/d(d_i phi) = 4 W0^2 a_s (d a_s/d s)
-  //       (g_i^3 G^2 - g_i sum g_j^4) / G^4, and d a_s/d s = 4 eps4.
+  // A'_i in the crystal frame, then A = R A' in the lab frame.
   const double pre = 16.0 * p.eps4 * p.W0 * p.W0 * out.a_s * inv_g4;
-  out.flux[0] = pre * (gx * gx * gx * g2 - g4sum * gx);
-  out.flux[1] = pre * (gy * gy * gy * g2 - g4sum * gy);
+  const double fx_c = pre * (gx_c * gx_c * gx_c * g2 - g4sum * gx_c);
+  const double fy_c = pre * (gy_c * gy_c * gy_c * g2 - g4sum * gy_c);
+  out.flux[0] = rotate ? (cth * fx_c - sth * fy_c) : fx_c;
+  out.flux[1] = rotate ? (sth * fx_c + cth * fy_c) : fy_c;
   if constexpr (Dim == 3) {
-    out.flux[2] = pre * (gz * gz * gz * g2 - g4sum * gz);
+    out.flux[2] = pre * (gz_c * gz_c * gz_c * g2 - g4sum * gz_c);
   }
   return out;
+}
+
+template <int Dim>
+[[nodiscard]] inline AnisotropyPoint
+evaluate_anisotropy(const ModelParams &p, double gx, double gy, double gz) noexcept {
+  return evaluate_anisotropy<Dim>(p, gx, gy, gz, p.crystal_angle);
 }
 
 /**
@@ -367,6 +395,16 @@ public:
     m_dfel_dphi = dfel_dphi;
   }
 
+  /**
+   * @brief Per-cell crystal angle, radians, overriding
+   *        @ref ModelParams::crystal_angle.
+   *
+   * Pass `nullptr` (the default) to use the scalar on `ModelParams`. The
+   * bicrystal IC writes a nearest-seed Voronoi field and installs it here;
+   * a single grain never needs to. Owned cells only, like the elastic hook.
+   */
+  void set_crystal_angle_field(const Field *angle) noexcept { m_angle = angle; }
+
   /// Advance `phi`, `psi` (hence `U`) and `theta` by @p dt.
   void step(double dt) {
     m_ex_state.exchange();
@@ -435,7 +473,9 @@ private:
       if constexpr (Dim == 3) {
         m_gz(i, j, kk) = gz;
       }
-      const auto a = evaluate_anisotropy<Dim>(p, gx, gy, gz);
+      const double th =
+          (m_angle != nullptr) ? (*m_angle)(i, j, kk) : p.crystal_angle;
+      const auto a = evaluate_anisotropy<Dim>(p, gx, gy, gz, th);
       const double w2 = a.W * a.W;
       m_tau(i, j, kk) = a.tau;
       m_Fx(i, j, kk) = w2 * gx + a.flux[0];
@@ -587,6 +627,7 @@ private:
   pfc::gradient::FDGradient<DerivZ> m_dJz;
 
   const Field *m_dfel_dphi{nullptr};
+  const Field *m_angle{nullptr};
 };
 
 } // namespace alloy_dendrite

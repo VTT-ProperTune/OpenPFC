@@ -181,10 +181,44 @@ struct ModelParams {
    * chemical free-energy scale `f_ref = L dT_0 / T_M`.
    */
   double lambda_el = 0.0;
-  /// Advance equation (4). Off makes theta a frozen zero field and skips the
-  /// thermal Laplacian entirely.
+  /**
+   * @brief Advance equation (4).
+   *
+   * Off skips the thermal Laplacian and the latent-heat source, so `theta`
+   * is whatever the caller wrote -- a frozen field, not necessarily a zero
+   * field. Frozen-temperature (FTA) directional solidification uses that
+   * on purpose: `theta(x,t) = (G/ΔT_h)(x - x0 - V_p t)` is imposed, the
+   * Laplacian is skipped, and `M_c theta` in equation (2) stays live. Zeroing
+   * `theta` here would silently disable FTA. See @ref fta_undercooling.
+   */
   bool evolve_theta = true;
+  /**
+   * @brief Crystal-frame rotation of the cubic anisotropy, radians.
+   *
+   * Equation (1) is evaluated on `n' = R(θ_c)^T n` rather than on the lab
+   * normal, then the Cahn–Hoffman flux is rotated back. `θ_c = 0` is a
+   * no-op, bitwise, so existing cubic-axis checks keep their last bits.
+   * A second grain uses a per-cell override on the stepper, not a second
+   * member here.
+   */
+  double crystal_angle = 0.0;
 };
+
+/**
+ * @brief Frozen-temperature (Bridgman) undercooling, dimensionless.
+ *
+ *     theta(x, t) = (G / ΔT_h) (x − x0 − V_p t)
+ *
+ * `gradient` is `G/ΔT_h` in `1/W0`, `pulling` is `V_p` in `W0/tau0`. The
+ * geometry is leftover Stage 4 of issue #85; the formula is the FTA of
+ * unmerged PR #103 (`T = T_l + G(x − x_s − V_p t)`), non-dimensionalised
+ * on this application's `theta`. Positive `gradient` is hotter downstream.
+ */
+[[nodiscard]] inline double fta_undercooling(double gradient, double x,
+                                             double x0, double pulling,
+                                             double t) noexcept {
+  return gradient * (x - x0 - pulling * t);
+}
 
 /// Solute prefactor `P(phi) = ((1+k) - (1-k) phi) / 2` of equation (3).
 /// `P = 1` in the liquid, `P = k` in the solid; strictly positive for

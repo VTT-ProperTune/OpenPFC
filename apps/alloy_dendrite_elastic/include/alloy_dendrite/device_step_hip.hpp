@@ -121,6 +121,7 @@ struct DeviceParams {
   double eps4{0.0};
   double at{0.0};          ///< `at_scale * 1/(2 sqrt 2) * W0`.
   double lambda_el{0.0};
+  double crystal_angle{0.0}; ///< Lab-to-crystal rotation, radians. 0 is a no-op.
   double grad_floor2{1.0e-24}; ///< `kGradNormFloor2`.
   int spec_source{0};
   int evolve_theta{1};

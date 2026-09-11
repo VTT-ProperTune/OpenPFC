@@ -300,6 +300,7 @@ private:
     // Precomputed host-side so the device never re-evaluates 1/(2 sqrt 2).
     m_dp.at = m_p.at_scale * kAntiTrapCoeff * m_p.W0;
     m_dp.lambda_el = m_p.lambda_el;
+    m_dp.crystal_angle = m_p.crystal_angle;
     m_dp.grad_floor2 = kGradNormFloor2;
     m_dp.spec_source = m_p.spec_source ? 1 : 0;
     m_dp.evolve_theta = m_p.evolve_theta ? 1 : 0;

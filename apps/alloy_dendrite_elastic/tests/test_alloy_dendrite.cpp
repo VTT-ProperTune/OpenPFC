@@ -38,6 +38,7 @@
 
 #include <array>
 #include <cmath>
+#include <cstdlib>
 #include <limits>
 #include <string>
 #include <vector>
@@ -230,6 +231,31 @@ TEST_CASE("cubic anisotropy matches equation (1)", "[unit][aniso]") {
     REQUIRE(std::isfinite(a.a_s));
     REQUIRE(std::isfinite(a.flux[0]));
     REQUIRE(a.flux[0] == Approx(0.0));
+  }
+
+  SECTION("crystal-frame rotation by pi/4 maps <100> onto <110>") {
+    // n' = R(θ_c)^T n. A lab <100> seen from a crystal rotated 45° is a
+    // <110>, so a_s must be the soft value 1 - eps4, not 1 + eps4. The
+    // flux is still a stationary point, now in the lab frame too.
+    auto q = p;
+    q.crystal_angle = 0.25 * std::acos(-1.0);
+    const auto a = alloy_dendrite::evaluate_anisotropy<2>(q, 1.0, 0.0, 0.0);
+    REQUIRE(a.a_s == Approx(1.0 - p.eps4));
+    REQUIRE(a.flux[0] == Approx(0.0).margin(1e-14));
+    REQUIRE(a.flux[1] == Approx(0.0).margin(1e-14));
+    // a_s(n, θ_c) == a_s(R^T n, 0): the rotation is a change of frame,
+    // not a different function.
+    const double cth = std::cos(q.crystal_angle);
+    const double sth = std::sin(q.crystal_angle);
+    const auto a0 = alloy_dendrite::evaluate_anisotropy<2>(p, cth, -sth, 0.0);
+    REQUIRE(a.a_s == Approx(a0.a_s));
+    // θ_c = 0 is a bitwise no-op against the four-argument form.
+    const auto lab = alloy_dendrite::evaluate_anisotropy<2>(p, 0.3, -0.7, 0.0);
+    const auto expl =
+        alloy_dendrite::evaluate_anisotropy<2>(p, 0.3, -0.7, 0.0, 0.0);
+    REQUIRE(lab.a_s == expl.a_s);
+    REQUIRE(lab.flux[0] == expl.flux[0]);
+    REQUIRE(lab.flux[1] == expl.flux[1]);
   }
 
   SECTION("3-D <100> and <111>") {
@@ -741,6 +767,145 @@ TEST_CASE("the elastic driving-force hook is wired", "[unit][elastic-hook]") {
 }
 
 // ---------------------------------------------------------------------------
+// 4b. FTA: evolve_theta = 0 must not drop M_c theta
+// ---------------------------------------------------------------------------
+
+TEST_CASE("imposed theta still enters M_c theta when evolve_theta is off",
+          "[unit][fta-hook]") {
+  // Frozen-temperature directional solidification writes a Bridgman profile
+  // into theta and leaves evolve_theta false so the thermal Laplacian is
+  // skipped. Equation (2) still has -lambda (1-phi^2)^2 M_c theta; zeroing
+  // theta because "thermal is off" would silently disable FTA. Same shape
+  // as [elastic-hook]: a wiring check, not a science run.
+  if (world_size() != 1) {
+    SKIP("single-rank hook check");
+  }
+  REQUIRE(alloy_dendrite::fta_undercooling(0.02, 10.0, 4.0, 0.5, 3.0) ==
+          Approx(0.02 * (10.0 - 4.0 - 0.5 * 3.0)));
+
+  auto run = [](double mc, double theta0) {
+    alloy_dendrite::ModelParams p;
+    p.eps4 = 0.0;
+    p.M_c = mc;
+    p.evolve_theta = false;
+    auto domain = pfc::domain::create(pfc::GridSize({64, 4, 1}),
+                                      pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                      pfc::GridSpacing({0.8, 0.8, 0.8}));
+    pfc::comm::HaloExchangeOptions opt;
+    opt.directions = alloy_dendrite::Stepper<2>::directions();
+    pfc::sim::stacks::FDPaddedCPUStack stack(domain, 2, 0, 1, MPI_COMM_WORLD, opt);
+    alloy_dendrite::Stepper<2> st(stack, p, 4);
+    st.phi().for_each_owned([&](int i, int j, int kk) {
+      const double x = st.phi().coords(i, j, kk)[0];
+      st.phi()(i, j, kk) = std::tanh((12.0 - std::fabs(x - 25.6)) / std::sqrt(2.0));
+      st.solute()(i, j, kk) = -1.0;
+      st.temperature()(i, j, kk) = theta0;
+    });
+    st.seed_conserved_solute();
+    for (int n = 0; n < 50; ++n) {
+      st.step(0.01);
+    }
+    double s = 0.0;
+    st.phi().for_each_owned([&](int i, int j, int kk) { s += st.phi()(i, j, kk); });
+    return s;
+  };
+
+  const double base = run(0.0, 0.0);
+  // Mc live, theta frozen at zero: bitwise the isothermal path.
+  REQUIRE(run(0.5, 0.0) == base);
+  // Mc off, theta nonzero: the term is Mc * theta, so still absent.
+  REQUIRE(run(0.0, 1.0) == base);
+  // Both: positive theta (hotter) opposes solidification.
+  const double driven = run(0.5, 1.0);
+  REQUIRE(driven != base);
+  REQUIRE(driven < base);
+
+  // Re-imposing the Bridgman field each step, as run_dendrite does, must
+  // leave theta equal to the formula -- not the leftover of a zeroed field
+  // and not a diffused one.
+  {
+    alloy_dendrite::ModelParams p;
+    p.eps4 = 0.0;
+    p.M_c = 0.5;
+    p.evolve_theta = false;
+    auto domain = pfc::domain::create(pfc::GridSize({32, 4, 1}),
+                                      pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                      pfc::GridSpacing({0.8, 0.8, 0.8}));
+    pfc::comm::HaloExchangeOptions opt;
+    opt.directions = alloy_dendrite::Stepper<2>::directions();
+    pfc::sim::stacks::FDPaddedCPUStack stack(domain, 2, 0, 1, MPI_COMM_WORLD, opt);
+    alloy_dendrite::Stepper<2> st(stack, p, 4);
+    const double G = 0.02;
+    const double x0 = 6.4;
+    const double Vp = 0.1;
+    const double dt = 0.01;
+    st.phi().for_each_owned([&](int i, int j, int kk) {
+      const double x = st.phi().coords(i, j, kk)[0];
+      st.phi()(i, j, kk) = std::tanh((6.0 - std::fabs(x - 6.4)) / std::sqrt(2.0));
+      st.solute()(i, j, kk) = -0.55;
+      st.temperature()(i, j, kk) =
+          alloy_dendrite::fta_undercooling(G, x, x0, Vp, 0.0);
+    });
+    st.seed_conserved_solute();
+    const int nstep = 20;
+    for (int n = 1; n <= nstep; ++n) {
+      st.step(dt);
+      alloy_dendrite::impose_fta_temperature(st, G, x0, Vp,
+                                             static_cast<double>(n) * dt);
+    }
+    const double t = static_cast<double>(nstep) * dt;
+    st.temperature().for_each_owned([&](int i, int j, int kk) {
+      const double x = st.temperature().coords(i, j, kk)[0];
+      REQUIRE(st.temperature()(i, j, kk) ==
+              Approx(alloy_dendrite::fta_undercooling(G, x, x0, Vp, t)));
+    });
+  }
+}
+
+TEST_CASE("two tanh seeds still conserve solute to round-off",
+          "[unit][bicrystal]") {
+  // A competing-dendrite *science* run is not a ctest. This only checks that
+  // the two-seed IC goes through the same conserved P(phi) U path as the
+  // single seed, so adding a grain does not invent a source.
+  if (world_size() != 1) {
+    SKIP("single-rank conservation check");
+  }
+  alloy_dendrite::DendriteConfig cfg;
+  cfg.model.D_l = 2.0;
+  cfg.model.k = 0.15;
+  cfg.model.lambda = cfg.model.D_l / alloy_dendrite::kA2;
+  cfg.model.eps4 = 0.02;
+  cfg.model.M_c = 0.0;
+  cfg.model.evolve_theta = false;
+  cfg.model.crystal_angle = 0.1;
+  cfg.crystal_angle2 = -0.1;
+  cfg.nx = 48;
+  cfg.ny = 48;
+  cfg.dx = 0.8;
+  cfg.t_end = 4.0;
+  cfg.n_sample = 4;
+  cfg.seed_radius = 6.0;
+  cfg.seed2_radius = 6.0;
+  cfg.seed_x = 12.0;
+  cfg.seed_y = 12.0;
+  cfg.seed2_x = 12.0;
+  cfg.seed2_y = 28.0;
+  cfg.tip_fit_halfwidth = 3;
+  cfg.quiet = true;
+  cfg.run_id = "ctest-bicrystal";
+  int rank = 0;
+  int nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  const auto r =
+      alloy_dendrite::run_dendrite_case(cfg, rank, nproc, MPI_COMM_WORLD);
+  CHECK(r.solute_drift_rel < 1e-11);
+  CHECK(r.phi_min > -1.05);
+  CHECK(r.phi_max < 1.05);
+  CHECK((std::isfinite(r.x_tip2) || std::isfinite(r.x_tip)));
+}
+
+// ---------------------------------------------------------------------------
 // 5. Selection diagnostics
 // ---------------------------------------------------------------------------
 
@@ -905,6 +1070,67 @@ TEST_CASE("selection and Ivantsov helpers", "[unit][diagnostics]") {
     const double s_lo = alloy_dendrite::selection_sigma_star(0.25, 2.0, 0.1, scan.rho[0]);
     const double s_hi = alloy_dendrite::selection_sigma_star(0.25, 2.0, 0.1, scan.rho[3]);
     REQUIRE(std::fabs(s_lo / s_hi - 1.0) > 0.3);
+  }
+
+  SECTION("downstream tip is the most-downstream + to - crossing") {
+    // A unique bump at j = 30, solid on the left. A staircase slant would
+    // alias several rows onto the same crossing cell; a Gaussian bump does
+    // not. measure_tip from a seed at the bottom would miss it.
+    const int nx = 80;
+    const int ny = 41;
+    const double dx = 0.5;
+    const int j_peak = 30;
+    std::vector<double> phi(static_cast<std::size_t>(nx * ny), -1.0);
+    auto at = [&](int i, int j) -> double & {
+      return phi[static_cast<std::size_t>(i) +
+                 static_cast<std::size_t>(j) * static_cast<std::size_t>(nx)];
+    };
+    for (int j = 0; j < ny; ++j) {
+      const double dj = static_cast<double>(j - j_peak);
+      const double x_if = 8.0 + 8.0 * std::exp(-0.04 * dj * dj);
+      for (int i = 0; i < nx; ++i) {
+        const double x = static_cast<double>(i) * dx;
+        at(i, j) = (x < x_if) ? 1.0 : -1.0;
+      }
+    }
+    const auto tip = alloy_dendrite::measure_downstream_tip(
+        phi, nx, ny, dx, dx, 0, 0, ny - 1, 4);
+    REQUIRE(tip.valid);
+    REQUIRE(tip.x_tip == Approx(16.0).margin(dx));
+    REQUIRE(tip.y_tip == Approx(static_cast<double>(j_peak) * dx).margin(dx));
+  }
+
+  SECTION("bicrystal tips split by seed row and the groove lags") {
+    const int nx = 80;
+    const int ny = 61;
+    const double dx = 0.5;
+    std::vector<double> phi(static_cast<std::size_t>(nx * ny), -1.0);
+    auto at = [&](int i, int j) -> double & {
+      return phi[static_cast<std::size_t>(i) +
+                 static_cast<std::size_t>(j) * static_cast<std::size_t>(nx)];
+    };
+    const int j1 = 15;
+    const int j2 = 45;
+    for (int j = 0; j < ny; ++j) {
+      double x_if = 8.0;
+      if (std::abs(j - j1) < 8) {
+        x_if = 18.0 - 0.15 * static_cast<double>((j - j1) * (j - j1));
+      } else if (std::abs(j - j2) < 8) {
+        x_if = 16.0 - 0.15 * static_cast<double>((j - j2) * (j - j2));
+      }
+      x_if = std::max(2.0, x_if);
+      for (int i = 0; i < nx; ++i) {
+        at(i, j) = (static_cast<double>(i) * dx < x_if) ? 1.0 : -1.0;
+      }
+    }
+    const auto bi = alloy_dendrite::measure_bicrystal_tips(phi, nx, ny, dx, dx, 0,
+                                                           j1, j2, 4);
+    REQUIRE(bi.valid);
+    REQUIRE(bi.tip1.valid);
+    REQUIRE(bi.tip2.valid);
+    REQUIRE(bi.tip1.x_tip > bi.tip2.x_tip);
+    REQUIRE(bi.x_groove < bi.tip1.x_tip);
+    REQUIRE(bi.x_groove < bi.tip2.x_tip);
   }
 
   SECTION("velocity_split_drift is zero on a ramp and finite on a bend") {
