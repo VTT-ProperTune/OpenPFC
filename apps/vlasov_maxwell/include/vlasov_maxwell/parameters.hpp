@@ -139,6 +139,26 @@ struct SimParams {
    * charge is reported rather than silently corrected.
    */
   double rho_background{std::nan("")};
+  /**
+   * @brief Thermal velocity of the initial state, in `c`.
+   *
+   * Not used by the evolution -- the Vlasov equation does not know what a
+   * temperature is -- but the diagnostics do. The velocity-boundary
+   * occupancy the validation ladder requires is "the fraction of particle
+   * number within one thermal width of the boundary", and that needs a
+   * width. The initial condition sets this; a run that leaves it at zero
+   * gets an empty shell and an honest zero rather than a meaningless
+   * number.
+   */
+  double v_thermal{0.0};
+  /**
+   * @brief Net charge above which a state is not considered neutral.
+   *
+   * The `k = 0` mode of Gauss is unsolvable for a charged periodic cell, so
+   * a non-neutral state is reported rather than silently zeroed. This is
+   * the threshold for that report.
+   */
+  double neutrality_tol{1.0e-12};
   /// Externally imposed, uniform, constant `B_z`. Used by the gyro-motion
   /// stage, where the self-consistent fields are switched off.
   double b_ext{0.0};
