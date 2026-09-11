@@ -71,6 +71,7 @@
 #include <openpfc/kernel/simulation/stacks/fd_padded_cpu_stack.hpp>
 
 #include <alloy_dendrite/diagnostics.hpp>
+#include <alloy_dendrite/field_output.hpp>
 #include <alloy_dendrite/parameters.hpp>
 #include <alloy_dendrite/step.hpp>
 
@@ -477,6 +478,8 @@ struct DendriteConfig {
 #endif
   std::string csv_timeseries;
   std::string csv_summary;
+  /// Raw-brick field snapshots; empty disables them. See `field_output.hpp`.
+  FieldOutputConfig fields{};
   std::string run_id = "dendrite";
   bool quiet = false;
 };
@@ -514,6 +517,14 @@ struct DendriteResult {
   double heat_drift_rel{std::numeric_limits<double>::quiet_NaN()};
   double phi_min{0.0};
   double phi_max{0.0};
+  /// Diagnostic samples whose tip measurement failed, out of @ref n_samples.
+  /// Nonzero is not automatically fatal -- the first few samples before the
+  /// seed has a parabolic tip legitimately fail -- but a run that loses
+  /// samples at the *end* has diverged, and @ref valid says so.
+  int n_samples{0};
+  int n_samples_failed{0};
+  /// Set when the final state left `phi` in `[-1.1, 1.1]` and `U` finite.
+  bool state_finite{false};
   // ---- elastic ---------------------------------------------------------
   /// Number of elastic solves performed (0 when the coupling is off).
   int el_solves{0};
@@ -629,6 +640,25 @@ template <int Dim>
         rank);
   }
 
+  // Snapshots share the diagnostic sample grid: a figure at a time no CSV row
+  // records cannot be read against the time series, and the point of writing
+  // both is that they are the same run seen two ways.
+  const auto &ob = stack.u().box();
+  FieldSnapshotWriter snap(
+      cfg.fields, cfg.run_id, {cfg.nx, cfg.ny, cfg.nz},
+      {ob.high[0] - ob.low[0] + 1, ob.high[1] - ob.low[1] + 1,
+       ob.high[2] - ob.low[2] + 1},
+      {ob.low[0], ob.low[1], ob.low[2]}, cfg.dx, rank, comm);
+  std::vector<std::string> snap_fields{"phi", "U", "theta"};
+#if ALLOY_DENDRITE_HAVE_ELASTICITY
+  if (elastic) {
+    snap_fields.insert(snap_fields.end(),
+                       {"f_el", "dfel_dphi", "p_hydro", "sig_vm"});
+  }
+#endif
+  int n_sample_seen = 0;
+  int n_snap = 0;
+
   std::vector<double> t_s, x_s, rho_s;
   std::vector<double> rho_w_s[kTipWindowCount];
   Conservation cons = cons0;
@@ -658,6 +688,8 @@ template <int Dim>
     const TipWindowScan scan = measure_tip_scan(plane, cfg.nx, cfg.ny, cfg.dx,
                                                 cfg.dx, i_seed, j_seed,
                                                 cfg.tip_windows);
+    ++res.n_samples;
+    res.n_samples_failed += tip.valid ? 0 : 1;
     if (tip.valid) {
       t_s.push_back(t);
       x_s.push_back(tip.x_tip);
@@ -689,6 +721,39 @@ template <int Dim>
 #endif
           ));
     }
+    if (snap.due(n_sample_seen)) {
+      snap.note_time(t);
+      snap.write("phi", n_snap, st.phi());
+      snap.write("U", n_snap, st.solute());
+      snap.write("theta", n_snap, st.temperature());
+#if ALLOY_DENDRITE_HAVE_ELASTICITY
+      if (elastic) {
+        const auto &sol = elastic->solver();
+        snap.write("f_el", n_snap, sol.elastic_energy_density());
+        snap.write("dfel_dphi", n_snap, sol.dfel_dphi());
+        // Voigt order is (xx, yy, zz, yz, xz, xy); see `Sym3`. The
+        // hydrostatic part is what couples to composition, and the von Mises
+        // equivalent is what a deviatoric response would show -- a
+        // dilatational eigenstrain in a *homogeneous* medium produces no
+        // deviatoric stress at all inside the inclusion, so a nonzero
+        // `sig_vm` figure is a picture of the modulus contrast and of the
+        // shape, which is precisely what is interesting here.
+        snap.write_from_sym("p_hydro", n_snap, sol.stress(), [](const double *c) {
+          return (c[0] + c[1] + c[2]) / 3.0;
+        });
+        snap.write_from_sym("sig_vm", n_snap, sol.stress(), [](const double *c) {
+          const double a = c[0] - c[1];
+          const double b = c[1] - c[2];
+          const double d = c[2] - c[0];
+          return std::sqrt(0.5 * (a * a + b * b + d * d) +
+                           3.0 * (c[3] * c[3] + c[4] * c[4] + c[5] * c[5]));
+        });
+      }
+#endif
+      ++n_snap;
+    }
+    ++n_sample_seen;
+
     // The dendrite must not touch its periodic image: past that point the
     // tip is growing into its own solute field and no measurement is valid.
     if (std::isfinite(tip.x_tip) &&
@@ -700,6 +765,8 @@ template <int Dim>
       break;
     }
   }
+
+  snap.write_manifest(snap_fields);
 
   res.v_tip = trailing_slope(t_s, x_s, cfg.fit_fraction);
   res.rho_tip = trailing_mean(rho_s, cfg.fit_fraction);
@@ -739,7 +806,18 @@ template <int Dim>
       std::fabs(cons.heat_balance - cons0.heat_balance) / heat_scale;
   res.phi_min = cons.phi_min;
   res.phi_max = cons.phi_max;
-  res.valid = std::isfinite(res.v_tip);
+  // A diverged run still produces a finite `v_tip`: samples whose tip fit
+  // fails are skipped rather than counted, so the trailing-window fit quietly
+  // falls back on the last healthy samples and reports a plausible velocity
+  // for a field that is full of NaN. That happened -- `dx = 1.0 W0` is above
+  // this model's stability limit and blew up at `t = 1065` of a `t_end = 2000`
+  // run while reporting `v_tip = 0.065`. So validity is a statement about the
+  // *final state*, not only about the fit: `phi` must still be a phase field
+  // and `U` must still be a number.
+  res.state_finite = std::isfinite(cons.phi_min) && std::isfinite(cons.phi_max) &&
+                     std::isfinite(cons.u_min) && std::isfinite(cons.u_max) &&
+                     cons.phi_min > -1.1 && cons.phi_max < 1.1;
+  res.valid = std::isfinite(res.v_tip) && res.state_finite;
 #if ALLOY_DENDRITE_HAVE_ELASTICITY
   if (elastic) {
     res.el_iter_mean = el_iter_sum / static_cast<double>(std::max(1, res.el_solves));
@@ -759,7 +837,8 @@ template <int Dim>
         "lambda_el,eps_c,eps_T,mu_liquid_frac,n_el_substep,"
         "el_solves,el_iter_mean,el_iter_max,el_nonconverged,el_energy,"
         "el_max_dfel,el_mean_stress,"
-        "solute_drift_rel,heat_drift_rel,phi_min,phi_max",
+        "solute_drift_rel,heat_drift_rel,phi_min,phi_max,"
+        "n_samples,n_samples_failed,state_finite,valid",
         rank);
 #if ALLOY_DENDRITE_HAVE_ELASTICITY
     const double eps_c = cfg.elastic_params.eps_c;
@@ -779,7 +858,7 @@ template <int Dim>
         "%.10g,%.10g,%.10g,"
         "%.10g,%.10g,%.10g,%.10g,%d,"
         "%d,%.4g,%d,%d,%.10g,%.10g,%.6g,"
-        "%.3e,%.3e,%.6g,%.6g",
+        "%.3e,%.3e,%.6g,%.6g,%d,%d,%d,%d",
         cfg.run_id.c_str(), cfg.nx, cfg.ny, cfg.nz, cfg.dx, cfg.fd_order, res.dt,
         cfg.t_end, p.lambda, p.k, p.D_l, p.D_th, p.M_c, p.eps4, cfg.omega,
         cfg.seed_radius, capillary_length(p), res.v_tip, res.rho_tip, res.x_tip,
@@ -788,7 +867,9 @@ template <int Dim>
         res.rho_drift, res.omega_eff, res.v_rho, res.v_rho_ivantsov, p.lambda_el,
         eps_c, eps_T, mu_l, nsub, res.el_solves, res.el_iter_mean, res.el_iter_max,
         res.el_nonconverged, res.el_energy, res.el_max_dfel, res.el_mean_stress,
-        res.solute_drift_rel, res.heat_drift_rel, res.phi_min, res.phi_max));
+        res.solute_drift_rel, res.heat_drift_rel, res.phi_min, res.phi_max,
+        res.n_samples, res.n_samples_failed, res.state_finite ? 1 : 0,
+        res.valid ? 1 : 0));
   }
   return res;
 }

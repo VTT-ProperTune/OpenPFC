@@ -176,6 +176,10 @@ void print_usage(std::ostream &os, const char *exe) {
      << "  --el-warm-start=0|1 reuse the previous strain (1)\n\n"
 #endif
      << "Output (CSV is appended, never truncated)\n"
+     << "  --fields-dir=DIR    raw-brick snapshots of phi, U, theta (and,\n"
+     << "                      with --elastic=1, f_el, dfel_dphi and the two\n"
+     << "                      stress invariants) plus a JSON manifest\n"
+     << "  --fields-every=N    snapshot every N-th diagnostic sample   (1)\n"
      << "  --csv=PATH          per-sample time series\n"
      << "  --summary=PATH      one row per run\n"
      << "  --run-id=NAME       identifier written into both CSVs (" << d.run_id
@@ -232,6 +236,8 @@ int run(int argc, char **argv, int rank, int nproc) {
   cfg.dt_safety = opt.real("dt-safety", cfg.dt_safety);
   cfg.t_end = opt.real("t-end", cfg.t_end);
   cfg.n_sample = opt.integer("samples", cfg.n_sample);
+  cfg.fields.dir = opt.text("fields-dir", "");
+  cfg.fields.every = opt.integer("fields-every", cfg.fields.every);
   cfg.fit_fraction = opt.real("fit-fraction", cfg.fit_fraction);
   cfg.tip_fit_halfwidth = opt.integer("tip-halfwidth", cfg.tip_fit_halfwidth);
   if (opt.has("tip-windows")) {
@@ -373,7 +379,21 @@ int run(int argc, char **argv, int rank, int nproc) {
             << (cfg.model.evolve_theta ? "" : "; meaningless with --evolve-theta=0")
             << ")\n"
             << "  phi range     [" << res.phi_min << ", " << res.phi_max << "]\n"
-            << std::endl;
+            << "  samples       " << res.n_samples << ", of which "
+            << res.n_samples_failed << " had no measurable tip\n";
+  if (!res.state_finite) {
+    // Loud, because the failure mode is a *plausible* number: samples whose
+    // tip fit fails are skipped, so the trailing-window fit silently falls
+    // back on the last healthy samples and reports a velocity for a field
+    // that is now full of NaN. `dx = 1.0 W0` does exactly this.
+    std::cout << "\n  *** DIVERGED: the final state is not a phase field "
+                 "(phi outside [-1.1, 1.1] or U non-finite).\n"
+                 "      Every number above was fitted to the samples taken "
+                 "before it blew up and is NOT a\n"
+                 "      result. Reduce dx (this model is unstable above about "
+                 "0.8 W0) or dt_safety.\n";
+  }
+  std::cout << std::endl;
   return res.valid ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 

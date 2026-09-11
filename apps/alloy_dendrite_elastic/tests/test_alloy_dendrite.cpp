@@ -658,10 +658,18 @@ TEST_CASE("selection and Ivantsov helpers", "[unit][diagnostics]") {
             Approx(0.2434).epsilon(0.01));
   }
 
-  SECTION("the tip-radius window scan is flat on an exact parabola") {
-    // A resolved parabola has no window dependence at all, so the spread the
+  SECTION("the tip-radius window scan is flat on a resolved parabola") {
+    // A *resolved* parabola has no window dependence, so the spread the
     // application reports on a real tip is a statement about the tip rather
-    // than about the estimator.
+    // than about the estimator. "Resolved" is load-bearing and is the whole
+    // reason this field is piecewise linear across the front rather than a
+    // step: with a step, the interpolated zero crossing is quantised to `dx`,
+    // and the narrowest window in the scan asks the fit to resolve a parabola
+    // offset of `(3 dx)^2 / (2 rho) = 0.125` through a 0.5 quantisation. That
+    // measures the quantisation, not the estimator, and it reported
+    // `rho = 4.2` against a true 9.0 while the wider windows were fine --
+    // which is exactly the false positive a window scan exists to expose, so
+    // it must not be built into the scan's own unit test.
     const int nx = 160;
     const int ny = 121;
     const double dx = 0.5;
@@ -672,16 +680,17 @@ TEST_CASE("selection and Ivantsov helpers", "[unit][diagnostics]") {
       const double dy = (static_cast<double>(j) - 60.0) * dx;
       const double xc = x_tip - dy * dy / (2.0 * rho);
       for (int i = 0; i < nx; ++i) {
+        const double s = (xc - static_cast<double>(i) * dx) / dx;
         phi[static_cast<std::size_t>(i + j * nx)] =
-            (static_cast<double>(i) * dx < xc) ? 1.0 : -1.0;
+            std::fmax(-1.0, std::fmin(1.0, s));
       }
     }
     const auto scan = alloy_dendrite::measure_tip_scan(phi, nx, ny, dx, dx, 20, 60);
     for (int q = 0; q < alloy_dendrite::kTipWindowCount; ++q) {
       INFO("half-width " << scan.halfwidth[q]);
-      REQUIRE(scan.rho[q] == Approx(rho).epsilon(0.06));
+      REQUIRE(scan.rho[q] == Approx(rho).epsilon(1e-9));
     }
-    REQUIRE(scan.spread < 0.06);
+    REQUIRE(scan.spread < 1e-9);
   }
 }
 
