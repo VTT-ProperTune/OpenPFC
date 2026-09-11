@@ -52,8 +52,11 @@ srun -n 1 --gpus-per-node=8 vlasov_hip_cost  --sizes=64,128,192,256 --reps=5
 (the 20-step operator/integrated comparison, kept short) and
 `vlasov-hip-science-rate` (`--science=landau`, \(32^3\), \(t=12\), host vs
 device `fit_envelope_rate` on `mode_ex`, timeout 900 s, `RUN_SERIAL`).
-The science-rate \(\gamma\) pair is **unmeasured on this branch**; run
-the second command on a GCD to fill it. Both binaries need hipFFT
+Job **21943612** (`dev-g`, 1 rank, \(32^3\), \(t=12\), 240 steps,
+\(\Delta t=0.05\)): \(\gamma_\mathrm{cpu}=\gamma_\mathrm{hip}=-0.1514064581\),
+relative difference \(6.040\times10^{-13}\) against a \(10^{-6}\) tolerance.
+That is the same 1-rank Landau \(\gamma\) as job 21942462 (CPU 1-vs-N).
+Both binaries need hipFFT
 (`find_package(hipfft)` in the application's `CMakeLists.txt`); the CPU
 build never looks for it.
 

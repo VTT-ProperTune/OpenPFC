@@ -73,6 +73,7 @@ velocity-boundary occupancy.
 - `vlasov-hip-parity`: CPU/GPU operator and 20-step integrated parity
   (HIP builds). `vlasov-hip-science-rate` (`--science=landau`) compares
   the fitted Landau \(\gamma\) of host `Stepper` vs `DeviceStepper`.
+  Job 21943612: both \(-0.1514064581\), relative difference \(6\times10^{-13}\).
 
 A grid that does not resolve the velocity spacing is refused
 (`require_resolved_spacing`); that is not the same check as the tail
