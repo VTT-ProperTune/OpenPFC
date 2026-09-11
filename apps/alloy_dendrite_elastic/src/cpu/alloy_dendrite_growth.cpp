@@ -61,19 +61,18 @@ namespace {
  *
  * `Omega = 0.55` is that benchmark's supersaturation.
  *
- * **`eps4 = 0.2` is not an anisotropy of 20%.** With the spec's
- * un-normalised `a_s = 1 + eps4 (n_x^4 + n_y^4)` and the 2-D identity
- * `n_x^4 + n_y^4 = (3 + cos 4 theta) / 4`,
- *
- *     a_s = (1 + 0.75 eps4) [ 1 + eps_eff cos 4 theta ],
- *     eps_eff = (eps4 / 4) / (1 + 0.75 eps4)
- *
- * so `eps4 = 0.2` is `eps_eff = 0.043`, which is the usual dendritic range,
- * and the `eps4 = 0.02` of the Karma 2001 benchmark would be `eps_eff =
- * 0.005` here -- far too weak to select a tip. The factor of roughly four
- * between the two conventions is the single easiest way to run this model
- * and get a growing blob instead of a dendrite; it is a consequence of the
- * spec's choice of `a_s`, discussed in `step.hpp`.
+ * **`eps4` now means what the literature means by it.** `MODEL_SPEC.md` was
+ * corrected on 2026-09-11 to the normalised Karma-Rappel form
+ * `a_s = (1 - 3 eps4)[1 + (4 eps4/(1 - 3 eps4)) sum n_i^4]`, which in 2-D is
+ * exactly `1 + eps4 cos 4 theta`; the pre-correction form
+ * `a_s = 1 + eps4 sum n_i^4` gave an effective strength
+ * `(eps4/4)/(1 + 0.75 eps4)`, about a quarter of the input, so published
+ * values did not transfer. The default here is therefore `eps4 = 0.0435`,
+ * not the `0.2` this preset shipped with: the two are the *same physical
+ * anisotropy*, 4.3 %, expressed in the two conventions, so the dendrite this
+ * preset grows is the one PR #147 measured rather than one five times more
+ * anisotropic. `--aniso-form=unnormalised` restores the old convention for
+ * reproducing those numbers exactly. See @ref alloy_dendrite::AnisotropyForm.
  *
  * **`D_th = 2` is a compromise and the most important caveat in this file.**
  * A metal's Lewis number `D_th / D_l` is `10^3` to `10^4`. An explicit
@@ -97,7 +96,9 @@ alloy_dendrite::DendriteConfig preset() {
   c.model.lambda = c.model.D_l / alloy_dendrite::kA2; // beta = 0
   c.model.D_th = 2.0;
   c.model.M_c = 0.5;
-  c.model.eps4 = 0.2;
+  // eps_eff = 4.35 %, the same physical anisotropy the pre-correction
+  // preset's eps4 = 0.2 produced under the un-normalised convention.
+  c.model.eps4 = 0.0435;
   c.model.evolve_theta = true;
   c.nx = 240;
   c.ny = 240;
@@ -129,6 +130,8 @@ void print_usage(std::ostream &os, const char *exe) {
      << ")\n\n"
      << "Model\n"
      << "  --lambda=X --k=X --Dl=X --Dth=X --Mc=X --eps4=X --W0=X --tau0=X\n"
+     << "  --aniso-form=S      karma-rappel (spec, default) or "
+        "unnormalised (PR #147)\n"
      << "  --at-scale=X        anti-trapping multiplier (" << d.model.at_scale
      << ")\n"
      << "  --evolve-theta=0|1  integrate equation (4)   (" << d.model.evolve_theta
@@ -173,6 +176,8 @@ int run(int argc, char **argv, int rank, int nproc) {
   cfg.model.D_th = opt.real("Dth", cfg.model.D_th);
   cfg.model.M_c = opt.real("Mc", cfg.model.M_c);
   cfg.model.eps4 = opt.real("eps4", cfg.model.eps4);
+  cfg.model.aniso_form = alloy_dendrite::parse_anisotropy_form(opt.text(
+      "aniso-form", alloy_dendrite::anisotropy_form_name(cfg.model.aniso_form)));
   cfg.model.W0 = opt.real("W0", cfg.model.W0);
   cfg.model.tau0 = opt.real("tau0", cfg.model.tau0);
   cfg.model.at_scale = opt.real("at-scale", cfg.model.at_scale);

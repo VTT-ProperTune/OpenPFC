@@ -93,9 +93,16 @@ TEST_CASE("thin-interface relations are self-consistent", "[unit][params]") {
 }
 
 TEST_CASE("cubic anisotropy matches equation (1)", "[unit][aniso]") {
+  // `MODEL_SPEC.md` equation (1) as corrected on 2026-09-11: the normalised
+  // Karma-Rappel form. The oracles below are written in terms of `A` and `B`
+  // rather than of `eps4` directly, so the same assertions hold for the
+  // pre-correction convention with `(A, B) = (1, eps4)` -- which is what the
+  // legacy section at the end exercises.
   alloy_dendrite::ModelParams p;
   p.eps4 = 0.2;
   p.W0 = 1.0;
+  const double A = 1.0 - 3.0 * p.eps4;
+  const double B = 4.0 * p.eps4 / (1.0 - 3.0 * p.eps4);
 
   SECTION("isotropic when eps4 is zero") {
     auto q = p;
@@ -109,12 +116,12 @@ TEST_CASE("cubic anisotropy matches equation (1)", "[unit][aniso]") {
   }
 
   SECTION("axis-aligned normal is a stationary point of a_s") {
-    // n = (1, 0): sum n_i^4 = 1, so a_s = 1 + eps4 and the flux, which is
+    // n = (1, 0): sum n_i^4 = 1, so a_s = A (1 + B) and the flux, which is
     // proportional to n_i^3 - (sum n_j^4) n_i, vanishes identically.
     const auto a = alloy_dendrite::evaluate_anisotropy<2>(p, -2.5, 0.0, 0.0);
-    REQUIRE(a.a_s == Approx(1.0 + p.eps4));
-    REQUIRE(a.W == Approx(p.W0 * (1.0 + p.eps4)));
-    REQUIRE(a.tau == Approx(p.tau0 * (1.0 + p.eps4) * (1.0 + p.eps4)));
+    REQUIRE(a.a_s == Approx(A * (1.0 + B)));
+    REQUIRE(a.W == Approx(p.W0 * A * (1.0 + B)));
+    REQUIRE(a.tau == Approx(p.tau0 * A * (1.0 + B) * A * (1.0 + B)));
     REQUIRE(a.flux[0] == Approx(0.0).margin(1e-14));
     REQUIRE(a.flux[1] == Approx(0.0).margin(1e-14));
   }
@@ -122,7 +129,7 @@ TEST_CASE("cubic anisotropy matches equation (1)", "[unit][aniso]") {
   SECTION("diagonal normal is the other stationary point") {
     // n = (1,1)/sqrt(2): sum n_i^4 = 1/2, the minimum of a_s in 2-D.
     const auto a = alloy_dendrite::evaluate_anisotropy<2>(p, 1.0, 1.0, 0.0);
-    REQUIRE(a.a_s == Approx(1.0 + 0.5 * p.eps4));
+    REQUIRE(a.a_s == Approx(A * (1.0 + 0.5 * B)));
     REQUIRE(a.flux[0] == Approx(0.0).margin(1e-14));
     REQUIRE(a.flux[1] == Approx(0.0).margin(1e-14));
   }
@@ -146,9 +153,57 @@ TEST_CASE("cubic anisotropy matches equation (1)", "[unit][aniso]") {
 
   SECTION("3-D <100> and <111>") {
     const auto ax = alloy_dendrite::evaluate_anisotropy<3>(p, 1.0, 0.0, 0.0);
-    REQUIRE(ax.a_s == Approx(1.0 + p.eps4));
+    REQUIRE(ax.a_s == Approx(A * (1.0 + B)));
     const auto ad = alloy_dendrite::evaluate_anisotropy<3>(p, 1.0, 1.0, 1.0);
-    REQUIRE(ad.a_s == Approx(1.0 + p.eps4 / 3.0));
+    REQUIRE(ad.a_s == Approx(A * (1.0 + B / 3.0)));
+  }
+
+  SECTION("2-D Karma-Rappel form is exactly 1 + eps4 cos 4 theta") {
+    // The reason the correction matters, stated as a test rather than as a
+    // claim: under the normalised form the orientation average of a_s is 1
+    // (so W0 is a real interface width) and the peak-to-mean amplitude is
+    // eps4 itself (so a published eps_4 transfers). Under the old form
+    // neither is true, which is asserted immediately below.
+    for (const double th : {0.0, 0.3, 0.7854, 1.1, 2.0}) {
+      const auto a = alloy_dendrite::evaluate_anisotropy<2>(p, std::cos(th),
+                                                            std::sin(th), 0.0);
+      REQUIRE(a.a_s == Approx(1.0 + p.eps4 * std::cos(4.0 * th)));
+    }
+    REQUIRE(alloy_dendrite::effective_anisotropy(
+                alloy_dendrite::AnisotropyForm::KarmaRappel, p.eps4) ==
+            Approx(p.eps4));
+  }
+
+  SECTION("the pre-correction convention is still reachable and is weaker") {
+    // PR #147 measured its Stage-2 table with a_s = 1 + eps4 sum n_i^4, so
+    // the old form has to stay reproducible. It is also the whole reason the
+    // spec was corrected: the same eps4 buys roughly a quarter of the
+    // anisotropy, and a_s never reaches 1.
+    auto q = p;
+    q.aniso_form = alloy_dendrite::AnisotropyForm::Unnormalised;
+    const auto ax = alloy_dendrite::evaluate_anisotropy<2>(q, 1.0, 0.0, 0.0);
+    REQUIRE(ax.a_s == Approx(1.0 + q.eps4));
+    const double eff = alloy_dendrite::effective_anisotropy(
+        alloy_dendrite::AnisotropyForm::Unnormalised, q.eps4);
+    REQUIRE(eff == Approx(0.25 * q.eps4 / (1.0 + 0.75 * q.eps4)));
+    REQUIRE(eff < 0.3 * q.eps4);
+    for (const double th : {0.0, 0.3, 0.7854, 1.1, 2.0}) {
+      const auto a = alloy_dendrite::evaluate_anisotropy<2>(q, std::cos(th),
+                                                            std::sin(th), 0.0);
+      REQUIRE(a.a_s ==
+              Approx((1.0 + 0.75 * q.eps4) * (1.0 + eff * std::cos(4.0 * th))));
+    }
+  }
+
+  SECTION("the two conventions agree at eps4 = 0") {
+    auto a0 = p;
+    a0.eps4 = 0.0;
+    auto b0 = a0;
+    b0.aniso_form = alloy_dendrite::AnisotropyForm::Unnormalised;
+    const auto ka = alloy_dendrite::evaluate_anisotropy<3>(a0, 0.3, -0.7, 0.2);
+    const auto un = alloy_dendrite::evaluate_anisotropy<3>(b0, 0.3, -0.7, 0.2);
+    REQUIRE(ka.a_s == un.a_s);
+    REQUIRE(ka.tau == un.tau);
   }
 }
 

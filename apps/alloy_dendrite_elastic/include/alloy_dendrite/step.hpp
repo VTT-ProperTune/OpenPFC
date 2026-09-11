@@ -159,11 +159,11 @@ using SecondDerivs = std::conditional_t<Dim == 3, SecondDerivs3, SecondDerivs2>;
 /**
  * @brief Anisotropy of equation (1) evaluated from a raw gradient.
  *
- * `a_s(n) = 1 + eps4 (n_x^4 + n_y^4 + n_z^4)`, `W = W0 a_s`,
+ * With `s = sum_i n_i^4`, `a_s(n) = A (1 + B s)`, `W = W0 a_s`,
  * `tau = tau0 a_s^2`, plus the flux
  *
  *     A_i = |grad phi|^2 W dW/d(d_i phi)
- *         = 4 eps4 W0^2 a_s [ g_i^3 G^2 - (sum_j g_j^4) g_i ] / G^4
+ *         = 4 A B W0^2 a_s [ g_i^3 G^2 - (sum_j g_j^4) g_i ] / G^4
  *
  * with `g_i = d_i phi` and `G^2 = sum_j g_j^2`. The algebra above is worth
  * spelling out because it is where the usual `0/0` disappears: the numerator
@@ -171,15 +171,16 @@ using SecondDerivs = std::conditional_t<Dim == 3, SecondDerivs3, SecondDerivs2>;
  * gradient and needs no ad-hoc floor. Only the `G^4` division does, and it
  * is guarded by @ref kGradNormFloor2.
  *
- * @note `MODEL_SPEC.md` equation (1) uses the un-normalised
- *       `a_s = 1 + eps4 sum n_i^4` rather than the Karma-Rappel form
- *       `(1 - 3 eps4)[1 + 4 eps4/(1-3 eps4) sum n_i^4]`. The two differ by
- *       more than a constant: with the spec's form `a_s` ranges over
- *       `[1 + eps4/d, 1 + eps4]` and is never 1, so `W0` is no longer the
- *       interface width of *any* orientation and the standard anisotropy
- *       strength `epsilon_4` of the selection theory is not `eps4`. The spec
- *       is the contract, so the spec's form is what is implemented; Stage 2
- *       numbers must be read with that in mind.
+ * `(A, B)` is `(1 - 3 eps4, 4 eps4/(1 - 3 eps4))` for
+ * `AnisotropyForm::KarmaRappel` -- `MODEL_SPEC.md` equation (1) as corrected
+ * on 2026-09-11 -- and `(1, eps4)` for `AnisotropyForm::Unnormalised`, the
+ * pre-correction form PR #147 measured with. The two agree at `eps4 = 0` and
+ * nowhere else; see @ref AnisotropyForm for why the difference matters and
+ * why the second is kept.
+ *
+ * @note `A B = 4 eps4` in the Karma-Rappel form and `eps4` in the other, so
+ *       the flux prefactor is carried as the product rather than
+ *       reconstructed, and the two branches differ in exactly two constants.
  */
 struct AnisotropyPoint {
   double a_s{1.0};
@@ -206,10 +207,13 @@ evaluate_anisotropy(const ModelParams &p, double gx, double gy, double gz) noexc
   const double inv_g2 = 1.0 / g2;
   const double inv_g4 = inv_g2 * inv_g2;
   const double s = g4sum * inv_g4; // sum n_i^4
-  out.a_s = 1.0 + p.eps4 * s;
+  const bool kr = (p.aniso_form == AnisotropyForm::KarmaRappel);
+  const double amp = kr ? (1.0 - 3.0 * p.eps4) : 1.0;
+  const double slope = kr ? (4.0 * p.eps4 / (1.0 - 3.0 * p.eps4)) : p.eps4;
+  out.a_s = amp * (1.0 + slope * s);
   out.W = p.W0 * out.a_s;
   out.tau = p.tau0 * out.a_s * out.a_s;
-  const double pre = 4.0 * p.eps4 * p.W0 * p.W0 * out.a_s * inv_g4;
+  const double pre = 4.0 * (amp * slope) * p.W0 * p.W0 * out.a_s * inv_g4;
   out.flux[0] = pre * (gx * gx * gx * g2 - g4sum * gx);
   out.flux[1] = pre * (gy * gy * gy * g2 - g4sum * gy);
   if constexpr (Dim == 3) {

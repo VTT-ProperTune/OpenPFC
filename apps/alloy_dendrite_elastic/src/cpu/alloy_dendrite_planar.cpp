@@ -84,6 +84,8 @@ void print_usage(std::ostream &os, const char *exe) {
      << ")\n"
      << "  --eps4=X            cubic anisotropy strength         (" << d.model.eps4
      << ")\n"
+     << "  --aniso-form=S      karma-rappel (spec, default) or "
+        "unnormalised (PR #147)\n"
      << "  --W0=X, --tau0=X    length and time units             (" << d.model.W0
      << ", " << d.model.tau0 << ")\n"
      << "  --evolve-theta=0|1  integrate equation (4)            ("
@@ -135,6 +137,8 @@ int run(int argc, char **argv, int rank, int nproc) {
   cfg.model.D_th = opt.real("Dth", cfg.model.D_th);
   cfg.model.M_c = opt.real("Mc", cfg.model.M_c);
   cfg.model.eps4 = opt.real("eps4", cfg.model.eps4);
+  cfg.model.aniso_form = alloy_dendrite::parse_anisotropy_form(opt.text(
+      "aniso-form", alloy_dendrite::anisotropy_form_name(cfg.model.aniso_form)));
   cfg.model.W0 = opt.real("W0", cfg.model.W0);
   cfg.model.tau0 = opt.real("tau0", cfg.model.tau0);
   cfg.model.at_scale = opt.real("at-scale", cfg.model.at_scale);

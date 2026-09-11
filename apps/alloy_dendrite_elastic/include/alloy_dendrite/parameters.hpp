@@ -65,6 +65,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <stdexcept>
 #include <string>
 
 namespace alloy_dendrite {
@@ -120,6 +121,72 @@ inline const double kAntiTrapCoeff = 1.0 / (2.0 * std::sqrt(2.0));
 inline constexpr double kGradNormFloor2 = 1.0e-24;
 
 /**
+ * @brief Which normalisation of the anisotropy function `a_s(n)` to use.
+ *
+ * @details
+ * `MODEL_SPEC.md` carries a dated correction (2026-09-11) on exactly this
+ * point, and the two forms are not a matter of taste:
+ *
+ *     KarmaRappel:   a_s = (1 - 3 eps4) [ 1 + (4 eps4/(1 - 3 eps4)) sum n_i^4 ]
+ *     Unnormalised:  a_s = 1 + eps4 sum n_i^4
+ *
+ * In 2-D, `n_x^4 + n_y^4 = (3 + cos 4 theta)/4`, so the first collapses to
+ * `a_s = 1 + eps4 cos 4 theta` **exactly** -- the mean of `a_s` over
+ * orientation is 1, `W0` is the interface width of the soft orientation
+ * average, and `eps4` *is* the anisotropy strength that Karma-Rappel
+ * selection theory and every published `eps_4` refer to. The second gives
+ * `a_s = (1 + 0.75 eps4)[1 + eps_eff cos 4 theta]` with
+ * `eps_eff = (eps4/4)/(1 + 0.75 eps4)`, about a quarter of the input: `W0` is
+ * then the width of no orientation at all, and literature parameters do not
+ * transfer (Karma-Rappel's 0.02 becomes 0.005, which grows a blob).
+ *
+ * The spec's corrected form is the default. `Unnormalised` is kept, and kept
+ * reachable from the CLI, for one reason: PR #147's Stage-2 table was
+ * measured with it, and a documented measurement whose code no longer exists
+ * is not reproducible. It is a compatibility switch, not an alternative
+ * model.
+ */
+enum class AnisotropyForm : int {
+  /// `MODEL_SPEC.md` equation (1) as corrected 2026-09-11. The default.
+  KarmaRappel = 0,
+  /// The pre-correction form, as implemented and measured by PR #147.
+  Unnormalised = 1
+};
+
+/// CLI spelling of @ref AnisotropyForm, for run headers and for round-tripping
+/// a `--aniso-form` value through `--help` output.
+[[nodiscard]] inline const char *anisotropy_form_name(AnisotropyForm f) noexcept {
+  return (f == AnisotropyForm::KarmaRappel) ? "karma-rappel" : "unnormalised";
+}
+
+/// Parse a `--aniso-form` value. Unknown spellings throw rather than falling
+/// back to a default: silently running the other convention would change the
+/// anisotropy by a factor of four and nothing downstream would say so.
+[[nodiscard]] inline AnisotropyForm parse_anisotropy_form(const std::string &s) {
+  if (s == "karma-rappel" || s == "kr" || s == "spec") {
+    return AnisotropyForm::KarmaRappel;
+  }
+  if (s == "unnormalised" || s == "unnormalized" || s == "pr147") {
+    return AnisotropyForm::Unnormalised;
+  }
+  throw std::invalid_argument(
+      "aniso-form must be 'karma-rappel' or 'unnormalised', got: " + s);
+}
+
+/**
+ * @brief Effective 4-fold anisotropy strength for a given form and `eps4`.
+ *
+ * The number that has to be held fixed when converting a case from one form
+ * to the other, and therefore the number a caller should reason in.
+ */
+[[nodiscard]] inline double effective_anisotropy(AnisotropyForm form,
+                                                 double eps4) noexcept {
+  return (form == AnisotropyForm::KarmaRappel)
+             ? eps4
+             : (0.25 * eps4) / (1.0 + 0.75 * eps4);
+}
+
+/**
  * @brief Physical parameters of equations (1)-(4).
  *
  * Defaults are the Stage-1 planar-verification point: isotropic, no thermal
@@ -144,8 +211,12 @@ struct ModelParams {
   /// what lets Stage 1 exercise the latent-heat balance without perturbing
   /// the solute problem it is measuring.
   double M_c = 0.0;
-  /// Cubic anisotropy strength `eps4` of equation (1).
+  /// Cubic anisotropy strength `eps4` of equation (1). Its meaning depends
+  /// on @ref aniso_form; see @ref effective_anisotropy.
   double eps4 = 0.0;
+  /// Normalisation of `a_s(n)`. Defaults to the spec's corrected
+  /// Karma-Rappel form; see @ref AnisotropyForm.
+  AnisotropyForm aniso_form = AnisotropyForm::KarmaRappel;
   /**
    * @brief Multiplier on the anti-trapping current.
    *
@@ -305,9 +376,13 @@ struct ModelParams {
   char buf[512];
   std::snprintf(buf, sizeof(buf),
                 "d0=%.6g beta=%.6g lambda=%.6g k=%.6g D_l=%.6g "
-                "lambda_beta0=%.6g eps4=%.6g at_scale=%.6g spec_source=%d",
+                "lambda_beta0=%.6g eps4=%.6g aniso=%s eps_eff=%.6g "
+                "at_scale=%.6g spec_source=%d",
                 capillary_length(p), kinetic_coefficient(p), p.lambda, p.k, p.D_l,
-                p.D_l * p.tau0 / (kA2 * p.W0 * p.W0), p.eps4, p.at_scale,
+                p.D_l * p.tau0 / (kA2 * p.W0 * p.W0), p.eps4,
+                p.aniso_form == AnisotropyForm::KarmaRappel ? "karma-rappel"
+                                                            : "unnormalised",
+                effective_anisotropy(p.aniso_form, p.eps4), p.at_scale,
                 p.spec_source ? 1 : 0);
   return std::string(buf);
 }
