@@ -387,3 +387,148 @@ contracts the freezing solid while the latent heat it releases expands it.
   error at all, only a staleness of $\partial f_{\mathrm{el}}/\partial\phi$
   bounded by $N\Delta t\,|V|\,|\nabla(\partial f_{\mathrm{el}}/\partial\phi)|$.
   @sec-ad-cost measures what it costs and what it changes.
+
+## Verification ladder {#sec-ad-ladder}
+
+Five stages, each with an oracle that is not the code itself. The rung that
+matters for believing the chapter's headline result is Stage 4, and it is
+worth nothing without the four below it.
+
+| Stage | What | Oracle | Where |
+|---|---|---|---|
+| 0 | The elastic solver alone | Closed forms: single-mode Green operator, dilatation identity, Eshelby sphere, $\nabla\!\cdot\!\boldsymbol{\sigma}=0$, $\partial f_{\mathrm{el}}/\partial\phi$ against a finite difference of the *re-converged* energy | `apps/common/tests/test_microelasticity.cpp` |
+| 1 | Planar interface, isothermal | Thin-interface velocity, kinetic coefficient and boundary layer; $k_{\mathrm{eff}}$ flat in velocity | @sec-ad-stage1 |
+| 2 | 2-D dendrite | Steady tip; box, grid and stencil convergence; $V\rho$ against Ivantsov | @sec-ad-steady |
+| 3 | 3-D and parallel | CPU/GPU parity; agreement across decompositions | @sec-ad-parallel |
+| 4 | Elasticity off against on | A measured change in a dendrite observable, against the run-to-run and measurement noise of Stages 1–3 | @sec-ad-science |
+
+### Stage 0: the elastic solver against closed forms
+
+Thirteen test cases, every oracle derived in the comment above the test that
+uses it. The three that are exact to round-off are the single Fourier mode
+against the closed-form strain of a homogeneous isotropic medium
+($\sim 10^{-14}$), the same against an independently coded $3\times3$
+acoustic-tensor solve for cubic symmetry ($\sim 10^{-13}$), and the pointwise
+dilatation identity for an arbitrary eigenstrain ($\sim 10^{-13}$). The
+Eshelby sphere is limited only by how well a grid represents a sphere. A
+homogeneous modulus converges in exactly one iteration — which is a test, not
+an observation — and the accelerated scheme's advantage over the plain one
+scales as $\sqrt{r}$ in the contrast, as Eyre and Milton predict.
+
+Two of these are worth singling out because they are the ones that would let
+a wrong coupling through. $\nabla\!\cdot\!\boldsymbol{\sigma} = 0$ is checked
+*spectrally* on the returned stress, so it tests the solution rather than the
+iteration that produced it. And $\partial f_{\mathrm{el}}/\partial\phi$ —
+@eq-ad-dfel, the only quantity the phase field ever sees — is checked against
+a finite difference of the energy **re-converged at the perturbed $\phi$**,
+not against the stored strain. That is the difference between verifying the
+term and verifying one's own algebra for it.
+
+The liquid shear modulus is a regularisation, not a material property: a
+liquid has no shear stiffness and the solve cannot take zero, because two
+channels of the local stiffness then become singular and every fixed point in
+this family has contraction factor one. Measured cost of the choice, cold
+start, $\mathrm{tol} = 10^{-6}$:
+
+| $\mu_l/\mu_s$ | 0.01 | **0.05** | 0.1 |
+|---|---:|---:|---:|
+| Eyre–Milton iterations | 32 | **16** | 12 |
+
+The default is 0.05, and @sec-ad-sensitivity reports what moving it does to
+the dendrite rather than asserting that it does nothing.
+
+### Stage 1: the planar front against thin-interface asymptotics {#sec-ad-stage1}
+
+Isothermal, $512\,W_0$ box, one-dimensional, $\lambda$ chosen so the kinetic
+coefficient $\beta$ is deliberately *nonzero* — the thin-interface velocity
+relation is vacuous at $\beta = 0$, where $\Omega = 1$ admits any $V$. Four
+independent relations are checked at once: $U_i = -\beta V$ (interface
+kinetics), $\ell = D_l/V$ (the outer diffusion field), $k_{\mathrm{eff}} = k$
+(local equilibrium at the interface), and the steady-state mass balance
+$U_\infty = k U_s - 1$. An error in any one term of the model breaks at least
+one of them.
+
+| $\Delta x / W_0$ | $V$ err | $\beta$ err | $\ell$ err | $k_{\mathrm{eff}}$ | $k_{\mathrm{eff}}$ err | solute drift | enthalpy drift |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1.6 | −58.54 % | +963 % | −38.70 % | 0.10835 | −27.76 % | 1.3e−14 | 5.0e−15 |
+| 1.2 | −23.07 % | +120 % | −11.88 % | 0.12639 | −15.74 % | 1.4e−15 | 5.8e−15 |
+| 0.8 | −1.65 % | +6.3 % | −0.74 % | 0.14927 | −0.49 % | 1.5e−14 | 1.7e−14 |
+| 0.6 | −0.19 % | +0.1 % | −0.16 % | 0.15018 | +0.12 % | 3.2e−14 | 3.8e−14 |
+| 0.4 | −0.02 % | −0.7 % | −0.09 % | 0.15023 | +0.16 % | 3.4e−13 | 2.6e−13 |
+
+: Stage-1 grid convergence, fourth-order stencils. **Use $\Delta x \le 0.6\,W_0$.** {#tbl-ad-stage1}
+
+The error collapses faster than fourth order between 1.2 and 0.6 because what
+is being resolved there is the $\tanh$ interface profile, whose truncation
+error in $W_0/\Delta x$ is exponential, not the stencil order. Raising the
+order at fixed coarse spacing helps and does not substitute:
+
+| FD order at $\Delta x = 1.2\,W_0$ | 2 | 4 | 6 | 8 |
+|---|---:|---:|---:|---:|
+| $V$ error | −59.9 % | −23.1 % | −14.7 % | −10.6 % |
+| $k_{\mathrm{eff}}$ error | −24.9 % | −15.7 % | −13.2 % | −10.3 % |
+
+#### The anti-trapping current is the sharpest test in the model
+
+$k_{\mathrm{eff}} = k(1 + (1-k)U_s)/(1 + (1-k)U_i)$ is $c_s/c_l^i$ exactly, and
+equals $k$ if and only if the freshly formed solid and the extrapolated outer
+liquid are at the same chemical potential. There is no solute-drag term in
+@eq-ad-u, so there is no Aziz-type velocity-dependent trapping to compare
+against: $k_{\mathrm{eff}}$ *is* $k$ by construction, and the test is that the
+measured value stays flat as the velocity varies over an eightfold range.
+
+| target $V$ | $\mathrm{at}=1$ (physical) | $\mathrm{at}=0$ (no current) | $\mathrm{at}=-1$ (sign flipped) |
+|---:|---:|---:|---:|
+| 0.05 | 0.15004 (+0.0 %) | 0.16223 (+8.2 %) | 0.17553 (+17.0 %) |
+| 0.10 | 0.15018 (+0.1 %) | 0.17741 (+18.3 %) | 0.21558 (+43.7 %) |
+| 0.20 | 0.15132 (+0.9 %) | 0.23686 (+57.9 %) | 0.53684 (+258 %) |
+| 0.40 | 0.15260 (+1.7 %) | 0.24806 (+65.4 %) | 0.44469 (+197 %) |
+
+: $k_{\mathrm{eff}}$ against velocity at $\Delta x = 0.6\,W_0$, three models. The columns share a *target* velocity, not a measured one — switching the current off changes the kinetics too, so at a target of 0.20 the measured velocities are 0.199, 0.335 and 0.809. {#tbl-ad-at}
+
+With the current on, $k_{\mathrm{eff}}$ is flat to under 2 % over an
+eightfold range in velocity. Without it, $k_{\mathrm{eff}}$ climbs
+monotonically with $V$ — the textbook signature of spurious solute trapping.
+With the sign flipped it climbs faster still, and one of those runs tripped
+the $|\phi| > 1.5$ instability guard. **This is the single most diagnostic
+measurement in the model, and it says the current is right.**
+
+The residual is the interface Péclet number $W_0 V / D_l$ showing through.
+The thin-interface asymptotics is an expansion in exactly that quantity, so
+the residual should be linear in it, and it is:
+
+| $V$ | 0.20 | 0.30 | 0.40 |
+|---|---:|---:|---:|
+| $W_0 V / D_l$ | 0.10 | 0.15 | 0.20 |
+| $k_{\mathrm{eff}}$ bias | +0.88 % | +1.41 % | +1.73 % |
+| bias / Péclet | 8.8 | 9.4 | 8.7 |
+
+: The residual partition-coefficient bias is the expansion parameter, not an error. {#tbl-ad-peclet}
+
+#### One box-size trap, since it cost a wrong number
+
+The $V = 0.40$ row above needs a $853\,W_0$ box, and a first pass ran it in
+$512\,W_0$ and measured $k_{\mathrm{eff}} = 0.13546$, i.e. $-9.7\%$ — the
+wrong *sign* for solute trapping, which is what gave it away. The cause is
+not the solute boundary layer, which at $V = 0.40$ is only $D_l/V = 5\,W_0$
+and fits anywhere. It is that the front travels $V\,t_{\mathrm{end}} =
+240\,W_0$ during the run, and in a $512\,W_0$ periodic box the two fronts
+have then consumed most of the melt between them. Re-run at $853$, $1707$ and
+$3413\,W_0$ the answer is $0.15260$ in all three, to five digits, and at
+$t_{\mathrm{end}} = 150$, $300$ and $600$ it is $0.15238$, $0.15255$ and
+$0.15260$. **Size the box by how far the front travels, not by the boundary
+layer.**
+
+#### Conservation is a discrete identity, not an approximation
+
+Total solute $\sum [P(\phi)/(1-k) + P(\phi)U]$ and the enthalpy balance
+$\sum\theta - \tfrac12\sum\phi$ are exact identities of the scheme, which is
+what the explicit Euler step buys. Measured drift over $3\times10^4$ to
+$5\times10^5$ steps is $10^{-15}$ to $7\times10^{-13}$ relative — round-off in
+a sum over $10^3$–$10^5$ cells, growing with cell count and step count exactly
+as a floating-point sum should and with no systematic trend. The same holds in
+3-D and for models that are physically *wrong* (the $\mathrm{at}=0$ column
+above), because conservation is a property of the discretisation rather than
+of the physics. It is therefore a check on the implementation and not
+evidence that the model is right — which is worth saying, because a
+conservation plot is often presented as though it were the latter.
