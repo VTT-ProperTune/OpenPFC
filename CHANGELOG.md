@@ -9,6 +9,14 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- **Allen–Cahn inverse homogenization** (`openpfc_inverse_homogenize`,
+  issue #161 Stages 2–3). Explicit gradient flow on
+  \(\tfrac12\lVert W\odot(C_H-C_{\mathrm{target}})\rVert_F^2\) with a
+  volume-fraction penalty and a phase-field perimeter. Catch2 checks a
+  spectral Laplacian oracle, that a uniform grey cell is driven toward
+  the homogeneous target volume, and that \(J\) decreases from noisy
+  initialization. Not Cahn–Hilliard (reserved for Stage 6) and not an
+  external optimizer.
 - **Periodic FFT homogenization and discrete \(C_H\)-sensitivity**
   (`apps/common/include/openpfc_apps/homogenization.hpp`, issue #161
   Stages 1 and 4). Six imposed-macroscopic-strain solves on the existing

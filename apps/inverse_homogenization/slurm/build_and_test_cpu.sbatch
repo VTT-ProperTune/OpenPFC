@@ -41,7 +41,8 @@ echo "CC=$(command -v CC)"
 
 cd "${BUILD}"
 cmake --build "${BUILD}" -j "${SLURM_NTASKS}" \
-  --target test_homogenization openpfc_homogenize
+  --target test_homogenization test_inverse_homogenization \
+           openpfc_homogenize openpfc_inverse_homogenize
 
 echo "=== ctest homogenization ==="
 cd "${BUILD}"
