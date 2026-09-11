@@ -150,6 +150,54 @@ inline const double kInvSqrt2Pi = 1.0 / std::sqrt(2.0 * std::acos(-1.0));
 }
 
 /**
+ * @brief Relative error the midpoint rule makes on a Maxwellian of width
+ *        @p vth sampled at spacing @p dv.
+ *
+ * By Poisson summation the trapezoidal/midpoint sum of a Gaussian over an
+ * infinite uniform grid is exact up to the aliased copies of its Fourier
+ * transform, so the relative error is
+ *
+ *     2 exp(-2 pi^2 (vth/dv)^2)
+ *
+ * which falls superexponentially in the number of cells per thermal
+ * width. Four cells per `vth` gives `1e-34`; two gives `1.4e-2`.
+ *
+ * **This is a different condition from @ref require_resolved_tail and it
+ * is the one that is easy to miss.** The tail check asks whether the box
+ * is wide enough; this asks whether the grid inside it is fine enough, and
+ * a run can pass the first while failing the second by a per cent. That
+ * happened: a Landau case with `v_max = 8 vth` but only 8 cells across the
+ * whole `v_y` axis deposited a density 1.44% low -- exactly the value this
+ * formula gives -- and the resulting error in the damping rate was
+ * invisible to a scan over `n_vx`, because the defect was on the *other*
+ * velocity axis.
+ */
+[[nodiscard]] inline double maxwellian_quadrature_error(double dv,
+                                                        double vth) noexcept {
+  const double r = vth / dv;
+  const double pi = std::acos(-1.0);
+  return 2.0 * std::exp(-2.0 * pi * pi * r * r);
+}
+
+/// Refuse a velocity grid too coarse to integrate the distribution.
+/// See @ref maxwellian_quadrature_error for why this is not implied by
+/// @ref require_resolved_tail.
+inline void require_resolved_spacing(double dv, double vth,
+                                     double tol = 1.0e-12) {
+  const double e = maxwellian_quadrature_error(dv, vth);
+  if (e > tol) {
+    throw std::invalid_argument(
+        "velocity spacing dv = " + std::to_string(dv) + " resolves v_th = " +
+        std::to_string(vth) + " with only " + std::to_string(vth / dv) +
+        " cells per thermal width, so the midpoint quadrature of the "
+        "distribution is wrong by " + std::to_string(e) +
+        " (tolerance " + std::to_string(tol) +
+        "). This is not the same condition as the tail check: increase the "
+        "cell count on this axis, not v_max.");
+  }
+}
+
+/**
  * @brief Refuse a velocity box that truncates more than @p tol of the
  *        distribution.
  *

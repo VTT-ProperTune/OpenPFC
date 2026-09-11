@@ -166,16 +166,25 @@ struct Ledger {
 /**
  * @brief `|hat g(m)|`, the amplitude of a single Fourier mode.
  *
- * Normalised so that a field `A cos(k_m x)` gives exactly `A`: the real
- * DFT puts half the amplitude in each of the `+m` and `-m` bins, and a
- * one-sided transform reports only one of them.
+ * Normalised so that a field `A cos(k_m x)` gives exactly `A`. Two factors
+ * are needed and an earlier revision had only one of them:
+ *
+ *  - `SpectralLine1D::forward` is the **unnormalised** DFT, so a bin
+ *    carries `N` times the Fourier coefficient. Missing this made every
+ *    reported amplitude `N` times too large -- harmlessly for the growth
+ *    and damping *rates*, since a constant factor cancels in
+ *    `d ln|E| / dt`, and not at all harmlessly for any figure or table
+ *    that quotes a field strength.
+ *  - a real signal splits its amplitude between the `+m` and `-m` bins,
+ *    so the one-sided value is half.
  */
 [[nodiscard]] inline double mode_amplitude(const SpectralLine1D &line,
                                            const std::vector<double> &g,
                                            int m) {
   const auto h = line.forward(g);
   if (m < 0 || static_cast<std::size_t>(m) >= h.size()) return 0.0;
-  return 2.0 * std::abs(h[static_cast<std::size_t>(m)]);
+  const double n = static_cast<double>(h.size());
+  return 2.0 * std::abs(h[static_cast<std::size_t>(m)]) / n;
 }
 
 /**
@@ -520,23 +529,29 @@ private:
   const double pi = std::acos(-1.0);
   std::vector<double> ph;
   ph.reserve(t.size());
-  double turns = 0.0;
+  double unwrapped = 0.0;
   double prev = 0.0;
   bool wrapped = false;
   for (std::size_t i = 0; i < t.size() && i < px.size() && i < py.size(); ++i) {
-    double a = std::atan2(py[i], px[i]);
-    if (i > 0) {
+    const double a = std::atan2(py[i], px[i]);
+    if (i == 0) {
+      unwrapped = a;
+    } else {
+      // Principal value of the increment. Reducing `a - prev` into
+      // `(-pi, pi]` is the unwrapping; the flag is about whether that
+      // reduction was a *choice*. An earlier revision instead flagged the
+      // raw `a - prev` whenever it exceeded 1.5 pi, which is what a
+      // perfectly ordinary atan2 branch cut looks like -- so it reported
+      // aliasing on a rotation sampled forty times per turn. The test
+      // caught it; the estimator is the apparatus, so it gets tested like
+      // one.
       double d = a - prev;
-      if (d > pi) {
-        turns -= 2.0 * pi;
-        if (d > 1.5 * pi) wrapped = true;
-      } else if (d < -pi) {
-        turns += 2.0 * pi;
-        if (d < -1.5 * pi) wrapped = true;
-      }
+      d -= 2.0 * pi * std::round(d / (2.0 * pi));
+      if (std::fabs(d) > 0.9 * pi) wrapped = true;
+      unwrapped += d;
     }
     prev = a;
-    ph.push_back(a + turns);
+    ph.push_back(unwrapped);
   }
   if (aliased != nullptr) *aliased = wrapped;
   const std::size_t n = ph.size();
