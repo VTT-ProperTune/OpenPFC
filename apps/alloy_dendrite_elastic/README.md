@@ -569,6 +569,22 @@ warm-started, a single Green application -- is **362 ms against a 2.78 ms
 GPU step, 130x**. No amount of loosening the tolerance closes that, because
 the last factor being loosened away is one FFT pass.
 
+### How soft the liquid is
+
+`microelasticity.hpp` calls the liquid shear modulus a regularisation
+parameter rather than a material constant and prices it on a `32^3` cold
+start. In this time loop, warm-started at `128^3` (job **21917122**), the
+price is the same shape but the absolute cost is what matters:
+
+| `mu_l / mu_s` | 0.01 | **0.05** (default) | 0.1 |
+|---|---:|---:|---:|
+| iterations, warm | 15.6 | 8.5 | 6.4 |
+| `t_el` (ms) | 5289 | 2918 | 2204 |
+
+The soft end of the literature range costs 2.4x the stiff end. It is a knob
+worth knowing about, and it is not a knob that changes the conclusion: even
+the cheapest liquid leaves the solve at 800x the phase-field step.
+
 ### Eight GCDs
 
 `256³` over eight GCDs is `128³` per GCD, so it lines up with the middle row
