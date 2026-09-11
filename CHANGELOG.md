@@ -9,6 +9,17 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- **FTA directional science campaign** on `alloy_dendrite_growth` (issue
+  #155, leftover of #85 after #154). Three LUMI-C runs (aligned `<100>`,
+  misoriented $0.2\,\mathrm{rad}$, two-seed bicrystal) plus optional
+  $22.5^{\circ}$ under a Bridgman field $G^{*}=0.02$, $V_p=0.05$,
+  $M_c=0.5$: elevated-$G$ directional geometry, not an Al–Cu furnace,
+  not evolving-$\theta$ Lewis number, not grain-boundary energy, not
+  CMS 2026 / Pinomaa $12\times 3.2\,\mu\mathrm{m}$. Time series now
+  write `v_tip2`, `y_groove`, `v_rel = v_tip-V_p` and the isotherm
+  `x_iso`; `--Mc=0` with `--gradient`/`--pulling` is rejected.
+  `slurm/alloy_dendrite_fta.sbatch` on partition `standard`. Catalog
+  stays at fifteen applications.
 - **FTA directional solidification and two-seed bicrystal** on
   `alloy_dendrite_growth` (leftover Stage 4 of issue #85; geometry from
   unmerged PR #103). Frozen-temperature field

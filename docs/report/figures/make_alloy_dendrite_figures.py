@@ -11,6 +11,7 @@ the CSV time series and summaries -- comes from `../data/`.
     make_alloy_dendrite_figures.py --fields-on  DIR_WITH_ELASTICITY \
                                    --fields-off DIR_WITHOUT \
                                    --data ../data --out ..
+    make_alloy_dendrite_figures.py --fta-dir /scratch/.../fta_<jobid> --out ..
 
 Figures produced
 ----------------
@@ -22,6 +23,9 @@ Figures produced
 `alloy_dendrite_tip_history.svg` tip velocity and radius against time for the
                                  off/on pair, with the fit window marked
 `alloy_dendrite_selection.svg`   sigma* against grid spacing and stencil order
+`alloy_dendrite_fta.svg`         FTA directional campaign: downstream-cropped
+                                 phi of aligned / misori / bicrystal
+`alloy_dendrite_fta_tips.svg`    FTA tip histories against the isotherm
 """
 
 import argparse
@@ -58,6 +62,28 @@ def snap(d: Path, man: dict, field: str, idx: int) -> Field2D:
     ex = g.axis_extent(g.nx, g.dx) + g.axis_extent(g.ny, g.dy)
     t = man["times"][idx] if idx < len(man["times"]) else None
     return Field2D(data=plane.astype(np.float64), extent=ex, name=field, time=t)
+
+
+def crop_downstream(f: Field2D, pad_frac: float = 0.12) -> Field2D:
+    """Crop around the most-downstream solid, not the box centre.
+
+    FTA grows from the cold (small-`x`) side of a long cell. A central crop
+    of a 640×256 box either misses the tip or fills the panel with melt.
+    """
+    ny, nx = f.data.shape
+    solid = f.data > 0.0
+    if not solid.any():
+        return f
+    ys, xs = np.nonzero(solid)
+    x_lo = max(0, int(xs.min()) - int(pad_frac * nx))
+    x_hi = min(nx, int(xs.max()) + max(4, int(pad_frac * nx)) + 1)
+    y_lo = max(0, int(ys.min()) - int(pad_frac * ny))
+    y_hi = min(ny, int(ys.max()) + int(pad_frac * ny) + 1)
+    sub = f.data[y_lo:y_hi, x_lo:x_hi]
+    x0, x1, y0, y1 = f.extent
+    dx, dy = (x1 - x0) / nx, (y1 - y0) / ny
+    ex = (x0 + x_lo * dx, x0 + x_hi * dx, y0 + y_lo * dy, y0 + y_hi * dy)
+    return Field2D(data=sub, extent=ex, name=f.name, time=f.time)
 
 
 def crop(f: Field2D, frac: float) -> Field2D:
@@ -287,6 +313,95 @@ def fig_tip_history(data: Path, out: Path, pairs, fit_fraction=0.3) -> None:
     print("wrote", out)
 
 
+def fig_fta(job: Path, out: Path) -> None:
+    """Three FTA cases, downstream-cropped phi at the last snapshot."""
+    cases = (("fta-aligned", r"aligned $\langle 100\rangle$"),
+             ("fta-misori", r"misori $0.2\,\mathrm{rad}$"),
+             ("fta-bicrystal", r"bicrystal $\pm 0.2\,\mathrm{rad}$"))
+    panels = []
+    for rid, label in cases:
+        d = job / f"fields_{rid}"
+        if not d.exists():
+            print(f"  (skipping {rid}: no fields dir)")
+            continue
+        man = load_manifest(d)
+        idx = len(man["times"]) - 1
+        panels.append((label, crop_downstream(snap(d, man, "phi", idx)), man, idx))
+    if not panels:
+        print(f"  (no FTA field snapshots in {job})")
+        return
+    fig, axes = plt.subplots(1, len(panels), figsize=(4.0 * len(panels), 3.4),
+                             squeeze=False)
+    for ax, (label, f, man, idx) in zip(axes[0], panels):
+        norm = fp._norm_for(f.data, "diverging", 0.0, None, None)
+        im = ax.imshow(f.data, extent=f.extent, origin="lower",
+                       cmap=fp._cmap_for("diverging"), norm=norm,
+                       interpolation="nearest")
+        ax.set_title(label, fontsize=fp.TITLE_FS)
+        ax.set_xlabel(r"$x$ ($W_0$)", fontsize=fp.LABEL_FS)
+        ax.set_ylabel(r"$y$ ($W_0$)", fontsize=fp.LABEL_FS)
+        ax.tick_params(labelsize=fp.TICK_FS)
+        ax.set_aspect("equal")
+        cb = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.03)
+        cb.ax.tick_params(labelsize=fp.TICK_FS - 1)
+        t = man["times"][idx]
+        ax.text(0.02, 0.98, rf"$t={t:g}\,\tau_0$", transform=ax.transAxes,
+                va="top", ha="left", fontsize=fp.TICK_FS)
+    fig.suptitle(r"FTA directional campaign: downstream crop of $\phi$ "
+                 r"(not a central crop of the $640\times 256$ cell)",
+                 x=0.01, ha="left", fontsize=fp.TITLE_FS)
+    fig.tight_layout(rect=(0, 0, 1, 0.92))
+    fig.savefig(out, format="svg", bbox_inches="tight")
+    plt.close(fig)
+    print("wrote", out)
+
+
+def fig_fta_tips(job: Path, out: Path, pulling: float = 0.05) -> None:
+    """Tip histories against the isotherm for the FTA campaign."""
+    pairs = (("fta-aligned", r"aligned $\langle 100\rangle$"),
+             ("fta-misori", r"misori $0.2\,\mathrm{rad}$"),
+             ("fta-bicrystal", r"bicrystal grain 1"),
+             ("fta-misori-22.5", r"misori $22.5^\circ$"))
+    fig, axes = plt.subplots(1, 3, figsize=(11.2, 3.4))
+    drawn = 0
+    for rid, label in pairs:
+        p = job / f"ts_{rid}.csv"
+        if not p.exists():
+            print(f"  (skipping {rid}: no time series)")
+            continue
+        t, xt = _series(p, "x_tip")
+        _, vt = _series(p, "v_tip")
+        tr, vr = _series(p, "v_rel")
+        ti, xi = _series(p, "x_iso")
+        if t.size:
+            axes[0].plot(t, xt, lw=1.3, label=label)
+            drawn += 1
+        if vt.size:
+            axes[1].plot(t, vt, lw=1.3, label=label)
+        if vr.size:
+            axes[2].plot(tr, vr, lw=1.3, label=label)
+        if rid == "fta-aligned" and ti.size:
+            axes[0].plot(ti, xi, lw=1.0, ls="--", color="0.4",
+                         label=r"isotherm $x_0+V_p t$")
+    if drawn == 0:
+        print(f"  (no FTA CSVs in {job})")
+        plt.close(fig)
+        return
+    axes[1].axhline(pulling, color="0.4", ls="--", lw=1.0, label=r"$V_p$")
+    axes[2].axhline(0.0, color="0.4", ls="--", lw=1.0)
+    fp._style_line_axes(axes[0], r"$t$  ($\tau_0$)", r"$x_{\mathrm{tip}}$  ($W_0$)")
+    fp._style_line_axes(axes[1], r"$t$  ($\tau_0$)", r"$V_{\mathrm{tip}}$  ($W_0/\tau_0$)")
+    fp._style_line_axes(axes[2], r"$t$  ($\tau_0$)", r"$V_{\mathrm{tip}}-V_p$")
+    for ax in axes:
+        ax.legend(fontsize=fp.TICK_FS - 1, frameon=False)
+    fig.suptitle(r"FTA tip vs isotherm. $V_{\mathrm{rel}}<0$ lags the Bridgman field.",
+                 x=0.01, ha="left", fontsize=fp.TITLE_FS)
+    fig.tight_layout(rect=(0, 0, 1, 0.92))
+    fig.savefig(out, format="svg", bbox_inches="tight")
+    plt.close(fig)
+    print("wrote", out)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--fields-on", type=Path)
@@ -294,6 +409,9 @@ def main() -> int:
     ap.add_argument("--data", type=Path, default=Path(__file__).parent.parent / "data")
     ap.add_argument("--slices-3d", type=Path,
                     help="slices_*/ directory from a 3-D coupled run")
+    ap.add_argument("--fta-dir", type=Path,
+                    help="job OUT from slurm/alloy_dendrite_fta.sbatch "
+                         "(fields_*/ and ts_*.csv). Downstream crop, not central.")
     ap.add_argument("--out", type=Path, default=Path(__file__).parent)
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
@@ -312,6 +430,14 @@ def main() -> int:
     fig_tip_history(args.data, args.out / "alloy_dendrite_tip_history.svg",
                     [("elasticity off", "alloy_dendrite_ts_off.csv"),
                      ("elasticity on", "alloy_dendrite_ts_on.csv")])
+    if args.fta_dir:
+        if args.fta_dir.exists():
+            fig_fta(args.fta_dir, args.out / "alloy_dendrite_fta.svg")
+            fig_fta_tips(args.fta_dir, args.out / "alloy_dendrite_fta_tips.svg")
+        else:
+            print(f"{args.fta_dir}: not present; FTA figures wait on the "
+                  "LUMI job. Re-run with --fta-dir pointing at "
+                  "/scratch/project_462001519/juaho/alloy-dendrite/fta_<jobid>")
     return 0
 
 

@@ -974,7 +974,8 @@ arrived first as a separate application in unmerged PR #103
 (`alloy_pf_directional`, Pinomaa et al., *J. Crystal Growth* 2020,
 Al–Cu FTA bicrystal). It was not merged: the catalog is closed at
 fifteen. The leftover is here, on `alloy_dendrite_growth`, not as a
-sixteenth binary.
+sixteenth binary. Issue #154 put the geometry on this binary; issue
+#155 is the campaign that runs it.
 
 The frozen-temperature field is the dimensionless Bridgman profile
 
@@ -985,23 +986,45 @@ $$ {#eq-ad-fta}
 `--gradient` is $G/\Delta T_h$ in $1/W_0$, `--pulling` is $V_p$ in
 $W_0/\tau_0$. Equation (4) is **not** integrated (`evolve_theta` stays
 off, the thermal Laplacian is skipped); $\theta$ is **not** zeroed;
-$M_c\theta$ in @eq-ad-phi stays live. Cubic anisotropy is evaluated on
-$\mathbf{n}' = R(\theta_c)^\mathsf{T}\mathbf{n}$, then
+$M_c\theta$ in @eq-ad-phi stays live. This is **infinite-Le FTA**, not
+a metallic evolving-$\theta$ Lewis-number run. Cubic anisotropy is
+evaluated on $\mathbf{n}' = R(\theta_c)^\mathsf{T}\mathbf{n}$, then
 $\sum n_i'^4$, with the same normalised Karma–Rappel $a_s$ as the rest
 of this chapter. A second tanh seed (`--seed2-*`, `--crystal-angle2`) is
 a single-$\phi$ bicrystal. There is no grain-boundary energy and no
-second order parameter; two solids that meet merge. The tip diagnostic
-for FTA is the downstream solid-to-liquid crossing, not the $+x$ arm
-from the box centre; a bicrystal reports two tips and the geometric
-groove between them. `--elastic=1` still builds the eigenstrain from
-the imposed $U$ and $\theta$.
+second order parameter; two solids that meet merge. Do not present a
+groove as a GB energy minimum. The tip diagnostic for FTA is the
+downstream solid-to-liquid crossing, not the $+x$ arm from the box
+centre; a bicrystal reports two tips and the geometric groove between
+them. `--elastic` is **off** for this campaign.
 
-**No paper-scale melt-pool result is claimed.** The CMS 2026
-reduced-scale replication was not run. The 12×3.2 µm Al–Cu bicrystal of
-PR #103 was not re-run on this binary. What is in the tree is the
-geometry, the crystal-frame anisotropy, the conserved two-seed initial
-condition, and a cheap wiring test that $M_c\theta$ still fires when
-equation (4) is off.
+**Elevated-$G$ directional geometry, not an Al–Cu furnace.**
+`--gradient=0.02` means $\ell_T = 50\,W_0$; `--pulling=0.05` means
+$\ell_D = D_l/V_p = 40\,W_0$. $\theta$ is scaled by the hypercooling
+$L/c_p \approx 336\,\mathrm{K}$ (@tbl-ad-material), not by the freezing
+range $\Delta T_0$. A metal Bridgman gradient of $\sim 10\,\mathrm{K\,mm^{-1}}$
+would make $\ell_T$ tens of millimetres against a $512\times 205\,W_0$
+box. The campaign does not claim a CMS 2026 / Pinomaa $12\times 3.2\,\mu\mathrm{m}$
+replication.
+
+| Case | $\theta_c$ | Seeds | $V_{\mathrm{tip}}$ | $V_{\mathrm{rel}}=V_{\mathrm{tip}}-V_p$ | Job |
+|---|---|---|---|---|---|
+| `fta-aligned` | $0$ | $(24, 102.4)$ | diverged $t\approx 27$; not a result | — | 21948410 |
+| `fta-misori` | $0.2\,\mathrm{rad}$ | same | diverged $t\approx 27$; not a result | — | 21948410 |
+| `fta-bicrystal` | $\pm 0.2\,\mathrm{rad}$ | $(24, 64)$, $(24, 140.8)$ | diverged $t\approx 27$; not a result | — | 21948410 |
+
+: FTA directional campaign on LUMI-C `standard`, $640\times 256$, $\Delta x=0.8\,W_0$, $t_{\mathrm{end}}=1200$, $G^{*}=0.02$, $V_p=0.05$, $M_c=0.5$, $\epsilon_4=0.04$. Job 21948410 ran the recipe and is **not** a $V_{\mathrm{tip}}$ result: every case left $\phi$ unbounded by $t\approx 27$. A 1-rank probe of the same flags dies at the same time. The periodic box carries a $\theta$ jump $G L_x = 10.2$ hypercoolings at the seam; that is a limitation of periodic FTA, not a measured growth rate. {#tbl-ad-fta}
+
+The science questions the table is built to answer, once a *valid* run
+exists: does a misoriented grain grow slower than an aligned
+$\langle 100\rangle$ grain under the Bridgman field, and does the
+aligned grain's advantage show up as a lag of $V_{\mathrm{rel}}$?
+Job 21948410 does not answer them. The bicrystal is two equally
+misoriented grains competing in one $\phi$, not an
+aligned-versus-misoriented pair and not a grain-boundary energy
+minimum. Figures use a **downstream crop**, not a central crop of the
+cell (`make_alloy_dendrite_figures.py --fta-dir`), and wait on a valid
+fields directory.
 
 ## Limitations {#sec-ad-limits}
 
@@ -1046,14 +1069,19 @@ overselling it.
    also carries a deviatoric misfit from anisotropic thermal expansion and
    from coherency at a curved interface. The formulation admits a general
    $\boldsymbol\varepsilon^{*}$; only the dilatational case is calibrated.
-9. **FTA directional solidification is a geometry, not a science result.**
-   The Bridgman field and the two-seed bicrystal are on
-   `alloy_dendrite_growth` (@sec-ad-fta). No competing-dendrite campaign
-   was run; the bicrystal is one $\phi$ with two frozen orientations, not
-   a two-order-parameter grain boundary. Periodic boundaries are still
-   periodic — there is no no-flux mould wall from PR #103.
-10. **No paper-scale melt-pool / CMS 2026 replication.** That remains
-    unattempted. Do not read @sec-ad-fta as one.
+9. **FTA is infinite-Le Bridgman, not a metallic Lewis-number run.**
+   The campaign in @sec-ad-fta / @tbl-ad-fta imposes
+   $\theta=(G/\Delta T_h)(x-x_0-V_p t)$ with `evolve_theta=0`. It does
+   not evolve latent heat, does not claim a grain-boundary energy (one
+   $\phi$; solids that meet merge), and is elevated-$G$ directional
+   geometry rather than an Al–Cu furnace. Numbers in @tbl-ad-fta are
+   pending a *valid* run. Job 21948410 wrote a summary with
+   `valid=0` and is not a $V_{\mathrm{tip}}$; the periodic $\theta$
+   jump $G L_x = 10.2$ at the seam is the suspected cause.
+10. **No paper-scale melt-pool / CMS 2026 / Pinomaa $12\times 3.2\,\mu\mathrm{m}$
+    replication.** That remains unattempted. Do not read @sec-ad-fta as
+    one. Periodic boundaries are still periodic — there is no no-flux
+    mould wall from PR #103.
 
 ## Why this one is harder than the others
 
