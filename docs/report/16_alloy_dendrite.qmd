@@ -1009,11 +1009,11 @@ replication.
 
 | Case | $\theta_c$ | Seeds | $V_{\mathrm{tip}}$ | $V_{\mathrm{rel}}=V_{\mathrm{tip}}-V_p$ | Job |
 |---|---|---|---|---|---|
-| `fta-aligned` | $0$ | $(24, 102.4)$ | pending | pending | pending |
-| `fta-misori` | $0.2\,\mathrm{rad}$ | same | pending | pending | pending |
-| `fta-bicrystal` | $\pm 0.2\,\mathrm{rad}$ | $(24, 64)$, $(24, 140.8)$ | pending | pending | pending |
+| `fta-aligned` | $0$ | $(24, 102.4)$ | pending | pending | 21948410 |
+| `fta-misori` | $0.2\,\mathrm{rad}$ | same | pending | pending | 21948410 |
+| `fta-bicrystal` | $\pm 0.2\,\mathrm{rad}$ | $(24, 64)$, $(24, 140.8)$ | pending | pending | 21948410 |
 
-: FTA directional campaign on LUMI-C `standard`, $640\times 256$, $\Delta x=0.8\,W_0$, $t_{\mathrm{end}}=1200$, $G^{*}=0.02$, $V_p=0.05$, $M_c=0.5$, $\epsilon_4=0.04$. Numbers are filled from the job summary once it finishes; until then this table is a recipe, not a result. {#tbl-ad-fta}
+: FTA directional campaign on LUMI-C `standard`, $640\times 256$, $\Delta x=0.8\,W_0$, $t_{\mathrm{end}}=1200$, $G^{*}=0.02$, $V_p=0.05$, $M_c=0.5$, $\epsilon_4=0.04$. Submitted as job 21948410; $V_{\mathrm{tip}}$ is filled from the summary CSV once it finishes. Until then this table is a recipe, not a result. {#tbl-ad-fta}
 
 The science questions the table is built to answer, once the numbers
 exist: does a misoriented grain grow slower than an aligned
@@ -1073,7 +1073,8 @@ overselling it.
    not evolve latent heat, does not claim a grain-boundary energy (one
    $\phi$; solids that meet merge), and is elevated-$G$ directional
    geometry rather than an Al–Cu furnace. Numbers in @tbl-ad-fta are
-   pending the LUMI-C job; a missing job ID means the table is a recipe.
+   pending LUMI-C job 21948410; $V_{\mathrm{tip}}$ is not a result
+   until that job writes the summary.
 10. **No paper-scale melt-pool / CMS 2026 / Pinomaa $12\times 3.2\,\mu\mathrm{m}$
     replication.** That remains unattempted. Do not read @sec-ad-fta as
     one. Periodic boundaries are still periodic — there is no no-flux

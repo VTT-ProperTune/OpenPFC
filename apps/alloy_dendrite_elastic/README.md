@@ -934,7 +934,8 @@ are in `slurm/alloy_dendrite_fta.sbatch` and in `--help`.
 | `fta-bicrystal` | ±0.2 | `(24, 64)` and `(24, 140.8)` | two-seed competition; groove is geometric |
 | `fta-misori-22.5` (optional) | π/8 | one, as aligned | second finite angle |
 
-LUMI-C, partition `standard`, account `project_462001519`. Figures:
+LUMI-C, partition `standard`, account `project_462001519`. Submitted as
+job **21948410**; `V_tip` is pending that job's summary CSV. Figures:
 downstream crop, not a central crop —
 
 ```bash
