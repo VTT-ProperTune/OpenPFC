@@ -9,6 +9,20 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- **Periodic FFT homogenization and discrete \(C_H\)-sensitivity**
+  (`apps/common/include/openpfc_apps/homogenization.hpp`, issue #161
+  Stages 1 and 4). Six imposed-macroscopic-strain solves on the existing
+  `EigenstrainMicroelasticity` Green operator assemble the engineering
+  Voigt \(C_H\); the mutual-energy formula then gives
+  \(\partial J/\partial h\) of
+  \(\tfrac12\lVert W\odot(C_H-C_{\mathrm{target}})\rVert_F^2\). Catch2
+  oracles: homogeneous cell, Postma/Backus laminate, cubic symmetry,
+  closed-form homogeneous gradient, and a finite-difference check on
+  random \(h\) (relative error \(<10^{-4}\)). CLI `openpfc_homogenize`.
+  This is the **sixteenth application**, an explicit catalog exception
+  for PDE-constrained inverse design — not a licence to add a
+  seventeenth. Inverse loop, spinodal constraint, and LUMI 3-D design
+  are not in this change.
 - **FTA directional solidification and two-seed bicrystal** on
   `alloy_dendrite_growth` (leftover Stage 4 of issue #85; geometry from
   unmerged PR #103). Frozen-temperature field
