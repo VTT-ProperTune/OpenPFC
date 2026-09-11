@@ -12,6 +12,24 @@ target_link_libraries(openpfc_apps_common INTERFACE OpenPFC)
 # spectral apps in apps/CMakeLists.txt.
 option(APPS_COMMON_ENABLE_TESTS "Enable building apps/common tests" ON)
 
+# plasma_dispersion.hpp is pure arithmetic: standard library only, no MPI, no
+# FFT, no OpenPFC. It is deliberately registered OUTSIDE the HeFFTe gate
+# below, because it is the oracle every linear plasma benchmark is measured
+# against and a build without the spectral stack should still be able to
+# check that the oracle itself is right.
+if(APPS_COMMON_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
+  find_package(Catch2 QUIET)
+  if(TARGET Catch2::Catch2WithMain)
+    add_executable(test_plasma_dispersion tests/test_plasma_dispersion.cpp)
+    target_include_directories(test_plasma_dispersion PRIVATE
+                               ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_link_libraries(test_plasma_dispersion PRIVATE Catch2::Catch2WithMain)
+    include(CTest)
+    add_test(NAME apps-common-plasma-dispersion COMMAND test_plasma_dispersion)
+    set_tests_properties(apps-common-plasma-dispersion PROPERTIES TIMEOUT 300)
+  endif()
+endif()
+
 if(APPS_COMMON_ENABLE_TESTS AND OpenPFC_BUILD_TESTS AND OpenPFC_ENABLE_HEFFTE)
   find_package(Catch2 QUIET)
   if(TARGET Catch2::Catch2)
