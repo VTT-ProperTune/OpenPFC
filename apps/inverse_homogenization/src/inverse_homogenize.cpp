@@ -51,6 +51,7 @@ struct Config {
   int normalize{1};
   double max_delta{0.05};
   int project_volume{0};
+  double simp{1.0};
 };
 
 void usage(std::ostream &os, const char *exe) {
@@ -65,7 +66,8 @@ void usage(std::ostream &os, const char *exe) {
      << "  --volume --lambda-volume --lambda-reg --epsilon\n"
      << "  --dt --steps --init uniform|noise --init-volume --csv=PATH\n"
      << "  --normalize=0|1 --max-delta   (default 1 and 0.05; RMS-normalise g)\n"
-     << "  --project-volume=0|1          shift h to hold --volume after each step\n";
+     << "  --project-volume=0|1          shift h to hold --volume after each step\n"
+     << "  --simp=P                      SIMP exponent on h for C(h) (default 1)\n";
 }
 
 bool parse_double(std::string_view v, double &out) {
@@ -131,6 +133,8 @@ bool parse_args(int argc, char **argv, Config &cfg) {
       ok = parse_double(val, cfg.max_delta) && cfg.max_delta >= 0.0;
     } else if (key == "project-volume") {
       ok = parse_int(val, cfg.project_volume);
+    } else if (key == "simp") {
+      ok = parse_double(val, cfg.simp) && cfg.simp >= 1.0;
     } else {
       return false;
     }
@@ -218,6 +222,7 @@ int main(int argc, char **argv) {
   spec.normalize_grad = cfg.normalize != 0;
   spec.max_abs_delta = cfg.max_delta;
   spec.project_volume = cfg.project_volume != 0;
+  spec.simp_p = cfg.simp;
 
   pfc::apps::inverse::PhaseFieldInverse inv(domain, stack.fft(), p);
   std::ofstream csv;
