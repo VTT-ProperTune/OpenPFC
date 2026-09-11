@@ -43,12 +43,19 @@ goes.
 
 # one GCD
 srun -n 1 --gpus-per-node=8 vlasov_hip_parity --nx=32 --nvx=32 --nvy=32 --steps=20
+srun -n 1 --gpus-per-node=8 vlasov_hip_parity --science=landau
 srun -n 1 --gpus-per-node=8 vlasov_hip_cost  --sizes=64,128,192,256 --reps=5
 ```
 
 `vlasov_hip_parity` exits non-zero if any check fails, so it can be wired to
-`ctest` as it stands. Both binaries need hipFFT (`find_package(hipfft)` in
-the application's `CMakeLists.txt`); the CPU build never looks for it.
+`ctest` as it stands. HIP builds register two tests: `vlasov-hip-parity`
+(the 20-step operator/integrated comparison, kept short) and
+`vlasov-hip-science-rate` (`--science=landau`, \(32^3\), \(t=12\), host vs
+device `fit_envelope_rate` on `mode_ex`, timeout 900 s, `RUN_SERIAL`).
+The science-rate \(\gamma\) pair is **unmeasured on this branch**; run
+the second command on a GCD to fill it. Both binaries need hipFFT
+(`find_package(hipfft)` in the application's `CMakeLists.txt`); the CPU
+build never looks for it.
 
 On LUMI-G use whole nodes (`--ntasks-per-node=8 --gpus-per-node=8`) and the
 CPU mask from `docs/lumi_slurm/tungsten_hip_scaling.sbatch`. Do **not** set

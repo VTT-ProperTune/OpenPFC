@@ -366,6 +366,14 @@ right to seven digits. $\mathrm{d}(v_x + \mathrm{i}v_y)/\mathrm{d}t =
 -\mathrm{i}\,(q/m)B_z\,(v_x + \mathrm{i}v_y)$, so the phase advances at
 $-(q/m)B_z$.
 
+The same frozen-$B$ problem, with an $x$-independent drifting Maxwellian
+so that `advect_x` is the identity, is the test of the Strang splitting
+itself. Vacuum waves are exact at any $\Delta t$ and Landau $\gamma$ is
+insensitive to the step, so neither measures the order. Against the
+closed-form mean velocity over one gyro period, with
+$\Delta t = T/\{8,16,32,64\}$, the fitted order is **2.07** (pairwise
+2.17, 2.04, 2.02) and the finest error is smaller than the coarsest.
+
 ### Stage 4: electromagnetic instability
 
 The rung the whole application exists for. Bi-Maxwellian with
@@ -530,6 +538,17 @@ the decomposition was put on $v_y$ in the first place — the alternative,
 decomposing $x$, would have made the *transport* communicate instead, which
 is $N_xN_{v_x}N_{v_y}$ rather than $N_x$.
 
+Transport bitwise agreement (1-rank vs N-rank `advect_vy`) is necessary
+and not sufficient. `test_mpi_science` compares the fitted Landau
+damping rate $\gamma$ of an identical $32^3$, $t=12$ run on
+`MPI_COMM_SELF` against `MPI_COMM_WORLD`. The oracle is the 1-rank
+$\gamma$, not the dispersion root. A parallel bug that shifted every
+rank the same way would still match kinetic theory and fail this test.
+On two ranks (job `21942462`, LUMI `debug`) both communicators give
+$\gamma = -0.1514064581$, agreeing to the $10^{-8}$ relative tolerance.
+NaN agreement is not a pass: the 1-rank rate is required to be finite
+first.
+
 ### GPU
 
 The device port was decided by measurement in two rounds rather than by
@@ -564,6 +583,14 @@ transport operators differ by exactly **one ulp**. They are not bitwise
 because the host build contracts `row += w*f` into an FMA while the kernels
 do not — which is reported rather than papered over.
 
+Operator parity is not a science rate. `vlasov_hip_parity --science=landau`
+runs the same $32^3$, $t=12$ Landau problem on the host `Stepper` and
+on `DeviceStepper` and compares `fit_envelope_rate` of `mode_ex`. That
+test is registered as `vlasov-hip-science-rate` (HIP builds, LUMI-G).
+**The $\gamma$ pair has not been measured on this branch**; the
+operator-parity table above is from job `21933310` and is a different
+question.
+
 ## Limitations {#sec-vm-limits}
 
 1. **Non-relativistic Vlasov–Maxwell is formally inconsistent.** Galilean
@@ -583,10 +610,31 @@ do not — which is reported rather than papered over.
    solution develops structure below any fixed $\Delta v$. The entropy
    drift measures the loss; it does not repair it. Nothing in this chapter
    should be read as a converged late-time result.
-5. **Recurrence.** A velocity grid of spacing $\Delta v$ reconstructs its
-   initial state at $T_R = 2\pi/(k\Delta v)$. Every run here is shorter
-   than its own $T_R$, but that is a constraint on the runs, not a
-   property of the method.
+5. **Recurrence, now measured.** A velocity grid of spacing $\Delta v$
+   reconstructs its initial state at $T_R = 2\pi/(k\Delta v)$. That is a
+   discrete-velocity fact, isolated here by streaming a Landau density
+   perturbation with the self-consistent field off, so only the exact
+   $x$-shift moves. Cell-centred $v_j = -v_{\max}+(j+\tfrac12)\Delta v$
+   puts a global minus sign on the signed mode at $t=T_R$; the
+   observable is $|\hat\rho|$.
+
+   | $N_{v_x}$ | $\Delta v$ | $T_R^\mathrm{pred}$ | $T_R^\mathrm{meas}$ | ratio |
+   |---|---:|---:|---:|---:|
+   | 24 | 0.033333 | 18.849556 | 18.849556 | 1.0000 |
+   | 32 | 0.025000 | 25.132741 | 25.132743 | 1.0000 |
+   | 48 | 0.016667 | 37.699112 | 37.699112 | 1.0000 |
+
+   : Recurrence time against $T_R = 2\pi/(k\Delta v)$ at three velocity
+   resolutions. Landau box, $v_{th}=0.05$, $v_{\max}=8v_{th}$,
+   $k=k_\mathrm{skin}(1)$, $N_x=32$, $N_{v_y}=16$, streaming,
+   `self_consistent=false`. {#tbl-vm-recurrence}
+
+   The slope of $T_\mathrm{meas}$ against $1/\Delta v$ is $0.628319$
+   against $2\pi/k = 0.628319$.
+   A science-rate window that includes $t > 0.8\,T_R$ throws rather
+   than quoting a recycled seed as a damping rate. The driver prints
+   $T_R$ and $t_\mathrm{end}/T_R$ on rank 0 and does not auto-extend
+   $t_\mathrm{end}$ past recurrence.
 6. **Collisionless, non-relativistic, no ionisation, no Boltzmann
    operator.** Mobile ions exist behind a flag and are untested at scale.
 7. **The rank cap of $N_{v_y}/\mathrm{halo}$**, as above.

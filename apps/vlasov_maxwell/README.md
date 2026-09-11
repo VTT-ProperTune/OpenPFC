@@ -51,11 +51,28 @@ velocity-boundary occupancy.
 ## What the tests assert
 
 - `test_fields`: vacuum \(\omega = k\) to round-off, charge-conserving Gauss,
-  moment deposition, boundary occupancy.
+  moment deposition, boundary occupancy, and a fitted Strang order of 2
+  on the Lorentz pair (gyro, frozen \(B\), \(x\)-independent Maxwellian —
+  not the vacuum wave, which is exact at any \(\Delta t\), and not Landau
+  \(\gamma\), which is insensitive to \(\Delta t\)).
 - `test_transport`: exact \(x\)-shift, interpolation order, 1-vs-N rank
-  `advect_vy`, halo overflow is an error.
+  `advect_vy` (bitwise), halo overflow is an error.
 - `test_diagnostics`: estimators on synthetic series with known answers,
-  including the biased-window failure modes they exist to catch.
+  including the biased-window failure modes they exist to catch, plus
+  \(T_R = 2\pi/(k\Delta v)\) and a throw when a science fit includes
+  \(t > 0.8\,T_R\).
+- `test_recurrence`: measured recurrence time across three \(N_{v_x}\) on
+  a streaming Landau IC (`self_consistent=false`); \(T_\mathrm{meas}/T_\mathrm{pred}\)
+  within 5 %, and the slope of \(T_\mathrm{meas}\) vs \(1/\Delta v\) is
+  \(2\pi/k\). Asserts \(|\hat\rho|\), not signed `mode_ex` (cell-centred
+  \(v_j\) flips the sign at \(T_R\)).
+- `test_mpi_science` (`[mpi]`, `vlasov-mpi-science-2rank`): 1-rank vs
+  N-rank Landau \(\gamma\) from `fit_envelope_rate` on `mode_ex`. The
+  oracle is the 1-rank rate, not the dispersion root. NaN agreement is
+  not a pass.
+- `vlasov-hip-parity`: CPU/GPU operator and 20-step integrated parity
+  (HIP builds). `vlasov-hip-science-rate` (`--science=landau`) compares
+  the fitted Landau \(\gamma\) of host `Stepper` vs `DeviceStepper`.
 
 A grid that does not resolve the velocity spacing is refused
 (`require_resolved_spacing`); that is not the same check as the tail
