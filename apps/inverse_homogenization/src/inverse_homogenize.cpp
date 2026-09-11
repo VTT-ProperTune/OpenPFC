@@ -11,6 +11,7 @@
  */
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <fstream>
@@ -340,10 +341,12 @@ int main(int argc, char **argv) {
   if (rank == 0) {
     std::cout << "target " << cfg.target << " grid " << cfg.nx << 'x' << cfg.ny
               << 'x' << cfg.nz << " steps " << cfg.steps << '\n';
-    std::cout << "step J J_tensor J_volume J_reg volume grad_rms step_rms grey perimeter C11 C12\n";
+    std::cout << "backend cpu ranks " << nproc << " grid " << cfg.nx << 'x'
+              << cfg.ny << 'x' << cfg.nz << " loads 6\n";
+    std::cout << "step J J_tensor J_volume J_reg volume grad_rms step_rms grey perimeter C11 C12 ms\n";
     if (!cfg.csv.empty()) {
       csv.open(cfg.csv);
-      csv << "step,J,J_tensor,J_volume,J_reg,volume,grad_rms,step_rms,grey,perimeter,C11,C12\n";
+      csv << "step,J,J_tensor,J_volume,J_reg,volume,grad_rms,step_rms,grey,perimeter,C11,C12,ms\n";
     }
   }
   pfc::apps::inverse::InverseStepReport last{};
@@ -356,18 +359,24 @@ int main(int argc, char **argv) {
         (cfg.steps > 1) ? static_cast<double>(s) / (cfg.steps - 1) : 1.0;
     spec.simp_p = simp0 + t * (simp1 - simp0);
     spec.lambda_reg = lr0 + t * (lr1 - lr0);
+    const auto t0 = std::chrono::steady_clock::now();
     last = inv.step(h, spec);
+    const auto t1 = std::chrono::steady_clock::now();
+    const double ms =
+        std::chrono::duration<double, std::milli>(t1 - t0).count();
     if (rank == 0) {
       std::cout << std::setprecision(8) << s << ' ' << last.J << ' '
                 << last.J_tensor << ' ' << last.J_volume << ' ' << last.J_reg
                 << ' ' << last.volume_fraction << ' ' << last.grad_rms << ' '
                 << last.step_rms << ' ' << last.grey_fraction << ' '
-                << last.perimeter << ' ' << last.C11 << ' ' << last.C12 << '\n';
+                << last.perimeter << ' ' << last.C11 << ' ' << last.C12 << ' '
+                << std::setprecision(3) << ms << '\n';
       if (csv.is_open()) {
         csv << s << ',' << last.J << ',' << last.J_tensor << ',' << last.J_volume
             << ',' << last.J_reg << ',' << last.volume_fraction << ','
             << last.grad_rms << ',' << last.step_rms << ',' << last.grey_fraction
-            << ',' << last.perimeter << ',' << last.C11 << ',' << last.C12 << '\n';
+            << ',' << last.perimeter << ',' << last.C11 << ',' << last.C12 << ','
+            << ms << '\n';
       }
     }
     if (!last.elasticity_converged) {
@@ -438,6 +447,14 @@ int main(int argc, char **argv) {
     }
     std::cout << "C11_bin " << Cb(0, 0) << " C12_bin " << Cb(0, 1)
               << " nu_bin " << nub << '\n';
+    std::cout << "ranks " << nproc << " grid " << cfg.nx << 'x' << cfg.ny << 'x'
+              << cfg.nz << " steps " << cfg.steps << " loads_per_step 6\n";
+    std::ifstream status("/proc/self/status");
+    std::string line;
+    while (std::getline(status, line)) {
+      if (line.rfind("VmHWM:", 0) == 0 || line.rfind("VmRSS:", 0) == 0)
+        std::cout << line << '\n';
+    }
     if (nproc == 1) {
       const auto man = pfc::apps::inverse::measure_manufacturability(
           h, cfg.nx, cfg.ny, cfg.nz);

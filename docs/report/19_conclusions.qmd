@@ -2,12 +2,16 @@
 
 ## What the application set demonstrates
 
-Fifteen applications, spanning fourth- through tenth-order spatial operators in
+Sixteen applications, spanning fourth- through tenth-order spatial operators in
 the shipped spectral set, conserved and non-conserved dynamics, dispersive and
 dissipative behaviour, single- and multi-field systems, a kinetic distribution
-on a phase-space grid, and both spectral and finite-difference discretisations
-— on one runtime, with one halo/decomposition layer. Fourteen of the fifteen
-have a device path; the coupled dendrite's elastic solve is still host-side.
+on a phase-space grid, both spectral and finite-difference discretisations, and
+one PDE-constrained inverse-design application (@sec-inverse-homogenization)
+— on one runtime, with one halo/decomposition layer. The sixteenth app is an
+**explicit exception** (match a target $\mathbf{C}_H$, not another PDE demo);
+the catalog is closed after it. Fourteen of the fifteen evolution apps have a
+device path; the coupled dendrite's elastic solve is still host-side, and
+inverse homogenization uses that same host Green operator.
 
 The four claims from the abstract hold up, with qualifications worth stating.
 
