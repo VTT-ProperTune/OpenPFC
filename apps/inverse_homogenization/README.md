@@ -81,6 +81,7 @@ Not paper claims. Grey linear interpolation **cannot** produce \(\nu<0\).
 | 21954427 | elastic-only RMS + SIMP \(1\to 3\), \(\lambda_r\) \(0.05\to 0.4\) | 0.261 | **0.50** | **grey \(0.999\to 0.674\)** — first real binarization |
 | 21954505 | same continuation, 80 steps; 2-D auxetic \(E_{\mathrm{void}}=0.08\) | 0.261 | **0.50** | auxetic grey \(1\to 0.79\), \(C_{12}=+0.25\) still not negative; orthotropic grey \(0.88\) |
 | 21954959 / 21955207 | 64² auxetic, two seeds; continue +150 steps | — | **0.50** | grey 0.63 / 0.58; morphologies **uncorrelated** (\(r=0.19\)). SIMP \(C_{12}\) 0.065→0.026; **physical** \(C_{12}=0.22\). Thresholded \(h>0.5\): \(\nu_{\mathrm{bin}}=0.032\) (seed continue), still \(>0\). |
+| 21956076 | **rotating-square seed** (hinged, half=0.200) | — | 0.64 | **\(\nu=-0.123\)**, \(C_{12}<0\)**. Inverse 80 steps still auxetic (\(\nu_{\mathrm{bin}}=-0.080\)). Re-entrant honeycomb on this grid is not auxetic. |
 
 The double well drives a *uniform* grey field to the wells (Catch2). A
 sharp/tanh interface with large \(\lambda_r/\varepsilon\) inverts bands

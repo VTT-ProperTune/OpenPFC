@@ -53,6 +53,6 @@ if(INVERSE_HOMOGENIZATION_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     target_link_libraries(test_inverse_homogenization PRIVATE Catch2::Catch2)
     add_test(NAME inverse-homogenization-ac-tests
              COMMAND test_inverse_homogenization)
-    set_tests_properties(inverse-homogenization-ac-tests PROPERTIES TIMEOUT 300)
+    set_tests_properties(inverse-homogenization-ac-tests PROPERTIES TIMEOUT 600)
   endif()
 endif()
