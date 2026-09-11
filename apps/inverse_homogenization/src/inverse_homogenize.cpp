@@ -48,6 +48,8 @@ struct Config {
   double init_volume{0.55};
   unsigned seed{1};
   std::string csv{};
+  int normalize{1};
+  double max_delta{0.05};
 };
 
 void usage(std::ostream &os, const char *exe) {
@@ -60,7 +62,8 @@ void usage(std::ostream &os, const char *exe) {
      << "  --E-target --nu-target          (isotropic / auxetic)\n"
      << "  --C11 --C22 --C12 --C66         (orthotropic in-plane block)\n"
      << "  --volume --lambda-volume --lambda-reg --epsilon\n"
-     << "  --dt --steps --init uniform|noise --init-volume --csv=PATH\n";
+     << "  --dt --steps --init uniform|noise --init-volume --csv=PATH\n"
+     << "  --normalize=0|1 --max-delta   (default 1 and 0.05; RMS-normalise g)\n";
 }
 
 bool parse_double(std::string_view v, double &out) {
@@ -120,6 +123,10 @@ bool parse_args(int argc, char **argv, Config &cfg) {
       cfg.seed = static_cast<unsigned>(s);
     } else if (key == "csv") {
       cfg.csv = std::string(val);
+    } else if (key == "normalize") {
+      ok = parse_int(val, cfg.normalize);
+    } else if (key == "max-delta") {
+      ok = parse_double(val, cfg.max_delta) && cfg.max_delta >= 0.0;
     } else {
       return false;
     }
@@ -204,16 +211,18 @@ int main(int argc, char **argv) {
   spec.lambda_reg = cfg.lambda_reg;
   spec.epsilon = cfg.epsilon;
   spec.dt = cfg.dt;
+  spec.normalize_grad = cfg.normalize != 0;
+  spec.max_abs_delta = cfg.max_delta;
 
   pfc::apps::inverse::PhaseFieldInverse inv(domain, stack.fft(), p);
   std::ofstream csv;
   if (rank == 0) {
     std::cout << "target " << cfg.target << " grid " << cfg.nx << 'x' << cfg.ny
               << 'x' << cfg.nz << " steps " << cfg.steps << '\n';
-    std::cout << "step J J_tensor J_volume J_reg volume grad_rms\n";
+    std::cout << "step J J_tensor J_volume J_reg volume grad_rms step_rms grey perimeter\n";
     if (!cfg.csv.empty()) {
       csv.open(cfg.csv);
-      csv << "step,J,J_tensor,J_volume,J_reg,volume,grad_rms\n";
+      csv << "step,J,J_tensor,J_volume,J_reg,volume,grad_rms,step_rms,grey,perimeter\n";
     }
   }
   pfc::apps::inverse::InverseStepReport last{};
@@ -222,11 +231,14 @@ int main(int argc, char **argv) {
     if (rank == 0) {
       std::cout << std::setprecision(8) << s << ' ' << last.J << ' '
                 << last.J_tensor << ' ' << last.J_volume << ' ' << last.J_reg
-                << ' ' << last.volume_fraction << ' ' << last.grad_rms << '\n';
+                << ' ' << last.volume_fraction << ' ' << last.grad_rms << ' '
+                << last.step_rms << ' ' << last.grey_fraction << ' '
+                << last.perimeter << '\n';
       if (csv.is_open()) {
         csv << s << ',' << last.J << ',' << last.J_tensor << ',' << last.J_volume
             << ',' << last.J_reg << ',' << last.volume_fraction << ','
-            << last.grad_rms << '\n';
+            << last.grad_rms << ',' << last.step_rms << ',' << last.grey_fraction
+            << ',' << last.perimeter << '\n';
       }
     }
     if (!last.elasticity_converged) {

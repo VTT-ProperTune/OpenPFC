@@ -39,14 +39,20 @@ cmake --build "${BUILD}" -j "${SLURM_NTASKS}" --target openpfc_inverse_homogeniz
 run() {
   local name="$1"; shift
   srun --ntasks=1 --cpus-per-task=4 \
-    "${BIN}" --nx=16 --ny=16 --nz=16 --steps=25 --dt=0.08 \
-    --init=noise --volume=0.5 --csv="${OUT}/${name}.csv" \
-    "$@" > "${OUT}/${name}.txt"
+    "${BIN}" --steps=40 --dt=0.03 --max-delta=0.03 --normalize=1 \
+    --init=noise --volume=0.5 --lambda-volume=4 --lambda-reg=0.08 \
+    --csv="${OUT}/${name}.csv" "$@" > "${OUT}/${name}.txt"
 }
 
-run isotropic --target=isotropic --E-target=0.9 --nu-target=0.25
-run auxetic   --target=auxetic   --E-target=0.7 --nu-target=0.3
-run orthotropic --target=orthotropic --C11=1.3 --C22=0.6 --C12=0.2 --C66=0.25
+# 3-D isotropic / orthotropic; 2-D high-contrast auxetic (grey two-phase
+# interpolation cannot produce nu<0 — binary topology is required).
+run isotropic --nx=16 --ny=16 --nz=16 --target=isotropic \
+  --E-target=0.9 --nu-target=0.25
+run auxetic --nx=32 --ny=32 --nz=1 --target=auxetic \
+  --E-solid=2 --E-void=0.02 --E-target=0.4 --nu-target=0.4 \
+  --lambda-reg=0.15 --epsilon=1.5
+run orthotropic --nx=16 --ny=16 --nz=16 --target=orthotropic \
+  --C11=1.3 --C22=0.6 --C12=0.2 --C66=0.25
 
 echo "=== done ==="
 echo "OUT ${OUT}"

@@ -146,19 +146,20 @@ TEST_CASE("Uniform inverse step drives volume toward the homogeneous target",
   spec.dt = 0.05;
   spec.mobility = 1.0;
   spec.clip = true;
+  spec.normalize_grad = true;
+  spec.max_abs_delta = 0.05;
 
   PhaseFieldInverse inv(cs.domain, cs.stack.fft(), phases());
-  double J0 = 0.0;
-  double vf0 = 0.0;
-  pfc::apps::inverse::InverseStepReport last{};
-  for (int s = 0; s < 12; ++s) {
-    last = inv.step(cs.h, spec);
-    REQUIRE(last.elasticity_converged);
-    if (s == 0) {
-      J0 = last.J;
-      vf0 = last.volume_fraction;
-    }
-  }
+  const auto first = inv.step(cs.h, spec);
+  REQUIRE(first.elasticity_converged);
+  // RMS-normalised step: volume must not jump by more than dt.
+  REQUIRE(std::abs(first.volume_fraction - 0.80) <= spec.dt + 1.0e-6);
+  REQUIRE(first.step_rms <= spec.max_abs_delta + 1.0e-12);
+
+  double J0 = first.J;
+  double vf0 = first.volume_fraction;
+  pfc::apps::inverse::InverseStepReport last = first;
+  for (int s = 0; s < 4; ++s) last = inv.step(cs.h, spec);
   REQUIRE(last.J < J0);
   REQUIRE(last.volume_fraction < vf0);
   REQUIRE(last.volume_fraction > 0.5);

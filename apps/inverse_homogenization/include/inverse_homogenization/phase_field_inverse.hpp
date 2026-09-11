@@ -21,7 +21,10 @@
  *   \Bigr)
  * \f]
  *
- * is taken with \(W(h)=h^2(1-h)^2\). This is Takezawa-style PF-TO, not
+ * is taken with \(W(h)=h^2(1-h)^2\). By default \(g\) is RMS-normalised
+ * so \(\Delta t\) is the RMS change in \(h\), and \(|\Delta h|\) is capped
+ * per cell; job 21949415 collapsed the volume because the raw gradient
+ * RMS was \(\sim 4\). This is Takezawa-style PF-TO, not
  * Cahn–Hilliard (volume is a penalty, not a conserved mass) and not an
  * external MMA. Cahn–Hilliard is reserved for the process-constrained
  * family in Stage 6.
@@ -62,6 +65,11 @@ struct InverseSpec {
   double mobility{1.0};
   double dt{0.1};
   bool clip{true};
+  /// Divide g by its RMS so `dt` is the RMS change in h (job 21949415
+  /// collapsed volume because the raw gradient RMS was ~4).
+  bool normalize_grad{true};
+  /// Hard cap on |Δh| per cell after the normalised step.
+  double max_abs_delta{0.05};
 };
 
 struct InverseStepReport {
@@ -71,6 +79,11 @@ struct InverseStepReport {
   double J_reg{0.0};
   double volume_fraction{0.0};
   double grad_rms{0.0};
+  double step_rms{0.0};
+  /// Fraction of cells with 0.1 < h < 0.9.
+  double grey_fraction{0.0};
+  /// sqrt(mean(-h Δh)), a specific-surface / length-scale proxy.
+  double perimeter{0.0};
   bool elasticity_converged{false};
 };
 
@@ -155,6 +168,8 @@ public:
 
     double local_reg = 0.0;
     double local_g2 = 0.0;
+    double local_grey = 0.0;
+    double local_hLap = 0.0;
     const double *hp = h.data();
     const double *djel = m_dJdh.data();
     const double *lp = m_lap.data();
@@ -164,6 +179,8 @@ public:
       const double well = double_well(hp[i]);
       // ∫ |grad h|^2 = -∫ h Δh  (periodic, spectral Δ).
       local_reg += 0.5 * spec.epsilon * (-hp[i] * lp[i]) + inv_eps * well;
+      local_hLap += -hp[i] * lp[i];
+      if (hp[i] > 0.1 && hp[i] < 0.9) local_grey += 1.0;
       const double g_el = m_n_global * djel[i];
       const double g_vol = spec.lambda_volume * 2.0 * dv;
       const double g_reg =
@@ -174,20 +191,31 @@ public:
     }
     m_g.note_host_write();
 
-    double glo_reg = 0.0, glo_g2 = 0.0;
-    MPI_Allreduce(&local_reg, &glo_reg, 1, MPI_DOUBLE, MPI_SUM, comm());
-    MPI_Allreduce(&local_g2, &glo_g2, 1, MPI_DOUBLE, MPI_SUM, comm());
-    out.J_reg = spec.lambda_reg * (glo_reg / m_n_global);
+    double glo[4] = {0, 0, 0, 0};
+    const double loc[4] = {local_reg, local_g2, local_grey, local_hLap};
+    MPI_Allreduce(loc, glo, 4, MPI_DOUBLE, MPI_SUM, comm());
+    out.J_reg = spec.lambda_reg * (glo[0] / m_n_global);
     out.J = out.J_tensor + out.J_volume + out.J_reg;
-    out.grad_rms = std::sqrt(glo_g2 / m_n_global);
+    out.grad_rms = std::sqrt(glo[1] / m_n_global);
+    out.grey_fraction = glo[2] / m_n_global;
+    out.perimeter = std::sqrt(std::max(0.0, glo[3] / m_n_global));
 
-    const double step = spec.dt * spec.mobility;
+    double scale = spec.dt * spec.mobility;
+    if (spec.normalize_grad && out.grad_rms > 0.0) scale /= out.grad_rms;
+    const double cap = spec.max_abs_delta;
+    double local_dh2 = 0.0;
     for (std::size_t i = 0; i < m_n_local; ++i) {
-      double hn = hp[i] - step * gp[i];
+      double dh = -scale * gp[i];
+      if (cap > 0.0) dh = std::min(cap, std::max(-cap, dh));
+      local_dh2 += dh * dh;
+      double hn = hp[i] + dh;
       if (spec.clip) hn = std::min(1.0, std::max(0.0, hn));
       h.data()[i] = hn;
     }
     h.note_host_write();
+    double glo_dh2 = 0.0;
+    MPI_Allreduce(&local_dh2, &glo_dh2, 1, MPI_DOUBLE, MPI_SUM, comm());
+    out.step_rms = std::sqrt(glo_dh2 / m_n_global);
     return out;
   }
 
