@@ -1,12 +1,13 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-# Inverse homogenization (issue #161). This directory starts with the
-# forward periodic homogenizer; the inverse loop is later work on the
-# same header in apps/common.
+# Inverse homogenization (issue #161). Forward C_H plus Allen–Cahn
+# descent on the tensor-mismatch objective. Not a general optimizer.
 
 option(INVERSE_HOMOGENIZATION_ENABLE_TESTS
        "Enable building inverse-homogenization smoke tests" ON)
+
+set(INVERSE_HOMOGENIZATION_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 set(_invhom_heffte_tgt "")
 if(TARGET Heffte::Heffte)
@@ -17,10 +18,17 @@ elseif(TARGET heffte)
   set(_invhom_heffte_tgt heffte)
 endif()
 
-add_executable(openpfc_homogenize src/homogenize.cpp)
-target_link_libraries(openpfc_homogenize PRIVATE OpenPFC openpfc_apps_common
-                      ${_invhom_heffte_tgt})
-install(TARGETS openpfc_homogenize DESTINATION bin)
+function(inverse_homogenization_cpu_executable target)
+  add_executable(${target} ${ARGN})
+  target_include_directories(${target} PRIVATE ${INVERSE_HOMOGENIZATION_INCLUDE_DIR})
+  target_link_libraries(${target} PRIVATE OpenPFC openpfc_apps_common
+                        ${_invhom_heffte_tgt})
+endfunction()
+
+inverse_homogenization_cpu_executable(openpfc_homogenize src/homogenize.cpp)
+inverse_homogenization_cpu_executable(openpfc_inverse_homogenize
+                                      src/inverse_homogenize.cpp)
+install(TARGETS openpfc_homogenize openpfc_inverse_homogenize DESTINATION bin)
 
 if(INVERSE_HOMOGENIZATION_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
   include(CTest)
@@ -30,4 +38,21 @@ if(INVERSE_HOMOGENIZATION_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
   set_tests_properties(inverse-homogenization-homogeneous-smoke PROPERTIES
     PASS_REGULAR_EXPRESSION "HOMOGENIZATION_CHECKSUM"
     TIMEOUT 180)
+  add_test(NAME inverse-homogenization-ac-smoke
+           COMMAND $<TARGET_FILE:openpfc_inverse_homogenize>
+                   --target=isotropic --nx=8 --ny=8 --nz=8 --steps=2
+                   --init=uniform --init-volume=0.8 --lambda-reg=0 --dt=0.1)
+  set_tests_properties(inverse-homogenization-ac-smoke PROPERTIES
+    PASS_REGULAR_EXPRESSION "INVERSE_CHECKSUM"
+    TIMEOUT 180)
+
+  find_package(Catch2 QUIET)
+  if(TARGET Catch2::Catch2)
+    inverse_homogenization_cpu_executable(test_inverse_homogenization
+                                          tests/test_inverse_homogenization.cpp)
+    target_link_libraries(test_inverse_homogenization PRIVATE Catch2::Catch2)
+    add_test(NAME inverse-homogenization-ac-tests
+             COMMAND test_inverse_homogenization)
+    set_tests_properties(inverse-homogenization-ac-tests PROPERTIES TIMEOUT 300)
+  endif()
 endif()
