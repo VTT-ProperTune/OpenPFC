@@ -171,9 +171,27 @@ struct SimParams {
   bool electrostatic{false};
 
   // ---- numerics ---------------------------------------------------------
-  /// Lagrange interpolation order for the semi-Lagrangian velocity shifts.
-  /// Odd orders are centred on the departure cell; 5 is the default.
+  /**
+   * @brief Lagrange interpolation order for the semi-Lagrangian shifts.
+   *
+   * This is both the number of interpolation points and the order of
+   * accuracy -- measured 2.99, 4.98 and 6.95 for 3, 5 and 7 -- and the two
+   * coincide for Lagrange interpolation, so the single name is not an
+   * ambiguity to resolve but a fact worth stating. Odd orders are centred
+   * on the departure cell; 5 is the default.
+   */
   int interp_order{5};
+  /**
+   * @brief Halo width along the distributed `v_y` axis, in cells.
+   *
+   * Zero means "derive it from the field extrema at start-up", which is
+   * what every driver does. It is exposed because the width is a shared
+   * fact: the transport step, the decomposition's rank cap
+   * (`N_vy / vy_halo`) and the diagnostics all have to agree on it, and a
+   * number three components each compute for themselves is a number they
+   * will eventually disagree about.
+   */
+  int vy_halo{0};
   /// Apply a Poisson-based divergence correction to `E_x`. Off by default:
   /// the point of the Gauss residual is to be measured, and a correction
   /// that runs silently hides the thing worth reporting.
@@ -233,6 +251,15 @@ struct SimParams {
     }
     if (interp_order < 1 || interp_order > 9) {
       throw std::invalid_argument("SimParams: interp_order must be 1..9");
+    }
+    if (!(t_end > 0.0) || dt < 0.0 || !std::isfinite(dt)) {
+      throw std::invalid_argument("SimParams: need t_end > 0 and dt >= 0");
+    }
+    if (n_sample < 1) {
+      throw std::invalid_argument("SimParams: n_sample must be >= 1");
+    }
+    if (vy_halo < 0) {
+      throw std::invalid_argument("SimParams: vy_halo must be >= 0");
     }
     for (const auto &s : species) {
       if (s.mu <= 0.0) {
