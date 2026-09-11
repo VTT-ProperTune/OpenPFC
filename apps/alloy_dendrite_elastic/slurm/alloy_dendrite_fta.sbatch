@@ -5,7 +5,7 @@
 #SBATCH --account=project_462001519
 #SBATCH --partition=standard
 #SBATCH --nodes=1
-#SBATCH --ntasks=128
+#SBATCH --ntasks=4
 #SBATCH --cpus-per-task=1
 #SBATCH --exclusive
 #SBATCH --time=04:00:00
@@ -15,6 +15,10 @@
 # Issue #155: FTA directional science campaign on alloy_dendrite_growth.
 # Three required cases (aligned / misori / bicrystal) plus an optional 22.5°
 # single grain, concurrent on one LUMI-C node. Pure FD; do not pass --elastic.
+# One rank per case: every other 2-D science sbatch in this directory does
+# the same. Job 21948410 used 32 ranks on nz=1 and is not a result; a
+# 1-rank probe of the same flags still diverged at t≈27 (periodic θ jump
+# G·Lx = 0.02·512 = 10.2 hypercoolings at the seam).
 #
 # Frozen-temperature (infinite Lewis number): evolve_theta=0, Mc=0.5.
 # Elevated-G directional geometry, not an Al-Cu furnace:
@@ -53,7 +57,7 @@ SHARED=(
 run_case() {
   local id="$1"; shift
   mkdir -p "${OUT}/fields_${id}"
-  srun --exact --ntasks=32 --cpus-per-task=1 --mem=32G \
+  srun --exact --ntasks=1 --cpus-per-task=1 --mem=16G \
     "${ALLOY_GROWTH_BIN}" "${SHARED[@]}" \
     --csv="${OUT}/ts_${id}.csv" --summary="${OUT}/sum_${id}.csv" \
     --fields-dir="${OUT}/fields_${id}" --run-id="${id}" "$@" \

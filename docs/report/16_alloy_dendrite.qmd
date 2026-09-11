@@ -1009,20 +1009,22 @@ replication.
 
 | Case | $\theta_c$ | Seeds | $V_{\mathrm{tip}}$ | $V_{\mathrm{rel}}=V_{\mathrm{tip}}-V_p$ | Job |
 |---|---|---|---|---|---|
-| `fta-aligned` | $0$ | $(24, 102.4)$ | pending | pending | 21948410 |
-| `fta-misori` | $0.2\,\mathrm{rad}$ | same | pending | pending | 21948410 |
-| `fta-bicrystal` | $\pm 0.2\,\mathrm{rad}$ | $(24, 64)$, $(24, 140.8)$ | pending | pending | 21948410 |
+| `fta-aligned` | $0$ | $(24, 102.4)$ | diverged $t\approx 27$; not a result | — | 21948410 |
+| `fta-misori` | $0.2\,\mathrm{rad}$ | same | diverged $t\approx 27$; not a result | — | 21948410 |
+| `fta-bicrystal` | $\pm 0.2\,\mathrm{rad}$ | $(24, 64)$, $(24, 140.8)$ | diverged $t\approx 27$; not a result | — | 21948410 |
 
-: FTA directional campaign on LUMI-C `standard`, $640\times 256$, $\Delta x=0.8\,W_0$, $t_{\mathrm{end}}=1200$, $G^{*}=0.02$, $V_p=0.05$, $M_c=0.5$, $\epsilon_4=0.04$. Submitted as job 21948410; $V_{\mathrm{tip}}$ is filled from the summary CSV once it finishes. Until then this table is a recipe, not a result. {#tbl-ad-fta}
+: FTA directional campaign on LUMI-C `standard`, $640\times 256$, $\Delta x=0.8\,W_0$, $t_{\mathrm{end}}=1200$, $G^{*}=0.02$, $V_p=0.05$, $M_c=0.5$, $\epsilon_4=0.04$. Job 21948410 ran the recipe and is **not** a $V_{\mathrm{tip}}$ result: every case left $\phi$ unbounded by $t\approx 27$. A 1-rank probe of the same flags dies at the same time. The periodic box carries a $\theta$ jump $G L_x = 10.2$ hypercoolings at the seam; that is a limitation of periodic FTA, not a measured growth rate. {#tbl-ad-fta}
 
-The science questions the table is built to answer, once the numbers
-exist: does a misoriented grain grow slower than an aligned
+The science questions the table is built to answer, once a *valid* run
+exists: does a misoriented grain grow slower than an aligned
 $\langle 100\rangle$ grain under the Bridgman field, and does the
-aligned grain's advantage show up as a lag of $V_{\mathrm{rel}}$? The
-bicrystal is two equally misoriented grains competing in one $\phi$,
-not an aligned-versus-misoriented pair and not a grain-boundary energy
+aligned grain's advantage show up as a lag of $V_{\mathrm{rel}}$?
+Job 21948410 does not answer them. The bicrystal is two equally
+misoriented grains competing in one $\phi$, not an
+aligned-versus-misoriented pair and not a grain-boundary energy
 minimum. Figures use a **downstream crop**, not a central crop of the
-cell (`make_alloy_dendrite_figures.py --fta-dir`).
+cell (`make_alloy_dendrite_figures.py --fta-dir`), and wait on a valid
+fields directory.
 
 ## Limitations {#sec-ad-limits}
 
@@ -1073,8 +1075,9 @@ overselling it.
    not evolve latent heat, does not claim a grain-boundary energy (one
    $\phi$; solids that meet merge), and is elevated-$G$ directional
    geometry rather than an Al–Cu furnace. Numbers in @tbl-ad-fta are
-   pending LUMI-C job 21948410; $V_{\mathrm{tip}}$ is not a result
-   until that job writes the summary.
+   pending a *valid* run. Job 21948410 wrote a summary with
+   `valid=0` and is not a $V_{\mathrm{tip}}$; the periodic $\theta$
+   jump $G L_x = 10.2$ at the seam is the suspected cause.
 10. **No paper-scale melt-pool / CMS 2026 / Pinomaa $12\times 3.2\,\mu\mathrm{m}$
     replication.** That remains unattempted. Do not read @sec-ad-fta as
     one. Periodic boundaries are still periodic — there is no no-flux

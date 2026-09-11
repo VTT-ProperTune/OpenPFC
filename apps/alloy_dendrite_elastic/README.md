@@ -934,8 +934,13 @@ are in `slurm/alloy_dendrite_fta.sbatch` and in `--help`.
 | `fta-bicrystal` | ±0.2 | `(24, 64)` and `(24, 140.8)` | two-seed competition; groove is geometric |
 | `fta-misori-22.5` (optional) | π/8 | one, as aligned | second finite angle |
 
-LUMI-C, partition `standard`, account `project_462001519`. Submitted as
-job **21948410**; `V_tip` is pending that job's summary CSV. Figures:
+LUMI-C, partition `standard`, account `project_462001519`. Job
+**21948410** ran this recipe and is **not** a `V_tip` result: every
+case diverged at `t≈27` (`valid=0`, `phi` unbounded). A 1-rank probe of
+the same flags dies at the same time, so this is not a 32-rank halo
+artefact. The periodic box carries a `θ` jump `G·Lx = 0.02·512 = 10.2`
+hypercoolings at the seam; PR #103 had no-flux mould walls, this binary
+does not. Do not quote the trailing-window slope from that job. Figures:
 downstream crop, not a central crop —
 
 ```bash
