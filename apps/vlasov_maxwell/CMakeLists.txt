@@ -44,6 +44,19 @@ if(VLASOV_ENABLE_TESTS AND OpenPFC_BUILD_TESTS AND TARGET Catch2::Catch2)
       ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1"
       TIMEOUT 900)
   endforeach()
+  # 1-rank vs N-rank Landau γ. The serial add_test above is a tautology
+  # (COMM_SELF == COMM_WORLD at one rank); this is the test that can fail.
+  if(TARGET test_mpi_science AND OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
+     (OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 2))
+    add_test(NAME vlasov-mpi-science-2rank
+      COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS}
+        $<TARGET_FILE:test_mpi_science> ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(vlasov-mpi-science-2rank PROPERTIES
+      ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1"
+      TIMEOUT 900
+      PROCESSORS 2
+      RUN_SERIAL TRUE)
+  endif()
 endif()
 
 # ---------------------------------------------------------------------------
@@ -89,6 +102,5 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
   include(CTest)
   add_test(NAME vlasov-hip-parity COMMAND vlasov_hip_parity)
   set_tests_properties(vlasov-hip-parity PROPERTIES TIMEOUT 900 RUN_SERIAL TRUE)
-
   message(STATUS "vlasov_maxwell HIP: kernels, parity, cost, and --device=hip")
 endif()
