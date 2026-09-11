@@ -38,6 +38,7 @@
 
 #include <array>
 #include <cmath>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -341,6 +342,93 @@ TEST_CASE("measure_tip recovers an exact parabola", "[unit][diagnostics]") {
   REQUIRE(t.rho == Approx(rho).epsilon(1e-9));
   REQUIRE(t.fit_rms < 1e-9);
   REQUIRE(t.fit_rows == 11);
+}
+
+TEST_CASE("trailing_slope of measure_tip recovers a known tip velocity",
+          "[unit][diagnostics]") {
+  // The headline v_tip is not a finite difference of the level-set crossing
+  // and not a measurement of a static parabola: it is trailing_slope of
+  // measure_tip(x_tip) on a moving front. A static-shape test of the
+  // parabola fit does not lock that chain.
+  const int nx = 200;
+  const int ny = 121;
+  const double dx = 0.5;
+  const double rho = 12.0;
+  const int j_seed = 60;
+  const double y_tip = static_cast<double>(j_seed) * dx;
+  const double v = 0.25;
+  const double x0 = 40.0;
+  std::vector<double> t, x;
+  for (int n = 0; n < 40; ++n) {
+    const double ti = 0.4 * static_cast<double>(n);
+    const double x_tip = x0 + v * ti;
+    std::vector<double> phi(static_cast<std::size_t>(nx * ny));
+    for (int j = 0; j < ny; ++j) {
+      const double dy = static_cast<double>(j) * dx - y_tip;
+      const double xf = x_tip - dy * dy / (2.0 * rho);
+      for (int i = 0; i < nx; ++i) {
+        const double s = (xf - static_cast<double>(i) * dx) / dx;
+        phi[static_cast<std::size_t>(i + j * nx)] =
+            std::fmax(-1.0, std::fmin(1.0, s));
+      }
+    }
+    const auto tip =
+        alloy_dendrite::measure_tip(phi, nx, ny, dx, dx, 20, j_seed, 5);
+    REQUIRE(tip.valid);
+    t.push_back(ti);
+    x.push_back(tip.x_tip);
+  }
+  REQUIRE(alloy_dendrite::trailing_slope(t, x, 0.5) == Approx(v).epsilon(1e-9));
+}
+
+TEST_CASE("a diverged field is not a valid tip measurement",
+          "[unit][diagnostics]") {
+  const int nx = 80;
+  const int ny = 64;
+  const double dx = 0.5;
+
+  SECTION("all-liquid has no tip") {
+    std::vector<double> phi(static_cast<std::size_t>(nx * ny), -1.0);
+    const auto t = alloy_dendrite::measure_tip(phi, nx, ny, dx, dx, 10, ny / 2, 5);
+    REQUIRE_FALSE(t.valid);
+    REQUIRE(std::isnan(t.x_tip));
+    REQUIRE(std::isnan(t.rho));
+  }
+
+  SECTION("NaN cells do not fabricate a crossing") {
+    std::vector<double> phi(static_cast<std::size_t>(nx * ny),
+                            std::numeric_limits<double>::quiet_NaN());
+    const auto t = alloy_dendrite::measure_tip(phi, nx, ny, dx, dx, 10, ny / 2, 5);
+    REQUIRE_FALSE(t.valid);
+  }
+
+  SECTION("skipped failed samples still produce a plausible v_tip") {
+    // The trap that quoted v_tip = 0.065 on a blown-up run: drop the last
+    // half of the samples (as the driver does when measure_tip fails) and
+    // the trailing-window slope of the remainder is still the true velocity.
+    std::vector<double> t, x;
+    const double v = 0.065;
+    for (int i = 0; i < 80; ++i) {
+      t.push_back(0.5 * static_cast<double>(i));
+      x.push_back(10.0 + v * t.back());
+    }
+    t.resize(40);
+    x.resize(40);
+    const double v_fit = alloy_dendrite::trailing_slope(t, x, 0.5);
+    REQUIRE(v_fit == Approx(v).epsilon(1e-12));
+
+    alloy_dendrite::Conservation exploded;
+    exploded.phi_min = -1.0;
+    exploded.phi_max = 1.0e9;
+    exploded.u_min = 0.0;
+    exploded.u_max = 0.0;
+    REQUIRE_FALSE(alloy_dendrite::conservation_state_finite(exploded));
+    REQUIRE_FALSE(alloy_dendrite::dendrite_result_valid(v_fit, false, false));
+    REQUIRE_FALSE(alloy_dendrite::dendrite_result_valid(v_fit, true, false));
+    REQUIRE_FALSE(alloy_dendrite::dendrite_result_valid(
+        std::numeric_limits<double>::quiet_NaN(), true, true));
+    REQUIRE(alloy_dendrite::dendrite_result_valid(v_fit, true, true));
+  }
 }
 
 TEST_CASE("trailing_slope is a fit, not a difference", "[unit][diagnostics]") {
@@ -786,6 +874,54 @@ TEST_CASE("selection and Ivantsov helpers", "[unit][diagnostics]") {
     REQUIRE(rb.rho[0] == Approx(rho).epsilon(1e-6)); // 0.5 rho is inside the cap
     REQUIRE(rb.spread > 0.1);                        // 2 rho is well outside it
   }
+
+  SECTION("a staircased parabola is flagged by the window scan") {
+    // The #149 false positive: a step-function contour quantises the
+    // interpolated crossing to dx, and the narrowest cell window then
+    // reports rho = 4.2 against a true 9.0 while the wider windows are
+    // fine. That spread is exactly what the scan exists to expose, so a
+    // step-function must *not* look like the resolved piecewise-linear
+    // case above. Do not "fix" this by loosening the success test.
+    const int nx = 160;
+    const int ny = 121;
+    const double dx = 0.5;
+    const double rho = 9.0;
+    const double x_tip = 60.0;
+    std::vector<double> phi(static_cast<std::size_t>(nx * ny), -1.0);
+    for (int j = 0; j < ny; ++j) {
+      const double dy = (static_cast<double>(j) - 60.0) * dx;
+      const double xc = x_tip - dy * dy / (2.0 * rho);
+      for (int i = 0; i < nx; ++i) {
+        phi[static_cast<std::size_t>(i + j * nx)] =
+            (static_cast<double>(i) * dx <= xc) ? 1.0 : -1.0;
+      }
+    }
+    const auto scan =
+        alloy_dendrite::measure_tip_scan(phi, nx, ny, dx, dx, 20, 60);
+    REQUIRE(scan.spread > 0.2);
+    // And sigma* inherits twice that relative error: a 20% rho spread is
+    // already a 44% sigma* spread. The quoted selection parameter from a
+    // staircased contour is not a number.
+    const double s_lo = alloy_dendrite::selection_sigma_star(0.25, 2.0, 0.1, scan.rho[0]);
+    const double s_hi = alloy_dendrite::selection_sigma_star(0.25, 2.0, 0.1, scan.rho[3]);
+    REQUIRE(std::fabs(s_lo / s_hi - 1.0) > 0.3);
+  }
+
+  SECTION("velocity_split_drift is zero on a ramp and finite on a bend") {
+    std::vector<double> t, x;
+    for (int i = 0; i < 64; ++i) {
+      t.push_back(0.1 * static_cast<double>(i));
+      x.push_back(0.2 * t.back());
+    }
+    REQUIRE(alloy_dendrite::velocity_split_drift(t, x, 0.5) ==
+            Approx(0.0).margin(1e-12));
+    for (int i = 32; i < 64; ++i) {
+      x[static_cast<std::size_t>(i)] = 0.2 * t[static_cast<std::size_t>(32)] +
+                                       0.5 * (t[static_cast<std::size_t>(i)] -
+                                              t[static_cast<std::size_t>(32)]);
+    }
+    REQUIRE(std::fabs(alloy_dendrite::velocity_split_drift(t, x, 1.0)) > 0.5);
+  }
 }
 
 #if ALLOY_DENDRITE_HAVE_ELASTICITY
@@ -900,6 +1036,56 @@ TEST_CASE("elastic solve: homogeneous modulus, uniform eigenstrain",
     // density that an inhomogeneous run would otherwise absorb silently.
     REQUIRE(std::fabs(rep.total_energy) > 1e-6);
   }
+}
+
+TEST_CASE("eps_c = 0 zeroes the isothermal elastic effect", "[unit][elastic]") {
+  // Equation (5) is a = h(phi) [eps_c (U - U_ref) + eps_T (theta - theta_ref)].
+  // With both misfits zero the eigenstrain vanishes identically, even on an
+  // inhomogeneous body, so the driving force that would enter equation (2)
+  // is zero. A default-configured isothermal run with --eps-c=0 must be
+  // this, not "small".
+  int rank = 0;
+  int nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+
+  auto domain = pfc::domain::create(pfc::GridSize({32, 32, 1}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  pfc::comm::HaloExchangeOptions opt;
+  opt.directions = alloy_dendrite::Stepper<2>::directions();
+  pfc::sim::stacks::FDPaddedCPUStack stack(domain, 2, rank, nproc, MPI_COMM_WORLD,
+                                           opt);
+
+  alloy_dendrite::ElasticParams ep;
+  ep.c_solid = pfc::apps::Stiffness::isotropic(100.0, 0.3);
+  ep.eps_c = 0.0;
+  ep.eps_T = 0.0;
+  ep.U_ref = 0.0;
+
+  auto phi = stack.make_field();
+  auto U = stack.make_field();
+  auto th = stack.make_field();
+  phi.for_each_owned([&](int i, int j, int k) {
+    const auto c = phi.coords(i, j, k);
+    const double r = std::hypot(c[0] - 16.0, c[1] - 16.0);
+    phi(i, j, k) = std::tanh((6.0 - r) / std::sqrt(2.0));
+    U(i, j, k) = 0.4; // would source a finite eigenstrain if eps_c != 0
+    th(i, j, k) = 0.0;
+  });
+
+  alloy_dendrite::ElasticCoupling ec0(stack, ep, rank, MPI_COMM_WORLD);
+  const auto off = ec0.solve(phi, U, th);
+  REQUIRE(off.converged);
+  REQUIRE(off.total_energy == Approx(0.0).margin(1e-18));
+  REQUIRE(off.max_dfel_dphi == Approx(0.0).margin(1e-12));
+
+  ep.eps_c = 0.01;
+  alloy_dendrite::ElasticCoupling ec1(stack, ep, rank, MPI_COMM_WORLD);
+  const auto on = ec1.solve(phi, U, th);
+  REQUIRE(on.converged);
+  REQUIRE(std::fabs(on.total_energy) > 1e-8);
+  REQUIRE(std::fabs(on.max_dfel_dphi) > 1e-8);
 }
 
 TEST_CASE("elastic off is bitwise off", "[elastic]") {
