@@ -72,10 +72,31 @@ inline const double kInvSqrt2Pi = 1.0 / std::sqrt(2.0 * std::acos(-1.0));
   return pref * std::exp(-0.5 * (a * a + b * b));
 }
 
-/// Anisotropy parameter `A = (vthy/vthx)^2 - 1` of @ref bi_maxwellian.
-[[nodiscard]] inline double anisotropy(double vthx, double vthy) noexcept {
+/**
+ * @brief Temperature ratio `A = T_y/T_x = (vthy/vthx)^2` of @ref bi_maxwellian.
+ *
+ * **This is the `A` the transverse dispersion relation is written in**
+ * (`openpfc_apps/plasma_dispersion.hpp`, `BiMaxwellian::anisotropy`), and
+ * the two must agree or the Weibel growth rate is compared against the
+ * wrong oracle. An earlier revision of this header defined `anisotropy` as
+ * `A - 1` -- the *excess* -- which is the form the marginal-stability
+ * condition `k^2 c^2 = omega_pe^2 (A - 1)` is usually quoted in. Two
+ * functions of the same name differing by one is precisely the silent
+ * mismatch that produces a confident wrong number, so the ratio is now the
+ * only thing called `A` and the excess has its own name.
+ */
+[[nodiscard]] inline double temperature_ratio(double vthx,
+                                              double vthy) noexcept {
   const double r = vthy / vthx;
-  return r * r - 1.0;
+  return r * r;
+}
+
+/// `A - 1`, the quantity the Weibel cutoff `k^2 c^2 = omega_pe^2 (A - 1)` is
+/// linear in. Positive means unstable: hotter across the wave vector than
+/// along it.
+[[nodiscard]] inline double anisotropy_excess(double vthx,
+                                              double vthy) noexcept {
+  return temperature_ratio(vthx, vthy) - 1.0;
 }
 
 /**
