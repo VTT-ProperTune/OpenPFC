@@ -249,8 +249,16 @@ int run(int argc, char **argv, int rank, int nproc) {
   // the deposited charge is wrong, and the run still looks healthy while
   // damping at the wrong rate.
   if (c.name != "wave") {
+    const double vth_min = std::min(vth, vthy);
     vlasov::ics::require_resolved_tail(p.v_max - std::fabs(drift),
                                        std::max(vth, vthy), 1.0e-10);
+    // And the grid inside the box has to integrate what the box holds.
+    // Checked on the *narrowest* thermal width, since that is the one the
+    // spacing has to resolve, and on both axes independently because they
+    // are sized independently and a defect on one is invisible to a scan
+    // over the other.
+    vlasov::ics::require_resolved_spacing(p.dvx(), vth_min, 1.0e-10);
+    vlasov::ics::require_resolved_spacing(p.dvy(), vth_min, 1.0e-10);
   }
 
   const double k = p.k_skin(mode);
