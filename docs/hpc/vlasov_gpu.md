@@ -26,10 +26,12 @@ own headers; start at
 | `apps/vlasov_maxwell/src/hip/vlasov_hip_cost.cpp` | `vlasov_hip_cost`, the per-phase measurement |
 
 The CPU application is untouched. `advect.hpp`, `moments.hpp`, `maxwell.hpp`
-and `step.hpp` remain the definition of what the application computes, and
-`vlasov_run` — the only driver a science run uses — has no device path at
-all. The device is reachable only through the two binaries above. That is a
-deliberate limitation and is listed as one below.
+and `step.hpp` remain the definition of what the application computes.
+`vlasov_run` reaches the same kernels behind `--device=hip` (optional
+`--device-x=0` leaves the spectral \(x\)-shift on the host). The two extra
+binaries answer different questions: `vlasov_hip_parity` whether the device
+computes the same thing as the host, and `vlasov_hip_cost` where the time
+goes.
 
 ## Build and run
 
@@ -99,10 +101,10 @@ and the honest reading is that most of the eight-GCD cost is skew and slab
 staging together, which a GPU-aware send would only partly remove. Not done;
 measured; written down rather than assumed either way.
 
-**`vlasov_run` itself.** The science driver has no `--device=hip` switch,
-because adding one means editing `src/cpu/vlasov_run.cpp`, which was outside
-this change's remit. `DeviceStepper` is a drop-in for the `advance` /
-`deposit_all` pair, so the edit is small; see [Limitations](#limitations).
+**`vlasov_run` itself.** The science driver takes `--device=hip` (and
+`--device-x=0|1`). `DeviceStepper` is a drop-in for the `advance` /
+`deposit_all` pair; a production Landau or Weibel run can stay on the device
+for the whole step.
 
 ### The scope decision, in the order it was actually made
 
@@ -411,12 +413,9 @@ fix, and it is a derivation, not a loosened constant.
 
 ## Limitations
 
-- **`vlasov_run` cannot use the device.** The science driver is unchanged, so
-  a production Weibel or Landau run is still CPU-only. Wiring it up means
-  replacing `st.advance(dt)` with `ds.advance(dt)` behind a `--device=hip`
-  option and calling `ds.download_all()` before a snapshot or a field-output
-  sample; that is an edit to `src/cpu/vlasov_run.cpp`, which this change did
-  not own.
+- **`--device=hip` is the science path.** `vlasov_run` wires `DeviceStepper`
+  behind that flag. The remaining device limitations are the ones below, not
+  a missing switch.
 - **One species is exercised.** `DeviceStepper` allocates a brick per species
   and loops over them, but every measurement and every parity run here is the
   default single electron species. A mobile-ion run is untested on the

@@ -225,7 +225,7 @@ diagnostic sample of every run.
 | Initial conditions | Analytic, in `ics.hpp`: Maxwellian, bi-Maxwellian, and two counter-streaming configurations that differ only in which velocity component carries the drift — along $k$ for the electrostatic two-stream case, across $k$ for the electromagnetic filamentation case |
 | Key physical parameters | Per species $\sigma_s = q_s/(-e)$ and $\mu_s = m_s/m_e$; electrons are $(-1, 1)$. Thermal velocity $v_{th}/c$, drift $u/c$, box $L_x/d_e$, and the temperature ratio $A = T_y/T_x = (v_{th,y}/v_{th,x})^2$ for the Weibel case, which is unstable for $A > 1$. Ions are immobile by default and available as a second species behind a flag |
 | Observables | Field energies $\tfrac12\int E_x^2$, $\tfrac12\int(E_y^2 + B_z^2)$; per-species particle number, momentum and kinetic energy; total energy; the Gauss residual; $\min f$; the $L^1$ and $L^2$ norms and the entropy $-\int f\ln f$; velocity-boundary occupancy |
-| Model maturity | *(filled in from the measured results — see @sec-vm-verification)* |
+| Model maturity | numerical verification: **analytical** — vacuum \(\omega=ck\) to round-off; Landau \(\gamma,\omega\), two-stream \(\gamma\) and Weibel \(\gamma(k)\) against a dispersion relation solved at run time (residuals at \(10^{-13}\)); gyro-frequency to \(3.6\times10^{-6}\); estimators tested on synthetic series, not only on the runs they report. physical completeness: **reduced** — 1D2V, non-relativistic, collisionless, immobile ions by default; the Lorentz cross product and Maxwell coupling are present, oblique Weibel modes are not. calibration: **none** — \(v/c\le 0.2\) is a regime, not a fitted plasma |
 
 ### Numerical strategy
 
