@@ -222,12 +222,13 @@ half-width is a parameter rather than a constant because the parabolic
 description is only good within roughly `rho` of the tip: too narrow and
 the fit is dominated by the staircase, too wide and it is biased by the
 non-parabolic flanks. That is not a hedge — it is measurable, and it was
-measured. `t_end = 400`, everything else at the shipped values:
+measured. `t_end = 400`, everything else at the shipped values, percentages
+relative to the narrowest window:
 
-| fit half-width (cells) | 3 | 5 | 8 |
-|---|---:|---:|---:|
-| `rho/W0`, `eps4 = 0.1` | 11.51 (+0 %) | 11.94 (+4 %) | 12.72 (+10 %) |
-| `rho/W0`, `eps4 = 0.2` | 3.94 (+0 %) | 4.66 (+18 %) | 5.49 (+39 %) |
+| fit half-width (cells) | 3 | 5 | 8 | 12 |
+|---|---:|---:|---:|---:|
+| `rho/W0`, `eps4 = 0.1` | 11.51 (+0 %) | 11.94 (+4 %) | 12.72 (+10 %) | 13.83 (+20 %) |
+| `rho/W0`, `eps4 = 0.2` | 3.94 (+0 %) | 4.66 (+18 %) | 5.49 (+39 %) | 6.43 (+63 %) |
 
 The trend is monotone and in the expected direction — a wider window
 reaches the flatter flanks and reports a larger radius — and it is worse
@@ -237,9 +238,6 @@ wide enough to average the staircase and narrow enough to stay parabolic.
 **Tip velocity is unaffected** — identical to five significant figures
 across every window — because it is a level-set crossing on one row
 and does not involve the fit at all.
-
-Widening further keeps the trend going: at `eps4 = 0.1` a 12-cell
-half-window gives `rho = 13.83 W0`, `+20 %` on the 3-cell value.
 
 Rule of thumb for a science run: choose the half-width so the fit spans
 about `rho/2`, and resolve the tip with `rho >= 10 dx`. The shipped
