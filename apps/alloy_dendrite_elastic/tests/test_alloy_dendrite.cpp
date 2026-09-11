@@ -941,8 +941,12 @@ alloy_dendrite::DendriteConfig small_coupled_case() {
   c.model.eps4 = 0.02;
   c.model.M_c = 0.0;
   c.model.evolve_theta = false;
-  c.nx = 96;
-  c.ny = 96;
+  // 64² is enough for a sign-of-coupling / bitwise-off control and keeps
+  // eight Debug FFT runs inside GitHub's ctest budget (96² timed out at
+  // 600 s on ubuntu-24.04 gcc-13 Debug). Do not grow this without splitting
+  // [elastic] out of alloy-dendrite-planar.
+  c.nx = 64;
+  c.ny = 64;
   c.dx = 0.8;
   c.t_end = 8.0;
   c.n_sample = 16;

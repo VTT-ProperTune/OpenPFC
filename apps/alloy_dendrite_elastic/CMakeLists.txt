@@ -101,13 +101,14 @@ if(ALLOY_DENDRITE_ENABLE_TESTS AND OpenPFC_BUILD_TESTS
   target_link_libraries(test_alloy_dendrite PRIVATE OpenPFC openpfc_apps_common
                         Catch2::Catch2 ${_alloy_dendrite_heffte_tgt})
   include(CTest)
-  # The planar case at a small size: a few seconds, but it is a real
-  # solidification run, not a unit test of a helper. Serial, because it
-  # already reports through MPI_COMM_WORLD.
+  # The Catch binary is the Stage-1 planar run *and* the coupled elastic
+  # controls. Debug FFT on a 2-core runner is the slow path; RUN_SERIAL so
+  # ctest -j2 does not steal the cores, and 900 s covers gcc-13 Debug.
   add_test(NAME alloy-dendrite-planar COMMAND test_alloy_dendrite)
   set_tests_properties(alloy-dendrite-planar PROPERTIES
     ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1"
-    TIMEOUT 600)
+    TIMEOUT 900
+    RUN_SERIAL TRUE)
 
   if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
     # Same physics on two ranks: the halo exchange of three field groups and
