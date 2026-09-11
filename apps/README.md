@@ -9,7 +9,7 @@ Full programs built when **`OpenPFC_BUILD_APPS=ON`** (default). They install und
 
 User-facing overview and example commands: [`docs/user_guide/applications.md`](../docs/user_guide/applications.md).
 
-CMake wires subdirectories from [`apps/CMakeLists.txt`](CMakeLists.txt) in this order: `tungsten`, `aluminumNew`, `cahn_hilliard`, `thin_film`, `surface_diffusion`, `kawahara`, `ehd_film`, `gradient_elasticity`, `higher_order_pfc`, `allen_cahn`, `alloy_dendrite_elastic`, `heat3d`, `wave2d`, `kobayashi`, `vlasov_maxwell`.
+CMake wires subdirectories from [`apps/CMakeLists.txt`](CMakeLists.txt) in this order: `tungsten`, `aluminumNew`, `cahn_hilliard`, `thin_film`, `surface_diffusion`, `kawahara`, `ehd_film`, `gradient_elasticity`, `higher_order_pfc`, `inverse_homogenization`, `allen_cahn`, `alloy_dendrite_elastic`, `heat3d`, `wave2d`, `kobayashi`, `vlasov_maxwell`.
 
 For the nine JSON-session apps, `./scripts/openpfc apps` lists presets and
 supported backends. Create a case with `openpfc init CASE --app=NAME`; see the
@@ -29,6 +29,7 @@ retain their app-specific commands.
 | [**`ehd_film/`**](ehd_film/README.md) | **EHD film under a flexible plate** (\(k^6\) bending lubrication) | JSON (`inputs_json/`) | `SpectralETDSession<EhdFilmPhysics, …>`; CPU + optional HIP |
 | [**`gradient_elasticity/`**](gradient_elasticity/README.md) | **Strain-gradient elasticity** (Helmholtz–Navier, 4th/6th order) | JSON (`inputs_json/`) | one-shot spectral \(2\times 2\) invert (not ETD); CPU + optional HIP |
 | [**`higher_order_pfc/`**](higher_order_pfc/README.md) | **Eighth-order PFC correlation kernel** (two-mode; \(k^8\) free energy, \(k^{10}\) conserved dynamics) | JSON (`inputs_json/`) | `SpectralETDSession<HigherOrderPFCPhysics, …>`; CPU + optional HIP |
+| [**`inverse_homogenization/`**](inverse_homogenization/README.md) | **Periodic inverse homogenization** (target \(C_H\); issue #161). Explicit sixteenth-app exception: PDE-constrained inverse design, not another PDE demo. Forward \(C_H\) and adjoint sensitivity are in tree; the inverse loop is later. | CLI (`--key=value`) | Reuses `openpfc_apps/microelasticity.hpp` (six imposed-strain FFT solves); CPU |
 | [**`allen_cahn/`**](allen_cahn/README.md) | **2D Allen–Cahn** demo; quick visual check | CLI only (no `App` JSON) | FD, separated halos, optional PNG; CPU + optional CUDA/HIP |
 | [**`alloy_dendrite_elastic/`**](alloy_dendrite_elastic/README.md) | **Thermo-solutal-elastic alloy solidification** (quantitative dilute-alloy phase field + anti-trapping + latent heat + eigenstrain microelasticity; FTA directional / bicrystal flags on the same binary) | CLI only (`--key=value`); CSV diagnostics | FD orders 2–14 via `FDGradient`, padded `HaloExchange`, spectral elastic solve on the same decomposition; CPU (+ optional HIP FD twin) |
 | [**`heat3d/`**](heat3d/README.md) | **3D heat equation** \(\partial_t u = D\Delta u\); five drivers from scratch → spectral implicit | CLI per binary | FD (orders 2–20), spectral pointwise RHS, spectral implicit Euler; OpenMP where enabled |
