@@ -61,6 +61,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -253,7 +254,7 @@ struct Row {
 };
 
 void print_table(const Shape &shape, double dt, const std::vector<Row> &rows,
-                 double cpu_step, double dev_step) {
+                 double cpu_step, double hybrid_step, double dev_step) {
   std::printf("\n  shape %s = %.0f cells, %.3f GB/brick, dt = %.4g\n",
               shape.label().c_str(), shape.cells(), shape.cells() * 8.0 / 1e9,
               dt);
@@ -273,8 +274,11 @@ void print_table(const Shape &shape, double dt, const std::vector<Row> &rows,
   }
   std::printf("  %s\n", std::string(66, '-').c_str());
   std::printf("  %-22s %-7s %12.6f\n", "full Strang step", "host", cpu_step);
-  std::printf("  %-22s %-7s %12.6f   speedup %.2fx\n", "full Strang step",
-              "hybrid", dev_step, dev_step > 0.0 ? cpu_step / dev_step : 0.0);
+  std::printf("  %-22s %-7s %12.6f   speedup %.2fx\n", "full step, A host",
+              "hybrid", hybrid_step,
+              hybrid_step > 0.0 ? cpu_step / hybrid_step : 0.0);
+  std::printf("  %-22s %-7s %12.6f   speedup %.2fx\n", "full step, A device",
+              "device", dev_step, dev_step > 0.0 ? cpu_step / dev_step : 0.0);
 }
 
 void print_usage(std::ostream &os, const char *exe) {
@@ -386,7 +390,7 @@ int run(int argc, char **argv, int rank, int nproc) {
 
     // ---- device phases --------------------------------------------------
     {
-      DeviceStepper ds(st, ps);
+      DeviceStepper ds(st, ps, /*device_x=*/true);
       ds.upload_all();
       auto &brick = ds.brick(0);
 
@@ -394,6 +398,12 @@ int run(int argc, char **argv, int rank, int nproc) {
               [&] { brick.upload(ps.f(0)); vlasov::hip::device_synchronize(); });
       time_it("  D2H whole brick", "bus", brick_bytes,
               [&] { brick.download(ps.f(0)); vlasov::hip::device_synchronize(); });
+
+      // Phase A on the device: pack, batched r2c, phase multiply, batched
+      // c2r, unpack. The payload column counts the brick five times, which
+      // is what those five passes touch.
+      time_it("A advect_x (dt/2)", "device", 10.0 * brick_bytes,
+              [&] { ds.device_advect_x(brick, h); });
 
       time_it("B advect_vx (dt/2)", "device", (p_d + 1.0) * brick_bytes, [&] {
         ds.device_advect_vx(brick, qm, h, st.fields.Ex, Bz);
@@ -429,39 +439,51 @@ int run(int argc, char **argv, int rank, int nproc) {
       }
       cpu_step = summarise(s).mean;
     }
+    double hybrid_step = 0.0;
     double dev_step = 0.0;
     vlasov::hip::PhaseTimings split;
-    {
+    vlasov::hip::PhaseTimings hybrid_split;
+    auto time_full_step = [&](bool device_x, vlasov::hip::PhaseTimings &out) {
       Bench fresh(shape, interp);
       fresh.st->work.measure_mass = false;
-      DeviceStepper ds(*fresh.st, *fresh.ps);
+      DeviceStepper ds(*fresh.st, *fresh.ps, device_x);
       ds.upload_all();
       ds.advance(fresh.dt); // warm-up
       ds.timings().clear();
-      std::vector<double> s;
+      std::vector<double> samples;
       for (int r = 0; r < reps; ++r) {
         const double t0 = wall_seconds();
         ds.advance(fresh.dt);
-        s.push_back(wall_seconds() - t0);
+        samples.push_back(wall_seconds() - t0);
       }
-      dev_step = summarise(s).mean;
-      split = ds.timings();
-    }
+      out = ds.timings();
+      return summarise(samples).mean;
+    };
+    // Phase A on the host -- the configuration that forces four whole-brick
+    // bus transfers per step -- and then phase A on the device, which does
+    // not. The pair is the measurement that says whether porting A was
+    // worth it, and it is measured rather than argued.
+    hybrid_step = time_full_step(false, hybrid_split);
+    dev_step = time_full_step(true, split);
 
     if (rank == 0) {
-      print_table(shape, b.dt, rows, cpu_step, dev_step);
-      const double n = std::max(1, split.steps);
-      std::printf("  hybrid step split (s/step): A_host %.6f  B %.6f  C %.6f  "
-                  "D %.6f\n",
-                  split.advect_x / n, split.advect_vx / n, split.advect_vy / n,
-                  split.moments / n);
-      std::printf("                              fields %.6f  coeffs %.6f  "
-                  "halo %.6f\n",
-                  split.fields / n, split.coeffs / n, split.halo / n);
-      std::printf("                              H2D %.6f  D2H %.6f  -> "
-                  "transfers are %.1f%% of the hybrid step\n",
-                  split.h2d / n, split.d2h / n,
-                  100.0 * split.transfer_fraction());
+      print_table(shape, b.dt, rows, cpu_step, hybrid_step, dev_step);
+      auto dump = [&](const char *tag, const vlasov::hip::PhaseTimings &t) {
+        const double n = std::max(1, t.steps);
+        std::printf("  %s split (s/step): A %.6f  B %.6f  C %.6f  D %.6f\n",
+                    tag, t.advect_x / n, t.advect_vx / n, t.advect_vy / n,
+                    t.moments / n);
+        std::printf("  %*s                 fields %.6f  coeffs %.6f  halo "
+                    "%.6f\n",
+                    static_cast<int>(std::strlen(tag)), "", t.fields / n,
+                    t.coeffs / n, t.halo / n);
+        std::printf("  %*s                 H2D %.6f  D2H %.6f  -> transfers "
+                    "%.1f%% of the step\n",
+                    static_cast<int>(std::strlen(tag)), "", t.h2d / n,
+                    t.d2h / n, 100.0 * t.transfer_fraction());
+      };
+      dump("A on host  ", hybrid_split);
+      dump("A on device", split);
     }
 
     if (out.active()) {
@@ -477,17 +499,23 @@ int run(int argc, char **argv, int rank, int nproc) {
       };
       for (const auto &r : rows) emit(r.phase, r.where, r.t, r.bytes);
       emit("full step", "host", Stat{cpu_step, 0.0}, 0.0);
-      emit("full step", "hybrid", Stat{dev_step, 0.0}, 0.0);
-      const double n = std::max(1, split.steps);
-      emit("split A_host", "hybrid", Stat{split.advect_x / n, 0.0}, 0.0);
-      emit("split B", "hybrid", Stat{split.advect_vx / n, 0.0}, 0.0);
-      emit("split C", "hybrid", Stat{split.advect_vy / n, 0.0}, 0.0);
-      emit("split D", "hybrid", Stat{split.moments / n, 0.0}, 0.0);
-      emit("split fields", "hybrid", Stat{split.fields / n, 0.0}, 0.0);
-      emit("split coeffs", "hybrid", Stat{split.coeffs / n, 0.0}, 0.0);
-      emit("split halo", "hybrid", Stat{split.halo / n, 0.0}, 0.0);
-      emit("split H2D", "hybrid", Stat{split.h2d / n, 0.0}, 0.0);
-      emit("split D2H", "hybrid", Stat{split.d2h / n, 0.0}, 0.0);
+      emit("full step", "hybrid", Stat{hybrid_step, 0.0}, 0.0);
+      emit("full step", "device", Stat{dev_step, 0.0}, 0.0);
+      auto emit_split = [&](const char *where,
+                            const vlasov::hip::PhaseTimings &t) {
+        const double n = std::max(1, t.steps);
+        emit("split A", where, Stat{t.advect_x / n, 0.0}, 0.0);
+        emit("split B", where, Stat{t.advect_vx / n, 0.0}, 0.0);
+        emit("split C", where, Stat{t.advect_vy / n, 0.0}, 0.0);
+        emit("split D", where, Stat{t.moments / n, 0.0}, 0.0);
+        emit("split fields", where, Stat{t.fields / n, 0.0}, 0.0);
+        emit("split coeffs", where, Stat{t.coeffs / n, 0.0}, 0.0);
+        emit("split halo", where, Stat{t.halo / n, 0.0}, 0.0);
+        emit("split H2D", where, Stat{t.h2d / n, 0.0}, 0.0);
+        emit("split D2H", where, Stat{t.d2h / n, 0.0}, 0.0);
+      };
+      emit_split("hybrid", hybrid_split);
+      emit_split("device", split);
     }
   }
 

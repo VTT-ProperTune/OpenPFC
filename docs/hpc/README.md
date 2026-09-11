@@ -29,6 +29,7 @@ Start with the [HPC operator guide](operator_guide.md).
 | LUMI software and ROCm environment | [LUMI installation](INSTALL.LUMI.md) |
 | LUMI scheduler examples | [LUMI Slurm guide](../lumi_slurm/README.md) |
 | VTT Tohtori modules and paths | [Tohtori installation](INSTALL.tohtori.md) |
+| [`vlasov_gpu.md`](vlasov_gpu.md) | 1D2V Vlasov-Maxwell on MI250X: what was ported, what deliberately was not, and the measurement that decided each |
 
 Site pages may name current modules and filesystem paths. Generic API, CMake,
 and configuration contracts belong in the main install guide and reference

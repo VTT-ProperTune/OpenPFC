@@ -322,6 +322,7 @@ void print_usage(std::ostream &os, const char *exe) {
      << "  --steps=N                Strang steps in the integrated test (20)\n"
      << "  --samples=N              divergence reports during them     (5)\n"
      << "  --dt=X                   step; 0 derives it                 (0)\n"
+     << "  --device-x=0|1           run phase A on the device too       (1)\n"
      << "  --quiet=1                pass/fail only\n";
 }
 
@@ -338,6 +339,7 @@ int run(int argc, char **argv, int rank, int nproc) {
   const int steps = opt.integer("steps", 20);
   const int samples = opt.integer("samples", 5);
   const double dt_in = opt.real("dt", 0.0);
+  const bool device_x = opt.flag("device-x", true);
   const bool quiet = opt.flag("quiet", false);
   opt.require_all_consumed();
 
@@ -349,6 +351,8 @@ int run(int argc, char **argv, int rank, int nproc) {
     std::printf("vlasov_hip_parity: %d x %d x %d, interp %d, %d ranks, "
                 "device %s\n",
                 nx, nvx, nvy, interp, nproc, vlasov::hip::device_name());
+    std::printf("  phase A (spectral x shift) runs on the %s\n",
+                device_x ? "device (hipFFT)" : "host (FFTW)");
   }
 
   // ---- tolerances, from the arithmetic ---------------------------------
@@ -356,10 +360,24 @@ int run(int argc, char **argv, int rank, int nproc) {
   const double kappa = measure_kappa(*ref.ps, ref.ps->f(0));
   const double nv = static_cast<double>(nvx) * static_cast<double>(nvy);
   const double eta = 2.0 * nv * kUnitRoundoff * kappa;
+  // Round-off of one spectral shift, relative to max|f|. Higham's bound for
+  // a radix-2 FFT is ||e||_2 <= c log2(N) u ||f||_2 with c a small constant;
+  // a shift is a forward transform, a multiply and an inverse, so twice
+  // that, and the difference between two *implementations* of it is bounded
+  // by the sum of their errors. Converting to the max norm with
+  // ||f||_2 <= sqrt(N) ||f||_inf and taking c = 4 gives the constant below.
+  // This term is zero unless phase A runs on the device, because otherwise
+  // both paths call the identical FFTW plan on identical data.
+  const double log2nx = std::log2(static_cast<double>(nx));
+  const double eps_fft =
+      device_x ? 8.0 * log2nx * kUnitRoundoff * std::sqrt(static_cast<double>(nx))
+               : 0.0;
   if (rank == 0) {
     std::printf("  dt %.6g, %d steps\n", ref.dt, steps);
     std::printf("  N_v = %.0f, kappa = sum|f|/|sum f| = %.6f\n", nv, kappa);
     std::printf("  eta = 2 N_v u kappa = %.3e   (the moment tolerance)\n", eta);
+    std::printf("  eps_fft = 8 log2(N_x) u sqrt(N_x) = %.3e   (one x shift)\n",
+                eps_fft);
   }
 
   // =====================================================================
@@ -374,7 +392,29 @@ int run(int argc, char **argv, int rank, int nproc) {
     const double h = 0.5 * ref.dt;
     const auto f0 = snapshot(ps.f(0));
 
-    DeviceStepper ds(st, ps);
+    DeviceStepper ds(st, ps, device_x);
+
+    // -- step A ---------------------------------------------------------
+    // Only meaningful when the device has its own transform; otherwise both
+    // paths are the same FFTW call and the comparison is a tautology.
+    if (device_x) {
+      restore(ps.f(0), f0);
+      vlasov::advect_x(ps, ps.f(0), h, st.xplan, st.work);
+      const auto host_x = snapshot(ps.f(0));
+
+      restore(ps.f(0), f0);
+      ds.upload_all();
+      ds.device_advect_x(ds.brick(0), h);
+      ds.download_all();
+      vlasov::PhaseField tmp = ps.make_field();
+      std::copy(ps.f(0).data(), ps.f(0).data() + ps.f(0).size(), tmp.data());
+      tmp.note_host_write();
+      restore(ps.f(0), host_x);
+      const Diff d = compare_fields(ps, ps.f(0), tmp);
+      v.check("A advect_x   max|dev-host|", d.max_abs, eps_fft * d.scale,
+              "(rocFFT vs FFTW)");
+      v.report("A advect_x   bitwise fraction", d.bitwise_fraction());
+    }
 
     // -- step B ---------------------------------------------------------
     restore(ps.f(0), f0);
@@ -436,10 +476,24 @@ int run(int argc, char **argv, int rank, int nproc) {
       const Diff dx = compare_lines(mh.flux_x, md.flux_x);
       const Diff dy = compare_lines(mh.flux_y, md.flux_y);
       const Diff de = compare_lines(mh.v2, md.v2);
-      v.check("D rho profile  max|dev-host|", dn.max_abs, eta * dn.scale);
-      v.check("D J_x profile  max|dev-host|", dx.max_abs, eta * dx.scale);
-      v.check("D J_y profile  max|dev-host|", dy.max_abs, eta * dy.scale);
-      v.check("D v2 profile   max|dev-host|", de.max_abs, eta * de.scale);
+      // A round-off bound is a bound on the *absolute* error of a sum, and
+      // it is governed by the sum of the magnitudes of the terms, not by the
+      // magnitude of the answer. For the density that distinction does not
+      // arise -- `f` is non-negative, so the two are the same number. For
+      // the fluxes it is the whole story: `sum v_x f` over a distribution
+      // symmetric in `v_x` cancels to zero to fifteen digits, so judging it
+      // against its own value asks the two paths to agree to 1e-30 and is a
+      // test of nothing. The honest scale is `sum |v_x f| <= v_max sum f`,
+      // i.e. `v_max` times the density profile, and that is what is used.
+      const double n_scale = dn.scale;
+      const double flux_scale = ref.p.v_max * n_scale;
+      const double v2_scale = ref.p.v_max * ref.p.v_max * n_scale;
+      v.check("D rho profile  max|dev-host|", dn.max_abs, eta * n_scale);
+      v.check("D J_x profile  max|dev-host|", dx.max_abs, eta * flux_scale,
+              "(scale v_max*max n)");
+      v.check("D J_y profile  max|dev-host|", dy.max_abs, eta * flux_scale,
+              "(scale v_max*max n)");
+      v.check("D v2 profile   max|dev-host|", de.max_abs, eta * v2_scale);
       auto scalar = [&](const char *what, double a, double b) {
         v.check(what, std::fabs(a - b), eta * std::fabs(a));
       };
@@ -473,7 +527,7 @@ int run(int argc, char **argv, int rank, int nproc) {
     Bench b(nx, nvx, nvy, interp, dt_in);   // device path
     a.st->work.measure_mass = false;
     b.st->work.measure_mass = false;
-    DeviceStepper ds(*b.st, *b.ps);
+    DeviceStepper ds(*b.st, *b.ps, device_x);
     ds.upload_all();
 
     // The largest shift in cells the run takes, for the tolerance below.
@@ -501,10 +555,16 @@ int run(int argc, char **argv, int rank, int nproc) {
     }
     ds.download_all();
 
+    // Two independent per-step sources, added:
+    //  - the moments' round-off, which reaches `f` through the field and
+    //    hence through the shift, with `8` covering the three shifts and two
+    //    depositions a Strang step contains;
+    //  - the two spectral x shifts, when they run on the device.
+    // Both accumulate at worst linearly in the number of steps.
+    const double n_steps = static_cast<double>(std::max(1, steps));
     const double tol_f_rel =
-        8.0 * static_cast<double>(std::max(1, steps)) * eta *
-        std::max(1.0, alpha_max);
-    const double tol_field_rel = 4.0 * eta * static_cast<double>(std::max(1, steps));
+        n_steps * (8.0 * eta * std::max(1.0, alpha_max) + 2.0 * eps_fft);
+    const double tol_field_rel = n_steps * (4.0 * eta + 2.0 * eps_fft);
 
     const Diff df = compare_fields(*a.ps, a.ps->f(0), b.ps->f(0));
     v.report("alpha_max (v_y cells)", alpha_max);
@@ -537,8 +597,15 @@ int run(int argc, char **argv, int rank, int nproc) {
     };
     ledger_check("ledger number", la.number, lb.number);
     ledger_check("ledger kinetic_energy", la.kinetic_energy, lb.kinetic_energy);
-    ledger_check("ledger momentum_x", la.momentum_x, lb.momentum_x);
-    ledger_check("ledger momentum_y", la.momentum_y, lb.momentum_y);
+    // Same cancellation as the flux profiles: total momentum is zero in
+    // every benchmark here by construction, so it is judged against
+    // `mu v_max N`, the sum of the magnitudes its terms could have had.
+    const double mom_scale =
+        a.p.species[0].mu * a.p.v_max * std::fabs(la.number);
+    v.check("ledger momentum_x", std::fabs(la.momentum_x - lb.momentum_x),
+            tol_field_rel * mom_scale, "(scale mu*v_max*N)");
+    v.check("ledger momentum_y", std::fabs(la.momentum_y - lb.momentum_y),
+            tol_field_rel * mom_scale, "(scale mu*v_max*N)");
     ledger_check("ledger l1", la.l1, lb.l1);
     ledger_check("ledger l2", la.l2, lb.l2);
     ledger_check("ledger entropy", la.entropy, lb.entropy);

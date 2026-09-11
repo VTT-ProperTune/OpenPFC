@@ -253,6 +253,57 @@ void advect_vy_gather_hip(const double *f_dev, double *out_dev,
                           const DeviceGeometry &g, const int *base_dev,
                           const double *wts_dev, int interp_order, int first);
 
+/**
+ * @brief Turn one fractional departure offset per line into `p` Lagrange
+ *        weights.
+ *
+ * The host computes `frac` (and the integer departure cell) because that
+ * needs the fields, the halo guard and the collective that goes with it;
+ * this turns each `frac` into weights, because that needs `p(p-1)` divisions
+ * per line and divisions are what the host was actually spending its time on
+ * -- 5.7 ms per Strang step at `256^3`, more than every device kernel in the
+ * step put together.
+ *
+ * The expression is the one @ref vlasov::lagrange_weights evaluates, in the
+ * same order, and contains only `-`, `*` and `/`, so the weights are bitwise
+ * the host's and the parity statement about the gathers is unaffected.
+ */
+void lagrange_weights_hip(const double *frac_dev, double *wts_dev,
+                          std::size_t n_lines, int interp_order, int first);
+
+/// Opaque hipFFT state for the spectral `x` shift. Created once per
+/// geometry; see @ref advect_x_hip.
+struct XShiftDevicePlan;
+
+/// True when this build has a device `x` shift at all.
+[[nodiscard]] bool x_shift_device_available();
+
+/// Allocate the transform buffers and the two batched hipFFT plans.
+/// Throws `std::runtime_error` on any hipFFT or allocation failure.
+[[nodiscard]] XShiftDevicePlan *x_shift_plan_create(const DeviceGeometry &g);
+void x_shift_plan_destroy(XShiftDevicePlan *plan);
+
+/**
+ * @brief Phase A on the device: `f(x, v_x, v_y) <- f(x - v_x dt, v_x, v_y)`.
+ *
+ * The exact spectral translation of @ref vlasov::advect_x, in place on the
+ * owned cells of the padded brick. `x` is periodic and rank-local, so this
+ * is a diagonal operator in Fourier space and needs no communication and no
+ * CFL condition.
+ *
+ * This is the phase the first round of measurements said was *not* worth
+ * porting -- it is 9% of the host step -- and the second round said was the
+ * only thing left worth porting, because once B, C and D are on the device
+ * it is 74% of what remains, and it drags four whole-brick bus transfers per
+ * step along behind it. `docs/hpc/vlasov_gpu.md` has both numbers.
+ *
+ * Unlike the gathers this is **not** bitwise against the host: FFTW and
+ * rocFFT are different algorithms with different rounding. The difference is
+ * `O(log_2 N_x) u` relative, which is what `vlasov_hip_parity.cpp` allows.
+ */
+void advect_x_hip(XShiftDevicePlan *plan, double *brick_dev, double v_max,
+                  double dvx, double dt, double dx);
+
 /// Scratch, in doubles, that @ref moments_hip needs for this geometry.
 [[nodiscard]] std::size_t moments_scratch_doubles(const DeviceGeometry &g);
 
@@ -325,7 +376,8 @@ namespace vlasov::hip {
  * that has not run yet is not a measurement of anything.
  */
 struct PhaseTimings {
-  double advect_x{0.0};   ///< host, spectral shift along x (both halves)
+  double advect_x{0.0};   ///< spectral shift along x (both halves), wherever
+                          ///< it ran -- @ref DeviceStepper::device_x says
   double advect_vx{0.0};  ///< device gather, step B (both halves)
   double advect_vy{0.0};  ///< device gather, step C
   double moments{0.0};    ///< device reduction + host completion
@@ -433,19 +485,34 @@ private:
 };
 
 /**
- * @brief The Lagrange coefficients of one velocity step, on both sides.
+ * @brief The departure offsets of one velocity step, and the weights the
+ *        device builds from them.
  *
- * Held as host vectors plus their device copies, resized once and refilled
- * every step. The host arrays are filled by the unmodified
- * @ref vlasov::lagrange_weights, so the device sees bitwise the same numbers
- * the host reference uses; see the file comment for why that matters more
- * than the bandwidth it costs.
+ * The split between host and device is the point of this class. Per advected
+ * line the host computes two numbers -- the integer departure cell and the
+ * fraction inside it -- from the fields, and uploads them; the device turns
+ * each fraction into `p` Lagrange weights. The work is divided that way
+ * because the two halves cost completely different things:
+ *
+ *  - the offset is a handful of flops per line, but needs `E`, `B` and, on
+ *    the `v_y` axis, the collective halo guard that must be able to throw.
+ *    That belongs on the host and is cheap there.
+ *  - the weights are `p(p-1)` **divisions** per line. Measured at `256^3`
+ *    the host spent 5.7 ms per Strang step on nothing else -- more than
+ *    every device kernel in the step combined -- which is why they moved.
+ *
+ * Fidelity is not traded away by the move: @ref lagrange_weights_hip
+ * evaluates the same expression on the same `frac`, out of `-`, `*` and `/`
+ * only, so the weights are bitwise the host's and the gathers' parity claim
+ * is untouched. What crosses the bus is `(int + double)` per line -- one
+ * plane, not a brick.
  */
 class CoefficientBuffer {
 public:
   CoefficientBuffer() = default;
   ~CoefficientBuffer() {
     device_free(m_base_dev);
+    device_free(m_frac_dev);
     device_free(m_wts_dev);
   }
   CoefficientBuffer(const CoefficientBuffer &) = delete;
@@ -454,38 +521,44 @@ public:
   void resize(std::size_t n_lines, int p) {
     if (n_lines == m_lines && p == m_p) return;
     device_free(m_base_dev);
+    device_free(m_frac_dev);
     device_free(m_wts_dev);
     m_base_dev = nullptr;
+    m_frac_dev = nullptr;
     m_wts_dev = nullptr;
     m_lines = n_lines;
     m_p = p;
     m_base.assign(n_lines, 0);
-    m_wts.assign(n_lines * static_cast<std::size_t>(p), 0.0);
+    m_frac.assign(n_lines, 0.0);
     m_base_dev = device_alloc_int(n_lines);
+    m_frac_dev = device_alloc(n_lines);
     m_wts_dev = device_alloc(n_lines * static_cast<std::size_t>(p));
   }
 
   [[nodiscard]] std::vector<int> &base() noexcept { return m_base; }
-  [[nodiscard]] std::vector<double> &wts() noexcept { return m_wts; }
+  [[nodiscard]] std::vector<double> &frac() noexcept { return m_frac; }
   [[nodiscard]] const int *base_dev() const noexcept { return m_base_dev; }
   [[nodiscard]] const double *wts_dev() const noexcept { return m_wts_dev; }
   /// Bytes moved by one refresh; reported so the reader can weigh it against
   /// the brick the gather reads.
   [[nodiscard]] std::size_t upload_bytes() const noexcept {
-    return m_lines * (sizeof(int) + static_cast<std::size_t>(m_p) * sizeof(double));
+    return m_lines * (sizeof(int) + sizeof(double));
   }
 
-  void upload() {
+  /// Upload the offsets and expand them into weights on the device.
+  void upload_and_expand(int first) {
     device_upload_int(m_base_dev, m_base.data(), m_lines);
-    device_upload(m_wts_dev, m_wts.data(), m_wts.size());
+    device_upload(m_frac_dev, m_frac.data(), m_lines);
+    lagrange_weights_hip(m_frac_dev, m_wts_dev, m_lines, m_p, first);
   }
 
 private:
   std::size_t m_lines{0};
   int m_p{0};
   std::vector<int> m_base{};
-  std::vector<double> m_wts{};
+  std::vector<double> m_frac{};
   int *m_base_dev{nullptr};
+  double *m_frac_dev{nullptr};
   double *m_wts_dev{nullptr};
 };
 
@@ -575,8 +648,18 @@ inline void exchange_vy_device(const PhaseSpace &ps, const DeviceGeometry &g,
  */
 class DeviceStepper {
 public:
-  DeviceStepper(Stepper &st, PhaseSpace &ps)
-      : m_st(&st), m_ps(&ps), m_p(&ps.params()) {
+  /**
+   * @param st        the host stepper whose state this object drives
+   * @param ps        the phase space the state lives on
+   * @param device_x  run phase A on the device too. The default is `true`
+   *                  because the measurement says so (see @ref advect_x_hip);
+   *                  `false` keeps the host's FFTW shift and pays the four
+   *                  whole-brick bus transfers per step that forces, which
+   *                  is the configuration `vlasov_hip_cost.cpp` compares
+   *                  against so the reader can see what phase A costs.
+   */
+  DeviceStepper(Stepper &st, PhaseSpace &ps, bool device_x = true)
+      : m_st(&st), m_ps(&ps), m_p(&ps.params()), m_device_x(device_x) {
     m_g.nx = ps.nx();
     m_g.nvx = ps.nvx();
     m_g.nvy = ps.nvy_local();
@@ -591,8 +674,18 @@ public:
     m_host_out.assign(static_cast<std::size_t>(kMomQuantities) *
                           static_cast<std::size_t>(m_g.nx),
                       0.0);
+    if (m_device_x) {
+      try {
+        m_xplan = x_shift_plan_create(m_g);
+      } catch (...) {
+        device_free(m_scratch);
+        device_free(m_out);
+        throw;
+      }
+    }
   }
   ~DeviceStepper() {
+    x_shift_plan_destroy(m_xplan);
     device_free(m_scratch);
     device_free(m_out);
   }
@@ -605,6 +698,8 @@ public:
   /// Largest `v_y` halo width any step has needed. Same meaning, same
   /// reporting, as @ref vlasov::Stepper::peak_halo_used.
   [[nodiscard]] int peak_halo_used() const noexcept { return m_peak_halo; }
+  /// Whether phase A runs on the device. See the constructor.
+  [[nodiscard]] bool device_x() const noexcept { return m_device_x; }
 
   /// Push every species' distribution to the device. Call once, after the
   /// initial condition, and again only if the host state was changed behind
@@ -687,7 +782,7 @@ public:
     m_cx.resize(static_cast<std::size_t>(nvy) * static_cast<std::size_t>(nx), p);
     const double inv_dvx = 1.0 / m_ps->dvx();
     auto &base = m_cx.base();
-    auto &wts = m_cx.wts();
+    auto &frac = m_cx.frac();
     for (int k = 0; k < nvy; ++k) {
       const double vy_k = m_ps->vy(k);
       for (int i = 0; i < nx; ++i) {
@@ -700,11 +795,10 @@ public:
             static_cast<std::size_t>(k) * static_cast<std::size_t>(nx) +
             static_cast<std::size_t>(i);
         base[line] = static_cast<int>(cell);
-        lagrange_weights(p, departure - cell,
-                         &wts[line * static_cast<std::size_t>(p)]);
+        frac[line] = departure - cell;
       }
     }
-    m_cx.upload();
+    m_cx.upload_and_expand(lagrange_first_offset(p));
     device_synchronize();
     m_t.coeffs += wall_seconds() - t0;
 
@@ -739,7 +833,7 @@ public:
     m_cy.resize(static_cast<std::size_t>(nvx) * static_cast<std::size_t>(nx), p);
     const double inv_dvy = 1.0 / m_ps->dvy();
     auto &base = m_cy.base();
-    auto &wts = m_cy.wts();
+    auto &frac = m_cy.frac();
     double local_max = 0.0;
     for (int j = 0; j < nvx; ++j) {
       const double vx_j = m_ps->vx(j);
@@ -754,8 +848,7 @@ public:
             static_cast<std::size_t>(j) * static_cast<std::size_t>(nx) +
             static_cast<std::size_t>(i);
         base[line] = static_cast<int>(cell);
-        lagrange_weights(p, departure - cell,
-                         &wts[line * static_cast<std::size_t>(p)]);
+        frac[line] = departure - cell;
       }
     }
     double global_max = local_max;
@@ -773,7 +866,7 @@ public:
           " is allocated. Same condition, same reason and same refusal to "
           "clamp as the host advect_vy.");
     }
-    m_cy.upload();
+    m_cy.upload_and_expand(lagrange_first_offset(p));
     device_synchronize();
     m_t.coeffs += wall_seconds() - t0;
 
@@ -874,9 +967,26 @@ public:
   [[nodiscard]] DeviceBrick &brick(std::size_t s) { return *m_bricks.at(s); }
 
 private:
-  /// Phase A, on the host, with the two brick copies it forces.
+  /**
+   * @brief Phase A for every species.
+   *
+   * Either one hipFFT call chain on the resident brick, or -- with
+   * `device_x == false` -- the host's FFTW shift, which forces a
+   * device-to-host copy of the whole brick before it and a host-to-device
+   * copy after it. The two are timed into the same @ref PhaseTimings slots,
+   * so a cost table shows directly what the copies cost and whether the
+   * device transform earned them back.
+   */
   void half_x_step(double h) {
     for (std::size_t s = 0; s < m_bricks.size(); ++s) {
+      if (m_device_x) {
+        const double t0 = wall_seconds();
+        advect_x_hip(m_xplan, m_bricks[s]->current(), m_p->v_max, m_ps->dvx(),
+                     h, m_ps->dx());
+        device_synchronize();
+        m_t.advect_x += wall_seconds() - t0;
+        continue;
+      }
       double t0 = wall_seconds();
       m_bricks[s]->download(m_ps->f(s));
       device_synchronize();
@@ -893,6 +1003,22 @@ private:
     }
   }
 
+public:
+  /// Phase A alone, for the cost driver. Exposed rather than reached through
+  /// `advance` so that a timing can isolate it.
+  void device_advect_x(DeviceBrick &brick, double h) {
+    if (!m_device_x) {
+      throw std::runtime_error(
+          "device_advect_x: this DeviceStepper was built with device_x = "
+          "false, so there is no device plan to call");
+    }
+    advect_x_hip(m_xplan, brick.current(), m_p->v_max, m_ps->dvx(), h,
+                 m_ps->dx());
+    device_synchronize();
+  }
+
+private:
+
   Stepper *m_st{nullptr};
   PhaseSpace *m_ps{nullptr};
   const SimParams *m_p{nullptr};
@@ -902,6 +1028,8 @@ private:
   CoefficientBuffer m_cy{};
   double *m_scratch{nullptr};
   double *m_out{nullptr};
+  XShiftDevicePlan *m_xplan{nullptr};
+  bool m_device_x{true};
   std::vector<double> m_host_out{};
   std::vector<double> m_stage_send{};
   std::vector<double> m_stage_recv{};
