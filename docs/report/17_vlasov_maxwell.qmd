@@ -1,0 +1,301 @@
+# Electromagnetic Vlasov–Maxwell kinetics {#sec-vlasov}
+
+`apps/vlasov_maxwell` — a collisionless kinetic distribution function on a
+three-dimensional phase space, coupled self-consistently to the full Maxwell
+system, with a Lorentz cross-product force and electromagnetic instabilities.
+
+Every other application in this report evolves a field over physical space.
+This one evolves a *distribution over phase space*: the unknown is
+$f_s(x, v_x, v_y, t)$, a function of one spatial and two velocity
+coordinates, and the fields it is coupled to are three components of $E$ and
+$B$ that live on the spatial line alone. The phase space is where the memory
+goes and the coupling is where the physics is.
+
+It is also the chapter where the reader meets a genuinely large system. That
+is deliberate. @sec-alloy-dendrite showed that OpenPFC's finite-difference
+and spectral stacks compose; this one shows that the framework survives a
+problem whose unknown does not live on the grid the fields live on.
+
+## Physical setting
+
+A plasma is a gas in which the particles are charged, and that single change
+makes it a field theory. Neutral gas molecules interact only when they
+collide, so a neutral gas at low density is nearly a set of independent
+particles. Charged particles interact through fields that every one of them
+contributes to and every one of them feels, at every distance. A plasma is
+therefore never a collection of particles in an external field; it is a
+collection of particles in *its own* field, and that self-consistency is the
+entire difficulty.
+
+At the densities and temperatures where collisions can be neglected, the
+statistical description is the **Vlasov equation**: the distribution function
+$f_s(\mathbf{x}, \mathbf{v}, t)$ is conserved along the trajectories of the
+smooth, self-consistent field. Nothing is dissipated, nothing is lost, and
+the entropy $-\int f \ln f$ is exactly constant. That makes the system
+Hamiltonian in a strong sense — and it makes the two most famous phenomena in
+the subject surprising.
+
+**Landau damping.** A wave in a collisionless plasma decays. There is no
+dissipation anywhere in the equations, entropy is exactly conserved, and yet
+the electric field of a small perturbation dies away exponentially. The
+energy is not lost; it goes into a progressively finer structure in velocity
+space, carried by particles moving at close to the wave's phase velocity.
+This is a real physical effect, it was predicted before it was measured, and
+it is the sharpest test in this chapter because the damping rate is the root
+of a transcendental equation that can be solved to machine precision and
+compared against.
+
+**Instability.** The same free energy that a Maxwellian has exhausted is
+available whenever the distribution is *not* Maxwellian. Two counter-streaming
+beams can give up their relative kinetic energy to a growing wave. Which wave
+grows depends on the geometry, and the distinction matters here:
+
+- Beams streaming **along** the wave vector drive a charge-density
+  modulation. The unstable field is $E_x$, longitudinal; this is the
+  electrostatic **two-stream** instability, and it is visible in a
+  Vlasov–Poisson model with no magnetic field at all.
+- Beams streaming **across** the wave vector drive a transverse current
+  modulation. Current filaments of the same sign attract, the filaments
+  coalesce, and the unstable field is a *magnetic* field $B_z$ that grows
+  out of nothing. This is the **Weibel**, or filamentation, instability, and
+  it cannot happen in an electrostatic model. It is why this application is
+  electromagnetic and why it carries two velocity coordinates rather than
+  one.
+
+The second is the physically interesting case and the harder test. A model
+that grows a magnetic field from a noise seed at the right rate has the
+Lorentz force, the current deposition, the Maxwell update and the phase-space
+transport all simultaneously correct; any one of them wrong and the growth
+rate is wrong or the instability is absent.
+
+## Governing equations
+
+The complete system, presented before any reduction. For each species $s$
+with charge $q_s$ and mass $m_s$:
+
+$$
+\frac{\partial f_s}{\partial t}
+  + \mathbf{v}\cdot\nabla_{\mathbf{x}} f_s
+  + \frac{q_s}{m_s}\left(\mathbf{E} + \mathbf{v}\times\mathbf{B}\right)
+      \cdot\nabla_{\mathbf{v}} f_s = 0
+$$ {#eq-vm-vlasov}
+
+coupled to Maxwell's equations,
+
+$$
+\nabla\cdot\mathbf{E} = \frac{\rho}{\varepsilon_0},
+\qquad
+\nabla\cdot\mathbf{B} = 0,
+$$ {#eq-vm-gauss}
+
+$$
+\frac{\partial \mathbf{B}}{\partial t} = -\nabla\times\mathbf{E},
+\qquad
+\frac{\partial \mathbf{E}}{\partial t}
+  = c^{2}\nabla\times\mathbf{B} - \frac{\mathbf{J}}{\varepsilon_0},
+$$ {#eq-vm-maxwell}
+
+and closed by the kinetic moments
+
+$$
+\rho(\mathbf{x},t) = \sum_s q_s \int f_s \,\mathrm{d}\mathbf{v},
+\qquad
+\mathbf{J}(\mathbf{x},t) = \sum_s q_s \int \mathbf{v}\, f_s \,\mathrm{d}\mathbf{v}.
+$$ {#eq-vm-moments}
+
+@eq-vm-vlasov is one equation per species on a six-dimensional phase space;
+@eq-vm-maxwell is six scalar evolution equations on physical space;
+@eq-vm-gauss is two constraints; @eq-vm-moments is the coupling that makes
+the whole thing self-consistent and nonlinear. Written out in components for
+several species it is a system of a few dozen coupled equations, and that is
+before a single discretisation choice is made.
+
+### The 1D2V reduction, derived
+
+The application solves a reduction, and the reduction is *derived* here
+rather than substituted, because which components survive is not obvious and
+getting it wrong is silent.
+
+Take one spatial coordinate $x$, two velocity coordinates $(v_x, v_y)$, and
+let every field depend on $x$ and $t$ only, so $\partial_y = \partial_z = 0$.
+The closure $f_s(x, v_x, v_y, t)$ carries no $v_z$, so $J_z \equiv 0$.
+Under those two statements @eq-vm-gauss and @eq-vm-maxwell separate into
+three groups.
+
+**One component disappears for free.** $\nabla\cdot\mathbf{B} = 0$ becomes
+$\partial_x B_x = 0$, so $B_x$ is uniform in space; the $x$ component of
+Faraday's law gives $\partial_t B_x = 0$, so it is uniform in time as well.
+On a periodic line with $B_x(t=0) = 0$, therefore $B_x \equiv 0$ **exactly,
+as an identity of the geometry**. This is worth stating clearly for a reason
+that returns in @sec-vm-verification: it means $\nabla\cdot\mathbf{B} = 0$ is
+*not* a meaningful numerical test in this geometry, and reporting it as a
+passed check would be misleading.
+
+**One pair decouples.** The remaining Faraday and Ampère components pair
+$(E_z, B_y)$ together,
+$\partial_t B_y = \partial_x E_z$ and
+$\partial_t E_z = c^2 \partial_x B_y$, driven by $J_z$ — which the closure
+has set to zero. That pair is a vacuum electromagnetic wave the plasma cannot
+touch. Initialised to zero it stays zero, and the application does not carry
+it.
+
+**What is left is the physics.** Three field components,
+
+$$
+\partial_x E_x = \frac{\rho}{\varepsilon_0}
+\qquad \text{(Gauss --- a constraint)}
+$$ {#eq-vm-gauss1d}
+
+$$
+\frac{\partial E_x}{\partial t} = -\frac{J_x}{\varepsilon_0}
+\qquad \text{(Ampère --- the evolution form of the same field)}
+$$ {#eq-vm-ampere-x}
+
+$$
+\frac{\partial E_y}{\partial t} = -c^2\frac{\partial B_z}{\partial x}
+   - \frac{J_y}{\varepsilon_0},
+\qquad
+\frac{\partial B_z}{\partial t} = -\frac{\partial E_y}{\partial x} .
+$$ {#eq-vm-transverse}
+
+With $\mathbf{B} = B_z\hat{\mathbf{z}}$ and
+$\mathbf{v} = (v_x, v_y, 0)$ the Lorentz force keeps its cross product
+intact,
+
+$$
+(\mathbf{v}\times\mathbf{B})_x = +v_y B_z,
+\qquad
+(\mathbf{v}\times\mathbf{B})_y = -v_x B_z,
+$$ {#eq-vm-lorentz}
+
+which rotates velocity vectors in the $(v_x, v_y)$ plane at the gyro-frequency
+$\omega_c = q_s B_z / m_s$. **That rotation is the whole reason for two
+velocity coordinates.** A 1D1V model has no cross product, no gyro-motion, no
+transverse current and therefore no electromagnetic instability; it is a
+different and much easier problem.
+
+### Normalisation
+
+Time in $\omega_{pe}^{-1}$, length in the electron skin depth
+$d_e = c/\omega_{pe}$, velocity in $c$, $E$ in $m_e c\,\omega_{pe}/e$, $B$ in
+$m_e\omega_{pe}/e$, and $f_s$ scaled so $\int f_s\,\mathrm{d}\mathbf{v} =
+n_s/n_0$. Then $c = \varepsilon_0 = 1$, and with $\sigma_s = q_s/(-e)$ and
+$\mu_s = m_s/m_e$ the evolved system is
+
+$$
+\frac{\partial f_s}{\partial t}
+ + v_x \frac{\partial f_s}{\partial x}
+ + \frac{\sigma_s}{\mu_s}\left[
+     \left(E_x + v_y B_z\right)\frac{\partial f_s}{\partial v_x}
+   + \left(E_y - v_x B_z\right)\frac{\partial f_s}{\partial v_y}
+   \right] = 0
+$$ {#eq-vm-norm}
+
+with @eq-vm-gauss1d–@eq-vm-transverse losing their $c$ and $\varepsilon_0$.
+For electrons $\sigma_s = -1$, $\mu_s = 1$. The Debye length is
+$\lambda_D = (v_{th}/c)\,d_e$, so electrostatic benchmarks quoted in
+$k\lambda_D$ and electromagnetic ones quoted in $k d_e$ differ by the
+thermal velocity in units of $c$.
+
+### Gauss is a diagnostic, not a constraint to be imposed
+
+@eq-vm-gauss1d and @eq-vm-ampere-x are two statements about the same field.
+Differentiating the first in time and substituting the second,
+
+$$
+\frac{\partial}{\partial t}\left(\partial_x E_x - \rho\right)
+  = -\left(\partial_x J_x + \partial_t \rho\right) = 0
+$$ {#eq-vm-charge}
+
+by the continuity equation, which is itself a moment of @eq-vm-vlasov.
+**Gauss's law is preserved exactly if and only if the discrete scheme
+conserves charge.** It is therefore not something to enforce and forget: it
+is the sharpest available measurement of whether the transport and the
+deposition are consistent with each other, and this application reports the
+residual $\|\partial_x E_x - \rho\|_\infty/\|\rho\|_\infty$ at every
+diagnostic sample of every run.
+
+## Problem setup
+
+| Item | Description |
+|---|---|
+| Use case | A collisionless electron plasma on a neutralising background, perturbed and allowed to evolve self-consistently with its own electromagnetic field. Five benchmark configurations, from a vacuum light wave to the Weibel instability |
+| Domain | One OpenPFC 3-D `Domain` whose axes are $(x, v_x, v_y)$ — **the phase space is the grid.** $x$ spans $[0, L_x)$ in electron skin depths; $v_x$ and $v_y$ span $[-v_{\max}, +v_{\max}]$ in units of $c$ |
+| Boundary conditions | $x$ **periodic**, physically. $v_x$, $v_y$ **not periodic**: zero inflow, and the distribution must be negligible at the boundary. The velocity boundary is the honest weak point of a structured-grid kinetic method, so the occupancy there is a reported diagnostic of every run rather than an assumption |
+| Initial conditions | Analytic, in `ics.hpp`: Maxwellian, bi-Maxwellian, and two counter-streaming configurations that differ only in which velocity component carries the drift — along $k$ for the electrostatic two-stream case, across $k$ for the electromagnetic filamentation case |
+| Key physical parameters | Per species $\sigma_s = q_s/(-e)$ and $\mu_s = m_s/m_e$; electrons are $(-1, 1)$. Thermal velocity $v_{th}/c$, drift $u/c$, box $L_x/d_e$, and the anisotropy $A = (v_{th,y}/v_{th,x})^2 - 1$ for the Weibel case. Ions are immobile by default and available as a second species behind a flag |
+| Observables | Field energies $\tfrac12\int E_x^2$, $\tfrac12\int(E_y^2 + B_z^2)$; per-species particle number, momentum and kinetic energy; total energy; the Gauss residual; $\min f$; the $L^1$ and $L^2$ norms and the entropy $-\int f\ln f$; velocity-boundary occupancy |
+| Model maturity | *(filled in from the measured results — see @sec-vm-verification)* |
+
+### Numerical strategy
+
+Strang splitting, and the reason it works so cleanly here is a property
+specific to 1D2V electromagnetic Vlasov: **every split step is a
+constant-coefficient translation along one axis.**
+
+| step | equation | speed | independent of | method |
+|---|---|---|---|---|
+| A | $\partial_t f + v_x\,\partial_x f = 0$ | $v_x$ | $x$ | exact spectral shift, $\hat f_k \mapsto \hat f_k e^{-\mathrm{i}k v_x \Delta t}$ |
+| B | $\partial_t f + a_x\,\partial_{v_x} f = 0$ | $a_x = \frac{\sigma}{\mu}(E_x + v_y B_z)$ | $v_x$ | semi-Lagrangian, Lagrange interpolation |
+| C | $\partial_t f + a_y\,\partial_{v_y} f = 0$ | $a_y = \frac{\sigma}{\mu}(E_y - v_x B_z)$ | $v_y$ | semi-Lagrangian, over the distributed axis |
+
+Step A is exact and carries no timestep restriction, because $x$ is periodic
+and the shift speed does not depend on the coordinate being shifted. Steps B
+and C are constant-coefficient for the same reason — $a_x$ depends on $x$
+and $v_y$ but not on $v_x$, and $a_y$ depends on $x$ and $v_x$ but not on
+$v_y$ — so each is a pure translation, not a variable-coefficient advection.
+That is a real simplification and it is worth being explicit that it is a
+property of this geometry rather than a general fact about Vlasov solvers.
+
+**The field update is exact too.** In Fourier space along $x$ the
+source-free transverse pair of @eq-vm-transverse is
+
+$$
+\frac{\mathrm{d}}{\mathrm{d}t}
+\begin{pmatrix}\hat E_y\\ \hat B_z\end{pmatrix}
+= -\mathrm{i}k
+\begin{pmatrix}0 & 1\\ 1 & 0\end{pmatrix}
+\begin{pmatrix}\hat E_y\\ \hat B_z\end{pmatrix},
+$$ {#eq-vm-rot}
+
+whose matrix exponential is the closed form
+$\cos(k\Delta t)\,\mathbf{I} - \mathrm{i}\sin(k\Delta t)\,\mathbf{S}$ with $\mathbf{S} = \left(\begin{smallmatrix}0&1\\1&0\end{smallmatrix}\right)$.
+The light wave is therefore integrated **exactly, at any $\Delta t$**: it
+carries no numerical dispersion and imposes no Courant condition, which for
+an explicit electromagnetic solver is the restriction one would normally
+expect to dominate. The current enters through Duhamel's formula, which is
+the same exponential-time-differencing structure the spectral applications
+of this report already use (@sec-etd).
+
+What that leaves is worth saying plainly, because it is easy to present an
+exact sub-step as though it made the method exact: the splitting is second
+order, and **the real error of this application lives in the velocity-space
+interpolation of steps B and C.** @sec-vm-verification measures it.
+
+### Decomposition, and the cap it implies
+
+The MPI decomposition is on $v_y$ **only**, and the consequences are the
+reason for the choice:
+
+- $x$ and $v_x$ are rank-local, so step A's transform is a local
+  one-dimensional FFT needing no transpose, and step B is a purely local
+  shift.
+- Step C translates along the distributed axis and is served by the existing
+  halo exchange, with width
+  $\lceil \max|a_y|\,\Delta t/\Delta v_y\rceil + \tfrac12\,$(interpolation
+  order). This is a Courant-like condition on the *velocity* step, checked at
+  runtime: exceeding the halo is an error, never a silent wrap.
+- $E_x$, $E_y$ and $B_z$ are one-dimensional in $x$ and cheap to replicate on
+  every rank; the moments need one `MPI_Allreduce` per step over arrays of
+  length $N_x$.
+- **The rank count is capped at $N_{v_y}$.** That is a real limit of this
+  decomposition and it is stated here rather than discovered during the
+  scaling study. Going beyond it needs a second decomposition axis and a
+  transpose, which is a larger change than this application justifies.
+
+Memory is a first-class result rather than an implementation detail, and it
+is the reason kinetic equations are expensive even though every operator in
+@eq-vm-norm is first order: one species costs
+$N_x N_{v_x} N_{v_y} \times 8$ bytes per working copy, so a
+$1024\times512\times512$ phase space is 2.1 GB per copy before any field is
+allocated. @sec-vm-scaling gives the measured figure.
