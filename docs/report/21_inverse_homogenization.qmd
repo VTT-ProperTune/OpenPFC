@@ -180,4 +180,4 @@ claimed as GPU. Grid, ranks, loads per step (6), wall time per iteration, and
 | 21956076 | Rotating-square $\nu=-0.123$ |
 | 21958468 | CH family, none auxetic |
 | 21959215 | Percolation / islands / opening |
-| Stage 8 sbatch | 3-D CPU/MPI (`stage8_3d.sbatch`) |
+| 21964843 | 3-D $64^3$ inverse, 1 rank: 12 steps, 6 solves/step, 7.7–4.7 s/step, VmHWM 224 MB. 8 ranks: 1.05–0.62 s/step. Genuine $n_z=64$ spinodal, not a 2-D extrusion. CPU/`standard` only. |
