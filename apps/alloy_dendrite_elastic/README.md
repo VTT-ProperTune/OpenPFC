@@ -32,7 +32,7 @@ FFT solve, coupled, in one application; that combination is the point.
 | Binary | Stage | What it does |
 |---|---|---|
 | `alloy_dendrite_planar` | 1 | Isothermal planar front measured against the thin-interface prediction: velocity, kinetic coefficient, solute boundary layer, **effective partition coefficient**, and the two conservation invariants. |
-| `alloy_dendrite_growth` | 2 / 3 / 4 | Deterministic dendrite, 2-D or 3-D (`--nz`), with tip-velocity and tip-radius diagnostics written to CSV. `--elastic=1` is Stage 4. |
+| `alloy_dendrite_growth` | 2 / 3 / 4 | Deterministic dendrite, 2-D or 3-D (`--nz`), with tip-velocity and tip-radius diagnostics written to CSV. `--elastic=1` is the eigenstrain coupling. `--gradient` / `--pulling` / `--seed2-*` is leftover Stage 4 of issue #85 (FTA directional / bicrystal) on this binary, not a sixteenth application. |
 | `alloy_dendrite_hip_parity` | — | Runs the CPU stepper and the HIP stepper on one deterministic thermo-solutal case and subtracts them; also dumps and compares the gathered global fields so a 1-rank run can be differenced against an N-rank one. Fails on `--tol`. |
 | `alloy_dendrite_coupled_cost` | — | Times one coupled GPU step part by part: GPU phase field, device→host, host prep, host Eyre–Milton, host→device. Answers whether the elastic solve belongs on the device. |
 
@@ -70,6 +70,18 @@ alloy_dendrite_growth --run-id=on  --summary=s.csv --elastic=1 --n-el-substep=20
 # f_el, df_el/dphi and the two stress invariants, as raw bricks plus a
 # manifest. Correct at any rank count.
 alloy_dendrite_growth --elastic=1 --fields-dir=out/ --fields-every=10
+
+# FTA directional solidification on the same binary. theta is imposed,
+# evolve_theta stays off, M_c theta stays live. Downstream tip, not the
+# +x arm from the box centre. This is a geometry, not a paper-scale result.
+alloy_dendrite_growth --gradient=0.02 --pulling=0.05 --Mc=0.5 \
+                      --seed-x=20 --seed-radius=10 --t-end=200 \
+                      --csv=results/fta.csv --run-id=fta
+
+# Two-seed bicrystal (one phi, two frozen orientations). Not a two-order-
+# parameter grain-boundary model: solids that meet merge.
+alloy_dendrite_growth --seed2-radius=8 --crystal-angle=0.2 \
+                      --crystal-angle2=-0.2 --csv=results/bicrystal.csv
 
 # CPU against GPU, and 1 rank against N, on one GCD / eight GCDs
 alloy_dendrite_hip_parity --nx=96 --ny=96 --nz=96 --steps=200 --dump=ref.bin
@@ -868,6 +880,41 @@ and porting before measuring is how the wrong term gets optimised.
 | `slurm/*.sbatch` | The jobs that produced the HIP parity and coupled-cost numbers, and the compute-node re-runs of the planar/Stage-2 tables. |
 | `tests/test_alloy_dendrite.cpp` | Closed-form relations, the measurements against analytic input, a real Stage-1 run, dimensional consistency, the order-aware step limit, and the coupled elastic path. |
 
+## Directional solidification (FTA) and competing dendrites
+
+Leftover Stage 4 of issue #85, previously a separate application in unmerged
+PR #103 (`alloy_pf_directional`). Catalog stays at fifteen: the geometry
+lives on `alloy_dendrite_growth`.
+
+The frozen-temperature (Bridgman) field is the dimensionless
+
+```text
+theta(x, t) = (G / ΔT_h) (x − x0 − V_p t)
+```
+
+`--gradient` is `G/ΔT_h` in `1/W0`, `--pulling` is `V_p` in `W0/tau0`,
+`--fta-x0` defaults to the first seed. `evolve_theta` stays **off** (the
+thermal Laplacian is skipped); `theta` is **not** zeroed; `M_c` in
+equation (2) stays live. Eigenstrain under `--elastic=1` still reads the
+imposed `U, theta`. Positive gradient is hotter downstream.
+
+Cubic anisotropy is evaluated in the crystal frame,
+`n' = R(θ_c)^T n`, then `∑ n_i'^4`, with the same normalised Karma–Rappel
+`a_s` as the isothermal dendrite. `--crystal-angle` is that rotation in
+radians. A second tanh seed (`--seed2-radius`, `--seed2-x/y`,
+`--crystal-angle2`) is a single-`phi` bicrystal: nearest-seed Voronoi
+assigns the two angles. There is no grain-boundary energy and no second
+order parameter; two solids that meet merge. The tip diagnostic for FTA
+is the **downstream** solid-to-liquid crossing, not the `+x` arm from the
+box centre; a bicrystal reports two tips and the geometric GB groove.
+
+**This is not a paper-scale melt-pool result.** No CMS 2026 reduced-scale
+replication was run. No 12×3.2 µm Al–Cu bicrystal from PR #103 was
+re-run on this binary. The ctest coverage is a 45° anisotropy check, a
+hook that `M_c theta` still fires when `evolve_theta = 0`, and two-seed
+solute conservation to round-off. A competing-dendrite science run is
+not a ctest.
+
 ## Relation to PRs #103 and #104
 
 Those two unmerged branches are a quantitative Al–Cu implementation of the
@@ -886,6 +933,12 @@ not from that code, but reading them changed several decisions:
   higher-order differences make it worse; a least-squares slope over a window
   is the estimator that converges. Both velocity measurements here are
   least-squares slopes for that reason.
+
+FTA directional solidification and the two-seed bicrystal from #103 now
+live here as flags on `alloy_dendrite_growth` rather than as a sixteenth
+application. The formula is the same Bridgman field; the discretisation
+is this application's collocated high-order FD and single `phi`, not
+their two-order-parameter Ji stencil.
 
 Where this deliberately differs:
 
