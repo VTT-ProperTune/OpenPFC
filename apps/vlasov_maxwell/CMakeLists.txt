@@ -45,3 +45,29 @@ if(VLASOV_ENABLE_TESTS AND OpenPFC_BUILD_TESTS AND TARGET Catch2::Catch2)
       TIMEOUT 900)
   endforeach()
 endif()
+
+# ---------------------------------------------------------------------------
+# HIP drivers.
+#
+# Additive and optional: the CPU application above is untouched and remains
+# the reference implementation. These two binaries exist to answer questions
+# about the device path rather than to be it -- one measures where the time
+# goes (`vlasov_hip_cost`), the other whether the device computes the same
+# thing as the host (`vlasov_hip_parity`). Both link the single .hip
+# translation unit that holds every kernel; no other file in the application
+# is compiled by hipcc.
+# ---------------------------------------------------------------------------
+if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+  set(_vlasov_hip_kernels ${CMAKE_CURRENT_SOURCE_DIR}/src/hip/vlasov_device_kernels.hip)
+  foreach(_drv IN ITEMS vlasov_hip_parity vlasov_hip_cost)
+    add_executable(${_drv} src/hip/${_drv}.cpp ${_vlasov_hip_kernels})
+    target_include_directories(${_drv} PRIVATE ${VLASOV_INCLUDE_DIR})
+    target_link_libraries(${_drv} PRIVATE OpenPFC openpfc_apps_common hip::host
+                          ${_vlasov_heffte_tgt})
+    set_target_properties(${_drv} PROPERTIES
+      HIP_STANDARD 20
+      HIP_STANDARD_REQUIRED ON)
+    install(TARGETS ${_drv} DESTINATION bin)
+  endforeach()
+  message(STATUS "vlasov_maxwell HIP drivers (parity, cost) enabled")
+endif()

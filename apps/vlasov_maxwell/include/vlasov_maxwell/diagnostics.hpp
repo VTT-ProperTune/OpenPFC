@@ -48,6 +48,7 @@
  */
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdio>
 #include <filesystem>
@@ -316,6 +317,90 @@ inline void set_drifts(Ledger &now, const Ledger &ref) noexcept {
     return std::nan("");
   }
   return (n * sxy - sx * sy) / den;
+}
+
+/**
+ * @brief Exponential rate from the **envelope** of a damped or growing
+ *        oscillation.
+ *
+ * `fit_exponential_rate` regresses `ln y` over every sample, which is
+ * unbiased only if the window happens to span a whole number of
+ * half-periods. A Landau-damped mode is `|E| ~ e^{gamma t}|cos(omega t +
+ * phi)|`, so `ln|E| = gamma t + ln|cos|`, and a window covering 7.2
+ * half-periods carries the leftover 0.2 of a period as a slope error.
+ * Measured, that bias was **-9.9% on the Landau damping rate, and it did
+ * not move at all** between `n_vx = 64` and 512 or between interpolation
+ * orders 3 and 9 -- which is exactly how one can tell it is not a
+ * discretisation error: a numerical error that is indifferent to the
+ * discretisation is not numerical.
+ *
+ * Fitting the local maxima removes it: the peaks of `|cos|` all sit at 1,
+ * so the envelope is a clean exponential. The cost is a factor of `pi`
+ * fewer points, which is irrelevant next to a systematic bias.
+ *
+ * @return the fitted rate, or NaN if fewer than three peaks lie in the
+ *         window -- which is itself the useful signal that the run is too
+ *         short to measure a rate at this frequency.
+ */
+[[nodiscard]] inline double fit_envelope_rate(const std::vector<double> &t,
+                                              const std::vector<double> &y,
+                                              double t0, double t1) {
+  std::vector<double> pt, py;
+  for (std::size_t i = 1; i + 1 < t.size() && i + 1 < y.size(); ++i) {
+    if (t[i] < t0 || t[i] > t1) continue;
+    if (!(y[i] > 0.0) || !std::isfinite(y[i])) continue;
+    if (y[i] >= y[i - 1] && y[i] >= y[i + 1]) {
+      pt.push_back(t[i]);
+      py.push_back(y[i]);
+    }
+  }
+  if (pt.size() < 3) return std::nan("");
+  return fit_exponential_rate(pt, py, pt.front(), pt.back());
+}
+
+/**
+ * @brief A fit window that contains the exponential phase and nothing else.
+ *
+ * An instability seeded at `1e-5` and growing at `0.3` reaches order one
+ * by `t ~ 40` and then saturates. A window fixed in advance as "the first
+ * half of the run" therefore measures the growth *and* the saturation, and
+ * reports a rate that is low by whatever fraction of the window is flat --
+ * measured, **-64% on the two-stream case**.
+ *
+ * The window is instead chosen from the data: it starts where the mode has
+ * grown by @p rise above its seed, so the initial transient in which the
+ * seeded mode redistributes over the eigenmodes is excluded, and ends
+ * where the mode reaches @p ceiling of its own maximum, which is below any
+ * plausible saturation.
+ *
+ * @return `{t0, t1}`, or `{NaN, NaN}` if no such window exists -- which
+ *         means the run never grew, and a rate should not be quoted.
+ */
+[[nodiscard]] inline std::array<double, 2>
+auto_growth_window(const std::vector<double> &t, const std::vector<double> &y,
+                   double rise = 5.0, double ceiling = 0.2) {
+  const std::array<double, 2> none{std::nan(""), std::nan("")};
+  if (t.size() < 4 || y.size() < 4) return none;
+  double y0 = 0.0;
+  for (const double v : y) {
+    if (v > 0.0) {
+      y0 = v;
+      break;
+    }
+  }
+  double ymax = 0.0;
+  for (const double v : y) ymax = std::fmax(ymax, v);
+  if (!(y0 > 0.0) || !(ymax > rise * y0)) return none;
+  const double lo = rise * y0;
+  const double hi = ceiling * ymax;
+  if (!(hi > lo)) return none;
+  double t0 = std::nan(""), t1 = std::nan("");
+  for (std::size_t i = 0; i < t.size() && i < y.size(); ++i) {
+    if (!std::isfinite(t0) && y[i] >= lo) t0 = t[i];
+    if (std::isfinite(t0) && y[i] <= hi) t1 = t[i];
+  }
+  if (!std::isfinite(t0) || !std::isfinite(t1) || !(t1 > t0)) return none;
+  return {t0, t1};
 }
 
 /**
