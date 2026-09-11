@@ -27,6 +27,7 @@
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 #include <inverse_homogenization/auxetic_geometry.hpp>
 #include <inverse_homogenization/phase_field_inverse.hpp>
+#include <inverse_homogenization/spinodal_generator.hpp>
 #include <openpfc_apps/homogenization.hpp>
 
 namespace {
@@ -64,6 +65,10 @@ struct Config {
   std::string dump_h{};
   std::string load_h{};
   double w12{1.0};
+  int ch_steps{200};
+  double ch_kappa{1.0};
+  double ch_dt{0.2};
+  double ch_aniso_y{1.0};
 };
 
 void usage(std::ostream &os, const char *exe) {
@@ -82,7 +87,8 @@ void usage(std::ostream &os, const char *exe) {
      << "  --simp=P --simp-end=P         SIMP continuation (linear in step)\n"
      << "  --lambda-reg-end              perimeter continuation\n"
      << "  --init-amp                    noise amplitude (default 0.25)\n"
-     << "  --init rotating-squares|reentrant|noise|uniform\n"
+     << "  --init rotating-squares|reentrant|spinodal|noise|uniform\n"
+     << "  --ch-steps --ch-kappa --ch-dt --ch-aniso-y   (Stage 6 CH family)\n"
      << "  --init-half --init-angle      rotating-square size/rotation\n"
      << "  --init-thickness --init-inset re-entrant wall geometry\n"
      << "  --no-tensor=1                 W=0 (binarization-only step)\n"
@@ -177,6 +183,14 @@ bool parse_args(int argc, char **argv, Config &cfg) {
       cfg.load_h = std::string(val);
     } else if (key == "W-12") {
       ok = parse_double(val, cfg.w12) && cfg.w12 >= 0.0;
+    } else if (key == "ch-steps") {
+      ok = parse_int(val, cfg.ch_steps) && cfg.ch_steps >= 0;
+    } else if (key == "ch-kappa") {
+      ok = parse_double(val, cfg.ch_kappa) && cfg.ch_kappa > 0.0;
+    } else if (key == "ch-dt") {
+      ok = parse_double(val, cfg.ch_dt) && cfg.ch_dt > 0.0;
+    } else if (key == "ch-aniso-y") {
+      ok = parse_double(val, cfg.ch_aniso_y) && cfg.ch_aniso_y > 0.0;
     } else {
       return false;
     }
@@ -186,7 +200,8 @@ bool parse_args(int argc, char **argv, Config &cfg) {
       cfg.target != "orthotropic")
     return false;
   if (cfg.init != "uniform" && cfg.init != "noise" &&
-      cfg.init != "rotating-squares" && cfg.init != "reentrant")
+      cfg.init != "rotating-squares" && cfg.init != "reentrant" &&
+      cfg.init != "spinodal")
     return false;
   return true;
 }
@@ -259,6 +274,17 @@ int main(int argc, char **argv) {
   } else if (cfg.init == "reentrant") {
     pfc::apps::inverse::fill_reentrant_honeycomb(
         h, cfg.nx, cfg.ny, cfg.init_thickness, cfg.init_inset);
+  } else if (cfg.init == "spinodal") {
+    pfc::apps::inverse::SpinodalSpec ch;
+    ch.c0 = cfg.init_volume;
+    ch.kappa = cfg.ch_kappa;
+    ch.dt = cfg.ch_dt;
+    ch.steps = cfg.ch_steps;
+    ch.noise = cfg.init_amp;
+    ch.seed = cfg.seed;
+    ch.ay = cfg.ch_aniso_y;
+    pfc::apps::inverse::seed_spinodal_noise(h, cfg.nx, cfg.ny, cfg.nz, ch);
+    pfc::apps::inverse::generate_spinodal(domain, stack.fft(), h, ch);
   }
   if (!cfg.load_h.empty()) {
     std::ifstream in(cfg.load_h);

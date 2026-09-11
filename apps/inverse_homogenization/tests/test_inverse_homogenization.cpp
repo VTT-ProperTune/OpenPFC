@@ -27,6 +27,7 @@
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 #include <inverse_homogenization/auxetic_geometry.hpp>
 #include <inverse_homogenization/phase_field_inverse.hpp>
+#include <inverse_homogenization/spinodal_generator.hpp>
 #include <openpfc_apps/homogenization.hpp>
 
 using Catch::Matchers::WithinAbs;
@@ -295,6 +296,68 @@ TEST_CASE("Reentrant honeycomb seed homogenizes to negative C12",
   // nu≈0.27). The rotating-square seed is the geometry that has C12<0.
   REQUIRE(r.volume_fraction > 0.15);
   REQUIRE(r.volume_fraction < 0.55);
+}
+
+TEST_CASE("Cahn-Hilliard spinodal conserves mean and forms structure",
+          "[inverse][spinodal]") {
+  Slab sl(16, 16);
+  pfc::apps::inverse::SpinodalSpec ch;
+  ch.c0 = 0.5;
+  ch.kappa = 1.0;
+  ch.dt = 0.2;
+  ch.steps = 80;
+  ch.noise = 0.15;
+  ch.seed = 3;
+  pfc::apps::inverse::seed_spinodal_noise(sl.h, sl.nx, sl.ny, 1, ch);
+  double local = 0.0;
+  for (std::size_t i = 0; i < sl.h.size(); ++i) local += sl.h.data()[i];
+  double mean0 = 0.0;
+  MPI_Allreduce(&local, &mean0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  mean0 /= static_cast<double>(sl.nx) * sl.ny;
+  pfc::apps::inverse::generate_spinodal(sl.domain, sl.stack.fft(), sl.h, ch);
+  local = 0.0;
+  double local2 = 0.0;
+  for (std::size_t i = 0; i < sl.h.size(); ++i) {
+    local += sl.h.data()[i];
+    const double d = sl.h.data()[i] - 0.5;
+    local2 += d * d;
+  }
+  double mean1 = 0.0, var = 0.0;
+  MPI_Allreduce(&local, &mean1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&local2, &var, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  mean1 /= static_cast<double>(sl.nx) * sl.ny;
+  var /= static_cast<double>(sl.nx) * sl.ny;
+  REQUIRE_THAT(mean1, WithinAbs(mean0, 1.0e-6));
+  REQUIRE(var > 0.002);
+}
+
+TEST_CASE("Spinodal C12 is positive; rotating-square C12 is negative",
+          "[inverse][spinodal][auxetic]") {
+  Slab chs(16, 16);
+  pfc::apps::inverse::SpinodalSpec ch;
+  ch.c0 = 0.5;
+  ch.kappa = 1.0;
+  ch.dt = 0.2;
+  ch.steps = 80;
+  ch.noise = 0.15;
+  pfc::apps::inverse::seed_spinodal_noise(chs.h, chs.nx, chs.ny, 1, ch);
+  pfc::apps::inverse::generate_spinodal(chs.domain, chs.stack.fft(), chs.h, ch);
+  MicroelasticityParams p = phases();
+  p.c_solid = Stiffness::isotropic(1.0, 0.3);
+  p.c_liquid = Stiffness::isotropic(0.02, 0.3);
+  p.n_el_iter = 200;
+  PeriodicHomogenizer hom_ch(chs.domain, chs.stack.fft(), p);
+  const auto rch = hom_ch.compute(chs.h);
+  REQUIRE(rch.all_converged());
+  INFO("spinodal C12=" << rch.stiffness(0, 1) << " C11=" << rch.stiffness(0, 0));
+  REQUIRE(rch.stiffness(0, 1) > 0.0);
+
+  Slab sq(48, 48);
+  pfc::apps::inverse::fill_rotating_squares(sq.h, sq.nx, sq.ny, 0.200, 0.45);
+  PeriodicHomogenizer hom_sq(sq.domain, sq.stack.fft(), p);
+  const auto rsq = hom_sq.compute(sq.h);
+  REQUIRE(rsq.all_converged());
+  REQUIRE(rsq.stiffness(0, 1) < 0.0);
 }
 
 TEST_CASE("Double-well derivative vanishes at the wells and at 1/2",
