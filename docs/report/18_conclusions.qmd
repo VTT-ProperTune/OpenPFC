@@ -2,13 +2,14 @@
 
 ## What the application set demonstrates
 
-Thirteen applications, spanning fourth- through tenth-order spatial operators in
+Fourteen applications, spanning fourth- through tenth-order spatial operators in
 the shipped spectral set, conserved and non-conserved dynamics, dispersive and
 dissipative behaviour, single- and multi-field systems, and both spectral and
 finite-difference discretisations — on one runtime, with one halo/decomposition
 layer and matching CPU and GPU paths.
 
-The two claims from the abstract hold up, with qualifications worth stating.
+The two claims from the abstract hold up, with qualifications worth stating,
+and a third that @sec-alloy-dendrite adds.
 
 **High order is cheap to express.** @sec-surface-diffusion ($k^4$),
 @sec-thin-film ($k^4$), @sec-kawahara ($k^5$, imaginary), @sec-ehd-film
@@ -29,6 +30,26 @@ between $10^{-12}$ and $3\times10^{-16}$. The application sources are unchanged
 between the one-GCD and the 128-GCD runs. Strong scaling holds 82% efficiency
 over a fourfold increase in ranks at $1280^3$; weak scaling at constant work
 per GCD reaches 8.59 billion cells on 16 nodes at 49.6%.
+
+**The two discretisations compose.** Every application up to
+@sec-kobayashi uses one field family and one discretisation. The
+thermo-solutal-elastic dendrite of @sec-alloy-dendrite runs four coupled
+fields on high-order finite differences with a halo exchange, and solves
+elliptic mechanical equilibrium spectrally *on the same decomposition inside
+the same time step*. The FD and FFT stacks were built separately and for
+different applications; that they can be composed without either of them
+knowing about the other is an architectural claim the rest of the report
+cannot make, and it is now measured: 1-rank against 4-rank agreement at
+$3\times10^{-14}$ relative on the coupled fields, an elastic iteration count
+independent of problem size from $128^3$ to $512^3$, and a $512^3$ coupled
+run on 2048 ranks.
+
+It also has a price, stated in @sec-ad-cost: one elastic solve costs 41
+finite-difference steps at $600^2$ and about 166 at $1280^2$, and the global
+solve scales at 40 % efficiency from 1 to 32 ranks where the local part
+scales far better. Putting a global solve inside a local time loop is
+affordable because the solve can be lagged — it is quasi-static — and not
+because it is cheap.
 
 Two qualifications, both measured rather than suspected. The earlier $768^3$
 curves that fell below 50% by four nodes were **grid-limited, not
@@ -84,7 +105,7 @@ That is the regime most of this report's applications live in.
 
 Honest accounting of what this report cannot support:
 
-* **Ten of thirteen applications have no scaling measurement.** The spectral
+* **Ten of fourteen applications have no scaling measurement.** The spectral
   ones share a stack with @sec-tungsten and would be expected to track it, but
   expectation is not measurement.
 * **No CPU control.** Without a LUMI-C run at equal node count, the report
@@ -102,6 +123,17 @@ Honest accounting of what this report cannot support:
   and self-consistency. This is inherent to a realistic equation of state, but
   it means their correctness rests on pinned checksums rather than closed-form
   agreement.
+* **The coupled dendrite's headline magnitude is regularisation-limited.** A
+  liquid supports no shear and the eigenstrain solve cannot take zero, so
+  `mu_l/mu_s` is a free parameter of the *method*, and it moves the measured
+  slowdown from 9.8 % to 23.1 % across a fivefold range with no sign of
+  settling (@sec-ad-sensitivity). The sign, the monotonicity, the
+  near-invariance of $\sigma^{*}$ and the eigenstrain cancellation survive
+  the whole scan; the number 16.7 % does not deserve three significant
+  figures.
+* **Nothing in @sec-alloy-dendrite is quantitative in three dimensions.** The
+  $512^3$ run demonstrates scale and consistency; it is 150 $\tau_0$ long and
+  shows a rounded cross, not a developed dendrite.
 
 ## Suggested next measurements
 
@@ -117,3 +149,12 @@ In order of what would most improve this report:
    whether the shared-stack expectation actually holds.
 4. **Diagnosing the host-side memory spike** that puts a 16-node floor under
    $2048^3$.
+5. **A device Green operator for the coupled dendrite.** The measurement is
+   already made and it is unambiguous: on a GPU build the host round trip is
+   0.3 % of the coupled step while the host *solve* is 500-3000 times the
+   device step. Nothing is to be gained by overlapping transfers and
+   everything by moving the solve, and half of it exists in
+   `GPUSpectralStack` over rocFFT.
+6. **A three-dimensional dendrite long enough to measure.** The coupled
+   $512^3$ machinery works; what is missing is run length, which is a
+   question of allocation rather than of code.
