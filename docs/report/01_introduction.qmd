@@ -60,9 +60,18 @@ the methods, not two different problems.
 | Phase-field crystal | @sec-tungsten, @sec-aluminum | Production PFC, mean-field ETD, moving frames |
 | High-order spectral | @sec-cahn-hilliard – @sec-gradient-elasticity | $k^4$ to $k^{10}$ operators, each with an analytical check |
 | Finite difference | @sec-heat3d – @sec-kobayashi | Stencils, coupled fields, mixed boundaries |
-| Coupled multiphysics | @sec-alloy-dendrite | Four fields, two discretisations: local high-order FD and a global spectral elasticity solve in one time step |
-| Scalability | @sec-scalability | Measured LUMI-G curves, 1–128 GCDs (16 nodes): strong, weak, and spectral against finite difference |
+| Coupled multiphysics | @sec-alloy-dendrite, @sec-vlasov | Four continuum fields with local FD and a global spectral elasticity solve in one time step; then a kinetic distribution on a 3-D phase-space grid coupled self-consistently to Maxwell |
+| Scalability | @sec-scalability | Measured LUMI-G curves for tungsten and Heat3D, 1–128 GCDs (16 nodes): strong, weak, and spectral against finite difference. Vlasov scaling is in @sec-vlasov and stops at the $N_{v_y}$ rank cap |
 
 Every chapter ends with a *Verification* section listing what the test suite
 actually asserts. The intent is that no statement in this report has to be
 taken on trust: it either cites a test or is marked as unmeasured.
+
+Four framework-level claims are argued from those measurements, and only
+from those measurements: high differential order is compact to express
+with the spectral machinery; the same application source has been scaled
+from one GCD to sixteen GPU nodes for the two models that have a LUMI-G
+curve; local finite differences and a global spectral solve compose inside
+one multiphysics time step; and the structured-grid abstraction extends to
+a kinetic distribution on a phase-space grid with self-consistent Maxwell
+coupling. The abstract states them; the conclusions qualify them.

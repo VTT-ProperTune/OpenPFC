@@ -1,8 +1,11 @@
 # Scalability {#sec-scalability}
 
-Three applications have been strong-scaled on LUMI-G from one GCD to 32 GCDs
-across four nodes. This chapter reports those curves, what limits them, and
-where they stop being worth extending.
+Two applications — tungsten, and Heat3D in both its spectral and
+finite-difference drivers — have been strong-scaled on LUMI-G from one GCD
+to 32 GCDs across four nodes, and then to 128 GCDs across sixteen. This
+chapter reports those curves, what limits them, and where they stop being
+worth extending. Vlasov scaling is a different experiment and lives in
+@sec-vm-scaling: it is capped at $N_{v_y}$ ranks, not at 16 nodes.
 
 ## Method
 
@@ -470,10 +473,16 @@ cost ratio, and that is your answer.
 | @sec-higher-order-pfc | No — CPU/GPU agreement checked at 1 and 2 GCDs only |
 | @sec-gradient-elasticity | No — not a time-stepping problem |
 | @sec-wave2d, @sec-allen-cahn, @sec-kobayashi | No |
+| @sec-alloy-dendrite | Not here — a 2048-rank CPU run at $512^3$ in @sec-alloy-dendrite, not a LUMI-G GPU curve |
+| @sec-vlasov | Not here — host strong scaling to the $N_{v_y}$ rank cap (64 of 85) and a single-GCD HIP speedup, both in @sec-vm-scaling. Not a 16-node result |
 
 The unmeasured spectral applications share the ETD stack with @sec-tungsten
 and would be expected to behave similarly at equal grid size, but that
-expectation has not been tested and no curve is claimed for them.
+expectation has not been tested and no curve is claimed for them. The
+dendrite and Vlasov measurements live in their own chapters and answer
+different questions (does the coupled machinery run at 2048 ranks; does a
+$v_y$-only decomposition strong-scale up to its own cap). They are not
+substitutes for a LUMI-G curve in this chapter.
 
 Two gaps this section used to name are now closed. The weak-scaling one
 (@sec-scal-weak): the tungsten model is measured to 16 nodes at constant work

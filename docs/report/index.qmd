@@ -50,8 +50,10 @@ quarto render docs/report --to pdf # PDF
 
 This is a first draft. Every shipped application now carries a physical
 question, a problem-setup table and a three-axis maturity statement, and the
-mathematics and verification sections are complete. The scalability chapter
-covers the three models that have been measured on LUMI-G; the remaining
+mathematics and verification sections are complete. Fifteen applications are
+in the catalog. The scalability chapter covers the two models (tungsten and
+Heat3D) that have been measured on LUMI-G out to 16 nodes; Vlasov scaling is
+in its own chapter and stops at the $N_{v_y}$ rank cap. The remaining
 applications are marked as unmeasured rather than estimated. Where a parameter
 could not be traced to a source from this repository, the chapter says so
 instead of implying a provenance it does not have.

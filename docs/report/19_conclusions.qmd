@@ -2,14 +2,14 @@
 
 ## What the application set demonstrates
 
-Fourteen applications, spanning fourth- through tenth-order spatial operators in
+Fifteen applications, spanning fourth- through tenth-order spatial operators in
 the shipped spectral set, conserved and non-conserved dynamics, dispersive and
-dissipative behaviour, single- and multi-field systems, and both spectral and
-finite-difference discretisations — on one runtime, with one halo/decomposition
-layer and matching CPU and GPU paths.
+dissipative behaviour, single- and multi-field systems, a kinetic distribution
+on a phase-space grid, and both spectral and finite-difference discretisations
+— on one runtime, with one halo/decomposition layer. Fourteen of the fifteen
+have a device path; the coupled dendrite's elastic solve is still host-side.
 
-The two claims from the abstract hold up, with qualifications worth stating,
-and a third that @sec-alloy-dendrite adds.
+The four claims from the abstract hold up, with qualifications worth stating.
 
 **High order is cheap to express.** @sec-surface-diffusion ($k^4$),
 @sec-thin-film ($k^4$), @sec-kawahara ($k^5$, imaginary), @sec-ehd-film
@@ -24,12 +24,24 @@ is @eq-etd1, not the spectral transform by itself. An explicit integrator on
 the sixth-order operator of @sec-ehd-film would need a timestep smaller by
 orders of magnitude.
 
-**The same source scales.** @sec-scalability reports measured curves out to
-128 GCDs across 16 nodes, with checksums agreeing between 1 and 16 GCDs to
-between $10^{-12}$ and $3\times10^{-16}$. The application sources are unchanged
-between the one-GCD and the 128-GCD runs. Strong scaling holds 82% efficiency
-over a fourfold increase in ranks at $1280^3$; weak scaling at constant work
-per GCD reaches 8.59 billion cells on 16 nodes at 49.6%.
+**The same source scales — where it has been measured, and not past the
+experiment.** @sec-scalability reports LUMI-G curves for **two** applications,
+tungsten and Heat3D, out to 128 GCDs across 16 nodes, with checksums agreeing
+between 1 and 16 GCDs to between $10^{-12}$ and $3\times10^{-16}$. The
+application sources are unchanged between the one-GCD and the 128-GCD runs.
+Strong scaling holds 82% efficiency over a fourfold increase in ranks at
+$1280^3$; weak scaling at constant work per GCD reaches 8.59 billion cells on
+16 nodes at 49.6%. Those are **cost-per-step** numbers on an **equal grid**.
+They are not time-to-solution, they are not equal-accuracy, and they are not a
+licence to quote 16-node scaling for the other thirteen applications.
+
+Two qualifications, both measured rather than suspected. The earlier $768^3$
+curves that fell below 50% by four nodes were **grid-limited, not
+code-limited** — the same code at $1280^3$ scales to sixteen. And on a
+slab-decomposed spectral model the rank count must divide the slab axis: at
+$1280^3$, twelve nodes runs the same problem 1.8 times *slower* than ten,
+because $1280/96$ is not an integer (@sec-scal-strong16). That is a larger
+effect than anything else in the chapter.
 
 **The two discretisations compose.** Every application up to
 @sec-kobayashi uses one field family and one discretisation. The
@@ -49,15 +61,31 @@ finite-difference steps at $600^2$ and about 166 at $1280^2$, and the global
 solve scales at 40 % efficiency from 1 to 32 ranks where the local part
 scales far better. Putting a global solve inside a local time loop is
 affordable because the solve can be lagged — it is quasi-static — and not
-because it is cheap.
+because it is cheap. That 2048-rank run is a **science-scale demonstration
+that the machinery works**, not a quantitative three-dimensional dendrite
+and not a LUMI-G GPU strong-scaling curve.
 
-Two qualifications, both measured rather than suspected. The earlier $768^3$
-curves that fell below 50% by four nodes were **grid-limited, not
-code-limited** — the same code at $1280^3$ scales to sixteen. And on a
-slab-decomposed spectral model the rank count must divide the slab axis: at
-$1280^3$, twelve nodes runs the same problem 1.8 times *slower* than ten,
-because $1280/96$ is not an integer (@sec-scal-strong16). That is a larger
-effect than anything else in the chapter.
+**The grid can be a phase space.** Nothing in the first fourteen applications
+requires the unknown to live where the fields live. @sec-vlasov does: the
+unknown is a distribution $f_s(x, v_x, v_y)$ on a three-dimensional
+phase-space grid, the fields $E_x$, $E_y$, $B_z$ live on the spatial line
+alone, and every step crosses between them through kinetic moments and a
+Lorentz force that keeps its cross product. That is not another PDE on the
+same kind of field. It is the one application that deposits charge and
+current from a distribution, grows a magnetic field from a noise seed at the
+Weibel rate, and treats Gauss's law as a charge-conservation diagnostic
+rather than a constraint to impose. Landau damping, two-stream growth and
+Weibel growth each match a numerically solved dispersion relation to a few
+parts in a thousand; the Gauss residual sits at $10^{-14}$ on electrostatic
+runs. The transverse Weibel relation used as the oracle is **derived in this
+codebase**, not quoted, and is labelled as such.
+
+Its scaling is a different experiment from @sec-scalability. The
+decomposition is on $v_y$ only, so the rank count is capped at
+$N_{v_y}/\mathrm{halo}$ — 85 on the measured grid, and the ladder stops at
+64 with 67.8% efficiency. A single MI250X GCD is 157 times a host core at
+$256^3$ because the working brick stays device-resident; that is a
+**CPU/GPU speedup**, not an algorithmic one, and not a 16-node result.
 
 ## The method comparison
 
@@ -105,11 +133,15 @@ That is the regime most of this report's applications live in.
 
 Honest accounting of what this report cannot support:
 
-* **Ten of fourteen applications have no scaling measurement.** The spectral
-  ones share a stack with @sec-tungsten and would be expected to track it, but
-  expectation is not measurement.
-* **No CPU control.** Without a LUMI-C run at equal node count, the report
-  cannot quantify what the GPU path buys.
+* **Eleven of fifteen applications have no LUMI-G scaling curve.** Tungsten
+  and Heat3D do, out to 16 nodes. The remaining spectral applications share a
+  stack with @sec-tungsten and would be expected to track it, but expectation
+  is not measurement. The dendrite's 2048-rank run and the Vlasov ladder to
+  the $N_{v_y}$ cap are different experiments and are not substitutes.
+* **No CPU control at equal node count.** Without a LUMI-C run, the report
+  cannot quantify what the GPU path buys over CPU for the models that have
+  been scaled. The Vlasov 157× figure is one GCD against one host core, not
+  that comparison.
 * **The method comparison is settled only for a linear operator.**
   @sec-scal-accuracy answers it exactly for the heat equation, where every
   initial condition has a closed-form solution. Nonlinear models add aliasing,
@@ -123,24 +155,31 @@ Honest accounting of what this report cannot support:
   and self-consistency. This is inherent to a realistic equation of state, but
   it means their correctness rests on pinned checksums rather than closed-form
   agreement.
-* **The coupled dendrite's headline magnitude is regularisation-limited.** A
-  liquid supports no shear and the eigenstrain solve cannot take zero, so
-  `mu_l/mu_s` is a free parameter of the *method*, and it moves the measured
-  slowdown from 9.8 % to 23.1 % across a fivefold range with no sign of
-  settling (@sec-ad-sensitivity). The sign, the monotonicity, the
-  near-invariance of $\sigma^{*}$ and the eigenstrain cancellation survive
-  the whole scan; the number 16.7 % does not deserve three significant
-  figures.
+* **The coupled dendrite's magnitude is regularisation-limited, and the
+  inviscid limit is small.** A liquid supports no shear and the eigenstrain
+  solve cannot take zero, so `mu_l/mu_s` is a free parameter of the *method*.
+  Over a 200-fold scan the tip slowdown falls from 29% at 0.20 to 3.3% at
+  0.001 and is still falling (@tbl-ad-mu). An $A + B\sqrt{\mu_l}$ fit
+  extrapolates below 1%, but the two smallest points sit above it, so the
+  data does not determine the inviscid limit — only that it is a few per
+  cent, not seventeen. The 16.7% figure is the effect at a conventionally
+  chosen regularisation. The sign, the monotonicity, the near-invariance of
+  $\sigma^{*}$ and the eigenstrain cancellation survive the whole scan.
 * **Nothing in @sec-alloy-dendrite is quantitative in three dimensions.** The
   $512^3$ run demonstrates scale and consistency; it is 150 $\tau_0$ long and
   shows a rounded cross, not a developed dendrite.
+* **Vlasov–Maxwell is a 1D2V reduction of a formally inconsistent
+  non-relativistic theory**, with a velocity grid that cannot follow
+  filamentation past saturation and a rank cap at $N_{v_y}$. The late-time
+  pictures are not converged kinetic turbulence.
 
 ## Suggested next measurements
 
 In order of what would most improve this report:
 
 1. **A LUMI-C CPU control** at equal node count for one model — the last
-   unmeasured axis of the scaling story.
+   unmeasured axis of the scaling story, and a different number from the
+   Vlasov single-GCD speedup.
 2. **The nonlinear half of the method comparison.** @sec-scal-accuracy settles
    the linear case in closed form; combining it with the aliasing cost measured
    in @sec-tungsten-dealias would give the same guidance for a nonlinear
@@ -158,3 +197,6 @@ In order of what would most improve this report:
 6. **A three-dimensional dendrite long enough to measure.** The coupled
    $512^3$ machinery works; what is missing is run length, which is a
    question of allocation rather than of code.
+7. **A second decomposition axis for Vlasov**, so the rank cap is not
+   $N_{v_y}$. That is a larger change than the present application justifies,
+   and until it exists the kinetic chapter cannot join the 16-node curves.
