@@ -53,6 +53,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -447,6 +448,129 @@ auto_growth_window(const std::vector<double> &t, const std::vector<double> &y,
   }
   const double half_period = sum / static_cast<double>(mins.size() - 1);
   return std::acos(-1.0) / half_period;
+}
+
+/**
+ * @brief Discrete-velocity recurrence time \(T_R = 2\pi / (k\,\Delta v)\).
+ *
+ * Free-streaming a spatially periodic mode on a uniform velocity grid
+ * reconstructs the initial density perturbation when neighbouring cells
+ * differ in phase by \(2\pi\). That is a property of the grid, not of
+ * Landau damping, and a science fit that includes \(t \gtrsim T_R\) is
+ * measuring the recycled initial condition.
+ *
+ * Cell-centred \(v_j = -v_{\max} + (j + \tfrac12)\Delta v\) puts a global
+ * minus sign on the *signed* mode at \(t = T_R\); the observable is the
+ * modulus. See `test_recurrence.cpp`.
+ */
+[[nodiscard]] inline double recurrence_time(double k, double dv) {
+  if (!(k > 0.0) || !(dv > 0.0) || !std::isfinite(k) || !std::isfinite(dv)) {
+    throw std::invalid_argument(
+        "recurrence_time: need k > 0 and dv > 0, got k = " +
+        std::to_string(k) + ", dv = " + std::to_string(dv));
+  }
+  return 2.0 * std::acos(-1.0) / (k * dv);
+}
+
+/**
+ * @brief Refuse a science-rate window that has walked into recurrence.
+ *
+ * A fit that includes \(t > 0.8\,T_R\) is not a damping or growth rate;
+ * the discrete velocity grid is reconstructing the seed. The driver must
+ * fail loudly rather than auto-extend `t_end` or quote the recycled
+ * amplitude. @p t1 is the end of the fit window, not of the run.
+ */
+inline void require_fit_before_recurrence(double t1, double k, double dv,
+                                          double frac = 0.8) {
+  if (!std::isfinite(t1)) {
+    return;
+  }
+  const double tr = recurrence_time(k, dv);
+  if (t1 > frac * tr) {
+    throw std::runtime_error(
+        "science fit window ends at t = " + std::to_string(t1) +
+        " which is past " + std::to_string(frac) +
+        " of the recurrence time T_R = " + std::to_string(tr) +
+        " (k = " + std::to_string(k) + ", dv = " + std::to_string(dv) +
+        "). Shorten t_end or refine the velocity grid; the driver will not "
+        "extend the run past T_R.");
+  }
+}
+
+/// How @ref find_recurrence_peak failed, when it did. Empty is not "no
+/// revival": an all-zero series has nothing to recur, while a decaying
+/// mode that never comes back is a real signal in the wrong regime.
+enum class RevivalKind { empty, none, found };
+
+/// One measured recurrence peak of a strictly positive amplitude series.
+struct Revival {
+  RevivalKind kind{RevivalKind::empty};
+  double t{std::nan("")};
+  double amplitude{0.0};
+};
+
+/**
+ * @brief Time of the recurrence peak of \(|\hat\rho(k)|\) (or any positive
+ *        amplitude series that is supposed to revive at @p t_pred).
+ *
+ * Searches \([0.5, 1.3]\,t_{\mathrm{pred}}\) for a local maximum of
+ * amplitude at least @p floor_frac of the first positive sample, then
+ * refines with the same three-point parabola as
+ * @ref frequency_from_minima. Returns `empty` when there is no signal to
+ * measure, `none` when there is a signal but no revival, and `found`
+ * with the refined time otherwise. Those three are distinct on purpose:
+ * treating "the reduction was zero" as "recurrence was late" would pass
+ * a broken deposition.
+ */
+[[nodiscard]] inline Revival
+find_recurrence_peak(const std::vector<double> &t, const std::vector<double> &y,
+                     double t_pred, double floor_frac = 0.3) {
+  Revival r;
+  if (t.size() < 3 || y.size() < 3 || !(t_pred > 0.0) || !std::isfinite(t_pred)) {
+    r.kind = RevivalKind::empty;
+    return r;
+  }
+  double y0 = 0.0;
+  for (const double v : y) {
+    if (v > 0.0 && std::isfinite(v)) {
+      y0 = v;
+      break;
+    }
+  }
+  if (!(y0 > 0.0)) {
+    r.kind = RevivalKind::empty;
+    return r;
+  }
+  const double t_lo = 0.5 * t_pred;
+  const double t_hi = 1.3 * t_pred;
+  std::size_t imax = t.size();
+  double ymax = 0.0;
+  for (std::size_t i = 1; i + 1 < t.size() && i + 1 < y.size(); ++i) {
+    if (t[i] < t_lo || t[i] > t_hi) continue;
+    if (!(y[i] > 0.0) || !std::isfinite(y[i])) continue;
+    if (y[i] > ymax) {
+      ymax = y[i];
+      imax = i;
+    }
+  }
+  if (imax >= t.size() || ymax < floor_frac * y0) {
+    r.kind = RevivalKind::none;
+    return r;
+  }
+  if (!(y[imax] >= y[imax - 1] && y[imax] >= y[imax + 1])) {
+    r.kind = RevivalKind::none;
+    return r;
+  }
+  const double a = y[imax - 1];
+  const double b = y[imax];
+  const double c = y[imax + 1];
+  const double den = a - 2.0 * b + c;
+  const double sh = (std::fabs(den) > 0.0) ? 0.5 * (a - c) / den : 0.0;
+  const double dt = 0.5 * (t[imax + 1] - t[imax - 1]);
+  r.kind = RevivalKind::found;
+  r.t = t[imax] + sh * dt;
+  r.amplitude = ymax;
+  return r;
 }
 
 /**
