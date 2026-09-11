@@ -28,6 +28,7 @@
 #include <inverse_homogenization/auxetic_geometry.hpp>
 #include <inverse_homogenization/phase_field_inverse.hpp>
 #include <inverse_homogenization/spinodal_generator.hpp>
+#include <inverse_homogenization/manufacturability.hpp>
 #include <openpfc_apps/homogenization.hpp>
 
 namespace {
@@ -437,6 +438,24 @@ int main(int argc, char **argv) {
     }
     std::cout << "C11_bin " << Cb(0, 0) << " C12_bin " << Cb(0, 1)
               << " nu_bin " << nub << '\n';
+    if (nproc == 1) {
+      const auto man = pfc::apps::inverse::measure_manufacturability(
+          h, cfg.nx, cfg.ny, cfg.nz);
+      const auto manb = pfc::apps::inverse::measure_manufacturability(
+          hbin, cfg.nx, cfg.ny, cfg.nz);
+      std::cout << std::setprecision(6)
+                << "manufacturability solid_comp " << manb.n_solid_components
+                << " void_comp " << manb.n_void_components
+                << " island_solid " << manb.island_solid_frac
+                << " island_void " << manb.island_void_frac << '\n';
+      std::cout << "percolate_solid x=" << manb.percolate_solid_x
+                << " y=" << manb.percolate_solid_y << " z=" << manb.percolate_solid_z
+                << " percolate_void x=" << manb.percolate_void_x
+                << " y=" << manb.percolate_void_y << " z=" << manb.percolate_void_z
+                << '\n';
+      std::cout << "opening_loss_r1 " << manb.opening_loss_r1 << " opening_loss_r2 "
+                << manb.opening_loss_r2 << " grey " << man.grey_fraction << '\n';
+    }
   }
   MPI_Finalize();
   return 0;

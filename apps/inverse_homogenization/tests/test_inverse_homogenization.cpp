@@ -28,6 +28,7 @@
 #include <inverse_homogenization/auxetic_geometry.hpp>
 #include <inverse_homogenization/phase_field_inverse.hpp>
 #include <inverse_homogenization/spinodal_generator.hpp>
+#include <inverse_homogenization/manufacturability.hpp>
 #include <openpfc_apps/homogenization.hpp>
 
 using Catch::Matchers::WithinAbs;
@@ -358,6 +359,37 @@ TEST_CASE("Spinodal C12 is positive; rotating-square C12 is negative",
   const auto rsq = hom_sq.compute(sq.h);
   REQUIRE(rsq.all_converged());
   REQUIRE(rsq.stiffness(0, 1) < 0.0);
+}
+
+TEST_CASE("Hinged rotating squares percolate; disconnected squares are islands",
+          "[inverse][manufacturability]") {
+  Slab conn(48, 48);
+  pfc::apps::inverse::fill_rotating_squares(conn.h, conn.nx, conn.ny, 0.200, 0.45);
+  const auto mc = pfc::apps::inverse::measure_manufacturability(conn.h, 48, 48, 1);
+  REQUIRE(mc.n_solid_components == 1);
+  REQUIRE(mc.island_solid_frac < 1.0e-12);
+  REQUIRE(mc.percolate_solid_x);
+  REQUIRE(mc.percolate_solid_y);
+
+  Slab disc(48, 48);
+  pfc::apps::inverse::fill_rotating_squares(disc.h, disc.nx, disc.ny, 0.160, 0.45);
+  const auto md = pfc::apps::inverse::measure_manufacturability(disc.h, 48, 48, 1);
+  REQUIRE(md.n_solid_components == 4);
+  REQUIRE(md.island_solid_frac > 0.5);
+  REQUIRE_FALSE(md.percolate_solid_x);
+  REQUIRE_FALSE(md.percolate_solid_y);
+}
+
+TEST_CASE("A full-solid cell has no opening loss and percolates",
+          "[inverse][manufacturability]") {
+  Slab sl(16, 16);
+  fill_value(sl.h, 1.0);
+  const auto m = pfc::apps::inverse::measure_manufacturability(sl.h, 16, 16, 1);
+  REQUIRE(m.n_solid_components == 1);
+  REQUIRE(m.percolate_solid_x);
+  REQUIRE(m.percolate_solid_y);
+  REQUIRE_THAT(m.opening_loss_r1, WithinAbs(0.0, 1.0e-12));
+  REQUIRE_THAT(m.solid_frac, WithinAbs(1.0, 1.0e-12));
 }
 
 TEST_CASE("Double-well derivative vanishes at the wells and at 1/2",
