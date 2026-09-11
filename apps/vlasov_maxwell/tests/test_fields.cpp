@@ -59,7 +59,9 @@
 #include <cmath>
 #include <complex>
 #include <cstddef>
+#include <cstdio>
 #include <random>
+#include <string>
 #include <vector>
 
 #include <catch2/catch_all.hpp>
@@ -152,6 +154,26 @@ std::vector<double> maxwellian(const SimParams &p, double n0, double dn,
     }
   }
   return f;
+}
+
+/// Least-squares slope of `log(err)` against `log(h)`: the fitted order of
+/// accuracy. Copied from `test_transport.cpp` rather than invented a second
+/// time; a single pair of levels is one noisy number.
+double fitted_order(const std::vector<double> &h, const std::vector<double> &e) {
+  const std::size_t n = h.size();
+  REQUIRE(n == e.size());
+  REQUIRE(n >= 2);
+  double sx = 0.0, sy = 0.0, sxx = 0.0, sxy = 0.0;
+  for (std::size_t i = 0; i < n; ++i) {
+    const double x = std::log(h[i]);
+    const double y = std::log(e[i]);
+    sx += x;
+    sy += y;
+    sxx += x * x;
+    sxy += x * y;
+  }
+  const double nd = static_cast<double>(n);
+  return (nd * sxy - sx * sy) / (nd * sxx - sx * sx);
 }
 
 /// View over this rank's slab of a *full* phase-space array, decomposed on
@@ -1229,6 +1251,91 @@ TEST_CASE("entropy of a Maxwellian matches -int f ln f",
   // floor of summing 128^2 positive terms, not a wish.
   REQUIRE(mom.entropy == Approx(s_exact).epsilon(1e-10));
   REQUIRE(mom.number == Approx(n0 * p.Lx).epsilon(1e-12));
+}
+
+TEST_CASE("Strang splitting of the Lorentz pair is second order in dt",
+          "[unit][step][strang]") {
+  // Vacuum waves are exact at any dt, and Landau gamma is insensitive to
+  // Delta t, so neither measures the splitting. Gyro-motion with frozen
+  // uniform B and an x-independent drifting Maxwellian does: advect_x is
+  // the identity, the field update is a no-op, and the remaining error is
+  // Strang of the Lorentz pair (advect_vx, advect_vy, advect_vx). The
+  // analytic mean velocity rotates at omega_c = -qm B.
+  if (world_size() != 1) {
+    SKIP("Strang-order table is a rank-local gyro problem");
+  }
+  const double vth = 0.05;
+  const double ux = 0.2;
+  const double b_ext = 0.5;
+  vlasov::SimParams p;
+  p.nx = 8;
+  p.nvx = 32;
+  p.nvy = 32;
+  p.Lx = 2.0 * kPi;
+  p.v_max = ux + 8.0 * vth;
+  p.v_thermal = vth;
+  p.b_ext = b_ext;
+  p.self_consistent = false;
+  p.electrostatic = false;
+  p.interp_order = 5;
+  p.validate();
+
+  const double qm = p.species[0].qm();
+  const double omega = -qm * b_ext; // +0.5 for electrons
+  const double period = 2.0 * kPi / std::fabs(omega);
+  const double a_max = std::fabs(qm) * p.v_max * std::fabs(b_ext);
+  const double alpha_max = a_max * (period / 8.0) / p.dvy();
+  const int halo = vlasov::required_halo_width(alpha_max, p.interp_order);
+
+  auto mean_v = [&](const vlasov::Stepper &st) {
+    const auto pm = vlasov::momentum(p, p.species[0], st.moments[0]);
+    const double n = st.moments[0].number;
+    return std::array<double, 2>{pm[0] / n, pm[1] / n};
+  };
+
+  auto run = [&](int nsteps) {
+    vlasov::PhaseSpace ps(p, halo, MPI_COMM_SELF);
+    ps.initialise(0, [&](double, double vx, double vy) {
+      return vlasov::ics::maxwellian(vx, vy, vth, 1.0, ux, 0.0);
+    });
+    vlasov::Stepper st(p, ps);
+    st.deposit_all();
+    const double dt = period / static_cast<double>(nsteps);
+    double worst = 0.0;
+    for (int s = 1; s <= nsteps; ++s) {
+      st.advance(dt);
+      const double t = static_cast<double>(s) * dt;
+      const auto v = mean_v(st);
+      const double vx_ex = ux * std::cos(omega * t);
+      const double vy_ex = ux * std::sin(omega * t);
+      worst = std::max(worst, std::hypot(v[0] - vx_ex, v[1] - vy_ex));
+    }
+    return worst;
+  };
+
+  const std::vector<int> nsteps{8, 16, 32, 64};
+  std::vector<double> hs, errs;
+  std::string table;
+  for (int n : nsteps) {
+    const double dt = period / static_cast<double>(n);
+    const double err = run(n);
+    hs.push_back(dt);
+    errs.push_back(err);
+    char buf[128];
+    std::snprintf(buf, sizeof(buf), "  n=%2d  dt=%.5f  err=%.3e", n, dt, err);
+    table += buf;
+    if (hs.size() > 1) {
+      const double rate =
+          std::log(errs[hs.size() - 2] / err) / std::log(2.0);
+      std::snprintf(buf, sizeof(buf), "  pairwise=%.2f", rate);
+      table += buf;
+    }
+    table += "\n";
+  }
+  const double order = fitted_order(hs, errs);
+  INFO("Strang gyro table\n" << table << "  fitted order = " << order);
+  REQUIRE(order == Approx(2.0).margin(0.2));
+  REQUIRE(errs.back() < errs.front());
 }
 
 TEST_CASE("the electrostatic reduction holds Ey and Bz at zero",
