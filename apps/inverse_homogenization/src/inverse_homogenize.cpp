@@ -57,6 +57,8 @@ struct Config {
   double init_amp{0.25};
   int no_tensor{0};
   std::string dump_h{};
+  std::string load_h{};
+  double w12{1.0};
 };
 
 void usage(std::ostream &os, const char *exe) {
@@ -76,7 +78,8 @@ void usage(std::ostream &os, const char *exe) {
      << "  --lambda-reg-end              perimeter continuation\n"
      << "  --init-amp                    noise amplitude (default 0.25)\n"
      << "  --no-tensor=1                 W=0 (binarization-only step)\n"
-     << "  --dump-h=PATH                 write the final h field (single rank)\n";
+     << "  --dump-h=PATH --load-h=PATH   write/read h (single rank)\n"
+     << "  --W-12                        extra weight on C12 (auxetic default 4)\n";
 }
 
 bool parse_double(std::string_view v, double &out) {
@@ -127,7 +130,7 @@ bool parse_args(int argc, char **argv, Config &cfg) {
     else if (key == "lambda-reg") ok = parse_double(val, cfg.lambda_reg);
     else if (key == "epsilon") ok = parse_double(val, cfg.epsilon) && cfg.epsilon > 0.0;
     else if (key == "dt") ok = parse_double(val, cfg.dt) && cfg.dt > 0.0;
-    else if (key == "steps") ok = parse_int(val, cfg.steps) && cfg.steps > 0;
+    else if (key == "steps") ok = parse_int(val, cfg.steps) && cfg.steps >= 0;
     else if (key == "init") cfg.init = std::string(val);
     else if (key == "init-volume") ok = parse_double(val, cfg.init_volume);
     else if (key == "seed") {
@@ -154,6 +157,10 @@ bool parse_args(int argc, char **argv, Config &cfg) {
       ok = parse_int(val, cfg.no_tensor);
     } else if (key == "dump-h") {
       cfg.dump_h = std::string(val);
+    } else if (key == "load-h") {
+      cfg.load_h = std::string(val);
+    } else if (key == "W-12") {
+      ok = parse_double(val, cfg.w12) && cfg.w12 >= 0.0;
     } else {
       return false;
     }
@@ -228,6 +235,24 @@ int main(int argc, char **argv) {
         }
         h(i, j, k) = std::min(1.0, std::max(0.0, hv));
       }
+  if (!cfg.load_h.empty()) {
+    std::ifstream in(cfg.load_h);
+    int nx = 0, ny = 0, nz = 0;
+    in >> nx >> ny >> nz;
+    if (!in || nx != cfg.nx || ny != cfg.ny || nz != cfg.nz) {
+      if (rank == 0)
+        std::cerr << "load-h: grid mismatch or unreadable " << cfg.load_h << '\n';
+      MPI_Finalize();
+      return 2;
+    }
+    for (int k = 0; k < n[2]; ++k)
+      for (int j = 0; j < n[1]; ++j)
+        for (int i = 0; i < n[0]; ++i) {
+          double v = 0.0;
+          in >> v;
+          h(i, j, k) = std::min(1.0, std::max(0.0, v));
+        }
+  }
   h.note_host_write();
 
   pfc::apps::MicroelasticityParams p;
@@ -249,17 +274,24 @@ int main(int argc, char **argv) {
   spec.max_abs_delta = cfg.max_delta;
   spec.project_volume = cfg.project_volume != 0;
   spec.simp_p = cfg.simp;
-  if (cfg.no_tensor != 0) spec.W = pfc::apps::Voigt6{};
+  if (cfg.no_tensor != 0) {
+    spec.W = pfc::apps::Voigt6{};
+  } else if (cfg.w12 != 1.0 || cfg.target == "auxetic") {
+    const double w = (cfg.target == "auxetic" && cfg.w12 == 1.0) ? 4.0 : cfg.w12;
+    spec.W(0, 1) = spec.W(1, 0) = w;
+    spec.W(0, 2) = spec.W(2, 0) = w;
+    spec.W(1, 2) = spec.W(2, 1) = w;
+  }
 
   pfc::apps::inverse::PhaseFieldInverse inv(domain, stack.fft(), p);
   std::ofstream csv;
   if (rank == 0) {
     std::cout << "target " << cfg.target << " grid " << cfg.nx << 'x' << cfg.ny
               << 'x' << cfg.nz << " steps " << cfg.steps << '\n';
-    std::cout << "step J J_tensor J_volume J_reg volume grad_rms step_rms grey perimeter\n";
+    std::cout << "step J J_tensor J_volume J_reg volume grad_rms step_rms grey perimeter C11 C12\n";
     if (!cfg.csv.empty()) {
       csv.open(cfg.csv);
-      csv << "step,J,J_tensor,J_volume,J_reg,volume,grad_rms,step_rms,grey,perimeter\n";
+      csv << "step,J,J_tensor,J_volume,J_reg,volume,grad_rms,step_rms,grey,perimeter,C11,C12\n";
     }
   }
   pfc::apps::inverse::InverseStepReport last{};
@@ -278,12 +310,12 @@ int main(int argc, char **argv) {
                 << last.J_tensor << ' ' << last.J_volume << ' ' << last.J_reg
                 << ' ' << last.volume_fraction << ' ' << last.grad_rms << ' '
                 << last.step_rms << ' ' << last.grey_fraction << ' '
-                << last.perimeter << '\n';
+                << last.perimeter << ' ' << last.C11 << ' ' << last.C12 << '\n';
       if (csv.is_open()) {
         csv << s << ',' << last.J << ',' << last.J_tensor << ',' << last.J_volume
             << ',' << last.J_reg << ',' << last.volume_fraction << ','
             << last.grad_rms << ',' << last.step_rms << ',' << last.grey_fraction
-            << ',' << last.perimeter << '\n';
+            << ',' << last.perimeter << ',' << last.C11 << ',' << last.C12 << '\n';
       }
     }
     if (!last.elasticity_converged) {
@@ -304,6 +336,16 @@ int main(int argc, char **argv) {
   // Physical C_H of the final h (linear two-phase interpolation), even if
   // SIMP or W=0 was used during the loop.
   const auto final = inv.homogenizer().compute(h);
+  auto hbin = h;
+  {
+    const auto ln2 = h.local_size();
+    for (int k = 0; k < ln2[2]; ++k)
+      for (int j = 0; j < ln2[1]; ++j)
+        for (int i = 0; i < ln2[0]; ++i)
+          hbin(i, j, k) = (h(i, j, k) > 0.5) ? 1.0 : 0.0;
+    hbin.note_host_write();
+  }
+  const auto bin = inv.homogenizer().compute(hbin);
   if (rank == 0) {
     std::cout << std::setprecision(16) << "INVERSE_CHECKSUM " << last.J << '\n';
     const auto &C = final.stiffness;
@@ -327,6 +369,23 @@ int main(int argc, char **argv) {
     const double rel =
         (C - Ct).frobenius_norm() / std::max(Ct.frobenius_norm(), 1.0e-30);
     std::cout << std::setprecision(8) << "rel_frobenius " << rel << '\n';
+    const double den = C(0, 0) + C(0, 1);
+    const double nu = (std::abs(den) > 1.0e-30) ? C(0, 1) / den : 0.0;
+    std::cout << "C11 " << C(0, 0) << " C12 " << C(0, 1) << " nu_eff " << nu
+              << " grey " << last.grey_fraction << '\n';
+    const auto &Cb = bin.stiffness;
+    const double denb = Cb(0, 0) + Cb(0, 1);
+    const double nub = (std::abs(denb) > 1.0e-30) ? Cb(0, 1) / denb : 0.0;
+    std::cout << "C_H_thresholded (h>0.5)\n";
+    for (int i = 0; i < 6; ++i) {
+      for (int j = 0; j < 6; ++j) {
+        if (j) std::cout << ' ';
+        std::cout << std::setprecision(8) << Cb(i, j);
+      }
+      std::cout << '\n';
+    }
+    std::cout << "C11_bin " << Cb(0, 0) << " C12_bin " << Cb(0, 1)
+              << " nu_bin " << nub << '\n';
   }
   MPI_Finalize();
   return 0;

@@ -93,6 +93,8 @@ struct InverseStepReport {
   double grey_fraction{0.0};
   /// sqrt(mean(-h Δh)), a specific-surface / length-scale proxy.
   double perimeter{0.0};
+  double C11{0.0};
+  double C12{0.0};
   bool elasticity_converged{false};
 };
 
@@ -188,6 +190,8 @@ public:
       const auto r = m_hom.compute(*h_el);
       out.elasticity_converged = r.all_converged();
       out.J_tensor = tensor_mismatch(r.stiffness, spec.C_target, spec.W);
+      out.C11 = r.stiffness(0, 0);
+      out.C12 = r.stiffness(0, 1);
       m_hom.objective_sensitivity(*h_el, spec.C_target, spec.W, m_dJdh);
       if (spec.simp_p != 1.0) {
         const double pexp = spec.simp_p;
