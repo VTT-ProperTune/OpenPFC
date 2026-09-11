@@ -242,6 +242,8 @@ int main(int argc, char **argv) {
     return 2;
   }
 
+  int rc = 0;
+  {
   const pfc::Domain domain = pfc::domain::create(
       pfc::GridSize({cfg.nx, cfg.ny, cfg.nz}),
       pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
@@ -295,8 +297,7 @@ int main(int argc, char **argv) {
     if (!in || nx != cfg.nx || ny != cfg.ny || nz != cfg.nz) {
       if (rank == 0)
         std::cerr << "load-h: grid mismatch or unreadable " << cfg.load_h << '\n';
-      MPI_Finalize();
-      return 2;
+      rc = 2;
     }
     for (int k = 0; k < n[2]; ++k)
       for (int j = 0; j < n[1]; ++j)
@@ -381,8 +382,8 @@ int main(int argc, char **argv) {
     }
     if (!last.elasticity_converged) {
       if (rank == 0) std::cerr << "elasticity did not converge at step " << s << '\n';
-      MPI_Finalize();
-      return 1;
+      rc = 1;
+      break;
     }
   }
   if (rank == 0 && !cfg.dump_h.empty()) {
@@ -474,6 +475,7 @@ int main(int argc, char **argv) {
                 << manb.opening_loss_r2 << " grey " << man.grey_fraction << '\n';
     }
   }
+  } // SpectralCPUStack / HeFFTe before MPI_Finalize
   MPI_Finalize();
-  return 0;
+  return rc;
 }
