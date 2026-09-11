@@ -538,6 +538,10 @@ struct DendriteResult {
   double rho_tip2{std::numeric_limits<double>::quiet_NaN()};
   /// Geometric GB groove (`measure_bicrystal_tips`); NaN without a second seed.
   double x_groove{std::numeric_limits<double>::quiet_NaN()};
+  double y_groove{std::numeric_limits<double>::quiet_NaN()};
+  /// `v_tip - V_p`. Under a Bridgman field this is the velocity relative to
+  /// the isotherm; zero means the tip is locked to the pulling speed.
+  double v_rel{std::numeric_limits<double>::quiet_NaN()};
   /// `V rho^2 / (D_l d0)`, the reciprocal of `sigma*/2`. Kept for continuity
   /// with the earlier CSVs.
   double selection{std::numeric_limits<double>::quiet_NaN()};
@@ -638,6 +642,11 @@ template <int Dim>
     throw std::invalid_argument(
         "run_dendrite: FTA (--gradient/--pulling) freezes theta; do not also "
         "set evolve_theta");
+  }
+  if (fta_active(cfg) && !(p.M_c > 0.0)) {
+    throw std::invalid_argument(
+        "run_dendrite: --gradient/--pulling is a no-op at Mc=0; FTA needs "
+        "M_c theta in equation (2). Pass --Mc>0 (the campaign uses 0.5).");
   }
   // Interface CFL at the pulling speed: the isotherm must not skip a cell,
   // or the discrete d_t phi that feeds the anti-trapping current is junk.
@@ -757,7 +766,7 @@ template <int Dim>
         "solute_total,solute_drift_rel,heat_balance,heat_drift_abs,"
         "theta_total,phi_total,phi_min,phi_max,u_min,u_max,"
         "el_iterations,el_energy,el_max_dfel,el_mean_stress,"
-        "x_tip2,y_tip2,rho_tip2,x_groove",
+        "x_tip2,y_tip2,v_tip2,rho_tip2,x_groove,y_groove,v_rel,x_iso",
         rank);
   }
 
@@ -815,6 +824,7 @@ template <int Dim>
     DendriteTip tip{};
     DendriteTip tip2{};
     double x_groove = std::numeric_limits<double>::quiet_NaN();
+    double y_groove = std::numeric_limits<double>::quiet_NaN();
     TipWindowScan scan{};
     TipWindowScan rscan{};
     if (bicrystal) {
@@ -824,7 +834,9 @@ template <int Dim>
       tip = bi.tip1;
       tip2 = bi.tip2;
       x_groove = bi.x_groove;
+      y_groove = bi.y_groove;
       res.x_groove = x_groove;
+      res.y_groove = y_groove;
     } else if (fta) {
       tip = measure_downstream_tip(plane, cfg.nx, cfg.ny, cfg.dx, cfg.dx,
                                    /*i_start=*/0, /*j_lo=*/0, cfg.ny - 1,
@@ -861,13 +873,20 @@ template <int Dim>
                              std::fabs(cons0.solute_total);
     const double heat_drift = std::fabs(cons.heat_balance - cons0.heat_balance);
     const double v_now = trailing_slope(t_s, x_s, 0.25);
+    const double v2_now = trailing_slope(t2_s, x2_s, 0.25);
+    const double v_rel_now =
+        std::isfinite(v_now) ? v_now - cfg.fta_pulling
+                             : std::numeric_limits<double>::quiet_NaN();
+    const double x_iso =
+        fta ? fta_x0 + cfg.fta_pulling * t
+            : std::numeric_limits<double>::quiet_NaN();
     if (ts_csv.active()) {
       ts_csv.row(format(
           "%s,%d,%.10g,%.10g,%.10g,%.10g,%.10g,%.6g,%d,"
           "%.10g,%.10g,%.10g,%.10g,%.6g,"
           "%.17g,%.6g,%.17g,%.6g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,"
           "%d,%.10g,%.10g,%.6g,"
-          "%.10g,%.10g,%.10g,%.10g",
+          "%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g",
           cfg.run_id.c_str(), step, t, tip.x_tip, tip.y_tip, v_now, tip.rho,
           tip.fit_rms, tip.fit_rows, scan.rho[0], scan.rho[1], scan.rho[2],
           scan.rho[3], scan.spread, cons.solute_total, sol_drift,
@@ -879,7 +898,8 @@ template <int Dim>
 #else
           0, 0.0, 0.0, 0.0,
 #endif
-          tip2.x_tip, tip2.y_tip, tip2.rho, x_groove));
+          tip2.x_tip, tip2.y_tip, v2_now, tip2.rho, x_groove, y_groove,
+          v_rel_now, x_iso));
     }
     if (snap.due(n_sample_seen)) {
       snap.note_time(t);
@@ -934,6 +954,8 @@ template <int Dim>
   res.v_tip2 = trailing_slope(t2_s, x2_s, cfg.fit_fraction);
   res.rho_tip2 = trailing_mean(rho2_s, cfg.fit_fraction);
   res.x_tip2 = x2_s.empty() ? std::numeric_limits<double>::quiet_NaN() : x2_s.back();
+  res.v_rel = std::isfinite(res.v_tip) ? res.v_tip - cfg.fta_pulling
+                                       : std::numeric_limits<double>::quiet_NaN();
   res.v_drift = velocity_split_drift(t_s, x_s, cfg.fit_fraction);
   res.rho_drift = split_window_drift(rho_s, cfg.fit_fraction);
   {
@@ -1023,8 +1045,9 @@ template <int Dim>
         "el_max_dfel,el_mean_stress,"
         "solute_drift_rel,heat_drift_rel,phi_min,phi_max,"
         "n_samples,n_samples_failed,state_finite,valid,"
-        "crystal_angle,crystal_angle2,fta_gradient,fta_pulling,"
-        "x_tip2,y_tip2,v_tip2,rho_tip2,x_groove",
+        "crystal_angle,crystal_angle2,fta_gradient,fta_pulling,fta_x0,"
+        "seed_x,seed_y,seed2_x,seed2_y,"
+        "x_tip2,y_tip2,v_tip2,rho_tip2,x_groove,y_groove,v_rel",
         rank);
 #if ALLOY_DENDRITE_HAVE_ELASTICITY
     const double eps_c = cfg.elastic_params.eps_c;
@@ -1047,7 +1070,8 @@ template <int Dim>
         "%.10g,%.10g,%.10g,%.10g,%d,"
         "%d,%.4g,%d,%d,%.10g,%.10g,%.6g,"
         "%.3e,%.3e,%.6g,%.6g,%d,%d,%d,%d,"
-        "%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g",
+        "%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,"
+        "%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g",
         cfg.run_id.c_str(), cfg.nx, cfg.ny, cfg.nz, cfg.dx, cfg.fd_order, res.dt,
         cfg.t_end, p.lambda, p.k, p.D_l, p.D_th, p.M_c, p.eps4, cfg.omega,
         cfg.seed_radius, capillary_length(p), res.v_tip, res.rho_tip, res.x_tip,
@@ -1061,8 +1085,11 @@ template <int Dim>
         res.solute_drift_rel, res.heat_drift_rel, res.phi_min, res.phi_max,
         res.n_samples, res.n_samples_failed, res.state_finite ? 1 : 0,
         res.valid ? 1 : 0, p.crystal_angle, cfg.crystal_angle2, cfg.fta_gradient,
-        cfg.fta_pulling, res.x_tip2, res.y_tip2, res.v_tip2, res.rho_tip2,
-        res.x_groove));
+        cfg.fta_pulling, fta_x0, xc, yc, bicrystal ? xc2
+                                                   : std::numeric_limits<double>::quiet_NaN(),
+        bicrystal ? yc2 : std::numeric_limits<double>::quiet_NaN(), res.x_tip2,
+        res.y_tip2, res.v_tip2, res.rho_tip2, res.x_groove, res.y_groove,
+        res.v_rel));
   }
   return res;
 }
