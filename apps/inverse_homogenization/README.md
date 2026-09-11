@@ -78,11 +78,13 @@ Not paper claims. Grey linear interpolation **cannot** produce \(\nu<0\).
 | 21949811 | RMS-normalised, `dt=0.03` | 0.129 | 0.40 | step 1 is \(0.55\to0.52\); volume still bleeds |
 | 21949859 | + volume projection | 0.375 | **0.50** | volume held; design stayed fully grey (Voigt-like) |
 | 21950094 | + SIMP \(p=3\) | 0.209 | **0.50** | still fully grey after 40 steps; \(C_{12}\) still \(>0\) |
+| 21954427 | elastic-only RMS + SIMP \(1\to 3\), \(\lambda_r\) \(0.05\to 0.4\) | 0.261 | **0.50** | **grey \(0.999\to 0.674\)** — first real binarization |
 
-Auxetic \(C_{12}\) stayed **positive** in every campaign. SIMP at 40 steps
-was not enough to leave the grey well; next is continuation on \(p\) /
-\(\lambda_r\) and a 2-D auxetic length-scale long enough to form re-entrant
-features.
+The double well drives a *uniform* grey field to the wells (Catch2). A
+sharp/tanh interface with large \(\lambda_r/\varepsilon\) inverts bands
+because the spectral Laplacian Gibbs term dominates \(W'\). Auxetic at
+\(E_{\mathrm{void}}=0.02\) lost Eyre–Milton convergence at step 13
+(grey already \(0.96\)).
 
 ## Tests
 

@@ -65,8 +65,9 @@ struct InverseSpec {
   double mobility{1.0};
   double dt{0.1};
   bool clip{true};
-  /// Divide g by its RMS so `dt` is the RMS change in h (job 21949415
-  /// collapsed volume because the raw gradient RMS was ~4).
+  /// RMS-normalise the *elastic* gradient only so `dt` sets that step
+  /// size. Volume and the double well are then added in physical units;
+  /// otherwise λ_r W' is crushed whenever ||g_el|| is large.
   bool normalize_grad{true};
   /// Hard cap on |Δh| per cell after the normalised step.
   double max_abs_delta{0.05};
@@ -168,37 +169,47 @@ public:
       throw std::invalid_argument("PhaseFieldInverse::step: simp_p must be >= 1");
     }
 
-    const RealField *h_el = &h;
-    if (spec.simp_p != 1.0) {
-      double *pp = m_penalized.data();
-      const double *hd = h.data();
-      for (std::size_t i = 0; i < m_n_local; ++i)
-        pp[i] = std::pow(hd[i], spec.simp_p);
-      m_penalized.note_host_write();
-      h_el = &m_penalized;
-    }
-    const auto r = m_hom.compute(*h_el);
     InverseStepReport out;
-    out.elasticity_converged = r.all_converged();
-    out.volume_fraction = r.volume_fraction;
-    out.J_tensor = tensor_mismatch(r.stiffness, spec.C_target, spec.W);
-    const double dv = r.volume_fraction - spec.volume_target;
+    const bool tensor_on = spec.W.max_abs() > 0.0;
+    const double vf0 = mean_value(h);
+    const double dv = vf0 - spec.volume_target;
     out.J_volume = spec.lambda_volume * dv * dv;
 
-    m_hom.objective_sensitivity(*h_el, spec.C_target, spec.W, m_dJdh);
-    if (spec.simp_p != 1.0) {
-      const double pexp = spec.simp_p;
-      const double pm1 = pexp - 1.0;
-      double *dj = m_dJdh.data();
-      const double *hd = h.data();
-      for (std::size_t i = 0; i < m_n_local; ++i)
-        dj[i] *= pexp * std::pow(hd[i], pm1);
+    if (tensor_on) {
+      const RealField *h_el = &h;
+      if (spec.simp_p != 1.0) {
+        double *pp = m_penalized.data();
+        const double *hd = h.data();
+        for (std::size_t i = 0; i < m_n_local; ++i)
+          pp[i] = std::pow(hd[i], spec.simp_p);
+        m_penalized.note_host_write();
+        h_el = &m_penalized;
+      }
+      const auto r = m_hom.compute(*h_el);
+      out.elasticity_converged = r.all_converged();
+      out.J_tensor = tensor_mismatch(r.stiffness, spec.C_target, spec.W);
+      m_hom.objective_sensitivity(*h_el, spec.C_target, spec.W, m_dJdh);
+      if (spec.simp_p != 1.0) {
+        const double pexp = spec.simp_p;
+        const double pm1 = pexp - 1.0;
+        double *dj = m_dJdh.data();
+        const double *hd = h.data();
+        for (std::size_t i = 0; i < m_n_local; ++i)
+          dj[i] *= pexp * std::pow(hd[i], pm1);
+        m_dJdh.note_host_write();
+      }
+    } else {
+      // Double-well / volume-only step (binarization oracle). Skip the six
+      // elasticity solves; W=0 so they cannot change J.
+      out.elasticity_converged = true;
+      out.J_tensor = 0.0;
+      std::fill(m_dJdh.vec().begin(), m_dJdh.vec().end(), 0.0);
       m_dJdh.note_host_write();
     }
     spectral_laplacian(m_domain, m_fft, h, m_hat, m_lap);
 
     double local_reg = 0.0;
-    double local_g2 = 0.0;
+    double local_el2 = 0.0;
     double local_grey = 0.0;
     double local_hLap = 0.0;
     const double *hp = h.data();
@@ -213,6 +224,28 @@ public:
       local_hLap += -hp[i] * lp[i];
       if (hp[i] > 0.1 && hp[i] < 0.9) local_grey += 1.0;
       const double g_el = m_n_global * djel[i];
+      gp[i] = g_el;
+      local_el2 += g_el * g_el;
+    }
+
+    double glo[4] = {0, 0, 0, 0};
+    const double loc[4] = {local_reg, local_el2, local_grey, local_hLap};
+    MPI_Allreduce(loc, glo, 4, MPI_DOUBLE, MPI_SUM, comm());
+    out.J_reg = spec.lambda_reg * (glo[0] / m_n_global);
+    out.J = out.J_tensor + out.J_volume + out.J_reg;
+    const double el_rms = std::sqrt(glo[1] / m_n_global);
+    out.grad_rms = el_rms;
+    out.grey_fraction = glo[2] / m_n_global;
+    out.perimeter = std::sqrt(std::max(0.0, glo[3] / m_n_global));
+
+    // Normalise elasticity only. Job 21950094 stayed fully grey because
+    // RMS-normalising the *total* g crushed λ_r W'(h) to a few percent of
+    // each step. Volume and the double well keep physical units.
+    const double el_scale =
+        (spec.normalize_grad && el_rms > 1.0e-30) ? (1.0 / el_rms) : 1.0;
+    double local_g2 = 0.0;
+    for (std::size_t i = 0; i < m_n_local; ++i) {
+      const double g_el = el_scale * gp[i];
       const double g_vol = spec.lambda_volume * 2.0 * dv;
       const double g_reg =
           spec.lambda_reg * (-spec.epsilon * lp[i] + inv_eps * double_well_prime(hp[i]));
@@ -221,18 +254,11 @@ public:
       local_g2 += g * g;
     }
     m_g.note_host_write();
-
-    double glo[4] = {0, 0, 0, 0};
-    const double loc[4] = {local_reg, local_g2, local_grey, local_hLap};
-    MPI_Allreduce(loc, glo, 4, MPI_DOUBLE, MPI_SUM, comm());
-    out.J_reg = spec.lambda_reg * (glo[0] / m_n_global);
-    out.J = out.J_tensor + out.J_volume + out.J_reg;
-    out.grad_rms = std::sqrt(glo[1] / m_n_global);
-    out.grey_fraction = glo[2] / m_n_global;
-    out.perimeter = std::sqrt(std::max(0.0, glo[3] / m_n_global));
+    double glo_g2 = 0.0;
+    MPI_Allreduce(&local_g2, &glo_g2, 1, MPI_DOUBLE, MPI_SUM, comm());
+    out.grad_rms = std::sqrt(glo_g2 / m_n_global);
 
     double scale = spec.dt * spec.mobility;
-    if (spec.normalize_grad && out.grad_rms > 0.0) scale /= out.grad_rms;
     const double cap = spec.max_abs_delta;
     double local_dh2 = 0.0;
     for (std::size_t i = 0; i < m_n_local; ++i) {
