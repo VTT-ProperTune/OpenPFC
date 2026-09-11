@@ -9,6 +9,64 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- **Thermo-solutal-elastic dendritic solidification**
+  (`apps/alloy_dendrite_elastic`, equations (5)-(7) of the issue #85 spec).
+  The application's phase field, solute and temperature are now coupled to
+  quasi-static elasticity through a composition- and temperature-dependent
+  eigenstrain whose energy feeds back into the phase-field driving force:
+  `elasticity.hpp` attaches `openpfc_apps/microelasticity.hpp` to the
+  finite-difference stack and `material.hpp` carries Al-4.5 wt% Cu in SI with
+  provenance and the two unit conversions (`eps_c` is `d eps*/dU`, not
+  `d eps*/dc`) that are easiest to get wrong by orders of magnitude. The
+  local physics runs on high-order FD with a halo exchange and the elliptic
+  mechanical equilibrium runs spectrally on the *same* decomposition inside
+  the same time step; the constructor refuses to run if the padded FD owned
+  box and the HeFFTe real-space inbox disagree, because the two are copied
+  index for index. Measured at the calibrated coupling: the tip slows 16.7%
+  and fattens 11.0% while `sigma*` moves 2.5%, and with the temperature field
+  on the solutal and thermal eigenstrains oppose each other and together
+  store a third of what the solutal misfit stores alone. Verified by a
+  zero-coupling run reproducing the reference to ten digits, by doubling the
+  stiffness reproducing `lambda_el = 2 lambda` exactly with `2.0000x` the
+  energy, and by 1-vs-4-rank agreement at `3e-14` relative. The magnitude
+  depends on the liquid-shear regularisation (9.8% to 23.1% across
+  `mu_l/mu_s` = 0.02 to 0.10) and that is stated rather than hidden.
+- **Field snapshots from the alloy dendrite** (`--fields-dir`,
+  `--fields-every`): `phi`, `U`, `theta` and, with the coupling on, `f_el`,
+  `df_el/dphi` and the hydrostatic and von Mises stress invariants, as raw
+  Fortran-ordered bricks through `pfc::BinaryWriter` plus a JSON manifest.
+  Correct at any rank count, unlike the single-piece `.vti` the other report
+  figures use. `scripts/check_decomposition.py` compares two such directories
+  and reports the relative max-norm and *where* it sits, which is what
+  separates round-off from a subdomain-seam bug.
+- **Tip radius measured in units of the tip radius**
+  (`measure_tip_scan_relative`). The existing scan takes its fit half-widths
+  in cells, which answers whether the grid resolves the fit and not whether
+  the shape is a parabola. At `eps4 = 0.04` the cell-window spread is 49% at
+  both `dx = 0.5` and `dx = 0.4` while the tip velocity converges to 0.7%: a
+  number that does not move under refinement is not a discretisation error.
+
+### Fixed
+
+- **`explicit_dt_limit` ignored the finite-difference order**
+  (`apps/alloy_dendrite_elastic`). It returned the second-order von Neumann
+  bound `dx^2/(2 d D)` for every stencil, which corresponds to a Nyquist
+  eigenvalue of 4; the true eigenvalue of the order-`p` central second
+  derivative rises with `p` (4, 5.33, 6.04, 6.42, 6.68, 6.87 for orders 2 to
+  12, tending to `pi^2`), so at order 12 the guard authorised a step 1.7x
+  larger than the scheme can take. No published result is affected -- every
+  run used a safety factor of 0.2 -- but a user at 0.8 and order 12 would
+  have diverged while the guard said the step was legal. The eigenvalue is
+  now read out of the same coefficient table the stepper differentiates with.
+- **A diverged dendrite run reported a plausible velocity.** Samples whose
+  tip fit fails were skipped rather than counted, so the trailing-window fit
+  fell back on the last healthy samples: `dx = 1.0 W0` blew up at `t = 1065`
+  of a `t_end = 2000` run and reported `v_tip = 0.065`, `sigma* = 0.026`.
+  Validity is now a statement about the final state as well as the fit, the
+  summary CSV carries `n_samples`, `n_samples_failed`, `state_finite` and
+  `valid`, and the driver says loudly that the numbers above it are not
+  results.
+
 - **3-D eigenstrain microelasticity on the FFT stack**
   (`apps/common/include/openpfc_apps/microelasticity.hpp`). A reusable
   quasi-static elastic solver for phase-field applications whose transforming
