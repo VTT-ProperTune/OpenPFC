@@ -154,7 +154,9 @@ Two binaries. **`alloy_dendrite_planar`** runs the Stage-1 verification — an i
 two-front box — and reports the steady velocity against the thin-interface prediction, the kinetic coefficient, the
 solute boundary layer against \(D_l/V\), the **effective partition coefficient** against the input \(k\), and the
 drift of the two conservation invariants. **`alloy_dendrite_growth`** runs a deterministic dendrite (2-D, or 3-D with
-`--nz`) and writes tip position, tip velocity and tip radius to CSV. HIP builds may add a parity driver for the FD step.
+`--nz`) and writes tip position, tip velocity and tip radius to CSV. `--gradient` / `--pulling` /
+`--seed2-*` is leftover Stage 4 of issue #85 (FTA directional solidification and a two-seed bicrystal) on
+this binary, not a sixteenth application. HIP builds may add a parity driver for the FD step.
 
 What makes it worth running rather than reading: at \(dx = 0.6\,W_0\) the measured \(k_\text{eff}\) is within 0.2 %
 of \(k\) and flat in velocity, while switching the anti-trapping current off moves it by 17 % and makes it climb with

@@ -9,6 +9,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- **FTA directional solidification and two-seed bicrystal** on
+  `alloy_dendrite_growth` (leftover Stage 4 of issue #85; geometry from
+  unmerged PR #103). Frozen-temperature field
+  `theta = (G/ΔT_h)(x − x0 − V_p t)` with `evolve_theta` off and `M_c theta`
+  live; crystal-frame cubic anisotropy `n' = R(θ_c)^T n`; second tanh seed
+  with its own `crystal_angle`. Downstream tip and GB-groove diagnostics.
+  Catalog stays at fifteen applications. Not a paper-scale melt-pool result.
 - **Thermo-solutal-elastic dendritic solidification**
   (`apps/alloy_dendrite_elastic`, equations (5)-(7) of the issue #85 spec).
   The application's phase field, solute and temperature are now coupled to
