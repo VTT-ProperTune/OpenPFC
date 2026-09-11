@@ -66,7 +66,22 @@ mpirun -n 1 ./apps/inverse_homogenization/openpfc_inverse_homogenize \
 `--target` is `isotropic`, `auxetic` (negative Poisson via `--nu-target`), or
 `orthotropic` (`--C11 --C22 --C12 --C66`). The loop is Takezawa-style
 Allen–Cahn, not Cahn–Hilliard and not MMA. `INVERSE_CHECKSUM` is the last
-\(J\).
+\(J\). Optional `--csv=PATH` writes the per-step history.
+
+### Stage 5 start (LUMI-C job 21949415)
+
+25 Allen–Cahn steps, \(16^3\), `standard`. Not binary manufacturable designs;
+the first step is still too aggressive (`dt=0.08` on an un-normalised
+gradient). Numbers are from the job, not a paper claim.
+
+| Target | \(\lVert C_H-C_\ast\rVert_F/\lVert C_\ast\rVert_F\) | \(\langle h\rangle\) (want 0.5) | notes |
+|--------|------------------------------------------------------|----------------------------------|--------|
+| isotropic \(E=0.9,\nu=0.25\) | **0.050** | 0.31 | tensor match; volume penalty lost the first step |
+| auxetic \(\nu=-0.3\) | 0.68 | 0.12 | \(C_{12}\) stayed positive — not an auxetic |
+| orthotropic \(C_{11}=1.3,C_{22}=0.6\) | 0.35 | 0.23 | weak \(C_{11}/C_{22}\) split only |
+
+Auxetic and orthotropic are **not** matched. That is the Stage 5 remainder
+(feature-scale binary topology, step-size control, multiple initialisations).
 
 ## Tests
 

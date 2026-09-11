@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <string>
@@ -46,6 +47,7 @@ struct Config {
   std::string init{"noise"};
   double init_volume{0.55};
   unsigned seed{1};
+  std::string csv{};
 };
 
 void usage(std::ostream &os, const char *exe) {
@@ -58,7 +60,7 @@ void usage(std::ostream &os, const char *exe) {
      << "  --E-target --nu-target          (isotropic / auxetic)\n"
      << "  --C11 --C22 --C12 --C66         (orthotropic in-plane block)\n"
      << "  --volume --lambda-volume --lambda-reg --epsilon\n"
-     << "  --dt --steps --init uniform|noise --init-volume\n";
+     << "  --dt --steps --init uniform|noise --init-volume --csv=PATH\n";
 }
 
 bool parse_double(std::string_view v, double &out) {
@@ -116,6 +118,8 @@ bool parse_args(int argc, char **argv, Config &cfg) {
       int s = 1;
       ok = parse_int(val, s);
       cfg.seed = static_cast<unsigned>(s);
+    } else if (key == "csv") {
+      cfg.csv = std::string(val);
     } else {
       return false;
     }
@@ -202,10 +206,15 @@ int main(int argc, char **argv) {
   spec.dt = cfg.dt;
 
   pfc::apps::inverse::PhaseFieldInverse inv(domain, stack.fft(), p);
+  std::ofstream csv;
   if (rank == 0) {
     std::cout << "target " << cfg.target << " grid " << cfg.nx << 'x' << cfg.ny
               << 'x' << cfg.nz << " steps " << cfg.steps << '\n';
     std::cout << "step J J_tensor J_volume J_reg volume grad_rms\n";
+    if (!cfg.csv.empty()) {
+      csv.open(cfg.csv);
+      csv << "step,J,J_tensor,J_volume,J_reg,volume,grad_rms\n";
+    }
   }
   pfc::apps::inverse::InverseStepReport last{};
   for (int s = 0; s < cfg.steps; ++s) {
@@ -214,6 +223,11 @@ int main(int argc, char **argv) {
       std::cout << std::setprecision(8) << s << ' ' << last.J << ' '
                 << last.J_tensor << ' ' << last.J_volume << ' ' << last.J_reg
                 << ' ' << last.volume_fraction << ' ' << last.grad_rms << '\n';
+      if (csv.is_open()) {
+        csv << s << ',' << last.J << ',' << last.J_tensor << ',' << last.J_volume
+            << ',' << last.J_reg << ',' << last.volume_fraction << ','
+            << last.grad_rms << '\n';
+      }
     }
     if (!last.elasticity_converged) {
       if (rank == 0) std::cerr << "elasticity did not converge at step " << s << '\n';
@@ -224,6 +238,15 @@ int main(int argc, char **argv) {
   if (rank == 0) {
     std::cout << std::setprecision(16) << "INVERSE_CHECKSUM " << last.J << '\n';
     const auto &C = inv.homogenizer().last().stiffness;
+    const auto &Ct = spec.C_target;
+    std::cout << "C_target\n";
+    for (int i = 0; i < 6; ++i) {
+      for (int j = 0; j < 6; ++j) {
+        if (j) std::cout << ' ';
+        std::cout << std::setprecision(8) << Ct(i, j);
+      }
+      std::cout << '\n';
+    }
     std::cout << "C_H\n";
     for (int i = 0; i < 6; ++i) {
       for (int j = 0; j < 6; ++j) {
@@ -232,6 +255,9 @@ int main(int argc, char **argv) {
       }
       std::cout << '\n';
     }
+    const double rel =
+        (C - Ct).frobenius_norm() / std::max(Ct.frobenius_norm(), 1.0e-30);
+    std::cout << std::setprecision(8) << "rel_frobenius " << rel << '\n';
   }
   MPI_Finalize();
   return 0;
