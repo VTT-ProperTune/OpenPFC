@@ -155,14 +155,33 @@ void print_usage(std::ostream &os, const char *exe) {
      << d.model.crystal_angle << ")\n\n"
      << "Frozen-temperature (FTA) directional solidification\n"
      << "  theta(x,t) = (G/dT_h)(x - x0 - V_p t). evolve_theta stays off;\n"
-     << "  M_c theta in equation (2) stays live. Provenance: issue #85 Stage 4\n"
-     << "  leftover, unmerged PR #103. Not a paper-scale melt-pool run.\n"
+     << "  M_c theta in equation (2) stays live. Infinite-Le Bridgman, not a\n"
+     << "  metallic evolving-theta Lewis-number run. Mc=0 with --gradient or\n"
+     << "  --pulling is a no-op and is rejected. Catalog stays at fifteen.\n"
      << "  --gradient=X        G/dT_h in 1/W0          (" << d.fta_gradient
      << ")\n"
      << "  --pulling=X         V_p in W0/tau0          (" << d.fta_pulling
      << ")\n"
      << "  --fta-x0=X          isotherm x0; default is the first seed x\n"
-     << "  --Mc=X              keep nonzero or FTA does nothing to phi\n\n"
+     << "  --Mc=X              required >0 when FTA is on (campaign: 0.5)\n\n"
+     << "  Issue #155 campaign (elevated-G directional geometry, not an Al-Cu\n"
+     << "  furnace). Shared flags:\n"
+     << "    --nx=640 --ny=256 --nz=1 --dx=0.8 --fd-order=4 --t-end=1200\n"
+     << "    --samples=240 --eps4=0.04 --Mc=0.5 --evolve-theta=0 --Dl=2\n"
+     << "    --omega=0.55 --gradient=0.02 --pulling=0.05 --fta-x0=24\n"
+     << "    --seed-radius=10 --fields-every=20\n"
+     << "    (a) aligned <100>:\n"
+     << "        --seed-x=24 --seed-y=102.4 --crystal-angle=0\n"
+     << "        --run-id=fta-aligned\n"
+     << "    (b) misori (0.2 rad ~ 11.5 deg):\n"
+     << "        same as (a), --crystal-angle=0.2 --run-id=fta-misori\n"
+     << "    (c) bicrystal (single phi; solids that meet merge):\n"
+     << "        --seed-y=64 --seed2-radius=10 --seed2-x=24 --seed2-y=140.8\n"
+     << "        --crystal-angle=0.2 --crystal-angle2=-0.2\n"
+     << "        --run-id=fta-bicrystal\n"
+     << "  gradient=0.02 means l_T = 50 W0; pulling=0.05; l_D = D_l/V_p =\n"
+     << "  40 W0. theta is scaled by the hypercooling L/c_p ~ 336 K, not\n"
+     << "  Delta T_0. Do not pass --elastic.\n\n"
      << "Bicrystal (two tanh seeds, one phi -- not a two-order-parameter GB)\n"
      << "  --seed2-radius=X    second seed; 0 disables (" << d.seed2_radius
      << ")\n"
@@ -423,10 +442,16 @@ int run(int argc, char **argv, int rank, int nproc) {
             << "  (one-radius window; this is the quotable one)\n"
             << "  Ivantsov      V rho = " << res.v_rho << " vs 2 D P(Omega_eff) = "
             << res.v_rho_ivantsov << "\n";
+  if (alloy_dendrite::fta_active(cfg)) {
+    std::cout << "  FTA           G/dT_h=" << cfg.fta_gradient
+              << "  V_p=" << cfg.fta_pulling << "  V_tip-V_p=" << res.v_rel
+              << "\n";
+  }
   if (std::isfinite(res.x_tip2) || std::isfinite(res.x_groove)) {
     std::cout << "  tip 2         x=" << res.x_tip2 << " y=" << res.y_tip2
               << "  V=" << res.v_tip2 << "  rho=" << res.rho_tip2 << "\n"
-              << "  GB groove     x=" << res.x_groove << "\n";
+              << "  GB groove     x=" << res.x_groove << "  y=" << res.y_groove
+              << "\n";
   }
   if (res.el_solves > 0) {
     std::cout << "  ------------------------------------------------------------\n"
