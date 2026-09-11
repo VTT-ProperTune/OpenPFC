@@ -532,3 +532,468 @@ above), because conservation is a property of the discretisation rather than
 of the physics. It is therefore a check on the implementation and not
 evidence that the model is right — which is worth saying, because a
 conservation plot is often presented as though it were the latter.
+
+### Stage 2: a steady tip, and what it takes to get one {#sec-ad-steady}
+
+A selection parameter is only worth quoting if the tip it comes from has
+stopped changing, if the box it grew in is not setting the answer, and if the
+grid resolves the tip. Those are three separate conditions and the first
+revision of this application met none of them.
+
+**The box.** Fixing $\epsilon_4 = 0.02$, $\Delta x = 0.8\,W_0$, fourth order,
+and varying the box:
+
+| box ($W_0$) | 320 | 480 | 640 | 800 |
+|---|---:|---:|---:|---:|
+| $V$ | 0.09001 | 0.08758 | 0.087936 | 0.087936 |
+| $\rho$ | 9.852 | 10.044 | 10.0155 | 10.0155 |
+| $\mathrm{d}V/V$ over the fit window | −10.3 % | −3.9 % | −2.0 % | −2.0 % |
+
+: Box convergence. 640 and 800 $W_0$ agree to six digits, so the box is not the answer above $640\,W_0$. {#tbl-ad-box}
+
+It is the *reservoir* that sets the box size, not the diffusion length. The
+tip radius is $10\,W_0$ and the solute diffusion length $D_l/V \approx 23\,W_0$,
+both tiny next to 640; but four arms keep rejecting solute into a closed
+domain, and `omega_eff` — the far-field supersaturation the tip actually sees
+— is what has to stop moving.
+
+**Steadiness.** At $\epsilon_4 = 0.02$ the residual velocity drift is −2 %
+even in a converged box: the tip is still slowly relaxing at $t = 2000$.
+Raising the anisotropy fixes it, because a sharper tip reaches its steady
+state sooner:
+
+| $\epsilon_4$ | 0.010 | 0.015 | 0.020 | 0.025 | 0.030 | 0.040 | 0.050 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| $\mathrm{d}V/V$ | −12.5 % | −6.8 % | −3.9 % | −1.1 % | −0.27 % | **+0.15 %** | +0.15 % |
+
+: Velocity drift across the trailing 30 % of a $t = 2000$ run. $\epsilon_4 \ge 0.03$ is steady. {#tbl-ad-steady}
+
+Everything below therefore uses $\epsilon_4 = 0.04$, which is 4 % anisotropy
+in the normalised convention of @eq-ad-aniso and is a physically ordinary
+value for a cubic metal.
+
+**Resolution, and why high-order stencils are the cheap way to get it.** In a
+$640\,W_0$ box at $\epsilon_4 = 0.04$, refining the grid and raising the
+stencil order are two routes to the same converged answer, and they do not
+cost the same. Wall times are for a matched $t = 50$ run on 16 ranks of one
+`standard` node, so they are directly comparable.
+
+| $\Delta x/W_0$ | order | $V$ | $\rho$ ($1\rho$ window) | $\sigma^{*}$ | wall | relative cost |
+|---:|---:|---:|---:|---:|---:|---:|
+| 0.80 | 4 | 0.194243 | 3.8983 | 0.37531 | 9.0 s | 1.0 |
+| 0.80 | 6 | 0.208537 | 3.6508 | 0.39860 | 9.1 s | 1.0 |
+| 0.80 | 8 | 0.212221 | 3.5913 | 0.40475 | 11.0 s | 1.2 |
+| 0.80 | 10 | 0.213529 | 3.5704 | 0.40699 | 12.3 s | 1.4 |
+| 0.80 | 12 | **0.214104** | 3.5618 | 0.40787 | 13.2 s | **1.5** |
+| 0.65 | 4 | 0.208069 | 3.6123 | 0.40805 | 15.7 s | 1.8 |
+| 0.50 | 4 | 0.212722 | 3.3960 | 0.45158 | 51.9 s | 5.8 |
+| 0.40 | 4 | **0.214287** | — | — | 147.1 s | **16.4** |
+| 0.32 | 4 | — | — | — | 399.3 s | 44.5 |
+
+: Grid spacing against stencil order at fixed $640\,W_0$ box, $\epsilon_4 = 0.04$. Wall times are a matched $t = 50$ run on 16 ranks of one `standard` node, at the corrected step limit. {#tbl-ad-order}
+
+Two things read off this.
+
+First, **fourth order at $\Delta x = 0.8\,W_0$ is 10 % wrong in the tip
+velocity** — the quantity a selection measurement is built from — and nothing
+about the run looks wrong. The drift is 0.09 %, the conservation residual is
+$10^{-13}$, the tip is a clean parabola, the anti-trapping current is doing
+its job. Resolution error in this model does not announce itself, and the
+only way to find it is to refine something and look.
+
+Second, the two routes to convergence cost very differently. Order 12 at
+$\Delta x = 0.8$ gives $V = 0.21410$; order 4 at $\Delta x = 0.4$ gives
+$0.21429$, agreeing to 0.09 %. The first costs $1.5\times$ the baseline run
+and the second $16.4\times$ — an **11-fold saving for the same answer**. The
+reason is dimensional: halving $\Delta x$ multiplies the cell count by $2^d$
+and the step count by 4, while widening the stencil multiplies neither. For a
+model whose expensive length scale is the *interface* rather than the domain,
+**buy resolution with the stencil, not with the grid.** (@sec-scal-methods
+makes the same comparison against a spectral solve on a different model; the
+crossover there and the saving here are the same arithmetic seen twice.)
+
+::: {.callout-warning appearance="simple"}
+## The step limit was not order-aware, and the cost table above is why it matters
+
+`explicit_dt_limit` returned the second-order von Neumann bound
+$\Delta x^2/(2 d D)$ for every stencil. That bound corresponds to a Nyquist
+eigenvalue of 4, which is the order-2 Laplacian's; the true eigenvalue of the
+order-$p$ central second derivative rises with $p$ — 4, 5.33, 6.04, 6.42,
+6.68, 6.87 for orders 2 to 12, tending to $\pi^2$ — so at order 12 the
+function authorised a step 1.7 times larger than the scheme can take.
+
+No number in this chapter is affected: every run used a safety factor of 0.2,
+so even at order 12 the effective factor was 0.34. But a user at
+$\mathrm{safety} = 0.8$ and order 12 would have diverged while the guard said
+the step was legal. It is fixed, computed from the same coefficient table the
+stepper differentiates with so that it cannot drift out of sync, and the
+consequence for @tbl-ad-order is that order 12 now takes 1.7 times as many
+steps — which narrows the high-order advantage without reversing it.
+:::
+
+**And the tip radius is ambiguous, honestly so.** At $\epsilon_4 = 0.04$ the
+tip radius is about $3.6\,W_0$, and the fit windows at 0.5, 1, 1.5 and 2 tip
+radii disagree by 36–54 %. That spread does *not* shrink under grid
+refinement (48.9 % at $\Delta x = 0.5$, 49.0 % at 0.4, while $V$ converges to
+0.7 %), which is how one knows it is not a discretisation error: a
+high-anisotropy tip simply stops being a paraboloid within about one radius
+of the apex, and the two-radius window is already on the flank.
+
+The consequence is stated rather than hidden: **$\sigma^{*}$ from this
+application carries a systematic uncertainty of order $\pm$50 % from the
+radius definition alone**, because $\sigma^{*} \propto \rho^{-2}$. What it
+does *not* carry is a run-to-run uncertainty — the model is deterministic and
+two runs of the same case agree bitwise — which is why the Stage-4 comparison
+below, which is a ratio of two $\sigma^{*}$ measured the same way, is
+meaningful to far better than 50 %.
+
+### Stage 3: three dimensions, and the same answer on any decomposition {#sec-ad-parallel}
+
+**Decomposition consistency.** The finite-difference fields are bitwise
+rank-independent: the stencil is evaluated in the same order everywhere and
+the halo carries exact copies, so $\phi$, $U$ and $\theta$ from a one-rank
+run are byte-for-byte the files from a four-rank run. The elastic fields
+cannot be, and it is worth being precise about why: HeFFTe composes a
+different sequence of transforms and transposes for each process grid, so the
+same answer is reached by a different rounding path. A byte comparison
+therefore reports every elastic file as differing and tells one nothing. What
+matters is the size of the difference and *where* it sits.
+
+| field | $\phi$ | $U$ | $f_{\mathrm{el}}$ | $\partial f_{\mathrm{el}}/\partial\phi$ | $\mathrm{tr}\,\sigma/3$ | $\sigma_{\mathrm{vM}}$ |
+|---|---:|---:|---:|---:|---:|---:|
+| rel. max-norm, 1 rank vs 4 | 1.7e−15 | 9.9e−15 | 1.7e−14 | 2.7e−14 | 2.7e−14 | 7.6e−15 |
+
+: Decomposition consistency over 375 coupled steps. Every maximum sits on the interface, not on a subdomain boundary — which is the other half of the statement, and is what separates round-off from a seam bug. {#tbl-ad-decomp}
+
+**A symmetry the code was never told about.** The model is invariant under
+$x \leftrightarrow y$, and nothing in the implementation enforces it: the
+stencils are applied axis by axis, the r2c transform treats $x$ as the
+half-complex axis and $y$ as a full one, and the MPI decomposition is a slab
+that is manifestly not symmetric under the exchange. After 160 000 coupled
+steps the 2-D solution satisfies $\max|\phi - \phi^{\mathsf{T}}| =
+9\times10^{-14}$, and the four arms reach 398 cells in all four directions.
+That is an independent check on the whole coupled chain — the anisotropy
+flux, the anti-trapping current, the Green operator's Nyquist handling and
+the halo exchange all have to be right for it to hold — and it is the kind of
+check that is free to run and easy to forget to make.
+
+**Three dimensions.** The same templated stepper, `nz > 1`. The largest case
+is $512^3$ — 134 million cells, four fields plus a six-component strain,
+stress and polarisation tensor each — on 16 `standard` nodes, 2048 MPI ranks,
+with the coupled elastic solve running every twentieth step and converging in
+12.9 Green-operator applications on average.
+
+| case | ranks | $t_{\mathrm{end}}$ | $V$ | $\rho$ | $\int f_{\mathrm{el}}$ | elastic iterations |
+|---|---:|---:|---:|---:|---:|---:|
+| $128^3$, off | 128 | 60 | 0.36004 | 6.290 | — | — |
+| $128^3$, on | 128 | 60 | 0.33332 | 7.428 | 542 | 12.65 |
+| $256^3$, off | 512 | 120 | 0.47139 | 4.971 | — | — |
+| $256^3$, on | 512 | 120 | 0.44311 | 4.962 | 1712 | 12.82 |
+| $512^3$, on | 2048 | 150 | 0.44313 | 5.462 | 2941 | 12.86 |
+
+: 3-D coupled runs on LUMI `standard`. {#tbl-ad-3d}
+
+Two things to take from this and one not to. The tip velocity at $256^3$ and
+$512^3$ agrees to $6\times10^{-5}$ — a $102\,W_0$ box and a $410\,W_0$ box,
+an eightfold change in cell count and a fourfold change in rank count give
+the same number — so the 3-D tip velocity is box- and decomposition-converged
+even though these are short runs. And the elastic iteration count is
+essentially independent of problem size (12.65, 12.82, 12.86), which is what
+a well-conditioned fixed point should do and is the reason the coupled solve
+is affordable at all at $512^3$.
+
+What *not* to take from it: $128^3$ disagrees with both larger boxes by 24 %
+in $V$, and $t_{\mathrm{end}} = 150$ is early — @fig-ad-3d shows a rounded
+$\langle 100 \rangle$ cross, not a developed dendrite with side branches.
+**The 3-D runs demonstrate that the coupled machinery works, scales and stays
+consistent at LUMI scale. They are not a 3-D dendrite science result, and the
+quantitative claims in this chapter are all 2-D.**
+
+![Mid-plane slices of the $512^3$ coupled run on 2048 ranks. The mid-$z$ and mid-$y$ planes are indistinguishable, as they must be for a spherical seed under $\langle 100 \rangle$ cubic anisotropy. Elastic energy concentrates on the interface and in the grooves; the bright spot at the centre is the original seed, whose composition history differs from the solid grown around it.](figures/alloy_dendrite_3d.svg){#fig-ad-3d}
+
+### Stage 4: what the elasticity actually does {#sec-ad-science}
+
+Everything above exists so that this comparison means something. The
+reference and the coupled run are the same binary, the same grid
+($960^2$ at $\Delta x = 0.5\,W_0$, a $480\,W_0$ box), the same $\epsilon_4 =
+0.04$, the same deterministic seed, the same $t_{\mathrm{end}} = 1000$, and
+the same code path — the reference is `--elastic=1 --lambda-el=0`, so it runs
+the elastic solve and discards its result rather than skipping it. There is
+no noise to average over: the model has no stochastic term, and two runs of
+the same case agree bitwise.
+
+![Tip velocity and radius for the elastic-off and elastic-on pair. Both plateau by $t \approx 400$; the shaded band is the fit window. The elastic-off run ends sooner because its faster tip trips the "84 % of the half-box" guard first.](figures/alloy_dendrite_tip_history.svg){#fig-ad-tip}
+
+**At the calibrated coupling the elastic energy of the solutal misfit slows
+the dendrite tip by 16.7 % and fattens it by 11.0 %.**
+
+| run | $\lambda_{\mathrm{el}}/\lambda$ | $V$ | $\Delta V/V$ | $\rho$ | $\Delta\rho/\rho$ | $\sigma^{*}$ | $\int f_{\mathrm{el}}$ |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| off | — | 0.212722 | — | 3.3960 | — | 0.45158 | 0 |
+| solve, no feedback | 0 | 0.212722 | +0.00 % | 3.3960 | +0.00 % | 0.45158 | 440 |
+| | 0.25 | 0.202754 | −4.69 % | 3.4962 | +2.95 % | 0.44702 | 443 |
+| | 0.5 | 0.193325 | −9.12 % | 3.5865 | +5.61 % | 0.44551 | 443 |
+| **calibrated** | **1** | **0.177228** | **−16.69 %** | **3.7678** | **+10.95 %** | **0.44032** | **416** |
+| | 2 | 0.152673 | −28.23 % | 4.3138 | +27.02 % | 0.38995 | 355 |
+| | 4 | 0.118399 | −44.34 % | 5.5564 | +63.61 % | 0.30308 | 278 |
+
+: The elastic coupling ladder. Monotone in $\lambda_{\mathrm{el}}$, smooth, and the zero-coupling row reproduces the reference to every printed digit. {#tbl-ad-science}
+
+![Elasticity off, on, and the difference, at $t = 902.5\,\tau_0$. The difference panel is the result: the interface has retreated along the whole length of all four arms (blue) and advanced in the grooves at the base of the side branches (red). The elastic feedback retards the tips and fills in behind them — which is what $V$ down and $\rho$ up mean, seen directly.](figures/alloy_dendrite_elastic_effect.svg){#fig-ad-effect}
+
+![The coupled state at steady tip. $f_{\mathrm{el}}$ concentrates at the arm tips and in the grooves between side branches — where the composition, and hence the natural lattice parameter, changes fastest. $\partial f_{\mathrm{el}}/\partial\phi$ is positive at the tips and negative in the grooves, which is the feedback in @eq-ad-phi doing exactly what @fig-ad-effect shows. $\theta$ is identically zero in this case and its panel is omitted.](figures/alloy_dendrite_fields.svg){#fig-ad-fields}
+
+#### Four checks that the number is the model's and not the code's
+
+**The solve runs and does nothing when told to.** `--lambda-el=0` with the
+elastic solve active reproduces the reference to all 10 printed digits of
+$V$ and $\rho$ while reporting $\int f_{\mathrm{el}} = 440$ and 10.5
+Green-operator applications per solve. The elasticity is being computed and
+is not leaking into the answer through any path but the intended one.
+
+**Doubling the stiffness equals doubling the coupling.** $f_{\mathrm{el}}$ is
+quadratic in the eigenstrain and linear in $\mathsf{C}$, so running at the
+unsoftened 300 K elastic constants ($2\times$ the stiffness) must give
+exactly the dynamics of $\lambda_{\mathrm{el}} = 2\lambda$ at the softened
+ones, with exactly twice the stored energy. Measured: $V = 0.152673$ and
+$\rho = 4.3138$ in both cases — identical — and $\int f_{\mathrm{el}} =
+709.2$ against $354.6$, a ratio of $2.0000$. That is the unit bookkeeping of
+@tbl-ad-material and @eq-ad-pol verified end to end.
+
+**Zeroing the misfit zeroes the effect.** With $\theta \equiv 0$ in the
+isothermal case, $\varepsilon_c = 0$ leaves no eigenstrain at all, and the
+run reproduces the reference exactly ($\int f_{\mathrm{el}} = 0$, one
+iteration). Symmetrically, $\varepsilon_T = 0$ changes nothing, because the
+thermal eigenstrain was already contributing nothing. **The entire effect in
+@tbl-ad-science is solutal**, which is worth stating plainly rather than
+leaving a reader to infer it from a model that has a thermal term in it.
+
+**Lagging the solve is a controlled approximation.** The elastic problem is
+quasi-static, so re-solving every $N$-th step is a staleness error, first
+order in $N\Delta t$. Measured against $N = 5$ on a matched shorter run:
+
+| $N$ | 5 | 10 | 20 | 50 | 100 |
+|---|---:|---:|---:|---:|---:|
+| $V$ | 0.1656571 | 0.1656177 | 0.1655413 | 0.1652764 | 0.1648165 |
+| change from $N=5$ | — | −0.024 % | −0.070 % | −0.230 % | −0.507 % |
+| elastic solves | 3126 | 1563 | 782 | 313 | 157 |
+| iterations per solve (warm start) | 9.19 | 10.27 | 11.51 | 13.20 | 14.54 |
+
+: Staleness is linear in $N$, as the quasi-static argument says it must be. {#tbl-ad-lag}
+
+At the $N = 20$ used throughout Stage 4 the lag error is **0.07 %**, against
+an effect of 16.7 %: a factor of 240. The iteration count rising with $N$ is
+the warm start losing its advantage, and it is why the saving from lagging
+saturates — going from $N=5$ to $N=100$ cuts solves by 20 but iterations only
+by 12.6.
+
+#### The elasticity moves the tip along the solvability curve
+
+$\sigma^{*} = 2 d_0 D_l/(V\rho^2)$ changes by **−2.5 %** while $V$ changes by
+−16.7 % and $\rho$ by +11.0 %. That is not a coincidence and it is the most
+informative number in the table: solvability theory says $\sigma^{*}$ is set
+by the anisotropy and the interface physics, while $V$ and $\rho$
+*individually* are set by the driving force. An extra energy penalty on the
+solid should therefore slide the operating point along the $\sigma^{*}$
+contour rather than move the contour, and it does.
+
+The shift can be read as an effective undercooling. On the coarser matched
+pair, $V\rho$ falls 5.3 %, which inverting the 2-D Ivantsov relation makes an
+equivalent supersaturation drop of $\Delta\Omega = 0.0084$ — 1.7 % of
+$\Omega$, and 23 % of the *peak* $|\partial f_{\mathrm{el}}/\partial\phi|$ of
+0.0369. A factor of about four between a peak and an interface-weighted
+effective value is what one should expect from the $(1-\phi^2)^2$ weight in
+@eq-ad-phi. **The elastic energy acts on this dendrite as a small, spatially
+structured reduction in the available driving force** — and the reason it is
+not negligible is the one given in @sec-alloy-dendrite: $f_{\mathrm{ref}}$
+for a dilute alloy is four orders of magnitude below an elastic constant.
+
+At $2\lambda$ and $4\lambda$, $\sigma^{*}$ falls by 14 % and 33 %: past the
+calibrated coupling the elastic term stops being a perturbation on the
+driving force and starts changing the selection itself. The calibrated point
+is inside the regime where the interpretation above holds, which is
+convenient and was not arranged.
+
+#### Thermo-solutal: the two misfits partly cancel
+
+Turning the temperature field on ($M_c = 0.5$, Lewis number 10) makes the
+thermal eigenstrain act. Copper contracts the aluminium lattice and the
+latent heat expands it, so $\varepsilon_c < 0$ and $\varepsilon_T > 0$, and
+the two eigenstrains oppose each other in the same place at the same time.
+
+| run | $\varepsilon_c$ | $\varepsilon_T$ | $V$ | $\Delta V/V$ | $\int f_{\mathrm{el}}$ |
+|---|---|---|---:|---:|---:|
+| off | — | — | 0.121417 | — | 0 |
+| solutal only | $-7.29\times10^{-3}$ | 0 | 0.113783 | −6.29 % | 55.5 |
+| thermal only | 0 | $+1.01\times10^{-2}$ | 0.118994 | −2.00 % | 11.9 |
+| **both** | $-7.29\times10^{-3}$ | $+1.01\times10^{-2}$ | 0.120033 | **−1.14 %** | **18.8** |
+
+: The two eigenstrains together do *less* than the solutal one alone. {#tbl-ad-thermosolutal}
+
+Together they store $18.8$, against $55.5$ for the solutal misfit by itself:
+**adding a second source of misfit reduces the elastic energy by a factor of
+three.** For two co-located scalar eigenstrains the energies would combine as
+$(a \pm b)^2$; from the single-source runs $|a| = 7.45$ and $|b| = 3.45$, so
+same sign predicts 118.9 and opposite sign predicts 16.0 against a measured
+18.8. The cancellation is not perfect because $\theta$ diffuses ten times
+faster than $U$ and the two fields therefore have different spatial shapes,
+so they cancel where they overlap and not elsewhere — which is why 18.8 sits
+just above 16.0 rather than on it.
+
+This is the kind of statement the chapter exists to be able to make. It is
+not available to a model with one field, it is not available to a model that
+couples elasticity to composition alone, and it inverts the naive
+expectation that more physics means more stress.
+
+## What the coupling costs {#sec-ad-cost}
+
+The elastic solve is twelve real transforms per Green-operator application
+and about ten applications per solve, against a finite-difference step that
+is four stages and three halo exchanges. Measured on `standard`, $600^2$,
+32 ranks, $t = 20$:
+
+| | elastic off | elastic on, every step |
+|---|---:|---:|
+| wall | 1.52 s | 62.93 s |
+
+so **one elastic solve costs about 41 finite-difference steps** at this size,
+rising to roughly 166 at $1280^2$ on 64 ranks as the FFT's all-to-all takes a
+larger share. That is the number that makes `n_el_substep` not an
+optimisation but the thing that makes the application runnable: at $N = 20$
+the coupled run is about 3 times the cost of the uncoupled one rather than
+41, and @tbl-ad-lag prices the accuracy.
+
+The elastic solve's own scaling from 1 to 32 ranks is $12.8\times$ — 40 %
+efficiency, which is what a global all-to-all on a $600^2$ grid gives and is
+much worse than the finite-difference part. **This is the honest cost of
+putting a global solve inside a local time loop**, and it is the reason the
+lagging matters more than any constant-factor optimisation would.
+
+What does *not* degrade is the iteration count: 12.65, 12.82 and 12.86 Green
+applications per solve at $128^3$, $256^3$ and $512^3$ (@tbl-ad-3d). The
+fixed point's conditioning is set by the modulus contrast, not by the problem
+size, so the coupled application inherits the FFT's scaling and nothing
+worse.
+
+## Sensitivity, and the one parameter that is not a material property {#sec-ad-sensitivity}
+
+Three choices in @eq-ad-stiff to @eq-ad-fixed are not measurements, and all
+three move the answer.
+
+| choice | $V$ | $\Delta V/V$ vs off | $\int f_{\mathrm{el}}$ |
+|---|---:|---:|---:|
+| reference (no coupling) | 0.212722 | — | 0 |
+| **default**: free body, $\mu_l/\mu_s = 0.05$ | 0.177228 | **−16.69 %** | 416 |
+| clamped cell, $\bar{\boldsymbol\varepsilon} = 0$ | 0.164579 | −22.63 % | 892 |
+| $\mu_l/\mu_s = 0.02$ | 0.191819 | −9.83 % | 360 |
+| $\mu_l/\mu_s = 0.10$ | 0.163671 | −23.06 % | 456 |
+
+: Sensitivity of the Stage-4 result to the three non-material choices. {#tbl-ad-sensitivity}
+
+**The macroscopic strain condition** is worth 6 percentage points of the
+17 %. Clamping the cell at zero mean strain stores $2.1\times$ the energy,
+because a uniformly transforming body that cannot expand carries a uniform
+stress on top of the structured one. The free-body condition is the default
+because a dendrite growing into a large melt is not clamped, and because the
+clamped answer depends on the box size while the free one does not — but the
+difference is a real modelling choice and it is this large.
+
+**The liquid shear modulus is the dominant systematic, and it does not have
+a clean limit.** A liquid supports no shear; the solve cannot take zero,
+because two channels of the local stiffness become singular and every fixed
+point in this family then has contraction factor one. $\mu_l/\mu_s$ is
+therefore a regularisation, and the effect it regularises is not small: the
+measured slowdown runs 9.8 %, 16.7 %, 23.1 % at $\mu_l/\mu_s = 0.02$, 0.05,
+0.10, roughly logarithmic in $\mu_l$ and with no sign of settling over the
+range a solve can afford. **The magnitude of the Stage-4 result should
+therefore be read as "of order 10–20 % at a physically defensible
+regularisation", not as $16.7 \pm 0.1$ %.** What is *not* sensitive to it is
+the sign, the monotonicity in $\lambda_{\mathrm{el}}$, the near-invariance of
+$\sigma^{*}$, and the partial cancellation of the two eigenstrains — all of
+which hold across the whole scan.
+
+This is a limitation of the eigenstrain-microelasticity formulation rather
+than of the implementation: a phase-field description of a solid growing into
+a genuinely inviscid liquid needs either a different treatment of the liquid
+(a pressure-only constitutive branch) or a solver that tolerates a singular
+local stiffness. Neither is a small change, and neither is in scope here.
+
+**The material data** contributes a smaller and better-characterised band.
+The Vegard slope is representative to about 6 %, and $f_{\mathrm{el}}$ goes
+as its square, so 12 % on the energy; the softening factor at $T_M$ is an
+extrapolation, and doubling it is exactly equivalent to doubling
+$\lambda_{\mathrm{el}}$ (verified above), which @tbl-ad-science prices at
+−28 % rather than −17 %. These are stated in @tbl-ad-material rather than
+buried.
+
+## Limitations {#sec-ad-limits}
+
+Stated plainly, because a chapter this long that ended on the result would be
+overselling it.
+
+1. **The quantitative claims are 2-D.** The 3-D runs demonstrate that the
+   coupled machinery works and scales to 2048 ranks with a size-independent
+   iteration count. They are too short and, at $128^3$, too small to support
+   a number.
+2. **$\sigma^{*}$ is not quotable to better than tens of percent.** The tip
+   radius depends on the fit window by 36–54 % at $\epsilon_4 = 0.04$ and the
+   spread does not shrink under refinement, because a sharp tip is not a
+   paraboloid past about one radius. The *ratios* in @tbl-ad-science are far
+   better than that, because they are the same measurement twice.
+3. **$\rho$ is not grid-converged where $V$ is.** Between $\Delta x = 0.65$
+   and $0.5$ at eighth order, $V$ moves 0.3 % and $\rho$ moves 3.2 %.
+   $\sigma^{*} \propto \rho^{-2}$ inherits that twice over.
+4. **The liquid shear regularisation sets the magnitude**, as above.
+5. **Lewis number 10, not $10^3$.** An explicit scheme's step is set by the
+   fastest diffusivity, so a metal's real thermal-to-solutal diffusivity
+   ratio costs three orders of magnitude more. The thermo-solutal results in
+   @tbl-ad-thermosolutal are qualitatively right about the cancellation and
+   are not a quantitative alloy prediction.
+6. **No plasticity, no grain boundaries, no melt convection, no
+   nucleation.** The elasticity is linear and the crystal is single. A real
+   Al–Cu casting relieves misfit stress by dislocation activity long before
+   it reaches the levels computed here.
+7. **CPU only.** The device twin of the finite-difference step exists; the
+   elastic solve is host-side. Measurements on a GPU build put the host
+   round-trip at 0.3 % of the coupled step but the host *solve* at 500–3000
+   times the device step, so a GPU coupled run is not currently worth doing.
+   A device Green operator over rocFFT is the obvious next step and is
+   started but not finished.
+8. **The eigenstrain is purely dilatational.** A real solidification front
+   also carries a deviatoric misfit from anisotropic thermal expansion and
+   from coherency at a curved interface. The formulation admits a general
+   $\boldsymbol\varepsilon^{*}$; only the dilatational case is calibrated.
+
+## Why this one is harder than the others
+
+Every other application in this report has one field family and one
+discretisation, and its verification is one comparison. This one has four
+fields, two discretisations, a solve inside a solve, and a verification
+ladder whose rungs are not interchangeable.
+
+Concretely, the things that had to be true simultaneously for
+@tbl-ad-science to mean anything: the anti-trapping current has to make
+$k_{\mathrm{eff}}$ velocity-independent (@tbl-ad-at), or the interface
+composition — which *is* the eigenstrain — is wrong; the conservative solute
+form has to be paired with its own source, or conservation breaks by 10 %;
+the anisotropy has to be normalised, or a literature $\epsilon_4$ arrives a
+factor of four too weak; the padded finite-difference box and the HeFFTe
+inbox have to describe the same cells, or the coupling is wrong on every rank
+but zero; the polarisation has to keep its eigenstress term, or a misfitting
+inclusion in a homogeneous medium produces no strain; $\partial
+f_{\mathrm{el}}/\partial\phi$ has to be checked against a *re-converged*
+energy, or one verifies one's own algebra; and the tip has to actually be
+steady, in a box that is not setting the answer, on a grid that resolves it.
+
+Each of those was wrong at some point during development, and each was found
+by a measurement rather than by inspection. That is the real content of the
+ladder in @sec-ad-ladder: not that the model is right, but that there is a
+sequence of checks each of which would have caught a specific way of being
+wrong.
+
+And the architectural point the application was built to make: **the local
+physics runs on high-order finite differences with a halo exchange, the
+elliptic mechanical equilibrium runs spectrally on the same decomposition,
+and they exchange fields every step inside one time loop.** OpenPFC's FD and
+FFT stacks were built separately and for different applications; this chapter
+is the demonstration that they compose.
