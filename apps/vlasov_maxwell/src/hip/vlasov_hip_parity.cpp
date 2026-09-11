@@ -113,6 +113,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include <mpi.h>
@@ -323,7 +324,114 @@ void print_usage(std::ostream &os, const char *exe) {
      << "  --samples=N              divergence reports during them     (5)\n"
      << "  --dt=X                   step; 0 derives it                 (0)\n"
      << "  --device-x=0|1           run phase A on the device too       (1)\n"
+     << "  --science=landau         CPU/GPU Landau γ instead of the 20-step\n"
+     << "                          operator test (off)\n"
      << "  --quiet=1                pass/fail only\n";
+}
+
+/// Landau IC, host Stepper vs DeviceStepper, same host envelope fit on
+/// `mode_ex`. The oracle is not the dispersion root: this asks whether the
+/// two paths measure the same rate, not whether either is right.
+int run_science_landau(int nx, int nvx, int nvy, int interp, double dt_in,
+                       bool device_x, int rank, int nproc) {
+  const double vth = 0.05;
+  const double twopi = 2.0 * std::acos(-1.0);
+  const double t_end = 12.0;
+  const double amp = 0.01;
+
+  auto make_landau = [&]() {
+    SimParams p;
+    p.nx = nx;
+    p.nvx = nvx;
+    p.nvy = nvy;
+    p.Lx = twopi * vth / 0.5;
+    p.v_max = 8.0 * vth;
+    p.v_thermal = vth;
+    p.t_end = t_end;
+    p.interp_order = interp;
+    p.electrostatic = true;
+    p.self_consistent = true;
+    p.validate();
+    const int halo = vlasov::required_halo_width(4.0, interp);
+    auto ps = std::make_unique<PhaseSpace>(p, halo, MPI_COMM_WORLD);
+    auto st = std::make_unique<Stepper>(p, *ps);
+    const double k = p.k_skin(1);
+    ps->initialise(0, [&](double x, double vx, double vy) {
+      return vlasov::ics::density_perturbation(x, k, amp) *
+             vlasov::ics::maxwellian(vx, vy, vth);
+    });
+    st->deposit_all();
+    const auto sol =
+        vlasov::solve_gauss(st->line, st->sources.rho, p.neutrality_tol);
+    st->fields.Ex = sol.Ex;
+    double emax = 0.0;
+    for (double v : st->fields.Ex) emax = std::fmax(emax, std::fabs(v));
+    const double dt =
+        dt_in > 0.0
+            ? dt_in
+            : p.dt_safety *
+                  vlasov::step_limit(p, 1.0, std::fmax(emax, 1.0e-3), 0.1, halo);
+    return std::tuple<SimParams, std::unique_ptr<PhaseSpace>,
+                      std::unique_ptr<Stepper>, double, int>{
+        p, std::move(ps), std::move(st), dt, halo};
+  };
+
+  auto cpu = make_landau();
+  auto gpu = make_landau();
+  auto &p = std::get<0>(cpu);
+  auto &ps_cpu = *std::get<1>(cpu);
+  auto &st_cpu = *std::get<2>(cpu);
+  auto &ps_gpu = *std::get<1>(gpu);
+  auto &st_gpu = *std::get<2>(gpu);
+  const double dt = std::get<3>(cpu);
+  const int n_steps = std::max(1, static_cast<int>(std::llround(t_end / dt)));
+  const double k = p.k_skin(1);
+
+  DeviceStepper ds(st_gpu, ps_gpu, device_x);
+  ds.upload_all();
+  st_cpu.work.measure_mass = false;
+  st_gpu.work.measure_mass = false;
+
+  std::vector<double> ts, mex_cpu, mex_gpu;
+  auto sample = [&](int step, double t) {
+    ds.download_all();
+    const Ledger lc = vlasov::make_ledger(p, st_cpu.line, st_cpu.moments,
+                                          st_cpu.sources, st_cpu.fields,
+                                          st_cpu.gauss, t, step, 1);
+    const Ledger lg = vlasov::make_ledger(p, st_gpu.line, st_gpu.moments,
+                                          st_gpu.sources, st_gpu.fields,
+                                          st_gpu.gauss, t, step, 1);
+    ts.push_back(t);
+    mex_cpu.push_back(lc.mode_ex);
+    mex_gpu.push_back(lg.mode_ex);
+  };
+  sample(0, 0.0);
+  for (int step = 1; step <= n_steps; ++step) {
+    st_cpu.advance(dt);
+    ds.advance(dt);
+    sample(step, static_cast<double>(step) * dt);
+  }
+
+  const double t0 = 3.0;
+  const double t1 = t_end;
+  vlasov::require_fit_before_recurrence(t1, k, p.dvx());
+  const double g_cpu = vlasov::fit_envelope_rate(ts, mex_cpu, t0, t1);
+  const double g_hip = vlasov::fit_envelope_rate(ts, mex_gpu, t0, t1);
+  const double denom = std::max(std::fabs(g_cpu), 1.0e-16);
+  const double rel = std::fabs(g_hip - g_cpu) / denom;
+  if (rank == 0) {
+    std::printf("vlasov_hip_parity science=landau: %d x %d x %d, %d ranks, "
+                "%d steps, dt %.6g\n",
+                nx, nvx, nvy, nproc, n_steps, dt);
+    std::printf("  gamma_cpu = %.10g\n", g_cpu);
+    std::printf("  gamma_hip = %.10g\n", g_hip);
+    std::printf("  |g_hip-g_cpu|/max(|g_cpu|,eps) = %.3e  (tol 1e-6)\n", rel);
+  }
+  const bool ok = std::isfinite(g_cpu) && std::isfinite(g_hip) && rel < 1.0e-6;
+  if (rank == 0) {
+    std::printf("\n  VLASOV_HIP_SCIENCE_RATE %s\n", ok ? "PASS" : "FAIL");
+  }
+  return ok ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 int run(int argc, char **argv, int rank, int nproc) {
@@ -341,7 +449,18 @@ int run(int argc, char **argv, int rank, int nproc) {
   const double dt_in = opt.real("dt", 0.0);
   const bool device_x = opt.flag("device-x", true);
   const bool quiet = opt.flag("quiet", false);
+  const std::string science = opt.text("science", "");
   opt.require_all_consumed();
+
+  if (science == "landau") {
+    vlasov::hip::bind_local_device(rank);
+    return run_science_landau(nx, nvx, nvy, interp, dt_in, device_x, rank,
+                              nproc);
+  }
+  if (!science.empty()) {
+    throw std::invalid_argument(
+        "--science must be omitted or 'landau', got '" + science + "'");
+  }
 
   vlasov::hip::bind_local_device(rank);
 
