@@ -39,9 +39,10 @@ composition- and temperature-dependent eigenstrain whose energy feeds back
 into the phase-field driving force. The local physics runs on high-order
 finite differences with a halo exchange; elliptic mechanical equilibrium is
 elsewhere in the same time step, solved spectrally on the same
-decomposition. At the calibrated coupling the elastic energy of the solutal
-misfit slows the dendrite tip by 17 % and fattens it by 11 %, while the
-selection parameter moves 2.5 % — the elasticity slides the operating point
+decomposition. At the calibrated coupling, and at the conventional regularisation of the
+liquid's shear stiffness, the elastic energy of the solutal misfit slows the
+dendrite tip by 17 % and fattens it by 11 %, while the selection parameter
+moves 2.5 % — the elasticity slides the operating point
 along the solvability curve rather than changing the selection. With the
 temperature field on, the solutal and thermal eigenstrains oppose each other
 and together store a third of what the solutal misfit stores alone.

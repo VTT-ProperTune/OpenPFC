@@ -123,14 +123,16 @@ Honest accounting of what this report cannot support:
   and self-consistency. This is inherent to a realistic equation of state, but
   it means their correctness rests on pinned checksums rather than closed-form
   agreement.
-* **The coupled dendrite's headline magnitude is regularisation-limited.** A
-  liquid supports no shear and the eigenstrain solve cannot take zero, so
-  `mu_l/mu_s` is a free parameter of the *method*, and it moves the measured
-  slowdown from 9.8 % to 23.1 % across a fivefold range with no sign of
-  settling (@sec-ad-sensitivity). The sign, the monotonicity, the
-  near-invariance of $\sigma^{*}$ and the eigenstrain cancellation survive
-  the whole scan; the number 16.7 % does not deserve three significant
-  figures.
+* **The coupled dendrite's headline magnitude is set by a regularisation,
+  not by the alloy.** A liquid supports no shear and the eigenstrain solve
+  cannot take zero, so `mu_l/mu_s` is a free parameter of the *method*.
+  Scanned over 200-fold it moves the measured slowdown from 28.6 % to
+  3.3 %, still falling at the softest liquid the fixed point can afford
+  (@tbl-ad-mu). The inviscid limit is of order a few per cent. Everything
+  qualitative — sign, monotonicity, the near-invariance of $\sigma^{*}$,
+  the eigenstrain cancellation — survives the whole scan, but 16.7 % is not
+  a prediction about Al–Cu and the chapter now says so where a reader will
+  see it.
 * **Nothing in @sec-alloy-dendrite is quantitative in three dimensions.** The
   $512^3$ run demonstrates scale and consistency; it is 150 $\tau_0$ long and
   shows a rounded cross, not a developed dendrite.
