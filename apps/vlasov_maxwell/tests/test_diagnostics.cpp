@@ -19,6 +19,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cmath>
+#include <stdexcept>
 #include <vector>
 
 #include <mpi.h>
@@ -348,6 +349,63 @@ TEST_CASE("drift of a vanishing baseline is absolute, not a 0/0",
           Approx((now.total_energy - ref.total_energy) / ref.total_energy)
               .margin(1e-18));
   REQUIRE(now.d_momentum_x == Approx(3.0e-9).margin(0.0));
+}
+
+TEST_CASE("recurrence_time is 2 pi / (k dv) and refuses garbage",
+          "[diagnostics][recurrence]") {
+  const double k = 10.0;
+  const double dv = 0.025;
+  REQUIRE(vlasov::recurrence_time(k, dv) ==
+          Approx(2.0 * kPi / (k * dv)).epsilon(1e-14));
+  REQUIRE_THROWS_AS(vlasov::recurrence_time(0.0, dv), std::invalid_argument);
+  REQUIRE_THROWS_AS(vlasov::recurrence_time(k, 0.0), std::invalid_argument);
+  REQUIRE_THROWS_AS(vlasov::recurrence_time(-k, dv), std::invalid_argument);
+  REQUIRE_THROWS_AS(vlasov::recurrence_time(k, std::nan("")),
+                    std::invalid_argument);
+}
+
+TEST_CASE("a science fit that includes t > 0.8 T_R throws",
+          "[diagnostics][recurrence]") {
+  const double k = 10.0;
+  const double dv = 0.025;
+  const double tr = vlasov::recurrence_time(k, dv);
+  REQUIRE_NOTHROW(vlasov::require_fit_before_recurrence(0.7 * tr, k, dv));
+  REQUIRE_THROWS_AS(vlasov::require_fit_before_recurrence(0.81 * tr, k, dv),
+                    std::runtime_error);
+  REQUIRE_THROWS_AS(vlasov::require_fit_before_recurrence(tr, k, dv),
+                    std::runtime_error);
+  // A missing window is a different failure; this guard must not invent one.
+  REQUIRE_NOTHROW(
+      vlasov::require_fit_before_recurrence(std::nan(""), k, dv));
+}
+
+TEST_CASE("recurrence peak finding distinguishes empty from no revival",
+          "[diagnostics][recurrence]") {
+  const double t_pred = 10.0;
+  std::vector<double> t, zeros, decay, revive;
+  for (int i = 0; i <= 400; ++i) {
+    const double ti = 0.05 * i;
+    t.push_back(ti);
+    zeros.push_back(0.0);
+    decay.push_back(std::exp(-0.4 * ti));
+    // A Gaussian bump at t_pred, on top of a decaying envelope, is the
+    // discrete-velocity revival shape in miniature.
+    const double z = (ti - t_pred) / 0.4;
+    revive.push_back(std::exp(-0.4 * ti) + std::exp(-0.5 * z * z));
+  }
+  const auto empty = vlasov::find_recurrence_peak(t, zeros, t_pred);
+  const auto none = vlasov::find_recurrence_peak(t, decay, t_pred);
+  const auto hit = vlasov::find_recurrence_peak(t, revive, t_pred);
+  REQUIRE(empty.kind == vlasov::RevivalKind::empty);
+  REQUIRE(none.kind == vlasov::RevivalKind::none);
+  REQUIRE(hit.kind == vlasov::RevivalKind::found);
+  REQUIRE(hit.t == Approx(t_pred).epsilon(1e-3));
+  REQUIRE_FALSE(std::isfinite(empty.t));
+  REQUIRE_FALSE(std::isfinite(none.t));
+  std::vector<double> short_t{0.0, 1.0};
+  std::vector<double> short_y{1.0, 0.5};
+  REQUIRE(vlasov::find_recurrence_peak(short_t, short_y, t_pred).kind ==
+          vlasov::RevivalKind::empty);
 }
 
 TEST_CASE("require_resolved_spacing refuses the Poisson-summation grid",

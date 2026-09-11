@@ -352,6 +352,7 @@ int run(int argc, char **argv, int rank, int nproc) {
   const int n_steps = std::max(1, static_cast<int>(std::llround(p.t_end / dt)));
   const int sample_every = std::max(1, n_steps / std::max(1, p.n_sample));
 
+  const double t_recurrence = vlasov::recurrence_time(k, p.dvx());
   if (rank == 0 && !quiet) {
     std::cout << "vlasov_run: case=" << c.name << "\n"
               << "  phase space   " << p.nx << " x " << p.nvx << " x " << p.nvy
@@ -364,6 +365,8 @@ int run(int argc, char **argv, int rank, int nproc) {
               << "  box           Lx=" << p.Lx << " d_e, k=" << k
               << ", vmax=" << p.v_max << " c\n"
               << "  k lambda_D    " << k * vth << "\n"
+              << "  T_R           " << t_recurrence << "  (t_end/T_R = "
+              << p.t_end / t_recurrence << ")\n"
               << "  dt            " << dt << " (limit " << lim << "), "
               << n_steps << " steps to t=" << p.t_end << "\n"
               << "  device        " << device
@@ -453,7 +456,10 @@ int run(int argc, char **argv, int rank, int nproc) {
     // starts after one oscillation period so the ballistic transient that
     // precedes the asymptotic Landau regime is excluded, and ends before
     // the mode reaches the round-off floor where it stops damping.
-    gamma_fit = vlasov::fit_envelope_rate(t_s, m_ex, 3.0, 0.7 * p.t_end);
+    fit_t0 = 3.0;
+    fit_t1 = 0.7 * p.t_end;
+    vlasov::require_fit_before_recurrence(fit_t1, k, p.dvx());
+    gamma_fit = vlasov::fit_envelope_rate(t_s, m_ex, fit_t0, fit_t1);
     omega_fit = vlasov::frequency_from_minima(t_s, m_ex, 0.0, 0.6 * p.t_end);
     const auto r = pd::solve_langmuir_root(k * vth);
     gamma_ref = r.omega.imag();
@@ -463,9 +469,10 @@ int run(int argc, char **argv, int rank, int nproc) {
     // saturates hard, and at 0.2 of its maximum the last fifth of the
     // window is already rolling over -- measured, -13.5% on the rate.
     const auto w = vlasov::auto_growth_window(t_s, m_ex, 5.0, 0.05);
-    gamma_fit = vlasov::fit_exponential_rate(t_s, m_ex, w[0], w[1]);
     fit_t0 = w[0];
     fit_t1 = w[1];
+    vlasov::require_fit_before_recurrence(fit_t1, k, p.dvx());
+    gamma_fit = vlasov::fit_exponential_rate(t_s, m_ex, w[0], w[1]);
     pd::TwoStreamMaxwellians ts2;
     ts2.v_drift = drift;
     ts2.v_th = vth;
@@ -492,9 +499,10 @@ int run(int argc, char **argv, int rank, int nproc) {
     }
   } else if (c.name == "weibel" || c.name == "filament") {
     const auto w = vlasov::auto_growth_window(t_s, m_bz);
-    gamma_fit = vlasov::fit_exponential_rate(t_s, m_bz, w[0], w[1]);
     fit_t0 = w[0];
     fit_t1 = w[1];
+    vlasov::require_fit_before_recurrence(fit_t1, k, p.dvx());
+    gamma_fit = vlasov::fit_exponential_rate(t_s, m_bz, w[0], w[1]);
     pd::BiMaxwellian bm;
     bm.v_th_x = vth;
     bm.v_th_y = (c.name == "weibel") ? vthy : std::sqrt(drift * drift + vth * vth);
