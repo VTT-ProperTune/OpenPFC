@@ -862,6 +862,49 @@ TEST_CASE("imposed theta still enters M_c theta when evolve_theta is off",
   }
 }
 
+TEST_CASE("FTA smoke: Bridgman field grows a finite downstream tip",
+          "[fta-smoke]") {
+  // Issue #155 science campaign, cheap. 96 x 48 at t_end = 8 is enough to
+  // see a moving tip and conserved solute; it is not a result. Do not grow
+  // [planar] / [elastic] / [bicrystal] to pay for this -- the 900 s
+  // alloy-dendrite-planar ctest has to keep fitting GitHub Debug.
+  if (world_size() != 1) {
+    SKIP("single-rank FTA smoke");
+  }
+  alloy_dendrite::DendriteConfig cfg;
+  cfg.model.D_l = 2.0;
+  cfg.model.k = 0.15;
+  cfg.model.lambda = cfg.model.D_l / alloy_dendrite::kA2;
+  cfg.model.eps4 = 0.04;
+  cfg.model.M_c = 0.5;
+  cfg.model.evolve_theta = false;
+  cfg.nx = 96;
+  cfg.ny = 48;
+  cfg.dx = 0.8;
+  cfg.t_end = 8.0;
+  cfg.n_sample = 8;
+  cfg.omega = 0.55;
+  cfg.seed_radius = 6.0;
+  cfg.seed_x = 8.0;
+  cfg.fta_gradient = 0.02;
+  cfg.fta_pulling = 0.05;
+  cfg.fta_x0 = 8.0;
+  cfg.tip_fit_halfwidth = 3;
+  cfg.quiet = true;
+  cfg.run_id = "ctest-fta-smoke";
+  int rank = 0;
+  int nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  const auto r =
+      alloy_dendrite::run_dendrite_case(cfg, rank, nproc, MPI_COMM_WORLD);
+  REQUIRE(r.valid);
+  REQUIRE(std::isfinite(r.v_tip));
+  CHECK(r.solute_drift_rel < 1e-11);
+  CHECK(r.phi_min > -1.05);
+  CHECK(r.phi_max < 1.05);
+}
+
 TEST_CASE("two tanh seeds still conserve solute to round-off",
           "[unit][bicrystal]") {
   // A competing-dendrite *science* run is not a ctest. This only checks that
