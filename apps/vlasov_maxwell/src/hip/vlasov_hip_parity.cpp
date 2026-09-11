@@ -339,6 +339,11 @@ int run_science_landau(int nx, int nvx, int nvy, int interp, double dt_in,
   const double t_end = 12.0;
   const double amp = 0.01;
 
+  struct LandauRun {
+    std::unique_ptr<PhaseSpace> ps;
+    std::unique_ptr<Stepper> st;
+    double dt{0.0};
+  };
   auto make_landau = [&]() {
     SimParams p;
     p.nx = nx;
@@ -353,37 +358,36 @@ int run_science_landau(int nx, int nvx, int nvy, int interp, double dt_in,
     p.self_consistent = true;
     p.validate();
     const int halo = vlasov::required_halo_width(4.0, interp);
-    auto ps = std::make_unique<PhaseSpace>(p, halo, MPI_COMM_WORLD);
-    auto st = std::make_unique<Stepper>(p, *ps);
-    const double k = p.k_skin(1);
-    ps->initialise(0, [&](double x, double vx, double vy) {
+    LandauRun r;
+    r.ps = std::make_unique<PhaseSpace>(p, halo, MPI_COMM_WORLD);
+    r.st = std::make_unique<Stepper>(r.ps->params(), *r.ps);
+    const double k = r.ps->params().k_skin(1);
+    r.ps->initialise(0, [&](double x, double vx, double vy) {
       return vlasov::ics::density_perturbation(x, k, amp) *
              vlasov::ics::maxwellian(vx, vy, vth);
     });
-    st->deposit_all();
-    const auto sol =
-        vlasov::solve_gauss(st->line, st->sources.rho, p.neutrality_tol);
-    st->fields.Ex = sol.Ex;
+    r.st->deposit_all();
+    const auto sol = vlasov::solve_gauss(r.st->line, r.st->sources.rho,
+                                         r.ps->params().neutrality_tol);
+    r.st->fields.Ex = sol.Ex;
     double emax = 0.0;
-    for (double v : st->fields.Ex) emax = std::fmax(emax, std::fabs(v));
-    const double dt =
-        dt_in > 0.0
-            ? dt_in
-            : p.dt_safety *
-                  vlasov::step_limit(p, 1.0, std::fmax(emax, 1.0e-3), 0.1, halo);
-    return std::tuple<SimParams, std::unique_ptr<PhaseSpace>,
-                      std::unique_ptr<Stepper>, double, int>{
-        p, std::move(ps), std::move(st), dt, halo};
+    for (double v : r.st->fields.Ex) emax = std::fmax(emax, std::fabs(v));
+    r.dt = dt_in > 0.0
+               ? dt_in
+               : r.ps->params().dt_safety *
+                     vlasov::step_limit(r.ps->params(), 1.0,
+                                        std::fmax(emax, 1.0e-3), 0.1, halo);
+    return r;
   };
 
   auto cpu = make_landau();
   auto gpu = make_landau();
-  auto &p = std::get<0>(cpu);
-  auto &ps_cpu = *std::get<1>(cpu);
-  auto &st_cpu = *std::get<2>(cpu);
-  auto &ps_gpu = *std::get<1>(gpu);
-  auto &st_gpu = *std::get<2>(gpu);
-  const double dt = std::get<3>(cpu);
+  auto &p = cpu.ps->params();
+  auto &ps_cpu = *cpu.ps;
+  auto &st_cpu = *cpu.st;
+  auto &ps_gpu = *gpu.ps;
+  auto &st_gpu = *gpu.st;
+  const double dt = cpu.dt;
   const int n_steps = std::max(1, static_cast<int>(std::llround(t_end / dt)));
   const double k = p.k_skin(1);
 

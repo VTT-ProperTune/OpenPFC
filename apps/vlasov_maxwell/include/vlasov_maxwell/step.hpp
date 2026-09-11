@@ -187,11 +187,16 @@ struct Stepper {
   int peak_halo_used{0};
 
   Stepper(const SimParams &params, PhaseSpace &space)
-      : p(&params), ps(&space), line(params.nx, params.Lx),
-        fields(FieldState::zeros(params.nx)), xplan(params.nx) {
+      : p(&space.params()), ps(&space), line(space.params().nx, space.params().Lx),
+        fields(FieldState::zeros(space.params().nx)), xplan(space.params().nx) {
+    // Bind to PhaseSpace's owned SimParams, not the constructor argument.
+    // Callers that return a copied SimParams (make_landau in the HIP science
+    // path) would otherwise leave p dangling; vector::at on the wreckage
+    // is how that showed up on LUMI job 21943338.
+    (void)params;
     work.resize_for_vx(space);
     work.resize_for_vy(space);
-    moments.resize(params.species.size());
+    moments.resize(space.params().species.size());
   }
 
   /// Deposit `rho` and `J` from the current state, and refresh the ledger
