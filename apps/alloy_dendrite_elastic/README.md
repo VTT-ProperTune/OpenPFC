@@ -569,6 +569,17 @@ warm-started, a single Green application -- is **362 ms against a 2.78 ms
 GPU step, 130x**. No amount of loosening the tolerance closes that, because
 the last factor being loosened away is one FFT pass.
 
+### The feedback switched on
+
+Everything above is timed with `lambda_el = 0`, so the solve runs and is
+paid for but its answer does not reach equation (2). Turning it on
+(`--lambda-el=1`, job **21917122**, `128^3`) costs 3091 ms against 2918 ms
+— 6 %, from the phase field moving differently and the warm start being
+correspondingly less warm — and the loop runs to completion, which is the
+end-to-end statement that the chain solve → `push_owned` → device field →
+stage B's `ELASTIC HOOK` is live. It is a cost measurement, not a physics
+result: no Stage-4 comparison of elastic off against on is claimed here.
+
 ### How soft the liquid is
 
 `microelasticity.hpp` calls the liquid shear modulus a regularisation
