@@ -22,7 +22,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   `--gradient`/`--pulling` is rejected. Recipe:
   `apps/alloy_dendrite_elastic/slurm/alloy_dendrite_fta.sbatch`.
   LUMI-C job 21948410 diverged (periodic \(\theta\) jump); do not quote
-  \(V_{\mathrm{tip}}\). Catalog stays at fifteen applications.
+  \(V_{\mathrm{tip}}\). Not a new application.
 - **Alloy-dendrite qualified low-shear point** (job **21996493**,
   LUMI-C `standard`, 8 ranks, 00:11:41): same \(256^2\) vehicle as
   21995259, \(\mu_l/\mu_s=0.001\), `--el-iter=400`. Green solve
