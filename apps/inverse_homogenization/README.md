@@ -77,9 +77,12 @@ Not paper claims. Grey linear interpolation **cannot** produce \(\nu<0\).
 | 21949415 | raw gradient, `dt=0.08` | **0.050** | 0.31 | first step collapsed volume \(0.55\to0.25\) |
 | 21949811 | RMS-normalised, `dt=0.03` | 0.129 | 0.40 | step 1 is \(0.55\to0.52\); volume still bleeds |
 | 21949859 | + volume projection | 0.375 | **0.50** | volume held; design stayed fully grey (Voigt-like) |
+| 21950094 | + SIMP \(p=3\) | 0.209 | **0.50** | still fully grey after 40 steps; \(C_{12}\) still \(>0\) |
 
-Auxetic \(C_{12}\) stayed **positive** in every campaign. Next: SIMP \(p=3\)
-so the loop can form 0/1 topology at fixed volume.
+Auxetic \(C_{12}\) stayed **positive** in every campaign. SIMP at 40 steps
+was not enough to leave the grey well; next is continuation on \(p\) /
+\(\lambda_r\) and a 2-D auxetic length-scale long enough to form re-entrant
+features.
 
 ## Tests
 
