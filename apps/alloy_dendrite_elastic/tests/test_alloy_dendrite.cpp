@@ -322,6 +322,12 @@ TEST_CASE("planar front: k_eff equals k, which is the anti-trapping test",
   // Velocity against the thin-interface prediction. Measured -0.33% here and
   // -0.19% in the full-length dx = 0.6 W0 run; the band is 5%.
   CHECK(r.v_measured == Approx(r.v_predicted).epsilon(0.05));
+  // Steady-state mass balance U_inf = k U_s - 1, i.e. the freshly formed
+  // solid carries exactly the far-field composition. Independent of both the
+  // kinetic relation and the boundary-layer fit, and -- unlike them -- a
+  // statement about solid the model laid down during the run rather than
+  // about the seeded profile. Measured -1e-4 absolute against U_far = -1.009.
+  CHECK(std::fabs(r.stefan_residual) < 1e-3);
 }
 
 TEST_CASE("planar front: switching the anti-trapping current off is visible",

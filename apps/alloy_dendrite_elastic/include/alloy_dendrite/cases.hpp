@@ -157,6 +157,18 @@ struct PlanarResult {
   double k_eff{std::numeric_limits<double>::quiet_NaN()};
   double u_interface{std::numeric_limits<double>::quiet_NaN()};
   double u_solid{std::numeric_limits<double>::quiet_NaN()};
+  double u_far{std::numeric_limits<double>::quiet_NaN()};
+  /**
+   * @brief Residual of the steady-state mass balance `U_inf = k U_s - 1`.
+   *
+   * Independent of the kinetic relation and of the boundary-layer fit: it
+   * says the freshly formed solid carries exactly the far-field composition,
+   * which is what "steady" means for a planar front. Three of the four
+   * Stage-1 relations (`U_i = -beta V`, `ell = D_l/V`, `U_s = U_i`) can be
+   * argued to be partly seeded by the analytic initial condition; this one
+   * is a statement about the solid the model laid down during the run.
+   */
+  double stefan_residual{std::numeric_limits<double>::quiet_NaN()};
   double fit_r2{std::numeric_limits<double>::quiet_NaN()};
   /// `|solute(t_end) - solute(0)| / |solute(0)|`.
   double solute_drift_rel{std::numeric_limits<double>::quiet_NaN()};
@@ -306,7 +318,7 @@ struct PlanarResult {
                          rank);
   }
 
-  std::vector<double> t_s, x_s, ui_s, us_s, ke_s, ell_s, r2_s;
+  std::vector<double> t_s, x_s, ui_s, us_s, uf_s, ke_s, ell_s, r2_s;
   Conservation cons = cons0;
   double t = 0.0;
   for (int step = 1; step <= res.n_steps; ++step) {
@@ -326,6 +338,7 @@ struct PlanarResult {
       x_s.push_back(front.x_if);
       ui_s.push_back(front.u_interface);
       us_s.push_back(front.u_solid);
+      uf_s.push_back(front.u_far);
       ke_s.push_back(front.k_eff);
       ell_s.push_back(front.ell);
       r2_s.push_back(front.fit_r2);
@@ -354,7 +367,9 @@ struct PlanarResult {
   res.v_measured = trailing_slope(t_s, x_s, cfg.fit_fraction);
   res.u_interface = trailing_mean(ui_s, cfg.fit_fraction);
   res.u_solid = trailing_mean(us_s, cfg.fit_fraction);
+  res.u_far = trailing_mean(uf_s, cfg.fit_fraction);
   res.k_eff = trailing_mean(ke_s, cfg.fit_fraction);
+  res.stefan_residual = res.u_far - (p.k * res.u_solid - 1.0);
   res.ell_measured = trailing_mean(ell_s, cfg.fit_fraction);
   res.fit_r2 = trailing_mean(r2_s, cfg.fit_fraction);
   res.beta_measured = (std::isfinite(res.v_measured) && res.v_measured != 0.0)
@@ -376,8 +391,8 @@ struct PlanarResult {
         "run_id,nx,ny,dx,dx_over_W0,fd_order,dt,t_end,lambda,k,D_l,W0,tau0,eps4,"
         "at_scale,spec_source,omega,peclet,beta_theory,beta_measured,v_predicted,"
         "v_measured,v_rel_err,ell_predicted,ell_measured,ell_rel_err,u_interface,"
-        "u_solid,k_eff,k_eff_rel_err,fit_r2,solute_drift_rel,heat_drift_rel,"
-        "phi_min,phi_max",
+        "u_solid,u_far,stefan_residual,k_eff,k_eff_rel_err,fit_r2,"
+        "solute_drift_rel,heat_drift_rel,phi_min,phi_max",
         rank);
     const double v_err = (std::isfinite(res.v_measured) && v_pred != 0.0)
                              ? (res.v_measured - v_pred) / v_pred
@@ -392,14 +407,14 @@ struct PlanarResult {
     sum_csv.row(format(
         "%s,%d,%d,%.10g,%.10g,%d,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,"
         "%.10g,%d,%.12g,%.6g,%.10g,%.10g,%.10g,%.10g,%.6g,%.10g,%.10g,%.6g,%.10g,"
-        "%.10g,%.10g,%.6g,%.6g,%.3e,%.3e,%.6g,%.6g",
+        "%.10g,%.10g,%.3e,%.10g,%.6g,%.6g,%.3e,%.3e,%.6g,%.6g",
         cfg.run_id.c_str(), cfg.nx, cfg.ny, cfg.dx, cfg.dx / p.W0, cfg.fd_order,
         res.dt, cfg.t_end, p.lambda, p.k, p.D_l, p.W0, p.tau0, p.eps4, p.at_scale,
         p.spec_source ? 1 : 0, res.omega, res.peclet, res.beta_theory,
         res.beta_measured, v_pred, res.v_measured, v_err, ell_pred_meas,
-        res.ell_measured, ell_err, res.u_interface, res.u_solid, res.k_eff,
-        (res.k_eff - p.k) / p.k, res.fit_r2, res.solute_drift_rel,
-        res.heat_drift_rel, res.phi_min, res.phi_max));
+        res.ell_measured, ell_err, res.u_interface, res.u_solid, res.u_far,
+        res.stefan_residual, res.k_eff, (res.k_eff - p.k) / p.k, res.fit_r2,
+        res.solute_drift_rel, res.heat_drift_rel, res.phi_min, res.phi_max));
   }
   return res;
 }

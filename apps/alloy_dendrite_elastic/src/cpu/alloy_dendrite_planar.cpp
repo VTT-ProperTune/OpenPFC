@@ -181,6 +181,9 @@ int run(int argc, char **argv, int rank, int nproc) {
             << "\n"
             << "  U_i           " << res.u_interface << "   U_solid " << res.u_solid
             << "   (equal iff k_eff == k)\n"
+            << "  mass balance  U_far " << res.u_far
+            << "  vs k U_s - 1 = " << (cfg.model.k * res.u_solid - 1.0)
+            << "  residual " << res.stefan_residual << "\n"
             << "  ------------------------------------------------------------\n"
             << "  solute drift  " << res.solute_drift_rel << " (relative)\n"
             << "  heat balance  " << res.heat_drift_rel
