@@ -20,9 +20,15 @@
  *     conservation, `k_eff`, the boundary layer and the velocity. This runs
  *     the shipped `run_planar`, not a copy of it.
  *
- * Plus a check that the elastic hook is actually wired, since the whole
- * point of leaving equations (5)-(7) out was to leave a working attachment
- * point behind, and an attachment point nothing tests is a comment.
+ * Plus, in a HeFFTe build, a fourth layer: the **coupled** path of
+ * equations (5)-(7). Those tests are built around one idea -- an
+ * elastic-off / elastic-on comparison is a controlled experiment only if
+ * switching the coupling off is exact. So the suite asserts bitwise
+ * identity for `lambda_el = 0` *with the solver running*, not merely a
+ * small difference, and then asserts that the coupling does something when
+ * it is turned on. The solver itself is verified against Eshelby in
+ * `apps/common/tests/test_microelasticity.cpp`; none of that is repeated
+ * here.
  *
  * Bands are set from the measured convergence study in the app README, at
  * roughly three times the observed error, and every one of them is
@@ -42,6 +48,10 @@
 #include <alloy_dendrite/diagnostics.hpp>
 #include <alloy_dendrite/parameters.hpp>
 #include <alloy_dendrite/step.hpp>
+#if ALLOY_DENDRITE_HAVE_ELASTICITY
+#include <alloy_dendrite/elasticity.hpp>
+#include <alloy_dendrite/material.hpp>
+#endif
 
 using Catch::Approx;
 
@@ -93,8 +103,16 @@ TEST_CASE("thin-interface relations are self-consistent", "[unit][params]") {
 }
 
 TEST_CASE("cubic anisotropy matches equation (1)", "[unit][aniso]") {
+  // Equation (1) is the *normalised* Karma-Rappel form since the 2026-09-11
+  // spec correction:
+  //     a_s = (1 - 3 eps4) + 4 eps4 sum n_i^4
+  // In 2-D that is identically 1 + eps4 cos 4theta, which is what makes a
+  // literature eps4 mean what it says. The stationary values are therefore
+  // 1 + eps4 along <100> and 1 - eps4 along <110>, not 1 + eps4 and
+  // 1 + eps4/2 as the un-normalised form gave. These numbers are the whole
+  // content of the correction, so they are asserted directly.
   alloy_dendrite::ModelParams p;
-  p.eps4 = 0.2;
+  p.eps4 = 0.05;
   p.W0 = 1.0;
 
   SECTION("isotropic when eps4 is zero") {
@@ -120,11 +138,45 @@ TEST_CASE("cubic anisotropy matches equation (1)", "[unit][aniso]") {
   }
 
   SECTION("diagonal normal is the other stationary point") {
-    // n = (1,1)/sqrt(2): sum n_i^4 = 1/2, the minimum of a_s in 2-D.
+    // n = (1,1)/sqrt(2): sum n_i^4 = 1/2, so a_s = 1 - eps4 -- the minimum,
+    // and below 1, which the un-normalised form could never produce.
     const auto a = alloy_dendrite::evaluate_anisotropy<2>(p, 1.0, 1.0, 0.0);
-    REQUIRE(a.a_s == Approx(1.0 + 0.5 * p.eps4));
+    REQUIRE(a.a_s == Approx(1.0 - p.eps4));
     REQUIRE(a.flux[0] == Approx(0.0).margin(1e-14));
     REQUIRE(a.flux[1] == Approx(0.0).margin(1e-14));
+  }
+
+  SECTION("2-D a_s is exactly 1 + eps4 cos 4theta") {
+    // The identity the normalisation exists to produce, checked at
+    // orientations that are not stationary points -- where the two
+    // conventions differ most and a partially applied correction would show.
+    for (int q = 0; q <= 16; ++q) {
+      const double th = 0.1 + 0.3 * static_cast<double>(q);
+      const auto a = alloy_dendrite::evaluate_anisotropy<2>(p, std::cos(th),
+                                                            std::sin(th), 0.0);
+      INFO("theta = " << th);
+      REQUIRE(a.a_s == Approx(1.0 + p.eps4 * std::cos(4.0 * th)).epsilon(1e-12));
+    }
+  }
+
+  SECTION("the flux is the gradient of W, to finite-difference accuracy") {
+    // A_i = |grad phi|^2 W dW/d(d_i phi). Getting a_s right and the flux
+    // wrong -- exactly the failure mode of a half-applied normalisation --
+    // gives a model whose anisotropy and whose surface stiffness disagree,
+    // and neither of the stationary-point checks above would catch it.
+    // Differentiating W(g) numerically catches it.
+    const double gx = 0.37;
+    const double gy = -0.82;
+    const double h = 1.0e-6;
+    auto W_of = [&](double a, double b) {
+      return alloy_dendrite::evaluate_anisotropy<2>(p, a, b, 0.0).W;
+    };
+    const auto a0 = alloy_dendrite::evaluate_anisotropy<2>(p, gx, gy, 0.0);
+    const double g2 = gx * gx + gy * gy;
+    const double dWdgx = (W_of(gx + h, gy) - W_of(gx - h, gy)) / (2.0 * h);
+    const double dWdgy = (W_of(gx, gy + h) - W_of(gx, gy - h)) / (2.0 * h);
+    REQUIRE(a0.flux[0] == Approx(g2 * a0.W * dWdgx).epsilon(1e-6));
+    REQUIRE(a0.flux[1] == Approx(g2 * a0.W * dWdgy).epsilon(1e-6));
   }
 
   SECTION("a_s depends only on direction; the flux scales linearly") {
@@ -147,8 +199,25 @@ TEST_CASE("cubic anisotropy matches equation (1)", "[unit][aniso]") {
   SECTION("3-D <100> and <111>") {
     const auto ax = alloy_dendrite::evaluate_anisotropy<3>(p, 1.0, 0.0, 0.0);
     REQUIRE(ax.a_s == Approx(1.0 + p.eps4));
+    // sum n_i^4 = 1/3 along <111>, so a_s = 1 - 5 eps4 / 3, the 3-D minimum.
     const auto ad = alloy_dendrite::evaluate_anisotropy<3>(p, 1.0, 1.0, 1.0);
-    REQUIRE(ad.a_s == Approx(1.0 + p.eps4 / 3.0));
+    REQUIRE(ad.a_s == Approx(1.0 - 5.0 * p.eps4 / 3.0));
+    REQUIRE(alloy_dendrite::anisotropy_min(p.eps4, 3) == Approx(ad.a_s));
+    REQUIRE(alloy_dendrite::anisotropy_min(p.eps4, 2) ==
+            Approx(alloy_dendrite::evaluate_anisotropy<2>(p, 1.0, 1.0, 0.0).a_s));
+  }
+
+  SECTION("eps4 outside [0, 1/3) is refused rather than run") {
+    auto domain = pfc::domain::create(pfc::GridSize({32, 4, 1}),
+                                      pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                      pfc::GridSpacing({0.8, 0.8, 0.8}));
+    pfc::comm::HaloExchangeOptions opt;
+    opt.directions = alloy_dendrite::Stepper<2>::directions();
+    pfc::sim::stacks::FDPaddedCPUStack stack(domain, 2, 0, 1, MPI_COMM_WORLD, opt);
+    auto bad = p;
+    bad.eps4 = 0.4; // a_s would go negative along <110>
+    REQUIRE_THROWS_AS(alloy_dendrite::Stepper<2>(stack, bad, 4),
+                      std::invalid_argument);
   }
 }
 
@@ -547,6 +616,274 @@ TEST_CASE("the elastic driving-force hook is wired", "[unit][elastic-hook]") {
   REQUIRE(driven != base);
   REQUIRE(driven < base);
 }
+
+// ---------------------------------------------------------------------------
+// 5. Selection diagnostics
+// ---------------------------------------------------------------------------
+
+TEST_CASE("selection and Ivantsov helpers", "[unit][diagnostics]") {
+  SECTION("sigma* is 2 d0 D / (V rho^2)") {
+    REQUIRE(alloy_dendrite::selection_sigma_star(0.25, 2.0, 0.1, 10.0) ==
+            Approx(2.0 * 0.25 * 2.0 / (0.1 * 100.0)));
+    REQUIRE(
+        !std::isfinite(alloy_dendrite::selection_sigma_star(0.25, 2.0, 0.0, 10.0)));
+  }
+
+  SECTION("the 2-D Ivantsov relation inverts its own forward map") {
+    // Omega = sqrt(pi P) exp(P) erfc(sqrt(P)) is the *2-D* (parabolic
+    // cylinder) form. The 3-D paraboloid gives P exp(P) E1(P), and the two
+    // differ by a factor of three in P at Omega = 0.55 -- exactly the kind of
+    // silent substitution that would make a V rho comparison meaningless
+    // while still producing a plausible number.
+    for (const double om : {0.1, 0.3, 0.55, 0.8}) {
+      const double pe = alloy_dendrite::ivantsov_peclet_2d(om);
+      const double back =
+          std::sqrt(std::acos(-1.0) * pe) * std::exp(pe) * std::erfc(std::sqrt(pe));
+      INFO("Omega = " << om << " Pe = " << pe);
+      REQUIRE(back == Approx(om).epsilon(1e-9));
+    }
+    REQUIRE(!std::isfinite(alloy_dendrite::ivantsov_peclet_2d(1.5)));
+  }
+
+  SECTION("split-window drift is zero on a plateau and finite on a ramp") {
+    std::vector<double> flat(64, 3.0);
+    REQUIRE(alloy_dendrite::split_window_drift(flat, 1.0) ==
+            Approx(0.0).margin(1e-15));
+    std::vector<double> ramp;
+    for (int i = 0; i < 64; ++i) {
+      ramp.push_back(1.0 + 0.01 * static_cast<double>(i));
+    }
+    // Half-means 1.155 and 1.475 about a mean of 1.315: +24.3%.
+    REQUIRE(alloy_dendrite::split_window_drift(ramp, 1.0) ==
+            Approx(0.2434).epsilon(0.01));
+  }
+
+  SECTION("the tip-radius window scan is flat on an exact parabola") {
+    // A resolved parabola has no window dependence at all, so the spread the
+    // application reports on a real tip is a statement about the tip rather
+    // than about the estimator.
+    const int nx = 160;
+    const int ny = 121;
+    const double dx = 0.5;
+    const double rho = 9.0;
+    const double x_tip = 60.0;
+    std::vector<double> phi(static_cast<std::size_t>(nx * ny), 0.0);
+    for (int j = 0; j < ny; ++j) {
+      const double dy = (static_cast<double>(j) - 60.0) * dx;
+      const double xc = x_tip - dy * dy / (2.0 * rho);
+      for (int i = 0; i < nx; ++i) {
+        phi[static_cast<std::size_t>(i + j * nx)] =
+            (static_cast<double>(i) * dx < xc) ? 1.0 : -1.0;
+      }
+    }
+    const auto scan = alloy_dendrite::measure_tip_scan(phi, nx, ny, dx, dx, 20, 60);
+    for (int q = 0; q < alloy_dendrite::kTipWindowCount; ++q) {
+      INFO("half-width " << scan.halfwidth[q]);
+      REQUIRE(scan.rho[q] == Approx(rho).epsilon(0.06));
+    }
+    REQUIRE(scan.spread < 0.06);
+  }
+}
+
+#if ALLOY_DENDRITE_HAVE_ELASTICITY
+
+// ---------------------------------------------------------------------------
+// 6. The coupled path, equations (5)-(7)
+// ---------------------------------------------------------------------------
+
+namespace {
+
+/// A small, fast, fully specified coupled dendrite case for the tests below.
+alloy_dendrite::DendriteConfig small_coupled_case() {
+  alloy_dendrite::DendriteConfig c;
+  c.model.D_l = 2.0;
+  c.model.k = 0.15;
+  c.model.lambda = c.model.D_l / alloy_dendrite::kA2;
+  c.model.eps4 = 0.02;
+  c.model.M_c = 0.0;
+  c.model.evolve_theta = false;
+  c.nx = 96;
+  c.ny = 96;
+  c.dx = 0.8;
+  c.t_end = 8.0;
+  c.n_sample = 16;
+  c.seed_radius = 8.0;
+  c.tip_fit_halfwidth = 6;
+  c.quiet = true;
+  c.elastic = true;
+  c.elastic_params.c_solid = alloy_dendrite::material::al_cu_solid_stiffness();
+  c.elastic_params.eps_c = alloy_dendrite::material::kEpsC;
+  c.elastic_params.eps_T = 0.0;
+  c.elastic_params.U_ref = -c.omega;
+  return c;
+}
+
+/// The tip position after a short run. One scalar that every part of the
+/// coupled step feeds into, so an unintended change anywhere shows up in it.
+double run_tip_x(const alloy_dendrite::DendriteConfig &cfg, int rank, int nproc) {
+  const auto res =
+      alloy_dendrite::run_dendrite_case(cfg, rank, nproc, MPI_COMM_WORLD);
+  REQUIRE(res.valid);
+  return res.x_tip;
+}
+
+} // namespace
+
+TEST_CASE("elastic solve: homogeneous modulus, uniform eigenstrain",
+          "[unit][elastic]") {
+  // The one configuration with a closed form. A uniformly transformed body
+  // with a uniform stiffness has no strain *fluctuation* at all -- every
+  // k != 0 mode of the polarisation vanishes -- so the answer is decided
+  // entirely by how eps_hat(0) is fixed, which is precisely what the spec
+  // leaves ambiguous. Both branches are asserted, because getting the
+  // macroscopic condition wrong is invisible in an inhomogeneous run: it
+  // only adds a smooth offset to the driving force.
+  int rank = 0;
+  int nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+
+  auto domain = pfc::domain::create(pfc::GridSize({16, 16, 1}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  pfc::comm::HaloExchangeOptions opt;
+  opt.directions = alloy_dendrite::Stepper<2>::directions();
+  pfc::sim::stacks::FDPaddedCPUStack stack(domain, 2, rank, nproc, MPI_COMM_WORLD,
+                                           opt);
+
+  alloy_dendrite::ElasticParams ep;
+  ep.c_solid = pfc::apps::Stiffness::isotropic(100.0, 0.3);
+  ep.mu_liquid_fraction = 1.0; // homogeneous: C_liquid == C_solid
+  ep.bulk_liquid_fraction = 1.0;
+  ep.eps_c = 0.01;
+  ep.U_ref = 0.0;
+
+  auto phi = stack.make_field();
+  auto U = stack.make_field();
+  auto th = stack.make_field();
+  phi.for_each_owned([&](int i, int j, int k) {
+    phi(i, j, k) = 1.0; // all solid, so h == 1 and the eigenstrain is uniform
+    U(i, j, k) = 1.0;   // amplitude a = eps_c * 1 = 0.01
+    th(i, j, k) = 0.0;
+  });
+  const double a = ep.eps_c;
+
+  SECTION("free body: zero stress, zero energy") {
+    ep.macro_strain = alloy_dendrite::MacroStrainMode::ZeroMeanStress;
+    alloy_dendrite::ElasticCoupling ec(stack, ep, rank, MPI_COMM_WORLD);
+    const auto rep = ec.solve(phi, U, th);
+    REQUIRE(rep.converged);
+    // A homogeneous modulus costs exactly one Green application; see
+    // microelasticity.hpp.
+    REQUIRE(rep.iterations == 1);
+    REQUIRE(rep.total_energy == Approx(0.0).margin(1e-20));
+    REQUIRE(rep.max_dfel_dphi == Approx(0.0).margin(1e-12));
+    // eps == eps* everywhere: the body has dilated freely.
+    REQUIRE(ec.solver().strain()[pfc::apps::SYM_XX].data()[0] == Approx(a));
+  }
+
+  SECTION("clamped body: uniform stress, and it is not small") {
+    ep.macro_strain = alloy_dendrite::MacroStrainMode::Clamped;
+    alloy_dendrite::ElasticCoupling ec(stack, ep, rank, MPI_COMM_WORLD);
+    const auto rep = ec.solve(phi, U, th);
+    REQUIRE(rep.converged);
+    // eps == 0, so sigma = -C : eps* and the mean pressure is -3 K a.
+    const double bulk = ep.c_solid.bulk_modulus();
+    REQUIRE(rep.mean_stress_trace == Approx(-3.0 * bulk * a).epsilon(1e-9));
+    // f_el = (1/2) eps* : C : eps* = (9/2) K a^2 per unit volume.
+    const double vol = 16.0 * 16.0 * 1.0;
+    REQUIRE(rep.total_energy == Approx(4.5 * bulk * a * a * vol).epsilon(1e-9));
+    // The point of reporting both modes: they differ by a finite energy
+    // density that an inhomogeneous run would otherwise absorb silently.
+    REQUIRE(std::fabs(rep.total_energy) > 1e-6);
+  }
+}
+
+TEST_CASE("elastic off is bitwise off", "[elastic]") {
+  // The control experiment. `lambda_el = 0` with the solver actually running
+  // must reproduce the uncoupled run *exactly*, or an elastic-off/elastic-on
+  // comparison measures the difference between two code paths rather than
+  // the difference elasticity makes.
+  int rank = 0;
+  int nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+
+  auto cfg = small_coupled_case();
+  cfg.elastic = false;
+  cfg.model.lambda_el = 0.0;
+  const double bare = run_tip_x(cfg, rank, nproc);
+
+  auto solving = small_coupled_case();
+  solving.elastic = true;
+  solving.model.lambda_el = 0.0;
+  REQUIRE(run_tip_x(solving, rank, nproc) == bare);
+}
+
+TEST_CASE("elastic on retards the tip, monotonically in lambda_el", "[elastic]") {
+  int rank = 0;
+  int nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+
+  auto cfg = small_coupled_case();
+  cfg.model.lambda_el = 0.0;
+  const double x0 = run_tip_x(cfg, rank, nproc);
+
+  cfg.model.lambda_el = cfg.model.lambda;
+  const double x1 = run_tip_x(cfg, rank, nproc);
+  cfg.model.lambda_el = 4.0 * cfg.model.lambda;
+  const double x4 = run_tip_x(cfg, rank, nproc);
+
+  REQUIRE(x1 != x0);
+  // Coherency energy is stored by transforming, the weight (1-phi^2)^2 is
+  // non-negative, and the dominant term of equation (7) is the
+  // transformation work, so a positive lambda_el opposes solidification and
+  // the tip falls back. Monotonicity in lambda_el is the same statement and
+  // is the cheapest check that the sign of equation (7) has not flipped.
+  REQUIRE(x1 < x0);
+  REQUIRE(x4 < x1);
+}
+
+TEST_CASE("lagging the elastic solve is bounded, and warm start is cheaper",
+          "[elastic]") {
+  int rank = 0;
+  int nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+
+  auto cfg = small_coupled_case();
+  cfg.model.lambda_el = cfg.model.lambda;
+
+  const auto every =
+      alloy_dendrite::run_dendrite_case(cfg, rank, nproc, MPI_COMM_WORLD);
+  REQUIRE(every.valid);
+  REQUIRE(every.el_nonconverged == 0);
+
+  auto lagged = cfg;
+  lagged.elastic_params.n_el_substep = 8;
+  const auto lag =
+      alloy_dendrite::run_dendrite_case(lagged, rank, nproc, MPI_COMM_WORLD);
+  REQUIRE(lag.valid);
+  // Eight times fewer solves, give or take the one before the loop.
+  REQUIRE(lag.el_solves < every.el_solves / 4);
+  // The lag error is a staleness of the driving force over 8 dt = 0.128
+  // tau0, during which the tip moves well under a tenth of a cell. The
+  // tolerance is what that is worth rather than a number chosen to pass.
+  REQUIRE(std::fabs(lag.x_tip - every.x_tip) < 0.1 * cfg.dx);
+
+  auto cold = cfg;
+  cold.elastic_params.warm_start = false;
+  const auto nowarm =
+      alloy_dendrite::run_dendrite_case(cold, rank, nproc, MPI_COMM_WORLD);
+  REQUIRE(nowarm.valid);
+  // Warm starting chooses the path to the fixed point, not the fixed point,
+  // so the physics must be unchanged to the solver tolerance.
+  REQUIRE(nowarm.x_tip == Approx(every.x_tip).epsilon(1e-6));
+  REQUIRE(every.el_iter_mean < nowarm.el_iter_mean);
+}
+
+#endif // ALLOY_DENDRITE_HAVE_ELASTICITY
 
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);

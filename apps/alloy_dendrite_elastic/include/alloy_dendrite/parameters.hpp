@@ -51,11 +51,11 @@
  *
  * ### Where the elastic term attaches
  *
- * Equation (2) carries a term `- lambda_el (1-phi^2)^2 dF_el/dphi` that this
- * application deliberately leaves out (equations (5)-(7) are another agent's
- * work). @ref ModelParams::lambda_el and the field pointer on
+ * Equation (2) carries a term `- lambda_el (1-phi^2)^2 dF_el/dphi`.
+ * @ref ModelParams::lambda_el and the field pointer on
  * `alloy_dendrite::Stepper` are the entire attachment surface; see
- * `step.hpp`, stage B, marked `ELASTIC HOOK`.
+ * `step.hpp`, stage B, marked `ELASTIC HOOK`, and `elasticity.hpp` for
+ * equations (5)-(7) and for what `lambda_el` means in physical units.
  *
  * @see Karma & Rappel, Phys. Rev. E 57, 4323 (1998)
  * @see Karma, Phys. Rev. Lett. 87, 115701 (2001)
@@ -169,9 +169,15 @@ struct ModelParams {
    * mismatch does to `k_eff`.
    */
   bool spec_source = false;
-  /// Elastic coupling of equation (2). Unused here: equations (5)-(7) are
-  /// not implemented. Kept so the hook in `step.hpp` compiles and so the
-  /// elastic agent has a name to fill in.
+  /**
+   * @brief Elastic coupling `lambda_el` of equation (2).
+   *
+   * Zero switches the elastic feedback off *bitwise*, which is what makes an
+   * elastic-off/elastic-on comparison a controlled experiment rather than
+   * two different programs. See `elasticity.hpp` for the derivation of
+   * `lambda_el = lambda` when the stiffnesses are expressed in units of the
+   * chemical free-energy scale `f_ref = L dT_0 / T_M`.
+   */
   double lambda_el = 0.0;
   /// Advance equation (4). Off makes theta a frozen zero field and skips the
   /// thermal Laplacian entirely.
@@ -298,6 +304,24 @@ struct ModelParams {
     lim = std::fmin(lim, dx * dx / (denom * p.D_th));
   }
   return std::fmin(lim, 0.25 * p.tau0);
+}
+
+/**
+ * @brief Interfacial-stiffness ceiling on `eps4` in 2-D.
+ *
+ * With `a_s = 1 + eps4 cos 4 theta` the 2-D stiffness is
+ * `a_s + a_s'' = 1 - 15 eps4 cos 4 theta`, which first vanishes at
+ * `eps4 = 1/15`. Beyond it the equilibrium shape has missing orientations and
+ * the smooth-tip selection theory the Stage-2 measurement is compared against
+ * does not apply -- the run will still produce a number, which is exactly why
+ * the ceiling is worth naming.
+ */
+inline constexpr double kEps4StiffnessLimit = 1.0 / 15.0;
+
+/// Minimum of the normalised `a_s` over orientation, `1 - eps4` in 2-D and
+/// `1 - 5 eps4 / 3` in 3-D. Must stay positive; see `step.hpp`.
+[[nodiscard]] inline double anisotropy_min(double eps4, int dim) noexcept {
+  return (dim == 3) ? (1.0 - 5.0 * eps4 / 3.0) : (1.0 - eps4);
 }
 
 /// Human-readable one-line dump of the derived quantities, for run headers.

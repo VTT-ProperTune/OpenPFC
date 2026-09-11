@@ -49,6 +49,14 @@ public:
 
   [[nodiscard]] bool help() const noexcept { return m_help; }
 
+  /// Was @p key supplied on the command line? Lets a driver distinguish
+  /// "left at its default" from "explicitly set to the default value",
+  /// which matters when the default is itself derived from another option
+  /// (`lambda_el` follows `lambda` unless it is asked for by name).
+  [[nodiscard]] bool has(const std::string &key) const {
+    return m_kv.find(key) != m_kv.end();
+  }
+
   double real(const std::string &key, double dflt) {
     const auto it = m_kv.find(key);
     if (it == m_kv.end()) {

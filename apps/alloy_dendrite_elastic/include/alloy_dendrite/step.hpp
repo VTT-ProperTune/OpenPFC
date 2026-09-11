@@ -12,17 +12,19 @@
  * @details
  * ## What is here and what is deliberately not
  *
- * Equations (1)-(4) only. Equations (5)-(7) -- the eigenstrain
- * microelasticity and its Fourier Green-operator solve -- are another
- * agent's work and are **absent**, not stubbed. What is present is the one
- * line where they attach: see `ELASTIC HOOK` in @ref Stepper::stage_b_. A
+ * Equations (1)-(4). Equations (5)-(7) -- the eigenstrain microelasticity
+ * and its Fourier Green-operator solve -- live in `elasticity.hpp`, which
+ * wraps `openpfc_apps/microelasticity.hpp`; this file knows about them only
+ * through one line, marked `ELASTIC HOOK` in @ref Stepper::stage_b_. A
  * caller sets @ref Stepper::set_elastic_driving_force to a field holding
  * `dF_el/dphi` and @ref ModelParams::lambda_el to a nonzero value, and the
  * term `- lambda_el (1-phi^2)^2 dF_el/dphi` joins the phase-field right-hand
- * side with no other change to this file or to the drivers. The quasi-static
- * solve is lagged by `n_el_substep` steps in the driver's loop (spec,
- * "Numerics"), which is why the hook is a *field* rather than a callback:
- * the stepper must be able to reuse a solution computed several steps ago.
+ * side with no other change to this file. The quasi-static solve is lagged
+ * by `n_el_substep` steps in the driver's loop (spec, "Numerics"), which is
+ * why the hook is a *field* rather than a callback: the stepper must be able
+ * to reuse a solution computed several steps ago, and a callback would
+ * invite someone to re-solve inside stage B where the FFT would be executed
+ * once per cell-loop rather than once per step.
  *
  * ## Why four stages and not one
  *
@@ -159,11 +161,11 @@ using SecondDerivs = std::conditional_t<Dim == 3, SecondDerivs3, SecondDerivs2>;
 /**
  * @brief Anisotropy of equation (1) evaluated from a raw gradient.
  *
- * `a_s(n) = 1 + eps4 (n_x^4 + n_y^4 + n_z^4)`, `W = W0 a_s`,
- * `tau = tau0 a_s^2`, plus the flux
+ * `a_s(n) = (1 - 3 eps4)[1 + (4 eps4/(1 - 3 eps4))(n_x^4+n_y^4+n_z^4)]`,
+ * `W = W0 a_s`, `tau = tau0 a_s^2`, plus the flux
  *
  *     A_i = |grad phi|^2 W dW/d(d_i phi)
- *         = 4 eps4 W0^2 a_s [ g_i^3 G^2 - (sum_j g_j^4) g_i ] / G^4
+ *         = 16 eps4 W0^2 a_s [ g_i^3 G^2 - (sum_j g_j^4) g_i ] / G^4
  *
  * with `g_i = d_i phi` and `G^2 = sum_j g_j^2`. The algebra above is worth
  * spelling out because it is where the usual `0/0` disappears: the numerator
@@ -171,15 +173,43 @@ using SecondDerivs = std::conditional_t<Dim == 3, SecondDerivs3, SecondDerivs2>;
  * gradient and needs no ad-hoc floor. Only the `G^4` division does, and it
  * is guarded by @ref kGradNormFloor2.
  *
- * @note `MODEL_SPEC.md` equation (1) uses the un-normalised
- *       `a_s = 1 + eps4 sum n_i^4` rather than the Karma-Rappel form
- *       `(1 - 3 eps4)[1 + 4 eps4/(1-3 eps4) sum n_i^4]`. The two differ by
- *       more than a constant: with the spec's form `a_s` ranges over
- *       `[1 + eps4/d, 1 + eps4]` and is never 1, so `W0` is no longer the
- *       interface width of *any* orientation and the standard anisotropy
- *       strength `epsilon_4` of the selection theory is not `eps4`. The spec
- *       is the contract, so the spec's form is what is implemented; Stage 2
- *       numbers must be read with that in mind.
+ * @note **Normalised Karma-Rappel form** (`MODEL_SPEC.md` equation (1) as
+ *       corrected 2026-09-11):
+ *
+ *           a_s = (1 - 3 eps4) [ 1 + (4 eps4 / (1 - 3 eps4)) sum n_i^4 ]
+ *               = (1 - 3 eps4) + 4 eps4 sum n_i^4
+ *
+ *       which is the second, cheaper form used below. Why the normalisation
+ *       matters rather than being cosmetic: in 2-D
+ *       `n_x^4 + n_y^4 = (3 + cos 4 theta)/4`, so
+ *
+ *           a_s = (1 - 3 eps4) + eps4 (3 + cos 4 theta) = 1 + eps4 cos 4 theta
+ *
+ *       *exactly*. `eps4` is then the anisotropy strength of the selection
+ *       theory, `a_s` averages to 1 over orientation, and `W0` is the
+ *       interface width of the `<110>` (soft) direction rather than of no
+ *       orientation at all. The earlier un-normalised `a_s = 1 + eps4 sum
+ *       n_i^4` gave an effective strength `(eps4/4)/(1 + 0.75 eps4)` --
+ *       about a quarter of nominal -- so Karma-Rappel's `eps4 = 0.02` acted
+ *       like 0.005 and grew a blob instead of a dendrite. In 3-D the same
+ *       expression is the standard `<100>` cubic form with `sum n_i^4` in
+ *       `[1/3, 1]`, i.e. `a_s` in `[1 - 5 eps4/3, 1 + eps4]`.
+ *
+ *       `d a_s / d(sum n_i^4) = 4 eps4`, which is the *only* place the
+ *       normalisation enters the flux: `A_i` below carries a factor
+ *       `4 eps4` where the un-normalised form carried `eps4`. Getting the
+ *       function right and the flux wrong would give a model whose
+ *       anisotropy and whose surface-stiffness disagree, which is worse
+ *       than either convention used consistently.
+ *
+ * @note Two ceilings on `eps4` worth knowing. `a_s > 0` needs
+ *       `eps4 < 1/3` (3-D) -- below that the interface width of the soft
+ *       orientation goes through zero. Long before that, the 2-D
+ *       interfacial stiffness `a_s + a_s''` = `1 - 15 eps4 cos 4 theta`
+ *       changes sign at `eps4 = 1/15 = 0.0667`: past that the equilibrium
+ *       shape has missing orientations (corners/ears) and the
+ *       smooth-tip selection theory this application compares against no
+ *       longer applies. @ref ModelParams::eps4 is checked against both.
  */
 struct AnisotropyPoint {
   double a_s{1.0};
@@ -206,10 +236,14 @@ evaluate_anisotropy(const ModelParams &p, double gx, double gy, double gz) noexc
   const double inv_g2 = 1.0 / g2;
   const double inv_g4 = inv_g2 * inv_g2;
   const double s = g4sum * inv_g4; // sum n_i^4
-  out.a_s = 1.0 + p.eps4 * s;
+  // Normalised Karma-Rappel: a_s = (1-3 eps4) + 4 eps4 sum n_i^4, so that in
+  // 2-D a_s = 1 + eps4 cos 4 theta exactly. See the note above.
+  out.a_s = (1.0 - 3.0 * p.eps4) + 4.0 * p.eps4 * s;
   out.W = p.W0 * out.a_s;
   out.tau = p.tau0 * out.a_s * out.a_s;
-  const double pre = 4.0 * p.eps4 * p.W0 * p.W0 * out.a_s * inv_g4;
+  // A_i = |grad phi|^2 W dW/d(d_i phi) = 4 W0^2 a_s (d a_s/d s)
+  //       (g_i^3 G^2 - g_i sum g_j^4) / G^4, and d a_s/d s = 4 eps4.
+  const double pre = 16.0 * p.eps4 * p.W0 * p.W0 * out.a_s * inv_g4;
   out.flux[0] = pre * (gx * gx * gx * g2 - g4sum * gx);
   out.flux[1] = pre * (gy * gy * gy * g2 - g4sum * gy);
   if constexpr (Dim == 3) {
@@ -293,6 +327,15 @@ public:
     }
     if (m_p.k <= 0.0 || m_p.k >= 1.0) {
       throw std::invalid_argument("alloy_dendrite::Stepper: k must be in (0,1)");
+    }
+    // The normalised anisotropy of equation (1) has a hard floor: a_s reaches
+    // 1 - 5 eps4/3 (3-D) or 1 - eps4 (2-D) and a non-positive interface width
+    // is not a model, it is a crash waiting for a gradient to point the wrong
+    // way. Refuse rather than produce plausible-looking nonsense.
+    if (m_p.eps4 < 0.0 || m_p.eps4 >= 1.0 / 3.0) {
+      throw std::invalid_argument(
+          "alloy_dendrite::Stepper: eps4 must be in [0, 1/3); the normalised "
+          "a_s = (1-3 eps4) + 4 eps4 sum n_i^4 is non-positive beyond that");
     }
     if constexpr (Dim == 3) {
       if (m_phi.local_size()[2] < 2) {
@@ -433,12 +476,11 @@ private:
       // ---- ELASTIC HOOK -------------------------------------------------
       // Equation (2) of MODEL_SPEC.md ends with
       //     - lambda_el (1-phi^2)^2 dF_el/dphi
-      // where dF_el/dphi is equation (7). Nothing else in this application
-      // has to change when equations (5)-(7) land: the elastic solve writes
-      // its result into a field on the same owned box, the driver installs it
-      // with set_elastic_driving_force(), and the line below starts firing.
-      // Lagging the solve by n_el_substep steps is legitimate (the mechanics
-      // are quasi-static) and needs no change here either -- the stepper
+      // where dF_el/dphi is equation (7). `elasticity.hpp` solves (5)-(7) and
+      // writes the result into a field on the same owned box; the driver
+      // installs it with set_elastic_driving_force() and the line below
+      // fires. Lagging the solve by n_el_substep steps is legitimate (the
+      // mechanics are quasi-static) and needs no change here -- the stepper
       // simply keeps reading whatever the last solve left in the field.
       if (dfel != nullptr && lam_el != 0.0) {
         rhs -= lam_el * gwell * (*dfel)(i, j, kk);
