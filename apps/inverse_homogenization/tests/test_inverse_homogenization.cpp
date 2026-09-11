@@ -215,6 +215,28 @@ TEST_CASE("Noisy initialization: a few AC steps decrease J",
   REQUIRE(r.J < r0.J);
 }
 
+TEST_CASE("Double well drives a uniform grey field toward the solid well",
+          "[inverse][binary]") {
+  constexpr int N = 8;
+  Case cs(N);
+  fill_value(cs.h, 0.80);
+  InverseSpec spec;
+  spec.W = Voigt6{};
+  spec.lambda_volume = 0.0;
+  spec.lambda_reg = 2.0;
+  spec.epsilon = 2.0;
+  spec.dt = 0.2;
+  spec.max_abs_delta = 0.2;
+  spec.project_volume = false;
+  spec.normalize_grad = false;
+  PhaseFieldInverse inv(cs.domain, cs.stack.fft(), phases());
+  pfc::apps::inverse::InverseStepReport last{};
+  for (int s = 0; s < 6; ++s) last = inv.step(cs.h, spec);
+  REQUIRE(last.elasticity_converged);
+  REQUIRE(last.step_rms > 1.0e-6);
+  REQUIRE(last.volume_fraction > 0.90);
+}
+
 TEST_CASE("Double-well derivative vanishes at the wells and at 1/2",
           "[inverse][algebra]") {
   REQUIRE_THAT(double_well_prime(0.0), WithinAbs(0.0, 1e-15));

@@ -52,6 +52,11 @@ struct Config {
   double max_delta{0.05};
   int project_volume{0};
   double simp{1.0};
+  double simp_end{-1.0};
+  double lambda_reg_end{-1.0};
+  double init_amp{0.25};
+  int no_tensor{0};
+  std::string dump_h{};
 };
 
 void usage(std::ostream &os, const char *exe) {
@@ -67,7 +72,11 @@ void usage(std::ostream &os, const char *exe) {
      << "  --dt --steps --init uniform|noise --init-volume --csv=PATH\n"
      << "  --normalize=0|1 --max-delta   (default 1 and 0.05; RMS-normalise g)\n"
      << "  --project-volume=0|1          shift h to hold --volume after each step\n"
-     << "  --simp=P                      SIMP exponent on h for C(h) (default 1)\n";
+     << "  --simp=P --simp-end=P         SIMP continuation (linear in step)\n"
+     << "  --lambda-reg-end              perimeter continuation\n"
+     << "  --init-amp                    noise amplitude (default 0.25)\n"
+     << "  --no-tensor=1                 W=0 (binarization-only step)\n"
+     << "  --dump-h=PATH                 write the final h field (single rank)\n";
 }
 
 bool parse_double(std::string_view v, double &out) {
@@ -135,6 +144,16 @@ bool parse_args(int argc, char **argv, Config &cfg) {
       ok = parse_int(val, cfg.project_volume);
     } else if (key == "simp") {
       ok = parse_double(val, cfg.simp) && cfg.simp >= 1.0;
+    } else if (key == "simp-end") {
+      ok = parse_double(val, cfg.simp_end) && cfg.simp_end >= 1.0;
+    } else if (key == "lambda-reg-end") {
+      ok = parse_double(val, cfg.lambda_reg_end) && cfg.lambda_reg_end >= 0.0;
+    } else if (key == "init-amp") {
+      ok = parse_double(val, cfg.init_amp) && cfg.init_amp >= 0.0;
+    } else if (key == "no-tensor") {
+      ok = parse_int(val, cfg.no_tensor);
+    } else if (key == "dump-h") {
+      cfg.dump_h = std::string(val);
     } else {
       return false;
     }
@@ -195,10 +214,17 @@ int main(int argc, char **argv) {
         double hv = cfg.init_volume;
         if (cfg.init == "noise") {
           const auto g = h.global(i, j, k);
+          const double twopi = 2.0 * 3.141592653589793;
+          const double nx = std::max(cfg.nx, 1);
+          const double ny = std::max(cfg.ny, 1);
+          const double nz = std::max(cfg.nz, 1);
           const double s = static_cast<double>(cfg.seed);
-          hv += 0.08 * std::sin(2.0 * 3.141592653589793 *
-                                ((g[0] + s) + 2.0 * g[1] + 3.0 * g[2]) /
-                                std::max(cfg.nx, 1));
+          const double n1 = std::sin(twopi * (g[0] + s) / nx);
+          const double n2 = std::sin(twopi * (2.0 * g[1] + s) / ny);
+          const double n3 = std::sin(twopi * (g[2] + 2.0 * s) / nz);
+          const double n4 = std::sin(2.0 * twopi * g[0] / nx) *
+                            std::sin(twopi * g[1] / ny);
+          hv += cfg.init_amp * (0.6 * n1 * n2 + 0.3 * n3 + 0.4 * n4);
         }
         h(i, j, k) = std::min(1.0, std::max(0.0, hv));
       }
@@ -208,7 +234,7 @@ int main(int argc, char **argv) {
   p.c_solid = pfc::apps::Stiffness::isotropic(cfg.E_solid, cfg.nu_solid);
   p.c_liquid = pfc::apps::Stiffness::isotropic(cfg.E_void, cfg.nu_void);
   p.tol_el = 1.0e-8;
-  p.n_el_iter = 80;
+  p.n_el_iter = 200;
   p.warm_start = false;
   p.comm = MPI_COMM_WORLD;
 
@@ -223,6 +249,7 @@ int main(int argc, char **argv) {
   spec.max_abs_delta = cfg.max_delta;
   spec.project_volume = cfg.project_volume != 0;
   spec.simp_p = cfg.simp;
+  if (cfg.no_tensor != 0) spec.W = pfc::apps::Voigt6{};
 
   pfc::apps::inverse::PhaseFieldInverse inv(domain, stack.fft(), p);
   std::ofstream csv;
@@ -236,7 +263,15 @@ int main(int argc, char **argv) {
     }
   }
   pfc::apps::inverse::InverseStepReport last{};
+  const double simp0 = cfg.simp;
+  const double simp1 = (cfg.simp_end > 0.0) ? cfg.simp_end : cfg.simp;
+  const double lr0 = cfg.lambda_reg;
+  const double lr1 = (cfg.lambda_reg_end >= 0.0) ? cfg.lambda_reg_end : cfg.lambda_reg;
   for (int s = 0; s < cfg.steps; ++s) {
+    const double t =
+        (cfg.steps > 1) ? static_cast<double>(s) / (cfg.steps - 1) : 1.0;
+    spec.simp_p = simp0 + t * (simp1 - simp0);
+    spec.lambda_reg = lr0 + t * (lr1 - lr0);
     last = inv.step(h, spec);
     if (rank == 0) {
       std::cout << std::setprecision(8) << s << ' ' << last.J << ' '
@@ -257,9 +292,21 @@ int main(int argc, char **argv) {
       return 1;
     }
   }
+  if (rank == 0 && !cfg.dump_h.empty()) {
+    std::ofstream hf(cfg.dump_h);
+    hf << cfg.nx << ' ' << cfg.ny << ' ' << cfg.nz << '\n';
+    const auto ln = h.local_size();
+    for (int k = 0; k < ln[2]; ++k)
+      for (int j = 0; j < ln[1]; ++j)
+        for (int i = 0; i < ln[0]; ++i)
+          hf << std::setprecision(8) << h(i, j, k) << '\n';
+  }
+  // Physical C_H of the final h (linear two-phase interpolation), even if
+  // SIMP or W=0 was used during the loop.
+  const auto final = inv.homogenizer().compute(h);
   if (rank == 0) {
     std::cout << std::setprecision(16) << "INVERSE_CHECKSUM " << last.J << '\n';
-    const auto &C = inv.homogenizer().last().stiffness;
+    const auto &C = final.stiffness;
     const auto &Ct = spec.C_target;
     std::cout << "C_target\n";
     for (int i = 0; i < 6; ++i) {
