@@ -20,15 +20,16 @@ the same \(C_H\).
 
 ## Status
 
-Stages 1 and 4 of #161 are in tree:
+Stages 1–4 of #161 are in tree:
 
 | Stage | What | Where |
 |-------|------|--------|
 | 1 | Forward periodic \(C_H\) | `openpfc_apps/homogenization.hpp`, `openpfc_homogenize` |
-| 4 | Discrete mutual-energy \(\delta J/\delta h\) + finite-difference check | same header; Catch2 `apps-common-homogenization` |
+| 2–3 | Allen–Cahn descent on the tensor-mismatch objective, volume penalty, perimeter | `phase_field_inverse.hpp`, `openpfc_inverse_homogenize` |
+| 4 | Discrete mutual-energy \(\delta J/\delta h\) + finite-difference check | homogenization.hpp; Catch2 `apps-common-homogenization` |
 
-Stages 2–3 and 5–8 (phase-field inverse loop, free topology, spinodal
-constraint, manufacturability, LUMI 3-D) are **not** implemented yet.
+Stages 5–8 (free-topology target campaign, spinodal constraint,
+manufacturability, LUMI 3-D) are **not** implemented yet.
 
 ## Reuse
 
@@ -53,6 +54,19 @@ the **engineering Voigt** \(6\times 6\) (order \(11,22,33,23,13,12\),
 \(C_{44}=\mu\), not \(2\mu\).
 
 `HOMOGENIZATION_CHECKSUM` is \(\lVert C_H\rVert_F\); the smoke test greps it.
+
+## Inverse driver (Allen–Cahn)
+
+```bash
+mpirun -n 1 ./apps/inverse_homogenization/openpfc_inverse_homogenize \
+  --target=isotropic --E-target=0.9 --nu-target=0.25 \
+  --volume=0.5 --nx=16 --ny=16 --nz=16 --steps=10 --init=noise
+```
+
+`--target` is `isotropic`, `auxetic` (negative Poisson via `--nu-target`), or
+`orthotropic` (`--C11 --C22 --C12 --C66`). The loop is Takezawa-style
+Allen–Cahn, not Cahn–Hilliard and not MMA. `INVERSE_CHECKSUM` is the last
+\(J\).
 
 ## Tests
 
