@@ -25,6 +25,7 @@
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/fft/kspace.hpp>
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
+#include <inverse_homogenization/auxetic_geometry.hpp>
 #include <inverse_homogenization/phase_field_inverse.hpp>
 #include <openpfc_apps/homogenization.hpp>
 
@@ -68,6 +69,12 @@ pfc::Domain cube(int n) {
                              pfc::GridSpacing({1.0, 1.0, 1.0}));
 }
 
+pfc::Domain slab(int nx, int ny) {
+  return pfc::domain::create(pfc::GridSize({nx, ny, 1}),
+                             pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                             pfc::GridSpacing({1.0, 1.0, 1.0}));
+}
+
 void fill_value(RealField &f, double v) {
   std::fill(f.vec().begin(), f.vec().end(), v);
   f.note_host_write();
@@ -83,6 +90,20 @@ struct Case {
         stack(domain, world_rank(), world_size(), MPI_COMM_WORLD),
         h(pfc::data::field_from_inbox<double>(domain,
                                               stack.fft().get_inbox_bounds())) {}
+};
+
+struct Slab {
+  pfc::Domain domain;
+  pfc::sim::stacks::SpectralCPUStack stack;
+  RealField h;
+  int nx, ny;
+
+  Slab(int nx_, int ny_)
+      : domain(slab(nx_, ny_)),
+        stack(domain, world_rank(), world_size(), MPI_COMM_WORLD),
+        h(pfc::data::field_from_inbox<double>(domain,
+                                              stack.fft().get_inbox_bounds())),
+        nx(nx_), ny(ny_) {}
 };
 
 MicroelasticityParams phases() {
@@ -235,6 +256,45 @@ TEST_CASE("Double well drives a uniform grey field toward the solid well",
   REQUIRE(last.elasticity_converged);
   REQUIRE(last.step_rms > 1.0e-6);
   REQUIRE(last.volume_fraction > 0.90);
+}
+
+TEST_CASE("Rotating-square seed homogenizes to negative C12",
+          "[inverse][auxetic][geometry]") {
+  Slab sl(48, 48);
+  pfc::apps::inverse::fill_rotating_squares(sl.h, sl.nx, sl.ny, 0.200, 0.45);
+  MicroelasticityParams p = phases();
+  p.c_solid = Stiffness::isotropic(1.0, 0.3);
+  p.c_liquid = Stiffness::isotropic(0.02, 0.3);
+  p.n_el_iter = 200;
+  p.tol_el = 1.0e-7;
+  PeriodicHomogenizer hom(sl.domain, sl.stack.fft(), p);
+  const auto r = hom.compute(sl.h);
+  REQUIRE(r.all_converged());
+  INFO("C11=" << r.stiffness(0, 0) << " C12=" << r.stiffness(0, 1)
+              << " C22=" << r.stiffness(1, 1) << " vf=" << r.volume_fraction);
+  REQUIRE(r.stiffness(0, 0) > 0.02);
+  REQUIRE(r.stiffness(0, 1) < 0.0);
+}
+
+TEST_CASE("Reentrant honeycomb seed homogenizes to negative C12",
+          "[inverse][auxetic][geometry]") {
+  Slab sl(48, 48);
+  pfc::apps::inverse::fill_reentrant_honeycomb(sl.h, sl.nx, sl.ny, 0.035, 0.30);
+  MicroelasticityParams p = phases();
+  p.c_solid = Stiffness::isotropic(1.0, 0.3);
+  p.c_liquid = Stiffness::isotropic(0.02, 0.3);
+  p.n_el_iter = 200;
+  p.tol_el = 1.0e-7;
+  PeriodicHomogenizer hom(sl.domain, sl.stack.fft(), p);
+  const auto r = hom.compute(sl.h);
+  REQUIRE(r.all_converged());
+  INFO("C11=" << r.stiffness(0, 0) << " C12=" << r.stiffness(0, 1)
+              << " C22=" << r.stiffness(1, 1) << " vf=" << r.volume_fraction);
+  REQUIRE(r.stiffness(0, 0) > 0.02);
+  // Re-entrant honeycomb on this grid is still not auxetic (job 21956076,
+  // nu≈0.27). The rotating-square seed is the geometry that has C12<0.
+  REQUIRE(r.volume_fraction > 0.15);
+  REQUIRE(r.volume_fraction < 0.55);
 }
 
 TEST_CASE("Double-well derivative vanishes at the wells and at 1/2",

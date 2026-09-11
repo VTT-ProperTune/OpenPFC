@@ -25,6 +25,7 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
+#include <inverse_homogenization/auxetic_geometry.hpp>
 #include <inverse_homogenization/phase_field_inverse.hpp>
 #include <openpfc_apps/homogenization.hpp>
 
@@ -55,6 +56,10 @@ struct Config {
   double simp_end{-1.0};
   double lambda_reg_end{-1.0};
   double init_amp{0.25};
+  double init_half{0.200};
+  double init_angle{0.45};
+  double init_thickness{0.035};
+  double init_inset{0.30};
   int no_tensor{0};
   std::string dump_h{};
   std::string load_h{};
@@ -77,6 +82,9 @@ void usage(std::ostream &os, const char *exe) {
      << "  --simp=P --simp-end=P         SIMP continuation (linear in step)\n"
      << "  --lambda-reg-end              perimeter continuation\n"
      << "  --init-amp                    noise amplitude (default 0.25)\n"
+     << "  --init rotating-squares|reentrant|noise|uniform\n"
+     << "  --init-half --init-angle      rotating-square size/rotation\n"
+     << "  --init-thickness --init-inset re-entrant wall geometry\n"
      << "  --no-tensor=1                 W=0 (binarization-only step)\n"
      << "  --dump-h=PATH --load-h=PATH   write/read h (single rank)\n"
      << "  --W-12                        extra weight on C12 (auxetic default 4)\n";
@@ -153,6 +161,14 @@ bool parse_args(int argc, char **argv, Config &cfg) {
       ok = parse_double(val, cfg.lambda_reg_end) && cfg.lambda_reg_end >= 0.0;
     } else if (key == "init-amp") {
       ok = parse_double(val, cfg.init_amp) && cfg.init_amp >= 0.0;
+    } else if (key == "init-half") {
+      ok = parse_double(val, cfg.init_half) && cfg.init_half > 0.0;
+    } else if (key == "init-angle") {
+      ok = parse_double(val, cfg.init_angle);
+    } else if (key == "init-thickness") {
+      ok = parse_double(val, cfg.init_thickness) && cfg.init_thickness > 0.0;
+    } else if (key == "init-inset") {
+      ok = parse_double(val, cfg.init_inset) && cfg.init_inset > 0.0;
     } else if (key == "no-tensor") {
       ok = parse_int(val, cfg.no_tensor);
     } else if (key == "dump-h") {
@@ -169,7 +185,9 @@ bool parse_args(int argc, char **argv, Config &cfg) {
   if (cfg.target != "isotropic" && cfg.target != "auxetic" &&
       cfg.target != "orthotropic")
     return false;
-  if (cfg.init != "uniform" && cfg.init != "noise") return false;
+  if (cfg.init != "uniform" && cfg.init != "noise" &&
+      cfg.init != "rotating-squares" && cfg.init != "reentrant")
+    return false;
   return true;
 }
 
@@ -235,6 +253,13 @@ int main(int argc, char **argv) {
         }
         h(i, j, k) = std::min(1.0, std::max(0.0, hv));
       }
+  if (cfg.init == "rotating-squares") {
+    pfc::apps::inverse::fill_rotating_squares(h, cfg.nx, cfg.ny, cfg.init_half,
+                                              cfg.init_angle);
+  } else if (cfg.init == "reentrant") {
+    pfc::apps::inverse::fill_reentrant_honeycomb(
+        h, cfg.nx, cfg.ny, cfg.init_thickness, cfg.init_inset);
+  }
   if (!cfg.load_h.empty()) {
     std::ifstream in(cfg.load_h);
     int nx = 0, ny = 0, nz = 0;
