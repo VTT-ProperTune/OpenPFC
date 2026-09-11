@@ -26,6 +26,33 @@ endfunction()
 alloy_dendrite_add_driver(alloy_dendrite_planar src/cpu/alloy_dendrite_planar.cpp)
 alloy_dendrite_add_driver(alloy_dendrite_growth src/cpu/alloy_dendrite_growth.cpp)
 
+# --------------------------------------------------------------------------
+# HIP twin of equations (1)-(4), and the coupled-cost driver.
+#
+# Two targets, because they answer two different questions and only one of
+# them needs HeFFTe. `alloy_dendrite_hip_parity` is the port's acceptance
+# gate: pure FD, no transforms, runs anywhere a GCD exists.
+# `alloy_dendrite_coupled_cost` additionally drives
+# `openpfc_apps/microelasticity.hpp`, which is built on `pfc::fft::IHostFFT`,
+# so it is only configured when HeFFTe is present -- a cost measurement of a
+# solve that cannot be built is not a useful thing to ship.
+# --------------------------------------------------------------------------
+if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+  add_executable(alloy_dendrite_hip_parity
+    src/hip/alloy_dendrite_hip_parity.cpp
+    src/hip/alloy_dendrite_hip_kernels.hip)
+  target_include_directories(alloy_dendrite_hip_parity PRIVATE
+                             ${ALLOY_DENDRITE_INCLUDE_DIR})
+  target_link_libraries(alloy_dendrite_hip_parity PRIVATE OpenPFC
+                        openpfc_apps_common hip::host openpfc_hip_kernels
+                        ${_alloy_dendrite_heffte_tgt})
+  set_target_properties(alloy_dendrite_hip_parity PROPERTIES
+    HIP_STANDARD 17
+    HIP_STANDARD_REQUIRED ON)
+  install(TARGETS alloy_dendrite_hip_parity DESTINATION bin)
+  message(STATUS "alloy_dendrite_hip_parity (MPI + HIP) enabled")
+endif()
+
 option(ALLOY_DENDRITE_ENABLE_TESTS "Build alloy_dendrite_elastic tests" ON)
 
 if(ALLOY_DENDRITE_ENABLE_TESTS AND OpenPFC_BUILD_TESTS
@@ -54,6 +81,46 @@ if(ALLOY_DENDRITE_ENABLE_TESTS AND OpenPFC_BUILD_TESTS
                      "[planar]")
     set_tests_properties(alloy-dendrite-planar-2rank PROPERTIES
       ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1"
+      TIMEOUT 900
+      RUN_SERIAL TRUE)
+  endif()
+endif()
+
+# --------------------------------------------------------------------------
+# CPU/GPU parity as a ctest.
+#
+# The binary decides pass or fail itself (`--tol`), rather than a pinned
+# checksum in this file. Both forms are defensible; this one was chosen
+# because the quantity that matters is "how far apart are the two paths",
+# and a pinned hex checksum answers a different question -- it pins the GPU
+# against its own past, which drifts the moment the ROCm version changes,
+# and says nothing about the host. The tolerance below is the measured drift
+# of a real run rounded up (see the app README, "CPU against GPU"), not a
+# number picked to make the test pass.
+# --------------------------------------------------------------------------
+if(TARGET alloy_dendrite_hip_parity AND OpenPFC_BUILD_TESTS)
+  include(CTest)
+  set(_alloy_parity_tol "2e-11")
+  set(_alloy_parity_args --nx=32 --ny=32 --nz=32 --dx=0.8 --fd-order=4
+                         --steps=50 --tol=${_alloy_parity_tol})
+  add_test(NAME alloy-dendrite-hip-parity
+           COMMAND $<TARGET_FILE:alloy_dendrite_hip_parity>
+                   ${_alloy_parity_args} --run-id=ctest-1rank)
+  set_tests_properties(alloy-dendrite-hip-parity PROPERTIES
+    PASS_REGULAR_EXPRESSION "ALLOY_PARITY_PASS"
+    TIMEOUT 600)
+
+  if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
+    # Two ranks: this is where an unexchanged halo group shows up. The
+    # CPU/GPU comparison is per-rank and therefore still exact in meaning;
+    # the 1-vs-N-rank comparison needs two runs and lives in
+    # slurm/alloy_dendrite_hip_parity.sbatch, which has a GPU node to do it on.
+    add_test(NAME alloy-dendrite-hip-parity-2rank
+             COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                     $<TARGET_FILE:alloy_dendrite_hip_parity>
+                     ${_alloy_parity_args} --run-id=ctest-2rank)
+    set_tests_properties(alloy-dendrite-hip-parity-2rank PROPERTIES
+      PASS_REGULAR_EXPRESSION "ALLOY_PARITY_PASS"
       TIMEOUT 900
       RUN_SERIAL TRUE)
   endif()
