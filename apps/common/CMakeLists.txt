@@ -49,6 +49,12 @@ if(APPS_COMMON_ENABLE_TESTS AND OpenPFC_BUILD_TESTS AND OpenPFC_ENABLE_HEFFTE)
     add_test(NAME apps-common-microelasticity COMMAND test_microelasticity)
     set_tests_properties(apps-common-microelasticity PROPERTIES TIMEOUT 300)
 
+    add_executable(test_homogenization tests/test_homogenization.cpp)
+    target_link_libraries(test_homogenization PRIVATE OpenPFC openpfc_apps_common
+                          Catch2::Catch2 ${_apps_common_heffte_tgt})
+    add_test(NAME apps-common-homogenization COMMAND test_homogenization)
+    set_tests_properties(apps-common-homogenization PROPERTIES TIMEOUT 300)
+
     if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
        (OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR
         OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 2))
@@ -58,6 +64,11 @@ if(APPS_COMMON_ENABLE_TESTS AND OpenPFC_BUILD_TESTS AND OpenPFC_ENABLE_HEFFTE)
         COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS}
           $<TARGET_FILE:test_microelasticity> ${MPIEXEC_POSTFLAGS})
       set_tests_properties(apps-common-microelasticity-mpi PROPERTIES
+        TIMEOUT 300 PROCESSORS 2)
+      add_test(NAME apps-common-homogenization-mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS}
+          $<TARGET_FILE:test_homogenization> ${MPIEXEC_POSTFLAGS})
+      set_tests_properties(apps-common-homogenization-mpi PROPERTIES
         TIMEOUT 300 PROCESSORS 2)
     endif()
   else()
