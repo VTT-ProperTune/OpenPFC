@@ -7,10 +7,12 @@ crystal (PFC) model, but the architecture — a domain decomposition, a
 distributed field, a pluggable spectral or finite-difference stack, and a
 session that wires them from JSON — is not specific to PFC.
 
-This report describes the fifteen applications shipped with OpenPFC 0.2:
+This report describes the sixteen applications shipped with OpenPFC 0.2:
 tungsten, aluminum, cahn_hilliard, thin_film, surface_diffusion, kawahara,
 ehd_film, higher_order_pfc, gradient_elasticity, heat3d, wave2d, allen_cahn,
-kobayashi, alloy_dendrite_elastic, and vlasov_maxwell. They span fourth-
+kobayashi, alloy_dendrite_elastic, vlasov_maxwell, and inverse_homogenization
+(an explicit catalog exception: PDE-constrained inverse design, not another
+evolution demo). They span fourth-
 through tenth-order spatial operators, conserved and non-conserved dynamics,
 dispersive and dissipative behaviour, single-field and coupled multi-field
 systems, a kinetic distribution on a phase-space grid, and both spectral

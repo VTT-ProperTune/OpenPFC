@@ -38,6 +38,9 @@ book:
       chapters:
         - 16_alloy_dendrite.qmd
         - 17_vlasov_maxwell.qmd
+    - part: "PDE-constrained inverse design"
+      chapters:
+        - 21_inverse_homogenization.qmd
     - 18_scalability.qmd
     - 19_conclusions.qmd
     - 20_references.qmd

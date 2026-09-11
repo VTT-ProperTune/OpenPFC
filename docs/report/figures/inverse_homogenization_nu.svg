@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="280" viewBox="0 0 520 280">
+  <title>Effective Poisson ratio: rotating squares vs Cahn–Hilliard family</title>
+  <desc>Measured nu from OpenPFC jobs 21956076 and 21958468. Rotating-square seed is auxetic; no CH process cell is.</desc>
+  <rect width="520" height="280" fill="#ffffff"/>
+  <text x="260" y="22" text-anchor="middle" font-family="sans-serif" font-size="13">Effective Poisson ratio (thresholded h&gt;0.5)</text>
+  <line x1="50" y1="40" x2="50" y2="230" stroke="#333" stroke-width="1"/>
+  <line x1="50" y1="140" x2="500" y2="140" stroke="#999" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="42" y="144" text-anchor="end" font-family="sans-serif" font-size="10">0</text>
+  <text x="42" y="80" text-anchor="end" font-family="sans-serif" font-size="10">+0.3</text>
+  <text x="42" y="210" text-anchor="end" font-family="sans-serif" font-size="10">−0.15</text>
+  <!-- nu = -0.123 -> y = 140 - (-0.123)/0.3*60 wait scale: 0.3 = 60px, y = 140 - nu/0.3*60 -->
+  <!-- rotating -0.123: 140+24.6=164.6 -->
+  <rect x="90" y="164.6" width="70" height="24.6" fill="#1f77b4"/>
+  <text x="125" y="248" text-anchor="middle" font-family="sans-serif" font-size="10">rotating</text>
+  <text x="125" y="258" text-anchor="middle" font-family="sans-serif" font-size="10">squares</text>
+  <text x="125" y="160" text-anchor="middle" font-family="sans-serif" font-size="10">−0.123</text>
+  <!-- CH best +0.23: 140-46=94 -->
+  <rect x="220" y="94" width="70" height="46" fill="#d62728"/>
+  <text x="255" y="248" text-anchor="middle" font-family="sans-serif" font-size="10">CH family</text>
+  <text x="255" y="258" text-anchor="middle" font-family="sans-serif" font-size="10">best ν_bin</text>
+  <text x="255" y="88" text-anchor="middle" font-family="sans-serif" font-size="10">+0.23</text>
+  <!-- CH typical +0.30: 140-60=80 -->
+  <rect x="350" y="80" width="70" height="60" fill="#ff9896"/>
+  <text x="385" y="248" text-anchor="middle" font-family="sans-serif" font-size="10">CH typical</text>
+  <text x="385" y="258" text-anchor="middle" font-family="sans-serif" font-size="10">grey c0=0.5</text>
+  <text x="385" y="74" text-anchor="middle" font-family="sans-serif" font-size="10">+0.30</text>
+  <text x="50" y="272" font-family="sans-serif" font-size="9" fill="#555">Jobs 21956076 (squares) and 21958468 (CH). Dashed line: ν=0.</text>
+</svg>

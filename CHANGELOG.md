@@ -9,6 +9,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- **Inverse homogenization Stages 6–8 and report chapter** (issue #161).
+  Process-parameter Cahn–Hilliard family versus rotating-square auxetic
+  seed; percolation/island/opening metrics; 3-D CPU/MPI driver with
+  per-step wall time (`stage8_3d.sbatch`). Device Green (#157) is still
+  open — no GPU claim. Report chapter
+  `docs/report/21_inverse_homogenization.qmd` (sixteenth-app exception).
 - **Allen–Cahn inverse homogenization** (`openpfc_inverse_homogenize`,
   issue #161 Stages 2–3). Explicit gradient flow on
   \(\tfrac12\lVert W\odot(C_H-C_{\mathrm{target}})\rVert_F^2\) with a

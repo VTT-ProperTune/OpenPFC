@@ -50,8 +50,9 @@ quarto render docs/report --to pdf # PDF
 
 This is a first draft. Every shipped application now carries a physical
 question, a problem-setup table and a three-axis maturity statement, and the
-mathematics and verification sections are complete. Fifteen applications are
-in the catalog. The scalability chapter covers the two models (tungsten and
+mathematics and verification sections are complete. Sixteen applications are
+in the catalog; the sixteenth (`inverse_homogenization`) is an explicit
+exception for PDE-constrained inverse design, not a licence to grow the set. The scalability chapter covers the two models (tungsten and
 Heat3D) that have been measured on LUMI-G out to 16 nodes; Vlasov scaling is
 in its own chapter and stops at the $N_{v_y}$ rank cap. The remaining
 applications are marked as unmeasured rather than estimated. Where a parameter
