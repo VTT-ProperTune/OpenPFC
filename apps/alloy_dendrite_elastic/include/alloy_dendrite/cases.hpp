@@ -672,6 +672,7 @@ template <int Dim>
 #endif
   int n_sample_seen = 0;
   int n_snap = 0;
+  bool last_sample_valid = false;
 
   std::vector<double> t_s, x_s, rho_s;
   std::vector<double> rho_w_s[kTipWindowCount];
@@ -708,6 +709,7 @@ template <int Dim>
                                   j_seed, cfg.tip_windows_rel,
                                   cfg.tip_fit_halfwidth);
     ++res.n_samples;
+    last_sample_valid = tip.valid;
     res.n_samples_failed += tip.valid ? 0 : 1;
     if (tip.valid) {
       t_s.push_back(t);
@@ -855,10 +857,8 @@ template <int Dim>
   // run while reporting `v_tip = 0.065`. So validity is a statement about the
   // *final state*, not only about the fit: `phi` must still be a phase field
   // and `U` must still be a number.
-  res.state_finite = std::isfinite(cons.phi_min) && std::isfinite(cons.phi_max) &&
-                     std::isfinite(cons.u_min) && std::isfinite(cons.u_max) &&
-                     cons.phi_min > -1.1 && cons.phi_max < 1.1;
-  res.valid = std::isfinite(res.v_tip) && res.state_finite;
+  res.state_finite = conservation_state_finite(cons);
+  res.valid = dendrite_result_valid(res.v_tip, res.state_finite, last_sample_valid);
 #if ALLOY_DENDRITE_HAVE_ELASTICITY
   if (elastic) {
     res.el_iter_mean = el_iter_sum / static_cast<double>(std::max(1, res.el_solves));

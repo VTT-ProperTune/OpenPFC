@@ -65,9 +65,12 @@
 #include <catch2/catch_all.hpp>
 #include <mpi.h>
 
+#include <vlasov_maxwell/ics.hpp>
 #include <vlasov_maxwell/maxwell.hpp>
 #include <vlasov_maxwell/moments.hpp>
 #include <vlasov_maxwell/parameters.hpp>
+#include <vlasov_maxwell/phase_space.hpp>
+#include <vlasov_maxwell/step.hpp>
 
 using Catch::Approx;
 using vlasov::Complex;
@@ -1187,6 +1190,85 @@ TEST_CASE("field energy and momentum match their Parseval values",
 
   f.Bz = sample_x(p, [&](double x) { return c * std::sin(k * x); });
   REQUIRE(vlasov::field_momentum_x(line, f) == Approx(0.5 * p.Lx * b * c).epsilon(1e-12));
+}
+
+/*
+ * Oracle. For a uniform 2-D Maxwellian of density n0 and thermal width vth,
+ *
+ *     S = -int f ln f d x d^{2}v
+ *       = - n0 Lx [ ln(n0 / (2 pi vth^{2})) - 1 ]
+ *
+ * because int f ln f d^{2}v = n [ln(n/(2 pi vth^{2})) - 1] over the infinite
+ * velocity plane. The box here is 10 vth, whose omitted tail is below
+ * round-off, so the discrete -sum f ln f * dV has to land on that closed
+ * form. Entropy is the Casimir that numerical diffusion shows up in, and
+ * it was previously only compared host-vs-device, never against an answer.
+ */
+TEST_CASE("entropy of a Maxwellian matches -int f ln f",
+          "[unit][moments][entropy]") {
+  SimParams p;
+  p.nx = 8;
+  p.nvx = 128;
+  p.nvy = 128;
+  p.Lx = 2.0;
+  const double vth = 0.05;
+  p.v_max = 10.0 * vth;
+  const double n0 = 1.0;
+  const auto f = maxwellian(p, n0, 0.0, 0.0, 0.0, vth);
+  const auto view =
+      vlasov::StridedDistribution::contiguous(f.data(), p.nx, p.nvx, 0, p.nvy);
+  vlasov::ReductionOptions opt;
+  opt.comm = MPI_COMM_SELF;
+  opt.v_thermal = vth;
+  const auto mom = vlasov::reduce_velocity(p, view, opt);
+
+  const double pref = n0 / (2.0 * kPi * vth * vth);
+  const double s_exact = -n0 * p.Lx * (std::log(pref) - 1.0);
+  INFO("entropy " << mom.entropy << "  exact " << s_exact);
+  // Measured relative error 2e-14 on this box; 1e-10 is the quadrature
+  // floor of summing 128^2 positive terms, not a wish.
+  REQUIRE(mom.entropy == Approx(s_exact).epsilon(1e-10));
+  REQUIRE(mom.number == Approx(n0 * p.Lx).epsilon(1e-12));
+}
+
+TEST_CASE("the electrostatic reduction holds Ey and Bz at zero",
+          "[unit][maxwell][electrostatic]") {
+  // The Vlasov-Poisson path is a runtime reduction of the same stepper:
+  // update_fields must zero the transverse pair rather than leave whatever
+  // was in them. Poisoning Ey, Bz and then taking one field update is the
+  // whole test; a no-op reduction would keep the poison.
+  if (world_size() != 1) {
+    SKIP("single-rank electrostatic reduction check");
+  }
+  SimParams p;
+  p.nx = 16;
+  p.nvx = 16;
+  p.nvy = 16;
+  p.Lx = 2.0 * kPi;
+  p.v_max = 0.4;
+  p.electrostatic = true;
+  p.interp_order = 3;
+  p.v_thermal = 0.05;
+  vlasov::PhaseSpace ps(p, 2, MPI_COMM_SELF);
+  ps.initialise(0, [&](double x, double vx, double vy) {
+    return vlasov::ics::maxwellian(vx, vy, 0.05, 1.0 + 0.02 * std::cos(x));
+  });
+  vlasov::Stepper st(p, ps);
+  for (double &v : st.fields.Ey) v = 0.3;
+  for (double &v : st.fields.Bz) v = -0.2;
+  st.deposit_all();
+  st.update_fields(0.01);
+  for (int i = 0; i < p.nx; ++i) {
+    REQUIRE(st.fields.Ey[static_cast<std::size_t>(i)] == 0.0);
+    REQUIRE(st.fields.Bz[static_cast<std::size_t>(i)] == 0.0);
+  }
+  // And it has to stay zero under a full Strang step, not only the field
+  // half: advect_vy with a leftover Bz would rotate the plasma.
+  st.advance(0.01);
+  for (int i = 0; i < p.nx; ++i) {
+    REQUIRE(st.fields.Ey[static_cast<std::size_t>(i)] == 0.0);
+    REQUIRE(st.fields.Bz[static_cast<std::size_t>(i)] == 0.0);
+  }
 }
 
 int main(int argc, char *argv[]) {

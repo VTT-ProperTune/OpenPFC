@@ -142,6 +142,35 @@ measure_conservation(const HostField &phi, const HostField &U,
 }
 
 /**
+ * @brief Whether the final field is still a phase field.
+ *
+ * `phi` in `[-1.1, 1.1]` (a fourth-order stencil overshoots a tanh front by
+ * ~1e-4, so 0.1 of headroom) and `U` finite. A run that left this band has
+ * diverged; see @ref dendrite_result_valid for why that matters.
+ */
+[[nodiscard]] inline bool conservation_state_finite(const Conservation &c) noexcept {
+  return std::isfinite(c.phi_min) && std::isfinite(c.phi_max) &&
+         std::isfinite(c.u_min) && std::isfinite(c.u_max) && c.phi_min > -1.1 &&
+         c.phi_max < 1.1;
+}
+
+/**
+ * @brief Whether a dendrite run's headline numbers may be quoted.
+ *
+ * A finite `v_tip` is not enough. Failed tip samples are skipped, so a
+ * trailing-window fit of the remaining crossings still reports a plausible
+ * velocity for a field that is full of NaN -- measured, `v_tip = 0.065` on a
+ * run that blew up at `t = 1065` of `t_end = 2000`. Validity is therefore
+ * the conjunction of a finite slope, a still-bounded final state, and a
+ * successful measurement on the *last* sample (early seed samples may fail;
+ * a failure at the end is a divergence).
+ */
+[[nodiscard]] inline bool dendrite_result_valid(double v_tip, bool state_finite,
+                                                bool last_sample_valid) noexcept {
+  return std::isfinite(v_tip) && state_finite && last_sample_valid;
+}
+
+/**
  * @brief Transverse-mean profile of a field along `x`, valid on every rank.
  *
  * Implemented as a length-`Nx` `MPI_Allreduce` rather than a gather, so it is
