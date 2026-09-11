@@ -68,20 +68,18 @@ mpirun -n 1 ./apps/inverse_homogenization/openpfc_inverse_homogenize \
 Allen–Cahn, not Cahn–Hilliard and not MMA. `INVERSE_CHECKSUM` is the last
 \(J\). Optional `--csv=PATH` writes the per-step history.
 
-### Stage 5 start (LUMI-C job 21949415)
+### Stage 5 campaigns (LUMI-C `standard`)
 
-25 Allen–Cahn steps, \(16^3\), `standard`. Not binary manufacturable designs;
-the first step is still too aggressive (`dt=0.08` on an un-normalised
-gradient). Numbers are from the job, not a paper claim.
+Not paper claims. Grey linear interpolation **cannot** produce \(\nu<0\).
 
-| Target | \(\lVert C_H-C_\ast\rVert_F/\lVert C_\ast\rVert_F\) | \(\langle h\rangle\) (want 0.5) | notes |
-|--------|------------------------------------------------------|----------------------------------|--------|
-| isotropic \(E=0.9,\nu=0.25\) | **0.050** | 0.31 | tensor match; volume penalty lost the first step |
-| auxetic \(\nu=-0.3\) | 0.68 | 0.12 | \(C_{12}\) stayed positive — not an auxetic |
-| orthotropic \(C_{11}=1.3,C_{22}=0.6\) | 0.35 | 0.23 | weak \(C_{11}/C_{22}\) split only |
+| Job | stepper | isotropic rel-F | volume | notes |
+|-----|---------|-----------------|--------|--------|
+| 21949415 | raw gradient, `dt=0.08` | **0.050** | 0.31 | first step collapsed volume \(0.55\to0.25\) |
+| 21949811 | RMS-normalised, `dt=0.03` | 0.129 | 0.40 | step 1 is \(0.55\to0.52\); volume still bleeds |
+| 21949859 | + volume projection | 0.375 | **0.50** | volume held; design stayed fully grey (Voigt-like) |
 
-Auxetic and orthotropic are **not** matched. That is the Stage 5 remainder
-(feature-scale binary topology, step-size control, multiple initialisations).
+Auxetic \(C_{12}\) stayed **positive** in every campaign. Next: SIMP \(p=3\)
+so the loop can form 0/1 topology at fixed volume.
 
 ## Tests
 

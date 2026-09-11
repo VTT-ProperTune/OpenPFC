@@ -73,6 +73,11 @@ struct InverseSpec {
   /// After the step, shift h by a constant so ⟨h⟩ matches volume_target
   /// (clip, then repeat a few times). Stronger than the quadratic penalty.
   bool project_volume{false};
+  /// SIMP exponent: elasticity sees \(h^p\), sensitivity is chained by
+  /// \(p h^{p-1}\). \(p=1\) is the linear interpolation; \(p=3\) is the
+  /// usual solid/void penalization. Grey two-phase linear interpolation
+  /// cannot realize auxetic \(C_{12}<0\).
+  double simp_p{1.0};
 };
 
 struct InverseStepReport {
@@ -131,6 +136,8 @@ public:
         m_lap(pfc::data::field_from_inbox<double>(domain, fft.get_inbox_bounds())),
         m_dJdh(pfc::data::field_from_inbox<double>(domain, fft.get_inbox_bounds())),
         m_g(pfc::data::field_from_inbox<double>(domain, fft.get_inbox_bounds())),
+        m_penalized(
+            pfc::data::field_from_inbox<double>(domain, fft.get_inbox_bounds())),
         m_n_local(m_dJdh.size()) {
     const auto gs = m_dJdh.global_size();
     m_n_global = static_cast<double>(gs[0]) * static_cast<double>(gs[1]) *
@@ -157,8 +164,20 @@ public:
       throw std::invalid_argument(
           "PhaseFieldInverse::step: epsilon, dt must be > 0 and mobility >= 0");
     }
+    if (spec.simp_p < 1.0) {
+      throw std::invalid_argument("PhaseFieldInverse::step: simp_p must be >= 1");
+    }
 
-    const auto r = m_hom.compute(h);
+    const RealField *h_el = &h;
+    if (spec.simp_p != 1.0) {
+      double *pp = m_penalized.data();
+      const double *hd = h.data();
+      for (std::size_t i = 0; i < m_n_local; ++i)
+        pp[i] = std::pow(hd[i], spec.simp_p);
+      m_penalized.note_host_write();
+      h_el = &m_penalized;
+    }
+    const auto r = m_hom.compute(*h_el);
     InverseStepReport out;
     out.elasticity_converged = r.all_converged();
     out.volume_fraction = r.volume_fraction;
@@ -166,7 +185,16 @@ public:
     const double dv = r.volume_fraction - spec.volume_target;
     out.J_volume = spec.lambda_volume * dv * dv;
 
-    m_hom.objective_sensitivity(h, spec.C_target, spec.W, m_dJdh);
+    m_hom.objective_sensitivity(*h_el, spec.C_target, spec.W, m_dJdh);
+    if (spec.simp_p != 1.0) {
+      const double pexp = spec.simp_p;
+      const double pm1 = pexp - 1.0;
+      double *dj = m_dJdh.data();
+      const double *hd = h.data();
+      for (std::size_t i = 0; i < m_n_local; ++i)
+        dj[i] *= pexp * std::pow(hd[i], pm1);
+      m_dJdh.note_host_write();
+    }
     spectral_laplacian(m_domain, m_fft, h, m_hat, m_lap);
 
     double local_reg = 0.0;
@@ -257,7 +285,7 @@ private:
   pfc::fft::IHostFFT &m_fft;
   PeriodicHomogenizer m_hom;
   ComplexField m_hat;
-  RealField m_lap, m_dJdh, m_g;
+  RealField m_lap, m_dJdh, m_g, m_penalized;
   std::size_t m_n_local{0};
   double m_n_global{1.0};
 };
