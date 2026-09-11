@@ -7,13 +7,13 @@ but the architecture — a domain decomposition, a distributed field, a
 pluggable spectral or finite-difference stack, and a session that wires them
 from JSON — is not specific to PFC.
 
-This report describes the thirteen applications shipped with OpenPFC 0.2. They
-span fourth- through tenth-order spatial operators, conserved and
+This report describes the fourteen applications shipped with OpenPFC 0.2.
+They span fourth- through tenth-order spatial operators, conserved and
 non-conserved dynamics, dispersive and dissipative behaviour, single-field and
 coupled multi-field systems, and both spectral and finite-difference
 discretisations.
 
-Two claims run through the report.
+Three claims run through the report.
 
 The first is that **high differential order is not high implementation
 complexity in a spectral code**. A sixth-order elastohydrodynamic operator and
@@ -31,5 +31,23 @@ unchanged between the one-GCD and the 128-GCD runs. The chapter also compares
 the spectral and finite-difference paths on the same equation, and is explicit
 about the one axis of that comparison the measurements do not settle.
 
-Neither claim is asserted without a number behind it. Where a property has not
-been measured, the report says so.
+The third is that **the two discretisations compose**. @sec-alloy-dendrite is
+a thermo-solutal-elastic dendritic solidification model: a quantitative
+dilute-alloy phase field with anti-trapping current, coupled to solute, to
+temperature through latent heat, and to quasi-static elasticity through a
+composition- and temperature-dependent eigenstrain whose energy feeds back
+into the phase-field driving force. The local physics runs on high-order
+finite differences with a halo exchange; elliptic mechanical equilibrium is
+elsewhere in the same time step, solved spectrally on the same
+decomposition. At the calibrated coupling the elastic energy of the solutal
+misfit slows the dendrite tip by 17 % and fattens it by 11 %, while the
+selection parameter moves 2.5 % — the elasticity slides the operating point
+along the solvability curve rather than changing the selection. With the
+temperature field on, the solutal and thermal eigenstrains oppose each other
+and together store a third of what the solutal misfit stores alone.
+
+None of the three claims is asserted without a number behind it. Where a
+property has not been measured, the report says so — and where a number
+depends on a parameter of the *method* rather than of the physics, as the
+dendrite's magnitude does on the liquid-shear regularisation, the report
+gives the range rather than the digit.
