@@ -36,7 +36,7 @@ $$ {#eq-etd-semi}
 
 where $L$ and $M_{\mathrm{nl}}$ are pointwise multipliers and $N$ is evaluated
 in real space. Integrating the linear part exactly over one step gives the
-first-order exponential time differencing (ETD1) update
+first-order exponential time differencing (ETD1) update [@Cox2002]
 
 $$
 \hat\psi^{\,n+1}
@@ -61,14 +61,17 @@ corresponding tenth-order operator needs $\Delta t \lesssim 2\times 10^{-6}$.
 ETD runs both at the timestep the physics wants.
 
 One step therefore costs two transforms — a forward transform of $N$ and an
-inverse transform of the updated field — plus $O(1)$ work per mode.
+inverse transform of the updated field — plus $O(1)$ work per mode. The
+transforms themselves are HeFFTe's [@Ayala2020], which is what supplies the
+distributed FFT and its slab or pencil decomposition; the applications never
+call it directly.
 
 ### Dealiasing
 
 Where $N$ is polynomial, the product raises the highest wave number present:
 $\psi^2$ doubles it and $\psi^3$ triples it. On a finite grid that content
 folds back onto resolved modes. Applications with a polynomial nonlinearity
-therefore apply the Orszag 2/3 rule, zeroing the upper third of the spectrum
+therefore apply the Orszag 2/3 rule [@Orszag1971], zeroing the upper third of the spectrum
 after each nonlinear evaluation. Purely linear applications
 (@sec-surface-diffusion) do not need it and switch it off.
 

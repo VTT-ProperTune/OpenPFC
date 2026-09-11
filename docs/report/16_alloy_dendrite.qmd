@@ -22,7 +22,7 @@ partition coefficient is $k \approx 0.14$, so it takes about one atom in seven
 depresses the local freezing point, which slows the interface, which is a
 *stabilising* feedback for a flat front and a *destabilising* one for a bumpy
 one: a protrusion reaches into melt that has not yet been enriched, so it
-grows faster, so it protrudes further. That is the Mullins–Sekerka instability,
+grows faster, so it protrudes further. That is the Mullins–Sekerka instability [@Mullins1964],
 and dendrites are what it produces once the anisotropy of the interfacial
 energy has selected which directions the arms point in.
 
@@ -233,8 +233,9 @@ assuming it.
 ### How the elastic problem is actually solved
 
 @eq-ad-equil with a $\phi$-dependent stiffness has no closed form. It is
-solved by the Khachaturyan–Shatalov Fourier Green-operator method extended to
-inhomogeneous moduli in the manner of Hu and Chen. Choose a homogeneous
+solved by the Khachaturyan–Shatalov Fourier Green-operator method
+[@Khachaturyan1983] extended to inhomogeneous moduli in the manner of Hu and
+Chen [@Hu2001]. Choose a homogeneous
 reference stiffness $\mathsf{C}_0$ (the Voigt average of solid and liquid) and
 define the polarisation
 
@@ -272,7 +273,7 @@ $$ {#eq-ad-green}
 
 Each iteration is twelve real transforms (six symmetric components, forward
 and back). The plain fixed point converges at a rate set by the modulus
-contrast; the Eyre–Milton accelerated scheme replaces that with
+contrast; the Eyre–Milton accelerated scheme [@Eyre1999] replaces that with
 $(\sqrt{r}-1)/(\sqrt{r}+1)$ in the contrast $r$ and is the default.
 
 That $\hat{\boldsymbol{\varepsilon}}(\mathbf{0})$ is a *choice* and not a
@@ -293,14 +294,14 @@ re-derived.
 
 | Piece | Source |
 |---|---|
-| Quantitative dilute-alloy phase field; anti-trapping current | Echebarria, Folch, Karma & Plapp, *Phys. Rev. E* **70**, 061604 (2004) |
-| Anti-trapping current; thin-interface asymptotics | Karma, *Phys. Rev. Lett.* **87**, 115701 (2001) |
-| Coupled heat and solute | Ramirez, Beckermann, Karma & Diepers, *Phys. Rev. E* **69**, 051607 (2004) |
-| Anisotropy function; thin-interface limit | Karma & Rappel, *Phys. Rev. E* **57**, 4323 (1998) |
-| Eigenstrain microelasticity; Fourier Green operator | Khachaturyan, *Theory of Structural Transformations in Solids* (1983) |
-| Inhomogeneous-modulus iterative FFT solve | Hu & Chen, *Acta Mater.* **49**, 1879 (2001) |
-| Accelerated fixed point | Eyre & Milton, *Eur. Phys. J. AP* **6**, 41 (1999) |
-| Spherical-inclusion closed form (test oracle) | Eshelby, *Proc. R. Soc. A* **241**, 376 (1957) |
+| Quantitative dilute-alloy phase field; anti-trapping current | @Echebarria2004 |
+| Anti-trapping current; thin-interface asymptotics | @Karma2001 |
+| Coupled heat and solute | @Ramirez2004 |
+| Anisotropy function; thin-interface limit | @Karma1998 |
+| Eigenstrain microelasticity; Fourier Green operator | @Khachaturyan1983 |
+| Inhomogeneous-modulus iterative FFT solve | @Hu2001 |
+| Accelerated fixed point | @Eyre1999 |
+| Spherical-inclusion closed form (test oracle) | @Eshelby1957 |
 
 : Provenance of the governing system. {#tbl-ad-provenance}
 
@@ -319,7 +320,7 @@ exactly how a verification application produces a confident wrong answer.
 | Boundary conditions | Periodic in every direction, for all four fields and for the elastic solve — the Green operator of @eq-ad-green *is* a periodic operator, so this is not a convenience but the condition under which @eq-ad-fixed is the solution |
 | Initial condition | $\phi = \tanh\!\left[(R_{\mathrm{seed}} - r)/\sqrt{2}\,W_0\right]$ about the box centre, $U = -\Omega$ and $\theta = 0$ everywhere. $R_{\mathrm{seed}} = 8\,W_0$, comfortably above the critical nucleus $\sim d_0/\Omega$. Deterministic; no noise anywhere, which is what makes elastic-off against elastic-on a controlled experiment rather than two samples of an ensemble |
 | Key physical parameters | $k = 0.15$, $D_l = 2$, $\lambda = D_l/a_2 = 3.1913$ (so the kinetic coefficient $\beta$ vanishes), $\Omega = 0.55$, $d_0/W_0 = a_1 a_2 / D_l = 0.277$ — the parameters of the Karma 2001 dilute-alloy benchmark. $\epsilon_4$ is scanned. Elastic constants and misfits are Al–4.5 wt% Cu; see @tbl-ad-material |
-| Observables | Tip position, velocity and radius (parabola fit at four independent fit windows), the selection parameter $\sigma^{*} = 2 d_0 D_l / (V\rho^2)$, $V\rho$ against the Ivantsov relation, solute and enthalpy conservation residuals, and — with the coupling on — the elastic iteration count, $\int f_{\mathrm{el}}\,\mathrm{d}V$, $\max|\partial f_{\mathrm{el}}/\partial\phi|$ and the residual mean pressure |
+| Observables | Tip position, velocity and radius (parabola fit at four independent fit windows), the selection parameter $\sigma^{*} = 2 d_0 D_l / (V\rho^2)$, $V\rho$ against the Ivantsov relation [@Ivantsov1947], solute and enthalpy conservation residuals, and — with the coupling on — the elastic iteration count, $\int f_{\mathrm{el}}\,\mathrm{d}V$, $\max|\partial f_{\mathrm{el}}/\partial\phi|$ and the residual mean pressure |
 | Model maturity | numerical verification: **analytical** at Stages 0 and 1 (Eshelby closed form; thin-interface planar relations) and **literature-comparative** at Stage 2 · physical completeness: **coupled** — four fields, two-way in every pair · calibration: **literature material data with stated provenance**, not fitted |
 
 ### Material data and how it becomes a dimensionless coupling
@@ -349,14 +350,14 @@ hypercooling.
 
 | Quantity | Value | Source |
 |---|---|---|
-| $T_M$ (pure Al) | 933.47 K | CRC Handbook, 97th ed. |
-| $L$ (per mass / per volume) | $3.97\times10^{5}$ J kg⁻¹ / $9.43\times10^{8}$ J m⁻³ | CRC Handbook; $\rho = 2375$ kg m⁻³ from Assael *et al.*, *J. Phys. Chem. Ref. Data* **35**, 285 (2006) |
-| $c_p$ (liquid, near $T_M$) | $1.18\times10^{3}$ J kg⁻¹ K⁻¹ | Assael *et al.* (2006) |
-| $k$, $|m|$ | 0.14, 3.4 K per wt% Cu | Al–Cu phase diagram; the values used throughout the quantitative dilute-alloy literature |
+| $T_M$ (pure Al) | 933.47 K | @Haynes2016 |
+| $L$ (per mass / per volume) | $3.97\times10^{5}$ J kg⁻¹ / $9.43\times10^{8}$ J m⁻³ | @Haynes2016; $\rho = 2375$ kg m⁻³ from @Assael2006 |
+| $c_p$ (liquid, near $T_M$) | $1.18\times10^{3}$ J kg⁻¹ K⁻¹ | @Assael2006 |
+| $k$, $|m|$ | 0.14, 3.4 K per wt% Cu | Al–Cu phase diagram; the values used throughout the quantitative dilute-alloy literature [@Echebarria2004] |
 | $c_0$ | 4.5 wt% Cu (1.97 at%) | alloy choice |
-| $a$, $\mathrm{d}a/\mathrm{d}c$ | 4.0496 Å, $-0.0175$ Å per at% Cu | CRC Handbook; Vegard slope **representative**, not assessed here (reported values span $-0.017$ to $-0.018$) |
-| $C_{11}, C_{12}, C_{44}$ (300 K) | 108.2, 61.3, 28.5 GPa | Kamm & Alers, *J. Appl. Phys.* **35**, 327 (1964) |
-| Softening at $T_M$ | $\times 0.5$ | **representative** extrapolation of Kamm & Alers to 933 K; running the 300 K constants would overstate $f_{\mathrm{el}}$ by about four |
+| $a$, $\mathrm{d}a/\mathrm{d}c$ | 4.0496 Å, $-0.0175$ Å per at% Cu | @Haynes2016; Vegard slope [@Vegard1921] **representative**, not assessed here (reported values span $-0.017$ to $-0.018$) |
+| $C_{11}, C_{12}, C_{44}$ (300 K) | 108.2, 61.3, 28.5 GPa | @Kamm1964 |
+| Softening at $T_M$ | $\times 0.5$ | **representative** extrapolation of @Kamm1964 to 933 K; running the 300 K constants would overstate $f_{\mathrm{el}}$ by about four |
 | $\alpha_L$ (solid, near $T_M$) | $3.0\times10^{-5}$ K⁻¹ | **representative** near-melting value |
 
 : Al–4.5 wt% Cu material data. Entries marked *representative* are not assessed for this alloy at this temperature; the elastic energy scales as the square of the Vegard slope, so its stated 6% band is a 12% band in $f_{\mathrm{el}}$. {#tbl-ad-material}
@@ -401,7 +402,7 @@ worth nothing without the four below it.
 |---|---|---|---|
 | 0 | The elastic solver alone | Closed forms: single-mode Green operator, dilatation identity, Eshelby sphere, $\nabla\!\cdot\!\boldsymbol{\sigma}=0$, $\partial f_{\mathrm{el}}/\partial\phi$ against a finite difference of the *re-converged* energy | `apps/common/tests/test_microelasticity.cpp` |
 | 1 | Planar interface, isothermal | Thin-interface velocity, kinetic coefficient and boundary layer; $k_{\mathrm{eff}}$ flat in velocity | @sec-ad-stage1 |
-| 2 | 2-D dendrite | Steady tip; box, grid and stencil convergence; $V\rho$ against Ivantsov | @sec-ad-steady |
+| 2 | 2-D dendrite | Steady tip; box, grid and stencil convergence; $V\rho$ against Ivantsov [@Ivantsov1947] | @sec-ad-steady |
 | 3 | 3-D and parallel | CPU/GPU parity; agreement across decompositions | @sec-ad-parallel |
 | 4 | Elasticity off against on | A measured change in a dendrite observable, against the run-to-run and measurement noise of Stages 1–3 | @sec-ad-science |
 
@@ -416,7 +417,7 @@ dilatation identity for an arbitrary eigenstrain ($\sim 10^{-13}$). The
 Eshelby sphere is limited only by how well a grid represents a sphere. A
 homogeneous modulus converges in exactly one iteration — which is a test, not
 an observation — and the accelerated scheme's advantage over the plain one
-scales as $\sqrt{r}$ in the contrast, as Eyre and Milton predict.
+scales as $\sqrt{r}$ in the contrast, as @Eyre1999 predict.
 
 Two of these are worth singling out because they are the ones that would let
 a wrong coupling through. $\nabla\!\cdot\!\boldsymbol{\sigma} = 0$ is checked
@@ -476,7 +477,7 @@ order at fixed coarse spacing helps and does not substitute:
 $k_{\mathrm{eff}} = k(1 + (1-k)U_s)/(1 + (1-k)U_i)$ is $c_s/c_l^i$ exactly, and
 equals $k$ if and only if the freshly formed solid and the extrapolated outer
 liquid are at the same chemical potential. There is no solute-drag term in
-@eq-ad-u, so there is no Aziz-type velocity-dependent trapping to compare
+@eq-ad-u, so there is no Aziz-type [@Aziz1982] velocity-dependent trapping to compare
 against: $k_{\mathrm{eff}}$ *is* $k$ by construction, and the test is that the
 measured value stays flat as the velocity varies over an eightfold range.
 
@@ -794,14 +795,14 @@ by 12.6.
 
 $\sigma^{*} = 2 d_0 D_l/(V\rho^2)$ changes by **−2.5 %** while $V$ changes by
 −16.7 % and $\rho$ by +11.0 %. That is not a coincidence and it is the most
-informative number in the table: solvability theory says $\sigma^{*}$ is set
+informative number in the table: solvability theory [@Karma1998] says $\sigma^{*}$ is set
 by the anisotropy and the interface physics, while $V$ and $\rho$
 *individually* are set by the driving force. An extra energy penalty on the
 solid should therefore slide the operating point along the $\sigma^{*}$
 contour rather than move the contour, and it does.
 
 The shift can be read as an effective undercooling. On the coarser matched
-pair, $V\rho$ falls 5.3 %, which inverting the 2-D Ivantsov relation makes an
+pair, $V\rho$ falls 5.3 %, which inverting the 2-D Ivantsov relation [@Ivantsov1947] makes an
 equivalent supersaturation drop of $\Delta\Omega = 0.0084$ — 1.7 % of
 $\Omega$, and 23 % of the *peak* $|\partial f_{\mathrm{el}}/\partial\phi|$ of
 0.0369. A factor of about four between a peak and an interface-weighted

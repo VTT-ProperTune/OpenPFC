@@ -7,7 +7,7 @@ its linear symbol is purely imaginary.
 
 Long weakly nonlinear waves on a shallow fluid layer where surface tension and
 gravity both matter. Where the Korteweg–de Vries equation keeps only
-third-order dispersion, Kawahara (1972) retains the fifth-order term as well.
+third-order dispersion, @Kawahara1972 retains the fifth-order term as well.
 When the two have opposite signs they compete, and the resulting dispersion
 relation is non-monotonic — waves of different length can travel in opposite
 directions.

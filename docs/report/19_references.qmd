@@ -1,0 +1,10 @@
+# References {.unnumbered}
+
+Works cited in this report. Entries are the primary sources for the models
+and material data used; where a chapter states that a parameter is
+*representative* rather than assessed, the citation identifies the assessment
+it is representative *of*, not a source the number was taken from digit by
+digit.
+
+::: {#refs}
+:::
