@@ -555,6 +555,176 @@ struct DendriteTip {
   return out;
 }
 
+/**
+ * @brief Most-downstream solid-to-liquid crossing on a gathered `xy` plane.
+ *
+ * @ref measure_tip is the `+x` arm of a seed at the box centre: it only
+ * searches a band of rows around `j_seed`, starting at `i_seed`. FTA
+ * directional solidification grows from a cold wall, so the tip that
+ * matters is the globally most-downstream (`largest x`) `+` to `-`
+ * crossing, not that arm. @p i_start is the first cell that may be solid;
+ * @p j_lo / @p j_hi (inclusive) clip the search. The parabola fit is the
+ * same as @ref measure_tip once the tip row is known.
+ */
+[[nodiscard]] inline DendriteTip
+measure_downstream_tip(const std::vector<double> &phi_xy, int nx, int ny,
+                       double dx, double dy, int i_start, int j_lo, int j_hi,
+                       int half_width_cells) {
+  DendriteTip out;
+  if (static_cast<int>(phi_xy.size()) != nx * ny || nx < 8 || ny < 2) {
+    return out;
+  }
+  auto at = [&](int i, int j) {
+    return phi_xy[static_cast<std::size_t>(i) +
+                  static_cast<std::size_t>(j) * static_cast<std::size_t>(nx)];
+  };
+  auto crossing = [&](int j) -> double {
+    double best = std::numeric_limits<double>::quiet_NaN();
+    const int i0 = std::max(0, i_start);
+    for (int i = i0; i + 1 < nx; ++i) {
+      const double a = at(i, j);
+      const double b = at(i + 1, j);
+      if (a >= 0.0 && b < 0.0) {
+        best = (static_cast<double>(i) + a / (a - b)) * dx;
+      }
+    }
+    return best;
+  };
+
+  const int ja = std::max(0, std::min(j_lo, j_hi));
+  const int jb = std::min(ny - 1, std::max(j_lo, j_hi));
+  int j_tip = -1;
+  double x_best = -std::numeric_limits<double>::infinity();
+  for (int j = ja; j <= jb; ++j) {
+    const double xc = crossing(j);
+    if (std::isfinite(xc) && xc > x_best) {
+      x_best = xc;
+      j_tip = j;
+    }
+  }
+  if (j_tip < 0) {
+    return out;
+  }
+  out.x_tip = x_best;
+  out.y_tip = static_cast<double>(j_tip) * dy;
+
+  std::vector<double> yy;
+  std::vector<double> xc;
+  for (int j = j_tip - half_width_cells; j <= j_tip + half_width_cells; ++j) {
+    if (j < 0 || j >= ny) {
+      continue;
+    }
+    const double c = crossing(j);
+    if (!std::isfinite(c)) {
+      continue;
+    }
+    const double dyj = (static_cast<double>(j) - static_cast<double>(j_tip)) * dy;
+    yy.push_back(dyj * dyj);
+    xc.push_back(c);
+  }
+  out.fit_rows = static_cast<int>(yy.size());
+  if (out.fit_rows < 3) {
+    // Position is still a measurement even if the parabola fit has too few
+    // rows -- FTA cells and grooves are often that narrow.
+    out.valid = std::isfinite(out.x_tip);
+    return out;
+  }
+  const double m = static_cast<double>(out.fit_rows);
+  double sx = 0.0, sy = 0.0, sxx = 0.0, sxy = 0.0;
+  for (std::size_t q = 0; q < yy.size(); ++q) {
+    sx += yy[q];
+    sy += xc[q];
+    sxx += yy[q] * yy[q];
+    sxy += yy[q] * xc[q];
+  }
+  const double den = m * sxx - sx * sx;
+  if (!(std::fabs(den) > 0.0)) {
+    out.valid = true;
+    return out;
+  }
+  const double slope = (m * sxy - sx * sy) / den;
+  const double icept = (sy - slope * sx) / m;
+  double ss = 0.0;
+  for (std::size_t q = 0; q < yy.size(); ++q) {
+    const double r = xc[q] - (icept + slope * yy[q]);
+    ss += r * r;
+  }
+  out.fit_rms = std::sqrt(ss / m) / dx;
+  out.rho = (slope < 0.0) ? (-0.5 / slope) : std::numeric_limits<double>::infinity();
+  out.valid = true;
+  return out;
+}
+
+/// Two downstream tips and the grain-boundary groove of a bicrystal.
+struct BicrystalTips {
+  DendriteTip tip1{};
+  DendriteTip tip2{};
+  /// Least-downstream `+` to `-` crossing between the two seed rows: the
+  /// liquid channel that lags the two grains. NaN if the seeds share a row
+  /// or the channel has closed.
+  double x_groove{std::numeric_limits<double>::quiet_NaN()};
+  double y_groove{std::numeric_limits<double>::quiet_NaN()};
+  bool valid{false};
+};
+
+/**
+ * @brief Two downstream tips and the geometric GB groove between them.
+ *
+ * Each tip is @ref measure_downstream_tip on the y-half that contains that
+ * seed, split at the midpoint so the two searches cannot steal each other's
+ * arm. The groove is the *minimum* such crossing in the open interval of
+ * rows between the seeds: a notch, not a Zhong grain boundary. This
+ * application has one `phi`, so two solids that meet simply merge.
+ */
+[[nodiscard]] inline BicrystalTips
+measure_bicrystal_tips(const std::vector<double> &phi_xy, int nx, int ny,
+                       double dx, double dy, int i_start, int j_seed1,
+                       int j_seed2, int half_width_cells) {
+  BicrystalTips out;
+  if (ny < 4) {
+    return out;
+  }
+  const int ja = std::max(0, std::min(j_seed1, j_seed2));
+  const int jb = std::min(ny - 1, std::max(j_seed1, j_seed2));
+  const int j_mid = (ja + jb) / 2;
+  const int j1_lo = (j_seed1 <= j_seed2) ? 0 : j_mid + 1;
+  const int j1_hi = (j_seed1 <= j_seed2) ? j_mid : ny - 1;
+  const int j2_lo = (j_seed2 < j_seed1) ? 0 : j_mid + 1;
+  const int j2_hi = (j_seed2 < j_seed1) ? j_mid : ny - 1;
+  out.tip1 = measure_downstream_tip(phi_xy, nx, ny, dx, dy, i_start, j1_lo,
+                                    j1_hi, half_width_cells);
+  out.tip2 = measure_downstream_tip(phi_xy, nx, ny, dx, dy, i_start, j2_lo,
+                                    j2_hi, half_width_cells);
+
+  auto at = [&](int i, int j) {
+    return phi_xy[static_cast<std::size_t>(i) +
+                  static_cast<std::size_t>(j) * static_cast<std::size_t>(nx)];
+  };
+  double x_min = std::numeric_limits<double>::infinity();
+  int j_g = -1;
+  const int i0 = std::max(0, i_start);
+  for (int j = ja + 1; j <= jb - 1; ++j) {
+    double xc = std::numeric_limits<double>::quiet_NaN();
+    for (int i = i0; i + 1 < nx; ++i) {
+      const double a = at(i, j);
+      const double b = at(i + 1, j);
+      if (a >= 0.0 && b < 0.0) {
+        xc = (static_cast<double>(i) + a / (a - b)) * dx;
+      }
+    }
+    if (std::isfinite(xc) && xc < x_min) {
+      x_min = xc;
+      j_g = j;
+    }
+  }
+  if (j_g >= 0) {
+    out.x_groove = x_min;
+    out.y_groove = static_cast<double>(j_g) * dy;
+  }
+  out.valid = out.tip1.valid || out.tip2.valid;
+  return out;
+}
+
 /// Number of tip-radius fit windows reported side by side; see
 /// @ref measure_tip_scan.
 inline constexpr int kTipWindowCount = 4;

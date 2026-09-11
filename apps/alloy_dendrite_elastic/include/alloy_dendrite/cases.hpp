@@ -47,9 +47,11 @@
  * Deterministic: one seed, no noise, fixed geometry, so two runs of the same
  * binary produce the same CSV. Four-fold anisotropy on a periodic square with
  * the seed at the centre gives four equivalent `<100>` arms; the `+x` arm is
- * the one measured. Latent heat is on and feeds back through `M_c`, so
- * equation (4) is actually coupled rather than merely integrated -- which is
- * the point of a *thermo*-solutal core.
+ * the one measured. Latent heat is off by default (a closed box has no
+ * steady tip); FTA directional solidification reuses the same `theta` field
+ * as an imposed Bridgman profile instead of integrating equation (4).
+ * A second tanh seed (`seed2_*`, `crystal_angle2`) is a single-`phi`
+ * bicrystal, not a two-order-parameter grain-boundary model.
  *
  * @see diagnostics.hpp for what the reported numbers mean, precisely
  * @see parameters.hpp for the predictions Stage 1 is measured against
@@ -457,6 +459,35 @@ struct DendriteConfig {
   double omega = 0.55;
   /// Seed radius in `W0`. Must clear the critical nucleus `~ d0 / omega`.
   double seed_radius = 8.0;
+  /**
+   * @brief Seed centre in `W0`. NaN (the default) is the box centre.
+   *
+   * FTA directional solidification typically puts the seed on the cold
+   * (small-`x`) side; the isothermal dendrite keeps the centre.
+   */
+  double seed_x = std::numeric_limits<double>::quiet_NaN();
+  double seed_y = std::numeric_limits<double>::quiet_NaN();
+  /// Second-seed radius in `W0`. `<= 0` disables the bicrystal.
+  double seed2_radius = 0.0;
+  /// Second-seed centre in `W0`. NaN places it at `(seed_x, seed_y + Ly/4)`.
+  double seed2_x = std::numeric_limits<double>::quiet_NaN();
+  double seed2_y = std::numeric_limits<double>::quiet_NaN();
+  /// Crystal-frame angle of the second seed, radians. Seed 1 uses
+  /// `ModelParams::crystal_angle`.
+  double crystal_angle2 = 0.0;
+  /**
+   * @brief Frozen-temperature gradient `G/ΔT_h` in `1/W0`.
+   *
+   * Nonzero (or a nonzero @ref fta_pulling) imposes
+   * `theta = (G/ΔT_h)(x - x0 - V_p t)`, leaves `evolve_theta` off, and
+   * does **not** zero `theta`. `M_c` in equation (2) stays live. Zero is
+   * the isothermal dendrite. See @ref fta_undercooling.
+   */
+  double fta_gradient = 0.0;
+  /// Pulling speed `V_p` in `W0/tau0`.
+  double fta_pulling = 0.0;
+  /// FTA reference `x0` in `W0`. NaN (the default) is the first seed's `x`.
+  double fta_x0 = std::numeric_limits<double>::quiet_NaN();
   double t_end = 400.0;
   int n_sample = 200;
   /// Rows either side of the tip used for the *primary* parabola fit, in
@@ -499,6 +530,14 @@ struct DendriteResult {
   double v_tip{std::numeric_limits<double>::quiet_NaN()};
   double rho_tip{std::numeric_limits<double>::quiet_NaN()};
   double x_tip{std::numeric_limits<double>::quiet_NaN()};
+  double y_tip{std::numeric_limits<double>::quiet_NaN()};
+  /// Second-seed tip; NaN when `seed2_radius <= 0`.
+  double x_tip2{std::numeric_limits<double>::quiet_NaN()};
+  double y_tip2{std::numeric_limits<double>::quiet_NaN()};
+  double v_tip2{std::numeric_limits<double>::quiet_NaN()};
+  double rho_tip2{std::numeric_limits<double>::quiet_NaN()};
+  /// Geometric GB groove (`measure_bicrystal_tips`); NaN without a second seed.
+  double x_groove{std::numeric_limits<double>::quiet_NaN()};
   /// `V rho^2 / (D_l d0)`, the reciprocal of `sigma*/2`. Kept for continuity
   /// with the earlier CSVs.
   double selection{std::numeric_limits<double>::quiet_NaN()};
@@ -571,6 +610,19 @@ struct DendriteResult {
  * exactly synchronous -- step `n+1` sees the equilibrium of the state left
  * by step `n`, which is what an explicit Euler step of a slaved field means.
  */
+[[nodiscard]] inline bool fta_active(const DendriteConfig &cfg) noexcept {
+  return cfg.fta_gradient != 0.0 || cfg.fta_pulling != 0.0;
+}
+
+template <int Dim>
+inline void impose_fta_temperature(Stepper<Dim> &st, double gradient, double x0,
+                                   double pulling, double t) {
+  st.temperature().for_each_owned([&](int i, int j, int kk) {
+    const double x = st.temperature().coords(i, j, kk)[0];
+    st.temperature()(i, j, kk) = fta_undercooling(gradient, x, x0, pulling, t);
+  });
+}
+
 template <int Dim>
 [[nodiscard]] inline DendriteResult run_dendrite(const DendriteConfig &cfg, int rank,
                                                  int nproc, MPI_Comm comm) {
@@ -581,6 +633,18 @@ template <int Dim>
   res.dt = (cfg.dt > 0.0) ? cfg.dt : cfg.dt_safety * dt_lim;
   if (res.dt > dt_lim) {
     throw std::invalid_argument("run_dendrite: dt exceeds the explicit limit");
+  }
+  if (fta_active(cfg) && p.evolve_theta) {
+    throw std::invalid_argument(
+        "run_dendrite: FTA (--gradient/--pulling) freezes theta; do not also "
+        "set evolve_theta");
+  }
+  // Interface CFL at the pulling speed: the isotherm must not skip a cell,
+  // or the discrete d_t phi that feeds the anti-trapping current is junk.
+  // Same 0.8 dx/V bound PR #103 used for V_p.
+  if (cfg.fta_pulling > 0.0 && res.dt > 0.8 * cfg.dx / cfg.fta_pulling) {
+    throw std::invalid_argument(
+        "run_dendrite: dt violates the FTA interface CFL dx/V_p");
   }
   if constexpr (Dim == 2) {
     if (cfg.nz != 1) {
@@ -603,23 +667,65 @@ template <int Dim>
                                            comm, opt);
   Stepper<Dim> st(stack, p, cfg.fd_order);
 
-  const int i_seed = cfg.nx / 2;
-  const int j_seed = cfg.ny / 2;
+  const double Lx = static_cast<double>(cfg.nx) * cfg.dx;
+  const double Ly = static_cast<double>(cfg.ny) * cfg.dx;
+  const double Lz = static_cast<double>(cfg.nz) * cfg.dx;
+  const double xc =
+      std::isfinite(cfg.seed_x) ? cfg.seed_x : 0.5 * Lx;
+  const double yc =
+      std::isfinite(cfg.seed_y) ? cfg.seed_y : 0.5 * Ly;
+  const double zc = 0.5 * Lz;
+  const int i_seed = std::max(
+      0, std::min(cfg.nx - 1, static_cast<int>(std::llround(xc / cfg.dx))));
+  const int j_seed = std::max(
+      0, std::min(cfg.ny - 1, static_cast<int>(std::llround(yc / cfg.dx))));
   const int k_seed = cfg.nz / 2;
-  const double xc = static_cast<double>(i_seed) * cfg.dx;
-  const double yc = static_cast<double>(j_seed) * cfg.dx;
-  const double zc = static_cast<double>(k_seed) * cfg.dx;
+  const bool bicrystal = cfg.seed2_radius > 0.0;
+  const double xc2 = bicrystal
+                         ? (std::isfinite(cfg.seed2_x) ? cfg.seed2_x : xc)
+                         : xc;
+  const double yc2 = bicrystal ? (std::isfinite(cfg.seed2_y) ? cfg.seed2_y
+                                                             : yc + 0.25 * Ly)
+                               : yc;
+  const int j_seed2 = std::max(
+      0, std::min(cfg.ny - 1, static_cast<int>(std::llround(yc2 / cfg.dx))));
+  const double fta_x0 = std::isfinite(cfg.fta_x0) ? cfg.fta_x0 : xc;
+  const bool fta = fta_active(cfg);
   const double inv_w = 1.0 / (std::sqrt(2.0) * p.W0);
   const double u0 = -cfg.omega;
+
+  using Field = typename Stepper<Dim>::Field;
+  Field angle = stack.make_field();
+  const bool two_angles = bicrystal && (cfg.crystal_angle2 != p.crystal_angle);
+
   st.phi().for_each_owned([&](int i, int j, int kk) {
     const auto c = st.phi().coords(i, j, kk);
     const double dz = (Dim == 3) ? (c[2] - zc) : 0.0;
-    const double r =
+    const double r1 =
         std::sqrt((c[0] - xc) * (c[0] - xc) + (c[1] - yc) * (c[1] - yc) + dz * dz);
-    st.phi()(i, j, kk) = std::tanh((cfg.seed_radius * p.W0 - r) * inv_w);
+    double phi = std::tanh((cfg.seed_radius * p.W0 - r1) * inv_w);
+    if (bicrystal) {
+      const double r2 = std::sqrt((c[0] - xc2) * (c[0] - xc2) +
+                                  (c[1] - yc2) * (c[1] - yc2) + dz * dz);
+      phi = std::fmax(phi, std::tanh((cfg.seed2_radius * p.W0 - r2) * inv_w));
+    }
+    st.phi()(i, j, kk) = phi;
     st.solute()(i, j, kk) = u0;
+    // FTA writes theta below. The isothermal path still zeros it. Do not
+    // zero when FTA is on: that would drop M_c theta out of equation (2).
     st.temperature()(i, j, kk) = 0.0;
+    if (two_angles) {
+      const double d1 = (c[0] - xc) * (c[0] - xc) + (c[1] - yc) * (c[1] - yc);
+      const double d2 = (c[0] - xc2) * (c[0] - xc2) + (c[1] - yc2) * (c[1] - yc2);
+      angle(i, j, kk) = (d2 < d1) ? cfg.crystal_angle2 : p.crystal_angle;
+    }
   });
+  if (fta) {
+    impose_fta_temperature(st, cfg.fta_gradient, fta_x0, cfg.fta_pulling, 0.0);
+  }
+  if (two_angles) {
+    st.set_crystal_angle_field(&angle);
+  }
   st.seed_conserved_solute();
 
 #if ALLOY_DENDRITE_HAVE_ELASTICITY
@@ -650,7 +756,8 @@ template <int Dim>
         "rho_w0,rho_w1,rho_w2,rho_w3,rho_spread,"
         "solute_total,solute_drift_rel,heat_balance,heat_drift_abs,"
         "theta_total,phi_total,phi_min,phi_max,u_min,u_max,"
-        "el_iterations,el_energy,el_max_dfel,el_mean_stress",
+        "el_iterations,el_energy,el_max_dfel,el_mean_stress,"
+        "x_tip2,y_tip2,rho_tip2,x_groove",
         rank);
   }
 
@@ -675,12 +782,19 @@ template <int Dim>
   bool last_sample_valid = false;
 
   std::vector<double> t_s, x_s, rho_s;
+  std::vector<double> t2_s, x2_s, rho2_s;
   std::vector<double> rho_w_s[kTipWindowCount];
   std::vector<double> rho_r_s[kTipWindowCount];
   Conservation cons = cons0;
   double t = 0.0;
   for (int step = 1; step <= res.n_steps; ++step) {
     st.step(res.dt);
+    t = static_cast<double>(step) * res.dt;
+    if (fta) {
+      // evolve_theta is false, so stage D left theta alone. Re-impose at the
+      // new time so M_c theta and the eigenstrain both see the Bridgman field.
+      impose_fta_temperature(st, cfg.fta_gradient, fta_x0, cfg.fta_pulling, t);
+    }
 #if ALLOY_DENDRITE_HAVE_ELASTICITY
     if (elastic && elastic->due(step)) {
       el_now = elastic->solve(st.phi(), st.solute(), st.temperature());
@@ -690,7 +804,6 @@ template <int Dim>
       res.el_nonconverged += el_now.converged ? 0 : 1;
     }
 #endif
-    t = static_cast<double>(step) * res.dt;
     if (step % sample_every != 0 && step != res.n_steps) {
       continue;
     }
@@ -699,15 +812,32 @@ template <int Dim>
     // the seed plane in 3-D: for `<100>` cubic anisotropy the `+x` arm grows
     // in that plane, so the 2-D and 3-D measurements are the same quantity.
     const auto plane = global_xy_plane(st.phi(), k_seed, comm);
-    const DendriteTip tip = measure_tip(plane, cfg.nx, cfg.ny, cfg.dx, cfg.dx,
-                                        i_seed, j_seed, cfg.tip_fit_halfwidth);
-    const TipWindowScan scan = measure_tip_scan(plane, cfg.nx, cfg.ny, cfg.dx,
-                                                cfg.dx, i_seed, j_seed,
-                                                cfg.tip_windows);
-    const TipWindowScan rscan =
-        measure_tip_scan_relative(plane, cfg.nx, cfg.ny, cfg.dx, cfg.dx, i_seed,
-                                  j_seed, cfg.tip_windows_rel,
-                                  cfg.tip_fit_halfwidth);
+    DendriteTip tip{};
+    DendriteTip tip2{};
+    double x_groove = std::numeric_limits<double>::quiet_NaN();
+    TipWindowScan scan{};
+    TipWindowScan rscan{};
+    if (bicrystal) {
+      const auto bi = measure_bicrystal_tips(plane, cfg.nx, cfg.ny, cfg.dx,
+                                             cfg.dx, /*i_start=*/0, j_seed,
+                                             j_seed2, cfg.tip_fit_halfwidth);
+      tip = bi.tip1;
+      tip2 = bi.tip2;
+      x_groove = bi.x_groove;
+      res.x_groove = x_groove;
+    } else if (fta) {
+      tip = measure_downstream_tip(plane, cfg.nx, cfg.ny, cfg.dx, cfg.dx,
+                                   /*i_start=*/0, /*j_lo=*/0, cfg.ny - 1,
+                                   cfg.tip_fit_halfwidth);
+    } else {
+      tip = measure_tip(plane, cfg.nx, cfg.ny, cfg.dx, cfg.dx, i_seed, j_seed,
+                        cfg.tip_fit_halfwidth);
+      scan = measure_tip_scan(plane, cfg.nx, cfg.ny, cfg.dx, cfg.dx, i_seed,
+                              j_seed, cfg.tip_windows);
+      rscan = measure_tip_scan_relative(plane, cfg.nx, cfg.ny, cfg.dx, cfg.dx,
+                                        i_seed, j_seed, cfg.tip_windows_rel,
+                                        cfg.tip_fit_halfwidth);
+    }
     ++res.n_samples;
     last_sample_valid = tip.valid;
     res.n_samples_failed += tip.valid ? 0 : 1;
@@ -715,10 +845,17 @@ template <int Dim>
       t_s.push_back(t);
       x_s.push_back(tip.x_tip);
       rho_s.push_back(tip.rho);
+      res.y_tip = tip.y_tip;
       for (int q = 0; q < kTipWindowCount; ++q) {
         rho_w_s[q].push_back(scan.rho[q]);
         rho_r_s[q].push_back(rscan.rho[q]);
       }
+    }
+    if (tip2.valid) {
+      t2_s.push_back(t);
+      x2_s.push_back(tip2.x_tip);
+      rho2_s.push_back(tip2.rho);
+      res.y_tip2 = tip2.y_tip;
     }
     const double sol_drift = std::fabs(cons.solute_total - cons0.solute_total) /
                              std::fabs(cons0.solute_total);
@@ -729,7 +866,8 @@ template <int Dim>
           "%s,%d,%.10g,%.10g,%.10g,%.10g,%.10g,%.6g,%d,"
           "%.10g,%.10g,%.10g,%.10g,%.6g,"
           "%.17g,%.6g,%.17g,%.6g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,"
-          "%d,%.10g,%.10g,%.6g",
+          "%d,%.10g,%.10g,%.6g,"
+          "%.10g,%.10g,%.10g,%.10g",
           cfg.run_id.c_str(), step, t, tip.x_tip, tip.y_tip, v_now, tip.rho,
           tip.fit_rms, tip.fit_rows, scan.rho[0], scan.rho[1], scan.rho[2],
           scan.rho[3], scan.spread, cons.solute_total, sol_drift,
@@ -737,11 +875,11 @@ template <int Dim>
           cons.phi_min, cons.phi_max, cons.u_min, cons.u_max,
 #if ALLOY_DENDRITE_HAVE_ELASTICITY
           el_now.iterations, el_now.total_energy, el_now.max_dfel_dphi,
-          el_now.mean_stress_trace
+          el_now.mean_stress_trace,
 #else
-          0, 0.0, 0.0, 0.0
+          0, 0.0, 0.0, 0.0,
 #endif
-          ));
+          tip2.x_tip, tip2.y_tip, tip2.rho, x_groove));
     }
     if (snap.due(n_sample_seen)) {
       snap.note_time(t);
@@ -793,6 +931,9 @@ template <int Dim>
   res.v_tip = trailing_slope(t_s, x_s, cfg.fit_fraction);
   res.rho_tip = trailing_mean(rho_s, cfg.fit_fraction);
   res.x_tip = x_s.empty() ? std::numeric_limits<double>::quiet_NaN() : x_s.back();
+  res.v_tip2 = trailing_slope(t2_s, x2_s, cfg.fit_fraction);
+  res.rho_tip2 = trailing_mean(rho2_s, cfg.fit_fraction);
+  res.x_tip2 = x2_s.empty() ? std::numeric_limits<double>::quiet_NaN() : x2_s.back();
   res.v_drift = velocity_split_drift(t_s, x_s, cfg.fit_fraction);
   res.rho_drift = split_window_drift(rho_s, cfg.fit_fraction);
   {
@@ -881,7 +1022,9 @@ template <int Dim>
         "el_solves,el_iter_mean,el_iter_max,el_nonconverged,el_energy,"
         "el_max_dfel,el_mean_stress,"
         "solute_drift_rel,heat_drift_rel,phi_min,phi_max,"
-        "n_samples,n_samples_failed,state_finite,valid",
+        "n_samples,n_samples_failed,state_finite,valid,"
+        "crystal_angle,crystal_angle2,fta_gradient,fta_pulling,"
+        "x_tip2,y_tip2,v_tip2,rho_tip2,x_groove",
         rank);
 #if ALLOY_DENDRITE_HAVE_ELASTICITY
     const double eps_c = cfg.elastic_params.eps_c;
@@ -903,7 +1046,8 @@ template <int Dim>
         "%.10g,%.10g,%.10g,"
         "%.10g,%.10g,%.10g,%.10g,%d,"
         "%d,%.4g,%d,%d,%.10g,%.10g,%.6g,"
-        "%.3e,%.3e,%.6g,%.6g,%d,%d,%d,%d",
+        "%.3e,%.3e,%.6g,%.6g,%d,%d,%d,%d,"
+        "%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g",
         cfg.run_id.c_str(), cfg.nx, cfg.ny, cfg.nz, cfg.dx, cfg.fd_order, res.dt,
         cfg.t_end, p.lambda, p.k, p.D_l, p.D_th, p.M_c, p.eps4, cfg.omega,
         cfg.seed_radius, capillary_length(p), res.v_tip, res.rho_tip, res.x_tip,
@@ -916,7 +1060,9 @@ template <int Dim>
         res.el_nonconverged, res.el_energy, res.el_max_dfel, res.el_mean_stress,
         res.solute_drift_rel, res.heat_drift_rel, res.phi_min, res.phi_max,
         res.n_samples, res.n_samples_failed, res.state_finite ? 1 : 0,
-        res.valid ? 1 : 0));
+        res.valid ? 1 : 0, p.crystal_angle, cfg.crystal_angle2, cfg.fta_gradient,
+        cfg.fta_pulling, res.x_tip2, res.y_tip2, res.v_tip2, res.rho_tip2,
+        res.x_groove));
   }
   return res;
 }

@@ -126,28 +126,36 @@ __device__ inline Anisotropy<Dim> anisotropy(const DeviceParams &p, double gx,
   if (p.eps4 == 0.0) {
     return out;
   }
-  const double g2 = gx * gx + gy * gy + (Dim == 3 ? gz * gz : 0.0);
+  // Twin of evaluate_anisotropy: n' = R(θ_c)^T n, flux rotated back with R.
+  // θ_c = 0 is skipped so the host/device last bits still match at rest.
+  const bool rotate = (p.crystal_angle != 0.0);
+  const double cth = rotate ? cos(p.crystal_angle) : 1.0;
+  const double sth = rotate ? sin(p.crystal_angle) : 0.0;
+  const double gx_c = rotate ? (cth * gx + sth * gy) : gx;
+  const double gy_c = rotate ? (-sth * gx + cth * gy) : gy;
+  const double gz_c = gz;
+  const double g2 = gx_c * gx_c + gy_c * gy_c + (Dim == 3 ? gz_c * gz_c : 0.0);
   if (g2 < p.grad_floor2) {
     return out;
   }
-  const double g4sum =
-      gx * gx * gx * gx + gy * gy * gy * gy + (Dim == 3 ? gz * gz * gz * gz : 0.0);
+  const double g4sum = gx_c * gx_c * gx_c * gx_c + gy_c * gy_c * gy_c * gy_c +
+                       (Dim == 3 ? gz_c * gz_c * gz_c * gz_c : 0.0);
   const double inv_g2 = 1.0 / g2;
   const double inv_g4 = inv_g2 * inv_g2;
-  const double s = g4sum * inv_g4; // sum n_i^4
-  // Normalised Karma-Rappel: a_s = (1-3 eps4) + 4 eps4 sum n_i^4, so that in
-  // 2-D a_s = 1 + eps4 cos 4 theta exactly. Same two lines as
+  const double s = g4sum * inv_g4; // sum n_i'^4
+  // Normalised Karma-Rappel: a_s = (1-3 eps4) + 4 eps4 sum n_i'^4, so that in
+  // 2-D a_s = 1 + eps4 cos 4 (theta - theta_c) exactly. Same two lines as
   // `evaluate_anisotropy` in step.hpp.
   out.a_s = (1.0 - 3.0 * p.eps4) + 4.0 * p.eps4 * s;
   out.W = p.W0 * out.a_s;
   out.tau = p.tau0 * out.a_s * out.a_s;
-  // A_i = |grad phi|^2 W dW/d(d_i phi) = 4 W0^2 a_s (d a_s/d s)
-  //       (g_i^3 G^2 - g_i sum g_j^4) / G^4, and d a_s/d s = 4 eps4.
   const double pre = 16.0 * p.eps4 * p.W0 * p.W0 * out.a_s * inv_g4;
-  out.fx = pre * (gx * gx * gx * g2 - g4sum * gx);
-  out.fy = pre * (gy * gy * gy * g2 - g4sum * gy);
+  const double fx_c = pre * (gx_c * gx_c * gx_c * g2 - g4sum * gx_c);
+  const double fy_c = pre * (gy_c * gy_c * gy_c * g2 - g4sum * gy_c);
+  out.fx = rotate ? (cth * fx_c - sth * fy_c) : fx_c;
+  out.fy = rotate ? (sth * fx_c + cth * fy_c) : fy_c;
   if constexpr (Dim == 3) {
-    out.fz = pre * (gz * gz * gz * g2 - g4sum * gz);
+    out.fz = pre * (gz_c * gz_c * gz_c * g2 - g4sum * gz_c);
   }
   return out;
 }

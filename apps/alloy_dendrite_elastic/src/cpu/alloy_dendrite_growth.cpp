@@ -34,6 +34,7 @@
  * Usage: `alloy_dendrite_growth [--key=value ...]`, `--help` for the list.
  */
 
+#include <cmath>
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
@@ -148,7 +149,26 @@ void print_usage(std::ostream &os, const char *exe) {
      << "Case\n"
      << "  --omega=X           initial supersaturation (" << d.omega << ")\n"
      << "  --seed-radius=X     seed radius in W0       (" << d.seed_radius
-     << ")\n\n"
+     << ")\n"
+     << "  --seed-x=X --seed-y=X   seed centre in W0; default is the box centre\n"
+     << "  --crystal-angle=X   <100> rotation, radians  ("
+     << d.model.crystal_angle << ")\n\n"
+     << "Frozen-temperature (FTA) directional solidification\n"
+     << "  theta(x,t) = (G/dT_h)(x - x0 - V_p t). evolve_theta stays off;\n"
+     << "  M_c theta in equation (2) stays live. Provenance: issue #85 Stage 4\n"
+     << "  leftover, unmerged PR #103. Not a paper-scale melt-pool run.\n"
+     << "  --gradient=X        G/dT_h in 1/W0          (" << d.fta_gradient
+     << ")\n"
+     << "  --pulling=X         V_p in W0/tau0          (" << d.fta_pulling
+     << ")\n"
+     << "  --fta-x0=X          isotherm x0; default is the first seed x\n"
+     << "  --Mc=X              keep nonzero or FTA does nothing to phi\n\n"
+     << "Bicrystal (two tanh seeds, one phi -- not a two-order-parameter GB)\n"
+     << "  --seed2-radius=X    second seed; 0 disables (" << d.seed2_radius
+     << ")\n"
+     << "  --seed2-x=X --seed2-y=X  default (seed_x, seed_y + Ly/4)\n"
+     << "  --crystal-angle2=X  second-grain rotation, radians ("
+     << d.crystal_angle2 << ")\n\n"
 #if ALLOY_DENDRITE_HAVE_ELASTICITY
      << "Elasticity, equations (5)-(7) (defaults: Al-4.5wt%Cu, see "
         "material.hpp)\n"
@@ -245,6 +265,15 @@ int run(int argc, char **argv, int rank, int nproc) {
   }
   cfg.omega = opt.real("omega", cfg.omega);
   cfg.seed_radius = opt.real("seed-radius", cfg.seed_radius);
+  cfg.seed_x = opt.real("seed-x", cfg.seed_x);
+  cfg.seed_y = opt.real("seed-y", cfg.seed_y);
+  cfg.seed2_radius = opt.real("seed2-radius", cfg.seed2_radius);
+  cfg.seed2_x = opt.real("seed2-x", cfg.seed2_x);
+  cfg.seed2_y = opt.real("seed2-y", cfg.seed2_y);
+  cfg.crystal_angle2 = opt.real("crystal-angle2", cfg.crystal_angle2);
+  cfg.fta_gradient = opt.real("gradient", cfg.fta_gradient);
+  cfg.fta_pulling = opt.real("pulling", cfg.fta_pulling);
+  cfg.fta_x0 = opt.real("fta-x0", cfg.fta_x0);
   cfg.model.lambda = opt.real("lambda", cfg.model.lambda);
   cfg.model.k = opt.real("k", cfg.model.k);
   cfg.model.D_l = opt.real("Dl", cfg.model.D_l);
@@ -254,6 +283,7 @@ int run(int argc, char **argv, int rank, int nproc) {
   cfg.model.W0 = opt.real("W0", cfg.model.W0);
   cfg.model.tau0 = opt.real("tau0", cfg.model.tau0);
   cfg.model.at_scale = opt.real("at-scale", cfg.model.at_scale);
+  cfg.model.crystal_angle = opt.real("crystal-angle", cfg.model.crystal_angle);
   cfg.model.evolve_theta = opt.flag("evolve-theta", cfg.model.evolve_theta);
 
   const bool want_elastic = opt.flag("elastic", false);
@@ -372,7 +402,7 @@ int run(int argc, char **argv, int rank, int nproc) {
             << "  Omega         " << cfg.omega << " (initial), "
             << res.omega_eff << " (effective, -min U at t_end)\n"
             << "  ------------------------------------------------------------\n"
-            << "  tip position  " << res.x_tip << "\n"
+            << "  tip position  " << res.x_tip << "  y=" << res.y_tip << "\n"
             << "  tip velocity  " << res.v_tip << "  (W0/tau0)\n"
             << "  tip radius    " << res.rho_tip << "  (W0), fit half-width "
             << cfg.tip_fit_halfwidth << " cells\n"
@@ -393,6 +423,11 @@ int run(int argc, char **argv, int rank, int nproc) {
             << "  (one-radius window; this is the quotable one)\n"
             << "  Ivantsov      V rho = " << res.v_rho << " vs 2 D P(Omega_eff) = "
             << res.v_rho_ivantsov << "\n";
+  if (std::isfinite(res.x_tip2) || std::isfinite(res.x_groove)) {
+    std::cout << "  tip 2         x=" << res.x_tip2 << " y=" << res.y_tip2
+              << "  V=" << res.v_tip2 << "  rho=" << res.rho_tip2 << "\n"
+              << "  GB groove     x=" << res.x_groove << "\n";
+  }
   if (res.el_solves > 0) {
     std::cout << "  ------------------------------------------------------------\n"
               << "  elastic       " << res.el_solves << " solves, mean "
