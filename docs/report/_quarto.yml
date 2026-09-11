@@ -37,9 +37,10 @@ book:
     - part: "Coupled multiphysics"
       chapters:
         - 16_alloy_dendrite.qmd
-    - 17_scalability.qmd
-    - 18_conclusions.qmd
-    - 19_references.qmd
+        - 17_vlasov_maxwell.qmd
+    - 18_scalability.qmd
+    - 19_conclusions.qmd
+    - 20_references.qmd
 
 format:
   html:
