@@ -79,6 +79,7 @@ Not paper claims. Grey linear interpolation **cannot** produce \(\nu<0\).
 | 21949859 | + volume projection | 0.375 | **0.50** | volume held; design stayed fully grey (Voigt-like) |
 | 21950094 | + SIMP \(p=3\) | 0.209 | **0.50** | still fully grey after 40 steps; \(C_{12}\) still \(>0\) |
 | 21954427 | elastic-only RMS + SIMP \(1\to 3\), \(\lambda_r\) \(0.05\to 0.4\) | 0.261 | **0.50** | **grey \(0.999\to 0.674\)** — first real binarization |
+| 21954505 | same continuation, 80 steps; 2-D auxetic \(E_{\mathrm{void}}=0.08\) | 0.261 | **0.50** | auxetic grey \(1\to 0.79\), \(C_{12}=+0.25\) still not negative; orthotropic grey \(0.88\) |
 
 The double well drives a *uniform* grey field to the wells (Catch2). A
 sharp/tanh interface with large \(\lambda_r/\varepsilon\) inverts bands
