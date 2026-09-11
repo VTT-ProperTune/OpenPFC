@@ -39,6 +39,10 @@
 #include <vlasov_maxwell/ics.hpp>
 #include <vlasov_maxwell/step.hpp>
 
+#ifdef VLASOV_ENABLE_HIP
+#include <vlasov_maxwell/device_step_hip.hpp>
+#endif
+
 namespace {
 
 using vlasov::Ledger;
@@ -89,7 +93,15 @@ void print_usage(std::ostream &os, const char *exe) {
      << "  --fields-dir=DIR    raw-brick phase space + fields + manifest\n"
      << "  --fields-every=N    snapshot every N-th sample            (1)\n"
      << "  --run-id=NAME       identifier written into every row  (vlasov)\n"
-     << "  --quiet=1           suppress the human-readable report\n";
+     << "  --quiet=1           suppress the human-readable report\n\n"
+     << "Device\n"
+     << "  --device=host|hip   where the transport and moment reduction run.\n"
+     << "                      hip requires a ROCm build; the host path stays\n"
+     << "                      the reference and is what every oracle in the\n"
+     << "                      validation ladder was measured against  (host)\n"
+     << "  --device-x=0|1      run the spectral x-shift on the device too. 0\n"
+     << "                      keeps it on the host, which costs four whole-\n"
+     << "                      brick bus crossings per step               (1)\n";
 }
 
 /// Per-case defaults. Collected here so that "the benchmark" is one object
@@ -216,6 +228,17 @@ int run(int argc, char **argv, int rank, int nproc) {
   vlasov::FieldOutputConfig fo;
   fo.dir = opt.text("fields-dir", "");
   fo.every = opt.integer("fields-every", 1);
+  const std::string device = opt.text("device", "host");
+  const bool device_x = opt.flag("device-x", true);
+  if (device != "host" && device != "hip") {
+    throw std::invalid_argument("--device must be 'host' or 'hip'");
+  }
+#ifndef VLASOV_ENABLE_HIP
+  if (device == "hip") {
+    throw std::invalid_argument(
+        "--device=hip needs a ROCm build; configure with --with-rocm");
+  }
+#endif
   const std::string run_id = opt.text("run-id", "vlasov");
   const bool quiet = opt.flag("quiet", false);
   opt.require_all_consumed();
@@ -335,6 +358,9 @@ int run(int argc, char **argv, int rank, int nproc) {
               << "  k lambda_D    " << k * vth << "\n"
               << "  dt            " << dt << " (limit " << lim << "), "
               << n_steps << " steps to t=" << p.t_end << "\n"
+              << "  device        " << device
+              << (device == "hip" && !device_x ? " (x-shift on host)" : "")
+              << "\n"
               << "  model         "
               << (p.electrostatic ? "electrostatic" : "electromagnetic")
               << (p.self_consistent ? "" : ", fields frozen") << "\n";
@@ -379,10 +405,30 @@ int run(int argc, char **argv, int rank, int nproc) {
   record(0, 0.0);
 
   double t = 0.0;
-  for (int step = 1; step <= n_steps; ++step) {
-    st.advance(dt);
-    t = static_cast<double>(step) * dt;
-    if (step % sample_every == 0 || step == n_steps) record(step, t);
+#ifdef VLASOV_ENABLE_HIP
+  if (device == "hip") {
+    vlasov::hip::DeviceStepper ds(st, ps, device_x);
+    for (int step = 1; step <= n_steps; ++step) {
+      ds.advance(dt);
+      t = static_cast<double>(step) * dt;
+      if (step % sample_every == 0 || step == n_steps) {
+        // The ledger and the snapshots read the host brick, so it has to be
+        // current. Downloading only on a sample rather than every step is
+        // the whole reason the device path is worth having: the brick stays
+        // on the GCD for `sample_every` steps at a time.
+        ds.download_all();
+        record(step, t);
+      }
+    }
+    ds.download_all();
+  } else
+#endif
+  {
+    for (int step = 1; step <= n_steps; ++step) {
+      st.advance(dt);
+      t = static_cast<double>(step) * dt;
+      if (step % sample_every == 0 || step == n_steps) record(step, t);
+    }
   }
   snap.write_manifest(snap_fields);
 

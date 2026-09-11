@@ -58,16 +58,37 @@ endif()
 # is compiled by hipcc.
 # ---------------------------------------------------------------------------
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+  # hipFFT carries the device spectral x-shift (phase A). It is a hard
+  # requirement of these two binaries and of nothing else in the tree, so it
+  # is found here rather than in the top-level dependency list.
+  find_package(hipfft REQUIRED CONFIG)
   set(_vlasov_hip_kernels ${CMAKE_CURRENT_SOURCE_DIR}/src/hip/vlasov_device_kernels.hip)
   foreach(_drv IN ITEMS vlasov_hip_parity vlasov_hip_cost)
     add_executable(${_drv} src/hip/${_drv}.cpp ${_vlasov_hip_kernels})
     target_include_directories(${_drv} PRIVATE ${VLASOV_INCLUDE_DIR})
     target_link_libraries(${_drv} PRIVATE OpenPFC openpfc_apps_common hip::host
-                          ${_vlasov_heffte_tgt})
+                          hip::hipfft ${_vlasov_heffte_tgt})
     set_target_properties(${_drv} PROPERTIES
       HIP_STANDARD 20
       HIP_STANDARD_REQUIRED ON)
     install(TARGETS ${_drv} DESTINATION bin)
   endforeach()
-  message(STATUS "vlasov_maxwell HIP drivers (parity, cost) enabled")
+  # The science driver becomes device-capable too, behind --device=hip.
+  # Without this the GPU path exists but no production run can reach it,
+  # which would make the 157x measurement true and useless.
+  target_sources(vlasov_run PRIVATE ${_vlasov_hip_kernels})
+  target_compile_definitions(vlasov_run PRIVATE VLASOV_ENABLE_HIP)
+  target_link_libraries(vlasov_run PRIVATE hip::host hip::hipfft)
+  set_target_properties(vlasov_run PROPERTIES HIP_STANDARD 20
+                                              HIP_STANDARD_REQUIRED ON)
+
+  # Parity is a test, not a demo: it already exits non-zero on failure, so
+  # registering it means a device regression fails the suite rather than
+  # waiting to be noticed. Serial and short -- the long device runs are the
+  # campaign's job, not ctest's.
+  include(CTest)
+  add_test(NAME vlasov-hip-parity COMMAND vlasov_hip_parity)
+  set_tests_properties(vlasov-hip-parity PROPERTIES TIMEOUT 900 RUN_SERIAL TRUE)
+
+  message(STATUS "vlasov_maxwell HIP: kernels, parity, cost, and --device=hip")
 endif()
