@@ -116,7 +116,7 @@
  * @see Weideman, *SIAM J. Numer. Anal.* **31**, 1497 (1994) — the w(z) algorithm
  * @see Weibel, *Phys. Rev. Lett.* **2**, 83 (1959) — the anisotropy instability
  * @see Bret, Gremillet & Dieckmann, *Phys. Plasmas* **17**, 120501 (2010) — review
- * @see Canosa, *J. Plasma Phys.* **8**, 187 (1973) — tabulated Langmuir roots
+ * @see Canosa, *J. Comput. Phys.* **13**, 158 (1973) — tabulated Langmuir roots
  */
 
 #include <algorithm>

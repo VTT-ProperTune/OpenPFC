@@ -22,15 +22,17 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   mechanical equilibrium runs spectrally on the *same* decomposition inside
   the same time step; the constructor refuses to run if the padded FD owned
   box and the HeFFTe real-space inbox disagree, because the two are copied
-  index for index. Measured at the calibrated coupling: the tip slows 16.7%
-  and fattens 11.0% while `sigma*` moves 2.5%, and with the temperature field
-  on the solutal and thermal eigenstrains oppose each other and together
-  store a third of what the solutal misfit stores alone. Verified by a
-  zero-coupling run reproducing the reference to ten digits, by doubling the
-  stiffness reproducing `lambda_el = 2 lambda` exactly with `2.0000x` the
-  energy, and by 1-vs-4-rank agreement at `3e-14` relative. The magnitude
-  depends on the liquid-shear regularisation (9.8% to 23.1% across
-  `mu_l/mu_s` = 0.02 to 0.10) and that is stated rather than hidden.
+  index for index. The coupling is real, signed and monotone: at the
+  conventional liquid-shear regularisation `mu_l/mu_s = 0.05` the tip slows
+  16.7% and fattens 11.0% while `sigma*` moves 2.5%. A 200-fold scan of
+  `mu_l/mu_s` (0.001 to 0.200) moves that slowdown from 3.26% to 28.6% and
+  is still falling, so the inviscid limit is a few per cent, not a
+  prediction about Al–Cu. With the temperature field on, the solutal and
+  thermal eigenstrains oppose each other and together store a third of what
+  the solutal misfit stores alone. Verified by a zero-coupling run
+  reproducing the reference to ten digits, by doubling the stiffness
+  reproducing `lambda_el = 2 lambda` exactly with `2.0000x` the energy, and
+  by 1-vs-4-rank agreement at `3e-14` relative.
 - **Field snapshots from the alloy dendrite** (`--fields-dir`,
   `--fields-every`): `phi`, `U`, `theta` and, with the coupling on, `f_el`,
   `df_el/dphi` and the hydrostatic and von Mises stress invariants, as raw
@@ -45,6 +47,16 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   the shape is a parabola. At `eps4 = 0.04` the cell-window spread is 49% at
   both `dx = 0.5` and `dx = 0.4` while the tip velocity converges to 0.7%: a
   number that does not move under refinement is not a discretisation error.
+- **1D2V electromagnetic Vlasov–Maxwell** (`apps/vlasov_maxwell`, issue #84).
+  A kinetic distribution on a 3-D phase-space grid coupled self-consistently
+  to Maxwell, with a real Lorentz cross-product. One stepper; `--case`
+  selects the validation rung. Linear rates are checked against a dispersion
+  relation solved at run time. HIP path measured at 157× on one MI250X GCD
+  at `256³`; science driver takes `--device=hip`.
+- **HIP twin of the alloy-dendrite finite-difference step**, with CPU/GPU
+  parity and a coupled-cost driver that times the host elastic solve against
+  the device phase field. The 2-D device halo exchange now accepts
+  `halo_width > 1` on an `nz == 1` slab.
 
 ### Fixed
 
@@ -66,6 +78,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   summary CSV carries `n_samples`, `n_samples_failed`, `state_finite` and
   `valid`, and the driver says loudly that the numbers above it are not
   results.
+- **Canosa 1973 was the wrong journal.** The tabulated Langmuir-root sanity
+  check cited *J. Plasma Phys.* **8**, 187; the paper is *J. Comput. Phys.*
+  **13**, 158–160, DOI 10.1016/0021-9991(73)90131-9. Header, test, and
+  bibliography now match the primary source.
 
 - **3-D eigenstrain microelasticity on the FFT stack**
   (`apps/common/include/openpfc_apps/microelasticity.hpp`). A reusable

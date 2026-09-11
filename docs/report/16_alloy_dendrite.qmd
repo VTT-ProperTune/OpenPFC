@@ -998,12 +998,13 @@ overselling it.
    nucleation.** The elasticity is linear and the crystal is single. A real
    Al–Cu casting relieves misfit stress by dislocation activity long before
    it reaches the levels computed here.
-7. **CPU only.** The device twin of the finite-difference step exists; the
-   elastic solve is host-side. Measurements on a GPU build put the host
-   round-trip at 0.3 % of the coupled step but the host *solve* at 500–3000
-   times the device step, so a GPU coupled run is not currently worth doing.
-   A device Green operator over rocFFT is the obvious next step and is
-   started but not finished.
+7. **Coupled elasticity is host-side.** The device twin of the
+   finite-difference step is in the tree and has a CPU/GPU parity test; the
+   elastic solve is still host-side. Measurements on a GPU build put the
+   host round-trip at 0.3 % of the coupled step but the host *solve* at
+   500–3000 times the device step, so a GPU coupled run is not currently
+   worth doing. A device Green operator over rocFFT is the obvious next
+   step and is not in this application.
 8. **The eigenstrain is purely dilatational.** A real solidification front
    also carries a deviatoric misfit from anisotropic thermal expansion and
    from coherency at a curved interface. The formulation admits a general

@@ -566,7 +566,7 @@ TEST_CASE("Langmuir roots: residual at round-off over a k lambda_D scan",
 /**
  * **Sanity check, not an oracle.** The \f$k\lambda_{D}=0.5\f$ root of the
  * kinetic Langmuir relation is the most-tabulated number in linear plasma
- * theory (Canosa, *J. Plasma Phys.* **8**, 187 (1973), and every textbook
+ * theory (Canosa, *J. Comput. Phys.* **13**, 158 (1973), and every textbook
  * since): \f$\omega\approx1.4156\f$, \f$\gamma\approx-0.1534\f$. Landing on it
  * means the *relation* is the one the literature solves and the normalisation
  * convention matches. It does not certify the root — the residual above does
