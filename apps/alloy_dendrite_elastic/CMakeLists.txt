@@ -51,6 +51,24 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
     HIP_STANDARD_REQUIRED ON)
   install(TARGETS alloy_dendrite_hip_parity DESTINATION bin)
   message(STATUS "alloy_dendrite_hip_parity (MPI + HIP) enabled")
+
+  if(_alloy_dendrite_heffte_tgt)
+    add_executable(alloy_dendrite_coupled_cost
+      src/hip/alloy_dendrite_coupled_cost.cpp
+      src/hip/alloy_dendrite_hip_kernels.hip)
+    target_include_directories(alloy_dendrite_coupled_cost PRIVATE
+                               ${ALLOY_DENDRITE_INCLUDE_DIR})
+    target_link_libraries(alloy_dendrite_coupled_cost PRIVATE OpenPFC
+                          openpfc_apps_common hip::host openpfc_hip_kernels
+                          ${_alloy_dendrite_heffte_tgt})
+    set_target_properties(alloy_dendrite_coupled_cost PROPERTIES
+      HIP_STANDARD 17
+      HIP_STANDARD_REQUIRED ON)
+    install(TARGETS alloy_dendrite_coupled_cost DESTINATION bin)
+    message(STATUS "alloy_dendrite_coupled_cost (MPI + HIP + HeFFTe) enabled")
+  else()
+    message(STATUS "alloy_dendrite_coupled_cost skipped: HeFFTe not found")
+  endif()
 endif()
 
 option(ALLOY_DENDRITE_ENABLE_TESTS "Build alloy_dendrite_elastic tests" ON)
