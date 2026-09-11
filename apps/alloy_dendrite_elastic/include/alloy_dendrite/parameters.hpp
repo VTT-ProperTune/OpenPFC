@@ -64,6 +64,8 @@
  */
 
 #include <cmath>
+
+#include <openpfc/kernel/field/fd_stencils.hpp>
 #include <cstdio>
 #include <string>
 
@@ -295,9 +297,55 @@ struct ModelParams {
  *       (`eps4 = 0.2`, `D_l = 2`) the solute limit is the binding one by a
  *       factor of ten and the point does not arise.
  */
+/**
+ * @brief Nyquist eigenvalue of the central second-derivative stencil of
+ *        order @p order, in units of `1/dx^2`.
+ *
+ * The symbol of the stencil is
+ * `Lhat(k) = (1/dx^2) [c_0 + 2 sum_m c_m cos(m k dx)] / denom`, and the
+ * explicit Euler stability bound is set by its largest magnitude, which for
+ * a central second derivative is at the Nyquist mode `k dx = pi` where
+ * `cos(m pi) = (-1)^m`. Returns `|Lhat| dx^2`, i.e. 4 at second order,
+ * rising monotonically to `pi^2 = 9.87` as the order goes to infinity.
+ *
+ * Reading it out of the same table the stepper differentiates with is
+ * deliberate: a hand-tabulated copy is a table that can drift out of sync
+ * with the stencil it is supposed to describe, and the whole point of this
+ * function is to be right about the stencil actually in use.
+ */
+[[nodiscard]] inline double d2_nyquist_eigenvalue(int order) noexcept {
+  pfc::field::fd::EvenCentralD2View v{};
+  if (!pfc::field::fd::lookup_even_central_d2(order, &v)) {
+    return 4.0; // unsupported order; the stepper rejects it separately
+  }
+  double sum = static_cast<double>(v.coeffs[0]);
+  for (int m = 1; m <= v.half_width; ++m) {
+    sum += 2.0 * static_cast<double>(v.coeffs[m]) * ((m % 2 == 0) ? 1.0 : -1.0);
+  }
+  return std::fabs(sum / static_cast<double>(v.denom));
+}
+
+/**
+ * @brief Largest explicit-Euler step that is stable for @p p on a grid of
+ *        spacing @p dx in @p dim dimensions with a stencil of order @p order.
+ *
+ * @note **The order matters and it used to be ignored.** This function
+ *       returned the second-order von Neumann bound `dx^2/(2 d D)` for every
+ *       stencil, which corresponds to a Nyquist eigenvalue of 4. The real
+ *       one grows with the order -- 4, 5.33, 6.04, 6.42, 6.68, 6.87 for
+ *       orders 2 to 12, tending to `pi^2` -- so the bound was too generous
+ *       by a factor of 1.7 at order 12. Every run in the campaign used
+ *       `dt_safety = 0.2`, a fivefold margin, and none of them was affected;
+ *       a run at `dt_safety = 0.8` and order 12 would have been unstable
+ *       while this function asserted it was inside the limit, which is
+ *       exactly the failure this application refuses to have elsewhere.
+ */
 [[nodiscard]] inline double explicit_dt_limit(const ModelParams &p, double dx,
-                                              int dim) noexcept {
-  const double denom = 2.0 * static_cast<double>(dim);
+                                              int dim, int order = 2) noexcept {
+  const double lam = d2_nyquist_eigenvalue(order);
+  // |1 - dt D lambda| <= 1  =>  dt <= 2 / (D lambda), with lambda summed
+  // over `dim` axes: lambda_total = dim * lam / dx^2.
+  const double denom = 0.5 * lam * static_cast<double>(dim);
   double lim = dx * dx / (denom * p.W0 * p.W0 / p.tau0);
   lim = std::fmin(lim, dx * dx / (denom * p.D_l));
   if (p.evolve_theta && p.D_th > 0.0) {

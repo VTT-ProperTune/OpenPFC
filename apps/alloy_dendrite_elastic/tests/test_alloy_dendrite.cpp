@@ -102,6 +102,41 @@ TEST_CASE("thin-interface relations are self-consistent", "[unit][params]") {
   REQUIRE(alloy_dendrite::solute_mobility(+1.0) == Approx(0.0));
 }
 
+TEST_CASE("the explicit step limit knows which stencil it is bounding",
+          "[unit][params]") {
+  // The Nyquist eigenvalue of the central second-derivative stencil, in
+  // units of 1/dx^2. Hand-derived from the symbol
+  // c_0 + 2 sum_m c_m (-1)^m, divided by denom:
+  //   order  2: |-2 + 2(1)(-1)| / 1            = 4
+  //   order  4: |-30 + 2[16(-1) + (-1)(1)]| / 12 = 64/12 = 5.3333
+  //   order  6: |-490 + 2[270(-1) + (-27)(1) + 2(-1)]| / 180 = 1088/180
+  // and it must tend to pi^2 = 9.8696 from below as the order rises,
+  // because that is the symbol of the exact second derivative at Nyquist.
+  REQUIRE(alloy_dendrite::d2_nyquist_eigenvalue(2) == Approx(4.0));
+  REQUIRE(alloy_dendrite::d2_nyquist_eigenvalue(4) == Approx(64.0 / 12.0));
+  REQUIRE(alloy_dendrite::d2_nyquist_eigenvalue(6) == Approx(1088.0 / 180.0));
+  double prev = 0.0;
+  for (int o = 2; o <= 14; o += 2) {
+    const double lam = alloy_dendrite::d2_nyquist_eigenvalue(o);
+    INFO("order " << o << " lambda " << lam);
+    REQUIRE(lam > prev);                                  // monotone
+    REQUIRE(lam < std::acos(-1.0) * std::acos(-1.0));     // below pi^2
+    prev = lam;
+  }
+
+  // And the step limit must shrink with it. This is the part that was
+  // wrong: the limit used to be the order-2 bound for every stencil, so a
+  // run at order 12 was allowed a step 1.7x larger than it can take.
+  alloy_dendrite::ModelParams p;
+  p.D_l = 2.0;
+  const double dx = 0.8;
+  const double lim2 = alloy_dendrite::explicit_dt_limit(p, dx, 2, 2);
+  const double lim12 = alloy_dendrite::explicit_dt_limit(p, dx, 2, 12);
+  REQUIRE(lim12 < lim2);
+  REQUIRE(lim2 / lim12 ==
+          Approx(alloy_dendrite::d2_nyquist_eigenvalue(12) / 4.0).epsilon(1e-12));
+}
+
 TEST_CASE("cubic anisotropy matches equation (1)", "[unit][aniso]") {
   // Equation (1) is the *normalised* Karma-Rappel form since the 2026-09-11
   // spec correction:
