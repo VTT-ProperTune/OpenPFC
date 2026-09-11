@@ -30,7 +30,8 @@ illustrative case. Both use the older regular-solution free energy with
 $\Omega = 20.1\,\mathrm{kJ\,mol^{-1}}$ at $c_0 = 0.32$ and grid-unit $\kappa$
 and $M$: they are **not calibrated Fe–Cr timescales and not production science
 cases**. The **science presets** are `fe_cr_early_stage.json` and the two
-`fe_cr_coarsening` files, which use the assessed Redlich–Kister thermodynamics
+`fe_cr_coarsening` files, which use the assessed Redlich–Kister
+[@Redlich1948] thermodynamics
 and carry a code-to-physical scale map. The table describes the science
 presets.
 
@@ -43,7 +44,7 @@ presets.
 | Initial condition | `seeded_noise`: deterministic hashed noise bounded by $\pm 0.005$ about the mean Cr fraction, with the global mean removed by an exact integer reduction, so the initial field is identical on any number of MPI ranks |
 | Key physical parameters | $T = 748.15\ \mathrm{K}$ (475 °C); Redlich–Kister $L_0 = 20500 - 9.68\,T\ \mathrm{J\,mol^{-1}}$, $L_1 = 0$; $V_m = 7.09\times10^{-6}\ \mathrm{m^3\,mol^{-1}}$; $\kappa = 10^{-9}\ \mathrm{J\,m^{-1}}$; $D = D_0e^{-Q/RT}$ with $D_0 = 2\times10^{-5}\ \mathrm{m^2\,s^{-1}}$ and $Q = 241\ \mathrm{kJ\,mol^{-1}}$. Compositions $c_0 = 0.50$ and $c_0 = 0.45$ |
 | Observable | Domain length $L(t) = 2\pi/k_1$ and its growth exponent; early-stage $k_{\mathrm{peak}}$; mean composition (conserved); total free energy (must decrease) |
-| Model maturity | numerical verification: **analytical** — the linear growth rate, the $L(k)$ symbol, the gradient energy and a synthetic power-law fit are all checked against closed forms · physical completeness: **reduced** — one composition field, no coherent elastic misfit, no magnetic contribution to the bcc Gibbs energy · calibration: **representative**. The interaction parameter is the classical bcc Cr–Fe assessment of Andersson & Sundman, *CALPHAD* **11** (1987) 83–92, but the application states plainly that its thermodynamic and kinetic constants are *"representative, not verified against the primary sources digit by digit"*. Treat the numbers as semi-quantitative |
+| Model maturity | numerical verification: **analytical** — the linear growth rate, the $L(k)$ symbol, the gradient energy and a synthetic power-law fit are all checked against closed forms · physical completeness: **reduced** — one composition field, no coherent elastic misfit, no magnetic contribution to the bcc Gibbs energy · calibration: **representative**. The interaction parameter is the classical bcc Cr–Fe assessment of @Andersson1987, but the application states plainly that its thermodynamic and kinetic constants are *"representative, not verified against the primary sources digit by digit"*. Treat the numbers as semi-quantitative |
 
 A periodic cell represents an interior volume of bulk material far from any
 free surface or grain boundary. That is the right idealisation for spinodal
@@ -106,8 +107,7 @@ $$ {#eq-ch-rk}
 of which @eq-ch-f is the $L_0 = \Omega$, $L_{i>0} = 0$ special case — the same
 expression, not a second code path, and a test asserts the reduction. The
 science presets use the assessed bcc Cr–Fe interaction
-$L_0 = 20500 - 9.68\,T\ \mathrm{J\,mol^{-1}}$ with $L_1 = 0$ (Andersson &
-Sundman, *CALPHAD* **11** (1987) 83–92); the verification presets use the
+$L_0 = 20500 - 9.68\,T\ \mathrm{J\,mol^{-1}}$ with $L_1 = 0$ [@Andersson1987]; the verification presets use the
 older representative $\Omega = 20.1\,\mathrm{kJ\,mol^{-1}}$ at
 $T = 748.15\,\mathrm{K}$, which is deeper and keeps Fe–32Cr inside the
 spinodal.

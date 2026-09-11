@@ -100,9 +100,7 @@ long mode's lifetime.
 
 Surface free energy depends on orientation, and by the Herring relation the
 stiffness that controls diffusive smoothing is
-$\tilde\gamma(\theta) = \gamma(\theta) + \gamma''(\theta)$ (Mullins 1957;
-Rettori & Villain, *J. Phys. France* **49**, 257 (1988); Bonzel & Preuss,
-*Surf. Sci.* **336**, 209 (1995)). The application does **not** differentiate a
+$\tilde\gamma(\theta) = \gamma(\theta) + \gamma''(\theta)$ [@Herring1951; @Mullins1957; @Rettori1988; @Bonzel1995]. The application does **not** differentiate a
 literature $\gamma(\theta)$ to obtain $\tilde\gamma$. It imposes the same
 periodic functional form directly on the kinetic coefficient,
 

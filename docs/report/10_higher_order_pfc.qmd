@@ -42,7 +42,7 @@ device smoke test (`tests/two_mode_hip_smoke.json`).
 | Grid | Noise-seeded runs: $t \in [0, 400]$ at $\Delta t = 0.05$ (8000 steps), sampled every $20$. Lattice-seeded controls: $t \in [0, 100]$ (2000 steps) |
 | Boundary conditions | Periodic on both active axes ($L_z = 1$) |
 | Initial condition | `seeded_noise` — decomposition-independent hashed noise of amplitude $0.01$ about $\bar\psi = -0.15$, `seed = 42`; or `lattice_seed` — an explicit sum of 2–3 plane waves at the target symmetry's reciprocal vectors, amplitude $0.2$ |
-| Key physical parameters | $\varepsilon = 0.25$ (quench depth), $q_1 = \sqrt2$ (second peak), $r_1 = 0.02$ (square) / $0$ (degenerate), $M = 1$, $g = 0.5$, $\bar\psi = -0.15$. **All nondimensional PFC model parameters.** The kernel's functional form and the $q_1$ values are taken from Wu, Adland & Karma, *Phys. Rev. E* **81**, 061601 (2010); the particular $(\varepsilon, r_1, \bar\psi)$ used here are chosen to expose the mechanism, not fitted to that paper's phase diagram |
+| Key physical parameters | $\varepsilon = 0.25$ (quench depth), $q_1 = \sqrt2$ (second peak), $r_1 = 0.02$ (square) / $0$ (degenerate), $M = 1$, $g = 0.5$, $\bar\psi = -0.15$. **All nondimensional PFC model parameters.** The kernel's functional form and the $q_1$ values are taken from @Wu2010; the particular $(\varepsilon, r_1, \bar\psi)$ used here are chosen to expose the mechanism, not fitted to that paper's phase diagram |
 | Observable | Free-energy density; reciprocal-space ring power $S(1)$ and $S(q_1)$ and the peak wave number $k_{\mathrm{peak}}$; real-space $\psi_4$/$\psi_6$ (global and local) and mean neighbour count |
 | Model maturity | numerical verification: **analytical** — the kernel matches its factored form to $10^{-12}$, the conserved symbol's constant term is bit-exactly zero, and $\psi_4$/$\psi_6$ are checked to $10^{-9}$ against analytically constructed ideal square and triangular lattices · physical completeness: **reduced** — two dimensions, one order parameter, no elastic or thermal coupling, no vapour phase · calibration: **representative**, not quantitative. The app README states explicitly which parts of the primary source were verified from this machine (the kernel structure and $q_1$ ratios, from the arXiv rendering) and which were not (the paper's quantitative phase diagram and elastic-constant fits) |
 
@@ -74,7 +74,7 @@ F[\psi] = \int\Big[\tfrac12\,\psi\,\Lambda(\nabla^2)\,\psi
 \partial_t\psi = M\nabla^2\frac{\delta F}{\delta\psi}.
 $$ {#eq-hop-energy}
 
-The two-mode kernel is a product of two Swift–Hohenberg factors,
+The two-mode kernel is a product of two Swift–Hohenberg [@Swift1977] factors,
 
 $$
 \Lambda(\nabla^2) \;=\; -\varepsilon
