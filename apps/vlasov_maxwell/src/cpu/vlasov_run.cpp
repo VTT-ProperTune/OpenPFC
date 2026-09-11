@@ -392,15 +392,26 @@ int run(int argc, char **argv, int rank, int nproc) {
   // then stops damping, so fitting late measures the floor.
   namespace pd = pfc::apps::plasma;
   double gamma_fit = std::nan(""), omega_fit = std::nan("");
+  double fit_t0 = std::nan(""), fit_t1 = std::nan("");
   double gamma_ref = std::nan(""), omega_ref = std::nan("");
   if (c.name == "landau") {
-    gamma_fit = vlasov::fit_exponential_rate(t_s, m_ex, 2.0, 0.45 * p.t_end);
+    // The envelope, not every sample: see fit_envelope_rate. The window
+    // starts after one oscillation period so the ballistic transient that
+    // precedes the asymptotic Landau regime is excluded, and ends before
+    // the mode reaches the round-off floor where it stops damping.
+    gamma_fit = vlasov::fit_envelope_rate(t_s, m_ex, 3.0, 0.7 * p.t_end);
     omega_fit = vlasov::frequency_from_minima(t_s, m_ex, 0.0, 0.6 * p.t_end);
     const auto r = pd::solve_langmuir_root(k * vth);
     gamma_ref = r.omega.imag();
     omega_ref = r.omega.real();
   } else if (c.name == "twostream") {
-    gamma_fit = vlasov::fit_exponential_rate(t_s, m_ex, 5.0, 0.5 * p.t_end);
+    // ceiling 0.05 rather than the default 0.2: the two-stream mode
+    // saturates hard, and at 0.2 of its maximum the last fifth of the
+    // window is already rolling over -- measured, -13.5% on the rate.
+    const auto w = vlasov::auto_growth_window(t_s, m_ex, 5.0, 0.05);
+    gamma_fit = vlasov::fit_exponential_rate(t_s, m_ex, w[0], w[1]);
+    fit_t0 = w[0];
+    fit_t1 = w[1];
     pd::TwoStreamMaxwellians ts2;
     ts2.v_drift = drift;
     ts2.v_th = vth;
@@ -413,14 +424,23 @@ int run(int argc, char **argv, int rank, int nproc) {
     // frequency columns because that is what it is.
     bool aliased = false;
     omega_fit = vlasov::fit_rotation_rate(t_s, p_x, p_y, &aliased);
-    omega_ref = p.species[0].qm() * p.b_ext;
+    // Sign: d/dt (v_x + i v_y) = (q/m) B_z (v_y - i v_x)
+    //                          = -i (q/m) B_z (v_x + i v_y),
+    // so the *phase* advances at -(q/m) B_z. An earlier revision compared
+    // against +(q/m) B_z and reported a 200% error on a rotation whose
+    // magnitude was right to seven digits -- the oracle was wrong, not the
+    // code, which is the failure mode a sign convention always has.
+    omega_ref = -p.species[0].qm() * p.b_ext;
     if (aliased && rank == 0 && !quiet) {
       std::cout << "  WARNING the gyro-phase advanced more than half a turn "
                    "between samples; the rotation rate is aliased. Increase "
                    "--samples.\n";
     }
   } else if (c.name == "weibel" || c.name == "filament") {
-    gamma_fit = vlasov::fit_exponential_rate(t_s, m_bz, 5.0, 0.5 * p.t_end);
+    const auto w = vlasov::auto_growth_window(t_s, m_bz);
+    gamma_fit = vlasov::fit_exponential_rate(t_s, m_bz, w[0], w[1]);
+    fit_t0 = w[0];
+    fit_t1 = w[1];
     pd::BiMaxwellian bm;
     bm.v_th_x = vth;
     bm.v_th_y = (c.name == "weibel") ? vthy : std::sqrt(drift * drift + vth * vth);
@@ -464,7 +484,7 @@ int run(int argc, char **argv, int rank, int nproc) {
     vlasov::CsvAppender sum(
         summary,
         "run_id,case,nx,nvx,nvy,Lx,vmax,k,k_lambda_D,vth,vthy,drift,amp,"
-        "dt,t_end,n_steps,ranks,halo,halo_used,interp,"
+        "dt,t_end,n_steps,ranks,halo,halo_used,interp,fit_t0,fit_t1,"
         "gamma_fit,gamma_ref,gamma_rel_err,omega_fit,omega_ref,omega_rel_err,"
         "d_energy,d_number,d_entropy,d_l1,d_l2,d_momentum_x,"
         "gauss_residual,f_min,boundary_ratio,boundary_fraction,"
@@ -474,14 +494,14 @@ int run(int argc, char **argv, int rank, int nproc) {
     std::snprintf(
         buf, sizeof(buf),
         "%s,%s,%d,%d,%d,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,"
-        "%.10g,%.10g,%d,%d,%d,%d,%d,"
+        "%.10g,%.10g,%d,%d,%d,%d,%d,%.6g,%.6g,"
         "%.10g,%.10g,%.6g,%.10g,%.10g,%.6g,"
         "%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,"
         "%.6e,%.6e,%.6e,%.6e,"
         "%.10g,%.10g,%.10g,%.0f",
         run_id.c_str(), c.name.c_str(), p.nx, p.nvx, p.nvy, p.Lx, p.v_max, k,
         k * vth, vth, vthy, drift, amp, dt, p.t_end, n_steps, nproc, halo,
-        st.peak_halo_used, p.interp_order, gamma_fit, gamma_ref,
+        st.peak_halo_used, p.interp_order, fit_t0, fit_t1, gamma_fit, gamma_ref,
         (std::isfinite(gamma_ref) && gamma_ref != 0.0)
             ? (gamma_fit - gamma_ref) / std::fabs(gamma_ref)
             : std::nan(""),
