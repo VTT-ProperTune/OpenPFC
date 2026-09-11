@@ -208,74 +208,104 @@ layers, which is the other way to get a biased `U_far`: the two fronts' tails
 then overlap at the periodic seam. At `V = 0.05` in a `512 W0` box that
 biases `k_eff` by 4 %; in a `1600 W0` box the same run gives `+0.02 %`.
 
-### 2-D dendrite
+### 2-D dendrite: a steady tip, and what it takes
 
-Shipped case: `240^2` at `dx = 0.8 W0`, `lambda = D_l/a2` (so `beta = 0`,
-`d0/W0 = 0.277`), `Omega = 0.55`, `eps4 = 0.2`, `D_th = 2`, `M_c = 0.5`,
-`t_end = 400`. About three minutes on one core.
+Shipped case: `600^2` at `dx = 0.8 W0`, `lambda = D_l/a2` (so `beta = 0`,
+`d0/W0 = 0.277`), `Omega = 0.55`, `eps4 = 0.04`, **isothermal**
+(`M_c = 0`, `--evolve-theta=0`), `t_end = 2000`.
 
-```
-t       x_tip     v_tip     rho_tip   fit_rms   sum(theta)
- 52.0   114.840   0.12837   7.303     0.039     1241.6
-152.0   124.912   0.09066   5.571     0.055     2969.8
-252.0   133.087   0.07979   4.921     0.060     4659.3
-400.0   144.137   0.07371   4.563     0.059     7216.1
-```
+Latent heat being off by default is a deliberate reversal. A closed periodic
+box with latent-heat release has **no steady tip**: equation (4) has no sink,
+`sum theta` grows monotonically, `M_c theta` eats the driving force and the
+tip decelerates for as long as the run lasts. The previous revision shipped
+exactly that case and correctly reported that it never reached a plateau.
+The thermal coupling is one flag away (`--Mc=0.5 --evolve-theta=1 --Dth=20`)
+rather than on, and the elastic section below shows what it does.
 
-The arm is 48 `W0` long against a tip radius of 4.6 `W0`, so it is a dendrite
-rather than a growing disc, and both `v_tip` and `rho_tip` are still
-decreasing at `t_end`: **this case does not reach a steady tip**, and no
-selection constant should be read off it. Latent heat is doing real work —
-`sum theta` grows to a mean `theta` of 0.125, so `M_c theta` removes about
-11 % of the driving force by the end, and setting `--Mc=0` visibly speeds the
-tip up.
+Three conditions have to hold before a selection parameter is worth quoting,
+and they are independent.
 
+**Box.** At `eps4 = 0.02`, `dx = 0.8`:
+
+| box (W0) | 320 | 480 | 640 | 800 |
+|---|---:|---:|---:|---:|
+| `V` | 0.09001 | 0.08758 | 0.087936 | 0.087936 |
+| `dV/V` over the fit window | -10.3 % | -3.9 % | -2.0 % | -2.0 % |
+
+640 and 800 agree to six digits. It is the solute *reservoir* that sets this,
+not the diffusion length: the tip radius is 10 W0 and `D_l/V` is 23, both
+tiny next to 640, but four arms keep rejecting into a closed domain.
+
+**Steadiness.** `dV/V` across the trailing 30 % of a `t = 2000` run:
+
+| `eps4` | 0.010 | 0.015 | 0.020 | 0.025 | 0.030 | 0.040 | 0.050 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `dV/V` | -12.5 % | -6.8 % | -3.9 % | -1.1 % | -0.27 % | **+0.15 %** | +0.15 % |
+
+Use `eps4 >= 0.03`. A sharper tip reaches steady state sooner.
+
+**Resolution — and buy it with the stencil, not the grid.** `640 W0` box,
+`eps4 = 0.04`. Wall times are a matched `t = 50` run on 16 ranks of one
+`standard` node, so they compare directly:
+
+| `dx/W0` | order | `V` | `rho` (1-rho window) | `sigma*` | wall | cost |
+|---:|---:|---:|---:|---:|---:|---:|
+| 0.80 | 4 | 0.194243 | 3.8983 | 0.37531 | 9.0 s | 1.0 |
+| 0.80 | 6 | 0.208537 | 3.6508 | 0.39860 | 9.1 s | 1.0 |
+| 0.80 | 8 | 0.212221 | 3.5913 | 0.40475 | 11.0 s | 1.2 |
+| 0.80 | 10 | 0.213529 | 3.5704 | 0.40699 | 12.3 s | 1.4 |
+| 0.80 | 12 | **0.214104** | 3.5618 | 0.40787 | 13.2 s | **1.5** |
+| 0.65 | 4 | 0.208069 | 3.6123 | 0.40805 | 15.7 s | 1.8 |
+| 0.50 | 4 | 0.213347 | 3.3515 | 0.46229 | 51.9 s | 5.8 |
+| 0.40 | 4 | **0.214287** | -- | -- | 147.1 s | **16.4** |
+
+**Fourth order at `dx = 0.8 W0` is 10 % wrong in `V`** and nothing about the
+run looks wrong: drift 0.09 %, conservation 1e-13, a clean parabolic tip.
+Order 12 at `dx = 0.8` and order 4 at `dx = 0.4` agree on `V` to 0.09 %, and
+the first is 11x cheaper -- halving `dx` multiplies cells by `2^d` and steps
+by 4, widening the stencil multiplies neither.
 
 #### How much the tip radius depends on the fit window
 
-`rho` is defined by a least-squares parabola through the `phi = 0`
-crossings of `2 * half_width + 1` rows centred on the tip row, and the
-half-width is a parameter rather than a constant because the parabolic
-description is only good within roughly `rho` of the tip: too narrow and
-the fit is dominated by the staircase, too wide and it is biased by the
-non-parabolic flanks. That is not a hedge — it is measurable, and it was
-measured. `t_end = 400`, everything else at the shipped values, percentages
-relative to the narrowest window:
+`rho` is a least-squares parabola through the `phi = 0` crossings of
+`2*half_width + 1` rows centred on the tip. The half-width is a parameter of
+the *measurement*, and `measure_tip_scan` reports four of them every sample
+so the ambiguity is part of the output rather than a hedge.
 
-| fit half-width (cells) | 3 | 5 | 8 | 12 |
-|---|---:|---:|---:|---:|
-| `rho/W0`, `eps4 = 0.1` | 11.51 (+0 %) | 11.94 (+4 %) | 12.72 (+10 %) | 13.83 (+20 %) |
-| `rho/W0`, `eps4 = 0.2` | 3.94 (+0 %) | 4.66 (+18 %) | 5.49 (+39 %) | 6.43 (+63 %) |
+Windows in **cells** answer "does the grid resolve the fit". Windows in
+**units of `rho`** (`measure_tip_scan_relative`, the literature convention,
+0.5/1/1.5/2) answer "is the shape a parabola". Those are different questions:
 
-The trend is monotone and in the expected direction — a wider window
-reaches the flatter flanks and reports a larger radius — and it is worse
-for the sharper tip: at `eps4 = 0.2` the radius is 4.7 `W0`,
-i.e. six cells at `dx = 0.8 W0`, so there is barely a window that is both
-wide enough to average the staircase and narrow enough to stay parabolic.
-**Tip velocity is unaffected** — identical to five significant figures
-across every window — because it is a level-set crossing on one row
-and does not involve the fit at all.
+| | `dx = 0.5` | `dx = 0.4` |
+|---|---:|---:|
+| `V` | 0.21273 | 0.21429 (converged to 0.7 %) |
+| relative-window spread | 48.9 % | 49.0 % (**does not move**) |
 
-Rule of thumb for a science run: choose the half-width so the fit spans
-about `rho/2`, and resolve the tip with `rho >= 10 dx`. The shipped
-dendrite does not meet the second condition; the `eps4 = 0.1` case
-(`rho = 12 W0` = 15 cells) does, at the cost of a stubbier arm.
-`fit_rms` is in every CSV row so the choice can be audited rather than
-assumed.
+A spread that does not shrink under refinement is not a discretisation error.
+At `eps4 = 0.04` the tip radius is about 3.5 `W0` and a dendrite stops being
+a paraboloid within roughly one radius of the apex, so the 2-rho window is
+already on the flank. `sigma*` from this application therefore carries a
+systematic uncertainty of order +/-50 % from the radius definition alone
+(`sigma* ~ rho^-2`). What it does *not* carry is run-to-run scatter: the
+model is deterministic and two runs of a case agree bitwise, which is why a
+*ratio* of two `sigma*` measured the same way is good to far better than that.
 
-Two caveats that a science run has to deal with:
+**Tip velocity is unaffected by the window** -- identical to five significant
+figures across every choice -- because it is a level-set crossing on one row
+and never touches the fit.
 
-- **`D_th = 2` means Lewis number 1.** A metal's is `10^3`–`10^4`. An
-  explicit scheme's step is set by the fastest diffusivity, so a realistic
-  Lewis number costs three to four orders of magnitude more. Getting a
-  quantitative thermo-solutal dendrite needs an implicit or spectral thermal
-  solve, which is not in this application.
-- **`eps4 = 0.2` is `eps_eff = 0.043`, not 20 %.** With the spec's
-  un-normalised `a_s = 1 + eps4 (n_x^4 + n_y^4)` and
-  `n_x^4 + n_y^4 = (3 + cos 4 theta)/4`, the anisotropy that the selection
-  theory sees is `(eps4/4)/(1 + 0.75 eps4)` — a factor of about four smaller
-  than the number in the input. Using the Karma-Rappel `eps4 = 0.02` here
-  gives `eps_eff = 0.005` and a blob.
+#### Caveats a science run has to deal with
+
+- **`D_th = 2` is Lewis number 1.** A metal's is `10^3`-`10^4`. An explicit
+  scheme's step is set by the fastest diffusivity, so a realistic Lewis
+  number costs three to four orders of magnitude more. The thermo-solutal
+  runs below use `D_th = 20` (Lewis 10), which is enough to make the thermal
+  eigenstrain act and is not a quantitative alloy prediction.
+- **The step limit is order-aware, and did not used to be.** The von Neumann
+  bound for the order-`p` central Laplacian is set by its Nyquist eigenvalue
+  -- 4, 5.33, 6.04, 6.42, 6.68, 6.87 for orders 2 to 12, tending to `pi^2` --
+  not by the order-2 value of 4. `explicit_dt_limit` now reads it out of the
+  same coefficient table the stepper differentiates with.
 
 ## The elastic coupling
 
@@ -352,6 +382,120 @@ solution can be reused. A ctest (`[elastic-hook]`) asserts that installing it
 with `lambda_el = 0` changes nothing *bitwise*, and that installing it with
 `lambda_el != 0` changes the result in the right direction.
 
+### Stage 4: what the coupling does
+
+`960^2` at `dx = 0.5 W0` (a 480 W0 box), `eps4 = 0.04`, `t_end = 1000`,
+64 ranks. The reference is `--elastic=1 --lambda-el=0`, i.e. the same code
+path with the feedback switched off, so the comparison isolates the coupling
+and not the machinery.
+
+| `lambda_el/lambda` | `V` | `dV/V` | `rho` | `drho/rho` | `sigma*` | `int f_el` |
+|---|---:|---:|---:|---:|---:|---:|
+| off | 0.212722 | -- | 3.3960 | -- | 0.45158 | 0 |
+| 0 (solve, no feedback) | 0.212722 | +0.00 % | 3.3960 | +0.00 % | 0.45158 | 440 |
+| 0.25 | 0.202754 | -4.69 % | 3.4962 | +2.95 % | 0.44702 | 443 |
+| 0.5 | 0.193325 | -9.12 % | 3.5865 | +5.61 % | 0.44551 | 443 |
+| **1 (calibrated)** | **0.177228** | **-16.69 %** | **3.7678** | **+10.95 %** | **0.44032** | **416** |
+| 2 | 0.152673 | -28.23 % | 4.3138 | +27.02 % | 0.38995 | 355 |
+| 4 | 0.118399 | -44.34 % | 5.5564 | +63.61 % | 0.30308 | 278 |
+
+`sigma*` moves 2.5 % while `V` moves 16.7 %: the elasticity slides the
+operating point along the solvability curve rather than changing the
+selection, which is what an extra penalty on the driving force should do.
+
+Four controls:
+
+- `--lambda-el=0` with the solve running reproduces the reference to ten
+  digits while reporting 440 units of stored energy and 10.5 iterations.
+- `--el-soften=1` (the unsoftened 300 K constants, 2x the stiffness) gives
+  *exactly* the dynamics of `lambda_el = 2 lambda` with exactly `2.0000x` the
+  energy. `f_el` is linear in `C` and the driving force is `lambda_el *
+  df_el/dphi`, so those two must coincide; that they do to every digit
+  verifies the unit bookkeeping in `material.hpp` end to end.
+- `--eps-c=0` in the isothermal case zeroes the effect exactly (`f_el = 0`,
+  one iteration) and `--eps-T=0` changes nothing, because `theta` is
+  identically zero there. **The isothermal effect is entirely solutal.**
+- Lagging: at `--n-el-substep=20` the staleness error is 0.07 % against a
+  16.7 % effect, and it is linear in the lag as the quasi-static argument
+  requires (-0.024, -0.070, -0.230, -0.507 % at N = 10, 20, 50, 100 relative
+  to N = 5).
+
+#### The two eigenstrains partly cancel
+
+Copper contracts the aluminium lattice (`eps_c < 0`) and the latent heat it
+releases expands it (`eps_T > 0`), in the same place at the same time.
+`600^2`, `dx = 0.8`, `--Mc=0.5 --evolve-theta=1 --Dth=20`, `t_end = 250`:
+
+| | `V` | `dV/V` | `int f_el` |
+|---|---:|---:|---:|
+| off | 0.121417 | -- | 0 |
+| solutal only (`--eps-T=0`) | 0.113783 | -6.29 % | 55.5 |
+| thermal only (`--eps-c=0`) | 0.118994 | -2.00 % | 11.9 |
+| **both** | 0.120033 | **-1.14 %** | **18.8** |
+
+**Adding a second source of misfit reduces the stored energy by a factor of
+three.** For co-located scalar eigenstrains the energies combine as
+`(a +/- b)^2`; the single-source runs give `|a| = 7.45`, `|b| = 3.45`, so
+same-sign predicts 118.9 and opposite-sign 16.0 against a measured 18.8. The
+residual is the two fields having different spatial shapes -- `theta`
+diffuses ten times faster than `U`, so they cancel where they overlap and
+not elsewhere.
+
+#### Cost
+
+One elastic solve is about **41 finite-difference steps** at `600^2` on 32
+ranks (1.52 s against 62.93 s for `t = 20`), rising to roughly 166 at
+`1280^2` on 64 ranks as the all-to-all takes a larger share. That is what
+makes `n_el_substep` load-bearing rather than an optimisation. The solve's
+own 1-to-32-rank scaling is 12.8x (40 % efficiency) -- the honest cost of a
+global solve inside a local time loop. What does *not* degrade is the
+iteration count: 12.65, 12.82, 12.86 at `128^3`, `256^3`, `512^3`.
+
+#### Sensitivity: the liquid shear modulus is the dominant systematic
+
+| choice | `V` | `dV/V` vs off | `int f_el` |
+|---|---:|---:|---:|
+| default: free body, `mu_l/mu_s = 0.05` | 0.177228 | -16.69 % | 416 |
+| clamped cell (`--el-macro=clamped`) | 0.164579 | -22.63 % | 892 |
+| `--el-mu-liquid=0.02` | 0.191819 | -9.83 % | 360 |
+| `--el-mu-liquid=0.10` | 0.163671 | -23.06 % | 456 |
+
+A liquid supports no shear and the solve cannot take zero, so `mu_l/mu_s` is
+a regularisation. It is not a small one: the effect runs 9.8, 16.7, 23.1 %
+across a fivefold range in `mu_l`, roughly logarithmically, with no sign of
+settling over the range a solve can afford. **Read the magnitude as "of order
+10-20 % at a defensible regularisation", not as `16.7 +/- 0.1`.** What is
+insensitive to it: the sign, the monotonicity in `lambda_el`, the
+near-invariance of `sigma*`, and the eigenstrain cancellation.
+
+The macroscopic-strain condition is worth another 6 points of the 17: a
+clamped cell stores `2.1x` the energy, because a uniformly transforming body
+that cannot expand carries a uniform stress on top of the structured one.
+
+### 3-D, at LUMI scale
+
+| case | ranks | `t_end` | `V` | `rho` | `int f_el` | iterations |
+|---|---:|---:|---:|---:|---:|---:|
+| `128^3` off / on | 128 | 60 | 0.36004 / 0.33332 | 6.290 / 7.428 | 0 / 542 | -- / 12.65 |
+| `256^3` off / on | 512 | 120 | 0.47139 / 0.44311 | 4.971 / 4.962 | 0 / 1712 | -- / 12.82 |
+| `512^3` on | 2048 | 150 | 0.44313 | 5.462 | 2941 | 12.86 |
+
+`256^3` and `512^3` agree on `V` to `6e-5` across an eightfold change in cell
+count. `128^3` disagrees with both by 24 %: a `102 W0` box is too small.
+**These runs demonstrate that the coupled machinery works, scales and stays
+consistent; they are not a 3-D dendrite science result** -- `t_end = 150` is
+a rounded `<100>` cross, not a developed dendrite.
+
+### The solution is four-fold symmetric, and nothing enforces that
+
+The model is invariant under `x <-> y`. The implementation is not obviously
+so: stencils are applied axis by axis, the r2c transform treats `x` as the
+half-complex axis, and the MPI decomposition is a slab. After 160000 coupled
+steps, `max|phi - phi^T| = 9e-14` and the four arms reach 398 cells in every
+direction. The anisotropy flux, the anti-trapping current, the Green
+operator's Nyquist folding and the halo exchange all have to be right for
+that to hold, and it costs nothing to check.
+
 ### Decomposition consistency, measured
 
 The FD fields are bitwise rank-independent. The elastic fields cannot be:
@@ -368,23 +512,33 @@ rank against four:
 and every maximum sits on the interface rather than on a subdomain boundary,
 which is the other half of the statement.
 
-## No HIP twin, and why
+## Backends: CPU here, and why the GPU path is not finished
 
-CPU only, deliberately, and not because of FD-order generality — the library
-already has `pfc::runtime::gpu` device gradient evaluators and a device halo
-exchange, so an order-general device path is available.
+This application is CPU only. That is a current state rather than a
+principle, and the reasoning has changed since the first revision of this
+file, so it is worth being precise about what exists.
 
-The reason is that a correct HIP twin of *this* model is four kernels, three
-device halo exchanges, fourteen device fields, and a CPU-versus-GPU parity
-test, and none of it can be run from a login node. Shipping an unexercised
-GPU path — with a pinned checksum nobody has ever seen produced — would be
-worse than shipping none: it would look verified. `apps/kobayashi`'s HIP
-twin, the model this was to follow, is two kernels over two fields at fixed
-second order; the step here is an order of magnitude more surface area.
+A HIP twin of the finite-difference step -- four kernels, three device halo
+exchanges, fourteen device fields, and a CPU-versus-GPU parity test -- is
+written and measured, on `standard-g` rather than on a login node. It is not
+in this branch; it is a separate reviewable change, because it also needed a
+library fix (`DeviceFacesHalo` built its MPI face types before resolving the
+active direction set, which rejected any 2-D device application above second
+order).
 
-The order to do it in, when there is a GPU: the elastic solve of equations
-(5)–(7) is an FFT and will need its own device story, and it is better to
-port one coupled step than to port half of it now and re-port it later.
+The elastic solve is host-side, and the measurement says that is currently
+the right place for it *and* that it is the thing to fix next. On a GPU
+build the host round trip -- copying `phi`, `U`, `theta` down and
+`df_el/dphi` back -- is **0.3 % of the coupled step**. The host *solve* is
+**500 to 3000 times the device step**. So the cost is entirely in the solve
+and not at all in the transfer, which means there is nothing to gain from
+clever overlapping and everything to gain from a device Green operator over
+rocFFT. Half of that exists already in `GPUSpectralStack`. Until it lands, a
+GPU coupled run would spend all its time on the host and there is no reason
+to do one.
+
+The order matters: porting the finite-difference step first and the elastic
+solve later would mean porting one coupled step twice.
 
 ## Layout
 
@@ -395,9 +549,13 @@ port one coupled step than to port half of it now and re-port it later.
 | `include/alloy_dendrite/diagnostics.hpp` | Every measurement, defined operationally: conservation, planar front, `k_eff`, tip position and radius, the append-only CSV sink. |
 | `include/alloy_dendrite/cases.hpp` | `run_planar` and `run_dendrite<Dim>`, shared by the drivers and the tests. |
 | `include/alloy_dendrite/cli.hpp` | `--key=value` parsing that rejects unknown keys. |
+| `include/alloy_dendrite/elasticity.hpp` | Equations (5)-(7) wired onto the FD stack: the layout contract between the padded FD field and the HeFFTe inbox, the eigenstrain assembly, the macroscopic-strain condition, and the `lambda_el` calibration. |
+| `include/alloy_dendrite/material.hpp` | Al-4.5 wt% Cu in SI with provenance, and the arithmetic that turns it into the dimensionless inputs of (5)-(7). Every value is cited or derived next to its use; values that are representative rather than assessed say so. |
+| `include/alloy_dendrite/field_output.hpp` | Raw-brick snapshots plus a JSON manifest, correct at any rank count. |
+| `scripts/check_decomposition.py` | Compares two snapshot directories written at different rank counts, reporting the relative max-norm and where it sits. |
 | `src/cpu/alloy_dendrite_planar.cpp` | Stage-1 driver. |
 | `src/cpu/alloy_dendrite_growth.cpp` | Stage-2/3 driver and the shipped dendrite preset. |
-| `tests/test_alloy_dendrite.cpp` | Closed-form relations, the measurements against analytic input, a real Stage-1 run, dimensional consistency, and the elastic hook. |
+| `tests/test_alloy_dendrite.cpp` | Closed-form relations, the measurements against analytic input, a real Stage-1 run, dimensional consistency, the order-aware step limit, and the coupled elastic path. |
 
 ## Relation to PRs #103 and #104
 

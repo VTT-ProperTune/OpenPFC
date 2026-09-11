@@ -164,8 +164,11 @@ $\phi: -1 \to +1$ raises $\theta$ by exactly one. On a periodic domain
 @eq-ad-theta integrates to
 $\mathrm{d}\langle\theta\rangle/\mathrm{d}t
  = \tfrac12\,\mathrm{d}\langle\phi\rangle/\mathrm{d}t$:
-**the box has no heat sink**, and @sec-ad-latent is about what that does to a
-steady tip.
+**the box has no heat sink**: the melt warms in exact proportion to the
+solidified fraction and the undercooling that drives growth is consumed as
+growth proceeds. That is the reason the Stage-2 selection measurement below
+is run isothermally, and @sec-ad-latent is what happens when the temperature
+field is switched on.
 
 ### Mechanical equilibrium
 
@@ -814,7 +817,7 @@ driving force and starts changing the selection itself. The calibrated point
 is inside the regime where the interpretation above holds, which is
 convenient and was not arranged.
 
-#### Thermo-solutal: the two misfits partly cancel
+#### Thermo-solutal: the two misfits partly cancel {#sec-ad-latent}
 
 Turning the temperature field on ($M_c = 0.5$, Lewis number 10) makes the
 thermal eigenstrain act. Copper contracts the aluminium lattice and the
