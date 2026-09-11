@@ -3,24 +3,28 @@ SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-# `alloy_dendrite_elastic` — thermo-solutal solidification core
+# `alloy_dendrite_elastic` — thermo-solutal-elastic solidification
 
 Quantitative dilute-alloy phase field with anti-trapping current, coupled to
-solute and to temperature with latent heat: **equations (1)–(4) of the
-capstone model spec** (issue #85).
+solute, to temperature with latent heat, **and to quasi-static elasticity
+through a composition- and temperature-dependent eigenstrain whose energy
+feeds back into the phase-field driving force**: equations (1)–(7) of the
+capstone model spec (issue #85), all of them.
 
-Equations (5)–(7) — the eigenstrain microelasticity and its Fourier
-Green-operator solve — are **not here**. They are another agent's work, and
-what this application provides for them is a working attachment point rather
-than a stub: see [Where the elastic solve attaches](#where-the-elastic-solve-attaches).
+Equations (1)–(4) are local and run on high-order finite differences with a
+halo exchange. Equations (5)–(7) are elliptic, hence global, and are solved
+spectrally on the *same* decomposition inside the same time step — see
+[The elastic coupling](#the-elastic-coupling). Local FD physics and a global
+FFT solve, coupled, in one application; that combination is the point.
 
 | | |
 |---|---|
-| Fields | `phi` (−1 liquid, +1 solid), `U` (supersaturation), `theta` (undercooling) |
+| Fields | `phi` (−1 liquid, +1 solid), `U` (supersaturation), `theta` (undercooling), `u` (displacement, slaved) |
 | Discretisation | high-order central FD via `pfc::gradient::FDGradient`, orders 2–14 |
 | Parallelism | MPI on `pfc::Domain` / `Box3i`, halo width `order/2` via `pfc::comm::HaloExchange` |
 | Time integration | explicit, four stages, three halo exchanges per step |
 | Dimensions | 2-D (`nz = 1`) and 3-D from one templated stepper |
+| Elastic solve | `openpfc_apps/microelasticity.hpp` — Khachaturyan Green operator, Eyre–Milton fixed point, HeFFTe on the FD stack's own decomposition |
 | Backends | CPU only — see [No HIP twin, and why](#no-hip-twin-and-why) |
 
 ## Binaries
@@ -36,7 +40,9 @@ to its default is exactly how a verification app produces a confident wrong
 answer.
 
 ```bash
-# Stage 1, about 40 s on one login-node core
+# Stage 1, about 40 s on one core. Run it on `standard`, not on a login
+# node: login nodes are for editing and inspecting output, and no number
+# quoted in this file was measured on one.
 alloy_dendrite_planar --nx=854 --dx=0.6 --velocity=0.1 --t-end=600 \
                       --summary=results/planar.csv --run-id=baseline
 
@@ -51,6 +57,17 @@ alloy_dendrite_growth --csv=results/tip.csv --summary=results/dendrite.csv
 
 # Stage 3 smoke, 3-D
 alloy_dendrite_growth --nx=96 --ny=96 --nz=96 --dx=1.0 --t-end=40
+
+# Stage 4: the same dendrite with and without the elastic feedback. The
+# eigenstrain, stiffness and coupling default to Al-4.5wt%Cu (material.hpp),
+# so `--elastic=1` alone is the calibrated model, not a scaled-down one.
+alloy_dendrite_growth --run-id=off --summary=s.csv
+alloy_dendrite_growth --run-id=on  --summary=s.csv --elastic=1 --n-el-substep=20
+
+# Field snapshots for figures: phi, U, theta, and with the coupling on also
+# f_el, df_el/dphi and the two stress invariants, as raw bricks plus a
+# manifest. Correct at any rank count.
+alloy_dendrite_growth --elastic=1 --fields-dir=out/ --fields-every=10
 ```
 
 CSV output is **appended, never truncated**, and every row carries the
@@ -260,26 +277,96 @@ Two caveats that a science run has to deal with:
   than the number in the input. Using the Karma-Rappel `eps4 = 0.02` here
   gives `eps_eff = 0.005` and a blob.
 
-## Where the elastic solve attaches
+## The elastic coupling
 
-Equation (2) ends with `− lambda_el (1−phi^2)^2 dF_el/dphi`. The whole
-attachment surface is two things:
+Equation (2) ends with `− lambda_el (1−phi^2)^2 dF_el/dphi`, and
+`elasticity.hpp` is what supplies that term. It is *not* an elastic solver:
+`openpfc_apps/microelasticity.hpp` is the solver, Eshelby-validated, with a
+finite-difference-checked `d f_el/d phi`. This file is the adapter, and the
+three jobs it does are the three places a coupled local-FD / global-FFT
+application goes quietly wrong.
+
+**1. Two layouts, one grid.** The phase field lives on a padded FD field
+(storage halo `fd_order/2`); the elastic solver lives on flat HeFFTe inbox
+fields with no halo. They must describe the same owned cells or the coupling
+is silently wrong on every rank but zero. The FFT is therefore built from the
+*stack's own* decomposition rather than from `nproc` — `SpectralCPUStack`
+would build its own process grid, which agrees with the FD stack's only
+below nine ranks — and the constructor then refuses to run if the two owned
+boxes still differ.
+
+**2. Three fields, not one.** The solver wants `h(phi)`, the eigenstrain
+amplitude, and *both* their `phi`-derivatives. Passing `nullptr` for the
+derivatives is accepted and yields `dfel_dphi() == 0` everywhere: a coupled
+run that is silently uncoupled. All four are always supplied.
+
+**3. Units.** `lambda_el` is not a free knob. Stiffnesses are expressed in
+units of `f_ref = L dT_0 / T_M`, and then `lambda_el = lambda` *is* the
+calibrated coupling — so a `lambda_el != lambda` is an explicit statement
+that the coupling is being scaled, which is legitimate in a sensitivity scan
+and impossible to do by accident. `material.hpp` carries the SI data, the
+provenance, and the two conversions (`eps_c` is `d eps*/dU`, not
+`d eps*/dc`; the factor `(1-k) c_l^0` between them is two orders of
+magnitude in the elastic energy).
+
+### Two things worth knowing before reading a coupled result
+
+**Plane strain in 2-D comes out for free.** A 2-D run has `nz = 1`, so every
+wave vector has `k_z = 0`, `Gamma_zzkl` vanishes identically and the solve
+returns `eps_zz == 0`. That is plane strain, not plane stress: the
+dilatational eigenstrain still has a `zz` component, so `sigma_zz` is nonzero
+and does work through equation (7). It is the right 2-D reduction for a
+dendrite in a thick sample, and it is a property of the discretisation rather
+than something the code imposes.
+
+**The `k = 0` mode is a choice.** `eps_hat(0) = 0` clamps the periodic cell
+at its mean strain, so a uniformly transforming body develops a uniform
+stress that grows with the solid fraction and shrinks with the box volume —
+which makes the elastic driving force depend on the domain size. The default
+is instead zero mean *stress*, which is a free body and box-independent.
+Both are available (`--el-macro=free|clamped`) and the residual mean pressure
+is reported every solve.
+
+### Lagging the solve
+
+Mechanical equilibrium is elliptic, so the displacement is slaved to the
+instantaneous state; physically the slaving is exact on the acoustic time
+scale, ten or more orders of magnitude below `tau0`. The error of re-solving
+only every `n_el_substep` steps is therefore not a relaxation error at all,
+only a staleness of `df_el/dphi`, bounded by `N dt |V| |grad(df_el/dphi)|`.
+The right way to size `N` is to measure what it does to a dendrite
+observable, which is what the Stage-4 tables below do.
+
+### The hook itself
 
 ```cpp
 alloy_dendrite::Stepper<2> st(stack, params, fd_order);
-st.set_elastic_driving_force(&dfel_dphi_field);  // field on the same owned box
-// and params.lambda_el != 0
+alloy_dendrite::ElasticCoupling el(stack, elastic_params, rank, comm);
+st.set_elastic_driving_force(&el.driving_force());   // params.lambda_el != 0
+// ... and in the time loop:
+if (el.due(step)) el.solve(st.phi(), st.solute(), st.temperature());
 ```
 
-The hook is a **field**, not a callback, because the spec allows the
-quasi-static solve to be lagged by `n_el_substep` phase-field steps: the
-stepper has to be able to reuse a solution computed several steps ago. It is
-read in stage B of `step.hpp`, at the line marked `ELASTIC HOOK`, and nothing
-else in this application changes when equations (5)–(7) land. There is a
-ctest (`[elastic-hook]`) that drives it with a constant field and asserts
-that installing it with `lambda_el = 0` changes nothing *bitwise*, and that
-installing it with `lambda_el != 0` changes the result in the right
-direction.
+The hook is a **field**, not a callback, precisely so that the lagged
+solution can be reused. A ctest (`[elastic-hook]`) asserts that installing it
+with `lambda_el = 0` changes nothing *bitwise*, and that installing it with
+`lambda_el != 0` changes the result in the right direction.
+
+### Decomposition consistency, measured
+
+The FD fields are bitwise rank-independent. The elastic fields cannot be:
+HeFFTe composes a different sequence of transforms for each process grid, so
+`cmp` reports every elastic file as differing and tells you nothing. What
+matters is the size of the difference and where it sits.
+`scripts/check_decomposition.py` reports both. Over 375 coupled steps, one
+rank against four:
+
+| field | `phi` | `U` | `f_el` | `df_el/dphi` | `tr sigma/3` | `sigma_vM` |
+|---|---:|---:|---:|---:|---:|---:|
+| rel. max-norm | 1.7e−15 | 9.9e−15 | 1.7e−14 | 2.7e−14 | 2.7e−14 | 7.6e−15 |
+
+and every maximum sits on the interface rather than on a subdomain boundary,
+which is the other half of the statement.
 
 ## No HIP twin, and why
 

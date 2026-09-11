@@ -257,6 +257,30 @@ int run(int argc, char **argv, int rank, int nproc) {
   cfg.model.evolve_theta = opt.flag("evolve-theta", cfg.model.evolve_theta);
 
   const bool want_elastic = opt.flag("elastic", false);
+  if (!want_elastic) {
+    // Every `--el-*`, `--lambda-el`, `--eps-c/-T`, `--u-ref/--theta-ref` and
+    // `--n-el-substep` is read only inside the branch below, so with the
+    // coupling off they stay unconsumed and the unknown-option check rejects
+    // them. That is the right behaviour -- silently accepting a coupling
+    // constant that does nothing is exactly the "confident wrong answer"
+    // this driver refuses elsewhere -- but "unknown option(s): lambda-el"
+    // does not say *why*, and the honest elastic-off reference run is
+    // `--elastic=1 --lambda-el=0`, which is not obvious. Say so.
+    for (const char *k : {"lambda-el", "eps-c", "eps-T", "u-ref", "theta-ref",
+                          "el-c11", "el-c12", "el-c44", "el-soften",
+                          "el-mu-liquid", "el-bulk-liquid", "el-macro",
+                          "el-scheme", "el-tol", "el-iter", "n-el-substep",
+                          "el-warm-start"}) {
+      if (opt.has(k)) {
+        throw std::invalid_argument(
+            std::string("--") + k +
+            " is only read with --elastic=1. For an elastic-off reference "
+            "that takes the identical code path, use "
+            "'--elastic=1 --lambda-el=0 --n-el-substep=1000000'; for no "
+            "elastic machinery at all, drop every --el-* option.");
+      }
+    }
+  }
 #if ALLOY_DENDRITE_HAVE_ELASTICITY
   namespace mat = alloy_dendrite::material;
   cfg.elastic = want_elastic;

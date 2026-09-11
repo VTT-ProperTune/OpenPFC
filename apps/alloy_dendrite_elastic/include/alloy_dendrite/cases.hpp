@@ -251,7 +251,7 @@ struct PlanarResult {
   res.ell_predicted = boundary_layer_width(p, v_pred);
   res.peclet = interface_peclet(p, v_pred);
 
-  const double dt_lim = explicit_dt_limit(p, cfg.dx, 2);
+  const double dt_lim = explicit_dt_limit(p, cfg.dx, 2, cfg.fd_order);
   res.dt = (cfg.dt > 0.0) ? cfg.dt : cfg.dt_safety * dt_lim;
   if (res.dt > dt_lim) {
     throw std::invalid_argument("run_planar: dt " + std::to_string(res.dt) +
@@ -577,7 +577,7 @@ template <int Dim>
   DendriteResult res;
   const ModelParams p = cfg.model;
 
-  const double dt_lim = explicit_dt_limit(p, cfg.dx, Dim);
+  const double dt_lim = explicit_dt_limit(p, cfg.dx, Dim, cfg.fd_order);
   res.dt = (cfg.dt > 0.0) ? cfg.dt : cfg.dt_safety * dt_lim;
   if (res.dt > dt_lim) {
     throw std::invalid_argument("run_dendrite: dt exceeds the explicit limit");
