@@ -18,7 +18,7 @@ Cahn–Hilliard offers both single-mode verification and seeded coarsening with
 mass, composition bounds, and total-energy CSV output; see its
 [diagnostics guide](../../apps/cahn_hilliard/README.md#coarsening-preset-and-diagnostics).
 
-Start with tungsten if you want the production-style PFC path. It reads JSON or TOML, uses the `App` pipeline, writes configured fields, and has CPU, CUDA and HIP variants when the build enables them. Start with Allen–Cahn if you want a small visual sanity check with optional PNG output and fewer moving pieces. Use Heat3D when your question is about finite-difference orders, the spectral heat-equation path, timings or scaling comparisons. Use **cahn_hilliard** for conserved fourth-order spinodal decomposition (Fe–Cr-like regular solution) on the same JSON spectral-ETD path as tungsten. Use **thin_film** for lubrication dewetting / coating (\(k^4\) capillary plus disjoining pressure, including an \(A=0\) leveling case). Use **surface_diffusion** for Mullins thermal smoothing of nanoscale roughness (exact \(k^4\) decay). Use **kawahara** for odd-order capillary–gravity dispersive waves (\(ik^3\) vs \(ik^5\), not a smoother). Use **ehd_film** for a sixth-order elastohydrodynamic gap under a bending plate (\(\lambda\sim-k^6\)). Use **gradient_elasticity** for size-dependent isotropic elasticity (Helmholtz–Navier, periodic eigenstrain, one-shot spectral \(2\times 2\)). Use **higher_order_pfc** for a deliberately very high-order PFC kernel (two-mode \(k^8\) free energy, \(k^{10}\) conserved dynamics) where the second correlation peak opens a band the classical \(k^4\) kernel cannot. Use **wave2d** for a minimal **coupled first-order** wave-equation demo (displacement + velocity) with mixed periodic / physical y-boundaries. Use **kobayashi** for a **coupled phase-field + temperature** dendritic-growth-style demo (periodic torus, manual FD, PNG of \(\phi\)). AluminumNew is mostly useful as a compact example of an `App<Model>` program wired through JSON.
+Start with tungsten if you want the production-style PFC path. It reads JSON or TOML, uses the `App` pipeline, writes configured fields, and has CPU, CUDA and HIP variants when the build enables them. Start with Allen–Cahn if you want a small visual sanity check with optional PNG output and fewer moving pieces. Use Heat3D when your question is about finite-difference orders, the spectral heat-equation path, timings or scaling comparisons. Use **cahn_hilliard** for conserved fourth-order spinodal decomposition (Fe–Cr-like regular solution) on the same JSON spectral-ETD path as tungsten. Use **thin_film** for lubrication dewetting / coating (\(k^4\) capillary plus disjoining pressure, including an \(A=0\) leveling case). Use **surface_diffusion** for Mullins thermal smoothing of nanoscale roughness (exact \(k^4\) decay). Use **kawahara** for odd-order capillary–gravity dispersive waves (\(ik^3\) vs \(ik^5\), not a smoother). Use **ehd_film** for a sixth-order elastohydrodynamic gap under a bending plate (\(\lambda\sim-k^6\)). Use **gradient_elasticity** for size-dependent isotropic elasticity (Helmholtz–Navier, periodic eigenstrain, one-shot spectral \(2\times 2\)). Use **higher_order_pfc** for a deliberately very high-order PFC kernel (two-mode \(k^8\) free energy, \(k^{10}\) conserved dynamics) where the second correlation peak opens a band the classical \(k^4\) kernel cannot. Use **wave2d** for a minimal **coupled first-order** wave-equation demo (displacement + velocity) with mixed periodic / physical y-boundaries. Use **kobayashi** for a **coupled phase-field + temperature** dendritic-growth-style demo (periodic torus, manual FD, PNG of \(\phi\)). Use **alloy_dendrite_elastic** when the question is *quantitative* solidification: it is the Echebarria–Karma dilute-alloy phase field with the anti-trapping current, coupled to solute and to temperature, and it ships the planar-interface verification (velocity, boundary layer, effective partition coefficient, conservation) that says whether the numbers mean anything. AluminumNew is mostly useful as a compact example of an `App<Model>` program wired through JSON.
 
 If you want declarative configuration, read [`app_pipeline.md`](app_pipeline.md) before writing your own input files. If your immediate question is “what file did this run write?”, read [`io_results.md`](io_results.md).
 
@@ -139,6 +139,26 @@ For visible motion on the grid, use moderate ε and large M; shrinking ε alone 
 ## wave2d
 
 `wave2d` integrates the 2D acoustic wave equation \(u_{tt} = c^2 \Delta u\) as \(\partial_t u = v\), \(\partial_t v = c^2 \Delta u\) with explicit Euler in time. **x** is periodic (MPI halos); **y** supports homogeneous **Dirichlet** or **Neumann** physical boundaries via ghost correction after the periodic exchange. CPU binaries: `wave2d_fd_manual` (fixed second-order stencil on `PaddedBrick`) and `wave2d_fd` (even orders 2–20). Optional **VTK** output (`--vtk` / `--vtk-every`) uses `pfc::VTKWriter` for ParaView time series on CPU and GPU binaries alike. CUDA/HIP builds may add `wave2d_cuda` / `wave2d_hip` (`wave2d_hip` uses `SparseExchange<HIPSpace>` on device Fields). See [`apps/wave2d/README.md`](../../apps/wave2d/README.md) for CLI, CFL guidance, and tests.
+
+## alloy_dendrite_elastic
+
+`alloy_dendrite_elastic` is the **solidification core** of the multiphysics capstone (issue #85): the quantitative
+dilute-alloy phase field of Echebarria, Folch, Karma and Plapp with Karma's anti-trapping current, coupled to a solute
+field and to a temperature field with latent heat. High-order central FD (`pfc::gradient::FDGradient`, orders 2–14) on a
+padded `pfc::comm::HaloExchange` stack, explicit four-stage step, MPI-decomposed, 2-D (`nz = 1`) and 3-D from one
+templated stepper. Elasticity is **not** in this application.
+
+Two binaries. **`alloy_dendrite_planar`** runs the Stage-1 verification — an isothermal planar front in a periodic
+two-front box — and reports the steady velocity against the thin-interface prediction, the kinetic coefficient, the
+solute boundary layer against \(D_l/V\), the **effective partition coefficient** against the input \(k\), and the
+drift of the two conservation invariants. **`alloy_dendrite_growth`** runs a deterministic dendrite (2-D, or 3-D with
+`--nz`) and writes tip position, tip velocity and tip radius to CSV.
+
+What makes it worth running rather than reading: at \(dx = 0.6\,W_0\) the measured \(k_\text{eff}\) is within 0.2 %
+of \(k\) and flat in velocity, while switching the anti-trapping current off moves it by 17 % and makes it climb with
+velocity. Total solute and the latent-heat balance are exact discrete identities and hold to round-off. See
+[`apps/alloy_dendrite_elastic/README.md`](../../apps/alloy_dendrite_elastic/README.md) for the resolution study, the
+measurement definitions, and the caveats.
 
 ## kobayashi
 

@@ -93,6 +93,71 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   `kernel/fft/kspace.hpp`, symptom first: a small, resolution-insensitive
   accuracy floor on a quantity that should be at round-off, with no error
   anywhere.
+- **The solidification core of the multiphysics capstone** (`apps/alloy_dendrite_elastic`,
+  issue #85): the quantitative dilute-alloy phase field of Echebarria, Folch,
+  Karma and Plapp with Karma's anti-trapping current, coupled to solute and to
+  temperature with latent heat -- equations (1)-(4) of the capstone model spec.
+  High-order central FD (`pfc::gradient::FDGradient`, orders 2-14) on padded
+  `pfc::comm::HaloExchange` fields, explicit four-stage step, MPI-decomposed on
+  `pfc::Domain`/`Box3i`, 2-D and 3-D from one templated stepper. Elasticity
+  (equations (5)-(7)) is deliberately absent; what is present is the field-based
+  attachment point for it, with a ctest that proves it is wired.
+
+  The point of the application is that its numbers are checkable, so the
+  Stage-1 planar-interface verification is the product rather than a
+  by-product. At `dx = 0.6 W0`, `k = 0.15`, `D_l = 2`, `lambda = 1`: the steady
+  front velocity is within 0.19% of the thin-interface prediction
+  `(Omega-1)/(k beta)`, the kinetic coefficient recovered as `-U_i/V` is within
+  0.15% of `a1 (tau0/(lambda W0))(1 - a2 lambda W0^2/(tau0 D_l))`, the solute
+  boundary layer is within 0.16% of `D_l/V`, the effective partition
+  coefficient is `0.15018` against an input `k = 0.15`, and the steady-state
+  mass balance `U_inf = k U_s - 1` closes to `-9.6e-5` absolute. Those five
+  are independent relations, not restatements of one another, so an error in
+  any single term of the model breaks at least one of them. A resolution study from
+  `dx/W0 = 1.6` down to `0.4` walks the velocity error from -58.5% to -0.02%
+  and `k_eff` from -27.8% to +0.16%; the collapse is faster than fourth order
+  because what is being resolved is the `tanh` profile, not the stencil.
+
+  `k_eff` is the measurement that says whether the anti-trapping current is
+  right, and it does: with the current on it is flat in velocity to under 2%
+  over an eight-fold range (`+0.02%` at `V = 0.05`, `+1.7%` at `V = 0.39`, the
+  residual tracking the interface Peclet number as the asymptotics says it
+  should); with the current switched off it climbs from `+7.8%` to `+65%`, and
+  with its sign flipped from `+16%` to `+288%`. It is measured by extrapolating
+  the outer solute profile back to the interface rather than by sampling the
+  first liquid cell, because the pointwise version carries a resolution
+  artefact the same size as the effect.
+
+  Total solute `sum[P(phi)/(1-k) + P(phi) U]` and the latent-heat balance
+  `sum theta - sum phi / 2` are **exact discrete identities** rather than
+  approximations -- collocated central differencing of a flux telescopes on a
+  periodic grid, `P` is affine in `phi`, and the same `d_t phi` array drives
+  the phase field and the solute source -- so the measured drift is round-off
+  (`1e-15` to `7e-13` over up to 500 000 steps, growing with cell count as a
+  floating-point sum should) and a drift above that is a broken term rather
+  than a loose tolerance. Getting that required evolving `P(phi) U` as the
+  primary variable and recovering `U` by division, which is why the code does
+  not evolve `U` directly.
+
+  Also shipped: a deterministic 2-D dendrite (three minutes on a login-node
+  core) with tip position, tip velocity and tip radius written to append-only
+  CSV, all three defined operationally in `diagnostics.hpp` next to the code
+  that computes them; a 3-D path exercised by a dimensional-consistency test
+  that requires a z-invariant `Stepper<3>` run to reproduce `Stepper<2>` to
+  round-off; and CPU-only backends, because a HIP twin of a four-kernel,
+  three-exchange, fourteen-field step that cannot be run from a login node
+  would look verified without being it.
+
+  Two errors in the capstone model spec were found by implementing it and are
+  documented in `step.hpp`. Equation (3) pairs the conservative left-hand side
+  `d_t[P U]` with the source `(1/2)(1 + (1-k) U) d_t phi` that belongs to the
+  non-conservative form `P d_t U`; the mixture is neither, and running it
+  (`--spec-source=1`) breaks solute conservation -- 10% drift at `V = 0.1`,
+  and the `V = 0.4` run diverged -- and biases `k_eff` by 15-34%. Equation
+  (1)'s un-normalised `a_s = 1 + eps4 sum n_i^4` gives an effective anisotropy `(eps4/4)/(1 + 0.75 eps4)` in 2-D, about four times
+  smaller than the input number, so the Karma-Rappel `eps4` values do not
+  transfer. The anti-trapping sign in the spec is correct, and
+  `parameters.hpp` records the cancellation that fixes it.
 
 - **Where spectral beats finite difference, and where it does not**
   (`heat3d_spectral_content_study`, `apps/heat3d`). The scalability chapter
