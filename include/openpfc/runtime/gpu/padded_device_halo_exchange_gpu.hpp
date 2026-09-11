@@ -504,9 +504,6 @@ public:
 
     m_face_specs = pfc::gpu::detail::make_padded_face_slabs(nx, ny, nz, hw);
 
-    m_face_types = halo::create_padded_face_types_6(
-        nx, ny, nz, m_halo_width, exchange::detail::get_mpi_type<double>());
-
     const std::array<Int3, 6> dirs_canon{Int3{1, 0, 0}, Int3{-1, 0, 0},
                                          Int3{0, 1, 0}, Int3{0, -1, 0},
                                          Int3{0, 0, 1}, Int3{0, 0, -1}};
@@ -516,6 +513,20 @@ public:
       m_neighbors.push_back(
           decomposition::get_neighbor_rank(decomp, m_rank, dirs_canon[i]));
     }
+
+    // Resolve the active slots *before* building the MPI types, and hand the
+    // mask over -- exactly as the host exchanger in `comm_halo_exchange.hpp`
+    // has done since 2-D slabs at fd_order > 2 were enabled there. Without
+    // the mask `create_padded_face_types_6` assumes all six faces are live
+    // and rejects an `nz == 1` slab whenever `halo_width > 1`, because a
+    // one-cell axis cannot host an `hw`-thick owned send slab. That axis
+    // carries no message under `Axes2D()`, so the demand is vacuous, but the
+    // throw is not: it made the device path unusable for any 2-D application
+    // above second order. `apps/kobayashi` never hit it only because its
+    // stencil is second order and `hw == 1` satisfies the check by accident.
+    m_face_types = halo::create_padded_face_types_6(
+        nx, ny, nz, m_halo_width, exchange::detail::get_mpi_type<double>(),
+        m_active);
     m_requests.resize(2 * 6);
 
     m_scratch_elems = 0;
