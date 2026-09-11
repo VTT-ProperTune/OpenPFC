@@ -3,9 +3,13 @@
 
 set(ALLOY_DENDRITE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# HeFFTe is not used by this application (equations (1)-(4) are pure FD), but
-# OpenPFC's interface target pulls its headers in on some configurations, so
-# link whichever target name is present when it is enabled.
+# Equations (1)-(4) are pure finite difference and need no FFT. Equations
+# (5)-(7) -- the eigenstrain microelasticity of `elasticity.hpp` -- are a
+# spectral solve and do need one. Rather than move the whole application
+# behind `OpenPFC_ENABLE_HEFFTE` (which would delete the Stage-1 planar
+# verification from every non-HeFFTe configuration, including one CI runs),
+# the elastic path is compiled in only when HeFFTe is available and the
+# drivers report a clear error when it is asked for and absent.
 set(_alloy_dendrite_heffte_tgt "")
 if(TARGET Heffte::Heffte)
   set(_alloy_dendrite_heffte_tgt Heffte::Heffte)
@@ -15,9 +19,15 @@ elseif(TARGET heffte)
   set(_alloy_dendrite_heffte_tgt heffte)
 endif()
 
+set(_alloy_dendrite_elastic_def ALLOY_DENDRITE_HAVE_ELASTICITY=0)
+if(OpenPFC_ENABLE_HEFFTE)
+  set(_alloy_dendrite_elastic_def ALLOY_DENDRITE_HAVE_ELASTICITY=1)
+endif()
+
 function(alloy_dendrite_add_driver name source)
   add_executable(${name} ${source})
   target_include_directories(${name} PRIVATE ${ALLOY_DENDRITE_INCLUDE_DIR})
+  target_compile_definitions(${name} PRIVATE ${_alloy_dendrite_elastic_def})
   target_link_libraries(${name} PRIVATE OpenPFC openpfc_apps_common
                         ${_alloy_dendrite_heffte_tgt})
   install(TARGETS ${name} DESTINATION bin)
@@ -33,6 +43,8 @@ if(ALLOY_DENDRITE_ENABLE_TESTS AND OpenPFC_BUILD_TESTS
   add_executable(test_alloy_dendrite tests/test_alloy_dendrite.cpp)
   target_include_directories(test_alloy_dendrite PRIVATE
                              ${ALLOY_DENDRITE_INCLUDE_DIR})
+  target_compile_definitions(test_alloy_dendrite PRIVATE
+                             ${_alloy_dendrite_elastic_def})
   target_link_libraries(test_alloy_dendrite PRIVATE OpenPFC openpfc_apps_common
                         Catch2::Catch2 ${_alloy_dendrite_heffte_tgt})
   include(CTest)

@@ -42,7 +42,7 @@
  * `W0` and much smaller than the box. Asking for `V` and computing
  * `Omega = 1 + k beta V` keeps those three constraints visible.
  *
- * ## Stage 2: the dendrite case
+ * ## Stage 2: the dendrite case, and the elastic coupling
  *
  * Deterministic: one seed, no noise, fixed geometry, so two runs of the same
  * binary produce the same CSV. Four-fold anisotropy on a periodic square with
@@ -59,6 +59,7 @@
 #include <cmath>
 #include <iostream>
 #include <limits>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -72,6 +73,20 @@
 #include <alloy_dendrite/diagnostics.hpp>
 #include <alloy_dendrite/parameters.hpp>
 #include <alloy_dendrite/step.hpp>
+
+// Equations (5)-(7) need an FFT, so they exist only in a HeFFTe-enabled
+// build. The Stage-1 planar verification and the uncoupled dendrite are pure
+// finite difference and must keep building without one -- CI has such a
+// configuration, and losing Stage 1 there would be a real regression. The
+// macro is set by this application's CMakeLists when OpenPFC_ENABLE_HEFFTE
+// is on; the drivers turn a request for elasticity in a non-HeFFTe build
+// into an explicit error rather than a silently uncoupled run.
+#ifndef ALLOY_DENDRITE_HAVE_ELASTICITY
+#define ALLOY_DENDRITE_HAVE_ELASTICITY 0
+#endif
+#if ALLOY_DENDRITE_HAVE_ELASTICITY
+#include <alloy_dendrite/elasticity.hpp>
+#endif
 
 namespace alloy_dendrite {
 
@@ -419,11 +434,12 @@ struct PlanarResult {
   return res;
 }
 
+
 // ===========================================================================
-// Stage 2 -- deterministic 2-D dendrite
+// Stage 2 -- deterministic 2-D dendrite, optionally elastically coupled
 // ===========================================================================
 
-/// Inputs of @ref run_dendrite_2d.
+/// Inputs of @ref run_dendrite.
 struct DendriteConfig {
   ModelParams model{};
   int nx = 300;
@@ -442,11 +458,23 @@ struct DendriteConfig {
   double seed_radius = 8.0;
   double t_end = 400.0;
   int n_sample = 200;
-  /// Rows either side of the tip used for the parabola fit, in cells. The
-  /// default corresponds to about `3 W0` at `dx = 0.8`.
+  /// Rows either side of the tip used for the *primary* parabola fit, in
+  /// cells. @ref tip_windows reports three further choices alongside it.
   int tip_fit_halfwidth = 4;
+  /// Fit half-widths reported side by side every sample, so that the
+  /// measurement's own ambiguity is part of the output. See
+  /// @ref measure_tip_scan.
+  int tip_windows[kTipWindowCount] = {kTipWindowDefaults[0], kTipWindowDefaults[1],
+                                      kTipWindowDefaults[2], kTipWindowDefaults[3]};
   /// Trailing fraction of samples used for the tip-velocity fit.
   double fit_fraction = 0.3;
+#if ALLOY_DENDRITE_HAVE_ELASTICITY
+  /// Solve equations (5)-(7) and feed `d f_el/d phi` back into equation (2).
+  /// `ModelParams::lambda_el` still decides whether the feedback *acts*, so
+  /// `elastic = true, lambda_el = 0` is a pure cost measurement.
+  bool elastic = false;
+  ElasticParams elastic_params{};
+#endif
   std::string csv_timeseries;
   std::string csv_summary;
   std::string run_id = "dendrite";
@@ -461,19 +489,62 @@ struct DendriteResult {
   double v_tip{std::numeric_limits<double>::quiet_NaN()};
   double rho_tip{std::numeric_limits<double>::quiet_NaN()};
   double x_tip{std::numeric_limits<double>::quiet_NaN()};
-  /// `V rho^2 / (D_l d0)`, the selection parameter `1/sigma*` is built from.
+  /// `V rho^2 / (D_l d0)`, the reciprocal of `sigma*/2`. Kept for continuity
+  /// with the earlier CSVs.
   double selection{std::numeric_limits<double>::quiet_NaN()};
+  /// `sigma* = 2 d0 D_l / (V rho^2)`, the quantity solvability predicts.
+  double sigma_star{std::numeric_limits<double>::quiet_NaN()};
+  /// Tip radius at each of @ref DendriteConfig::tip_windows, averaged over
+  /// the same trailing window as `rho_tip`.
+  double rho_window[kTipWindowCount]{};
+  /// `(max - min)/min` of `rho_window`. The ambiguity of the radius, hence
+  /// half the ambiguity of `sigma*`.
+  double rho_window_spread{std::numeric_limits<double>::quiet_NaN()};
+  /// Relative change of `V` between the two halves of the trailing window.
+  double v_drift{std::numeric_limits<double>::quiet_NaN()};
+  /// Same for `rho`.
+  double rho_drift{std::numeric_limits<double>::quiet_NaN()};
+  /// `-min U` at the end of the run: the supersaturation the tip actually
+  /// sees, which in a closed periodic box is not the initial `omega`.
+  double omega_eff{std::numeric_limits<double>::quiet_NaN()};
+  /// Measured `V rho`, to be read against `2 D_l P_Ivantsov(omega_eff)`.
+  double v_rho{std::numeric_limits<double>::quiet_NaN()};
+  double v_rho_ivantsov{std::numeric_limits<double>::quiet_NaN()};
   double solute_drift_rel{std::numeric_limits<double>::quiet_NaN()};
   double heat_drift_rel{std::numeric_limits<double>::quiet_NaN()};
   double phi_min{0.0};
   double phi_max{0.0};
+  // ---- elastic ---------------------------------------------------------
+  /// Number of elastic solves performed (0 when the coupling is off).
+  int el_solves{0};
+  double el_iter_mean{0.0};
+  int el_iter_max{0};
+  /// Solves that hit `n_el_iter` without reaching `tol_el`.
+  int el_nonconverged{0};
+  /// `int f_el dV` at the end of the run.
+  double el_energy{0.0};
+  /// Max `|d f_el/d phi|` at the end of the run.
+  double el_max_dfel{0.0};
+  /// Residual mean pressure; see @ref ElasticReport::mean_stress_trace.
+  double el_mean_stress{0.0};
 };
 
 /**
- * @brief Deterministic 2-D thermo-solutal dendrite with tip diagnostics.
+ * @brief Deterministic 2-D (or 3-D) thermo-solutal dendrite with tip
+ *        diagnostics, optionally coupled to equations (5)-(7).
  *
  * Periodic square, one seed at the centre, four-fold anisotropy, no noise.
  * The `+x` arm is measured every `n_sample`-th step and written to CSV.
+ *
+ * ## The elastic schedule
+ *
+ * The solve runs **once before the first step** and then after every
+ * `n_el_substep`-th step. Solving first matters: with a lagged field
+ * initialised to zero, the first `n_el_substep` steps would run uncoupled
+ * and the elastic-off and elastic-on runs would differ by a transient that
+ * has nothing to do with elasticity. With `n_el_substep = 1` the schedule is
+ * exactly synchronous -- step `n+1` sees the equilibrium of the state left
+ * by step `n`, which is what an explicit Euler step of a slaved field means.
  */
 template <int Dim>
 [[nodiscard]] inline DendriteResult run_dendrite(const DendriteConfig &cfg, int rank,
@@ -526,23 +597,53 @@ template <int Dim>
   });
   st.seed_conserved_solute();
 
+#if ALLOY_DENDRITE_HAVE_ELASTICITY
+  std::unique_ptr<ElasticCoupling> elastic;
+  ElasticReport el_now{};
+  if (cfg.elastic) {
+    elastic = std::make_unique<ElasticCoupling>(stack, cfg.elastic_params, rank,
+                                                comm);
+    // Solve before the first step; see the schedule note above.
+    el_now = elastic->solve(st.phi(), st.solute(), st.temperature());
+    st.set_elastic_driving_force(&elastic->driving_force());
+    res.el_solves = 1;
+    res.el_iter_mean = el_now.iterations;
+    res.el_iter_max = el_now.iterations;
+    res.el_nonconverged = el_now.converged ? 0 : 1;
+  }
+  double el_iter_sum = static_cast<double>(res.el_iter_mean);
+#endif
+
   const auto cons0 =
       measure_conservation(st.phi(), st.solute(), st.temperature(), p, comm);
 
   CsvAppender ts_csv;
   if (!cfg.csv_timeseries.empty()) {
-    ts_csv = CsvAppender(cfg.csv_timeseries,
-                         "run_id,step,t,x_tip,y_tip,v_tip,rho_tip,fit_rms,fit_rows,"
-                         "solute_total,solute_drift_rel,heat_balance,heat_drift_abs,"
-                         "theta_total,phi_total,phi_min,phi_max,u_min,u_max",
-                         rank);
+    ts_csv = CsvAppender(
+        cfg.csv_timeseries,
+        "run_id,step,t,x_tip,y_tip,v_tip,rho_tip,fit_rms,fit_rows,"
+        "rho_w0,rho_w1,rho_w2,rho_w3,rho_spread,"
+        "solute_total,solute_drift_rel,heat_balance,heat_drift_abs,"
+        "theta_total,phi_total,phi_min,phi_max,u_min,u_max,"
+        "el_iterations,el_energy,el_max_dfel,el_mean_stress",
+        rank);
   }
 
   std::vector<double> t_s, x_s, rho_s;
+  std::vector<double> rho_w_s[kTipWindowCount];
   Conservation cons = cons0;
   double t = 0.0;
   for (int step = 1; step <= res.n_steps; ++step) {
     st.step(res.dt);
+#if ALLOY_DENDRITE_HAVE_ELASTICITY
+    if (elastic && elastic->due(step)) {
+      el_now = elastic->solve(st.phi(), st.solute(), st.temperature());
+      ++res.el_solves;
+      el_iter_sum += el_now.iterations;
+      res.el_iter_max = std::max(res.el_iter_max, el_now.iterations);
+      res.el_nonconverged += el_now.converged ? 0 : 1;
+    }
+#endif
     t = static_cast<double>(step) * res.dt;
     if (step % sample_every != 0 && step != res.n_steps) {
       continue;
@@ -554,23 +655,39 @@ template <int Dim>
     const auto plane = global_xy_plane(st.phi(), k_seed, comm);
     const DendriteTip tip = measure_tip(plane, cfg.nx, cfg.ny, cfg.dx, cfg.dx,
                                         i_seed, j_seed, cfg.tip_fit_halfwidth);
+    const TipWindowScan scan = measure_tip_scan(plane, cfg.nx, cfg.ny, cfg.dx,
+                                                cfg.dx, i_seed, j_seed,
+                                                cfg.tip_windows);
     if (tip.valid) {
       t_s.push_back(t);
       x_s.push_back(tip.x_tip);
       rho_s.push_back(tip.rho);
+      for (int q = 0; q < kTipWindowCount; ++q) {
+        rho_w_s[q].push_back(scan.rho[q]);
+      }
     }
     const double sol_drift = std::fabs(cons.solute_total - cons0.solute_total) /
                              std::fabs(cons0.solute_total);
     const double heat_drift = std::fabs(cons.heat_balance - cons0.heat_balance);
     const double v_now = trailing_slope(t_s, x_s, 0.25);
     if (ts_csv.active()) {
-      ts_csv.row(format("%s,%d,%.10g,%.10g,%.10g,%.10g,%.10g,%.6g,%d,%.17g,%.6g,"
-                        "%.17g,%.6g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g",
-                        cfg.run_id.c_str(), step, t, tip.x_tip, tip.y_tip, v_now,
-                        tip.rho, tip.fit_rms, tip.fit_rows, cons.solute_total,
-                        sol_drift, cons.heat_balance, heat_drift, cons.theta_total,
-                        cons.phi_total, cons.phi_min, cons.phi_max, cons.u_min,
-                        cons.u_max));
+      ts_csv.row(format(
+          "%s,%d,%.10g,%.10g,%.10g,%.10g,%.10g,%.6g,%d,"
+          "%.10g,%.10g,%.10g,%.10g,%.6g,"
+          "%.17g,%.6g,%.17g,%.6g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,"
+          "%d,%.10g,%.10g,%.6g",
+          cfg.run_id.c_str(), step, t, tip.x_tip, tip.y_tip, v_now, tip.rho,
+          tip.fit_rms, tip.fit_rows, scan.rho[0], scan.rho[1], scan.rho[2],
+          scan.rho[3], scan.spread, cons.solute_total, sol_drift,
+          cons.heat_balance, heat_drift, cons.theta_total, cons.phi_total,
+          cons.phi_min, cons.phi_max, cons.u_min, cons.u_max,
+#if ALLOY_DENDRITE_HAVE_ELASTICITY
+          el_now.iterations, el_now.total_energy, el_now.max_dfel_dphi,
+          el_now.mean_stress_trace
+#else
+          0, 0.0, 0.0, 0.0
+#endif
+          ));
     }
     // The dendrite must not touch its periodic image: past that point the
     // tip is growing into its own solute field and no measurement is valid.
@@ -587,11 +704,32 @@ template <int Dim>
   res.v_tip = trailing_slope(t_s, x_s, cfg.fit_fraction);
   res.rho_tip = trailing_mean(rho_s, cfg.fit_fraction);
   res.x_tip = x_s.empty() ? std::numeric_limits<double>::quiet_NaN() : x_s.back();
+  res.v_drift = velocity_split_drift(t_s, x_s, cfg.fit_fraction);
+  res.rho_drift = split_window_drift(rho_s, cfg.fit_fraction);
+  {
+    double lo = std::numeric_limits<double>::infinity();
+    double hi = 0.0;
+    for (int q = 0; q < kTipWindowCount; ++q) {
+      res.rho_window[q] = trailing_mean(rho_w_s[q], cfg.fit_fraction);
+      if (std::isfinite(res.rho_window[q]) && res.rho_window[q] > 0.0) {
+        lo = std::fmin(lo, res.rho_window[q]);
+        hi = std::fmax(hi, res.rho_window[q]);
+      }
+    }
+    if (std::isfinite(lo) && lo > 0.0) {
+      res.rho_window_spread = (hi - lo) / lo;
+    }
+  }
   {
     const double d0 = capillary_length(p);
     res.selection = (std::isfinite(res.v_tip) && std::isfinite(res.rho_tip))
                         ? res.v_tip * res.rho_tip * res.rho_tip / (p.D_l * d0)
                         : std::numeric_limits<double>::quiet_NaN();
+    res.sigma_star = selection_sigma_star(d0, p.D_l, res.v_tip, res.rho_tip);
+    res.v_rho = res.v_tip * res.rho_tip;
+    res.omega_eff = -cons.u_min;
+    const double pe = ivantsov_peclet_2d(res.omega_eff);
+    res.v_rho_ivantsov = 2.0 * p.D_l * pe;
   }
   res.solute_drift_rel = std::fabs(cons.solute_total - cons0.solute_total) /
                          std::fabs(cons0.solute_total);
@@ -602,21 +740,55 @@ template <int Dim>
   res.phi_min = cons.phi_min;
   res.phi_max = cons.phi_max;
   res.valid = std::isfinite(res.v_tip);
+#if ALLOY_DENDRITE_HAVE_ELASTICITY
+  if (elastic) {
+    res.el_iter_mean = el_iter_sum / static_cast<double>(std::max(1, res.el_solves));
+    res.el_energy = el_now.total_energy;
+    res.el_max_dfel = el_now.max_dfel_dphi;
+    res.el_mean_stress = el_now.mean_stress_trace;
+  }
+#endif
 
   if (rank == 0 && !cfg.csv_summary.empty()) {
-    CsvAppender sum(cfg.csv_summary,
-                    "run_id,nx,ny,nz,dx,fd_order,dt,t_end,lambda,k,D_l,D_th,M_c,"
-                    "eps4,omega,seed_radius,d0,v_tip,rho_tip,x_tip,selection,"
-                    "solute_drift_rel,heat_drift_rel,phi_min,phi_max",
-                    rank);
-    sum.row(format("%s,%d,%d,%d,%.10g,%d,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,"
-                   "%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.3e,%.3e,"
-                   "%.6g,%.6g",
-                   cfg.run_id.c_str(), cfg.nx, cfg.ny, cfg.nz, cfg.dx, cfg.fd_order,
-                   res.dt, cfg.t_end, p.lambda, p.k, p.D_l, p.D_th, p.M_c, p.eps4,
-                   cfg.omega, cfg.seed_radius, capillary_length(p), res.v_tip,
-                   res.rho_tip, res.x_tip, res.selection, res.solute_drift_rel,
-                   res.heat_drift_rel, res.phi_min, res.phi_max));
+    CsvAppender sum(
+        cfg.csv_summary,
+        "run_id,nx,ny,nz,dx,fd_order,dt,t_end,lambda,k,D_l,D_th,M_c,"
+        "eps4,omega,seed_radius,d0,v_tip,rho_tip,x_tip,selection,sigma_star,"
+        "rho_w0,rho_w1,rho_w2,rho_w3,rho_spread,v_drift,rho_drift,"
+        "omega_eff,v_rho,v_rho_ivantsov,"
+        "lambda_el,eps_c,eps_T,mu_liquid_frac,n_el_substep,"
+        "el_solves,el_iter_mean,el_iter_max,el_nonconverged,el_energy,"
+        "el_max_dfel,el_mean_stress,"
+        "solute_drift_rel,heat_drift_rel,phi_min,phi_max",
+        rank);
+#if ALLOY_DENDRITE_HAVE_ELASTICITY
+    const double eps_c = cfg.elastic_params.eps_c;
+    const double eps_T = cfg.elastic_params.eps_T;
+    const double mu_l = cfg.elastic_params.mu_liquid_fraction;
+    const int nsub = cfg.elastic_params.n_el_substep;
+#else
+    const double eps_c = 0.0;
+    const double eps_T = 0.0;
+    const double mu_l = 0.0;
+    const int nsub = 0;
+#endif
+    sum.row(format(
+        "%s,%d,%d,%d,%.10g,%d,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,"
+        "%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,"
+        "%.10g,%.10g,%.10g,%.10g,%.6g,%.6g,%.6g,"
+        "%.10g,%.10g,%.10g,"
+        "%.10g,%.10g,%.10g,%.10g,%d,"
+        "%d,%.4g,%d,%d,%.10g,%.10g,%.6g,"
+        "%.3e,%.3e,%.6g,%.6g",
+        cfg.run_id.c_str(), cfg.nx, cfg.ny, cfg.nz, cfg.dx, cfg.fd_order, res.dt,
+        cfg.t_end, p.lambda, p.k, p.D_l, p.D_th, p.M_c, p.eps4, cfg.omega,
+        cfg.seed_radius, capillary_length(p), res.v_tip, res.rho_tip, res.x_tip,
+        res.selection, res.sigma_star, res.rho_window[0], res.rho_window[1],
+        res.rho_window[2], res.rho_window[3], res.rho_window_spread, res.v_drift,
+        res.rho_drift, res.omega_eff, res.v_rho, res.v_rho_ivantsov, p.lambda_el,
+        eps_c, eps_T, mu_l, nsub, res.el_solves, res.el_iter_mean, res.el_iter_max,
+        res.el_nonconverged, res.el_energy, res.el_max_dfel, res.el_mean_stress,
+        res.solute_drift_rel, res.heat_drift_rel, res.phi_min, res.phi_max));
   }
   return res;
 }

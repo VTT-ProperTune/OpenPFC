@@ -526,6 +526,201 @@ struct DendriteTip {
   return out;
 }
 
+/// Number of tip-radius fit windows reported side by side; see
+/// @ref measure_tip_scan.
+inline constexpr int kTipWindowCount = 4;
+
+/// Default fit half-widths, in cells, of @ref measure_tip_scan.
+inline constexpr int kTipWindowDefaults[kTipWindowCount] = {3, 5, 8, 12};
+
+/// Tip radius measured at several fit half-widths in the same sample.
+struct TipWindowScan {
+  int halfwidth[kTipWindowCount]{};
+  double rho[kTipWindowCount]{};
+  double fit_rms[kTipWindowCount]{};
+  /// Spread `(max - min) / min` across the windows. This is *the* honesty
+  /// number for a quoted `sigma*`: `sigma*` goes as `1/rho^2`, so a 20%
+  /// ambiguity in `rho` is a 44% ambiguity in `sigma*`.
+  double spread{std::numeric_limits<double>::quiet_NaN()};
+};
+
+/**
+ * @brief Measure the tip radius at @ref kTipWindowCount fit half-widths at once.
+ *
+ * @details
+ * The parabola half-width is a free parameter of the *measurement*, not of
+ * the physics, and the previous revision of this application measured a
+ * +63% spread across windows on a tip that was six cells wide. Reporting one
+ * radius from one window hides that; reporting four and their spread makes
+ * the ambiguity part of the result. It costs four contour scans per sample,
+ * which is nothing next to a time step, and it means the sensitivity does
+ * not have to be re-derived from four separate runs that might not be at the
+ * same point of the transient.
+ *
+ * The expectation, if the tip really is a parabola resolved by the grid, is
+ * that `rho` stops depending on the window: too narrow is dominated by the
+ * level-set staircase and too wide reaches the non-parabolic flanks, so a
+ * *flat* scan is evidence that both ends of that trade-off are far away.
+ * `fit_rms` per window says which of the two is biting.
+ */
+[[nodiscard]] inline TipWindowScan
+measure_tip_scan(const std::vector<double> &phi_xy, int nx, int ny, double dx,
+                 double dy, int i_seed, int j_seed,
+                 const int halfwidths[kTipWindowCount] = kTipWindowDefaults) {
+  TipWindowScan out;
+  double lo = std::numeric_limits<double>::infinity();
+  double hi = 0.0;
+  for (int q = 0; q < kTipWindowCount; ++q) {
+    out.halfwidth[q] = halfwidths[q];
+    const DendriteTip t =
+        measure_tip(phi_xy, nx, ny, dx, dy, i_seed, j_seed, halfwidths[q]);
+    out.rho[q] = t.valid ? t.rho : std::numeric_limits<double>::quiet_NaN();
+    out.fit_rms[q] = t.valid ? t.fit_rms : std::numeric_limits<double>::quiet_NaN();
+    if (std::isfinite(out.rho[q]) && out.rho[q] > 0.0) {
+      lo = std::fmin(lo, out.rho[q]);
+      hi = std::fmax(hi, out.rho[q]);
+    }
+  }
+  if (std::isfinite(lo) && lo > 0.0) {
+    out.spread = (hi - lo) / lo;
+  }
+  return out;
+}
+
+/**
+ * @brief Split-window drift of a series: is the plateau a plateau?
+ *
+ * Splits the trailing @p fraction of the samples in half and returns the
+ * relative change of the mean between the two halves. A steady quantity
+ * gives a number that shrinks as the window is pushed later; a quantity
+ * still relaxing gives one that does not. Returning the *relative* change
+ * rather than a slope keeps it comparable between `V` and `rho`, and makes
+ * "steady to 1%" a statement rather than an impression.
+ */
+[[nodiscard]] inline double split_window_drift(const std::vector<double> &v,
+                                               double fraction) {
+  const std::size_t n = v.size();
+  if (n < 8) {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+  const std::size_t want = std::max<std::size_t>(
+      8, static_cast<std::size_t>(fraction * static_cast<double>(n)));
+  const std::size_t begin = (want >= n) ? 0 : (n - want);
+  const std::size_t mid = begin + (n - begin) / 2;
+  double a = 0.0, b = 0.0;
+  double na = 0.0, nb = 0.0;
+  for (std::size_t q = begin; q < mid; ++q) {
+    if (std::isfinite(v[q])) {
+      a += v[q];
+      na += 1.0;
+    }
+  }
+  for (std::size_t q = mid; q < n; ++q) {
+    if (std::isfinite(v[q])) {
+      b += v[q];
+      nb += 1.0;
+    }
+  }
+  if (!(na > 0.0) || !(nb > 0.0)) {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+  a /= na;
+  b /= nb;
+  const double m = 0.5 * (a + b);
+  return (m != 0.0) ? (b - a) / std::fabs(m) : std::numeric_limits<double>::quiet_NaN();
+}
+
+/**
+ * @brief Same as @ref split_window_drift but for a velocity read off a
+ *        position series: two independent least-squares slopes.
+ *
+ * Differencing the already-fitted trailing velocity would inherit the fit's
+ * own window and say nothing new. Fitting `x(t)` separately over the first
+ * and second half of the trailing window gives two independent estimates of
+ * `V`, and their relative difference is what "the tip velocity has stopped
+ * changing" has to mean operationally.
+ */
+[[nodiscard]] inline double velocity_split_drift(const std::vector<double> &t,
+                                                 const std::vector<double> &x,
+                                                 double fraction) {
+  const std::size_t n = std::min(t.size(), x.size());
+  if (n < 16) {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+  const std::size_t want = std::max<std::size_t>(
+      16, static_cast<std::size_t>(fraction * static_cast<double>(n)));
+  const std::size_t begin = (want >= n) ? 0 : (n - want);
+  const std::size_t mid = begin + (n - begin) / 2;
+  const std::vector<double> t1(t.begin() + static_cast<long>(begin),
+                               t.begin() + static_cast<long>(mid));
+  const std::vector<double> x1(x.begin() + static_cast<long>(begin),
+                               x.begin() + static_cast<long>(mid));
+  const std::vector<double> t2(t.begin() + static_cast<long>(mid), t.end());
+  const std::vector<double> x2(x.begin() + static_cast<long>(mid), x.end());
+  const double v1 = trailing_slope(t1, x1, 1.0);
+  const double v2 = trailing_slope(t2, x2, 1.0);
+  if (!std::isfinite(v1) || !std::isfinite(v2)) {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+  const double m = 0.5 * (v1 + v2);
+  return (m != 0.0) ? (v2 - v1) / std::fabs(m)
+                    : std::numeric_limits<double>::quiet_NaN();
+}
+
+/**
+ * @brief Selection parameter `sigma* = 2 d0 D / (V rho^2)`.
+ *
+ * The quantity microscopic solvability predicts for a given anisotropy
+ * strength, and the reason a tip velocity alone is not a result: `V` and
+ * `rho` separately depend on the undercooling through the Ivantsov relation,
+ * and only the combination is a statement about *selection*. Note the
+ * `rho^2`: the relative uncertainty of `sigma*` is twice that of `rho` plus
+ * that of `V`, which is why @ref TipWindowScan::spread is reported next to
+ * it.
+ */
+[[nodiscard]] inline double selection_sigma_star(double d0, double D, double v,
+                                                 double rho) noexcept {
+  return (v > 0.0 && rho > 0.0) ? (2.0 * d0 * D / (v * rho * rho))
+                                : std::numeric_limits<double>::quiet_NaN();
+}
+
+/**
+ * @brief 2-D Ivantsov relation `Omega = sqrt(pi P) exp(P) erfc(sqrt(P))`,
+ *        inverted for the tip Peclet number `P = V rho / (2 D)`.
+ *
+ * Reported alongside the measured `V rho` so that the two halves of the
+ * selection problem can be checked separately: Ivantsov fixes the *product*
+ * `V rho` from the far-field supersaturation and says nothing about how it
+ * splits, and anisotropy-driven selection fixes the split. A run that
+ * reproduces `sigma*` while missing `V rho` is not reproducing the physics,
+ * it is cancelling two errors.
+ *
+ * Bisection on a monotone function; returns NaN outside `Omega` in `(0, 1)`.
+ */
+[[nodiscard]] inline double ivantsov_peclet_2d(double omega) {
+  if (!(omega > 0.0) || !(omega < 1.0)) {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+  auto f = [](double pe) {
+    const double s = std::sqrt(pe);
+    return std::sqrt(std::acos(-1.0) * pe) * std::exp(pe) * std::erfc(s);
+  };
+  double lo = 1.0e-12;
+  double hi = 1.0;
+  while (f(hi) < omega && hi < 1.0e6) {
+    hi *= 2.0;
+  }
+  for (int it = 0; it < 200; ++it) {
+    const double mid = 0.5 * (lo + hi);
+    if (f(mid) < omega) {
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+  return 0.5 * (lo + hi);
+}
+
 /**
  * @brief Rank-0 append-only CSV sink.
  *
