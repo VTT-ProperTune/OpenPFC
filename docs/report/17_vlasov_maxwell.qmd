@@ -599,7 +599,21 @@ do not — which is reported rather than papered over.
 
 Every other application in this report evolves a field over physical space.
 This one evolves a distribution over a phase space of higher dimension than
-the space its fields live in, and that changes what is hard.
+the space its fields live in, and that changes what is hard. It is not
+another PDE on the same kind of unknown. What none of the other fourteen
+applications demonstrate, and what this one has to get simultaneously
+right, is:
+
+- a distribution on a **three-dimensional phase-space grid**, not a
+  physical-space field;
+- **self-consistent Maxwell coupling** through kinetic moments, so the
+  plasma lives in its own field;
+- a **real Lorentz cross product**, which is why there are two velocity
+  coordinates and why a magnetic field can grow from a noise seed;
+- **electromagnetic instabilities** (Weibel / filamentation) that an
+  electrostatic reduction cannot produce;
+- Gauss's law as a **charge-conserving diagnostic**, preserved if and only
+  if the transport and the deposition agree, not imposed as a constraint.
 
 The individual operators are trivial — first-order advection, three of
 them, each a translation along one axis. There is no $\nabla^8$ anywhere.
@@ -612,9 +626,10 @@ factor of two and every rate is a per cent off in a way no scan of the
 other axis can see.
 
 And it is the one chapter where the governing system is genuinely large:
-one kinetic equation per species on a three-dimensional phase space, four
-surviving field components after a reduction that has to be *derived*, two
-constraints of which one is free and one is a diagnostic, and the moment
-integrals that close the loop. @eq-vm-vlasov to @eq-vm-charge are what the
-code solves, and the reduction from the first to the last is the part worth
-reading twice.
+one kinetic equation per species on a three-dimensional phase space, the
+Maxwell curls and the Lorentz force written in full before any reduction
+(@eq-vm-vlasov–@eq-vm-moments), four surviving field components after a
+reduction that has to be *derived*, two constraints of which one is free
+and one is a diagnostic, and the moment integrals that close the loop.
+@eq-vm-vlasov to @eq-vm-charge are what the code solves, and the reduction
+from the first to the last is the part worth reading twice.

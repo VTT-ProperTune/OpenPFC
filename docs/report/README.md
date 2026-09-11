@@ -59,10 +59,10 @@ Python, R, or Jupyter.
 | Path | Contents |
 |---|---|
 | `index.qmd`, `00_*`–`02_*` | preface, abstract, introduction, shared numerical methods |
-| `03_*`–`15_*` | one chapter per application |
+| `03_*`–`15_*` | one chapter per continuum application (tungsten through kobayashi) |
 | `16_alloy_dendrite.qmd` | the thermo-solutal-elastic dendrite: local FD physics and a global FFT solve in one coupled application |
-| `17_vlasov_maxwell.qmd` | the 1D2V electromagnetic Vlasov-Maxwell kinetic capstone: a distribution on a 3-D phase space coupled to the full Maxwell system |
-| `18_scalability.qmd` | measured LUMI-G strong-scaling curves |
+| `17_vlasov_maxwell.qmd` | the 1D2V electromagnetic Vlasov–Maxwell kinetic capstone: a distribution on a 3-D phase space coupled to the full Maxwell system |
+| `18_scalability.qmd` | measured LUMI-G strong-scaling curves (tungsten and Heat3D; Vlasov scaling is in chapter 17) |
 | `19_conclusions.qmd` | what is demonstrated, and the gaps |
 | `data/*.csv` | measured timings, transcribed from [`../hpc/lumi_gpu_scaling.md`](../hpc/lumi_gpu_scaling.md) |
 | `figures/*.svg` | committed figures |

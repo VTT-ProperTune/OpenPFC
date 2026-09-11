@@ -5,13 +5,15 @@ coupled to solute, to temperature through latent heat, and to quasi-static
 elasticity through a composition- and temperature-dependent eigenstrain, with
 the elastic energy feeding back into the phase-field driving force.
 
-Every other application in this report solves one physics with one
+Every other continuum application in this report solves one physics with one
 discretisation. This one solves four fields with two, and that is the reason
 it is here: the local solidification dynamics run on high-order finite
 differences with a halo exchange, while mechanical equilibrium — which is
 elliptic and therefore global — is solved spectrally on the same
 decomposition in the same time step. **Local FD physics and a global FFT
-solve, coupled, in one application.**
+solve, coupled, in one application.** The kinetic chapter that follows is a
+different kind of exception: its unknown does not live on the grid the
+fields live on.
 
 ## Physical setting
 
@@ -728,8 +730,14 @@ the same case agree bitwise.
 
 ![Tip velocity and radius for the elastic-off and elastic-on pair. Both plateau by $t \approx 400$; the shaded band is the fit window. The elastic-off run ends sooner because its faster tip trips the "84 % of the half-box" guard first.](figures/alloy_dendrite_tip_history.svg){#fig-ad-tip}
 
-**At the calibrated coupling the elastic energy of the solutal misfit slows
-the dendrite tip by 16.7 % and fattens it by 11.0 %.**
+**At the default liquid-shear regularisation ($\mu_l/\mu_s = 0.05$) the
+elastic energy of the solutal misfit slows the dendrite tip by 16.7 % and
+fattens it by 11.0 %.** That is the effect at a conventionally chosen
+regularisation, not a quantitatively converged alloy prediction;
+@sec-ad-sensitivity scans the regularisation, and the magnitude falls with
+it. What the ladder below is for is the qualitative structure: signed,
+monotone in the coupling, and a slide along the solvability curve rather
+than a change of selection.
 
 | run | $\lambda_{\mathrm{el}}/\lambda$ | $V$ | $\Delta V/V$ | $\rho$ | $\Delta\rho/\rho$ | $\sigma^{*}$ | $\int f_{\mathrm{el}}$ |
 |---|---:|---:|---:|---:|---:|---:|---:|
@@ -786,7 +794,7 @@ order in $N\Delta t$. Measured against $N = 5$ on a matched shorter run:
 : Staleness is linear in $N$, as the quasi-static argument says it must be. {#tbl-ad-lag}
 
 At the $N = 20$ used throughout Stage 4 the lag error is **0.07 %**, against
-an effect of 16.7 %: a factor of 240. The iteration count rising with $N$ is
+an effect of 16.7 % at this regularisation: a factor of 240. The iteration count rising with $N$ is
 the warm start losing its advantage, and it is why the saving from lagging
 saturates — going from $N=5$ to $N=100$ cuts solves by 20 but iterations only
 by 12.6.
@@ -794,7 +802,7 @@ by 12.6.
 #### The elasticity moves the tip along the solvability curve
 
 $\sigma^{*} = 2 d_0 D_l/(V\rho^2)$ changes by **−2.5 %** while $V$ changes by
-−16.7 % and $\rho$ by +11.0 %. That is not a coincidence and it is the most
+−16.7 % and $\rho$ by +11.0 % at this regularisation. That is not a coincidence and it is the most
 informative number in the table: solvability theory [@Karma1998] says $\sigma^{*}$ is set
 by the anisotropy and the interface physics, while $V$ and $\rho$
 *individually* are set by the driving force. An extra energy penalty on the
@@ -891,30 +899,58 @@ three move the answer.
 | clamped cell, $\bar{\boldsymbol\varepsilon} = 0$ | 0.164579 | −22.63 % | 892 |
 | $\mu_l/\mu_s = 0.02$ | 0.191819 | −9.83 % | 360 |
 | $\mu_l/\mu_s = 0.10$ | 0.163671 | −23.06 % | 456 |
+| $\mu_l/\mu_s = 0.001$ | 0.205785 | −3.26 % | 266 |
 
 : Sensitivity of the Stage-4 result to the three non-material choices. {#tbl-ad-sensitivity}
 
 **The macroscopic strain condition** is worth 6 percentage points of the
-17 %. Clamping the cell at zero mean strain stores $2.1\times$ the energy,
+17 % at the default regularisation. Clamping the cell at zero mean strain stores $2.1\times$ the energy,
 because a uniformly transforming body that cannot expand carries a uniform
 stress on top of the structured one. The free-body condition is the default
 because a dendrite growing into a large melt is not clamped, and because the
 clamped answer depends on the box size while the free one does not — but the
 difference is a real modelling choice and it is this large.
 
-**The liquid shear modulus is the dominant systematic, and it does not have
-a clean limit.** A liquid supports no shear; the solve cannot take zero,
-because two channels of the local stiffness become singular and every fixed
-point in this family then has contraction factor one. $\mu_l/\mu_s$ is
-therefore a regularisation, and the effect it regularises is not small: the
-measured slowdown runs 9.8 %, 16.7 %, 23.1 % at $\mu_l/\mu_s = 0.02$, 0.05,
-0.10, roughly logarithmic in $\mu_l$ and with no sign of settling over the
-range a solve can afford. **The magnitude of the Stage-4 result should
-therefore be read as "of order 10–20 % at a physically defensible
-regularisation", not as $16.7 \pm 0.1$ %.** What is *not* sensitive to it is
-the sign, the monotonicity in $\lambda_{\mathrm{el}}$, the near-invariance of
-$\sigma^{*}$, and the partial cancellation of the two eigenstrains — all of
-which hold across the whole scan.
+**The liquid shear modulus does not merely perturb the magnitude — it sets
+it.** A liquid supports no shear; the solve cannot take zero, because two
+channels of the local stiffness become singular and every fixed point in
+this family then has contraction factor one. $\mu_l/\mu_s$ is therefore a
+regularisation, and the honest thing to do with a regularisation is to scan
+it until it stops mattering. It does not stop mattering:
+
+| $\mu_l/\mu_s$ | 0.001 | 0.002 | 0.005 | 0.010 | 0.030 | 0.050 | 0.100 | 0.200 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| $\Delta V/V$ | −3.26 % | −3.61 % | −4.69 % | −6.50 % | −12.57 % | **−16.69 %** | −23.06 % | −28.60 % |
+| $\int f_{\mathrm{el}}$ | 266 | 272 | 291 | 317 | 388 | 416 | 456 | 507 |
+| iterations | 45.0 | 33.2 | 23.3 | 17.4 | 12.0 | 10.3 | 7.4 | 5.3 |
+
+: The Stage-4 effect against the liquid-shear regularisation, over a 200-fold range. Every run converged; none hit the iteration cap. {#tbl-ad-mu}
+
+Two things are visible and only one of them is comfortable. The effect
+**falls by a factor of nine** as the liquid is softened towards a real
+liquid, and it is still falling at $\mu_l/\mu_s = 0.001$, which at 45 Green
+applications per solve is about as soft as this fixed point can afford. An
+$A + B\sqrt{\mu_l}$ form fits the eight points with $R^2 = 0.996$ and
+extrapolates to under 1 %, but the two smallest points sit above that fit,
+so **the data does not determine the inviscid limit.** What it does
+determine is that the limit is *small*: of order a few per cent, not
+seventeen.
+
+The stored energy behaves quite differently, falling only from 507 to 266 —
+a factor of two — across the same 200-fold range. So the regularisation is
+not controlling how much elastic energy there is; it is controlling how much
+of that energy reaches the tip as a driving force.
+
+**The consequence for the headline must be stated plainly.** The 16.7 %
+quoted in @tbl-ad-science is the effect *at a conventionally chosen
+regularisation*, and a substantial part of it is the regularisation rather
+than the alloy. A reader should take from that table that the coupling is
+real, signed, monotone and large enough to matter, and should not take
+the number 16.7 % as a prediction about Al–4.5 wt% Cu.
+
+What survives the whole scan unchanged is everything qualitative: the sign,
+the monotonicity in $\lambda_{\mathrm{el}}$, the near-invariance of
+$\sigma^{*}$, and the partial cancellation of the two eigenstrains.
 
 This is a limitation of the eigenstrain-microelasticity formulation rather
 than of the implementation: a phase-field description of a solid growing into
@@ -947,7 +983,12 @@ overselling it.
 3. **$\rho$ is not grid-converged where $V$ is.** Between $\Delta x = 0.65$
    and $0.5$ at eighth order, $V$ moves 0.3 % and $\rho$ moves 3.2 %.
    $\sigma^{*} \propto \rho^{-2}$ inherits that twice over.
-4. **The liquid shear regularisation sets the magnitude**, as above.
+4. **The liquid shear regularisation sets the magnitude, not just its
+   uncertainty.** Over a 200-fold scan the effect falls ninefold and is
+   still falling at the softest liquid the solve can afford
+   (@tbl-ad-mu). The inviscid limit is small — a few per cent — and the
+   16.7 % headline is substantially a property of the regularisation. The
+   qualitative results are unaffected.
 5. **Lewis number 10, not $10^3$.** An explicit scheme's step is set by the
    fastest diffusivity, so a metal's real thermal-to-solutal diffusivity
    ratio costs three orders of magnitude more. The thermo-solutal results in
@@ -970,10 +1011,11 @@ overselling it.
 
 ## Why this one is harder than the others
 
-Every other application in this report has one field family and one
+Every other continuum application in this report has one field family and one
 discretisation, and its verification is one comparison. This one has four
 fields, two discretisations, a solve inside a solve, and a verification
-ladder whose rungs are not interchangeable.
+ladder whose rungs are not interchangeable. The kinetic chapter that follows
+is a different kind of exception and is not this one.
 
 Concretely, the things that had to be true simultaneously for
 @tbl-ad-science to mean anything: the anti-trapping current has to make

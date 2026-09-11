@@ -2,20 +2,17 @@
 % SPDX-License-Identifier: CC-BY-4.0
 %
 % Bibliography for the OpenPFC applications report.
-%
-% Entries marked "% CHECK" were completed from the author's knowledge rather
-% than from a line already present in the report text: the report named the
-% work (an eponym such as the Orszag 2/3 rule, or a bare "Mullins 1957") but
-% did not carry volume and page numbers. They should be checked against the
-% primary source before the report is published externally. Every other entry
-% reproduces bibliographic detail that was already written in the chapter it
-% is cited from.
+% Metadata checked against publisher pages, Crossref/DOI records, and
+% (for pre-DOI work) the original journal issue or a library catalogue
+% of the original. The transverse Weibel dispersion in Z-function form
+% used in chapter 17 is derived in this codebase, not taken from a
+% cited source.
 
 % ---------------------------------------------------------------------------
 % Numerical methods
 % ---------------------------------------------------------------------------
 
-@article{Cox2002,                                                   % CHECK
+@article{Cox2002,
   author  = {Cox, S. M. and Matthews, P. C.},
   title   = {Exponential Time Differencing for Stiff Systems},
   journal = {Journal of Computational Physics},
@@ -26,7 +23,7 @@
   doi     = {10.1006/jcph.2002.6995}
 }
 
-@article{Orszag1971,                                                % CHECK
+@article{Orszag1971,
   author  = {Orszag, Steven A.},
   title   = {On the Elimination of Aliasing in Finite-Difference Schemes by
              Filtering High-Wavenumber Components},
@@ -38,11 +35,11 @@
   doi     = {10.1175/1520-0469(1971)028<1074:OTEOAI>2.0.CO;2}
 }
 
-@inproceedings{Ayala2020,                                           % CHECK
+@inproceedings{Ayala2020,
   author    = {Ayala, Alan and Tomov, Stanimire and Haidar, Azzam and
                Dongarra, Jack},
   title     = {{heFFTe}: Highly Efficient {FFT} for Exascale},
-  booktitle = {Computational Science -- ICCS 2020},
+  booktitle = {Computational Science -- {ICCS} 2020},
   series    = {Lecture Notes in Computer Science},
   volume    = {12137},
   pages     = {262--275},
@@ -66,7 +63,7 @@
   doi     = {10.1016/0364-5916(87)90022-8}
 }
 
-@article{Redlich1948,                                               % CHECK
+@article{Redlich1948,
   author  = {Redlich, Otto and Kister, A. T.},
   title   = {Algebraic Representation of Thermodynamic Properties and the
              Classification of Solutions},
@@ -82,7 +79,7 @@
 % Surfaces and surface diffusion
 % ---------------------------------------------------------------------------
 
-@article{Mullins1957,                                               % CHECK
+@article{Mullins1957,
   author  = {Mullins, W. W.},
   title   = {Theory of Thermal Grooving},
   journal = {Journal of Applied Physics},
@@ -93,7 +90,7 @@
   doi     = {10.1063/1.1722742}
 }
 
-@article{Herring1951,                                               % CHECK
+@article{Herring1951,
   author  = {Herring, Conyers},
   title   = {Some Theorems on the Free Energies of Crystal Surfaces},
   journal = {Physical Review},
@@ -132,7 +129,7 @@
 % Dispersive waves
 % ---------------------------------------------------------------------------
 
-@article{Kawahara1972,                                              % CHECK
+@article{Kawahara1972,
   author  = {Kawahara, Takuji},
   title   = {Oscillatory Solitary Waves in Dispersive Media},
   journal = {Journal of the Physical Society of Japan},
@@ -147,7 +144,7 @@
 % Phase-field crystal
 % ---------------------------------------------------------------------------
 
-@article{Swift1977,                                                 % CHECK
+@article{Swift1977,
   author  = {Swift, J. and Hohenberg, P. C.},
   title   = {Hydrodynamic fluctuations at the convective instability},
   journal = {Physical Review A},
@@ -222,7 +219,7 @@
   doi     = {10.1103/PhysRevE.69.051607}
 }
 
-@article{Mullins1964,                                               % CHECK
+@article{Mullins1964,
   author  = {Mullins, W. W. and Sekerka, R. F.},
   title   = {Stability of a Planar Interface During Solidification of a Dilute
              Binary Alloy},
@@ -234,17 +231,22 @@
   doi     = {10.1063/1.1713333}
 }
 
-@article{Ivantsov1947,                                              % CHECK
+@article{Ivantsov1947,
   author  = {Ivantsov, G. P.},
-  title   = {Temperature field around a spherical, cylindrical and
+  title   = {Temperature field around a spherical, cylindrical, and
              needle-shaped crystal growing in a supercooled melt},
-  journal = {Doklady Akademii Nauk SSSR},
+  journal = {Doklady Akademii Nauk {SSSR}},
   volume  = {58},
-  pages   = {567},
-  year    = {1947}
+  number  = {4},
+  pages   = {567--569},
+  year    = {1947},
+  note    = {Original: Temperaturnoe pole vokrug sharoobraznogo,
+             tsilindricheskogo i igloobraznogo kristalla, rastushchego v
+             pereokhlazhdennom rasplave. English translation NASA TM-77889
+             (1985)}
 }
 
-@article{Aziz1982,                                                  % CHECK
+@article{Aziz1982,
   author  = {Aziz, Michael J.},
   title   = {Model for solute redistribution during rapid solidification},
   journal = {Journal of Applied Physics},
@@ -333,16 +335,17 @@
   doi     = {10.1063/1.1713309}
 }
 
-@book{Haynes2016,                                                        % CHECK
+@book{Haynes2016,
   editor    = {Haynes, William M.},
-  title     = {CRC Handbook of Chemistry and Physics},
+  title     = {{CRC} Handbook of Chemistry and Physics},
   edition   = {97},
   publisher = {CRC Press},
   address   = {Boca Raton, FL},
-  year      = {2016}
+  year      = {2016},
+  isbn      = {978-1-4987-5428-6}
 }
 
-@article{Vegard1921,                                                % CHECK
+@article{Vegard1921,
   author  = {Vegard, L.},
   title   = {Die Konstitution der Mischkristalle und die Raumf\"ullung der
              Atome},
@@ -358,16 +361,19 @@
 % Kinetic plasma
 % ---------------------------------------------------------------------------
 
-@article{Landau1946,                                                % CHECK
+@article{Landau1946,
   author  = {Landau, L. D.},
   title   = {On the vibrations of the electronic plasma},
-  journal = {Journal of Physics USSR},
+  journal = {Journal of Physics ({USSR})},
   volume  = {10},
-  pages   = {25--34},
-  year    = {1946}
+  pages   = {25},
+  year    = {1946},
+  note    = {English translation of Zh. Eksp. Teor. Fiz. 16 (1946) 574.
+             Reprinted in Collected Papers of L. D. Landau, Pergamon, 1965,
+             pp. 445--460}
 }
 
-@article{Weibel1959,                                                % CHECK
+@article{Weibel1959,
   author  = {Weibel, Erich S.},
   title   = {Spontaneously Growing Transverse Waves in a Plasma Due to an
              Anisotropic Velocity Distribution},
@@ -379,16 +385,17 @@
   doi     = {10.1103/PhysRevLett.2.83}
 }
 
-@book{Fried1961,                                                    % CHECK
+@book{Fried1961,
   author    = {Fried, Burton D. and Conte, Samuel D.},
   title     = {The Plasma Dispersion Function: The Hilbert Transform of the
                Gaussian},
   publisher = {Academic Press},
   address   = {New York},
-  year      = {1961}
+  year      = {1961},
+  doi       = {10.1016/C2013-0-12176-9}
 }
 
-@article{Weideman1994,                                              % CHECK
+@article{Weideman1994,
   author  = {Weideman, J. A. C.},
   title   = {Computation of the Complex Error Function},
   journal = {SIAM Journal on Numerical Analysis},
@@ -399,16 +406,17 @@
   doi     = {10.1137/0731077}
 }
 
-@article{Canosa1973,                                                % CHECK
-  author  = {Canosa, J.},
-  title   = {Numerical solution of Landau's dispersion equation},
-  journal = {Journal of Plasma Physics},
-  volume  = {8},
-  pages   = {187},
+@article{Canosa1973,
+  author  = {Canosa, Jos\'{e}},
+  title   = {Numerical solution of {Landau}'s dispersion equation},
+  journal = {Journal of Computational Physics},
+  volume  = {13},
+  number  = {1},
+  pages   = {158--160},
   year    = {1973}
 }
 
-@article{Bret2010,                                                  % CHECK
+@article{Bret2010,
   author  = {Bret, A. and Gremillet, L. and Dieckmann, M. E.},
   title   = {Multidimensional electron beam-plasma instabilities in the
              relativistic regime},
@@ -420,9 +428,9 @@
   doi     = {10.1063/1.3514586}
 }
 
-@article{Cheng1976,                                                 % CHECK
+@article{Cheng1976,
   author  = {Cheng, C. Z. and Knorr, Georg},
-  title   = {The integration of the Vlasov equation in configuration space},
+  title   = {The integration of the {Vlasov} equation in configuration space},
   journal = {Journal of Computational Physics},
   volume  = {22},
   number  = {3},

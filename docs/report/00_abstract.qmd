@@ -1,19 +1,22 @@
 # Abstract {.unnumbered}
 
 OpenPFC is a framework for solving partial differential equations on
-structured, periodic, MPI-distributed grids, with matching CPU and GPU
-execution paths. Its original target was the phase-field crystal (PFC) model,
-but the architecture — a domain decomposition, a distributed field, a
-pluggable spectral or finite-difference stack, and a session that wires them
-from JSON — is not specific to PFC.
+structured, periodic, MPI-distributed grids, with CPU and GPU execution
+paths that share the same physics. Its original target was the phase-field
+crystal (PFC) model, but the architecture — a domain decomposition, a
+distributed field, a pluggable spectral or finite-difference stack, and a
+session that wires them from JSON — is not specific to PFC.
 
-This report describes the fourteen applications shipped with OpenPFC 0.2.
-They span fourth- through tenth-order spatial operators, conserved and
-non-conserved dynamics, dispersive and dissipative behaviour, single-field and
-coupled multi-field systems, and both spectral and finite-difference
-discretisations.
+This report describes the fifteen applications shipped with OpenPFC 0.2:
+tungsten, aluminum, cahn_hilliard, thin_film, surface_diffusion, kawahara,
+ehd_film, higher_order_pfc, gradient_elasticity, heat3d, wave2d, allen_cahn,
+kobayashi, alloy_dendrite_elastic, and vlasov_maxwell. They span fourth-
+through tenth-order spatial operators, conserved and non-conserved dynamics,
+dispersive and dissipative behaviour, single-field and coupled multi-field
+systems, a kinetic distribution on a phase-space grid, and both spectral
+and finite-difference discretisations.
 
-Three claims run through the report.
+Four claims run through the report.
 
 The first is that **high differential order is not high implementation
 complexity in a spectral code**. A sixth-order elastohydrodynamic operator and
@@ -23,13 +26,20 @@ comparable in effort. What high order does cost is stiffness, and the report
 is explicit about how exponential time differencing absorbs it.
 
 The second is that **the same application source runs on a laptop core and on
-sixteen nodes of a GPU supercomputer**. Chapter @sec-scalability reports
-measured curves on LUMI-G out to 128 GCDs across 16 nodes: strong scaling at
-82% efficiency over a fourfold increase in ranks, and weak scaling at constant
-work per GCD ending on 8.59 billion cells. The application sources are
-unchanged between the one-GCD and the 128-GCD runs. The chapter also compares
-the spectral and finite-difference paths on the same equation, and is explicit
-about the one axis of that comparison the measurements do not settle.
+sixteen nodes of a GPU supercomputer**. That is a statement about the
+runtime, not about every application. Chapter @sec-scalability reports
+measured LUMI-G curves for two models out to 128 GCDs across 16 nodes:
+tungsten strong scaling at 82% efficiency over a fourfold increase in ranks
+at $1280^3$, and weak scaling at constant work per GCD ending on 8.59 billion
+cells. The application sources are unchanged between the one-GCD and the
+128-GCD runs. The chapter also compares the spectral and finite-difference
+paths on the same equation, and is explicit that those measurements settle
+cost per step and parallel efficiency, not time to solution, and that they
+are equal-grid comparisons until the accuracy section converts them. The
+kinetic application of @sec-vlasov is a different experiment: it strong-scales
+on the host to the $N_{v_y}$ rank cap of its one-axis decomposition, and a
+single MI250X GCD is 157 times a host core at $256^3$. It is not a 16-node
+result.
 
 The third is that **the two discretisations compose**. @sec-alloy-dendrite is
 a thermo-solutal-elastic dendritic solidification model: a quantitative
@@ -39,15 +49,31 @@ composition- and temperature-dependent eigenstrain whose energy feeds back
 into the phase-field driving force. The local physics runs on high-order
 finite differences with a halo exchange; elliptic mechanical equilibrium is
 elsewhere in the same time step, solved spectrally on the same
-decomposition. At the calibrated coupling the elastic energy of the solutal
-misfit slows the dendrite tip by 17 % and fattens it by 11 %, while the
-selection parameter moves 2.5 % — the elasticity slides the operating point
-along the solvability curve rather than changing the selection. With the
-temperature field on, the solutal and thermal eigenstrains oppose each other
-and together store a third of what the solutal misfit stores alone.
+decomposition. The coupling is real, signed and monotone: it retards the
+tips, fattens them, and slides the operating point along the solvability
+curve rather than changing the selection. At the conventional liquid-shear
+regularisation $\mu_l/\mu_s = 0.05$ the tip slows by 17% and fattens by 11%,
+while $\sigma^{*}$ moves 2.5%. That magnitude is a property of the
+regularisation, not of the alloy: a 200-fold scan down to $\mu_l/\mu_s =
+0.001$ falls ninefold, is still falling, and points at an inviscid limit of a
+few per cent. With the temperature field on, the solutal and thermal
+eigenstrains oppose each other and together store a third of what the
+solutal misfit stores alone. The $512^3$ coupled run on 2048 ranks shows that
+the machinery scales; it is too short to be a three-dimensional dendrite
+result.
 
-None of the three claims is asserted without a number behind it. Where a
+The fourth is that **the structured-grid abstraction is not confined to
+ordinary physical-space fields**. @sec-vlasov evolves a distribution
+$f_s(x,v_x,v_y)$ on a three-dimensional phase-space grid, deposits kinetic
+moments, and couples them self-consistently to Maxwell's equations with the
+Lorentz cross product intact. Landau damping, two-stream growth and the
+Weibel instability each match a numerically solved dispersion relation to a
+few parts in a thousand; Gauss's law is a charge-conservation diagnostic at
+$10^{-14}$, not a constraint the scheme imposes. No other application in the
+report has an unknown that does not live on the grid its fields live on.
+
+None of the four claims is asserted without a number behind it. Where a
 property has not been measured, the report says so — and where a number
 depends on a parameter of the *method* rather than of the physics, as the
 dendrite's magnitude does on the liquid-shear regularisation, the report
-gives the range rather than the digit.
+gives the scan rather than the digit.
