@@ -587,9 +587,11 @@ Operator parity is not a science rate. `vlasov_hip_parity --science=landau`
 runs the same $32^3$, $t=12$ Landau problem on the host `Stepper` and
 on `DeviceStepper` and compares `fit_envelope_rate` of `mode_ex`. That
 test is registered as `vlasov-hip-science-rate` (HIP builds, LUMI-G).
-**The $\gamma$ pair has not been measured on this branch**; the
-operator-parity table above is from job `21933310` and is a different
-question.
+Job `21943612` on one MI250X GCD measured
+$\gamma_\mathrm{cpu}=\gamma_\mathrm{hip}=-0.1514064581$
+(relative difference $6.0\times10^{-13}$), the same 1-rank Landau rate as
+the CPU 1-vs-N check (job `21942462`). Operator parity remains job
+`21933310` and is a different question.
 
 ## Limitations {#sec-vm-limits}
 
