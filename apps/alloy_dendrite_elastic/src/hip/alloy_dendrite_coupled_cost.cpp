@@ -133,8 +133,17 @@ struct CostConfig {
   /// Elastic feedback strength in equation (2). Zero still solves and still
   /// pays, which is what makes it a clean cost measurement.
   double lambda_el = 0.0;
-  /// `brick` builds the FD side on `decomposition::create` (FD-optimal,
-  /// incompatible with the FFT above one rank); `slab` matches the FFT.
+  /**
+   * @brief Which decomposition the FD fields are cut on.
+   *
+   * `slab` means "whatever `spectral_fft_proc_grid` gave the FFT", which is
+   * the only setting that can couple. The name is the common case rather
+   * than the universal one: that function only returns a true 1-D slab at
+   * nine ranks or more (`kSpectralSlabMinRanks`), and below that it returns
+   * the same minimum-surface brick `decomposition::create` would, so at
+   * eight GCDs the two settings differ only in that `brick` is allowed to
+   * disagree with the FFT and therefore refuses to couple.
+   */
   std::string fd_grid = "slab";
   std::string csv;
   std::string run_id = "cost";

@@ -159,6 +159,111 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   transfer. The anti-trapping sign in the spec is correct, and
   `parameters.hpp` records the cancellation that fixes it.
 
+- **HIP path for the alloy dendrite, with the parity measurement that makes
+  it a port rather than a claim** (`apps/alloy_dendrite_elastic`, issue #85).
+  Four kernels, the same three device halo exchanges in the same order,
+  sixteen device fields, and the finite-difference stencil carried as data so
+  the spatial order stays a run-time choice in `[2, 14]` -- the reason the
+  library's `pfc::gpu::FDGradientDevice` is deliberately *not* used is that it
+  pre-multiplies each weight by `1/(h denom)` while the CPU evaluator sums the
+  integer weights and scales once at the end, and a parity measurement should
+  measure the port rather than a gratuitous difference in the evaluator. The
+  kernels are transcribed expression by expression from `step.hpp`, including
+  the parenthesisation, for the same reason. Everything below is from LUMI
+  `standard-g`, job **21916748**. **CPU against GPU**, both steppers in one
+  process on one decomposition from a bit-identical initial condition, `96^3`
+  at order 4 with anisotropy, latent heat and the anti-trapping current all
+  live, 200 steps: `max|phi_cpu - phi_gpu| =` **4.9e-13**, `U` 5.8e-14,
+  `theta` 4.2e-14, and the domain integrals agree **exactly**. The 2-D slab is
+  4.4e-16; across FD orders the drift grows with the stencil width as a sum of
+  more terms should (2.2e-15 / 5.8e-14 / 4.8e-13 / 1.7e-12 at orders
+  2/4/6/8). **1 rank against N ranks on the GPU**, compared after gathering
+  into *global* index order so the comparison is about the halo exchange
+  rather than about ownership: **bitwise identical** at 2, 4 and 8 GCDs in
+  3-D and at 4 in 2-D -- which is the expected answer, since no reduction
+  enters the step, and is therefore worth measuring precisely because
+  anything else would have been a bug. **A tolerance without a run length is
+  meaningless**, and the measurement says why: the same `64^3` case drifts
+  1.6e-15 / 5.8e-14 / 1.3e-07 / **0.53** at 50 / 200 / 800 / 3200 steps. That
+  is exponential, not linear, and it is physics rather than a defect -- a
+  solid sphere growing into a supersaturated melt is morphologically
+  unstable, so the two runs' side branches pick different phases from a
+  one-ULP difference at the tip. Domain integrals are amplified four to five
+  orders of magnitude less (1.5e-05 at 3200 steps), so the honest rule is
+  pointwise below ~1e3 steps and statistical above. `ctest -R
+  alloy-dendrite-hip-parity` runs `32^3` for 50 steps against a 2e-11 bound;
+  the binary decides pass/fail itself rather than matching a pinned checksum,
+  because a pinned checksum pins the GPU against its own past and says
+  nothing about the host. Throughput, for provenance rather than as a claim:
+  one MI250X GCD against one Trento core at `96^3` is 2.18 ms against
+  59.5 ms per step.
+
+- **What coupling the elastic solve actually costs, measured**
+  (`alloy_dendrite_coupled_cost`). `openpfc_apps/microelasticity.hpp` is
+  host-only, so a GPU phase field coupled to it either needs a device port of
+  the tensor solve or pays a host round-trip per solve. This driver runs the
+  real coupled step -- GPU phase field, `phi/U/theta` down, `h`/`a` and their
+  `phi`-derivatives built on the host, Eyre-Milton fixed point,
+  `dF_el/dphi` back up into stage B's `ELASTIC HOOK` -- and times the five
+  parts separately. One GCD, order 4, default liquid, `tol_el = 1e-6`, job
+  **21916676** (`standard-g`), milliseconds per step: at `96^3`
+  `t_pf = 2.02`, round trip `4.14`, `t_el` **1060** warm / 2058 cold; at
+  `128^3` `2.70` / `8.72` / **2918** / 5517. **The round-trip is not the
+  problem**: it is 2-3x one GPU step, 4-9 ms absolute, and 0.3 % of the
+  coupled step, while the host FFT solve is 500-1050x the GPU step and
+  250-600x the round-trip it was supposedly being weighed against. Porting
+  the round-trip away would buy 0.3 %. Warm start halves the iteration count
+  (16.5 to 8.5) and therefore halves the cost -- worth having, and not enough
+  to change the decision. Sweeping `tol_el` (job **21916767**) shows the
+  solve is linear in iterations at ~345 ms each with no fixed overhead, so
+  the floor of the host route -- warm-started, `tol_el = 1e-3`, one Green
+  application, twelve host transforms of `128^3` -- is 362 ms against a
+  2.78 ms GPU step, still **130x**. The route taken is therefore to keep the
+  host round-trip and *not* port it, and to make the host solve affordable by
+  lagging it (`--n-el-substep`, legitimate because the mechanics are
+  quasi-static) and loosening `tol_el`. Lagging is the lever that does not
+  behave the way arithmetic says, which is exactly why it was measured (job
+  21917122, `128^3`, warm): skipping a solve makes the next one harder, the
+  iteration count climbs 8.3 / 9.9 / 10.1 / 13.0 at `N` = 1 / 2 / 5 / 10, and
+  the amortised cost falls only 6.4x rather than 10x. Combined with
+  `tol_el = 1e-3` the best measured configuration is `N = 10`, at 112 ms
+  amortised per step -- a coupled step about **48x** the bare GPU step rather
+  than a thousand. Arithmetic from the single-lever numbers would have said
+  36 ms and 14x; it is wrong by three, because at `N = 10` one Green
+  application no longer suffices and the count goes to 3.25. Whether a solve
+  lagged ten steps at 1e-3 is *accurate* enough is a physics question this
+  measurement does not answer and which needs a Stage-4 study.
+
+  What the numbers *do* say is what a device elastic solve would have to
+  target: the twelve transforms per Green application, not the round-trip
+  and not the pointwise tensor contraction. Half of that already exists
+  (`pfc::sim::stacks::GPUSpectralStack` over HeFFTe's rocFFT backend); what
+  is missing is the local half, which is kernels of the same shape as the
+  four added here. No device elastic solve is attempted, deliberately.
+
+  One thing found on the way, reported rather than hidden: **at eight ranks
+  per node the coupled driver aborts with a GPU memory fault in about a
+  third of runs**, and only when the elastic solve actually runs *and* the
+  device halo exchange is handing device pointers to MPI. Ten repeats each
+  way (job 21917129, `64^3`, 8 steps): GPU-aware halo with the solve on
+  **7/10** completed; packed halo with the solve on 10/10; GPU-aware halo
+  with `--elastic=0` 10/10. Constructing the solver without calling it is
+  also clean over 20 steps, as is `MPICH_GPU_SUPPORT_ENABLED=0` (job
+  21917107). It is not rank-deterministic and not size-dependent, and the
+  HIP twin on its own runs 200 steps at eight GCDs bitwise-clean, which
+  points at the interaction between device-pointer point-to-point and
+  HeFFTe's host-buffer collectives on one communicator under Cray MPICH
+  rather than at the kernels. Not root-caused;
+  `OPENPFC_HIP_FORCE_PACKED_HALO=1` is the workaround and is set in the job
+  script with a comment saying why. Single-GCD runs -- which is where every
+  number the route decision rests on was taken -- are unaffected.
+
+- **`slurm/*.sbatch` for `apps/alloy_dendrite_elastic`**: the seven jobs that
+  produced every number in the application's README, each with a header
+  saying which question it answers and what it would take to falsify the
+  answer. Every table in that README now carries the Slurm job id that
+  produced it.
+
 - **Where spectral beats finite difference, and where it does not**
   (`heat3d_spectral_content_study`, `apps/heat3d`). The scalability chapter
   had cost per step and parallel scaling measured for both spatial operators
@@ -344,6 +449,20 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   guard: `test_heat3d_fd_convergence.cpp` / ctest `heat3d-fd-convergence`.
 
 ### Fixed
+
+- **The device halo exchange could not serve a 2-D slab above second order.**
+  `DeviceFacesHalo` resolved its active direction set *after* building the
+  six MPI face types and then built them with the default all-active mask, so
+  `create_padded_face_types_6` rejected an `nz == 1` slab whenever
+  `halo_width > 1`: "owned extents 256x256x1 cannot host halo_width=2 owned
+  send slabs on axis 2". The `+-Z` faces carry no message under `Axes2D()`,
+  so the demand is vacuous; the host exchanger in `comm_halo_exchange.hpp`
+  has passed the mask since 2-D slabs at `fd_order > 2` were enabled there,
+  and the device one now does the same. `apps/kobayashi` never hit this only
+  because its stencil is second order and `hw == 1` satisfies the check by
+  accident. Found by the 2-D case of `alloy_dendrite_hip_parity`, which needs
+  `hw = 2` at order 4; with the mask it agrees with the host stepper to
+  4.4e-16 on `256^2` over 200 steps (job 21916748, `standard-g`).
 
 - The applications report renders. `docs/report/14_allen_cahn.qmd` contained
   `$R^\*$`; a backslash-escaped asterisk is invalid in math mode and LuaTeX
@@ -585,6 +704,48 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   its FD operator-evaluation and rhs-pattern suites stay available.
 
 ### Changed
+
+- **`apps/alloy_dendrite_elastic` now uses the corrected anisotropy of
+  `MODEL_SPEC.md` equation (1)**, i.e. the normalised Karma-Rappel
+  `a_s = (1 - 3 eps4)[1 + (4 eps4/(1 - 3 eps4)) sum n_i^4]` rather than the
+  pre-correction `1 + eps4 sum n_i^4`. In 2-D the first is exactly
+  `1 + eps4 cos 4 theta`, so the orientation average of `a_s` is 1 and `W0`
+  is a real interface width, and the peak amplitude is `eps4` itself, so a
+  published `epsilon_4` transfers; under the old form the effective strength
+  was `(eps4/4)/(1 + 0.75 eps4)`, about a quarter of the input. Both
+  properties are now asserted in `ctest -R alloy-dendrite` rather than
+  argued. The shipped 2-D preset's `eps4` moves from 0.2 to **0.0435**, which
+  is the *same physical anisotropy* (4.35 %) written in the new convention,
+  so the dendrite it grows is the one that was measured and not one five
+  times more anisotropic. `--aniso-form=unnormalised` restores the old form
+  exactly, because the application's Stage-2 table was measured with it and a
+  documented measurement whose code no longer exists is not reproducible;
+  `effective_anisotropy(form, eps4)` converts, and every run header prints
+  `aniso=` and `eps_eff=` so a CSV can be traced to a convention. Re-measured
+  on `standard` (job 21916714): the old convention reproduces
+  `x_tip = 144.137` to every quoted digit, and the corrected one at matched
+  effective anisotropy gives `v_tip` 2.5 % higher and `rho_tip` 3.4 % lower,
+  because `a_s` no longer carries the `1 + 0.75 eps4 = 1.15` offset that was
+  scaling `W(n)` and `tau(n)` at every orientation.
+
+- **`apps/alloy_dendrite_elastic`'s measurements are now from compute nodes,
+  with job ids.** The application's tables were produced on a LUMI login
+  node. All of them were re-run on `standard` and **nothing moved**: the
+  resolution ladder and the FD-order table reproduce to every quoted digit
+  (job 21916463). Three things did come out of the re-run. The anti-trapping
+  table's `V = 0.40` row was quoted at a `512 W0` box, where the two fronts
+  meet before `t_end` and the measurement is invalid (`k_eff = 0.13584`,
+  steady mass-balance residual `9.0e-3`); at `1024 W0` and above it converges
+  to 0.15260, which is the number the table quoted, so the box size was wrong
+  rather than the number (job 21916585, four box sizes). The `at_scale = 0`
+  and `-1` columns are not converged measurements at all -- residual `1e-2`
+  to `5e-2`, measured velocity up to 120 % off target -- so their digits move
+  by up to 7 % with the box and are now labelled as directional rather than
+  quantitative. And the 2-rank ctest, registered but never runnable from a
+  login node, now runs: `ctest -R "alloy-dendrite|microelasticity"` is 4/4
+  green on `standard` including `alloy-dendrite-planar-2rank` (job 21916702),
+  so the conservation claim, which rests on three halo-exchange groups, is
+  exercised across a rank boundary for the first time.
 
 - `docs/report/12_heat3d.qmd` reports the measured orders of accuracy from
   `heat3d_fd_convergence_study` (2.00, 3.98, 5.96, 7.95, 9.94, 11.84 against
