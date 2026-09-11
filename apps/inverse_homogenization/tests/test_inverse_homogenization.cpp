@@ -165,6 +165,24 @@ TEST_CASE("Uniform inverse step drives volume toward the homogeneous target",
   REQUIRE(last.volume_fraction > 0.5);
 }
 
+TEST_CASE("Volume projection holds the target mean after a step",
+          "[inverse][volume]") {
+  constexpr int N = 8;
+  Case cs(N);
+  fill_value(cs.h, 0.80);
+  InverseSpec spec;
+  spec.C_target = voigt_from_stiffness(Stiffness::isotropic(1.0, 0.25));
+  spec.volume_target = 0.5;
+  spec.lambda_volume = 0.0;
+  spec.lambda_reg = 0.0;
+  spec.dt = 0.05;
+  spec.project_volume = true;
+  PhaseFieldInverse inv(cs.domain, cs.stack.fft(), phases());
+  const auto r = inv.step(cs.h, spec);
+  REQUIRE(r.elasticity_converged);
+  REQUIRE_THAT(r.volume_fraction, WithinAbs(0.5, 1.0e-6));
+}
+
 TEST_CASE("Noisy initialization: a few AC steps decrease J",
           "[inverse][descent]") {
   constexpr int N = 8;

@@ -40,7 +40,8 @@ run() {
   local name="$1"; shift
   srun --ntasks=1 --cpus-per-task=4 \
     "${BIN}" --steps=40 --dt=0.03 --max-delta=0.03 --normalize=1 \
-    --init=noise --volume=0.5 --lambda-volume=4 --lambda-reg=0.08 \
+    --project-volume=1 --init=noise --volume=0.5 \
+    --lambda-volume=1 --lambda-reg=0.08 \
     --csv="${OUT}/${name}.csv" "$@" > "${OUT}/${name}.txt"
 }
 

@@ -70,6 +70,9 @@ struct InverseSpec {
   bool normalize_grad{true};
   /// Hard cap on |Δh| per cell after the normalised step.
   double max_abs_delta{0.05};
+  /// After the step, shift h by a constant so ⟨h⟩ matches volume_target
+  /// (clip, then repeat a few times). Stronger than the quadratic penalty.
+  bool project_volume{false};
 };
 
 struct InverseStepReport {
@@ -216,7 +219,33 @@ public:
     double glo_dh2 = 0.0;
     MPI_Allreduce(&local_dh2, &glo_dh2, 1, MPI_DOUBLE, MPI_SUM, comm());
     out.step_rms = std::sqrt(glo_dh2 / m_n_global);
+    if (spec.project_volume) project_mean(h, spec.volume_target, spec.clip);
+    out.volume_fraction = mean_value(h);
     return out;
+  }
+
+  [[nodiscard]] double mean_value(const RealField &h) const {
+    double local = 0.0;
+    const double *p = h.data();
+    for (std::size_t i = 0; i < m_n_local; ++i) local += p[i];
+    double global = 0.0;
+    MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_SUM, comm());
+    return global / m_n_global;
+  }
+
+  void project_mean(RealField &h, double target, bool clip_flag) const {
+    for (int it = 0; it < 6; ++it) {
+      const double vf = mean_value(h);
+      const double shift = target - vf;
+      if (std::abs(shift) < 1.0e-12) break;
+      double *p = h.data();
+      for (std::size_t i = 0; i < m_n_local; ++i) {
+        double hn = p[i] + shift;
+        if (clip_flag) hn = std::min(1.0, std::max(0.0, hn));
+        p[i] = hn;
+      }
+      h.note_host_write();
+    }
   }
 
 private:
