@@ -467,6 +467,13 @@ struct DendriteConfig {
   /// @ref measure_tip_scan.
   int tip_windows[kTipWindowCount] = {kTipWindowDefaults[0], kTipWindowDefaults[1],
                                       kTipWindowDefaults[2], kTipWindowDefaults[3]};
+  /// Fit half-widths in units of the tip radius itself, reported alongside
+  /// the cell-based scan. See @ref measure_tip_scan_relative: this is the
+  /// scan whose spread is a statement about the *shape*, and it is the one
+  /// the quoted `sigma*` is built from.
+  double tip_windows_rel[kTipWindowCount] = {
+      kTipWindowRelDefaults[0], kTipWindowRelDefaults[1],
+      kTipWindowRelDefaults[2], kTipWindowRelDefaults[3]};
   /// Trailing fraction of samples used for the tip-velocity fit.
   double fit_fraction = 0.3;
 #if ALLOY_DENDRITE_HAVE_ELASTICITY
@@ -503,6 +510,13 @@ struct DendriteResult {
   /// `(max - min)/min` of `rho_window`. The ambiguity of the radius, hence
   /// half the ambiguity of `sigma*`.
   double rho_window_spread{std::numeric_limits<double>::quiet_NaN()};
+  /// Tip radius at half-widths of 0.5, 1, 1.5 and 2 tip radii.
+  double rho_rel[kTipWindowCount]{};
+  double rho_rel_spread{std::numeric_limits<double>::quiet_NaN()};
+  /// The one-radius window: the literature convention, and the radius the
+  /// quoted @ref sigma_star_rel is built from.
+  double rho_1{std::numeric_limits<double>::quiet_NaN()};
+  double sigma_star_rel{std::numeric_limits<double>::quiet_NaN()};
   /// Relative change of `V` between the two halves of the trailing window.
   double v_drift{std::numeric_limits<double>::quiet_NaN()};
   /// Same for `rho`.
@@ -661,6 +675,7 @@ template <int Dim>
 
   std::vector<double> t_s, x_s, rho_s;
   std::vector<double> rho_w_s[kTipWindowCount];
+  std::vector<double> rho_r_s[kTipWindowCount];
   Conservation cons = cons0;
   double t = 0.0;
   for (int step = 1; step <= res.n_steps; ++step) {
@@ -688,6 +703,10 @@ template <int Dim>
     const TipWindowScan scan = measure_tip_scan(plane, cfg.nx, cfg.ny, cfg.dx,
                                                 cfg.dx, i_seed, j_seed,
                                                 cfg.tip_windows);
+    const TipWindowScan rscan =
+        measure_tip_scan_relative(plane, cfg.nx, cfg.ny, cfg.dx, cfg.dx, i_seed,
+                                  j_seed, cfg.tip_windows_rel,
+                                  cfg.tip_fit_halfwidth);
     ++res.n_samples;
     res.n_samples_failed += tip.valid ? 0 : 1;
     if (tip.valid) {
@@ -696,6 +715,7 @@ template <int Dim>
       rho_s.push_back(tip.rho);
       for (int q = 0; q < kTipWindowCount; ++q) {
         rho_w_s[q].push_back(scan.rho[q]);
+        rho_r_s[q].push_back(rscan.rho[q]);
       }
     }
     const double sol_drift = std::fabs(cons.solute_total - cons0.solute_total) /
@@ -788,11 +808,32 @@ template <int Dim>
     }
   }
   {
+    double lo = std::numeric_limits<double>::infinity();
+    double hi = 0.0;
+    for (int q = 0; q < kTipWindowCount; ++q) {
+      res.rho_rel[q] = trailing_mean(rho_r_s[q], cfg.fit_fraction);
+      if (std::isfinite(res.rho_rel[q]) && res.rho_rel[q] > 0.0) {
+        lo = std::fmin(lo, res.rho_rel[q]);
+        hi = std::fmax(hi, res.rho_rel[q]);
+      }
+      // The one-radius window is the literature convention; find it rather
+      // than assuming index 1, so a driver that reorders the fractions does
+      // not silently quote a different measurement under the same name.
+      if (std::fabs(cfg.tip_windows_rel[q] - 1.0) < 1e-12) {
+        res.rho_1 = res.rho_rel[q];
+      }
+    }
+    if (std::isfinite(lo) && lo > 0.0) {
+      res.rho_rel_spread = (hi - lo) / lo;
+    }
+  }
+  {
     const double d0 = capillary_length(p);
     res.selection = (std::isfinite(res.v_tip) && std::isfinite(res.rho_tip))
                         ? res.v_tip * res.rho_tip * res.rho_tip / (p.D_l * d0)
                         : std::numeric_limits<double>::quiet_NaN();
     res.sigma_star = selection_sigma_star(d0, p.D_l, res.v_tip, res.rho_tip);
+    res.sigma_star_rel = selection_sigma_star(d0, p.D_l, res.v_tip, res.rho_1);
     res.v_rho = res.v_tip * res.rho_tip;
     res.omega_eff = -cons.u_min;
     const double pe = ivantsov_peclet_2d(res.omega_eff);
@@ -832,7 +873,9 @@ template <int Dim>
         cfg.csv_summary,
         "run_id,nx,ny,nz,dx,fd_order,dt,t_end,lambda,k,D_l,D_th,M_c,"
         "eps4,omega,seed_radius,d0,v_tip,rho_tip,x_tip,selection,sigma_star,"
-        "rho_w0,rho_w1,rho_w2,rho_w3,rho_spread,v_drift,rho_drift,"
+        "rho_w0,rho_w1,rho_w2,rho_w3,rho_spread,"
+        "rho_r0,rho_r1,rho_r2,rho_r3,rho_rel_spread,rho_1,sigma_star_rel,"
+        "v_drift,rho_drift,"
         "omega_eff,v_rho,v_rho_ivantsov,"
         "lambda_el,eps_c,eps_T,mu_liquid_frac,n_el_substep,"
         "el_solves,el_iter_mean,el_iter_max,el_nonconverged,el_energy,"
@@ -854,7 +897,9 @@ template <int Dim>
     sum.row(format(
         "%s,%d,%d,%d,%.10g,%d,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,"
         "%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,"
-        "%.10g,%.10g,%.10g,%.10g,%.6g,%.6g,%.6g,"
+        "%.10g,%.10g,%.10g,%.10g,%.6g,"
+        "%.10g,%.10g,%.10g,%.10g,%.6g,%.10g,%.10g,"
+        "%.6g,%.6g,"
         "%.10g,%.10g,%.10g,"
         "%.10g,%.10g,%.10g,%.10g,%d,"
         "%d,%.4g,%d,%d,%.10g,%.10g,%.6g,"
@@ -863,7 +908,9 @@ template <int Dim>
         cfg.t_end, p.lambda, p.k, p.D_l, p.D_th, p.M_c, p.eps4, cfg.omega,
         cfg.seed_radius, capillary_length(p), res.v_tip, res.rho_tip, res.x_tip,
         res.selection, res.sigma_star, res.rho_window[0], res.rho_window[1],
-        res.rho_window[2], res.rho_window[3], res.rho_window_spread, res.v_drift,
+        res.rho_window[2], res.rho_window[3], res.rho_window_spread,
+        res.rho_rel[0], res.rho_rel[1], res.rho_rel[2], res.rho_rel[3],
+        res.rho_rel_spread, res.rho_1, res.sigma_star_rel, res.v_drift,
         res.rho_drift, res.omega_eff, res.v_rho, res.v_rho_ivantsov, p.lambda_el,
         eps_c, eps_T, mu_l, nsub, res.el_solves, res.el_iter_mean, res.el_iter_max,
         res.el_nonconverged, res.el_energy, res.el_max_dfel, res.el_mean_stress,

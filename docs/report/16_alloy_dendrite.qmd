@@ -1,0 +1,389 @@
+# Thermo-solutal-elastic dendritic solidification {#sec-alloy-dendrite}
+
+`apps/alloy_dendrite_elastic` — a quantitative dilute-alloy phase field
+coupled to solute, to temperature through latent heat, and to quasi-static
+elasticity through a composition- and temperature-dependent eigenstrain, with
+the elastic energy feeding back into the phase-field driving force.
+
+Every other application in this report solves one physics with one
+discretisation. This one solves four fields with two, and that is the reason
+it is here: the local solidification dynamics run on high-order finite
+differences with a halo exchange, while mechanical equilibrium — which is
+elliptic and therefore global — is solved spectrally on the same
+decomposition in the same time step. **Local FD physics and a global FFT
+solve, coupled, in one application.**
+
+## Physical setting
+
+Pour a dilute aluminium–copper melt into a mould and cool it. Solid nucleates,
+and because the solid dissolves less copper than the liquid does — the
+partition coefficient is $k \approx 0.14$, so it takes about one atom in seven
+— every advancing interface pushes copper ahead of itself. The rejected solute
+depresses the local freezing point, which slows the interface, which is a
+*stabilising* feedback for a flat front and a *destabilising* one for a bumpy
+one: a protrusion reaches into melt that has not yet been enriched, so it
+grows faster, so it protrudes further. That is the Mullins–Sekerka instability,
+and dendrites are what it produces once the anisotropy of the interfacial
+energy has selected which directions the arms point in.
+
+Two further couplings matter, and both of them are usually left out.
+
+**Latent heat.** Solidifying releases heat, the heat warms the melt the arm is
+growing into, and the warmed melt is harder to solidify. In a dilute alloy at
+these growth rates the solute field is the slower and therefore the
+rate-controlling one, but the thermal field is not passive: it is the reason
+the tip of a real dendrite is not simply the solutal prediction.
+
+**Misfit stress.** This is the one that is almost always left out. Copper is
+the smaller atom, so a copper-rich aluminium lattice is a *contracted*
+lattice: the Vegard slope of the dilute fcc solid solution is about
+$-0.0175$ Å per at% Cu against a lattice parameter of 4.05 Å. The solid that
+freezes at a dendrite tip and the solid that freezes in the grooves between
+arms therefore have different compositions, hence different natural lattice
+spacings, hence they do not fit together. They are welded into one crystal
+anyway, and the crystal carries the resulting stress. Thermal contraction adds
+a second, co-located eigenstrain. The stored elastic energy is a real
+contribution to the free energy of the solid, and a phase field that does not
+account for it is asserting that it is negligible rather than measuring it.
+
+Whether it is negligible is a quantitative question with a clean answer. One
+unit of the dimensionless supersaturation $U$ is worth a chemical
+free-energy density
+$f_{\mathrm{ref}} = L\,\Delta T_0 / T_M \approx 1.4\times10^{7}\,\mathrm{J\,m^{-3}}$
+for this alloy, four orders of magnitude below the elastic constants. Elastic
+energy scales as $\tfrac{1}{2} C \varepsilon^{*2}$, so it reaches
+$f_{\mathrm{ref}}$ at an eigenstrain of only
+$\varepsilon^{*} \sim \sqrt{2 f_{\mathrm{ref}}/C} \approx 5\times10^{-4}$ —
+well inside the range this alloy's solute partitioning produces. **The
+coupling is not small, and the reason it is usually dropped is that solving
+for it is expensive, not that it does not matter.**
+
+The question this chapter asks is therefore: *does the elastic energy of the
+solutal and thermal misfit measurably change a dendrite, and by how much?*
+
+## Governing equations
+
+The complete system, in the non-dimensionalisation of the quantitative
+dilute-alloy phase field: lengths in the interface width $W_0$, times in the
+relaxation time $\tau_0$. The fields are the phase field
+$\phi \in [-1, 1]$ ($+1$ solid, $-1$ liquid), the dimensionless
+supersaturation $U$, the dimensionless undercooling $\theta$, and the
+displacement $\mathbf{u}$.
+
+::: {.callout-note appearance="simple"}
+Nothing below is abbreviated for presentation. This is the system the code
+integrates, symbol for symbol; the mapping to the source is in
+@tbl-ad-provenance.
+:::
+
+### Anisotropy
+
+With $\mathbf{n} = \nabla\phi/|\nabla\phi|$ the interface normal, the cubic
+($\langle 100 \rangle$) anisotropy function and the width and relaxation time
+it modulates are
+
+$$
+a_s(\mathbf{n}) = (1 - 3\epsilon_4)
+  \left[ 1 + \frac{4\epsilon_4}{1 - 3\epsilon_4}
+     \left(n_x^4 + n_y^4 + n_z^4\right) \right],
+\qquad
+W(\mathbf{n}) = W_0\, a_s, \qquad
+\tau(\mathbf{n}) = \tau_0\, a_s^2 .
+$$ {#eq-ad-aniso}
+
+The normalisation is load-bearing rather than cosmetic. In two dimensions
+$n_x^4 + n_y^4 = (3 + \cos 4\vartheta)/4$, so @eq-ad-aniso collapses to
+$a_s = 1 + \epsilon_4 \cos 4\vartheta$ *exactly*: $\epsilon_4$ is then the
+anisotropy strength of the selection theory, $a_s$ averages to one over
+orientation, and published values transfer directly. The un-normalised
+$a_s = 1 + \epsilon_4 \sum n_i^4$ that an earlier revision of this application
+used has an effective strength of $(\epsilon_4/4)/(1 + 0.75\epsilon_4)$ —
+about a quarter of nominal — so the literature's $\epsilon_4 = 0.02$ behaves
+like $0.005$ and grows a blob instead of a dendrite.
+
+### Phase field
+
+$$
+\tau(\mathbf{n})\, \partial_t \phi =
+   \nabla\!\cdot\!\left[ W(\mathbf{n})^2 \nabla\phi \right]
+ + \sum_i \partial_i \left[ |\nabla\phi|^2\, W(\mathbf{n})
+        \frac{\partial W}{\partial(\partial_i\phi)} \right]
+ + \phi - \phi^3
+ - \lambda\,(1-\phi^2)^2 \left( U + M_c\,\theta \right)
+ - \lambda_{\mathrm{el}}\,(1-\phi^2)^2
+        \frac{\partial f_{\mathrm{el}}}{\partial \phi} .
+$$ {#eq-ad-phi}
+
+The first two terms are the anisotropic gradient energy and the
+Cahn–Hoffman flux that goes with it; the third is the double well; the fourth
+is the chemical and thermal driving force; the fifth is the elastic feedback
+this chapter exists to measure. The $(1-\phi^2)^2$ weight localises the
+driving force to the interface and is what makes the bulk phases exact
+solutions of the double well at any $U$ and $\theta$.
+
+### Solute
+
+Conserved form, with the anti-trapping current $\mathbf{j}_{\mathrm{at}}$ that
+removes the spurious solute trapping a diffuse interface would otherwise
+produce:
+
+$$
+\partial_t \left[ P(\phi)\, U \right]
+  = \nabla\!\cdot\!\left[ D_l\, q(\phi) \nabla U
+        + \mathbf{j}_{\mathrm{at}} \right]
+    + \tfrac{1}{2}\, \partial_t \phi ,
+$$ {#eq-ad-u}
+
+$$
+P(\phi) = \frac{(1+k) - (1-k)\phi}{2}, \qquad
+q(\phi) = \frac{1-\phi}{2}, \qquad
+\mathbf{j}_{\mathrm{at}} = \frac{W_0}{2\sqrt{2}}
+    \left[ 1 + (1-k)U \right] \partial_t\phi \,
+    \frac{\nabla\phi}{|\nabla\phi|} .
+$$ {#eq-ad-at}
+
+The pairing of the conservative left-hand side with the source
+$\tfrac{1}{2}\partial_t\phi$ is not interchangeable with the
+non-conservative form. Substituting
+$\partial_t[PU] = P\,\partial_t U + U\,\partial_t P$ with
+$\partial_t P = -\tfrac{1-k}{2}\partial_t\phi$ cancels the $(1-k)U$ term
+that the non-conservative source carries. Running the mismatched pair — the
+conservative left side with the non-conservative source — breaks solute
+conservation by 10% and biases the effective partition coefficient by 15–34%.
+That is a measurement made during development, not an argument.
+
+### Temperature
+
+$$
+\partial_t \theta = D_{\mathrm{th}} \nabla^2 \theta
+    + \tfrac{1}{2}\, \partial_t \phi .
+$$ {#eq-ad-theta}
+
+The source is the latent heat, normalised so that a full transformation
+$\phi: -1 \to +1$ raises $\theta$ by exactly one. On a periodic domain
+@eq-ad-theta integrates to
+$\mathrm{d}\langle\theta\rangle/\mathrm{d}t
+ = \tfrac12\,\mathrm{d}\langle\phi\rangle/\mathrm{d}t$:
+**the box has no heat sink**, and @sec-ad-latent is about what that does to a
+steady tip.
+
+### Mechanical equilibrium
+
+Quasi-static: there is no time derivative, so the displacement is slaved to
+the instantaneous $\phi$, $U$ and $\theta$.
+
+$$
+\nabla\!\cdot\!\boldsymbol{\sigma} = 0, \qquad
+\boldsymbol{\sigma} = \mathsf{C}(\phi) :
+   \left( \boldsymbol{\varepsilon}(\mathbf{u}) - \boldsymbol{\varepsilon}^{*} \right),
+\qquad
+\varepsilon_{ij}(\mathbf{u}) = \tfrac{1}{2}
+   \left( \partial_i u_j + \partial_j u_i \right) ,
+$$ {#eq-ad-equil}
+
+with the eigenstrain and the interpolated stiffness
+
+$$
+\varepsilon^{*}_{ij} = h(\phi)
+  \left[ \varepsilon_c \left( U - U_{\mathrm{ref}} \right)
+       + \varepsilon_T \left( \theta - \theta_{\mathrm{ref}} \right) \right]
+  \delta_{ij},
+\qquad
+h(\phi) = \frac{1+\phi}{2},
+$$ {#eq-ad-eigen}
+
+$$
+\mathsf{C}(\phi) = \mathsf{C}_{\mathrm{solid}}\, h(\phi)
+   + \mathsf{C}_{\mathrm{liquid}} \left( 1 - h(\phi) \right) .
+$$ {#eq-ad-stiff}
+
+The eigenstrain is purely dilatational and lives in the solid, which is what
+$h(\phi)$ enforces: a liquid has no reference lattice to misfit against.
+
+### Elastic energy and the feedback term
+
+$$
+f_{\mathrm{el}} = \tfrac{1}{2}
+  \left( \boldsymbol{\varepsilon} - \boldsymbol{\varepsilon}^{*} \right) :
+  \mathsf{C} :
+  \left( \boldsymbol{\varepsilon} - \boldsymbol{\varepsilon}^{*} \right) ,
+$$ {#eq-ad-fel}
+
+$$
+\frac{\partial f_{\mathrm{el}}}{\partial \phi}
+  = -\,\boldsymbol{\sigma} : \frac{\partial \boldsymbol{\varepsilon}^{*}}{\partial \phi}
+    + \tfrac{1}{2}
+      \left( \boldsymbol{\varepsilon} - \boldsymbol{\varepsilon}^{*} \right) :
+      \frac{\partial \mathsf{C}}{\partial \phi} :
+      \left( \boldsymbol{\varepsilon} - \boldsymbol{\varepsilon}^{*} \right) .
+$$ {#eq-ad-dfel}
+
+Both terms are kept. The first is the transformation-work term and dominates;
+the second is the modulus-contrast term, and it is the one that makes the
+solve *inhomogeneous* and therefore iterative. Differentiating at frozen
+strain is legitimate because the strain is at mechanical equilibrium, so
+$\delta F/\delta \mathbf{u} = -\nabla\!\cdot\!\boldsymbol{\sigma} = 0$ and the
+partial derivative is the total variational derivative; the unit tests check
+that against a finite difference of the *re-converged* energy rather than
+assuming it.
+
+### How the elastic problem is actually solved
+
+@eq-ad-equil with a $\phi$-dependent stiffness has no closed form. It is
+solved by the Khachaturyan–Shatalov Fourier Green-operator method extended to
+inhomogeneous moduli in the manner of Hu and Chen. Choose a homogeneous
+reference stiffness $\mathsf{C}_0$ (the Voigt average of solid and liquid) and
+define the polarisation
+
+$$
+\boldsymbol{\tau}_{\mathrm{pol}}
+  = \boldsymbol{\sigma} - \mathsf{C}_0 : \boldsymbol{\varepsilon}
+  = \left( \mathsf{C} - \mathsf{C}_0 \right) :
+    \left( \boldsymbol{\varepsilon} - \boldsymbol{\varepsilon}^{*} \right)
+    - \mathsf{C}_0 : \boldsymbol{\varepsilon}^{*} .
+$$ {#eq-ad-pol}
+
+The second term is the drive and must not be dropped: without it the
+polarisation vanishes identically when $\mathsf{C} = \mathsf{C}_0$, which
+would predict zero strain for a misfitting inclusion in a homogeneous medium.
+The fixed point is then
+
+$$
+\hat{\boldsymbol{\varepsilon}}(\mathbf{k})
+  = -\,\hat{\boldsymbol{\Gamma}}(\mathbf{k}) :
+     \hat{\boldsymbol{\tau}}_{\mathrm{pol}}(\mathbf{k})
+  \quad (\mathbf{k} \neq \mathbf{0}),
+\qquad
+\hat{\boldsymbol{\varepsilon}}(\mathbf{0}) = \bar{\boldsymbol{\varepsilon}},
+$$ {#eq-ad-fixed}
+
+with $\bar{\boldsymbol{\varepsilon}}$ the applied macroscopic strain and
+$\boldsymbol{\Gamma}$ the Green operator built from the acoustic tensor of the
+reference medium,
+
+$$
+\left( G^{-1} \right)_{ik}(\mathbf{k}) = C_{0,ijkl}\, k_j k_l ,
+\qquad
+\Gamma_{ijkl} = \operatorname{sym}\!\left( k_j\, G_{ik}\, k_l \right) .
+$$ {#eq-ad-green}
+
+Each iteration is twelve real transforms (six symmetric components, forward
+and back). The plain fixed point converges at a rate set by the modulus
+contrast; the Eyre–Milton accelerated scheme replaces that with
+$(\sqrt{r}-1)/(\sqrt{r}+1)$ in the contrast $r$ and is the default.
+
+That $\hat{\boldsymbol{\varepsilon}}(\mathbf{0})$ is a *choice* and not a
+consequence deserves saying out loud. Setting it to zero clamps the periodic
+cell at its mean strain, so a uniformly transforming body develops a uniform
+stress whose size grows with the solid fraction and shrinks with the box
+volume — which would make the elastic driving force depend on the domain size
+and contaminate exactly the domain study @sec-ad-steady needs. The default
+here is instead zero mean *stress*, $\bar{\boldsymbol{\varepsilon}} =
+\langle \boldsymbol{\varepsilon}^{*} \rangle$, which is a genuinely free body
+and is exact for a homogeneous modulus. Both are available and
+@sec-ad-sensitivity reports the difference rather than asserting it is small.
+
+### Provenance
+
+Every piece of the system above is taken from the primary literature, not
+re-derived.
+
+| Piece | Source |
+|---|---|
+| Quantitative dilute-alloy phase field; anti-trapping current | Echebarria, Folch, Karma & Plapp, *Phys. Rev. E* **70**, 061604 (2004) |
+| Anti-trapping current; thin-interface asymptotics | Karma, *Phys. Rev. Lett.* **87**, 115701 (2001) |
+| Coupled heat and solute | Ramirez, Beckermann, Karma & Diepers, *Phys. Rev. E* **69**, 051607 (2004) |
+| Anisotropy function; thin-interface limit | Karma & Rappel, *Phys. Rev. E* **57**, 4323 (1998) |
+| Eigenstrain microelasticity; Fourier Green operator | Khachaturyan, *Theory of Structural Transformations in Solids* (1983) |
+| Inhomogeneous-modulus iterative FFT solve | Hu & Chen, *Acta Mater.* **49**, 1879 (2001) |
+| Accelerated fixed point | Eyre & Milton, *Eur. Phys. J. AP* **6**, 41 (1999) |
+| Spherical-inclusion closed form (test oracle) | Eshelby, *Proc. R. Soc. A* **241**, 376 (1957) |
+
+: Provenance of the governing system. {#tbl-ad-provenance}
+
+## Problem setup
+
+Two binaries, one model. `alloy_dendrite_planar` runs the Stage-1 planar
+front; `alloy_dendrite_growth` runs the 2-D and 3-D dendrite and the elastic
+coupling. Both are `--key=value` driven, and an unknown key is an error rather
+than a warning — a typo that silently reverts a parameter to its default is
+exactly how a verification application produces a confident wrong answer.
+
+| Item | Description |
+|---|---|
+| Use case | A single crystalline seed growing into an undercooled, supersaturated dilute alloy melt, with $\langle 100 \rangle$ cubic anisotropy selecting the arm directions and a solutal/thermal eigenstrain loading the solid |
+| Domain | $N_x \times N_y \times N_z$ with $\Delta y = \Delta z = \Delta x$; $N_z = 1$ selects the 2-D slab and anything larger the full 3-D brick, from one templated stepper. The shipped 2-D case is $600^2$ at $\Delta x = 0.8\,W_0$, i.e. a $480\,W_0$ box |
+| Boundary conditions | Periodic in every direction, for all four fields and for the elastic solve — the Green operator of @eq-ad-green *is* a periodic operator, so this is not a convenience but the condition under which @eq-ad-fixed is the solution |
+| Initial condition | $\phi = \tanh\!\left[(R_{\mathrm{seed}} - r)/\sqrt{2}\,W_0\right]$ about the box centre, $U = -\Omega$ and $\theta = 0$ everywhere. $R_{\mathrm{seed}} = 8\,W_0$, comfortably above the critical nucleus $\sim d_0/\Omega$. Deterministic; no noise anywhere, which is what makes elastic-off against elastic-on a controlled experiment rather than two samples of an ensemble |
+| Key physical parameters | $k = 0.15$, $D_l = 2$, $\lambda = D_l/a_2 = 3.1913$ (so the kinetic coefficient $\beta$ vanishes), $\Omega = 0.55$, $d_0/W_0 = a_1 a_2 / D_l = 0.277$ — the parameters of the Karma 2001 dilute-alloy benchmark. $\epsilon_4$ is scanned. Elastic constants and misfits are Al–4.5 wt% Cu; see @tbl-ad-material |
+| Observables | Tip position, velocity and radius (parabola fit at four independent fit windows), the selection parameter $\sigma^{*} = 2 d_0 D_l / (V\rho^2)$, $V\rho$ against the Ivantsov relation, solute and enthalpy conservation residuals, and — with the coupling on — the elastic iteration count, $\int f_{\mathrm{el}}\,\mathrm{d}V$, $\max|\partial f_{\mathrm{el}}/\partial\phi|$ and the residual mean pressure |
+| Model maturity | numerical verification: **analytical** at Stages 0 and 1 (Eshelby closed form; thin-interface planar relations) and **literature-comparative** at Stage 2 · physical completeness: **coupled** — four fields, two-way in every pair · calibration: **literature material data with stated provenance**, not fitted |
+
+### Material data and how it becomes a dimensionless coupling
+
+The two conversions below are where a coupled elastic phase field is most
+easily wrong by orders of magnitude, so they are written out rather than
+buried in a constant.
+
+**Stiffness.** @eq-ad-phi is dimensionless. Matching the elastic term against
+the chemical term $-\lambda(1-\phi^2)^2 U$ gives
+$\lambda_{\mathrm{el}} = \lambda / f_{\mathrm{ref}}$ with
+$f_{\mathrm{ref}} = L\,\Delta T_0/T_M$ and
+$\Delta T_0 = |m|\, c_l^0 (1-k)$ the freezing range. Equivalently, and this
+is how the code does it: **express every stiffness in units of
+$f_{\mathrm{ref}}$, and then $\lambda_{\mathrm{el}} = \lambda$ is the
+calibrated coupling.** A $\lambda_{\mathrm{el}} \neq \lambda$ is then an
+explicit statement that the coupling is being scaled away from its calibrated
+value — legitimate in a sensitivity scan, and impossible to do by accident.
+
+**Eigenstrain.** $\varepsilon_c$ is $\partial\varepsilon^{*}/\partial U$, not
+$\partial\varepsilon^{*}/\partial c$. One unit of $U$ is a composition change
+of $(1-k)c_l^0$, so
+$\varepsilon_c = a^{-1}(\mathrm{d}a/\mathrm{d}c)\,(1-k)\,c_l^0$. Omitting that
+factor is a two-order-of-magnitude error in the elastic energy.
+$\varepsilon_T = \alpha_L L/c_p$, because $\theta$ is scaled by the
+hypercooling.
+
+| Quantity | Value | Source |
+|---|---|---|
+| $T_M$ (pure Al) | 933.47 K | CRC Handbook, 97th ed. |
+| $L$ (per mass / per volume) | $3.97\times10^{5}$ J kg⁻¹ / $9.43\times10^{8}$ J m⁻³ | CRC Handbook; $\rho = 2375$ kg m⁻³ from Assael *et al.*, *J. Phys. Chem. Ref. Data* **35**, 285 (2006) |
+| $c_p$ (liquid, near $T_M$) | $1.18\times10^{3}$ J kg⁻¹ K⁻¹ | Assael *et al.* (2006) |
+| $k$, $|m|$ | 0.14, 3.4 K per wt% Cu | Al–Cu phase diagram; the values used throughout the quantitative dilute-alloy literature |
+| $c_0$ | 4.5 wt% Cu (1.97 at%) | alloy choice |
+| $a$, $\mathrm{d}a/\mathrm{d}c$ | 4.0496 Å, $-0.0175$ Å per at% Cu | CRC Handbook; Vegard slope **representative**, not assessed here (reported values span $-0.017$ to $-0.018$) |
+| $C_{11}, C_{12}, C_{44}$ (300 K) | 108.2, 61.3, 28.5 GPa | Kamm & Alers, *J. Appl. Phys.* **35**, 327 (1964) |
+| Softening at $T_M$ | $\times 0.5$ | **representative** extrapolation of Kamm & Alers to 933 K; running the 300 K constants would overstate $f_{\mathrm{el}}$ by about four |
+| $\alpha_L$ (solid, near $T_M$) | $3.0\times10^{-5}$ K⁻¹ | **representative** near-melting value |
+
+: Al–4.5 wt% Cu material data. Entries marked *representative* are not assessed for this alloy at this temperature; the elastic energy scales as the square of the Vegard slope, so its stated 6% band is a 12% band in $f_{\mathrm{el}}$. {#tbl-ad-material}
+
+The derived dimensionless couplings are
+$f_{\mathrm{ref}} = 1.40\times10^{7}$ J m⁻³,
+$\varepsilon_c = -7.29\times10^{-3}$ per unit $U$ and
+$\varepsilon_T = +1.01\times10^{-2}$ per unit $\theta$. The two misfits have
+opposite sign, which is physically right and worth noticing: solute rejection
+contracts the freezing solid while the latent heat it releases expands it.
+
+### Numerics
+
+- $\phi$, $U$ and $\theta$: high-order central finite differences (orders 2
+  to 14 are available), halo width $\mathrm{order}/2$, **explicit Euler** in
+  time. Euler is not a placeholder — it is what makes the discrete solute
+  identity behind @eq-ad-u exact to round-off. A multi-stage scheme would need
+  that identity re-derived per stage.
+- Three limits bound $\Delta t$ and all three are enforced: the diffusive von
+  Neumann limit on $D_l$ and $D_{\mathrm{th}}$, the phase-field relaxation
+  $\tau(\mathbf{n})$, and the interface CFL $\Delta x / V$. The third is the
+  one that is easy to miss, and it is what keeps the discrete
+  $\partial_t\phi$ that drives the anti-trapping current resolved.
+- Elasticity: HeFFTe on the **same decomposition** as the finite-difference
+  stack. The application refuses to run if the FD owned box and the FFT
+  real-space inbox differ, because the two are copied index-for-index and a
+  mismatch would be invisible on one rank and wrong on every other.
+- The elastic solve runs every `n_el_substep` phase-field steps. It is
+  quasi-static — the acoustic time scale is ten or more orders of magnitude
+  below $\tau_0$ for any metal — so lagging it is not a physical relaxation
+  error at all, only a staleness of $\partial f_{\mathrm{el}}/\partial\phi$
+  bounded by $N\Delta t\,|V|\,|\nabla(\partial f_{\mathrm{el}}/\partial\phi)|$.
+  @sec-ad-cost measures what it costs and what it changes.

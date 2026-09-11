@@ -574,6 +574,7 @@ measure_tip_scan(const std::vector<double> &phi_xy, int nx, int ny, double dx,
     out.halfwidth[q] = halfwidths[q];
     const DendriteTip t =
         measure_tip(phi_xy, nx, ny, dx, dy, i_seed, j_seed, halfwidths[q]);
+
     out.rho[q] = t.valid ? t.rho : std::numeric_limits<double>::quiet_NaN();
     out.fit_rms[q] = t.valid ? t.fit_rms : std::numeric_limits<double>::quiet_NaN();
     if (std::isfinite(out.rho[q]) && out.rho[q] > 0.0) {
@@ -586,6 +587,79 @@ measure_tip_scan(const std::vector<double> &phi_xy, int nx, int ny, double dx,
   }
   return out;
 }
+
+/**
+ * @brief Fit half-widths as multiples of the tip radius itself.
+ *
+ * The literature convention. `measure_tip_scan` takes its windows in *cells*,
+ * which is the right unit for asking whether the grid resolves the fit and
+ * the wrong one for asking whether the shape is a parabola: those two
+ * questions have different answers and a cell-based scan conflates them.
+ *
+ * Concretely: at `eps4 = 0.04` and `Omega = 0.55` the tip radius is about
+ * `3 W0`. At `dx = 0.4` the widest default window, 12 cells, reaches
+ * `4.8 W0` up the flank -- more than one radius past the point where a
+ * dendrite stops being a paraboloid and starts being a stem. The scan then
+ * reports a 49% spread that does not shrink when the grid is refined,
+ * because it is not a resolution error at all; it is the flank. Measured at
+ * `dx = 0.5` and `0.4` the spread was 48.9% and 49.0%, while the *velocity*
+ * converged to 0.7%. A number that does not move under refinement is not
+ * telling you about the discretisation.
+ *
+ * Scaling the windows with `rho` asks the question that has a
+ * grid-independent answer, and it is the same question every published
+ * tip-radius measurement asks. Two passes: window in cells to get a first
+ * `rho`, then `frac * rho` converted to cells. One refinement is enough --
+ * the map from window to `rho` is weak enough near the tip that a second
+ * pass moves the answer by less than the spread being measured -- but a
+ * pathological first pass is rejected rather than iterated on.
+ *
+ * @param frac  Half-widths in units of `rho`; 0.5, 1, 1.5, 2 by default.
+ *              A half-width below two cells cannot support a parabola fit
+ *              and reports NaN for that window rather than a number.
+ */
+[[nodiscard]] inline TipWindowScan
+measure_tip_scan_relative(const std::vector<double> &phi_xy, int nx, int ny,
+                          double dx, double dy, int i_seed, int j_seed,
+                          const double frac[kTipWindowCount],
+                          int seed_halfwidth = 5) {
+  TipWindowScan out;
+  const DendriteTip first =
+      measure_tip(phi_xy, nx, ny, dx, dy, i_seed, j_seed, seed_halfwidth);
+  if (!first.valid || !std::isfinite(first.rho) || first.rho <= 0.0) {
+    for (int q = 0; q < kTipWindowCount; ++q) {
+      out.rho[q] = std::numeric_limits<double>::quiet_NaN();
+      out.fit_rms[q] = std::numeric_limits<double>::quiet_NaN();
+    }
+    return out;
+  }
+  double lo = std::numeric_limits<double>::infinity();
+  double hi = 0.0;
+  for (int q = 0; q < kTipWindowCount; ++q) {
+    const int hw = static_cast<int>(std::lround(frac[q] * first.rho / dy));
+    out.halfwidth[q] = hw;
+    if (hw < 2) {
+      out.rho[q] = std::numeric_limits<double>::quiet_NaN();
+      out.fit_rms[q] = std::numeric_limits<double>::quiet_NaN();
+      continue;
+    }
+    const DendriteTip t = measure_tip(phi_xy, nx, ny, dx, dy, i_seed, j_seed, hw);
+    out.rho[q] = t.valid ? t.rho : std::numeric_limits<double>::quiet_NaN();
+    out.fit_rms[q] = t.valid ? t.fit_rms : std::numeric_limits<double>::quiet_NaN();
+    if (std::isfinite(out.rho[q]) && out.rho[q] > 0.0) {
+      lo = std::fmin(lo, out.rho[q]);
+      hi = std::fmax(hi, out.rho[q]);
+    }
+  }
+  if (std::isfinite(lo) && lo > 0.0) {
+    out.spread = (hi - lo) / lo;
+  }
+  return out;
+}
+
+/// Default relative fit half-widths, in units of `rho`.
+inline constexpr double kTipWindowRelDefaults[kTipWindowCount] = {0.5, 1.0, 1.5,
+                                                                  2.0};
 
 /**
  * @brief Split-window drift of a series: is the plateau a plateau?

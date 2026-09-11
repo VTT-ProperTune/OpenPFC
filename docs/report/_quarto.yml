@@ -34,8 +34,11 @@ book:
         - 13_wave2d.qmd
         - 14_allen_cahn.qmd
         - 15_kobayashi.qmd
-    - 16_scalability.qmd
-    - 17_conclusions.qmd
+    - part: "Coupled multiphysics"
+      chapters:
+        - 16_alloy_dendrite.qmd
+    - 17_scalability.qmd
+    - 18_conclusions.qmd
 
 format:
   html:
