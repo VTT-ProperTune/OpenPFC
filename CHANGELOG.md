@@ -9,6 +9,35 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- **Coherent elastic Cahn–Hilliard** (`cahn_hilliard_elastic`). Same
+  application, not a seventeenth catalog entry. Vegard eigenstrain
+  \(\varepsilon^{*}=\varepsilon_0(c-c_{\mathrm{ref}})I\) on the existing
+  Khachaturyan Green operator; \(\mu_{\mathrm{el}}=\partial f_{\mathrm{el}}/\partial c\)
+  enters the conserved chemical potential. Equal-stiffness coherent pair
+  (one \(\Gamma\) application per step). Host-only until device Green
+  (#157). Catch2: uniform field stays put; mass is conserved.
+  $256^2$ campaign (job 21969396): cubic Vegard axis power $0.96$
+  versus isotropic labyrinth versus $\varepsilon_0=0.08$ suppression.
+
+### Changed
+
+- **Thin-film `fields[]` snapshots** on `thin_film_nonlinear` / `_hip`
+  (same helper as EHD and surface diffusion). Omitting `fields[]` keeps
+  diagnostics-only behaviour for tests. Report figures at $512^2$
+  (HIP job 21968269): late spontaneous dewetting wallpaper and a
+  $t=85$ spontaneous-vs-defect pair. Recipe:
+  `apps/thin_film/slurm/report_512.sbatch` and
+  `docs/report/figures/make_thin_film_money.py`.
+- **Cahn–Hilliard report figures at $512^2$**. The chapter's money figure
+  is the science cell (`fe_cr_coarsening.json`, $c_0=0.5$, HIP job
+  21968070): a late bicontinuous labyrinth, an early-vs-late coarsening
+  pair, and a $512^2$ single-mode vs broadband comparison. Replaces the
+  $128^2$ stripe montage. Recipe:
+  `apps/cahn_hilliard/slurm/report_512.sbatch` and
+  `docs/report/figures/make_cahn_hilliard_money.py`.
+
+### Added
+
 - **Inverse homogenization Stages 6–8 and report chapter** (issue #161).
   Process-parameter Cahn–Hilliard family versus rotating-square auxetic
   seed; percolation/island/opening metrics; 3-D CPU/MPI driver with

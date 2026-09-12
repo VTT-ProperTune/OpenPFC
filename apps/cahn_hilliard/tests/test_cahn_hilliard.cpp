@@ -14,9 +14,13 @@
 
 #include <cmath>
 #include <complex>
+#include <filesystem>
+#include <fstream>
 #include <mpi.h>
 #include <numbers>
 #include <stdexcept>
+#include <string>
+#include <unistd.h>
 #include <vector>
 
 #include <nlohmann/json.hpp>
@@ -24,6 +28,7 @@
 #include <cahn_hilliard/cahn_hilliard_physics.hpp>
 #include <cahn_hilliard/cahn_hilliard_session.hpp>
 #include <cahn_hilliard/cosine_mode.hpp>
+#include <cahn_hilliard/elastic_driver.hpp>
 #include <cahn_hilliard/fe_cr_thermo.hpp>
 #include <openpfc_apps/structure_factor.hpp>
 #include <openpfc/kernel/data/domain.hpp>
@@ -556,4 +561,90 @@ TEST_CASE("Coarsening exponent recovers a known power law",
   REQUIRE_THAT(pfc::apps::coarsening_exponent(t, L),
                WithinRel(1.0 / 3.0, 1e-9));
   REQUIRE(pfc::apps::coarsening_exponent({1.0}, {2.0}) == 0.0);
+}
+
+TEST_CASE("Elastic CH converts Pa stiffness into RT/Vm units",
+          "[cahn_hilliard][elastic]") {
+  cahn_hilliard::CahnHilliardParams ch;
+  ch.recompute_derived();
+  cahn_hilliard::ElasticCHParams el;
+  el.E = 2.0e11;
+  el.nu = 0.3;
+  const auto C = cahn_hilliard::stiffness_in_rt_vm(el, ch);
+  const double f0 = ch.scales().f0(ch.T);
+  const auto C_pa = pfc::apps::Stiffness::isotropic(el.E, el.nu);
+  REQUIRE_THAT(C.c11, WithinRel(C_pa.c11 / f0, 1e-12));
+  REQUIRE_THAT(C.zener(), WithinAbs(1.0, 1e-12));
+}
+
+TEST_CASE("Uniform composition does not move under a uniform eigenstrain",
+          "[cahn_hilliard][elastic]") {
+  if (world_size() != 1) SKIP("single-rank spectral check");
+  const auto dir = std::filesystem::temp_directory_path() /
+                   ("ch_el_uniform_" + std::to_string(::getpid()));
+  std::filesystem::create_directories(dir);
+  const auto path = dir / "case.json";
+  {
+    std::ofstream f(path);
+    f << R"({
+      "model": {"name": "cahn_hilliard", "params": {"c0": 0.5, "Omega": 20100.0}},
+      "elasticity": {"eps0": 0.04, "c_ref": 0.4, "E": 2.0e11, "nu": 0.3},
+      "domain": {"Lx": 16, "Ly": 16, "Lz": 1, "dx": 1.0},
+      "timestepping": {"t1": 0.5, "dt": 0.1, "saveat": 0.5},
+      "diagnostics": {"csv": ")" + (dir / "d.csv").string() + R"("},
+      "initial_conditions": [{"type": "cosine_mode", "c0": 0.5, "amplitude": 0.0,
+                              "nx": 1, "ny": 0, "nz": 0}]
+    })";
+  }
+  REQUIRE(cahn_hilliard::run_cahn_hilliard_elastic(0, 1, MPI_COMM_WORLD,
+                                                   path.string()) == 0);
+  std::ifstream csv(dir / "d.csv");
+  std::string header, last, line;
+  std::getline(csv, header);
+  while (std::getline(csv, line)) last = line;
+  // step,time,mean,mass,min,max,...
+  std::vector<std::string> cols;
+  for (std::size_t i = 0, p = 0; p != std::string::npos; ++i) {
+    const auto n = last.find(',', p);
+    cols.push_back(last.substr(p, n - p));
+    p = (n == std::string::npos) ? n : n + 1;
+  }
+  REQUIRE_THAT(std::stod(cols[2]), WithinAbs(0.5, 1e-12));
+  REQUIRE_THAT(std::stod(cols[4]), WithinAbs(0.5, 1e-12));
+  REQUIRE_THAT(std::stod(cols[5]), WithinAbs(0.5, 1e-12));
+  std::filesystem::remove_all(dir);
+}
+
+TEST_CASE("Elastic CH conserves mass on a noisy cell", "[cahn_hilliard][elastic]") {
+  if (world_size() != 1) SKIP("single-rank spectral check");
+  const auto dir = std::filesystem::temp_directory_path() /
+                   ("ch_el_mass_" + std::to_string(::getpid()));
+  std::filesystem::create_directories(dir);
+  const auto path = dir / "case.json";
+  {
+    std::ofstream f(path);
+    f << R"({
+      "model": {"name": "cahn_hilliard", "params": {"c0": 0.5, "Omega": 20100.0}},
+      "elasticity": {"eps0": 0.04, "c_ref": 0.5, "c11": 2.3e11, "c12": 1.35e11, "c44": 1.17e11},
+      "domain": {"Lx": 32, "Ly": 32, "Lz": 1, "dx": 1.0},
+      "timestepping": {"t1": 2.0, "dt": 0.1, "saveat": 2.0},
+      "diagnostics": {"csv": ")" + (dir / "d.csv").string() + R"("},
+      "initial_conditions": [{"type": "seeded_noise", "c0": 0.5, "amplitude": 0.01, "seed": 7}]
+    })";
+  }
+  REQUIRE(cahn_hilliard::run_cahn_hilliard_elastic(0, 1, MPI_COMM_WORLD,
+                                                   path.string()) == 0);
+  std::ifstream csv(dir / "d.csv");
+  std::string header, first, last, line;
+  std::getline(csv, header);
+  std::getline(csv, first);
+  while (std::getline(csv, line)) last = line;
+  auto mean_of = [](const std::string &row) {
+    const auto c1 = row.find(',');
+    const auto c2 = row.find(',', c1 + 1);
+    const auto c3 = row.find(',', c2 + 1);
+    return std::stod(row.substr(c2 + 1, c3 - c2 - 1));
+  };
+  REQUIRE_THAT(mean_of(last), WithinAbs(mean_of(first), 1e-12));
+  std::filesystem::remove_all(dir);
 }
