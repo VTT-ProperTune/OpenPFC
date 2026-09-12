@@ -18,6 +18,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   (#157). Catch2: uniform field stays put; mass is conserved.
   $256^2$ campaign (job 21969396): cubic Vegard axis power $0.96$
   versus isotropic labyrinth versus $\varepsilon_0=0.08$ suppression.
+  $64^3$ (job 21979862): orthogonal mid-planes of a 3-D $\langle 100\rangle$
+  network, not an extruded 2-D maze.
 
 ### Changed
 

@@ -244,6 +244,19 @@ is $t=20$ (axis power $0.975$) against $t=40$.
 ![Same cubic run, $t=20$ vs $t=40$. The Manhattan labyrinth thickens;
 it does not relax back to an isotropic one.](figures/cahn_hilliard_elastic_pair.png){#fig-ch-elastic-pair}
 
+A 2-D maze is not the 3-D morphology. @fig-ch-elastic-3d is the same
+cubic Vegard model on $64^3$ (job 21979862, $t=30$): $xy$, $xz$ and $yz$
+mid-planes are all $\langle 100\rangle$-aligned, and they are *not* the
+same picture — this is a 3-D network of axis-aligned walls, not an
+extruded 2-D cell. @fig-ch-elastic-3d-iso is the $c>0.5$ surface of that
+brick.
+
+![Cubic Vegard Cahn–Hilliard, $64^3$, $t=30$. Three orthogonal mid-planes.
+Job 21979862.](figures/cahn_hilliard_elastic_3d_slices.png){#fig-ch-elastic-3d}
+
+![Surface voxels $c>0.5$ of the same $64^3$ cell. Bicontinuous,
+axis-aligned, not a 2-D extrusion.](figures/cahn_hilliard_elastic_3d_iso.png){#fig-ch-elastic-3d-iso}
+
 Coarsening is the result that a time strip of similar-looking fields
 cannot show. @fig-ch-coarsening is the same run at $t=400$ (wavelength
 already selected, $L\approx 17.7$ cells) and $t=4000$ ($L\approx 37.3$
