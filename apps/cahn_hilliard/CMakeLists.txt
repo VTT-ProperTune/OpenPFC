@@ -1,7 +1,8 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-# Cahn–Hilliard: one physics header, one JSON SpectralETDSession, CPU + HIP.
+# Cahn–Hilliard: JSON SpectralETDSession (CPU + HIP) plus host-only
+# coherent-elastic binary on the existing Green operator.
 
 option(CAHN_HILLIARD_ENABLE_TESTS "Enable building Cahn–Hilliard tests" ON)
 
@@ -36,6 +37,12 @@ endfunction()
 
 cahn_hilliard_cpu_executable(cahn_hilliard src/cahn_hilliard.cpp)
 install(TARGETS cahn_hilliard DESTINATION bin)
+
+# Coherent Vegard misfit on the existing Green operator (host-only, #157).
+# Not a seventeenth application: same Fe–Cr model, extra binary like
+# thin_film_nonlinear.
+cahn_hilliard_cpu_executable(cahn_hilliard_elastic src/cahn_hilliard_elastic.cpp)
+install(TARGETS cahn_hilliard_elastic DESTINATION bin)
 
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
   cahn_hilliard_hip_executable(cahn_hilliard_hip src/hip/cahn_hilliard.cpp)

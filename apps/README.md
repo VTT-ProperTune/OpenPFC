@@ -22,7 +22,7 @@ retain their app-specific commands.
 |-----------|------|--------|----------------|
 | [**`tungsten/`**](tungsten/README.md) | Production-style **3D phase-field crystal** (tungsten); JSON/TOML, validated params, field I/O | JSON / TOML (`inputs_json/`, `inputs_toml/`) | `SpectralETDSession<TungstenPhysics, …>`, spectral / HeFFTe, CPU + optional CUDA/HIP |
 | [**`aluminumNew/`**](aluminumNew/README.md) | Compact aluminum PFC sample (`seed_grid_fcc`) | JSON / TOML | `SpectralETDSession<AluminumPhysics, …>`, moving-frame mean-field ETD |
-| [**`cahn_hilliard/`**](cahn_hilliard/README.md) | **Fe–Cr-like Cahn–Hilliard** spinodal (\(k^4\) spectral ETD) | JSON (`inputs_json/`) | `SpectralETDSession<CahnHilliardPhysics, …>`; CPU + optional HIP |
+| [**`cahn_hilliard/`**](cahn_hilliard/README.md) | **Fe–Cr-like Cahn–Hilliard** spinodal (\(k^4\) spectral ETD); optional coherent Vegard Green-operator coupling (`cahn_hilliard_elastic`, host-only) | JSON (`inputs_json/`) | `SpectralETDSession<CahnHilliardPhysics, …>`; CPU + optional HIP; elastic binary reuses `microelasticity.hpp` |
 | [**`thin_film/`**](thin_film/README.md) | **Lubrication dewetting / coating** (\(k^4\) capillary + disjoining) | JSON (`inputs_json/`) | `SpectralETDSession<ThinFilmPhysics, …>`; CPU + optional HIP |
 | [**`surface_diffusion/`**](surface_diffusion/README.md) | **Mullins surface diffusion** (exact \(k^4\) annealing) | JSON (`inputs_json/`) | `SpectralETDSession<SurfaceDiffusionPhysics, …>`; CPU + optional HIP |
 | [**`kawahara/`**](kawahara/README.md) | **Kawahara capillary–gravity waves** (odd-order \(ik^3\)/\(ik^5\)) | JSON (`inputs_json/`) | `SpectralETDSession<KawaharaPhysics, …>`; CPU + optional HIP |

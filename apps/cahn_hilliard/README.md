@@ -11,7 +11,7 @@ issue `#77`. The older teaching program `examples/12_cahn_hilliard` is a
 hard-coded math demo on the historical stack; use this app for JSON/TOML,
 Catch2 checks, and a HIP twin when rocFFT HeFFTe is on.
 
-Binaries: `cahn_hilliard` (CPU); `cahn_hilliard_hip` when `OpenPFC_ENABLE_HIP_SPECTRAL` is on. Built when `OpenPFC_ENABLE_HEFFTE=ON`.
+Binaries: `cahn_hilliard` (CPU); `cahn_hilliard_hip` when `OpenPFC_ENABLE_HIP_SPECTRAL` is on; `cahn_hilliard_elastic` (CPU, coherent Vegard misfit on the existing Green operator — host-only, #157). Built when `OpenPFC_ENABLE_HEFFTE=ON`.
 
 ## Fe–Cr ageing: problem setup
 
@@ -28,7 +28,7 @@ The science case, as opposed to the compact verifiers below. This is the
 | **Key parameters** | `T = 748.15 K` (475 °C); Redlich–Kister `L0 = 20500 − 9.68 T` J/mol; `Vm = 7.09e-6` m³/mol; `κ = 1e-9` J/m; `D = D0 exp(−Q/RT)` with `D0 = 2e-5` m²/s, `Q = 241` kJ/mol |
 | **Observable** | Characteristic domain length `L(t) = 2π/k₁` from the azimuthally averaged structure factor, plus its growth exponent |
 | **Simulated ageing** | ~1100 h at 475 °C (4000 code time units × 0.278 h) |
-| **Model maturity** | numerical verification: **analytical** (linear growth rate, exact `k⁴` symbol) · physical completeness: **reduced** (no elastic misfit, no magnetic Gibbs-energy term) · calibration: **representative** — see the warning below |
+| **Model maturity** | numerical verification: **analytical** (linear growth rate, exact `k⁴` symbol) · physical completeness: **reduced** without `cahn_hilliard_elastic` (no magnetic Gibbs-energy term); **extended** with the Vegard Green-operator coupling · calibration: **representative** — see the warning below |
 
 ### Why a periodic box
 
@@ -36,9 +36,13 @@ A periodic cell represents an interior volume of bulk material far from any
 free surface or grain boundary. That is the right idealisation for spinodal
 decomposition, which is a bulk instability with no nucleation barrier and no
 preferred site. It excludes exactly what its name implies: surfaces, grain
-boundaries, and any long-range stress field that would couple to the
-composition. Coherent elastic misfit in particular is known to bias α/α′
-morphology and is **not** in this model.
+boundaries. Coherent elastic misfit is known to bias α/α′ morphology; it is
+**not** in `cahn_hilliard` / `cahn_hilliard_hip`. The host binary
+`cahn_hilliard_elastic` adds a Vegard eigenstrain
+`ε* = ε0 (c − c_ref) I` on the same Khachaturyan Green operator used by
+the dendrite and inverse homogenization. Both phases are treated as equal
+stiffness solids (a coherent pair, not a solid–liquid contrast). The
+device Green (#157) is still open, so this path is CPU-only.
 
 The box must be large compared with the selected wavelength or the statistics
 are meaningless. At `c₀ = 0.5` the model predicts `λ_max ≈ 17.3` code units, so

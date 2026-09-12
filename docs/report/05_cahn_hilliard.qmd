@@ -44,7 +44,7 @@ presets.
 | Initial condition | `seeded_noise`: deterministic hashed noise bounded by $\pm 0.005$ about the mean Cr fraction, with the global mean removed by an exact integer reduction, so the initial field is identical on any number of MPI ranks |
 | Key physical parameters | $T = 748.15\ \mathrm{K}$ (475 °C); Redlich–Kister $L_0 = 20500 - 9.68\,T\ \mathrm{J\,mol^{-1}}$, $L_1 = 0$; $V_m = 7.09\times10^{-6}\ \mathrm{m^3\,mol^{-1}}$; $\kappa = 10^{-9}\ \mathrm{J\,m^{-1}}$; $D = D_0e^{-Q/RT}$ with $D_0 = 2\times10^{-5}\ \mathrm{m^2\,s^{-1}}$ and $Q = 241\ \mathrm{kJ\,mol^{-1}}$. Compositions $c_0 = 0.50$ and $c_0 = 0.45$ |
 | Observable | Domain length $L(t) = 2\pi/k_1$ and its growth exponent; early-stage $k_{\mathrm{peak}}$; mean composition (conserved); total free energy (must decrease) |
-| Model maturity | numerical verification: **analytical** — the linear growth rate, the $L(k)$ symbol, the gradient energy and a synthetic power-law fit are all checked against closed forms · physical completeness: **reduced** — one composition field, no coherent elastic misfit, no magnetic contribution to the bcc Gibbs energy · calibration: **representative**. The interaction parameter is the classical bcc Cr–Fe assessment of @Andersson1987, but the application states plainly that its thermodynamic and kinetic constants are *"representative, not verified against the primary sources digit by digit"*. Treat the numbers as semi-quantitative |
+| Model maturity | numerical verification: **analytical** — the linear growth rate, the $L(k)$ symbol, the gradient energy and a synthetic power-law fit are all checked against closed forms · physical completeness: **reduced** without elasticity (no magnetic contribution to the bcc Gibbs energy); **extended** by `cahn_hilliard_elastic`, which adds a Vegard eigenstrain on the existing Green operator · calibration: **representative**. The interaction parameter is the classical bcc Cr–Fe assessment of @Andersson1987, but the application states plainly that its thermodynamic and kinetic constants are *"representative, not verified against the primary sources digit by digit"*. Treat the numbers as semi-quantitative |
 
 A periodic cell represents an interior volume of bulk material far from any
 free surface or grain boundary. That is the right idealisation for spinodal
@@ -186,39 +186,86 @@ current-state total energy including the spectral gradient contribution.
 * **Structure factor.** The diagnostic recovers the wave number of a single
   known mode, and the exponent fit recovers $1/3$ exactly from a synthetic
   $L \propto t^{1/3}$ series.
+* **Coherent elasticity.** A uniform composition under a uniform Vegard
+  eigenstrain does not move ($\nabla^2\mu_{\mathrm{el}}=0$). Mass is
+  conserved on a noisy $32^2$ cell with cubic $C_{ij}$. The Green operator
+  itself is the dendrite/inverse suite in `test_microelasticity.cpp`.
 
 ## Binaries and inputs
 
-`cahn_hilliard` (CPU), `cahn_hilliard_hip`. Presets: `fe_cr_spinodal.json`
-(single-mode verification) and `coarsening.json` (seeded broadband
-coarsening with diagnostics).
+`cahn_hilliard` (CPU), `cahn_hilliard_hip`, `cahn_hilliard_elastic` (CPU,
+Vegard Green-operator coupling; host-only, #157). Presets:
+`fe_cr_spinodal.json` (single-mode verification), `coarsening.json`
+(seeded broadband), `fe_cr_elastic.json` (coherent cubic misfit).
 
 ## Visualisation
 
-![Broadband spinodal decomposition of Fe–32Cr from `coarsening.json`
-(seeded noise, $c_0=0.32$). The composition is essentially uniform at
-$t=0$; by $t=5$ the spinodal instability has already carved the field
-into a fine mottled pattern (`diagnostics.csv` records $c$ spanning
-$[0.14,0.87]$ at that point), and coarsening then slowly reduces the
-domain count from $t=10$ through $t=100$ while conserving the mean
-composition exactly. The colour scale is diverging and centred on $c_0$,
-not on 0.5, because departure from the alloy's own mean composition is
-the physically meaningful signal, not the absolute composition.
-](figures/cahn_hilliard_coarsening_montage.svg){#fig-ch-coarsening}
+@fig-ch-spinodal is the science cell: $512\times 512$ of Fe–50Cr at 475 °C, late
+enough that the binodals have been reached and the labyrinth has
+coarsened. HIP job 21968070, preset `fe_cr_coarsening.json`, $t=4000$
+($\approx 1114$ h). The colour scale is diverging and centred on $c_0=0.5$.
+One code cell is $1.068\,\mathrm{nm}$, so the box is $547\,\mathrm{nm}$ on
+a side.
 
-![The same alloy at the same time ($t=10$), from the two shipped
-presets. `fe_cr_spinodal.json` seeds one Fourier mode near $k_{\max}$
-(@eq-ch-growth) and grows a single, still-sinusoidal stripe pattern;
-`coarsening.json` seeds broadband noise and has already nucleated many
-separate domains. Same physics, same clock, different morphology — the
-initial condition, not the equation, decides what a spinodal micrograph
-looks like. $t=10$, not `fe_cr_spinodal.json`'s full $t_1=20$, is
-deliberate: this single-mode case keeps growing past the point where $c$
-should saturate inside $[0,1]$, and by $t\approx12$ it has overshot those
-physical bounds (ETD1 here is not unconditionally stable at large
-amplitude, matching the stability caveat in the Verification section
-above) — $t=10$ is the latest sample that is still physically sane for
-both runs.](figures/cahn_hilliard_comparison.svg){#fig-ch-comparison}
+![Cahn–Hilliard spinodal at $512\times 512$, $c_0=0.5$, $t=4000$. Bicontinuous
+$\alpha/\alpha'$ labyrinth after 1114 h of ageing at 475 °C. HIP job
+21968070, `fe_cr_coarsening.json`.](figures/cahn_hilliard_spinodal_512.png){#fig-ch-spinodal}
+
+That labyrinth is the *incoherent* morphology: no misfit, no preferred
+direction. A coherent $\alpha/\alpha'$ pair carries a Vegard eigenstrain
+$\varepsilon^{*}=\varepsilon_0(c-c_{\mathrm{ref}})I$. @fig-ch-elastic is
+the same conserved Cahn–Hilliard and the same Green operator as the
+dendrite, four ways (job 21969396, $256^2$ unless noted):
+
+- no misfit — isotropic labyrinth ($512^2$, job 21968070);
+- isotropic Vegard, $\varepsilon_0=0.04$ — still a labyrinth, slightly
+  coarser (2-D $Y(\mathbf n)$ is not flat, axis power $0.60$);
+- cubic Fe-like $C_{ij}$, $\varepsilon_0=0.04$ — $\langle 100\rangle$
+  bands, axis power $0.96$ at $t=40$;
+- cubic $\varepsilon_0=0.08$ — $2Y\varepsilon_0^2$ beats $|f''|$, the
+  spinodal is dead (amplitude $8\times 10^{-5}$).
+
+$\varepsilon_0=0.04$ is illustrative, not a fitted $da/dc$. The magnetic
+Gibbs-energy term is still absent; the device Green is still #157.
+
+![Four coherent-spinodal outcomes. Top left: no misfit. Top right:
+isotropic Vegard. Bottom left: cubic Vegard, $\langle 100\rangle$
+aligned. Bottom right: cubic Vegard large enough to suppress the
+instability. Job 21969396.](figures/cahn_hilliard_elastic_quartet.png){#fig-ch-elastic}
+
+{{< pagebreak >}}
+
+![Cubic Vegard Cahn–Hilliard, $512\times 512$, $t=40$. Axis power $0.955$,
+$c\in[0.073,0.930]$. Job 21969476.](figures/cahn_hilliard_elastic_aligned.png){#fig-ch-elastic-aligned}
+
+The aligned state also coarsens, still on the axes: @fig-ch-elastic-pair
+is $t=20$ (axis power $0.975$) against $t=40$.
+
+![Same cubic run, $t=20$ vs $t=40$. The Manhattan labyrinth thickens;
+it does not relax back to an isotropic one.](figures/cahn_hilliard_elastic_pair.png){#fig-ch-elastic-pair}
+
+Coarsening is the result that a time strip of similar-looking fields
+cannot show. @fig-ch-coarsening is the same run at $t=400$ (wavelength
+already selected, $L\approx 17.7$ cells) and $t=4000$ ($L\approx 37.3$
+cells $= 39.8\,\mathrm{nm}$). Shared colour scale: the domains thicken,
+the topology stays bicontinuous, the mean composition does not move.
+
+![Same $512\times 512$ Fe–50Cr run, $t=400$ vs $t=4000$. Domain length doubles;
+the colour scale is shared.](figures/cahn_hilliard_coarsening_pair.png){#fig-ch-coarsening}
+
+{{< pagebreak >}}
+
+The initial condition, not the equation, decides the micrograph.
+@fig-ch-comparison is the verification thermodynamics ($\Omega = 20.1\,\mathrm{kJ\,mol^{-1}}$,
+$c_0=0.32$) at $512\times 512$ and $t=10$: one Fourier mode near $k_{\max}$
+(@eq-ch-growth) stays a stripe; broadband noise has already broken into
+Cr-rich droplets. $t=10$ is the latest sample that is still physically
+sane for the single-mode seed — past $t\approx 12$ that run overshoots
+$c\in[0,1]$ (ETD1 is not unconditionally stable at large amplitude).
+
+![Same alloy, same $t=10$, $512\times 512$ cell, central $192\times 192$ window:
+single-mode seed vs broadband noise. The initial condition sets the
+morphology.](figures/cahn_hilliard_comparison.png){#fig-ch-comparison}
 
 ## Scalability
 

@@ -29,6 +29,7 @@ results
 !apps/thin_film/slurm/*.sbatch
 !apps/alloy_dendrite_elastic/slurm/*.sbatch
 !apps/inverse_homogenization/slurm/*.sbatch
+!apps/cahn_hilliard/slurm/*.sbatch
 !scripts/*.sbatch
 apps/kobayashi/slurm/builds/
 .trash
