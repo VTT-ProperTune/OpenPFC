@@ -170,8 +170,10 @@ Honest accounting of what this report cannot support:
   chosen regularisation. The sign, the monotonicity, the near-invariance of
   $\sigma^{*}$ and the eigenstrain cancellation survive the whole scan.
 * **Nothing in @sec-alloy-dendrite is quantitative in three dimensions.** The
-  $512^3$ run demonstrates scale and consistency; it is 150 $\tau_0$ long and
-  shows a rounded cross, not a developed dendrite.
+  $512^3$ coupled run is 150 $\tau_0$ and a rounded cross. A longer
+  isothermal $256^3$ at $\epsilon_4=0.05$ (job 21981928) is a
+  $\langle 100\rangle$ dendrite with parabolic tips; it still has no
+  noise, so no sidebranches, and no 3-D selection number.
 * **Vlasov–Maxwell is a 1D2V reduction of a formally inconsistent
   non-relativistic theory**, with a velocity grid that cannot follow
   filamentation past saturation and a rank cap at $N_{v_y}$. The late-time
