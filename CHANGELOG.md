@@ -9,6 +9,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- **Heat3D CPU median `wall_step`** (`HEAT3D_CPU_WALL_STEP_MS_MEDIAN`)
+  on `heat3d_fd` / `heat3d_spectral`, matching the GPU warm-up rule.
+  LUMI-C equal-node control (job 21990892, 8 ranks × 16 threads,
+  \(N=1024\)): spectral 5525 ms, FD-2 569 ms, FD-8 1492 ms, FD-12
+  1796 ms. CSV `docs/report/data/heat3d_method_cost_lumi_c.csv`.
+  Recipe: `apps/heat3d/slurm/lumi_c_control.sbatch`. Candidate for the
+  operator-choice protocol, not an admitted ranking.
 - **Coherent elastic Cahn–Hilliard** (`cahn_hilliard_elastic`). Same
   application, not a seventeenth catalog entry. Vegard eigenstrain
   \(\varepsilon^{*}=\varepsilon_0(c-c_{\mathrm{ref}})I\) on the existing

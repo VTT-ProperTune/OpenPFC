@@ -1,0 +1,11 @@
+# Cost per step at equal grid, heat3d on LUMI-C, N=1024, 1 node,
+# 8 MPI ranks x 16 OpenMP threads, 25 accepted steps after 5 warm-up,
+# dt=0.01 (job 21990892, OpenPFC revision fc0d3a248f91d390a561559dd91d4a8ddfd48ef4).
+# wall_step_ms is the median of barriered steps (HEAT3D_CPU_WALL_STEP_MS_MEDIAN).
+# Candidate CPU control for research/articles/periodic-operator-choice; not an
+# admitted equal-accuracy ranking by itself.
+method,fd_order,job,wall_step_ms
+spectral,0,21990892,5525.32
+fd,2,21990892,568.765
+fd,8,21990892,1492.08
+fd,12,21990892,1795.79
