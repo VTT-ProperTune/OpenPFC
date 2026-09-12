@@ -107,15 +107,8 @@ def _parse_attrs(blob: bytes) -> dict[str, str]:
     return {k.decode(): v.decode() for k, v in _ATTR_RE.findall(blob)}
 
 
-def read_vti(path: Path | str, *, time: Optional[float] = None) -> Field2D:
-    """Read a single-piece `.vti` (VTK ImageData) scalar field.
-
-    Assumes exactly one `<DataArray>` (one scalar field per file, which is
-    how every OpenPFC `fields[]` writer entry is configured in this repo).
-    Handles both `format="appended"` (raw or base64 `<AppendedData>`) and a
-    fully inline `format="binary"` `<DataArray>` (base64, header + payload
-    together). Z is squeezed if `Lz == 1`.
-    """
+def _read_vti_brick(path: Path | str) -> tuple[np.ndarray, tuple, tuple, str]:
+    """Decode a single-piece `.vti` to `[nz, ny, nx]`, origin, spacing, name."""
     raw = Path(path).read_bytes()
 
     m = _HEADER_TYPE_RE.search(raw)
@@ -194,19 +187,35 @@ def read_vti(path: Path | str, *, time: Optional[float] = None) -> Field2D:
     # x,y,z), matching pfc::VTKWriter's write of the local Fortran-ordered
     # field brick.
     grid_xyz = values.reshape((nx, ny, nz), order="F")
-    grid = np.transpose(grid_xyz, (2, 1, 0))  # -> [nz, ny, nx]
-    if nz == 1:
-        grid2d = grid[0]
-    else:
-        grid2d = grid[nz // 2]  # mid-depth slice, matches slice_bin default
+    grid = np.transpose(grid_xyz, (2, 1, 0)).astype(np.float64)  # [nz, ny, nx]
+    return grid, origin, spacing, field_name
 
+
+def read_vti(path: Path | str, *, time: Optional[float] = None) -> Field2D:
+    """Read a single-piece `.vti` (VTK ImageData) scalar field.
+
+    Assumes exactly one `<DataArray>` (one scalar field per file, which is
+    how every OpenPFC `fields[]` writer entry is configured in this repo).
+    Handles both `format="appended"` (raw or base64 `<AppendedData>`) and a
+    fully inline `format="binary"` `<DataArray>` (base64, header + payload
+    together). Z is squeezed if `Lz == 1`; otherwise the mid-depth slice.
+    """
+    grid, origin, spacing, field_name = _read_vti_brick(path)
+    nz, ny, nx = grid.shape
+    grid2d = grid[0] if nz == 1 else grid[nz // 2]
     extent = (
         origin[0],
         origin[0] + nx * spacing[0],
         origin[1],
         origin[1] + ny * spacing[1],
     )
-    return Field2D(data=grid2d.astype(np.float64), extent=extent, name=field_name, time=time)
+    return Field2D(data=grid2d, extent=extent, name=field_name, time=time)
+
+
+def read_vti_volume(path: Path | str) -> np.ndarray:
+    """Read a single-piece `.vti` as a 3-D array `[nz, ny, nx]`."""
+    grid, _, _, _ = _read_vti_brick(path)
+    return grid
 
 
 # --------------------------------------------------------------------------
