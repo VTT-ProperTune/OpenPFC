@@ -34,6 +34,7 @@
 #ifndef PFC_INITIAL_CONDITIONS_SEED_GRID_HPP
 #define PFC_INITIAL_CONDITIONS_SEED_GRID_HPP
 
+#include <algorithm>
 #include <numbers>
 #include <random>
 #include <sstream>
@@ -96,27 +97,33 @@ public:
     const auto &spacing = pfc::domain::get_spacing(domain);
 
     std::vector<Seed> seeds;
-    const int Ny = m_Ny;
-    const int Nz = m_Nz;
+    const int Nx = std::max(1, m_Nx);
+    const int Ny = std::max(1, m_Ny);
+    const int Nz = std::max(1, m_Nz);
     const double radius = get_radius();
 
+    const double Dx = spacing[0] * size[0] / Nx;
     const double Dy = spacing[1] * size[1] / Ny;
-    const double Dz = spacing[2] * size[2] / Nz;
-    const double X0 = m_X0;
+    const double Dz = spacing[2] * size[2] / std::max(Nz, 1);
     const double Y0 = Dy / 2.0;
     const double Z0 = Dz / 2.0;
     std::mt19937_64 re(42);
     std::uniform_real_distribution<double> rt(-0.2 * radius, 0.2 * radius);
     std::uniform_real_distribution<double> rr(0.0, 2.0 * std::numbers::pi);
 
-    for (int j = 0; j < Ny; j++) {
-      for (int k = 0; k < Nz; k++) {
-        const std::array<double, 3> location = {X0 + rt(re), Y0 + (Dy * j) + rt(re),
-                                                Z0 + (Dz * k) + rt(re)};
-        const std::array<double, 3> orientation = {rr(re), rr(re), rr(re)};
-        const Seed seed(location, orientation, get_radius(), get_density(),
-                        get_amplitude());
-        seeds.push_back(seed);
+    // Nx == 1: directional-solidification plane of seeds at x = X0 (shipped
+    // moving_bc). Nx > 1: fill the box in x as well, for a polycrystal.
+    for (int i = 0; i < Nx; i++) {
+      const double x = (Nx > 1) ? (Dx / 2.0 + Dx * i) : m_X0;
+      for (int j = 0; j < Ny; j++) {
+        for (int k = 0; k < Nz; k++) {
+          const std::array<double, 3> location = {
+              x + rt(re), Y0 + (Dy * j) + rt(re), Z0 + (Dz * k) + rt(re)};
+          const std::array<double, 3> orientation = {rr(re), rr(re), rr(re)};
+          const Seed seed(location, orientation, get_radius(), get_density(),
+                          get_amplitude());
+          seeds.push_back(seed);
+        }
       }
     }
 

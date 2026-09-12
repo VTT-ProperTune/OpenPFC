@@ -25,6 +25,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   $V=0.488$, $\rho=5.23$, not the rounded cross of the $t=150$ $512^3$
   coupled snapshot. No noise, so no sidebranches. Recipe:
   `apps/alloy_dendrite_elastic/slurm/dendrite_3d_long.sbatch`.
+- **Tungsten polycrystal.** `SeedGrid` fills $N_x$ when $N_x>1$ (the
+  $N_x=1$ plane at $X_0$ is unchanged). HIP job 21985367,
+  $256\times 256\times 16$, $3\times 3$ randomly oriented BCC seeds:
+  grains impinge by $t=400$. Preset `tungsten_polycrystal.json`.
 
 ### Changed
 
