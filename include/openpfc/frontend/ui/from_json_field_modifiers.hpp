@@ -112,6 +112,13 @@ inline void from_json(const json &j, SeedGrid &ic) {
         "Invalid JSON input: missing or invalid 'rho' field.");
   }
 
+  if (j.contains("Nx")) {
+    if (!j["Nx"].is_number()) {
+      throw std::invalid_argument(
+          "Invalid JSON input: missing or invalid 'Nx' field.");
+    }
+    ic.set_Nx(j["Nx"]);
+  }
   ic.set_Ny(j["Ny"]);
   ic.set_Nz(j["Nz"]);
   ic.set_X0(j["X0"]);

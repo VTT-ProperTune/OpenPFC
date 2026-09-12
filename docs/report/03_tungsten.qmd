@@ -274,6 +274,27 @@ its absolute value. This isothermal case sits close to a coexistence
 point on this timescale — the seed does not visibly grow or shrink, only
 its facet edges relax.](figures/tungsten_seed_panel.svg){#fig-tungsten-seed}
 
+That is a nucleus. The question this chapter asked was a grain boundary.
+@fig-tungsten-poly is nine BCC seeds of different orientation on a
+$256\times 256\times 16$ slab (`tungsten_polycrystal.json`, HIP job
+21985367). At $t=0$ they are islands in melt. At $t=400$ they have
+impinged: each grain keeps its lattice, and the meeting lines are
+disordered. @fig-tungsten-poly-amp is the local amplitude of $\psi$ —
+solid grains light, melt and grain-boundary core dark. `SeedGrid` now
+fills $N_x$ as well as $N_y,N_z$ when $N_x>1$; $N_x=1$ is still the
+directional-solidification plane at $X_0$.
+
+![Nine randomly oriented tungsten PFC seeds. Left: $t=0$. Right: $t=400$,
+grains have met. Job 21985367.](figures/tungsten_polycrystal_pair.png){#fig-tungsten-poly}
+
+{{< pagebreak >}}
+
+![Density $\psi$ at $t=400$. Each patch is a BCC grain; the orientation
+is visible in the lattice. HIP job 21985367.](figures/tungsten_polycrystal.png){#fig-tungsten-poly-psi}
+
+![Local amplitude of $\psi$ at $t=400$. Grains are ordered (light);
+grain boundaries and residual melt are dark.](figures/tungsten_polycrystal_amp.png){#fig-tungsten-poly-amp}
+
 ## Scalability
 
 Measured on LUMI-G from 1 to 32 GCDs at $768^3$; see @sec-scalability. This is

@@ -30,6 +30,7 @@ results
 !apps/alloy_dendrite_elastic/slurm/*.sbatch
 !apps/inverse_homogenization/slurm/*.sbatch
 !apps/cahn_hilliard/slurm/*.sbatch
+!apps/tungsten/slurm/*.sbatch
 !scripts/*.sbatch
 apps/kobayashi/slurm/builds/
 .trash

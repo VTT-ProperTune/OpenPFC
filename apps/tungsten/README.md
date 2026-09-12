@@ -77,7 +77,7 @@ Install path when using `cmake --install`: `<prefix>/bin/`.
 | [`inputs_json/`](inputs_json/README.md) | JSON (mirrors TOML structure) |
 | `inputs_toml/` | TOML (same scenarios as JSON; no separate README) |
 
-Start from `inputs_json/tungsten_single_seed.json` or `inputs_toml/tungsten_single_seed.toml`. Heavy performance cases: `tungsten_performance.*`.
+Start from `inputs_json/tungsten_single_seed.json` or `inputs_toml/tungsten_single_seed.toml`. A $3\times 3$ polycrystal (grains that actually meet) is `tungsten_polycrystal.json`. Heavy performance cases: `tungsten_performance.*`.
 
 Optional directional-solidification keys on `model.params` (same names as aluminum): `G_grid`, `V_grid`, `x_initial`. Default is isothermal (`G_grid = 0`). The linear operator stays at JSON `T`; the pointwise cubic uses `T + G (x' - x_initial - V t)`. CPU / CUDA / HIP share `tungsten_pointwise.hpp`.
 
