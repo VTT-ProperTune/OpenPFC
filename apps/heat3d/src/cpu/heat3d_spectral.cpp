@@ -16,6 +16,8 @@
  */
 
 #include <cstdlib>
+#include <vector>
+
 #include <mpi.h>
 
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
@@ -45,10 +47,20 @@ void run_spectral(const RunConfig &cfg, int rank, int nproc) {
 
   heat3d::SpectralHeatPropagator prop(stack.fft(), stack.u(), heat3d::kD, cfg.dt);
 
+  const int warmup = heat3d::env_warmup_steps();
+  std::vector<double> step_s;
+  step_s.reserve(static_cast<std::size_t>(cfg.n_steps));
   runtime::MPITimer timer{MPI_COMM_WORLD};
   runtime::tic(timer);
-  for (int step = 0; step < cfg.n_steps; ++step) prop.step(stack.u());
+  for (int step = 0; step < cfg.n_steps; ++step) {
+    MPI_Barrier(MPI_COMM_WORLD);
+    const double step_t0 = MPI_Wtime();
+    prop.step(stack.u());
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (step >= warmup) step_s.push_back(MPI_Wtime() - step_t0);
+  }
   const double max_elapsed = runtime::toc(timer);
+  heat3d::print_median_wall_step_ms(rank, step_s);
 
   heat3d::report(rank, nproc, cfg, "spectral", "", max_elapsed,
                  "(periodic spectral vs infinite-domain reference)",

@@ -24,12 +24,15 @@
  * container implementation.
  */
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstdlib>
 #include <iostream>
 #include <mpi.h>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #if defined(_OPENMP)
 #include <omp.h>
@@ -59,6 +62,27 @@ inline double analytic_gaussian(double r2, double t, double D) noexcept {
  * @brief Build the FD-specific extra metadata string: `fd_order=...` plus
  *        OpenMP thread info (when `_OPENMP` is defined).
  */
+/// Warm-up frames dropped from the median `wall_step` (GPU HIP default is 1;
+/// the LUMI-C equal-accuracy control uses 5).
+inline int env_warmup_steps(int fallback = 5) {
+  const char *v = std::getenv("HEAT3D_WARMUP");
+  if (v == nullptr || *v == '\0') return fallback;
+  return std::atoi(v);
+}
+
+/// Rank-0 median of barriered per-step wall times, in milliseconds.
+inline void print_median_wall_step_ms(int rank,
+                                      const std::vector<double> &step_s) {
+  if (rank != 0 || step_s.empty()) return;
+  std::vector<double> s = step_s;
+  std::sort(s.begin(), s.end());
+  const std::size_t n = s.size();
+  const double med =
+      (n % 2 == 1) ? s[n / 2] : 0.5 * (s[n / 2 - 1] + s[n / 2]);
+  std::cout << "HEAT3D_CPU_WALL_STEP_MS_MEDIAN=" << (med * 1000.0) << " n=" << n
+            << "\n";
+}
+
 inline std::string fd_extra_metadata(const RunConfig &cfg) {
   std::ostringstream os;
   os << "fd_order=" << cfg.fd_order;

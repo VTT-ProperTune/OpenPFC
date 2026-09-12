@@ -31,6 +31,7 @@ results
 !apps/inverse_homogenization/slurm/*.sbatch
 !apps/cahn_hilliard/slurm/*.sbatch
 !apps/tungsten/slurm/*.sbatch
+!apps/heat3d/slurm/*.sbatch
 !scripts/*.sbatch
 apps/kobayashi/slurm/builds/
 .trash

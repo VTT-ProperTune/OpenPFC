@@ -34,6 +34,7 @@
 #include <optional>
 #include <ostream>
 #include <utility>
+#include <vector>
 
 #include <mpi.h>
 
@@ -202,16 +203,23 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
   });
 
   // 6. Time loop — explicit Euler, point-wise RHS.
+  const int warmup = heat3d::env_warmup_steps();
+  std::vector<double> step_s;
+  step_s.reserve(static_cast<std::size_t>(cfg.n_steps));
   MPI_Barrier(MPI_COMM_WORLD);
   const double t_start = MPI_Wtime();
   double t = 0.0;
   for (int step = 0; step < cfg.n_steps; ++step) {
+    MPI_Barrier(MPI_COMM_WORLD);
+    const double step_t0 = MPI_Wtime();
     halo.exchange();
     u.for_each_owned([&](int i, int j, int k) {
       const auto g = pfc::gradient::evaluate(grad, pfc::Int3{i, j, k});
       du(i, j, k) = g.xx + g.yy + g.zz;
     });
     u += cfg.dt * du;
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (step >= warmup) step_s.push_back(MPI_Wtime() - step_t0);
     t += cfg.dt;
   }
   const double local_elapsed = MPI_Wtime() - t_start;
@@ -222,6 +230,7 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
 
   // 7. L2-vs-analytic report via shared reporting infrastructure.
   heat3d::RunConfig heat_cfg{cfg.N, cfg.n_steps, cfg.dt, cfg.fd_order};
+  heat3d::print_median_wall_step_ms(rank, step_s);
   heat3d::report(rank, nproc, heat_cfg, "fd",
                  heat3d::fd_extra_metadata(heat_cfg), max_elapsed,
                  "(periodic; interior L2)", [&u, hw](auto &&cb) {
