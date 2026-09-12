@@ -44,6 +44,7 @@ cd "${BUILD}"
 cmake --build "${BUILD}" -j 8 --target openpfc_homogenize_hip openpfc_inverse_homogenize_hip
 
 BIN="${BUILD}/apps/inverse_homogenization/openpfc_homogenize_hip"
+IBIN="${BUILD}/apps/inverse_homogenization/openpfc_inverse_homogenize_hip"
 srun --ntasks=1 --gpus-per-node=1 "${BIN}" \
   --shape=homogeneous --nx=16 --ny=16 --nz=16 --volume=1 \
   > "${OUT}/homogeneous.txt"
@@ -51,12 +52,18 @@ srun --ntasks=1 --gpus-per-node=1 "${BIN}" \
   --shape=rotating-squares --nx=32 --ny=32 --nz=1 \
   --E-solid=1 --E-void=0.02 --nu-solid=0.3 --nu-void=0.3 \
   > "${OUT}/rotating.txt"
-srun --ntasks=1 --gpus-per-node=1 "${BIN}" \
+echo "=== 64^3 homogeneous HIP (timed) ==="
+/usr/bin/time -f 'elapsed_sec %e' srun --ntasks=1 --gpus-per-node=1 "${BIN}" \
   --shape=homogeneous --nx=64 --ny=64 --nz=64 --volume=1 \
-  > "${OUT}/hom64.txt"
+  > "${OUT}/hom64.txt" 2> "${OUT}/hom64.time"
+srun --ntasks=1 --gpus-per-node=1 "${IBIN}" \
+  --nx=16 --ny=16 --nz=16 --steps=2 \
+  > "${OUT}/inverse16.txt"
 
 echo "=== done ==="
 echo "OUT ${OUT}"
 cat "${OUT}/homogeneous.txt"
 echo "--- rotating ---"
 cat "${OUT}/rotating.txt"
+echo "--- 64^3 time ---"
+cat "${OUT}/hom64.time" "${OUT}/hom64.txt" | tail -n 20

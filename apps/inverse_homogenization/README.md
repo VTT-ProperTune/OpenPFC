@@ -84,7 +84,9 @@ Not paper claims. Grey linear interpolation **cannot** produce \(\nu<0\).
 | 21956076 | **rotating-square seed** (hinged, half=0.200) | — | 0.64 | **\(\nu=-0.123\)**, \(C_{12}<0\)**. Inverse 80 steps still auxetic (\(\nu_{\mathrm{bin}}=-0.080\)). Re-entrant honeycomb on this grid is not auxetic. |
 | 21958468 | Stage 6 CH process family vs rotating square | — | 0.35–0.65 | **No CH \((c_0,\kappa,a_y)\) is auxetic.** Best spinodal \(\nu_{\mathrm{bin}}=+0.23\); rotating square \(\nu=-0.123\). Process restriction loses the auxetic quadrant. |
 | 21959215 | Stage 7 manufacturability | — | — | Rotating square: 1 solid component, percolates \(x,y\), opening loss \(r=1\) is 0. Disconnected squares (`half=0.16`): 4 islands, no solid percolation. Spinodal: 7+7 components, grey 0.83. |
-| 21964843 | Stage 8 $64^3$ 3-D inverse (CPU) | — | 0.5 | 1 rank: 12 steps, 6 solves/step, 7.7–4.7 s/step, 224 MB. 8 ranks: 1.05–0.62 s/step. Not a 2-D extrusion. No GPU (#157). $128^3$ did not finish (MPI_Finalize vs HeFFTe dtor; fix in tree). |
+| 21964843 | Stage 8 $64^3$ 3-D inverse (CPU) | — | 0.5 | 1 rank: 12 steps, 6 solves/step, 7.7–4.7 s/step, 224 MB. 8 ranks: 1.05–0.62 s/step. |
+| 21967096 | $128^3$ spinodal $\mathbf{C}_H$, 8 CPU ranks | — | 0.5 | MPI-destructor fix: **finished**. 237 MB/rank, $\nu=0.30$. |
+| 21967095 | HIP Green on 1 GCD | — | — | Homogeneous $C_{11}=1.346153846$ (CPU match). Rotating-square $32^2$: **$\nu=-0.075$**, $C_{12}<0$. $64^3$ homogeneous wall **7.59 s**. Inverse 2 steps converged. |
 
 The double well drives a *uniform* grey field to the wells (Catch2). A
 sharp/tanh interface with large \(\lambda_r/\varepsilon\) inverts bands
