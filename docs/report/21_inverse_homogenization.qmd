@@ -180,4 +180,6 @@ claimed as GPU. Grid, ranks, loads per step (6), wall time per iteration, and
 | 21956076 | Rotating-square $\nu=-0.123$ |
 | 21958468 | CH family, none auxetic |
 | 21959215 | Percolation / islands / opening |
-| 21964843 | 3-D $64^3$ inverse, 1 rank: 12 steps, 6 solves/step, 7.7–4.7 s/step, VmHWM 224 MB. 8 ranks: 1.05–0.62 s/step. Genuine $n_z=64$ spinodal, not a 2-D extrusion. CPU/`standard` only. |
+| 21964843 | 3-D $64^3$ inverse, 1 rank: 12 steps, 6 solves/step, 7.7–4.7 s/step, VmHWM 224 MB. 8 ranks: 1.05–0.62 s/step. Genuine $n_z=64$ spinodal, not a 2-D extrusion. CPU/`standard`. |
+| 21967096 | $128^3$ spinodal $\mathbf{C}_H$, 8 ranks, 237 MB/rank. MPI_Finalize/HeFFTe order fixed. |
+| 21967095 | HIP (1 GCD): homogeneous $C_{11}=1.346153846$ matches CPU; rotating-square $32^2$ $\nu=-0.075$; $64^3$ homogeneous 7.59 s wall. |
