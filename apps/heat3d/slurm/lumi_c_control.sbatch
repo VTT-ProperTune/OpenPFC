@@ -34,13 +34,14 @@ module load LUMI/25.09 partition/C cpeGNU cray-fftw lumi-CrayPath
 if [[ -d "${HOME}/privatemodules" ]]; then
   module use "${HOME}/privatemodules"
 fi
-export LD_LIBRARY_PATH="/flash/project_462001519/juaho/build/heffte-2.3.0-milan/lib:/usr/lib64:${CRAY_LD_LIBRARY_PATH:-}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+HEFFTE_CMAKE="/flash/project_462001519/juaho/build/heffte-2.3.0-milan/lib/cmake/Heffte"
+HEFFTE_LIB="/flash/project_462001519/juaho/build/heffte-2.3.0-milan/lib"
+export LD_LIBRARY_PATH="${HEFFTE_LIB}:${CRAY_LD_LIBRARY_PATH:-}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+unset LD_PRELOAD
 export CRAYPE_LINK_TYPE="${CRAYPE_LINK_TYPE:-dynamic}"
 export MPICH_GPU_SUPPORT_ENABLED=0
 export CC=cc
 export CXX=CC
-# Applied only to srun, not to cmake/cc: gcc 11.2 RPATH otherwise hides gcc 14 libstdc++.
-STDCXX_PRELOAD="/usr/lib64/libstdc++.so.6"
 
 echo "=== heat3d LUMI-C control job ${SLURM_JOB_ID} on ${SLURM_JOB_PARTITION} ==="
 echo "host $(hostname)  build ${BUILD}"
@@ -48,17 +49,33 @@ echo "revision $(git -C "${SRC}" rev-parse HEAD)"
 module list
 
 mkdir -p "${OUT}"
-test -x "${BUILD}/apps/heat3d/heat3d_fd"
-test -x "${BUILD}/apps/heat3d/heat3d_spectral"
+# Relink on C with host MPI. Do not set LD_PRELOAD here: it breaks cray cc.
+rm -f "${BUILD}/CMakeCache.txt"
+rm -rf "${BUILD}/CMakeFiles"
+cmake -S "${SRC}" -B "${BUILD}" -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_TOOLCHAIN_FILE="${SRC}/cmake/toolchains/lumi-gcc12-mpich.cmake" \
+  -DCMAKE_EXE_LINKER_FLAGS="-Wl,-rpath,${HEFFTE_LIB}" \
+  -DOpenPFC_ENABLE_HEFFTE=ON \
+  -DOpenPFC_BUILD_TESTS=OFF \
+  -DOpenPFC_BUILD_APPS=ON \
+  -DOpenPFC_BUILD_EXAMPLES=OFF \
+  -DOpenPFC_ENABLE_HDF5=OFF \
+  -DOpenPFC_ENABLE_CUDA=OFF \
+  -DOpenPFC_ENABLE_HIP=OFF \
+  -DOpenPFC_MPI_HIP_AWARE=OFF \
+  -DMPI_C_COMPILER=cc \
+  -DMPI_CXX_COMPILER=CC \
+  -DHeffte_DIR="${HEFFTE_CMAKE}"
+cmake --build "${BUILD}" -j "${SLURM_CPUS_ON_NODE}" \
+  --target heat3d_fd heat3d_spectral
 
 run_one() {
   local tag="$1"
   shift
   local log="${OUT}/${tag}-${SLURM_JOB_ID}.log"
   echo "=== ${tag} ==="
-  srun --ntasks=8 --cpus-per-task=16 --cpu-bind=cores \
-    --export=ALL,LD_PRELOAD="${STDCXX_PRELOAD}" \
-    "$@" | tee "${log}"
+  srun --ntasks=8 --cpus-per-task=16 --cpu-bind=cores "$@" | tee "${log}"
 }
 
 run_one spectral "${BUILD}/apps/heat3d/heat3d_spectral" "${N}" "${STEPS}" "${DT}"
