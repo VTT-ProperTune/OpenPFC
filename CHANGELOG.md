@@ -20,6 +20,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   versus isotropic labyrinth versus $\varepsilon_0=0.08$ suppression.
   $64^3$ (job 21979862): orthogonal mid-planes of a 3-D $\langle 100\rangle$
   network, not an extruded 2-D maze.
+- **Longer 3-D dendrite.** Isothermal $256^3$, $\epsilon_4=0.05$,
+  $t=165$ (job 21981928): parabolic $\langle 100\rangle$ arms,
+  $V=0.488$, $\rho=5.23$, not the rounded cross of the $t=150$ $512^3$
+  coupled snapshot. No noise, so no sidebranches. Recipe:
+  `apps/alloy_dendrite_elastic/slurm/dendrite_3d_long.sbatch`.
 
 ### Changed
 
