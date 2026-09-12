@@ -39,8 +39,10 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/simulation/spectral_etd_system.hpp>
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
+#include <openpfc_apps/field_snapshots.hpp>
 #include <openpfc_apps/gather.hpp>
 #include <openpfc_apps/structure_factor.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 
 #include <thin_film/fd_flux.hpp>
 #include <thin_film/nonlinear.hpp>
@@ -148,6 +150,17 @@ int main(int argc, char *argv[]) {
                                                                 MPI_COMM_SELF);
     }
 
+    // Rank-0 full-domain field for optional fields[] VTK dumps (gathered).
+    std::unique_ptr<pfc::data::Field<double>> snap_field;
+    std::unique_ptr<pfc::VTKWriter> snapshots;
+    int snapshot_index = 0;
+    if (rank == 0 && cfg.contains("fields")) {
+      snap_field = std::make_unique<pfc::data::Field<double>>(
+          domain, pfc::domain::index_box(domain), 0);
+      snapshots = pfc::apps::make_field_snapshot_writer(cfg, "h", *snap_field,
+                                                        MPI_COMM_SELF);
+    }
+
     std::unique_ptr<std::FILE, int (*)(std::FILE *)> out(nullptr, std::fclose);
     if (rank == 0 && cfg.contains("diagnostics")) {
       const std::filesystem::path path =
@@ -191,6 +204,14 @@ int main(int argc, char *argv[]) {
             global_xy, Lx, Ly, hole_threshold_frac * p.h0);
       }
       if (s.ruptured && rupture_time < 0.0) rupture_time = t;
+      if (rank == 0 && snapshots && snap_field && !global_xy.empty()) {
+        snap_field->with_host_view([&](double *d, std::size_t n) {
+          const std::size_t m = n < global_xy.size() ? n : global_xy.size();
+          for (std::size_t i = 0; i < m; ++i) d[i] = global_xy[i];
+        });
+        pfc::apps::write_field_snapshot(snapshots.get(), snapshot_index++,
+                                        *snap_field);
+      }
       if (out) {
         std::ostringstream line;
         line.imbue(std::locale::classic());

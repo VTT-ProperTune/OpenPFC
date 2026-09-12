@@ -178,8 +178,10 @@ ETD1 as in @eq-etd1, dealiased.
 
 ## Binaries and inputs
 
-`thin_film` (CPU), `thin_film_hip`. Presets: `leveling.json`,
-`dewetting.json`.
+`thin_film` (CPU), `thin_film_hip`, `thin_film_nonlinear` / `_hip`,
+`thin_film_fd` (CPU, conservative face-flux through rupture). Presets:
+`leveling.json`, `dewetting.json`, `thin_film_dewetting.json`,
+`thin_film_fd_dewetting.json`.
 
 ## Visualisation
 
@@ -206,6 +208,35 @@ defect is not a rescaled copy of the spontaneous pattern.
 ![Same $512\times 512$ lubrication model, $t=85$. Left: spontaneous
 noise, still intact. Right: one Gaussian defect, already a hole. Shared
 colour scale.](figures/thin_film_comparison.png){#fig-tf-comparison}
+
+The spectral ETD1 run stops here: past $h\sim 0.6\,h^{*}$ the explicit
+nonlinearity is stiff and the solver diverges. @fig-tf-fd-through is the
+same lubrication model on the conservative face-flux FD stepper
+(`thin_film_fd`, harmonic mobility, job 21980525, $256^2$). At $t=250$
+the film is still connected ($\min h = 0.69$). At $t=400$ it has
+**ruptured**: 54 holes sitting on the precursor $\min h = 0.152 \approx
+h^{*}$, hole area $19.5\,\%$ of cells below $h_0/2$, liquid volume
+conserved to $10^{-12}$. That is the morphology the spectral path cannot
+reach.
+
+![Conservative FD through rupture. Left: $t=250$, still a film. Right:
+$t=400$, 54 holes at the precursor. Job 21980525,
+`thin_film_fd`.](figures/thin_film_fd_through.png){#fig-tf-fd-through}
+
+{{< pagebreak >}}
+
+![FD spontaneous dewetting after rupture, $256\times 256$, $t=400$.
+Holes (blue) in a residual film (red), capillary rims in white. Job
+21980525.](figures/thin_film_fd_rupture.png){#fig-tf-fd-rupture}
+
+A defect does not merely open one hole and stop. @fig-tf-fd-pair: the
+seeded depression is a primary ring at $t=180$; by $t=280$ secondary
+holes have nucleated around it (17 dry regions). The unblemished film
+opens a disordered packing of holes instead.
+
+![FD through rupture, $t=400$ spontaneous vs $t=280$ defect. One
+engineered hole plus secondary nucleation, against a field of
+spontaneous holes.](figures/thin_film_fd_pair.png){#fig-tf-fd-pair}
 
 ## Scalability
 

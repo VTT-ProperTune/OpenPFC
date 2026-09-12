@@ -30,6 +30,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   $t=85$ spontaneous-vs-defect pair. Recipe:
   `apps/thin_film/slurm/report_512.sbatch` and
   `docs/report/figures/make_thin_film_money.py`.
+- **`thin_film_fd` VTK dumps and through-rupture figures.** Rank-0
+  gathered `fields[]`. Job 21980525, $256^2$: spontaneous $t=400$ has 54
+  holes at $h^{*}=0.15$ (volume conserved); the spectral ETD path
+  diverges before this morphology. Recipe: `fd_rupture.sbatch`.
 - **Cahn–Hilliard report figures at $512^2$**. The chapter's money figure
   is the science cell (`fe_cr_coarsening.json`, $c_0=0.5$, HIP job
   21968070): a late bicontinuous labyrinth, an early-vs-late coarsening
