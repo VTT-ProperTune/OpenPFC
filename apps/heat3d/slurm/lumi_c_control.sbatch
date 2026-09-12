@@ -34,8 +34,7 @@ module load LUMI/25.09 partition/C cpeGNU cray-fftw lumi-CrayPath
 if [[ -d "${HOME}/privatemodules" ]]; then
   module use "${HOME}/privatemodules"
 fi
-module load heffte/2.3.0
-export LD_LIBRARY_PATH="${CRAY_LD_LIBRARY_PATH:-}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+export LD_LIBRARY_PATH="/flash/project_462001519/juaho/build/heffte-2.3.0-milan/lib:${CRAY_LD_LIBRARY_PATH:-}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 export CRAYPE_LINK_TYPE="${CRAYPE_LINK_TYPE:-dynamic}"
 export CC=cc
 export CXX=CC
