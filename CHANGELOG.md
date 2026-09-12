@@ -53,11 +53,14 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- **HIP Green-operator homogenization** (`openpfc_homogenize_hip`,
+  `openpfc_inverse_homogenize_hip`). Device FFT + Eyre–Milton on the
+  existing Khachaturyan operator; homogeneous \(C_{11}\) matches CPU
+  (job 21967095). Coupled dendrite device Green remains issue #157.
 - **Inverse homogenization Stages 6–8 and report chapter** (issue #161).
   Process-parameter Cahn–Hilliard family versus rotating-square auxetic
   seed; percolation/island/opening metrics; 3-D CPU/MPI driver with
-  per-step wall time (`stage8_3d.sbatch`). Device Green (#157) is still
-  open — no GPU claim. Report chapter
+  per-step wall time (`stage8_3d.sbatch`). Report chapter
   `docs/report/21_inverse_homogenization.qmd` (sixteenth-app exception).
 - **Allen–Cahn inverse homogenization** (`openpfc_inverse_homogenize`,
   issue #161 Stages 2–3). Explicit gradient flow on

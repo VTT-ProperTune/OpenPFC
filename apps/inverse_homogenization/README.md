@@ -20,16 +20,22 @@ the same \(C_H\).
 
 ## Status
 
-Stages 1–4 of #161 are in tree:
+Stages 1–8 of #161 are in tree. Remaining gaps are listed under
+Limitations in the report chapter, not as missing stages.
 
 | Stage | What | Where |
 |-------|------|--------|
 | 1 | Forward periodic \(C_H\) | `openpfc_apps/homogenization.hpp`, `openpfc_homogenize` |
 | 2–3 | Allen–Cahn descent on the tensor-mismatch objective, volume penalty, perimeter | `phase_field_inverse.hpp`, `openpfc_inverse_homogenize` |
 | 4 | Discrete mutual-energy \(\delta J/\delta h\) + finite-difference check | homogenization.hpp; Catch2 `apps-common-homogenization` |
+| 5 | Free-topology campaigns (isotropic / auxetic / orthotropic; two seeds) | `openpfc_inverse_homogenize`, `auxetic_geometry.hpp`; jobs in the table below |
+| 6 | Cahn–Hilliard process-parameter family vs rotating-square auxetic | `spinodal_generator.hpp`; job 21958468 |
+| 7 | Percolation, islands, opening-loss metrics | `manufacturability.hpp`; job 21959215 |
+| 8 | Genuine 3-D cells and HIP Green | `stage8_3d.sbatch`, `openpfc_homogenize_hip` / `openpfc_inverse_homogenize_hip` |
 
-Stages 5–8 (free-topology target campaign, spinodal constraint,
-manufacturability, LUMI 3-D) are **not** implemented yet.
+What is **not** claimed: grey linear \(C(h)\) cannot produce \(\nu<0\);
+SIMP from noise did not enter the rotating-square basin; coupled dendrite
+device Green is issue #157, not this app. Catalog stays closed.
 
 ## Reuse
 
@@ -113,12 +119,16 @@ login node. CPU suite:
 sbatch apps/inverse_homogenization/slurm/build_and_test_cpu.sbatch
 ```
 
-## Workflow (target, not yet the inverse binary)
+## Workflow
 
 ```
 h(x) → C(x) → six periodic elasticity solves → C_H[h] → J → dJ/dh
-     → optimizer / phase-field evolution → new h(x)
+     → Allen–Cahn step or CH process map → new h(x)
 ```
 
 `PeriodicHomogenizer::compute` and `objective_sensitivity` are the first two
-arrows after \(C(x)\). The rest waits on later PRs of #161.
+arrows after \(C(x)\). `openpfc_inverse_homogenize` runs the rest as
+Takezawa-style Allen–Cahn; Stage 6 substitutes a Cahn–Hilliard process
+map for the free-topology step. HIP twins
+(`openpfc_homogenize_hip`, `openpfc_inverse_homogenize_hip`) use a
+device Green operator (FFT + Eyre–Milton) on the same loop.
