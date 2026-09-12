@@ -748,10 +748,11 @@ def figure_aluminum_fcc_nucleus_comparison():
 
 
 FIGURES = [
-    figure_cahn_hilliard_coarsening_montage,
-    figure_cahn_hilliard_comparison,
-    figure_thin_film_dewetting_montage,
-    figure_thin_film_comparison,
+    # Cahn–Hilliard report figures are 512^2 PNGs from
+    # make_cahn_hilliard_money.py (HIP job, slurm/report_512.sbatch), not
+    # the 128^2 demo dumps this script still knows how to render.
+    # Thin-film report figures are 512^2 PNGs from
+    # make_thin_film_money.py (HIP job, slurm/report_512.sbatch).
     figure_tungsten_seed_panel,
     figure_surface_diffusion_comparison,
     figure_ehd_film_comparison,

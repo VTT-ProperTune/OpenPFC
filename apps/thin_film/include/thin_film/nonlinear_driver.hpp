@@ -54,6 +54,7 @@
 #include <openpfc/kernel/fft/kspace_iterator.hpp>
 #include <openpfc/kernel/simulation/spectral_etd_ops.hpp>
 #include <openpfc/runtime/gpu/spectral_etd_ops_gpu.hpp>
+#include <openpfc_apps/field_snapshots.hpp>
 #include <openpfc_apps/spectral_flux.hpp>
 #include <openpfc_apps/structure_factor.hpp>
 
@@ -216,6 +217,9 @@ int run_thin_film_nonlinear(int rank, int nproc, MPI_Comm comm,
       Ops::swap(out, p_scratch);
     };
 
+    auto snapshots = pfc::apps::make_field_snapshot_writer(cfg, "h", h, comm);
+    int snapshot_index = 0;
+
     // Diagnostics CSV, rank 0, never overwriting.
     std::unique_ptr<std::FILE, int (*)(std::FILE *)> out(nullptr, std::fclose);
     if (rank == 0 && cfg.contains("diagnostics")) {
@@ -245,6 +249,7 @@ int run_thin_film_nonlinear(int rank, int nproc, MPI_Comm comm,
         s.dominant_spacing = sf.dominant_wavelength();
       });
       if (s.ruptured && rupture_time < 0.0) rupture_time = t;
+      pfc::apps::write_field_snapshot(snapshots.get(), snapshot_index++, h);
       if (out) {
         std::ostringstream line;
         line.imbue(std::locale::classic());
