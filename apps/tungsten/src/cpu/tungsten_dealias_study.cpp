@@ -23,6 +23,11 @@
  * wrong either way and the comparison has no good side.
  *
  * Usage: `tungsten_dealias_study [output.csv] [steps]`
+ *        `tungsten_dealias_study --reserved [output.csv]`
+ *
+ * `--reserved` is the Paper A RQ2 evaluation point: N=128, dx=pi/3
+ * (six points per lattice, not in the four-row exploration CSV), 30
+ * steps with 5 warm-up, median wall_step mask on vs off.
  *
  * Single rank by default and not fast — the finest point is a 96³ run twice
  * over. It is a study, not a test; nothing in CI calls it. Regenerate
@@ -30,6 +35,7 @@
  * the presets change.
  */
 
+#include <algorithm>
 #include <cmath>
 #include <complex>
 #include <cstdio>
@@ -78,10 +84,25 @@ json shipped_params() {
 
 struct Outcome {
   double k_peak{}, k1{}, s_peak{}, power{}, min_psi{}, max_psi{}, mean_psi{};
+  double wall_step_s_median{}, checksum_l2{};
 };
 
+int env_warmup(int fallback = 5) {
+  const char *v = std::getenv("TUNGSTEN_WARMUP");
+  if (v == nullptr || *v == '\0') return fallback;
+  return std::atoi(v);
+}
+
+double median_of(std::vector<double> s) {
+  if (s.empty()) return 0.0;
+  std::sort(s.begin(), s.end());
+  const std::size_t n = s.size();
+  return (n % 2 == 1) ? s[n / 2] : 0.5 * (s[n / 2 - 1] + s[n / 2]);
+}
+
 /// One seeded-solidification run. `dealias` is the only thing that varies.
-Outcome run_case(int n, double dx, int n_steps, bool dealias, int rank, int nproc) {
+Outcome run_case(int n, double dx, int n_steps, bool dealias, int rank, int nproc,
+                 int warmup = 0) {
   const auto domain = pfc::domain::create(pfc::GridSize({n, n, n}),
                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                           pfc::GridSpacing({dx, dx, dx}));
@@ -109,7 +130,15 @@ Outcome run_case(int n, double dx, int n_steps, bool dealias, int rank, int npro
   opt.dealias = dealias;
   pfc::sim::SpectralETDSystem<Physics> sys(phys, stack.fft(), state, 1.0, opt);
   double t = 0.0;
-  for (int s = 0; s < n_steps; ++s) t = sys.step(t);
+  std::vector<double> step_s;
+  step_s.reserve(static_cast<std::size_t>(n_steps));
+  for (int s = 0; s < n_steps; ++s) {
+    MPI_Barrier(MPI_COMM_WORLD);
+    const double t0 = MPI_Wtime();
+    t = sys.step(t);
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (s >= warmup) step_s.push_back(MPI_Wtime() - t0);
+  }
 
   pfc::data::Field<std::complex<double>> hat(domain, stack.fft().get_outbox_bounds(),
                                              0);
@@ -134,8 +163,20 @@ Outcome run_case(int n, double dx, int n_steps, bool dealias, int rank, int npro
   MPI_Allreduce(&lo, &glo, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
   MPI_Allreduce(&hi, &ghi, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
+  double l2_local = 0.0, n_local = 0.0;
+  psi.with_host_view([&](const double *p, std::size_t m) {
+    for (std::size_t i = 0; i < m; ++i) {
+      l2_local += p[i] * p[i];
+      n_local += 1.0;
+    }
+  });
+  double l2g[2]{}, l2l[2]{l2_local, n_local};
+  MPI_Allreduce(l2l, l2g, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  const double checksum_l2 = std::sqrt(l2g[0] / l2g[1]);
+
   return Outcome{sf.k_peak, sf.k1,          sf.S_peak, sf.total_power,
-                 glo,       ghi,            g[0] / g[1]};
+                 glo,       ghi,            g[0] / g[1],
+                 median_of(step_s), checksum_l2};
 }
 
 } // namespace
@@ -146,9 +187,67 @@ int main(int argc, char *argv[]) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
-  const std::string out_path =
-      (argc > 1) ? argv[1] : "tungsten_dealias_resolution.csv";
-  const int n_steps = (argc > 2) ? std::atoi(argv[2]) : 1000;
+  const bool reserved =
+      (argc > 1 && std::string(argv[1]) == "--reserved");
+  const std::string out_path = reserved
+      ? ((argc > 2) ? argv[2] : "tungsten_dealias_reserved.csv")
+      : ((argc > 1) ? argv[1] : "tungsten_dealias_resolution.csv");
+  const int n_steps = reserved ? 30
+      : ((argc > 2) ? std::atoi(argv[2]) : 1000);
+  const int warmup = reserved ? env_warmup(5) : 0;
+
+  if (reserved) {
+    const int n = 128;
+    const double dx = std::numbers::pi / 3.0;
+    const Outcome off = run_case(n, dx, n_steps, false, rank, nproc, warmup);
+    const Outcome on = run_case(n, dx, n_steps, true, rank, nproc, warmup);
+    auto rel = [](double a, double b) {
+      return (a != 0.0) ? std::abs(b - a) / std::abs(a) : 0.0;
+    };
+    const double f_before = 3.0 / tungsten::resolution::nyquist_k(dx);
+    const double f_after = tungsten::resolution::two_thirds_cut(dx) /
+                           tungsten::resolution::nyquist_k(dx);
+    const double r = (off.wall_step_s_median > 0.0)
+                         ? on.wall_step_s_median / off.wall_step_s_median
+                         : 0.0;
+    if (rank == 0) {
+      const std::filesystem::path p{out_path};
+      if (p.has_parent_path()) std::filesystem::create_directories(p.parent_path());
+      std::unique_ptr<std::FILE, int (*)(std::FILE *)> out(std::fopen(out_path.c_str(), "w"),
+                                                           std::fclose);
+      if (!out) {
+        std::fprintf(stderr, "cannot open %s\n", out_path.c_str());
+        MPI_Abort(MPI_COMM_WORLD, 1);
+      }
+      std::fprintf(out.get(),
+                   "# Reserved N=128 dx=pi/3 tungsten mask on/off, Paper A RQ2.\n"
+                   "N,dx,steps,warmup,pts_per_lattice,f_nl_before,f_nl_after,"
+                   "wall_step_ms_off,wall_step_ms_on,r,"
+                   "k1_off,k1_on,rel_dk1,s_peak_off,s_peak_on,rel_ds_peak,"
+                   "checksum_l2_off,checksum_l2_on\n");
+      std::ostringstream line;
+      line.imbue(std::locale::classic());
+      line << std::setprecision(10) << n << ',' << dx << ',' << n_steps << ','
+           << warmup << ',' << tungsten::resolution::points_per_lattice(dx) << ','
+           << f_before << ',' << f_after << ','
+           << (1000.0 * off.wall_step_s_median) << ','
+           << (1000.0 * on.wall_step_s_median) << ',' << r << ',' << off.k1
+           << ',' << on.k1 << ',' << rel(off.k1, on.k1) << ',' << off.s_peak
+           << ',' << on.s_peak << ',' << rel(off.s_peak, on.s_peak) << ','
+           << off.checksum_l2 << ',' << on.checksum_l2 << '\n';
+      std::fputs(line.str().c_str(), out.get());
+      std::printf("TUNGSTEN_WALL_STEP_MS_OFF=%.6f\n", 1000.0 * off.wall_step_s_median);
+      std::printf("TUNGSTEN_WALL_STEP_MS_ON=%.6f\n", 1000.0 * on.wall_step_s_median);
+      std::printf("TUNGSTEN_R=%.6f\n", r);
+      std::printf("TUNGSTEN_F_NL_BEFORE=%.6f TUNGSTEN_F_NL_AFTER=%.6f\n", f_before,
+                  f_after);
+      std::printf("rel_dk1=%.6e rel_ds_peak=%.6e\n", rel(off.k1, on.k1),
+                  rel(off.s_peak, on.s_peak));
+      std::printf("wrote %s\n", out_path.c_str());
+    }
+    MPI_Finalize();
+    return 0;
+  }
 
   // Roughly a fixed physical box (~71 code lengths) at each spacing, so the
   // seed sees the same amount of vapour to grow into.
