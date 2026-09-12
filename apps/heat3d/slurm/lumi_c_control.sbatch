@@ -66,6 +66,11 @@ cmake -S "${SRC}" -B "${BUILD}" -G Ninja \
   -DOpenPFC_MPI_HIP_AWARE=OFF \
   -DMPI_C_COMPILER=cc \
   -DMPI_CXX_COMPILER=CC \
+  -DMPI_C_HEADER_DIR="${MPICH_DIR}/include" \
+  -DMPI_CXX_HEADER_DIR="${MPICH_DIR}/include" \
+  -DMPI_C_LIB_NAMES=mpi \
+  -DMPI_CXX_LIB_NAMES=mpi \
+  -DMPI_mpi_LIBRARY="${MPICH_DIR}/lib/libmpi.so" \
   -DHeffte_DIR="${HEFFTE_CMAKE}"
 cmake --build "${BUILD}" -j "${SLURM_CPUS_ON_NODE}" \
   --target heat3d_fd heat3d_spectral
