@@ -710,12 +710,32 @@ is affordable at all at $512^3$.
 
 What *not* to take from it: $128^3$ disagrees with both larger boxes by 24 %
 in $V$, and $t_{\mathrm{end}} = 150$ is early — @fig-ad-3d shows a rounded
-$\langle 100 \rangle$ cross, not a developed dendrite with side branches.
-**The 3-D runs demonstrate that the coupled machinery works, scales and stays
-consistent at LUMI scale. They are not a 3-D dendrite science result, and the
-quantitative claims in this chapter are all 2-D.**
+$\langle 100 \rangle$ cross. **The coupled $512^3$ run demonstrates that the
+machinery works at LUMI scale. It is not, by itself, a 3-D dendrite science
+result; the quantitative selection claims in this chapter remain 2-D.**
 
 ![Mid-plane slices of the $512^3$ coupled run on 2048 ranks. The mid-$z$ and mid-$y$ planes are indistinguishable, as they must be for a spherical seed under $\langle 100 \rangle$ cubic anisotropy. Elastic energy concentrates on the interface and in the grooves; the bright spot at the centre is the original seed, whose composition history differs from the solid grown around it.](figures/alloy_dendrite_3d.svg){#fig-ad-3d}
+
+A longer isothermal $256^3$ run (elastic off, $\epsilon_4 = 0.05$, job
+21981928) is the morphology that $t=150$ does not reach. @fig-ad-3d-long
+is $t = 73$ (still a cross) against $t = 165$ (parabolic $\langle 100\rangle$
+tips, grooves between arms, $V = 0.488$, $\rho = 5.23$, arm length
+$\approx 87\,W_0$). The three mid-planes in @fig-ad-3d-long-slices agree,
+as cubic symmetry requires. There is no noise, so there are no
+sidebranches — that is still a missing 3-D claim, not a failure of this
+run.
+
+![Isothermal $256^3$ dendrite, $\epsilon_4=0.05$. Left: $t=73$, a rounded
+cross. Right: $t=165$, developed $\langle 100\rangle$ arms. Job
+21981928.](figures/alloy_dendrite_3d_long_growth.png){#fig-ad-3d-long}
+
+![Same run, $t=165$: $xy$, $xz$ and $yz$ mid-planes. Cubic symmetry, not
+an extruded 2-D crystal.](figures/alloy_dendrite_3d_long_slices.png){#fig-ad-3d-long-slices}
+
+{{< pagebreak >}}
+
+![Mid-$z$ plane of the $256^3$ isothermal dendrite at $t=165$. $V=0.488$,
+$\rho=5.23$. Job 21981928.](figures/alloy_dendrite_3d_long_mid.png){#fig-ad-3d-long-mid}
 
 ### Stage 4: what the elasticity actually does {#sec-ad-science}
 
