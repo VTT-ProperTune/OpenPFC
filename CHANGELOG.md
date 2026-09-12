@@ -16,6 +16,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   1796 ms. CSV `docs/report/data/heat3d_method_cost_lumi_c.csv`.
   Recipe: `apps/heat3d/slurm/lumi_c_control.sbatch`. Candidate for the
   operator-choice protocol, not an admitted ranking.
+- **Heat3D held-out \(N=128\) RK4** (job 21991231): orders 2 and 12 at
+  \(f=0.3\) and \(0.6\). Predicted vs measured ratio is 1 to
+  \(6\times10^{-8}\) relative. CSV
+  `docs/report/data/heat3d_spectral_content_heldout.csv`.
 - **Coherent elastic Cahn–Hilliard** (`cahn_hilliard_elastic`). Same
   application, not a seventeenth catalog entry. Vegard eigenstrain
   \(\varepsilon^{*}=\varepsilon_0(c-c_{\mathrm{ref}})I\) on the existing
