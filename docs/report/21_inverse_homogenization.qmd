@@ -118,6 +118,25 @@ Random Fourier noise never produced $C_{12}<0$. A Grima rotating-square seed
 Catch2 requires $C_{12}<0$ on the $48^2$ rotating-square seed. Inverse from that
 seed stayed auxetic ($\nu_{\mathrm{bin}}=-0.080$ after 80 steps).
 
+@fig-invhom-hinges is the geometry result as a picture: too small a square and
+the cell is four islands; too large and the squares fuse into a plate with
+holes; only the hinge width is auxetic. @fig-invhom-rotating tiles that
+working cell.
+
+![Hinge width is the whole design. Left: half-side $0.185$, four islands, $\nu>0$ (job 21955691). Centre: $0.200$, one percolating network, $\nu=-0.123$ (job 21956076). Right: $0.215$, fused plate, $\nu=+0.14$ (job 21955873). Dark is solid.](figures/inverse_homogenization_hinges.png){#fig-invhom-hinges}
+
+![Three-by-three periodic tiling of the rotating-square seed (job 21956076). Dark is solid. This is the geometry that homogenizes to $\nu=-0.123$.](figures/inverse_homogenization_rotating_tile.png){#fig-invhom-rotating}
+
+The kinematic signature of auxeticity is a **lateral expansion under stretch**.
+@fig-invhom-stretch applies the same vertical stretch to a $3\times 3$ tile:
+the rotating-square network widens; the CH spinodal narrows. The Poisson
+effect is drawn at $5\times$ so the *sign* is visible; the measured $\nu$ is
+in the label. This is an affine display, not a finite-strain solve.
+
+![Top: rotating-square rest and stretch — the pattern gets *wider*. Bottom: thresholded Cahn–Hilliard rest and the same stretch — the pattern gets *narrower*.](figures/inverse_homogenization_stretch.png){#fig-invhom-stretch}
+
+![Two inverse designs for the same auxetic target from different seeds (job 21955207). $\mathrm{corr}(h)=0.19$: the inverse map is not unique.](figures/inverse_homogenization_two_seeds.png){#fig-invhom-seeds}
+
 ## Stage 6 — process restriction
 
 Semi-implicit spectral Cahn–Hilliard [@Cahn1958] on the same FFT, parameters
@@ -133,6 +152,10 @@ CH/spinodal morphologies **drops the auxetic quadrant**. That is a result, not
 a failed run.
 
 ![Effective Poisson ratio of the rotating-square mechanism versus the CH process family (jobs 21956076, 21958468).](figures/inverse_homogenization_nu.svg){#fig-invhom-nu}
+
+![Cahn–Hilliard process microstructure at $c_0=0.5$, $\kappa=1$ (job 21958468), $3\times 3$ tile. Bicontinuous, not re-entrant: $\nu_{\mathrm{bin}}=+0.23$.](figures/inverse_homogenization_spinodal_tile.png){#fig-invhom-spinodal}
+
+![HIP rotating-square stiffness (engineering Voigt). The in-plane $C_{12}$ block is **negative** (job 21967095).](figures/inverse_homogenization_CH.svg){#fig-invhom-CH}
 
 ## Manufacturability (Stage 7)
 
@@ -151,6 +174,10 @@ A 2-D extrusion is not a 3-D case. 3-D work uses $n_z=n_x$ spinodal / inverse
 loops. Device Green (#157) is open: timings are CPU/MPI on `standard`, never
 claimed as GPU. Grid, ranks, loads per step (6), wall time per iteration, and
 `VmHWM` are printed by `openpfc_inverse_homogenize`.
+
+![Four $z$-slices of the $64^3$ inverse field (job 21964843), thresholded at $0.5$. The topology changes with $z$: this is a genuine 3-D cell, not an extruded 2-D pattern.](figures/inverse_homogenization_3d_slices.png){#fig-invhom-3d}
+
+![Left: surface voxels of the same $64^3$ cell, isometric. Right: eight $z$-slices stacked. Neither view is a 2-D extrusion.](figures/inverse_homogenization_3d_iso.png){#fig-invhom-3d-iso}
 
 ## Verification (Stage 1 and 4)
 
