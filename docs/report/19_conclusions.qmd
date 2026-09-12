@@ -10,8 +10,9 @@ one PDE-constrained inverse-design application (@sec-inverse-homogenization)
 — on one runtime, with one halo/decomposition layer. The sixteenth app is an
 **explicit exception** (match a target $\mathbf{C}_H$, not another PDE demo);
 the catalog is closed after it. Fourteen of the fifteen evolution apps have a
-device path; the coupled dendrite's elastic solve is still host-side, and
-inverse homogenization uses that same host Green operator.
+device path; the coupled dendrite's elastic solve is still host-side (#157).
+Inverse homogenization has HIP Green twins for homogenization and the
+inverse loop; that is not a 3-D GPU scaling curve.
 
 The four claims from the abstract hold up, with qualifications worth stating.
 

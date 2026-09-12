@@ -36,9 +36,11 @@ The scientific question that is *not* a generic TO demo is Stage 6:
 | Observable | Engineering-Voigt $\mathbf{C}_H$, $\nu=C_{12}/(C_{11}+C_{12})$, grey fraction, percolation, opening loss |
 | Model maturity | numerical verification: **homogeneous + laminate oracles and a finite-difference gradient check** · physical completeness: **reduced** — linear two-phase elasticity, ersatz void, no finite strain · calibration: **none** |
 
-Device Green-operator elasticity is issue #157 and is **not** in this
-application. Stage 8 timings below are **CPU/MPI on LUMI-C `standard`**, not a
-GPU claim.
+HIP Green-operator twins (`openpfc_homogenize_hip`,
+`openpfc_inverse_homogenize_hip`) are in this application: device FFT +
+Eyre–Milton, with homogeneous \(C_{11}\) matching CPU (job 21967095).
+Stage 8 3-D timings below are **CPU/MPI on LUMI-C `standard`**. Coupled
+dendrite device Green remains issue #157.
 
 ## Governing workflow
 
@@ -171,9 +173,10 @@ morphological opening loss. Job 21959215:
 ## 3-D (Stage 8)
 
 A 2-D extrusion is not a 3-D case. 3-D work uses $n_z=n_x$ spinodal / inverse
-loops. Device Green (#157) is open: timings are CPU/MPI on `standard`, never
-claimed as GPU. Grid, ranks, loads per step (6), wall time per iteration, and
-`VmHWM` are printed by `openpfc_inverse_homogenize`.
+loops. Grid, ranks, loads per step (6), wall time per iteration, and
+`VmHWM` are printed by `openpfc_inverse_homogenize`. The 3-D timings below
+are CPU/MPI on `standard`. HIP Green is a one-GCD homogenization/inverse
+parity check (job 21967095), not a 3-D GPU scaling curve.
 
 ![Four $z$-slices of the $64^3$ inverse field (job 21964843), thresholded at $0.5$. The topology changes with $z$: this is a genuine 3-D cell, not an extruded 2-D pattern.](figures/inverse_homogenization_3d_slices.png){#fig-invhom-3d}
 
@@ -194,7 +197,8 @@ claimed as GPU. Grid, ranks, loads per step (6), wall time per iteration, and
   the rotating-square basin.
 - Re-entrant honeycomb on this grid was **not** auxetic; only rotating squares
   were.
-- No GPU elasticity in this app (#157).
+- HIP Green exists for this app; it is not a 3-D GPU scaling curve.
+  Coupled dendrite device Green remains #157.
 - Catalog stays closed after this sixteenth app.
 
 ## Provenance
