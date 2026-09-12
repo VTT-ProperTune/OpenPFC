@@ -1,0 +1,5 @@
+# Reserved N=128 dx=pi/3 tungsten mask on/off, Paper A RQ2.
+# LUMI-C job 21993461, 8 ranks x 16 threads, OpenPFC 3dabc9cc.
+# Candidate occupancy/r; not an equal-accuracy spectral-vs-FD ranking.
+N,dx,steps,warmup,pts_per_lattice,f_nl_before,f_nl_after,wall_step_ms_off,wall_step_ms_on,r,k1_off,k1_on,rel_dk1,s_peak_off,s_peak_on,rel_ds_peak,checksum_l2_off,checksum_l2_on
+128,1.047197551,30,5,6,1,0.6666666667,16.335197,16.284169,0.9968761932,0.6948259156,0.6923676698,0.003537930515,15470391.97,15423548.61,0.003027935996,0.1873943049,0.1863687579

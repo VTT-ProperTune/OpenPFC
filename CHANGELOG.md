@@ -11,8 +11,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 - **Tungsten reserved dealias timing** (`tungsten_dealias_study --reserved`):
   \(N=128\), \(\Delta x=\pi/3\), mask on vs off, median `wall_step` after
-  five warm-up steps. Paper A RQ2 evaluation point; not in the four-row
-  exploration CSV.
+  five warm-up steps. Job 21993461 (LUMI-C 8×16): \(r=c_{\mathrm{on}}/
+  c_{\mathrm{off}}=0.997\), \(f_{\mathrm{nl}}=1\) before the mask and
+  \(2/3\) after, \(|\Delta k_1|\) and \(|\Delta S_{\mathrm{peak}}|<0.4\%\).
+  CSV `docs/report/data/tungsten_dealias_reserved.csv`. Not a
+  spectral-versus-FD ranking.
 - **Heat3D CPU median `wall_step`** (`HEAT3D_CPU_WALL_STEP_MS_MEDIAN`)
   on `heat3d_fd` / `heat3d_spectral`, matching the GPU warm-up rule.
   LUMI-C equal-node control (job 21990892, 8 ranks × 16 threads,
