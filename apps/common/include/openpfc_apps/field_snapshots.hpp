@@ -8,11 +8,11 @@
  * @brief Optional `fields[]` snapshot output for the standalone science drivers.
  *
  * Shared by the science drivers that do *not* run on
- * `SpectralETDSession`: `surface_diffusion_anisotropic` and
- * `ehd_film_nonlinear`. Both own their own `main()` because their physics is
- * not expressible as a reciprocal-space symbol, and both consequently missed
- * out on the one thing the session gives every other application for free —
- * a field writer.
+ * `SpectralETDSession`: `surface_diffusion_anisotropic`,
+ * `ehd_film_nonlinear`, and `thin_film_nonlinear` (CPU and HIP). They own
+ * their own `main()` because their physics is not expressible as a
+ * reciprocal-space symbol, and consequently missed out on the one thing the
+ * session gives every other application for free — a field writer.
  *
  * @details
  * That gap had a concrete cost: the science presets of those two apps could
@@ -80,9 +80,10 @@ namespace pfc::apps {
  * @throws std::invalid_argument if `fields[]` is malformed, holds more than
  *         one entry, or names a field this driver does not own
  */
+template <typename MemorySpace = pfc::HostSpace>
 inline std::unique_ptr<pfc::VTKWriter>
 make_field_snapshot_writer(const nlohmann::json &cfg, const std::string &field_name,
-                           const pfc::data::Field<double> &field,
+                           const pfc::data::Field<double, MemorySpace> &field,
                            MPI_Comm comm = MPI_COMM_WORLD) {
   if (!cfg.contains("fields")) return nullptr;
   const auto &fields = cfg.at("fields");
@@ -135,13 +136,15 @@ make_field_snapshot_writer(const nlohmann::json &cfg, const std::string &field_n
  * @param writer     may be `nullptr`
  * @param increment  save index, not step index (see the file-level notes)
  */
+template <typename MemorySpace = pfc::HostSpace>
 inline void write_field_snapshot(pfc::VTKWriter *writer, int increment,
-                                 const pfc::data::Field<double> &field) {
+                                 pfc::data::Field<double, MemorySpace> &field) {
   if (writer == nullptr) return;
-  const pfc::field::FieldView<double> view(field.data(), field.size(),
-                                           field.box().size, field.spacing(),
-                                           field.origin());
-  writer->write(increment, view);
+  field.with_host_view([&](double *d, std::size_t n) {
+    const pfc::field::FieldView<double> view(d, n, field.box().size, field.spacing(),
+                                             field.origin());
+    writer->write(increment, view);
+  });
 }
 
 } // namespace pfc::apps
