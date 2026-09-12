@@ -30,6 +30,34 @@ inverse_homogenization_cpu_executable(openpfc_inverse_homogenize
                                       src/inverse_homogenize.cpp)
 install(TARGETS openpfc_homogenize openpfc_inverse_homogenize DESTINATION bin)
 
+if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
+  function(inverse_homogenization_hip_executable target)
+    add_executable(${target} ${ARGN}
+      src/hip/microelasticity_kernels.hip)
+    target_include_directories(${target} PRIVATE ${INVERSE_HOMOGENIZATION_INCLUDE_DIR})
+    target_link_libraries(${target} PRIVATE OpenPFC openpfc_apps_common
+                          ${_invhom_heffte_tgt} hip::host openpfc_hip_kernels)
+    set_target_properties(${target} PROPERTIES
+      HIP_STANDARD 20
+      HIP_STANDARD_REQUIRED ON)
+  endfunction()
+  inverse_homogenization_hip_executable(openpfc_homogenize_hip
+                                        src/hip/homogenize_hip.cpp)
+  inverse_homogenization_hip_executable(openpfc_inverse_homogenize_hip
+                                        src/hip/inverse_homogenize_hip.cpp)
+  install(TARGETS openpfc_homogenize_hip openpfc_inverse_homogenize_hip
+          DESTINATION bin)
+  message(STATUS "openpfc_homogenize_hip / openpfc_inverse_homogenize_hip (HIP Green) enabled")
+  if(INVERSE_HOMOGENIZATION_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
+    add_test(NAME inverse-homogenization-hip-homogeneous-smoke
+             COMMAND $<TARGET_FILE:openpfc_homogenize_hip>
+                     --shape=homogeneous --nx=8 --ny=8 --nz=8 --volume=1)
+    set_tests_properties(inverse-homogenization-hip-homogeneous-smoke PROPERTIES
+      PASS_REGULAR_EXPRESSION "HOMOGENIZATION_CHECKSUM"
+      TIMEOUT 180)
+  endif()
+endif()
+
 if(INVERSE_HOMOGENIZATION_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
   include(CTest)
   add_test(NAME inverse-homogenization-homogeneous-smoke
