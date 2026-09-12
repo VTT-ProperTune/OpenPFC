@@ -45,6 +45,7 @@
  * ## Usage
  *
  *     heat3d_spectral_content_study [--data-dir DIR] [--no-validate]
+ *     heat3d_spectral_content_study [--data-dir DIR] [--held-out-only]
  *
  * `DIR` defaults to `docs/report/data` resolved against the current
  * working directory — run this from the repository root, or pass an
@@ -138,6 +139,15 @@ const std::vector<ValidationPoint> kValidationPoints = {
     {4, 96, 0.30, 200},
 };
 
+/// Protocol held-out pair (Paper A linear slice): orders 2 and 12 at
+/// f = 0.3 and 0.6 on N = 128, not in kValidationPoints.
+const std::vector<ValidationPoint> kHeldOutPoints = {
+    {2, 128, 0.30, 200},
+    {2, 128, 0.60, 200},
+    {12, 128, 0.30, 800},
+    {12, 128, 0.60, 800},
+};
+
 } // namespace
 
 int main(int argc, char **argv) {
@@ -156,18 +166,55 @@ int main(int argc, char **argv) {
 
   std::string data_dir = "docs/report/data";
   bool validate = true;
+  bool held_out_only = false;
   for (int i = 1; i < argc; ++i) {
     const std::string arg = argv[i];
     if (arg == "--data-dir" && i + 1 < argc) {
       data_dir = argv[++i];
     } else if (arg == "--no-validate") {
       validate = false;
+    } else if (arg == "--held-out-only") {
+      held_out_only = true;
     } else {
       std::cerr << "Usage: " << argv[0]
-                << " [--data-dir DIR] [--no-validate]\n";
+                << " [--data-dir DIR] [--no-validate|--held-out-only]\n";
       MPI_Finalize();
       return 1;
     }
+  }
+
+  if (held_out_only) {
+    std::cout << "Held-out N=128 RK4 (orders 2 and 12, f=0.3 and 0.6)\n";
+    std::vector<sc::ValidationCase> cases;
+    for (const ValidationPoint &p : kHeldOutPoints) {
+      const sc::ValidationCase c =
+          sc::run_validation(p.fd_order, p.N, p.f, sc::kDiffusionTime, p.n_steps);
+      const sc::ValidationCase c2 = sc::run_validation(
+          p.fd_order, p.N, p.f, sc::kDiffusionTime, 2 * p.n_steps);
+      cases.push_back(c);
+      cases.push_back(c2);
+      std::cout << "order=" << c.fd_order << " N=" << c.N << " f=" << c.f
+                << " ratio=" << c.ratio << " half-dt ratio=" << c2.ratio << "\n";
+    }
+    const std::string path = data_dir + "/heat3d_spectral_content_heldout.csv";
+    std::ofstream csv(path);
+    if (!csv) {
+      std::cerr << "cannot write " << path << "\n";
+      MPI_Finalize();
+      return 1;
+    }
+    csv << "# Held-out N=128 RK4 residuals, Paper A linear protocol.\n"
+        << "fd_order,N,content_fraction,tau,n_steps,dt,t_final,predicted_l2,"
+           "measured_l2,ratio\n";
+    csv << std::scientific << std::setprecision(10);
+    for (const sc::ValidationCase &c : cases) {
+      csv << c.fd_order << "," << c.N << "," << c.f << "," << c.tau << ","
+          << c.n_steps << "," << c.dt << "," << c.t_final << "," << c.predicted_l2
+          << "," << c.measured_l2 << "," << c.ratio << "\n";
+    }
+    std::cout << "wrote " << path << "\n";
+    MPI_Finalize();
+    return 0;
   }
 
   std::vector<MethodCost> costs;
