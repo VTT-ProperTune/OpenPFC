@@ -1,0 +1,16 @@
+# Three repeats, heat3d on LUMI-C, N=512, 8 ranks x 16 threads, 25 accepted
+# steps after 5 warm-up, dt=0.01, job 21995723.
+# wall_step_ms is HEAT3D_CPU_WALL_STEP_MS_MEDIAN. Not the N=1024 ranking table.
+repeat,method,fd_order,wall_step_ms
+1,spectral,0,714.204
+1,fd,2,78.1709
+1,fd,8,178.578
+1,fd,12,244.85
+2,spectral,0,712.862
+2,fd,2,78.7608
+2,fd,8,178.869
+2,fd,12,244.151
+3,spectral,0,714.314
+3,fd,2,78.0404
+3,fd,8,178.352
+3,fd,12,244.994
