@@ -1,0 +1,7 @@
+# 2-D qualified low-shear point, alloy_dendrite_growth, job 21996493.
+# Same vehicle as 21995259: nx=ny=256, dx=0.8, t_end=200, 8 LUMI-C ranks.
+# --el-iter=400 --el-tol=1e-6. NOT the 960^2 science box.
+# off = --elastic=1 --lambda-el=0 --n-el-substep=1000000.
+run_id,mu_liquid_frac,lambda_el,v_tip,dV_over_V,rho_tip,sigma_star,el_energy,el_iter_mean,el_iter_max,el_nonconverged
+off,0.05,0,0.1029215345,,14.95118044,0.04815345874,0,1,1,0
+mu0.001,0.001,3.191319611,0.09991146279,-2.924628e-02,17.16429152,0.03763722749,56.33338139,21.29,107,0
