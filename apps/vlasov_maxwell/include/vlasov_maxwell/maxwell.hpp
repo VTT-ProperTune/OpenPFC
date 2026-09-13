@@ -116,7 +116,8 @@
  *
  * @see parameters.hpp for the reduction and the normalisation
  * @see moments.hpp for where `rho`, `J_x` and `J_y` come from
- * @see docs/report/02_numerical_methods.qmd for the ETD pattern OpenPFC uses
+ * @see articles/openpfc-applications/02_numerical_methods.qmd (research)
+ *      for the ETD pattern OpenPFC uses
  */
 
 #include <algorithm>

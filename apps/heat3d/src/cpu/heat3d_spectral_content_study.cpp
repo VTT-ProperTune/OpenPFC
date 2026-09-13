@@ -10,7 +10,9 @@
  * @details
  * ## Why
  *
- * The method comparison in `docs/report/16_scalability.qmd` had two of its
+ * The method comparison in the OpenPFC applications catalog
+ * (`articles/openpfc-applications/18_scalability.qmd` in
+ * ahojukka5/research) had two of its
  * three axes measured (cost per step at equal grid, strong scaling at equal
  * grid) and the third — accuracy — measured only for a **single Fourier
  * mode**, by `heat3d_fd_convergence_study`. One smooth mode is the best
