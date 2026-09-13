@@ -11,7 +11,8 @@
  * @details
  * ## Why this exists
  *
- * `docs/report/16_scalability.qmd` measures the spectral and
+ * `ahojukka5/research` `articles/openpfc-applications/18_scalability.qmd`
+ * measures the spectral and
  * finite-difference paths of @sec-heat3d on two of the three axes that
  * decide between them — cost per step at equal grid, and parallel
  * efficiency at equal grid — and then declines to give a recommendation,

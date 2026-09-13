@@ -7,6 +7,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 The programs under `apps/` are full OpenPFC applications. They are different from the short executables under `examples/`: examples teach one API pattern at a time, while applications are meant to be run as model-specific binaries with realistic inputs. They are built when `OpenPFC_BUILD_APPS=ON`, which is the default, and they usually install under `<prefix>/bin` when you run `cmake --install`.
 
+The scientific catalog (equations, verification, scaling) is the
+[OpenPFC applications report](https://github.com/ahojukka5/research/blob/master/articles/openpfc-applications/index.qmd)
+in `ahojukka5/research`. This page is the operator-facing inventory.
+
 For realistic runs, assume MPI is involved. Use the same compiler, MPI and HeFFTe stack that you used to build OpenPFC; the install details are in [`INSTALL.md`](../../INSTALL.md). If you are still learning the library, run an example first through [`../quickstart.md`](../quickstart.md), then come back here.
 
 ## Which application should I run?

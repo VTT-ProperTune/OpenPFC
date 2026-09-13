@@ -11,9 +11,10 @@ stepper; `--case` selects the validation rung. The electrostatic
 Vlasov–Poisson reduction is a runtime specialisation of the same code, not a
 second implementation.
 
-This is the kinetic capstone of issue #84. The report chapter
-(`docs/report/17_vlasov_maxwell.qmd`) presents the full Vlasov–Maxwell system
-before deriving the 1D2V reduction. GPU measurements live in
+This is the kinetic capstone of issue #84. The
+[applications catalog](https://github.com/ahojukka5/research/blob/master/articles/openpfc-applications/17_vlasov_maxwell.qmd)
+presents the full Vlasov–Maxwell system before deriving the 1D2V
+reduction. GPU measurements live in
 [`docs/hpc/vlasov_gpu.md`](../../docs/hpc/vlasov_gpu.md).
 
 | | |

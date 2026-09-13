@@ -44,9 +44,8 @@ exclude_patterns = [
     "archive/OPENPFC_REFACTORING_EXECUTION_PLAN.md",
     "archive/0.2_migration_map.md",
     "archive/refactoring_roadmap.md",
-    # Quarto applications report: the .qmd chapters are not a Sphinx source
-    # suffix, so only its build output needs excluding. report/README.md stays
-    # a normal page so docs/README.md can link to it.
+    # Applications catalog prose lives in ahojukka5/research
+    # (articles/openpfc-applications). This tree keeps CSV/figure artifacts.
     "report/_output/**",
 ]
 suppress_warnings = ["toc.not_included"]

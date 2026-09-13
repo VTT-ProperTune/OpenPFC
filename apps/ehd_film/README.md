@@ -164,7 +164,8 @@ session's `fields` key —
 `fields: [{"name": "h", "data": "results/ehd_film_nonlinear/<case>_%04d.vti"}]`
 — which writes a VTK snapshot of the gap at every `saveat`, indexed by save
 and not by step (`_0000` is `t=0`). Both `load_relaxation_*.json` presets set
-it; `docs/report/09_ehd_film.qmd` renders the compliant-against-stiff
+it; the [applications catalog](https://github.com/ahojukka5/research/blob/master/articles/openpfc-applications/09_ehd_film.qmd)
+renders the compliant-against-stiff
 comparison from those snapshots. Omit the key and the driver writes
 diagnostics only, as it did before.
 

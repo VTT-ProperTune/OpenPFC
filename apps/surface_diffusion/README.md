@@ -150,7 +150,8 @@ One key is shared with the session shape: an optional
 writes a VTK snapshot of the surface at every `saveat`, indexed by save and
 not by step (`_0000` is `t=0`). Both `nanosurface_*.json` presets set it, so
 the orientation split in the CSV can also be looked at as a surface —
-`docs/report/07_surface_diffusion.qmd` renders exactly that. Omit the key and
+the [applications catalog](https://github.com/ahojukka5/research/blob/master/articles/openpfc-applications/07_surface_diffusion.qmd)
+renders exactly that. Omit the key and
 the driver writes diagnostics only, as it did before.
 
 ## Measured orientation selection (LUMI, CPU, 2026-09-09)

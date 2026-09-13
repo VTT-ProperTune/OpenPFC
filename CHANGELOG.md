@@ -7,6 +7,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+### Changed
+
+- **Applications catalog moved** to `ahojukka5/research`
+  (`articles/openpfc-applications`). `docs/report/` keeps CSV writers
+  and figure-regeneration scripts; narrative Quarto chapters are no
+  longer in this repository ([#174](https://github.com/VTT-ProperTune/OpenPFC/issues/174)).
+
 ### Added
 
 - **Alloy-dendrite qualified low-shear point** (job **21996493**,

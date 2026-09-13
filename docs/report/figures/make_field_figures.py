@@ -273,7 +273,8 @@ def figure_surface_diffusion_comparison():
     Do not read the panel amplitudes off the isolated single-orientation
     rates B_0(1 +- eps_a)k^4: theta is the orientation of the *combined*
     gradient of both ridge sets, so the two do not decay independently
-    (`docs/report/07_surface_diffusion.qmd` makes the same point about the
+    (`articles/openpfc-applications/07_surface_diffusion.qmd` in
+    ahojukka5/research makes the same point about the
     measured 3:1 split).
 
     t=8 is the shipped `t1`, not an extension: h decays as exp(-B k^4 t),
