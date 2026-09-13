@@ -32,6 +32,7 @@ results
 !apps/cahn_hilliard/slurm/*.sbatch
 !apps/tungsten/slurm/*.sbatch
 !apps/heat3d/slurm/*.sbatch
+!apps/vlasov_maxwell/slurm/*.sbatch
 !scripts/*.sbatch
 apps/kobayashi/slurm/builds/
 .trash
