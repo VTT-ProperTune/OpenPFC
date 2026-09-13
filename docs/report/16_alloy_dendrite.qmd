@@ -944,7 +944,17 @@ it until it stops mattering. It does not stop mattering:
 | $\int f_{\mathrm{el}}$ | 266 | 272 | 291 | 317 | 388 | 416 | 456 | 507 |
 | iterations | 45.0 | 33.2 | 23.3 | 17.4 | 12.0 | 10.3 | 7.4 | 5.3 |
 
-: The Stage-4 effect against the liquid-shear regularisation, over a 200-fold range. Every run converged; none hit the iteration cap. {#tbl-ad-mu}
+: The Stage-4 effect against the liquid-shear regularisation, over a 200-fold range. Every run converged; none hit the iteration cap. Exploratory: no job IDs in this repository. {#tbl-ad-mu}
+
+A later evaluation-grade scan on a smaller box does **not** reproduce
+the 16.7% row. Jobs **21995259** (eight ratios, \(256^2\),
+\(t_{\mathrm{end}}=200\)) and **21996493** (the same box at
+\(\mu_l/\mu_s=0.001\) with `--el-iter=400`) give a few-percent
+slowdown where the Green solve converges, and **−2.92%** at the
+qualified soft point (`el_nonconverged=0`, max 107 iterations). CSVs:
+`docs/report/data/dendrite_shear_21995259.csv` and
+`dendrite_shear_21996493.csv`. That vehicle is not @tbl-ad-science.
+Do not mix the two boxes.
 
 Two things are visible and only one of them is comfortable. The effect
 **falls by a factor of nine** as the liquid is softened towards a real

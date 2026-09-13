@@ -9,6 +9,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- **Alloy-dendrite qualified low-shear point** (job **21996493**,
+  LUMI-C `standard`, 8 ranks, 00:11:41): same \(256^2\) vehicle as
+  21995259, \(\mu_l/\mu_s=0.001\), `--el-iter=400`. Green solve
+  qualifies (`el_nonconverged=0`, max 107 iterations). \(dV/V=-2.92\%\),
+  matching the capped 21995259 row. Not the \(960^2\) science box.
+  CSV `docs/report/data/dendrite_shear_21996493.csv`.
 - **Tungsten reserved dealias timing** (`tungsten_dealias_study --reserved`):
   \(N=128\), \(\Delta x=\pi/3\), mask on vs off, median `wall_step` after
   five warm-up steps. Job 21993461 (LUMI-C 8×16): \(r=c_{\mathrm{on}}/
