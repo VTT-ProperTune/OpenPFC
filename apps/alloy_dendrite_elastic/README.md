@@ -25,7 +25,7 @@ FFT solve, coupled, in one application; that combination is the point.
 | Time integration | explicit, four stages, three halo exchanges per step |
 | Dimensions | 2-D (`nz = 1`) and 3-D from one templated stepper |
 | Elastic solve | `openpfc_apps/microelasticity.hpp` — Khachaturyan Green operator, Eyre–Milton fixed point, HeFFTe on the FD stack's own decomposition |
-| Backends | CPU for the science path; HIP twin of the FD step, with elasticity remaining host-side — see [The HIP twin](#the-hip-twin) |
+| Backends | CPU science path; HIP twin of the FD step; device Green operator for coupled elasticity (`--device=1` / `alloy_dendrite_hip_growth`) — see [The HIP twin](#the-hip-twin) |
 
 ## Binaries
 
@@ -554,12 +554,19 @@ from `step.hpp`, including the parenthesisation and the normalised
 Karma–Rappel anisotropy, so that the residual difference between the two
 paths measures compiler reassociation and nothing else.
 
-Coupled elasticity stays on the host. That is deliberate: the CPU growth
-driver already does Stage 2/4 science through `elasticity.hpp`, and the
-measurement below says moving the Green-operator solve to the device is the
-thing that would matter, not the field copies. `alloy_dendrite_hip_parity`
-is thermo-solutal only. `alloy_dendrite_coupled_cost` is the same GPU step
-with the host adapter attached, timed in five parts.
+Coupled elasticity has a device path (issue #157):
+`DeviceEigenstrainMicroelasticity` in `apps/common` runs the Eyre–Milton
+fixed point on rocFFT HeFFTe with HIP kernels for polarisation, Green
+contraction, local reflection, residual reduction, and `d f_el/d phi`.
+The inner loop does not copy the six tensor fields to the host.
+`alloy_dendrite_coupled_cost --device=1` times that path.
+`alloy_dendrite_hip_growth` is the coupled GPU science driver on the same
+application (not a sixteenth catalog entry).
+`openpfc_microelasticity_hip_parity` subtracts the host solver on a
+homogeneous (Eshelby) inclusion and a heterogeneous-modulus inclusion.
+`alloy_dendrite_hip_parity` remains thermo-solutal only. The host adapter
+is still the default of `alloy_dendrite_coupled_cost` so the original
+cost tables stay reproducible.
 
 The 2-D device path (`nz = 1`, `Axes2D()`, halo width `> 1`) needed a
 library fix: `DeviceFacesHalo` used to build its MPI face types with the
@@ -791,11 +798,11 @@ the route decision rests on was taken — are unaffected.
 
 ### The route taken, and the one not taken
 
-**Keep the host round-trip.** The measurement says it costs 0.3 % of the
-coupled step, so porting it is optimising the wrong term. The host *solve*
-is 500 to 3000 times the GPU step. The CPU application already couples that
-way; the GPU measurement says there is no reason to do otherwise until a
-device Green operator exists.
+**Keep the host round-trip of `phi`/`U`/`theta`.** The measurement says
+that copy costs 0.3 % of the coupled step, so porting *it* is the wrong
+term. The host *solve* is 500 to 3000 times the GPU step. That is the
+piece issue #157 ports; the host cost table below is the baseline that
+job made.
 
 Two levers make the host route affordable today, both legitimate because the
 mechanics are quasi-static — and the first of them does **not** do what the
@@ -856,9 +863,28 @@ exactly the shape of the four in `alloy_dendrite_hip_kernels.hip`. The
 obstacle `microelasticity.hpp` documents, that such a contraction does not
 fit `SpectralETDOps`, is real, but it is an argument against reusing
 `SpectralETDOps`, not against a device path. At 130x on the floor case such
-a port would turn a coupled step from FFT-bound back into FD-bound. It is
-deliberately not attempted here, because the measurement was the assignment
-and porting before measuring is how the wrong term gets optimised.
+a port would turn a coupled step from FFT-bound back into FD-bound. That
+port is issue #157.
+
+### Device Green operator, measured
+
+Job **22043044** (`standard-g`, one GCD, warm start, `tol_el = 1e-6`,
+same vehicle as the host table). Eshelby and heterogeneous-modulus
+parity pass at 1 and 2 ranks (`N = 24`). Cost, milliseconds per elastic
+solve, 8 iterations on both paths:
+
+| grid | host `t_el` | device `t_el` | host/device | device `t_pf` | device round-trip |
+|---|---:|---:|---:|---:|---:|
+| `64^3` | 266 | **8.57** | 31× | 1.54 | **0** |
+| `96^3` | 998 | **23.6** | 42× | 2.09 | **0** |
+| `128^3` | 2700 | **49.5** | **55×** | 2.74 | **0** |
+
+The timed device path has no host copy of the six tensor fields. At
+`128^3` the coupled step is still elasticity-bound (`t_el / t_pf ≈ 18`),
+not FD-bound, but the host thousand-fold gap is gone. Drivers:
+`alloy_dendrite_coupled_cost --device=1` and `alloy_dendrite_hip_growth`.
+Recipes: `slurm/alloy_dendrite_device_green.sbatch` and
+`slurm/alloy_dendrite_hip_science.sbatch`.
 
 ## Layout
 
@@ -874,12 +900,14 @@ and porting before measuring is how the wrong term gets optimised.
 | `include/alloy_dendrite/field_output.hpp` | Raw-brick snapshots plus a JSON manifest, correct at any rank count. |
 | `include/alloy_dendrite/device_step_hip.hpp` | The HIP launch surface: three trivially copyable descriptors and four launchers. Explains why the stencil weights travel unscaled. |
 | `include/alloy_dendrite/device_stepper_hip.hpp` | Device twin of `Stepper`: the sixteen device fields, the three halo groups, the residency bookkeeping. Explains why it takes a decomposition rather than a stack. |
+| `include/alloy_dendrite/device_elasticity_hip.hpp` | Device adapter: padded `phi`/`U`/`theta` → Green solve → padded `d f_el/d phi`. |
 | `scripts/check_decomposition.py` | Compares two snapshot directories written at different rank counts, reporting the relative max-norm and where it sits. |
 | `src/cpu/alloy_dendrite_planar.cpp` | Stage-1 driver. |
 | `src/cpu/alloy_dendrite_growth.cpp` | Stage-2/3/4 driver and the shipped dendrite preset. |
 | `src/hip/alloy_dendrite_hip_kernels.hip` | The four kernels, transcribed expression by expression from `step.hpp`. |
 | `src/hip/alloy_dendrite_hip_parity.cpp` | CPU-against-GPU and 1-rank-against-N-rank, with a `--tol` that makes it a test. Thermo-solutal only. |
-| `src/hip/alloy_dendrite_coupled_cost.cpp` | The coupled GPU step with equations (5)–(7) attached through the host adapter, timed in five parts. |
+| `src/hip/alloy_dendrite_coupled_cost.cpp` | Host or `--device=1` Green solve, timed in parts. |
+| `src/hip/alloy_dendrite_hip_growth.cpp` | Coupled GPU science driver on the same application. |
 | `slurm/*.sbatch` | The jobs that produced the HIP parity and coupled-cost numbers, the compute-node re-runs of the planar/Stage-2 tables, and the FTA directional campaign (`alloy_dendrite_fta.sbatch`). |
 | `tests/test_alloy_dendrite.cpp` | Closed-form relations, the measurements against analytic input, a real Stage-1 run, dimensional consistency, the order-aware step limit, the coupled elastic path, and a cheap `[fta-smoke]` Bridgman run. |
 

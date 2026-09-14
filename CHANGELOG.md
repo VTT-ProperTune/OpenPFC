@@ -16,6 +16,19 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- **Device Green-operator elasticity** (`DeviceEigenstrainMicroelasticity`,
+  issue [#157](https://github.com/VTT-ProperTune/OpenPFC/issues/157)).
+  Same Eyre–Milton scheme as the host solver on rocFFT HeFFTe; polarisation,
+  Green contraction, local reflection, residual reduction and
+  \(\partial f_{\mathrm{el}}/\partial\phi\) stay on device. Shared by
+  homogenization HIP and `alloy_dendrite_elastic`.
+  `alloy_dendrite_coupled_cost --device=1` times the path;
+  `alloy_dendrite_hip_growth` is the coupled GPU science driver (same
+  application). Parity: `openpfc_microelasticity_hip_parity`.
+  LUMI-G job **22043044**: Eshelby and heterogeneous-modulus parity pass at
+  1 and 2 ranks (`N=24`); warm-started `t_el` host/device 266/8.57 ms
+  (`64^3`), 998/23.6 ms (`96^3`), 2700/49.5 ms (`128^3`, **55×**), 8
+  iterations both paths, device round-trip zero.
 - **FTA directional campaign instrumentation** on `alloy_dendrite_growth`
   (issue #155). Time series write `v_tip2`, `y_groove`,
   `v_rel = v_tip-V_p` and the isotherm `x_iso`; `--Mc=0` with
