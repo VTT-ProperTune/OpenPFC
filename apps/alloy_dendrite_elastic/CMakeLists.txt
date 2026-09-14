@@ -79,11 +79,37 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
     target_link_libraries(alloy_dendrite_coupled_cost PRIVATE OpenPFC
                           openpfc_apps_common hip::host openpfc_hip_kernels
                           ${_alloy_dendrite_heffte_tgt})
+    if(TARGET openpfc_microelasticity_hip)
+      target_link_libraries(alloy_dendrite_coupled_cost PRIVATE
+                            openpfc_microelasticity_hip)
+      target_compile_definitions(alloy_dendrite_coupled_cost PRIVATE
+                                 OpenPFC_ENABLE_HIP_SPECTRAL)
+    endif()
     set_target_properties(alloy_dendrite_coupled_cost PROPERTIES
       HIP_STANDARD 17
       HIP_STANDARD_REQUIRED ON)
     install(TARGETS alloy_dendrite_coupled_cost DESTINATION bin)
     message(STATUS "alloy_dendrite_coupled_cost (MPI + HIP + HeFFTe) enabled")
+
+    if(TARGET openpfc_microelasticity_hip)
+      add_executable(alloy_dendrite_hip_growth
+        src/hip/alloy_dendrite_hip_growth.cpp
+        src/hip/alloy_dendrite_hip_kernels.hip)
+      target_include_directories(alloy_dendrite_hip_growth PRIVATE
+                             ${ALLOY_DENDRITE_INCLUDE_DIR})
+      target_compile_definitions(alloy_dendrite_hip_growth PRIVATE
+                             ${_alloy_dendrite_elastic_def}
+                             OpenPFC_ENABLE_HIP_SPECTRAL)
+      target_link_libraries(alloy_dendrite_hip_growth PRIVATE OpenPFC
+                            openpfc_apps_common hip::host openpfc_hip_kernels
+                            openpfc_microelasticity_hip
+                            ${_alloy_dendrite_heffte_tgt})
+      set_target_properties(alloy_dendrite_hip_growth PROPERTIES
+        HIP_STANDARD 17
+        HIP_STANDARD_REQUIRED ON)
+      install(TARGETS alloy_dendrite_hip_growth DESTINATION bin)
+      message(STATUS "alloy_dendrite_hip_growth (device Green coupling) enabled")
+    endif()
   else()
     message(STATUS "alloy_dendrite_coupled_cost skipped: HeFFTe not found")
   endif()

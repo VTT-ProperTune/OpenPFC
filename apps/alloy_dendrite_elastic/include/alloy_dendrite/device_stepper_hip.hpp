@@ -213,6 +213,7 @@ public:
   [[nodiscard]] const ModelParams &params() const noexcept { return m_p; }
   [[nodiscard]] int fd_order() const noexcept { return m_order; }
   [[nodiscard]] const pfc::Box3i &box() const noexcept { return m_box; }
+  [[nodiscard]] const hip::DeviceGeom &geom() const noexcept { return m_g; }
 
 private:
   [[nodiscard]] Field make_field_(const pfc::Domain &domain, int fd_order) const {

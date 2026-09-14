@@ -94,6 +94,9 @@
 #include <alloy_dendrite/diagnostics.hpp>
 #include <alloy_dendrite/elasticity.hpp>
 #include <alloy_dendrite/parameters.hpp>
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+#include <alloy_dendrite/device_elasticity_hip.hpp>
+#endif
 
 namespace {
 
@@ -154,6 +157,9 @@ struct CostConfig {
   std::string csv;
   std::string run_id = "cost";
   bool quiet = false;
+  /// Device Green operator (issue #157). Host solve remains the default so
+  /// the original cost tables stay reproducible.
+  bool device_elastic = false;
 };
 
 /// Mean of the trailing entries, skipping the warm-up.
@@ -332,10 +338,20 @@ int run_cost(const CostConfig &cfg, int rank, int nproc, MPI_Comm comm) {
   mp.comm = comm;
 
   std::unique_ptr<EigenstrainMicroelasticity> solver;
-  if (cfg.elastic) {
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+  std::unique_ptr<alloy_dendrite::DeviceElasticCoupling> device_solver;
+#endif
+  if (cfg.elastic && !cfg.device_elastic) {
     solver = std::make_unique<EigenstrainMicroelasticity>(domain, fftstack.fft(), mp);
     dev.set_elastic_driving_force(&dfel_d);
   }
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+  if (cfg.elastic && cfg.device_elastic) {
+    device_solver = std::make_unique<alloy_dendrite::DeviceElasticCoupling>(
+        domain, fd_decomp, rank, comm, ep, dev.geom());
+    dev.set_elastic_driving_force(&device_solver->driving_force());
+  }
+#endif
 
   // ---- the timed loop --------------------------------------------------
   std::vector<double> t_pf, t_d2h, t_prep, t_el, t_h2d;
@@ -367,6 +383,22 @@ int run_cost(const CostConfig &cfg, int rank, int nproc, MPI_Comm comm) {
     double residual = 0.0;
     bool converged = true;
     if (cfg.elastic && (step % cfg.n_el_substep == 0)) {
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+      if (cfg.device_elastic && device_solver) {
+        a = MPI_Wtime();
+        const auto rep = device_solver->solve(dev.phi(), dev.solute(),
+                                                dev.temperature());
+        if (hipDeviceSynchronize() != hipSuccess) {
+          throw std::runtime_error("hipDeviceSynchronize failed after device elastic");
+        }
+        b = MPI_Wtime();
+        el = b - a;
+        iters = rep.iterations;
+        residual = rep.residual;
+        converged = rep.converged;
+      } else
+#endif
+          if (solver) {
       a = MPI_Wtime();
       pull_three(dev.phi(), dev.solute(), dev.temperature(), phi_h, u_h, th_h);
       b = MPI_Wtime();
@@ -425,6 +457,7 @@ int run_cost(const CostConfig &cfg, int rank, int nproc, MPI_Comm comm) {
       push_owned(solver->dfel_dphi(), dfel_d);
       b = MPI_Wtime();
       h2d = b - a;
+      }
     }
 
     if (record) {
@@ -460,6 +493,7 @@ int run_cost(const CostConfig &cfg, int rank, int nproc, MPI_Comm comm) {
               << " fd_grid=" << cfg.fd_grid << " steps=" << cfg.steps
               << " warmup=" << cfg.warmup << " dt=" << dt
               << " elastic=" << (cfg.elastic ? 1 : 0)
+              << " device_elastic=" << (cfg.device_elastic ? 1 : 0)
               << " warm_start=" << (cfg.warm_start ? 1 : 0)
               << " n_el_substep=" << cfg.n_el_substep << " tol_el=" << cfg.tol_el
               << " liquid_shear=" << cfg.liquid_shear << "\n";
@@ -507,6 +541,8 @@ void print_usage(std::ostream &os, const char *exe) {
      << "\n"
      << "Elasticity (equations (5)-(7))\n"
      << "  --elastic=0|1          couple at all            (" << d.elastic << ")\n"
+     << "  --device=0|1          device Green operator (#157) ("
+     << d.device_elastic << ")\n"
      << "  --n-el-substep=N       solve every N steps      (" << d.n_el_substep
      << ")\n"
      << "  --warm-start=0|1       reuse the last solution  (" << d.warm_start
@@ -558,6 +594,7 @@ int run(int argc, char **argv, int rank, int nproc) {
   cfg.model.eps4 = opt.real("eps4", cfg.model.eps4);
   cfg.model.at_scale = opt.real("at-scale", cfg.model.at_scale);
   cfg.elastic = opt.flag("elastic", cfg.elastic);
+  cfg.device_elastic = opt.flag("device", cfg.device_elastic);
   cfg.n_el_substep = opt.integer("n-el-substep", cfg.n_el_substep);
   cfg.warm_start = opt.flag("warm-start", cfg.warm_start);
   cfg.tol_el = opt.real("tol-el", cfg.tol_el);
@@ -578,6 +615,15 @@ int run(int argc, char **argv, int rank, int nproc) {
   if (cfg.n_el_substep < 1) {
     throw std::invalid_argument("--n-el-substep must be >= 1");
   }
+  if (cfg.device_elastic && !cfg.elastic) {
+    throw std::invalid_argument("--device=1 requires --elastic=1");
+  }
+#if !defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+  if (cfg.device_elastic) {
+    throw std::invalid_argument(
+        "--device=1 requires OpenPFC_ENABLE_HIP_SPECTRAL (rocFFT HeFFTe)");
+  }
+#endif
   if (cfg.fd_grid != "slab" && cfg.fd_grid != "brick") {
     throw std::invalid_argument("--fd-grid must be 'slab' or 'brick'");
   }
