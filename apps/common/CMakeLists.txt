@@ -30,6 +30,64 @@ if(APPS_COMMON_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
   endif()
 endif()
 
+# Device Green operator (issue #157). OBJECT so homogenization and
+# alloy_dendrite_elastic share one kernel translation unit.
+if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
+  set_source_files_properties(src/hip/microelasticity_hip_kernels.hip
+                            PROPERTIES LANGUAGE HIP)
+  add_library(openpfc_microelasticity_hip OBJECT
+              src/hip/microelasticity_hip_kernels.hip)
+  target_include_directories(openpfc_microelasticity_hip PUBLIC
+                             ${CMAKE_CURRENT_SOURCE_DIR}/include)
+  target_link_libraries(openpfc_microelasticity_hip PUBLIC OpenPFC hip::host)
+  target_compile_definitions(openpfc_microelasticity_hip PUBLIC
+                             OpenPFC_ENABLE_HIP OpenPFC_ENABLE_HIP_SPECTRAL)
+  set_target_properties(openpfc_microelasticity_hip PROPERTIES
+    HIP_STANDARD 17
+    HIP_STANDARD_REQUIRED ON)
+  message(STATUS "openpfc_microelasticity_hip (device Green operator) enabled")
+
+  set(_me_hip_heffte "")
+  if(TARGET Heffte::Heffte)
+    set(_me_hip_heffte Heffte::Heffte)
+  elseif(TARGET Heffte)
+    set(_me_hip_heffte Heffte)
+  elseif(TARGET heffte)
+    set(_me_hip_heffte heffte)
+  endif()
+  add_executable(openpfc_microelasticity_hip_parity
+                 src/hip/microelasticity_hip_parity.cpp)
+  target_link_libraries(openpfc_microelasticity_hip_parity PRIVATE
+                        OpenPFC openpfc_apps_common
+                        openpfc_microelasticity_hip hip::host
+                        ${_me_hip_heffte})
+  set_target_properties(openpfc_microelasticity_hip_parity PROPERTIES
+    HIP_STANDARD 17
+    HIP_STANDARD_REQUIRED ON)
+  install(TARGETS openpfc_microelasticity_hip_parity DESTINATION bin)
+  if(OpenPFC_BUILD_TESTS)
+    include(CTest)
+    add_test(NAME apps-common-microelasticity-hip-parity
+             COMMAND $<TARGET_FILE:openpfc_microelasticity_hip_parity>
+                     --n=16)
+    set_tests_properties(apps-common-microelasticity-hip-parity PROPERTIES
+      PASS_REGULAR_EXPRESSION "ELASTIC_HIP_PARITY_PASS"
+      TIMEOUT 300)
+    if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
+       (OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR
+        OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 2))
+      add_test(NAME apps-common-microelasticity-hip-parity-mpi
+               COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                       ${MPIEXEC_PREFLAGS}
+                       $<TARGET_FILE:openpfc_microelasticity_hip_parity>
+                       ${MPIEXEC_POSTFLAGS} --n=16)
+      set_tests_properties(apps-common-microelasticity-hip-parity-mpi PROPERTIES
+        PASS_REGULAR_EXPRESSION "ELASTIC_HIP_PARITY_PASS"
+        TIMEOUT 300 PROCESSORS 2)
+    endif()
+  endif()
+endif()
+
 if(APPS_COMMON_ENABLE_TESTS AND OpenPFC_BUILD_TESTS AND OpenPFC_ENABLE_HEFFTE)
   find_package(Catch2 QUIET)
   if(TARGET Catch2::Catch2)

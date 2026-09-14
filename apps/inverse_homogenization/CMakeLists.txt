@@ -32,10 +32,10 @@ install(TARGETS openpfc_homogenize openpfc_inverse_homogenize DESTINATION bin)
 
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
   function(inverse_homogenization_hip_executable target)
-    add_executable(${target} ${ARGN}
-      src/hip/microelasticity_kernels.hip)
+    add_executable(${target} ${ARGN})
     target_include_directories(${target} PRIVATE ${INVERSE_HOMOGENIZATION_INCLUDE_DIR})
     target_link_libraries(${target} PRIVATE OpenPFC openpfc_apps_common
+                          openpfc_microelasticity_hip
                           ${_invhom_heffte_tgt} hip::host openpfc_hip_kernels)
     set_target_properties(${target} PROPERTIES
       HIP_STANDARD 20

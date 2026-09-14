@@ -198,14 +198,11 @@
  *
  * ## Scope — what this deliberately does not do
  *
- * - **Host only.** Every loop here is a plain host loop over
- *   `pfc::data::Field<double>` and the transforms go through
- *   `pfc::fft::IHostFFT`. `spectral_flux.hpp` is templated on `MemorySpace`
- *   because its elementwise work already had CUDA/HIP kernels behind
- *   `SpectralETDOps`; the pointwise work here is a six-component symmetric
- *   tensor contraction with a spatially varying stiffness, which has no such
- *   kernel yet. A device path is a separate piece of work, not a template
- *   parameter away.
+ * - **Host reference, optional HIP twin.** Every loop here is a plain host
+ *   loop over `pfc::data::Field<double>` and the transforms go through
+ *   `pfc::fft::IHostFFT`. The device path is `microelasticity_hip.hpp`
+ *   (issue #157): same Eyre–Milton scheme on `IDeviceFFT` plus HIP
+ *   kernels, not a `SpectralETDOps` template parameter.
  * - **Periodic only.** The Green operator *is* the periodic boundary
  *   condition. A free surface or a clamped face needs a different solver.
  * - **Small strain, no plasticity, no finite rotation.** Linear kinematics
