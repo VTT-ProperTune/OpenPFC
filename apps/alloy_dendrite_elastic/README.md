@@ -868,16 +868,19 @@ port is issue #157.
 
 ### Device Green operator, measured
 
-Job **22043044** (`standard-g`, one GCD, warm start, `tol_el = 1e-6`,
-same vehicle as the host table). Eshelby and heterogeneous-modulus
-parity pass at 1 and 2 ranks (`N = 24`). Cost, milliseconds per elastic
-solve, 8 iterations on both paths:
+Job **22042881** (`standard-g`, one GCD, warm start, `tol_el = 1e-6`,
+20 steps after 4 warm-up). Eshelby and heterogeneous-modulus parity pass
+at 1 and 2 ranks (`N = 24`): 1 vs 1 and 20 vs 20 iterations,
+`max|deps| ~ 2×10^{-18}`, `max|ddfel| ~ 1×10^{-20}`. Two-rank HeFFTe
+still prints `MPI_Comm_free` after `MPI_Finalize` (teardown, not a
+numeric fail). Cost, milliseconds per elastic solve, 8 iterations
+and the same residual on both paths:
 
 | grid | host `t_el` | device `t_el` | host/device | device `t_pf` | device round-trip |
 |---|---:|---:|---:|---:|---:|
-| `64^3` | 266 | **8.57** | 31× | 1.54 | **0** |
-| `96^3` | 998 | **23.6** | 42× | 2.09 | **0** |
-| `128^3` | 2700 | **49.5** | **55×** | 2.74 | **0** |
+| `64^3` | 263 | **8.66** | 30× | 1.53 | **0** |
+| `96^3` | 1003 | **23.9** | 42× | 2.09 | **0** |
+| `128^3` | 2736 | **49.6** | **55×** | 2.75 | **0** |
 
 The timed device path has no host copy of the six tensor fields. At
 `128^3` the coupled step is still elasticity-bound (`t_el / t_pf ≈ 18`),
@@ -885,6 +888,35 @@ not FD-bound, but the host thousand-fold gap is gone. Drivers:
 `alloy_dendrite_coupled_cost --device=1` and `alloy_dendrite_hip_growth`.
 Recipes: `slurm/alloy_dendrite_device_green.sbatch` and
 `slurm/alloy_dendrite_hip_science.sbatch`.
+
+### Coupled GPU science
+
+Job **22043824**, `192^2`, `dx = 0.8`, 4000 steps (`t = 48`), one GCD.
+`V` is a least-squares slope of `x_tip(t)` on the last ten samples
+(the same trailing-window idea as the CPU tables). `on` is modulus
+contrast with zero eigenstrain: a null elastic coupling, so it must
+match `off`. `thermal` and `both` turn on `evolve_theta` (`D_th = 2`,
+`M_c = 0.5`); they are not isothermal and are not compared to `off`
+for `dV/V`. This box is smaller and earlier than the CPU `600^2`
+Stage-4 table; quote it as a GPU vehicle, not a replacement for those
+numbers. Heat and solute conservation stay on the CPU driver.
+
+| | `V` | `rho` | `int f_el` | `max σ_vm` | last iters | `t_el` (ms) |
+|---|---:|---:|---:|---:|---:|---:|
+| off | 0.1650 | 10.96 | 0 | 0 | 0 | 0 |
+| on (no eigenstrain) | 0.1650 | 10.96 | 0 | 0 | 1 | 1.65 |
+| solutal | 0.1650 | 10.96 | 5.70×10⁻³ | 4.46×10⁻³ | 6 | 9.82 |
+| thermal | 0.1162 | 9.71 | 3.27×10⁻³ | 2.82×10⁻³ | 5 | 11.1 |
+| both | 0.1162 | 9.71 | **1.40×10⁻³** | 2.13×10⁻³ | 6 | 10.8 |
+
+`on` matches `off` to the printed digits of `x_tip`. Solutal misfit on
+this vehicle stores energy but does not move `V` at `t = 48`. Thermal
+and both share the slower non-isothermal tip; opposite-sign
+eigenstrains again reduce stored energy (here by a factor of two
+relative to solutal, and below thermal). Hydrostatic mean stress stays
+at round-off (`|mean p| < 10^{-18}`), consistent with the zero-mean-stress
+macroscopic condition. CSV:
+`docs/report/data/alloy_dendrite_hip_science_22043824.csv`.
 
 ## Layout
 

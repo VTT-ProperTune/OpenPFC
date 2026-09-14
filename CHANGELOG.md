@@ -25,10 +25,16 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   `alloy_dendrite_coupled_cost --device=1` times the path;
   `alloy_dendrite_hip_growth` is the coupled GPU science driver (same
   application). Parity: `openpfc_microelasticity_hip_parity`.
-  LUMI-G job **22043044**: Eshelby and heterogeneous-modulus parity pass at
-  1 and 2 ranks (`N=24`); warm-started `t_el` host/device 266/8.57 ms
-  (`64^3`), 998/23.6 ms (`96^3`), 2700/49.5 ms (`128^3`, **55×**), 8
-  iterations both paths, device round-trip zero.
+  LUMI-G job **22042881**: Eshelby and heterogeneous-modulus parity pass at
+  1 and 2 ranks (`N=24`); warm-started `t_el` host/device 263/8.66 ms
+  (`64^3`), 1003/23.9 ms (`96^3`), 2736/49.6 ms (`128^3`, **55×**), 8
+  iterations both paths, device round-trip zero. Coupled GPU science
+  job **22043824** (`192^2`, `t=48`): modulus-only matches elastic-off
+  (`V=0.165`); solutal stores \(f_{\mathrm{el}}=5.70\times10^{-3}\)
+  without moving \(V\); thermal and both (\(V=0.116\)) show eigenstrain
+  cancellation (\(f_{\mathrm{el}}=1.40\times10^{-3}\) vs \(3.27\times10^{-3}\)
+  thermal-only). CSV
+  `docs/report/data/alloy_dendrite_hip_science_22043824.csv`.
 - **FTA directional campaign instrumentation** on `alloy_dendrite_growth`
   (issue #155). Time series write `v_tip2`, `y_groove`,
   `v_rel = v_tip-V_p` and the isotherm `x_iso`; `--Mc=0` with
