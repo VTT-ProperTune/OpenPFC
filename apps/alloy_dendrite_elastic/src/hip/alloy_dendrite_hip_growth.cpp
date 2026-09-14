@@ -212,13 +212,17 @@ int run(const Cfg &cfg, int rank, int nproc, MPI_Comm comm) {
           const int hw = phi.storage_halo();
           const auto n = phi.local_size();
           const std::size_t npx = static_cast<std::size_t>(n[0] + 2 * hw);
+          const std::size_t npy = static_cast<std::size_t>(n[1] + 2 * hw);
+          const std::size_t k0 =
+              static_cast<std::size_t>(hw) * npx * npy;
           for (int j = 0; j < n[1]; ++j)
             for (int i = 0; i < n[0]; ++i)
               plane[static_cast<std::size_t>(i) +
                     static_cast<std::size_t>(j) * cfg.nx] =
                   data[(static_cast<std::size_t>(i) + hw) +
-                       (static_cast<std::size_t>(j) + hw) * npx];
+                       (static_cast<std::size_t>(j) + hw) * npx + k0];
         });
+        phi.note_device_write(); // a read, not a hand-over
         const auto tip = alloy_dendrite::measure_tip(
             plane, cfg.nx, cfg.ny, cfg.dx, cfg.dx, cfg.nx / 2, cfg.ny / 2, 8);
         x_tip = tip.x_tip;

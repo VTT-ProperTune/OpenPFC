@@ -179,6 +179,9 @@ int main(int argc, char **argv) {
   rc_cases |= run_case("heterogeneous", liquid, 80);
   if (rank == 0 && rc_cases == 0) std::cout << "ELASTIC_HIP_PARITY_PASS\n";
   rc = rc_cases;
+  host_stack.reset();
+  dev_stack.reset();
+  MPI_Barrier(MPI_COMM_WORLD);
   }
   MPI_Finalize();
   return rc;
