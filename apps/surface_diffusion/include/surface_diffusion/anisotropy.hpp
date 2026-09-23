@@ -90,7 +90,7 @@ make_anisotropy_schema() {
              .default_value = 0.0})
       .integer(&AnisotropySchemaValues::m,
                {.name = "m",
-                .description = "surface-stiffness symmetry order (4 or 6)",
+                .description = "symmetry order of the scalar coefficient B(theta) (4 or 6)",
                 .required = false,
                 .min = 1.0,
                 .max = 8.0,
@@ -103,8 +103,11 @@ inline void apply_anisotropy_json(const nlohmann::json &j, AnisotropyParams &p) 
 }
 
 /**
- * @brief Orientation-dependent surface-diffusion stiffness
+ * @brief Imposed scalar coefficient
  *        \f$B(\theta)=B_0[1+\epsilon_a\cos(m\theta)]\f$.
+ *
+ * `SurfaceStiffness` is the historical type name. It does not mean that
+ * \f$B\f$ equals the Herring stiffness \f$\gamma+\gamma''\f$.
  *
  * By construction, `B0` is a fixed point of the family in @p m: setting
  * `eps_a = 0` makes `operator()` return `B0` for every `theta`, which is the

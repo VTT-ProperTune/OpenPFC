@@ -278,6 +278,16 @@ double anisotropic_single_mode_rate(int nx, int ny,
 
 } // namespace
 
+TEST_CASE("anisotropic eps_a = 0 Fourier symbol is -B0 k^4",
+          "[surface_diffusion][anisotropy][spectral]") {
+  constexpr double B0 = 1.7;
+  constexpr double k = 0.5;
+  const double symbol =
+      surface_diffusion::isotropic_limit_symbol(B0, -(k * k));
+  REQUIRE_THAT(symbol, WithinAbs(-B0 * k * k * k * k, 1e-15));
+  REQUIRE(symbol < 0.0);
+}
+
 TEST_CASE("AnisotropicSurfaceDiffusionETD reduces to isotropic k^4 decay at "
           "eps_a = 0",
           "[surface_diffusion][anisotropy][spectral]") {
@@ -290,7 +300,10 @@ TEST_CASE("AnisotropicSurfaceDiffusionETD reduces to isotropic k^4 decay at "
   const double twopi = 2.0 * std::numbers::pi;
   const double k = twopi * 2.0 / 32.0;
   const double expected = B0 * k * k * k * k;
-  REQUIRE_THAT(rate, WithinRel(expected, 1.0e-6));
+  const double symbol =
+      surface_diffusion::isotropic_limit_symbol(B0, -(k * k));
+  REQUIRE_THAT(symbol, WithinAbs(-expected, 1e-15));
+  REQUIRE_THAT(rate, WithinRel(-symbol, 1.0e-6));
 }
 
 TEST_CASE("AnisotropicSurfaceDiffusionETD: single-orientation decay matches "

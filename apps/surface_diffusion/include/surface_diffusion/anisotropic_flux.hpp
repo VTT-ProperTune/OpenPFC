@@ -9,20 +9,25 @@
  *        diffusion equation (`#115`).
  *
  * @details
- * The isotropic Mullins model (`surface_diffusion_physics.hpp`) is the
- * divergence form
+ * The isotropic Mullins model (`surface_diffusion_physics.hpp`) is
  * \f[
- *   \partial_t h = \nabla\cdot\bigl[B_0\,\nabla(\nabla^2 h)\bigr]
- *               = -B_0\nabla^4 h,
+ *   \partial_t h = -B_0\nabla^4 h,
  * \f]
- * which is a pure reciprocal-space symbol because \f$B_0\f$ is constant. The
- * anisotropic generalisation replaces the constant kinetic coefficient with
- * the orientation-dependent stiffness \f$B(\theta)\f$ of `anisotropy.hpp`,
- * \f$\theta=\operatorname{atan2}(h_y,h_x)\f$ the local surface-gradient
+ * which is a pure reciprocal-space symbol because \f$B_0\f$ is constant.
+ * The anisotropic generalisation keeps the same conservative structure.
+ * \f$B(\theta)\f$ in `anisotropy.hpp` is an imposed scalar coefficient,
+ * not a Herring surface stiffness, and
+ * \f$\theta=\operatorname{atan2}(h_y,h_x)\f$ is the local surface-gradient
  * orientation:
  * \f[
- *   \partial_t h = \nabla\cdot\bigl[B(\theta)\,\nabla(\nabla^2 h)\bigr].
+ *   \mu = -\nabla^2 h,
+ *   \qquad
+ *   \partial_t h = \nabla\cdot\bigl[B(\theta)\,\nabla\mu\bigr]
+ *                = -\nabla\cdot\bigl[B(\theta)\,\nabla(\nabla^2 h)\bigr].
  * \f]
+ * At \f$\epsilon_a=0\f$ this is \f$-B_0\nabla^4 h\f$, Fourier symbol
+ * \f$-B_0|k|^4\f$. The opposite divergence, without the minus on
+ * \f$\nabla^2 h\f$, would anti-smooth.
  * \f$B(\theta)\f$ depends on the field itself (through its gradient), so the
  * operator cannot be written as a single reciprocal-space multiplier the way
  * `SurfaceDiffusionPhysics::linear_symbol` is; it is evaluated the same way
@@ -39,8 +44,8 @@
  *
  * \f[
  *   \partial_t\hat h = L_0(k)\,\hat h + \hat N,\qquad
- *   L_0(k) = -B_0\,k_{\mathrm{lap}}^2,\qquad
- *   \hat N = \widehat{\nabla\cdot[B(\theta)\nabla(\nabla^2 h)]} - L_0(k)\hat h,
+ *   L_0(k) = -B_0\,k_{\mathrm{lap}}^2 = -B_0|k|^4,\qquad
+ *   \hat N = \widehat{\nabla\cdot[B(\theta)\nabla\mu]} - L_0(k)\hat h,
  * \f]
  * i.e. the constant-\f$B_0\f$ part is integrated exactly (unconditionally
  * stable for the stiff fourth-order term) and \f$\hat N\f$ carries only the
@@ -75,7 +80,16 @@
 
 namespace surface_diffusion {
 
-/// ETD1 stepper for `dh/dt = div[B(theta) grad(lap h)]` on a 2-D domain.
+/// Fourier symbol of the `eps_a = 0` limit.
+///
+/// `k_laplacian` is the spectral multiplier of \f$\nabla^2\f$, equal to
+/// \f$-|k|^2\f$. The limit is \f$\partial_t h=-B_0\nabla^4 h\f$, so the
+/// symbol is \f$-B_0|k|^4=-B_0 k_{\mathrm{laplacian}}^2\f$.
+inline double isotropic_limit_symbol(double B0, double k_laplacian) noexcept {
+  return -B0 * k_laplacian * k_laplacian;
+}
+
+/// ETD1 stepper for `dh/dt = div[B(theta) grad(mu)]`, `mu = -lap h`.
 class AnisotropicSurfaceDiffusionETD {
   using Ops = pfc::sim::SpectralETDOps<pfc::HostSpace>;
 
@@ -129,11 +143,11 @@ public:
           m_kx[i] = kx;
           m_ky[i] = ky;
           m_k_lap[i] = -(kx * kx + ky * ky + kz * kz);
-          // Orszag 2/3 dealiasing mask: B(theta)*grad(lap h) is a strongly
+          // Orszag 2/3 dealiasing mask: B(theta)*grad(mu) is a strongly
           // nonlinear product (theta itself is a ratio of gradients), so its
           // transform carries wavenumbers the grid cannot represent.
           if (std::abs(kx) > cutx || std::abs(ky) > cuty) m_mask[i] = 0.0;
-          const double l0 = -stiffness.B0 * m_k_lap[i] * m_k_lap[i];
+          const double l0 = isotropic_limit_symbol(stiffness.B0, m_k_lap[i]);
           m_L0[i] = l0;
           const double a = l0 * dt;
           m_expL[i] = std::exp(a);

@@ -11,7 +11,7 @@
  * `surface_diffusion/anisotropic_flux.hpp`,
  *
  * \f[
- *   \partial_t h = \nabla\cdot\bigl[B(\theta)\,\nabla(\nabla^2 h)\bigr],
+ *   \partial_t h = -\nabla\cdot\bigl[B(\theta)\,\nabla(\nabla^2 h)\bigr],
  *   \qquad B(\theta) = B_0\bigl[1+\epsilon_a\cos(m\theta)\bigr],
  * \f]
  *
