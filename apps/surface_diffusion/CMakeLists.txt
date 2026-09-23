@@ -37,7 +37,7 @@ endfunction()
 surface_diffusion_cpu_executable(surface_diffusion src/surface_diffusion.cpp)
 install(TARGETS surface_diffusion DESTINATION bin)
 
-# Science driver for #115: orientation-dependent surface stiffness B(theta)
+# Science driver for #115: imposed orientation-dependent coefficient B(theta)
 # through a self-contained spectral flux stepper. Host only, like thin_film's
 # nonlinear driver -- the directional mobility needs a complex i*k_d multiply
 # the device Ops layer does not expose.

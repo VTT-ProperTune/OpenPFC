@@ -84,10 +84,14 @@ from `i*k_x*h_hat` / `i*k_y*h_hat`, not a finite-difference stencil). The
 governing equation generalises the isotropic divergence form:
 
 \[
-\partial_t h=\nabla\cdot\bigl[B(\theta)\,\nabla(\nabla^2 h)\bigr]
+\partial_t h=-\nabla\cdot\bigl[B(\theta)\,\nabla(\nabla^2 h)\bigr]
 \quad\xrightarrow{\ B(\theta)\to B_0\ }\quad
-\partial_t h=-B_0\nabla^4 h.
+\partial_t h=-B_0\nabla^4 h,
 \]
+
+with Fourier symbol \(-B_0|k|^4\). `SurfaceStiffness` is the historical
+name of this scalar coefficient. It is not a claim that \(B\) equals the
+Herring stiffness \(\gamma+\gamma''\).
 
 **This is still a small-slope, height-function model.** \(\theta\) is the
 orientation of the local surface gradient of a single-valued height field; it
@@ -239,7 +243,7 @@ smoke: job 21791182 (`small-g`, 16², mean \(h=0\)).
 | `include/surface_diffusion/surface_diffusion_pointwise.hpp` | Zero remainder (verifier) |
 | `include/surface_diffusion/surface_diffusion_session.hpp` | JSON session, field `h` (verifier) |
 | `include/surface_diffusion/anisotropy.hpp` | `B(theta) = B0[1+eps_a cos(m theta)]` + JSON schema (`#115`) |
-| `include/surface_diffusion/anisotropic_flux.hpp` | Self-contained spectral-flux ETD1 stepper for `div[B(theta) grad(lap h)]` (`#115`) |
+| `include/surface_diffusion/anisotropic_flux.hpp` | Self-contained spectral-flux ETD1 stepper for `div[B(theta) grad(mu)]` with `mu=-lap h` (`#115`) |
 | `src/surface_diffusion.cpp` / `src/hip/` | CPU / HIP `main` (verifier) |
 | `src/surface_diffusion_anisotropic.cpp` | CPU science driver: crossed corrugation, CSV diagnostics (`#115`) |
 | `inputs_json/smoothing.json` | Multi-wavelength annealing demo (verifier) |
