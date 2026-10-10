@@ -21,6 +21,8 @@
 
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL) || defined(OpenPFC_ENABLE_HIP_SPECTRAL)
 
+#include <memory>
+#include <stdexcept>
 #include <utility>
 
 #include <mpi.h>
@@ -34,8 +36,18 @@
 
 #include <openpfc/runtime/gpu/bind_local_device.hpp>
 #include <openpfc/runtime/gpu/fft_gpu.hpp>
+#include <openpfc/runtime/gpu/fft_single_device.hpp>
 
 namespace pfc::sim::stacks {
+
+/**
+ * @brief Which device FFT `GPUSpectralStack::fft()` exposes.
+ *
+ * `heffte` (default) is the distributed heFFTe backend. `single_device`
+ * (one rank only) uses `pfc::fft::SingleDeviceFFT`: one vendor 3D plan,
+ * the same boxes and scaling, far fewer kernel launches (issue #382).
+ */
+enum class DeviceFFTChoice { heffte, single_device };
 
 template <class MemorySpace> struct gpu_fft_for;
 
@@ -96,6 +108,33 @@ public:
       : GPUSpectralStack(std::move(domain), rank, nproc, comm,
                          gpu_fft_for<MemorySpace>::default_plan_options()) {}
 
+  /**
+   * @brief Stack with an explicit device-FFT choice.
+   * @throws std::invalid_argument for `single_device` with nproc != 1
+   * @throws std::runtime_error if the single-device boxes differ from heFFTe's
+   */
+  GPUSpectralStack(pfc::Domain domain, int rank, int nproc, MPI_Comm comm,
+                   DeviceFFTChoice choice,
+                   const heffte::plan_options &options =
+                       gpu_fft_for<MemorySpace>::default_plan_options())
+      : GPUSpectralStack(std::move(domain), rank, nproc, comm, options) {
+    if (choice != DeviceFFTChoice::single_device) return;
+    if (m_nproc != 1)
+      throw std::invalid_argument(
+          "GPUSpectralStack: DeviceFFTChoice::single_device needs exactly one rank");
+    m_single = std::make_unique<pfc::fft::SingleDeviceFFT<MemorySpace>>(
+        std::array<int, 3>{m_domain.size[0], m_domain.size[1], m_domain.size[2]});
+    if (!(m_single->get_inbox_bounds() == m_fft.get_inbox_bounds()) ||
+        !(m_single->get_outbox_bounds() == m_fft.get_outbox_bounds()))
+      throw std::runtime_error(
+          "GPUSpectralStack: single-device FFT boxes differ from the heFFTe boxes");
+  }
+
+  /// The device FFT in use (`single_device` when chosen, else heFFTe).
+  [[nodiscard]] DeviceFFTChoice fft_choice() const noexcept {
+    return m_single ? DeviceFFTChoice::single_device : DeviceFFTChoice::heffte;
+  }
+
   [[nodiscard]] const pfc::Domain &domain() const noexcept { return m_domain; }
   [[nodiscard]] pfc::decomposition::Decomposition &decomposition() noexcept {
     return m_decomp;
@@ -105,8 +144,12 @@ public:
     return m_decomp;
   }
 
-  [[nodiscard]] pfc::fft::IDeviceFFT<MemorySpace> &fft() noexcept { return m_fft; }
+  [[nodiscard]] pfc::fft::IDeviceFFT<MemorySpace> &fft() noexcept {
+    if (m_single) return *m_single;
+    return m_fft;
+  }
   [[nodiscard]] const pfc::fft::IDeviceFFT<MemorySpace> &fft() const noexcept {
+    if (m_single) return *m_single;
     return m_fft;
   }
 
@@ -121,6 +164,7 @@ private:
   pfc::Domain m_domain{};
   pfc::decomposition::Decomposition m_decomp;
   fft_type m_fft;
+  std::unique_ptr<pfc::fft::SingleDeviceFFT<MemorySpace>> m_single;
   field_type m_u;
   int m_rank{0};
   int m_nproc{1};

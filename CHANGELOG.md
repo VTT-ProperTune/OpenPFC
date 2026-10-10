@@ -27,6 +27,14 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   and an outer-flux budget. Complements `divergence_separated`; it does
   not replace the diffusive `a_face grad p` law.
 
+- One-rank device FFT `pfc::fft::SingleDeviceFFT<CUDASpace|HIPSpace>`
+  (`runtime/gpu/fft_single_device.hpp`): one cuFFT or rocFFT 3D r2c/c2r plan
+  per direction, with the boxes and scaling of the heFFTe backend.
+  `GPUSpectralStack` selects it with `DeviceFFTChoice::single_device`
+  (one rank only; the default is unchanged). On a 43 x 819 x 16 spectral
+  ETD step on an H100 this cuts kernel launches from about 150 to 18 and
+  the step from 0.75 to 0.22 ms (#382).
+
 ### Fixed
 
 - Configure with CMake 4 using nlohmann-json 3.11.3 without a

@@ -51,3 +51,7 @@ template parameter through every call site.
   the session constructs the device FFT directly (M8/M10).
 - Precision policy (ADR 0006) applies: workspace is allocated only for the
   instantiated precision.
+- `IDeviceFFT` has a second, non-heFFTe implementation for one rank,
+  `SingleDeviceFFT` (#382): one vendor 3D plan with the same boxes and
+  scaling. It is honest in the same sense: `GPUSpectralStack` refuses
+  `DeviceFFTChoice::single_device` for more than one rank at construction.

@@ -54,6 +54,7 @@ The shortest useful mental model is:
 | `World` | Deprecated A0 adapter around `Domain` | `openpfc/kernel/data/world.hpp` | `examples/world_strong_types_example.cpp` uses `Domain` |
 | `SpectralCPUStack` | Owns the CPU domain, decomposition, FFT, and field stack | `openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp` | `user_guide/app_pipeline.md` |
 | `GPUSpectralStack` | Device FFT stack; JSON `plan_options` overlay like CPU | `openpfc/runtime/gpu/gpu_spectral_stack.hpp` | `tungsten_cuda`, session-matrix-cuda |
+| `SingleDeviceFFT` | One-rank device FFT: one cuFFT/rocFFT 3D plan, heFFTe boxes and scaling; `GPUSpectralStack(..., DeviceFFTChoice::single_device)` | `openpfc/runtime/gpu/fft_single_device.hpp` | `test_fft_single_device_{cuda,hip}` |
 | `SimulationSession<Stack>` | Method × backend session: selection, Time, and a stack | `openpfc/kernel/simulation/simulation_session.hpp` | `user_guide/app_pipeline.md` |
 | JSON session factory | `make_simulation_session<Stack>` from `method`/`backend` JSON | `openpfc/frontend/ui/from_json_simulation_session.hpp` | `user_guide/app_pipeline.md` |
 | `CliOptions` | Fail-closed `--key=value` parsing for CLI-driven apps | `openpfc/frontend/utils/cli_options.hpp` | dendrite / Vlasov drivers |

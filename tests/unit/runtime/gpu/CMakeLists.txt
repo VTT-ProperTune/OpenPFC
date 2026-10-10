@@ -21,6 +21,16 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     target_link_libraries(test_gpu_fft PRIVATE Catch2::Catch2 openpfc CUDA::cudart MPI::MPI_CXX Heffte::Heffte)
     add_test(NAME GPU_FFT COMMAND test_gpu_fft)
 
+    # Issue #382: one-rank single-device FFT vs the heFFTe backend.
+    add_executable(test_fft_single_device_cuda test_fft_single_device.cpp)
+    target_include_directories(test_fft_single_device_cuda PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_fft_single_device_cuda PRIVATE Catch2::Catch2 openpfc
+        openpfc_gpu_kernels CUDA::cudart CUDA::cufft MPI::MPI_CXX Heffte::Heffte)
+    add_test(NAME GPU_FFT_SingleDevice COMMAND test_fft_single_device_cuda)
+
     # One device-vs-host ETD parity target (plain, mean-field, moving-frame toys);
     # the toy pointwise functors are instantiated for the device in the .cu TU.
     add_executable(test_spectral_etd_system_cuda
@@ -187,6 +197,17 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
         target_link_libraries(test_gpu_fft_hip PRIVATE
             Catch2::Catch2 openpfc hip::host MPI::MPI_CXX Heffte::Heffte)
         add_test(NAME HIP_FFT COMMAND test_gpu_fft_hip)
+
+        # Issue #382: one-rank single-device FFT (rocFFT) vs the heFFTe backend.
+        add_executable(test_fft_single_device_hip test_fft_single_device.cpp)
+        target_include_directories(test_fft_single_device_hip PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+            ${CMAKE_SOURCE_DIR}/include
+        )
+        target_compile_definitions(test_fft_single_device_hip PRIVATE OPENPFC_TEST_HIP)
+        target_link_libraries(test_fft_single_device_hip PRIVATE Catch2::Catch2 openpfc
+            openpfc_hip_kernels hip::host MPI::MPI_CXX Heffte::Heffte)
+        add_test(NAME HIP_FFT_SingleDevice COMMAND test_fft_single_device_hip)
 
         add_executable(test_spectral_etd_system_hip
             test_spectral_etd_system_gpu.cpp
