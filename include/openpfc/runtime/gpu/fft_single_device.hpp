@@ -21,8 +21,10 @@
  * - complex outbox = [0, nx/2] x [0, ny) x [0, nz) (r2c along x),
  * - both stored with x fastest,
  * - forward unscaled, backward scaled by 1/(nx ny nz),
- * - the backward input is preserved (copied to a workspace first: out-of-
- *   place multi-dimensional C2R may overwrite its input).
+ * - the backward input is preserved: it is copied to a workspace first
+ *   (out-of-place multi-dimensional C2R may overwrite its input), and the
+ *   1/N scaling is applied during that copy (C2R is linear), so the copy and
+ *   the scaling are one pass.
  * All work is issued on the legacy default stream, like the heFFTe path.
  *
  * Use through `GPUSpectralStack` with `DeviceFFTChoice::single_device`, or
@@ -86,11 +88,9 @@ template <> struct single_device_vendor<CUDASpace> {
   static void backward(plans &p, std::complex<double> *in, double *out) {
     check(cufftExecZ2D(p.bwd, reinterpret_cast<cufftDoubleComplex *>(in), out), "cufftExecZ2D");
   }
-  static void copy(void *dst, const void *src, std::size_t bytes) {
-    if (cudaMemcpyAsync(dst, src, bytes, cudaMemcpyDeviceToDevice, nullptr) != cudaSuccess)
-      throw std::runtime_error("SingleDeviceFFT<CUDA>: cudaMemcpyAsync failed");
+  static void scaled_copy(double *dst, const double *src, double a, std::size_t n) {
+    pfc::axpy_fill_cuda_impl(dst, src, a, 0.0, n);
   }
-  static void scale(double *x, double a, std::size_t n) { pfc::axpy_fill_cuda_impl(x, x, a, 0.0, n); }
 };
 #endif
 
@@ -146,11 +146,9 @@ template <> struct single_device_vendor<HIPSpace> {
     void *ob[1] = {out};
     check(rocfft_execute(p.bwd, ib, ob, p.info), "rocfft_execute (inverse)");
   }
-  static void copy(void *dst, const void *src, std::size_t bytes) {
-    if (hipMemcpyAsync(dst, src, bytes, hipMemcpyDeviceToDevice, nullptr) != hipSuccess)
-      throw std::runtime_error("SingleDeviceFFT<HIP>: hipMemcpyAsync failed");
+  static void scaled_copy(double *dst, const double *src, double a, std::size_t n) {
+    pfc::axpy_fill_hip_impl(dst, src, a, 0.0, n);
   }
-  static void scale(double *x, double a, std::size_t n) { pfc::axpy_fill_hip_impl(x, x, a, 0.0, n); }
 };
 #endif
 
@@ -187,9 +185,11 @@ public:
 
   void backward(const ComplexBuffer &in, RealBuffer &out) override {
     require(in.size() == size_outbox() && out.size() == size_inbox(), "backward");
-    vendor::copy(m_work.data(), in.data(), size_outbox() * sizeof(std::complex<double>));
+    // Workspace copy and 1/N scaling in one pass over the complex data
+    // (interleaved re/im doubles), then the C2R from the workspace.
+    vendor::scaled_copy(reinterpret_cast<double *>(m_work.data()), reinterpret_cast<const double *>(in.data()),
+                        1.0 / static_cast<double>(size_inbox()), 2 * size_outbox());
     vendor::backward(m_plans, m_work.data(), out.data());
-    vendor::scale(out.data(), 1.0 / static_cast<double>(size_inbox()), size_inbox());
   }
 
   void reset_fft_time() override {}
