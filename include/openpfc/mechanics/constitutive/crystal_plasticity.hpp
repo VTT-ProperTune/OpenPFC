@@ -45,6 +45,7 @@
 #include <cstddef>
 #include <limits>
 #include <stdexcept>
+#include <type_traits>
 #include <vector>
 
 #include <openpfc/mechanics/constitutive/history.hpp>
@@ -468,6 +469,60 @@ template <int N> OPENPFC_HD bool solve_dense(double *matrix, double *rhs) {
   return true;
 }
 
+/// A recorded elimination program, not a conventional permuted LU matrix.
+/// Later pivots swap only the trailing matrix, preserving earlier multipliers
+/// in the rows where the original solve used them. Replaying each RHS therefore
+/// follows the same pivot and arithmetic order as solve_dense.
+template <int N> struct DenseFactors {
+  double entries[N * N];
+  int pivots[N];
+
+  [[nodiscard]] OPENPFC_HD bool factor() {
+    double scale = 0.0;
+    for (int entry = 0; entry < N * N; ++entry)
+      scale = std::max(scale, std::abs(entries[entry]));
+    const double floor = 1e-14 * std::max(scale, 1.0);
+    for (int column = 0; column < N; ++column) {
+      int pivot = column;
+      double best = std::abs(entries[column * N + column]);
+      for (int row = column + 1; row < N; ++row) {
+        const double value = std::abs(entries[row * N + column]);
+        if (value > best) {
+          best = value;
+          pivot = row;
+        }
+      }
+      if (!(best > floor)) return false;
+      pivots[column] = pivot;
+      if (pivot != column)
+        for (int entry = column; entry < N; ++entry)
+          std::swap(entries[column * N + entry], entries[pivot * N + entry]);
+      const double diagonal = entries[column * N + column];
+      for (int row = column + 1; row < N; ++row) {
+        const double multiplier = entries[row * N + column] / diagonal;
+        entries[row * N + column] = multiplier;
+        for (int entry = column + 1; entry < N; ++entry)
+          entries[row * N + entry] -= multiplier * entries[column * N + entry];
+      }
+    }
+    return true;
+  }
+
+  OPENPFC_HD void solve(double *rhs) const {
+    for (int column = 0; column < N; ++column) {
+      if (pivots[column] != column) std::swap(rhs[column], rhs[pivots[column]]);
+      for (int row = column + 1; row < N; ++row)
+        rhs[row] -= entries[row * N + column] * rhs[column];
+    }
+    for (int row = N - 1; row >= 0; --row) {
+      double value = rhs[row];
+      for (int column = row + 1; column < N; ++column)
+        value -= entries[row * N + column] * rhs[column];
+      rhs[row] = value / entries[row * N + row];
+    }
+  }
+};
+
 [[nodiscard]] OPENPFC_INLINE_HD Tensor2
 unpack_velocity(const double packed[9]) noexcept {
   Tensor2 velocity;
@@ -682,10 +737,49 @@ factor_tangent(const FccSlipParameters &parameters, const Tensor2 &plastic_inver
   return factors;
 }
 
+struct ReducedTangent {
+  DenseFactors<kSystems> hardening;
+  DenseFactors<9> schur;
+};
+
+[[nodiscard]] OPENPFC_HD inline bool prepare_tangent(const TangentFactors &factors,
+                                                     ReducedTangent &reduced,
+                                                     FccStatus &status) {
+  for (int alpha = 0; alpha < kSystems; ++alpha)
+    for (int beta = 0; beta < kSystems; ++beta)
+      reduced.hardening.entries[alpha * kSystems + beta] = factors.jxx[alpha][beta];
+  if (!reduced.hardening.factor()) {
+    status = FccStatus::HardeningBlock;
+    return false;
+  }
+  double response[kSystems][9];
+  for (int unknown = 0; unknown < 9; ++unknown) {
+    double column[kSystems];
+    for (int alpha = 0; alpha < kSystems; ++alpha)
+      column[alpha] = factors.jxl[alpha][unknown];
+    reduced.hardening.solve(column);
+    for (int alpha = 0; alpha < kSystems; ++alpha)
+      response[alpha][unknown] = column[alpha];
+  }
+  for (int row = 0; row < 9; ++row)
+    for (int column = 0; column < 9; ++column) {
+      double value = factors.jll[row][column];
+      for (int alpha = 0; alpha < kSystems; ++alpha)
+        value -= factors.jlx[row][alpha] * response[alpha][column];
+      reduced.schur.entries[row * 9 + column] = value;
+    }
+  if (!reduced.schur.factor()) {
+    status = FccStatus::Tangent;
+    return false;
+  }
+  return true;
+}
+
+template <class Reduced = std::nullptr_t>
 [[nodiscard]] OPENPFC_INLINE_HD Tensor2
 directional_stress(const FccSlipParameters &parameters, const Tensor2 &orientation,
                    const TangentFactors &factors, const Tensor2 &sample_increment,
-                   FccStatus &status) {
+                   FccStatus &status, const Reduced *reduced = nullptr) {
   const Tensor2 crystal_increment = push_forward(orientation, sample_increment);
   const Tensor2 dmapper = matmul(crystal_increment, factors.plastic_inverse);
   const Tensor2 delastic = matmul(dmapper, factors.intermediate);
@@ -716,57 +810,70 @@ directional_stress(const FccSlipParameters &parameters, const Tensor2 &orientati
                             factors.slope.value[alpha] * projected;
   }
 
-  double response[kSystems][9];
-  for (int unknown = 0; unknown < 9; ++unknown) {
-    double column[kSystems];
-    double matrix[kSystems * kSystems];
-    for (int alpha = 0; alpha < kSystems; ++alpha) {
-      column[alpha] = factors.jxl[alpha][unknown];
-      for (int beta = 0; beta < kSystems; ++beta) {
-        matrix[alpha * kSystems + beta] = factors.jxx[alpha][beta];
-      }
-    }
-    if (!solve_dense<kSystems>(matrix, column)) {
-      status = FccStatus::HardeningBlock;
-      return {};
-    }
-    for (int alpha = 0; alpha < kSystems; ++alpha) {
-      response[alpha][unknown] = column[alpha];
-    }
-  }
-  double resistance_response[kSystems];
-  {
-    double matrix[kSystems * kSystems];
-    for (int alpha = 0; alpha < kSystems; ++alpha) {
-      resistance_response[alpha] = rhs_resistance[alpha];
-      for (int beta = 0; beta < kSystems; ++beta) {
-        matrix[alpha * kSystems + beta] = factors.jxx[alpha][beta];
-      }
-    }
-    if (!solve_dense<kSystems>(matrix, resistance_response)) {
-      status = FccStatus::HardeningBlock;
-      return {};
-    }
-  }
-
-  double schur[81];
   double rhs[9];
-  for (int row = 0; row < 9; ++row) {
-    rhs[row] = rhs_velocity[row];
-    for (int alpha = 0; alpha < kSystems; ++alpha) {
-      rhs[row] -= factors.jlx[row][alpha] * resistance_response[alpha];
+  if constexpr (!std::is_same_v<Reduced, std::nullptr_t>) {
+    double resistance_response[kSystems];
+    for (int alpha = 0; alpha < kSystems; ++alpha)
+      resistance_response[alpha] = rhs_resistance[alpha];
+    reduced->hardening.solve(resistance_response);
+    for (int row = 0; row < 9; ++row) {
+      rhs[row] = rhs_velocity[row];
+      for (int alpha = 0; alpha < kSystems; ++alpha)
+        rhs[row] -= factors.jlx[row][alpha] * resistance_response[alpha];
     }
-    for (int column = 0; column < 9; ++column) {
-      double value = factors.jll[row][column];
+    reduced->schur.solve(rhs);
+  } else {
+    double response[kSystems][9];
+    for (int unknown = 0; unknown < 9; ++unknown) {
+      double column[kSystems];
+      double matrix[kSystems * kSystems];
       for (int alpha = 0; alpha < kSystems; ++alpha) {
-        value -= factors.jlx[row][alpha] * response[alpha][column];
+        column[alpha] = factors.jxl[alpha][unknown];
+        for (int beta = 0; beta < kSystems; ++beta) {
+          matrix[alpha * kSystems + beta] = factors.jxx[alpha][beta];
+        }
       }
-      schur[row * 9 + column] = value;
+      if (!solve_dense<kSystems>(matrix, column)) {
+        status = FccStatus::HardeningBlock;
+        return {};
+      }
+      for (int alpha = 0; alpha < kSystems; ++alpha) {
+        response[alpha][unknown] = column[alpha];
+      }
     }
-  }
-  if (!solve_dense<9>(schur, rhs)) {
-    status = FccStatus::Tangent;
-    return {};
+    double resistance_response[kSystems];
+    {
+      double matrix[kSystems * kSystems];
+      for (int alpha = 0; alpha < kSystems; ++alpha) {
+        resistance_response[alpha] = rhs_resistance[alpha];
+        for (int beta = 0; beta < kSystems; ++beta) {
+          matrix[alpha * kSystems + beta] = factors.jxx[alpha][beta];
+        }
+      }
+      if (!solve_dense<kSystems>(matrix, resistance_response)) {
+        status = FccStatus::HardeningBlock;
+        return {};
+      }
+    }
+
+    double schur[81];
+    for (int row = 0; row < 9; ++row) {
+      rhs[row] = rhs_velocity[row];
+      for (int alpha = 0; alpha < kSystems; ++alpha) {
+        rhs[row] -= factors.jlx[row][alpha] * resistance_response[alpha];
+      }
+      for (int column = 0; column < 9; ++column) {
+        double value = factors.jll[row][column];
+        for (int alpha = 0; alpha < kSystems; ++alpha) {
+          value -= factors.jlx[row][alpha] * response[alpha][column];
+        }
+        schur[row * 9 + column] = value;
+      }
+    }
+    if (!solve_dense<9>(schur, rhs)) {
+      status = FccStatus::Tangent;
+      return {};
+    }
   }
   const Tensor2 dvelocity = unpack_velocity(rhs);
   const Tensor2 dintermediate = scaled(dvelocity, -parameters.time_step);
@@ -793,12 +900,21 @@ directional_stress(const FccSlipParameters &parameters, const Tensor2 &orientati
 assemble_tangent(const FccSlipParameters &parameters, const Tensor2 &orientation,
                  const TangentFactors &factors, FccStatus &status) {
   Tangent tangent;
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+  ReducedTangent reduced;
+  if (!prepare_tangent(factors, reduced, status)) return {};
+#endif
   for (int row = 0; row < 3; ++row) {
     for (int column = 0; column < 3; ++column) {
       Tensor2 direction{};
       direction(row, column) = 1.0;
       const Tensor2 stress =
-          directional_stress(parameters, orientation, factors, direction, status);
+          directional_stress(parameters, orientation, factors, direction, status
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+                             ,
+                             &reduced
+#endif
+          );
       if (status != FccStatus::Success) return {};
       for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {

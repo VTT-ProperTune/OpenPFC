@@ -7,6 +7,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+### Changed
+
+- Device FCC tangent assembly reuses the hardening and Schur elimination
+  programs across its nine deformation directions. Host material evaluation
+  retains its independent dense solves; constitutive equations, local caps
+  and trial-history admission are unchanged (#425).
+
 ### Added
 
 - GPU grain-contact extraction stores unique contacts in an open-addressed

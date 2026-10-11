@@ -331,3 +331,50 @@ TEST_CASE("the FCC tangent matches a central difference",
   REQUIRE(relative_difference(material.tangent_action(0, slipping, direction),
                               slipping_action) < 1e-12);
 }
+
+namespace {
+template <int N> void check_recorded_elimination() {
+  using namespace pfc::finite_strain::crystal;
+  DenseFactors<N> factors;
+  double original[N * N];
+  for (int row = 0; row < N; ++row)
+    for (int column = 0; column < N; ++column) {
+      const int permuted = (row + 3) % N;
+      original[row * N + column] = factors.entries[row * N + column] =
+          (permuted == column ? 5.0 : 0.0) +
+          .03 * std::sin(2.0 * permuted + .7 * column);
+    }
+  REQUIRE(factors.factor());
+  int swaps = 0;
+  for (int column = 0; column < N; ++column)
+    swaps += factors.pivots[column] != column;
+  REQUIRE(swaps > 1);
+  for (int trial = 0; trial < N + 2; ++trial) {
+    double rhs[N]{}, reference[N], matrix[N * N], expected[N];
+    for (int column = 0; column < N; ++column)
+      expected[column] = std::cos(.3 * column + trial);
+    for (int row = 0; row < N; ++row) {
+      for (int column = 0; column < N; ++column)
+        rhs[row] += original[row * N + column] * expected[column];
+      reference[row] = rhs[row];
+    }
+    std::copy(original, original + N * N, matrix);
+    REQUIRE(solve_dense<N>(matrix, reference));
+    factors.solve(rhs);
+    for (int row = 0; row < N; ++row) {
+      REQUIRE(rhs[row] == reference[row]);
+      REQUIRE_THAT(rhs[row], WithinAbs(expected[row], 2e-14));
+    }
+  }
+  std::fill(factors.entries, factors.entries + N * N, 0.0);
+  REQUIRE_FALSE(factors.factor());
+  factors.entries[0] = std::numeric_limits<double>::quiet_NaN();
+  REQUIRE_FALSE(factors.factor());
+}
+} // namespace
+
+TEST_CASE("FCC tangent elimination replays pivoted nonsymmetric solves",
+          "[finite_strain][fcc][factorization]") {
+  check_recorded_elimination<9>();
+  check_recorded_elimination<12>();
+}
