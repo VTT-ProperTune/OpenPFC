@@ -121,8 +121,8 @@ TEST_CASE("the explicit step limit knows which stencil it is bounding",
   for (int o = 2; o <= 14; o += 2) {
     const double lam = alloy_dendrite::d2_nyquist_eigenvalue(o);
     INFO("order " << o << " lambda " << lam);
-    REQUIRE(lam > prev);                                  // monotone
-    REQUIRE(lam < std::acos(-1.0) * std::acos(-1.0));     // below pi^2
+    REQUIRE(lam > prev);                              // monotone
+    REQUIRE(lam < std::acos(-1.0) * std::acos(-1.0)); // below pi^2
     prev = lam;
   }
 
@@ -189,8 +189,8 @@ TEST_CASE("cubic anisotropy matches equation (1)", "[unit][aniso]") {
     // conventions differ most and a partially applied correction would show.
     for (int q = 0; q <= 16; ++q) {
       const double th = 0.1 + 0.3 * static_cast<double>(q);
-      const auto a = alloy_dendrite::evaluate_anisotropy<2>(p, std::cos(th),
-                                                            std::sin(th), 0.0);
+      const auto a =
+          alloy_dendrite::evaluate_anisotropy<2>(p, std::cos(th), std::sin(th), 0.0);
       INFO("theta = " << th);
       REQUIRE(a.a_s == Approx(1.0 + p.eps4 * std::cos(4.0 * th)).epsilon(1e-12));
     }
@@ -251,8 +251,7 @@ TEST_CASE("cubic anisotropy matches equation (1)", "[unit][aniso]") {
     REQUIRE(a.a_s == Approx(a0.a_s));
     // θ_c = 0 is a bitwise no-op against the four-argument form.
     const auto lab = alloy_dendrite::evaluate_anisotropy<2>(p, 0.3, -0.7, 0.0);
-    const auto expl =
-        alloy_dendrite::evaluate_anisotropy<2>(p, 0.3, -0.7, 0.0, 0.0);
+    const auto expl = alloy_dendrite::evaluate_anisotropy<2>(p, 0.3, -0.7, 0.0, 0.0);
     REQUIRE(lab.a_s == expl.a_s);
     REQUIRE(lab.flux[0] == expl.flux[0]);
     REQUIRE(lab.flux[1] == expl.flux[1]);
@@ -398,8 +397,7 @@ TEST_CASE("trailing_slope of measure_tip recovers a known tip velocity",
             std::fmax(-1.0, std::fmin(1.0, s));
       }
     }
-    const auto tip =
-        alloy_dendrite::measure_tip(phi, nx, ny, dx, dx, 20, j_seed, 5);
+    const auto tip = alloy_dendrite::measure_tip(phi, nx, ny, dx, dx, 20, j_seed, 5);
     REQUIRE(tip.valid);
     t.push_back(ti);
     x.push_back(tip.x_tip);
@@ -407,8 +405,7 @@ TEST_CASE("trailing_slope of measure_tip recovers a known tip velocity",
   REQUIRE(alloy_dendrite::trailing_slope(t, x, 0.5) == Approx(v).epsilon(1e-9));
 }
 
-TEST_CASE("a diverged field is not a valid tip measurement",
-          "[unit][diagnostics]") {
+TEST_CASE("a diverged field is not a valid tip measurement", "[unit][diagnostics]") {
   const int nx = 80;
   const int ny = 64;
   const double dx = 0.5;
@@ -862,8 +859,7 @@ TEST_CASE("imposed theta still enters M_c theta when evolve_theta is off",
   }
 }
 
-TEST_CASE("FTA smoke: Bridgman field grows a finite downstream tip",
-          "[fta-smoke]") {
+TEST_CASE("FTA smoke: Bridgman field grows a finite downstream tip", "[fta-smoke]") {
   // Issue #155 science campaign, cheap. 96 x 48 at t_end = 8 is enough to
   // see a moving tip and conserved solute; it is not a result. Do not grow
   // [planar] / [elastic] / [bicrystal] to pay for this -- the 900 s
@@ -896,8 +892,7 @@ TEST_CASE("FTA smoke: Bridgman field grows a finite downstream tip",
   int nproc = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
-  const auto r =
-      alloy_dendrite::run_dendrite_case(cfg, rank, nproc, MPI_COMM_WORLD);
+  const auto r = alloy_dendrite::run_dendrite_case(cfg, rank, nproc, MPI_COMM_WORLD);
   REQUIRE(r.valid);
   REQUIRE(std::isfinite(r.v_tip));
   CHECK(r.solute_drift_rel < 1e-11);
@@ -905,8 +900,48 @@ TEST_CASE("FTA smoke: Bridgman field grows a finite downstream tip",
   CHECK(r.phi_max < 1.05);
 }
 
-TEST_CASE("two tanh seeds still conserve solute to round-off",
-          "[unit][bicrystal]") {
+TEST_CASE("FTA smoke: 3-D Bridgman field grows a finite downstream tip",
+          "[fta-smoke][3d]") {
+  // Cheap 3-D CPU reference of the HIP FTA path. 24^3 at t_end = 4 is
+  // enough to see a moving tip and conserved solute; it is not a result.
+  if (world_size() != 1) {
+    SKIP("single-rank 3-D FTA smoke");
+  }
+  alloy_dendrite::DendriteConfig cfg;
+  cfg.model.D_l = 2.0;
+  cfg.model.k = 0.15;
+  cfg.model.lambda = cfg.model.D_l / alloy_dendrite::kA2;
+  cfg.model.eps4 = 0.04;
+  cfg.model.M_c = 0.5;
+  cfg.model.evolve_theta = false;
+  cfg.nx = 24;
+  cfg.ny = 24;
+  cfg.nz = 24;
+  cfg.dx = 0.8;
+  cfg.t_end = 4.0;
+  cfg.n_sample = 4;
+  cfg.tip_fit_halfwidth = 6;
+  cfg.omega = 0.55;
+  cfg.seed_radius = 4.0;
+  cfg.seed_x = 6.4;
+  cfg.fta_gradient = 0.02;
+  cfg.fta_pulling = 0.05;
+  cfg.fta_x0 = 6.4;
+  cfg.quiet = true;
+  cfg.run_id = "ctest-fta-3d-smoke";
+  int rank = 0;
+  int nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  const auto r = alloy_dendrite::run_dendrite_case(cfg, rank, nproc, MPI_COMM_WORLD);
+  REQUIRE(r.valid);
+  REQUIRE(std::isfinite(r.v_tip));
+  CHECK(r.solute_drift_rel < 1e-11);
+  CHECK(r.phi_min > -1.05);
+  CHECK(r.phi_max < 1.05);
+}
+
+TEST_CASE("two tanh seeds still conserve solute to round-off", "[unit][bicrystal]") {
   // A competing-dendrite *science* run is not a ctest. This only checks that
   // the two-seed IC goes through the same conserved P(phi) U path as the
   // single seed, so adding a grain does not invent a source.
@@ -940,8 +975,7 @@ TEST_CASE("two tanh seeds still conserve solute to round-off",
   int nproc = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
-  const auto r =
-      alloy_dendrite::run_dendrite_case(cfg, rank, nproc, MPI_COMM_WORLD);
+  const auto r = alloy_dendrite::run_dendrite_case(cfg, rank, nproc, MPI_COMM_WORLD);
   CHECK(r.solute_drift_rel < 1e-11);
   CHECK(r.phi_min > -1.05);
   CHECK(r.phi_max < 1.05);
@@ -1043,7 +1077,8 @@ TEST_CASE("selection and Ivantsov helpers", "[unit][diagnostics]") {
       const double xc = x_tip - dy * dy / (2.0 * rho);
       for (int i = 0; i < nx; ++i) {
         const double t = (xc - static_cast<double>(i) * dx) / dx;
-        phi[static_cast<std::size_t>(i + j * nx)] = std::fmax(-1.0, std::fmin(1.0, t));
+        phi[static_cast<std::size_t>(i + j * nx)] =
+            std::fmax(-1.0, std::fmin(1.0, t));
       }
     }
     const auto rs = alloy_dendrite::measure_tip_scan_relative(
@@ -1069,12 +1104,13 @@ TEST_CASE("selection and Ivantsov helpers", "[unit][diagnostics]") {
       const double dy = static_cast<double>(j) * dx - y_tip;
       const double a = std::fabs(dy);
       // parabola inside one radius, straight flank outside it
-      const double off = (a < rho) ? dy * dy / (2.0 * rho)
-                                   : rho / 2.0 + (a - rho) * 1.5;
+      const double off =
+          (a < rho) ? dy * dy / (2.0 * rho) : rho / 2.0 + (a - rho) * 1.5;
       const double xc = x_tip - off;
       for (int i = 0; i < nx; ++i) {
         const double t = (xc - static_cast<double>(i) * dx) / dx;
-        bent[static_cast<std::size_t>(i + j * nx)] = std::fmax(-1.0, std::fmin(1.0, t));
+        bent[static_cast<std::size_t>(i + j * nx)] =
+            std::fmax(-1.0, std::fmin(1.0, t));
       }
     }
     const auto rb = alloy_dendrite::measure_tip_scan_relative(
@@ -1104,14 +1140,15 @@ TEST_CASE("selection and Ivantsov helpers", "[unit][diagnostics]") {
             (static_cast<double>(i) * dx <= xc) ? 1.0 : -1.0;
       }
     }
-    const auto scan =
-        alloy_dendrite::measure_tip_scan(phi, nx, ny, dx, dx, 20, 60);
+    const auto scan = alloy_dendrite::measure_tip_scan(phi, nx, ny, dx, dx, 20, 60);
     REQUIRE(scan.spread > 0.2);
     // And sigma* inherits twice that relative error: a 20% rho spread is
     // already a 44% sigma* spread. The quoted selection parameter from a
     // staircased contour is not a number.
-    const double s_lo = alloy_dendrite::selection_sigma_star(0.25, 2.0, 0.1, scan.rho[0]);
-    const double s_hi = alloy_dendrite::selection_sigma_star(0.25, 2.0, 0.1, scan.rho[3]);
+    const double s_lo =
+        alloy_dendrite::selection_sigma_star(0.25, 2.0, 0.1, scan.rho[0]);
+    const double s_hi =
+        alloy_dendrite::selection_sigma_star(0.25, 2.0, 0.1, scan.rho[3]);
     REQUIRE(std::fabs(s_lo / s_hi - 1.0) > 0.3);
   }
 
@@ -1136,8 +1173,8 @@ TEST_CASE("selection and Ivantsov helpers", "[unit][diagnostics]") {
         at(i, j) = (x < x_if) ? 1.0 : -1.0;
       }
     }
-    const auto tip = alloy_dendrite::measure_downstream_tip(
-        phi, nx, ny, dx, dx, 0, 0, ny - 1, 4);
+    const auto tip =
+        alloy_dendrite::measure_downstream_tip(phi, nx, ny, dx, dx, 0, 0, ny - 1, 4);
     REQUIRE(tip.valid);
     REQUIRE(tip.x_tip == Approx(16.0).margin(dx));
     REQUIRE(tip.y_tip == Approx(static_cast<double>(j_peak) * dx).margin(dx));
@@ -1166,8 +1203,8 @@ TEST_CASE("selection and Ivantsov helpers", "[unit][diagnostics]") {
         at(i, j) = (static_cast<double>(i) * dx < x_if) ? 1.0 : -1.0;
       }
     }
-    const auto bi = alloy_dendrite::measure_bicrystal_tips(phi, nx, ny, dx, dx, 0,
-                                                           j1, j2, 4);
+    const auto bi =
+        alloy_dendrite::measure_bicrystal_tips(phi, nx, ny, dx, dx, 0, j1, j2, 4);
     REQUIRE(bi.valid);
     REQUIRE(bi.tip1.valid);
     REQUIRE(bi.tip2.valid);
@@ -1185,9 +1222,9 @@ TEST_CASE("selection and Ivantsov helpers", "[unit][diagnostics]") {
     REQUIRE(alloy_dendrite::velocity_split_drift(t, x, 0.5) ==
             Approx(0.0).margin(1e-12));
     for (int i = 32; i < 64; ++i) {
-      x[static_cast<std::size_t>(i)] = 0.2 * t[static_cast<std::size_t>(32)] +
-                                       0.5 * (t[static_cast<std::size_t>(i)] -
-                                              t[static_cast<std::size_t>(32)]);
+      x[static_cast<std::size_t>(i)] =
+          0.2 * t[static_cast<std::size_t>(32)] +
+          0.5 * (t[static_cast<std::size_t>(i)] - t[static_cast<std::size_t>(32)]);
     }
     REQUIRE(std::fabs(alloy_dendrite::velocity_split_drift(t, x, 1.0)) > 0.5);
   }

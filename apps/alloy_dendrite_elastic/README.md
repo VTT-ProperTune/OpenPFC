@@ -566,7 +566,22 @@ bricks (`phi`, `U`, and with `--elastic=1` also `f_el` / `dfel_dphi`) and
 measures the tip on gathered 2-D planes at any rank count. HIP defaults
 follow the CPU growth driver: `lambda = D_l/a2`, Al-4.5wt%Cu stiffness
 and `eps_c` from `material.hpp`, and `lambda_el = lambda` when
-`--elastic=1`. Issue #11 recipe:
+`--elastic=1`. Frozen-temperature directional forcing uses the same
+`--gradient` / `--pulling` / `--fta-x0` flags as the CPU driver. Theta
+is imposed each step; `evolve_theta` stays off; `M_c theta` stays live.
+`--Mc=0` with `--gradient` or `--pulling` is rejected. In 3-D the CSV
+`x_tip` is the MPI max `x` with `phi > 0`. Do not pass `--elastic` on
+an FTA run. Small 3-D HIP example:
+
+```bash
+alloy_dendrite_hip_growth --nx=48 --ny=48 --nz=48 --dx=0.8 --steps=20 \
+  --sample-every=5 --Mc=0.5 --evolve-theta=0 --eps4=0.04 --Dl=2 \
+  --omega=0.55 --gradient=0.02 --pulling=0.05 --fta-x0=19.2 \
+  --csv=results/fta3d.csv --fields-dir=results/fta3d \
+  --run-id=fta3d-hip
+```
+
+Issue #11 recipe:
 [`slurm/showcase_dendrite2d.sbatch`](slurm/showcase_dendrite2d.sbatch)
 (8 GCDs, isothermal; both arms keep the device Green solve; off is
 `--lambda-el=0`, on is calibrated `lambda_el=lambda`). Heavy frames go to

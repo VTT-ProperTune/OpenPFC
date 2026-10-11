@@ -15,6 +15,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   `label_contacts` extraction uses the same table. A 10,000-identity
   registry no longer requires a 10,000 × 10,000 unsigned workspace (#392).
 
+- HIP `alloy_dendrite_hip_growth` exposes the CPU frozen-temperature
+  Bridgman flags `--gradient`, `--pulling`, and `--fta-x0` on genuine 3-D
+  grids. Theta is imposed each step; `M_c theta` stays live; `--Mc=0` or
+  `--evolve-theta=1` with FTA is rejected. CSV `x_tip` in 3-D is the MPI
+  max solid front. Closes #393.
+
 - Finite-strain `evaluate_j2`, `evaluate_fcc`, and `evaluate_saint_venant`
   return the Piola stress, the local `∂P/∂F` tangent, and any trial
   history from one constitutive evaluation. Actions on that tangent do

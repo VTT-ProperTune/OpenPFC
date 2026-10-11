@@ -18,6 +18,7 @@
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -77,12 +78,40 @@ struct Cfg {
   double lambda_el = 0.0;
   std::string csv;
   std::string run_id = "hip-growth";
+  double fta_gradient = 0.0;
+  double fta_pulling = 0.0;
+  double fta_x0 = std::numeric_limits<double>::quiet_NaN();
   struct FieldDump {
     std::string dir;
     int every{1};
   };
   FieldDump fields{};
 };
+
+[[nodiscard]] bool fta_active(const Cfg &cfg) noexcept {
+  return cfg.fta_gradient != 0.0 || cfg.fta_pulling != 0.0;
+}
+
+void push_seed(DevField &dst, const RealField &src);
+
+void impose_fta(DevField &theta, RealField &scratch, double gradient, double x0,
+                double pulling, double t) {
+  scratch.for_each_owned([&](int i, int j, int k) {
+    const double x = scratch.coords(i, j, k)[0];
+    scratch(i, j, k) = alloy_dendrite::fta_undercooling(gradient, x, x0, pulling, t);
+  });
+  push_seed(theta, scratch);
+}
+
+[[nodiscard]] double solid_front_x(const RealField &phi, MPI_Comm comm) {
+  double local = -std::numeric_limits<double>::infinity();
+  phi.for_each_owned([&](int i, int j, int k) {
+    if (phi(i, j, k) > 0.0) local = std::max(local, phi.coords(i, j, k)[0]);
+  });
+  double global = local;
+  MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_MAX, comm);
+  return global;
+}
 
 void download_owned(DevField &src, RealField &dst) {
   const auto n = dst.local_size();
@@ -157,6 +186,21 @@ int run(const Cfg &cfg, int rank, int nproc, MPI_Comm comm) {
   const double dt_lim =
       alloy_dendrite::explicit_dt_limit(p, cfg.dx, dim, cfg.fd_order);
   const double dt = (cfg.dt > 0.0) ? cfg.dt : cfg.dt_safety * dt_lim;
+  const bool fta = fta_active(cfg);
+  if (fta && p.evolve_theta) {
+    throw std::invalid_argument(
+        "alloy_dendrite_hip_growth: FTA (--gradient/--pulling) freezes theta; "
+        "do not also set evolve_theta");
+  }
+  if (fta && !(p.M_c > 0.0)) {
+    throw std::invalid_argument(
+        "alloy_dendrite_hip_growth: --gradient/--pulling is a no-op at Mc=0; "
+        "FTA needs M_c theta in equation (2). Pass --Mc>0.");
+  }
+  if (cfg.fta_pulling > 0.0 && dt > 0.8 * cfg.dx / cfg.fta_pulling) {
+    throw std::invalid_argument(
+        "alloy_dendrite_hip_growth: dt violates the FTA interface CFL dx/V_p");
+  }
 
   const auto domain = pfc::domain::create(
       pfc::GridSize({cfg.nx, cfg.ny, cfg.nz}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
@@ -182,6 +226,7 @@ int run(const Cfg &cfg, int rank, int nproc, MPI_Comm comm) {
   const double xc = 0.5 * cfg.nx * cfg.dx;
   const double yc = 0.5 * cfg.ny * cfg.dx;
   const double zc = 0.5 * cfg.nz * cfg.dx;
+  const double fta_x0 = std::isfinite(cfg.fta_x0) ? cfg.fta_x0 : xc;
   const double inv_w = 1.0 / (std::sqrt(2.0) * p.W0);
   RealField seed = pfc::data::field_from_inbox<double>(
       domain, pfc::decomposition::local_box(decomp, rank));
@@ -195,8 +240,12 @@ int run(const Cfg &cfg, int rank, int nproc, MPI_Comm comm) {
   push_seed(phi, seed);
   seed.for_each_owned([&](int i, int j, int k) { seed(i, j, k) = -cfg.omega; });
   push_seed(U, seed);
-  seed.for_each_owned([&](int i, int j, int k) { seed(i, j, k) = 0.0; });
-  push_seed(th, seed);
+  if (fta) {
+    impose_fta(th, seed, cfg.fta_gradient, fta_x0, cfg.fta_pulling, 0.0);
+  } else {
+    seed.for_each_owned([&](int i, int j, int k) { seed(i, j, k) = 0.0; });
+    push_seed(th, seed);
+  }
   if (d2)
     d2->seed_conserved_solute();
   else
@@ -286,6 +335,9 @@ int run(const Cfg &cfg, int rank, int nproc, MPI_Comm comm) {
     if (hipDeviceSynchronize() != hipSuccess) {
       throw std::runtime_error("hipDeviceSynchronize failed after step");
     }
+    if (fta) {
+      impose_fta(th, seed, cfg.fta_gradient, fta_x0, cfg.fta_pulling, step * dt);
+    }
     double b = MPI_Wtime();
     const double tpf = b - a;
     t_pf_sum += tpf;
@@ -316,10 +368,12 @@ int run(const Cfg &cfg, int rank, int nproc, MPI_Comm comm) {
             plane, cfg.nx, cfg.ny, cfg.dx, cfg.dx, cfg.nx / 2, cfg.ny / 2, 8);
         x_tip = tip.x_tip;
         rho = tip.rho;
-        if (have_tip) v_tip = (x_tip - x_prev) / (cfg.sample_every * dt);
-        x_prev = x_tip;
-        have_tip = true;
+      } else {
+        x_tip = solid_front_x(host_phi, comm);
       }
+      if (have_tip) v_tip = (x_tip - x_prev) / (cfg.sample_every * dt);
+      x_prev = x_tip;
+      have_tip = true;
       if (csv.active()) {
         csv.row(alloy_dendrite::format(
             "%s,%d,%.6f,%.6f,%.6f,%d,%.6e,%.6e,%.3e,%.3e,%.6e,%.6e,%.6e,%.6f,"
@@ -345,6 +399,11 @@ int run(const Cfg &cfg, int rank, int nproc, MPI_Comm comm) {
               << " eps_T=" << cfg.eps_T << " u_ref=" << cfg.u_ref
               << " c11=" << cfg.c_solid.c11 << " liquid_shear=" << cfg.liquid_shear
               << " ranks=" << nproc << "\n";
+    if (fta) {
+      std::cout << "ALLOY_HIP_GROWTH_FTA gradient=" << cfg.fta_gradient
+                << " pulling=" << cfg.fta_pulling << " x0=" << fta_x0
+                << " Mc=" << p.M_c << " evolve_theta=0 dt=" << dt << "\n";
+    }
     std::cout << "ALLOY_HIP_GROWTH_MS t_pf_mean=" << 1e3 * t_pf_sum / cfg.steps
               << " t_el_mean=" << (n_el > 0 ? 1e3 * t_el_sum / n_el : 0.0)
               << " el_solves=" << n_el << " last_iters=" << el.iterations
@@ -366,7 +425,14 @@ int run_cli(int argc, char **argv, int rank, int nproc) {
                 << "Defaults match CPU growth: lambda=D_l/a2, Al-4.5wt%Cu\n"
                 << "stiffness/eps_c from material.hpp. With --elastic=1,\n"
                 << "lambda_el defaults to lambda (calibrated in f_ref units).\n"
-                << "Elastic-off comparison: --elastic=1 --lambda-el=0.\n";
+                << "Elastic-off comparison: --elastic=1 --lambda-el=0.\n"
+                << "FTA directional: theta=(G/dT_h)(x-x0-Vp t). evolve_theta\n"
+                << "stays off; Mc theta stays live. Mc=0 with --gradient or\n"
+                << "--pulling is rejected. Do not pass --elastic.\n"
+                << "  --gradient=X --pulling=X --fta-x0=X --Mc=X --evolve-theta=0\n"
+                << "  3-D example: --nx=48 --ny=48 --nz=48 --dx=0.8 --steps=20\n"
+                << "    --Mc=0.5 --evolve-theta=0 --gradient=0.02 --pulling=0.05\n"
+                << "    --csv=results/fta3d.csv --fields-dir=results/fta3d\n";
     }
     return EXIT_SUCCESS;
   }
@@ -391,6 +457,9 @@ int run_cli(int argc, char **argv, int rank, int nproc) {
   cfg.model.M_c = opt.real("Mc", cfg.model.M_c);
   cfg.model.eps4 = opt.real("eps4", cfg.model.eps4);
   cfg.model.evolve_theta = opt.flag("evolve-theta", cfg.model.evolve_theta);
+  cfg.fta_gradient = opt.real("gradient", cfg.fta_gradient);
+  cfg.fta_pulling = opt.real("pulling", cfg.fta_pulling);
+  cfg.fta_x0 = opt.real("fta-x0", cfg.fta_x0);
   cfg.elastic = opt.flag("elastic", cfg.elastic);
   cfg.n_el_substep = opt.integer("n-el-substep", cfg.n_el_substep);
   cfg.warm_start = opt.flag("warm-start", cfg.warm_start);
