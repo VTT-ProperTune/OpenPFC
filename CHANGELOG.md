@@ -19,7 +19,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   Bridgman flags `--gradient`, `--pulling`, and `--fta-x0` on genuine 3-D
   grids. Theta is imposed each step; `M_c theta` stays live; `--Mc=0` or
   `--evolve-theta=1` with FTA is rejected. CSV `x_tip` in 3-D is the MPI
-  max solid front. Closes #393.
+  max solid front. Closes #393. `--load-fields` / `--load-index` /
+  `--start-step` reload SnapshotSeries `phi` and `U` bricks through
+  `BinaryReader`.
 
 - Finite-strain `evaluate_j2`, `evaluate_fcc`, and `evaluate_saint_venant`
   return the Piola stress, the local `∂P/∂F` tangent, and any trial

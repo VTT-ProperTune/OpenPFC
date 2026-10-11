@@ -579,6 +579,15 @@ alloy_dendrite_hip_growth --nx=48 --ny=48 --nz=48 --dx=0.8 --steps=20 \
   --omega=0.55 --gradient=0.02 --pulling=0.05 --fta-x0=19.2 \
   --csv=results/fta3d.csv --fields-dir=results/fta3d \
   --run-id=fta3d-hip
+
+# Continue from SnapshotSeries bricks written above. Same run-id, same
+# decomposition. --start-step is the FTA clock (theta uses t = step*dt).
+alloy_dendrite_hip_growth --nx=48 --ny=48 --nz=48 --dx=0.8 --steps=20 \
+  --sample-every=5 --Mc=0.5 --evolve-theta=0 --eps4=0.04 --Dl=2 \
+  --omega=0.55 --gradient=0.02 --pulling=0.05 --fta-x0=19.2 \
+  --load-fields=results/fta3d --load-index=0 --start-step=20 \
+  --csv=results/fta3d.csv --fields-dir=results/fta3d-cont \
+  --run-id=fta3d-hip
 ```
 
 Issue #11 recipe:
