@@ -11,6 +11,9 @@ namespace pfc {
 struct CUDASpace;
 struct HIPSpace;
 } // namespace pfc
+namespace heffte {
+enum class reshape_algorithm;
+} // namespace heffte
 
 namespace pfc::fft {
 /** Planned device-resident DCT-II/DST-II batches, with FFTW raw forward and
@@ -61,6 +64,13 @@ template <class MemorySpace> class BatchedMixedTransform {
 public:
   BatchedMixedTransform(int nx, int ny, double period_x, double period_y,
                         BoundedAxis z, MPI_Comm comm = MPI_COMM_WORLD);
+  /// Select an existing heFFTe exchange algorithm without changing the layout.
+  /// All ranks must select the same valid algorithm. The original overload
+  /// retains alltoallv. On one rank the policy is validated but no MPI reshape
+  /// is needed. GPU-aware versus host-staged execution remains a build policy.
+  BatchedMixedTransform(int nx, int ny, double period_x, double period_y,
+                        BoundedAxis z, heffte::reshape_algorithm algorithm,
+                        MPI_Comm comm = MPI_COMM_WORLD);
   ~BatchedMixedTransform();
   BatchedMixedTransform(BatchedMixedTransform &&) noexcept;
   BatchedMixedTransform &operator=(BatchedMixedTransform &&) noexcept;
