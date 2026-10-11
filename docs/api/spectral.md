@@ -11,7 +11,7 @@ local data through an implementation of the FFT contract. Read the
 API below.
 
 For uniform bounded axes, see [boundary transforms](boundary_transforms.md):
-explicit DCT/DST grids and homogeneous Poisson solves.
+explicit DCT/DST grids and periodic x/y with bounded z.
 
 ## `pfc::decomposition::Decomposition`
 
