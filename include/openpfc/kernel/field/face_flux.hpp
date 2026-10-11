@@ -34,6 +34,12 @@
  * the global extent is 1. A local owned extent of 1 on an active axis
  * still forms both face fluxes, both from the halos. A 2-D grid is the
  * case where the global z extent is 1.
+ *
+ * For a model-supplied face value that is not `a_face grad p` (diffusive
+ * plus anti-trapping, for example), use `face_divergence` in
+ * `face_current.hpp`. That operator does not replace this one.
+ *
+ * @see face_current.hpp
  */
 
 #include <array>

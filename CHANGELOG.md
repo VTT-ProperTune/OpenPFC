@@ -22,6 +22,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   buffers and accumulation on the device and refreshes Full halos through
   `eval.prepare()`.
 
+- Conservative divergence of a model-supplied Cartesian face current:
+  `pfc::field::fd::face_divergence` with Zero / Prescribed / Model walls
+  and an outer-flux budget. Complements `divergence_separated`; it does
+  not replace the diffusive `a_face grad p` law.
+
 ### Fixed
 
 - Configure with CMake 4 using nlohmann-json 3.11.3 without a
