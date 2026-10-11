@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #include <catch2/catch_test_macros.hpp>
+#include <openpfc/kernel/grain/contact_hash.hpp>
 #include <openpfc/runtime/cpu/detail/grain_tracking.hpp>
 
 namespace gr = pfc::grain;
@@ -78,4 +79,21 @@ TEST_CASE("host reference validates geometry and storage at its boundary",
       std::invalid_argument);
   const std::vector<gr::Id> empty{0};
   REQUIRE(ref::contact_graph({1, 1}, 1, empty).vertices.empty());
+}
+
+TEST_CASE("contact hash workspace stays compact at ten thousand grains",
+          "[grain][tracking][reference]") {
+  constexpr std::size_t grains = 10000;
+  constexpr std::size_t edges = 4096;
+  const auto dense = gr::dense_adjacency_bytes(grains);
+  const auto compact = gr::contact_hash_bytes(edges);
+  REQUIRE(dense == grains * grains * sizeof(unsigned));
+  REQUIRE(compact == gr::contact_hash_slots(edges) * sizeof(unsigned long long));
+  REQUIRE(compact < dense / 100);
+  REQUIRE(gr::contact_hash_slots(0) == 8);
+  REQUIRE(gr::pack_contact_key(3, 7) != gr::contact_hash_empty);
+  const auto ends = gr::unpack_contact_key(gr::pack_contact_key(3, 7));
+  REQUIRE(ends.first == 3);
+  REQUIRE(ends.second == 7);
+  REQUIRE_THROWS_AS(gr::pack_contact_key(4, 4), std::invalid_argument);
 }
