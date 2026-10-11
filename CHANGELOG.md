@@ -54,6 +54,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   ETD step on an H100 this cuts kernel launches from about 150 to 18 and
   the step from 0.75 to 0.22 ms (#382).
 
+- Restarted GMRES and flexible right preconditioning admit true residuals;
+  finite-strain FFT defaults to GMRES and retains caller-established SPD CG
+  (#403).
+
 ### Fixed
 
 - Configure with CMake 4 using nlohmann-json 3.11.3 without a
