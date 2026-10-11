@@ -11,11 +11,11 @@
  * device buffers. Include this from a CUDA or HIP translation unit: the
  * bound `for_each_interior_device` launch is instantiated there.
  *
- * The factory is `pfc::sim::steppers::create(std::tie(u, v), eval, model,
- * dt, tableau)` for `Field<double, CUDASpace>` / `HIPSpace`. It uses the
- * same `ButcherTableau`, model `rhs(t, g)`, and composite evaluator as
- * the host factory. `eval.prepare()` refreshes Full halos after each
- * stage is published into the bound fields.
+ * The factory is `pfc::sim::steppers::create(std::tie(u, v[, w[, q]]), eval,
+ * model, dt, tableau)` for two, three, or four `Field<double, CUDASpace>` /
+ * `HIPSpace` fields. It uses the same `ButcherTableau`, model `rhs(t, g)`,
+ * and composite evaluator as the host factory. `eval.prepare()` refreshes
+ * Full halos after each stage is published into the bound fields.
  *
  * @see kernel/simulation/steppers/explicit_rk.hpp
  * @see runtime/gpu/elementwise_ops_gpu.hpp
@@ -119,6 +119,26 @@ OPENPFC_HD inline pfc::sim::gpu::DeviceInc2 as_device_inc2(const Inc &inc) {
   }
 }
 
+template <class Inc>
+OPENPFC_HD inline pfc::sim::gpu::DeviceInc3 as_device_inc3(const Inc &inc) {
+  if constexpr (std::is_same_v<std::remove_cvref_t<Inc>,
+                               pfc::sim::gpu::DeviceInc3>) {
+    return inc;
+  } else {
+    return pfc::sim::gpu::DeviceInc3{inc.du, inc.dv, inc.dw};
+  }
+}
+
+template <class Inc>
+OPENPFC_HD inline pfc::sim::gpu::DeviceInc4 as_device_inc4(const Inc &inc) {
+  if constexpr (std::is_same_v<std::remove_cvref_t<Inc>,
+                               pfc::sim::gpu::DeviceInc4>) {
+    return inc;
+  } else {
+    return pfc::sim::gpu::DeviceInc4{inc.du, inc.dv, inc.dw, inc.dq};
+  }
+}
+
 template <class Model, class Composite> struct DeviceInc2Adapter {
   Model model;
   OPENPFC_HD pfc::sim::gpu::DeviceInc2 rhs(double t,
@@ -127,22 +147,63 @@ template <class Model, class Composite> struct DeviceInc2Adapter {
   }
 };
 
+template <class Model, class Composite> struct DeviceInc3Adapter {
+  Model model;
+  OPENPFC_HD pfc::sim::gpu::DeviceInc3 rhs(double t,
+                                           const Composite &g) const noexcept {
+    return as_device_inc3(model.rhs(t, g));
+  }
+};
+
+template <class Model, class Composite> struct DeviceInc4Adapter {
+  Model model;
+  OPENPFC_HD pfc::sim::gpu::DeviceInc4 rhs(double t,
+                                           const Composite &g) const noexcept {
+    return as_device_inc4(model.rhs(t, g));
+  }
+};
+
+template <class FieldT, std::size_t N>
+void check_device_rk_fields(const std::array<FieldT *, N> &fields) {
+  static_assert(N >= 2 && N <= 4, "device explicit RK supports 2, 3, or 4 fields");
+  if (fields[0]->storage_halo() <= 0) {
+    throw std::invalid_argument(
+        "device explicit RK: padded Fields (storage_halo > 0) are required");
+  }
+  for (std::size_t i = 0; i < N; ++i) {
+    for (std::size_t j = i + 1; j < N; ++j) {
+      if (fields[i] == fields[j] || fields[i]->data() == fields[j]->data()) {
+        throw std::invalid_argument("RK stage binding: duplicate field references");
+      }
+    }
+    if (i == 0) continue;
+    const auto &a = *fields[0];
+    const auto &b = *fields[i];
+    if (a.domain() != b.domain() || a.box().low != b.box().low ||
+        a.local_size() != b.local_size() || a.storage_halo() != b.storage_halo()) {
+      throw std::invalid_argument("RK multi-field factory: layouts differ");
+    }
+  }
+}
+
 /**
- * Two-field explicit RK on device-resident padded Fields.
+ * N-field explicit RK on device-resident padded Fields (N = 2, 3, or 4).
  *
  * Bound fields hold the accepted state. Each stage is formed in scratch,
  * published into the fields for stencil reads, prepared (halos), and
  * evaluated on device. Accepted contents are restored after the RHS so a
  * failed stage does not leave a half-applied stage in the fields.
  */
-template <class Space, class Eval, class Model, class Composite, class G0, class G1>
+template <class Space, class Eval, class Model, class Composite, class... Gs>
 class ResidentMultiExplicitRK {
 public:
+  static constexpr std::size_t N = sizeof...(Gs);
+  static_assert(N >= 2 && N <= 4, "device explicit RK supports 2, 3, or 4 fields");
   using FieldT = pfc::data::Field<double, Space>;
   using Buffer =
       pfc::core::DataBuffer<pfc::memory_space_to_backend_t<Space>, double>;
 
-  ResidentMultiExplicitRK(std::array<FieldT *, 2> fields, Eval &eval,
+  ResidentMultiExplicitRK(std::array<FieldT *, N> fields, Eval &eval,
                           const Model &model, double dt,
                           ButcherTableau<double> tableau)
       : m_fields(fields), m_eval(eval), m_model(model), m_dt(dt),
@@ -152,47 +213,41 @@ public:
     static_assert(is_cuda_space<Space>() || is_hip_space<Space>(),
                   "device explicit RK requires CUDASpace or HIPSpace");
     const unsigned int s = m_tableau.stage_count();
-    for (int f = 0; f < 2; ++f) {
-      m_backup[static_cast<std::size_t>(f)] = Buffer(m_n);
-      m_stage[static_cast<std::size_t>(f)] = Buffer(m_n);
-      m_du[static_cast<std::size_t>(f)] = Buffer(m_n);
-      m_k[static_cast<std::size_t>(f)].reserve(s);
-      for (unsigned int i = 0; i < s; ++i)
-        m_k[static_cast<std::size_t>(f)].emplace_back(m_n);
+    for (std::size_t f = 0; f < N; ++f) {
+      m_backup[f] = Buffer(m_n);
+      m_stage[f] = Buffer(m_n);
+      m_du[f] = Buffer(m_n);
+      m_k[f].reserve(s);
+      for (unsigned int i = 0; i < s; ++i) m_k[f].emplace_back(m_n);
     }
     device_fill<Space>(m_ones.data(), m_n, 1.0);
   }
 
-  double step(double t, FieldT &u, FieldT &v) {
-    if (&u != m_fields[0] || &v != m_fields[1]) {
-      throw std::invalid_argument(
-          "device explicit RK: step fields are not the bound pair");
+  template <class... Fs> double step(double t, Fs &...fs) {
+    static_assert(sizeof...(Fs) == N, "device explicit RK: wrong field count");
+    const std::array<FieldT *, N> got{&fs...};
+    for (std::size_t f = 0; f < N; ++f) {
+      if (got[f] != m_fields[f]) {
+        throw std::invalid_argument(
+            "device explicit RK: step fields are not the bound set");
+      }
+      if (got[f]->size() != m_n) {
+        throw std::invalid_argument(
+            "device explicit RK: field storage size changed");
+      }
+      got[f]->sync_to_device();
     }
-    if (u.size() != m_n || v.size() != m_n) {
-      throw std::invalid_argument("device explicit RK: field storage size changed");
-    }
-    u.sync_to_device();
-    v.sync_to_device();
     const unsigned int s = m_tableau.stage_count();
-    for (int f = 0; f < 2; ++f) {
-      const auto fi = static_cast<std::size_t>(f);
-      device_copy<Space>(m_backup[fi].data(), m_fields[fi]->data(), m_n);
-    }
-    DeviceInc2Adapter<Model, Composite> adapter{m_model};
+    for (std::size_t f = 0; f < N; ++f)
+      device_copy<Space>(m_backup[f].data(), m_fields[f]->data(), m_n);
     for (unsigned int i = 0; i < s; ++i) {
       form_stage(i);
       publish_stage();
       try {
         m_eval.prepare();
-        device_fill<Space>(m_du[0].data(), m_n, 0.0);
-        device_fill<Space>(m_du[1].data(), m_n, 0.0);
-        const pfc::sim::gpu::DevicePtrPack2 pack{m_du[0].data(), m_du[1].data()};
-        const double stage_time = t + m_tableau.c(i) * m_dt;
-        pfc::sim::gpu::for_each_interior_device<DeviceInc2Adapter<Model, Composite>,
-                                                Composite, G0, G1>(
-            adapter, m_eval, pack, stage_time, m_nx, m_ny, m_nz);
-        device_copy<Space>(m_k[0][i].data(), m_du[0].data(), m_n);
-        device_copy<Space>(m_k[1][i].data(), m_du[1].data(), m_n);
+        evaluate_rhs(t + m_tableau.c(i) * m_dt);
+        for (std::size_t f = 0; f < N; ++f)
+          device_copy<Space>(m_k[f][i].data(), m_du[f].data(), m_n);
       } catch (...) {
         restore_accepted();
         throw;
@@ -206,48 +261,69 @@ public:
   double dt() const noexcept { return m_dt; }
 
 private:
+  void evaluate_rhs(double stage_time) {
+    for (std::size_t f = 0; f < N; ++f) device_fill<Space>(m_du[f].data(), m_n, 0.0);
+    if constexpr (N == 2) {
+      DeviceInc2Adapter<Model, Composite> adapter{m_model};
+      const pfc::sim::gpu::DevicePtrPack2 pack{m_du[0].data(), m_du[1].data()};
+      pfc::sim::gpu::for_each_interior_device<DeviceInc2Adapter<Model, Composite>,
+                                              Composite, Gs...>(
+          adapter, m_eval, pack, stage_time, m_nx, m_ny, m_nz);
+    } else if constexpr (N == 3) {
+      DeviceInc3Adapter<Model, Composite> adapter{m_model};
+      const pfc::sim::gpu::DevicePtrPack3 pack{m_du[0].data(), m_du[1].data(),
+                                               m_du[2].data()};
+      pfc::sim::gpu::for_each_interior_device<DeviceInc3Adapter<Model, Composite>,
+                                              Composite, Gs...>(
+          adapter, m_eval, pack, stage_time, m_nx, m_ny, m_nz);
+    } else {
+      DeviceInc4Adapter<Model, Composite> adapter{m_model};
+      const pfc::sim::gpu::DevicePtrPack4 pack{m_du[0].data(), m_du[1].data(),
+                                               m_du[2].data(), m_du[3].data()};
+      pfc::sim::gpu::for_each_interior_device<DeviceInc4Adapter<Model, Composite>,
+                                              Composite, Gs...>(
+          adapter, m_eval, pack, stage_time, m_nx, m_ny, m_nz);
+    }
+  }
+
   void form_stage(unsigned int stage_idx) {
-    for (int f = 0; f < 2; ++f) {
-      const auto fi = static_cast<std::size_t>(f);
-      device_copy<Space>(m_stage[fi].data(), m_backup[fi].data(), m_n);
+    for (std::size_t f = 0; f < N; ++f) {
+      device_copy<Space>(m_stage[f].data(), m_backup[f].data(), m_n);
       for (unsigned int j = 0; j < stage_idx; ++j) {
         const double a_ij = m_tableau.a(stage_idx, j);
-        device_scale_add<Space>(m_stage[fi].data(), m_k[fi][j].data(), m_dt * a_ij,
+        device_scale_add<Space>(m_stage[f].data(), m_k[f][j].data(), m_dt * a_ij,
                                 m_ones.data(), m_weights.data(), m_n);
       }
     }
   }
 
   void publish_stage() {
-    for (int f = 0; f < 2; ++f) {
-      const auto fi = static_cast<std::size_t>(f);
-      device_copy<Space>(m_fields[fi]->data(), m_stage[fi].data(), m_n);
-      m_fields[fi]->note_device_write();
+    for (std::size_t f = 0; f < N; ++f) {
+      device_copy<Space>(m_fields[f]->data(), m_stage[f].data(), m_n);
+      m_fields[f]->note_device_write();
     }
   }
 
   void restore_accepted() {
-    for (int f = 0; f < 2; ++f) {
-      const auto fi = static_cast<std::size_t>(f);
-      device_copy<Space>(m_fields[fi]->data(), m_backup[fi].data(), m_n);
-      m_fields[fi]->note_device_write();
+    for (std::size_t f = 0; f < N; ++f) {
+      device_copy<Space>(m_fields[f]->data(), m_backup[f].data(), m_n);
+      m_fields[f]->note_device_write();
     }
   }
 
   void accumulate() {
     const unsigned int s = m_tableau.stage_count();
-    for (int f = 0; f < 2; ++f) {
-      const auto fi = static_cast<std::size_t>(f);
+    for (std::size_t f = 0; f < N; ++f) {
       for (unsigned int i = 0; i < s; ++i) {
-        device_scale_add<Space>(m_fields[fi]->data(), m_k[fi][i].data(),
+        device_scale_add<Space>(m_fields[f]->data(), m_k[f][i].data(),
                                 m_dt * m_tableau.b(i), m_ones.data(),
                                 m_weights.data(), m_n);
       }
-      m_fields[fi]->note_device_write();
+      m_fields[f]->note_device_write();
     }
   }
 
-  std::array<FieldT *, 2> m_fields{};
+  std::array<FieldT *, N> m_fields{};
   Eval &m_eval;
   const Model &m_model;
   double m_dt{0.0};
@@ -256,10 +332,10 @@ private:
   int m_nx{0};
   int m_ny{0};
   int m_nz{0};
-  std::array<Buffer, 2> m_backup{};
-  std::array<Buffer, 2> m_stage{};
-  std::array<Buffer, 2> m_du{};
-  std::array<std::vector<Buffer>, 2> m_k{};
+  std::array<Buffer, N> m_backup{};
+  std::array<Buffer, N> m_stage{};
+  std::array<Buffer, N> m_du{};
+  std::array<std::vector<Buffer>, N> m_k{};
   Buffer m_ones;
   Buffer m_weights;
 };
@@ -286,20 +362,56 @@ template <class Space, class Composite, class G0, class G1, class Model>
   using FieldT = pfc::data::Field<double, Space>;
   FieldT &u = std::get<0>(fields);
   FieldT &v = std::get<1>(fields);
-  if (&u == &v || u.data() == v.data()) {
-    throw std::invalid_argument("RK stage binding: duplicate field references");
-  }
-  if (u.domain() != v.domain() || u.box().low != v.box().low ||
-      u.local_size() != v.local_size() || u.storage_halo() != v.storage_halo()) {
-    throw std::invalid_argument("RK multi-field factory: layouts differ");
-  }
-  if (u.storage_halo() <= 0) {
-    throw std::invalid_argument(
-        "device explicit RK: padded Fields (storage_halo > 0) are required");
-  }
+  const std::array<FieldT *, 2> bound{&u, &v};
+  detail::check_device_rk_fields(bound);
   using Eval = pfc::gpu::CompositeGradientDevice<Composite, G0, G1>;
   return detail::ResidentMultiExplicitRK<Space, Eval, Model, Composite, G0, G1>(
-      {&u, &v}, eval, model, dt, tableau);
+      bound, eval, model, dt, tableau);
+}
+
+/**
+ * @brief Device-resident three-field explicit RK factory.
+ *
+ * Same contract as the two-field factory. `Model::rhs` returns `DeviceInc3`
+ * or `{du, dv, dw}`. Stage buffers stay on device.
+ */
+template <class Space, class Composite, class G0, class G1, class G2, class Model>
+[[nodiscard]] auto create(
+    std::tuple<pfc::data::Field<double, Space> &, pfc::data::Field<double, Space> &,
+               pfc::data::Field<double, Space> &>
+        fields,
+    pfc::gpu::CompositeGradientDevice<Composite, G0, G1, G2> &eval,
+    const Model &model, double dt, const ButcherTableau<double> &tableau) {
+  using FieldT = pfc::data::Field<double, Space>;
+  const std::array<FieldT *, 3> bound{&std::get<0>(fields), &std::get<1>(fields),
+                                      &std::get<2>(fields)};
+  detail::check_device_rk_fields(bound);
+  using Eval = pfc::gpu::CompositeGradientDevice<Composite, G0, G1, G2>;
+  return detail::ResidentMultiExplicitRK<Space, Eval, Model, Composite, G0, G1, G2>(
+      bound, eval, model, dt, tableau);
+}
+
+/**
+ * @brief Device-resident four-field explicit RK factory.
+ *
+ * Same contract as the two-field factory. `Model::rhs` returns `DeviceInc4`
+ * or `{du, dv, dw, dq}`. Stage buffers stay on device.
+ */
+template <class Space, class Composite, class G0, class G1, class G2, class G3,
+          class Model>
+[[nodiscard]] auto create(
+    std::tuple<pfc::data::Field<double, Space> &, pfc::data::Field<double, Space> &,
+               pfc::data::Field<double, Space> &, pfc::data::Field<double, Space> &>
+        fields,
+    pfc::gpu::CompositeGradientDevice<Composite, G0, G1, G2, G3> &eval,
+    const Model &model, double dt, const ButcherTableau<double> &tableau) {
+  using FieldT = pfc::data::Field<double, Space>;
+  const std::array<FieldT *, 4> bound{&std::get<0>(fields), &std::get<1>(fields),
+                                      &std::get<2>(fields), &std::get<3>(fields)};
+  detail::check_device_rk_fields(bound);
+  using Eval = pfc::gpu::CompositeGradientDevice<Composite, G0, G1, G2, G3>;
+  return detail::ResidentMultiExplicitRK<Space, Eval, Model, Composite, G0, G1, G2,
+                                         G3>(bound, eval, model, dt, tableau);
 }
 
 } // namespace pfc::sim::steppers

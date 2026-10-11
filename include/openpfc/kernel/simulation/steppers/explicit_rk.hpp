@@ -57,7 +57,8 @@
  * @see openpfc/kernel/simulation/steppers/euler.hpp for the forward-Euler
  *      stepper pattern
  * @see openpfc/runtime/gpu/explicit_rk_gpu.hpp for the device-resident
- *      two-field factory on `Field<double, CUDASpace>` / `HIPSpace`
+ *      two-, three-, and four-field factory on `Field<double, CUDASpace>`
+ *      / `HIPSpace`
  */
 
 #include <algorithm>
