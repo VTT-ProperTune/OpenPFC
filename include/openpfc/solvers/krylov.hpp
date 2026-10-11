@@ -221,6 +221,8 @@ KrylovResult gmres(Ops &ops, Action &&action, const typename Ops::Vector &b,
 }
 
 /** PCG for a caller-established SPD operator and fixed SPD inverse M.
+ * None bypasses M; otherwise CG requires a fixed SPD inverse regardless
+ * of the GMRES-only flexible/side options.
  * Curvature checks catch some violations but never prove symmetry or SPD.
  * Every convergence claim is checked against the original unpreconditioned RHS.
  */
@@ -243,6 +245,10 @@ KrylovResult cg(Ops &ops, Action &&action, const typename Ops::Vector &b,
       throw std::invalid_argument("operator output size mismatch");
   };
   auto precondition = [&]() {
+    if (c.preconditioning == Preconditioning::None) {
+      ops.copy(r, z);
+      return;
+    }
     auto t = std::chrono::steady_clock::now();
     inverse(r, z, out.iterations);
     out.preconditioner_seconds += detail::elapsed(t);
@@ -295,6 +301,10 @@ KrylovResult cg(Ops &ops, Action &&action, const typename Ops::Vector &b,
       ops.axpy(r, -1, product);
       out.residual = ops.norm(r);
       out.history.back().true_residual = out.residual;
+      if (!std::isfinite(out.residual)) {
+        out.status = LinearStatus::NonFinite;
+        return out;
+      }
       if (out.residual <= stop) {
         out.status = LinearStatus::Converged;
         return out;

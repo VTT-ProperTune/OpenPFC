@@ -680,19 +680,31 @@ TEST_CASE("FFT exposes GMRES and caller-established compatible SPD CG",
           "[finite_strain][krylov]") {
   auto tools = make_grid(Int3{5, 5, 5}, MPI_COMM_WORLD);
   CompatibleProjector projector(tools.fft, tools.domain);
+  struct HeterogeneousScaled {
+    std::vector<double> stiffness;
+    Tensor2 stress(std::size_t i, const Tensor2 &f) const {
+      return scaled(f, stiffness[i]);
+    }
+    Tensor2 tangent_action(std::size_t i, const Tensor2 &, const Tensor2 &v) const {
+      return scaled(v, stiffness[i]);
+    }
+  } law;
+  const auto inbox = tools.fft.get_inbox_bounds();
+  for (int z = inbox.low[2]; z <= inbox.high[2]; ++z)
+    for (int y = inbox.low[1]; y <= inbox.high[1]; ++y)
+      for (int x = inbox.low[0]; x <= inbox.high[0]; ++x)
+        law.stiffness.push_back(2 + .5 * std::sin(2 * std::acos(-1.) * x / 5));
   NewtonControls c;
   c.krylov_method = KrylovMethod::CG;
-  REQUIRE_THROWS_AS(
-      solve_equilibrium(projector, ScaledDeformationLaw{}, simple_shear(.1), c),
-      std::invalid_argument);
-  // G:2I is SPD on the compatible zero-mean range of G.
+  REQUIRE_THROWS_AS(solve_equilibrium(projector, law, simple_shear(.1), c),
+                    std::invalid_argument);
+  // G:a(X)I is SPD on range(G): v:G:a v = sum a(X)|v|² > 0.
   c.operator_is_spd = true;
-  auto cg_result =
-      solve_equilibrium(projector, ScaledDeformationLaw{}, simple_shear(.1), c);
+  auto cg_result = solve_equilibrium(projector, law, simple_shear(.1), c);
   c.krylov_method = KrylovMethod::GMRES;
-  auto gmres_result =
-      solve_equilibrium(projector, ScaledDeformationLaw{}, simple_shear(.1), c);
+  auto gmres_result = solve_equilibrium(projector, law, simple_shear(.1), c);
   REQUIRE(cg_result.converged);
+  REQUIRE(cg_result.history[1].krylov_iterations > 0);
   REQUIRE(gmres_result.converged);
   REQUIRE(max_abs_diff(cg_result.deformation, gmres_result.deformation) < 1e-12);
   for (const auto &step : gmres_result.history) REQUIRE(step.linear.converged());

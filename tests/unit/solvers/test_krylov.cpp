@@ -156,3 +156,17 @@ TEST_CASE("Krylov MPI reductions use all owned entries", "[krylov][MPI]") {
   REQUIRE(std::abs(result.rhs_norm - std::sqrt(expected)) < 1e-12);
   REQUIRE(ops.reductions.calls > 0);
 }
+
+TEST_CASE("unpreconditioned CG bypasses a supplied inverse", "[krylov]") {
+  Matrix a{{4, -1}, {-1, 3}};
+  Vec b{1, 2}, x(2);
+  VectorOperations ops;
+  KrylovControls c;
+  c.preconditioning = Preconditioning::None;
+  auto forbidden = [](const Vec &, Vec &, int) {
+    throw std::runtime_error("inverse must be bypassed");
+  };
+  auto result = cg(ops, multiply(a), b, x, c, forbidden);
+  REQUIRE(result.converged());
+  REQUIRE(result.preconditioner_calls == 0);
+}
