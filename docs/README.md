@@ -107,3 +107,6 @@ Documentation-specific structure, preview commands, and checks are described in
 
 [Matrix-free Krylov solvers](reference/krylov.md) describes GMRES, flexible
 right preconditioning, true residual admission and the explicit SPD CG path.
+
+[Inexact Newton](reference/inexact_newton.md) describes forcing tolerances,
+line search, trial rollback and the residual-based FFT adapter.

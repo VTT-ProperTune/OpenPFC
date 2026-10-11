@@ -5,3 +5,4 @@ add_subdirectory(microelasticity)
 add_subdirectory(finite_strain_fft)
 
 target_sources(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_krylov.cpp)
+target_sources(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_newton.cpp)
