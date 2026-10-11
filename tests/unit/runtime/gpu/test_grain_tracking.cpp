@@ -32,6 +32,45 @@ bool available() {
   return pfc::gpu::test::is_cuda_available();
 #endif
 }
+TEST_CASE("singleton contacts validate labels without visiting neighbours",
+          "[grain][tracking][singleton]") {
+  if (!available()) SKIP("GPU unavailable");
+  for (bool periodic : {false, true}) {
+    const gr::Grid2D grid{3, 2, periodic, periodic, gr::Connectivity::Eight};
+    const std::vector<gr::Id> ids{41};
+    for (bool occupied : {false, true}) {
+      std::vector<gr::Id> labels(12, occupied ? 41 : 0);
+      labels[0] = 0;
+      Buffer<gr::Id> input(labels.size());
+      input.copy_from_host(labels);
+      Buffer<gr::Contact> output(1);
+      const std::vector<gr::Contact> sentinel{{555, 777}};
+      output.copy_from_host(sentinel);
+      const auto expected = tr::reference::contact_graph(grid, 2, labels, 2);
+      gr::Diagnostics diagnostics;
+      {
+        gr::diagnostics::Scope scope(&diagnostics);
+        const auto actual =
+            tr::adjacency(Tag{}, grid, 2, read(input), ids, view(output), 64);
+        REQUIRE(actual.status == tr::Status::Success);
+        REQUIRE(actual.active == expected.vertices);
+        REQUIRE(actual.edge_count == expected.edges.size());
+      }
+      REQUIRE(diagnostics.source_accesses_complete);
+      REQUIRE(diagnostics.accesses
+                  .reads[static_cast<std::size_t>(gr::diagnostics::Field::Labels)] ==
+              labels.size());
+      REQUIRE(input.to_host() == labels);
+      REQUIRE(output.to_host() == sentinel);
+      labels.back() = 99;
+      input.copy_from_host(labels);
+      REQUIRE(
+          tr::adjacency(Tag{}, grid, 2, read(input), ids, view(output), 64).status ==
+          tr::Status::UnknownIdentity);
+      REQUIRE(output.to_host() == sentinel);
+    }
+  }
+}
 TEST_CASE("resident grain tracking matches shortest path and contact oracles",
           "[grain][tracking]") {
   if (!available()) SKIP("GPU unavailable");

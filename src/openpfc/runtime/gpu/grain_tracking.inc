@@ -182,6 +182,9 @@ __global__ void contacts(Grid grid, Slot slots, const Id *labels, const Id *ids,
     if constexpr (Observe) dg::read(counts, Field::Counts, sizeof(unsigned));
     if constexpr (Observe) dg::write(counts, Field::Counts, sizeof(unsigned));
     atomicOr(active + a, 1u);
+    // Every non-background label is still validated above. With one
+    // registered identity there cannot be a contact with a different grain.
+    if (grains == 1) continue;
     const int zr = pfc::grain::detail::depth_radius(grid, radius);
     for (int dz = -zr; dz <= zr; ++dz)
       for (int dy = -radius; dy <= radius; ++dy)
@@ -316,7 +319,8 @@ adjacency_impl(Tag, Grid grid, Slot slots, std::span<const Id> labels,
   if (bad & 1u) return {Status::UnknownIdentity, 0, {}, table_bytes};
   std::vector<unsigned long long> packed(table_slots);
   if (table_slots) {
-    GPU_CHECK(gpuMemcpy(packed.data(), keys.data, table_bytes, gpuMemcpyDeviceToHost));
+    GPU_CHECK(
+        gpuMemcpy(packed.data(), keys.data, table_bytes, gpuMemcpyDeviceToHost));
     dg::copy(Direction::DeviceToHost, Field::AdjacencyMatrix, table_bytes);
   }
   std::vector<Contact> unique;

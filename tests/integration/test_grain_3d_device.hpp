@@ -33,6 +33,47 @@ __global__ void produce_3d(double *values, std::size_t i, double q) {
   if (!blockIdx.x && !threadIdx.x) values[i] = q;
 }
 } // namespace
+TEST_CASE("3D singleton graph scans every label once at large contact radius",
+          "[grain][3d][device][singleton]") {
+  require_device_3d();
+  for (bool periodic : {false, true}) {
+    const Grid3D g{3, 2, 2, periodic, periodic, periodic, Connectivity::TwentySix};
+    const std::vector<Id> ids{9};
+    for (bool occupied : {false, true}) {
+      std::vector<Id> labels(24, occupied ? 9 : 0);
+      labels[0] = 0;
+      ThreeLabels input(labels.size());
+      input.copy_from_host(labels);
+      pfc::core::DataBuffer<ThreeBackend, Contact> output(1);
+      const std::vector<Contact> sentinel{{80, 90}};
+      output.copy_from_host(sentinel);
+      const auto expected = graph(g, 2, labels, 2);
+      Diagnostics d;
+      {
+        diagnostics::Scope scope(&d);
+        const auto actual = tracking::adjacency(
+            ThreeBackend{}, g, 2, std::span(input.data(), input.size()), ids,
+            std::span(output.data(), output.size()), 64);
+        REQUIRE(actual.status == tracking::Status::Success);
+        REQUIRE(actual.active == expected.vertices);
+        REQUIRE(actual.edge_count == expected.edges.size());
+      }
+      REQUIRE(d.source_accesses_complete);
+      REQUIRE(
+          d.accesses.reads[static_cast<std::size_t>(diagnostics::Field::Labels)] ==
+          labels.size());
+      REQUIRE(input.to_host() == labels);
+      REQUIRE(output.to_host() == sentinel);
+      labels.back() = 77;
+      input.copy_from_host(labels);
+      REQUIRE(tracking::adjacency(ThreeBackend{}, g, 2,
+                                  std::span(input.data(), input.size()), ids,
+                                  std::span(output.data(), output.size()), 64)
+                  .status == tracking::Status::UnknownIdentity);
+      REQUIRE(output.to_host() == sentinel);
+    }
+  }
+}
 TEST_CASE("3D device ownership matches independent exhaustive tiny masks",
           "[grain][3d][device]") {
   require_device_3d();

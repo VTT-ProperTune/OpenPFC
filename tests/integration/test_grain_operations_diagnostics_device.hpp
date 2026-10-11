@@ -160,7 +160,7 @@ TEST_CASE("single-UID adjacency exposes exact auxiliary counts",
           sizeof(dg::Accesses) + sizeof(Id) + contact_hash_bytes(0) +
               2 * sizeof(unsigned));
   REQUIRE(d.allocations(dg::Space::Device).live_bytes == 0);
-  REQUIRE(d.accesses.reads[f(dg::Field::Labels)] == 2);
+  REQUIRE(d.accesses.reads[f(dg::Field::Labels)] == 1);
   REQUIRE(d.accesses.reads[f(dg::Field::Registry)] == 2);
   REQUIRE(d.accesses.reads[f(dg::Field::Counts)] == 1);
   REQUIRE(d.accesses.writes[f(dg::Field::Counts)] == 2);
