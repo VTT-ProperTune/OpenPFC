@@ -2,6 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #pragma once
 
+#if defined(__CUDACC__)
+#include <cuda_runtime.h>
+#elif defined(__HIPCC__)
+#include <hip/hip_runtime.h>
+#endif
+
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -88,7 +94,7 @@ __device__ inline bool insert_contact_key(unsigned long long *table,
     if (cur == key) return true;
     if (cur == contact_hash_empty) {
       const unsigned long long old =
-          atomicCAS(table + slot, contact_hash_empty, key);
+          ::atomicCAS(table + slot, contact_hash_empty, key);
       if (old == contact_hash_empty || old == key) return true;
     }
     slot = (slot + 1) & mask;
