@@ -87,6 +87,16 @@ TEST_CASE("batched device lines preserve raw normalization and padded strides",
           REQUIRE_THAT(
               c[i], WithinAbs(expect[i], 2e-11 * std::max(1., std::abs(expect[i]))));
         REQUIRE(in.read() == input);
+        RealTransform evaluator(axis);
+        for (int b = 0; b < 5; ++b) {
+          std::vector<double> line(n);
+          for (int k = 0; k < n; ++k) line[k] = c[b * layout[1] + k * layout[0]];
+          int order = type == RealTransformType::DCT2 ? 1 : 0;
+          REQUIRE_THAT(evaluator.evaluate(line, axis.origin, order),
+                       WithinAbs(0, 2e-11));
+          REQUIRE_THAT(evaluator.evaluate(line, axis.origin + axis.length, order),
+                       WithinAbs(0, 2e-11));
+        }
         plan.backward(out.span(), in.span());
         auto back = in.read();
         for (std::size_t i = 0; i < back.size(); ++i)
