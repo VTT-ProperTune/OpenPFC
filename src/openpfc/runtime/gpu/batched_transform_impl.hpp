@@ -452,6 +452,7 @@ void BatchedRealTransform<M>::backward(std::span<const double> in,
 
 template <class M> struct BatchedMixedTransform<M>::Impl {
   int nx, ny, local_y, ylow;
+  int communicator_size = 1;
   double lx, ly, norm;
   BoundedAxis z;
   MPI_Comm comm;
@@ -472,6 +473,7 @@ template <class M> struct BatchedMixedTransform<M>::Impl {
     int rank, ranks;
     MPI_Comm_rank(c, &rank);
     MPI_Comm_size(c, &ranks);
+    communicator_size = ranks;
     int invalid = 0, any;
     try {
       axis_check(a);
@@ -572,7 +574,10 @@ template <class M> struct BatchedMixedTransform<M>::Impl {
         modes.p, phase.p, stats.p, z.n, plane(), output_box.contains({0, 0, 0}));
     GPU_CHECK(gpuGetLastError());
     GPU_CHECK(gpuMemcpy(zero, stats.p, sizeof(zero), gpuMemcpyDeviceToHost));
-    MPI_Allreduce(zero, global, 3, MPI_DOUBLE, MPI_MAX, comm);
+    if (communicator_size > 1)
+      MPI_Allreduce(zero, global, 3, MPI_DOUBLE, MPI_MAX, comm);
+    else
+      std::copy(zero, zero + 3, global);
     if (global[2] || global[1] > tol * global[0])
       throw std::invalid_argument(
           "boundary mixed incompatible/nonfinite Neumann forcing");
@@ -676,15 +681,19 @@ void BatchedMixedTransform<M>::helmholtz(std::span<const double> in,
                 (s != LaplacianSymbol::Spectral &&
                  s != LaplacianSymbol::CenteredDifference),
       any;
-  MPI_Allreduce(&invalid, &any, 1, MPI_INT, MPI_MAX, p.comm);
+  any = invalid;
+  if (p.communicator_size > 1)
+    MPI_Allreduce(&invalid, &any, 1, MPI_INT, MPI_MAX, p.comm);
   if (any)
     throw std::invalid_argument(
         "boundary mixed invalid collective solve parameters");
-  double meta[3] = {alpha, double(int(s)), tol}, lo[3], hi[3];
-  MPI_Allreduce(meta, lo, 3, MPI_DOUBLE, MPI_MIN, p.comm);
-  MPI_Allreduce(meta, hi, 3, MPI_DOUBLE, MPI_MAX, p.comm);
-  if (!std::equal(lo, lo + 3, hi))
-    throw std::invalid_argument("boundary solve parameters differ across ranks");
+  if (p.communicator_size > 1) {
+    double meta[3] = {alpha, double(int(s)), tol}, lo[3], hi[3];
+    MPI_Allreduce(meta, lo, 3, MPI_DOUBLE, MPI_MIN, p.comm);
+    MPI_Allreduce(meta, hi, 3, MPI_DOUBLE, MPI_MAX, p.comm);
+    if (!std::equal(lo, lo + 3, hi))
+      throw std::invalid_argument("boundary solve parameters differ across ranks");
+  }
   p.set_weights(alpha, s, false);
   p.forward(in.data());
   if (!p.sine && alpha == 0) p.check_compatibility(tol);
