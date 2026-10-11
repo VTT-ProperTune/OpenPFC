@@ -12,7 +12,8 @@
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/simulation/steppers/explicit_rk.hpp>
-#if defined(OpenPFC_ENABLE_HEFFTE) && !defined(__HIP__) && !defined(__HIPCC__)
+#if defined(OpenPFC_ENABLE_HEFFTE) && !defined(__HIP__) && !defined(__HIPCC__) &&   \
+    !defined(__CUDACC__)
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/field/spectral_gradient.hpp>
 #endif
@@ -287,7 +288,8 @@ inline void verify_fd_time(bool fourth) {
           "nonlinear explicit-time RK temporal order");
   require(fine < (fourth ? 1e-7 : 1e-4), "manufactured temporal tolerance");
 }
-#if defined(OpenPFC_ENABLE_HEFFTE) && !defined(__HIP__) && !defined(__HIPCC__)
+#if defined(OpenPFC_ENABLE_HEFFTE) && !defined(__HIP__) && !defined(__HIPCC__) &&   \
+    !defined(__CUDACC__)
 inline double verify_spectral(bool fourth, Observe observe = nullptr) {
   constexpr int n = 24;
   auto g = domain(n);

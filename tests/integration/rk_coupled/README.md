@@ -65,12 +65,18 @@ production stepper. All stages and outputs compare with the independent
 CPU stencil recurrence. It also checks the same nonlinear, explicitly timed
 uniform manufactured solution at two timestep sizes for RK2 and RK4.
 Transfers and full-array audits are intentional test costs; this is not a
-resident-device integrator or a performance test. Actual hardware is required; there is no no-device skip or host fallback. CUDA is
-unverified.
+resident-device integrator or a performance test. Actual hardware is required; there is no no-device skip or host fallback.
 
-The one-rank entry point always runs. With MPI suites enabled the host and
-HIP tests register 1/2/4/8-rank cases, subject to the configured maximum world
-size. Stage cases use a periodic 24³ global grid with x slabs, including owned
+The resident CUDA/HIP tests (`resident.cu` / `resident.hip`) call
+`create(std::tie(u, v), eval, model, dt, tableau)` on
+`Field<double, CUDASpace>` / `HIPSpace`. Stage construction, Full halo
+refresh, RHS, and accumulation stay on the device. Per-stage downloads in
+the test are audits of `eval.prepare()` against `oracle.hpp` (stage
+inputs, face/edge/corner ghosts, accepted state), not stepper transfers.
+
+The one-rank entry point always runs. With MPI suites enabled the host,
+native HIP, and resident CUDA/HIP tests register 1/2/4/8-rank cases,
+subject to the configured maximum world size. Stage cases use a periodic 24³ global grid with x slabs, including owned
 x extent three at eight ranks, and audit every actual stage halo. The spatial
 refinement additionally uses 32³ and 64³ grids. Native
 rank/device metadata is printed to stderr. Build and run through
