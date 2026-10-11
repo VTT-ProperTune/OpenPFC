@@ -514,6 +514,12 @@ template <class M> struct BatchedMixedTransform<M>::Impl {
     else {
       auto options = heffte::default_options<Backend>();
       options.use_reorder = true;
+#if (defined(OPENPFC_GPU_API_CUDA) && defined(OpenPFC_MPI_CUDA_AWARE)) ||           \
+    (defined(OPENPFC_GPU_API_HIP) && defined(OpenPFC_MPI_HIP_AWARE))
+      options.use_gpu_aware = true;
+#else
+      options.use_gpu_aware = false;
+#endif
       distributed =
           std::make_unique<heffte::fft3d_r2c<Backend>>(in, out, 0, c, options);
       work.allocate(distributed->size_workspace());

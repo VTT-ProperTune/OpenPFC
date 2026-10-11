@@ -147,6 +147,9 @@ from another stream or host. Construct, execute and destroy on the same
 current device. One instance is not reentrant. The communicator is borrowed
 and must remain live until destruction. One rank uses a vendor 3D FFT;
 multiple ranks reuse heFFTe's distribution with full z output lines.
+GPU-aware MPI follows the configured `OpenPFC_MPI_CUDA_AWARE` or
+`OpenPFC_MPI_HIP_AWARE` setting. Without it, heFFTe stages communication
+through host buffers; no extra field copy is made by the bounded transform.
 At most ny ranks are supported. The checked vendor extent limit is
 nx*ny*n <= INT_MAX. Input values must be finite. GPU Neumann Poisson
 additionally detects nonfinite coefficients while checking compatibility.
