@@ -128,3 +128,29 @@ TEST_CASE("residual exception rolls trial cache back before propagation",
   REQUIRE(model.rejected == 1);
   REQUIRE(model.committed == 27);
 }
+
+TEST_CASE("distributed Newton admits global residual and synchronized rollback",
+          "[nonlinear][MPI]") {
+  struct DistributedRoot : SquareRoot {
+    int rank = 0;
+    void residual(const std::vector<double> &x, std::vector<double> &r) {
+      SquareRoot::residual(x, r);
+      r[0] -= rank;
+    }
+  } model;
+  MPI_Comm_rank(MPI_COMM_WORLD, &model.rank);
+  VectorOperations ops(MPI_COMM_WORLD);
+  std::vector<double> x{.1};
+  NewtonControls c;
+  c.relative_tolerance = 1e-12;
+  auto result = newton(ops, model, x, c);
+  REQUIRE(result.converged());
+  REQUIRE(result.rejected_trials > 0);
+  REQUIRE(std::abs(x[0] - std::sqrt(2. + model.rank)) < 1e-11);
+  REQUIRE(model.committed == 27);
+  int counts[2] = {model.accepted, model.rejected}, low[2], high[2];
+  MPI_Allreduce(counts, low, 2, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
+  MPI_Allreduce(counts, high, 2, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  REQUIRE(low[0] == high[0]);
+  REQUIRE(low[1] == high[1]);
+}
