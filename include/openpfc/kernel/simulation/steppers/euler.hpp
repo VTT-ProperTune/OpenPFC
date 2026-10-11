@@ -53,6 +53,7 @@
 
 #include <array>
 #include <cstddef>
+#include <stdexcept>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -568,6 +569,139 @@ template <class... Ts, class Eval, class Model>
     pfc::sim::for_each_interior(model, eval, du_ptrs, t);
   };
   return MultiEulerStepper<decltype(rhs), N>(dt, sizes, std::move(rhs));
+}
+
+/**
+ * @brief Forward Euler that updates owned cells in place.
+ *
+ * `MultiEulerStepper` clones each field's entire buffer (halo included)
+ * into a work copy, a candidate and a commit. A 2D slab with a nonzero
+ * storage halo therefore copies several unused z-layers every step.
+ *
+ * This stepper does not clone state. The right-hand side is invoked once,
+ * while every field still holds the pre-step owned values, and fills one
+ * `du` buffer per field. Only after that call returns are the owned cells
+ * updated, all fields together:
+ *
+ *     field(i, j, k) += dt * du[field.idx(i, j, k)]
+ *
+ * Halo cells are not written. The caller fills them before the next
+ * right-hand side, which is the same contract as `FDGradient`.
+ *
+ * Coupled fields stay consistent: every `du` is finished before any owned
+ * cell changes, so one field's update cannot enter another's right-hand
+ * side. The right-hand side must not itself write owned cells.
+ *
+ * Deliberate difference from `MultiEulerStepper`: there is no isolated
+ * candidate and `can_rollback()` is false. If the right-hand side throws,
+ * owned cells are unchanged. A right-hand side that fills halos before
+ * throwing can still leave those halos modified; the stepper does not
+ * snapshot them.
+ *
+ * `du` is allocated once, at `field.size()`, and is not resized by `step`.
+ * `eval.idx(i, j, k)` must be `Field::idx(i, j, k)` so the scatter and the
+ * owned update name the same cell.
+ */
+template <class Rhs, std::size_t N> class OwnedEulerStepper {
+public:
+  static constexpr std::size_t field_count = N;
+
+  OwnedEulerStepper(double dt, std::array<std::size_t, N> sizes, Rhs rhs)
+      : m_dt(dt), m_sizes(sizes), m_rhs(std::move(rhs)) {
+    if (!(dt > 0.0)) {
+      throw std::invalid_argument("OwnedEulerStepper: dt must be positive");
+    }
+    for (std::size_t i = 0; i < N; ++i) {
+      if (sizes[i] == 0) {
+        throw std::invalid_argument(
+            "OwnedEulerStepper: field size must be positive");
+      }
+      m_du[i].assign(sizes[i], 0.0);
+    }
+  }
+
+  [[nodiscard]] bool can_rollback() const noexcept { return false; }
+
+  /// Bytes of method-owned `du` storage. Constant across `step` calls.
+  [[nodiscard]] std::size_t workspace_bytes() const noexcept {
+    std::size_t n = 0;
+    for (const auto &du : m_du) n += du.size() * sizeof(double);
+    return n;
+  }
+
+  template <class... Fs> double step(double t, Fs &...fields) {
+    static_assert(sizeof...(Fs) == N, "OwnedEulerStepper: field count must match N");
+    validate(std::index_sequence_for<Fs...>{}, fields...);
+    auto du_pack = make_du(std::index_sequence_for<Fs...>{});
+    m_rhs(t, du_pack);
+    add_owned(std::index_sequence_for<Fs...>{}, fields...);
+    return t + m_dt;
+  }
+
+private:
+  template <std::size_t... I, class... Fs>
+  void validate(std::index_sequence<I...>, const Fs &...fields) const {
+    auto check = [&](std::size_t i, const auto &field) {
+      if (field.size() != m_sizes[i] || m_du[i].size() != m_sizes[i]) {
+        throw std::invalid_argument("OwnedEulerStepper: field storage changed");
+      }
+    };
+    (check(I, fields), ...);
+  }
+
+  template <std::size_t... I> auto make_du(std::index_sequence<I...>) {
+    return std::tie(m_du[I]...);
+  }
+
+  template <std::size_t... I, class... Fs>
+  void add_owned(std::index_sequence<I...>, Fs &...fields) {
+    (add_one(fields, m_du[I]), ...);
+  }
+
+  template <class F> void add_one(F &field, const std::vector<double> &du) const {
+    const auto n = field.local_size();
+    for (int k = 0; k < n[2]; ++k) {
+      for (int j = 0; j < n[1]; ++j) {
+        for (int i = 0; i < n[0]; ++i) {
+          field(i, j, k) += m_dt * du[field.idx(i, j, k)];
+        }
+      }
+    }
+  }
+
+  double m_dt{0.0};
+  std::array<std::size_t, N> m_sizes{};
+  std::array<std::vector<double>, N> m_du{};
+  Rhs m_rhs;
+};
+
+/**
+ * @brief Build an `OwnedEulerStepper` for a pointwise multi-field RHS.
+ *
+ * Same `for_each_interior` wiring as `create(tuple<Field&...>, ...)`, but
+ * the step updates owned cells in place instead of cloning the padded
+ * buffers. See `OwnedEulerStepper` for the halo and rollback contract.
+ */
+template <class... Ts, class Eval, class Model>
+[[nodiscard]] auto create_owned(std::tuple<pfc::data::Field<Ts> &...> fields,
+                                Eval &eval, const Model &model, double dt) {
+  constexpr std::size_t N = sizeof...(Ts);
+  static_assert(N >= 1, "create_owned needs at least one field");
+  static_assert((std::is_same_v<Ts, double> && ...),
+                "create_owned requires real double fields");
+  std::array<std::size_t, N> sizes{};
+  std::apply(
+      [&](auto &...f) {
+        std::size_t i = 0;
+        ((sizes[i++] = f.size()), ...);
+      },
+      fields);
+  auto rhs = [&eval, &model](double t, auto &du_tuple) {
+    auto du_ptrs = std::apply(
+        [](auto &...vs) { return std::make_tuple(vs.data()...); }, du_tuple);
+    pfc::sim::for_each_interior(model, eval, du_ptrs, t);
+  };
+  return OwnedEulerStepper<decltype(rhs), N>(dt, sizes, std::move(rhs));
 }
 
 } // namespace pfc::sim::steppers

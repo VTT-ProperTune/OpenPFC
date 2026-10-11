@@ -5,9 +5,13 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include <chrono>
 #include <cmath>
 #include <complex>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
+#include <stdexcept>
 #include <tuple>
 #include <vector>
 
@@ -371,4 +375,212 @@ TEST_CASE("multi_euler_complex_two_field", "[stepper][euler][complex]") {
   commit_step_attempt(a, b, attempt);
   REQUIRE(a[0].real() == Catch::Approx(e0.real()).margin(1e-12));
   REQUIRE(b[0].imag() == Catch::Approx(e1.imag()).margin(1e-12));
+}
+
+namespace {
+
+pfc::data::Field<double> slab(int nx, int ny, int halo) {
+  const auto domain = pfc::domain::with_spacing({nx, ny, 1}, {1.0, 1.0, 1.0});
+  const pfc::Box3i box = pfc::Box3i::from_bounds({0, 0, 0}, {nx - 1, ny - 1, 0});
+  return pfc::data::Field<double>(domain, box, halo);
+}
+
+void fill_sentinel(pfc::data::Field<double> &f, double halo_value,
+                   double owned_value) {
+  const int h = f.storage_halo();
+  const auto n = f.local_size();
+  for (int k = -h; k < n[2] + h; ++k) {
+    for (int j = -h; j < n[1] + h; ++j) {
+      for (int i = -h; i < n[0] + h; ++i) {
+        const bool owned =
+            i >= 0 && i < n[0] && j >= 0 && j < n[1] && k >= 0 && k < n[2];
+        f(i, j, k) = owned ? owned_value : halo_value;
+      }
+    }
+  }
+}
+
+bool halo_untouched(const pfc::data::Field<double> &f, double halo_value) {
+  const int h = f.storage_halo();
+  const auto n = f.local_size();
+  for (int k = -h; k < n[2] + h; ++k) {
+    for (int j = -h; j < n[1] + h; ++j) {
+      for (int i = -h; i < n[0] + h; ++i) {
+        const bool owned =
+            i >= 0 && i < n[0] && j >= 0 && j < n[1] && k >= 0 && k < n[2];
+        if (!owned && f(i, j, k) != halo_value) return false;
+      }
+    }
+  }
+  return true;
+}
+
+struct OwnedEval {
+  const pfc::data::Field<double> *field = nullptr;
+  double rate = 0.0;
+  void prepare() {}
+  [[nodiscard]] double operator()(int, int, int) const { return rate; }
+  [[nodiscard]] std::size_t idx(int i, int j, int k) const {
+    return field->idx(i, j, k);
+  }
+  [[nodiscard]] int imin() const { return 0; }
+  [[nodiscard]] int imax() const { return field->local_size()[0]; }
+  [[nodiscard]] int jmin() const { return 0; }
+  [[nodiscard]] int jmax() const { return field->local_size()[1]; }
+  [[nodiscard]] int kmin() const { return 0; }
+  [[nodiscard]] int kmax() const { return field->local_size()[2]; }
+};
+
+struct IdentityModel {
+  [[nodiscard]] double rhs(double, double g) const { return g; }
+};
+
+struct CoupledEval {
+  const pfc::data::Field<double> *phi = nullptr;
+  void prepare() {}
+  struct View {
+    double phi;
+  };
+  [[nodiscard]] View operator()(int i, int j, int k) const {
+    return {(*phi)(i, j, k)};
+  }
+  [[nodiscard]] std::size_t idx(int i, int j, int k) const {
+    return phi->idx(i, j, k);
+  }
+  [[nodiscard]] int imin() const { return 0; }
+  [[nodiscard]] int imax() const { return phi->local_size()[0]; }
+  [[nodiscard]] int jmin() const { return 0; }
+  [[nodiscard]] int jmax() const { return phi->local_size()[1]; }
+  [[nodiscard]] int kmin() const { return 0; }
+  [[nodiscard]] int kmax() const { return phi->local_size()[2]; }
+};
+
+struct CoupledModel {
+  struct Inc {
+    double phi_rate;
+    double u_rate;
+    [[nodiscard]] std::tuple<double, double> as_tuple() const {
+      return {phi_rate, u_rate};
+    }
+  };
+  /// Temperature rate is the pre-step phase value. An update of phi inside
+  /// this call would contaminate u_rate.
+  [[nodiscard]] Inc rhs(double, const CoupledEval::View &g) const {
+    return {1.0, g.phi};
+  }
+};
+
+} // namespace
+
+TEST_CASE("owned euler updates a padded 2D slab and leaves the halo",
+          "[stepper][euler][owned]") {
+  constexpr int nx = 6;
+  constexpr int ny = 5;
+  constexpr int halo = 2;
+  constexpr double dt = 0.25;
+  constexpr double halo_value = 9.0;
+  auto u = slab(nx, ny, halo);
+  fill_sentinel(u, halo_value, 1.0);
+  REQUIRE(u.size() == static_cast<std::size_t>((nx + 2 * halo) * (ny + 2 * halo) *
+                                               (1 + 2 * halo)));
+
+  OwnedEval eval{&u, 4.0};
+  IdentityModel model;
+  auto stepper = create_owned(std::tie(u), eval, model, dt);
+  REQUIRE_FALSE(stepper.can_rollback());
+  const std::size_t bytes = stepper.workspace_bytes();
+  REQUIRE(bytes == u.size() * sizeof(double));
+  REQUIRE(stepper.step(0.0, u) == Catch::Approx(dt));
+  REQUIRE(stepper.workspace_bytes() == bytes);
+
+  for (int j = 0; j < ny; ++j) {
+    for (int i = 0; i < nx; ++i) {
+      REQUIRE(u(i, j, 0) == Catch::Approx(1.0 + dt * 4.0));
+    }
+  }
+  REQUIRE(halo_untouched(u, halo_value));
+}
+
+TEST_CASE("owned euler evaluates coupled rates before either update",
+          "[stepper][euler][owned]") {
+  constexpr double dt = 0.5;
+  auto phi = slab(4, 3, 2);
+  auto temperature = slab(4, 3, 2);
+  fill_sentinel(phi, -1.0, 2.0);
+  fill_sentinel(temperature, -1.0, 8.0);
+  const double phi0 = phi(1, 1, 0);
+  const double u0 = temperature(1, 1, 0);
+
+  CoupledEval eval{&phi};
+  CoupledModel model;
+  auto stepper = create_owned(std::tie(phi, temperature), eval, model, dt);
+  stepper.step(0.0, phi, temperature);
+
+  REQUIRE(phi(1, 1, 0) == Catch::Approx(phi0 + dt * 1.0));
+  // u uses the pre-step phi, not phi + dt.
+  REQUIRE(temperature(1, 1, 0) == Catch::Approx(u0 + dt * phi0));
+  REQUIRE(halo_untouched(phi, -1.0));
+  REQUIRE(halo_untouched(temperature, -1.0));
+}
+
+TEST_CASE("owned euler leaves owned cells unchanged when the rhs throws",
+          "[stepper][euler][owned]") {
+  auto u = slab(4, 4, 1);
+  fill_sentinel(u, 3.0, 1.0);
+  // The throw is in the stepper's RHS callable, before the owned update.
+  // A throw inside for_each_interior's OpenMP loop is a different contract:
+  // that loop does not propagate exceptions (it terminates). This test is
+  // the stepper's own guarantee.
+  struct Boom {
+    void operator()(double, std::tuple<std::vector<double> &> &) const {
+      throw std::runtime_error("owned euler rhs failed");
+    }
+  };
+  OwnedEulerStepper<Boom, 1> stepper(0.1, {u.size()}, Boom{});
+  REQUIRE_THROWS_AS(stepper.step(0.0, u), std::runtime_error);
+  REQUIRE(u(0, 0, 0) == Catch::Approx(1.0));
+  REQUIRE(u(3, 3, 0) == Catch::Approx(1.0));
+  REQUIRE(halo_untouched(u, 3.0));
+}
+
+TEST_CASE("owned euler moves less state than the cloning steppers",
+          "[stepper][euler][owned][bench]") {
+  constexpr int nx = 128;
+  constexpr int ny = 128;
+  constexpr int halo = 2;
+  constexpr int steps = 50;
+  constexpr double dt = 0.01;
+  auto a = slab(nx, ny, halo);
+  auto b = slab(nx, ny, halo);
+  fill_sentinel(a, 0.0, 1.0);
+  fill_sentinel(b, 0.0, 1.0);
+
+  OwnedEval eval_a{&a, 1.0};
+  OwnedEval eval_b{&b, 1.0};
+  IdentityModel model;
+  auto owned = create_owned(std::tie(a), eval_a, model, dt);
+  auto cloning = create(std::tie(b), eval_b, model, dt);
+
+  const auto t0 = std::chrono::steady_clock::now();
+  for (int n = 0; n < steps; ++n) owned.step(n * dt, a);
+  const double owned_s =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+
+  const auto t1 = std::chrono::steady_clock::now();
+  for (int n = 0; n < steps; ++n) cloning.step(n * dt, b);
+  const double cloning_s =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - t1).count();
+
+  REQUIRE(a(0, 0, 0) == Catch::Approx(b(0, 0, 0)));
+  // MultiEulerStepper keeps du, a work copy and a candidate: three full
+  // slabs. Each step copies the accepted state, writes the candidate and
+  // commits it. OwnedEulerStepper keeps one du slab and writes owned cells.
+  const std::size_t slab_bytes = a.size() * sizeof(double);
+  const std::size_t owned_write = static_cast<std::size_t>(nx) * ny * sizeof(double);
+  REQUIRE(owned.workspace_bytes() == slab_bytes);
+  WARN("owned " << owned_s << " s, MultiEuler " << cloning_s << " s, slab cells "
+                << a.size() << ", owned cells " << nx * ny << ", owned workspace "
+                << slab_bytes << " B, MultiEuler workspace " << 3 * slab_bytes
+                << " B, owned write/step " << owned_write
+                << " B, MultiEuler copy/step " << 3 * slab_bytes << " B");
 }
