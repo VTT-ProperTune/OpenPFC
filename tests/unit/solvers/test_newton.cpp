@@ -111,3 +111,20 @@ TEST_CASE("adaptive and tight Newton reach an independent coupled root",
   }
   REQUIRE(changed);
 }
+
+TEST_CASE("residual exception rolls trial cache back before propagation",
+          "[nonlinear]") {
+  struct Failing : SquareRoot {
+    void residual(const std::vector<double> &x, std::vector<double> &r) {
+      SquareRoot::residual(x, r);
+      if (x[0] > .2) throw std::runtime_error("local update failed");
+    }
+  } model;
+  VectorOperations ops;
+  std::vector<double> x{.1};
+  REQUIRE_THROWS_AS(newton(ops, model, x), std::runtime_error);
+  REQUIRE(x[0] == .1);
+  REQUIRE(model.cache == .1);
+  REQUIRE(model.rejected == 1);
+  REQUIRE(model.committed == 27);
+}
