@@ -41,6 +41,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Fixed
 
+- `polycrystal_shear` destroys the FFT before `MPI_Finalize`. HeFFTe
+  frees a duplicated communicator in its destructor, so a multi-rank
+  run aborted after a successful solve. A Slurm step whose task count
+  does not match the MPI world aborts before the grid is allocated.
+
 - The finite-strain compatible projector accepts even grids. Each Nyquist
   wave-vector component is zero (`k_component_odd`), so `q_i q_j` stays
   Hermitian. Odd grids keep the previous projection.

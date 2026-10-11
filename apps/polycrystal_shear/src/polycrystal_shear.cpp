@@ -488,6 +488,21 @@ int main(int argc, char **argv) {
   int ranks = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &ranks);
+  // A failed fabric init can leave every process as its own world. Each
+  // one would then allocate the full grid. Abort before that allocation.
+  if (const char *launched = std::getenv("SLURM_STEP_NUM_TASKS")) {
+    const int expected = std::atoi(launched);
+    if (expected > 1 && ranks != expected) {
+      std::fprintf(stderr,
+                   "polycrystal_shear rank %d mpi_world=%d slurm_step_tasks=%d\n",
+                   rank, ranks, expected);
+      MPI_Abort(MPI_COMM_WORLD, 3);
+    }
+  }
+  if (rank == 0) {
+    std::fprintf(stderr, "polycrystal_shear mpi_world=%d\n", ranks);
+    std::fflush(stderr);
+  }
 
   Options options;
   std::string error;
@@ -520,177 +535,188 @@ int main(int argc, char **argv) {
   }
   broadcast_orientations(orientations, rank, MPI_COMM_WORLD);
 
-  Domain domain = domain::create(Int3{options.size, options.size, options.size});
-  auto decomposition = decomposition::create(domain, ranks);
-  auto transform = fft::create(decomposition, rank, MPI_COMM_WORLD);
-  CompatibleProjector projector(transform, domain);
-  const auto box = transform.get_inbox_bounds();
-  Layout layout;
-  layout.origin_x = box.low[0];
-  layout.origin_y = box.low[1];
-  layout.origin_z = box.low[2];
-  layout.local_x = box.high[0] - box.low[0] + 1;
-  layout.local_y = box.high[1] - box.low[1] + 1;
-  layout.local_z = box.high[2] - box.low[2] + 1;
-  layout.global_n = options.size;
-  layout.grains_per_edge = options.grains;
-  layout.voxels_per_grain = options.size / options.grains;
-  const std::size_t local_count = projector.local_size();
-  if (static_cast<std::size_t>(layout.local_x) *
-          static_cast<std::size_t>(layout.local_y) *
-          static_cast<std::size_t>(layout.local_z) !=
-      local_count) {
-    if (rank == 0) {
-      std::fprintf(stderr, "FFT inbox is not a dense brick\n");
-    }
-    MPI_Abort(MPI_COMM_WORLD, 2);
-  }
-
-  PolycrystalFcc material(local_count, layout, parameters, orientations);
-  if (rank == 0) {
-    const double local_gib = material.stored_bytes() / (1024.0 * 1024.0 * 1024.0);
-    std::printf("polycrystal_shear grid=%d grains=%d ranks=%d local_points=%zu "
-                "material_GiB_per_rank=%.3f\n",
-                options.size, options.grains, ranks, local_count, local_gib);
-    std::fflush(stdout);
-  }
-
-  NewtonControls controls;
-  controls.maximum_krylov_iterations = options.krylov;
-  controls.maximum_newton_iterations = options.newton;
-  IncrementStart start;
-  start.deformation.assign(local_count, identity2());
-  const int mid = options.size / 2;
-  const std::size_t plane_count = static_cast<std::size_t>(options.size) *
-                                  static_cast<std::size_t>(options.size);
-  std::vector<float> local_plane(plane_count);
-  std::vector<float> reduced_plane(plane_count);
-  double peak = 0.0;
-  int completed = 0;
-  bool slices_differ = false;
-  double first_sum = 0.0;
-
-  for (int step = 1; step <= options.steps; ++step) {
-    const auto started = std::chrono::steady_clock::now();
-    const double gamma = options.shear * static_cast<double>(step) /
-                         static_cast<double>(options.steps);
-    const Tensor2 macroscopic = simple_shear(gamma);
-    NewtonResult solved;
-    try {
-      solved = solve_increment(projector, material, macroscopic, start, controls,
-                               MPI_COMM_WORLD);
-    } catch (const std::exception &solve_error) {
-      if (rank == 0) {
-        std::fprintf(stderr, "step %d failed: %s\n", step, solve_error.what());
-        write_provenance(options, completed, 1);
-      }
-      MPI_Finalize();
-      return 1;
-    }
-    int local_failed = material.failed() ? 1 : 0;
-    int any_failed = 0;
-    MPI_Allreduce(&local_failed, &any_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-    if (any_failed != 0 || !solved.converged) {
-      if (rank == 0) {
-        std::fprintf(stderr, "step %d did not converge (material_failed=%d)\n", step,
-                     any_failed);
-        if (!material.failure().empty()) {
-          std::fprintf(stderr, "material: %s\n", material.failure().c_str());
-        }
-        write_provenance(options, completed, 1);
-      }
-      MPI_Finalize();
-      return 1;
-    }
-    for (std::size_t index = 0; index < local_count; ++index) {
-      material.accept(index, solved.deformation[index]);
-    }
-    std::fill(local_plane.begin(), local_plane.end(), 0.0f);
-    double local_peak = 0.0;
-    std::size_t index = 0;
-    for (int z = layout.origin_z; z < layout.origin_z + layout.local_z; ++z) {
-      for (int y = layout.origin_y; y < layout.origin_y + layout.local_y; ++y) {
-        for (int x = layout.origin_x; x < layout.origin_x + layout.local_x;
-             ++x, ++index) {
-          if (z != mid) {
-            continue;
-          }
-          const double scalar = symmetric_piola_scalar(solved.piola[index]);
-          local_peak = std::max(local_peak, scalar);
-          local_plane[static_cast<std::size_t>(x + options.size * y)] =
-              static_cast<float>(scalar);
-        }
-      }
-    }
-    if (index != local_count) {
-      MPI_Abort(MPI_COMM_WORLD, 3);
-    }
-    MPI_Reduce(local_plane.data(), reduced_plane.data(),
-               static_cast<int>(plane_count), MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
-    double global_peak = 0.0;
-    MPI_Reduce(&local_peak, &global_peak, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    const double local_rss = resident_gib();
-    double max_rss = 0.0;
-    MPI_Reduce(&local_rss, &max_rss, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    const auto stopped = std::chrono::steady_clock::now();
-    const double seconds = std::chrono::duration<double>(stopped - started).count();
-    if (rank == 0) {
-      peak = std::max(peak, global_peak);
-      char name[64];
-      std::snprintf(name, sizeof(name), "slice-%05d.f32", step);
-      const std::filesystem::path file =
-          std::filesystem::path(options.outdir) / name;
-      std::ofstream slice(file, std::ios::binary);
-      slice.write(
-          reinterpret_cast<const char *>(reduced_plane.data()),
-          static_cast<std::streamsize>(reduced_plane.size() * sizeof(float)));
-      if (!slice) {
-        std::fprintf(stderr, "slice write failed: %s\n", file.string().c_str());
-        write_provenance(options, completed, 1);
-        MPI_Abort(MPI_COMM_WORLD, 4);
-      }
-      double sum = 0.0;
-      for (float value : reduced_plane) {
-        sum += static_cast<double>(value);
-      }
-      if (step == 1) {
-        first_sum = sum;
-      } else if (sum != first_sum) {
-        slices_differ = true;
-      }
-      int krylov = 0;
-      for (const NewtonStep &item : solved.history) {
-        krylov += item.krylov_iterations;
-      }
-      std::printf(
-          "step %d/%d gamma %.8e converged 1 newton %zu krylov %d "
-          "correction %.3e residual %.3e peak %.6e rss_GiB %.2f seconds %.3f\n",
-          step, options.steps, gamma, solved.history.size(), krylov,
-          solved.history.empty() ? 0.0
-                                 : solved.history.back().correction_over_reference,
-          solved.projected_residual, global_peak, max_rss, seconds);
-      std::fflush(stdout);
-      write_provenance(options, completed + 1, -1);
-    }
-    start.deformation = std::move(solved.deformation);
-    start.macroscopic = macroscopic;
-    ++completed;
-  }
-
+  // HeFFTe frees a duplicated communicator from its destructor. That
+  // object has to die before MPI_Finalize, or a multi-rank run aborts
+  // after the solve has already succeeded.
   int render_status = 0;
-  if (rank == 0) {
-    if (options.render != 0) {
-      render_status = render_animation(options, peak);
+  {
+    Domain domain = domain::create(Int3{options.size, options.size, options.size});
+    auto decomposition = decomposition::create(domain, ranks);
+    auto transform = fft::create(decomposition, rank, MPI_COMM_WORLD);
+    CompatibleProjector projector(transform, domain);
+    const auto box = transform.get_inbox_bounds();
+    Layout layout;
+    layout.origin_x = box.low[0];
+    layout.origin_y = box.low[1];
+    layout.origin_z = box.low[2];
+    layout.local_x = box.high[0] - box.low[0] + 1;
+    layout.local_y = box.high[1] - box.low[1] + 1;
+    layout.local_z = box.high[2] - box.low[2] + 1;
+    layout.global_n = options.size;
+    layout.grains_per_edge = options.grains;
+    layout.voxels_per_grain = options.size / options.grains;
+    const std::size_t local_count = projector.local_size();
+    if (static_cast<std::size_t>(layout.local_x) *
+            static_cast<std::size_t>(layout.local_y) *
+            static_cast<std::size_t>(layout.local_z) !=
+        local_count) {
+      if (rank == 0) {
+        std::fprintf(stderr, "FFT inbox is not a dense brick\n");
+      }
+      MPI_Abort(MPI_COMM_WORLD, 2);
     }
-    const int exit_status = render_status == 0 ? 0 : 1;
-    write_provenance(options, completed, exit_status);
-    std::printf("polycrystal_shear status=%s grid=%dx%dx%d steps_completed=%d "
-                "slices_differ=%d law=finite-strain-fcc\n",
-                exit_status == 0 ? "ok" : "render-failed", options.size,
-                options.size, options.size, completed, slices_differ ? 1 : 0);
-    std::fflush(stdout);
+
+    PolycrystalFcc material(local_count, layout, parameters, orientations);
+    if (rank == 0) {
+      const double local_gib = material.stored_bytes() / (1024.0 * 1024.0 * 1024.0);
+      std::printf("polycrystal_shear grid=%d grains=%d ranks=%d local_points=%zu "
+                  "material_GiB_per_rank=%.3f\n",
+                  options.size, options.grains, ranks, local_count, local_gib);
+      std::fflush(stdout);
+    }
+
+    NewtonControls controls;
+    controls.maximum_krylov_iterations = options.krylov;
+    controls.maximum_newton_iterations = options.newton;
+    IncrementStart start;
+    start.deformation.assign(local_count, identity2());
+    const int mid = options.size / 2;
+    const std::size_t plane_count = static_cast<std::size_t>(options.size) *
+                                    static_cast<std::size_t>(options.size);
+    std::vector<float> local_plane(plane_count);
+    std::vector<float> reduced_plane(plane_count);
+    double peak = 0.0;
+    int completed = 0;
+    bool slices_differ = false;
+    double first_sum = 0.0;
+    bool step_failed = false;
+
+    for (int step = 1; step <= options.steps; ++step) {
+      const auto started = std::chrono::steady_clock::now();
+      const double gamma = options.shear * static_cast<double>(step) /
+                           static_cast<double>(options.steps);
+      const Tensor2 macroscopic = simple_shear(gamma);
+      NewtonResult solved;
+      try {
+        solved = solve_increment(projector, material, macroscopic, start, controls,
+                                 MPI_COMM_WORLD);
+      } catch (const std::exception &solve_error) {
+        if (rank == 0) {
+          std::fprintf(stderr, "step %d failed: %s\n", step, solve_error.what());
+          write_provenance(options, completed, 1);
+        }
+        step_failed = true;
+        render_status = 1;
+        break;
+      }
+      int local_failed = material.failed() ? 1 : 0;
+      int any_failed = 0;
+      MPI_Allreduce(&local_failed, &any_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+      if (any_failed != 0 || !solved.converged) {
+        if (rank == 0) {
+          std::fprintf(stderr, "step %d did not converge (material_failed=%d)\n",
+                       step, any_failed);
+          if (!material.failure().empty()) {
+            std::fprintf(stderr, "material: %s\n", material.failure().c_str());
+          }
+          write_provenance(options, completed, 1);
+        }
+        step_failed = true;
+        render_status = 1;
+        break;
+      }
+      for (std::size_t index = 0; index < local_count; ++index) {
+        material.accept(index, solved.deformation[index]);
+      }
+      std::fill(local_plane.begin(), local_plane.end(), 0.0f);
+      double local_peak = 0.0;
+      std::size_t index = 0;
+      for (int z = layout.origin_z; z < layout.origin_z + layout.local_z; ++z) {
+        for (int y = layout.origin_y; y < layout.origin_y + layout.local_y; ++y) {
+          for (int x = layout.origin_x; x < layout.origin_x + layout.local_x;
+               ++x, ++index) {
+            if (z != mid) {
+              continue;
+            }
+            const double scalar = symmetric_piola_scalar(solved.piola[index]);
+            local_peak = std::max(local_peak, scalar);
+            local_plane[static_cast<std::size_t>(x + options.size * y)] =
+                static_cast<float>(scalar);
+          }
+        }
+      }
+      if (index != local_count) {
+        MPI_Abort(MPI_COMM_WORLD, 3);
+      }
+      MPI_Reduce(local_plane.data(), reduced_plane.data(),
+                 static_cast<int>(plane_count), MPI_FLOAT, MPI_SUM, 0,
+                 MPI_COMM_WORLD);
+      double global_peak = 0.0;
+      MPI_Reduce(&local_peak, &global_peak, 1, MPI_DOUBLE, MPI_MAX, 0,
+                 MPI_COMM_WORLD);
+      const double local_rss = resident_gib();
+      double max_rss = 0.0;
+      MPI_Reduce(&local_rss, &max_rss, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+      const auto stopped = std::chrono::steady_clock::now();
+      const double seconds =
+          std::chrono::duration<double>(stopped - started).count();
+      if (rank == 0) {
+        peak = std::max(peak, global_peak);
+        char name[64];
+        std::snprintf(name, sizeof(name), "slice-%05d.f32", step);
+        const std::filesystem::path file =
+            std::filesystem::path(options.outdir) / name;
+        std::ofstream slice(file, std::ios::binary);
+        slice.write(
+            reinterpret_cast<const char *>(reduced_plane.data()),
+            static_cast<std::streamsize>(reduced_plane.size() * sizeof(float)));
+        if (!slice) {
+          std::fprintf(stderr, "slice write failed: %s\n", file.string().c_str());
+          write_provenance(options, completed, 1);
+          MPI_Abort(MPI_COMM_WORLD, 4);
+        }
+        double sum = 0.0;
+        for (float value : reduced_plane) {
+          sum += static_cast<double>(value);
+        }
+        if (step == 1) {
+          first_sum = sum;
+        } else if (sum != first_sum) {
+          slices_differ = true;
+        }
+        int krylov = 0;
+        for (const NewtonStep &item : solved.history) {
+          krylov += item.krylov_iterations;
+        }
+        std::printf(
+            "step %d/%d gamma %.8e converged 1 newton %zu krylov %d "
+            "correction %.3e residual %.3e peak %.6e rss_GiB %.2f seconds %.3f\n",
+            step, options.steps, gamma, solved.history.size(), krylov,
+            solved.history.empty() ? 0.0
+                                   : solved.history.back().correction_over_reference,
+            solved.projected_residual, global_peak, max_rss, seconds);
+        std::fflush(stdout);
+        write_provenance(options, completed + 1, -1);
+      }
+      start.deformation = std::move(solved.deformation);
+      start.macroscopic = macroscopic;
+      ++completed;
+    }
+
+    if (!step_failed && rank == 0) {
+      if (options.render != 0) {
+        render_status = render_animation(options, peak);
+      }
+      const int exit_status = render_status == 0 ? 0 : 1;
+      write_provenance(options, completed, exit_status);
+      std::printf("polycrystal_shear status=%s grid=%dx%dx%d steps_completed=%d "
+                  "slices_differ=%d law=finite-strain-fcc\n",
+                  exit_status == 0 ? "ok" : "render-failed", options.size,
+                  options.size, options.size, completed, slices_differ ? 1 : 0);
+      std::fflush(stdout);
+    }
+    MPI_Bcast(&render_status, 1, MPI_INT, 0, MPI_COMM_WORLD);
   }
-  MPI_Bcast(&render_status, 1, MPI_INT, 0, MPI_COMM_WORLD);
   MPI_Finalize();
   return render_status == 0 ? 0 : 1;
 }
