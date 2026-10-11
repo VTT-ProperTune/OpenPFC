@@ -178,3 +178,26 @@ only complete operator applications fuse conversion and diagonalization.
 Device regressions compare raw coefficients with direct trigonometric
 sums and independent host transforms, including padded/interleaved batches,
 odd/even periodic dimensions, nullspaces and both diagonal symbols.
+
+### Distributed exchange policy
+
+The original `BatchedMixedTransform` constructor retains heFFTe's
+`alltoallv` exchange policy. An overload accepts the installed heFFTe
+`reshape_algorithm` directly; include `<heffte_plan_logic.h>` when naming
+its enumerators. Supported choices are `alltoallv`, `alltoall`, `p2p` and
+`p2p_plined`, on both CUDA and HIP builds:
+
+```cpp
+pfc::fft::BatchedMixedTransform<pfc::HIPSpace> transform(
+    nx, ny, period_x, period_y, z,
+    heffte::reshape_algorithm::p2p_plined, communicator);
+```
+
+All ranks must supply the same valid policy; invalid or mismatched values
+are rejected collectively before planning. This does not change y-slab /
+full-z ownership, normalization, the borrowed communicator or the existing
+build-time GPU-aware MPI policy. One-rank execution still uses the vendor
+FFT directly. No automatic policy selection or arbitrary decomposition is
+provided. Choose an exchange policy using verified end-to-end measurements
+on the target MPI installation, rather than assuming one is universally
+fastest.

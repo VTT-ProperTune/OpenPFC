@@ -3,6 +3,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <cmath>
+#include <heffte_plan_logic.h>
 #include <limits>
 #include <numbers>
 #include <numeric>
@@ -201,6 +202,16 @@ TEST_CASE("batched device mixed validation is collective",
   BoundedAxis z{RealTransformType::DCT2, UniformGrid::CellCentered, 3, 2};
   REQUIRE_THROWS_AS((BatchedMixedTransform<Space>(7, ranks - 1, 3, 4, z)),
                     std::invalid_argument);
+  REQUIRE_THROWS_AS(
+      (BatchedMixedTransform<Space>(7, std::max(7, ranks), 3, 4, z,
+                                    static_cast<heffte::reshape_algorithm>(999))),
+      std::invalid_argument);
+  if (ranks > 1)
+    REQUIRE_THROWS_AS((BatchedMixedTransform<Space>(
+                          7, ranks, 3, 4, z,
+                          rank == 0 ? heffte::reshape_algorithm::alltoallv
+                                    : heffte::reshape_algorithm::p2p)),
+                      std::invalid_argument);
   if (ranks > 1)
     REQUIRE_THROWS_AS((BatchedMixedTransform<Space>(7, ranks, 3 + rank, 4, z)),
                       std::invalid_argument);
@@ -219,4 +230,59 @@ TEST_CASE("batched device mixed validation is collective",
   values[0] = std::numeric_limits<double>::quiet_NaN();
   in.upload(values);
   REQUIRE_THROWS_AS(plan.poisson(in.span(), out.span()), std::invalid_argument);
+}
+
+TEST_CASE("batched mixed reshape alternatives preserve the operator",
+          "[batched_boundary][MPI]") {
+  if (!select_device()) SKIP("no allocated compatible device");
+  int ranks;
+  MPI_Comm_size(MPI_COMM_WORLD, &ranks);
+  for (auto algorithm :
+       {heffte::reshape_algorithm::alltoallv, heffte::reshape_algorithm::alltoall,
+        heffte::reshape_algorithm::p2p, heffte::reshape_algorithm::p2p_plined})
+    for (auto type : {RealTransformType::DCT2, RealTransformType::DST2})
+      for (int n : {5, 8}) {
+        BoundedAxis z{type, UniformGrid::CellCentered, n, 2.3, .2};
+        int ny = std::max(7, ranks);
+        BatchedMixedTransform<Space> plan(7, ny, 3.1, 4.2, z, algorithm);
+        MixedTransform host(7, ny, 3.1, 4.2, z);
+        std::vector<double> values(plan.size_inbox()), expected(values.size());
+        auto box = plan.inbox();
+        pfc::for_each_index(box, [&](auto p) {
+          values[box.to_linear(p)] =
+              std::sin(.7 * (p[0] + 1) * (p[1] + 1) * (p[2] + 1));
+        });
+        Device<double> in(values.size()), out(values.size());
+        Device<std::complex<double>> coefficients(plan.size_outbox());
+        in.upload(values);
+        plan.forward(in.span(), coefficients.span());
+        std::vector<std::complex<double>> reference(coefficients.count);
+        host.forward(values, reference);
+        auto actual = coefficients.read();
+        for (std::size_t i = 0; i < actual.size(); ++i)
+          REQUIRE(std::abs(actual[i] - reference[i]) <
+                  2e-11 * std::max(1., std::abs(reference[i])));
+        plan.backward(coefficients.span(), out.span());
+        auto back = out.read();
+        for (std::size_t i = 0; i < values.size(); ++i)
+          REQUIRE_THAT(back[i], WithinAbs(values[i], 2e-11));
+        for (auto symbol :
+             {LaplacianSymbol::Spectral, LaplacianSymbol::CenteredDifference}) {
+          for (double reaction : {0., 2.}) {
+            host.laplacian(values, expected, symbol);
+            for (std::size_t i = 0; i < values.size(); ++i)
+              expected[i] = -expected[i] + reaction * values[i];
+            in.upload(expected);
+            plan.helmholtz(in.span(), out.span(), reaction, symbol);
+            double sum = std::accumulate(values.begin(), values.end(), 0.), global;
+            MPI_Allreduce(&sum, &global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            double mean = reaction == 0 && type == RealTransformType::DCT2
+                              ? global / (double(7) * ny * n)
+                              : 0;
+            back = out.read();
+            for (std::size_t i = 0; i < values.size(); ++i)
+              REQUIRE_THAT(back[i], WithinAbs(values[i] - mean, 2e-11));
+          }
+        }
+      }
 }
