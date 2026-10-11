@@ -110,3 +110,6 @@ right preconditioning, true residual admission and the explicit SPD CG path.
 
 [Inexact Newton](reference/inexact_newton.md) describes forcing tolerances,
 line search, trial rollback and the residual-based FFT adapter.
+
+[Structured multigrid](reference/multigrid.md) describes volume-weighted
+transfers, coarse operators, nullspaces and the replicated MPI limitation.
