@@ -147,6 +147,7 @@ function(openpfc_add_gpu_kernel_library tgt ext runtime_lib)
       src/openpfc/runtime/gpu/fill.${ext}
       src/openpfc/runtime/gpu/elementwise_ops.${ext}
       src/openpfc/runtime/gpu/fcc_batch.${ext}
+      src/openpfc/runtime/gpu/vector_operations.${ext}
       ${ARGN}
   )
   target_include_directories(${tgt}
@@ -154,7 +155,7 @@ function(openpfc_add_gpu_kernel_library tgt ext runtime_lib)
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
       $<INSTALL_INTERFACE:include>
   )
-  target_link_libraries(${tgt} PUBLIC ${runtime_lib})
+  target_link_libraries(${tgt} PUBLIC ${runtime_lib} MPI::MPI_CXX)
   target_link_libraries(openpfc PRIVATE ${tgt})
   openpfc_gpu_public_definitions(${tgt})
   if(DEFINED nlohmann_json_SOURCE_DIR)
