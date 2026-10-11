@@ -16,6 +16,20 @@ if(OpenPFC_ENABLE_HEFFTE)
   if(OpenPFC_HAS_FFTW3)
     target_sources(openpfc-tests PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/test_mixed_transform.cpp)
+    if(OpenPFC_ENABLE_CUDA_SPECTRAL OR OpenPFC_ENABLE_HIP_SPECTRAL)
+      target_sources(openpfc-tests PRIVATE
+          ${CMAKE_CURRENT_SOURCE_DIR}/test_batched_transform.cpp)
+      add_test(NAME batched-boundary-mixed-self COMMAND openpfc-tests
+          "[batched_boundary]")
+      if(OpenPFC_RUN_MPI_SUITES)
+        add_test(NAME batched-boundary-2ranks COMMAND ${MPIEXEC_EXECUTABLE}
+            ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS}
+            $<TARGET_FILE:openpfc-tests>
+            "[batched_boundary]"
+            ${MPIEXEC_POSTFLAGS})
+        set_tests_properties(batched-boundary-2ranks PROPERTIES PROCESSORS 2)
+      endif()
+    endif()
   endif()
   target_sources(openpfc-tests PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}/test_fft.cpp

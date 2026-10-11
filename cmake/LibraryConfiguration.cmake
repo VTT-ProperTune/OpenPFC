@@ -300,6 +300,16 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     openpfc_add_gpu_kernel_library(openpfc_gpu_kernels cu CUDA::cudart
         src/openpfc/runtime/gpu/padded_halo_faces.cu
         src/openpfc/runtime/gpu/grain_tracking.cu)
+    if(OpenPFC_ENABLE_CUDA_SPECTRAL AND OpenPFC_HAS_FFTW3)
+      # Keep these objects in openpfc with the shared axis-contract definitions:
+      # a reverse dependency from the separate kernel archive breaks static links.
+      target_sources(openpfc_kernel_obj PRIVATE
+          src/openpfc/runtime/gpu/batched_transform.cu)
+      set_target_properties(openpfc_kernel_obj PROPERTIES
+          CUDA_STANDARD 20 CUDA_STANDARD_REQUIRED ON)
+      target_link_libraries(openpfc_kernel_obj PRIVATE CUDA::cufft)
+      target_link_libraries(openpfc PRIVATE CUDA::cufft)
+    endif()
     # Pin CUDA language standard: project C++20 would otherwise map to "CUDA20" on
     # some CMake versions that do not know the matching nvcc flags (e.g. CMake 3.22).
     # Device-link the static archive. Without this, nvcc relocatable objects
@@ -319,6 +329,17 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
     openpfc_add_gpu_kernel_library(openpfc_hip_kernels hip hip::host
         src/openpfc/runtime/gpu/padded_halo_faces.hip
         src/openpfc/runtime/gpu/grain_tracking.hip)
+    if(OpenPFC_ENABLE_HIP_SPECTRAL AND OpenPFC_HAS_FFTW3)
+      find_package(rocfft REQUIRED CONFIG)
+      set_source_files_properties(src/openpfc/runtime/gpu/batched_transform.hip
+          PROPERTIES LANGUAGE HIP)
+      target_sources(openpfc_kernel_obj PRIVATE
+          src/openpfc/runtime/gpu/batched_transform.hip)
+      set_target_properties(openpfc_kernel_obj PROPERTIES
+          HIP_STANDARD 20 HIP_STANDARD_REQUIRED ON)
+      target_link_libraries(openpfc_kernel_obj PRIVATE roc::rocfft)
+      target_link_libraries(openpfc PRIVATE roc::rocfft)
+    endif()
     set_target_properties(openpfc_hip_kernels PROPERTIES
         HIP_STANDARD 20
         HIP_STANDARD_REQUIRED ON

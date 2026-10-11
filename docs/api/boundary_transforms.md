@@ -104,8 +104,8 @@ rows of the table with periodic x/y, including unit periodic dimensions.
 Plans and scratch are reused; input buffers are preserved. `buffer_bytes`
 counts owned arrays, excluding opaque plan allocations. Planning and
 destruction obey FFTW's serial planner requirements. One instance must
-not execute concurrently. MPI execution is collective. Device mixed
-transforms and arbitrary decompositions that split z are not implemented.
+not execute concurrently. MPI execution is collective. Arbitrary
+decompositions that split z are not implemented.
 Native distributed homogeneous sine/cosine transforms remain accessible
 through heFFTe's versioned `rtransform` API; its raw scaling depends on
 the backend and must not be assumed to match this FFTW contract.
@@ -113,3 +113,68 @@ the backend and must not be assumed to match this FFTW contract.
 Regression tests cover mirrored DFT coefficients, round trips, analytic
 derivatives and boundary traces, both Laplacian symbols, Poisson solves,
 small odd/even grids, weighted Neumann compatibility and MPI mixed layouts.
+
+## Batched device transforms
+
+`openpfc/kernel/fft/batched_transform.hpp` adds
+`BatchedRealTransform<MemorySpace>` and `BatchedMixedTransform<MemorySpace>`.
+Include `openpfc/runtime/gpu/memory_space_gpu.hpp` for `pfc::CUDASpace` or
+`pfc::HIPSpace`. The corresponding vendor spectral build and FFTW are
+required. Only the cell-centered DCT2/DST2 rows are supported; type I,
+type IV and mixed endpoint conditions are rejected, not inferred.
+
+The line plan accepts explicit batch count, sample stride and batch
+distance, all positive, in doubles. Lines must not overlap. Buffer extents
+include padding: `(batches-1)*distance+(n-1)*stride+1`. Padding is untouched.
+Forward exposes the same raw real coefficients as `RealTransform` and
+inverse is normalized. Input and coefficient arrays are preserved;
+an identical input/output span is allowed for rank-local line transforms.
+
+The mixed plan exposes the same complex coefficients and y-slab layout
+as `MixedTransform`. All arrays passed as spans point to device memory:
+
+```cpp
+BoundedAxis z{RealTransformType::DST2, UniformGrid::CellCentered, 64, 2};
+BatchedMixedTransform<pfc::CUDASpace> mixed(64, 64, 3, 4, z);
+// rhs and solution are device spans of mixed.size_inbox() doubles.
+mixed.helmholtz(rhs, solution, 2.0); // (-Delta+2)u=f
+// mixed.poisson(rhs, solution) and mixed.laplacian(rhs, solution) also work.
+```
+
+Plans/workspaces are reused without execution-time buffer allocation.
+The legacy default stream is used; synchronize it before accessing results
+from another stream or host. Construct, execute and destroy on the same
+current device. One instance is not reentrant. The communicator is borrowed
+and must remain live until destruction. One rank uses a vendor 3D FFT;
+multiple ranks reuse heFFTe's distribution with full z output lines.
+GPU-aware MPI follows the configured `OpenPFC_MPI_CUDA_AWARE` or
+`OpenPFC_MPI_HIP_AWARE` setting. Without it, heFFTe stages communication
+through host buffers; no extra field copy is made by the bounded transform.
+At most ny ranks are supported. The checked vendor extent limit is
+nx*ny*n <= INT_MAX. Input values must be finite. GPU Neumann Poisson
+additionally detects nonfinite coefficients while checking compatibility.
+
+`helmholtz` accepts finite nonnegative reaction; zero reaction is Poisson.
+Both Laplacian symbols remain available. All ranks must agree on reaction,
+symbol and compatibility tolerance. Neumann Poisson checks the global
+constant mode against the maximum raw mixed coefficient, transfers only
+three diagnostic scalars from device to host, then reduces them over MPI.
+Its solution has zero arithmetic mean. Positive reaction retains the
+constant mode. No field is copied to the host during a solve.
+
+Internally the line transform reorders even-indexed samples ascending and
+odd-indexed samples descending, using an n-point real FFT. DST2 uses
+alternating signs and reversed cosine modes. The mixed solve permutes
+whole z planes and uses a half-volume 3D FFT. With complex periodic modes
+A=F[k], B=F[n-k] and theta=pi*k/(2n), its cosine coefficients are
+`C[k]=cos(theta)(A+B)-i sin(theta)(A-B)` and
+`C[n-k]=sin(theta)(A+B)+i cos(theta)(A-B)`.
+The two different diagonal symbols are applied together before recovering
+the Fourier pair. Taking a real part here would lose the periodic phase.
+Constant modes, even-size Nyquist modes and odd-size partners are handled
+explicitly. Forward/backward still expose actual DCT/DST coefficients;
+only complete operator applications fuse conversion and diagonalization.
+
+Device regressions compare raw coefficients with direct trigonometric
+sums and independent host transforms, including padded/interleaved batches,
+odd/even periodic dimensions, nullspaces and both diagonal symbols.
