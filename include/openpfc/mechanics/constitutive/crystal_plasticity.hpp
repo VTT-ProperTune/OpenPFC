@@ -92,7 +92,7 @@ struct FccSlipUpdate {
   double shear_rate[12]{};
 };
 
-[[nodiscard]] inline FccSlipState
+[[nodiscard]] OPENPFC_INLINE_HD FccSlipState
 fcc_identity_state(const FccSlipParameters &parameters) {
   FccSlipState state;
   state.plastic = identity2();
@@ -102,6 +102,43 @@ fcc_identity_state(const FccSlipParameters &parameters) {
     state.shear[system] = 0.0;
   }
   return state;
+}
+
+/// Failures returned by the shared host/device arithmetic. No history is committed.
+enum class FccStatus {
+  Success,
+  Parameters,
+  Orientation,
+  SingularDeformation,
+  RateRange,
+  VelocityJacobian,
+  VelocityLineSearch,
+  VelocityIterations,
+  HardeningBlock,
+  Tangent,
+  ResistanceIterations,
+  PlasticOrientation
+};
+
+inline const char *fcc_status_message(FccStatus status) noexcept {
+  switch (status) {
+  case FccStatus::Success: return "success";
+  case FccStatus::Parameters: return "FCC slip parameters are not admissible";
+  case FccStatus::Orientation:
+    return "crystal orientation must be a proper rotation";
+  case FccStatus::SingularDeformation: return "crystal deformation is singular";
+  case FccStatus::RateRange: return "FCC slip rate left the admissible range";
+  case FccStatus::VelocityJacobian: return "FCC slip velocity Jacobian is singular";
+  case FccStatus::VelocityLineSearch: return "FCC slip velocity line search failed";
+  case FccStatus::VelocityIterations: return "FCC slip velocity did not converge";
+  case FccStatus::HardeningBlock: return "FCC slip hardening block is singular";
+  case FccStatus::Tangent: return "FCC slip tangent is singular";
+  case FccStatus::ResistanceIterations:
+    return "FCC slip resistance did not converge";
+  case FccStatus::PlasticOrientation:
+    return "FCC plastic map left the orientation-preserving range";
+  }
+  return "unknown FCC status";
 }
 
 namespace crystal {
@@ -115,8 +152,10 @@ inline constexpr double kRateCap = 4.0;
 struct Tangent {
   double c[3][3][3][3]{};
 
-  double &operator()(int i, int j, int k, int l) noexcept { return c[i][j][k][l]; }
-  double operator()(int i, int j, int k, int l) const noexcept {
+  OPENPFC_HD double &operator()(int i, int j, int k, int l) noexcept {
+    return c[i][j][k][l];
+  }
+  OPENPFC_HD double operator()(int i, int j, int k, int l) const noexcept {
     return c[i][j][k][l];
   }
 };
@@ -124,18 +163,21 @@ struct Tangent {
 struct Integrated {
   FccSlipUpdate update{};
   Tangent tangent{};
+  FccStatus status = FccStatus::Success;
 };
 
-[[nodiscard]] inline double determinant(const Tensor2 &a) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD double determinant(const Tensor2 &a) noexcept {
   return a(0, 0) * (a(1, 1) * a(2, 2) - a(1, 2) * a(2, 1)) -
          a(0, 1) * (a(1, 0) * a(2, 2) - a(1, 2) * a(2, 0)) +
          a(0, 2) * (a(1, 0) * a(2, 1) - a(1, 1) * a(2, 0));
 }
 
-[[nodiscard]] inline Tensor2 inverse(const Tensor2 &a) {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor2 inverse(const Tensor2 &a,
+                                                FccStatus &status) {
   const double det = determinant(a);
   if (!(std::abs(det) > 1e-30)) {
-    throw std::runtime_error("crystal deformation is singular");
+    status = FccStatus::SingularDeformation;
+    return {};
   }
   const double inv = 1.0 / det;
   Tensor2 out;
@@ -151,8 +193,8 @@ struct Integrated {
   return out;
 }
 
-[[nodiscard]] inline const std::array<Tensor2, kSystems> &schmid_tensors() {
-  static const std::array<Tensor2, kSystems> systems = [] {
+[[nodiscard]] OPENPFC_INLINE_HD std::array<Tensor2, kSystems> schmid_tensors() {
+  std::array<Tensor2, kSystems> systems = [] {
     constexpr int raw[kSystems][6] = {
         {0, 1, -1, 1, 1, 1},    {-1, 0, 1, 1, 1, 1},    {1, -1, 0, 1, 1, 1},
         {0, -1, -1, -1, -1, 1}, {1, 0, 1, -1, -1, 1},   {-1, 1, 0, -1, -1, 1},
@@ -185,12 +227,13 @@ struct Integrated {
   return systems;
 }
 
-[[nodiscard]] inline double interaction(const FccSlipParameters &parameters,
-                                        int alpha, int beta) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD double
+interaction(const FccSlipParameters &parameters, int alpha, int beta) noexcept {
   return alpha / 3 == beta / 3 ? parameters.coplanar : parameters.latent;
 }
 
-inline void require_parameters(const FccSlipParameters &parameters) {
+[[nodiscard]] OPENPFC_INLINE_HD bool
+admissible_parameters(const FccSlipParameters &parameters) {
   const bool stable = parameters.c11 > 0.0 && parameters.c44 > 0.0 &&
                       parameters.c11 > std::abs(parameters.c12) &&
                       (parameters.c11 + 2.0 * parameters.c12) > 0.0;
@@ -202,12 +245,16 @@ inline void require_parameters(const FccSlipParameters &parameters) {
       parameters.saturation_resistance > parameters.initial_resistance &&
       parameters.time_step > 0.0 && parameters.coplanar >= 0.0 &&
       parameters.latent >= 0.0;
-  if (!stable || !flow) {
-    throw std::invalid_argument("FCC slip parameters are not admissible");
-  }
+  return stable && flow;
 }
 
-[[nodiscard]] inline bool proper_rotation(const Tensor2 &orientation) noexcept {
+inline void require_parameters(const FccSlipParameters &parameters) {
+  if (!admissible_parameters(parameters))
+    throw std::invalid_argument("FCC slip parameters are not admissible");
+}
+
+[[nodiscard]] OPENPFC_INLINE_HD bool
+proper_rotation(const Tensor2 &orientation) noexcept {
   if (!(std::abs(determinant(orientation) - 1.0) < 1e-8)) {
     return false;
   }
@@ -223,18 +270,18 @@ inline void require_parameters(const FccSlipParameters &parameters) {
   return true;
 }
 
-[[nodiscard]] inline Tensor2 push_forward(const Tensor2 &orientation,
-                                          const Tensor2 &sample) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor2
+push_forward(const Tensor2 &orientation, const Tensor2 &sample) noexcept {
   return matmul(orientation, matmul(sample, transposed(orientation)));
 }
 
-[[nodiscard]] inline Tensor2 pull_stress(const Tensor2 &orientation,
-                                         const Tensor2 &crystal) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor2
+pull_stress(const Tensor2 &orientation, const Tensor2 &crystal) noexcept {
   return matmul(transposed(orientation), matmul(crystal, orientation));
 }
 
-[[nodiscard]] inline Tensor2 cubic_stress(const FccSlipParameters &parameters,
-                                          const Tensor2 &strain) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor2
+cubic_stress(const FccSlipParameters &parameters, const Tensor2 &strain) noexcept {
   Tensor2 stress;
   stress(0, 0) =
       parameters.c11 * strain(0, 0) + parameters.c12 * (strain(1, 1) + strain(2, 2));
@@ -251,7 +298,8 @@ inline void require_parameters(const FccSlipParameters &parameters) {
   return stress;
 }
 
-[[nodiscard]] inline Tensor2 green_lagrange(const Tensor2 &elastic) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor2
+green_lagrange(const Tensor2 &elastic) noexcept {
   Tensor2 metric = matmul(transposed(elastic), elastic);
   metric(0, 0) -= 1.0;
   metric(1, 1) -= 1.0;
@@ -269,7 +317,7 @@ struct Kinetics {
   bool finite = true;
 };
 
-[[nodiscard]] inline Kinetics
+[[nodiscard]] OPENPFC_INLINE_HD Kinetics
 evaluate_kinetics(const FccSlipParameters &parameters, const Tensor2 &second,
                   const double resistance[kSystems]) noexcept {
   const auto &systems = schmid_tensors();
@@ -301,7 +349,8 @@ evaluate_kinetics(const FccSlipParameters &parameters, const Tensor2 &second,
   return out;
 }
 
-[[nodiscard]] inline Tensor2 velocity_from(const double rate[kSystems]) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor2
+velocity_from(const double rate[kSystems]) noexcept {
   const auto &systems = schmid_tensors();
   Tensor2 velocity{};
   for (int alpha = 0; alpha < kSystems; ++alpha) {
@@ -315,7 +364,7 @@ struct SlipSlope {
   double derivative[kSystems]{};
 };
 
-[[nodiscard]] inline SlipSlope
+[[nodiscard]] OPENPFC_INLINE_HD SlipSlope
 slip_slope(const FccSlipParameters &parameters,
            const double resistance[kSystems]) noexcept {
   SlipSlope slope;
@@ -335,7 +384,7 @@ slip_slope(const FccSlipParameters &parameters,
   return slope;
 }
 
-[[nodiscard]] inline double
+[[nodiscard]] OPENPFC_INLINE_HD double
 hardening_dot(const FccSlipParameters &parameters, const SlipSlope &slope, int alpha,
               const double absolute_rate[kSystems]) noexcept {
   double accumulated = 0.0;
@@ -355,7 +404,7 @@ struct LpEvaluation {
   double scale = 0.0;
 };
 
-[[nodiscard]] inline LpEvaluation
+[[nodiscard]] OPENPFC_INLINE_HD LpEvaluation
 evaluate_velocity(const FccSlipParameters &parameters, const Tensor2 &mapper,
                   const Tensor2 &velocity, const double resistance[kSystems]) {
   LpEvaluation out;
@@ -371,11 +420,11 @@ evaluate_velocity(const FccSlipParameters &parameters, const Tensor2 &mapper,
   return out;
 }
 
-[[nodiscard]] inline int pack_index(int row, int column) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD int pack_index(int row, int column) noexcept {
   return row * 3 + column;
 }
 
-template <int N> bool solve_dense(double *matrix, double *rhs) {
+template <int N> OPENPFC_HD bool solve_dense(double *matrix, double *rhs) {
   double scale = 0.0;
   for (int entry = 0; entry < N * N; ++entry) {
     scale = std::max(scale, std::abs(matrix[entry]));
@@ -419,7 +468,8 @@ template <int N> bool solve_dense(double *matrix, double *rhs) {
   return true;
 }
 
-[[nodiscard]] inline Tensor2 unpack_velocity(const double packed[9]) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor2
+unpack_velocity(const double packed[9]) noexcept {
   Tensor2 velocity;
   for (int row = 0; row < 3; ++row) {
     for (int column = 0; column < 3; ++column) {
@@ -429,7 +479,8 @@ template <int N> bool solve_dense(double *matrix, double *rhs) {
   return velocity;
 }
 
-inline void pack_velocity(const Tensor2 &velocity, double packed[9]) noexcept {
+OPENPFC_INLINE_HD void pack_velocity(const Tensor2 &velocity,
+                                     double packed[9]) noexcept {
   for (int row = 0; row < 3; ++row) {
     for (int column = 0; column < 3; ++column) {
       packed[pack_index(row, column)] = velocity(row, column);
@@ -437,11 +488,9 @@ inline void pack_velocity(const Tensor2 &velocity, double packed[9]) noexcept {
   }
 }
 
-[[nodiscard]] inline Tensor2 velocity_increment(const FccSlipParameters &parameters,
-                                                const Tensor2 &mapper,
-                                                const Tensor2 &elastic,
-                                                const Kinetics &kinetics, int row,
-                                                int column) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor2 velocity_increment(
+    const FccSlipParameters &parameters, const Tensor2 &mapper,
+    const Tensor2 &elastic, const Kinetics &kinetics, int row, int column) noexcept {
   Tensor2 delastic{};
   for (int i = 0; i < 3; ++i) {
     delastic(i, column) = -parameters.time_step * mapper(i, row);
@@ -459,10 +508,9 @@ inline void pack_velocity(const Tensor2 &velocity, double packed[9]) noexcept {
   return dvelocity;
 }
 
-[[nodiscard]] inline LpEvaluation solve_velocity(const FccSlipParameters &parameters,
-                                                 const Tensor2 &mapper,
-                                                 Tensor2 velocity,
-                                                 const double resistance[kSystems]) {
+[[nodiscard]] OPENPFC_INLINE_HD LpEvaluation solve_velocity(
+    const FccSlipParameters &parameters, const Tensor2 &mapper, Tensor2 velocity,
+    const double resistance[kSystems], FccStatus &status) {
   for (int iteration = 0; iteration < kLpIterations; ++iteration) {
     const LpEvaluation current =
         evaluate_velocity(parameters, mapper, velocity, resistance);
@@ -473,7 +521,8 @@ inline void pack_velocity(const Tensor2 &velocity, double packed[9]) noexcept {
       return accepted;
     }
     if (!current.kinetics.finite) {
-      throw std::runtime_error("FCC slip rate left the admissible range");
+      status = FccStatus::RateRange;
+      return {};
     }
 
     double jacobian[81];
@@ -502,7 +551,8 @@ inline void pack_velocity(const Tensor2 &velocity, double packed[9]) noexcept {
       }
     }
     if (!solve_dense<9>(jacobian, rhs)) {
-      throw std::runtime_error("FCC slip velocity Jacobian is singular");
+      status = FccStatus::VelocityJacobian;
+      return {};
     }
     const Tensor2 step = unpack_velocity(rhs);
     double lambda = 1.0;
@@ -519,10 +569,12 @@ inline void pack_velocity(const Tensor2 &velocity, double packed[9]) noexcept {
       lambda *= 0.5;
     }
     if (!accepted) {
-      throw std::runtime_error("FCC slip velocity line search failed");
+      status = FccStatus::VelocityLineSearch;
+      return {};
     }
   }
-  throw std::runtime_error("FCC slip velocity did not converge");
+  status = FccStatus::VelocityIterations;
+  return {};
 }
 
 struct TangentFactors {
@@ -543,7 +595,7 @@ struct TangentFactors {
   double jxx[kSystems][kSystems]{};
 };
 
-[[nodiscard]] inline TangentFactors
+[[nodiscard]] OPENPFC_INLINE_HD TangentFactors
 factor_tangent(const FccSlipParameters &parameters, const Tensor2 &plastic_inverse,
                const Tensor2 &crystal_deformation, const Tensor2 &velocity,
                const double resistance[kSystems]) {
@@ -630,10 +682,10 @@ factor_tangent(const FccSlipParameters &parameters, const Tensor2 &plastic_inver
   return factors;
 }
 
-[[nodiscard]] inline Tensor2 directional_stress(const FccSlipParameters &parameters,
-                                                const Tensor2 &orientation,
-                                                const TangentFactors &factors,
-                                                const Tensor2 &sample_increment) {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor2
+directional_stress(const FccSlipParameters &parameters, const Tensor2 &orientation,
+                   const TangentFactors &factors, const Tensor2 &sample_increment,
+                   FccStatus &status) {
   const Tensor2 crystal_increment = push_forward(orientation, sample_increment);
   const Tensor2 dmapper = matmul(crystal_increment, factors.plastic_inverse);
   const Tensor2 delastic = matmul(dmapper, factors.intermediate);
@@ -675,7 +727,8 @@ factor_tangent(const FccSlipParameters &parameters, const Tensor2 &plastic_inver
       }
     }
     if (!solve_dense<kSystems>(matrix, column)) {
-      throw std::runtime_error("FCC slip hardening block is singular");
+      status = FccStatus::HardeningBlock;
+      return {};
     }
     for (int alpha = 0; alpha < kSystems; ++alpha) {
       response[alpha][unknown] = column[alpha];
@@ -691,7 +744,8 @@ factor_tangent(const FccSlipParameters &parameters, const Tensor2 &plastic_inver
       }
     }
     if (!solve_dense<kSystems>(matrix, resistance_response)) {
-      throw std::runtime_error("FCC slip hardening block is singular");
+      status = FccStatus::HardeningBlock;
+      return {};
     }
   }
 
@@ -711,7 +765,8 @@ factor_tangent(const FccSlipParameters &parameters, const Tensor2 &plastic_inver
     }
   }
   if (!solve_dense<9>(schur, rhs)) {
-    throw std::runtime_error("FCC slip tangent is singular");
+    status = FccStatus::Tangent;
+    return {};
   }
   const Tensor2 dvelocity = unpack_velocity(rhs);
   const Tensor2 dintermediate = scaled(dvelocity, -parameters.time_step);
@@ -734,16 +789,17 @@ factor_tangent(const FccSlipParameters &parameters, const Tensor2 &plastic_inver
   return pull_stress(orientation, dcrystal);
 }
 
-[[nodiscard]] inline Tangent assemble_tangent(const FccSlipParameters &parameters,
-                                              const Tensor2 &orientation,
-                                              const TangentFactors &factors) {
+[[nodiscard]] OPENPFC_INLINE_HD Tangent
+assemble_tangent(const FccSlipParameters &parameters, const Tensor2 &orientation,
+                 const TangentFactors &factors, FccStatus &status) {
   Tangent tangent;
   for (int row = 0; row < 3; ++row) {
     for (int column = 0; column < 3; ++column) {
       Tensor2 direction{};
       direction(row, column) = 1.0;
       const Tensor2 stress =
-          directional_stress(parameters, orientation, factors, direction);
+          directional_stress(parameters, orientation, factors, direction, status);
+      if (status != FccStatus::Success) return {};
       for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
           tangent(i, j, row, column) = stress(i, j);
@@ -754,7 +810,7 @@ factor_tangent(const FccSlipParameters &parameters, const Tensor2 &plastic_inver
   return tangent;
 }
 
-[[nodiscard]] inline PiolaTangent
+[[nodiscard]] OPENPFC_INLINE_HD PiolaTangent
 published_tangent(const Tangent &tangent) noexcept {
   PiolaTangent out;
   for (int i = 0; i < 3; ++i) {
@@ -769,8 +825,8 @@ published_tangent(const Tangent &tangent) noexcept {
   return out;
 }
 
-[[nodiscard]] inline Tensor2 apply_tangent(const Tangent &tangent,
-                                           const Tensor2 &increment) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor2
+apply_tangent(const Tangent &tangent, const Tensor2 &increment) noexcept {
   Tensor2 out;
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
@@ -786,8 +842,8 @@ published_tangent(const Tangent &tangent) noexcept {
   return out;
 }
 
-[[nodiscard]] inline bool same_tensor(const Tensor2 &left,
-                                      const Tensor2 &right) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD bool same_tensor(const Tensor2 &left,
+                                                 const Tensor2 &right) noexcept {
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
       if (left(i, j) != right(i, j)) {
@@ -798,17 +854,22 @@ published_tangent(const Tangent &tangent) noexcept {
   return true;
 }
 
-[[nodiscard]] inline Integrated integrate(const FccSlipParameters &parameters,
-                                          const Tensor2 &orientation,
-                                          const FccSlipState &committed,
-                                          const Tensor2 &deformation) {
-  require_parameters(parameters);
-  if (!proper_rotation(orientation)) {
-    throw std::invalid_argument("crystal orientation must be a proper rotation");
+[[nodiscard]] OPENPFC_INLINE_HD Integrated
+try_integrate(const FccSlipParameters &parameters, const Tensor2 &orientation,
+              const FccSlipState &committed, const Tensor2 &deformation) {
+  Integrated integrated;
+  FccStatus &status = integrated.status;
+  if (!admissible_parameters(parameters)) {
+    status = FccStatus::Parameters;
+    return integrated;
   }
-  detail::note_constitutive_integration();
+  if (!proper_rotation(orientation)) {
+    status = FccStatus::Orientation;
+    return integrated;
+  }
   const Tensor2 crystal_deformation = push_forward(orientation, deformation);
-  const Tensor2 plastic_inverse = inverse(committed.plastic);
+  const Tensor2 plastic_inverse = inverse(committed.plastic, status);
+  if (status != FccStatus::Success) return integrated;
   const Tensor2 mapper = matmul(crystal_deformation, plastic_inverse);
 
   std::array<double, kSystems> resistance{};
@@ -819,7 +880,8 @@ published_tangent(const Tangent &tangent) noexcept {
   LpEvaluation solved{};
   bool state_converged = false;
   for (int iteration = 0; iteration < kStateIterations; ++iteration) {
-    solved = solve_velocity(parameters, mapper, velocity, resistance.data());
+    solved = solve_velocity(parameters, mapper, velocity, resistance.data(), status);
+    if (status != FccStatus::Success) return integrated;
     velocity = solved.velocity;
     const SlipSlope slope = slip_slope(parameters, resistance.data());
     double absolute_rate[kSystems];
@@ -836,14 +898,17 @@ published_tangent(const Tangent &tangent) noexcept {
     }
     resistance = next;
     if (error <= 1e-12) {
-      solved = solve_velocity(parameters, mapper, velocity, resistance.data());
+      solved =
+          solve_velocity(parameters, mapper, velocity, resistance.data(), status);
+      if (status != FccStatus::Success) return integrated;
       velocity = solved.velocity;
       state_converged = true;
       break;
     }
   }
   if (!state_converged) {
-    throw std::runtime_error("FCC slip resistance did not converge");
+    status = FccStatus::ResistanceIterations;
+    return integrated;
   }
 
   const Tensor2 intermediate = axpy(-parameters.time_step, velocity, identity2());
@@ -851,15 +916,15 @@ published_tangent(const Tangent &tangent) noexcept {
   const Tensor2 crystal_stress =
       matmul(crystal_deformation,
              matmul(growth, matmul(solved.second, transposed(growth))));
-  const Tensor2 raw_plastic = inverse(growth);
+  const Tensor2 raw_plastic = inverse(growth, status);
+  if (status != FccStatus::Success) return integrated;
   const double plastic_det = determinant(raw_plastic);
   if (!(plastic_det > 0.0)) {
-    throw std::runtime_error(
-        "FCC plastic map left the orientation-preserving range");
+    status = FccStatus::PlasticOrientation;
+    return integrated;
   }
   const Tensor2 stored_plastic = scaled(raw_plastic, 1.0 / std::cbrt(plastic_det));
 
-  Integrated integrated;
   integrated.update.piola = pull_stress(orientation, crystal_stress);
   integrated.update.state.plastic = stored_plastic;
   integrated.update.state.velocity = velocity;
@@ -873,8 +938,23 @@ published_tangent(const Tangent &tangent) noexcept {
   }
   const TangentFactors factors = factor_tangent(
       parameters, plastic_inverse, crystal_deformation, velocity, resistance.data());
-  integrated.tangent = assemble_tangent(parameters, orientation, factors);
+  integrated.tangent = assemble_tangent(parameters, orientation, factors, status);
   return integrated;
+}
+
+// Host wrapper preserves the established exception types and integration counter.
+[[nodiscard]] inline Integrated integrate(const FccSlipParameters &parameters,
+                                          const Tensor2 &orientation,
+                                          const FccSlipState &committed,
+                                          const Tensor2 &deformation) {
+  require_parameters(parameters);
+  if (!proper_rotation(orientation))
+    throw std::invalid_argument(fcc_status_message(FccStatus::Orientation));
+  detail::note_constitutive_integration();
+  Integrated result = try_integrate(parameters, orientation, committed, deformation);
+  if (result.status != FccStatus::Success)
+    throw std::runtime_error(fcc_status_message(result.status));
+  return result;
 }
 
 } // namespace crystal
@@ -887,6 +967,26 @@ struct FccEvaluation {
   FccSlipUpdate update;
   PiolaTangent tangent;
 };
+
+struct FccEvaluationResult {
+  FccEvaluation value{};
+  FccStatus status = FccStatus::Success;
+};
+
+/// Nonthrowing material update; input history remains immutable.
+[[nodiscard]] OPENPFC_INLINE_HD FccEvaluationResult
+try_evaluate_fcc(const FccSlipParameters &parameters, const Tensor2 &orientation,
+                 const FccSlipState &committed, const Tensor2 &deformation) {
+  const auto result =
+      crystal::try_integrate(parameters, orientation, committed, deformation);
+  FccEvaluationResult out;
+  out.status = result.status;
+  if (out.status == FccStatus::Success) {
+    out.value.update = result.update;
+    out.value.tangent = crystal::published_tangent(result.tangent);
+  }
+  return out;
+}
 
 [[nodiscard]] inline FccEvaluation evaluate_fcc(const FccSlipParameters &parameters,
                                                 const Tensor2 &orientation,

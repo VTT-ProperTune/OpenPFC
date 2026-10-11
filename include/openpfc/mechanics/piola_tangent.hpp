@@ -23,12 +23,14 @@ namespace pfc::finite_strain {
 struct PiolaTangent {
   double c[3][3][3][3]{};
 
-  double &operator()(int i, int j, int k, int l) noexcept { return c[i][j][k][l]; }
-  double operator()(int i, int j, int k, int l) const noexcept {
+  OPENPFC_HD double &operator()(int i, int j, int k, int l) noexcept {
+    return c[i][j][k][l];
+  }
+  OPENPFC_HD double operator()(int i, int j, int k, int l) const noexcept {
     return c[i][j][k][l];
   }
 
-  [[nodiscard]] Tensor2 action(const Tensor2 &increment) const noexcept {
+  [[nodiscard]] OPENPFC_HD Tensor2 action(const Tensor2 &increment) const noexcept {
     Tensor2 out;
     for (int i = 0; i < 3; ++i) {
       for (int j = 0; j < 3; ++j) {
