@@ -31,8 +31,10 @@
  * tuple-like `du` argument.
  *
  * Cells outside `[imin,imax) x [jmin,jmax) x [kmin,kmax)` are left
- * untouched (`du` is not cleared here). Parallelized with
- * `#pragma omp parallel for collapse(2)` over `(iz, iy)`.
+ * untouched (`du` is not cleared here). The default `LoopPolicy::Parallel`
+ * uses `#pragma omp parallel for collapse(2)` over `(iz, iy)`.
+ * `LoopPolicy::Serial` keeps that loop on the calling thread and does not
+ * change the process OpenMP thread count.
  *
  * @see openpfc/kernel/field/grad_concepts.hpp for the per-member detection
  *      concepts that backends use to fill only requested members
@@ -56,6 +58,15 @@
 #include <openpfc/kernel/field/tuple_protocol.hpp>
 
 namespace pfc::sim {
+
+/**
+ * @brief Whether `for_each_interior` forks an OpenMP team.
+ *
+ * `Parallel` is the historical behavior. `Serial` evaluates the loop on the
+ * calling thread. It does not call `omp_set_num_threads`. Without OpenMP the
+ * loop is serial either way.
+ */
+enum class LoopPolicy { Parallel, Serial };
 
 namespace detail {
 
@@ -110,7 +121,8 @@ inline void scatter(DuOut &du, std::size_t k, const Inc &inc) {
  * @param t      Simulation time forwarded to `rhs`.
  */
 template <class Model, class Eval, class DuOut>
-inline void for_each_interior(const Model &model, Eval &eval, DuOut du, double t) {
+inline void for_each_interior(const Model &model, Eval &eval, DuOut du, double t,
+                              LoopPolicy policy = LoopPolicy::Parallel) {
   eval.prepare();
   const int kmin = eval.kmin();
   const int kmax = eval.kmax();
@@ -119,7 +131,10 @@ inline void for_each_interior(const Model &model, Eval &eval, DuOut du, double t
   const int imin = eval.imin();
   const int imax = eval.imax();
 #if defined(_OPENMP)
-#pragma omp parallel for collapse(2) schedule(static)
+  const bool use_parallel = policy == LoopPolicy::Parallel;
+#pragma omp parallel for collapse(2) schedule(static) if (use_parallel)
+#else
+  (void)policy;
 #endif
   for (int iz = kmin; iz < kmax; ++iz) {
     for (int iy = jmin; iy < jmax; ++iy) {

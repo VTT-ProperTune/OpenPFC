@@ -494,18 +494,19 @@ template <class Eval, class Binding> struct CheckedStageEvaluator {
 template <class Eval, class Model>
 [[nodiscard]] auto create(Eval &eval, const Model &model, double dt,
                           std::size_t local_size,
-                          const ButcherTableau<double> &tableau) {
+                          const ButcherTableau<double> &tableau,
+                          LoopPolicy policy = LoopPolicy::Parallel) {
   if constexpr (!requires(std::vector<double> &stage) { eval.bind_stage(stage); }) {
     throw std::invalid_argument(
         "RK create(eval,...): evaluator must explicitly bind_stage(vector); "
         "use create(field,eval,...) for existing bound field evaluators");
   }
-  auto rhs = [&eval, &model](double t, std::vector<double> &u,
-                             std::vector<double> &du) {
+  auto rhs = [&eval, &model, policy](double t, std::vector<double> &u,
+                                     std::vector<double> &du) {
     if constexpr (requires { eval.bind_stage(u); }) {
       eval.bind_stage(u);
       std::fill(du.begin(), du.end(), 0.0);
-      pfc::sim::for_each_interior(model, eval, du.data(), t);
+      pfc::sim::for_each_interior(model, eval, du.data(), t, policy);
     }
   };
   return ExplicitRKStepper<decltype(rhs)>(dt, local_size, tableau, std::move(rhs));
@@ -529,15 +530,16 @@ template <class Eval, class Model>
 template <class Eval, class Model>
 [[nodiscard]] auto create(pfc::data::Field<double> &u, Eval &eval,
                           const Model &model, double dt,
-                          const ButcherTableau<double> &tableau) {
-  auto rhs = [&eval, &model, offset = u.idx(0, 0, 0),
+                          const ButcherTableau<double> &tableau,
+                          LoopPolicy policy = LoopPolicy::Parallel) {
+  auto rhs = [&eval, &model, policy, offset = u.idx(0, 0, 0),
               binding = detail::FieldStageTransaction<1>({&u.vec()})](
                  double t, const std::vector<double> &stage,
                  std::vector<double> &du) mutable {
     std::fill(du.begin(), du.end(), 0.0);
     binding.evaluate({&stage}, [&] {
       detail::CheckedStageEvaluator checked{eval, binding};
-      pfc::sim::for_each_interior(model, checked, du.data() + offset, t);
+      pfc::sim::for_each_interior(model, checked, du.data() + offset, t, policy);
     });
   };
   return ExplicitRKStepper<decltype(rhs)>(dt, u.size(), tableau, std::move(rhs));
@@ -565,7 +567,8 @@ template <class Eval, class Model>
 template <class... Ts, class Eval, class Model>
 [[nodiscard]] auto create(std::tuple<pfc::data::Field<Ts> &...> fields, Eval &eval,
                           const Model &model, double dt,
-                          const ButcherTableau<double> &tableau) {
+                          const ButcherTableau<double> &tableau,
+                          LoopPolicy policy = LoopPolicy::Parallel) {
   constexpr std::size_t N = sizeof...(Ts);
   static_assert(N >= 1, "RK multi-field factory needs at least one field");
   static_assert((std::is_same_v<Ts, double> && ...),
@@ -592,7 +595,7 @@ template <class... Ts, class Eval, class Model>
       },
       fields);
 
-  auto rhs = [&eval, &model, offsets,
+  auto rhs = [&eval, &model, offsets, policy,
               binding = detail::FieldStageTransaction<N>(buffers)](
                  double t, auto &u_tuple, auto &du_tuple) mutable {
     std::apply([](auto &...du) { (std::fill(du.begin(), du.end(), 0.0), ...); },
@@ -601,7 +604,7 @@ template <class... Ts, class Eval, class Model>
       auto du_ptrs = std::make_tuple(std::get<I>(du_tuple).data() + offsets[I]...);
       binding.evaluate({&std::get<I>(u_tuple)...}, [&] {
         detail::CheckedStageEvaluator checked{eval, binding};
-        pfc::sim::for_each_interior(model, checked, du_ptrs, t);
+        pfc::sim::for_each_interior(model, checked, du_ptrs, t, policy);
       });
     }(std::make_index_sequence<N>{});
   };

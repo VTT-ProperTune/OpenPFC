@@ -30,6 +30,7 @@ target_sources(openpfc-tests PRIVATE
   scenarios/field_operations/test_wave2d_state_access.cpp
   scenarios/time_integration/test_rk3_convergence.cpp
   scenarios/time_integration/test_field_accessor_concept.cpp
+  scenarios/time_integration/test_loop_policy.cpp
 )
 
 # Small downstream-style consumer, with no HeFFTe/frontend dependency.
@@ -105,7 +106,7 @@ if(OpenPFC_ENABLE_HEFFTE)
     scenarios/gpu_validation/test_hip_vs_cpu_laplacian.cpp
     scenarios/gpu_validation/test_hip_vs_cpu_laplacian_mpi.cpp
     scenarios/time_integration/test_stepper_contract_equivalence.cpp
-  )
+)
 endif()
 
 # Device Faces/Full pack kernels live in `openpfc_gpu_kernels`. The test
