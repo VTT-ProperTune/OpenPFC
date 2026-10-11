@@ -15,6 +15,7 @@ target_sources(openpfc-tests
     ${CMAKE_CURRENT_SOURCE_DIR}/test_method_composition.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_step_attempt.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_step_protocol.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_rk_nfield.cpp
 )
 
 # AC-facing CTest name: `ctest -R '^method_composition$'`.
@@ -48,3 +49,7 @@ add_executable(test_rk_stage_allocations test_rk_stage_allocations.cpp)
 target_include_directories(test_rk_stage_allocations PRIVATE ${CMAKE_SOURCE_DIR}/tests)
 target_link_libraries(test_rk_stage_allocations PRIVATE OpenPFC Catch2::Catch2WithMain)
 add_test(NAME test_rk_stage_allocations COMMAND test_rk_stage_allocations)
+add_test(NAME test_rk_nfield
+         COMMAND $<TARGET_FILE:openpfc-tests> "[rk_nfield]")
+set_tests_properties(test_rk_nfield PROPERTIES
+  ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
