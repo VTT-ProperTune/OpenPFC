@@ -62,6 +62,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   and rollback hooks. Its FFT adapter collectively admits local material
   failures before projection (#406).
 
+- Structured geometric multigrid supports scalar Poisson and vector
+  elastic auxiliary operators, periodic gauges, Dirichlet boundaries,
+  rediscretized and Galerkin coarse operators (#407).
+
 ### Fixed
 
 - Configure with CMake 4 using nlohmann-json 3.11.3 without a
