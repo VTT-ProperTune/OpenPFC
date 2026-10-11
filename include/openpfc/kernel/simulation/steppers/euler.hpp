@@ -114,8 +114,7 @@ public:
   }
 
   /** Advance host field state by one explicit-Euler step. */
-  template <pfc::field::HostFieldState<Scalar> F>
-  double step(double t, F &u) {
+  template <pfc::field::HostFieldState<Scalar> F> double step(double t, F &u) {
     return step(t, u.vec());
   }
 
@@ -190,8 +189,7 @@ private:
  * @tparam N      Number of fields.
  * @tparam Scalar Field element type (`double` or `std::complex<double>`).
  */
-template <class Rhs, std::size_t N, class Scalar = double>
-class MultiEulerStepper {
+template <class Rhs, std::size_t N, class Scalar = double> class MultiEulerStepper {
 public:
   using RhsType = Rhs;
   using scalar_type = Scalar;
@@ -228,8 +226,8 @@ public:
   /** Isolate one Euler update per host field (via `vec()`). */
   template <pfc::field::HostFieldState<Scalar>... Fs>
     requires(sizeof...(Fs) == N)
-  [[nodiscard]] MultiStepAttemptResult<N, Scalar>
-  attempt(double t, const Fs &...u_accepted) {
+  [[nodiscard]] MultiStepAttemptResult<N, Scalar> attempt(double t,
+                                                          const Fs &...u_accepted) {
     return attempt(t, u_accepted.vec()...);
   }
 
@@ -341,8 +339,7 @@ private:
     ((u_accepted = m_candidate[I]), ...);
   }
 
-  [[nodiscard]] std::array<const std::vector<Scalar> *, N>
-  candidate_ptrs() const {
+  [[nodiscard]] std::array<const std::vector<Scalar> *, N> candidate_ptrs() const {
     return candidate_ptrs_impl(std::make_index_sequence<N>{});
   }
 
@@ -422,12 +419,10 @@ private:
   template <std::size_t... I>
   void alloc(std::index_sequence<I...>,
              const std::array<std::size_t, field_count> &sizes) {
-    ((std::get<I>(m_du).assign(sizes[I],
-                               std::tuple_element_t<I, ScalarTuple>{}),
-      std::get<I>(m_u_work).assign(sizes[I],
-                                   std::tuple_element_t<I, ScalarTuple>{}),
-      std::get<I>(m_candidate).assign(
-          sizes[I], std::tuple_element_t<I, ScalarTuple>{})),
+    ((std::get<I>(m_du).assign(sizes[I], std::tuple_element_t<I, ScalarTuple>{}),
+      std::get<I>(m_u_work).assign(sizes[I], std::tuple_element_t<I, ScalarTuple>{}),
+      std::get<I>(m_candidate)
+          .assign(sizes[I], std::tuple_element_t<I, ScalarTuple>{})),
      ...);
   }
 
@@ -437,8 +432,7 @@ private:
     ((std::get<I>(m_u_work) = u_accepted), ...);
   }
 
-  template <std::size_t... I>
-  auto make_work_tuple(std::index_sequence<I...>) {
+  template <std::size_t... I> auto make_work_tuple(std::index_sequence<I...>) {
     return std::tie(std::get<I>(m_u_work)...);
   }
 
@@ -458,8 +452,7 @@ private:
     (one(std::get<I>(m_candidate), u_accepted, std::get<I>(m_du)), ...);
   }
 
-  [[nodiscard]] std::tuple<const std::vector<Scalars> *...>
-  candidate_ptrs() const {
+  [[nodiscard]] std::tuple<const std::vector<Scalars> *...> candidate_ptrs() const {
     return candidate_ptrs_impl(std::index_sequence_for<Scalars...>{});
   }
 
@@ -539,7 +532,6 @@ template <class T, class Eval, class Model>
   return create(eval, model, dt, u.size());
 }
 
-
 /**
  * @brief Multi-field overload: build a `MultiEulerStepper` from a tuple of
  *        `Field` references, a composite evaluator, and a model whose
@@ -559,8 +551,8 @@ template <class T, class Eval, class Model>
  * @param dt      Time-step size.
  */
 template <class... Ts, class Eval, class Model>
-[[nodiscard]] auto create(std::tuple<pfc::data::Field<Ts> &...> fields,
-                          Eval &eval, const Model &model, double dt) {
+[[nodiscard]] auto create(std::tuple<pfc::data::Field<Ts> &...> fields, Eval &eval,
+                          const Model &model, double dt) {
   constexpr std::size_t N = sizeof...(Ts);
   std::array<std::size_t, N> sizes{};
   std::apply(
@@ -577,6 +569,5 @@ template <class... Ts, class Eval, class Model>
   };
   return MultiEulerStepper<decltype(rhs), N>(dt, sizes, std::move(rhs));
 }
-
 
 } // namespace pfc::sim::steppers
