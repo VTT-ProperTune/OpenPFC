@@ -9,7 +9,7 @@ Full programs built when **`OpenPFC_BUILD_APPS=ON`** (default). They install und
 
 User-facing overview and example commands: [`docs/user_guide/applications.md`](../docs/user_guide/applications.md).
 
-CMake wires subdirectories from [`apps/CMakeLists.txt`](CMakeLists.txt) in this order: `tungsten`, `aluminumNew`, `cahn_hilliard`, `thin_film`, `surface_diffusion`, `kawahara`, `ehd_film`, `gradient_elasticity`, `higher_order_pfc`, `inverse_homogenization`, `incompressible_flow`, `allen_cahn`, `alloy_dendrite_elastic`, `heat3d`, `wave2d`, `kobayashi`, `vlasov_maxwell`.
+CMake wires subdirectories from [`apps/CMakeLists.txt`](CMakeLists.txt) in this order: `tungsten`, `aluminumNew`, `cahn_hilliard`, `thin_film`, `surface_diffusion`, `kawahara`, `ehd_film`, `gradient_elasticity`, `higher_order_pfc`, `inverse_homogenization`, `incompressible_flow`, `polycrystal_shear`, `allen_cahn`, `alloy_dendrite_elastic`, `heat3d`, `wave2d`, `kobayashi`, `vlasov_maxwell`.
 
 For the nine JSON-session apps, `./scripts/openpfc apps` lists presets and
 supported backends. Create a case with `openpfc init CASE --app=NAME`; see the

@@ -9,6 +9,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- `polycrystal_shear` advances a periodic FCC polycrystal in finite-strain
+  simple shear and can encode a mid-plane animation. The grid may be even.
+  Launch scripts and campaign output stay outside this repository.
+
 - Finite-strain `evaluate_j2`, `evaluate_fcc`, and `evaluate_saint_venant`
   return the Piola stress, the local `∂P/∂F` tangent, and any trial
   history from one constitutive evaluation. Actions on that tangent do
