@@ -161,7 +161,6 @@ template <LocalConstitutiveLaw Law>
 solve_equilibrium(CompatibleProjector &projector, const Law &law,
                   const Tensor2 &macroscopic, NewtonControls controls = {},
                   MPI_Comm comm = MPI_COMM_WORLD) {
-  require_odd_grid(projector.domain());
   if (!(controls.krylov_relative_tolerance > 0.0) ||
       !(controls.newton_relative_tolerance > 0.0)) {
     throw std::invalid_argument("solver tolerances must be positive");
@@ -264,7 +263,6 @@ template <LocalConstitutiveLaw Law>
 solve_increment(CompatibleProjector &projector, const Law &law,
                 const Tensor2 &macroscopic, const IncrementStart &start,
                 NewtonControls controls = {}, MPI_Comm comm = MPI_COMM_WORLD) {
-  require_odd_grid(projector.domain());
   if (!(controls.krylov_relative_tolerance > 0.0) ||
       !(controls.newton_relative_tolerance > 0.0)) {
     throw std::invalid_argument("solver tolerances must be positive");
@@ -292,7 +290,9 @@ solve_increment(CompatibleProjector &projector, const Law &law,
   for (Tensor2 &value : result.deformation) {
     value = add(value, macro_step);
   }
-  const std::vector<Tensor2> tangent_state = start.deformation;
+  // The caller's field is not modified. Alias it instead of copying a
+  // second 1024³ tensor into the increment.
+  const std::vector<Tensor2> &tangent_state = start.deformation;
   bool tangent_from_start = true;
 
   auto apply_tangent = [&](const std::vector<Tensor2> &direction,
@@ -319,9 +319,11 @@ solve_increment(CompatibleProjector &projector, const Law &law,
     }
   };
 
-  std::vector<Tensor2> load(n, macro_step);
   std::vector<Tensor2> rhs;
-  apply_tangent(load, rhs);
+  {
+    const std::vector<Tensor2> load(n, macro_step);
+    apply_tangent(load, rhs);
+  }
   for (Tensor2 &value : rhs) {
     value = scaled(value, -1.0);
   }

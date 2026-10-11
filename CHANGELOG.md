@@ -37,6 +37,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Fixed
 
+- The finite-strain compatible projector accepts even grids. Each Nyquist
+  wave-vector component is zero (`k_component_odd`), so `q_i q_j` stays
+  Hermitian. Odd grids keep the previous projection.
+
 - Configure with CMake 4 using nlohmann-json 3.11.3 without a
   policy-minimum override; preserve the existing 0.4 package version.
 

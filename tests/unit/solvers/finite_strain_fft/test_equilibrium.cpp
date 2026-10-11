@@ -15,10 +15,10 @@
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/fft/kspace_iterator.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
-#include <openpfc/solvers/finite_strain_fft/field_stats.hpp>
-#include <openpfc/solvers/finite_strain_fft/newton.hpp>
 #include <openpfc/mechanics/constitutive/saint_venant_kirchhoff.hpp>
 #include <openpfc/mechanics/constitutive/simo_j2.hpp>
+#include <openpfc/solvers/finite_strain_fft/field_stats.hpp>
+#include <openpfc/solvers/finite_strain_fft/newton.hpp>
 
 #include <cmath>
 #include <complex>
@@ -90,12 +90,46 @@ double max_abs_diff(const std::vector<Tensor2> &a, const std::vector<Tensor2> &b
 
 } // namespace
 
-TEST_CASE("even grids are rejected by the compatible projector",
+TEST_CASE("even-grid projection is idempotent and drops a pure Nyquist mode",
           "[finite_strain][projector]") {
-  auto domain = domain::create(Int3{4, 4, 4});
-  auto decomposition = decomposition::create(domain, 1);
-  auto fft = fft::create(decomposition);
-  REQUIRE_THROWS_AS(CompatibleProjector(fft, domain), std::invalid_argument);
+  auto tools = make_grid(Int3{4, 4, 4}, MPI_COMM_WORLD);
+  CompatibleProjector projector(tools.fft, tools.domain);
+  const auto field = random_field(projector.local_size(), 11u);
+  std::vector<Tensor2> once;
+  std::vector<Tensor2> twice;
+  projector.apply(field, once);
+  projector.apply(once, twice);
+  REQUIRE(max_abs_diff(once, twice) < 1e-10);
+
+  const auto stats =
+      tensor_field_stats(once, tools.fft.get_inbox_bounds(), MPI_COMM_WORLD, false);
+  const double scale = stats.frobenius_l2 + 1.0;
+  for (int a = 0; a < 3; ++a) {
+    for (int b = 0; b < 3; ++b) {
+      REQUIRE_THAT(stats.component[a][b].sum / scale, WithinAbs(0.0, 1e-10));
+    }
+  }
+
+  std::vector<Tensor2> nyquist(projector.local_size());
+  const auto box = tools.fft.get_inbox_bounds();
+  std::size_t index = 0;
+  for (int z = box.low[2]; z <= box.high[2]; ++z) {
+    for (int y = box.low[1]; y <= box.high[1]; ++y) {
+      for (int x = box.low[0]; x <= box.high[0]; ++x, ++index) {
+        const double sign = ((x + y + z) & 1) == 0 ? 1.0 : -1.0;
+        nyquist[index](0, 0) = sign;
+      }
+    }
+  }
+  std::vector<Tensor2> dropped;
+  projector.apply(nyquist, dropped);
+  double local = 0.0;
+  for (const Tensor2 &value : dropped) {
+    local = std::max(local, frobenius_norm(value));
+  }
+  double reduced = 0.0;
+  MPI_Allreduce(&local, &reduced, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  REQUIRE(reduced < 1e-10);
 }
 
 TEST_CASE("projection removes the mean and is idempotent",
