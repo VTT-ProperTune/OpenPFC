@@ -17,6 +17,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <openpfc/kernel/data/host_device.hpp>
 
 namespace pfc::finite_strain {
 
@@ -24,11 +25,11 @@ namespace pfc::finite_strain {
 struct Tensor2 {
   double c[3][3]{};
 
-  double &operator()(int i, int j) noexcept { return c[i][j]; }
-  double operator()(int i, int j) const noexcept { return c[i][j]; }
+  OPENPFC_HD double &operator()(int i, int j) noexcept { return c[i][j]; }
+  OPENPFC_HD double operator()(int i, int j) const noexcept { return c[i][j]; }
 };
 
-[[nodiscard]] inline Tensor2 identity2() noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor2 identity2() noexcept {
   Tensor2 out;
   out(0, 0) = 1.0;
   out(1, 1) = 1.0;
@@ -36,7 +37,7 @@ struct Tensor2 {
   return out;
 }
 
-[[nodiscard]] inline Tensor2 transposed(const Tensor2 &a) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor2 transposed(const Tensor2 &a) noexcept {
   Tensor2 out;
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
@@ -46,11 +47,12 @@ struct Tensor2 {
   return out;
 }
 
-[[nodiscard]] inline double trace(const Tensor2 &a) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD double trace(const Tensor2 &a) noexcept {
   return a(0, 0) + a(1, 1) + a(2, 2);
 }
 
-[[nodiscard]] inline Tensor2 matmul(const Tensor2 &a, const Tensor2 &b) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor2 matmul(const Tensor2 &a,
+                                               const Tensor2 &b) noexcept {
   Tensor2 out;
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
@@ -60,7 +62,7 @@ struct Tensor2 {
   return out;
 }
 
-[[nodiscard]] inline Tensor2 scaled(const Tensor2 &a, double s) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor2 scaled(const Tensor2 &a, double s) noexcept {
   Tensor2 out;
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
@@ -70,7 +72,8 @@ struct Tensor2 {
   return out;
 }
 
-[[nodiscard]] inline Tensor2 add(const Tensor2 &a, const Tensor2 &b) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor2 add(const Tensor2 &a,
+                                            const Tensor2 &b) noexcept {
   Tensor2 out;
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
@@ -80,8 +83,8 @@ struct Tensor2 {
   return out;
 }
 
-[[nodiscard]] inline Tensor2 axpy(double alpha, const Tensor2 &x,
-                                  const Tensor2 &y) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor2 axpy(double alpha, const Tensor2 &x,
+                                             const Tensor2 &y) noexcept {
   Tensor2 out;
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
@@ -92,7 +95,7 @@ struct Tensor2 {
 }
 
 /// Symmetric part `(A + A^T) / 2`.
-[[nodiscard]] inline Tensor2 symmetric_part(const Tensor2 &a) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor2 symmetric_part(const Tensor2 &a) noexcept {
   Tensor2 out;
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
@@ -102,8 +105,8 @@ struct Tensor2 {
   return out;
 }
 
-[[nodiscard]] inline double frobenius_dot(const Tensor2 &a,
-                                          const Tensor2 &b) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD double frobenius_dot(const Tensor2 &a,
+                                                     const Tensor2 &b) noexcept {
   double sum = 0.0;
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
@@ -113,12 +116,12 @@ struct Tensor2 {
   return sum;
 }
 
-[[nodiscard]] inline double frobenius_norm(const Tensor2 &a) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD double frobenius_norm(const Tensor2 &a) noexcept {
   return std::sqrt(frobenius_dot(a, a));
 }
 
 /// Von Mises equivalent of a symmetric stress, `sqrt(3/2) ||dev σ||_F`.
-[[nodiscard]] inline double von_mises(const Tensor2 &stress) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD double von_mises(const Tensor2 &stress) noexcept {
   const double mean = trace(stress) / 3.0;
   Tensor2 deviator = stress;
   deviator(0, 0) -= mean;
