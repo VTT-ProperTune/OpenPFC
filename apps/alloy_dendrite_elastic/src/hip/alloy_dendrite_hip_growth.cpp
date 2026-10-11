@@ -14,6 +14,7 @@
 #include <hip/hip_runtime.h>
 
 #include <cmath>
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <iomanip>
@@ -44,6 +45,7 @@
 #include <alloy_dendrite/parameters.hpp>
 #include <openpfc/frontend/io/snapshot_series.hpp>
 #include <openpfc/frontend/utils/cli_options.hpp>
+#include <openpfc/kernel/simulation/binary_reader.hpp>
 
 namespace {
 
@@ -81,6 +83,9 @@ struct Cfg {
   double fta_gradient = 0.0;
   double fta_pulling = 0.0;
   double fta_x0 = std::numeric_limits<double>::quiet_NaN();
+  std::string load_fields;
+  int load_index = 0;
+  int start_step = 0;
   struct FieldDump {
     std::string dir;
     int every{1};
@@ -93,6 +98,43 @@ struct Cfg {
 }
 
 void push_seed(DevField &dst, const RealField &src);
+
+[[nodiscard]] std::string snapshot_brick_path(const std::string &dir,
+                                              const std::string &prefix,
+                                              const char *name, int index) {
+  char frame[16];
+  std::snprintf(frame, sizeof(frame), "%04d", index);
+  return (std::filesystem::path(dir) / (prefix + "_" + name + "_" + frame + ".bin"))
+      .string();
+}
+
+void unpack_owned_brick(RealField &dst, const std::vector<double> &brick) {
+  const auto n = dst.local_size();
+  const std::size_t expected = static_cast<std::size_t>(n[0]) *
+                               static_cast<std::size_t>(n[1]) *
+                               static_cast<std::size_t>(n[2]);
+  if (brick.size() != expected) {
+    throw std::invalid_argument("load-fields: brick size does not match owned box");
+  }
+  std::size_t q = 0;
+  for (int k = 0; k < n[2]; ++k)
+    for (int j = 0; j < n[1]; ++j)
+      for (int i = 0; i < n[0]; ++i) dst(i, j, k) = brick[q++];
+  dst.note_host_write();
+}
+
+void load_owned_brick(RealField &dst, const std::string &path, MPI_Comm comm) {
+  const auto gs = pfc::domain::get_size(dst.domain());
+  const auto box = dst.box();
+  pfc::BinaryReader reader(comm);
+  reader.set_domain({gs[0], gs[1], gs[2]}, {box.size[0], box.size[1], box.size[2]},
+                    {box.low[0], box.low[1], box.low[2]});
+  std::vector<double> brick(static_cast<std::size_t>(box.size[0]) *
+                            static_cast<std::size_t>(box.size[1]) *
+                            static_cast<std::size_t>(box.size[2]));
+  reader.read(path, brick);
+  unpack_owned_brick(dst, brick);
+}
 
 void impose_fta(DevField &theta, RealField &scratch, double gradient, double x0,
                 double pulling, double t) {
@@ -240,8 +282,24 @@ int run(const Cfg &cfg, int rank, int nproc, MPI_Comm comm) {
   push_seed(phi, seed);
   seed.for_each_owned([&](int i, int j, int k) { seed(i, j, k) = -cfg.omega; });
   push_seed(U, seed);
+  if (!cfg.load_fields.empty()) {
+    if (cfg.load_index < 0) {
+      throw std::invalid_argument(
+          "alloy_dendrite_hip_growth: --load-index must be >= 0");
+    }
+    load_owned_brick(
+        seed,
+        snapshot_brick_path(cfg.load_fields, cfg.run_id, "phi", cfg.load_index),
+        comm);
+    push_seed(phi, seed);
+    load_owned_brick(
+        seed, snapshot_brick_path(cfg.load_fields, cfg.run_id, "U", cfg.load_index),
+        comm);
+    push_seed(U, seed);
+  }
+  const double t0 = cfg.start_step * dt;
   if (fta) {
-    impose_fta(th, seed, cfg.fta_gradient, fta_x0, cfg.fta_pulling, 0.0);
+    impose_fta(th, seed, cfg.fta_gradient, fta_x0, cfg.fta_pulling, t0);
   } else {
     seed.for_each_owned([&](int i, int j, int k) { seed(i, j, k) = 0.0; });
     push_seed(th, seed);
@@ -335,8 +393,9 @@ int run(const Cfg &cfg, int rank, int nproc, MPI_Comm comm) {
     if (hipDeviceSynchronize() != hipSuccess) {
       throw std::runtime_error("hipDeviceSynchronize failed after step");
     }
+    const double t = (cfg.start_step + step) * dt;
     if (fta) {
-      impose_fta(th, seed, cfg.fta_gradient, fta_x0, cfg.fta_pulling, step * dt);
+      impose_fta(th, seed, cfg.fta_gradient, fta_x0, cfg.fta_pulling, t);
     }
     double b = MPI_Wtime();
     const double tpf = b - a;
@@ -378,12 +437,12 @@ int run(const Cfg &cfg, int rank, int nproc, MPI_Comm comm) {
         csv.row(alloy_dendrite::format(
             "%s,%d,%.6f,%.6f,%.6f,%d,%.6e,%.6e,%.3e,%.3e,%.6e,%.6e,%.6e,%.6f,"
             "%.6e,%.6f",
-            cfg.run_id.c_str(), step, step * dt, 1e3 * tpf, 1e3 * tel, el.iterations,
-            el.total_energy, el.virial_energy, el.energy_balance_rel, el.residual,
-            el.max_dfel_dphi, el.mean_stress_trace,
+            cfg.run_id.c_str(), cfg.start_step + step, t, 1e3 * tpf, 1e3 * tel,
+            el.iterations, el.total_energy, el.virial_energy, el.energy_balance_rel,
+            el.residual, el.max_dfel_dphi, el.mean_stress_trace,
             elastic ? elastic->max_von_mises() : 0.0, x_tip, v_tip, rho));
       }
-      snapshots.write_if_due(n_seen, step, step * dt);
+      snapshots.write_if_due(n_seen, cfg.start_step + step, t);
       ++n_seen;
     }
   }
@@ -420,19 +479,23 @@ int run_cli(int argc, char **argv, int rank, int nproc) {
   pfc::utils::CliOptions opt(argc, argv);
   if (opt.help()) {
     if (rank == 0) {
-      std::cout << "Usage: " << argv[0]
-                << " [--nx= --ny= --nz= --elastic=0|1 --fields-dir=DIR ...]\n"
-                << "Defaults match CPU growth: lambda=D_l/a2, Al-4.5wt%Cu\n"
-                << "stiffness/eps_c from material.hpp. With --elastic=1,\n"
-                << "lambda_el defaults to lambda (calibrated in f_ref units).\n"
-                << "Elastic-off comparison: --elastic=1 --lambda-el=0.\n"
-                << "FTA directional: theta=(G/dT_h)(x-x0-Vp t). evolve_theta\n"
-                << "stays off; Mc theta stays live. Mc=0 with --gradient or\n"
-                << "--pulling is rejected. Do not pass --elastic.\n"
-                << "  --gradient=X --pulling=X --fta-x0=X --Mc=X --evolve-theta=0\n"
-                << "  3-D example: --nx=48 --ny=48 --nz=48 --dx=0.8 --steps=20\n"
-                << "    --Mc=0.5 --evolve-theta=0 --gradient=0.02 --pulling=0.05\n"
-                << "    --csv=results/fta3d.csv --fields-dir=results/fta3d\n";
+      std::cout
+          << "Usage: " << argv[0]
+          << " [--nx= --ny= --nz= --elastic=0|1 --fields-dir=DIR ...]\n"
+          << "Defaults match CPU growth: lambda=D_l/a2, Al-4.5wt%Cu\n"
+          << "stiffness/eps_c from material.hpp. With --elastic=1,\n"
+          << "lambda_el defaults to lambda (calibrated in f_ref units).\n"
+          << "Elastic-off comparison: --elastic=1 --lambda-el=0.\n"
+          << "FTA directional: theta=(G/dT_h)(x-x0-Vp t). evolve_theta\n"
+          << "stays off; Mc theta stays live. Mc=0 with --gradient or\n"
+          << "--pulling is rejected. Do not pass --elastic.\n"
+          << "  --gradient=X --pulling=X --fta-x0=X --Mc=X --evolve-theta=0\n"
+          << "  --load-fields=DIR --load-index=N --start-step=N\n"
+          << "  3-D example: --nx=48 --ny=48 --nz=48 --dx=0.8 --steps=20\n"
+          << "    --Mc=0.5 --evolve-theta=0 --gradient=0.02 --pulling=0.05\n"
+          << "    --csv=results/fta3d.csv --fields-dir=results/fta3d\n"
+          << "  Restart from SnapshotSeries bricks with the same run-id:\n"
+          << "    --load-fields=results/fta3d --load-index=0 --start-step=20\n";
     }
     return EXIT_SUCCESS;
   }
@@ -497,6 +560,13 @@ int run_cli(int argc, char **argv, int rank, int nproc) {
   cfg.run_id = opt.text("run-id", cfg.run_id);
   cfg.fields.dir = opt.text("fields-dir", "");
   cfg.fields.every = opt.integer("fields-every", cfg.fields.every);
+  cfg.load_fields = opt.text("load-fields", "");
+  cfg.load_index = opt.integer("load-index", cfg.load_index);
+  cfg.start_step = opt.integer("start-step", cfg.start_step);
+  if (cfg.start_step < 0) {
+    throw std::invalid_argument(
+        "alloy_dendrite_hip_growth: --start-step must be >= 0");
+  }
   opt.require_all_consumed();
   pfc::runtime::gpu::bind_local_device(MPI_COMM_WORLD);
   return run(cfg, rank, nproc, MPI_COMM_WORLD);
