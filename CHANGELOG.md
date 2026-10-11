@@ -70,6 +70,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   stress, consistent tangent, trial history and explicit failure statuses
   without modifying committed history (#391, #419).
 
+- Resident device vector operations compose generic Krylov and Newton
+  with finite-strain FFT FCC equilibrium. Collective material failure
+  invalidates every rank's trial before any load commit (#412).
+
 ### Fixed
 
 - Configure with CMake 4 using nlohmann-json 3.11.3 without a
