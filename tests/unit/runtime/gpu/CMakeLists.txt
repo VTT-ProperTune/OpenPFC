@@ -384,3 +384,12 @@ foreach(_backend IN ITEMS cuda hip)
   add_test(NAME FccBatch_${_backend} COMMAND test_fcc_batch_${_backend})
   set_tests_properties(FccBatch_${_backend} PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 4)
 endforeach()
+
+if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
+  add_executable(test_solver_vectors_cuda test_solver_vectors.cpp solver_toys.cu)
+  target_link_libraries(test_solver_vectors_cuda PRIVATE Catch2::Catch2
+      openpfc_gpu_kernels CUDA::cudart MPI::MPI_CXX)
+  set_target_properties(test_solver_vectors_cuda PROPERTIES CUDA_STANDARD 20)
+  add_test(NAME SolverVectors_cuda COMMAND test_solver_vectors_cuda)
+  set_tests_properties(SolverVectors_cuda PROPERTIES TIMEOUT 120 SKIP_RETURN_CODE 4)
+endif()
