@@ -402,3 +402,11 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE AND OpenPFC_ENABLE_CUDA_SPECTR
   add_test(NAME MechanicsProjector_cuda COMMAND test_mechanics_projector_cuda)
   set_tests_properties(MechanicsProjector_cuda PROPERTIES TIMEOUT 120 SKIP_RETURN_CODE 4)
 endif()
+
+if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
+  add_executable(test_multigrid_cuda test_multigrid.cpp)
+  target_link_libraries(test_multigrid_cuda PRIVATE Catch2::Catch2
+      openpfc_gpu_kernels CUDA::cudart MPI::MPI_CXX)
+  add_test(NAME Multigrid_cuda COMMAND test_multigrid_cuda)
+  set_tests_properties(Multigrid_cuda PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 4)
+endif()
