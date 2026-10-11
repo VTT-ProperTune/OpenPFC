@@ -393,3 +393,12 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
   add_test(NAME SolverVectors_cuda COMMAND test_solver_vectors_cuda)
   set_tests_properties(SolverVectors_cuda PROPERTIES TIMEOUT 120 SKIP_RETURN_CODE 4)
 endif()
+
+if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE AND OpenPFC_ENABLE_CUDA_SPECTRAL)
+  add_executable(test_mechanics_projector_cuda test_mechanics_projector.cpp)
+  target_link_libraries(test_mechanics_projector_cuda PRIVATE Catch2::Catch2
+      openpfc_gpu_kernels CUDA::cudart CUDA::cufft MPI::MPI_CXX)
+  target_compile_definitions(test_mechanics_projector_cuda PRIVATE OpenPFC_ENABLE_CUDA_SPECTRAL)
+  add_test(NAME MechanicsProjector_cuda COMMAND test_mechanics_projector_cuda)
+  set_tests_properties(MechanicsProjector_cuda PROPERTIES TIMEOUT 120 SKIP_RETURN_CODE 4)
+endif()
