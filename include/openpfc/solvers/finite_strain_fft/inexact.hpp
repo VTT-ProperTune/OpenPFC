@@ -7,6 +7,7 @@ namespace pfc::finite_strain {
 struct InexactResult {
   std::vector<Tensor2> deformation, piola;
   solvers::NonlinearResult nonlinear;
+  solvers::ReductionMetrics reductions;
 };
 /** Solve projected equilibrium using generic residual-based Newton.
  * Initial deformation is the accepted field plus the prescribed macro step.
@@ -54,6 +55,7 @@ InexactResult solve_nonlinear_increment(CompatibleProjector &projector,
   const Tensor2 step = add(macro, scaled(start.macroscopic, -1));
   for (auto &f : result.deformation) f = add(f, step);
   result.nonlinear = solvers::newton(ops, model, result.deformation, controls);
+  result.reductions = ops.reductions;
   result.piola.resize(result.deformation.size());
   for (std::size_t i = 0; i < result.piola.size(); ++i)
     result.piola[i] = law.stress(i, result.deformation[i]);

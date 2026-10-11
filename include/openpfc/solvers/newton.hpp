@@ -135,7 +135,7 @@ NonlinearResult newton(Ops &ops, Model &model, typename Ops::Vector &x,
       alpha *= c.backtrack;
     }
     record.step_length = accepted ? alpha : 0;
-    record.correction_norm = alpha * ops.norm(s);
+    record.correction_norm = accepted ? alpha * ops.norm(s) : 0;
     record.residual_after = norm;
     out.history.push_back(record);
     if (!accepted) {
