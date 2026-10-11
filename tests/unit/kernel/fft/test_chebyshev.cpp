@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -15,6 +16,45 @@
 #include <openpfc/kernel/field/fd_stencils.hpp>
 
 using Catch::Matchers::WithinAbs;
+
+TEST_CASE("Chebyshev Helmholtz remains accurate as degree increases",
+          "[fft][chebyshev][helmholtz_stability]") {
+  const double pi = std::acos(-1.0), k = pi / 2;
+  for (int degree : {15, 31, 63, 127}) {
+    const auto z = pfc::fft::chebyshev_lobatto(degree);
+    for (double reaction : {-1.0, 0.0, 0.1, 1.0, 6.854308612, 100.0, 900.0}) {
+      for (bool neumann : {false, true}) {
+        CAPTURE(degree, reaction, neumann);
+        std::vector<double> exact(z.size()), f(z.size());
+        for (std::size_t j = 0; j < z.size(); ++j) {
+          exact[j] = neumann ? std::sin(k * z[j]) : std::cos(k * z[j]);
+          f[j] = -(k * k + reaction) * exact[j];
+        }
+        auto u = neumann
+                     ? pfc::fft::chebyshev_neumann_helmholtz(f, reaction, 0, 0)
+                     : pfc::fft::chebyshev_dirichlet_helmholtz(f, reaction, 0, 0);
+        auto d = pfc::fft::chebyshev_derivative(u);
+        for (std::size_t j = 0; j < u.size(); ++j)
+          REQUIRE_THAT(u[j], WithinAbs(exact[j], 1e-10));
+        REQUIRE_THAT(neumann ? d.front() : u.front(), WithinAbs(0, 1e-9));
+        REQUIRE_THAT(neumann ? d.back() : u.back(), WithinAbs(0, 1e-9));
+      }
+      // Outward derivatives have opposite signs at the two ends.
+      std::vector<double> exact(z.size()), f(z.size());
+      for (std::size_t j = 0; j < z.size(); ++j) {
+        exact[j] = std::cos(k * z[j]);
+        f[j] = -(k * k + reaction) * exact[j];
+      }
+      auto u = pfc::fft::chebyshev_robin_helmholtz(f, reaction, 1, 1, -k, 1, -1, -k);
+      auto d = pfc::fft::chebyshev_derivative(u);
+      CAPTURE(degree, reaction);
+      REQUIRE_THAT(u.front() + d.front(), WithinAbs(-k, 1e-9));
+      REQUIRE_THAT(u.back() - d.back(), WithinAbs(-k, 1e-9));
+      for (std::size_t j = 0; j < u.size(); ++j)
+        REQUIRE_THAT(u[j], WithinAbs(exact[j], 1e-10));
+    }
+  }
+}
 
 namespace {
 
@@ -43,10 +83,9 @@ matrix_derivative(const std::vector<double> &values) {
     double row_sum = 0.0;
     for (int j = 0; j <= n; ++j) {
       if (i == j) continue;
-      const double entry = (c[static_cast<std::size_t>(i)] /
-                            c[static_cast<std::size_t>(j)]) /
-                           (x[static_cast<std::size_t>(i)] -
-                            x[static_cast<std::size_t>(j)]);
+      const double entry =
+          (c[static_cast<std::size_t>(i)] / c[static_cast<std::size_t>(j)]) /
+          (x[static_cast<std::size_t>(i)] - x[static_cast<std::size_t>(j)]);
       dense[static_cast<std::size_t>(i)][static_cast<std::size_t>(j)] = entry;
       row_sum += entry;
     }
@@ -71,8 +110,7 @@ template <typename Sample>
   std::vector<double> values(static_cast<std::size_t>(nx) * z.size());
   for (int iz = 0; iz <= degree; ++iz) {
     for (int ix = 0; ix < nx; ++ix) {
-      const double x =
-          period * static_cast<double>(ix) / static_cast<double>(nx);
+      const double x = period * static_cast<double>(ix) / static_cast<double>(nx);
       values[static_cast<std::size_t>(iz) * static_cast<std::size_t>(nx) +
              static_cast<std::size_t>(ix)] =
           sample(x, z[static_cast<std::size_t>(iz)]);
@@ -127,6 +165,74 @@ template <typename Sample>
 }
 
 } // namespace
+
+TEST_CASE("stable Helmholtz satisfies an independent differentiation matrix",
+          "[fft][chebyshev][helmholtz_stability]") {
+  const double k = std::acos(-1.0) / 2, reaction = 6.854308612;
+  const auto z = pfc::fft::chebyshev_lobatto(31);
+  for (int boundary = 0; boundary < 3; ++boundary) {
+    std::vector<double> f(z.size());
+    for (std::size_t j = 0; j < z.size(); ++j)
+      f[j] = -(k * k + reaction) *
+             (boundary == 1 ? std::sin(k * z[j]) : std::cos(k * z[j]));
+    auto u =
+        boundary == 0 ? pfc::fft::chebyshev_dirichlet_helmholtz(f, reaction, 0, 0)
+        : boundary == 1
+            ? pfc::fft::chebyshev_neumann_helmholtz(f, reaction, 0, 0)
+            : pfc::fft::chebyshev_robin_helmholtz(f, reaction, 1, 1, -k, 1, -1, -k);
+    const auto second = matrix_derivative(matrix_derivative(u));
+    for (std::size_t j = 1; j + 1 < u.size(); ++j)
+      REQUIRE_THAT(second[j] - reaction * u[j], WithinAbs(f[j], 1e-9));
+  }
+}
+
+TEST_CASE("integrated Helmholtz rejects nonfinite data and resonance",
+          "[fft][chebyshev][helmholtz_stability]") {
+  const double k = std::acos(-1.0) / 2;
+  std::vector<double> f(64, 0);
+  REQUIRE_THROWS_AS(pfc::fft::chebyshev_dirichlet_helmholtz(f, -k * k, 0, 0),
+                    std::invalid_argument);
+  REQUIRE_THROWS_AS(pfc::fft::chebyshev_neumann_helmholtz(f, -k * k, 0, 0),
+                    std::invalid_argument);
+  REQUIRE_THROWS_AS(pfc::fft::chebyshev_dirichlet_helmholtz(
+                        f, std::numeric_limits<double>::infinity(), 0, 0),
+                    std::invalid_argument);
+  f[2] = std::numeric_limits<double>::quiet_NaN();
+  REQUIRE_THROWS_AS(pfc::fft::chebyshev_robin_helmholtz(f, 1, 1, 1, 0, 1, -1, 0),
+                    std::invalid_argument);
+}
+
+TEST_CASE("mixed Helmholtz keeps small Fourier forcing modes at high degree",
+          "[fft][chebyshev][helmholtz_stability]") {
+  const double pi = std::acos(-1.0), k = pi / 2;
+  constexpr int nx = 7, ny = 5;
+  for (int degree : {31, 63})
+    for (double reaction : {0.0, 2.0})
+      for (int boundary = 0; boundary < 3; ++boundary) {
+        CAPTURE(degree, reaction, boundary);
+        const auto h = [&](double x, double y) {
+          return std::cos(2 * pi * x / 3) * std::sin(2 * pi * y / 4);
+        };
+        const auto exact =
+            volume_field(nx, ny, degree, 3, 4, [&](double x, double y, double z) {
+              return h(x, y) * (boundary == 1 ? std::sin(k * z) : std::cos(k * z));
+            });
+        auto f = exact;
+        const double eigen = k * k + (2 * pi / 3) * (2 * pi / 3) +
+                             (2 * pi / 4) * (2 * pi / 4) + reaction;
+        for (double &v : f) v *= -eigen;
+        std::vector<double> data(nx * ny, 0);
+        if (boundary == 2)
+          for (int y = 0; y < ny; ++y)
+            for (int x = 0; x < nx; ++x)
+              data[y * nx + x] = -k * h(3.0 * x / nx, 4.0 * y / ny);
+        const auto u = pfc::fft::fourier_chebyshev_robin_helmholtz(
+            f, nx, ny, 3, 4, reaction, boundary == 1 ? 0 : 1, boundary == 0 ? 0 : 1,
+            data, boundary == 1 ? 0 : 1,
+            boundary == 0 ? 0 : (boundary == 2 ? -1 : 1), data);
+        REQUIRE(max_abs_diff(u, exact) < 1e-10);
+      }
+}
 
 TEST_CASE("Chebyshev coefficients reproduce the Lobatto samples",
           "[fft][chebyshev]") {
@@ -203,14 +309,11 @@ TEST_CASE("Fourier-Chebyshev Laplacian matches separable polynomials",
   };
 
   const auto constant = laplace(8, 4, [](double, double) { return 1.0; });
-  REQUIRE(max_abs_diff(constant, std::vector<double>(constant.size(), 0.0)) <
-          1e-12);
+  REQUIRE(max_abs_diff(constant, std::vector<double>(constant.size(), 0.0)) < 1e-12);
 
-  const auto along_z = laplace(1, 8, [](double, double z) {
-    return 2.0 * z * z - 1.0;
-  });
-  REQUIRE(max_abs_diff(along_z, std::vector<double>(along_z.size(), 4.0)) <
-          1e-10);
+  const auto along_z =
+      laplace(1, 8, [](double, double z) { return 2.0 * z * z - 1.0; });
+  REQUIRE(max_abs_diff(along_z, std::vector<double>(along_z.size(), 4.0)) < 1e-10);
 
   const auto product = tensor_field(16, 8, period, [](double x, double z) {
     return std::cos(2.0 * x) * (2.0 * z * z - 1.0);
@@ -220,9 +323,9 @@ TEST_CASE("Fourier-Chebyshev Laplacian matches separable polynomials",
   std::vector<double> product_expect(product.size());
   const auto z = pfc::fft::chebyshev_lobatto(8);
   for (int iz = 0; iz <= 8; ++iz) {
-    const double t2 = 2.0 * z[static_cast<std::size_t>(iz)] *
-                          z[static_cast<std::size_t>(iz)] -
-                      1.0;
+    const double t2 =
+        2.0 * z[static_cast<std::size_t>(iz)] * z[static_cast<std::size_t>(iz)] -
+        1.0;
     for (int ix = 0; ix < 16; ++ix) {
       const double x = period * static_cast<double>(ix) / 16.0;
       product_expect[static_cast<std::size_t>(iz) * 16 +
@@ -232,11 +335,9 @@ TEST_CASE("Fourier-Chebyshev Laplacian matches separable polynomials",
   }
   REQUIRE(max_abs_diff(product_lap, product_expect) < 1e-9);
 
-  const auto nyquist = tensor_field(8, 2, period, [](double x, double) {
-    return std::cos(4.0 * x);
-  });
-  const auto nyquist_lap =
-      pfc::fft::fourier_chebyshev_laplacian(nyquist, 8, period);
+  const auto nyquist =
+      tensor_field(8, 2, period, [](double x, double) { return std::cos(4.0 * x); });
+  const auto nyquist_lap = pfc::fft::fourier_chebyshev_laplacian(nyquist, 8, period);
   std::vector<double> nyquist_expect(nyquist.size());
   for (std::size_t i = 0; i < nyquist.size(); ++i) {
     nyquist_expect[i] = -16.0 * nyquist[i];
@@ -252,17 +353,16 @@ TEST_CASE("Fourier-Chebyshev Laplacian of a smooth mode converges in z",
     const auto values = tensor_field(8, degree, period, [](double x, double z) {
       return std::sin(2.0 * x) * std::exp(z);
     });
-    const auto got =
-        pfc::fft::fourier_chebyshev_laplacian(values, 8, period);
+    const auto got = pfc::fft::fourier_chebyshev_laplacian(values, 8, period);
     const auto z = pfc::fft::chebyshev_lobatto(degree);
     double peak = 0.0;
     for (int iz = 0; iz <= degree; ++iz) {
       for (int ix = 0; ix < 8; ++ix) {
         const double x = period * static_cast<double>(ix) / 8.0;
-        const double expect = -3.0 * std::sin(2.0 * x) *
-                              std::exp(z[static_cast<std::size_t>(iz)]);
-        const auto index = static_cast<std::size_t>(iz) * 8 +
-                           static_cast<std::size_t>(ix);
+        const double expect =
+            -3.0 * std::sin(2.0 * x) * std::exp(z[static_cast<std::size_t>(iz)]);
+        const auto index =
+            static_cast<std::size_t>(iz) * 8 + static_cast<std::size_t>(ix);
         peak = std::max(peak, std::abs(got[index] - expect));
       }
     }
@@ -274,23 +374,18 @@ TEST_CASE("Fourier-Chebyshev Laplacian of a smooth mode converges in z",
   REQUIRE(fine < coarse);
 }
 
-TEST_CASE("Fourier-Chebyshev Laplacian rejects a bad grid",
-          "[fft][chebyshev]") {
+TEST_CASE("Fourier-Chebyshev Laplacian rejects a bad grid", "[fft][chebyshev]") {
   const std::vector<double> values{1.0, 2.0, 3.0, 4.0};
   REQUIRE_THROWS_AS(pfc::fft::fourier_chebyshev_laplacian({}, 4, 1.0),
                     std::invalid_argument);
-  REQUIRE_THROWS_AS(
-      pfc::fft::fourier_chebyshev_laplacian(values, 0, 1.0),
-      std::invalid_argument);
-  REQUIRE_THROWS_AS(
-      pfc::fft::fourier_chebyshev_laplacian(values, 3, 1.0),
-      std::invalid_argument);
-  REQUIRE_THROWS_AS(
-      pfc::fft::fourier_chebyshev_laplacian(values, 4, 0.0),
-      std::invalid_argument);
-  REQUIRE_THROWS_AS(
-      pfc::fft::fourier_chebyshev_laplacian(values, 4, -1.0),
-      std::invalid_argument);
+  REQUIRE_THROWS_AS(pfc::fft::fourier_chebyshev_laplacian(values, 0, 1.0),
+                    std::invalid_argument);
+  REQUIRE_THROWS_AS(pfc::fft::fourier_chebyshev_laplacian(values, 3, 1.0),
+                    std::invalid_argument);
+  REQUIRE_THROWS_AS(pfc::fft::fourier_chebyshev_laplacian(values, 4, 0.0),
+                    std::invalid_argument);
+  REQUIRE_THROWS_AS(pfc::fft::fourier_chebyshev_laplacian(values, 4, -1.0),
+                    std::invalid_argument);
 }
 
 TEST_CASE("Fourier-Fourier-Chebyshev Laplacian matches separable polynomials",
@@ -2172,19 +2267,18 @@ TEST_CASE("Chebyshev Dirichlet Poisson recovers polynomial solutions",
   };
 
   REQUIRE(error_of(
-              8, [](double) { return -2.0; },
-              [](double x) { return 1.0 - x * x; }, 0.0, 0.0) < 1e-11);
+              8, [](double) { return -2.0; }, [](double x) { return 1.0 - x * x; },
+              0.0, 0.0) < 1e-11);
   REQUIRE(error_of(
-              8, [](double) { return 0.0; }, [](double x) { return x; }, 1.0,
-              -1.0) < 1e-12);
+              8, [](double) { return 0.0; }, [](double x) { return x; }, 1.0, -1.0) <
+          1e-12);
   REQUIRE(error_of(
               10, [](double x) { return -6.0 * x; },
               [](double x) { return x - x * x * x; }, 0.0, 0.0) < 1e-11);
 
   const auto nodes = pfc::fft::chebyshev_lobatto(12);
   const std::vector<double> forcing(nodes.size(), -2.0);
-  const auto solution =
-      pfc::fft::chebyshev_dirichlet_poisson(forcing, 0.0, 0.0);
+  const auto solution = pfc::fft::chebyshev_dirichlet_poisson(forcing, 0.0, 0.0);
   const auto second =
       pfc::fft::chebyshev_derivative(pfc::fft::chebyshev_derivative(solution));
   REQUIRE(max_abs_diff(second, forcing) < 1e-9);
@@ -2200,8 +2294,8 @@ TEST_CASE("Chebyshev Dirichlet Poisson converges for a smooth forcing",
       forcing[j] = std::exp(nodes[j]);
       truth[j] = std::exp(nodes[j]);
     }
-    const auto got = pfc::fft::chebyshev_dirichlet_poisson(
-        forcing, std::exp(1.0), std::exp(-1.0));
+    const auto got = pfc::fft::chebyshev_dirichlet_poisson(forcing, std::exp(1.0),
+                                                           std::exp(-1.0));
     return max_abs_diff(got, truth);
   };
   const double coarse = error_at(8);

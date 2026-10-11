@@ -63,8 +63,7 @@ chebyshev_derivative(std::span<const double> values);
 /// The other axis is Chebyshev–Lobatto, stored from +1 down to -1.
 /// `values` is row-major with the periodic index contiguous.
 [[nodiscard]] std::vector<double>
-fourier_chebyshev_laplacian(std::span<const double> values, int nx,
-                            double period);
+fourier_chebyshev_laplacian(std::span<const double> values, int nx, double period);
 
 /// Laplacian d²/dz² + d²/dy² + d²/dx² on one rank.
 /// `nx` and `ny` uniform nodes span periodic intervals `period_x`
@@ -207,7 +206,9 @@ chebyshev_neumann_poisson(std::span<const double> forcing, double slope_at_plus,
 
 /// Solve u'' - lambda u = forcing on [-1, 1], with both endpoints
 /// prescribed. A zero lambda reuses the Dirichlet Poisson solve.
-/// The two highest modes are fixed by the endpoint values.
+/// Nonzero lambda uses twice-integrated coefficient equations and boundary
+/// rows with a row-scaled, pivoted solve (quadratic storage, cubic worst-case
+/// work). It avoids downward-recurrence cancellation; no modes are filtered.
 /// `forcing` is sampled on the Lobatto grid from +1 down to -1.
 /// The result uses that same grid.
 [[nodiscard]] std::vector<double>
@@ -216,7 +217,7 @@ chebyshev_dirichlet_helmholtz(std::span<const double> forcing, double lambda,
 
 /// Solve u'' - lambda u = forcing on [-1, 1], with both endpoint
 /// slopes prescribed. A zero lambda reuses the Neumann Poisson solve.
-/// The two highest modes are set by the endpoint slopes.
+/// Nonzero lambda uses the same integrated coefficient solve as Dirichlet.
 /// `forcing` is sampled on the Lobatto grid from +1 down to -1.
 /// The result uses that same grid.
 [[nodiscard]] std::vector<double>

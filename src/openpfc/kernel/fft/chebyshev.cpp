@@ -13,8 +13,8 @@
  * constants are fixed by the endpoint values. Neumann Poisson uses
  * the same integrals, rejects a slope jump the forcing cannot
  * support, and fixes the constant so the integral is zero.
- * Dirichlet Helmholtz uses a tau recurrence for u'' - lambda u = f.
- * The two highest coefficients match the endpoint values. A zero
+ * Helmholtz uses twice-integrated coefficient equations and two
+ * boundary rows for u'' - lambda u = f. A zero
  * lambda reuses the Poisson integral. Neumann Helmholtz matches both
  * endpoint slopes. A zero lambda reuses the Neumann Poisson solve.
  * Robin Poisson mixes the value and the slope at each end. Pure
@@ -36,6 +36,7 @@
 
 #include <openpfc/kernel/fft/chebyshev.hpp>
 
+#include <algorithm>
 #include <cmath>
 #include <complex>
 #include <fftw3.h>
@@ -106,7 +107,8 @@ struct Plan {
   if (samples.empty()) {
     throw std::invalid_argument(what);
   }
-  if (samples.size() > static_cast<std::size_t>(std::vector<double>{}.max_size() / 2)) {
+  if (samples.size() >
+      static_cast<std::size_t>(std::vector<double>{}.max_size() / 2)) {
     throw std::invalid_argument("chebyshev: grid is too large");
   }
   return static_cast<int>(samples.size()) - 1;
@@ -158,8 +160,7 @@ forward_bins(std::span<const double> values) {
   return (2.0 * pi * static_cast<double>(alias)) / period;
 }
 
-[[nodiscard]] std::vector<double>
-second_derivative(std::span<const double> values) {
+[[nodiscard]] std::vector<double> second_derivative(std::span<const double> values) {
   return chebyshev_derivative(chebyshev_derivative(values));
 }
 
@@ -184,46 +185,13 @@ integrate_coefficients(std::span<const double> derivative) {
   double ahead = 0.0;
   double current = 0.0;
   for (int k = static_cast<int>(coefficients.size()) - 1; k >= 1; --k) {
-    const double updated = 2.0 * x * current - ahead +
-                           coefficients[static_cast<std::size_t>(k)];
+    const double updated =
+        2.0 * x * current - ahead + coefficients[static_cast<std::size_t>(k)];
     ahead = current;
     current = updated;
   }
   const double constant = coefficients.empty() ? 0.0 : coefficients.front();
   return constant + x * current - ahead;
-}
-
-/// Coefficient of T_k in u'', for u = sum a_j T_j.
-/// Only modes j >= k + 2 of the same parity contribute.
-[[nodiscard]] double
-second_derivative_coefficient(std::span<const double> coefficients, int mode) {
-  const double weight = (mode == 0) ? 2.0 : 1.0;
-  double sum = 0.0;
-  const double wave = static_cast<double>(mode);
-  for (int j = mode + 2; j < static_cast<int>(coefficients.size()); j += 2) {
-    const double higher = static_cast<double>(j);
-    sum += higher * (higher * higher - wave * wave) *
-           coefficients[static_cast<std::size_t>(j)];
-  }
-  return sum / weight;
-}
-
-/// Coefficients of a polynomial solution with the two highest modes set.
-[[nodiscard]] std::vector<double> helmholtz_series(std::span<const double> forcing,
-                                                   double lambda, double highest,
-                                                   double next) {
-  const int degree = static_cast<int>(forcing.size()) - 1;
-  std::vector<double> coefficients(forcing.size(), 0.0);
-  coefficients[static_cast<std::size_t>(degree)] = highest;
-  if (degree >= 1) {
-    coefficients[static_cast<std::size_t>(degree - 1)] = next;
-  }
-  for (int mode = degree - 2; mode >= 0; --mode) {
-    const double second = second_derivative_coefficient(coefficients, mode);
-    coefficients[static_cast<std::size_t>(mode)] =
-        (second - forcing[static_cast<std::size_t>(mode)]) / lambda;
-  }
-  return coefficients;
 }
 
 struct EndpointSum {
@@ -241,40 +209,8 @@ struct EndpointSum {
   return sum;
 }
 
-/// T_k'(1) = k^2 and T_k'(-1) = (-1)^{k-1} k^2.
-[[nodiscard]] EndpointSum slope_sum(std::span<const double> coefficients) {
-  EndpointSum sum;
-  for (int mode = 1; mode < static_cast<int>(coefficients.size()); ++mode) {
-    const double weight = static_cast<double>(mode) * static_cast<double>(mode) *
-                          coefficients[static_cast<std::size_t>(mode)];
-    sum.at_plus += weight;
-    sum.at_minus += (mode % 2 == 1) ? weight : -weight;
-  }
-  return sum;
-}
-
-enum class HelmholtzMatch { values, slopes };
-
-[[nodiscard]] EndpointSum matched_ends(std::span<const double> coefficients,
-                                       HelmholtzMatch match) {
-  if (match == HelmholtzMatch::values) return endpoint_sum(coefficients);
-  return slope_sum(coefficients);
-}
-
-[[nodiscard]] bool coefficients_finite(std::span<const double> coefficients) {
-  for (double value : coefficients) {
-    if (!std::isfinite(value)) return false;
-  }
-  return true;
-}
-
 [[nodiscard]] double column_scale(double at_plus, double at_minus) {
-  double scale = 1.0;
-  const double plus = std::abs(at_plus);
-  const double minus = std::abs(at_minus);
-  if (plus > scale) scale = plus;
-  if (minus > scale) scale = minus;
-  return scale;
+  return std::max({1.0, std::abs(at_plus), std::abs(at_minus)});
 }
 
 [[nodiscard]] std::vector<double>
@@ -287,53 +223,6 @@ evaluate_series(std::span<const double> coefficients, int degree) {
   return values;
 }
 
-[[nodiscard]] std::vector<double>
-solve_matched_helmholtz(std::span<const double> forcing, double lambda,
-                        double at_plus, double at_minus, HelmholtzMatch match,
-                        const char *singular) {
-  const int degree = static_cast<int>(forcing.size()) - 1;
-  const auto coefficients = chebyshev_coefficients(forcing);
-  const auto particular = helmholtz_series(coefficients, lambda, 0.0, 0.0);
-  const std::vector<double> zero(coefficients.size(), 0.0);
-  const auto along_highest = helmholtz_series(zero, lambda, 1.0, 0.0);
-  const auto along_next = helmholtz_series(zero, lambda, 0.0, 1.0);
-  if (!coefficients_finite(particular) || !coefficients_finite(along_highest) ||
-      !coefficients_finite(along_next)) {
-    throw std::invalid_argument("chebyshev: Helmholtz degree is too large");
-  }
-
-  const auto particular_ends = matched_ends(particular, match);
-  const auto highest_ends = matched_ends(along_highest, match);
-  const auto next_ends = matched_ends(along_next, match);
-  const double highest_scale =
-      column_scale(highest_ends.at_plus, highest_ends.at_minus);
-  const double next_scale = column_scale(next_ends.at_plus, next_ends.at_minus);
-  const double highest_plus = highest_ends.at_plus / highest_scale;
-  const double highest_minus = highest_ends.at_minus / highest_scale;
-  const double next_plus = next_ends.at_plus / next_scale;
-  const double next_minus = next_ends.at_minus / next_scale;
-  const double determinant = highest_plus * next_minus - next_plus * highest_minus;
-  if (!(std::abs(determinant) > 1e-8)) {
-    throw std::invalid_argument(singular);
-  }
-  const double rhs_plus = at_plus - particular_ends.at_plus;
-  const double rhs_minus = at_minus - particular_ends.at_minus;
-  const double highest =
-      (rhs_plus * next_minus - next_plus * rhs_minus) / determinant / highest_scale;
-  const double next = (highest_plus * rhs_minus - highest_minus * rhs_plus) /
-                      determinant / next_scale;
-
-  std::vector<double> solution(coefficients.size());
-  for (std::size_t mode = 0; mode < solution.size(); ++mode) {
-    solution[mode] =
-        particular[mode] + highest * along_highest[mode] + next * along_next[mode];
-  }
-  if (!coefficients_finite(solution)) {
-    throw std::invalid_argument("chebyshev: Helmholtz degree is too large");
-  }
-  return evaluate_series(solution, degree);
-}
-
 struct RobinWeights {
   double value_plus{0.0};
   double slope_plus{0.0};
@@ -341,59 +230,106 @@ struct RobinWeights {
   double slope_minus{0.0};
 };
 
-[[nodiscard]] EndpointSum robin_boundary(std::span<const double> coefficients,
-                                         RobinWeights weights) {
-  const auto values = endpoint_sum(coefficients);
-  const auto slopes = slope_sum(coefficients);
-  return EndpointSum{
-      weights.value_plus * values.at_plus + weights.slope_plus * slopes.at_plus,
-      weights.value_minus * values.at_minus + weights.slope_minus * slopes.at_minus};
-}
-
+/// Twice-integrated coefficient equations:
+/// a_k - lambda (J^2 a)_k = (J^2 f)_k, k=2,...,N.
+/// J uses zero integration constant. The first two equations are the
+/// boundary conditions, not unstable downward homogeneous recurrences.
+/// Keep J's two extra modes until the second integration is complete.
 [[nodiscard]] std::vector<double>
-solve_robin_helmholtz(std::span<const double> forcing, double lambda,
-                      RobinWeights weights, double data_plus, double data_minus) {
-  const int degree = static_cast<int>(forcing.size()) - 1;
-  const auto coefficients = chebyshev_coefficients(forcing);
-  const auto particular = helmholtz_series(coefficients, lambda, 0.0, 0.0);
-  const std::vector<double> zero(coefficients.size(), 0.0);
-  const auto along_highest = helmholtz_series(zero, lambda, 1.0, 0.0);
-  const auto along_next = helmholtz_series(zero, lambda, 0.0, 1.0);
-  if (!coefficients_finite(particular) || !coefficients_finite(along_highest) ||
-      !coefficients_finite(along_next)) {
-    throw std::invalid_argument("chebyshev: Helmholtz degree is too large");
+solve_integrated_helmholtz(std::span<const double> forcing, double lambda,
+                           RobinWeights weights, double data_plus, double data_minus,
+                           const char *singular) {
+  for (double value :
+       {lambda, weights.value_plus, weights.slope_plus, weights.value_minus,
+        weights.slope_minus, data_plus, data_minus}) {
+    if (!std::isfinite(value))
+      throw std::invalid_argument("chebyshev: nonfinite Helmholtz data");
+  }
+  for (double value : forcing)
+    if (!std::isfinite(value))
+      throw std::invalid_argument("chebyshev: nonfinite Helmholtz forcing");
+
+  // Pure value/slope problems have known continuous resonances. Finite
+  // truncation can shift a pole enough that pivot checks alone miss it.
+  const bool pure_values = weights.slope_plus == 0 && weights.slope_minus == 0;
+  const bool pure_slopes = weights.value_plus == 0 && weights.value_minus == 0;
+  if (lambda < 0 && (pure_values || pure_slopes)) {
+    const double mode = 2 * std::sqrt(-lambda) / std::acos(-1.0);
+    if (mode >= 1 &&
+        std::abs(mode - std::round(mode)) <=
+            64 * std::numeric_limits<double>::epsilon() * std::max(1.0, mode))
+      throw std::invalid_argument(singular);
   }
 
-  const auto particular_ends = robin_boundary(particular, weights);
-  const auto highest_ends = robin_boundary(along_highest, weights);
-  const auto next_ends = robin_boundary(along_next, weights);
-  const double highest_scale =
-      column_scale(highest_ends.at_plus, highest_ends.at_minus);
-  const double next_scale = column_scale(next_ends.at_plus, next_ends.at_minus);
-  const double highest_plus = highest_ends.at_plus / highest_scale;
-  const double highest_minus = highest_ends.at_minus / highest_scale;
-  const double next_plus = next_ends.at_plus / next_scale;
-  const double next_minus = next_ends.at_minus / next_scale;
-  const double determinant = highest_plus * next_minus - next_plus * highest_minus;
-  if (!(std::abs(determinant) > 1e-8)) {
-    throw std::invalid_argument("chebyshev: Helmholtz Robin problem is singular");
+  const auto n = forcing.size();
+  if (n > std::vector<long double>{}.max_size() / n)
+    throw std::invalid_argument("chebyshev: Helmholtz matrix is too large");
+  std::vector<long double> matrix(n * n, 0), rhs(n);
+  const auto integrated = integrate_coefficients(
+      integrate_coefficients(chebyshev_coefficients(forcing)));
+  rhs[0] = data_plus;
+  rhs[1] = data_minus;
+  for (std::size_t row = 2; row < n; ++row) rhs[row] = integrated[row];
+  std::vector<double> unit(n, 0);
+  for (std::size_t col = 0; col < n; ++col) {
+    unit[col] = 1;
+    const auto twice = integrate_coefficients(integrate_coefficients(unit));
+    unit[col] = 0;
+    const long double k = col, sign = col % 2 == 0 ? 1 : -1;
+    // T_k(+1)=1, T_k(-1)=(-1)^k; derivatives k^2 and -(-1)^k k^2.
+    matrix[col] = weights.value_plus + weights.slope_plus * k * k;
+    matrix[n + col] = sign * (weights.value_minus - weights.slope_minus * k * k);
+    for (std::size_t row = 2; row < n; ++row)
+      matrix[row * n + col] =
+          (row == col ? 1 : 0) - static_cast<long double>(lambda) * twice[row];
   }
-  const double rhs_plus = data_plus - particular_ends.at_plus;
-  const double rhs_minus = data_minus - particular_ends.at_minus;
-  const double highest =
-      (rhs_plus * next_minus - next_plus * rhs_minus) / determinant / highest_scale;
-  const double next = (highest_plus * rhs_minus - highest_minus * rhs_plus) /
-                      determinant / next_scale;
 
-  std::vector<double> solution(coefficients.size());
-  for (std::size_t mode = 0; mode < solution.size(); ++mode) {
-    solution[mode] =
-        particular[mode] + highest * along_highest[mode] + next * along_next[mode];
+  // Row equilibration and partial pivoting. Extended precision protects
+  // boundary slope sums; it is not a substitute for the integral formulation.
+  for (std::size_t row = 0; row < n; ++row) {
+    long double scale = 0;
+    for (std::size_t col = 0; col < n; ++col)
+      scale = std::max(scale, std::abs(matrix[row * n + col]));
+    if (!(scale > 0) || !std::isfinite(scale)) throw std::invalid_argument(singular);
+    for (std::size_t col = 0; col < n; ++col) matrix[row * n + col] /= scale;
+    rhs[row] /= scale;
   }
-  if (!coefficients_finite(solution)) {
-    throw std::invalid_argument("chebyshev: Helmholtz degree is too large");
+  // Inputs and integration weights are doubles: judge unresolved pivots
+  // against their precision, not the elimination accumulator's precision.
+  const long double tolerance = 64 * n * std::numeric_limits<double>::epsilon();
+  for (std::size_t col = 0; col < n; ++col) {
+    std::size_t pivot = col;
+    for (std::size_t row = col + 1; row < n; ++row)
+      if (std::abs(matrix[row * n + col]) > std::abs(matrix[pivot * n + col]))
+        pivot = row;
+    if (!(std::abs(matrix[pivot * n + col]) > tolerance))
+      throw std::invalid_argument(singular);
+    if (pivot != col) {
+      for (std::size_t j = col; j < n; ++j)
+        std::swap(matrix[col * n + j], matrix[pivot * n + j]);
+      std::swap(rhs[col], rhs[pivot]);
+    }
+    for (std::size_t row = col + 1; row < n; ++row) {
+      const long double factor = matrix[row * n + col] / matrix[col * n + col];
+      matrix[row * n + col] = 0;
+      if (factor == 0) continue;
+      for (std::size_t j = col + 1; j < n; ++j)
+        matrix[row * n + j] -= factor * matrix[col * n + j];
+      rhs[row] -= factor * rhs[col];
+    }
   }
-  return evaluate_series(solution, degree);
+  for (std::size_t row = n; row-- > 0;) {
+    for (std::size_t col = row + 1; col < n; ++col)
+      rhs[row] -= matrix[row * n + col] * rhs[col];
+    rhs[row] /= matrix[row * n + row];
+  }
+  std::vector<double> solution(n);
+  for (std::size_t j = 0; j < n; ++j) {
+    solution[j] = static_cast<double>(rhs[j]);
+    if (!std::isfinite(solution[j]))
+      throw std::invalid_argument("chebyshev: nonfinite Helmholtz solution");
+  }
+  return evaluate_series(solution, static_cast<int>(n) - 1);
 }
 
 /// Derivative along one periodic axis. A count below 2 is zero and
@@ -543,11 +479,13 @@ std::vector<double> chebyshev_derivative(std::span<const double> values) {
   std::vector<std::complex<double>> spectrum(static_cast<std::size_t>(m));
   for (int k = 0; k < m; ++k) {
     int wave = 0;
-    if (k < n) wave = k;
-    else if (k > n) wave = k - m;
+    if (k < n)
+      wave = k;
+    else if (k > n)
+      wave = k - m;
     const auto bin = bins[static_cast<std::size_t>(k)];
-    spectrum[static_cast<std::size_t>(k)] = std::complex<double>(0.0, 1.0) *
-                                            static_cast<double>(wave) * bin;
+    spectrum[static_cast<std::size_t>(k)] =
+        std::complex<double>(0.0, 1.0) * static_cast<double>(wave) * bin;
   }
   Plan plan(m);
   plan.load(spectrum);
@@ -558,8 +496,7 @@ std::vector<double> chebyshev_derivative(std::span<const double> values) {
     const double x = nodes[static_cast<std::size_t>(j)];
     const double sine = std::sqrt(1.0 - x * x);
     derivative[static_cast<std::size_t>(j)] =
-        -theta[static_cast<std::size_t>(j)].real() /
-        (static_cast<double>(m) * sine);
+        -theta[static_cast<std::size_t>(j)].real() / (static_cast<double>(m) * sine);
   }
 
   double left = 0.0;
@@ -580,20 +517,16 @@ std::vector<double> chebyshev_derivative(std::span<const double> values) {
   return derivative;
 }
 
-std::vector<double>
-fourier_chebyshev_laplacian(std::span<const double> values, int nx,
-                            double period) {
+std::vector<double> fourier_chebyshev_laplacian(std::span<const double> values,
+                                                int nx, double period) {
   if (nx < 1) {
-    throw std::invalid_argument(
-        "chebyshev: periodic count must be positive");
+    throw std::invalid_argument("chebyshev: periodic count must be positive");
   }
   if (!(period > 0.0)) {
     throw std::invalid_argument("chebyshev: period must be positive");
   }
-  if (values.empty() ||
-      values.size() % static_cast<std::size_t>(nx) != 0) {
-    throw std::invalid_argument(
-        "chebyshev: values do not match the periodic count");
+  if (values.empty() || values.size() % static_cast<std::size_t>(nx) != 0) {
+    throw std::invalid_argument("chebyshev: values do not match the periodic count");
   }
   const auto lines = values.size() / static_cast<std::size_t>(nx);
   if (lines > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
@@ -1970,15 +1903,13 @@ PartialDerivatives fourier_chebyshev_gradient(std::span<const double> values, in
   return gradient;
 }
 
-std::vector<double>
-chebyshev_dirichlet_poisson(std::span<const double> forcing,
-                            double value_at_plus, double value_at_minus) {
+std::vector<double> chebyshev_dirichlet_poisson(std::span<const double> forcing,
+                                                double value_at_plus,
+                                                double value_at_minus) {
   if (forcing.size() < 2) {
-    throw std::invalid_argument(
-        "chebyshev: Dirichlet Poisson needs both endpoints");
+    throw std::invalid_argument("chebyshev: Dirichlet Poisson needs both endpoints");
   }
-  if (forcing.size() >
-      static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+  if (forcing.size() > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
     throw std::invalid_argument("chebyshev: grid is too large");
   }
   const int degree = static_cast<int>(forcing.size()) - 1;
@@ -1994,8 +1925,7 @@ chebyshev_dirichlet_poisson(std::span<const double> forcing,
   }
   solution.front() +=
       0.5 * ((value_at_plus + value_at_minus) - (at_plus + at_minus));
-  solution[1] +=
-      0.5 * ((value_at_plus - value_at_minus) - (at_plus - at_minus));
+  solution[1] += 0.5 * ((value_at_plus - value_at_minus) - (at_plus - at_minus));
 
   const auto nodes = chebyshev_lobatto(degree);
   std::vector<double> values(nodes.size());
@@ -2065,8 +1995,8 @@ std::vector<double> chebyshev_dirichlet_helmholtz(std::span<const double> forcin
   if (lambda == 0.0) {
     return chebyshev_dirichlet_poisson(forcing, value_at_plus, value_at_minus);
   }
-  return solve_matched_helmholtz(
-      forcing, lambda, value_at_plus, value_at_minus, HelmholtzMatch::values,
+  return solve_integrated_helmholtz(
+      forcing, lambda, RobinWeights{1, 0, 1, 0}, value_at_plus, value_at_minus,
       "chebyshev: Helmholtz Dirichlet problem is singular");
 }
 
@@ -2082,9 +2012,9 @@ std::vector<double> chebyshev_neumann_helmholtz(std::span<const double> forcing,
   if (lambda == 0.0) {
     return chebyshev_neumann_poisson(forcing, slope_at_plus, slope_at_minus);
   }
-  return solve_matched_helmholtz(forcing, lambda, slope_at_plus, slope_at_minus,
-                                 HelmholtzMatch::slopes,
-                                 "chebyshev: Helmholtz Neumann problem is singular");
+  return solve_integrated_helmholtz(
+      forcing, lambda, RobinWeights{0, 1, 0, 1}, slope_at_plus, slope_at_minus,
+      "chebyshev: Helmholtz Neumann problem is singular");
 }
 
 std::vector<double>
@@ -2179,10 +2109,11 @@ chebyshev_robin_helmholtz(std::span<const double> forcing, double lambda,
                                        data_plus / slope_weight_plus,
                                        data_minus / slope_weight_minus);
   }
-  return solve_robin_helmholtz(forcing, lambda,
-                               RobinWeights{value_weight_plus, slope_weight_plus,
-                                            value_weight_minus, slope_weight_minus},
-                               data_plus, data_minus);
+  return solve_integrated_helmholtz(
+      forcing, lambda,
+      RobinWeights{value_weight_plus, slope_weight_plus, value_weight_minus,
+                   slope_weight_minus},
+      data_plus, data_minus, "chebyshev: Helmholtz Robin problem is singular");
 }
 
 } // namespace pfc::fft
