@@ -17,6 +17,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   stays on the unloading branch. Existing `stress` and `tangent_action`
   results are unchanged.
 
+- Device-resident two-field explicit RK: `create(std::tie(u, v), eval, model,
+  dt, tableau)` on `Field<double, CUDASpace>` / `HIPSpace` keeps stage
+  buffers and accumulation on the device and refreshes Full halos through
+  `eval.prepare()`.
+
 ### Fixed
 
 - Configure with CMake 4 using nlohmann-json 3.11.3 without a

@@ -70,6 +70,7 @@
 #if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
 
 #include <cstddef>
+#include <functional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -457,7 +458,10 @@ private:
  *
  * Mirrors CPU `pfc::field::CompositeGradient<Composite, PerField...>`:
  * constructor takes one `FDGradientDevice<PerFieldGrads>` per field,
- * `prepare()` is a no-op fan-out, and `pod()` returns the packed payload.
+ * `prepare()` runs an optional host callback (typically Full halo
+ * exchange), and `pod()` returns the packed payload. The callback is the
+ * device counterpart of `FDGradient`'s halo prepare hook; mixed
+ * derivatives need valid edge and corner ghosts.
  */
 template <class Composite, class... PerFieldGrads> class CompositeGradientDevice {
 public:
@@ -473,7 +477,12 @@ public:
     }
   }
 
-  void prepare() noexcept {}
+  /// Host-only hook invoked by `prepare()` (halo exchange, not a kernel).
+  void set_prepare(std::function<void()> fn) { m_prepare = std::move(fn); }
+
+  void prepare() {
+    if (m_prepare) m_prepare();
+  }
 
   [[nodiscard]] const CompositeGradientDevicePOD &pod() const noexcept {
     return m_pod;
@@ -488,6 +497,7 @@ public:
 
 private:
   CompositeGradientDevicePOD m_pod{};
+  std::function<void()> m_prepare{};
 };
 
 /**
