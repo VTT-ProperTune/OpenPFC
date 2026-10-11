@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
-#include <cuda_runtime.h>
+#include <openpfc/runtime/gpu/gpu_api.hpp>
 #include <stdexcept>
 __global__ void toy_action(int n, const double *x, double *y, int kind,
                            const double *state) {
@@ -14,6 +14,6 @@ __global__ void toy_action(int n, const double *x, double *y, int kind,
 void solver_toy(int n, const double *x, double *y, int kind,
                 const double *state = nullptr) {
   toy_action<<<(n + 255) / 256, 256>>>(n, x, y, kind, state);
-  if (cudaGetLastError() != cudaSuccess)
+  if (pfc::gpuGetLastError() != pfc::gpuSuccess)
     throw std::runtime_error("toy launch failed");
 }
