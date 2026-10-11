@@ -58,6 +58,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   finite-strain FFT defaults to GMRES and retains caller-established SPD CG
   (#403).
 
+- Residual-based inexact Newton provides adaptive forcing, Armijo trials
+  and rollback hooks. Its FFT adapter collectively admits local material
+  failures before projection (#406).
+
 ### Fixed
 
 - Configure with CMake 4 using nlohmann-json 3.11.3 without a
