@@ -13,7 +13,9 @@
  *
  * `tangent_action(F, dF)` is the directional derivative `dP`. It is the
  * action that the Newton step writes as `K^{LT} : dF^T` in de Geus et al.,
- * Eq. (23). The fourth-order tensor is not stored.
+ * Eq. (23). `evaluate_saint_venant` stores that same derivative by
+ * applying it to the nine basis tensors. There is no history and no
+ * constitutive integration.
  */
 
 #pragma once
@@ -23,6 +25,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include <openpfc/mechanics/piola_tangent.hpp>
 #include <openpfc/mechanics/tensor.hpp>
 
 namespace pfc::finite_strain {
@@ -82,6 +85,31 @@ constitutive_response(const Tensor2 &deformation, IsotropicModuli moduli) noexce
   return add(matmul(increment, second_pk), matmul(deformation, stress_inc));
 }
 
+/// Stress and stored tangent. The tangent is nine analytic actions.
+struct SaintVenantEvaluation {
+  StressResponse response;
+  PiolaTangent tangent;
+};
+
+[[nodiscard]] inline SaintVenantEvaluation
+evaluate_saint_venant(const Tensor2 &deformation, IsotropicModuli moduli) noexcept {
+  SaintVenantEvaluation out;
+  out.response = constitutive_response(deformation, moduli);
+  for (int column = 0; column < 3; ++column) {
+    for (int row = 0; row < 3; ++row) {
+      Tensor2 increment{};
+      increment(row, column) = 1.0;
+      const Tensor2 stress = tangent_action(deformation, increment, moduli);
+      for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+          out.tangent(i, j, row, column) = stress(i, j);
+        }
+      }
+    }
+  }
+  return out;
+}
+
 /**
  * Saint-Venant-Kirchhoff response on an FFT inbox.
  *
@@ -107,6 +135,11 @@ public:
 
   [[nodiscard]] Tensor2 stress(std::size_t index, const Tensor2 &deformation) const {
     return constitutive_response(deformation, moduli_at(index)).piola;
+  }
+
+  [[nodiscard]] SaintVenantEvaluation evaluate(std::size_t index,
+                                               const Tensor2 &deformation) const {
+    return evaluate_saint_venant(deformation, moduli_at(index));
   }
 
   [[nodiscard]] Tensor2 tangent_action(std::size_t index, const Tensor2 &deformation,

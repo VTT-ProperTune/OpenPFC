@@ -33,8 +33,8 @@
  * frozen resistance. The resistance is then a fixed point. A rejected
  * increment leaves the committed `(Fp, ξ, γ, Lp)` unchanged. The tangent
  * is `dP_ij / dF_kl` in the sample frame, including the hardening
- * sensitivity, and is the linearization consumed by the existing Newton
- * solver.
+ * sensitivity. `evaluate_fcc` returns that tensor with the trial state
+ * from the same slip update.
  */
 
 #pragma once
@@ -48,6 +48,8 @@
 #include <vector>
 
 #include <openpfc/mechanics/constitutive/history.hpp>
+#include <openpfc/mechanics/constitutive/integration_count.hpp>
+#include <openpfc/mechanics/piola_tangent.hpp>
 #include <openpfc/mechanics/tensor.hpp>
 
 namespace pfc::finite_strain {
@@ -752,6 +754,21 @@ factor_tangent(const FccSlipParameters &parameters, const Tensor2 &plastic_inver
   return tangent;
 }
 
+[[nodiscard]] inline PiolaTangent
+published_tangent(const Tangent &tangent) noexcept {
+  PiolaTangent out;
+  for (int i = 0; i < 3; ++i) {
+    for (int j = 0; j < 3; ++j) {
+      for (int k = 0; k < 3; ++k) {
+        for (int l = 0; l < 3; ++l) {
+          out(i, j, k, l) = tangent(i, j, k, l);
+        }
+      }
+    }
+  }
+  return out;
+}
+
 [[nodiscard]] inline Tensor2 apply_tangent(const Tangent &tangent,
                                            const Tensor2 &increment) noexcept {
   Tensor2 out;
@@ -789,6 +806,7 @@ factor_tangent(const FccSlipParameters &parameters, const Tensor2 &plastic_inver
   if (!proper_rotation(orientation)) {
     throw std::invalid_argument("crystal orientation must be a proper rotation");
   }
+  detail::note_constitutive_integration();
   const Tensor2 crystal_deformation = push_forward(orientation, deformation);
   const Tensor2 plastic_inverse = inverse(committed.plastic);
   const Tensor2 mapper = matmul(crystal_deformation, plastic_inverse);
@@ -861,6 +879,27 @@ factor_tangent(const FccSlipParameters &parameters, const Tensor2 &plastic_inver
 
 } // namespace crystal
 
+/// Stress, sample-frame tangent, and trial slip state from one update.
+///
+/// `update.state` is the trial. It is not published. The tangent is the
+/// linearization of this update, already formed inside the slip solve.
+struct FccEvaluation {
+  FccSlipUpdate update;
+  PiolaTangent tangent;
+};
+
+[[nodiscard]] inline FccEvaluation evaluate_fcc(const FccSlipParameters &parameters,
+                                                const Tensor2 &orientation,
+                                                const FccSlipState &state,
+                                                const Tensor2 &deformation) {
+  const crystal::Integrated integrated =
+      crystal::integrate(parameters, orientation, state, deformation);
+  FccEvaluation out;
+  out.update = integrated.update;
+  out.tangent = crystal::published_tangent(integrated.tangent);
+  return out;
+}
+
 [[nodiscard]] inline FccSlipUpdate integrate_fcc(const FccSlipParameters &parameters,
                                                  const Tensor2 &orientation,
                                                  const FccSlipState &state,
@@ -882,10 +921,13 @@ factor_tangent(const FccSlipParameters &parameters, const Tensor2 &plastic_inver
  * Per-point FCC slip. Orientation is configuration. Plastic history moves
  * only through `begin_trial`, `stage`, `accept`, and `reject`.
  *
- * `accept` keeps the tangent of that step. The next increment's first
- * Krylov solve linearizes at the accepted deformation and receives that
- * stored tangent. A later iteration, at an updated deformation, linearizes
- * the committed state directly.
+ * `evaluate` returns the stress, the tangent of this new slip update, and
+ * the trial state. It does not publish that state. `accept` keeps the
+ * tangent of the step it publishes. `accepted_tangent` reads that tensor.
+ * `tangent_action` returns it when the deformation is the accepted one,
+ * which is the predictor used by the first Krylov product of an
+ * incremental solve. At any other deformation, `tangent_action` uses the
+ * same update as `evaluate`.
  */
 class FccSlipMaterial {
 public:
@@ -907,6 +949,29 @@ public:
 
   [[nodiscard]] Tensor2 stress(std::size_t index, const Tensor2 &deformation) const {
     return response_at(index, deformation).update.piola;
+  }
+
+  /// Fresh slip update at `deformation`. Does not publish the trial state.
+  [[nodiscard]] FccEvaluation evaluate(std::size_t index,
+                                       const Tensor2 &deformation) const {
+    const crystal::Integrated &integrated = response_at(index, deformation);
+    FccEvaluation out;
+    out.update = integrated.update;
+    out.tangent = crystal::published_tangent(integrated.tangent);
+    return out;
+  }
+
+  [[nodiscard]] bool has_accepted_tangent(std::size_t index) const {
+    return lagged_.at(index).valid;
+  }
+
+  /// Tangent stored by the last `accept` at this point.
+  [[nodiscard]] PiolaTangent accepted_tangent(std::size_t index) const {
+    const Linearization &lagged = lagged_.at(index);
+    if (!lagged.valid) {
+      throw std::logic_error("FCC point has no accepted tangent");
+    }
+    return crystal::published_tangent(lagged.tangent);
   }
 
   [[nodiscard]] Tensor2 tangent_action(std::size_t index, const Tensor2 &deformation,

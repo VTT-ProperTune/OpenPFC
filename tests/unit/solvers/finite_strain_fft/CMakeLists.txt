@@ -6,6 +6,7 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_saint_venant_kirchhoff.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_simo_j2.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_crystal_plasticity.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_constitutive_evaluation.cpp
 )
 
 if(OpenPFC_ENABLE_HEFFTE)

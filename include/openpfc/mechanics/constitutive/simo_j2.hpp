@@ -8,10 +8,10 @@
  * The update is the elastic-predictor / plastic-corrector used by the
  * GooseFFT program `finite-strain/elasto-plasticity.py`: logarithmic strain
  * of the elastic Finger tensor, a von Mises yield function, associative
- * flow, and linear isotropic hardening. The global solver sees only `P`
- * and the action of the consistent tangent. Plastic history stays in this
- * law and moves only through `begin_trial`, `stage`, `accept`, and
- * `reject`.
+ * flow, and linear isotropic hardening. `evaluate_j2` returns `P`, the
+ * tangent of the branch that integration takes, and the trial state.
+ * Plastic history stays in this law and moves only through `begin_trial`,
+ * `stage`, `accept`, and `reject`.
  */
 
 #pragma once
@@ -23,6 +23,8 @@
 #include <vector>
 
 #include <openpfc/mechanics/constitutive/history.hpp>
+#include <openpfc/mechanics/constitutive/integration_count.hpp>
+#include <openpfc/mechanics/piola_tangent.hpp>
 #include <openpfc/mechanics/tensor.hpp>
 
 namespace pfc::finite_strain {
@@ -386,11 +388,28 @@ struct IntegratedJ2 {
   return contract42(scaled4(elastic_stiffness(moduli), 0.5), log_finger);
 }
 
+/// Public `K_ijkl = A_jikl`, so `K.action` matches `consistent_action`.
+[[nodiscard]] inline PiolaTangent
+published_tangent(const Tensor4 &tangent) noexcept {
+  PiolaTangent out;
+  for (int i = 0; i < 3; ++i) {
+    for (int j = 0; j < 3; ++j) {
+      for (int k = 0; k < 3; ++k) {
+        for (int l = 0; l < 3; ++l) {
+          out(i, j, k, l) = tangent(j, i, k, l);
+        }
+      }
+    }
+  }
+  return out;
+}
+
 [[nodiscard]] inline IntegratedJ2 integrate(J2Moduli moduli, const J2State &state,
                                             const Tensor2 &deformation) {
   if (!(moduli.shear > 0.0) || !(moduli.hardening + 3.0 * moduli.shear > 0.0)) {
     throw std::invalid_argument("J2 shear and plastic modulus must be positive");
   }
+  note_constitutive_integration();
   const Tensor2 inverse_previous = inverse(state.deformation);
   const Tensor2 relative = matmul(deformation, inverse_previous);
   const Tensor2 trial_finger =
@@ -468,6 +487,30 @@ struct CachedResponse {
 
 } // namespace detail
 
+/// Stress, branch tangent, and trial history from one return map.
+///
+/// `trial` is not published. The tangent is the branch this integration
+/// takes. A state that already lies on the yield surface takes the
+/// unloading branch, because plasticity requires `φ > 0`.
+struct J2Evaluation {
+  J2Response response;
+  PiolaTangent tangent;
+  J2State trial;
+};
+
+[[nodiscard]] inline J2Evaluation evaluate_j2(J2Moduli moduli, const J2State &state,
+                                              const Tensor2 &deformation) {
+  const detail::IntegratedJ2 integrated =
+      detail::integrate(moduli, state, deformation);
+  J2Evaluation out;
+  out.response = integrated.response;
+  out.tangent = detail::published_tangent(integrated.tangent);
+  out.trial.finger = integrated.response.finger;
+  out.trial.deformation = deformation;
+  out.trial.plastic = integrated.response.plastic;
+  return out;
+}
+
 [[nodiscard]] inline J2Response integrate_j2(J2Moduli moduli, const J2State &state,
                                              const Tensor2 &deformation) {
   return detail::integrate(moduli, state, deformation).response;
@@ -484,14 +527,19 @@ struct CachedResponse {
 /**
  * Simo J2 response on an FFT inbox.
  *
- * `stress` and `tangent_action` read the committed state and are safe to
- * call from the global Newton loop. They do not publish a new history.
- * `stage` writes the trial that `accept` later publishes.
+ * `stress`, `evaluate`, and `tangent_action` read the committed state and
+ * do not publish history. `stage` writes the trial that `accept` publishes.
  *
- * `accept` also keeps the consistent tangent of that step. The next
- * increment's first Krylov solve linearizes at the accepted deformation,
- * and that stored tangent is the one returned. A later iteration, at an
- * updated deformation, linearizes the committed state directly.
+ * `evaluate` returns the stress, the tangent of the branch that this new
+ * integration takes, and the trial state. On a state that already lies on
+ * the yield surface that branch is unloading, because the return map
+ * enters plasticity only for `φ > 0`.
+ *
+ * `accept` keeps the consistent tangent of the step it publishes.
+ * `accepted_tangent` reads that tensor. `tangent_action` returns it when
+ * the deformation is the accepted one, which is the loading-side predictor
+ * used by the first Krylov product of an incremental solve. At any other
+ * deformation, `tangent_action` uses the same branch as `evaluate`.
  */
 class SimoJ2Material {
 public:
@@ -517,6 +565,32 @@ public:
 
   [[nodiscard]] Tensor2 stress(std::size_t index, const Tensor2 &deformation) const {
     return response_at(index, deformation).response.piola;
+  }
+
+  /// Fresh branch at `deformation`. Does not publish `trial`.
+  [[nodiscard]] J2Evaluation evaluate(std::size_t index,
+                                      const Tensor2 &deformation) const {
+    const detail::IntegratedJ2 &integrated = response_at(index, deformation);
+    J2Evaluation out;
+    out.response = integrated.response;
+    out.tangent = detail::published_tangent(integrated.tangent);
+    out.trial.finger = integrated.response.finger;
+    out.trial.deformation = deformation;
+    out.trial.plastic = integrated.response.plastic;
+    return out;
+  }
+
+  [[nodiscard]] bool has_accepted_tangent(std::size_t index) const {
+    return lagged_.at(index).valid;
+  }
+
+  /// Loading-side tangent stored by the last `accept` at this point.
+  [[nodiscard]] PiolaTangent accepted_tangent(std::size_t index) const {
+    const Linearization &lagged = lagged_.at(index);
+    if (!lagged.valid) {
+      throw std::logic_error("J2 point has no accepted tangent");
+    }
+    return detail::published_tangent(lagged.tangent);
   }
 
   [[nodiscard]] Tensor2 tangent_action(std::size_t index, const Tensor2 &deformation,

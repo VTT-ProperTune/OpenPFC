@@ -7,6 +7,16 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+### Added
+
+- Finite-strain `evaluate_j2`, `evaluate_fcc`, and `evaluate_saint_venant`
+  return the Piola stress, the local `∂P/∂F` tangent, and any trial
+  history from one constitutive evaluation. Actions on that tangent do
+  not integrate again. `accepted_tangent` reads the loading-side tensor
+  kept by `accept`. A fresh J2 evaluation at an accepted yield state
+  stays on the unloading branch. Existing `stress` and `tangent_action`
+  results are unchanged.
+
 ### Fixed
 
 - Configure with CMake 4 using nlohmann-json 3.11.3 without a
