@@ -23,6 +23,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   stays on the unloading branch. Existing `stress` and `tangent_action`
   results are unchanged.
 
+- Device-resident explicit RK for two, three, or four real fields:
+  `create(std::tie(u, v[, w[, q]]), eval, model, dt, tableau)` on
+  `Field<double, CUDASpace>` / `HIPSpace`. Stage buffers stay on device.
+  The two-field factory is unchanged. Closes #394.
+
 - Device-resident two-field explicit RK: `create(std::tie(u, v), eval, model,
   dt, tableau)` on `Field<double, CUDASpace>` / `HIPSpace` keeps stage
   buffers and accumulation on the device and refreshes Full halos through
