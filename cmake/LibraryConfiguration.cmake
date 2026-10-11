@@ -149,6 +149,7 @@ function(openpfc_add_gpu_kernel_library tgt ext runtime_lib)
       src/openpfc/runtime/gpu/fcc_batch.${ext}
       src/openpfc/runtime/gpu/vector_operations.${ext}
       src/openpfc/runtime/gpu/finite_strain.${ext}
+      src/openpfc/runtime/gpu/multigrid.${ext}
       ${ARGN}
   )
   target_include_directories(${tgt}

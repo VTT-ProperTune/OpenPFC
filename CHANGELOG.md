@@ -74,6 +74,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   with finite-strain FFT FCC equilibrium. Collective material failure
   invalidates every rank's trial before any load commit (#412).
 
+- Device multigrid V-cycles retain smoothing, transfers and coarse actions
+  on the device for scalar and elastic auxiliary systems (#413).
+
 ### Fixed
 
 - Configure with CMake 4 using nlohmann-json 3.11.3 without a
