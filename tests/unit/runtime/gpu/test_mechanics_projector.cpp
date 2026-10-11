@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
-#include "test_helpers.hpp"
+#include "mechanics_backend.hpp"
 #include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
@@ -10,13 +10,13 @@
 using namespace pfc::finite_strain;
 TEST_CASE("device tensor projection matches an independent full discrete transform",
           "[mechanics][projector][device]") {
-  if (!pfc::gpu::test::is_cuda_available()) SKIP("GPU unavailable");
+  if (!mechanics_test::available()) SKIP("GPU unavailable");
   std::array<int, 3> shape{5, 3, 7};
   std::array<double, 3> spacing{.2, .4, .1};
   constexpr int n = 105;
-  pfc::fft::SingleDeviceFFT<pfc::CUDASpace> fft(shape);
-  gpu::CompatibilityProjector<pfc::CUDASpace> project(fft, shape, spacing);
-  pfc::solvers::gpu::VectorOperations<pfc::backend::CUDATag> ops;
+  pfc::fft::SingleDeviceFFT<mechanics_test::Space> fft(shape);
+  gpu::CompatibilityProjector<mechanics_test::Space> project(fft, shape, spacing);
+  pfc::solvers::gpu::VectorOperations<mechanics_test::Tag> ops;
   auto x = ops.make(9 * n), y = ops.make(9 * n), z = ops.make(9 * n);
   std::vector<double> input(9 * n), reference(9 * n);
   for (int i = 0; i < 9 * n; ++i)
@@ -69,7 +69,7 @@ TEST_CASE("device tensor projection matches an independent full discrete transfo
     REQUIRE(std::abs(got[i] - twice[i]) < 1e-12);
   }
   REQUIRE_THROWS_AS(
-      (gpu::CompatibilityProjector<pfc::CUDASpace>(fft, {4, 3, 7}, spacing)),
+      (gpu::CompatibilityProjector<mechanics_test::Space>(fft, {4, 3, 7}, spacing)),
       std::invalid_argument);
 }
 TEST_CASE("collective device material failure invalidates every trial",
@@ -78,13 +78,14 @@ TEST_CASE("collective device material failure invalidates every trial",
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &ranks);
   if (ranks != 2) SKIP("requires two communicating ranks");
-  if (!pfc::gpu::test::is_cuda_available()) SKIP("GPU unavailable");
+  if (!mechanics_test::available()) SKIP("GPU unavailable");
   constexpr int n = 27;
-  pfc::fft::SingleDeviceFFT<pfc::CUDASpace> fft({3, 3, 3});
-  gpu::CompatibilityProjector<pfc::CUDASpace> project(fft, {3, 3, 3}, {1., 1., 1.});
-  pfc::solvers::gpu::VectorOperations<pfc::backend::CUDATag> ops(MPI_COMM_WORLD);
+  pfc::fft::SingleDeviceFFT<mechanics_test::Space> fft({3, 3, 3});
+  gpu::CompatibilityProjector<mechanics_test::Space> project(fft, {3, 3, 3},
+                                                             {1., 1., 1.});
+  pfc::solvers::gpu::VectorOperations<mechanics_test::Tag> ops(MPI_COMM_WORLD);
   FccSlipParameters parameters{2, 1, .5, .001, 5, 2.25, .1, .02, .2, .05, 1, 1.4};
-  gpu::FccEquilibrium<pfc::CUDASpace> model(project, ops, parameters);
+  gpu::FccEquilibrium<mechanics_test::Space> model(project, ops, parameters);
   model.material.set_orientations(std::vector<Tensor2>(n, identity2()));
   auto f = ops.make(9 * n);
   std::vector<double> values(9 * n);

@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
-#include "test_helpers.hpp"
+#include "mechanics_backend.hpp"
 #include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
@@ -9,18 +9,18 @@
 template <class Tag>
 concept HasResidentOperations =
     requires { typename pfc::solvers::gpu::VectorOperations<Tag>; };
-static_assert(HasResidentOperations<pfc::backend::CUDATag>);
+static_assert(HasResidentOperations<mechanics_test::Tag>);
 static_assert(!HasResidentOperations<pfc::backend::CPUTag>);
 #if !defined(OpenPFC_ENABLE_HIP)
 static_assert(!HasResidentOperations<pfc::backend::HIPTag>);
 #endif
-using Ops = pfc::solvers::gpu::VectorOperations<pfc::backend::CUDATag>;
+using Ops = pfc::solvers::gpu::VectorOperations<mechanics_test::Tag>;
 using Vec = Ops::Vector;
 namespace sol = pfc::solvers;
 void solver_toy(int, const double *, double *, int, const double * = nullptr);
 TEST_CASE("resident FGMRES solves a nonsymmetric cyclic operator with restarts",
           "[solver][device][krylov]") {
-  if (!pfc::gpu::test::is_cuda_available()) SKIP("GPU unavailable");
+  if (!mechanics_test::available()) SKIP("GPU unavailable");
   Ops ops(MPI_COMM_WORLD);
   constexpr int n = 73;
   auto x = ops.make(n), b = ops.make(n);
@@ -86,7 +86,7 @@ struct NonlinearToy {
 TEST_CASE(
     "resident Newton globalizes a nonlinear reference without committing trials",
     "[solver][device][newton]") {
-  if (!pfc::gpu::test::is_cuda_available()) SKIP("GPU unavailable");
+  if (!mechanics_test::available()) SKIP("GPU unavailable");
   Ops ops(MPI_COMM_WORLD);
   auto x = ops.make(19), committed = ops.make(19);
   std::vector<double> initial(19, .1);

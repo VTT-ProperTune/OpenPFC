@@ -1,20 +1,20 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
-#include "test_helpers.hpp"
+#include "mechanics_backend.hpp"
 #include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <openpfc/runtime/gpu/multigrid.hpp>
 #include <openpfc/solvers/krylov.hpp>
 #include <openpfc/solvers/structured_operators.hpp>
 #include <random>
-using Tag = pfc::backend::CUDATag;
+using Tag = mechanics_test::Tag;
 namespace sol = pfc::solvers;
 using Ops = sol::gpu::VectorOperations<Tag>;
 using Vec = Ops::Vector;
 TEST_CASE("device multigrid preserves host transfers boundaries and coupled coarse "
           "correction",
           "[multigrid][device]") {
-  if (!pfc::gpu::test::is_cuda_available()) SKIP("GPU unavailable");
+  if (!mechanics_test::available()) SKIP("GPU unavailable");
   for (int components : {1, 3})
     for (auto boundary : {sol::Boundary::Periodic, sol::Boundary::Dirichlet})
       for (auto coarse :

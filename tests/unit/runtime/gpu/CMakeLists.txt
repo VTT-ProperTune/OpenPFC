@@ -410,3 +410,32 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
   add_test(NAME Multigrid_cuda COMMAND test_multigrid_cuda)
   set_tests_properties(Multigrid_cuda PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 4)
 endif()
+
+if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+  set_source_files_properties(solver_toys.hip PROPERTIES LANGUAGE HIP)
+  add_executable(test_solver_vectors_hip test_solver_vectors.cpp solver_toys.hip)
+  target_link_libraries(test_solver_vectors_hip PRIVATE Catch2::Catch2
+      openpfc_hip_kernels hip::host MPI::MPI_CXX)
+  target_compile_definitions(test_solver_vectors_hip PRIVATE OPENPFC_TEST_MECHANICS_HIP)
+  set_target_properties(test_solver_vectors_hip PROPERTIES HIP_STANDARD 20)
+  add_test(NAME SolverVectors_hip COMMAND test_solver_vectors_hip)
+  set_tests_properties(SolverVectors_hip PROPERTIES TIMEOUT 120 SKIP_RETURN_CODE 4)
+
+  add_executable(test_multigrid_hip test_multigrid.cpp)
+  target_link_libraries(test_multigrid_hip PRIVATE Catch2::Catch2
+      openpfc_hip_kernels hip::host MPI::MPI_CXX)
+  target_compile_definitions(test_multigrid_hip PRIVATE OPENPFC_TEST_MECHANICS_HIP)
+  add_test(NAME Multigrid_hip COMMAND test_multigrid_hip)
+  set_tests_properties(Multigrid_hip PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 4)
+
+  if(OpenPFC_ENABLE_HIP_SPECTRAL)
+    find_package(rocfft REQUIRED CONFIG)
+    add_executable(test_mechanics_projector_hip test_mechanics_projector.cpp)
+    target_link_libraries(test_mechanics_projector_hip PRIVATE Catch2::Catch2
+        openpfc_hip_kernels hip::host roc::rocfft MPI::MPI_CXX)
+    target_compile_definitions(test_mechanics_projector_hip PRIVATE
+        OPENPFC_TEST_MECHANICS_HIP OpenPFC_ENABLE_HIP_SPECTRAL)
+    add_test(NAME MechanicsProjector_hip COMMAND test_mechanics_projector_hip)
+    set_tests_properties(MechanicsProjector_hip PROPERTIES TIMEOUT 120 SKIP_RETURN_CODE 4)
+  endif()
+endif()

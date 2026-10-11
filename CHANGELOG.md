@@ -16,6 +16,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- HIP runs the resident FGMRES/Newton, independent mechanics projection and
+  Poisson/vector-elasticity multigrid gates using the CUDA test problems
+  and unchanged acceptance criteria (#428).
+
+
 - GPU grain-contact extraction stores unique contacts in an open-addressed
   table of O(edge capacity) slots instead of a dense G×G adjacency matrix.
   `tracking::adjacency` reports `workspace_bytes`. Distributed
