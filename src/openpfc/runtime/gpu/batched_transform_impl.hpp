@@ -466,7 +466,8 @@ template <class M> struct BatchedMixedTransform<M>::Impl {
   double cached_alpha = -1;
   LaplacianSymbol cached_symbol{};
   bool cached_laplacian = false;
-  Impl(int x, int y, double px, double py, BoundedAxis a, MPI_Comm c)
+  Impl(int x, int y, double px, double py, BoundedAxis a, MPI_Comm c,
+       heffte::reshape_algorithm algorithm)
       : nx(x), ny(y), lx(px), ly(py), z(a), comm(c) {
     if (c == MPI_COMM_NULL)
       throw std::invalid_argument("boundary communicator is null");
@@ -477,6 +478,11 @@ template <class M> struct BatchedMixedTransform<M>::Impl {
     int invalid = 0, any;
     try {
       axis_check(a);
+      if (algorithm != heffte::reshape_algorithm::alltoallv &&
+          algorithm != heffte::reshape_algorithm::alltoall &&
+          algorithm != heffte::reshape_algorithm::p2p &&
+          algorithm != heffte::reshape_algorithm::p2p_plined)
+        invalid = 1;
       if (x < 1 || y < ranks || !std::isfinite(px) || px <= 0 ||
           !std::isfinite(py) || py <= 0)
         invalid = 1;
@@ -489,13 +495,21 @@ template <class M> struct BatchedMixedTransform<M>::Impl {
     MPI_Allreduce(&invalid, &any, 1, MPI_INT, MPI_MAX, c);
     if (any)
       throw std::invalid_argument("boundary mixed collective geometry invalid");
-    double meta[8] = {double(x), double(y),           px,      py, double(a.n),
-                      a.length,  double(int(a.type)), a.origin},
-           lo[8], hi[8];
-    MPI_Allreduce(meta, lo, 8, MPI_DOUBLE, MPI_MIN, c);
-    MPI_Allreduce(meta, hi, 8, MPI_DOUBLE, MPI_MAX, c);
-    if (!std::equal(lo, lo + 8, hi))
-      throw std::invalid_argument("boundary geometry differs across ranks");
+    double meta[9] = {double(x),
+                      double(y),
+                      px,
+                      py,
+                      double(a.n),
+                      a.length,
+                      double(int(a.type)),
+                      a.origin,
+                      double(int(algorithm))},
+           lo[9], hi[9];
+    MPI_Allreduce(meta, lo, 9, MPI_DOUBLE, MPI_MIN, c);
+    MPI_Allreduce(meta, hi, 9, MPI_DOUBLE, MPI_MAX, c);
+    if (!std::equal(lo, lo + 9, hi))
+      throw std::invalid_argument(
+          "boundary geometry or reshape policy differs across ranks");
     auto in = heffte::split_world(
         heffte::box3d<>({0, 0, 0}, {x - 1, y - 1, a.n - 1}), {1, ranks, 1})[rank];
     auto out = heffte::split_world(
@@ -515,6 +529,7 @@ template <class M> struct BatchedMixedTransform<M>::Impl {
       local = std::make_unique<Fourier>(std::vector<int>{a.n, y, x}, 1);
     else {
       auto options = heffte::default_options<Backend>();
+      options.algorithm = algorithm;
       options.use_reorder = true;
 #if (defined(OPENPFC_GPU_API_CUDA) && defined(OpenPFC_MPI_CUDA_AWARE)) ||           \
     (defined(OPENPFC_GPU_API_HIP) && defined(OpenPFC_MPI_HIP_AWARE))
@@ -586,7 +601,14 @@ template <class M> struct BatchedMixedTransform<M>::Impl {
 template <class M>
 BatchedMixedTransform<M>::BatchedMixedTransform(int x, int y, double lx, double ly,
                                                 BoundedAxis z, MPI_Comm c)
-    : m_impl(std::make_unique<Impl>(x, y, lx, ly, z, c)) {}
+    : BatchedMixedTransform(x, y, lx, ly, z, heffte::reshape_algorithm::alltoallv,
+                            c) {}
+template <class M>
+BatchedMixedTransform<M>::BatchedMixedTransform(int x, int y, double lx, double ly,
+                                                BoundedAxis z,
+                                                heffte::reshape_algorithm algorithm,
+                                                MPI_Comm c)
+    : m_impl(std::make_unique<Impl>(x, y, lx, ly, z, c, algorithm)) {}
 template <class M> BatchedMixedTransform<M>::~BatchedMixedTransform() = default;
 template <class M>
 BatchedMixedTransform<M>::BatchedMixedTransform(BatchedMixedTransform &&) noexcept =
