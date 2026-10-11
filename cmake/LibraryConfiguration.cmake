@@ -146,6 +146,7 @@ function(openpfc_add_gpu_kernel_library tgt ext runtime_lib)
       src/openpfc/runtime/gpu/sparse_vector_ops.${ext}
       src/openpfc/runtime/gpu/fill.${ext}
       src/openpfc/runtime/gpu/elementwise_ops.${ext}
+      src/openpfc/runtime/gpu/fcc_batch.${ext}
       ${ARGN}
   )
   target_include_directories(${tgt}
@@ -322,6 +323,8 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
         CUDA_STANDARD 20
         CUDA_STANDARD_REQUIRED ON
     )
+    target_compile_options(openpfc_gpu_kernels PRIVATE
+        $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>)
     message(STATUS "✅ GPU kernel library enabled")
 endif()
 

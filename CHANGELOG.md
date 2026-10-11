@@ -66,6 +66,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   elastic auxiliary operators, periodic gauges, Dirichlet boundaries,
   rediscretized and Galerkin coarse operators (#407).
 
+- Shared nonthrowing FCC arithmetic and CUDA/HIP material batches return
+  stress, consistent tangent, trial history and explicit failure statuses
+  without modifying committed history (#391, #419).
+
 ### Fixed
 
 - Configure with CMake 4 using nlohmann-json 3.11.3 without a
