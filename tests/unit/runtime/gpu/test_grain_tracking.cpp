@@ -3,7 +3,9 @@
 #include "test_helpers.hpp"
 #include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <chrono>
 #include <iostream>
+#include <openpfc/kernel/grain/contact_hash.hpp>
 #include <openpfc/runtime/cpu/detail/grain_tracking.hpp>
 #include <openpfc/runtime/gpu/databuffer_gpu.hpp>
 #include <openpfc/runtime/gpu/grain_tracking.hpp>
@@ -182,4 +184,34 @@ TEST_CASE("resident graph has no fixed thirty-two neighbor capacity",
   REQUIRE(result.status == tr::Status::Success);
   REQUIRE(result.edge_count == 2080);
   REQUIRE(output.to_host() == tr::reference::contact_graph({1, 1}, 65, ids).edges);
+}
+
+TEST_CASE("ten thousand registered grains do not allocate a dense adjacency matrix",
+          "[grain][tracking][sparse]") {
+  if (!available()) SKIP("GPU unavailable");
+  constexpr std::size_t grains = 10000;
+  std::vector<gr::Id> ids(grains);
+  for (std::size_t i = 0; i < grains; ++i) ids[i] = i + 1;
+  gr::Grid2D grid{4, 1};
+  std::vector<gr::Id> labels{1, 2, 0, 0};
+  Buffer<gr::Id> resident(labels.size());
+  resident.copy_from_host(labels);
+  Buffer<gr::Contact> output(16);
+  const auto t0 = std::chrono::steady_clock::now();
+  const auto extracted =
+      tr::adjacency(Tag{}, grid, 1, read(resident), ids, view(output));
+  const auto ms = std::chrono::duration<double, std::milli>(
+                      std::chrono::steady_clock::now() - t0)
+                      .count();
+  REQUIRE(extracted.status == tr::Status::Success);
+  REQUIRE(extracted.edge_count == 1);
+  auto edges = output.to_host();
+  edges.resize(extracted.edge_count);
+  REQUIRE(edges == std::vector<gr::Contact>{{1, 2}});
+  REQUIRE(extracted.workspace_bytes == gr::contact_hash_bytes(output.size()));
+  REQUIRE(extracted.workspace_bytes < gr::dense_adjacency_bytes(grains) / 100);
+  std::cout << "sparse adjacency grains=" << grains
+            << " workspace_bytes=" << extracted.workspace_bytes
+            << " dense_bytes=" << gr::dense_adjacency_bytes(grains)
+            << " adjacency_ms=" << ms << '\n';
 }

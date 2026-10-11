@@ -1,8 +1,13 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
+#include <openpfc/kernel/grain/contact_hash.hpp>
 #include <openpfc/runtime/gpu/gpu_api.hpp>
 #include <openpfc/runtime/gpu/grain_diagnostics.hpp>
 #include <openpfc/runtime/gpu/grain_tracking.hpp>
+
+#include <algorithm>
+#include <limits>
+#include <vector>
 
 namespace pfc::grain::tracking {
 #if defined(OPENPFC_GPU_API_HIP)
@@ -126,15 +131,14 @@ __global__ void sweep(Grid grid, std::size_t n, const std::uint8_t *occupancy,
   }
   if constexpr (Observe) dg::merge(totals, local);
 }
-template <bool Observe>
-__global__ void zero(unsigned *data, std::size_t n, dg::Accesses *totals,
-                     Field field) {
+template <bool Observe, class T = unsigned>
+__global__ void zero(T *data, std::size_t n, dg::Accesses *totals, Field field) {
   std::conditional_t<Observe, dg::Accesses, dg::NoAccesses> local{};
   dg::Accesses *counts = nullptr;
   if constexpr (Observe) counts = &local;
   for (std::size_t i = blockIdx.x * blockDim.x + threadIdx.x; i < n;
        i += static_cast<std::size_t>(gridDim.x) * blockDim.x)
-    dg::store<Observe>(data, i, unsigned{0}, counts, field);
+    dg::store<Observe>(data, i, T{}, counts, field);
   if constexpr (Observe) dg::merge(totals, local);
 }
 template <bool Observe>
@@ -154,8 +158,9 @@ __device__ std::size_t find_id(const Id *ids, std::size_t n, Id id,
 }
 template <bool Observe, class Grid>
 __global__ void contacts(Grid grid, Slot slots, const Id *labels, const Id *ids,
-                         std::size_t grains, unsigned *matrix, unsigned *active,
-                         unsigned *error, int radius, dg::Accesses *totals) {
+                         std::size_t grains, unsigned long long *keys,
+                         std::size_t table_slots, unsigned *active, unsigned *error,
+                         int radius, dg::Accesses *totals) {
   std::conditional_t<Observe, dg::Accesses, dg::NoAccesses> local{};
   dg::Accesses *counts = nullptr;
   if constexpr (Observe) counts = &local;
@@ -202,37 +207,14 @@ __global__ void contacts(Grid grid, Slot slots, const Id *labels, const Id *ids,
             }
             const auto low = a < b ? a : b, high = a < b ? b : a;
             if constexpr (Observe)
-              dg::read(counts, Field::AdjacencyMatrix, sizeof(unsigned));
+              dg::read(counts, Field::AdjacencyMatrix, sizeof(unsigned long long));
             if constexpr (Observe)
-              dg::write(counts, Field::AdjacencyMatrix, sizeof(unsigned));
-            atomicOr(matrix + low * grains + high, 1u);
+              dg::write(counts, Field::AdjacencyMatrix, sizeof(unsigned long long));
+            if (!insert_contact_key(keys, table_slots, low, high))
+              atomicOr(error, 2u);
           }
         }
   }
-  if constexpr (Observe) dg::merge(totals, local);
-}
-template <bool Observe>
-__global__ void pack(const unsigned *matrix, const Id *ids, std::size_t n,
-                     Contact *edges, std::size_t capacity, std::size_t *count,
-                     dg::Accesses *totals) {
-  std::conditional_t<Observe, dg::Accesses, dg::NoAccesses> local{};
-  dg::Accesses *counts = nullptr;
-  if constexpr (Observe) counts = &local;
-  if (blockIdx.x != 0 || threadIdx.x != 0) return;
-  std::size_t found = 0;
-  for (std::size_t a = 0; a < n; ++a)
-    for (std::size_t b = a + 1; b < n; ++b)
-      if (dg::load<Observe>(matrix, a * n + b, counts, Field::AdjacencyMatrix)) {
-        if (found < capacity) {
-          dg::store<Observe>(
-              edges, found,
-              Contact{dg::load<Observe>(ids, a, counts, Field::Registry),
-                      dg::load<Observe>(ids, b, counts, Field::Registry)},
-              counts, Field::Contacts);
-        }
-        ++found;
-      }
-  dg::store<Observe>(count, 0, found, counts, Field::Counts);
   if constexpr (Observe) dg::merge(totals, local);
 }
 constexpr unsigned blocks = 128, threads = 256;
@@ -301,57 +283,66 @@ adjacency_impl(Tag, Grid grid, Slot slots, std::span<const Id> labels,
   const auto grains = identities.size();
   // Reuse the independent canonical graph validation for the host registry.
   validate(ContactGraph{std::vector<Id>(identities.begin(), identities.end()), {}});
-  if (grains && grains > std::numeric_limits<std::size_t>::max() / grains)
-    throw std::overflow_error("grain adjacency matrix size overflow");
+  if (grains > std::numeric_limits<std::uint32_t>::max())
+    throw std::overflow_error("grain contact hash key exceeds uint32 index");
+  const auto table_slots = contact_hash_slots(output.size());
+  const auto table_bytes = contact_hash_bytes(output.size());
   dg::Observation<Tag> observation;
   dg::Interval interval(dg::Phase::Adjacency);
   auto *counts = observation.data();
   Buffer<Id> ids(grains);
-  Buffer<unsigned> matrix(grains * grains), active(grains), error(1);
+  Buffer<unsigned long long> keys(table_slots);
+  Buffer<unsigned> active(grains), error(1);
   Buffer<Contact> edges(output.size());
-  Buffer<std::size_t> count(1);
   if (grains) {
     GPU_CHECK(gpuMemcpy(ids.data, identities.data(), grains * sizeof(Id),
                         gpuMemcpyHostToDevice));
     dg::copy(Direction::HostToDevice, Field::Registry, grains * sizeof(Id));
   }
-  GPU_LAUNCH_KERNEL(zero<Observe>, blocks, threads,
-                    (matrix.data, grains * grains, counts, Field::AdjacencyMatrix),
-                    0);
+  GPU_LAUNCH_KERNEL((zero<Observe, unsigned long long>), blocks, threads,
+                    (keys.data, table_slots, counts, Field::AdjacencyMatrix), 0);
   GPU_LAUNCH_KERNEL(zero<Observe>, blocks, threads,
                     (active.data, grains, counts, Field::Counts), 0);
   GPU_LAUNCH_KERNEL(zero<Observe>, 1, 1, (error.data, 1, counts, Field::Flags), 0);
   GPU_LAUNCH_KERNEL((contacts<Observe, Grid>), blocks, threads,
-                    (grid, slots, labels.data(), ids.data, grains, matrix.data,
-                     active.data, error.data, static_cast<int>(contact_radius),
-                     counts),
+                    (grid, slots, labels.data(), ids.data, grains, keys.data,
+                     table_slots, active.data, error.data,
+                     static_cast<int>(contact_radius), counts),
                     0);
   unsigned bad = 0;
   GPU_CHECK(gpuMemcpy(&bad, error.data, sizeof(bad), gpuMemcpyDeviceToHost));
   dg::copy(Direction::DeviceToHost, Field::Flags, sizeof(bad));
   dg::scan(dg::host_accesses(), dg::Phase::Adjacency, slots);
-  if (bad) return {Status::UnknownIdentity, 0, {}};
-  GPU_LAUNCH_KERNEL(
-      pack<Observe>, 1, 1,
-      (matrix.data, ids.data, grains, edges.data, output.size(), count.data, counts),
-      0);
-  std::size_t found = 0;
-  GPU_CHECK(gpuMemcpy(&found, count.data, sizeof(found), gpuMemcpyDeviceToHost));
-  dg::copy(Direction::DeviceToHost, Field::Counts, sizeof(found));
-  if (found > output.size()) return {Status::CapacityOverflow, found, {}};
+  if (bad & 1u) return {Status::UnknownIdentity, 0, {}, table_bytes};
+  std::vector<unsigned long long> packed(table_slots);
+  if (table_slots) {
+    GPU_CHECK(gpuMemcpy(packed.data(), keys.data, table_bytes, gpuMemcpyDeviceToHost));
+    dg::copy(Direction::DeviceToHost, Field::AdjacencyMatrix, table_bytes);
+  }
+  std::vector<Contact> unique;
+  unique.reserve(output.size());
+  for (auto key : packed) {
+    if (key == contact_hash_empty) continue;
+    const auto ends = unpack_contact_key(key);
+    unique.push_back({identities[ends.first], identities[ends.second]});
+  }
+  std::sort(unique.begin(), unique.end());
+  const auto found = unique.size();
+  if (found > output.size() || (bad & 2u))
+    return {Status::CapacityOverflow, found, {}, table_bytes};
   std::vector<unsigned> observed(grains);
   if (grains) {
     GPU_CHECK(gpuMemcpy(observed.data(), active.data, grains * sizeof(unsigned),
                         gpuMemcpyDeviceToHost));
     dg::copy(Direction::DeviceToHost, Field::Counts, grains * sizeof(unsigned));
   }
-  AdjacencyResult result{Status::Success, found, {}};
+  AdjacencyResult result{Status::Success, found, {}, table_bytes};
   for (std::size_t i = 0; i < grains; ++i)
     if (observed[i]) result.active.push_back(identities[i]);
   if (found) {
-    GPU_CHECK(gpuMemcpy(output.data(), edges.data, found * sizeof(Contact),
-                        gpuMemcpyDeviceToDevice));
-    dg::copy(Direction::DeviceToDevice, Field::Contacts, found * sizeof(Contact));
+    GPU_CHECK(gpuMemcpy(output.data(), unique.data(), found * sizeof(Contact),
+                        gpuMemcpyHostToDevice));
+    dg::copy(Direction::HostToDevice, Field::Contacts, found * sizeof(Contact));
   }
   GPU_CHECK(gpuDeviceSynchronize());
   return result;

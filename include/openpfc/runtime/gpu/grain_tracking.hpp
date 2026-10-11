@@ -21,6 +21,8 @@ struct AdjacencyResult {
   Status status = Status::Success;
   std::size_t edge_count = 0;
   std::vector<Id> active;
+  /// Compact unique-contact table bytes; never a dense G×G matrix.
+  std::size_t workspace_bytes = 0;
 };
 
 /// All spans except identities denote device storage; layouts are slot-major.
@@ -107,8 +109,9 @@ adjacency(backend::HIPTag tag, Grid grid, Slot slots, std::span<const Id> labels
 /// Eight/TwentySix Chebyshev). Identities is a sorted unique nonzero HOST registry.
 /// Output is a canonical DEVICE contact list; active is compact HOST metadata.
 /// edge_count reports required capacity, including on CapacityOverflow. Unknown
-/// labels and insufficient edge capacity leave output unchanged. Internal dense
-/// registry matrix costs O(registry size squared) storage; size overflow is
-/// rejected, and allocation/runtime failures throw.
+/// labels and insufficient edge capacity leave output unchanged. Unique contacts
+/// use an open-addressed table of O(edge capacity) slots, not a dense G×G
+/// matrix. `workspace_bytes` is that table. Size overflow is rejected, and
+/// allocation/runtime failures throw.
 
 } // namespace pfc::grain::tracking

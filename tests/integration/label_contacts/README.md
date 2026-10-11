@@ -39,8 +39,8 @@ conservative-bounds fallback is selected automatically.
 after any registry/slot change. Workspace-backed probes/extraction allocate no
 device buffers; host compact result vectors still allocate and calls synchronize.
 The convenience overload constructs scratch on every call. Probe scratch is
-O(grains), extraction reserves an O(grains squared) device matrix plus bounded
-edge storage and uses serial canonical packing. The literal neighbor loop costs
+O(grains), extraction reserves an O(edge capacity) unique-contact table plus
+host compact of occupied keys. The literal neighbor loop costs
 O(owned cells * slots * radius cubed), and full extraction adds another slot
 factor. These are correctness capabilities, not established performance claims.
 The workspace is non-reentrant, privately owns its registry and buffers, and

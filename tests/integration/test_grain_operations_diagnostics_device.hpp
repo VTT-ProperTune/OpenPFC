@@ -3,6 +3,7 @@
 #pragma once
 #include "../fixtures/allocation_provider.hpp"
 #include <catch2/catch_test_macros.hpp>
+#include <openpfc/kernel/grain/contact_hash.hpp>
 #include <openpfc/runtime/gpu/grain_tracking.hpp>
 #include <openpfc/runtime/gpu/grain_transfer.hpp>
 #if defined(__HIPCC__) || defined(__HIP__)
@@ -152,21 +153,25 @@ TEST_CASE("single-UID adjacency exposes exact auxiliary counts",
   REQUIRE(result.status == tracking::Status::Success);
   REQUIRE(result.edge_count == 0);
   REQUIRE(result.active == std::vector<Id>{7});
+  REQUIRE(result.workspace_bytes == contact_hash_bytes(0));
   REQUIRE(d.source_accesses_complete);
-  REQUIRE(d.allocations(dg::Space::Device).requests == 6);
+  REQUIRE(d.allocations(dg::Space::Device).requests == 5);
   REQUIRE(d.allocations(dg::Space::Device).peak_live_bytes ==
-          sizeof(dg::Accesses) + 28);
+          sizeof(dg::Accesses) + sizeof(Id) + contact_hash_bytes(0) +
+              2 * sizeof(unsigned));
   REQUIRE(d.allocations(dg::Space::Device).live_bytes == 0);
   REQUIRE(d.accesses.reads[f(dg::Field::Labels)] == 2);
   REQUIRE(d.accesses.reads[f(dg::Field::Registry)] == 2);
   REQUIRE(d.accesses.reads[f(dg::Field::Counts)] == 1);
-  REQUIRE(d.accesses.writes[f(dg::Field::Counts)] == 3);
-  REQUIRE(d.accesses.writes[f(dg::Field::AdjacencyMatrix)] == 1);
+  REQUIRE(d.accesses.writes[f(dg::Field::Counts)] == 2);
+  REQUIRE(d.accesses.writes[f(dg::Field::AdjacencyMatrix)] == contact_hash_slots(0));
   REQUIRE(d.accesses.reads[f(dg::Field::AdjacencyMatrix)] == 0);
   REQUIRE(d.copies.bytes[dir(dg::Direction::HostToDevice)][f(dg::Field::Registry)] ==
           8);
   REQUIRE(d.copies.bytes[dir(dg::Direction::DeviceToHost)][f(dg::Field::Counts)] ==
-          sizeof(std::size_t) + 4);
+          sizeof(unsigned));
+  REQUIRE(d.copies.bytes[dir(dg::Direction::DeviceToHost)]
+                        [f(dg::Field::AdjacencyMatrix)] == contact_hash_bytes(0));
   REQUIRE(
       d.copies.bytes[dir(dg::Direction::DeviceToDevice)][f(dg::Field::Contacts)] ==
       0);
