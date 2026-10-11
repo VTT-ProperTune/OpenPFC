@@ -10,6 +10,9 @@ local data through an implementation of the FFT contract. Read the
 [spectral-stack concept](../concepts/spectral_stack.md) before using the exact
 API below.
 
+For uniform bounded axes, see [boundary transforms](boundary_transforms.md):
+explicit DCT/DST grids and homogeneous Poisson solves.
+
 ## `pfc::decomposition::Decomposition`
 
 ```{doxygenstruct} pfc::decomposition::Decomposition
