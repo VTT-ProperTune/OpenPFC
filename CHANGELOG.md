@@ -16,6 +16,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- Odd-grid periodic displacement reconstruction uses the existing host FFT
+  layout and reports gradient recovery error with a zero translation gauge.
+
 - HIP runs the resident FGMRES/Newton, independent mechanics projection and
   Poisson/vector-elasticity multigrid gates using the CUDA test problems
   and unchanged acceptance criteria (#428).
