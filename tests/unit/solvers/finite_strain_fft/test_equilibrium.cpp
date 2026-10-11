@@ -18,6 +18,7 @@
 #include <openpfc/mechanics/constitutive/saint_venant_kirchhoff.hpp>
 #include <openpfc/mechanics/constitutive/simo_j2.hpp>
 #include <openpfc/solvers/finite_strain_fft/field_stats.hpp>
+#include <openpfc/solvers/finite_strain_fft/inexact.hpp>
 #include <openpfc/solvers/finite_strain_fft/newton.hpp>
 
 #include <cmath>
@@ -708,4 +709,55 @@ TEST_CASE("FFT exposes GMRES and caller-established compatible SPD CG",
   REQUIRE(gmres_result.converged);
   REQUIRE(max_abs_diff(cg_result.deformation, gmres_result.deformation) < 1e-12);
   for (const auto &step : gmres_result.history) REQUIRE(step.linear.converged());
+}
+
+TEST_CASE("residual Newton preserves FFT prescribed macro and compatibility",
+          "[finite_strain][nonlinear]") {
+  auto tools = make_grid(Int3{5, 5, 5}, MPI_COMM_WORLD);
+  CompatibleProjector projector(tools.fft, tools.domain);
+  IncrementStart start;
+  start.deformation.assign(projector.local_size(), identity2());
+  solvers::NewtonControls c;
+  auto r = solve_nonlinear_increment(projector, ScaledDeformationLaw{},
+                                     simple_shear(.1), start, c);
+  REQUIRE(r.nonlinear.converged());
+  auto expected = std::vector<Tensor2>(projector.local_size(), simple_shear(.1));
+  REQUIRE(max_abs_diff(r.deformation, expected) < 1e-12);
+  REQUIRE(max_abs_diff(start.deformation,
+                       std::vector<Tensor2>(projector.local_size(), identity2())) ==
+          0);
+}
+
+TEST_CASE("FFT Newton propagates a rank-local material failure collectively",
+          "[MPI][finite_strain][nonlinear][material_failure]") {
+  REQUIRE(mpi::get_size(MPI_COMM_WORLD) == 2);
+  auto tools = make_grid(Int3{5, 5, 5}, MPI_COMM_WORLD);
+  CompatibleProjector projector(tools.fft, tools.domain);
+  struct FailingLaw : ScaledDeformationLaw {
+    int rank;
+    bool fail_tangent;
+    int committed = 27;
+    Tensor2 stress(std::size_t i, const Tensor2 &f) const {
+      if (rank == 1 && !fail_tangent)
+        throw std::runtime_error("rank-local stress failure");
+      return ScaledDeformationLaw::stress(i, f);
+    }
+    Tensor2 tangent_action(std::size_t i, const Tensor2 &f, const Tensor2 &v) const {
+      if (rank == 1 && fail_tangent)
+        throw std::runtime_error("rank-local tangent failure");
+      return ScaledDeformationLaw::tangent_action(i, f, v);
+    }
+  } law{{}, mpi::get_rank(MPI_COMM_WORLD), false};
+  IncrementStart start;
+  auto fluctuation = random_field(projector.local_size(), 417u + law.rank);
+  projector.apply(fluctuation, start.deformation);
+  for (auto &f : start.deformation) f = axpy(.01, f, identity2());
+  const auto before = start.deformation;
+  for (bool tangent : {false, true}) {
+    law.fail_tangent = tangent;
+    REQUIRE_THROWS_AS(solve_nonlinear_increment(projector, law, identity2(), start),
+                      std::runtime_error);
+    REQUIRE(law.committed == 27);
+    REQUIRE(max_abs_diff(start.deformation, before) == 0);
+  }
 }
