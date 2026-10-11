@@ -6,9 +6,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 # Uniform-grid boundary transforms
 
 Include `openpfc/kernel/fft/real_transform.hpp` for a rank-local
-`RealTransform`. This additive API preserves `IHostFFT`,
+`RealTransform`, or `openpfc/kernel/fft/mixed_transform.hpp` for a
+distributed `MixedTransform`. These additive APIs preserve `IHostFFT`,
 `IDeviceFFT` and [Chebyshev collocation](../../include/openpfc/kernel/fft/chebyshev.hpp).
-It requires an FFTW-enabled build.
+They require FFTW; the mixed API also requires a heFFTe-enabled build.
 Link the installed `OpenPFC::openpfc` target as usual.
 
 ## Select the discrete problem explicitly
@@ -53,8 +54,9 @@ inner product. These symbols must not be interchanged.
 Cosine has a constant zero mode. `poisson` rejects a zero coefficient
 larger than `compatibility_tolerance * max_abs_coefficient` and sets the
 solution coefficient to zero. The mean is arithmetic for DCT2 and
-trapezoidal (half weight at endpoints) for DCT1. Sine has no nullspace.
-Nonfinite forcing is rejected.
+trapezoidal (half weight at endpoints) for DCT1. For the mixed solve,
+this applies only to the global x=y=z zero mode, and compatibility is
+checked collectively. Sine has no nullspace. Nonfinite forcing is rejected.
 
 `RealTransform::evaluate(coefficients,x,order)` evaluates the interpolant,
 its first derivative or its spectral second derivative at any physical
@@ -72,7 +74,7 @@ compatibility includes the prescribed flux through that lifting.
 Unlike conditions at the two ends, Robin conditions, variable-coefficient
 diagonal solves, and type IV are unsupported by this API.
 
-## Usage
+## Usage and distributed layout
 
 ```cpp
 using namespace pfc::fft;
@@ -81,9 +83,33 @@ RealTransform line(z);
 std::vector<double> f(z.n), u(z.n);
 // Fill f at coordinate(z,j); homogeneous Dirichlet is imposed by the basis.
 line.poisson(f, u);
+
+// After MPI_Init: periodic x/y, same bounded z, y slabs with full x/z.
+MixedTransform mixed(64, 64, 3.0, 4.0, z, MPI_COMM_WORLD);
+std::vector<double> rhs(mixed.size_inbox()), solution(rhs.size());
+// Fill rhs using mixed.inbox(), x-fastest, then local y, then z.
+mixed.poisson(rhs, solution);
 ```
+
+All ranks must pass identical geometry and valid buffer extents.
+The communicator is borrowed and must outlive the plan; destroy plans
+before MPI_Finalize. At most ny ranks are supported, each with complete
+z lines. The outbox reduces x to 0..nx/2 and retains all y frequencies
+and z modes. Both buffers are x-fastest. The bounded transform is a
+rank-local FFTW batch. The periodic planes are one heFFTe batched 2D
+FFT, including heFFTe's existing communication and layout machinery.
+No new transpose implementation is involved. This supports all four
+rows of the table with periodic x/y, including unit periodic dimensions.
 
 Plans and scratch are reused; input buffers are preserved. `buffer_bytes`
 counts owned arrays, excluding opaque plan allocations. Planning and
 destruction obey FFTW's serial planner requirements. One instance must
-not execute concurrently.
+not execute concurrently. MPI execution is collective. Device mixed
+transforms and arbitrary decompositions that split z are not implemented.
+Native distributed homogeneous sine/cosine transforms remain accessible
+through heFFTe's versioned `rtransform` API; its raw scaling depends on
+the backend and must not be assumed to match this FFTW contract.
+
+Regression tests cover mirrored DFT coefficients, round trips, analytic
+derivatives and boundary traces, both Laplacian symbols, Poisson solves,
+small odd/even grids, weighted Neumann compatibility and MPI mixed layouts.
