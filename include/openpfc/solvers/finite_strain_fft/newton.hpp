@@ -3,7 +3,7 @@
 
 /**
  * @file newton.hpp
- * @brief Matrix-free Newton–CG solve of `G : P(F) = 0`.
+ * @brief Matrix-free Newton–Krylov solve of `G : P(F) = 0`.
  *
  * The loop follows Algorithm 1 of de Geus et al. for one prescribed
  * macroscopic deformation gradient. The material enters only through
@@ -32,10 +32,17 @@
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/solvers/finite_strain_fft/constitutive.hpp>
 #include <openpfc/solvers/finite_strain_fft/projector.hpp>
+#include <openpfc/solvers/krylov.hpp>
 
 namespace pfc::finite_strain {
 
+enum class KrylovMethod { GMRES, CG };
+
 struct NewtonControls {
+  KrylovMethod krylov_method = KrylovMethod::GMRES;
+  int krylov_restart = 30;
+  /// Caller establishes SPD on the compatible, zero-mean subspace.
+  bool operator_is_spd = false;
   /// Relative Krylov tolerance, the published program's `tol=1e-8`.
   double krylov_relative_tolerance = 1e-8;
   /// `||δF|| / ||F_ref||` threshold, the published program's `1e-5`.
@@ -50,6 +57,8 @@ struct NewtonStep {
   int krylov_iterations = 0;
   /// `||G : P||` after this update. Zero when the right-hand side was zero.
   double projected_residual = 0.0;
+  /// Original linear residual and restart history, including admission status.
+  solvers::KrylovResult linear;
 };
 
 struct NewtonResult {
@@ -90,60 +99,44 @@ inline void scale_add(std::vector<Tensor2> &y, double alpha,
   }
 }
 
+struct TensorAlgebra {
+  static double inner(const Tensor2 &a, const Tensor2 &b) {
+    return frobenius_dot(a, b);
+  }
+  static void axpy(Tensor2 &y, double a, const Tensor2 &x) {
+    y = finite_strain::axpy(a, x, y);
+  }
+  static void scale(Tensor2 &y, double a) { y = scaled(y, a); }
+};
+using TensorOperations = solvers::VectorOperations<Tensor2, TensorAlgebra>;
 struct KrylovOutcome {
   std::vector<Tensor2> correction;
-  int iterations = 0;
-  double residual = 0.0;
+  solvers::KrylovResult diagnostics;
 };
-
 template <typename Matvec>
-[[nodiscard]] KrylovOutcome conjugate_gradient(const std::vector<Tensor2> &rhs,
-                                               Matvec &&matvec, double relative,
-                                               int max_iterations, MPI_Comm comm) {
+[[nodiscard]] KrylovOutcome
+solve_linear(const std::vector<Tensor2> &rhs, Matvec &&matvec,
+             const NewtonControls &controls, int cap, MPI_Comm comm) {
+  if (controls.krylov_method == KrylovMethod::CG && !controls.operator_is_spd)
+    throw std::invalid_argument("CG requires a caller-established SPD operator");
+  TensorOperations ops(comm);
+  solvers::KrylovControls c;
+  c.relative_tolerance = controls.krylov_relative_tolerance;
+  c.maximum_iterations = cap;
+  c.restart = controls.krylov_restart;
+  c.preconditioning = solvers::Preconditioning::None;
   KrylovOutcome out;
-  const std::size_t n = rhs.size();
-  out.correction.assign(n, Tensor2{});
-  const double rhs_norm = global_norm(rhs, comm);
-  if (rhs_norm == 0.0) {
-    return out;
-  }
-  const double absolute = relative * rhs_norm;
-  std::vector<Tensor2> residual = rhs;
-  std::vector<Tensor2> direction;
-  std::vector<Tensor2> product(n);
-  double rho_previous = 0.0;
-
-  for (int iteration = 0; iteration < max_iterations; ++iteration) {
-    const double residual_norm = global_norm(residual, comm);
-    if (residual_norm < absolute) {
-      out.iterations = iteration;
-      out.residual = residual_norm;
-      return out;
-    }
-    const double rho = residual_norm * residual_norm;
-    if (iteration == 0) {
-      direction = residual;
-    } else {
-      const double beta = rho / rho_previous;
-      for (std::size_t i = 0; i < n; ++i) {
-        direction[i] = axpy(beta, direction[i], residual[i]);
-      }
-    }
-    matvec(direction, product);
-    const double curvature = global_dot(direction, product, comm);
-    if (!(std::abs(curvature) > 0.0)) {
-      throw std::runtime_error(
-          "finite-strain CG stopped on a zero curvature product");
-    }
-    const double alpha = rho / curvature;
-    scale_add(out.correction, alpha, direction);
-    scale_add(residual, -alpha, product);
-    rho_previous = rho;
-  }
-  out.iterations = max_iterations;
-  out.residual = global_norm(residual, comm);
-  out.correction.clear();
-  throw std::runtime_error("finite-strain CG reached the iteration cap");
+  out.correction = ops.make(rhs.size());
+  out.diagnostics = controls.krylov_method == KrylovMethod::GMRES
+                        ? solvers::gmres(ops, matvec, rhs, out.correction, c)
+                        : solvers::cg(ops, matvec, rhs, out.correction, c);
+  if (!out.diagnostics.converged())
+    throw std::runtime_error(
+        "finite-strain Krylov failed true residual admission; status=" +
+        std::to_string(static_cast<int>(out.diagnostics.status)) +
+        ", iterations=" + std::to_string(out.diagnostics.iterations) +
+        ", residual=" + std::to_string(out.diagnostics.residual));
+  return out;
 }
 
 } // namespace detail
@@ -215,8 +208,8 @@ solve_equilibrium(CompatibleProjector &projector, const Law &law,
   result.reference_norm = detail::global_norm(macro, comm);
 
   for (int newton = 0; newton < controls.maximum_newton_iterations; ++newton) {
-    auto linear = detail::conjugate_gradient(
-        rhs, apply_tangent, controls.krylov_relative_tolerance, krylov_cap, comm);
+    auto linear =
+        detail::solve_linear(rhs, apply_tangent, controls, krylov_cap, comm);
     if (newton == 0) {
       for (std::size_t i = 0; i < n; ++i) {
         result.deformation[i] = add(macroscopic, linear.correction[i]);
@@ -227,7 +220,8 @@ solve_equilibrium(CompatibleProjector &projector, const Law &law,
     refresh_residual(rhs);
 
     NewtonStep step;
-    step.krylov_iterations = linear.iterations;
+    step.krylov_iterations = linear.diagnostics.iterations;
+    step.linear = std::move(linear.diagnostics);
     step.correction_over_reference =
         detail::global_norm(linear.correction, comm) / result.reference_norm;
     step.projected_residual = detail::global_norm(rhs, comm);
@@ -331,14 +325,15 @@ solve_increment(CompatibleProjector &projector, const Law &law,
   }
 
   for (int newton = 0; newton < controls.maximum_newton_iterations; ++newton) {
-    auto linear = detail::conjugate_gradient(
-        rhs, apply_tangent, controls.krylov_relative_tolerance, krylov_cap, comm);
+    auto linear =
+        detail::solve_linear(rhs, apply_tangent, controls, krylov_cap, comm);
     detail::scale_add(result.deformation, 1.0, linear.correction);
     tangent_from_start = false;
     refresh_residual(rhs);
 
     NewtonStep step;
-    step.krylov_iterations = linear.iterations;
+    step.krylov_iterations = linear.diagnostics.iterations;
+    step.linear = std::move(linear.diagnostics);
     step.correction_over_reference =
         detail::global_norm(linear.correction, comm) / result.reference_norm;
     step.projected_residual = detail::global_norm(rhs, comm);

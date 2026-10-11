@@ -15,10 +15,10 @@
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/fft/kspace_iterator.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
-#include <openpfc/solvers/finite_strain_fft/field_stats.hpp>
-#include <openpfc/solvers/finite_strain_fft/newton.hpp>
 #include <openpfc/mechanics/constitutive/saint_venant_kirchhoff.hpp>
 #include <openpfc/mechanics/constitutive/simo_j2.hpp>
+#include <openpfc/solvers/finite_strain_fft/field_stats.hpp>
+#include <openpfc/solvers/finite_strain_fft/newton.hpp>
 
 #include <cmath>
 #include <complex>
@@ -674,4 +674,26 @@ TEST_CASE("two ranks reproduce one J2 increment", "[MPI][finite_strain][j2]") {
   REQUIRE(serial_again.converged);
   REQUIRE(parallel_again.converged);
   REQUIRE(field_diff(parallel_again, serial_again) < 1e-8);
+}
+
+TEST_CASE("FFT exposes GMRES and caller-established compatible SPD CG",
+          "[finite_strain][krylov]") {
+  auto tools = make_grid(Int3{5, 5, 5}, MPI_COMM_WORLD);
+  CompatibleProjector projector(tools.fft, tools.domain);
+  NewtonControls c;
+  c.krylov_method = KrylovMethod::CG;
+  REQUIRE_THROWS_AS(
+      solve_equilibrium(projector, ScaledDeformationLaw{}, simple_shear(.1), c),
+      std::invalid_argument);
+  // G:2I is SPD on the compatible zero-mean range of G.
+  c.operator_is_spd = true;
+  auto cg_result =
+      solve_equilibrium(projector, ScaledDeformationLaw{}, simple_shear(.1), c);
+  c.krylov_method = KrylovMethod::GMRES;
+  auto gmres_result =
+      solve_equilibrium(projector, ScaledDeformationLaw{}, simple_shear(.1), c);
+  REQUIRE(cg_result.converged);
+  REQUIRE(gmres_result.converged);
+  REQUIRE(max_abs_diff(cg_result.deformation, gmres_result.deformation) < 1e-12);
+  for (const auto &step : gmres_result.history) REQUIRE(step.linear.converged());
 }

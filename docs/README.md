@@ -104,3 +104,6 @@ Code contributions are described in
 [CONTRIBUTING.md](https://github.com/VTT-ProperTune/OpenPFC/blob/master/CONTRIBUTING.md).
 Documentation-specific structure, preview commands, and checks are described in
 [Contributing to documentation](development/contributing-docs.md).
+
+[Matrix-free Krylov solvers](reference/krylov.md) describes GMRES, flexible
+right preconditioning, true residual admission and the explicit SPD CG path.
