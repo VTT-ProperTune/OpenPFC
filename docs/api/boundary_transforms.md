@@ -153,6 +153,9 @@ through host buffers; no extra field copy is made by the bounded transform.
 At most ny ranks are supported. The checked vendor extent limit is
 nx*ny*n <= INT_MAX. Input values must be finite. GPU Neumann Poisson
 additionally detects nonfinite coefficients while checking compatibility.
+The ny bound is necessary for the owned y slabs, not sufficient for every
+small grid: heFFTe must also be able to assign nonempty intermediate FFT
+boxes. Its planner can reject an undersized intermediate decomposition.
 
 `helmholtz` accepts finite nonnegative reaction; zero reaction is Poisson.
 Both Laplacian symbols remain available. All ranks must agree on reaction,
