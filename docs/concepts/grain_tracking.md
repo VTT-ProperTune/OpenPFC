@@ -59,10 +59,10 @@ it is independent of the support mask and ownership propagation stencil.
 A radius must be smaller than the largest signed 32-bit integer.
 
 The host supplies a canonical identity registry. Kernels validate encountered
-identities against that registry, mark active identities, and atomically admit
-contacts into a dynamic dense registry matrix. A deterministic device packing
-pass visits the upper triangle in identity order, producing a canonical unique
-contact list. No fixed per-grain neighbor cap silently discards an edge.
+identities against that registry, mark active identities, and atomically insert
+unique contacts into an open-addressed table of O(edge capacity) slots. Host
+compact sorts the occupied keys into a canonical unique contact list. No fixed
+per-grain neighbor cap silently discards an edge.
 
 The contact destination is a bounded device span. If it is too small,
 `CapacityOverflow` reports the exact required `edge_count`, leaving the
@@ -73,10 +73,12 @@ metadata and excludes disappeared identities. Only compact registry/active
 metadata and scalar status/count cross the host boundary, while label grids and
 contact lists remain on the device.
 
-The initial implementation allocates an unsigned dense matrix with registry
-size squared entries and uses a serial device packing pass. Those are explicit
-capacity/performance limitations, not a scaling claim. Allocation failures throw
-rather than truncate. It is a local 2D producer with no MPI, 3D, asynchronous
+The contact table is `contact_hash_slots(edge_capacity)` 64-bit keys, at least
+eight and four slots per reserved edge, rounded up to a power of two. That is
+O(edge capacity), not O(registry size squared). A 10,000-identity registry with
+a 16-edge output therefore does not allocate a 10,000 × 10,000 adjacency
+matrix. Allocation failures throw rather than truncate. It is a local 2D
+producer with no MPI, 3D, asynchronous
 update cadence, or PDE timestep ownership. Applications call it after changes to
 support/identity observations at their chosen cadence; call frequency changes
 detector cost and must be stated by any consumer.

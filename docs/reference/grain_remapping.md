@@ -118,10 +118,10 @@ allocations; it is a lower bound, not an allocator high-water measurement.
 Graph device-to-host bytes count the compact edge copy alone.
 
 The CPU contact implementation deliberately uses the independent quadratic
-coordinate-pair oracle for small grids. Device adjacency currently has a
-quadratic registry matrix and serial canonical pack. These limitations
-are explicit; this API does not claim scalable host detection, optimal
-recoloring, or GPU-resident coloring.
+coordinate-pair oracle for small grids. Device adjacency stores unique contacts
+in an O(edge capacity) hash table and compact-sorts them on the host. This API
+does not claim scalable host detection, optimal recoloring, or GPU-resident
+coloring.
 
 ## Small consumer and validation
 

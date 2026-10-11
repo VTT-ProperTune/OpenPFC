@@ -9,6 +9,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- GPU grain-contact extraction stores unique contacts in an open-addressed
+  table of O(edge capacity) slots instead of a dense G×G adjacency matrix.
+  `tracking::adjacency` reports `workspace_bytes`. Distributed
+  `label_contacts` extraction uses the same table. A 10,000-identity
+  registry no longer requires a 10,000 × 10,000 unsigned workspace (#392).
+
 - Finite-strain `evaluate_j2`, `evaluate_fcc`, and `evaluate_saint_venant`
   return the Piola stress, the local `∂P/∂F` tangent, and any trial
   history from one constitutive evaluation. Actions on that tangent do
