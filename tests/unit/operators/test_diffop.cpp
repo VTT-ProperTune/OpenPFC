@@ -21,9 +21,9 @@ TEST_CASE("DiffOp - differentiate in all directions", "[diffop][unit]") {
     REQUIRE(domain::get_origin(domain)[0] < 0.0);
     REQUIRE(domain::get_origin(domain)[1] < 0.0);
     REQUIRE(domain::get_origin(domain)[2] < 0.0);
-    REQUIRE(domain::get_upper_bounds(domain)[0] > 0.0);
-    REQUIRE(domain::get_upper_bounds(domain)[1] > 0.0);
-    REQUIRE(domain::get_upper_bounds(domain)[2] > 0.0);
+    REQUIRE(domain::upper(domain)[0] > 0.0);
+    REQUIRE(domain::upper(domain)[1] > 0.0);
+    REQUIRE(domain::upper(domain)[2] > 0.0);
   }
 
   SECTION("Domain spacing is positive") {

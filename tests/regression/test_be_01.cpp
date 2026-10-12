@@ -104,9 +104,9 @@ TEST_CASE(
     const Domain d = domain::from_bounds({100, 100, 100}, {0, 0, 0}, {9.9, 9.9, 9.9},
                                          {false, false, false});
 
-    REQUIRE(domain::get_lower_bounds(d) == Real3{0.0, 0.0, 0.0});
+    REQUIRE(domain::lower(d) == Real3{0.0, 0.0, 0.0});
 
-    const Real3 up = domain::get_upper_bounds(d);
+    const Real3 up = domain::upper(d);
     REQUIRE(up[0] == Catch::Approx(9.9));
     REQUIRE(up[1] == Catch::Approx(9.9));
     REQUIRE(up[2] == Catch::Approx(9.9));

@@ -195,13 +195,37 @@ namespace domain {
   return idx;
 }
 
-/// Physical coordinate of the global lower corner (index (0,0,0)).
-[[nodiscard]] inline Real3 get_lower_bounds(const Domain &d) noexcept {
-  return to_coords(d, {0, 0, 0});
+/// Lower limit of the box: the coordinate of index (0,0,0).
+[[nodiscard]] inline Real3 lower(const Domain &d) noexcept { return d.origin; }
+
+/**
+ * @brief Upper limit of the box, the inverse of `from_bounds`.
+ *
+ * On a periodic axis this is `lower + size * spacing`, the periodic image of
+ * the lower limit, which holds no stored point. On a non-periodic axis it is
+ * the last grid point, `lower + (size - 1) * spacing`.
+ */
+[[nodiscard]] inline Real3 upper(const Domain &d) noexcept {
+  Real3 u;
+  for (int i = 0; i < 3; ++i) {
+    const int n = d.periodic[i] ? d.size[i] : d.size[i] - 1;
+    u[i] = d.origin[i] + n * d.spacing[i];
+  }
+  return u;
 }
-/// Physical coordinate of the global upper corner (index (nx-1,ny-1,nz-1)).
-[[nodiscard]] inline Real3 get_upper_bounds(const Domain &d) noexcept {
-  return to_coords(d, {d.size[0] - 1, d.size[1] - 1, d.size[2] - 1});
+
+/// Box length per axis, `upper(d) - lower(d)`.
+[[nodiscard]] inline Real3 extent(const Domain &d) noexcept {
+  const Real3 lo = lower(d);
+  const Real3 up = upper(d);
+  return {up[0] - lo[0], up[1] - lo[1], up[2] - lo[2]};
+}
+
+/// Midpoint of the box per axis, `(lower(d) + upper(d)) / 2`.
+[[nodiscard]] inline Real3 center(const Domain &d) noexcept {
+  const Real3 lo = lower(d);
+  const Real3 up = upper(d);
+  return {0.5 * (lo[0] + up[0]), 0.5 * (lo[1] + up[1]), 0.5 * (lo[2] + up[2])};
 }
 
 /// `spacing[0]*spacing[1]*spacing[2] * nx*ny*nz` (matches `world::physical_volume`).

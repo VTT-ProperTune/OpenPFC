@@ -72,11 +72,26 @@ TEST_CASE("Domain dimensionality / bounds / volume", "[domain][unit]") {
   // exactly on the upper bound.
   const Domain d = domain::from_bounds({100, 100, 100}, {0, 0, 0}, {9.9, 9.9, 9.9},
                                        {false, false, false});
-  REQUIRE(domain::get_lower_bounds(d) == Real3{0.0, 0.0, 0.0});
-  const Real3 up = domain::get_upper_bounds(d);
+  REQUIRE(domain::lower(d) == Real3{0.0, 0.0, 0.0});
+  const Real3 up = domain::upper(d);
   REQUIRE(up[0] == Catch::Approx(9.9));
   REQUIRE(domain::physical_volume(domain::with_spacing(
               {10, 10, 10}, {0.1, 0.1, 0.1})) == Catch::Approx(0.001 * 1000));
+}
+
+TEST_CASE("Domain lower/upper invert from_bounds", "[domain][unit]") {
+  // Periodic axes: upper is the image of lower, size * spacing away.
+  const Domain p =
+      domain::from_bounds({256, 128, 1}, {-142.0, 0.0, -0.5}, {142.0, 64.0, 0.5});
+  REQUIRE(domain::lower(p) == Real3{-142.0, 0.0, -0.5});
+  REQUIRE(domain::upper(p) == Real3{142.0, 64.0, 0.5});
+  REQUIRE(domain::extent(p) == Real3{284.0, 64.0, 1.0});
+  REQUIRE(domain::center(p) == Real3{0.0, 32.0, 0.0});
+  // A non-periodic axis ends on its last grid point.
+  const Domain q = domain::from_bounds({11, 4, 4}, {1.0, 0.0, 0.0}, {2.0, 4.0, 4.0},
+                                       {false, true, true});
+  REQUIRE(domain::upper(q)[0] == Catch::Approx(2.0));
+  REQUIRE(domain::to_coords(q, {10, 0, 0})[0] == domain::upper(q)[0]);
 }
 
 TEST_CASE("Domain::get_origin(d, i) returns per-axis origin", "[domain][unit]") {

@@ -43,8 +43,8 @@ void print_domain_info(const Domain &domain, const std::string &name) {
   std::cout << "    is_3d():        " << (domain::is_3d(domain) ? "true" : "false")
             << "\n";
 
-  auto lower = domain::get_lower_bounds(domain);
-  auto upper = domain::get_upper_bounds(domain);
+  auto lower = domain::lower(domain);
+  auto upper = domain::upper(domain);
   std::cout << "\n  Lower bounds:     (" << lower[0] << ", " << lower[1] << ", "
             << lower[2] << ")\n";
   std::cout << "  Upper bounds:     (" << upper[0] << ", " << upper[1] << ", "
@@ -92,8 +92,8 @@ int main() {
     std::cout << "  Is 3D:            " << (is_3d(d) ? "yes" : "no") << "\n";
     std::cout << "  Dimensionality:   " << dimensionality(d) << "D\n";
 
-    auto lower = get_lower_bounds(d);
-    auto upper = get_upper_bounds(d);
+    auto lower = domain::lower(d);
+    auto upper = domain::upper(d);
     std::cout << "  Bounds:           [" << lower[0] << ", " << upper[0] << "] × "
               << "[" << lower[1] << ", " << upper[1] << "] × "
               << "[" << lower[2] << ", " << upper[2] << "]\n";
@@ -127,8 +127,8 @@ int main() {
   std::cout << "  is_2d(domain)               - Check if 2D (nx>1, ny>1, nz=1)\n";
   std::cout << "  is_3d(domain)               - Check if 3D (all > 1)\n";
   std::cout << "  dimensionality(domain)      - Get 1, 2, or 3\n";
-  std::cout << "  get_lower_bounds(domain)    - Physical coords at (0,0,0)\n";
-  std::cout << "  get_upper_bounds(domain)    - Physical coords at max indices\n";
+  std::cout << "  lower(domain)               - Box lower limit (index (0,0,0))\n";
+  std::cout << "  upper(domain)               - Box upper limit (periodic image)\n";
   std::cout << "=============================================================\n\n";
 
   return 0;
