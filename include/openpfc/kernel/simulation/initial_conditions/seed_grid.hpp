@@ -93,8 +93,9 @@ public:
   void apply(pfc::field::FieldOutput<double> field, const Domain &domain,
              const Box3i &box, double time = 0.0) override {
     (void)time;
-    const auto &size = pfc::domain::get_size(domain);
-    const auto &spacing = pfc::domain::get_spacing(domain);
+    // Seeds tile the box from its lower limit; X0 is an absolute coordinate.
+    const Real3 lo = pfc::domain::lower(domain);
+    const Real3 len = pfc::domain::extent(domain);
 
     std::vector<Seed> seeds;
     const int Nx = std::max(1, m_Nx);
@@ -102,11 +103,11 @@ public:
     const int Nz = std::max(1, m_Nz);
     const double radius = get_radius();
 
-    const double Dx = spacing[0] * size[0] / Nx;
-    const double Dy = spacing[1] * size[1] / Ny;
-    const double Dz = spacing[2] * size[2] / std::max(Nz, 1);
-    const double Y0 = Dy / 2.0;
-    const double Z0 = Dz / 2.0;
+    const double Dx = len[0] / Nx;
+    const double Dy = len[1] / Ny;
+    const double Dz = len[2] / std::max(Nz, 1);
+    const double Y0 = lo[1] + Dy / 2.0;
+    const double Z0 = lo[2] + Dz / 2.0;
     std::mt19937_64 re(42);
     std::uniform_real_distribution<double> rt(-0.2 * radius, 0.2 * radius);
     std::uniform_real_distribution<double> rr(0.0, 2.0 * std::numbers::pi);
@@ -114,7 +115,7 @@ public:
     // Nx == 1: directional-solidification plane of seeds at x = X0 (shipped
     // moving_bc). Nx > 1: fill the box in x as well, for a polycrystal.
     for (int i = 0; i < Nx; i++) {
-      const double x = (Nx > 1) ? (Dx / 2.0 + Dx * i) : m_X0;
+      const double x = (Nx > 1) ? (lo[0] + Dx / 2.0 + Dx * i) : m_X0;
       for (int j = 0; j < Ny; j++) {
         for (int k = 0; k < Nz; k++) {
           const std::array<double, 3> location = {x + rt(re), Y0 + (Dy * j) + rt(re),

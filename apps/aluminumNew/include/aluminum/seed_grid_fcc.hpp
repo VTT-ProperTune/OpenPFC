@@ -52,15 +52,14 @@ public:
 
   void apply(pfc::field::FieldOutput<double> field, const pfc::Domain &domain,
              const pfc::Box3i &box, double /*time*/) override {
-    const auto size = pfc::domain::get_size(domain);
     const auto spacing = pfc::domain::get_spacing(domain);
     const auto origin = pfc::domain::get_origin(domain);
-    const double Dy =
-        spacing[1] * static_cast<double>(size[1]) / static_cast<double>(m_Ny);
-    const double Dz =
-        spacing[2] * static_cast<double>(size[2]) / static_cast<double>(m_Nz);
-    const double Y0 = Dy / 2.0;
-    const double Z0 = Dz / 2.0;
+    // Seeds tile y and z from the lower limit; X0 is an absolute coordinate.
+    const auto len = pfc::domain::extent(domain);
+    const double Dy = len[1] / static_cast<double>(m_Ny);
+    const double Dz = len[2] / static_cast<double>(m_Nz);
+    const double Y0 = origin[1] + Dy / 2.0;
+    const double Z0 = origin[2] + Dz / 2.0;
     std::mt19937_64 re(static_cast<std::mt19937_64::result_type>(m_rseed));
     std::uniform_real_distribution<double> rt(-0.2 * m_radius, 0.2 * m_radius);
     std::uniform_real_distribution<double> rr(0.0, 2.0 * std::numbers::pi);
