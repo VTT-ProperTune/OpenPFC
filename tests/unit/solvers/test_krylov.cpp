@@ -76,6 +76,32 @@ TEST_CASE("restarted GMRES agrees with independent pivoted elimination",
     REQUIRE(ops.norm(residual) <= 1e-12 * ops.norm(b));
   }
 }
+TEST_CASE("reorthogonalized GMRES solves a widely scaled tridiagonal matrix",
+          "[krylov]") {
+  Matrix a(40, Vec(40));
+  Vec b(40, 1);
+  for (int i = 0; i < 40; ++i) {
+    a[i][i] = std::pow(10., -3. + 6. * i / 39.);
+    if (i) a[i][i - 1] = .1;
+    if (i + 1 < 40) a[i][i + 1] = -.1;
+  }
+  VectorOperations ops;
+  Vec x(40);
+  KrylovControls c;
+  // The dimension is the restart. GMRES(20) leaves a residual near 4e-2
+  // after 200 iterations on this matrix with either orthogonalization,
+  // because the restarted subspace is too small, not because the basis
+  // lost orthogonality.
+  c.restart = 40;
+  c.relative_tolerance = 1e-10;
+  c.maximum_iterations = 40;
+  auto result = gmres(ops, multiply(a), b, x, c);
+  REQUIRE(result.converged());
+  Vec residual;
+  multiply(a)(x, residual);
+  ops.axpy(residual, -1, b);
+  REQUIRE(ops.norm(residual) <= 1e-10 * ops.norm(b));
+}
 TEST_CASE("FGMRES retains independently varying right directions", "[krylov]") {
   Matrix a{{4, 2, -1}, {-1, 3, 1}, {0, -2, 5}};
   Vec b{1, -4, 2}, x(3);

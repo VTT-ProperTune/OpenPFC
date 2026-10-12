@@ -10,7 +10,11 @@ and CG. The algorithms accept a vector-operations object, an action
 `A(x,y)` and an inverse-preconditioner `M(r,z,iteration)`. They do not
 require a matrix or a discretization type. `VectorOperations<double>`
 provides host vectors and optional MPI reductions; another implementation
-can supply the same `make`, `copy`, `scale`, `axpy`, `dot` and `norm` methods.
+can supply the same `make`, `copy`, `scale`, `axpy`, `dot`, `dots` and
+`norm` methods. `dots` evaluates several inner products against one
+vector and performs one reduction. Restarted GMRES orthogonalizes with
+two classical passes so each pass shares that reduction; the second pass
+is the reorthogonalization.
 
 ```cpp
 pfc::solvers::VectorOperations<> ops(MPI_COMM_WORLD);

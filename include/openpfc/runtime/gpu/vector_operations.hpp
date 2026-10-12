@@ -96,30 +96,58 @@ public:
     combine(y.data(), a, x.data(), 1, y.size());
   }
   double dot(const Vector &x, const Vector &y) {
-    if (x.size() != y.size()) throw std::invalid_argument("vector size mismatch");
-    workspace(x.size());
+    double out = 0;
+    dots(&x, 1, y, &out);
+    return out;
+  }
+  /// Several inner products against one vector, then one MPI reduction.
+  /// Each column is reduced on the device and copied back before that
+  /// collective. Every coefficient uses y as it stands at entry.
+  void dots(const Vector *columns, int count, const Vector &y, double *out) {
+    if (count < 1 || columns == nullptr || out == nullptr)
+      throw std::invalid_argument("empty inner-product batch");
+    double stack[64];
+    std::vector<double> heap;
+    double *local = stack;
+    if (count > 64) {
+      heap.resize(count);
+      local = heap.data();
+    }
+    workspace(y.size());
     const auto start = std::chrono::steady_clock::now();
-    double local = 0;
+    for (int column = 0; column < count; ++column) {
+      if (columns[column].size() != y.size())
+        throw std::invalid_argument("vector size mismatch");
+      double value = 0;
 #if defined(OpenPFC_ENABLE_CUDA)
-    if constexpr (std::is_same_v<Tag, pfc::backend::CUDATag>)
-      local = detail::dot_cuda(x.data(), y.data(), x.size(), workspace_.data());
+      if constexpr (std::is_same_v<Tag, pfc::backend::CUDATag>)
+        value = detail::dot_cuda(columns[column].data(), y.data(), y.size(),
+                                 workspace_.data());
 #endif
 #if defined(OpenPFC_ENABLE_HIP)
-    if constexpr (std::is_same_v<Tag, pfc::backend::HIPTag>)
-      local = detail::dot_hip(x.data(), y.data(), x.size(), workspace_.data());
+      if constexpr (std::is_same_v<Tag, pfc::backend::HIPTag>)
+        value = detail::dot_hip(columns[column].data(), y.data(), y.size(),
+                                workspace_.data());
 #endif
-    if (x.size()) scalar_transfer_bytes += sizeof(double);
-    double result = local;
-    if (comm_ != MPI_COMM_NULL) {
-      int err = MPI_Allreduce(&local, &result, 1, MPI_DOUBLE, MPI_SUM, comm_);
-      if (err != MPI_SUCCESS)
-        throw std::runtime_error("solver MPI reduction failed");
+      local[column] = value;
     }
+    if (y.size())
+      scalar_transfer_bytes += sizeof(double) * static_cast<std::size_t>(count);
+    if (comm_ != MPI_COMM_NULL) {
+      const auto collective = std::chrono::steady_clock::now();
+      if (MPI_Allreduce(local, out, count, MPI_DOUBLE, MPI_SUM, comm_) !=
+          MPI_SUCCESS)
+        throw std::runtime_error("solver MPI reduction failed");
+      reductions.collective_seconds +=
+          std::chrono::duration<double>(std::chrono::steady_clock::now() -
+                                        collective)
+              .count();
+    } else
+      for (int column = 0; column < count; ++column) out[column] = local[column];
     ++reductions.calls;
     reductions.seconds +=
         std::chrono::duration<double>(std::chrono::steady_clock::now() - start)
             .count();
-    return result;
   }
   MPI_Comm communicator() const { return comm_; }
   double norm(const Vector &x) { return std::sqrt(dot(x, x)); }

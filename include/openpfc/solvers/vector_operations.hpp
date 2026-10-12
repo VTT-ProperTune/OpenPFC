@@ -12,6 +12,9 @@ namespace pfc::solvers {
 struct ReductionMetrics {
   std::size_t calls = 0;
   double seconds = 0;
+  /// Time inside MPI collectives. The rest of `seconds` is local arithmetic
+  /// and, on a device, the scalar transfer that feeds the collective.
+  double collective_seconds = 0;
 };
 
 /// Algebra for scalar entries; tensor consumers supply inner/axpy/scale.
@@ -46,17 +49,43 @@ public:
     for (std::size_t i = 0; i < x.size(); ++i) Algebra::axpy(y[i], a, x[i]);
   }
   double dot(const Vector &x, const Vector &y) {
-    if (x.size() != y.size()) throw std::invalid_argument("vector size mismatch");
-    double local = 0;
-    for (std::size_t i = 0; i < x.size(); ++i) local += Algebra::inner(x[i], y[i]);
-    if (comm_ == MPI_COMM_NULL) return local;
+    double out = 0;
+    dots(&x, 1, y, &out);
+    return out;
+  }
+  /// One collective for several inner products against the same vector.
+  /// Coefficients are taken before any of those columns are subtracted, so a
+  /// caller that wants modified Gram-Schmidt must still pass one column.
+  void dots(const Vector *columns, int count, const Vector &y, double *out) {
+    if (count < 1 || columns == nullptr || out == nullptr)
+      throw std::invalid_argument("empty inner-product batch");
+    double stack[64];
+    std::vector<double> heap;
+    double *local = stack;
+    if (count > 64) {
+      heap.resize(count);
+      local = heap.data();
+    }
+    for (int column = 0; column < count; ++column) {
+      if (columns[column].size() != y.size())
+        throw std::invalid_argument("vector size mismatch");
+      double sum = 0;
+      for (std::size_t i = 0; i < y.size(); ++i)
+        sum += Algebra::inner(columns[column][i], y[i]);
+      local[column] = sum;
+    }
+    if (comm_ == MPI_COMM_NULL) {
+      for (int column = 0; column < count; ++column) out[column] = local[column];
+      return;
+    }
     const auto t = std::chrono::steady_clock::now();
-    double global = 0;
-    MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_SUM, comm_);
-    ++reductions.calls;
-    reductions.seconds +=
+    if (MPI_Allreduce(local, out, count, MPI_DOUBLE, MPI_SUM, comm_) != MPI_SUCCESS)
+      throw std::runtime_error("solver MPI reduction failed");
+    const double waited =
         std::chrono::duration<double>(std::chrono::steady_clock::now() - t).count();
-    return global;
+    ++reductions.calls;
+    reductions.seconds += waited;
+    reductions.collective_seconds += waited;
   }
   double norm(const Vector &x) { return std::sqrt(dot(x, x)); }
 };

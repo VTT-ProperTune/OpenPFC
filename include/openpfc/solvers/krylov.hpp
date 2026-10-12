@@ -113,7 +113,7 @@ KrylovResult gmres(Ops &ops, Action &&action, const typename Ops::Vector &b,
   for (auto &a : v) a = ops.make(b.size());
   for (auto &a : z) a = ops.make(b.size());
   std::vector<double> h((c.restart + 1) * c.restart), cs(c.restart), sn(c.restart),
-      g(c.restart + 1);
+      g(c.restart + 1), coeff(c.restart);
   auto H = [&](int i, int j) -> double & { return h[i * c.restart + j]; };
   int stagnant = 0;
   double previous = out.residual;
@@ -151,11 +151,15 @@ KrylovResult gmres(Ops &ops, Action &&action, const typename Ops::Vector &b,
       else
         ops.copy(product, v[j + 1]);
       const double before = ops.norm(v[j + 1]);
+      // Two classical passes. Each pass reads every inner product before any
+      // subtraction, so those coefficients share one reduction. The second
+      // pass reorthogonalizes. One classical pass is not used: it loses
+      // orthogonality on a long basis.
       for (int pass = 0; pass < 2; ++pass) {
+        ops.dots(v.data(), j + 1, v[j + 1], coeff.data());
         for (int i = 0; i <= j; ++i) {
-          const double a = ops.dot(v[i], v[j + 1]);
-          H(i, j) += a;
-          ops.axpy(v[j + 1], -a, v[i]);
+          H(i, j) += coeff[i];
+          ops.axpy(v[j + 1], -coeff[i], v[i]);
         }
       }
       H(j + 1, j) = ops.norm(v[j + 1]);
