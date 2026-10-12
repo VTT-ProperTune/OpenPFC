@@ -29,6 +29,7 @@
 
 #if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -211,14 +212,9 @@ public:
       }
     }
 
+    m_any_real_axis = any_real_neighbor_axis;
     {
-      const bool any_self_axis = (m_axis_is_self[0] && m_axis_active[0]) ||
-                                 (m_axis_is_self[1] && m_axis_active[1]) ||
-                                 (m_axis_is_self[2] && m_axis_active[2]);
-      if (any_self_axis && m_scratch_elems > 0) {
-        Ops::malloc_dev(reinterpret_cast<void **>(&m_d_scratch),
-                        m_scratch_elems * sizeof(double), Ops::malloc_full_scratch);
-      }
+      // Self axes copy in place (fused kernel, no scratch); see run_self_pass_.
       const bool need_device_pools = any_real_neighbor_axis && m_scratch_elems > 0 &&
                                      (m_use_contiguous || !m_use_gpu_aware);
       if (need_device_pools) {
@@ -250,10 +246,6 @@ public:
   DeviceFullHalo &operator=(const DeviceFullHalo &) = delete;
 
   ~DeviceFullHalo() {
-    if (m_d_scratch != nullptr) {
-      Ops::free_dev(m_d_scratch);
-      m_d_scratch = nullptr;
-    }
     for (double *p : m_d_send_pool) {
       if (p != nullptr) {
         Ops::free_dev(p);
@@ -294,6 +286,15 @@ public:
    * @param stream Stream the caller used to populate `fields`. Fully
    *               synchronised before MPI starts.
    *
+   * @note Self-periodic axes copy in place with one fused kernel per axis (all
+   *       fields, both faces). When every active axis is self-periodic (no
+   *       MPI), the copies are only enqueued on `stream` and the host does not
+   *       wait: later work on the same stream (and the legacy default stream
+   *       that `HaloExchange` uses) sees the filled halos, and a host reader
+   *       must synchronise the stream (`Field::with_host_view` does, through a
+   *       blocking copy). With any real neighbor every pass is synchronised as
+   *       before.
+   *
    * @note `*_FORCE_PACKED_HALO=1` selects packed host staging while preserving
    *       the requested Full connectivity. Without GPU-aware MPI the
    *       26-fill still runs; real-neighbor axes host-stage packed slabs.
@@ -303,7 +304,9 @@ public:
     auto &H = Ops::timers();
 
     double t_mark = MPI_Wtime();
-    Ops::stream_sync(stream, Ops::sync_pre_full);
+    if (m_any_real_axis) {
+      Ops::stream_sync(stream, Ops::sync_pre_full);
+    }
     if (perf) {
       H.pre_stream_sync += MPI_Wtime() - t_mark;
       ++H.n_calls;
@@ -395,30 +398,45 @@ private:
   void run_pass_(int axis, double *const *fields, stream_t stream) {
     if (m_axis_is_self[axis]) {
       run_self_pass_(axis, fields, stream);
-    } else {
-      run_mpi_pass_(axis, fields, stream);
+      // All-self exchange: stream order serialises the widening passes and later
+      // work; the host does not wait. With any MPI axis keep the full syncs.
+      if (m_any_real_axis) {
+        Ops::stream_sync(stream, Ops::sync_after_full_self);
+      }
+      return;
     }
+    run_mpi_pass_(axis, fields, stream);
     Ops::stream_sync(stream, Ops::sync_after_full_pass);
   }
 
+  /// Both faces of a self-periodic axis for all fields: one fused in-place copy
+  /// per batch of `kMaxSelfCopyFields` fields (interior strip -> opposite halo).
   void run_self_pass_(int axis, double *const *fields, stream_t stream) {
-    if (m_d_scratch == nullptr) {
-      throw std::runtime_error(
-          "DeviceFullHalo: self-axis pass needs device scratch");
+    ::pfc::gpu::detail::PaddedSelfCopy c;
+    c.nslab = 2;
+    c.nxp = m_nxp;
+    c.nyp = m_nyp;
+    for (int f = 0; f < 2; ++f) {
+      const auto &send = m_slabs[axis][f].first;
+      const auto &recv_opp = m_slabs[axis][f ^ 1].second;
+      c.src[f][0] = send.ox;
+      c.src[f][1] = send.oy;
+      c.src[f][2] = send.oz;
+      c.dst[f][0] = recv_opp.ox;
+      c.dst[f][1] = recv_opp.oy;
+      c.dst[f][2] = recv_opp.oz;
+      c.ext[f][0] = send.sx;
+      c.ext[f][1] = send.sy;
+      c.ext[f][2] = send.sz;
     }
-    for (std::size_t fld = 0; fld < m_n_fields; ++fld) {
-      double *d_pad = fields[fld];
-      for (int f = 0; f < 2; ++f) {
-        const auto &send = m_slabs[axis][f].first;
-        const auto &recv_opp = m_slabs[axis][f ^ 1].second;
-        Ops::pack_face(m_d_scratch, d_pad, send.ox, send.oy, send.oz, send.sx,
-                       send.sy, send.sz, m_nxp, m_nyp, m_nzp, stream);
-        Ops::unpack_face(d_pad, m_d_scratch, recv_opp.ox, recv_opp.oy, recv_opp.oz,
-                         recv_opp.sx, recv_opp.sy, recv_opp.sz, m_nxp, m_nyp, m_nzp,
-                         stream);
-      }
+    for (std::size_t base = 0; base < m_n_fields;
+         base += ::pfc::gpu::detail::kMaxSelfCopyFields) {
+      const std::size_t m = std::min<std::size_t>(
+          ::pfc::gpu::detail::kMaxSelfCopyFields, m_n_fields - base);
+      c.nfields = static_cast<int>(m);
+      for (std::size_t q = 0; q < m; ++q) c.pads[q] = fields[base + q];
+      Ops::self_copy_faces(c, stream);
     }
-    Ops::stream_sync(stream, Ops::sync_after_full_self);
   }
 
   void run_mpi_pass_(int axis, double *const *fields, stream_t stream) {
@@ -634,9 +652,9 @@ private:
   std::size_t m_scratch_elems = 0;
 
   bool m_use_gpu_aware = false;
+  bool m_any_real_axis = false; ///< some active axis has a real (MPI) neighbor
   bool m_use_contiguous = false;
 
-  double *m_d_scratch = nullptr;
   std::vector<double *> m_d_send_pool;
   std::vector<double *> m_d_recv_pool;
   std::vector<double *> m_h_send_pool;

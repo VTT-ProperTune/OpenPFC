@@ -18,6 +18,7 @@
 #include <cuda_runtime.h>
 
 #include <cstddef>
+#include <vector>
 
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
@@ -116,6 +117,53 @@ void run_full_halo_check(const pfc::decomposition::Decomposition &decomp, int ra
 }
 
 } // namespace
+
+TEST_CASE("HaloExchange CUDASpace Full2D: 1-rank, nz = 1, three fields, hw = 2",
+          "[gpu][padded_halo][full_halo][cuda]") {
+  // All axes self-periodic: the fused in-place copy path with no host sync.
+  // The host reads through with_host_view (a blocking copy) right after.
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 1) {
+    return;
+  }
+  if (!cuda_runtime_available()) {
+    SKIP("No CUDA runtime / device available on this host");
+  }
+  auto domain = pfc::domain::create({9, 7, 1});
+  auto decomp = pfc::decomposition::create(domain, 1);
+  std::vector<pfc::data::Field<double, CUDASpace>> f;
+  for (int q = 0; q < 3; ++q) {
+    f.push_back(make_padded_field(decomp, rank, 2));
+    fill_owned_hash(f.back(), q);
+  }
+  pfc::comm::HaloExchangeOptions opt;
+  opt.connectivity = pfc::comm::HaloConnectivity::Full;
+  opt.directions = pfc::halo::presets::Full2D();
+  pfc::comm::HaloExchange<CUDASpace, double> halo({&f[0], &f[1], &f[2]}, decomp,
+                                                  rank, MPI_COMM_WORLD, opt);
+  REQUIRE(halo.num_fields() == 3);
+  for (int rep = 0; rep < 2; ++rep) { // repeated exchanges stay correct
+    halo.exchange();
+  }
+  for (int q = 0; q < 3; ++q) {
+    bool ok = true;
+    f[static_cast<std::size_t>(q)].with_host_view([&](double *data, std::size_t) {
+      auto &u = f[static_cast<std::size_t>(q)];
+      const auto n = u.size3();
+      const auto gsz = u.global_size();
+      for (int j = -2; j < n[1] + 2; ++j) {
+        for (int i = -2; i < n[0] + 2; ++i) {
+          const auto g = u.global(i, j, 0);
+          ok &= data[u.idx(i, j, 0)] ==
+                cell_hash(q, wrap(g[0], gsz[0]), wrap(g[1], gsz[1]), 0);
+        }
+      }
+    });
+    REQUIRE(ok);
+  }
+}
 
 TEST_CASE("HaloExchange CUDASpace Full: 1-rank periodic fill (all 26 halos)",
           "[gpu][padded_halo][full_halo][cuda]") {
