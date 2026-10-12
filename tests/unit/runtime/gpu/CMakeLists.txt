@@ -124,6 +124,19 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     # not a failure.
     set_tests_properties(CUDA_ExchangeFailClosed PROPERTIES SKIP_RETURN_CODE 4)
 
+    add_executable(test_implicit_geometry_cuda
+        test_implicit_geometry_device.cu
+        ${CMAKE_SOURCE_DIR}/src/openpfc/runtime/gpu/implicit_geometry.cu)
+    target_include_directories(test_implicit_geometry_cuda PRIVATE
+        ${CMAKE_SOURCE_DIR}/include)
+    target_link_libraries(test_implicit_geometry_cuda PRIVATE CUDA::cudart)
+    set_target_properties(test_implicit_geometry_cuda PROPERTIES
+        CUDA_STANDARD 20
+        CUDA_STANDARD_REQUIRED ON)
+    target_compile_options(test_implicit_geometry_cuda PRIVATE
+        $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>)
+    add_test(NAME CUDA_ImplicitGeometry COMMAND test_implicit_geometry_cuda)
+
     message(STATUS "✅ GPU tests enabled")
 elseif(OpenPFC_ENABLE_CUDA)
     message(STATUS "⚠️  GPU tests disabled (CUDA not found)")
