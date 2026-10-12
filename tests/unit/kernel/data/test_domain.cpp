@@ -147,9 +147,7 @@ TEST_CASE("Domain streaming operator", "[domain][unit]") {
 
   const std::string output = oss.str();
 
-  SECTION("streaming produces non-empty output") {
-    REQUIRE_FALSE(output.empty());
-  }
+  SECTION("streaming produces non-empty output") { REQUIRE_FALSE(output.empty()); }
 
   SECTION("output contains identifying information") {
     // Check for domain marker or component keywords
