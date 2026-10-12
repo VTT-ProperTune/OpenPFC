@@ -3,7 +3,9 @@
 #pragma once
 #include <openpfc/solvers/multigrid.hpp>
 namespace pfc::solvers {
-/** Second-order finite-difference auxiliary operator in a unit cube.
+/** Second-order finite-difference auxiliary operator in a rectangular box.
+ * Axis lengths default to one. The weak-form cell-volume scaling uses the
+ * supplied physical lengths, independently of grid aspect ratio.
  * Scalar: -mu*Laplacian. Vector: -mu*Laplacian(u)-(lambda+mu)*grad(div(u)),
  * using centered mixed derivatives and compact diagonal second derivatives
  * for the Laplacian. With mu>0, lambda+mu>=0 it is SPD modulo periodic
@@ -11,14 +13,17 @@ namespace pfc::solvers {
  * Components are coupled through mixed derivatives; no crystal update occurs.
  */
 inline SparseOperator elastic_auxiliary(const StructuredGrid &g, double lambda = 1,
-                                        double mu = .5) {
+                                        double mu = .5,
+                                        std::array<double, 3> lengths = {1, 1, 1}) {
   g.validate();
   if ((g.components != 1 && g.components != 3) || !(mu > 0) || !(lambda + mu >= 0) ||
       !std::isfinite(lambda) || !std::isfinite(mu))
     throw std::invalid_argument("invalid elastic auxiliary operator");
   double h[3], volume = 1;
   for (int d = 0; d < 3; ++d) {
-    h[d] = 1.0 / (g.shape[d] - (g.boundary == Boundary::Dirichlet));
+    if (!(lengths[d] > 0) || !std::isfinite(lengths[d]))
+      throw std::invalid_argument("auxiliary lengths must be positive finite");
+    h[d] = lengths[d] / (g.shape[d] - (g.boundary == Boundary::Dirichlet));
     volume *= h[d];
   }
   std::vector<std::map<int, double>> rows(g.size());
