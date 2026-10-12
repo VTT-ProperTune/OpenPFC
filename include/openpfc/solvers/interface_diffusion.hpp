@@ -27,6 +27,8 @@
 
 #include <array>
 #include <cmath>
+#include <limits>
+#include <stdexcept>
 #include <vector>
 
 namespace pfc::solvers {
@@ -38,7 +40,8 @@ struct TransmissionRequest {
   double kappa_minus = 1;
   double kappa_plus = 10;
   TransmissionClosure closure = TransmissionClosure::Calibrated;
-  /// Segments shorter than this fraction of h are merged into the node.
+  /// Optional lower bound on resistance as a fraction of h/kappa at the row.
+  /// This changes the edge coefficient; it does not move the interface.
   double theta_floor = 0;
 };
 

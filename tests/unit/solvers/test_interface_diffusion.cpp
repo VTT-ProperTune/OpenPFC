@@ -183,6 +183,56 @@ int fail(const std::string &why) {
 
 int main() {
   {
+    const auto shape = pfc::geometry::make_plane({.5, 0, 0}, {1, 0, 0});
+    const pfc::geometry::Vec3 a{.5, .5, .5}, b{.375, .5, .5};
+    const auto forward = pfc::solvers::transmission_detail::segment_resistance(
+        shape, a, b, 10, 1, 24);
+    const auto reverse = pfc::solvers::transmission_detail::segment_resistance(
+        shape, b, a, 10, 1, 24);
+    if (std::abs(forward - .0125) > 1e-15 || forward != reverse)
+      return fail("zero endpoint changed resistance with edge direction");
+    Gmres record;
+    const auto u = solve_plane(16, pfc::solvers::TransmissionClosure::Series,
+                               {1, 0, 0}, {.5, 0, 0}, 10, 1, record);
+    if (!record.converged) return fail("endpoint planar solve did not converge");
+    for (int k = 0; k <= 16; ++k)
+      for (int j = 0; j <= 16; ++j)
+        for (int i = 0; i <= 16; ++i)
+          if (std::abs(u[i + 17 * (j + 17 * k)] -
+                       manufactured(shape, 10, 1, {0, -1, 0}, .7,
+                                    {i / 16., j / 16., k / 16.})) > 1e-8)
+            return fail("endpoint planar solve missed the exact field");
+    const auto sphere = pfc::geometry::make_sphere({.5, .5, .5}, .25);
+    for (const double invalid : std::array<double, 4>{0., -1., INFINITY, NAN}) {
+      pfc::solvers::TransmissionRequest request;
+      request.kappa_minus = invalid;
+      bool refused = false;
+      try {
+        (void)pfc::solvers::build_transmission(sphere, request);
+      } catch (const std::invalid_argument &) {
+        refused = true;
+      }
+      if (!refused) return fail("invalid diffusivity was admitted");
+    }
+    pfc::solvers::TransmissionRequest request;
+    request.cells = 0;
+    bool refused = false;
+    try {
+      (void)pfc::solvers::build_transmission(sphere, request);
+    } catch (const std::invalid_argument &) {
+      refused = true;
+    }
+    if (!refused) return fail("zero grid size was admitted");
+    request.cells = 100000;
+    refused = false;
+    try {
+      (void)pfc::solvers::build_transmission(sphere, request);
+    } catch (const std::overflow_error &) {
+      refused = true;
+    }
+    if (!refused) return fail("overflowing node count was admitted");
+  }
+  {
     const pfc::geometry::Vec3 aligned{1, 0, 0};
     const auto shape = pfc::geometry::make_plane({0.37, 0, 0}, aligned);
     pfc::solvers::TransmissionRequest request;
