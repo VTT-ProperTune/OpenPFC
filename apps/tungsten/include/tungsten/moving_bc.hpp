@@ -41,6 +41,7 @@
 #include <mpi.h>
 #include <sstream>
 #include <stdexcept>
+#include <vector>
 
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/field/operations.hpp>
@@ -48,6 +49,7 @@
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/utils/logging.hpp>
+#include <tungsten/solidification_bc_rules.hpp>
 
 namespace tungsten {
 
@@ -121,12 +123,13 @@ public:
     size = pfc::mpi::get_comm_size(comm);
   }
 
-  void apply(pfc::field::FieldOutput<double> field, const pfc::Domain &domain,
-             const pfc::Box3i &box, double time = 0.0) override {
-    (void)time;
-    const pfc::Int3 low = box.low;
-    const pfc::Int3 high = box.high;
-
+  /**
+   * @brief Advance the front from the local column maxima of the field.
+   * @param local_max max over y and z of each local x column, box.low[0]
+   *        first (what the host loop and the device reduction both produce)
+   */
+  void track_front(const std::vector<double> &local_max, const pfc::Domain &domain,
+                   const pfc::Box3i &box) {
     const auto Lx = pfc::domain::get_size(domain, 0);
     const auto dx = pfc::domain::get_spacing(domain, 0);
     const auto x0 = pfc::domain::get_origin(domain, 0);
@@ -137,16 +140,9 @@ public:
       // avoids undefined behavior from empty-vector data() on some MPI stacks.
       global_xline.resize(Lx);
     }
-
     fill(xline.begin(), xline.end(), std::numeric_limits<double>::lowest());
-
-    long int idx = 0;
-    for (int k = low[2]; k <= high[2]; k++) {
-      for (int j = low[1]; j <= high[1]; j++) {
-        for (int i = low[0]; i <= high[0]; i++) {
-          xline[i] = std::max(xline[i], field[idx++]);
-        }
-      }
+    for (std::size_t i = 0; i < local_max.size(); ++i) {
+      xline[box.low[0] + i] = local_max[i];
     }
 
     if (xline.empty() ||
@@ -200,41 +196,48 @@ public:
       oss << "Boundary position: " << m_xpos;
       pfc::log_debug(lg, oss.str());
     }
-
-    fill_bc(field, domain, box);
   }
 
-  void fill_bc(pfc::field::FieldOutput<double> field, const pfc::Domain &domain,
-               const pfc::Box3i &box) {
+  /// The band around the current front, with its periodic images.
+  [[nodiscard]] MovingBandRule band_rule(const pfc::Domain &domain) const {
     // Wrap in coordinates relative to the lower x limit, so the periodic
     // images of the front are found for any box placement.
     const double x0 = pfc::domain::lower(domain)[0];
     const double l = pfc::domain::extent(domain)[0];
     double xpos = std::fmod(m_xpos - x0, l);
     if (xpos < 0.0) xpos += l;
-    const double xwidth = m_xwidth;
-    const double alpha = m_alpha;
+    return {
+        .blend = {.alpha = m_alpha, .rho_low = m_rho_low, .rho_high = m_rho_high},
+        .x0 = x0,
+        .l = l,
+        .xpos = xpos,
+        .xwidth = m_xwidth};
+  }
 
-    pfc::field::apply_inplace(
-        field, domain, box, [=, this](const pfc::Real3 &X, double current) {
-          const double x = X[0] - x0;
-          const double dist = x - xpos;
-          auto blend = [&](double d) {
-            const double S = 1.0 / (1.0 + std::exp(-alpha * d));
-            return (m_rho_low * S) + (m_rho_high * (1.0 - S));
-          };
+  void apply(pfc::field::FieldOutput<double> field, const pfc::Domain &domain,
+             const pfc::Box3i &box, double time = 0.0) override {
+    (void)time;
+    const int nx = box.size[0];
+    std::vector<double> local_max(nx, std::numeric_limits<double>::lowest());
+    long int idx = 0;
+    for (int k = box.low[2]; k <= box.high[2]; k++) {
+      for (int j = box.low[1]; j <= box.high[1]; j++) {
+        for (int i = 0; i < nx; i++) {
+          local_max[i] = std::max(local_max[i], field[idx++]);
+        }
+      }
+    }
+    track_front(local_max, domain, box);
+    fill_bc(field, domain, box);
+  }
 
-          if (std::abs(dist) < xwidth) {
-            return blend(dist);
-          }
-          if (xpos < xwidth && std::abs(dist - l) < xwidth) {
-            return blend(dist - l);
-          }
-          if (xpos > l - xwidth && std::abs(dist + l) < xwidth) {
-            return blend(dist + l);
-          }
-          return current; // outside transition bands, keep value
-        });
+  void fill_bc(pfc::field::FieldOutput<double> field, const pfc::Domain &domain,
+               const pfc::Box3i &box) {
+    const MovingBandRule r = band_rule(domain);
+    pfc::field::apply_inplace(field, domain, box,
+                              [r](const pfc::Real3 &X, double current) {
+                                return r(X[0], X[1], X[2], current);
+                              });
   }
 };
 

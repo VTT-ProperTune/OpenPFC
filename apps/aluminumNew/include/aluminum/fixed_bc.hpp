@@ -35,6 +35,7 @@
 
 #include <cmath>
 
+#include <aluminum/solidification_bc_rules.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/field/operations.hpp>
@@ -61,21 +62,21 @@ public:
 
   const std::string &get_modifier_name() const override { return m_name; }
 
+  /// The band against the upper x limit of the box, wherever the box is.
+  [[nodiscard]] FixedBandRule rule(const pfc::Domain &domain) const {
+    return {.blend = {.alpha = alpha, .rho_low = m_rho_low, .rho_high = m_rho_high},
+            .xpos = pfc::domain::upper(domain)[0] - xwidth,
+            .xwidth = xwidth};
+  }
+
   void apply(pfc::field::FieldOutput<double> field, const pfc::Domain &domain,
              const pfc::Box3i &box, double time = 0.0) override {
     (void)time;
-    // The band sits against the upper x limit of the box, wherever the box is.
-    const double xpos = pfc::domain::upper(domain)[0] - xwidth;
-
-    pfc::field::apply_inplace(
-        field, domain, box, [=, this](const pfc::Real3 &X, double current) {
-          const double x = X[0];
-          if (std::abs(x - xpos) < xwidth) {
-            const double S = 1.0 / (1.0 + std::exp(-alpha * (x - xpos)));
-            return (m_rho_low * S) + (m_rho_high * (1.0 - S));
-          }
-          return current;
-        });
+    const FixedBandRule r = rule(domain);
+    pfc::field::apply_inplace(field, domain, box,
+                              [r](const pfc::Real3 &X, double current) {
+                                return r(X[0], X[1], X[2], current);
+                              });
   }
 };
 

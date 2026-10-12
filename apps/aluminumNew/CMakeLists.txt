@@ -38,7 +38,8 @@ function(aluminum_cpu_executable target)
 endfunction()
 
 function(aluminum_cuda_executable target)
-  add_executable(${target} ${ARGN} src/gpu/aluminum_pointwise.cu)
+  add_executable(${target} ${ARGN} src/gpu/aluminum_pointwise.cu
+                 src/gpu/aluminum_device_bcs.cpp)
   target_include_directories(${target} PRIVATE ${ALUMINUM_INCLUDE_DIRS})
   target_link_libraries(${target} PRIVATE OpenPFC
                         nlohmann_json::nlohmann_json ${_aluminum_heffte_tgt}
@@ -49,7 +50,8 @@ function(aluminum_cuda_executable target)
 endfunction()
 
 function(aluminum_hip_executable target)
-  add_executable(${target} ${ARGN} src/gpu/aluminum_pointwise.hip)
+  add_executable(${target} ${ARGN} src/gpu/aluminum_pointwise.hip
+                 src/gpu/aluminum_device_bcs.cpp)
   target_include_directories(${target} PRIVATE ${ALUMINUM_INCLUDE_DIRS})
   target_link_libraries(${target} PRIVATE OpenPFC
                         nlohmann_json::nlohmann_json ${_aluminum_heffte_tgt}

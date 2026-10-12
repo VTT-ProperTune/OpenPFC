@@ -22,7 +22,8 @@ function(tungsten_cpu_executable target)
 endfunction()
 
 function(tungsten_cuda_executable target)
-  add_executable(${target} ${ARGN} src/gpu/tungsten_pointwise.cu)
+  add_executable(${target} ${ARGN} src/gpu/tungsten_pointwise.cu
+                 src/gpu/tungsten_device_bcs.cpp)
   target_include_directories(${target} PRIVATE ${TUNGSTEN_INCLUDE_DIR})
   target_link_libraries(${target} PRIVATE OpenPFC
                         nlohmann_json::nlohmann_json ${_tungsten_heffte_tgt}
@@ -33,7 +34,8 @@ function(tungsten_cuda_executable target)
 endfunction()
 
 function(tungsten_hip_executable target)
-  add_executable(${target} ${ARGN} src/gpu/tungsten_pointwise.hip)
+  add_executable(${target} ${ARGN} src/gpu/tungsten_pointwise.hip
+                 src/gpu/tungsten_device_bcs.cpp)
   target_include_directories(${target} PRIVATE ${TUNGSTEN_INCLUDE_DIR})
   target_link_libraries(${target} PRIVATE OpenPFC
                         nlohmann_json::nlohmann_json ${_tungsten_heffte_tgt}

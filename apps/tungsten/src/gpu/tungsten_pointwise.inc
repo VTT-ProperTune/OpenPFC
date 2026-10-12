@@ -13,3 +13,9 @@
 #include <tungsten/tungsten_pointwise.hpp>
 
 OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE(tungsten::TungstenPointwise)
+
+#include <openpfc/runtime/gpu/modifier_rule_gpu.hpp>
+#include <tungsten/solidification_bc_rules.hpp>
+
+OPENPFC_INSTANTIATE_MODIFIER_RULE(tungsten::FixedBandRule)
+OPENPFC_INSTANTIATE_MODIFIER_RULE(tungsten::MovingBandRule)
