@@ -37,6 +37,8 @@
  * `for_each_interior(model, eval, du, t)` RHS. They follow the
  * `domain::create` and `pfc::data::field_from_subdomain` pattern
  * used throughout OpenPFC for creating domains and fields.
+ * `create_owned` builds an `OwnedEulerStepper` that writes owned cells in
+ * place. `create` still builds the cloning `MultiEulerStepper`.
  *
  * Higher-order explicit methods (RK2, RK4) live in sibling files in this
  * folder under `pfc::sim::steppers::`. First-order IMEX Euler with an
@@ -52,6 +54,7 @@
  */
 
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <stdexcept>
 #include <tuple>
@@ -574,9 +577,10 @@ template <class... Ts, class Eval, class Model>
 /**
  * @brief Forward Euler that updates owned cells in place.
  *
- * `MultiEulerStepper` clones each field's entire buffer (halo included)
- * into a work copy, a candidate and a commit. A 2D slab with a nonzero
- * storage halo therefore copies several unused z-layers every step.
+ * `MultiEulerStepper` keeps a rate buffer, a work copy, a candidate, and a
+ * rollback checkpoint of each field's entire padded buffer. Each step copies
+ * the accepted state into the work array and commits a full-buffer candidate,
+ * including unused z-layers of a 2D slab.
  *
  * This stepper does not clone state. The right-hand side is invoked once,
  * while every field still holds the pre-step owned values, and fills one
@@ -592,15 +596,17 @@ template <class... Ts, class Eval, class Model>
  * cell changes, so one field's update cannot enter another's right-hand
  * side. The right-hand side must not itself write owned cells.
  *
- * Deliberate difference from `MultiEulerStepper`: there is no isolated
- * candidate and `can_rollback()` is false. If the right-hand side throws,
- * owned cells are unchanged. A right-hand side that fills halos before
- * throwing can still leave those halos modified; the stepper does not
- * snapshot them.
+ * There is no isolated candidate and `can_rollback()` is false. If the
+ * right-hand side throws before returning, owned cells are unchanged. A
+ * right-hand side that fills halos before throwing can still leave those
+ * halos modified; the stepper does not snapshot them. A throw inside
+ * `for_each_interior`'s OpenMP loop still terminates the process. That is
+ * the existing loop contract, not a new one.
  *
  * `du` is allocated once, at `field.size()`, and is not resized by `step`.
+ * Cells the right-hand side does not overwrite keep the previous rate.
  * `eval.idx(i, j, k)` must be `Field::idx(i, j, k)` so the scatter and the
- * owned update name the same cell.
+ * owned update name the same cell. `dt` must be finite and positive.
  */
 template <class Rhs, std::size_t N> class OwnedEulerStepper {
 public:
@@ -608,8 +614,9 @@ public:
 
   OwnedEulerStepper(double dt, std::array<std::size_t, N> sizes, Rhs rhs)
       : m_dt(dt), m_sizes(sizes), m_rhs(std::move(rhs)) {
-    if (!(dt > 0.0)) {
-      throw std::invalid_argument("OwnedEulerStepper: dt must be positive");
+    if (!(dt > 0.0) || !std::isfinite(dt)) {
+      throw std::invalid_argument(
+          "OwnedEulerStepper: dt must be finite and positive");
     }
     for (std::size_t i = 0; i < N; ++i) {
       if (sizes[i] == 0) {

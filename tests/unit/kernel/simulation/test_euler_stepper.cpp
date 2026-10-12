@@ -5,9 +5,9 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
-#include <chrono>
 #include <cmath>
 #include <complex>
+#include <limits>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
@@ -385,6 +385,40 @@ pfc::data::Field<double> slab(int nx, int ny, int halo) {
   return pfc::data::Field<double>(domain, box, halo);
 }
 
+pfc::data::Field<double> box3(int nx, int ny, int nz, int halo) {
+  const auto domain = pfc::domain::with_spacing({nx, ny, nz}, {1.0, 1.0, 1.0});
+  const pfc::Box3i box =
+      pfc::Box3i::from_bounds({0, 0, 0}, {nx - 1, ny - 1, nz - 1});
+  return pfc::data::Field<double>(domain, box, halo);
+}
+
+double pattern_value(int i, int j, int k) {
+  return 0.5 + 0.1 * i + 0.01 * j + 0.001 * k;
+}
+
+void fill_pattern(pfc::data::Field<double> &f, double halo_value) {
+  const int h = f.storage_halo();
+  const auto n = f.local_size();
+  for (int k = -h; k < n[2] + h; ++k) {
+    for (int j = -h; j < n[1] + h; ++j) {
+      for (int i = -h; i < n[0] + h; ++i) {
+        const bool owned =
+            i >= 0 && i < n[0] && j >= 0 && j < n[1] && k >= 0 && k < n[2];
+        f(i, j, k) = owned ? pattern_value(i, j, k) : halo_value;
+      }
+    }
+  }
+}
+
+bool same_storage(const pfc::data::Field<double> &a,
+                  const pfc::data::Field<double> &b) {
+  if (a.size() != b.size()) return false;
+  for (std::size_t q = 0; q < a.size(); ++q) {
+    if (a.vec()[q] != b.vec()[q]) return false;
+  }
+  return true;
+}
+
 void fill_sentinel(pfc::data::Field<double> &f, double halo_value,
                    double owned_value) {
   const int h = f.storage_halo();
@@ -516,9 +550,14 @@ TEST_CASE("owned euler evaluates coupled rates before either update",
   auto stepper = create_owned(std::tie(phi, temperature), eval, model, dt);
   stepper.step(0.0, phi, temperature);
 
-  REQUIRE(phi(1, 1, 0) == Catch::Approx(phi0 + dt * 1.0));
-  // u uses the pre-step phi, not phi + dt.
-  REQUIRE(temperature(1, 1, 0) == Catch::Approx(u0 + dt * phi0));
+  const auto n = phi.local_size();
+  for (int j = 0; j < n[1]; ++j) {
+    for (int i = 0; i < n[0]; ++i) {
+      REQUIRE(phi(i, j, 0) == Catch::Approx(phi0 + dt * 1.0));
+      // Temperature uses the pre-step phase, not the updated phase.
+      REQUIRE(temperature(i, j, 0) == Catch::Approx(u0 + dt * phi0));
+    }
+  }
   REQUIRE(halo_untouched(phi, -1.0));
   REQUIRE(halo_untouched(temperature, -1.0));
 }
@@ -541,46 +580,107 @@ TEST_CASE("owned euler leaves owned cells unchanged when the rhs throws",
   REQUIRE(u(0, 0, 0) == Catch::Approx(1.0));
   REQUIRE(u(3, 3, 0) == Catch::Approx(1.0));
   REQUIRE(halo_untouched(u, 3.0));
+
+  // A halo write that happens before the throw is outside the owned-cell
+  // guarantee. The stepper does not roll it back.
+  struct HaloThenThrow {
+    pfc::data::Field<double> *field = nullptr;
+    void operator()(double, std::tuple<std::vector<double> &> &) const {
+      (*field)(-1, 0, 0) = 42.0;
+      throw std::runtime_error("owned euler halo then throw");
+    }
+  };
+  HaloThenThrow rhs{&u};
+  OwnedEulerStepper<HaloThenThrow, 1> later(0.1, {u.size()}, rhs);
+  REQUIRE_THROWS_AS(later.step(0.0, u), std::runtime_error);
+  REQUIRE(u(0, 0, 0) == Catch::Approx(1.0));
+  REQUIRE(u(-1, 0, 0) == Catch::Approx(42.0));
 }
 
-TEST_CASE("owned euler moves less state than the cloning steppers",
-          "[stepper][euler][owned][bench]") {
-  constexpr int nx = 128;
-  constexpr int ny = 128;
+TEST_CASE("owned euler rejects a non-finite or non-positive dt",
+          "[stepper][euler][owned]") {
+  struct Idle {
+    void operator()(double, std::tuple<std::vector<double> &> &) const {}
+  };
+  const std::array<std::size_t, 1> sizes{4};
+  REQUIRE_THROWS_AS(OwnedEulerStepper<Idle, 1>(0.0, sizes, Idle{}),
+                    std::invalid_argument);
+  REQUIRE_THROWS_AS(OwnedEulerStepper<Idle, 1>(-0.2, sizes, Idle{}),
+                    std::invalid_argument);
+  REQUIRE_THROWS_AS(OwnedEulerStepper<Idle, 1>(
+                        std::numeric_limits<double>::infinity(), sizes, Idle{}),
+                    std::invalid_argument);
+  REQUIRE_THROWS_AS(OwnedEulerStepper<Idle, 1>(
+                        std::numeric_limits<double>::quiet_NaN(), sizes, Idle{}),
+                    std::invalid_argument);
+  REQUIRE_THROWS_AS(OwnedEulerStepper<Idle, 1>(0.1, {0}, Idle{}),
+                    std::invalid_argument);
+}
+
+TEST_CASE("owned euler matches MultiEuler and a pre-step reference on a 3D box",
+          "[stepper][euler][owned]") {
+  constexpr int nx = 5;
+  constexpr int ny = 4;
+  constexpr int nz = 3;
   constexpr int halo = 2;
-  constexpr int steps = 50;
-  constexpr double dt = 0.01;
-  auto a = slab(nx, ny, halo);
-  auto b = slab(nx, ny, halo);
-  fill_sentinel(a, 0.0, 1.0);
-  fill_sentinel(b, 0.0, 1.0);
+  constexpr double dt = 0.125;
+  constexpr double lambda = 0.25;
+  constexpr double halo_value = 7.0;
+  constexpr int steps = 3;
 
-  OwnedEval eval_a{&a, 1.0};
-  OwnedEval eval_b{&b, 1.0};
-  IdentityModel model;
-  auto owned = create_owned(std::tie(a), eval_a, model, dt);
-  auto cloning = create(std::tie(b), eval_b, model, dt);
+  auto owned_field = box3(nx, ny, nz, halo);
+  auto multi_field = box3(nx, ny, nz, halo);
+  fill_pattern(owned_field, halo_value);
+  fill_pattern(multi_field, halo_value);
+  REQUIRE(owned_field.local_size()[2] == nz);
+  REQUIRE(owned_field.size() >
+          static_cast<std::size_t>(nx) * static_cast<std::size_t>(ny) * nz);
 
-  const auto t0 = std::chrono::steady_clock::now();
-  for (int n = 0; n < steps; ++n) owned.step(n * dt, a);
-  const double owned_s =
-      std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+  struct CellEval {
+    const pfc::data::Field<double> *field = nullptr;
+    void prepare() {}
+    [[nodiscard]] double operator()(int i, int j, int k) const {
+      return (*field)(i, j, k);
+    }
+    [[nodiscard]] std::size_t idx(int i, int j, int k) const {
+      return field->idx(i, j, k);
+    }
+    [[nodiscard]] int imin() const { return 0; }
+    [[nodiscard]] int imax() const { return field->local_size()[0]; }
+    [[nodiscard]] int jmin() const { return 0; }
+    [[nodiscard]] int jmax() const { return field->local_size()[1]; }
+    [[nodiscard]] int kmin() const { return 0; }
+    [[nodiscard]] int kmax() const { return field->local_size()[2]; }
+  };
+  struct DecayModel {
+    double lambda = 0.0;
+    [[nodiscard]] double rhs(double, double g) const { return -lambda * g; }
+  };
 
-  const auto t1 = std::chrono::steady_clock::now();
-  for (int n = 0; n < steps; ++n) cloning.step(n * dt, b);
-  const double cloning_s =
-      std::chrono::duration<double>(std::chrono::steady_clock::now() - t1).count();
+  CellEval owned_eval{&owned_field};
+  CellEval multi_eval{&multi_field};
+  DecayModel model{lambda};
+  auto owned = create_owned(std::tie(owned_field), owned_eval, model, dt);
+  auto cloning = create(std::tie(multi_field), multi_eval, model, dt);
+  REQUIRE(owned.workspace_bytes() == owned_field.size() * sizeof(double));
+  REQUIRE_FALSE(owned.can_rollback());
 
-  REQUIRE(a(0, 0, 0) == Catch::Approx(b(0, 0, 0)));
-  // MultiEulerStepper keeps du, a work copy and a candidate: three full
-  // slabs. Each step copies the accepted state, writes the candidate and
-  // commits it. OwnedEulerStepper keeps one du slab and writes owned cells.
-  const std::size_t slab_bytes = a.size() * sizeof(double);
-  const std::size_t owned_write = static_cast<std::size_t>(nx) * ny * sizeof(double);
-  REQUIRE(owned.workspace_bytes() == slab_bytes);
-  WARN("owned " << owned_s << " s, MultiEuler " << cloning_s << " s, slab cells "
-                << a.size() << ", owned cells " << nx * ny << ", owned workspace "
-                << slab_bytes << " B, MultiEuler workspace " << 3 * slab_bytes
-                << " B, owned write/step " << owned_write
-                << " B, MultiEuler copy/step " << 3 * slab_bytes << " B");
+  const double factor = 1.0 - dt * lambda;
+  for (int step = 0; step < steps; ++step) {
+    REQUIRE(owned.step(step * dt, owned_field) == Catch::Approx((step + 1) * dt));
+    REQUIRE(cloning.step(step * dt, multi_field) == Catch::Approx((step + 1) * dt));
+  }
+
+  REQUIRE(same_storage(owned_field, multi_field));
+  REQUIRE(halo_untouched(owned_field, halo_value));
+  const double scale = std::pow(factor, steps);
+  for (int k = 0; k < nz; ++k) {
+    for (int j = 0; j < ny; ++j) {
+      for (int i = 0; i < nx; ++i) {
+        REQUIRE(owned_field(i, j, k) ==
+                Catch::Approx(pattern_value(i, j, k) * scale));
+      }
+    }
+  }
+  REQUIRE(owned.workspace_bytes() == owned_field.size() * sizeof(double));
 }

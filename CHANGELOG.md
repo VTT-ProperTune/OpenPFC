@@ -16,6 +16,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- `OwnedEulerStepper` and `create_owned` advance real fields by forward
+  Euler on owned cells only. Coupled rates are taken from the pre-step
+  state, halo cells are not written, and `can_rollback()` is false. A
+  non-finite time step is rejected. Closes #426.
+
 - A shared coarse correction for uniquely owned structured Poisson and
   vector-elasticity operators. The small coarse unknown stays replicated,
   restriction is P^T, and periodic gauges use one communicator-wide mean.
