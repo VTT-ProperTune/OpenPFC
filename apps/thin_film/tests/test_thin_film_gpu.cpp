@@ -35,13 +35,9 @@ json mini_settings() {
   return {
       {"model", {{"name", "thin_film"}, {"params", {{"h0", 1.0}, {"A", 0.05}}}}},
       {"domain",
-       {{"Lx", 16},
-        {"Ly", 16},
-        {"Lz", 1},
-        {"dx", 1.0},
-        {"dy", 1.0},
-        {"dz", 1.0},
-        {"origin", "corner"}}},
+       {{"size", {16, 16, 1}},
+        {"lower", {0.0, 0.0, 0.0}},
+        {"upper", {16.0, 16.0, 1.0}}}},
       {"timestepping", {{"t0", 0.0}, {"t1", 0.2}, {"dt", 0.1}, {"saveat", -1.0}}},
       {"initial_conditions",
        {{{"target", "h"},
@@ -87,7 +83,10 @@ std::array<double, 4> last_csv_row(const std::string &path) {
 
 nlohmann::json nonlinear_mini_settings(const std::string &csv_path) {
   return {
-      {"domain", {{"Lx", 32}, {"Ly", 32}, {"Lz", 1}, {"dx", 1.0}}},
+      {"domain",
+       {{"size", {32, 32, 1}},
+        {"lower", {0.0, 0.0, 0.0}},
+        {"upper", {32.0, 32.0, 1.0}}}},
       {"model",
        {{"params",
          {{"h0", 1.0}, {"gamma", 1.0}, {"M0", 1.0}, {"A", 0.05}, {"h_star", 0.2}}}}},

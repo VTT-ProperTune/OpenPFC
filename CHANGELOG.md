@@ -9,6 +9,15 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Breaking
 
+- An input's `domain` is now the box: `"size": [Nx, Ny, Nz]`, `"lower"` and
+  `"upper"` limits, spacing `(upper - lower) / size` on every (periodic)
+  axis. `Lx`/`Ly`/`Lz`, `dx`/`dy`/`dz`, `origin`/`origo` and flat root-level
+  domain keys are removed; using them fails with the equivalent block in the
+  message. `scripts/migrate_domain_block.py FILE...` rewrites JSON and TOML
+  inputs in place with the grid unchanged bit for bit. All shipped inputs are
+  migrated. The thin-film, surface-diffusion, EHD and Cahn-Hilliard elastic
+  drivers now read the domain through `from_json<Domain>` (#487).
+
 - `domain::get_lower_bounds` / `get_upper_bounds` are replaced by
   `domain::lower`, `upper`, `extent` and `center`. `upper` is the end of the
   box (the periodic image of `lower` on a periodic axis); the old

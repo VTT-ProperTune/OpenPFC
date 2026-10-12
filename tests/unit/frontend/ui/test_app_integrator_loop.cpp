@@ -21,13 +21,10 @@ json minimal_spectral_settings() {
   json settings;
   settings["method"] = "spectral";
   settings["backend"] = "cpu";
-  settings["Lx"] = 4;
-  settings["Ly"] = 4;
-  settings["Lz"] = 4;
-  settings["dx"] = 0.25;
-  settings["dy"] = 0.25;
-  settings["dz"] = 0.25;
-  settings["origin"] = "center";
+  // 4^3 points, spacing 0.25, box centred on the origin.
+  settings["domain"] = {{"size", {4, 4, 4}},
+                        {"lower", {-0.5, -0.5, -0.5}},
+                        {"upper", {0.5, 0.5, 0.5}}};
   settings["t0"] = 0.0;
   settings["t1"] = 0.05;
   settings["dt"] = 0.01;

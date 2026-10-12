@@ -166,7 +166,7 @@ def test_catalog_presets_and_installed_data(tmp_path, app, preset):
     assert manifest["app"] == app and manifest["preset"] == preset
     settings = json.loads((case / "input.json").read_text())
     assert settings["model"]["name"] == app
-    assert all(isinstance(settings["domain"][key], int) for key in ("Lx", "Ly", "Lz"))
+    assert all(isinstance(n, int) for n in settings["domain"]["size"])
     assert all(f["data"].startswith("results/") for f in settings["fields"])
     prefix = tmp_path / "prefix"
     driver = prefix / "bin/openpfc"

@@ -46,6 +46,7 @@
 #include <nlohmann/json.hpp>
 
 #include <openpfc/frontend/io/diagnostics_series.hpp>
+#include <openpfc/frontend/ui/from_json_world_time.hpp>
 #include <openpfc/frontend/ui/json_snapshot_fields.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
@@ -76,12 +77,12 @@ int main(int argc, char *argv[]) {
     if (!in) throw std::runtime_error(std::string("cannot open ") + argv[1]);
     json cfg = json::parse(in);
 
-    const auto &d = cfg.at("domain");
-    const int Lx = d.at("Lx"), Ly = d.at("Ly"), Lz = d.value("Lz", 1);
-    const double dx = d.value("dx", 1.0);
-    const auto domain = pfc::domain::create(pfc::GridSize({Lx, Ly, Lz}),
-                                            pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                            pfc::GridSpacing({dx, dx, dx}));
+    const auto domain = pfc::ui::from_json<pfc::Domain>(cfg);
+    const double dx = pfc::domain::get_spacing(domain, 0);
+    // One spacing for x and y: the driver reads dx only.
+    if (pfc::domain::get_spacing(domain, 1) != dx)
+      throw std::invalid_argument(
+          "ehd_film_nonlinear: x and y spacings must match, (upper - lower) / size");
 
     ehd_film::EhdFilmParams p;
     ehd_film::apply_ehd_film_json(cfg.at("model").at("params"), p);

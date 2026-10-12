@@ -9,19 +9,23 @@
 using json = nlohmann::json;
 using namespace pfc;
 
-TEST_CASE("World validation with wrong type for Lx",
+namespace {
+json domain_block(json size, json lower, json upper) {
+  return {{"domain", {{"size", size}, {"lower", lower}, {"upper", upper}}}};
+}
+} // namespace
+
+TEST_CASE("Domain validation with a non-integer size",
           "[ui][integration][validation]") {
-  json j = {{"Lx", 256.5}, // Float instead of int!
-            {"Ly", 256},   {"Lz", 256}, {"dx", 1.0},
-            {"dy", 1.0},   {"dz", 1.0}, {"origo", "center"}};
+  json j = domain_block({256.5, 256, 256}, {0, 0, 0}, {1, 1, 1});
 
   try {
     [[maybe_unused]] auto world = ui::from_json<Domain>(j);
     FAIL("Should have thrown exception");
   } catch (const std::invalid_argument &e) {
     std::string msg(e.what());
-    REQUIRE((msg.find("Lx") != std::string::npos));
-    REQUIRE((msg.find("integer") != std::string::npos));
+    REQUIRE((msg.find("domain.size") != std::string::npos));
+    REQUIRE((msg.find("integers") != std::string::npos));
     REQUIRE((msg.find("256.5") != std::string::npos));
     REQUIRE((msg.find("Description") != std::string::npos));
     REQUIRE((msg.find("Expected") != std::string::npos));
@@ -30,61 +34,33 @@ TEST_CASE("World validation with wrong type for Lx",
   }
 }
 
-TEST_CASE("World validation with invalid origo value",
+TEST_CASE("Domain validation with a missing upper limit",
           "[ui][integration][validation]") {
-  json j = {
-      {"Lx", 256}, {"Ly", 256}, {"Lz", 256},        {"dx", 1.0},
-      {"dy", 1.0}, {"dz", 1.0}, {"origo", "centre"} // British spelling!
-  };
+  json j = domain_block({256, 256, 256}, {0, 0, 0}, {1, 1, 1});
+  j["domain"].erase("upper");
 
   try {
     [[maybe_unused]] auto world = ui::from_json<Domain>(j);
     FAIL("Should have thrown exception");
   } catch (const std::invalid_argument &e) {
     std::string msg(e.what());
-    REQUIRE((msg.find("origo") != std::string::npos));
-    REQUIRE((msg.find("Valid options") != std::string::npos));
-    REQUIRE((msg.find("'center'") != std::string::npos));
-    REQUIRE((msg.find("'corner'") != std::string::npos));
-    REQUIRE((msg.find("centre") != std::string::npos));
-  }
-}
-
-TEST_CASE("World validation with missing Ly field",
-          "[ui][integration][validation]") {
-  json j = {{"Lx", 256},
-            // Ly is missing!
-            {"Lz", 256},
-            {"dx", 1.0},
-            {"dy", 1.0},
-            {"dz", 1.0},
-            {"origo", "center"}};
-
-  try {
-    [[maybe_unused]] auto world = ui::from_json<Domain>(j);
-    FAIL("Should have thrown exception");
-  } catch (const std::invalid_argument &e) {
-    std::string msg(e.what());
-    REQUIRE((msg.find("Ly") != std::string::npos));
+    REQUIRE((msg.find("domain.upper") != std::string::npos));
     REQUIRE((msg.find("missing") != std::string::npos));
-    REQUIRE((msg.find("grid points in Y direction") != std::string::npos));
+    REQUIRE((msg.find("upper limits of the box") != std::string::npos));
   }
 }
 
-TEST_CASE("World validation with wrong type for dx",
+TEST_CASE("Domain validation with a string lower limit",
           "[ui][integration][validation]") {
-  json j = {{"Lx", 256},   {"Ly", 256}, {"Lz", 256},
-            {"dx", "1.0"}, // String instead of float!
-            {"dy", 1.0},   {"dz", 1.0}, {"origo", "center"}};
+  json j = domain_block({256, 256, 256}, {"0.0", 0, 0}, {1, 1, 1});
 
   try {
     [[maybe_unused]] auto world = ui::from_json<Domain>(j);
     FAIL("Should have thrown exception");
   } catch (const std::invalid_argument &e) {
     std::string msg(e.what());
-    REQUIRE((msg.find("dx") != std::string::npos));
-    REQUIRE((msg.find("grid spacing") != std::string::npos));
-    REQUIRE((msg.find("float") != std::string::npos));
+    REQUIRE((msg.find("domain.lower") != std::string::npos));
+    REQUIRE((msg.find("finite numbers") != std::string::npos));
   }
 }
 
@@ -108,8 +84,7 @@ TEST_CASE("Unknown field modifier type error", "[ui][integration][validation]") 
 }
 
 TEST_CASE("Error messages are concise", "[ui][integration][validation]") {
-  json j = {{"Lx", 256.5}, {"Ly", 256}, {"Lz", 256},        {"dx", 1.0},
-            {"dy", 1.0},   {"dz", 1.0}, {"origo", "center"}};
+  json j = domain_block({256.5, 256, 256}, {0, 0, 0}, {1, 1, 1});
 
   try {
     [[maybe_unused]] auto world = ui::from_json<Domain>(j);
@@ -123,29 +98,11 @@ TEST_CASE("Error messages are concise", "[ui][integration][validation]") {
   }
 }
 
-TEST_CASE("World validation accepts integer dx", "[ui][integration][validation]") {
-  json j = {{"Lx", 256}, {"Ly", 256}, {"Lz", 256},
-            {"dx", 1}, // integer literal
-            {"dy", 1.0}, {"dz", 1.0}, {"origin", "center"}};
+TEST_CASE("Domain validation accepts integer limits",
+          "[ui][integration][validation]") {
+  json j = domain_block({256, 128, 1}, {0, -64, 0}, {256, 64, 1});
   REQUIRE_NOTHROW(ui::from_json<Domain>(j));
   Domain domain = ui::from_json<Domain>(j);
-  REQUIRE(domain::get_spacing(domain, 0) == 1.0);
-}
-
-TEST_CASE("World validation accepts integer dy", "[ui][integration][validation]") {
-  json j = {{"Lx", 256}, {"Ly", 256},         {"Lz", 256},
-            {"dx", 1.0}, {"dy", 1}, // integer literal
-            {"dz", 1.0}, {"origin", "center"}};
-  REQUIRE_NOTHROW(ui::from_json<Domain>(j));
-  Domain domain = ui::from_json<Domain>(j);
-  REQUIRE(domain::get_spacing(domain, 1) == 1.0);
-}
-
-TEST_CASE("World validation accepts integer dz", "[ui][integration][validation]") {
-  json j = {{"Lx", 256},         {"Ly", 256}, {"Lz", 256},
-            {"dx", 1.0},         {"dy", 1.0}, {"dz", 1}, // integer literal
-            {"origin", "center"}};
-  REQUIRE_NOTHROW(ui::from_json<Domain>(j));
-  Domain domain = ui::from_json<Domain>(j);
-  REQUIRE(domain::get_spacing(domain, 2) == 1.0);
+  REQUIRE(domain::get_spacing(domain) == Real3{1.0, 1.0, 1.0});
+  REQUIRE(domain::get_origin(domain) == Real3{0.0, -64.0, 0.0});
 }

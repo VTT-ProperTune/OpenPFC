@@ -47,13 +47,9 @@ json session_settings(int sx, int sy, int sz, double dt) {
   return {
       {"model", {{"name", "tungsten"}, {"params", model_params()}}},
       {"domain",
-       {{"Lx", sx},
-        {"Ly", sy},
-        {"Lz", sz},
-        {"dx", 1.0},
-        {"dy", 1.0},
-        {"dz", 1.0},
-        {"origin", "corner"}}},
+       {{"size", {sx, sy, sz}},
+        {"lower", {0.0, 0.0, 0.0}},
+        {"upper", {sx, sy, sz}}}},
       {"timestepping", {{"t0", 0.0}, {"t1", dt}, {"dt", dt}, {"saveat", 1.0e9}}}};
 }
 

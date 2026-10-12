@@ -150,14 +150,10 @@ void AppProfilingController::populate_export_metadata(
   exp.export_metadata = json::object();
   if (root_settings.contains("domain")) {
     const auto &d = root_settings["domain"];
-    if (d.contains("Lx")) {
-      exp.export_metadata["domain_lx"] = d["Lx"];
-    }
-    if (d.contains("Ly")) {
-      exp.export_metadata["domain_ly"] = d["Ly"];
-    }
-    if (d.contains("Lz")) {
-      exp.export_metadata["domain_lz"] = d["Lz"];
+    if (d.contains("size") && d["size"].is_array() && d["size"].size() == 3) {
+      exp.export_metadata["domain_lx"] = d["size"][0];
+      exp.export_metadata["domain_ly"] = d["size"][1];
+      exp.export_metadata["domain_lz"] = d["size"][2];
     }
   }
   if (const char *e = std::getenv("SLURM_JOB_ID")) {

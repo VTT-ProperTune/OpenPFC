@@ -56,8 +56,11 @@ NTASKS="${SLURM_NTASKS:?SLURM_NTASKS is not set}"
 RUNDIR="${JOBROOT}/runs/${SLURM_JOB_NAME}_${SLURM_JOB_ID}"
 mkdir -p "${RUNDIR}"
 
-sed -e "s/__LX__/${LX}/g" -e "s/__T1__/${STEPS}/g" "${TEMPLATE}" \
-  > "${RUNDIR}/input.toml"
+# Box limits for the symmetric domain: lower = -0.5 * dx * LX, upper = -lower.
+LOWER=$(awk -v n="${LX}" 'BEGIN { printf "%.17g", -0.5 * 1.1107207345395915 * n }')
+UPPER=$(awk -v n="${LX}" 'BEGIN { printf "%.17g", 0.5 * 1.1107207345395915 * n }')
+sed -e "s/__LX__/${LX}/g" -e "s/__LOWER__/${LOWER}/g" -e "s/__UPPER__/${UPPER}/g" \
+  -e "s/__T1__/${STEPS}/g" "${TEMPLATE}" > "${RUNDIR}/input.toml"
 cp -f "${BASH_SOURCE[0]}" "${RUNDIR}/tungsten_hip_scaling.sbatch"
 cd "${RUNDIR}"
 

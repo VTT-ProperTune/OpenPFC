@@ -21,7 +21,7 @@ def main():
     args = parser.parse_args()
     settings = {
         "model": {"name": "cahn_hilliard", "params": {}},
-        "domain": {"Lx": 32, "Ly": 16, "Lz": 1, "dx": 1, "dy": 1, "dz": 1, "origin": "corner"},
+        "domain": {"size": [32, 16, 1], "lower": [0, 0, 0], "upper": [32, 16, 1]},
         "timestepping": {"t0": 0, "t1": 0.04, "dt": 0.01, "saveat": 0.01},
         "initial_conditions": [{"type": "seeded_noise", "target": "c", "c0": 0.32, "amplitude": 0.02, "seed": 42}],
         "diagnostics": {"csv": "results/diagnostics.csv"},

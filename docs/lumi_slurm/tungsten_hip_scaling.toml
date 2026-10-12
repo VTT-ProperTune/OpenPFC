@@ -36,13 +36,11 @@ q31 = 20.0
 q40 = 45.0
 
 [domain]
-Lx = __LX__
-Ly = __LX__
-Lz = __LX__
-dx = 1.1107207345395915
-dy = 1.1107207345395915
-dz = 1.1107207345395915
-origin = "center"
+# Symmetric box; the sbatch fills __LOWER__/__UPPER__ = -/+ 0.5 * dx * LX
+# with dx = 1.1107207345395915.
+size = [__LX__, __LX__, __LX__]
+lower = [__LOWER__, __LOWER__, __LOWER__]
+upper = [__UPPER__, __UPPER__, __UPPER__]
 
 [timestepping]
 t0 = 0.0

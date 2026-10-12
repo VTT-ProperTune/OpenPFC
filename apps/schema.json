@@ -18,42 +18,33 @@
         },
         "domain": {
             "type": "object",
+            "description": "The box: grid points per axis and its lower and upper limits. Every axis is periodic, so the spacing is (upper - lower) / size and upper is the periodic image of lower.",
             "properties": {
-                "Lx": {
-                    "type": "integer"
+                "size": {
+                    "type": "array",
+                    "items": {"type": "integer", "minimum": 1},
+                    "minItems": 3,
+                    "maxItems": 3
                 },
-                "Ly": {
-                    "type": "integer"
+                "lower": {
+                    "type": "array",
+                    "items": {"type": "number"},
+                    "minItems": 3,
+                    "maxItems": 3
                 },
-                "Lz": {
-                    "type": "integer"
-                },
-                "dx": {
-                    "type": "number"
-                },
-                "dy": {
-                    "type": "number"
-                },
-                "dz": {
-                    "type": "number"
-                },
-                "origin": {
-                    "type": "string",
-                    "enum": [
-                        "center",
-                        "corner"
-                    ]
+                "upper": {
+                    "type": "array",
+                    "items": {"type": "number"},
+                    "minItems": 3,
+                    "maxItems": 3
                 }
             },
             "required": [
-                "Lx",
-                "Ly",
-                "Lz",
-                "dx",
-                "dy",
-                "dz",
-                "origin"
-            ]
+                "size",
+                "lower",
+                "upper"
+            ],
+            "additionalProperties": false
         },
         "timestepping": {
             "type": "object",

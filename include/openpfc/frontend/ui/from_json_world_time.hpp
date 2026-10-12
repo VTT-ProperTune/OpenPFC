@@ -9,9 +9,15 @@
 #ifndef PFC_UI_FROM_JSON_WORLD_TIME_HPP
 #define PFC_UI_FROM_JSON_WORLD_TIME_HPP
 
+#include <array>
 #include <cmath>
+#include <limits>
+#include <sstream>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 #include <openpfc/frontend/ui/errors_config_format.hpp>
 #include <openpfc/frontend/ui/from_json_fwd.hpp>
@@ -22,170 +28,163 @@
 
 namespace pfc::ui {
 
+namespace detail {
+
+/// Keys of the removed `Lx/dx/origin` domain format.
+inline constexpr std::array<const char *, 8> legacy_domain_keys{
+    "Lx", "Ly", "Lz", "dx", "dy", "dz", "origin", "origo"};
+
 /**
- * Creates a Domain object from a JSON input.
+ * @brief `{lower, upper}` with `(upper - lower) / n == d` bit for bit when one
+ *        exists (symmetric first), otherwise the closest. Mirrors
+ *        `scripts/migrate_domain_block.py`.
+ */
+inline std::pair<double, double> exact_box_limits(int n, double d, double lower) {
+  std::vector<double> starts;
+  if (lower < 0.0) starts.push_back(-lower);
+  starts.push_back(lower + n * d);
+  double best = starts.back();
+  double best_err = std::numeric_limits<double>::infinity();
+  for (double start : starts) {
+    double lo = start, hi = start;
+    for (int k = 0; k < 64; ++k) {
+      for (double u : {lo, hi}) {
+        if (!(u > lower)) continue;
+        const double err = std::abs((u - lower) / n - d);
+        if (err == 0.0) return {lower, u};
+        if (err < best_err) {
+          best_err = err;
+          best = u;
+        }
+      }
+      lo = std::nextafter(lo, -std::numeric_limits<double>::infinity());
+      hi = std::nextafter(hi, std::numeric_limits<double>::infinity());
+    }
+  }
+  return {lower, best};
+}
+
+/// The `size/lower/upper` block equivalent to a legacy block, or null.
+inline json legacy_domain_equivalent(const json &d) {
+  try {
+    const int nx = d.at("Lx").get<int>();
+    const int ny = d.value("Ly", 1);
+    const int nz = d.value("Lz", 1);
+    const double dx = d.at("dx").get<double>();
+    const std::array<int, 3> n{nx, ny, nz};
+    const std::array<double, 3> h{dx, d.value("dy", dx), d.value("dz", dx)};
+    const std::string origin =
+        d.value("origin", d.value("origo", std::string("corner")));
+    if (origin != "center" && origin != "corner") return nullptr;
+    json lower = json::array(), upper = json::array();
+    for (int a = 0; a < 3; ++a) {
+      const double x0 = origin == "center" ? -0.5 * h[a] * n[a] : 0.0;
+      const auto [lo, up] = exact_box_limits(n[a], h[a], x0);
+      lower.push_back(lo);
+      upper.push_back(up);
+    }
+    return json{{"size", n}, {"lower", lower}, {"upper", upper}};
+  } catch (const std::exception &) {
+    return nullptr;
+  }
+}
+
+/// Throw, naming the replacement, when a removed domain key is present.
+inline void reject_legacy_domain_keys(const json &root, const json &d) {
+  std::vector<std::string> found;
+  for (const char *k : legacy_domain_keys) {
+    if (d.contains(k) || root.contains(k)) found.emplace_back(k);
+  }
+  if (found.empty()) return;
+  std::ostringstream oss;
+  oss << "Invalid configuration: the domain keys";
+  for (const auto &k : found) oss << " '" << k << "'";
+  oss << " were removed. A domain is now its grid size and the lower and upper "
+         "limits of the box, \"domain\": {\"size\": [Nx, Ny, Nz], \"lower\": "
+         "[x0, y0, z0], \"upper\": [x1, y1, z1]}, with spacing (upper - lower) "
+         "/ size on each periodic axis.";
+  const json legacy = d.contains("Lx") ? d : root;
+  if (const json eq = legacy_domain_equivalent(legacy); !eq.is_null()) {
+    oss << " This input is equivalent to \"domain\": " << eq.dump() << ".";
+  }
+  oss << " scripts/migrate_domain_block.py rewrites input files in place.";
+  throw std::invalid_argument(oss.str());
+}
+
+/// A JSON array of exactly three numbers that pass @p ok.
+template <class T, class Ok>
+std::array<T, 3> read_triple(const json &d, const char *key, const char *what,
+                             const char *expected, const char *example, Ok ok) {
+  const auto fail = [&](const std::string &got) {
+    throw std::invalid_argument(
+        format_config_error(std::string("domain.") + key, what, expected, got, {},
+                            std::string("\"") + key + "\": " + example));
+  };
+  if (!d.contains(key)) fail("missing");
+  const json &v = d.at(key);
+  if (!v.is_array() || v.size() != 3) fail(v.dump());
+  std::array<T, 3> out{};
+  for (std::size_t a = 0; a < 3; ++a) {
+    const json &e = v[a];
+    if constexpr (std::is_integral_v<T>) {
+      if (!e.is_number_integer()) fail(v.dump());
+    } else {
+      if (!e.is_number()) fail(v.dump());
+    }
+    out[a] = e.get<T>();
+    if (!ok(out[a])) fail(v.dump());
+  }
+  return out;
+}
+
+} // namespace detail
+
+/**
+ * Creates a Domain from the `domain` block of an input:
  *
- * @param j A JSON object containing the following fields:
- *   - Lx (int): The number of grid points in the x direction.
- *   - Ly (int): The number of grid points in the y direction.
- *   - Lz (int): The number of grid points in the z direction.
- *   - dx (float): The grid spacing in the x direction.
- *   - dy (float): The grid spacing in the y direction.
- *   - dz (float): The grid spacing in the z direction.
- *   - origin (string): The origin of the coordinate system. Must be one of
- *     "center" or "corner".
+ * @code{.json}
+ * "domain": {"size": [256, 256, 256],
+ *            "lower": [-142.2, -142.2, -142.2],
+ *            "upper": [142.2, 142.2, 142.2]}
+ * @endcode
  *
- * @return A Domain object.
+ * - `size`: grid points per axis, positive integers.
+ * - `lower`, `upper`: limits of the box, finite, `upper > lower` per axis.
  *
- * @throws std::invalid_argument if any of the required fields are missing
- *         or have an invalid value.
+ * Every axis is periodic, so the spacing is `(upper - lower) / size` and
+ * `upper` is the periodic image of `lower`, not a stored point (see
+ * `domain::from_bounds`). Index `i` sits at `lower + i * spacing`.
+ *
+ * @param j The input root (with a `domain` object) or the domain object.
+ * @throws std::invalid_argument on a missing or invalid key, and on the
+ *         removed `Lx/Ly/Lz/dx/dy/dz/origin/origo` keys, with the equivalent
+ *         block in the message.
  */
 template <> [[nodiscard]] inline Domain from_json<Domain>(const json &j) {
-  int Lx = 0;
-  int Ly = 0;
-  int Lz = 0;
-  double dx = 0.0;
-  double dy = 0.0;
-  double dz = 0.0;
-  double x0 = 0.0;
-  double y0 = 0.0;
-  double z0 = 0.0;
-  std::string origin;
-
-  // Use helper to support both flat and nested structures
-  auto lx_val = get_json_value(j, "Lx", "domain");
-  if (lx_val.is_null() || !lx_val.is_number_integer()) {
-    throw std::invalid_argument(format_config_error(
-        "Lx", "number of grid points in X direction", "positive integer",
-        get_json_value_string(j, "Lx"), {}, "\"Lx\": 256"));
+  const json &d =
+      (j.contains("domain") && j["domain"].is_object()) ? j["domain"] : j;
+  detail::reject_legacy_domain_keys(j, d);
+  const auto size = detail::read_triple<int>(
+      d, "size", "grid points per axis", "three positive integers",
+      "[256, 256, 256]", [](int n) { return n > 0; });
+  const auto finite = [](double x) { return std::isfinite(x); };
+  const auto lower =
+      detail::read_triple<double>(d, "lower", "lower limits of the box",
+                                  "three finite numbers", "[0.0, 0.0, 0.0]", finite);
+  const auto upper = detail::read_triple<double>(
+      d, "upper", "upper limits of the box", "three finite numbers",
+      "[64.0, 64.0, 64.0]", finite);
+  for (int a = 0; a < 3; ++a) {
+    if (!(upper[a] > lower[a])) {
+      throw std::invalid_argument(format_config_error(
+          "domain.upper", "upper limits of the box", "each above its lower limit",
+          d.at("upper").dump() + " with lower " + d.at("lower").dump(), {},
+          "\"lower\": [0.0, 0.0, 0.0], \"upper\": [64.0, 64.0, 64.0]"));
+    }
   }
-  Lx = lx_val;
-  if (Lx <= 0) {
-    throw std::invalid_argument(format_config_error(
-        "Lx", "number of grid points in X direction", "positive integer",
-        get_json_value_string(j, "Lx"), {}, "\"Lx\": 256"));
-  }
-
-  auto ly_val = get_json_value(j, "Ly", "domain");
-  if (ly_val.is_null() || !ly_val.is_number_integer()) {
-    std::string ly_str =
-        ly_val.is_null() ? "missing" : get_json_value_string(j, "Ly");
-    throw std::invalid_argument(
-        format_config_error("Ly", "number of grid points in Y direction",
-                            "positive integer", ly_str, {}, "\"Ly\": 256"));
-  }
-  Ly = ly_val;
-  if (Ly <= 0) {
-    throw std::invalid_argument(format_config_error(
-        "Ly", "number of grid points in Y direction", "positive integer",
-        get_json_value_string(j, "Ly"), {}, "\"Ly\": 256"));
-  }
-
-  auto lz_val = get_json_value(j, "Lz", "domain");
-  if (lz_val.is_null() || !lz_val.is_number_integer()) {
-    std::string lz_str =
-        lz_val.is_null() ? "missing" : get_json_value_string(j, "Lz");
-    throw std::invalid_argument(
-        format_config_error("Lz", "number of grid points in Z direction",
-                            "positive integer", lz_str, {}, "\"Lz\": 256"));
-  }
-  Lz = lz_val;
-  if (Lz <= 0) {
-    throw std::invalid_argument(format_config_error(
-        "Lz", "number of grid points in Z direction", "positive integer",
-        get_json_value_string(j, "Lz"), {}, "\"Lz\": 256"));
-  }
-
-  auto dx_val = get_json_value(j, "dx", "domain");
-  if (dx_val.is_null() || !dx_val.is_number()) {
-    std::string dx_str =
-        dx_val.is_null() ? "missing" : get_json_value_string(j, "dx");
-    throw std::invalid_argument(
-        format_config_error("dx", "grid spacing in X direction", "positive float",
-                            dx_str, {}, "\"dx\": 1.0"));
-  }
-  dx = dx_val;
-  if (!std::isfinite(dx)) {
-    throw std::invalid_argument(
-        format_config_error("dx", "grid spacing in X direction", "finite float",
-                            get_json_value_string(j, "dx"), {}, "\"dx\": 1.0"));
-  }
-  if (dx <= 0.0) {
-    throw std::invalid_argument(
-        format_config_error("dx", "grid spacing in X direction", "positive float",
-                            get_json_value_string(j, "dx"), {}, "\"dx\": 1.0"));
-  }
-
-  auto dy_val = get_json_value(j, "dy", "domain");
-  if (dy_val.is_null() || !dy_val.is_number()) {
-    std::string dy_str =
-        dy_val.is_null() ? "missing" : get_json_value_string(j, "dy");
-    throw std::invalid_argument(
-        format_config_error("dy", "grid spacing in Y direction", "positive float",
-                            dy_str, {}, "\"dy\": 1.0"));
-  }
-  dy = dy_val;
-  if (!std::isfinite(dy)) {
-    throw std::invalid_argument(
-        format_config_error("dy", "grid spacing in Y direction", "finite float",
-                            get_json_value_string(j, "dy"), {}, "\"dy\": 1.0"));
-  }
-  if (dy <= 0.0) {
-    throw std::invalid_argument(
-        format_config_error("dy", "grid spacing in Y direction", "positive float",
-                            get_json_value_string(j, "dy"), {}, "\"dy\": 1.0"));
-  }
-
-  auto dz_val = get_json_value(j, "dz", "domain");
-  if (dz_val.is_null() || !dz_val.is_number()) {
-    std::string dz_str =
-        dz_val.is_null() ? "missing" : get_json_value_string(j, "dz");
-    throw std::invalid_argument(
-        format_config_error("dz", "grid spacing in Z direction", "positive float",
-                            dz_str, {}, "\"dz\": 1.0"));
-  }
-  dz = dz_val;
-  if (!std::isfinite(dz)) {
-    throw std::invalid_argument(
-        format_config_error("dz", "grid spacing in Z direction", "finite float",
-                            get_json_value_string(j, "dz"), {}, "\"dz\": 1.0"));
-  }
-  if (dz <= 0.0) {
-    throw std::invalid_argument(
-        format_config_error("dz", "grid spacing in Z direction", "positive float",
-                            get_json_value_string(j, "dz"), {}, "\"dz\": 1.0"));
-  }
-
-  // Support both "origin" (new) and "origo" (legacy) for backward compatibility
-  auto origin_val = get_json_value(j, "origin", "domain");
-  if (origin_val.is_null()) {
-    origin_val = get_json_value(j, "origo", "domain");
-  }
-  if (origin_val.is_null() || !origin_val.is_string()) {
-    std::string origin_key = j.contains("origin") ? "origin" : "origo";
-    std::string origin_str =
-        origin_val.is_null() ? "missing" : get_json_value_string(j, origin_key);
-    throw std::invalid_argument(format_config_error(
-        origin_key, "coordinate system origin", "string ('center' or 'corner')",
-        origin_str, {"center", "corner"}, R"("origin": "center")"));
-  }
-  origin = origin_val;
-
-  std::string origin_key = j.contains("origin") ? "origin" : "origo";
-  if (origin != "center" && origin != "corner") {
-    throw std::invalid_argument(format_config_error(
-        origin_key, "coordinate system origin", "string ('center' or 'corner')",
-        "\"" + origin + "\"", {"center", "corner"}, R"("origin": "center")"));
-  }
-
-  if (origin == "center") {
-    x0 = -0.5 * dx * Lx;
-    y0 = -0.5 * dy * Ly;
-    z0 = -0.5 * dz * Lz;
-  }
-
-  return pfc::domain::create(GridSize({Lx, Ly, Lz}), PhysicalOrigin({x0, y0, z0}),
-                             GridSpacing({dx, dy, dz}));
+  return pfc::domain::from_bounds({size[0], size[1], size[2]},
+                                  {lower[0], lower[1], lower[2]},
+                                  {upper[0], upper[1], upper[2]});
 }
 
 template <> [[nodiscard]] inline Time from_json<Time>(const json &j) {

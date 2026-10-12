@@ -274,13 +274,9 @@ TEST_CASE("toml_to_json handles OpenPFC configuration patterns", "[toml][json]")
     alpha = 0.50
 
     [domain]
-    Lx = 32
-    Ly = 32
-    Lz = 32
-    dx = 1.1107207345395915
-    dy = 1.1107207345395915
-    dz = 1.1107207345395915
-    origin = "center"
+    size = [32, 32, 32]
+    lower = [-17.771531752633464, -17.771531752633464, -17.771531752633464]
+    upper = [17.771531752633464, 17.771531752633464, 17.771531752633464]
 
     [timestepping]
     t0 = 0.0
@@ -312,8 +308,8 @@ TEST_CASE("toml_to_json handles OpenPFC configuration patterns", "[toml][json]")
   REQUIRE_THAT(json["model"]["params"]["T"].get<double>(), WithinRel(3300.0, 1e-10));
 
   // Verify domain section
-  REQUIRE(json["domain"]["Lx"] == 32);
-  REQUIRE(json["domain"]["origin"] == "center");
+  REQUIRE(json["domain"]["size"] == nlohmann::json{32, 32, 32});
+  REQUIRE(json["domain"]["lower"][0].get<double>() == -17.771531752633464);
 
   // Verify timestepping section
   REQUIRE_THAT(json["timestepping"]["t0"].get<double>(), WithinRel(0.0, 1e-10));

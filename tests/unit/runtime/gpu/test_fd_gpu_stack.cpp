@@ -177,13 +177,10 @@ TEST_CASE("session matrix fd GPU from JSON", "[gpu][fd_stack][session][json]") {
       {"method", "fd"},
       {"backend", backend},
       {"fd_order", 4},
-      {"Lx", 8},
-      {"Ly", 8},
-      {"Lz", 8},
-      {"dx", 1.0},
-      {"dy", 1.0},
-      {"dz", 1.0},
-      {"origin", "corner"},
+      {"domain",
+       {{"size", {8, 8, 8}},
+        {"lower", {0.0, 0.0, 0.0}},
+        {"upper", {8.0, 8.0, 8.0}}}},
       {"timestepping", {{"t0", 0.0}, {"t1", 0.2}, {"dt", 0.1}, {"saveat", 0.1}}}};
   auto session =
       pfc::ui::make_simulation_session<pfc::sim::stacks::FDGPUStack<Space>>(

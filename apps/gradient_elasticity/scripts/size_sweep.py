@@ -62,8 +62,9 @@ def make_settings(*, N, R, w, ell, mu, lam, eps0, order, dx=1.0, x0=None,
             "params": {"mu": mu, "lambda": lam, "ell": ell, "eps0": eps0,
                        "order": order},
         },
-        "domain": {"Lx": N, "Ly": N, "Lz": 1, "dx": dx, "dy": dx, "dz": 1.0,
-                  "origin": "corner"},
+        # Box [0, N * dx)^2 x [0, 1): spacing dx in x and y, 1 in z.
+        "domain": {"size": [N, N, 1], "lower": [0.0, 0.0, 0.0],
+                   "upper": [N * dx, N * dx, 1.0]},
         "timestepping": {"t0": 0.0, "t1": 1.0, "dt": 1.0, "saveat": -1.0},
         "initial_conditions": [
             {"target": "g", "type": "circular_inclusion", "g0": 0.0,

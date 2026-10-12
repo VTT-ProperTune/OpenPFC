@@ -50,6 +50,7 @@
 #include <cahn_hilliard/fe_cr_thermo.hpp>
 #include <openpfc/frontend/io/diagnostics_series.hpp>
 #include <openpfc/frontend/ui/field_modifier_registry.hpp>
+#include <openpfc/frontend/ui/from_json_world_time.hpp>
 #include <openpfc/frontend/ui/json_snapshot_fields.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
@@ -135,12 +136,7 @@ inline int run_cahn_hilliard_elastic(int rank, int nproc, MPI_Comm comm,
     if (!in) throw std::runtime_error("cannot open " + json_path);
     json cfg = json::parse(in);
 
-    const auto &d = cfg.at("domain");
-    const int Lx = d.at("Lx"), Ly = d.at("Ly"), Lz = d.value("Lz", 1);
-    const double dx = d.value("dx", 1.0);
-    const auto domain = pfc::domain::create(pfc::GridSize({Lx, Ly, Lz}),
-                                            pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                            pfc::GridSpacing({dx, dx, dx}));
+    const auto domain = pfc::ui::from_json<pfc::Domain>(cfg);
 
     CahnHilliardParams ch;
     if (cfg.contains("model") && cfg.at("model").contains("params"))

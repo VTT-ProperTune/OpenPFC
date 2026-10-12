@@ -122,21 +122,13 @@ q40 = 45.0
 # ============================================================================
 
 [domain]
-# Grid size in each dimension (number of grid points)
-Lx = 32
-Ly = 32
-Lz = 32
-
-# Grid spacing in each dimension (physical units)
-# Determines the resolution of the simulation
-dx = 1.1107207345395915
-dy = 1.1107207345395915
-dz = 1.1107207345395915
-
-# Origin position
-# "center" places the origin at the center of the domain
-# Alternative: specify explicit coordinates [x0, y0, z0]
-origin = "center"
+# Grid points per axis
+size = [32, 32, 32]
+# Limits of the box (physical units). The box is symmetric, so the seed at
+# (0, 0, 0) sits in its middle. Spacing is (upper - lower) / size, here
+# 1.1107207345395915 on every axis; upper is the periodic image of lower.
+lower = [-17.771531752633464, -17.771531752633464, -17.771531752633464]
+upper = [17.771531752633464, 17.771531752633464, 17.771531752633464]
 
 # ============================================================================
 # Time Stepping Configuration

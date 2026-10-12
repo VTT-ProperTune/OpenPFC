@@ -55,13 +55,9 @@ json mini_settings() {
   return {
       {"model", {{"name", "aluminum"}, {"params", model_params()}}},
       {"domain",
-       {{"Lx", 8},
-        {"Ly", 8},
-        {"Lz", 8},
-        {"dx", 1.0},
-        {"dy", 1.0},
-        {"dz", 1.0},
-        {"origin", "corner"}}},
+       {{"size", {8, 8, 8}},
+        {"lower", {0.0, 0.0, 0.0}},
+        {"upper", {8.0, 8.0, 8.0}}}},
       {"timestepping", {{"t0", 0.0}, {"t1", 0.02}, {"dt", 0.01}, {"saveat", 0.01}}},
       {"initial_conditions",
        {{{"target", "psi"}, {"type", "constant"}, {"n0", -0.0060}}}}};

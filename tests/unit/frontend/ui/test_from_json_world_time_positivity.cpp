@@ -3,8 +3,8 @@
 
 /**
  * @file test_from_json_world_time_positivity.cpp
- * @brief Catch2 coverage for positivity validation in from_json<Domain> and
- *        from_json<Time>
+ * @brief Catch2 coverage for positivity validation in from_json<Time>.
+ *        The domain parser has its own file, test_from_json_domain.cpp.
  */
 
 #include <catch2/catch_test_macros.hpp>
@@ -13,196 +13,12 @@
 #include <nlohmann/json.hpp>
 
 #include <openpfc/frontend/ui/from_json_world_time.hpp>
-#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
 
 using json = nlohmann::json;
 
-using pfc::Domain;
 using pfc::Time;
 using pfc::ui::from_json;
-
-TEST_CASE("[world][positivity] from_json_world_rejects_zero_dx") {
-  json j = {{"Lx", 128}, {"Ly", 128}, {"Lz", 128},         {"dx", 0.0},
-            {"dy", 1.0}, {"dz", 1.0}, {"origin", "center"}};
-
-  REQUIRE_THROWS_AS(from_json<Domain>(j), std::invalid_argument);
-}
-
-TEST_CASE("[world][positivity] from_json_world_rejects_negative_dx") {
-  json j = {{"Lx", 128}, {"Ly", 128}, {"Lz", 128},         {"dx", -1.0},
-            {"dy", 1.0}, {"dz", 1.0}, {"origin", "center"}};
-
-  REQUIRE_THROWS_AS(from_json<Domain>(j), std::invalid_argument);
-}
-
-TEST_CASE("[world][positivity] from_json_world_rejects_zero_dy") {
-  json j = {{"Lx", 128}, {"Ly", 128}, {"Lz", 128},         {"dx", 1.0},
-            {"dy", 0.0}, {"dz", 1.0}, {"origin", "center"}};
-
-  REQUIRE_THROWS_AS(from_json<Domain>(j), std::invalid_argument);
-}
-
-TEST_CASE("[world][positivity] from_json_world_rejects_negative_dy") {
-  json j = {{"Lx", 128},  {"Ly", 128}, {"Lz", 128},         {"dx", 1.0},
-            {"dy", -0.5}, {"dz", 1.0}, {"origin", "center"}};
-
-  REQUIRE_THROWS_AS(from_json<Domain>(j), std::invalid_argument);
-}
-
-TEST_CASE("[world][positivity] from_json_world_rejects_zero_dz") {
-  json j = {{"Lx", 128}, {"Ly", 128}, {"Lz", 128},         {"dx", 1.0},
-            {"dy", 1.0}, {"dz", 0.0}, {"origin", "center"}};
-
-  REQUIRE_THROWS_AS(from_json<Domain>(j), std::invalid_argument);
-}
-
-TEST_CASE("[world][positivity] from_json_world_rejects_negative_dz") {
-  json j = {{"Lx", 128}, {"Ly", 128},  {"Lz", 128},         {"dx", 1.0},
-            {"dy", 1.0}, {"dz", -2.0}, {"origin", "center"}};
-
-  REQUIRE_THROWS_AS(from_json<Domain>(j), std::invalid_argument);
-}
-
-TEST_CASE("[world][positivity] from_json_world_rejects_zero_Lx") {
-  json j = {{"Lx", 0},   {"Ly", 128}, {"Lz", 128},         {"dx", 1.0},
-            {"dy", 1.0}, {"dz", 1.0}, {"origin", "center"}};
-
-  REQUIRE_THROWS_AS(from_json<Domain>(j), std::invalid_argument);
-}
-
-TEST_CASE("[world][positivity] from_json_world_rejects_negative_Lx") {
-  json j = {{"Lx", -64}, {"Ly", 128}, {"Lz", 128},         {"dx", 1.0},
-            {"dy", 1.0}, {"dz", 1.0}, {"origin", "center"}};
-
-  REQUIRE_THROWS_AS(from_json<Domain>(j), std::invalid_argument);
-}
-
-TEST_CASE("[world][positivity] from_json_world_rejects_zero_Ly") {
-  json j = {{"Lx", 128}, {"Ly", 0},   {"Lz", 128},         {"dx", 1.0},
-            {"dy", 1.0}, {"dz", 1.0}, {"origin", "center"}};
-
-  REQUIRE_THROWS_AS(from_json<Domain>(j), std::invalid_argument);
-}
-
-TEST_CASE("[world][positivity] from_json_world_rejects_negative_Ly") {
-  json j = {{"Lx", 128}, {"Ly", -32}, {"Lz", 128},         {"dx", 1.0},
-            {"dy", 1.0}, {"dz", 1.0}, {"origin", "center"}};
-
-  REQUIRE_THROWS_AS(from_json<Domain>(j), std::invalid_argument);
-}
-
-TEST_CASE("[world][positivity] from_json_world_rejects_zero_Lz") {
-  json j = {{"Lx", 128}, {"Ly", 128}, {"Lz", 0},           {"dx", 1.0},
-            {"dy", 1.0}, {"dz", 1.0}, {"origin", "center"}};
-
-  REQUIRE_THROWS_AS(from_json<Domain>(j), std::invalid_argument);
-}
-
-TEST_CASE("[world][positivity] from_json_world_rejects_negative_Lz") {
-  json j = {{"Lx", 128}, {"Ly", 128}, {"Lz", -16},         {"dx", 1.0},
-            {"dy", 1.0}, {"dz", 1.0}, {"origin", "center"}};
-
-  REQUIRE_THROWS_AS(from_json<Domain>(j), std::invalid_argument);
-}
-
-TEST_CASE("[world][positivity] from_json_world_accepts_valid_positive_dx_dy_dz") {
-  json j = {{"Lx", 128},  {"Ly", 128}, {"Lz", 128},         {"dx", 1.5},
-            {"dy", 0.01}, {"dz", 4.7}, {"origin", "center"}};
-
-  REQUIRE_NOTHROW(from_json<Domain>(j));
-}
-
-TEST_CASE("[world][positivity] from_json_world_accepts_valid_positive_Lx_Ly_Lz") {
-  json j = {{"Lx", 256}, {"Ly", 64},  {"Lz", 128},         {"dx", 1.0},
-            {"dy", 1.0}, {"dz", 1.0}, {"origin", "center"}};
-
-  REQUIRE_NOTHROW(from_json<Domain>(j));
-}
-
-TEST_CASE("[world][positivity] from_json_world_error_message_names_dx") {
-  json j = {{"Lx", 128}, {"Ly", 128}, {"Lz", 128},         {"dx", 0.0},
-            {"dy", 1.0}, {"dz", 1.0}, {"origin", "center"}};
-
-  try {
-    (void)from_json<Domain>(j);
-    FAIL("Expected std::invalid_argument to be thrown");
-  } catch (const std::invalid_argument &e) {
-    std::string msg = e.what();
-    REQUIRE(msg.find("dx") != std::string::npos);
-    REQUIRE(msg.find("grid spacing in X direction") != std::string::npos);
-  }
-}
-
-TEST_CASE("[world][positivity] from_json_world_error_message_names_dy") {
-  json j = {{"Lx", 128},  {"Ly", 128}, {"Lz", 128},         {"dx", 1.0},
-            {"dy", -1.0}, {"dz", 1.0}, {"origin", "center"}};
-
-  try {
-    (void)from_json<Domain>(j);
-    FAIL("Expected std::invalid_argument to be thrown");
-  } catch (const std::invalid_argument &e) {
-    std::string msg = e.what();
-    REQUIRE(msg.find("dy") != std::string::npos);
-    REQUIRE(msg.find("grid spacing in Y direction") != std::string::npos);
-  }
-}
-
-TEST_CASE("[world][positivity] from_json_world_error_message_names_dz") {
-  json j = {{"Lx", 128}, {"Ly", 128},    {"Lz", 128},         {"dx", 1.0},
-            {"dy", 1.0}, {"dz", -0.001}, {"origin", "center"}};
-
-  try {
-    (void)from_json<Domain>(j);
-    FAIL("Expected std::invalid_argument to be thrown");
-  } catch (const std::invalid_argument &e) {
-    std::string msg = e.what();
-    REQUIRE(msg.find("dz") != std::string::npos);
-    REQUIRE(msg.find("grid spacing in Z direction") != std::string::npos);
-  }
-}
-
-TEST_CASE("[world][positivity] from_json_world_error_message_names_Lx") {
-  json j = {{"Lx", 0},   {"Ly", 128}, {"Lz", 128},         {"dx", 1.0},
-            {"dy", 1.0}, {"dz", 1.0}, {"origin", "center"}};
-
-  try {
-    (void)from_json<Domain>(j);
-    FAIL("Expected std::invalid_argument to be thrown");
-  } catch (const std::invalid_argument &e) {
-    std::string msg = e.what();
-    REQUIRE(msg.find("Lx") != std::string::npos);
-    REQUIRE(msg.find("number of grid points in X direction") != std::string::npos);
-  }
-}
-
-TEST_CASE("[world][positivity] from_json_world_error_message_names_Ly") {
-  json j = {{"Lx", 128}, {"Ly", -32}, {"Lz", 128},         {"dx", 1.0},
-            {"dy", 1.0}, {"dz", 1.0}, {"origin", "center"}};
-
-  try {
-    (void)from_json<Domain>(j);
-    FAIL("Expected std::invalid_argument to be thrown");
-  } catch (const std::invalid_argument &e) {
-    std::string msg = e.what();
-    REQUIRE(msg.find("Ly") != std::string::npos);
-    REQUIRE(msg.find("number of grid points in Y direction") != std::string::npos);
-  }
-}
-
-TEST_CASE("[world][positivity] from_json_world_error_message_names_Lz") {
-  json j = {{"Lx", 128}, {"Ly", 128}, {"Lz", 0},           {"dx", 1.0},
-            {"dy", 1.0}, {"dz", 1.0}, {"origin", "center"}};
-
-  try {
-    (void)from_json<Domain>(j);
-    FAIL("Expected std::invalid_argument to be thrown");
-  } catch (const std::invalid_argument &e) {
-    std::string msg = e.what();
-    REQUIRE(msg.find("Lz") != std::string::npos);
-    REQUIRE(msg.find("number of grid points in Z direction") != std::string::npos);
-  }
-}
 
 TEST_CASE("[time][positivity] from_json_time_rejects_zero_dt") {
   json j = {
@@ -244,57 +60,6 @@ TEST_CASE("[time][positivity] from_json_time_error_message_names_dt") {
     REQUIRE(msg.find("dt") != std::string::npos);
     REQUIRE(msg.find("timestep size") != std::string::npos);
   }
-}
-
-TEST_CASE("[world][positivity] from_json_world_with_nested_domain") {
-  json j = {
-      {"domain",
-       {{"Lx", 64}, {"Ly", 64}, {"Lz", 64}, {"dx", 0.0}, {"dy", 1.0}, {"dz", 1.0}}},
-      {"origin", "center"}};
-
-  REQUIRE_THROWS_AS(from_json<Domain>(j), std::invalid_argument);
-
-  // Test with positive value should work
-  j["domain"]["dx"] = 1.5;
-  REQUIRE_NOTHROW(from_json<Domain>(j));
-}
-
-TEST_CASE("[world][positivity] from_json_world_with_nested_domain_rejects_zero_Lx") {
-  json j = {
-      {"domain",
-       {{"Lx", 0}, {"Ly", 64}, {"Lz", 64}, {"dx", 1.0}, {"dy", 1.0}, {"dz", 1.0}}},
-      {"origin", "center"}};
-
-  REQUIRE_THROWS_AS(from_json<Domain>(j), std::invalid_argument);
-}
-
-TEST_CASE(
-    "[world][positivity] from_json_world_with_nested_domain_rejects_negative_Ly") {
-  json j = {
-      {"domain",
-       {{"Lx", 64}, {"Ly", -32}, {"Lz", 64}, {"dx", 1.0}, {"dy", 1.0}, {"dz", 1.0}}},
-      {"origin", "center"}};
-
-  REQUIRE_THROWS_AS(from_json<Domain>(j), std::invalid_argument);
-}
-
-TEST_CASE("[world][positivity] from_json_world_with_nested_domain_rejects_zero_Lz") {
-  json j = {
-      {"domain",
-       {{"Lx", 64}, {"Ly", 64}, {"Lz", 0}, {"dx", 1.0}, {"dy", 1.0}, {"dz", 1.0}}},
-      {"origin", "center"}};
-
-  REQUIRE_THROWS_AS(from_json<Domain>(j), std::invalid_argument);
-}
-
-TEST_CASE("[world][positivity] "
-          "from_json_world_with_nested_domain_accepts_valid_positive_Lx_Ly_Lz") {
-  json j = {
-      {"domain",
-       {{"Lx", 32}, {"Ly", 64}, {"Lz", 128}, {"dx", 1.0}, {"dy", 1.0}, {"dz", 1.0}}},
-      {"origin", "center"}};
-
-  REQUIRE_NOTHROW(from_json<Domain>(j));
 }
 
 TEST_CASE("[time][positivity] from_json_time_accepts_zero_saveat_to_disable_saves") {
@@ -383,44 +148,6 @@ TEST_CASE("[time][positivity] "
   REQUIRE_THROWS_AS(from_json<Time>(j), std::invalid_argument);
 }
 
-TEST_CASE("[world][positivity] from_json_world_rejects_nan_dx") {
-  // Use quiet NaN which JSON can represent as a string that gets parsed
-  // Construct JSON then override dx to NaN
-  json j = {{"Lx", 128}, {"Ly", 128}, {"Lz", 128},         {"dx", 1.0},
-            {"dy", 1.0}, {"dz", 1.0}, {"origin", "center"}};
-
-  // Set dx to NaN via direct manipulation of the JSON value
-  std::vector<uint8_t> nan_bytes = {0x00, 0x00, 0x00, 0x00,
-                                    0x00, 0x00, 0xf8, 0x7f}; // double NaN
-  double nan_val;
-  std::memcpy(&nan_val, nan_bytes.data(), sizeof(nan_val));
-  j["dx"] = nan_val;
-
-  REQUIRE_THROWS_AS(from_json<Domain>(j), std::invalid_argument);
-}
-
-TEST_CASE("[world][positivity] from_json_world_rejects_inf_dy") {
-  // Construct JSON then override dy to Infinity
-  json j = {{"Lx", 128}, {"Ly", 128}, {"Lz", 128},         {"dx", 1.0},
-            {"dy", 1.0}, {"dz", 1.0}, {"origin", "center"}};
-
-  // Set dy to positive infinity
-  j["dy"] = std::numeric_limits<double>::infinity();
-
-  REQUIRE_THROWS_AS(from_json<Domain>(j), std::invalid_argument);
-}
-
-TEST_CASE("[world][positivity] from_json_world_rejects_negative_inf_dz") {
-  // Construct JSON then override dz to -Infinity
-  json j = {{"Lx", 128}, {"Ly", 128}, {"Lz", 128},         {"dx", 1.0},
-            {"dy", 1.0}, {"dz", 1.0}, {"origin", "center"}};
-
-  // Set dz to negative infinity
-  j["dz"] = -std::numeric_limits<double>::infinity();
-
-  REQUIRE_THROWS_AS(from_json<Domain>(j), std::invalid_argument);
-}
-
 TEST_CASE("[time][positivity] from_json_time_rejects_nan_dt") {
   json j = {
       {"timestepping", {{"t0", 0.0}, {"t1", 10.0}, {"dt", 0.1}, {"saveat", 1.0}}}};
@@ -477,20 +204,4 @@ TEST_CASE("[time][positivity] from_json_time_rejects_inf_t1") {
   j["timestepping"]["t1"] = std::numeric_limits<double>::infinity();
 
   REQUIRE_THROWS_AS(from_json<Time>(j), std::invalid_argument);
-}
-
-TEST_CASE("[world][positivity] from_json_world_with_nested_domain_rejects_nan_dx") {
-  json j = {
-      {"domain",
-       {{"Lx", 64}, {"Ly", 64}, {"Lz", 64}, {"dx", 1.0}, {"dy", 1.0}, {"dz", 1.0}}},
-      {"origin", "center"}};
-
-  // Set dx to NaN
-  std::vector<uint8_t> nan_bytes = {0x00, 0x00, 0x00, 0x00,
-                                    0x00, 0x00, 0xf8, 0x7f}; // double NaN
-  double nan_val;
-  std::memcpy(&nan_val, nan_bytes.data(), sizeof(nan_val));
-  j["domain"]["dx"] = nan_val;
-
-  REQUIRE_THROWS_AS(from_json<Domain>(j), std::invalid_argument);
 }

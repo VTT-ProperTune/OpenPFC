@@ -53,6 +53,7 @@ def extract_number(s):
 def main_old(args):
     if args["json"] is not None and os.path.exists(args["json"]):
         args.update(json.load(open(args["json"])))
+    apply_domain_block(args)
     if args["results_dir"] != "" and not os.path.isdir(args["results_dir"]):
         print("Directory %s does not exist!" % args["results_dir"])
         return
@@ -73,9 +74,24 @@ def main_old(args):
     print(footer.format(**args))
 
 
+def apply_domain_block(args):
+    """Take grid size, spacing and origin from a ``domain`` block with
+    ``size``/``lower``/``upper``; flat legacy ``Lx``/``dx``/``origo`` keys
+    from older inputs are left as they are."""
+    d = args.get("domain")
+    if not isinstance(d, dict) or "size" not in d:
+        return
+    for a, n, lo, up in zip("xyz", d["size"], d["lower"], d["upper"]):
+        args["L" + a] = n
+        args["d" + a] = (up - lo) / n
+        args[a + "0"] = lo
+    args["origo"] = None
+
+
 def main(args):
     if args["json"] is not None and os.path.exists(args["json"]):
         args.update(json.load(open(args["json"])))
+    apply_domain_block(args)
     files = []
     nfiles = int((args["t1"] - args["t0"])/args["saveat"]) + 1
     nwarnings = 0
@@ -91,7 +107,9 @@ def main(args):
     args["ntimesteps"] = len(files)
     args["timesteps"] = " ".join("%0.3f" % (i*args["saveat"]) for i in range(len(files)))
 
-    if args["origo"] == "center":
+    if args["origo"] is None:
+        pass  # x0/y0/z0 came from the domain block
+    elif args["origo"] == "center":
         args["x0"] = -0.5 * args["Lx"] * args["dx"]
         args["y0"] = -0.5 * args["Ly"] * args["dy"]
         args["z0"] = -0.5 * args["Lz"] * args["dz"]

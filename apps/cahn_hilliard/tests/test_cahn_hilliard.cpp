@@ -122,13 +122,9 @@ json mini_session_json() {
   return {
       {"model", {{"name", "cahn_hilliard"}, {"params", {{"c0", 0.32}}}}},
       {"domain",
-       {{"Lx", 16},
-        {"Ly", 16},
-        {"Lz", 1},
-        {"dx", 1.0},
-        {"dy", 1.0},
-        {"dz", 1.0},
-        {"origin", "corner"}}},
+       {{"size", {16, 16, 1}},
+        {"lower", {0.0, 0.0, 0.0}},
+        {"upper", {16.0, 16.0, 1.0}}}},
       {"timestepping", {{"t0", 0.0}, {"t1", 0.1}, {"dt", 0.05}, {"saveat", -1.0}}},
       {"initial_conditions",
        {{{"target", "c"},
@@ -700,7 +696,7 @@ TEST_CASE("Uniform composition does not move under a uniform eigenstrain",
     f << R"({
       "model": {"name": "cahn_hilliard", "params": {"c0": 0.5, "Omega": 20100.0}},
       "elasticity": {"eps0": 0.04, "c_ref": 0.4, "E": 2.0e11, "nu": 0.3},
-      "domain": {"Lx": 16, "Ly": 16, "Lz": 1, "dx": 1.0},
+      "domain": {"size": [16, 16, 1], "lower": [0.0, 0.0, 0.0], "upper": [16.0, 16.0, 1.0]},
       "timestepping": {"t1": 0.5, "dt": 0.1, "saveat": 0.5},
       "diagnostics": {"csv": ")" +
              (dir / "d.csv").string() + R"("},
@@ -738,7 +734,7 @@ TEST_CASE("Elastic CH conserves mass on a noisy cell", "[cahn_hilliard][elastic]
     f << R"({
       "model": {"name": "cahn_hilliard", "params": {"c0": 0.5, "Omega": 20100.0}},
       "elasticity": {"eps0": 0.04, "c_ref": 0.5, "c11": 2.3e11, "c12": 1.35e11, "c44": 1.17e11},
-      "domain": {"Lx": 32, "Ly": 32, "Lz": 1, "dx": 1.0},
+      "domain": {"size": [32, 32, 1], "lower": [0.0, 0.0, 0.0], "upper": [32.0, 32.0, 1.0]},
       "timestepping": {"t1": 2.0, "dt": 0.1, "saveat": 2.0},
       "diagnostics": {"csv": ")" +
              (dir / "d.csv").string() + R"("},
