@@ -9,6 +9,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- A Cartesian transmission operator for `-div(κ ∇u) = 0` across a
+  stationary implicit interface. Uncut edges keep the standard stencil.
+  A cut edge uses the series resistance `∫ ds/κ`. Nodes that touch a cut
+  can instead use a calibrated row that is exact for a planar jump.
+  Closes #444.
+
 - Cartesian implicit interfaces (`pfc::geometry`) evaluate a plane, sphere,
   circle, ellipse, and rotated ellipsoid on the existing `Domain` coordinates.
   Negative is inside. A plane, sphere, and circle are signed distances; the

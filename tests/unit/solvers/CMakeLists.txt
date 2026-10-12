@@ -7,3 +7,7 @@ add_subdirectory(finite_strain_fft)
 target_sources(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_krylov.cpp)
 target_sources(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_newton.cpp)
 target_sources(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_multigrid.cpp)
+
+add_executable(test_interface_diffusion test_interface_diffusion.cpp)
+target_include_directories(test_interface_diffusion PRIVATE ${CMAKE_SOURCE_DIR}/include)
+add_test(NAME InterfaceDiffusion COMMAND test_interface_diffusion)
