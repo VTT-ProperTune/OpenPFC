@@ -44,8 +44,11 @@
  * shared (field_multigrid_kernels.hpp), so host and device give the same
  * result up to floating-point contraction. Device coefficients written on the
  * host (`with_host_view`) are pushed by `update()`; vectors passed to `apply`
- * must be current on the device. Non-periodic axes keep zero halos
- * (homogeneous Dirichlet on the correction).
+ * must be current on the device. On a level that is periodic and owned by one rank
+ * along every active axis (even extents), values read through halos are written
+ * to their periodic images directly and the level exchanges no halos; `apply`
+ * may then also write the periodic images into the halo of z. Non-periodic axes keep
+ * zero halos (homogeneous Dirichlet on the correction).
  */
 
 #include <algorithm>
@@ -219,6 +222,14 @@ private:
       L->g.low[a] = b.low[a];
       L->g.ih2[a] = m_active[a] ? 1.0 / (sp[a] * sp[a]) : 0.0;
     }
+    {
+      const auto &gs = domain::get_size(d);
+      bool wrap = true;
+      for (int a = 0; a < 3; ++a)
+        if (m_active[a])
+          wrap = wrap && d.periodic[a] && b.size[a] == gs[a] && b.size[a] % 2 == 0;
+      L->g.wrap = wrap ? 1 : 0;
+    }
     const bool two_d = !m_active[2];
     comm::HaloExchangeOptions ou, oc;
     ou.connectivity = comm::HaloConnectivity::Full;
@@ -262,7 +273,7 @@ private:
   }
   void exchange_u(Level &L) {
     if constexpr (!is_host) L.u.note_device_write();
-    L.u_x->exchange();
+    if (!L.g.wrap) L.u_x->exchange(); // wrap levels write their periodic images
   }
   static void zero(FieldT &f) {
     if constexpr (is_host) {
@@ -289,8 +300,7 @@ private:
                                       "owned box with storage halo 1");
     if constexpr (is_host) {
       for_owned(L, [&](int i, int j, int k) {
-        const auto s = fmg::index(L.g, i, j, k);
-        dst.data()[s] = src.data()[s];
+        fmg::store(L.g, dst.data(), i, j, k, src.data()[fmg::index(L.g, i, j, k)]);
       });
     } else {
       gpu_ops::copy_owned(L.g, src.data(), dst.data());
@@ -328,8 +338,7 @@ private:
     if constexpr (is_host) {
       const auto C = coeffs(L);
       for_owned(L, [&](int i, int j, int k) {
-        const auto s = fmg::index(L.g, i, j, k);
-        L.r.data()[s] = L.f.data()[s] - fmg::apply(L.g, C, L.u.data(), i, j, k);
+        fmg::residual(L.g, C, L.f.data(), L.u.data(), L.r.data(), i, j, k);
       });
     } else {
       gpu_ops::residual(L.g, coeffs(L), L.f.data(), L.u.data(), L.r.data());
@@ -354,7 +363,7 @@ private:
     residual(L);
     Level &G = *m_levels[l + 1];
     if constexpr (!is_host) L.r.note_device_write();
-    L.r_x->exchange();
+    if (!L.g.wrap) L.r_x->exchange();
     if constexpr (is_host) {
       for_owned(G, [&](int I, int J, int K) {
         fmg::restrict_residual(L.g, L.r.data(), L.m.data(), G.g, G.m.data(),

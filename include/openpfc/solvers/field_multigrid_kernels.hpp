@@ -36,6 +36,11 @@ struct Level {
   int active[3] = {0, 0, 0};
   int low[3] = {0, 0, 0};
   double ih2[3] = {0, 0, 0};
+  /// 1: every active axis is periodic, owned by this rank alone and of even extent.
+  /// Values that are read through halos are then written to their periodic images
+  /// as well (`store`), so the level needs no halo exchange; the even extent keeps
+  /// the red-black colouring consistent across the wrap.
+  int wrap = 0;
 };
 
 /// Coefficient arrays of one level (padded, halo exchanged where noted).
@@ -65,6 +70,29 @@ OPENPFC_HD inline void owned_ijk(const Level &L, std::size_t t, int &i, int &j,
   j = static_cast<int>((t / static_cast<std::size_t>(L.n[0])) %
                        static_cast<std::size_t>(L.n[1]));
   k = static_cast<int>(t / (static_cast<std::size_t>(L.n[0]) * L.n[1]));
+}
+
+/// u(i, j, k) = v, and on a `wrap` level also at the periodic images of a
+/// boundary cell in the halo (faces, edges and corners).
+OPENPFC_HD inline void store(const Level &L, double *u, int i, int j, int k,
+                             double v) {
+  u[index(L, i, j, k)] = v;
+  if (!L.wrap) return;
+  const int c[3] = {i, j, k};
+  int alt[3][2], na[3];
+  for (int a = 0; a < 3; ++a) {
+    alt[a][0] = c[a];
+    na[a] = 1;
+    if (!L.active[a]) continue;
+    if (c[a] == 0)
+      alt[a][na[a]++] = L.n[a];
+    else if (c[a] == L.n[a] - 1)
+      alt[a][na[a]++] = -1;
+  }
+  for (int z = 0; z < na[2]; ++z)
+    for (int y = 0; y < na[1]; ++y)
+      for (int x = 0; x < na[0]; ++x)
+        if (x || y || z) u[index(L, alt[0][x], alt[1][y], alt[2][z])] = v;
 }
 
 /// Off-diagonal sum sum_nb w_nb u_nb and diagonal c + sum_nb w_nb of a free row.
@@ -106,12 +134,19 @@ OPENPFC_HD inline void smooth(const Level &L, const Coefficients &C, const doubl
   if (((L.low[0] + i + L.low[1] + j + L.low[2] + k) & 1) != colour) return;
   const std::size_t s = index(L, i, j, k);
   if (C.m[s] == 0.0) {
-    u[s] = f[s];
+    store(L, u, i, j, k, f[s]);
     return;
   }
   double off, diag;
   row(L, C, u, i, j, k, off, diag);
-  u[s] = (f[s] + off) / diag;
+  store(L, u, i, j, k, (f[s] + off) / diag);
+}
+
+/// r = f - A u at an owned cell (stored with its periodic images on a wrap level).
+OPENPFC_HD inline void residual(const Level &L, const Coefficients &C,
+                                const double *f, const double *u, double *r, int i,
+                                int j, int k) {
+  store(L, r, i, j, k, f[index(L, i, j, k)] - apply(L, C, u, i, j, k));
 }
 
 /// Coarse coefficients at coarse owned cell (I, J, K) from the fine level:
@@ -218,7 +253,7 @@ OPENPFC_HD inline void prolong_add(const Level &F, const double *mf, double *uf,
       }
     }
   }
-  uf[s] += v;
+  store(F, uf, i, j, k, uf[s] + v);
 }
 
 } // namespace pfc::solvers::fmg

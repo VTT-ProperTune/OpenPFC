@@ -50,8 +50,7 @@ __global__ void copy_owned_kernel(Level L, const double *s, double *d) {
   OPENPFC_FMG_LOOP(k::owned_count(L)) {
     int i, j, kk;
     k::owned_ijk(L, t, i, j, kk);
-    const std::size_t x = k::index(L, i, j, kk);
-    d[x] = s[x];
+    k::store(L, d, i, j, kk, s[k::index(L, i, j, kk)]);
   }
 }
 __global__ void apply_kernel(Level L, Coefficients C, const double *u, double *out) {
@@ -74,8 +73,7 @@ __global__ void residual_kernel(Level L, Coefficients C, const double *f, const 
   OPENPFC_FMG_LOOP(k::owned_count(L)) {
     int i, j, kk;
     k::owned_ijk(L, t, i, j, kk);
-    const std::size_t x = k::index(L, i, j, kk);
-    r[x] = f[x] - k::apply(L, C, u, i, j, kk);
+    k::residual(L, C, f, u, r, i, j, kk);
   }
 }
 __global__ void restrict_coefficients_kernel(Level F, Coefficients Cf, Level G, double *c,
