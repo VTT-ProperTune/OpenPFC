@@ -10,15 +10,18 @@
  * @details
  * Modifiers operate on a host `FieldOutput<double>` over the owned box. For a
  * host-space field this wraps `field.output()` and records the host write; for
- * a device-space field it brackets the call with `Field::with_host_view`, so
- * the framework — not the caller — owns the residency bracket (Audit §4.1 /
- * §13.3). Halo-padded fields are rejected: modifiers see owned cells only.
+ * a device-space field it runs the modifier's registered device applier
+ * (`device_field_modifier.hpp`) when there is one, and otherwise brackets the
+ * call with `Field::with_host_view`, so the framework — not the caller — owns
+ * the residency bracket (Audit §4.1 / §13.3). Halo-padded fields are
+ * rejected: modifiers see owned cells only.
  */
 
 #include <stdexcept>
 
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/field/state_access.hpp>
+#include <openpfc/kernel/simulation/device_field_modifier.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/simulation_context.hpp>
 
@@ -57,6 +60,15 @@ void apply_field_modifier(FieldModifier &modifier,
     call(field.data(), field.size());
     field.note_host_write();
   } else {
+    // A registered device applier works on the device buffer directly; any
+    // other modifier keeps the full host round trip.
+    if (has_device_applier(modifier)) {
+      field.sync_to_device();
+      try_apply_on_device(modifier, DeviceFieldView{field.data(), field.size()},
+                          field.domain(), field.box(), time);
+      field.note_device_write();
+      return;
+    }
     field.with_host_view(call);
   }
 }
