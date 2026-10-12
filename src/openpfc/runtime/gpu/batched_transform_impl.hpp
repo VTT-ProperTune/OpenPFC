@@ -262,26 +262,31 @@ __device__ double2 cosine_mode(const double2 *v, const double2 *phase, int k, in
           p.x * (a.y + c.y) - p.y * (a.x - c.x)};
 }
 __global__ void expose(const double2 *in, double2 *out, const double2 *phase, int n,
-                       std::size_t plane, bool sine) {
+                       std::size_t plane, bool sine, int local_x, int local_y,
+                       bool yfast) {
   auto i = std::size_t(blockIdx.x) * blockDim.x + threadIdx.x;
   if (i < plane * n) {
     int k = i / plane;
     auto b = i % plane;
-    out[std::size_t(sine ? n - 1 - k : k) * plane + b] =
+    auto canonical = yfast ? (b % local_y) * local_x + b / local_y : b;
+    out[std::size_t(sine ? n - 1 - k : k) * plane + canonical] =
         cosine_mode(in, phase, k, n, plane, b);
   }
 }
 __global__ void reconstruct(const double2 *in, double2 *out, const double2 *phase,
-                            int n, std::size_t plane, bool sine, double factor) {
+                            int n, std::size_t plane, bool sine, double factor,
+                            int local_x, int local_y, bool yfast) {
   auto i = std::size_t(blockIdx.x) * blockDim.x + threadIdx.x;
   if (i < plane * n) {
     int k = i / plane;
     auto b = i % plane;
-    double2 a = in[std::size_t(sine ? n - 1 - k : k) * plane + b];
+    auto canonical = yfast ? (b % local_y) * local_x + b / local_y : b;
+    double2 a = in[std::size_t(sine ? n - 1 - k : k) * plane + canonical];
     if (!k)
       out[i] = {.5 * factor * a.x, .5 * factor * a.y};
     else {
-      double2 c = in[std::size_t(sine ? k - 1 : n - k) * plane + b], p = phase[k];
+      double2 c = in[std::size_t(sine ? k - 1 : n - k) * plane + canonical],
+              p = phase[k];
       double2 u = {a.x + c.y, a.y - c.x};
       out[i] = {.5 * factor * (p.x * u.x - p.y * u.y),
                 .5 * factor * (p.y * u.x + p.x * u.y)};
@@ -315,13 +320,15 @@ __global__ void paired_diagonal(double2 *v, const double *weights,
   v[i] = {.5 * (p.x * u.x - p.y * u.y), .5 * (p.y * u.x + p.x * u.y)};
   v[j] = {.5 * (p.x * w.x + p.y * w.y), .5 * (p.x * w.y - p.y * w.x)};
 }
-__global__ void diagonal_weights(double *out, int nx, int ny, int local_y, int ylow,
-                                 int n, double lx, double ly, double lz, bool sine,
-                                 bool fd, double alpha, bool laplacian) {
+__global__ void diagonal_weights(double *out, int nx, int ny, int local_x,
+                                 int local_y, int xlow, int ylow, int n, double lx,
+                                 double ly, double lz, bool sine, bool fd,
+                                 double alpha, bool laplacian, bool yfast) {
   auto i = std::size_t(blockIdx.x) * blockDim.x + threadIdx.x;
-  std::size_t plane = std::size_t(nx / 2 + 1) * local_y;
+  std::size_t plane = std::size_t(local_x) * local_y;
   if (i < plane * n) {
-    int x = i % (nx / 2 + 1), y = i % plane / (nx / 2 + 1) + ylow;
+    int x = (yfast ? i % plane / local_y : i % local_x) + xlow;
+    int y = (yfast ? i % local_y : i % plane / local_x) + ylow;
     int q = i / plane + int(sine);
     double wave[3] = {2 * pi * x / lx, 2 * pi * min(y, ny - y) / ly, pi * q / lz};
     double h[3] = {lx / nx, ly / ny, lz / n}, lambda = 0;
@@ -451,12 +458,12 @@ void BatchedRealTransform<M>::backward(std::span<const double> in,
 }
 
 template <class M> struct BatchedMixedTransform<M>::Impl {
-  int nx, ny, local_y, ylow;
+  int nx, ny, local_x, local_y, xlow, ylow;
   int communicator_size = 1;
   double lx, ly, norm;
   BoundedAxis z;
   MPI_Comm comm;
-  bool sine;
+  bool sine, yfast = false;
   Box3i input_box, output_box;
   Array<double> data, weights, stats;
   Array<double2> modes, phase;
@@ -467,7 +474,7 @@ template <class M> struct BatchedMixedTransform<M>::Impl {
   LaplacianSymbol cached_symbol{};
   bool cached_laplacian = false;
   Impl(int x, int y, double px, double py, BoundedAxis a, MPI_Comm c,
-       heffte::reshape_algorithm algorithm)
+       heffte::reshape_algorithm algorithm, SpectralSlab slab)
       : nx(x), ny(y), lx(px), ly(py), z(a), comm(c) {
     if (c == MPI_COMM_NULL)
       throw std::invalid_argument("boundary communicator is null");
@@ -478,6 +485,8 @@ template <class M> struct BatchedMixedTransform<M>::Impl {
     int invalid = 0, any;
     try {
       axis_check(a);
+      if (slab != SpectralSlab::Y && slab != SpectralSlab::X) invalid = 1;
+      if (slab == SpectralSlab::X && x / 2 + 1 < ranks) invalid = 1;
       if (algorithm != heffte::reshape_algorithm::alltoallv &&
           algorithm != heffte::reshape_algorithm::alltoall &&
           algorithm != heffte::reshape_algorithm::p2p &&
@@ -495,28 +504,36 @@ template <class M> struct BatchedMixedTransform<M>::Impl {
     MPI_Allreduce(&invalid, &any, 1, MPI_INT, MPI_MAX, c);
     if (any)
       throw std::invalid_argument("boundary mixed collective geometry invalid");
-    double meta[9] = {double(x),
-                      double(y),
-                      px,
-                      py,
-                      double(a.n),
-                      a.length,
-                      double(int(a.type)),
-                      a.origin,
-                      double(int(algorithm))},
-           lo[9], hi[9];
-    MPI_Allreduce(meta, lo, 9, MPI_DOUBLE, MPI_MIN, c);
-    MPI_Allreduce(meta, hi, 9, MPI_DOUBLE, MPI_MAX, c);
-    if (!std::equal(lo, lo + 9, hi))
+    double meta[10] = {double(x),
+                       double(y),
+                       px,
+                       py,
+                       double(a.n),
+                       a.length,
+                       double(int(a.type)),
+                       a.origin,
+                       double(int(algorithm)),
+                       double(int(slab))},
+           lo[10], hi[10];
+    MPI_Allreduce(meta, lo, 10, MPI_DOUBLE, MPI_MIN, c);
+    MPI_Allreduce(meta, hi, 10, MPI_DOUBLE, MPI_MAX, c);
+    if (!std::equal(lo, lo + 10, hi))
       throw std::invalid_argument(
-          "boundary geometry or reshape policy differs across ranks");
+          "boundary geometry, reshape policy or spectral slab differs across ranks");
     auto in = heffte::split_world(
         heffte::box3d<>({0, 0, 0}, {x - 1, y - 1, a.n - 1}), {1, ranks, 1})[rank];
+    yfast = ranks > 1 && slab == SpectralSlab::X;
     auto out = heffte::split_world(
-        heffte::box3d<>({0, 0, 0}, {x / 2, y - 1, a.n - 1}), {1, ranks, 1})[rank];
+        heffte::box3d<>({0, 0, 0}, {x / 2, y - 1, a.n - 1},
+                        yfast ? std::array<int, 3>{1, 0, 2}
+                              : std::array<int, 3>{0, 1, 2}),
+        slab == SpectralSlab::X ? std::array<int, 3>{ranks, 1, 1}
+                                : std::array<int, 3>{1, ranks, 1})[rank];
     input_box = Box3i::from_bounds(in.low, in.high);
     output_box = Box3i::from_bounds(out.low, out.high);
-    local_y = in.size[1];
+    local_x = out.size[0];
+    local_y = out.size[1];
+    xlow = out.low[0];
     ylow = out.low[1];
     sine = a.type == RealTransformType::DST2;
     norm = 1 / (double(x) * y * a.n);
@@ -569,8 +586,8 @@ template <class M> struct BatchedMixedTransform<M>::Impl {
     if (alpha == cached_alpha && s == cached_symbol && lap == cached_laplacian)
       return;
     diagonal_weights<<<blocks(modes.count), 256>>>(
-        weights.p, nx, ny, local_y, ylow, z.n, lx, ly, z.length, sine,
-        s == LaplacianSymbol::CenteredDifference, alpha, lap);
+        weights.p, nx, ny, local_x, local_y, xlow, ylow, z.n, lx, ly, z.length, sine,
+        s == LaplacianSymbol::CenteredDifference, alpha, lap, yfast);
     GPU_CHECK(gpuGetLastError());
     cached_alpha = alpha;
     cached_symbol = s;
@@ -602,13 +619,19 @@ template <class M>
 BatchedMixedTransform<M>::BatchedMixedTransform(int x, int y, double lx, double ly,
                                                 BoundedAxis z, MPI_Comm c)
     : BatchedMixedTransform(x, y, lx, ly, z, heffte::reshape_algorithm::alltoallv,
-                            c) {}
+                            SpectralSlab::Y, c) {}
 template <class M>
 BatchedMixedTransform<M>::BatchedMixedTransform(int x, int y, double lx, double ly,
                                                 BoundedAxis z,
                                                 heffte::reshape_algorithm algorithm,
                                                 MPI_Comm c)
-    : m_impl(std::make_unique<Impl>(x, y, lx, ly, z, c, algorithm)) {}
+    : BatchedMixedTransform(x, y, lx, ly, z, algorithm, SpectralSlab::Y, c) {}
+template <class M>
+BatchedMixedTransform<M>::BatchedMixedTransform(int x, int y, double lx, double ly,
+                                                BoundedAxis z,
+                                                heffte::reshape_algorithm algorithm,
+                                                SpectralSlab slab, MPI_Comm c)
+    : m_impl(std::make_unique<Impl>(x, y, lx, ly, z, c, algorithm, slab)) {}
 template <class M> BatchedMixedTransform<M>::~BatchedMixedTransform() = default;
 template <class M>
 BatchedMixedTransform<M>::BatchedMixedTransform(BatchedMixedTransform &&) noexcept =
@@ -657,9 +680,9 @@ void BatchedMixedTransform<M>::forward(std::span<const double> in,
   extent(in.size(), size_inbox());
   extent(out.size(), size_outbox());
   p.forward(in.data());
-  expose<<<blocks(p.modes.count), 256>>>(p.modes.p,
-                                         reinterpret_cast<double2 *>(out.data()),
-                                         p.phase.p, p.z.n, p.plane(), p.sine);
+  expose<<<blocks(p.modes.count), 256>>>(
+      p.modes.p, reinterpret_cast<double2 *>(out.data()), p.phase.p, p.z.n,
+      p.plane(), p.sine, p.local_x, p.local_y, p.yfast);
   GPU_CHECK(gpuGetLastError());
 }
 template <class M>
@@ -670,7 +693,7 @@ void BatchedMixedTransform<M>::backward(std::span<const std::complex<double>> in
   extent(out.size(), size_inbox());
   reconstruct<<<blocks(p.modes.count), 256>>>(
       reinterpret_cast<const double2 *>(in.data()), p.modes.p, p.phase.p, p.z.n,
-      p.plane(), p.sine, p.norm);
+      p.plane(), p.sine, p.norm, p.local_x, p.local_y, p.yfast);
   GPU_CHECK(gpuGetLastError());
   p.inverse(out.data());
 }

@@ -204,3 +204,33 @@ FFT directly. No automatic policy selection or arbitrary decomposition is
 provided. Choose an exchange policy using verified end-to-end measurements
 on the target MPI installation, rather than assuming one is universally
 fastest.
+
+### Retained spectral ownership
+
+Physical fields always use the existing y-slab/full-z decomposition. The
+default spectral ownership remains y slabs. An explicit overload allows
+full-z **spectral x slabs**, without changing the boundary grid or operator:
+
+```cpp
+pfc::fft::BatchedMixedTransform<pfc::HIPSpace> transform(
+    nx, ny, period_x, period_y, z,
+    heffte::reshape_algorithm::p2p_plined,
+    pfc::fft::SpectralSlab::X, communicator);
+```
+
+`inbox()` still describes physical y slabs; `outbox()` now describes the
+selected spectral ownership. Obtain buffer extents from the plan rather
+than assuming they equal another rank's extents. Both forward and backward
+use canonical x-fast exposed coefficients, even though distributed complete
+operators retain heFFTe's y-fast/z-slow internal order. Conversion is fused
+into the existing coefficient kernels; physical fields are not staged on
+the host. Complete bounded-z lines remain local in both layouts.
+
+All ranks must agree on the valid choice. X additionally requires
+`ranks <= nx/2 + 1`; physical ownership still requires `ranks <= ny`.
+These are necessary ownership bounds, not a promise that every tiny
+intermediate library plan is valid. One rank keeps the original vendor
+FFT and storage order. `SpectralSlab::Y` preserves the original layout and
+all existing constructor defaults. Normalization, signs, zero modes,
+compatibility checks, borrowed-communicator and device-lifetime contracts
+are unchanged. No arbitrary decomposition or automatic selection is added.
