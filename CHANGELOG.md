@@ -14,6 +14,15 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   box (the periodic image of `lower` on a periodic axis); the old
   `get_upper_bounds` returned the last grid point (#487).
 
+### Fixed
+
+- The tungsten and aluminum fixed BC placed its band at `Lx * dx - width`,
+  outside any box that does not start at 0, so the center-origin single-seed
+  inputs ran with no boundary condition. BCs, the temperature-gradient
+  unwrap, seed grids and the default centres of pulses, inclusions, defects
+  and loads now use the box limits. A shipped-input test requires every
+  declared BC to change at least one cell (#479).
+
 ### Changed
 
 - The device `HaloConnectivity::Full` exchange copies a self-periodic axis

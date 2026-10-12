@@ -288,8 +288,6 @@ struct AluminumPhysics {
   }
 
   [[nodiscard]] AluminumPointwise pointwise() const {
-    const auto size = pfc::domain::get_size(domain);
-    const auto spacing = pfc::domain::get_spacing(domain);
     return {.p3_bar = params.p3_bar,
             .p4_bar = params.p4_bar,
             .p2_bar = params.p2_bar,
@@ -307,7 +305,8 @@ struct AluminumPhysics {
             .V_grid = params.V_grid,
             .x_initial = params.x_initial,
             .front_x = params.m_xpos,
-            .length_x = static_cast<double>(size[0]) * spacing[0]};
+            .length_x = pfc::domain::extent(domain)[0],
+            .lower_x = pfc::domain::lower(domain)[0]};
   }
 
   // ---- host conveniences (same math as the pointwise functor) -------------

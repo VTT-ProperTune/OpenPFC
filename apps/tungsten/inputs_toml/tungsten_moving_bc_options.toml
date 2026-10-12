@@ -62,7 +62,7 @@ rho = -0.047
 [[boundary_conditions]]
 target = "psi"
 type = "moving"
-initial_position = "end"
+xpos = 139.17225402106772  # MovingBC needs a numeric start; matches the JSON twin
 rho_low = -0.464
 rho_high = -0.10
 width = 3.0

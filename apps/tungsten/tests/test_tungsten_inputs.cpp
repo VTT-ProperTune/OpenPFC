@@ -35,6 +35,9 @@
 #include <nlohmann/json.hpp>
 
 #include <openpfc/frontend/ui/field_modifier_registry.hpp>
+#include <openpfc/frontend/ui/from_json_world_time.hpp>
+#include <openpfc/frontend/ui/settings_loader.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <tungsten/tungsten_physics.hpp>
 #include <tungsten/tungsten_session.hpp>
 
@@ -51,6 +54,21 @@ std::vector<std::filesystem::path> shipped_inputs() {
       out.push_back(entry.path());
     }
   }
+  std::sort(out.begin(), out.end());
+  return out;
+}
+
+/// Every shipped input in any format: inputs_json/, inputs_toml/ and the
+/// stand-alone CUDA example next to them.
+std::vector<std::filesystem::path> all_shipped_inputs() {
+  std::vector<std::filesystem::path> out = shipped_inputs();
+  const std::filesystem::path toml_dir{TUNGSTEN_INPUTS_TOML_DIR};
+  for (const auto &entry : std::filesystem::directory_iterator(toml_dir)) {
+    if (entry.is_regular_file() && entry.path().extension() == ".toml") {
+      out.push_back(entry.path());
+    }
+  }
+  out.emplace_back(TUNGSTEN_CUDA_EXAMPLE_JSON);
   std::sort(out.begin(), out.end());
   return out;
 }
@@ -90,6 +108,40 @@ TEST_CASE("Every shipped tungsten JSON input loads", "[tungsten][inputs]") {
         INFO("section: " << section << ", type: " << type);
         REQUIRE_NOTHROW(pfc::ui::create_field_modifier(type, entry));
       }
+    }
+  }
+}
+
+// A boundary condition placed outside the box changes nothing and still costs
+// a full pass over the field every step. tungsten_single_seed once declared a
+// fixed BC whose band lay beyond its center-origin domain. The input's box is
+// kept and its grid coarsened, so the 1024^3 inputs stay cheap.
+TEST_CASE("Every shipped tungsten boundary condition touches the box",
+          "[tungsten][inputs]") {
+  tungsten::register_catalog();
+
+  for (const auto &path : all_shipped_inputs()) {
+    INFO("input file: " << path.filename().string());
+    const json cfg = pfc::ui::load_settings_file(path);
+    if (!cfg.contains("boundary_conditions")) continue;
+
+    const pfc::Domain full = pfc::ui::from_json<pfc::Domain>(cfg);
+    const pfc::Int3 n = pfc::domain::get_size(full);
+    const pfc::Int3 coarse{std::min(n[0], 64), std::min(n[1], 8), std::min(n[2], 8)};
+    const pfc::Domain domain = pfc::domain::from_bounds(
+        coarse, pfc::domain::lower(full), pfc::domain::upper(full));
+    const pfc::Box3i box = pfc::domain::index_box(domain);
+
+    for (const json &entry : cfg["boundary_conditions"]) {
+      const std::string type = entry["type"].get<std::string>();
+      INFO("boundary condition: " << type);
+      auto bc = pfc::ui::create_field_modifier(type, entry);
+      constexpr double untouched = 12345.0;
+      std::vector<double> field(pfc::domain::get_total_size(domain), untouched);
+      bc->apply(pfc::field::FieldOutput<double>(field), domain, box, 0.0);
+      const auto changed = std::count_if(field.begin(), field.end(),
+                                         [](double v) { return v != untouched; });
+      REQUIRE(changed > 0);
     }
   }
 }

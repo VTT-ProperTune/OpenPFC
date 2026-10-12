@@ -222,8 +222,6 @@ struct TungstenPhysics {
   }
 
   [[nodiscard]] TungstenPointwise pointwise() const noexcept {
-    const auto size = pfc::domain::get_size(domain);
-    const auto spacing = pfc::domain::get_spacing(domain);
     return {.c_psi = -params.get_stabP(),
             .c_psi2 = params.get_p3_bar(),
             .c_psi3 = params.get_p4_bar(),
@@ -237,7 +235,8 @@ struct TungstenPhysics {
             .V_grid = params.get_V_grid(),
             .x_initial = params.get_x_initial(),
             .front_x = params.get_xpos(),
-            .length_x = static_cast<double>(size[0]) * spacing[0]};
+            .length_x = pfc::domain::extent(domain)[0],
+            .lower_x = pfc::domain::lower(domain)[0]};
   }
 
   /// Host convenience: \f$N(\psi,\psi_{\mathrm{MF}})\f$ via the pointwise functor.

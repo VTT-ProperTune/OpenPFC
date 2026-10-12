@@ -116,7 +116,9 @@ if(TUNGSTEN_ENABLE_TESTS)
     # The shipped inputs are part of the product, so a test loads them from the
     # source tree rather than from a copy that could drift.
     target_compile_definitions(test_tungsten PRIVATE
-      TUNGSTEN_INPUTS_JSON_DIR="${CMAKE_CURRENT_SOURCE_DIR}/inputs_json")
+      TUNGSTEN_INPUTS_JSON_DIR="${CMAKE_CURRENT_SOURCE_DIR}/inputs_json"
+      TUNGSTEN_INPUTS_TOML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/inputs_toml"
+      TUNGSTEN_CUDA_EXAMPLE_JSON="${CMAKE_CURRENT_SOURCE_DIR}/tungsten_single_seed_256_cuda.json")
     include(CTest)
     # Run all tungsten tests in a single invocation to avoid per-test MPI overhead
     add_test(NAME tungsten-all-tests COMMAND test_tungsten)

@@ -46,6 +46,7 @@ struct TungstenPointwise {
   double x_initial{};
   double front_x{};
   double length_x{};
+  double lower_x{}; ///< Lower x limit of the box.
 
   OPENPFC_HD double temperature_variation(double x, double t) const {
     if (G_grid == 0.0) {
@@ -54,9 +55,13 @@ struct TungstenPointwise {
     if (length_x <= 0.0) {
       return G_grid * (x - x_initial - V_grid * t);
     }
-    const double fullruns = std::floor(front_x / length_x) * length_x;
-    const double steppoint = std::fmod(front_x, length_x);
-    const double dist = x + fullruns - (x > steppoint) * length_x;
+    // Unwrap relative to the lower x limit so the front's periodic images
+    // are found for any box placement.
+    const double xr = x - lower_x;
+    const double front_r = front_x - lower_x;
+    const double fullruns = std::floor(front_r / length_x) * length_x;
+    const double steppoint = std::fmod(front_r, length_x);
+    const double dist = xr + fullruns - (xr > steppoint) * length_x + lower_x;
     return G_grid * (dist - x_initial - V_grid * t);
   }
 

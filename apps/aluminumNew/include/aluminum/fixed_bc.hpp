@@ -64,9 +64,8 @@ public:
   void apply(pfc::field::FieldOutput<double> field, const pfc::Domain &domain,
              const pfc::Box3i &box, double time = 0.0) override {
     (void)time;
-    const double Lx = pfc::domain::get_size(domain, 0);
-    const double dx = pfc::domain::get_spacing(domain, 0);
-    const double xpos = (Lx * dx) - xwidth;
+    // The band sits against the upper x limit of the box, wherever the box is.
+    const double xpos = pfc::domain::upper(domain)[0] - xwidth;
 
     pfc::field::apply_inplace(
         field, domain, box, [=, this](const pfc::Real3 &X, double current) {

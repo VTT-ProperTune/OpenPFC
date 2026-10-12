@@ -206,16 +206,18 @@ public:
 
   void fill_bc(pfc::field::FieldOutput<double> field, const pfc::Domain &domain,
                const pfc::Box3i &box) {
-    const double Lx = pfc::domain::get_size(domain, 0);
-    const double dx = pfc::domain::get_spacing(domain, 0);
-    const double l = Lx * dx;
-    const double xpos = std::fmod(m_xpos, l);
+    // Wrap in coordinates relative to the lower x limit, so the periodic
+    // images of the front are found for any box placement.
+    const double x0 = pfc::domain::lower(domain)[0];
+    const double l = pfc::domain::extent(domain)[0];
+    double xpos = std::fmod(m_xpos - x0, l);
+    if (xpos < 0.0) xpos += l;
     const double xwidth = m_xwidth;
     const double alpha = m_alpha;
 
     pfc::field::apply_inplace(
         field, domain, box, [=, this](const pfc::Real3 &X, double current) {
-          const double x = X[0];
+          const double x = X[0] - x0;
           const double dist = x - xpos;
           auto blend = [&](double d) {
             const double S = 1.0 / (1.0 + std::exp(-alpha * d));
