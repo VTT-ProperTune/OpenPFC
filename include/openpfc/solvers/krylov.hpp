@@ -54,7 +54,8 @@ inline double elapsed(std::chrono::steady_clock::time_point t) {
 } // namespace detail
 
 /**
- * Restarted GMRES with twice modified Gram-Schmidt and true residual admission.
+ * Restarted GMRES with two classical Gram-Schmidt passes and true residual
+ * admission. The second pass is the reorthogonalization.
  * A(x,y) computes A*x; inverse M(r,z,iteration) computes M_k^{-1}*r.
  * Left preconditioning must be fixed and linear. Right preconditioning stores
  * every z_j, supporting variable/nonlinear M_k when flexible=true (FGMRES).

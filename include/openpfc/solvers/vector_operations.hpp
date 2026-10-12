@@ -28,7 +28,8 @@ template <class Value> struct ScalarAlgebra {
  * Default std::vector operations with optional communicator-wide inner products.
  * MPI_COMM_NULL selects purely local arithmetic without requiring MPI_Init.
  * Algorithms only depend on this operations contract, so another vector/storage
- * implementation can provide make, copy, scale, axpy, dot and norm instead.
+ * implementation can provide make, copy, scale, axpy, dot, dots and norm
+ * instead. GMRES calls dots, one reduction for a whole classical pass.
  * All collective consumers must use the same communicator and call sequence.
  */
 template <class Value = double, class Algebra = ScalarAlgebra<Value>>
