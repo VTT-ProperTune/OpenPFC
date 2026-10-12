@@ -49,7 +49,13 @@ OpenPFC padded fields, MPI halo exchange and the existing finite-difference
 kernel. `multigrid_mpi.hpp` provides an explicitly replicated hierarchy
 adapter with collective ownership checks. The fine action is distributed;
 the adapter gathers residuals and replicates hierarchy storage and work.
-This supports correctness checks on MPI and is **not** a scalable
-multilevel implementation. A distributed coarse hierarchy remains future
-work; account for replicated memory and communication when using this
-adapter.
+That adapter remains a correctness check, not a scalable hierarchy.
+
+`coarse_correction.hpp` supplies a bounded shared coarse correction.
+Owned fine residuals restrict with the rows of P^T, one small collective
+sums the coarse residual, and the existing coarse solve prolongs the
+correction. The coarse unknown may be replicated while it stays under the
+explicit size bound. Periodic constants use one communicator-wide mean, so
+unequal ownership does not remove a different gauge on each rank. This is
+a two-level correction, not a distributed hierarchy with a coarse-rank
+policy.

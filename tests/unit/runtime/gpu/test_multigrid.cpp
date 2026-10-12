@@ -3,6 +3,7 @@
 #include "mechanics_backend.hpp"
 #include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <openpfc/runtime/gpu/coarse_correction.hpp>
 #include <openpfc/runtime/gpu/multigrid.hpp>
 #include <openpfc/solvers/krylov.hpp>
 #include <openpfc/solvers/structured_operators.hpp>
@@ -74,4 +75,56 @@ TEST_CASE("device multigrid preserves host transfers boundaries and coupled coar
           }
         }
 }
-int main(int argc, char **argv) { return Catch::Session().run(argc, argv); }
+TEST_CASE(
+    "device coarse correction matches the host correction without a host mirror",
+    "[coarse][device]") {
+  if (!mechanics_test::available()) SKIP("GPU unavailable");
+  int rank = 0, ranks = 1, devices = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &ranks);
+  if (ranks != 1) SKIP("single-device coarse comparison");
+#if defined(OPENPFC_TEST_MECHANICS_HIP)
+  if (hipGetDeviceCount(&devices) != hipSuccess || devices < 1)
+    SKIP("no HIP device");
+  GPU_CHECK(hipSetDevice(rank % devices));
+#else
+  if (cudaGetDeviceCount(&devices) != cudaSuccess || devices < 1)
+    SKIP("no CUDA device");
+  GPU_CHECK(cudaSetDevice(rank % devices));
+#endif
+  sol::StructuredGrid grid{{9, 7, 5}, 3};
+  std::vector<int> owned(grid.size());
+  for (int i = 0; i < grid.size(); ++i) owned[i] = i;
+  auto factory = [](const sol::StructuredGrid &g) {
+    return sol::elastic_auxiliary(g, 1, .5, {2, 3, 5});
+  };
+  sol::SharedCoarseCorrection host(grid, owned, factory, MPI_COMM_WORLD);
+  sol::gpu::SharedCoarseCorrection<Tag> device(grid, owned, factory, MPI_COMM_WORLD);
+  REQUIRE(device.retained_host_coarse_bytes() == 0);
+  std::vector<double> rhs(grid.size());
+  std::mt19937 rng(17);
+  for (auto &value : rhs) value = std::uniform_real_distribution<double>(-1, 1)(rng);
+  grid.project(rhs);
+  std::vector<double> reference;
+  host(rhs, reference);
+  Ops ops(MPI_COMM_WORLD);
+  auto b = ops.make(grid.size()), z = ops.make(grid.size());
+  b.copy_from_host(rhs);
+  device(b, z);
+  auto got = z.to_host();
+  double error = 0, scale = 0;
+  for (int i = 0; i < grid.size(); ++i) {
+    error += (got[i] - reference[i]) * (got[i] - reference[i]);
+    scale += reference[i] * reference[i];
+  }
+  REQUIRE(std::sqrt(error / std::max(1., scale)) < 1e-9);
+  REQUIRE(device.collective_bytes ==
+          2 * static_cast<std::size_t>(device.coarse_dofs()) * sizeof(double));
+  REQUIRE(device.retained_host_coarse_bytes() == 0);
+}
+int main(int argc, char **argv) {
+  MPI_Init(&argc, &argv);
+  int result = Catch::Session().run(argc, argv);
+  MPI_Finalize();
+  return result;
+}

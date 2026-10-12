@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #include <catch2/catch_test_macros.hpp>
+#include <openpfc/solvers/coarse_correction.hpp>
 #include <openpfc/solvers/krylov.hpp>
 #include <openpfc/solvers/structured_operators.hpp>
 using namespace pfc::solvers;
@@ -285,4 +286,188 @@ TEST_CASE("auxiliary operators preserve physical box metrics",
         if (dirichlet.columns[j] == row) opposite = dirichlet.values[j];
       REQUIRE(std::abs(dirichlet.values[k] - opposite) < 1e-14);
     }
+}
+
+namespace {
+Multigrid::Factory auxiliary_factory(int components, std::array<double, 3> lengths) {
+  return [=](const StructuredGrid &grid) {
+    return components == 1 ? poisson_auxiliary(grid)
+                           : elastic_auxiliary(grid, 1, .5, lengths);
+  };
+}
+std::vector<int> every_index(int n) {
+  std::vector<int> owned(n);
+  for (int i = 0; i < n; ++i) owned[i] = i;
+  return owned;
+}
+void require_true_residual(VectorOperations<> &ops, const std::vector<double> &b,
+                           const std::vector<double> &ax) {
+  auto residual = ax;
+  ops.axpy(residual, -1, b);
+  REQUIRE(ops.norm(residual) <= 1e-8 * ops.norm(b));
+}
+} // namespace
+
+TEST_CASE("shared coarse correction is adjoint and admits a true residual",
+          "[multigrid][coarse]") {
+  VectorOperations ops;
+  for (int components : {1, 3})
+    for (auto boundary : {Boundary::Periodic, Boundary::Dirichlet}) {
+      StructuredGrid grid{{9, 7, 5}, components, boundary};
+      auto factory = auxiliary_factory(components, {2, 3, 5});
+      SharedCoarseCorrection correction(grid, every_index(grid.size()), factory,
+                                        MPI_COMM_NULL);
+      std::vector<double> coarse(correction.coarse().size(), 1), fine, restricted;
+      correction.prolong_owned(coarse, fine);
+      for (int i = 0; i < grid.size(); ++i) {
+        int node = i / components, x = node % grid.shape[0],
+            y = node / grid.shape[0] % grid.shape[1],
+            z = node / (grid.shape[0] * grid.shape[1]);
+        if (boundary == Boundary::Periodic)
+          REQUIRE(std::abs(fine[i] - 1) < 1e-12);
+        else if (grid.constrained(x, y, z))
+          REQUIRE(fine[i] == 0);
+        else
+          REQUIRE(fine[i] >= -1e-12);
+      }
+      auto field = random_vector(grid.size()),
+           mode = random_vector(correction.coarse().size());
+      grid.project(field);
+      correction.coarse().project(mode);
+      correction.restrict_owned(field, restricted);
+      correction.prolong_owned(mode, fine);
+      REQUIRE(std::abs(ops.dot(restricted, mode) - ops.dot(field, fine)) < 1e-9);
+      if (boundary == Boundary::Periodic) {
+        std::vector<double> biased(grid.size(), 1), update;
+        correction(biased, update);
+        double sum = 0;
+        for (double value : update) sum += value;
+        REQUIRE(std::abs(sum) < 1e-8);
+      }
+      auto rhs = random_vector(grid.size());
+      std::vector<double> unknown(grid.size()), product;
+      grid.project(rhs);
+      auto action = factory(grid);
+      KrylovControls controls;
+      controls.relative_tolerance = 1e-10;
+      controls.maximum_iterations = 200;
+      auto solved = gmres(ops, action, rhs, unknown, controls,
+                          [&](const auto &r, auto &z, int) {
+                            two_level(correction, action, action.diagonal, r, z);
+                          });
+      REQUIRE(solved.converged());
+      REQUIRE(solved.iterations < 80);
+      action(unknown, product);
+      require_true_residual(ops, rhs, product);
+      REQUIRE(correction.coarse().size() <= correction.fine().size() / 2);
+    }
+  StructuredGrid grid{{9, 9, 9}, 1};
+  auto incomplete = every_index(grid.size());
+  incomplete.pop_back();
+  REQUIRE_THROWS_AS(
+      SharedCoarseCorrection(grid, incomplete, poisson_auxiliary, MPI_COMM_NULL),
+      std::invalid_argument);
+}
+
+TEST_CASE("two ranks share one coarse correction under unequal ownership",
+          "[multigrid][MPI][coarse]") {
+  int rank = 0, ranks = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &ranks);
+  if (ranks != 2) SKIP("two-rank coarse correction");
+  VectorOperations ops(MPI_COMM_WORLD);
+  for (int components : {1, 3}) {
+    StructuredGrid grid{{9, 9, 9}, components};
+    auto factory = auxiliary_factory(components, {2, 3, 5});
+    std::vector<int> owned;
+    for (int i = 0; i < grid.size(); ++i)
+      if (i % ranks == rank) owned.push_back(i);
+    int count = owned.size(), counts[2];
+    MPI_Allgather(&count, 1, MPI_INT, counts, 1, MPI_INT, MPI_COMM_WORLD);
+    REQUIRE(counts[0] != counts[1]);
+    SharedCoarseCorrection serial(grid, every_index(grid.size()), factory,
+                                  MPI_COMM_NULL);
+    SharedCoarseCorrection distributed(grid, owned, factory, MPI_COMM_WORLD);
+    auto global = random_vector(grid.size());
+    grid.project(global);
+    std::vector<double> serial_update, local(owned.size()), distributed_update;
+    for (std::size_t i = 0; i < owned.size(); ++i) local[i] = global[owned[i]];
+    serial(global, serial_update);
+    distributed(local, distributed_update);
+    for (std::size_t i = 0; i < owned.size(); ++i)
+      REQUIRE(std::abs(distributed_update[i] - serial_update[owned[i]]) < 1e-8);
+    REQUIRE(distributed.collective_bytes ==
+            static_cast<std::size_t>(distributed.applications) * 2 *
+                distributed.coarse().size() * sizeof(double));
+    REQUIRE(distributed.coarse().size() < grid.size() / 4);
+    auto rhs = random_vector(grid.size());
+    grid.project(rhs);
+    auto full = factory(grid);
+    std::vector<int> counts_owned(ranks), offsets(ranks), indices;
+    MPI_Allgather(&count, 1, MPI_INT, counts_owned.data(), 1, MPI_INT,
+                  MPI_COMM_WORLD);
+    int total = 0;
+    for (int i = 0; i < ranks; ++i) {
+      offsets[i] = total;
+      total += counts_owned[i];
+    }
+    indices.resize(total);
+    MPI_Allgatherv(owned.data(), count, MPI_INT, indices.data(), counts_owned.data(),
+                   offsets.data(), MPI_INT, MPI_COMM_WORLD);
+    auto action = [&](const std::vector<double> &x, std::vector<double> &y) {
+      std::vector<double> gathered(indices.size()), complete(grid.size()), product;
+      MPI_Allgatherv(x.data(), x.size(), MPI_DOUBLE, gathered.data(),
+                     counts_owned.data(), offsets.data(), MPI_DOUBLE,
+                     MPI_COMM_WORLD);
+      for (std::size_t i = 0; i < indices.size(); ++i)
+        complete[indices[i]] = gathered[i];
+      full(complete, product);
+      y.resize(owned.size());
+      for (std::size_t i = 0; i < owned.size(); ++i) y[i] = product[owned[i]];
+    };
+    std::vector<double> b(owned.size()), x(owned.size()), product,
+        diagonal(owned.size());
+    for (std::size_t i = 0; i < owned.size(); ++i) {
+      b[i] = rhs[owned[i]];
+      diagonal[i] = full.diagonal[owned[i]];
+    }
+    KrylovControls controls;
+    controls.relative_tolerance = 1e-9;
+    controls.maximum_iterations = 200;
+    auto solved =
+        gmres(ops, action, b, x, controls, [&](const auto &r, auto &z, int) {
+          two_level(distributed, action, diagonal, r, z);
+        });
+    REQUIRE(solved.converged());
+    REQUIRE(solved.iterations < 80);
+    action(x, product);
+    require_true_residual(ops, b, product);
+  }
+  StructuredGrid grid{{9, 9, 9}, 1};
+  auto domain = pfc::domain::create(pfc::Int3{9, 9, 9});
+  auto decomposition = pfc::decomposition::create(domain, ranks);
+  PeriodicPoissonAction poisson(decomposition, rank, MPI_COMM_WORLD);
+  SharedCoarseCorrection correction(grid, poisson.owned_indices(), poisson_auxiliary,
+                                    MPI_COMM_WORLD);
+  auto global = random_vector(grid.size());
+  grid.project(global);
+  auto owned = poisson.owned_indices();
+  auto reference = poisson_auxiliary(grid);
+  std::vector<double> b(owned.size()), x(owned.size()), product,
+      diagonal(owned.size());
+  for (std::size_t i = 0; i < owned.size(); ++i) {
+    b[i] = global[owned[i]];
+    diagonal[i] = reference.diagonal[owned[i]];
+  }
+  KrylovControls controls;
+  controls.relative_tolerance = 1e-8;
+  controls.maximum_iterations = 200;
+  auto solved =
+      gmres(ops, poisson, b, x, controls, [&](const auto &r, auto &z, int) {
+        two_level(correction, poisson, diagonal, r, z);
+      });
+  REQUIRE(solved.converged());
+  REQUIRE(solved.iterations < 80);
+  poisson(x, product);
+  require_true_residual(ops, b, product);
 }

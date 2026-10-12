@@ -16,6 +16,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- A shared coarse correction for uniquely owned structured Poisson and
+  vector-elasticity operators. The small coarse unknown stays replicated,
+  restriction is P^T, and periodic gauges use one communicator-wide mean.
+  The one-device hierarchy is unchanged. Closes #454.
+
 - Odd-grid periodic displacement reconstruction uses the existing host FFT
   layout and reports gradient recovery error with a zero translation gauge.
 
