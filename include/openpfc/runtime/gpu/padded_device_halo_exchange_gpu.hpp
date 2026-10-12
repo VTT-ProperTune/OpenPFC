@@ -52,6 +52,7 @@
 #include <openpfc/runtime/gpu/gpu_aware_mpi.hpp>
 #include <openpfc/runtime/gpu/gpu_check.hpp>
 #include <openpfc/runtime/gpu/memory_space_gpu.hpp>
+#include <openpfc/runtime/gpu/padded_self_copy.hpp>
 
 #if defined(OpenPFC_ENABLE_CUDA)
 #include <cuda_runtime.h>
@@ -151,6 +152,11 @@ void launch_padded_pack_face(double *d_dst_contig, const double *d_pad, int ox,
 void launch_padded_unpack_face(double *d_pad, const double *d_src_contig, int ox,
                                int oy, int oz, int sx, int sy, int sz, int nxp,
                                int nyp, int nzp, cudaStream_t stream);
+
+/// Fused self-neighbor copy (both faces of one axis, up to kMaxSelfCopyFields
+/// buffers).
+void launch_padded_self_copy_faces(const ::pfc::gpu::detail::PaddedSelfCopy &c,
+                                   cudaStream_t stream);
 
 inline bool runtime_mpi_cuda_aware() {
 #if defined(OpenPFC_MPI_CUDA_AWARE)
@@ -270,6 +276,10 @@ struct CUDAHaloOps {
     detail::launch_padded_unpack_face(d_pad, d_src, ox, oy, oz, sx, sy, sz, nxp, nyp,
                                       nzp, stream);
   }
+  static void self_copy_faces(const ::pfc::gpu::detail::PaddedSelfCopy &c,
+                              stream_t stream) {
+    detail::launch_padded_self_copy_faces(c, stream);
+  }
 };
 
 } // namespace pfc::cuda
@@ -289,6 +299,11 @@ void launch_padded_pack_face(double *d_dst_contig, const double *d_pad, int ox,
 void launch_padded_unpack_face(double *d_pad, const double *d_src_contig, int ox,
                                int oy, int oz, int sx, int sy, int sz, int nxp,
                                int nyp, int nzp, hipStream_t stream);
+
+/// Fused self-neighbor copy (both faces of one axis, up to kMaxSelfCopyFields
+/// buffers).
+void launch_padded_self_copy_faces(const ::pfc::gpu::detail::PaddedSelfCopy &c,
+                                   hipStream_t stream);
 
 inline bool runtime_mpi_hip_aware() {
 #if defined(OpenPFC_MPI_HIP_AWARE)
@@ -407,6 +422,10 @@ struct HIPHaloOps {
                           stream_t stream) {
     detail::launch_padded_unpack_face(d_pad, d_src, ox, oy, oz, sx, sy, sz, nxp, nyp,
                                       nzp, stream);
+  }
+  static void self_copy_faces(const ::pfc::gpu::detail::PaddedSelfCopy &c,
+                              stream_t stream) {
+    detail::launch_padded_self_copy_faces(c, stream);
   }
 };
 
