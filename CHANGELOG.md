@@ -20,6 +20,14 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   Poisson/vector-elasticity multigrid gates using the CUDA test problems
   and unchanged acceptance criteria (#428).
 
+- Cartesian implicit interfaces (`pfc::geometry`) evaluate a plane, sphere,
+  circle, ellipse, and rotated ellipsoid on the existing `Domain` coordinates.
+  Negative is inside. A plane, sphere, and circle are signed distances; the
+  ellipsoid and ellipse polynomials are not. Cell classification uses the
+  exact range of φ, so equal corner signs are not treated as proof that a
+  curved interface misses the cell. Cut cells keep a compact index list.
+  Device classification and cut-cell measures run from the same functions.
+  Closes #434 and #435.
 
 - GPU grain-contact extraction stores unique contacts in an open-addressed
   table of O(edge capacity) slots instead of a dense G×G adjacency matrix.
