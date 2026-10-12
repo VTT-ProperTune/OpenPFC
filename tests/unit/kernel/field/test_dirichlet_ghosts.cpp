@@ -155,3 +155,39 @@ TEST_CASE("StagePreparationService spectral penalty hook writes owned cells",
   REQUIRE(u(0, 0, 0) == 0.0);
   REQUIRE(u(1, 0, 0) == 1.0);
 }
+
+TEST_CASE("Dirichlet ghosts mirror one axis through a corner",
+          "[kernel][field][bc][unit]") {
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank != 0) {
+    return;
+  }
+
+  constexpr int Nx = 8;
+  auto domain = pfc::domain::create(
+      pfc::GridSize({Nx, 6, 5}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+      pfc::GridSpacing({1.0, 1.0, 1.0}), pfc::Bool3{false, false, false});
+  auto decomp = pfc::decomposition::create(domain, 1);
+  auto u = pfc::data::field_from_subdomain<double>(decomp, 0, 2);
+  const auto n = u.local_size();
+  for (int k = -2; k < n[2] + 2; ++k) {
+    for (int j = -2; j < n[1] + 2; ++j) {
+      for (int i = -2; i < n[0] + 2; ++i) {
+        u(i, j, k) = 1000.0 * static_cast<double>(i) +
+                     10.0 * static_cast<double>(j) + static_cast<double>(k);
+      }
+    }
+  }
+  const double owned = u(3, 3, 2);
+  apply_dirichlet_ghosts(u, /*axis=*/0, 0.0, 1.5);
+
+  // Node mirror of -1 is +1. j = -1 stays: the corner touches the disabled
+  // y face and is still the x-axis odd mirror, not the original sample.
+  REQUIRE_THAT(u(-1, -1, 0), WithinAbs(-u(1, -1, 0), 1e-12));
+  REQUIRE(u(-1, -1, 0) == -990.0);
+  REQUIRE_THAT(u(Nx, -1, 1), WithinAbs(2.0 * 1.5 - u(Nx - 2, -1, 1), 1e-12));
+  REQUIRE_THAT(u(-1, 0, 0), WithinAbs(-u(1, 0, 0), 1e-12));
+  REQUIRE(u(3, 3, 2) == owned);
+  REQUIRE(u(2, -1, 0) == 1990.0);
+}

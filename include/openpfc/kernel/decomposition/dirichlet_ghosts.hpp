@@ -9,10 +9,11 @@
  *
  * @details
  * `StagePreparationService` is the single pre-stage BC protocol. This helper
- * is the one-axis node-centered odd case of `apply_reflection_ghosts`
- * (`ReflectionExtent::AllOutside`, so a periodic wrap on @p axis is
- * overwritten). Nodes sit on the physical bounds. Spectral penalty BCs use
- * the same service hook with a different callable (owned-cell writes).
+ * is the one-axis node-centered odd mirror (`ReflectionExtent::AllOutside`,
+ * so a periodic wrap on @p axis is overwritten). A corner that also lies
+ * outside a disabled axis is still filled. Nodes sit on the physical
+ * bounds. Spectral penalty BCs use the same service hook with a different
+ * callable (owned-cell writes).
  *
  * Default order vs halo is `HaloThenBoundary` so a periodic wrap that
  * leaked onto a physical face is overwritten. `BoundaryThenHalo` is
@@ -30,7 +31,8 @@ namespace pfc::communication {
 
 /**
  * @brief Fill storage-halo cells whose global index on @p axis is outside
- *        `[0, N)`. Owned cells are not written.
+ *        `[0, N)`. Owned cells are not written. A corner that is also
+ *        outside another axis is still filled: only @p axis is mirrored.
  *
  * @param u     Padded host field (`storage_halo() >= 1`).
  * @param axis  0, 1, or 2.
@@ -47,6 +49,9 @@ inline void apply_dirichlet_ghosts(pfc::data::Field<T, pfc::HostSpace> &u, int a
   if (axis < 0 || axis > 2) {
     throw std::invalid_argument("apply_dirichlet_ghosts: axis must be 0, 1, or 2");
   }
+  if (u.storage_halo() < 1) {
+    return;
+  }
   ReflectionWalls<T> walls;
   const ReflectionSide<T> low{true, ReflectionParity::Odd, BoundaryCentering::Node,
                               u_low};
@@ -62,7 +67,13 @@ inline void apply_dirichlet_ghosts(pfc::data::Field<T, pfc::HostSpace> &u, int a
     walls.zm = low;
     walls.zp = high;
   }
-  apply_reflection_ghosts(u, walls, ReflectionExtent::AllOutside);
+  // Reflection drops a corner that touches a disabled side. Dirichlet is
+  // one axis, so that corner is still this axis's odd mirror.
+  detail::ReflectionGeometry<T> geom =
+      detail::build_reflection_geometry(u, walls, ReflectionExtent::AllOutside);
+  geom.skip_disabled = 1;
+  detail::validate_reflection_geometry(geom);
+  detail::apply_reflection_host(u, geom);
 }
 
 } // namespace pfc::communication

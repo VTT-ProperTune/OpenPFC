@@ -113,6 +113,9 @@ template <typename T> struct ReflectionGeometry {
   int odd[6]{};
   int cell_face[6]{};
   T value[6]{};
+  /// Disabled outside axes do not cancel the sample. One-axis Dirichlet
+  /// sets this so a corner still receives that axis's mirror.
+  int skip_disabled = 0;
 };
 
 template <typename T> struct ReflectionSample {
@@ -172,7 +175,9 @@ reflection_sample(const ReflectionGeometry<T> &geom, int i, int j, int k) noexce
     const int g = geom.low[axis] + local[axis];
     const int applied = reflection_side_applies(geom, axis, g);
     if (applied < 0) {
-      cancel = 1;
+      if (geom.skip_disabled == 0) {
+        cancel = 1;
+      }
       continue;
     }
     if (applied == 0) {
