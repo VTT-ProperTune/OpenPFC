@@ -28,6 +28,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   state, halo cells are not written, and `can_rollback()` is false. A
   non-finite time step is rejected. Closes #426.
 
+- `pfc::solvers::FieldVector`, `FieldOperations` and `FieldHalo` run `cg`,
+  `gmres` and `newton` on a block of padded Fields. Reductions sum owned
+  cells (optionally masked) with one collective; a stencil action exchanges
+  halos through `FieldHalo` rather than a second runtime (#471).
+
 - A shared coarse correction for uniquely owned structured Poisson and
   vector-elasticity operators. The small coarse unknown stays replicated,
   restriction is P^T, and periodic gauges use one communicator-wide mean.
