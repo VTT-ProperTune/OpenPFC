@@ -25,7 +25,6 @@
 #include <openpfc/kernel/fft/fft_interface.hpp>
 #include <tungsten/tungsten_session.hpp>
 
-
 using nlohmann::json;
 
 namespace {
@@ -166,10 +165,10 @@ public:
 
   void run_cpu_test(int size_x, int size_y, int size_z, int num_iterations) {
     run_backend<tungsten::TungstenSession>("CPU", size_x, size_y, size_z,
-                                              num_iterations, [](auto &session) {
-                                                auto &psi = session.psi().vec();
-                                                fill_sine(psi.data(), psi.size());
-                                              });
+                                           num_iterations, [](auto &session) {
+                                             auto &psi = session.psi().vec();
+                                             fill_sine(psi.data(), psi.size());
+                                           });
   }
 
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)

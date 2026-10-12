@@ -15,11 +15,11 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <iomanip>
 #include <mpi.h>
 #include <numbers>
-#include <tuple>
-#include <iomanip>
 #include <sstream>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -27,12 +27,12 @@
 
 #include <kawahara/capillary_gravity_mapping.hpp>
 #include <kawahara/kawahara_physics.hpp>
-#include <kawahara/kdv_soliton.hpp>
-#include <openpfc/kernel/fft/kspace_iterator.hpp>
 #include <kawahara/kawahara_session.hpp>
+#include <kawahara/kdv_soliton.hpp>
 #include <kawahara/wave_packet_diagnostics.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/fft/kspace_iterator.hpp>
 #include <openpfc/kernel/simulation/simulation_state.hpp>
 #include <openpfc/kernel/simulation/spectral_etd_system.hpp>
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
@@ -95,7 +95,6 @@ double tail_dominant_k(const pfc::data::Field<double> &u, double x_peak,
   }
   return best_k;
 }
-
 
 double cosine_phase(const pfc::data::Field<double> &u, int nx) {
   const auto n = u.local_size();
@@ -433,7 +432,9 @@ double domega_dk(double k, double beta, double gamma) {
 }
 
 /// Wrap an angle into (-pi, pi].
-double wrap_angle(double theta) { return std::atan2(std::sin(theta), std::cos(theta)); }
+double wrap_angle(double theta) {
+  return std::atan2(std::sin(theta), std::cos(theta));
+}
 
 } // namespace
 
@@ -455,7 +456,8 @@ TEST_CASE("Kawahara capillary-gravity mapping: alpha/beta/gamma and crossover",
   const CapillaryGravityRegime critical{1.0, 1.0, 1.0 / 3.0};
   REQUIRE_THAT(kawahara::beta_of(critical), WithinAbs(0.0, 1e-14));
   const CapillaryGravityRegime supercritical{1.0, 1.0, 0.40};
-  REQUIRE(kawahara::beta_of(supercritical) > 0.0); // tau=0.40 > 1/3: no real crossover
+  REQUIRE(kawahara::beta_of(supercritical) >
+          0.0); // tau=0.40 > 1/3: no real crossover
 }
 
 TEST_CASE("Kawahara wave-packet diagnostics recover a known static envelope",
@@ -483,7 +485,8 @@ TEST_CASE("Kawahara wave-packet diagnostics recover a known static envelope",
   // narrowband envelope) the envelope's own DC Fourier content divided by Lx,
   // *not* the envelope's peak amplitude -- amp*sigma*sqrt(2*pi)/Lx here.
   const double Lx = static_cast<double>(N) * dx;
-  const double expected_mode_amplitude = amp * sigma * std::sqrt(2.0 * std::numbers::pi) / Lx;
+  const double expected_mode_amplitude =
+      amp * sigma * std::sqrt(2.0 * std::numbers::pi) / Lx;
   REQUIRE_THAT(s.mode_amplitude, WithinRel(expected_mode_amplitude, 0.05));
   REQUIRE(s.edge_fraction < 1e-6);
 }
@@ -553,8 +556,8 @@ TEST_CASE("Kawahara wave packet: group/phase velocity vs the dispersion "
   pfc::sim::SpectralETDOptions opt;
   opt.psi_name = "u";
   opt.dealias = true;
-  pfc::sim::SpectralETDSystem<kawahara::KawaharaPhysics<>> sys(phys, stack.fft(), state,
-                                                               dt, opt);
+  pfc::sim::SpectralETDSystem<kawahara::KawaharaPhysics<>> sys(phys, stack.fft(),
+                                                               state, dt, opt);
   double t = 0.0;
   for (int step = 0; step < n_steps; ++step) {
     t = sys.step(t);
@@ -568,8 +571,8 @@ TEST_CASE("Kawahara wave packet: group/phase velocity vs the dispersion "
 
   const double v_g_measured = (sampleT.centroid - sample0.centroid) / t;
   const double v_g_diff = std::abs(v_g_measured - v_g_analytic);
-  const double v_g_ok = v_g_diff <= v_g_tol_abs ||
-                        v_g_diff <= v_g_tol_rel * std::abs(v_g_analytic);
+  const double v_g_ok =
+      v_g_diff <= v_g_tol_abs || v_g_diff <= v_g_tol_rel * std::abs(v_g_analytic);
   INFO("k0=" << k0 << " v_g_measured=" << v_g_measured
              << " v_g_analytic=" << v_g_analytic << " diff=" << v_g_diff);
   REQUIRE(v_g_ok);
@@ -627,8 +630,7 @@ TEST_CASE("Kawahara grid: the 1-D r2c outbox holds the modes the symbols assume"
   std::vector<double> kx;
   double max_ky = 0.0, max_kz = 0.0;
   pfc::fft::kspace::for_each_kpoint(
-      outbox, domain,
-      [&](std::size_t, double a, double b, double c, int, int, int) {
+      outbox, domain, [&](std::size_t, double a, double b, double c, int, int, int) {
         kx.push_back(a);
         max_ky = std::max(max_ky, std::abs(b));
         max_kz = std::max(max_kz, std::abs(c));
@@ -641,7 +643,8 @@ TEST_CASE("Kawahara grid: the 1-D r2c outbox holds the modes the symbols assume"
   double worst = 0.0;
   for (std::size_t m = 0; m < kx.size(); ++m)
     worst = std::max(worst, std::abs(kx[m] - static_cast<double>(m) * dk));
-  INFO("largest deviation from k_m = 2*pi*m/Lx: " << worst << " (dk = " << dk << ")");
+  INFO("largest deviation from k_m = 2*pi*m/Lx: " << worst << " (dk = " << dk
+                                                  << ")");
   REQUIRE(worst < 1.0e-12);
 }
 
@@ -685,8 +688,8 @@ TEST_CASE("Kawahara linear operator: every resolved mode is exactly neutral",
   // part still propagates those modes, so they must be neutral too -- a
   // localized pulse carries small but nonzero content all the way to Nyquist,
   // and anything that grows there eventually owns the solution.
-  for (int m : {1, 2, 4, 8, 16, 32, m_cut - 1, m_cut, m_cut + 1, m_cut + 40,
-                N / 2 - 1}) {
+  for (int m :
+       {1, 2, 4, 8, 16, 32, m_cut - 1, m_cut, m_cut + 1, m_cut + 40, N / 2 - 1}) {
     const double k = static_cast<double>(m) * dk;
     const double omega = beta * k * k * k + gamma * std::pow(k, 5);
 
@@ -701,8 +704,8 @@ TEST_CASE("Kawahara linear operator: every resolved mode is exactly neutral",
     pfc::sim::SpectralETDOptions opt;
     opt.psi_name = "u";
     opt.dealias = true;
-    pfc::sim::SpectralETDSystem<kawahara::KawaharaPhysics<>> sys(
-        phys, stack.fft(), state, dt, opt);
+    pfc::sim::SpectralETDSystem<kawahara::KawaharaPhysics<>> sys(phys, stack.fft(),
+                                                                 state, dt, opt);
     double t = 0.0;
     for (int step = 0; step < n_steps; ++step) t = sys.step(t);
 
@@ -734,8 +737,8 @@ TEST_CASE("Kawahara linear operator: every resolved mode is exactly neutral",
     pfc::sim::SpectralETDOptions opt;
     opt.psi_name = "u";
     opt.dealias = true;
-    pfc::sim::SpectralETDSystem<kawahara::KawaharaPhysics<>> sys(
-        phys, stack.fft(), state, dt, opt);
+    pfc::sim::SpectralETDSystem<kawahara::KawaharaPhysics<>> sys(phys, stack.fft(),
+                                                                 state, dt, opt);
     double t = 0.0;
     for (int step = 0; step < n_steps; ++step) t = sys.step(t);
     const double amp = mode_amplitude(u);
@@ -775,8 +778,8 @@ TEST_CASE("Kawahara nonlinearity populates only the modes u^2 can reach",
   // beta = gamma = 0 isolates the nonlinear stage: with no dispersion the
   // linear symbol is zero and every mode present is one the product put there.
   json params{{"alpha", 1.5}, {"beta", 0.0}, {"gamma", 0.0}};
-  auto phys = kawahara::KawaharaPhysics<>::from_json(
-      params, domain, stack.fft().get_inbox_bounds());
+  auto phys = kawahara::KawaharaPhysics<>::from_json(params, domain,
+                                                     stack.fft().get_inbox_bounds());
   pfc::SimulationState state;
   phys.declare_fields(state);
   auto &u = state.get_field<double>("u");
@@ -803,9 +806,9 @@ TEST_CASE("Kawahara nonlinearity populates only the modes u^2 can reach",
   // invisible in any linear test, while it stops a solitary wave from being a
   // solution and makes it shed and deform over a long run.
   const double expected_second = 0.5 * 1.5 * amp * amp * k0 * dt;
-  INFO("second harmonic: measured " << std::setprecision(17)
-                                    << mode_coefficient(u, 2 * m0) << ", closed form "
-                                    << expected_second);
+  INFO("second harmonic: measured "
+       << std::setprecision(17) << mode_coefficient(u, 2 * m0) << ", closed form "
+       << expected_second);
   CHECK_THAT(mode_coefficient(u, 2 * m0), WithinRel(expected_second, 1.0e-9));
 
   double worst = 0.0;
@@ -818,8 +821,8 @@ TEST_CASE("Kawahara nonlinearity populates only the modes u^2 can reach",
       worst_m = m;
     }
   }
-  INFO("largest amplitude outside modes {" << m0 << ", " << 2 * m0
-                                           << "}: " << worst << " at m=" << worst_m
+  INFO("largest amplitude outside modes {" << m0 << ", " << 2 * m0 << "}: " << worst
+                                           << " at m=" << worst_m
                                            << " (initial amplitude " << amp << ")");
   // Measured 2.0e-15 here. The bound is 1e-12: still seven orders below the
   // second harmonic this step legitimately creates, so anything reading
@@ -878,8 +881,8 @@ TEST_CASE("Kawahara dealiasing keeps exactly the modes below the 2/3 cut",
     pfc::sim::SpectralETDOptions opt;
     opt.psi_name = "u";
     opt.dealias = true;
-    pfc::sim::SpectralETDSystem<kawahara::KawaharaPhysics<>> sys(
-        phys, stack.fft(), state, dt, opt);
+    pfc::sim::SpectralETDSystem<kawahara::KawaharaPhysics<>> sys(phys, stack.fft(),
+                                                                 state, dt, opt);
     (void)sys.step(0.0);
 
     const double measured = mode_coefficient(u, harmonic);
@@ -948,8 +951,8 @@ TEST_CASE("Kawahara linear operator stays neutral over a science-length run",
     pfc::sim::SpectralETDOptions opt;
     opt.psi_name = "u";
     opt.dealias = true;
-    pfc::sim::SpectralETDSystem<kawahara::KawaharaPhysics<>> sys(
-        phys, stack.fft(), state, dt, opt);
+    pfc::sim::SpectralETDSystem<kawahara::KawaharaPhysics<>> sys(phys, stack.fft(),
+                                                                 state, dt, opt);
     double t = 0.0;
     std::vector<std::pair<int, double>> trace;
     for (int step = 1; step <= n_steps; ++step) {
@@ -979,8 +982,10 @@ TEST_CASE("KdV soliton initial condition: derived width and rejected signs",
   REQUIRE_THAT(kawahara::kdv_soliton_speed(alpha, amp),
                WithinRel(alpha * amp / 3.0, 1e-14));
 
-  json j{{"type", "kdv_soliton"}, {"amplitude", amp},
-         {"alpha", alpha},        {"beta", beta},
+  json j{{"type", "kdv_soliton"},
+         {"amplitude", amp},
+         {"alpha", alpha},
+         {"beta", beta},
          {"x0", 32.0}};
   kawahara::KdVSoliton ic;
   from_json(j, ic);
@@ -1063,12 +1068,11 @@ TEST_CASE("Kawahara: fifth-order dispersion makes a KdV solitary wave radiate",
   // wavenumber the fifth-order term should put a wave train at. Nothing in the
   // solver knows this number; it comes from the dispersion relation alone,
   // which is what makes it worth measuring.
-  const double k_res =
-      std::sqrt((-beta + std::sqrt(beta * beta + 4.0 * gamma * c_soliton)) /
-                (2.0 * gamma));
+  const double k_res = std::sqrt(
+      (-beta + std::sqrt(beta * beta + 4.0 * gamma * c_soliton)) / (2.0 * gamma));
   INFO("alpha=" << alpha << " beta=" << beta << " gamma=" << gamma
-                << " c_soliton=" << c_soliton << " W=" << width
-                << " k_res=" << k_res << " k_dealias=" << k_dealias);
+                << " c_soliton=" << c_soliton << " W=" << width << " k_res=" << k_res
+                << " k_dealias=" << k_dealias);
   REQUIRE(k_res < 0.5 * k_dealias); // the shed train has to be resolved
 
   const auto domain = pfc::domain::create(pfc::GridSize({N, 1, 1}),
@@ -1116,8 +1120,8 @@ TEST_CASE("Kawahara: fifth-order dispersion makes a KdV solitary wave radiate",
     pfc::sim::SpectralETDOptions opt;
     opt.psi_name = "u";
     opt.dealias = true;
-    pfc::sim::SpectralETDSystem<kawahara::KawaharaPhysics<>> sys(
-        phys, stack.fft(), state, dt, opt);
+    pfc::sim::SpectralETDSystem<kawahara::KawaharaPhysics<>> sys(phys, stack.fft(),
+                                                                 state, dt, opt);
     double t = 0.0;
     constexpr int kSample = 1000;
     std::vector<std::pair<int, double>> trace;
@@ -1137,25 +1141,24 @@ TEST_CASE("Kawahara: fifth-order dispersion makes a KdV solitary wave radiate",
 
     kawahara::PulseDiagnostics diag(MPI_COMM_WORLD, 2.0 * tail_inner);
     const auto sample = diag.sample(u);
-    return Outcome{mean_u(u) - mean0,
-                   sample.peak_amplitude / amp,
-                   sample.peak_x - x0,
-                   sample.tail_rms,
-                   tail_dominant_k(u, sample.peak_x, tail_inner, tail_ramp,
-                                   k_dealias),
-                   std::move(trace), std::move(l2trace)};
+    return Outcome{
+        mean_u(u) - mean0,
+        sample.peak_amplitude / amp,
+        sample.peak_x - x0,
+        sample.tail_rms,
+        tail_dominant_k(u, sample.peak_x, tail_inner, tail_ramp, k_dealias),
+        std::move(trace),
+        std::move(l2trace)};
   };
 
   const Outcome kdv = run(0.0);
   const Outcome kawa = run(gamma);
-  INFO("KdV control: peak_ratio=" << kdv.peak_ratio << " moved="
-                                  << kdv.peak_displacement
-                                  << " tail_rms=" << kdv.tail_rms
-                                  << " tail_k=" << kdv.tail_k);
-  INFO("Kawahara:    peak_ratio=" << kawa.peak_ratio << " moved="
-                                  << kawa.peak_displacement
-                                  << " tail_rms=" << kawa.tail_rms
-                                  << " tail_k=" << kawa.tail_k);
+  INFO("KdV control: peak_ratio="
+       << kdv.peak_ratio << " moved=" << kdv.peak_displacement
+       << " tail_rms=" << kdv.tail_rms << " tail_k=" << kdv.tail_k);
+  INFO("Kawahara:    peak_ratio="
+       << kawa.peak_ratio << " moved=" << kawa.peak_displacement
+       << " tail_rms=" << kawa.tail_rms << " tail_k=" << kawa.tail_k);
 
   // Nothing below is meaningful if the integration lost the field, and a bare
   // "nan is within 0 of 0" would say nothing about where it went. Fail here
@@ -1202,8 +1205,7 @@ TEST_CASE("Kawahara: fifth-order dispersion makes a KdV solitary wave radiate",
   // ... and it travels at the speed the closed form gives. The peak location
   // is read off grid points, so one cell is the resolution of this check;
   // measured displacement is 2.50 against a predicted c*T = 2.50.
-  REQUIRE_THAT(kdv.peak_displacement,
-               WithinAbs(c_soliton * dt * n_steps, dx));
+  REQUIRE_THAT(kdv.peak_displacement, WithinAbs(c_soliton * dt * n_steps, dx));
 
   // ... and it leaves nothing behind it. The control's tail RMS is 4.2e-5,
   // three orders below the pulse amplitude: the residual sech^2 skirt that

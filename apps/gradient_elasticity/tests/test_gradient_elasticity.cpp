@@ -87,16 +87,19 @@ void fill_circular_inclusion(pfc::data::Field<double> &g, double x0, double y0,
 /// Single-rank, direct physics/solve calls (no JSON session) so the size
 /// sweep used by the tests below stays fast and self-contained.
 gradient_elasticity::StressSummary run_circular_case(int N, double R, double w,
-                                                      double ell, double mu,
-                                                      double lambda, double eps0,
-                                                      int order = 4) {
+                                                     double ell, double mu,
+                                                     double lambda, double eps0,
+                                                     int order = 4) {
   const auto domain = pfc::domain::create(pfc::GridSize({N, N, 1}),
                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                           pfc::GridSpacing({1.0, 1.0, 1.0}));
   pfc::sim::stacks::SpectralCPUStack stack(domain, 0, 1, MPI_COMM_WORLD);
   auto phys = gradient_elasticity::GradientElasticityPhysics<>::from_json(
-      json{{"ell", ell}, {"eps0", eps0}, {"mu", mu}, {"lambda", lambda},
-          {"order", order}},
+      json{{"ell", ell},
+           {"eps0", eps0},
+           {"mu", mu},
+           {"lambda", lambda},
+           {"order", order}},
       domain, stack.fft().get_inbox_bounds());
   pfc::SimulationState state;
   phys.declare_fields(state);
@@ -120,9 +123,8 @@ gradient_elasticity::StressSummary run_circular_case(int N, double R, double w,
   gradient_elasticity::compute_stress_fields(phys, g, exx, eyy, exy, sxx, syy, sxy,
                                              stress_hydro, stress_vm,
                                              energy_density);
-  return gradient_elasticity::summarize_stress(stress_hydro, stress_vm,
-                                               energy_density, domain,
-                                               MPI_COMM_WORLD);
+  return gradient_elasticity::summarize_stress(
+      stress_hydro, stress_vm, energy_density, domain, MPI_COMM_WORLD);
 }
 
 /// Classical (infinite-domain, sharp-boundary) closed form for a 2-D
@@ -473,7 +475,8 @@ TEST_CASE("Spectral strain/stress post-processing matches the analytical "
         max_err_exy = std::max(max_err_exy, std::abs(exy(i, j, k) - exy_a));
         max_err_hydro =
             std::max(max_err_hydro, std::abs(stress_hydro(i, j, k) - s.hydrostatic));
-        max_err_vm = std::max(max_err_vm, std::abs(stress_vm(i, j, k) - s.von_mises));
+        max_err_vm =
+            std::max(max_err_vm, std::abs(stress_vm(i, j, k) - s.von_mises));
         max_err_w = std::max(max_err_w,
                              std::abs(energy_density(i, j, k) - s.energy_density));
       }
@@ -504,8 +507,8 @@ TEST_CASE("ell=0 recovers the classical analytical circular-inclusion stress",
   constexpr double eps0 = 0.01;
 
   const auto summary = run_circular_case(N, R, w, /*ell=*/0.0, mu, lambda, eps0);
-  const double p_classical = std::abs(classical_inclusion_inside_hydrostatic(
-      mu, lambda, eps0));
+  const double p_classical =
+      std::abs(classical_inclusion_inside_hydrostatic(mu, lambda, eps0));
   const double vm_classical =
       classical_inclusion_boundary_von_mises(mu, lambda, eps0);
 
@@ -595,23 +598,21 @@ TEST_CASE("Doubling the periodic box leaves the inclusion peak stress "
   // just asserted.
   const auto box8 =
       run_circular_case(8 * static_cast<int>(R), R, w, ell, mu, lambda, eps0);
-  const auto small_box = run_circular_case(16 * static_cast<int>(R), R, w, ell, mu,
-                                           lambda, eps0);
-  const auto large_box = run_circular_case(32 * static_cast<int>(R), R, w, ell, mu,
-                                           lambda, eps0);
+  const auto small_box =
+      run_circular_case(16 * static_cast<int>(R), R, w, ell, mu, lambda, eps0);
+  const auto large_box =
+      run_circular_case(32 * static_cast<int>(R), R, w, ell, mu, lambda, eps0);
   const auto rel_change = [](double a, double b) { return std::abs(b - a) / a; };
   WARN("L/R 8->16 relative change: peak_hydro="
        << rel_change(box8.peak_abs_hydrostatic, small_box.peak_abs_hydrostatic)
-       << " peak_vm="
-       << rel_change(box8.peak_von_mises, small_box.peak_von_mises));
+       << " peak_vm=" << rel_change(box8.peak_von_mises, small_box.peak_von_mises));
   WARN("L/R 16->32 relative change: peak_hydro="
        << rel_change(small_box.peak_abs_hydrostatic, large_box.peak_abs_hydrostatic)
        << " peak_vm="
        << rel_change(small_box.peak_von_mises, large_box.peak_von_mises));
   REQUIRE_THAT(large_box.peak_abs_hydrostatic,
-              WithinRel(small_box.peak_abs_hydrostatic, 0.02));
-  REQUIRE_THAT(large_box.peak_von_mises,
-              WithinRel(small_box.peak_von_mises, 0.02));
+               WithinRel(small_box.peak_abs_hydrostatic, 0.02));
+  REQUIRE_THAT(large_box.peak_von_mises, WithinRel(small_box.peak_von_mises, 0.02));
 }
 
 int main(int argc, char *argv[]) {

@@ -37,10 +37,10 @@
 #include <openpfc/frontend/ui/from_json_field_modifiers.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/simulation/initial_conditions/indexed_noise.hpp>
-#include <openpfc/kernel/simulation/simulation_state.hpp>
 #include <openpfc/kernel/simulation/adaptive_controller.hpp>
 #include <openpfc/kernel/simulation/etd_step_doubling.hpp>
+#include <openpfc/kernel/simulation/initial_conditions/indexed_noise.hpp>
+#include <openpfc/kernel/simulation/simulation_state.hpp>
 #include <openpfc/kernel/simulation/spectral_etd_system.hpp>
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
@@ -422,9 +422,9 @@ TEST_CASE("Fe-Cr Cahn-Hilliard fixed and adaptive ETD at similar accuracy",
       sys.set_dt(t_end - t);
       t = sys.step(t);
     }
-    const double wall_ms =
-        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0)
-            .count();
+    const double wall_ms = std::chrono::duration<double, std::milli>(
+                               std::chrono::steady_clock::now() - t0)
+                               .count();
     return std::tuple{state.get_field<double>("c").vec(), sys.nonlinear_count(),
                       sys.forward_count() + sys.backward_count(), wall_ms, t};
   };
@@ -462,7 +462,8 @@ TEST_CASE("Fe-Cr Cahn-Hilliard fixed and adaptive ETD at similar accuracy",
     const double dt = time.get_attempted_dt();
     doubling.attempt(time.get_accepted_time(), dt);
     const auto decision = controller.decide_from_embedded_error(
-        dt, doubling.raw_difference(), doubling.saved_state(), doubling.half_steps());
+        dt, doubling.raw_difference(), doubling.saved_state(),
+        doubling.half_steps());
     if (decision.accepted) {
       doubling.commit();
       accepted_dt.push_back(dt);
@@ -474,14 +475,15 @@ TEST_CASE("Fe-Cr Cahn-Hilliard fixed and adaptive ETD at similar accuracy",
     controller.apply(time, decision);
     ++guard;
   }
-  const double wall_ms =
-      std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0)
-          .count();
+  const double wall_ms = std::chrono::duration<double, std::milli>(
+                             std::chrono::steady_clock::now() - t0)
+                             .count();
   REQUIRE(time.done());
   const auto &adaptive_field = state.get_field<double>("c").vec();
   double adaptive_error = 0.0;
   for (std::size_t i = 0; i < adaptive_field.size(); ++i) {
-    adaptive_error = std::max(adaptive_error, std::abs(adaptive_field[i] - reference[i]));
+    adaptive_error =
+        std::max(adaptive_error, std::abs(adaptive_field[i] - reference[i]));
   }
 
   double best_gap = 1e300;
@@ -512,12 +514,13 @@ TEST_CASE("Fe-Cr Cahn-Hilliard fixed and adaptive ETD at similar accuracy",
   }
 
   std::cout << "ch adaptive accepted=" << controller.accepted_count()
-            << " rejected=" << controller.rejected_count() << " nonlinear=" << nonlinear
-            << " transforms=" << transforms << " error=" << adaptive_error
-            << " wall_ms=" << wall_ms << "\n";
+            << " rejected=" << controller.rejected_count()
+            << " nonlinear=" << nonlinear << " transforms=" << transforms
+            << " error=" << adaptive_error << " wall_ms=" << wall_ms << "\n";
   std::cout << "ch matched fixed dt=" << matched_dt << " error=" << matched_error
-            << " nonlinear=" << matched_nonlinear << " transforms=" << matched_transforms
-            << " wall_ms=" << matched_ms << "\n";
+            << " nonlinear=" << matched_nonlinear
+            << " transforms=" << matched_transforms << " wall_ms=" << matched_ms
+            << "\n";
   std::cout << "ch adaptive dt";
   for (double h : accepted_dt) {
     std::cout << ' ' << h;

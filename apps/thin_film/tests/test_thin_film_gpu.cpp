@@ -86,17 +86,14 @@ std::array<double, 4> last_csv_row(const std::string &path) {
 }
 
 nlohmann::json nonlinear_mini_settings(const std::string &csv_path) {
-  return {{"domain", {{"Lx", 32}, {"Ly", 32}, {"Lz", 1}, {"dx", 1.0}}},
-          {"model",
-           {{"params",
-             {{"h0", 1.0},
-              {"gamma", 1.0},
-              {"M0", 1.0},
-              {"A", 0.05},
-              {"h_star", 0.2}}}}},
-          {"timestepping", {{"t1", 0.5}, {"dt", 0.01}, {"saveat", -1.0}}},
-          {"initial_conditions", {{"amplitude", 0.02}, {"seed", 7}}},
-          {"diagnostics", {{"csv", csv_path}}}};
+  return {
+      {"domain", {{"Lx", 32}, {"Ly", 32}, {"Lz", 1}, {"dx", 1.0}}},
+      {"model",
+       {{"params",
+         {{"h0", 1.0}, {"gamma", 1.0}, {"M0", 1.0}, {"A", 0.05}, {"h_star", 0.2}}}}},
+      {"timestepping", {{"t1", 0.5}, {"dt", 0.01}, {"saveat", -1.0}}},
+      {"initial_conditions", {{"amplitude", 0.02}, {"seed", 7}}},
+      {"diagnostics", {{"csv", csv_path}}}};
 }
 
 } // namespace

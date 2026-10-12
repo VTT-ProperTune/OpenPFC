@@ -29,9 +29,9 @@
 #include <openpfc/kernel/fft/kspace_iterator.hpp>
 #include <openpfc/kernel/simulation/simulation_state.hpp>
 #include <openpfc/kernel/simulation/spectral_etd_system.hpp>
+#include <openpfc/kernel/simulation/spectral_flux.hpp>
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
-#include <openpfc/kernel/simulation/spectral_flux.hpp>
 
 using Catch::Matchers::WithinAbs;
 using Catch::Matchers::WithinRel;
@@ -281,9 +281,8 @@ TEST_CASE("EHD flux stepper reproduces the analytical k^6 decay",
       });
 
   // gamma = A = 0, so p = B lap^2 h. Constant mobility M0.
-  pfc::sim::FluxETD stepper(domain, stack.fft(), dt, [=](double kl) {
-    return M0 * B * kl * kl * kl;
-  });
+  pfc::sim::FluxETD stepper(domain, stack.fft(), dt,
+                            [=](double kl) { return M0 * B * kl * kl * kl; });
   auto potential = [&](pfc::data::Field<std::complex<double>> &h_hat,
                        pfc::data::Field<double> &,
                        pfc::data::Field<std::complex<double>> &out) {
@@ -333,8 +332,8 @@ TEST_CASE("EHD cubic mobility conserves liquid volume under bending, tension "
   auto &h = stack.u();
   const double twopi = 2.0 * std::numbers::pi;
   h.apply([&](double x, double y, double) {
-    return h0 * (1.0 + 0.2 * std::cos(twopi * 2 * x / N) *
-                           std::cos(twopi * 2 * y / N));
+    return h0 *
+           (1.0 + 0.2 * std::cos(twopi * 2 * x / N) * std::cos(twopi * 2 * y / N));
   });
 
   const ehd_film::EhdFilmPointwise pw{.A = A, .h0 = h0};
@@ -351,8 +350,8 @@ TEST_CASE("EHD cubic mobility conserves liquid volume under bending, tension "
     return B * kl * kl * kl - gamma * kl * kl - Pip0 * kl;
   });
   pfc::data::Field<double> pi_real(domain, stack.fft().get_inbox_bounds(), 0);
-  pfc::data::Field<std::complex<double>> pi_hat(
-      domain, stack.fft().get_outbox_bounds(), 0);
+  pfc::data::Field<std::complex<double>> pi_hat(domain,
+                                                stack.fft().get_outbox_bounds(), 0);
   auto potential = [&](pfc::data::Field<std::complex<double>> &h_hat,
                        pfc::data::Field<double> &hh,
                        pfc::data::Field<std::complex<double>> &out) {
@@ -366,8 +365,8 @@ TEST_CASE("EHD cubic mobility conserves liquid volume under bending, tension "
       pi_hat.with_host_view([&](std::complex<double> *piv, std::size_t) {
         out.with_host_view([&](std::complex<double> *o, std::size_t) {
           for (std::size_t i = 0; i < m; ++i)
-            o[i] = B * k_lap[i] * k_lap[i] * hv[i] - gamma * k_lap[i] * hv[i] -
-                   piv[i];
+            o[i] =
+                B * k_lap[i] * k_lap[i] * hv[i] - gamma * k_lap[i] * hv[i] - piv[i];
         });
       });
     });
@@ -406,10 +405,9 @@ TEST_CASE("EHD localized load thins the gap at its centre and conserves volume",
   h.apply([&](double, double, double) { return h0; });
 
   // No bending, tension or adhesion here: isolate the load's own sign.
-  pfc::sim::FluxETD stepper(domain, stack.fft(), dt,
-                             [](double) { return 0.0; });
+  pfc::sim::FluxETD stepper(domain, stack.fft(), dt, [](double) { return 0.0; });
   const auto load = ehd_film::GaussianLoad::centred(domain, /*p0=*/0.5,
-                                                     /*a=*/6.0, /*t_load=*/1.0e9);
+                                                    /*a=*/6.0, /*t_load=*/1.0e9);
   pfc::data::Field<double> pext_real(domain, stack.fft().get_inbox_bounds(), 0);
   auto potential = [&](pfc::data::Field<std::complex<double>> &,
                        pfc::data::Field<double> &,
@@ -426,10 +424,12 @@ TEST_CASE("EHD localized load thins the gap at its centre and conserves volume",
   const ehd_film::CubicMobility mobility{M0, h0};
 
   pfc::data::Field<double> p_dummy(domain, stack.fft().get_inbox_bounds(), 0);
-  const auto before = ehd_film::sample_ehd_film(h, p_dummy, domain, h0, MPI_COMM_WORLD);
+  const auto before =
+      ehd_film::sample_ehd_film(h, p_dummy, domain, h0, MPI_COMM_WORLD);
   double t = 0.0;
   for (int s = 0; s < 10; ++s) t = stepper.step(t, h, potential, mobility);
-  const auto after = ehd_film::sample_ehd_film(h, p_dummy, domain, h0, MPI_COMM_WORLD);
+  const auto after =
+      ehd_film::sample_ehd_film(h, p_dummy, domain, h0, MPI_COMM_WORLD);
 
   REQUIRE(after.h_center < before.h_center); // gap thins under the load
   REQUIRE_THAT(after.volume, WithinRel(before.volume, 1e-10));
@@ -504,14 +504,12 @@ TEST_CASE("Constant-mobility flux path matches the forced linear oracle",
   const double L = static_cast<double>(N);
   const double k = twopi * static_cast<double>(nx) / L;
   const double k2 = k * k;
-  const double lambda =
-      ehd_film::forced_linear_decay_rate(k2, B, gamma, M0);
+  const double lambda = ehd_film::forced_linear_decay_rate(k2, B, gamma, M0);
   const double U_inf = -p0 / (k2 * (B * k2 + gamma));
   auto U_exact = [&](double t) {
     const double t_on = std::min(t, t_load);
     double u = U_inf * (1.0 - std::exp(-lambda * t_on));
-    if (t > t_load)
-      u *= std::exp(-lambda * (t - t_load));
+    if (t > t_load) u *= std::exp(-lambda * (t - t_load));
     return u;
   };
 
@@ -538,8 +536,7 @@ TEST_CASE("Constant-mobility flux path matches the forced linear oracle",
       for (int j = 0; j < nloc[1]; ++j)
         for (int i = 0; i < nloc[0]; ++i) {
           const auto x = pext_real.coords(i, j, kk);
-          pext_real(i, j, kk) =
-              (load_time < t_load) ? p0 * std::cos(k * x[0]) : 0.0;
+          pext_real(i, j, kk) = (load_time < t_load) ? p0 * std::cos(k * x[0]) : 0.0;
         }
     pfc::sim::SpectralETDOps<pfc::HostSpace>::forward(stack.fft(), pext_real,
                                                       pext_hat);
@@ -547,8 +544,8 @@ TEST_CASE("Constant-mobility flux path matches the forced linear oracle",
       pext_hat.with_host_view([&](std::complex<double> *pev, std::size_t) {
         out.with_host_view([&](std::complex<double> *o, std::size_t) {
           for (std::size_t i = 0; i < m; ++i)
-            o[i] = B * k_lap[i] * k_lap[i] * hv[i] - gamma * k_lap[i] * hv[i] +
-                   pev[i];
+            o[i] =
+                B * k_lap[i] * k_lap[i] * hv[i] - gamma * k_lap[i] * hv[i] + pev[i];
         });
       });
     });

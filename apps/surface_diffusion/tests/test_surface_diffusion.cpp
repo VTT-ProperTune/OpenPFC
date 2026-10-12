@@ -222,8 +222,8 @@ TEST_CASE("SurfaceDiffusionSession runs a short JSON case",
 TEST_CASE("SurfaceStiffness reduces exactly to B0 when eps_a = 0",
           "[surface_diffusion][anisotropy]") {
   const surface_diffusion::SurfaceStiffness B{/*B0=*/1.7, /*eps_a=*/0.0, /*m=*/4};
-  for (double theta : {-std::numbers::pi, -1.3, -0.5, 0.0, 0.7, 1.9,
-                       std::numbers::pi}) {
+  for (double theta :
+       {-std::numbers::pi, -1.3, -0.5, 0.0, 0.7, 1.9, std::numbers::pi}) {
     REQUIRE_THAT(B(theta), WithinAbs(1.7, 1e-15));
   }
 }
@@ -345,13 +345,13 @@ TEST_CASE("AnisotropicSurfaceDiffusionETD conserves mean height",
   const double h0 = 0.37;
   h.apply([&](double x, double y, double) {
     return h0 + 0.05 * std::cos(twopi * 2.0 * x / Lx) +
-          0.05 * std::cos(twopi * 3.0 * y / Lx);
+           0.05 * std::cos(twopi * 3.0 * y / Lx);
   });
   REQUIRE_THAT(mean_h(h), WithinAbs(h0, 1e-10));
 
   const surface_diffusion::SurfaceStiffness B{1.0, 0.6, 6};
-  surface_diffusion::AnisotropicSurfaceDiffusionETD stepper(domain, stack.fft(), 0.02,
-                                                            B);
+  surface_diffusion::AnisotropicSurfaceDiffusionETD stepper(domain, stack.fft(),
+                                                            0.02, B);
   double t = 0.0;
   for (int step = 0; step < 20; ++step) t = stepper.step(t, h);
   REQUIRE_THAT(mean_h(h), WithinAbs(h0, 1e-9));

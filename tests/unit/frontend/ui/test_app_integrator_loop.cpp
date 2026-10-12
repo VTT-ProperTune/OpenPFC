@@ -47,8 +47,9 @@ TEST_CASE("JSON spectral session drives SimulationDriver without Model",
   MPI_Comm_rank(MPI_COMM_WORLD, &rank_id);
   MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
 
-  auto session = pfc::ui::make_simulation_session<pfc::sim::stacks::SpectralCPUStack>(
-      minimal_spectral_settings(), rank_id, num_ranks, MPI_COMM_WORLD);
+  auto session =
+      pfc::ui::make_simulation_session<pfc::sim::stacks::SpectralCPUStack>(
+          minimal_spectral_settings(), rank_id, num_ranks, MPI_COMM_WORLD);
   REQUIRE(std::string(session.stack_name()) == "SpectralCPUStack");
 
   int steps = 0;

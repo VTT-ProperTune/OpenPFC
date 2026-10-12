@@ -250,8 +250,8 @@ template <> [[nodiscard]] inline Time from_json<Time>(const json &j) {
     const auto &integrator = j["timestepping"]["integrator"];
     if (integrator.contains("method")) {
       try {
-        method = from_json<pfc::sim::steppers::RKIntegratorMethod>(
-            integrator["method"]);
+        method =
+            from_json<pfc::sim::steppers::RKIntegratorMethod>(integrator["method"]);
       } catch (const std::exception &ex) {
         throw std::invalid_argument(ex.what());
       }

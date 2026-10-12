@@ -30,16 +30,25 @@ namespace {
 /// Every field the schema declares, and nothing it does not. The schema is
 /// enforced since 0.2, so an incomplete block here is a load failure.
 json model_params() {
-  return {{"alpha", 0.20},           {"T_const", 980.0},
-          {"T_min", 780.0},          {"T_max", 1280.0},
-          {"T0", 89285.0},           {"Bx", 0.817900686921996},
-          {"G_grid", 0.0},           {"V_grid", 0.0},
-          {"x_initial", 130.0},      {"lambda", 0.22},
-          {"stabP", 0.0},            {"p2_bar", 0.8286531831},
-          {"p3_bar", -0.04204863},   {"p4_bar", 0.007533},
+  return {{"alpha", 0.20},
+          {"T_const", 980.0},
+          {"T_min", 780.0},
+          {"T_max", 1280.0},
+          {"T0", 89285.0},
+          {"Bx", 0.817900686921996},
+          {"G_grid", 0.0},
+          {"V_grid", 0.0},
+          {"x_initial", 130.0},
+          {"lambda", 0.22},
+          {"stabP", 0.0},
+          {"p2_bar", 0.8286531831},
+          {"p3_bar", -0.04204863},
+          {"p4_bar", 0.007533},
           {"q20_bar", 0.016531729105214},
-          {"q21_bar", 5.467},        {"q30_bar", 1.7152418049986},
-          {"q31_bar", 0.45},         {"q40_bar", 0.787482}};
+          {"q21_bar", 5.467},
+          {"q30_bar", 1.7152418049986},
+          {"q31_bar", 0.45},
+          {"q40_bar", 0.787482}};
 }
 
 json mini_settings() {
@@ -119,14 +128,12 @@ TEST_CASE("AluminumGPUSession matches host with G_grid",
   if (!pfc::gpu::test::is_hip_available()) {
     SKIP("HIP not available");
   }
-  run_host_vs_device<aluminum::AluminumSession, aluminum::AluminumHIPSession>(
-      s);
+  run_host_vs_device<aluminum::AluminumSession, aluminum::AluminumHIPSession>(s);
 #else
   if (!pfc::gpu::test::is_cuda_available()) {
     SKIP("CUDA not available");
   }
-  run_host_vs_device<aluminum::AluminumSession, aluminum::AluminumCUDASession>(
-      s);
+  run_host_vs_device<aluminum::AluminumSession, aluminum::AluminumCUDASession>(s);
 #endif
 }
 
