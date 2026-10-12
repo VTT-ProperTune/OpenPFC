@@ -152,6 +152,7 @@ function(openpfc_add_gpu_kernel_library tgt ext runtime_lib)
       src/openpfc/runtime/gpu/multigrid.${ext}
       src/openpfc/runtime/gpu/reflection_ghosts.${ext}
       src/openpfc/runtime/gpu/field_operations.${ext}
+      src/openpfc/runtime/gpu/field_multigrid.${ext}
       ${ARGN}
   )
   target_include_directories(${tgt}
