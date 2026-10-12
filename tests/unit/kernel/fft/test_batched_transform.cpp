@@ -206,6 +206,22 @@ TEST_CASE("batched device mixed validation is collective",
       (BatchedMixedTransform<Space>(7, std::max(7, ranks), 3, 4, z,
                                     static_cast<heffte::reshape_algorithm>(999))),
       std::invalid_argument);
+  REQUIRE_THROWS_AS(
+      (BatchedMixedTransform<Space>(7, std::max(7, ranks), 3, 4, z,
+                                    heffte::reshape_algorithm::p2p_plined,
+                                    static_cast<SpectralSlab>(999))),
+      std::invalid_argument);
+  if (ranks > 1) {
+    REQUIRE_THROWS_AS((BatchedMixedTransform<Space>(
+                          1, std::max(7, ranks), 3, 4, z,
+                          heffte::reshape_algorithm::p2p_plined, SpectralSlab::X)),
+                      std::invalid_argument);
+    REQUIRE_THROWS_AS(
+        (BatchedMixedTransform<Space>(
+            7, std::max(7, ranks), 3, 4, z, heffte::reshape_algorithm::p2p_plined,
+            rank == 0 ? SpectralSlab::X : SpectralSlab::Y)),
+        std::invalid_argument);
+  }
   if (ranks > 1)
     REQUIRE_THROWS_AS((BatchedMixedTransform<Space>(
                           7, ranks, 3, 4, z,
@@ -285,4 +301,93 @@ TEST_CASE("batched mixed reshape alternatives preserve the operator",
           }
         }
       }
+}
+
+TEST_CASE("retained spectral slabs preserve canonical modes and bounded operators",
+          "[batched_boundary][MPI]") {
+  if (!select_device()) SKIP("no allocated compatible device");
+  int ranks;
+  MPI_Comm_size(MPI_COMM_WORLD, &ranks);
+  for (auto algorithm :
+       {heffte::reshape_algorithm::alltoallv, heffte::reshape_algorithm::alltoall,
+        heffte::reshape_algorithm::p2p, heffte::reshape_algorithm::p2p_plined})
+    for (auto type : {RealTransformType::DCT2, RealTransformType::DST2})
+      for (int nx : {std::max(6, 2 * ranks), std::max(7, 2 * ranks + 1)})
+        for (int n : {1, 3, 8}) {
+          int ny = std::max(7, ranks);
+          BoundedAxis z{type, UniformGrid::CellCentered, n, 2.3, .2};
+          BatchedMixedTransform<Space> plan(nx, ny, 3.1, 4.2, z, algorithm,
+                                            SpectralSlab::X);
+          MixedTransform host(nx, ny, 3.1, 4.2, z);
+          auto box = plan.inbox(), spectral = plan.outbox();
+          REQUIRE(spectral.low[1] == 0);
+          REQUIRE(spectral.high[1] == ny - 1);
+          REQUIRE(spectral.low[2] == 0);
+          REQUIRE(spectral.high[2] == n - 1);
+          std::vector<double> values(plan.size_inbox()), expected(values.size());
+          pfc::for_each_index(box, [&](auto p) {
+            values[box.to_linear(p)] =
+                std::sin(.7 * (p[0] + 1) * (p[1] + 1) * (p[2] + 1));
+          });
+          Device<double> in(values.size()), out(values.size());
+          Device<std::complex<double>> coefficients(plan.size_outbox());
+          std::vector<std::complex<double>> local(host.size_outbox());
+          host.forward(values, local);
+          pfc::Box3i global =
+              pfc::Box3i::from_bounds({0, 0, 0}, {nx / 2, ny - 1, n - 1});
+          std::vector<std::complex<double>> reference(global.count());
+          pfc::for_each_index(host.outbox(), [&](auto p) {
+            reference[global.to_linear(p)] = local[host.outbox().to_linear(p)];
+          });
+          MPI_Allreduce(MPI_IN_PLACE, reference.data(), int(reference.size()),
+                        MPI_C_DOUBLE_COMPLEX, MPI_SUM, MPI_COMM_WORLD);
+          in.upload(values);
+          plan.forward(in.span(), coefficients.span());
+          auto actual = coefficients.read();
+          pfc::for_each_index(spectral, [&](auto p) {
+            auto exact = reference[global.to_linear(p)];
+            REQUIRE(std::abs(actual[spectral.to_linear(p)] - exact) <
+                    2e-11 * std::max(1., std::abs(exact)));
+          });
+          plan.backward(coefficients.span(), out.span());
+          REQUIRE(coefficients.read() == actual);
+          auto back = out.read();
+          for (std::size_t i = 0; i < values.size(); ++i)
+            REQUIRE_THAT(back[i], WithinAbs(values[i], 2e-11));
+          for (auto symbol :
+               {LaplacianSymbol::Spectral, LaplacianSymbol::CenteredDifference}) {
+            host.laplacian(values, expected, symbol);
+            in.upload(values);
+            plan.laplacian(in.span(), out.span(), symbol);
+            back = out.read();
+            for (std::size_t i = 0; i < values.size(); ++i)
+              REQUIRE_THAT(back[i], WithinAbs(expected[i], 2e-10));
+            for (double alpha : {0., 2.}) {
+              host.laplacian(values, expected, symbol);
+              for (std::size_t i = 0; i < values.size(); ++i)
+                expected[i] = -expected[i] + alpha * values[i];
+              in.upload(expected);
+              plan.helmholtz(in.span(), out.span(), alpha, symbol);
+              double sum = std::accumulate(values.begin(), values.end(), 0.), total;
+              MPI_Allreduce(&sum, &total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+              double mean = alpha == 0 && type == RealTransformType::DCT2
+                                ? total / (double(nx) * ny * n)
+                                : 0;
+              back = out.read();
+              for (std::size_t i = 0; i < values.size(); ++i)
+                REQUIRE_THAT(back[i], WithinAbs(values[i] - mean, 2e-11));
+            }
+          }
+          if (type == RealTransformType::DCT2) {
+            in.upload(std::vector<double>(values.size(), 1));
+            REQUIRE_THROWS_AS(plan.poisson(in.span(), out.span()),
+                              std::invalid_argument);
+            in.upload(std::vector<double>(values.size(),
+                                          std::numeric_limits<double>::quiet_NaN()));
+            REQUIRE_THROWS_AS(plan.poisson(in.span(), out.span()),
+                              std::invalid_argument);
+            in.upload(values);
+            plan.helmholtz(in.span(), out.span(), 2);
+          }
+        }
 }

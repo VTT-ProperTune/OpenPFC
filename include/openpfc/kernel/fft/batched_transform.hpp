@@ -16,6 +16,10 @@ enum class reshape_algorithm;
 } // namespace heffte
 
 namespace pfc::fft {
+/// Ownership of mixed-transform spectral coefficients. Physical data always
+/// uses y slabs with complete bounded-z lines. Exposed coefficients are
+/// canonical x-fast regardless of the internal FFT memory order.
+enum class SpectralSlab { Y, X };
 /** Planned device-resident DCT-II/DST-II batches, with FFTW raw forward and
  * normalized inverse. Only CellCentered is supported. Sample (batch,j) is
  * at batch*distance+j*stride; positive nonoverlapping strides are required.
@@ -47,8 +51,10 @@ private:
 };
 
 /** Periodic x/y, cell-centered DCT-II or DST-II in z, double precision.
- * Geometry/layout and raw coefficient conventions match MixedTransform.
- * Full x/z lines, y slabs, at most ny ranks. The communicator is borrowed:
+ * Physical geometry and raw coefficient conventions match MixedTransform.
+ * Physical x/z lines are complete; y slabs permit at most ny ranks. Spectral
+ * ownership defaults to y slabs, with an explicit x-slab alternative below.
+ * The communicator is borrowed:
  * all ranks construct/execute/destroy collectively before MPI_Finalize.
  * One rank uses a vendor half-volume 3D FFT; multiple ranks use existing
  * heFFTe reshapes, not a separate transpose implementation. Forward exposes
@@ -71,6 +77,13 @@ public:
   BatchedMixedTransform(int nx, int ny, double period_x, double period_y,
                         BoundedAxis z, heffte::reshape_algorithm algorithm,
                         MPI_Comm comm = MPI_COMM_WORLD);
+  /// Opt into full-z spectral x slabs. Distributed operators retain heFFTe's
+  /// y-fast memory order; forward/backward still expose canonical coefficients.
+  /// All ranks must agree. X requires at least one R2C x coefficient per rank.
+  /// One-rank execution keeps the original vendor plan and storage order.
+  BatchedMixedTransform(int nx, int ny, double period_x, double period_y,
+                        BoundedAxis z, heffte::reshape_algorithm algorithm,
+                        SpectralSlab spectral_slab, MPI_Comm comm = MPI_COMM_WORLD);
   ~BatchedMixedTransform();
   BatchedMixedTransform(BatchedMixedTransform &&) noexcept;
   BatchedMixedTransform &operator=(BatchedMixedTransform &&) noexcept;
