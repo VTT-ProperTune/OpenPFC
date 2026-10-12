@@ -38,6 +38,7 @@ install(FILES
 if(DEFINED Heffte_DIR AND NOT Heffte_DIR STREQUAL "Heffte_DIR-NOTFOUND")
   export(EXPORT OpenPFCTargets
     FILE "${CMAKE_CURRENT_BINARY_DIR}/OpenPFCTargets.cmake"
+    NAMESPACE OpenPFC::
   )
 else()
   message(STATUS "Skipping export of OpenPFCTargets (Heffte not installed via config)")
