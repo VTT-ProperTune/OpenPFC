@@ -45,10 +45,7 @@ public:
 
   void apply(pfc::field::FieldOutput<double> field, const pfc::Domain &domain,
              const pfc::Box3i &box, double /*time*/) override {
-    const auto size = pfc::domain::get_size(domain);
-    const auto spacing = pfc::domain::get_spacing(domain);
-    const double Lx = spacing[0] * static_cast<double>(size[0]);
-    const double x0 = std::isfinite(m_x0) ? m_x0 : 0.5 * Lx;
+    const double x0 = std::isfinite(m_x0) ? m_x0 : pfc::domain::center(domain)[0];
     const double u0 = m_u0;
     const double amp = m_amplitude;
     const double sig = m_sigma;

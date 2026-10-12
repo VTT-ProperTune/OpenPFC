@@ -182,9 +182,10 @@ public:
     const auto spacing = pfc::domain::get_spacing(m_domain);
     const double Lx = spacing[0] * static_cast<double>(size[0]);
     const double edge = 0.05 * Lx;
+    const double lo = pfc::domain::lower(m_domain)[0];
     double local_edge_peak = 0.0;
     m_u2.for_each_owned([&](const pfc::Real3 &x, double lp) {
-      if (x[0] < edge || x[0] > Lx - edge) {
+      if (x[0] - lo < edge || x[0] - lo > Lx - edge) {
         const double env2 =
             std::max(0.0, 2.0 * lp - 2.0 * result.mean * result.mean);
         local_edge_peak = std::max(local_edge_peak, env2);

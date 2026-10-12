@@ -116,9 +116,8 @@ struct GaussianLoad {
   /// Centre the load in @p domain.
   static GaussianLoad centred(const pfc::Domain &domain, double p0, double a,
                               double t_load) {
-    const auto size = pfc::domain::get_size(domain);
-    const auto dx = pfc::domain::get_spacing(domain);
-    return GaussianLoad{p0, a, t_load, 0.5 * size[0] * dx[0], 0.5 * size[1] * dx[1]};
+    const auto mid = pfc::domain::center(domain);
+    return GaussianLoad{p0, a, t_load, mid[0], mid[1]};
   }
 };
 
@@ -153,10 +152,10 @@ struct EhdFilmSample {
                                                    pfc::data::Field<double> &p,
                                                    const pfc::Domain &domain,
                                                    double h0, MPI_Comm comm) {
-  const auto size = pfc::domain::get_size(domain);
   const auto dx = pfc::domain::get_spacing(domain);
-  const double cx = 0.5 * static_cast<double>(size[0]) * dx[0];
-  const double cy = 0.5 * static_cast<double>(size[1]) * dx[1];
+  const auto mid = pfc::domain::center(domain);
+  const double cx = mid[0];
+  const double cy = mid[1];
   const double cell = dx[0] * dx[1] * dx[2];
 
   double local_h_center = 0.0;

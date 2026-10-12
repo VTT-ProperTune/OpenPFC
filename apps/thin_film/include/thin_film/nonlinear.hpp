@@ -164,10 +164,8 @@ struct GaussianDefect {
   /// Centre the defect in @p domain.
   static GaussianDefect centred(const pfc::Domain &domain, double amplitude,
                                 double sigma) {
-    const auto size = pfc::domain::get_size(domain);
-    const auto dx = pfc::domain::get_spacing(domain);
-    return GaussianDefect{amplitude, sigma, 0.5 * size[0] * dx[0],
-                          0.5 * size[1] * dx[1]};
+    const auto mid = pfc::domain::center(domain);
+    return GaussianDefect{amplitude, sigma, mid[0], mid[1]};
   }
 };
 

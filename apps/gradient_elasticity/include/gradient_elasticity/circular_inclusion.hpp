@@ -68,8 +68,9 @@ public:
     const auto spacing = pfc::domain::get_spacing(domain);
     const double Lx = spacing[0] * static_cast<double>(size[0]);
     const double Ly = spacing[1] * static_cast<double>(size[1]);
-    const double x0 = std::isfinite(m_x0) ? m_x0 : 0.5 * Lx;
-    const double y0 = std::isfinite(m_y0) ? m_y0 : 0.5 * Ly;
+    const auto mid = pfc::domain::center(domain);
+    const double x0 = std::isfinite(m_x0) ? m_x0 : mid[0];
+    const double y0 = std::isfinite(m_y0) ? m_y0 : mid[1];
     const double g0 = m_g0;
     const double amp = m_amplitude;
     const double R = m_radius;

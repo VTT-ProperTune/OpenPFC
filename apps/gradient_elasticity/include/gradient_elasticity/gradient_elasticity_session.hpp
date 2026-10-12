@@ -230,14 +230,11 @@ public:
                 << " total_elastic_energy=" << summary.total_elastic_energy << '\n';
     }
     if (m_line_profile.enabled) {
-      const auto size = pfc::domain::get_size(m_domain);
-      const auto spacing = pfc::domain::get_spacing(m_domain);
-      const double Lx = spacing[0] * static_cast<double>(size[0]);
-      const double Ly = spacing[1] * static_cast<double>(size[1]);
+      const auto mid = pfc::domain::center(m_domain);
       const double x0 =
-          std::isfinite(m_line_profile.x0) ? m_line_profile.x0 : 0.5 * Lx;
+          std::isfinite(m_line_profile.x0) ? m_line_profile.x0 : mid[0];
       const double y0 =
-          std::isfinite(m_line_profile.y0) ? m_line_profile.y0 : 0.5 * Ly;
+          std::isfinite(m_line_profile.y0) ? m_line_profile.y0 : mid[1];
       write_line_profile(m_line_profile.path, g(), ux(), uy(), stress_hydro(),
                          stress_vm(), energy_density(), x0, y0, m_nproc);
     }

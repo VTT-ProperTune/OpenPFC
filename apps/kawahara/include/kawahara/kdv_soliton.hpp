@@ -118,7 +118,7 @@ public:
     const auto size = pfc::domain::get_size(domain);
     const auto spacing = pfc::domain::get_spacing(domain);
     const double Lx = spacing[0] * static_cast<double>(size[0]);
-    const double x0 = std::isfinite(m_x0) ? m_x0 : 0.5 * Lx;
+    const double x0 = std::isfinite(m_x0) ? m_x0 : pfc::domain::center(domain)[0];
     const double w = width();
     if (!std::isfinite(w)) {
       throw std::invalid_argument(
