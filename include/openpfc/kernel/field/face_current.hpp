@@ -43,6 +43,11 @@
 namespace pfc::field::fd {
 
 /// How a global non-periodic side is closed.
+///
+/// This is the face-current law. It is not a scalar ghost fill.
+/// `pfc::communication::ReflectionWalls` mirrors padded samples; an even
+/// mirror does not make a general anisotropic `G` zero. A model that wants
+/// `G_f = 0` selects `Zero` here.
 enum class WallPolicy {
   Model,     ///< leave the caller-supplied face value (functor or buffer)
   Zero,      ///< impose G_f = 0; the functor is not used on this side

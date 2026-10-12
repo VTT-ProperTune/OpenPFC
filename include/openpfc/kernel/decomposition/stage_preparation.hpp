@@ -13,7 +13,8 @@
  * protocol** (M10): it interprets stage requirements (`needs_halo_exchange`,
  * `needs_boundary_update`, region kind, boundary/halo ordering) and drives
  * those exchangers plus an injectable boundary hook — FD Dirichlet ghosts
- * (`apply_dirichlet_ghosts`) or spectral penalty writes on owned cells.
+ * (`apply_dirichlet_ghosts`), even/odd `ReflectionWalls`, or spectral
+ * penalty writes on owned cells.
  * There is no parallel `ExecutionService::prepare_boundaries` path and no
  * BC flag on `StageContext`.
  *
@@ -33,6 +34,7 @@
  *
  * @see comm_halo_exchange.hpp
  * @see dirichlet_ghosts.hpp
+ * @see reflection_ghosts.hpp
  * @see openpfc/kernel/integrator/stage_context.hpp
  */
 
@@ -44,6 +46,7 @@
 #include <unordered_map>
 
 #include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/reflection_ghosts.hpp>
 
 namespace pfc::communication {
 
@@ -95,7 +98,9 @@ struct StagePreparationRequirements {
  * Bind brick-backed exchangers by name, optionally set a boundary hook, then
  * call `prepare` with requirements and the field name list for this stage.
  * Phase ordering is **global** across the field list (all BC hooks then all
- * exchanges, or reverse) — not interleaved per field.
+ * exchanges, or reverse) — not interleaved per field. Registered reflection
+ * walls run after both of those, so they see exchanged tangential halos.
+ * Corners are composed in axis order X, then Y, then Z.
  *
  * @tparam T Element type of the bound exchangers (default `double`).
  */
@@ -132,6 +137,29 @@ public:
    */
   void set_boundary_hook(std::function<void(std::string_view field_name)> hook) {
     m_boundary_hook = std::move(hook);
+  }
+
+  /**
+   * @brief Register even/odd ghost reflection for one bound field.
+   *
+   * Applied when `needs_boundary_update` is set, after the halo exchange if
+   * that exchange also runs. The field must be the buffer the exchanger
+   * writes. Pass empty walls to clear.
+   */
+  void set_reflection(std::string_view name, const ReflectionWalls<T> &walls,
+                      data::Field<T, HostSpace> &field) {
+    bool any = false;
+    const ReflectionSide<T> sides[6] = {walls.xm, walls.xp, walls.ym,
+                                        walls.yp, walls.zm, walls.zp};
+    for (const ReflectionSide<T> &side : sides) {
+      any = any || side.enabled;
+    }
+    if (!any) {
+      m_reflections.erase(std::string(name));
+      return;
+    }
+    m_reflections.insert_or_assign(std::string(name),
+                                   ReflectionBinding{walls, &field});
   }
 
   /**
@@ -180,6 +208,9 @@ public:
         run_boundary_hooks_(fields);
       }
     }
+    if (run_boundary) {
+      run_reflections_(fields);
+    }
 
     (void)req.region_kind; // recorded for callers/docs; full face ring on halo
   }
@@ -200,7 +231,23 @@ private:
     }
   }
 
+  void run_reflections_(std::span<const std::string_view> fields) {
+    for (const std::string_view name : fields) {
+      const auto it = m_reflections.find(std::string(name));
+      if (it == m_reflections.end()) {
+        continue;
+      }
+      apply_reflection_ghosts(*it->second.field, it->second.walls);
+    }
+  }
+
+  struct ReflectionBinding {
+    ReflectionWalls<T> walls{};
+    data::Field<T, HostSpace> *field = nullptr;
+  };
+
   std::unordered_map<std::string, std::function<void()>> m_exchangers;
+  std::unordered_map<std::string, ReflectionBinding> m_reflections;
   std::function<void(std::string_view)> m_boundary_hook;
 };
 

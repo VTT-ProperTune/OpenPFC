@@ -1,0 +1,411 @@
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+/**
+ * Manufactured even/odd reflection for padded fields.
+ *
+ * The expected value is the mirror map written out below. It does not call
+ * the fill. Multi-rank cases go through StagePreparationService so the
+ * exchange runs before the fill. A faces-only exchange leaves the physical
+ * × periodic corner untouched; that corner is the check that reflection
+ * reads the exchanged tangential halo rather than an earlier poison value.
+ *
+ * Even reflection is checked against a zero normal difference. A separate
+ * case shows a nonzero tangential face current on that same field: the
+ * scalar mirror is not `WallPolicy::Zero`.
+ */
+
+#include <cmath>
+#include <cstdlib>
+#include <numbers>
+#include <string>
+#include <vector>
+
+#include <catch2/catch_test_macros.hpp>
+#include <mpi.h>
+
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/decomposition/decomposition_neighbors.hpp>
+#include <openpfc/kernel/decomposition/halo_directions.hpp>
+#include <openpfc/kernel/decomposition/reflection_ghosts.hpp>
+#include <openpfc/kernel/decomposition/stage_preparation.hpp>
+#include <openpfc/kernel/field/face_current.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
+
+using pfc::HostSpace;
+using pfc::communication::apply_reflection_ghosts;
+using pfc::communication::BoundaryCentering;
+using pfc::communication::reflection_walls;
+using pfc::communication::ReflectionExtent;
+using pfc::communication::ReflectionParity;
+using pfc::communication::ReflectionWalls;
+
+namespace {
+
+struct AxisMap {
+  int index = 0;
+  int sign = 1;
+};
+
+int wrap_index(int g, int n) {
+  const int r = g % n;
+  return r < 0 ? r + n : r;
+}
+
+/// Independent mirror. Periodic axes wrap. Odd parity contributes a sign.
+AxisMap map_axis(int g, int n, bool periodic, BoundaryCentering centering,
+                 ReflectionParity parity) {
+  if (g >= 0 && g < n) {
+    return {g, 1};
+  }
+  if (periodic) {
+    return {wrap_index(g, n), 1};
+  }
+  const bool cell = centering == BoundaryCentering::CellFace;
+  const int mirrored =
+      g < 0 ? (cell ? -1 - g : -g) : (cell ? 2 * n - 1 - g : 2 * (n - 1) - g);
+  const int sign = parity == ReflectionParity::Odd ? -1 : 1;
+  return {mirrored, sign};
+}
+
+double sample_value(int x, int y, int z) {
+  return static_cast<double>(3 * x + 5 * y + 7 * z);
+}
+
+double expected_value(int gx, int gy, int gz, pfc::Int3 n, pfc::Bool3 periodic,
+                      BoundaryCentering centering, ReflectionParity parity) {
+  const AxisMap x = map_axis(gx, n[0], periodic[0], centering, parity);
+  const AxisMap y = map_axis(gy, n[1], periodic[1], centering, parity);
+  const AxisMap z = map_axis(gz, n[2], periodic[2], centering, parity);
+  return static_cast<double>(x.sign * y.sign * z.sign) *
+         sample_value(x.index, y.index, z.index);
+}
+
+void poison_ghosts(pfc::data::Field<double, HostSpace> &u) {
+  const int hw = u.storage_halo();
+  const auto n = u.local_size();
+  for (int k = -hw; k < n[2] + hw; ++k) {
+    for (int j = -hw; j < n[1] + hw; ++j) {
+      for (int i = -hw; i < n[0] + hw; ++i) {
+        const bool owned =
+            i >= 0 && i < n[0] && j >= 0 && j < n[1] && k >= 0 && k < n[2];
+        if (!owned) {
+          u(i, j, k) = -1234567.0;
+        }
+      }
+    }
+  }
+}
+
+void fill_owned(pfc::data::Field<double, HostSpace> &u) {
+  const auto n = u.local_size();
+  for (int k = 0; k < n[2]; ++k) {
+    for (int j = 0; j < n[1]; ++j) {
+      for (int i = 0; i < n[0]; ++i) {
+        const auto g = u.global(i, j, k);
+        u(i, j, k) = sample_value(g[0], g[1], g[2]);
+      }
+    }
+  }
+}
+
+void require_matches(const pfc::data::Field<double, HostSpace> &u,
+                     BoundaryCentering centering, ReflectionParity parity,
+                     pfc::Bool3 periodic) {
+  const int hw = u.storage_halo();
+  const auto n = u.local_size();
+  const auto gsz = u.global_size();
+  for (int k = -hw; k < n[2] + hw; ++k) {
+    for (int j = -hw; j < n[1] + hw; ++j) {
+      for (int i = -hw; i < n[0] + hw; ++i) {
+        const auto g = u.global(i, j, k);
+        const double expect =
+            expected_value(g[0], g[1], g[2], gsz, periodic, centering, parity);
+        INFO("local " << i << " " << j << " " << k << " global " << g[0] << " "
+                      << g[1] << " " << g[2]);
+        REQUIRE(u(i, j, k) == expect);
+      }
+    }
+  }
+}
+
+void require_owned_unchanged(const pfc::data::Field<double, HostSpace> &u) {
+  const auto n = u.local_size();
+  for (int k = 0; k < n[2]; ++k) {
+    for (int j = 0; j < n[1]; ++j) {
+      for (int i = 0; i < n[0]; ++i) {
+        const auto g = u.global(i, j, k);
+        REQUIRE(u(i, j, k) == sample_value(g[0], g[1], g[2]));
+      }
+    }
+  }
+}
+
+pfc::data::Field<double, HostSpace> make_serial_field(pfc::Bool3 periodic, int hw) {
+  auto domain = pfc::domain::create(pfc::GridSize({8, 6, 5}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}), periodic);
+  auto decomp = pfc::decomposition::create(domain, 1);
+  return pfc::data::field_from_subdomain<double>(decomp, 0, hw);
+}
+
+} // namespace
+
+TEST_CASE("reflection ghosts match the mirror map at several halo widths",
+          "[kernel][field][reflection][unit]") {
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank != 0) {
+    return;
+  }
+
+  const pfc::Bool3 closed{false, false, false};
+  for (const int hw : {1, 3}) {
+    for (const auto centering :
+         {BoundaryCentering::Node, BoundaryCentering::CellFace}) {
+      for (const auto parity : {ReflectionParity::Even, ReflectionParity::Odd}) {
+        auto u = make_serial_field(closed, hw);
+        fill_owned(u);
+        poison_ghosts(u);
+        const double owned_checksum = u(1, 1, 1);
+        apply_reflection_ghosts(u, reflection_walls<double>(parity, centering, 0.0));
+        require_matches(u, centering, parity, closed);
+        require_owned_unchanged(u);
+        REQUIRE(u(1, 1, 1) == owned_checksum);
+      }
+    }
+  }
+}
+
+TEST_CASE("odd corner composes X then Y through nonzero wall values",
+          "[kernel][field][reflection][unit]") {
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank != 0) {
+    return;
+  }
+
+  auto u = make_serial_field(pfc::Bool3{false, false, true}, 2);
+  const auto n = u.local_size();
+  for (int k = 0; k < n[2]; ++k) {
+    for (int j = 0; j < n[1]; ++j) {
+      for (int i = 0; i < n[0]; ++i) {
+        u(i, j, k) = 1000.0 * static_cast<double>(i) + static_cast<double>(j);
+      }
+    }
+  }
+  poison_ghosts(u);
+  ReflectionWalls<double> walls;
+  walls.xm = {true, ReflectionParity::Odd, BoundaryCentering::Node, 3.0};
+  walls.ym = {true, ReflectionParity::Odd, BoundaryCentering::Node, 5.0};
+  apply_reflection_ghosts(u, walls);
+
+  // Source of (-1,-1) is (1,1) = 1001. X then Y:
+  // 2*5 - (2*3 - 1001) = 1005.
+  REQUIRE(u(-1, -1, 0) == 1005.0);
+  REQUIRE(u(-1, 0, 0) == 2.0 * 3.0 - u(1, 0, 0));
+  // j = -1 is the enabled low wall. The disabled high wall stays poison.
+  REQUIRE(u(2, -1, 0) == 2.0 * 5.0 - u(2, 1, 0));
+  REQUIRE(u(2, n[1], 0) == -1234567.0);
+}
+
+TEST_CASE("node centering rejects a halo as wide as the axis",
+          "[kernel][field][reflection][unit]") {
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank != 0) {
+    return;
+  }
+
+  auto domain = pfc::domain::create(
+      pfc::GridSize({4, 4, 4}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+      pfc::GridSpacing({1.0, 1.0, 1.0}), pfc::Bool3{false, true, true});
+  auto decomp = pfc::decomposition::create(domain, 1);
+  auto node = pfc::data::field_from_subdomain<double>(decomp, 0, 4);
+  fill_owned(node);
+  REQUIRE_THROWS_AS(apply_reflection_ghosts(
+                        node, reflection_walls<double>(ReflectionParity::Even,
+                                                       BoundaryCentering::Node)),
+                    std::out_of_range);
+
+  auto cell = pfc::data::field_from_subdomain<double>(decomp, 0, 4);
+  fill_owned(cell);
+  poison_ghosts(cell);
+  apply_reflection_ghosts(
+      cell,
+      reflection_walls<double>(ReflectionParity::Even, BoundaryCentering::CellFace));
+  REQUIRE(cell(-4, 0, 0) == cell(3, 0, 0));
+  REQUIRE(cell(4, 0, 0) == cell(3, 0, 0));
+}
+
+TEST_CASE("a disabled physical side and a periodic axis are left to the exchange",
+          "[kernel][field][reflection][unit]") {
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank != 0) {
+    return;
+  }
+
+  auto u = make_serial_field(pfc::Bool3{false, true, true}, 1);
+  fill_owned(u);
+  poison_ghosts(u);
+  ReflectionWalls<double> walls;
+  walls.xp = {true, ReflectionParity::Even, BoundaryCentering::Node, 0.0};
+  apply_reflection_ghosts(u, walls);
+  REQUIRE(u(-1, 0, 0) == -1234567.0);
+  REQUIRE(u(8, 0, 0) == u(6, 0, 0));
+  REQUIRE(u(0, -1, 0) == -1234567.0);
+  REQUIRE(u(0, 0, -1) == -1234567.0);
+}
+
+TEST_CASE("even reflection zeroes the normal difference and not a tangential flux",
+          "[kernel][field][reflection][unit]") {
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank != 0) {
+    return;
+  }
+
+  constexpr int n = 8;
+  auto domain = pfc::domain::create(
+      pfc::GridSize({n, n, 4}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+      pfc::GridSpacing({1.0, 1.0, 1.0}), pfc::Bool3{false, false, true});
+  auto decomp = pfc::decomposition::create(domain, 1);
+  auto u = pfc::data::field_from_subdomain<double>(decomp, 0, 1);
+  const auto sz = u.local_size();
+  for (int k = 0; k < sz[2]; ++k) {
+    for (int j = 0; j < sz[1]; ++j) {
+      for (int i = 0; i < sz[0]; ++i) {
+        const double x = static_cast<double>(i) / static_cast<double>(n - 1);
+        u(i, j, k) = std::cos(std::numbers::pi * x) + 0.5 * static_cast<double>(j);
+      }
+    }
+  }
+  ReflectionWalls<double> walls;
+  walls.xm = {true, ReflectionParity::Even, BoundaryCentering::Node, 0.0};
+  walls.xp = {true, ReflectionParity::Even, BoundaryCentering::Node, 0.0};
+  apply_reflection_ghosts(u, walls);
+  REQUIRE(u(-1, 2, 0) == u(1, 2, 0));
+  REQUIRE(u(n, 2, 0) == u(n - 2, 2, 0));
+  REQUIRE(u(1, 2, 0) - u(-1, 2, 0) == 0.0);
+  REQUIRE(u(n, 2, 0) - u(n - 2, 2, 0) == 0.0);
+
+  // Tangential difference on the reflected low-x sample. The normal
+  // difference above is zero. This current is not.
+  const double tangential = u(0, 3, 0) - u(0, 2, 0);
+  REQUIRE(tangential == 0.5);
+
+  const int nx = n;
+  const int ny = n;
+  const int nz = 4;
+  std::vector<double> gx(pfc::field::fd::n_xfaces(nx, ny, nz), tangential);
+  std::vector<double> gy(pfc::field::fd::n_yfaces(nx, ny, nz), 0.0);
+  std::vector<double> gz(pfc::field::fd::n_zfaces(nx, ny, nz), 0.0);
+  REQUIRE(gx[pfc::field::fd::xface_index(nx, ny, 0, 2, 0)] == 0.5);
+  pfc::field::fd::apply_walls(gx, gy, gz, nx, ny, nz, {true, true, true},
+                              pfc::field::fd::closed_walls());
+  REQUIRE(gx[pfc::field::fd::xface_index(nx, ny, 0, 2, 0)] == 0.0);
+}
+
+TEST_CASE("stage preparation reflects after the halo exchange",
+          "[MPI][reflection]") {
+  int rank = 0;
+  int size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 1 && size != 2 && size != 4) {
+    return;
+  }
+
+  const pfc::Int3 grid = size == 4   ? pfc::Int3{2, 2, 1}
+                         : size == 2 ? pfc::Int3{2, 1, 1}
+                                     : pfc::Int3{1, 1, 1};
+  const pfc::Bool3 periodic{false, false, true};
+  auto domain = pfc::domain::create(pfc::GridSize({8, 8, 4}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}), periodic);
+  auto decomp = pfc::decomposition::create(domain, grid);
+  constexpr int hw = 2;
+
+  auto run = [&](pfc::comm::HaloConnectivity connectivity,
+                 BoundaryCentering centering, ReflectionParity parity,
+                 bool boundary) {
+    auto u = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+    fill_owned(u);
+    poison_ghosts(u);
+    pfc::comm::HaloExchangeOptions opt;
+    opt.connectivity = connectivity;
+    // Physical faces have no MPI neighbour. The exchanger's direction
+    // agreement rejects that peer, so those faces stay out of the set and
+    // reflection fills them after the exchange.
+    const auto base = connectivity == pfc::comm::HaloConnectivity::Full
+                          ? pfc::halo::presets::Full3D()
+                          : pfc::halo::presets::Axes3D();
+    opt.selector = [&](int r) {
+      std::vector<pfc::Int3> kept;
+      kept.reserve(base.dirs.size());
+      for (const auto &d : base.dirs) {
+        if (pfc::decomposition::get_neighbor_rank(decomp, r, d) >= 0) {
+          kept.push_back(d);
+        }
+      }
+      return pfc::halo::HaloDirectionSet(std::move(kept));
+    };
+    pfc::comm::HaloExchange<HostSpace, double> halo(u, decomp, rank, MPI_COMM_WORLD,
+                                                    opt);
+    pfc::communication::StagePreparationService<double> prep;
+    prep.bind("u", halo);
+    prep.set_boundary_hook([&](std::string_view) { poison_ghosts(u); });
+    if (boundary) {
+      prep.set_reflection("u", reflection_walls<double>(parity, centering, 0.0), u);
+    }
+    pfc::communication::StagePreparationRequirements req;
+    req.needs_halo_exchange = true;
+    req.needs_boundary_update = true;
+    req.ordering = pfc::communication::BoundaryHaloOrder::BoundaryThenHalo;
+    const std::string_view fields[] = {"u"};
+    prep.prepare(req, fields);
+    return u;
+  };
+
+  auto faces = run(pfc::comm::HaloConnectivity::Faces, BoundaryCentering::Node,
+                   ReflectionParity::Even, true);
+  const auto n = faces.local_size();
+  const auto low = faces.box().low;
+  if (low[0] == 0) {
+    const int j = 0;
+    const int k_halo = -1;
+    const auto g = faces.global(1, j, k_halo);
+    const double expect = expected_value(
+        faces.global(-1, j, k_halo)[0], g[1], g[2], faces.global_size(), periodic,
+        BoundaryCentering::Node, ReflectionParity::Even);
+    INFO("faces corner rank " << rank);
+    REQUIRE(faces(-1, j, k_halo) == expect);
+    REQUIRE(faces(-1, j, k_halo) != -1234567.0);
+  }
+  if (low[0] + n[0] == faces.global_size()[0]) {
+    const int i_ghost = n[0];
+    const auto gsrc = faces.global(n[0] - 2, 0, -1);
+    const double expect = expected_value(
+        faces.global(i_ghost, 0, -1)[0], gsrc[1], gsrc[2], faces.global_size(),
+        periodic, BoundaryCentering::Node, ReflectionParity::Even);
+    REQUIRE(faces(i_ghost, 0, -1) == expect);
+  }
+
+  for (const auto centering :
+       {BoundaryCentering::Node, BoundaryCentering::CellFace}) {
+    for (const auto parity : {ReflectionParity::Even, ReflectionParity::Odd}) {
+      auto full = run(pfc::comm::HaloConnectivity::Full, centering, parity, true);
+      require_matches(full, centering, parity, periodic);
+      require_owned_unchanged(full);
+    }
+  }
+
+  auto untouched = run(pfc::comm::HaloConnectivity::Full, BoundaryCentering::Node,
+                       ReflectionParity::Even, false);
+  if (low[0] == 0) {
+    REQUIRE(untouched(-1, 0, 0) == -1234567.0);
+  }
+}

@@ -20,6 +20,7 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_state_concepts.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/field_from_subdomain_tests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_dirichlet_ghosts.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_reflection_ghosts.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_face_flux.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_face_current.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_fourier_and_noise.cpp
@@ -45,6 +46,18 @@ if(OpenPFC_RUN_MPI_SUITES)
         ${MPIEXEC_POSTFLAGS})
     set_tests_properties(fd_mixed_${_mixed_ranks}ranks PROPERTIES
       TIMEOUT 120 RUN_SERIAL TRUE)
+  endforeach()
+  foreach(_reflection_ranks 1 2 4)
+    if(OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER 0 AND
+       _reflection_ranks GREATER OpenPFC_MPI_TEST_MAX_WORLD_SIZE)
+      continue()
+    endif()
+    add_test(NAME fd_reflection_${_reflection_ranks}ranks
+      COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${_reflection_ranks}
+        ${MPIEXEC_PREFLAGS} $<TARGET_FILE:openpfc-tests> "[MPI][reflection]"
+        ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(fd_reflection_${_reflection_ranks}ranks PROPERTIES
+      TIMEOUT 180 RUN_SERIAL TRUE)
   endforeach()
   foreach(_face_ranks 1 2 4 8)
     if(OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER 0 AND

@@ -54,6 +54,15 @@ Use an unpadded `pfc::data::Field<T>` (`storage_halo == 0`) + `pfc::SparseHaloEx
 - Consumes `StagePreparationRequirements` (`needs_halo_exchange`, `needs_boundary_update`, `region_kind`, `BoundaryHaloOrder`), typically via `pfc::integrator::requirements_from(StageContext, needs_boundary)`. `StageContext` has no BC flag; the driver passes `needs_boundary`.
 - When halo is required, calls `HaloExchange` on named, bound fields.
 - When boundary update is required, runs an injectable boundary hook (FD: `apply_dirichlet_ghosts`; spectral: penalty write on owned cells). Default order is **boundary then halo** so updated owned faces are published to neighbors before evaluation. Use **halo then boundary** when overwriting a periodic wrap on a physical face.
+- `set_reflection` registers `ReflectionWalls` on a bound field. The fill
+  runs after the hook and the halo exchange. It is even or odd reflection
+  on the global non-periodic faces this rank touches, for node-centered or
+  cell-face-centered bounds, at any halo width whose mirror lands inside
+  the global index range. Edge and corner ghosts are the composition of
+  those one-axis maps in order X, then Y, then Z, the same order as a full
+  halo's widening passes. Periodic faces stay with the exchange. Even
+  reflection of a scalar is not a zero face current; that law is
+  `WallPolicy` in `face_current.hpp`, and the model chooses it.
 - `prepare` is **pre-evaluation** only. Post-evaluation BC enforcement after writing new owned values stays a separate driver responsibility outside `prepare`.
 - Rejection / retry does not roll back halo buffers: re-prepare from the accepted owned core.
 
