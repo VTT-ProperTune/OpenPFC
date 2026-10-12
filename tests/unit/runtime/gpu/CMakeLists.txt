@@ -305,6 +305,17 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     target_link_libraries(test_sparsevector_cuda PRIVATE Catch2::Catch2 openpfc_gpu_kernels CUDA::cudart)
     add_test(NAME CUDA_SparseVector COMMAND test_sparsevector_cuda)
 
+    add_executable(test_reflection_ghosts_cuda test_reflection_ghosts.cpp)
+    target_include_directories(test_reflection_ghosts_cuda PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_reflection_ghosts_cuda PRIVATE Catch2::Catch2 openpfc
+        openpfc_gpu_kernels CUDA::cudart MPI::MPI_CXX)
+    target_compile_definitions(test_reflection_ghosts_cuda PRIVATE
+        OPENPFC_TEST_REFLECTION_CUDA)
+    add_test(NAME CUDA_ReflectionGhosts COMMAND test_reflection_ghosts_cuda)
+
     add_executable(test_deep_copy_fill_cuda test_deep_copy_fill.cpp)
     target_include_directories(test_deep_copy_fill_cuda PRIVATE
         ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
@@ -336,6 +347,17 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
     )
     target_link_libraries(test_sparsevector_hip PRIVATE Catch2::Catch2 openpfc_hip_kernels hip::host)
     add_test(NAME HIP_SparseVector COMMAND test_sparsevector_hip)
+
+    add_executable(test_reflection_ghosts_hip test_reflection_ghosts.cpp)
+    target_include_directories(test_reflection_ghosts_hip PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_reflection_ghosts_hip PRIVATE Catch2::Catch2 openpfc
+        openpfc_hip_kernels hip::host MPI::MPI_CXX)
+    target_compile_definitions(test_reflection_ghosts_hip PRIVATE
+        OPENPFC_TEST_REFLECTION_HIP)
+    add_test(NAME HIP_ReflectionGhosts COMMAND test_reflection_ghosts_hip)
 
     add_executable(test_deep_copy_fill_hip test_deep_copy_fill.cpp)
     target_include_directories(test_deep_copy_fill_hip PRIVATE
