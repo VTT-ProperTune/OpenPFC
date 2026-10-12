@@ -67,9 +67,11 @@ endif()
 # FetchContent nlohmann_json is a build-time dependency only — do not dump its
 # headers into the prefix. Consumers that include JSON-using public headers
 # get nlohmann_json via find_dependency in OpenPFCConfig.cmake.
-# simulation_state.hpp includes simulation_state.ipp, so .ipp must ship too.
+# Implementation includes ship too: simulation_state.hpp includes
+# simulation_state.ipp and solvers/interface_diffusion.hpp includes
+# interface_diffusion.inl.
 install(DIRECTORY include/openpfc DESTINATION include
-        FILES_MATCHING PATTERN "*.hpp" PATTERN "*.ipp")
+        FILES_MATCHING PATTERN "*.hpp" PATTERN "*.ipp" PATTERN "*.inl")
 
 # Install library binary
 install(TARGETS openpfc
