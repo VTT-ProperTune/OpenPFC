@@ -35,6 +35,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <span>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -87,6 +88,22 @@ template <class T, class MemorySpace = pfc::HostSpace>
   const int err = MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_SUM, comm);
   pfc::mpi::throw_on_mpi_error(err, "MPI_Allreduce SUM in allreduce_sum");
   return global;
+}
+
+/**
+ * @brief Element-wise `MPI_SUM` of `values` across `comm`, in place.
+ *
+ * Every rank must pass the same length. An empty span is a no-op
+ * collective; a length above `INT_MAX` throws `std::length_error`.
+ */
+inline void allreduce_sum(std::span<double> values, MPI_Comm comm) {
+  if (values.size() > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+    throw std::length_error("allreduce_sum: span longer than INT_MAX");
+  }
+  const int err =
+      MPI_Allreduce(MPI_IN_PLACE, values.data(), static_cast<int>(values.size()),
+                    MPI_DOUBLE, MPI_SUM, comm);
+  pfc::mpi::throw_on_mpi_error(err, "MPI_Allreduce SUM in allreduce_sum(span)");
 }
 
 /**

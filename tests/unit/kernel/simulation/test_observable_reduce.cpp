@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <cmath>
+#include <span>
+#include <vector>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -42,6 +44,39 @@ double analytic_gaussian_r3() {
 }
 
 } // namespace
+
+namespace {
+
+// Each rank contributes (rank + 1) * (i + 1); the sum over P ranks is
+// (i + 1) * P * (P + 1) / 2.
+void check_span_allreduce() {
+  int size = 1;
+  int rank = 0;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  std::vector<double> values(5);
+  for (std::size_t i = 0; i < values.size(); ++i) {
+    values[i] = static_cast<double>((rank + 1) * (i + 1));
+  }
+  pfc::sim::allreduce_sum(std::span<double>(values), MPI_COMM_WORLD);
+  const double ranks = static_cast<double>(size) * (size + 1) / 2.0;
+  for (std::size_t i = 0; i < values.size(); ++i) {
+    REQUIRE(values[i] == static_cast<double>(i + 1) * ranks);
+  }
+  std::vector<double> empty;
+  REQUIRE_NOTHROW(pfc::sim::allreduce_sum(std::span<double>(empty), MPI_COMM_WORLD));
+}
+
+} // namespace
+
+TEST_CASE("allreduce_sum over a span sums element-wise", "[observable][unit]") {
+  check_span_allreduce();
+}
+
+TEST_CASE("allreduce_sum over a span sums element-wise across ranks",
+          "[MPI][observable]") {
+  check_span_allreduce();
+}
 
 TEST_CASE("observable constant field integral is the domain volume",
           "[observable][unit]") {

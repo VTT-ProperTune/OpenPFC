@@ -48,6 +48,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- `pfc::sim::allreduce_sum(std::span<double>, MPI_Comm)` sums an array
+  element-wise across ranks in place, next to the scalar overload, so
+  applications reduce per-bin partial sums without their own
+  `MPI_Allreduce` (#489).
+
 - `OwnedEulerStepper` and `create_owned` advance real fields by forward
   Euler on owned cells only. Coupled rates are taken from the pre-step
   state, halo cells are not written, and `can_rollback()` is false. A
