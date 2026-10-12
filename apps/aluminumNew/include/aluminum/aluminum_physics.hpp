@@ -22,8 +22,6 @@
  */
 
 #include <cmath>
-#include <stdexcept>
-#include <string>
 #include <nlohmann/json.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/domain.hpp>
@@ -31,6 +29,8 @@
 #include <openpfc/kernel/simulation/parameter_schema.hpp>
 #include <openpfc/kernel/simulation/physics_concepts.hpp>
 #include <openpfc/kernel/simulation/simulation_state.hpp>
+#include <stdexcept>
+#include <string>
 
 #include <aluminum/aluminum_pointwise.hpp>
 
@@ -139,8 +139,7 @@ inline void validate_temperature_window(const AluminumSchemaValues &v) {
   }
 }
 
-inline void apply_schema_values(const AluminumSchemaValues &v,
-                                AluminumParams &p) {
+inline void apply_schema_values(const AluminumSchemaValues &v, AluminumParams &p) {
   validate_temperature_window(v);
   static_cast<AluminumSchemaValues &>(p) = v;
   p.recompute_derived();
@@ -149,25 +148,57 @@ inline void apply_schema_values(const AluminumSchemaValues &v,
 inline pfc::sim::ParameterSchema<AluminumSchemaValues> make_aluminum_schema() {
   pfc::sim::ParameterSchema<AluminumSchemaValues> s;
   s.model_name("Aluminum")
-      .real(&AluminumSchemaValues::T0, {.name = "T0", .description = "reference temperature", .required = true, .min = 0.0})
-      .real(&AluminumSchemaValues::Bx, {.name = "Bx", .description = "peak coefficient", .required = true})
-      .real(&AluminumSchemaValues::T_const, {.name = "T_const", .description = "constant temperature", .required = true})
-      .real(&AluminumSchemaValues::T_max, {.name = "T_max", .description = "upper clamp on T_const + T_var", .required = true})
-      .real(&AluminumSchemaValues::T_min, {.name = "T_min", .description = "lower clamp on T_const + T_var", .required = true})
-      .real(&AluminumSchemaValues::G_grid, {.name = "G_grid", .description = "thermal gradient", .required = true})
-      .real(&AluminumSchemaValues::V_grid, {.name = "V_grid", .description = "frame velocity", .required = true})
-      .real(&AluminumSchemaValues::x_initial, {.name = "x_initial", .description = "initial front position", .required = true})
-      .real(&AluminumSchemaValues::alpha, {.name = "alpha", .description = "FCC correlation peak width", .required = true})
-      .real(&AluminumSchemaValues::lambda, {.name = "lambda", .description = "mean-field filter strength", .required = true})
-      .real(&AluminumSchemaValues::stabP, {.name = "stabP", .description = "ETD stabilization", .required = true})
-      .real(&AluminumSchemaValues::p2_bar, {.name = "p2_bar", .description = "shifted p2", .required = true})
-      .real(&AluminumSchemaValues::p3_bar, {.name = "p3_bar", .description = "shifted p3", .required = true})
-      .real(&AluminumSchemaValues::p4_bar, {.name = "p4_bar", .description = "shifted p4", .required = true})
-      .real(&AluminumSchemaValues::q20_bar, {.name = "q20_bar", .description = "shifted q20", .required = true})
-      .real(&AluminumSchemaValues::q21_bar, {.name = "q21_bar", .description = "shifted q21", .required = true})
-      .real(&AluminumSchemaValues::q30_bar, {.name = "q30_bar", .description = "shifted q30", .required = true})
-      .real(&AluminumSchemaValues::q31_bar, {.name = "q31_bar", .description = "shifted q31", .required = true})
-      .real(&AluminumSchemaValues::q40_bar, {.name = "q40_bar", .description = "shifted q40", .required = true});
+      .real(&AluminumSchemaValues::T0, {.name = "T0",
+                                        .description = "reference temperature",
+                                        .required = true,
+                                        .min = 0.0})
+      .real(&AluminumSchemaValues::Bx,
+            {.name = "Bx", .description = "peak coefficient", .required = true})
+      .real(&AluminumSchemaValues::T_const, {.name = "T_const",
+                                             .description = "constant temperature",
+                                             .required = true})
+      .real(&AluminumSchemaValues::T_max,
+            {.name = "T_max",
+             .description = "upper clamp on T_const + T_var",
+             .required = true})
+      .real(&AluminumSchemaValues::T_min,
+            {.name = "T_min",
+             .description = "lower clamp on T_const + T_var",
+             .required = true})
+      .real(&AluminumSchemaValues::G_grid,
+            {.name = "G_grid", .description = "thermal gradient", .required = true})
+      .real(&AluminumSchemaValues::V_grid,
+            {.name = "V_grid", .description = "frame velocity", .required = true})
+      .real(&AluminumSchemaValues::x_initial,
+            {.name = "x_initial",
+             .description = "initial front position",
+             .required = true})
+      .real(&AluminumSchemaValues::alpha,
+            {.name = "alpha",
+             .description = "FCC correlation peak width",
+             .required = true})
+      .real(&AluminumSchemaValues::lambda,
+            {.name = "lambda",
+             .description = "mean-field filter strength",
+             .required = true})
+      .real(&AluminumSchemaValues::stabP,
+            {.name = "stabP", .description = "ETD stabilization", .required = true})
+      .real(&AluminumSchemaValues::p2_bar,
+            {.name = "p2_bar", .description = "shifted p2", .required = true})
+      .real(&AluminumSchemaValues::p3_bar,
+            {.name = "p3_bar", .description = "shifted p3", .required = true})
+      .real(&AluminumSchemaValues::p4_bar,
+            {.name = "p4_bar", .description = "shifted p4", .required = true})
+      .real(&AluminumSchemaValues::q20_bar,
+            {.name = "q20_bar", .description = "shifted q20", .required = true})
+      .real(&AluminumSchemaValues::q21_bar,
+            {.name = "q21_bar", .description = "shifted q21", .required = true})
+      .real(&AluminumSchemaValues::q30_bar,
+            {.name = "q30_bar", .description = "shifted q30", .required = true})
+      .real(&AluminumSchemaValues::q31_bar,
+            {.name = "q31_bar", .description = "shifted q31", .required = true})
+      .real(&AluminumSchemaValues::q40_bar,
+            {.name = "q40_bar", .description = "shifted q40", .required = true});
   return s;
 }
 
@@ -176,8 +207,7 @@ inline void apply_aluminum_json(const nlohmann::json &j, AluminumParams &p) {
 }
 
 /** FCC dual-Gaussian peak used by Gen-1 `P_F` (not tungsten's C2). */
-[[nodiscard]] inline double fcc_correlation_peak(double k_laplacian,
-                                                 double alpha) {
+[[nodiscard]] inline double fcc_correlation_peak(double k_laplacian, double alpha) {
   const double alpha2 = 2.0 * alpha * alpha;
   const double k_abs = std::sqrt(-k_laplacian);
   const double k_wave = k_abs - 1.0;
@@ -230,8 +260,8 @@ struct AluminumPhysics {
   }
 
   void declare_fields(pfc::SimulationState &state) const {
-    pfc::sim::add_declared_field<RealType, MemorySpace>(state, "psi", domain,
-                                                        box, 0);
+    pfc::sim::add_declared_field<RealType, MemorySpace>(state, "psi", domain, box,
+                                                        0);
   }
 
   [[nodiscard]] double filter_mf(double k_laplacian) const {
@@ -251,7 +281,8 @@ struct AluminumPhysics {
     return k_laplacian * op_ck;
   }
 
-  /// PFC dynamics are conserved: \f$\hat N\f$ enters as \f$k_{\mathrm{lap}}\hat N\f$.
+  /// PFC dynamics are conserved: \f$\hat N\f$ enters as \f$k_{\mathrm{lap}}\hat
+  /// N\f$.
   [[nodiscard]] double nonlinear_symbol(double k_laplacian) const {
     return k_laplacian;
   }
@@ -287,8 +318,8 @@ struct AluminumPhysics {
                                     double T_var) const {
     return pointwise().nonlinearity(psi, psi_mf, p_star, T_var);
   }
-  [[nodiscard]] double free_energy_density(double psi, double psi_mf,
-                                           double p_star, double T_var) const {
+  [[nodiscard]] double free_energy_density(double psi, double psi_mf, double p_star,
+                                           double T_var) const {
     return pointwise().free_energy_density(psi, psi_mf, p_star, T_var);
   }
 };

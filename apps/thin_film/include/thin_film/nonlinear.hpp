@@ -104,9 +104,9 @@ struct FilmSample {
  * @param comm         communicator to reduce over
  */
 template <class MemorySpace = pfc::HostSpace>
-[[nodiscard]] inline FilmSample
-sample_film(pfc::data::Field<double, MemorySpace> &h, const pfc::Domain &domain,
-           double h0, double rupture_frac, MPI_Comm comm) {
+[[nodiscard]] inline FilmSample sample_film(pfc::data::Field<double, MemorySpace> &h,
+                                            const pfc::Domain &domain, double h0,
+                                            double rupture_frac, MPI_Comm comm) {
   double lo = std::numeric_limits<double>::infinity(), hi = -lo;
   double local_sum = 0.0, local_holes = 0.0, local_cells = 0.0;
   h.with_host_view([&](const double *d, std::size_t n) {

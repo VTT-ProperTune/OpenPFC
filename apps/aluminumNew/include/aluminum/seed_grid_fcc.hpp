@@ -111,12 +111,11 @@ private:
 
 inline void from_json(const nlohmann::json &j, SeedGridFCC &ic) {
   pfc::ui::detail::throw_unless_json_modifier_type(
-      j, "seed_grid_fcc",
-      "Invalid JSON input: missing or incorrect 'type' field.");
+      j, "seed_grid_fcc", "Invalid JSON input: missing or incorrect 'type' field.");
   for (const char *key : {"Ny", "Nz", "X0", "radius", "amplitude", "rho"}) {
     if (!j.contains(key) || !j[key].is_number()) {
-      throw std::invalid_argument(std::string("seed_grid_fcc: missing or invalid '") +
-                                  key + "' field.");
+      throw std::invalid_argument(
+          std::string("seed_grid_fcc: missing or invalid '") + key + "' field.");
     }
   }
   ic.set_Ny(j["Ny"].get<int>());

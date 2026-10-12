@@ -210,7 +210,8 @@ struct TungstenPhysics {
     return spectral::linear_symbol(k_laplacian, phys.opCk);
   }
 
-  /// PFC dynamics are conserved: \f$\hat N\f$ enters as \f$k_{\mathrm{lap}}\hat N\f$.
+  /// PFC dynamics are conserved: \f$\hat N\f$ enters as \f$k_{\mathrm{lap}}\hat
+  /// N\f$.
   [[nodiscard]] double nonlinear_symbol(double k_laplacian) const {
     return k_laplacian;
   }
@@ -242,8 +243,8 @@ struct TungstenPhysics {
   /// Host convenience: \f$N(\psi,\psi_{\mathrm{MF}})\f$ via the pointwise functor.
   [[nodiscard]] double nonlinearity(double psi, double psi_mf, double x = 0.0,
                                     double t = 0.0) const {
-    return pointwise().nonlinearity(pfc::sim::SpectralCell{
-        .psi = psi, .psi_mf = psi_mf, .x = x, .t = t});
+    return pointwise().nonlinearity(
+        pfc::sim::SpectralCell{.psi = psi, .psi_mf = psi_mf, .x = x, .t = t});
   }
 
   [[nodiscard]] double temperature_variation(double x, double t) const {

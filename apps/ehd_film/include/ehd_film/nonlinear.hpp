@@ -5,7 +5,8 @@
 
 /**
  * @file nonlinear.hpp
- * @brief Nonlinear compliant lubrication: \f$h^3\f$ mobility, load, adhesion (`#116`).
+ * @brief Nonlinear compliant lubrication: \f$h^3\f$ mobility, load, adhesion
+ * (`#116`).
  *
  * @details
  * The shipped `ehd_film` preset freezes the hydrodynamic mobility at
@@ -100,9 +101,9 @@ struct CubicMobility {
  * recovery/redistribution (`#116`, computational experiment B).
  */
 struct GaussianLoad {
-  double p0{0.0};      ///< peak applied pressure
-  double a{1.0};       ///< Gaussian width (code length units)
-  double t_load{0.0};  ///< dwell time; load is on for t in [0, t_load)
+  double p0{0.0};     ///< peak applied pressure
+  double a{1.0};      ///< Gaussian width (code length units)
+  double t_load{0.0}; ///< dwell time; load is on for t in [0, t_load)
   double cx{0.0}, cy{0.0};
 
   [[nodiscard]] double operator()(double x, double y, double t) const {
@@ -117,18 +118,17 @@ struct GaussianLoad {
                               double t_load) {
     const auto size = pfc::domain::get_size(domain);
     const auto dx = pfc::domain::get_spacing(domain);
-    return GaussianLoad{p0, a, t_load, 0.5 * size[0] * dx[0],
-                        0.5 * size[1] * dx[1]};
+    return GaussianLoad{p0, a, t_load, 0.5 * size[0] * dx[0], 0.5 * size[1] * dx[1]};
   }
 };
 
 /// Observables a compliant-lubrication load/relaxation experiment reports.
 struct EhdFilmSample {
-  double h_center{};        ///< thickness at the domain centre
-  double p_max{}, p_min{};  ///< pressure extrema
-  double spreading_radius{};///< RMS radius of the disturbance about centre
-  double displaced_volume{};///< volume squeezed out from under the load
-  double volume{};          ///< total fluid volume (conservation check)
+  double h_center{};         ///< thickness at the domain centre
+  double p_max{}, p_min{};   ///< pressure extrema
+  double spreading_radius{}; ///< RMS radius of the disturbance about centre
+  double displaced_volume{}; ///< volume squeezed out from under the load
+  double volume{};           ///< total fluid volume (conservation check)
 };
 
 /**
@@ -149,9 +149,10 @@ struct EhdFilmSample {
  * the load; by exact volume conservation it must equal the volume gained in
  * the surrounding annulus, up to the reported round-off drift in `volume`.
  */
-[[nodiscard]] inline EhdFilmSample
-sample_ehd_film(pfc::data::Field<double> &h, pfc::data::Field<double> &p,
-                const pfc::Domain &domain, double h0, MPI_Comm comm) {
+[[nodiscard]] inline EhdFilmSample sample_ehd_film(pfc::data::Field<double> &h,
+                                                   pfc::data::Field<double> &p,
+                                                   const pfc::Domain &domain,
+                                                   double h0, MPI_Comm comm) {
   const auto size = pfc::domain::get_size(domain);
   const auto dx = pfc::domain::get_spacing(domain);
   const double cx = 0.5 * static_cast<double>(size[0]) * dx[0];

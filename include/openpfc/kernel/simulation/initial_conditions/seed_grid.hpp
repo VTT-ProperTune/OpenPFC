@@ -77,8 +77,8 @@ public:
       : m_Ny(Ny), m_Nz(Nz), m_X0(X0), m_radius(radius), m_rho(0.0),
         m_amplitude(0.0) {}
 
-  void apply(const SimulationContext &ctx, pfc::field::FieldOutput<double> field, const Domain &domain,
-             const Box3i &box, double time) override {
+  void apply(const SimulationContext &ctx, pfc::field::FieldOutput<double> field,
+             const Domain &domain, const Box3i &box, double time) override {
     const int nseeds = m_Nx * m_Ny * m_Nz;
     if (ctx.is_rank0()) {
       const Logger lg{LogLevel::Info, 0};
@@ -90,8 +90,8 @@ public:
     apply(field, domain, box, time);
   }
 
-  void apply(pfc::field::FieldOutput<double> field, const Domain &domain, const Box3i &box,
-             double time = 0.0) override {
+  void apply(pfc::field::FieldOutput<double> field, const Domain &domain,
+             const Box3i &box, double time = 0.0) override {
     (void)time;
     const auto &size = pfc::domain::get_size(domain);
     const auto &spacing = pfc::domain::get_spacing(domain);
@@ -117,8 +117,8 @@ public:
       const double x = (Nx > 1) ? (Dx / 2.0 + Dx * i) : m_X0;
       for (int j = 0; j < Ny; j++) {
         for (int k = 0; k < Nz; k++) {
-          const std::array<double, 3> location = {
-              x + rt(re), Y0 + (Dy * j) + rt(re), Z0 + (Dz * k) + rt(re)};
+          const std::array<double, 3> location = {x + rt(re), Y0 + (Dy * j) + rt(re),
+                                                  Z0 + (Dz * k) + rt(re)};
           const std::array<double, 3> orientation = {rr(re), rr(re), rr(re)};
           const Seed seed(location, orientation, get_radius(), get_density(),
                           get_amplitude());
@@ -136,8 +136,6 @@ public:
       return 0.0;
     });
   }
-
-
 };
 
 } // namespace pfc

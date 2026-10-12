@@ -78,7 +78,8 @@ public:
       throw std::invalid_argument("circular_inclusion: radius must be > 0.");
     }
     if (!(w > 0.0)) {
-      throw std::invalid_argument("circular_inclusion: interface_width must be > 0.");
+      throw std::invalid_argument(
+          "circular_inclusion: interface_width must be > 0.");
     }
     auto wrap = [](double d, double L) {
       if (!(L > 0.0)) {
