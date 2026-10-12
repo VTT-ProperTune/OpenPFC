@@ -36,8 +36,9 @@ namespace pfc {
  *         the unpadded owned box).
  */
 template <class T, class MemorySpace>
-void apply_field_modifier(FieldModifier &modifier, data::Field<T, MemorySpace> &field,
-                          double time, const SimulationContext *ctx = nullptr) {
+void apply_field_modifier(FieldModifier &modifier,
+                          data::Field<T, MemorySpace> &field, double time,
+                          const SimulationContext *ctx = nullptr) {
   static_assert(std::is_same_v<T, double>,
                 "apply_field_modifier: FieldModifier operates on double fields");
   if (field.storage_halo() != 0) {
