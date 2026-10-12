@@ -315,6 +315,9 @@ OPENPFC_HD inline void integrate_curved(const Implicit &shape, Box root,
   if (body_inside_box(shape, root, dimension)) {
     const double body = shape.body_volume();
     sink.add(body, root_volume - body);
+    // The analytic measure shortcut supplies no corresponding phase points.
+    // A quadrature caller must not interpret an empty set as complete.
+    if (sink.points) sink.q->complete = 0;
     if (shape.body_area() > 0) {
       sink.m->interface_area += shape.body_area();
       return;

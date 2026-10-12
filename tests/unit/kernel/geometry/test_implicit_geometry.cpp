@@ -43,6 +43,23 @@ using pfc::geometry::wrap_coordinate;
 
 static constexpr double kPi = 3.14159265358979323846;
 
+TEST_CASE("contained-body measure shortcut does not claim complete quadrature",
+          "[geometry][quadrature]") {
+  const Box box{{0, 0, 0}, {1, 1, 1}};
+  for (const auto shape :
+       {make_sphere({.5, .5, .5}, .1),
+        make_axis_aligned_ellipsoid({.5, .5, .5}, {.1, .2, .15})}) {
+    Policy policy;
+    policy.max_depth = 1;
+    const auto measure = measure_box(shape, box, 3, policy);
+    const auto quadrature = integrate_box(shape, box, 3, policy, 1);
+    REQUIRE(measure.inside_volume == Approx(shape.body_volume()));
+    REQUIRE(quadrature.measure.inside_volume == Approx(measure.inside_volume));
+    REQUIRE(quadrature.measure.outside_volume == Approx(measure.outside_volume));
+    REQUIRE_FALSE(quadrature.complete);
+  }
+}
+
 TEST_CASE("box polyhedron has unit volume", "[geometry][poly]") {
   const double volume = poly_volume(poly_box(Box{{0, 0, 0}, {1, 1, 1}}));
   REQUIRE(volume == Approx(1.0).epsilon(1e-12));
