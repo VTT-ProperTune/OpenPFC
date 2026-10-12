@@ -230,3 +230,59 @@ TEST_CASE("coupled vector elasticity matches a continuum manufactured field",
     previous = error;
   }
 }
+
+TEST_CASE("auxiliary operators preserve physical box metrics",
+          "[multigrid][metrics]") {
+  StructuredGrid g{{7, 5, 9}, 3};
+  auto a = elastic_auxiliary(g, 1, .5),
+       dilated = elastic_auxiliary(g, 1, .5, {2, 2, 2});
+  REQUIRE(a.columns == dilated.columns);
+  for (std::size_t i = 0; i < a.values.size(); ++i)
+    REQUIRE(std::abs(dilated.values[i] - 2 * a.values[i]) < 1e-14);
+  std::array<double, 3> lengths{2, 3, 5}, amplitude{.7, -.2, .3};
+  auto anisotropic = elastic_auxiliary(g, 1, .5, lengths);
+  std::vector<double> u(g.size()), expected(g.size()), result;
+  double volume = 1, alpha[3], beta[3], total = 0;
+  for (int d = 0; d < 3; ++d) {
+    double h = lengths[d] / g.shape[d], theta = 2 * std::acos(-1.) / g.shape[d];
+    volume *= h;
+    alpha[d] = 4 * std::pow(std::sin(theta / 2), 2) / (h * h);
+    beta[d] = std::sin(theta) / h;
+    total += alpha[d];
+  }
+  for (int z = 0; z < g.shape[2]; ++z)
+    for (int y = 0; y < g.shape[1]; ++y)
+      for (int x = 0; x < g.shape[0]; ++x) {
+        double value = std::sin(2 * std::acos(-1.) *
+                                (double(x) / g.shape[0] + double(y) / g.shape[1] +
+                                 double(z) / g.shape[2]));
+        for (int c = 0; c < 3; ++c) {
+          int row = 3 * g.node(x, y, z) + c;
+          u[row] = amplitude[c] * value;
+          double v = .5 * total * amplitude[c] + 1.5 * alpha[c] * amplitude[c];
+          for (int d = 0; d < 3; ++d)
+            if (d != c) v += 1.5 * beta[c] * beta[d] * amplitude[d];
+          expected[row] = volume * value * v;
+        }
+      }
+  anisotropic(u, result);
+  for (std::size_t i = 0; i < u.size(); ++i)
+    REQUIRE(std::abs(result[i] - expected[i]) < 1e-12);
+  std::fill(u.begin(), u.end(), 1);
+  anisotropic(u, result);
+  for (double v : result) REQUIRE(std::abs(v) < 1e-13);
+  REQUIRE_THROWS_AS(elastic_auxiliary(g, 1, .5, {1, 0, 1}), std::invalid_argument);
+  REQUIRE_THROWS_AS(
+      elastic_auxiliary(g, 1, .5, {1, std::numeric_limits<double>::infinity(), 1}),
+      std::invalid_argument);
+  StructuredGrid scalar{{5, 5, 5}, 1, Boundary::Dirichlet};
+  auto dirichlet = elastic_auxiliary(scalar, 0, 1, lengths);
+  for (int row = 0; row < dirichlet.size(); ++row)
+    for (int k = dirichlet.offsets[row]; k < dirichlet.offsets[row + 1]; ++k) {
+      int col = dirichlet.columns[k];
+      double opposite = 0;
+      for (int j = dirichlet.offsets[col]; j < dirichlet.offsets[col + 1]; ++j)
+        if (dirichlet.columns[j] == row) opposite = dirichlet.values[j];
+      REQUIRE(std::abs(dirichlet.values[k] - opposite) < 1e-14);
+    }
+}
