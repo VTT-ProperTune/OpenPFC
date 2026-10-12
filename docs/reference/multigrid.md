@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Structured host geometric multigrid
 
 `openpfc/solvers/multigrid.hpp` supplies a structured-grid V-cycle with

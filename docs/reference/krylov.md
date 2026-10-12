@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Matrix-free Krylov solvers
 
 `openpfc/solvers/krylov.hpp` provides restarted GMRES, flexible right GMRES
