@@ -603,17 +603,17 @@ TEST_CASE("owned euler rejects a non-finite or non-positive dt",
     void operator()(double, std::tuple<std::vector<double> &> &) const {}
   };
   const std::array<std::size_t, 1> sizes{4};
-  REQUIRE_THROWS_AS(OwnedEulerStepper<Idle, 1>(0.0, sizes, Idle{}),
+  REQUIRE_THROWS_AS((OwnedEulerStepper<Idle, 1>(0.0, sizes, Idle{})),
                     std::invalid_argument);
-  REQUIRE_THROWS_AS(OwnedEulerStepper<Idle, 1>(-0.2, sizes, Idle{}),
+  REQUIRE_THROWS_AS((OwnedEulerStepper<Idle, 1>(-0.2, sizes, Idle{})),
                     std::invalid_argument);
-  REQUIRE_THROWS_AS(OwnedEulerStepper<Idle, 1>(
-                        std::numeric_limits<double>::infinity(), sizes, Idle{}),
+  REQUIRE_THROWS_AS((OwnedEulerStepper<Idle, 1>(
+                        std::numeric_limits<double>::infinity(), sizes, Idle{})),
                     std::invalid_argument);
-  REQUIRE_THROWS_AS(OwnedEulerStepper<Idle, 1>(
-                        std::numeric_limits<double>::quiet_NaN(), sizes, Idle{}),
+  REQUIRE_THROWS_AS((OwnedEulerStepper<Idle, 1>(
+                        std::numeric_limits<double>::quiet_NaN(), sizes, Idle{})),
                     std::invalid_argument);
-  REQUIRE_THROWS_AS(OwnedEulerStepper<Idle, 1>(0.1, {0}, Idle{}),
+  REQUIRE_THROWS_AS((OwnedEulerStepper<Idle, 1>(0.1, {0}, Idle{})),
                     std::invalid_argument);
 }
 
