@@ -49,6 +49,7 @@
  */
 
 #include <algorithm>
+#include <initializer_list>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -281,6 +282,11 @@ private:
     }
   }
   static void copy_owned(Level &L, const FieldT &src, FieldT &dst) {
+    for (const FieldT *f : std::initializer_list<const FieldT *>{&src, &dst})
+      for (int a = 0; a < 3; ++a)
+        if (f->local_size()[a] != L.g.n[a] || f->padded_extent(a) != L.g.pitch[a])
+          throw std::invalid_argument("FieldMultigrid: vectors must be on the fine "
+                                      "owned box with storage halo 1");
     if constexpr (is_host) {
       for_owned(L, [&](int i, int j, int k) {
         const auto s = fmg::index(L.g, i, j, k);
