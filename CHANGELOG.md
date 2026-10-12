@@ -9,6 +9,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Changed
 
+- The device `HaloConnectivity::Full` exchange copies a self-periodic axis
+  with one fused in-place kernel for all fields instead of a pack and an
+  unpack per face and field. When every axis is self-periodic, `exchange()`
+  enqueues the copies on the stream and returns without a host
+  synchronisation; with a real neighbor every pass is still synchronised
+  (#464).
+
 - Device FCC tangent assembly reuses the hardening and Schur elimination
   programs across its nine deformation directions. Host material evaluation
   retains its independent dense solves; constitutive equations, local caps
