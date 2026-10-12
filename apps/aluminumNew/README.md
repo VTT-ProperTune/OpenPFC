@@ -28,7 +28,7 @@ initial-condition catalog. That is a rot check, not a physics check.
 |---|---|
 | **Use case** | An aluminium melt with a row of FCC seeds, intended for directional solidification |
 | **Question** | Where does the front settle under a pulled temperature gradient, and what grain structure follows it? |
-| **Domain** | `1024 x 2048 x 256` cells at `dx = 2*pi*sqrt(3)/8 = 1.36035`, i.e. `1393 x 2786 x 348` reduced PFC length units, origin at the corner. Eight cells per FCC lattice constant `a = 2*pi*sqrt(3)` |
+| **Domain** | `1024 x 2048 x 256` cells at `dx = 2*pi*sqrt(3)/8 = 1.36035`, i.e. `1393 x 2786 x 348` reduced PFC length units, box starting at 0. Eight cells per FCC lattice constant `a = 2*pi*sqrt(3)` |
 | **Grid/time** | `t` in `[0, 2000]`, `dt = 1` (2000 steps), field dump every 200 |
 | **Boundary conditions** | Periodic on all three axes (the FFT has no other mode), plus a stationary `fixed` sigmoid density-reservoir band pulling `psi` between `-1.297` and `-0.006` near the high-`x` end -- see "Why periodic" below |
 | **Initial condition** | Uniform `psi = -0.006`, then `seed_grid_fcc`: a `2 x 1` row of FCC seeds of radius 120 at `x = 130`, amplitude 0.4, `rho = -0.036`, each jittered by `+/-0.2 R` and randomly oriented. Each seed is built from four `<111>` wave vectors, unlike tungsten's six `{110}` |

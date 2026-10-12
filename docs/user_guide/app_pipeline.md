@@ -85,7 +85,7 @@ Exact keys vary slightly by app and schema version; always treat
 
 | Section / keys | Handled by | Role |
 |----------------|------------|------|
-| `Lx`, `Ly`, `Lz`, `dx`, `dy`, `dz`, `origin`, … | `from_json` for `Domain` / `make_simulation_session` | Grid and physical extent. |
+| `domain.size`, `domain.lower`, `domain.upper` | `from_json` for `Domain` / `make_simulation_session` | Grid points and box limits; spacing is derived. |
 | `t0`, `t1`, `dt`, `saveat` | `Time` | Integration interval and output cadence. |
 | `plan_options` | HeFFTe `plan_options` | FFT backend (`backend`), `use_gpu_aware`, `reshape_algorithm`, etc. |
 | `model.name`, `model.params` | App-local physics params | Physics coefficients. |

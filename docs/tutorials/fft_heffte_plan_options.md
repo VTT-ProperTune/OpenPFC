@@ -15,7 +15,7 @@ It is organized in four blocks you will see in real configs:
 
 | Block | Role |
 |-------|------|
-| `[domain]` | Grid size, spacing, origin — same information as JSON `domain` / top-level world keys in apps (see [`../configuration.md`](../user_guide/configuration.md)). |
+| `[domain]` | Grid size and box limits (`size`, `lower`, `upper`) — same information as the JSON `domain` object (see [`../configuration.md`](../user_guide/configuration.md)). |
 | `[plan_options]` | HeFFTe backend (`fftw`, `cuda`, …), reshape algorithm, pencils, GPU-aware MPI, etc. |
 | `[timestepping]` | `t0`, `t1`, `dt`, `saveat` — mirrors the `Time` object in the spectral stack. |
 | `[model]` | Placeholder name/params — real apps (e.g. tungsten) use richer `model.params`. |

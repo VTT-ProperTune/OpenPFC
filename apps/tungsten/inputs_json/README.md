@@ -54,9 +54,9 @@ The model parameters are identical to those in the TOML files. See the TOML file
 
 ## Domain Configuration
 
-- `Lx`, `Ly`, `Lz`: Grid size in each dimension
-- `dx`, `dy`, `dz`: Grid spacing in each dimension
-- `origin`: Coordinate system origin ("center" or "corner")
+- `size`: grid points per axis
+- `lower`, `upper`: limits of the box. Spacing is `(upper - lower) / size`;
+  a symmetric box puts the single seed at `(0, 0, 0)` in its middle
 
 ## Time Stepping
 

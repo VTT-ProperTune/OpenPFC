@@ -21,7 +21,7 @@ configurations.
 |---|---|---|
 | **Use case** | A solidification front sweeping through undercooled tungsten, with a grid of differently oriented seeds ahead of it | Smallest runnable configuration |
 | **Question** | Where does the front sit, how fast does it advance, and what grain structure does it leave? | Does the stack run end to end? |
-| **Domain** | `128 x 64 x 64` cells at `dx = 2*pi/(4*sqrt(2)) = 1.11072`, i.e. `142.2 x 71.1 x 71.1` reduced PFC length units, origin at the corner. Eight cells per BCC lattice constant `a = 2*pi*sqrt(2)` | `32^3` cells at the same spacing (`35.5^3`), origin at the centre |
+| **Domain** | `128 x 64 x 64` cells at `dx = 2*pi/(4*sqrt(2)) = 1.11072`, i.e. `142.2 x 71.1 x 71.1` reduced PFC length units, box starting at 0. Eight cells per BCC lattice constant `a = 2*pi*sqrt(2)` | `32^3` cells at the same spacing (`35.5^3`), box centred on 0 |
 | **Grid/time** | `t` in `[0, 20000]`, `dt = 1`, field dump every 100 | `t` in `[0, 10]`, `dt = 1`, dump every step |
 | **Boundary conditions** | Periodic on all three axes (the FFT has no other mode), plus a `moving` sigmoid density-reservoir band of width 15 tracking the front 40 units ahead of it -- see "Why periodic" below | Periodic on all three axes plus a stationary `fixed` reservoir band |
 | **Initial condition** | Uniform `psi = -0.10`, then `seed_grid`: a `2 x 2` array of BCC seeds of radius 25 at `x = 30`, each jittered by `+/-0.2 R` and randomly oriented from a fixed RNG seed (42), so runs are deterministic | Uniform `psi = -0.4`, then `single_seed`: one BCC nucleus from the six `{110}` wave vectors, `amp_eq = 0.215936`, `rho_seed = -0.047` |

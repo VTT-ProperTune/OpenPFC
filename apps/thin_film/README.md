@@ -356,7 +356,7 @@ JSON `model.params`: `h0`, `gamma`, `M0`, `A`. Initial condition
 `"type": "cosine_mode"` with `h0` / `amplitude` / `nx` / `ny` / `nz`.
 
 The `h^3` lubrication science cases (`#114`, `#124`) take a different JSON
-shape (`domain.Lx`/`Ly`/`Lz`/`dx`, `model.params` adds `h_star`,
+shape (`domain.size`/`lower`/`upper` with equal x and y spacing, `model.params` adds `h_star`,
 `timestepping.t1`/`dt`/`saveat`, `initial_conditions.amplitude`/`seed`/
 `defect_amplitude`/`defect_sigma`, `diagnostics.csv`) and the same case file
 drives *any* of the three nonlinear binaries:

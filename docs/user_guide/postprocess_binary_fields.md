@@ -13,7 +13,7 @@ To interpret bytes correctly you need **metadata** that is not in the file:
 
 | Metadata | Example |
 |----------|---------|
-| Global grid | `Lx`, `Ly`, `Lz` |
+| Global grid | `domain.size` |
 | Local brick | Which index range this file’s rank owned (or concatenate ranks in order) |
 | Dtype | `float64` real (default writer path) |
 | Layout | Fortran index order: `i` varies fastest in the **first** dimension in memory for `MPI_ORDER_FORTRAN` 3D subarrays |

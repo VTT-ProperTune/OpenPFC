@@ -11,15 +11,30 @@ This page lists the **JSON / TOML surface** consumed by the default **CPU spectr
 
 ## Domain (grid)
 
-Parsed by `from_json<Domain>(settings)` — supports **flat** keys on the root object **or** nested under `"domain"`.
+Parsed by `from_json<Domain>(settings)` from the `"domain"` object. The domain
+is the box itself:
 
-| Key(s) | Type | Meaning |
-|--------|------|---------|
-| `Lx`, `Ly`, `Lz` | integer | Grid point counts |
-| `dx`, `dy`, `dz` | number | Spacing |
-| `origin` (or `origo`) | string | `"center"` or `"corner"` — sets physical origin convention |
+| Key | Type | Meaning |
+|-----|------|---------|
+| `size` | 3 positive integers | Grid points per axis |
+| `lower` | 3 finite numbers | Lower limit of the box; index `(0,0,0)` sits here |
+| `upper` | 3 finite numbers | Upper limit of the box, above `lower` on every axis |
 
-**Examples:** top-level keys in some snippets; `tungsten` uses a `"domain"` object with the same logical fields ([`apps/tungsten/inputs_json/`](../../apps/tungsten/inputs_json/README.md)).
+```json
+"domain": {"size": [256, 256, 256],
+           "lower": [-142.2, -142.2, -142.2],
+           "upper": [142.2, 142.2, 142.2]}
+```
+
+Every axis is periodic, so the spacing is `(upper - lower) / size` and `upper`
+is the periodic image of `lower`, not a stored point. Index `i` sits at
+`lower + i * spacing`. Place a seed in the middle of the box by making the box
+symmetric and putting the seed at `(0, 0, 0)`.
+
+The earlier keys `Lx`/`Ly`/`Lz`, `dx`/`dy`/`dz` and `origin`/`origo` were
+removed; an input that uses them fails with the equivalent block in the
+message. `scripts/migrate_domain_block.py FILE...` rewrites JSON and TOML
+inputs in place and keeps the grid bit for bit.
 
 ## Time stepping
 

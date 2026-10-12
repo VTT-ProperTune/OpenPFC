@@ -53,7 +53,8 @@ composed stepper). JSON still describes domain, time, `method`/`backend`,
 | `pfc::World` / `world::create` / `from_json<World>` / stack `world()` | `pfc::Domain` + `pfc::Box3i` (`domain::create`, `decomposition::local_box`, `decomposition::domain`); JSON is `from_json<Domain>` only |
 
 `from_json<Domain>` shares the `Lx`/`Ly`/`Lz`/`dx`/`dy`/`dz`/`origin` schema
-with the old `from_json<World>`.
+with the old `from_json<World>`. (Later replaced by `size`/`lower`/`upper`;
+see the changelog and `scripts/migrate_domain_block.py`.)
 
 ## Code shape
 
@@ -101,7 +102,8 @@ Production tungsten/aluminum keep JSON ICs, BCs, writers, and
 
 ## JSON keys that still work
 
-Unchanged: `Lx`/`Ly`/`Lz`, `dx`/`dy`/`dz`, `origin`/`origo`, `t0`/`t1`/`dt`/`saveat`,
+Unchanged in 0.2 (the domain keys were replaced later by `size`/`lower`/`upper`):
+`Lx`/`Ly`/`Lz`, `dx`/`dy`/`dz`, `origin`/`origo`, `t0`/`t1`/`dt`/`saveat`,
 `method` (`spectral`|`fd`), `backend` (`cpu`|`cuda`|`hip`), `plan_options`,
 `fields[]`, `initial_conditions[]`, `boundary_conditions[]`, `checkpoint`,
 `restart_from`.
