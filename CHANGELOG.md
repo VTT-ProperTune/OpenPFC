@@ -33,6 +33,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   cells (optionally masked) with one collective; a stencil action exchanges
   halos through `FieldHalo` rather than a second runtime (#471).
 
+- `pfc::solvers::FieldMultigrid`, a matrix-free geometric multigrid V-cycle on
+  padded Fields for c u - div(D grad u) with per-face coefficients and pinned
+  cells, 2-D and 3-D, distributed and on host, CUDA and HIP. It is symmetric
+  and meant to precondition CG/GMRES/Newton. With constant coefficients the
+  PCG iteration count does not depend on the grid; with large coefficient jumps
+  it grows, because coarse coefficients are averaged rather than Galerkin (#470).
+
 - A shared coarse correction for uniquely owned structured Poisson and
   vector-elasticity operators. The small coarse unknown stays replicated,
   restriction is P^T, and periodic gauges use one communicator-wide mean.
