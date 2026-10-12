@@ -56,3 +56,16 @@ TEST_CASE("Scatter data to destination", "[SparseVector (Host)]") {
   REQUIRE(big_data[2] == 0.0);
   REQUIRE(big_data[3] == 4.0);
 }
+
+TEST_CASE("SparseVector records one past its largest index",
+          "[SparseVector (Host)]") {
+  using Vec = core::SparseVector<backend::CPUTag, double>;
+  REQUIRE(Vec(std::vector<size_t>{7, 2, 5}).index_end() == 8);
+  REQUIRE(
+      Vec(std::vector<size_t>{3, 0}, std::vector<double>{1.0, 2.0}).index_end() ==
+      4);
+  const std::vector<size_t> sorted{1, 4, 9};
+  REQUIRE(Vec(sorted.data(), sorted.size()).index_end() == 10);
+  REQUIRE(Vec(std::vector<size_t>{}).index_end() == 0);
+  REQUIRE(Vec(size_t{3}).index_end() == core::unknown_index_end);
+}

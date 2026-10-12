@@ -14,7 +14,9 @@
  *
  * Fail-closed OOB: any index `>=` the dense length throws `std::runtime_error`
  * with the same messages as CPU (`gather: index out of bounds` /
- * `scatter: index out of bounds`) before any device write.
+ * `scatter: index out of bounds`) before any device write. The check uses
+ * the bound `SparseVector` records at construction, so a halo exchange does
+ * not copy its index lists back to the host on every call.
  *
  * @see kernel/decomposition/sparse_vector_ops.hpp
  */
@@ -42,15 +44,22 @@ namespace pfc::core {
  * @param source_size Size of source; any `indices[i] >= source_size` throws
  *        `std::runtime_error("gather: index out of bounds")` before the kernel
  *        runs (parity with CPU `pfc::core::gather`)
+ * @param index_end One past the largest index when the caller knows it
+ *        (`SparseVector::index_end()`); the check is then O(1). With
+ *        `unknown_index_end` the indices are downloaded and scanned.
  */
 void gather_cuda_impl(size_t n, const size_t *indices, double *data,
-                      const double *source, size_t source_size);
+                      const double *source, size_t source_size,
+                      size_t index_end = unknown_index_end);
 void gather_cuda_impl(size_t n, const size_t *indices, float *data,
-                      const float *source, size_t source_size);
+                      const float *source, size_t source_size,
+                      size_t index_end = unknown_index_end);
 void gather_cuda_impl(size_t n, const size_t *indices, std::uint64_t *data,
-                      const std::uint64_t *source, size_t source_size);
+                      const std::uint64_t *source, size_t source_size,
+                      size_t index_end = unknown_index_end);
 void scatter_cuda_impl(size_t n, const size_t *indices, const double *data,
-                       double *dest, size_t dest_size);
+                       double *dest, size_t dest_size,
+                       size_t index_end = unknown_index_end);
 
 /**
  * @brief Gather for SparseVector<CUDATag, double> (CUDA device).
@@ -62,7 +71,8 @@ inline void gather(SparseVector<backend::CUDATag, double> &sparse_vector,
     return;
   }
   gather_cuda_impl(sparse_vector.size(), sparse_vector.indices().data(),
-                   sparse_vector.data().data(), source, source_size);
+                   sparse_vector.data().data(), source, source_size,
+                   sparse_vector.index_end());
 }
 
 /** Compact typed selection, preserving binary32 values and full-width identities.
@@ -70,8 +80,9 @@ inline void gather(SparseVector<backend::CUDATag, double> &sparse_vector,
  * callers synchronize any producer on a nondefault stream before this call.
  * Returns only after gathering completes. OOB indices leave output unchanged.
  * A nonempty selection requires nonnull source and disjoint source/output
- * storage. Empty selections do not dereference source. Indices are downloaded
- * for validation (O(selection size)); the dense source stays device-resident.
+ * storage. Empty selections do not dereference source. Bounds come from
+ * `index_end()`, recorded when the indices were built on the host; only a
+ * vector sized without indices is downloaded for validation.
  * Scatter remains double-only. This does not add a Float32 remapping API.
  */
 template <typename T>
@@ -80,7 +91,8 @@ inline void gather(SparseVector<backend::CUDATag, T> &sparse_vector, const T *so
                    size_t source_size) {
   if (sparse_vector.empty()) return;
   gather_cuda_impl(sparse_vector.size(), sparse_vector.indices().data(),
-                   sparse_vector.data().data(), source, source_size);
+                   sparse_vector.data().data(), source, source_size,
+                   sparse_vector.index_end());
 }
 
 /**
@@ -93,7 +105,8 @@ inline void scatter(const SparseVector<backend::CUDATag, double> &sparse_vector,
     return;
   }
   scatter_cuda_impl(sparse_vector.size(), sparse_vector.indices().data(),
-                    sparse_vector.data().data(), dest, dest_size);
+                    sparse_vector.data().data(), dest, dest_size,
+                    sparse_vector.index_end());
 }
 #endif
 
@@ -107,15 +120,22 @@ inline void scatter(const SparseVector<backend::CUDATag, double> &sparse_vector,
  * @param source_size Size of source; any `indices[i] >= source_size` throws
  *        `std::runtime_error("gather: index out of bounds")` before the kernel
  *        runs (parity with CPU `pfc::core::gather`)
+ * @param index_end One past the largest index when the caller knows it
+ *        (`SparseVector::index_end()`); the check is then O(1). With
+ *        `unknown_index_end` the indices are downloaded and scanned.
  */
 void gather_hip_impl(size_t n, const size_t *indices, double *data,
-                     const double *source, size_t source_size);
+                     const double *source, size_t source_size,
+                     size_t index_end = unknown_index_end);
 void gather_hip_impl(size_t n, const size_t *indices, float *data,
-                     const float *source, size_t source_size);
+                     const float *source, size_t source_size,
+                     size_t index_end = unknown_index_end);
 void gather_hip_impl(size_t n, const size_t *indices, std::uint64_t *data,
-                     const std::uint64_t *source, size_t source_size);
+                     const std::uint64_t *source, size_t source_size,
+                     size_t index_end = unknown_index_end);
 void scatter_hip_impl(size_t n, const size_t *indices, const double *data,
-                      double *dest, size_t dest_size);
+                      double *dest, size_t dest_size,
+                      size_t index_end = unknown_index_end);
 
 /**
  * @brief Gather for SparseVector<HIPTag, double> (HIP device).
@@ -127,7 +147,8 @@ inline void gather(SparseVector<backend::HIPTag, double> &sparse_vector,
     return;
   }
   gather_hip_impl(sparse_vector.size(), sparse_vector.indices().data(),
-                  sparse_vector.data().data(), source, source_size);
+                  sparse_vector.data().data(), source, source_size,
+                  sparse_vector.index_end());
 }
 
 /** Compact typed selection, preserving binary32 values and full-width identities.
@@ -135,8 +156,9 @@ inline void gather(SparseVector<backend::HIPTag, double> &sparse_vector,
  * callers synchronize any producer on a nondefault stream before this call.
  * Returns only after gathering completes. OOB indices leave output unchanged.
  * A nonempty selection requires nonnull source and disjoint source/output
- * storage. Empty selections do not dereference source. Indices are downloaded
- * for validation (O(selection size)); the dense source stays device-resident.
+ * storage. Empty selections do not dereference source. Bounds come from
+ * `index_end()`, recorded when the indices were built on the host; only a
+ * vector sized without indices is downloaded for validation.
  * Scatter remains double-only. This does not add a Float32 remapping API.
  */
 template <typename T>
@@ -145,7 +167,8 @@ inline void gather(SparseVector<backend::HIPTag, T> &sparse_vector, const T *sou
                    size_t source_size) {
   if (sparse_vector.empty()) return;
   gather_hip_impl(sparse_vector.size(), sparse_vector.indices().data(),
-                  sparse_vector.data().data(), source, source_size);
+                  sparse_vector.data().data(), source, source_size,
+                  sparse_vector.index_end());
 }
 
 /**
@@ -158,7 +181,8 @@ inline void scatter(const SparseVector<backend::HIPTag, double> &sparse_vector,
     return;
   }
   scatter_hip_impl(sparse_vector.size(), sparse_vector.indices().data(),
-                   sparse_vector.data().data(), dest, dest_size);
+                   sparse_vector.data().data(), dest, dest_size,
+                   sparse_vector.index_end());
 }
 #endif
 

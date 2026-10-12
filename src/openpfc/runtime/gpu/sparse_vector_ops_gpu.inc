@@ -19,8 +19,9 @@
 #include <string>
 #include <vector>
 
-#include <openpfc/runtime/gpu/gpu_api.hpp>
+#include <openpfc/kernel/decomposition/sparse_vector.hpp>
 #include <openpfc/runtime/common/selection_geometry.hpp>
+#include <openpfc/runtime/gpu/gpu_api.hpp>
 
 #ifdef OpenPFC_ENABLE_GPU_AUTOTUNING
 #include "openpfc/runtime/common/gpu_autotune.hpp"
@@ -55,8 +56,14 @@ __global__ void scatter_kernel(size_t n, const size_t *indices, const double *da
 
 namespace {
 
-void check_indices_host(size_t n, const size_t *indices, size_t length,
-                        const char *oob_message) {
+void check_indices(size_t n, const size_t *indices, size_t length, size_t index_end,
+                   const char *oob_message) {
+  if (index_end != unknown_index_end) {
+    if (index_end > length) {
+      throw std::runtime_error(oob_message);
+    }
+    return;
+  }
   std::vector<size_t> host_idx(n);
   ::pfc::gpuError_t err = ::pfc::gpuMemcpy(host_idx.data(), indices,
                                            n * sizeof(size_t),
@@ -83,8 +90,8 @@ int gather_scatter_threads(size_t n, const char *kernel_name) {
 }
 
 template <typename T>
-void launch_gather(size_t n, const size_t *indices, T *data,
-                   const T *source, size_t source_size) {
+void launch_gather(size_t n, const size_t *indices, T *data, const T *source,
+                   size_t source_size, size_t index_end) {
   if (n == 0) {
     return;
   }
@@ -93,7 +100,7 @@ void launch_gather(size_t n, const size_t *indices, T *data,
   }
   const int threads_per_block = gather_scatter_threads(n, "gather");
   const int blocks = detail::selection_blocks(n, threads_per_block);
-  check_indices_host(n, indices, source_size, "gather: index out of bounds");
+  check_indices(n, indices, source_size, index_end, "gather: index out of bounds");
   gather_kernel<<<blocks, threads_per_block>>>(n, indices, data, source);
   ::pfc::gpuError_t err = ::pfc::gpuGetLastError();
   if (err != ::pfc::gpuSuccess) {
@@ -109,11 +116,11 @@ void launch_gather(size_t n, const size_t *indices, T *data,
 }
 
 void launch_scatter(size_t n, const size_t *indices, const double *data,
-                    double *dest, size_t dest_size) {
+                    double *dest, size_t dest_size, size_t index_end) {
   if (n == 0) {
     return;
   }
-  check_indices_host(n, indices, dest_size, "scatter: index out of bounds");
+  check_indices(n, indices, dest_size, index_end, "scatter: index out of bounds");
   const int threads_per_block = gather_scatter_threads(n, "scatter");
   const int blocks =
       (static_cast<int>(n) + threads_per_block - 1) / threads_per_block;
@@ -135,45 +142,47 @@ void launch_scatter(size_t n, const size_t *indices, const double *data,
 
 #if defined(OpenPFC_ENABLE_CUDA) && defined(OPENPFC_GPU_API_CUDA)
 void gather_cuda_impl(size_t n, const size_t *indices, double *data,
-                      const double *source, size_t source_size) {
-  launch_gather(n, indices, data, source, source_size);
+                      const double *source, size_t source_size, size_t index_end) {
+  launch_gather(n, indices, data, source, source_size, index_end);
 }
 
 void gather_cuda_impl(size_t n, const size_t *indices, float *data,
-                         const float *source, size_t source_size) {
-  launch_gather(n, indices, data, source, source_size);
+                      const float *source, size_t source_size, size_t index_end) {
+  launch_gather(n, indices, data, source, source_size, index_end);
 }
 
 void gather_cuda_impl(size_t n, const size_t *indices, std::uint64_t *data,
-                         const std::uint64_t *source, size_t source_size) {
-  launch_gather(n, indices, data, source, source_size);
+                      const std::uint64_t *source, size_t source_size,
+                      size_t index_end) {
+  launch_gather(n, indices, data, source, source_size, index_end);
 }
 
 void scatter_cuda_impl(size_t n, const size_t *indices, const double *data,
-                       double *dest, size_t dest_size) {
-  launch_scatter(n, indices, data, dest, dest_size);
+                       double *dest, size_t dest_size, size_t index_end) {
+  launch_scatter(n, indices, data, dest, dest_size, index_end);
 }
 #endif
 
 #if defined(OpenPFC_ENABLE_HIP) && defined(OPENPFC_GPU_API_HIP)
 void gather_hip_impl(size_t n, const size_t *indices, double *data,
-                     const double *source, size_t source_size) {
-  launch_gather(n, indices, data, source, source_size);
+                     const double *source, size_t source_size, size_t index_end) {
+  launch_gather(n, indices, data, source, source_size, index_end);
 }
 
 void gather_hip_impl(size_t n, const size_t *indices, float *data,
-                         const float *source, size_t source_size) {
-  launch_gather(n, indices, data, source, source_size);
+                     const float *source, size_t source_size, size_t index_end) {
+  launch_gather(n, indices, data, source, source_size, index_end);
 }
 
 void gather_hip_impl(size_t n, const size_t *indices, std::uint64_t *data,
-                         const std::uint64_t *source, size_t source_size) {
-  launch_gather(n, indices, data, source, source_size);
+                     const std::uint64_t *source, size_t source_size,
+                     size_t index_end) {
+  launch_gather(n, indices, data, source, source_size, index_end);
 }
 
 void scatter_hip_impl(size_t n, const size_t *indices, const double *data,
-                      double *dest, size_t dest_size) {
-  launch_scatter(n, indices, data, dest, dest_size);
+                      double *dest, size_t dest_size, size_t index_end) {
+  launch_scatter(n, indices, data, dest, dest_size, index_end);
 }
 #endif
 

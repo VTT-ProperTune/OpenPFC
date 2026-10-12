@@ -43,6 +43,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <limits>
 #include <stdexcept>
 #include <type_traits>
 #include <vector>
@@ -95,12 +96,18 @@ using HostTag = backend::CPUTag;
  * @tparam BackendTag Backend tag (CPUTag, CUDATag, HIPTag)
  * @tparam T Element type (must be trivially copyable for GPU backends)
  */
+/// `SparseVector::index_end()` when the indices were never seen on the host.
+inline constexpr size_t unknown_index_end = std::numeric_limits<size_t>::max();
+
 template <typename BackendTag, typename T> class SparseVector {
 private:
   DataBuffer<BackendTag, size_t> m_indices; // Sorted indices
   DataBuffer<BackendTag, T> m_data;         // Values at those indices
   size_t m_size;
   bool m_indices_sorted;
+  // One past the largest index, recorded once from the host index list so
+  // device gather/scatter can bounds-check without downloading the indices.
+  size_t m_index_end = unknown_index_end;
 
   void copy_indices_to_device(const std::vector<size_t> &sorted_indices) {
     detail::copy_indices_to_device_impl<BackendTag>(m_indices, m_size,
@@ -125,6 +132,7 @@ public:
       m_indices = DataBuffer<BackendTag, size_t>(0);
       m_data = DataBuffer<BackendTag, T>(0);
       m_indices_sorted = true;
+      m_index_end = 0;
       return;
     }
 
@@ -132,6 +140,7 @@ public:
     std::vector<size_t> sorted_indices = indices;
     std::sort(sorted_indices.begin(), sorted_indices.end());
     m_indices_sorted = true;
+    m_index_end = sorted_indices.back() + 1;
 
     // Allocate buffers
     m_indices = DataBuffer<BackendTag, size_t>(m_size);
@@ -153,12 +162,14 @@ public:
     if (n == 0) {
       m_indices = DataBuffer<BackendTag, size_t>(0);
       m_data = DataBuffer<BackendTag, T>(0);
+      m_index_end = 0;
       return;
     }
     if (sorted_indices == nullptr) {
       throw std::runtime_error(
           "SparseVector: sorted_indices is null for non-zero size");
     }
+    m_index_end = *std::max_element(sorted_indices, sorted_indices + n) + 1;
     m_indices = DataBuffer<BackendTag, size_t>(m_size);
     m_data = DataBuffer<BackendTag, T>(m_size);
     if constexpr (std::is_same_v<BackendTag, backend::CPUTag>) {
@@ -184,6 +195,7 @@ public:
       m_indices = DataBuffer<BackendTag, size_t>(0);
       m_data = DataBuffer<BackendTag, T>(0);
       m_indices_sorted = true;
+      m_index_end = 0;
       return;
     }
 
@@ -205,6 +217,7 @@ public:
       sorted_data.push_back(val);
     }
     m_indices_sorted = true;
+    m_index_end = sorted_indices.back() + 1;
 
     // Allocate buffers
     m_indices = DataBuffer<BackendTag, size_t>(m_size);
@@ -240,6 +253,12 @@ public:
    * @brief Check if indices are sorted
    */
   bool is_sorted() const { return m_indices_sorted; }
+
+  /**
+   * @brief One past the largest index, or `unknown_index_end` when the vector
+   *        was sized without indices (`SparseVector(size_t)`).
+   */
+  size_t index_end() const { return m_index_end; }
 
 private:
   void copy_data_to_device(const std::vector<T> &host_data) {
