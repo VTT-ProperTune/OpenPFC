@@ -280,11 +280,13 @@ TEST_CASE("A no-slip polynomial has a known convective term", "[channel]") {
     const auto coarse = residuals(grid.first, grid.second, 4);
     const auto fine = residuals(grid.first, grid.second, 8);
     const auto finer = residuals(grid.first, grid.second, 16);
+    INFO("degree-8 divergence=" << fine[2] << "; degree-16 divergence=" << finer[2]);
     // The velocity fits a degree-4 grid, so the sampled product is
     // exact from that degree. There is no coarser truncation gap.
-    // The streamwise pressure mode solves a Helmholtz problem, so
-    // its tau residual is about 2e-3 at degree 8 and falls below
-    // 1e-9 at degree 16. Degree 32 overflows that recurrence.
+    // Pressure contains a cosh(2z) mode even for polynomial velocity.
+    // Differentiate on the enriched pressure grid before restriction.
+    // The remaining degree-8 sampled-divergence truncation is below 1e-2;
+    // degree 16 resolves this mode. No tolerance is relaxed.
     REQUIRE(coarse[3] > 0.5);
     REQUIRE(coarse[0] < 1e-10);
     REQUIRE(fine[0] < 1e-10);
@@ -296,6 +298,51 @@ TEST_CASE("A no-slip polynomial has a known convective term", "[channel]") {
     REQUIRE(finer[2] < fine[2]);
     REQUIRE(fine[4] < 1e-9);
     REQUIRE(finer[4] < 1e-9);
+  }
+}
+
+TEST_CASE("Channel pressure agrees with an independent hyperbolic solution",
+          "[channel]") {
+  const double period = 2 * std::acos(-1.0);
+  // p''-4p = -4(1-z²)²(1+z²), p'(+/-1)=0. The polynomial particular
+  // solution is 41/4 + 37z²/2 + 13z⁴/2 + z⁶. The even homogeneous
+  // solution has amplitude -69/(2 sinh(2)). These formulas use no solver.
+  const auto pressure = [](double z) {
+    return 10.25 + z * z * (18.5 + z * z * (6.5 + z * z)) -
+           69 * std::cosh(2 * z) / (2 * std::sinh(2.));
+  };
+  const auto slope = [](double z) {
+    return z * (37 + z * z * (26 + 6 * z * z)) -
+           69 * std::sinh(2 * z) / std::sinh(2.);
+  };
+  for (int degree : {8, 16, 32}) {
+    const int nx = 8, ny = 3;
+    const auto nodes = pfc::fft::chebyshev_lobatto(degree);
+    std::vector<double> tx(nodes.size() * nx * ny), ty(tx.size()), tz(tx.size());
+    for (int iz = 0; iz <= degree; ++iz)
+      for (int iy = 0; iy < ny; ++iy)
+        for (int ix = 0; ix < nx; ++ix) {
+          const double z = nodes[iz], x = period * ix / nx;
+          tx[flow::channel_index(iz, iy, ix, ny, nx)] =
+              -2 * (1 - z * z) * (1 - z * z) * (1 + z * z) * std::sin(2 * x);
+        }
+    const auto got =
+        flow::impermeable_acceleration(tx, ty, tz, nx, ny, period, period);
+    double error = 0, wall = 0;
+    for (int iz = 0; iz <= degree; ++iz)
+      for (int iy = 0; iy < ny; ++iy)
+        for (int ix = 0; ix < nx; ++ix) {
+          const double z = nodes[iz], x = period * ix / nx;
+          const auto i = flow::channel_index(iz, iy, ix, ny, nx);
+          error = std::max(
+              error, std::abs(got.x[i] - tx[i] - 2 * pressure(z) * std::sin(2 * x)));
+          error = std::max(error, std::abs(got.z[i] + slope(z) * std::cos(2 * x)));
+          error = std::max(error, std::abs(got.y[i]));
+          if (iz == 0 || iz == degree) wall = std::max(wall, std::abs(got.z[i]));
+        }
+    INFO("degree=" << degree << " error=" << error << " wall=" << wall);
+    REQUIRE(error < (degree == 8 ? 1e-5 : 1e-10));
+    REQUIRE(wall < 1e-10);
   }
 }
 

@@ -25,11 +25,16 @@ struct WallAcceleration {
 };
 
 /// Remove the pressure gradient from a momentum tendency.
-/// The acceleration is divergence-free. Its wall-normal component
+/// The acceleration approximates the continuous divergence-free projection.
+/// Its sampled divergence converges with polynomial degree; it is not an
+/// exact discrete Leray projector on an underresolved pressure space.
+/// Its wall-normal component
 /// vanishes at both Chebyshev ends. The pressure solve is the
-/// Neumann Poisson problem on this grid: dp/dz equals the normal
+/// Neumann Poisson problem on a degree-N+2 pressure grid: dp/dz equals the normal
 /// tendency at each end. No-slip is the Dirichlet data on the
-/// velocity, not a penalty on a periodic mode.
+/// velocity, not a penalty on a periodic mode. The tendency polynomial is
+/// prolonged, pressure is differentiated before restriction to degree N,
+/// and the caller's velocity grid is unchanged.
 [[nodiscard]] WallAcceleration
 impermeable_acceleration(std::span<const double> tendency_x,
                          std::span<const double> tendency_y,
