@@ -81,10 +81,11 @@ jobs:
       - name: Run Tests
         working-directory: build
         run: |
-          # Same CTest invocation as ci.yml (add_test targets, e.g. openpfc-all-tests)
+          # Instrumented aggregate completed in 388s during bounded qualification.
+          # Preserve every suite/assertion; a 600s overrun still fails the job.
           ctest --output-on-failure -j2 \
             --exclude-regex "benchmark" \
-            --timeout 300
+            --timeout 600
 
       - name: Generate coverage report
         working-directory: build
