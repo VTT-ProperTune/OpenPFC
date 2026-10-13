@@ -12,6 +12,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Breaking
 
+- `SpectralCPUStack::fft()` returns `IHostFFT&` (also for default HeFFTe
+  stacks). Explicit concrete bindings and float/buffer overload consumers
+  must use the preserved `fft::create` factory or migrate to double-vector
+  interface calls (#507).
+
 - An input's `domain` is now the box: `"size": [Nx, Ny, Nz]`, `"lower"` and
   `"upper"` limits, spacing `(upper - lower) / size` on every (periodic)
   axis. `Lx`/`Ly`/`Lz`, `dx`/`dy`/`dz`, `origin`/`origo` and flat root-level
