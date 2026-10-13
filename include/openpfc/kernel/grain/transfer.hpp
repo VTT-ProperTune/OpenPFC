@@ -42,19 +42,26 @@ struct TransferResult {
   std::vector<Grain> grains;
 };
 
-namespace detail {
-
+/// Source/destination storage slots for one active physical UID. Trivially
+/// copyable; validated plans may upload the table to device memory.
 struct Assignment {
   Id id;
   Slot source;
   Slot destination;
 };
 
-struct PreparedTransfer {
+/// Host-owned plan. A public preparation failure returns no payload.
+/// Publish grains with values/labels only after every cell stage succeeds.
+struct TransferPlan {
   TransferStatus status = TransferStatus::Success;
   std::vector<Assignment> assignments;
   std::vector<Grain> grains;
 };
+
+namespace detail {
+// Preserve existing internal/source callers while making type ownership public.
+using Assignment = pfc::grain::Assignment;
+using PreparedTransfer = pfc::grain::TransferPlan;
 
 template <class Grid>
 inline TransferStatus transfer_layout(const Grid &grid, Slot slots,
@@ -256,6 +263,21 @@ OPENPFC_INLINE_HD TransferStatus stage_cell(
 }
 
 } // namespace detail
+
+[[nodiscard]] inline TransferPlan prepare_transfer(Slot slots,
+                                                   std::span<const Grain> grains,
+                                                   std::span<const Transfer> moves) {
+  auto plan = detail::prepare_transfer(slots, grains, moves);
+  if (plan.status != TransferStatus::Success) return {plan.status, {}, {}};
+  return plan;
+}
+
+/// Binary lookup in a sorted table produced by prepare_transfer. Missing UID
+/// returns count. Host/device callers own the table's lifetime and residency.
+OPENPFC_INLINE_HD std::size_t find_assignment(const Assignment *assignments,
+                                              std::size_t count, Id id) {
+  return detail::find_assignment(assignments, count, id);
+}
 
 /**
  * Stage a local 2D transaction in slot-major arrays: slot*(nx*ny)+x+nx*y.

@@ -321,4 +321,43 @@ inline void payload(Statistics &statistics, std::span<const Id> ids,
   statistics.moved_label_bytes = statistics.moved_samples * sizeof(Id);
 }
 } // namespace detail
+
+/// Graph-only decision: no tracking, support cutting or field transfer.
+using Decision = detail::Decision;
+
+/** Plan slot moves for a canonical contact graph and sorted grain registry.
+ * Contacts may describe a subset of the active registry. Weights are finite,
+ * nonnegative and match vertices, including for methods that ignore weights.
+ * Malformed public inputs return InvalidInput; absent/inactive graph identities
+ * return UnknownIdentity. Inputs remain unchanged; callers stage transfers and
+ * publish their accepted state separately. The existing coloring policy is used.
+ */
+[[nodiscard]] inline Decision decide(const ContactGraph &contacts,
+                                     std::span<const Grain> grains, Slot slots,
+                                     std::span<const double> weights,
+                                     const Options &options = {}) {
+  if (options.method != Method::Incremental &&
+      options.method != Method::GlobalSaturation &&
+      options.method != Method::GlobalLargestFirst &&
+      options.method != Method::CompleteOracle)
+    return {Status::InvalidInput, {}, 0, false};
+  try {
+    pfc::grain::validate(contacts);
+  } catch (const std::invalid_argument &) {
+    return {Status::InvalidInput, {}, 0, false};
+  }
+  if (weights.size() != contacts.vertices.size())
+    return {Status::InvalidInput, {}, 0, false};
+  for (double w : weights)
+    if (!std::isfinite(w) || w < 0) return {Status::InvalidInput, {}, 0, false};
+  Id previous = background;
+  for (const auto &grain : grains) {
+    if (!grain.id || grain.id <= previous ||
+        (grain.active && (grain.slot == unassigned || grain.slot >= slots)) ||
+        (!grain.active && grain.slot != unassigned))
+      return {Status::InvalidInput, {}, 0, false};
+    previous = grain.id;
+  }
+  return detail::decide(contacts, grains, slots, weights, options);
+}
 } // namespace pfc::grain::remapping
