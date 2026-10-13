@@ -17,11 +17,17 @@ endif()
 # Split compiled sources into object libraries (kernel/runtime vs frontend) for
 # clearer layering and faster incremental rebuilds; link as one `openpfc` for
 # install/export (see docs/archive/refactoring_roadmap.md Phase D).
-set(OpenPFC_HAS_FFTW3 OFF)
-find_library(OpenPFC_FFTW3_LIBRARY NAMES fftw3)
-if(OpenPFC_FFTW3_LIBRARY)
-  set(OpenPFC_HAS_FFTW3 ON)
+# Keep the existing explicit library override usable.
+if(OpenPFC_FFTW3_LIBRARY AND NOT FFTW3_LIBRARY)
+  set(FFTW3_LIBRARY "${OpenPFC_FFTW3_LIBRARY}" CACHE FILEPATH "Double-precision FFTW library")
 endif()
+if(OpenPFC_ENABLE_HEFFTE)
+  find_package(FFTW3 REQUIRED MODULE)
+else()
+  find_package(FFTW3 QUIET MODULE)
+endif()
+set(OpenPFC_HAS_FFTW3 ${FFTW3_FOUND})
+set(OpenPFC_FFTW3_LIBRARY ${FFTW3_LIBRARY})
 
 set(_openpfc_kernel_obj_sources
     src/openpfc/runtime/common/mpi_startup.cpp
@@ -70,7 +76,8 @@ add_library(OpenPFC ALIAS openpfc)
 if(OpenPFC_HAS_FFTW3)
   # Private: the static archive records the FFTW dependency for its
   # consumers without exporting the absolute library path.
-  target_link_libraries(openpfc PRIVATE ${OpenPFC_FFTW3_LIBRARY})
+  target_link_libraries(openpfc PRIVATE FFTW3::fftw3)
+  target_link_libraries(openpfc_kernel_obj PRIVATE FFTW3::fftw3)
 endif()
 
 # Object libraries need the same include paths / standards as the merged `openpfc`
