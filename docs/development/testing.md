@@ -78,3 +78,14 @@ The authoritative GPU compile check today is `scripts/build.sh --with-cuda --no-
 (`test_tungsten_cpu_vs_cuda`, `test_tungsten_app_gpu_ic`, etc.) must be run on a
 GPU node. See `tests/baselines/BASELINES.md` for the scientific/performance
 baselines and which comparisons are bitwise vs tolerance-based.
+
+## Existing toolchains and portable consumers
+
+`./scripts/build.sh --machine=portable --cpu --no-test --jobs=2` builds a
+package using the caller's compilers, MPI and CMake package search paths.
+Set `CC`, `CXX` and `CMAKE_PREFIX_PATH`, or pass explicit `--cmake-arg`
+options for dependencies and install prefixes. This mode performs no module
+loading and injects no Tohtori/LUMI toolchain. Configure and build remain
+canonical; run `cmake --install <build> --prefix <prefix>` to install.
+Without `--no-test`, the ordinary Python and CTest suites still run.
+CUDA/HIP SDKs and device allocation remain the caller's responsibility.

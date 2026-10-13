@@ -75,6 +75,8 @@ Usage: ./scripts/build.sh [options]
 Canonical configure / build / test entry point for OpenPFC. Do not invoke
 cmake / cmake --build / ctest by hand for routine work — this script loads
 the correct modules (compiler, MPI, HeFFTe) and machine toolchain.
+Use --machine=portable with preinstalled compilers/MPI/packages on ordinary
+CI or workstations. It preserves the caller environment and CMake discovery.
 
 On Tohtori the default is a 32-way Release CPU build in builds/release.
 On LUMI the default is a HIP/ROCm Release build: configure on the login
@@ -82,7 +84,7 @@ node (FetchContent needs the network), then submit compile + ctest to a
 GPU partition (standard-g by default, or dev-g).
 
 Options:
-  --machine=NAME          tohtori or lumi (default: auto-detect from host)
+  --machine=NAME          tohtori, lumi or portable (default: auto-detect from host)
   --build-type=TYPE       Debug or Release
   --build-dir=PATH        Build directory
                           Tohtori default: builds/debug or builds/release
@@ -280,7 +282,8 @@ fi
 case "${MACHINE,,}" in
   tohtori) MACHINE="tohtori" ;;
   lumi) MACHINE="lumi" ;;
-  *) die "unsupported machine '${MACHINE}'; expected tohtori or lumi" ;;
+  portable) MACHINE="portable" ;;
+  *) die "unsupported machine '${MACHINE}'; expected tohtori, lumi or portable" ;;
 esac
 
 if [[ "${MACHINE}" == "lumi" && "${BACKEND_EXPLICIT}" -eq 0 ]]; then
@@ -306,7 +309,7 @@ SUBMIT="$(as_bool "${SUBMIT}")"
 # OPENMPI_ROOT_CUDA above). Only engages for CUDA builds, and only when the
 # caller hasn't already pointed OPENMPI_ROOT somewhere else themselves.
 USE_CUSTOM_CUDA_MPI=0
-if (( WITH_CUDA )) && [[ -z "${OPENMPI_ROOT:-}" ]] &&
+if [[ "${MACHINE}" == "tohtori" ]] && (( WITH_CUDA )) && [[ -z "${OPENMPI_ROOT:-}" ]] &&
    [[ -x "${OPENMPI_ROOT_CUDA}/bin/mpicc" ]]; then
   USE_CUSTOM_CUDA_MPI=1
 fi
@@ -347,14 +350,14 @@ esac
 BACKEND="cpu"
 if (( WITH_CUDA )); then
   BACKEND="cuda"
-  if [[ -z "${CUDA_ARCHITECTURES}" ]]; then
+  if [[ "${MACHINE}" == "tohtori" && -z "${CUDA_ARCHITECTURES}" ]]; then
     CUDA_ARCHITECTURES="90"
   fi
   # heffte/2.4.1-cuda-openmpi5 depends_on the site openmpi/5.0.10 module,
   # which would re-prepend the site MPI onto PATH and undo the custom stack
   # below. HEFFTE_PREFIX + CMAKE_PREFIX_PATH (already set up further down)
   # are sufficient without the module in that case.
-  if [[ -z "${HEFFTE_MODULE}" ]] && (( ! USE_CUSTOM_CUDA_MPI )); then
+  if [[ "${MACHINE}" == "tohtori" && -z "${HEFFTE_MODULE}" ]] && (( ! USE_CUSTOM_CUDA_MPI )); then
     HEFFTE_MODULE="heffte/${HEFFTE_VERSION}-cuda-openmpi5"
   fi
 elif (( WITH_ROCM )); then
@@ -398,8 +401,10 @@ fi
 
 if [[ "${MACHINE}" == "tohtori" ]]; then
   TOOLCHAIN="${REPO_ROOT}/cmake/toolchains/tohtori-gcc11-openmpi.cmake"
-else
+elif [[ "${MACHINE}" == "lumi" ]]; then
   TOOLCHAIN="${REPO_ROOT}/cmake/toolchains/lumi-gcc12-mpich.cmake"
+else
+  TOOLCHAIN=""
 fi
 
 CONFIGURE_SECONDS=0
@@ -601,18 +606,24 @@ setup_lumi_env() {
   fi
 }
 
-init_lmod
-module purge
-if [[ "${MACHINE}" == "lumi" ]]; then
-  setup_lumi_env
+if [[ "${MACHINE}" == "portable" ]]; then
+  # The caller owns compilers, MPI and installed SDK/package discovery.
+  # Never purge its environment or impose an HPC toolchain.
+  export CC="${CC:-cc}" CXX="${CXX:-c++}"
 else
-  setup_tohtori_env
+  init_lmod
+  module purge
+  if [[ "${MACHINE}" == "lumi" ]]; then
+    setup_lumi_env
+  else
+    setup_tohtori_env
+  fi
+  [[ -f "${TOOLCHAIN}" ]] || die "missing toolchain ${TOOLCHAIN}"
 fi
 
-[[ -f "${TOOLCHAIN}" ]] || die "missing toolchain ${TOOLCHAIN}"
-
 HEFFTE_DIR_ENV="${HEFFTE_DIR:-}"
-if (( ENABLE_HEFFTE )); then
+HEFFTE_DIR="${HEFFTE_DIR_ENV}"
+if (( ENABLE_HEFFTE )) && [[ "${MACHINE}" != "portable" ]]; then
   resolve_heffte_dir
   [[ -n "${HEFFTE_DIR}" ]] ||
     die "HeFFTe ${BACKEND} package not found (prefix ${HEFFTE_PREFIX}; module '${HEFFTE_MODULE:-none}')"
@@ -629,7 +640,7 @@ if (( ENABLE_HEFFTE )); then
     export CPATH="${HEFFTE_PREFIX}/include:${CPATH:-}"
   fi
   export CMAKE_PREFIX_PATH="${HEFFTE_PREFIX}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
-else
+elif (( ! ENABLE_HEFFTE )); then
   HEFFTE_DIR=""
   echo "OpenPFC_ENABLE_HEFFTE=OFF (FD-only / kernel-only; HeFFTe not required)"
 fi
@@ -653,7 +664,6 @@ declare -a CMAKE_ARGS=(
   -B "${BUILD_DIR}"
   -G "${CMAKE_GENERATOR}"
   -DCMAKE_BUILD_TYPE="${BUILD_TYPE}"
-  -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}"
   -DOpenPFC_ENABLE_HEFFTE=$([[ ${ENABLE_HEFFTE} -eq 1 ]] && echo ON || echo OFF)
   -DOpenPFC_BUILD_TESTS=$([[ ${RUN_TESTS} -eq 1 ]] && echo ON || echo OFF)
   -DOpenPFC_RUN_MPI_SUITES=$([[ ${RUN_MPI_TESTS} -eq 1 ]] && echo ON || echo OFF)
@@ -666,7 +676,10 @@ declare -a CMAKE_ARGS=(
   -DOpenPFC_ENABLE_CUDA=$([[ ${WITH_CUDA} -eq 1 ]] && echo ON || echo OFF)
   -DOpenPFC_ENABLE_HIP=$([[ ${WITH_ROCM} -eq 1 ]] && echo ON || echo OFF)
 )
-if (( ENABLE_HEFFTE )); then
+if [[ -n "${TOOLCHAIN}" ]]; then
+  CMAKE_ARGS+=("-DCMAKE_TOOLCHAIN_FILE=${TOOLCHAIN}")
+fi
+if (( ENABLE_HEFFTE )) && [[ "${MACHINE}" != "portable" ]]; then
   CMAKE_ARGS+=("-DHeffte_DIR=${HEFFTE_DIR}")
 fi
 
@@ -716,10 +729,12 @@ echo "  MPI suites: $([[ ${RUN_MPI_TESTS} -eq 1 ]] && echo enabled || echo disab
 echo "  compiler:   ${CXX} ($(command -v "${CXX}"))"
 if [[ "${MACHINE}" == "tohtori" ]]; then
   echo "  MPI:        $(command -v mpicxx)$([[ ${USE_CUSTOM_CUDA_MPI} -eq 1 ]] && echo " (custom CUDA-aware build)")"
-else
+elif [[ "${MACHINE}" == "lumi" ]]; then
   echo "  MPI:        Cray MPICH (cc/CC wrappers)"
   echo "  partition:  ${LUMI_PARTITION}  account=${LUMI_ACCOUNT}"
   echo "  submit:     $([[ ${SUBMIT} -eq 1 ]] && echo yes || echo no)"
+else
+  echo "  MPI:        caller-supplied environment (CMake discovery)"
 fi
 if (( WITH_CUDA )); then
   echo "  MPI CUDA-aware: $([[ ${MPI_CUDA_AWARE} -eq 1 ]] && echo ON || echo OFF)"
