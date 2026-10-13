@@ -59,6 +59,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- Host spectral sessions accept explicit `fft = "local"` in JSON/TOML for
+  one actual communicator rank; HeFFTe remains the default (#507).
+
 - `LocalFFT` provides direct double-precision R2C/C2R transforms with owned
   aligned FFTW buffers, input preservation and inverse normalization (#507).
 
