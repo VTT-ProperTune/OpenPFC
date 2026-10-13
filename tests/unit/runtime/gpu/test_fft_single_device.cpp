@@ -113,6 +113,9 @@ void compare(const std::array<int, 3> &n) {
   const auto ha = out_a.to_host(), hb = out_b.to_host();
   CHECK(max_abs(hb, ha) < 1e-12);
   CHECK(max_abs(hb, h) < 1e-12); // round trip
+  CHECK(one.get_fft_time() > 0.0);
+  one.reset_fft_time();
+  CHECK(one.get_fft_time() == 0.0);
   CHECK(max_rel(kb.to_host(), hkb) == 0.0); // backward input preserved
 }
 
