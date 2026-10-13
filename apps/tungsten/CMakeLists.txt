@@ -183,6 +183,38 @@ if(TUNGSTEN_ENABLE_TESTS)
   endif()
 endif()
 
+# Production JSON/TOML selection and collective one-rank restriction.
+if(OpenPFC_BUILD_TESTS AND TUNGSTEN_ENABLE_TESTS)
+  find_package(Python3 3.8 COMPONENTS Interpreter QUIET)
+  if(Python3_Interpreter_FOUND)
+    foreach(_entry "cuda,cufft" "hip,rocfft")
+      string(REPLACE "," ";" _parts "${_entry}")
+      list(GET _parts 0 _runtime)
+      list(GET _parts 1 _backend)
+      if(TARGET tungsten_${_runtime})
+        add_test(NAME tungsten-${_runtime}-local-fft-cli
+          COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/local_fft_cli.py
+            --binary $<TARGET_FILE:tungsten_${_runtime}> --backend ${_backend})
+        set_tests_properties(tungsten-${_runtime}-local-fft-cli PROPERTIES
+          TIMEOUT 150 RUN_SERIAL TRUE SKIP_RETURN_CODE 77)
+        if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
+           (OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR
+            OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 2))
+          add_test(NAME tungsten-${_runtime}-local-fft-reject-2rank
+            COMMAND ${Python3_EXECUTABLE}
+              ${CMAKE_CURRENT_SOURCE_DIR}/tests/local_fft_cli.py
+              --binary $<TARGET_FILE:tungsten_${_runtime}> --backend ${_backend}
+              --mpiexec ${MPIEXEC_EXECUTABLE}
+              --numproc-flag=${MPIEXEC_NUMPROC_FLAG})
+          set_tests_properties(tungsten-${_runtime}-local-fft-reject-2rank PROPERTIES
+            TIMEOUT 150 RUN_SERIAL TRUE SKIP_RETURN_CODE 77)
+        endif()
+      endif()
+    endforeach()
+  endif()
+endif()
+
 # ---- scalability study -----------------------------------------------------
 if(OpenPFC_ENABLE_CUDA_SPECTRAL)
   tungsten_cuda_executable(tungsten_scalability src/tungsten_scalability.cpp)

@@ -129,6 +129,26 @@ public:
         m_session(make_simulation_session<Stack>(m_settings, rank, nproc, comm)),
         m_ckpt(make_checkpoint_service(m_settings, comm)),
         m_profile(m_settings, rank, comm) {
+    if (m_ctx.rank0) {
+      const char *implementation = "heffte";
+      const char *backend = "fftw";
+#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL) || defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+      if constexpr (!is_host) {
+        if (stack().fft_choice() == pfc::sim::stacks::DeviceFFTChoice::single_device)
+          implementation = "local";
+#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
+        if constexpr (std::is_same_v<memory_space, pfc::CUDASpace>)
+          backend = "cufft";
+#endif
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+        if constexpr (std::is_same_v<memory_space, pfc::HIPSpace>)
+          backend = "rocfft";
+#endif
+      }
+#endif
+      std::cout << "SPECTRAL_FFT implementation=" << implementation
+                << " backend=" << backend << " ranks=" << nproc << '\n';
+    }
     const pfc::Box3i inbox = fft().get_inbox_bounds();
 
     // Physics + fields.

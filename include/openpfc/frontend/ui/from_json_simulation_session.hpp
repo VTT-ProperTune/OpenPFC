@@ -54,8 +54,11 @@ make_simulation_session(const json &settings, int rank, int nproc,
                                         pfc::sim::SimulationMethod::Spectral,
                                         pfc::sim::SimulationBackend::Cuda);
     const auto options = cuda_spectral_plan_options_from_json(settings, nproc);
+    const auto choice = spectral_fft_choice_from_json(settings) == "local"
+                            ? pfc::sim::stacks::DeviceFFTChoice::single_device
+                            : pfc::sim::stacks::DeviceFFTChoice::heffte;
     return pfc::sim::SimulationSession<Stack>(selection, std::move(time), [&] {
-      return Stack(std::move(domain), rank, nproc, comm, options);
+      return Stack(std::move(domain), rank, nproc, comm, choice, options);
     });
 #endif
 #if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
@@ -65,8 +68,11 @@ make_simulation_session(const json &settings, int rank, int nproc,
                                         pfc::sim::SimulationMethod::Spectral,
                                         pfc::sim::SimulationBackend::Hip);
     const auto options = hip_spectral_plan_options_from_json(settings, nproc);
+    const auto choice = spectral_fft_choice_from_json(settings) == "local"
+                            ? pfc::sim::stacks::DeviceFFTChoice::single_device
+                            : pfc::sim::stacks::DeviceFFTChoice::heffte;
     return pfc::sim::SimulationSession<Stack>(selection, std::move(time), [&] {
-      return Stack(std::move(domain), rank, nproc, comm, options);
+      return Stack(std::move(domain), rank, nproc, comm, choice, options);
     });
 #endif
   } else {

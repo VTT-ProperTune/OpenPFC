@@ -15,6 +15,7 @@ int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
 #include <algorithm>
 #include <cmath>
 #include <numbers>
+#include <string>
 #include <vector>
 
 #include <catch2/catch_session.hpp>
@@ -73,6 +74,8 @@ json single_seed_settings() {
 double max_abs_diff(const std::vector<double> &a, const double *b, std::size_t n) {
   double m = 0.0;
   for (std::size_t i = 0; i < n; ++i) {
+    REQUIRE(std::isfinite(a[i]));
+    REQUIRE(std::isfinite(b[i]));
     m = std::max(m, std::abs(a[i] - b[i]));
   }
   return m;
@@ -175,15 +178,28 @@ TEST_CASE("TungstenETD 32^3/10-step sine IC host vs device within 1e-10",
   fill_sine(host.psi().vec().data(), host.psi().vec().size());
   host.run();
 
-  Dev dev(settings, rank, nproc, MPI_COMM_WORLD);
-  dev.psi().with_host_view([&](double *d, std::size_t n) { fill_sine(d, n); });
-  dev.run();
-
   const auto &psi_h = host.psi().vec();
-  dev.psi().with_host_view([&](double *d, std::size_t n) {
-    REQUIRE(n == psi_h.size());
-    REQUIRE(max_abs_diff(psi_h, d, n) < 1e-10);
-  });
+  std::vector<double> distributed;
+  for (const char *choice : {"heffte", "local"}) {
+    if (nproc != 1 && std::string(choice) == "local") continue;
+    INFO("fft = " << choice);
+    settings["fft"] = choice;
+    Dev dev(settings, rank, nproc, MPI_COMM_WORLD);
+    CHECK(dev.stack().fft_choice() ==
+          (std::string(choice) == "local"
+               ? pfc::sim::stacks::DeviceFFTChoice::single_device
+               : pfc::sim::stacks::DeviceFFTChoice::heffte));
+    dev.psi().with_host_view([&](double *d, std::size_t n) { fill_sine(d, n); });
+    dev.run();
+    dev.psi().with_host_view([&](double *d, std::size_t n) {
+      REQUIRE(n == psi_h.size());
+      REQUIRE(max_abs_diff(psi_h, d, n) < 1e-10);
+      if (distributed.empty())
+        distributed.assign(d, d + n);
+      else
+        REQUIRE(max_abs_diff(distributed, d, n) < 1e-10);
+    });
+  }
 }
 
 TEST_CASE("TungstenGPUSession single_seed IC matches host within 1e-10",
