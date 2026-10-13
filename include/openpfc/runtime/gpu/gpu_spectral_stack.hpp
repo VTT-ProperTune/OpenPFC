@@ -93,15 +93,8 @@ public:
 
   explicit GPUSpectralStack(pfc::Domain domain, int rank, int nproc, MPI_Comm comm,
                             const heffte::plan_options &options)
-      : m_domain(std::move(domain)), m_decomp([&] {
-          pfc::runtime::gpu::bind_local_device(comm);
-          return pfc::decomposition::create(
-              m_domain, pfc::decomposition::spectral_fft_proc_grid(
-                            m_domain.size, nproc));
-        }()),
-        m_fft(gpu_fft_for<MemorySpace>::create(m_decomp, rank, comm, options)),
-        m_u(m_domain, m_fft.get_inbox_bounds(), 0), m_rank(rank), m_nproc(nproc),
-        m_comm(comm) {}
+      : GPUSpectralStack(std::move(domain), rank, nproc, comm,
+                         DeviceFFTChoice::heffte, options) {}
 
   explicit GPUSpectralStack(pfc::Domain domain, int rank, int nproc,
                             MPI_Comm comm = MPI_COMM_WORLD)
@@ -109,31 +102,22 @@ public:
                          gpu_fft_for<MemorySpace>::default_plan_options()) {}
 
   /**
-   * @brief Stack with an explicit device-FFT choice.
-   * @throws std::invalid_argument for `single_device` with nproc != 1
-   * @throws std::runtime_error if the single-device boxes differ from heFFTe's
+   * @brief Construct only the selected FFT and size the field from its inbox.
+   * @throws std::invalid_argument for `single_device` unless `comm` has one
+   *         rank and the supplied rank/size agree with that communicator.
    */
   GPUSpectralStack(pfc::Domain domain, int rank, int nproc, MPI_Comm comm,
                    DeviceFFTChoice choice,
                    const heffte::plan_options &options =
                        gpu_fft_for<MemorySpace>::default_plan_options())
-      : GPUSpectralStack(std::move(domain), rank, nproc, comm, options) {
-    if (choice != DeviceFFTChoice::single_device) return;
-    if (m_nproc != 1)
-      throw std::invalid_argument(
-          "GPUSpectralStack: DeviceFFTChoice::single_device needs exactly one rank");
-    m_single = std::make_unique<pfc::fft::SingleDeviceFFT<MemorySpace>>(
-        std::array<int, 3>{m_domain.size[0], m_domain.size[1], m_domain.size[2]});
-    if (!(m_single->get_inbox_bounds() == m_fft.get_inbox_bounds()) ||
-        !(m_single->get_outbox_bounds() == m_fft.get_outbox_bounds()))
-      throw std::runtime_error(
-          "GPUSpectralStack: single-device FFT boxes differ from the heFFTe boxes");
-  }
+      : m_domain(std::move(domain)),
+        m_decomp(make_decomposition(m_domain, rank, nproc, comm, choice)),
+        m_fft(make_fft(m_domain, m_decomp, rank, comm, choice, options)),
+        m_u(m_domain, m_fft->get_inbox_bounds(), 0), m_choice(choice), m_rank(rank),
+        m_nproc(nproc), m_comm(comm) {}
 
-  /// The device FFT in use (`single_device` when chosen, else heFFTe).
-  [[nodiscard]] DeviceFFTChoice fft_choice() const noexcept {
-    return m_single ? DeviceFFTChoice::single_device : DeviceFFTChoice::heffte;
-  }
+  /// The selected implementation; the other implementation is not constructed.
+  [[nodiscard]] DeviceFFTChoice fft_choice() const noexcept { return m_choice; }
 
   [[nodiscard]] const pfc::Domain &domain() const noexcept { return m_domain; }
   [[nodiscard]] pfc::decomposition::Decomposition &decomposition() noexcept {
@@ -144,13 +128,9 @@ public:
     return m_decomp;
   }
 
-  [[nodiscard]] pfc::fft::IDeviceFFT<MemorySpace> &fft() noexcept {
-    if (m_single) return *m_single;
-    return m_fft;
-  }
+  [[nodiscard]] pfc::fft::IDeviceFFT<MemorySpace> &fft() noexcept { return *m_fft; }
   [[nodiscard]] const pfc::fft::IDeviceFFT<MemorySpace> &fft() const noexcept {
-    if (m_single) return *m_single;
-    return m_fft;
+    return *m_fft;
   }
 
   [[nodiscard]] field_type &u() noexcept { return m_u; }
@@ -161,11 +141,52 @@ public:
   [[nodiscard]] MPI_Comm mpi_comm() const noexcept { return m_comm; }
 
 private:
+  static pfc::decomposition::Decomposition
+  make_decomposition(const pfc::Domain &domain, int rank, int nproc, MPI_Comm comm,
+                     DeviceFFTChoice choice) {
+    if (choice == DeviceFFTChoice::single_device) {
+      if (comm == MPI_COMM_NULL)
+        throw std::invalid_argument(
+            "GPUSpectralStack: local FFT needs a valid communicator");
+      int comm_size = 0, comm_rank = -1;
+      MPI_Comm_size(comm, &comm_size);
+      MPI_Comm_rank(comm, &comm_rank);
+      if (nproc != 1 || rank != 0 || comm_size != 1 || comm_rank != 0) {
+        throw std::invalid_argument(
+            "GPUSpectralStack: local FFT needs exactly one rank and matching "
+            "communicator rank/size");
+      }
+    } else if (choice != DeviceFFTChoice::heffte) {
+      throw std::invalid_argument("GPUSpectralStack: invalid FFT choice");
+    }
+    // Validate before device binding or any vendor-plan allocation.
+    pfc::runtime::gpu::bind_local_device(comm);
+    return pfc::decomposition::create(
+        domain, pfc::decomposition::spectral_fft_proc_grid(domain.size, nproc));
+  }
+
+  static std::unique_ptr<pfc::fft::IDeviceFFT<MemorySpace>>
+  make_fft(const pfc::Domain &domain,
+           const pfc::decomposition::Decomposition &decomp, int rank, MPI_Comm comm,
+           DeviceFFTChoice choice, const heffte::plan_options &options) {
+    if (choice == DeviceFFTChoice::single_device) {
+      if (!(pfc::decomposition::local_box(decomp, rank) ==
+            pfc::domain::index_box(domain))) {
+        throw std::invalid_argument(
+            "GPUSpectralStack: local FFT needs the whole domain");
+      }
+      return std::make_unique<pfc::fft::SingleDeviceFFT<MemorySpace>>(domain.size);
+    }
+    // Construct the factory prvalue in place: FFT_Impl is not movable.
+    return std::unique_ptr<pfc::fft::IDeviceFFT<MemorySpace>>(
+        new fft_type(gpu_fft_for<MemorySpace>::create(decomp, rank, comm, options)));
+  }
+
   pfc::Domain m_domain{};
   pfc::decomposition::Decomposition m_decomp;
-  fft_type m_fft;
-  std::unique_ptr<pfc::fft::SingleDeviceFFT<MemorySpace>> m_single;
+  std::unique_ptr<pfc::fft::IDeviceFFT<MemorySpace>> m_fft;
   field_type m_u;
+  DeviceFFTChoice m_choice;
   int m_rank{0};
   int m_nproc{1};
   MPI_Comm m_comm{MPI_COMM_WORLD};
