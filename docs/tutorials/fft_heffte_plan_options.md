@@ -54,12 +54,25 @@ Start from defaults (`fftw`, `alltoall`, `use_pencils = false`) and change **one
 - [`../performance_profiling.md`](../hpc/performance_profiling.md) — measuring the effect of changes  
 - [`gpu_app_quickstart.md`](gpu_app_quickstart.md) — GPU binaries and CMake flags  
 
-## Direct plans for a single GPU rank
+## Direct plans for a single rank
 
-JSON-driven GPU spectral sessions, including Tungsten, accept a root
+JSON-driven spectral sessions, including Tungsten, accept a root
 `"fft": "local"` (`fft = "local"` before any table in TOML). This uses the
-existing direct cuFFT/rocFFT 3-D plans and requires a one-rank communicator.
-`"fft": "heffte"` is the default and supports distributed execution. CPU
-spectral sessions currently reject `local`. This selection is independent
-of the hardware `backend`; HeFFTe `plan_options` do not tune the direct plan.
+direct FFTW/cuFFT/rocFFT 3-D plans and requires a one-rank communicator.
+`"fft": "heffte"` is the default and supports distributed execution. This
+selection is independent of the hardware `backend`; HeFFTe `plan_options` do not tune the direct plan.
 The selected implementation and vendor backend are printed at startup.
+
+The host `SpectralCPUStack::fft()` accessor now returns `IHostFFT&`, so the
+same solver can use either implementation. This is a source compatibility
+change even for stacks using the default HeFFTe implementation: replace
+explicit `CPUFFT&` bindings with `IHostFFT&` for double-vector transforms.
+Code needing concrete `CPUFFT` buffer or float overloads can still construct
+that type with `fft::create`. The legacy
+`cpu_fft_from_json_and_decomposition` helper returns `CPUFFT` and rejects
+`fft = "local"`; use a spectral session/stack or `LocalFFT` for direct FFTW.
+Host direct transforms preserve inputs through owned aligned buffers; caller
+vectors do not need FFTW alignment. Planning and destruction follow FFTW's
+[serial planner contract](https://www.fftw.org/fftw3_doc/Thread-safety.html).
+The implementation does not initialize FFTW threads, change thread counts or
+call global cleanup. One instance is not reentrant.

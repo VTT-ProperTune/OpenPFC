@@ -43,9 +43,11 @@ make_simulation_session(const json &settings, int rank, int nproc,
                                         pfc::sim::SimulationMethod::Spectral,
                                         pfc::sim::SimulationBackend::Cpu);
     const auto options = cpu_spectral_plan_options_from_json(settings, nproc);
+    const auto choice = spectral_fft_choice_from_json(settings) == "local"
+                            ? pfc::fft::Implementation::Local
+                            : pfc::fft::Implementation::Heffte;
     return pfc::sim::SimulationSession<Stack>(selection, std::move(time), [&] {
-      return pfc::sim::stacks::SpectralCPUStack(std::move(domain), rank, nproc, comm,
-                                                options);
+      return Stack(std::move(domain), rank, nproc, comm, choice, options);
     });
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
   } else if constexpr (std::is_same_v<Stack, pfc::sim::stacks::GPUSpectralStack<

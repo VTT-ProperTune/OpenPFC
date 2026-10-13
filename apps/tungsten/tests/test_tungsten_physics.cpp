@@ -549,3 +549,41 @@ TEST_CASE("SpectralETDSession infers vtk from .vti path", "[tungsten][etd][vtk]"
   std::error_code ec;
   std::filesystem::remove_all(dir, ec);
 }
+
+TEST_CASE("Tungsten direct FFTW retains complete accepted fields",
+          "[tungsten][local_fft]") {
+  int ranks = 0;
+  MPI_Comm_size(MPI_COMM_WORLD, &ranks);
+  if (ranks != 1) SKIP("complete-domain local FFT needs one rank");
+  json settings = golden_settings(16, 0.1, 0.01);
+  settings["model"]["params"]["n0"] = -0.4;
+  settings["model"]["params"]["T"] = 0.5;
+  settings["initial_conditions"] =
+      json::array({{{"target", "psi"}, {"type", "constant"}, {"n0", -0.4}}});
+  tungsten::TungstenSession reference(settings, 0, 1, MPI_COMM_SELF);
+  settings["fft"] = "local";
+  tungsten::TungstenSession local(settings, 0, 1, MPI_COMM_SELF);
+  CHECK(local.stack().fft_choice() == pfc::fft::Implementation::Local);
+  CHECK(dynamic_cast<pfc::fft::LocalFFT *>(&local.fft()) != nullptr);
+  auto &values = reference.psi().vec();
+  for (std::size_t i = 0; i < values.size(); ++i)
+    values[i] = -0.4 + 0.1 * std::sin(2 * std::numbers::pi * double(i) /
+                                      double(values.size()));
+  local.psi().vec() = values;
+  std::vector<std::vector<double>> states;
+  reference.run([&] { states.push_back(reference.psi().vec()); });
+  std::size_t accepted = 0;
+  local.run([&] {
+    REQUIRE(accepted < states.size());
+    const auto &actual = local.psi().vec();
+    const auto &expected = states[accepted++];
+    REQUIRE(actual.size() == expected.size());
+    for (std::size_t i = 0; i < actual.size(); ++i) {
+      REQUIRE(std::isfinite(actual[i]));
+      REQUIRE(std::isfinite(expected[i]));
+      REQUIRE(std::abs(actual[i] - expected[i]) < 1e-10);
+    }
+  });
+  REQUIRE(accepted == states.size());
+  REQUIRE(accepted == 11); // initial state plus ten accepted timesteps
+}

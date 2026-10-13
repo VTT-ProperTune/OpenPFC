@@ -105,15 +105,11 @@ inline void reject_cuda_backend_for_cpu_spectral_stack(const nlohmann::json &pla
  * `from_json<fft::Backend>`), the root value is copied into the plan slice so one
  * JSON file can drive both helpers consistently.
  *
- * `backend: \"cuda\"` is rejected here: this path always constructs CPU HeFFTe
- * (`fft::create` → `CPUFFT`).
+ * CPU sessions use FFTW hardware; the implementation choice is independent.
  */
 [[nodiscard]] inline heffte::plan_options
 cpu_spectral_plan_options_from_json(const nlohmann::json &settings, int nproc = 1) {
-  if (spectral_fft_choice_from_json(settings) == "local") {
-    throw std::invalid_argument(
-        "local FFT is currently supported only by GPU spectral sessions");
-  }
+  (void)spectral_fft_choice_from_json(settings);
   const nlohmann::json plan_opts = merged_spectral_plan_options_json(settings);
   heffte::plan_options options = heffte::default_options<heffte::backend::fftw>();
   if (!plan_opts.empty()) {
@@ -133,6 +129,9 @@ cpu_spectral_plan_options_from_json(const nlohmann::json &settings, int nproc = 
 cpu_fft_from_json_and_decomposition(const nlohmann::json &settings,
                                     const decomposition::Decomposition &decomp,
                                     int rank_id, MPI_Comm comm) {
+  if (spectral_fft_choice_from_json(settings) == "local")
+    throw std::invalid_argument("local FFT requires SpectralCPUStack or LocalFFT; "
+                                "this legacy factory returns CPUFFT");
   const auto options = cpu_spectral_plan_options_from_json(settings);
   return fft::create(decomp, rank_id, comm, 0, options);
 }
