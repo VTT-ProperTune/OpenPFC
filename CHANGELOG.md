@@ -7,6 +7,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- `pfc::geometry::periodic_distance` is the Euclidean distance from each
+  voxel centre to the nearest occupied voxel of a periodic isotropic mask.
+  The signed companion is negative on occupied voxels (#520).
+
 - Add `pfc::solvers::scalar_root` (`solvers/scalar_root.hpp`): bracketed
   Newton with bisection fallback for one scalar equation per cell, such as
   inverting a concentration law for its diffusion potential. Host and device
