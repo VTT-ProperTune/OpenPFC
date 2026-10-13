@@ -132,6 +132,10 @@ public:
     if (m_ctx.rank0) {
       const char *implementation = "heffte";
       const char *backend = "fftw";
+      if constexpr (is_host) {
+        if (stack().fft_choice() == pfc::fft::Implementation::Local)
+          implementation = "local";
+      }
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL) || defined(OpenPFC_ENABLE_HIP_SPECTRAL)
       if constexpr (!is_host) {
         if (stack().fft_choice() == pfc::sim::stacks::DeviceFFTChoice::single_device)
