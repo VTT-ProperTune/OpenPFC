@@ -50,3 +50,11 @@ if(DEFINED Heffte_DIR AND NOT Heffte_DIR STREQUAL "Heffte_DIR-NOTFOUND")
 else()
   message(STATUS "Skipping export of OpenPFCTargets (Heffte not installed via config)")
 endif()
+
+if(OpenPFC_BUILD_TESTS AND OpenPFC_HAS_FFTW3)
+  add_test(NAME LocalFFT_InstalledConsumer
+    COMMAND ${CMAKE_COMMAND} "-Dbuild=${CMAKE_BINARY_DIR}" "-Dsource=${CMAKE_SOURCE_DIR}"
+      "-Dcc=${CMAKE_C_COMPILER}" "-Dcxx=${CMAKE_CXX_COMPILER}"
+      -P ${CMAKE_SOURCE_DIR}/tests/packaging/check_local_fft_consumer.cmake)
+  set_tests_properties(LocalFFT_InstalledConsumer PROPERTIES TIMEOUT 180 RUN_SERIAL TRUE)
+endif()
