@@ -14,6 +14,14 @@ if(NOT TARGET MPI::MPI_CXX OR NOT TARGET MPI::MPI_C)
   find_package(MPI REQUIRED COMPONENTS C CXX)
 endif()
 
+if(@OpenPFC_HAS_FFTW3@)
+  set(_OpenPFC_MODULE_PATH "${CMAKE_MODULE_PATH}")
+  list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
+  find_dependency(FFTW3 MODULE)
+  set(CMAKE_MODULE_PATH "${_OpenPFC_MODULE_PATH}")
+  unset(_OpenPFC_MODULE_PATH)
+endif()
+
 # Transitive dependencies of the installed targets (audit 11 / PM). Without
 # these, find_package(OpenPFC) on a CUDA/HIP/HDF5-enabled install fails unless
 # the consumer happens to have already found them. The flags are stamped from

@@ -32,8 +32,13 @@ write_basic_package_version_file(
 install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/OpenPFCConfig.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/OpenPFCConfigVersion.cmake
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindFFTW3.cmake
   DESTINATION lib/cmake/OpenPFC
 )
+
+# Build-tree consumers use the same relocatable dependency finder.
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindFFTW3.cmake
+               ${CMAKE_CURRENT_BINARY_DIR}/FindFFTW3.cmake COPYONLY)
 
 # Avoid export errors in local/dev builds where HeFFTe is fetched via
 # FetchContent and not part of any install/export set.
