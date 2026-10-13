@@ -177,6 +177,14 @@ public:
 
   double dt() const noexcept { return m_dt; }
 
+  /// Allocated scalar scratch only; excludes tableau, callback and metadata.
+  [[nodiscard]] std::size_t workspace_bytes() const noexcept {
+    std::size_t cells =
+        m_du.capacity() + m_u_temp.capacity() + m_candidate.capacity();
+    for (const auto &stage : m_k) cells += stage.capacity();
+    return cells * sizeof(Scalar);
+  }
+
   /** Isolate a candidate from host field state (via `vec()`). */
   template <pfc::field::HostFieldState<Scalar> F>
   [[nodiscard]] Attempt attempt(double t, const F &u) {

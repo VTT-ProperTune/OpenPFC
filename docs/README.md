@@ -76,6 +76,9 @@ Documentation is easier to maintain when each fact has one primary home:
 Other pages should link to these sources instead of copying long option lists,
 API examples, or troubleshooting sections.
 
+[Runtime coupled field stepping](concepts/runtime_field_rk.md) describes
+owned-cell CPU RK stages, collective rejection and accepted-state integrity.
+
 [Grain identity and topology](concepts/grain_topology.md) describes persistent
 identities, recyclable slots and the local 2D contact contract.
 

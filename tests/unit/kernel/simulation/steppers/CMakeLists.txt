@@ -16,6 +16,7 @@ target_sources(openpfc-tests
     ${CMAKE_CURRENT_SOURCE_DIR}/test_step_attempt.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_step_protocol.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_rk_nfield.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_runtime_field_rk.cpp
 )
 
 # AC-facing CTest name: `ctest -R '^method_composition$'`.
@@ -53,3 +54,20 @@ add_test(NAME test_rk_nfield
          COMMAND $<TARGET_FILE:openpfc-tests> "[rk_nfield]")
 set_tests_properties(test_rk_nfield PROPERTIES
   ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+
+add_test(NAME test_runtime_field_rk
+         COMMAND $<TARGET_FILE:openpfc-tests> "[runtime_field_rk]")
+if(OpenPFC_RUN_MPI_SUITES)
+  foreach(_runtime_ranks 1 2 4)
+    if(OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER 0 AND
+       _runtime_ranks GREATER OpenPFC_MPI_TEST_MAX_WORLD_SIZE)
+      continue()
+    endif()
+    add_test(NAME runtime_field_rk_${_runtime_ranks}ranks
+      COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${_runtime_ranks}
+        ${MPIEXEC_PREFLAGS} $<TARGET_FILE:openpfc-tests> "[runtime_field_rk]"
+        ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(runtime_field_rk_${_runtime_ranks}ranks PROPERTIES
+      RUN_SERIAL TRUE TIMEOUT 120)
+  endforeach()
+endif()
