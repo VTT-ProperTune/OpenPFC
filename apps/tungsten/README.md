@@ -70,6 +70,21 @@ the file throws at startup. It documents a feature that does not exist.
 
 Install path when using `cmake --install`: `<prefix>/bin/`.
 
+## Single-rank GPU FFT
+
+GPU binaries accept root-level `"fft": "local"` in JSON, or `fft = "local"`
+before any table in TOML. This selects a direct cuFFT (CUDA) or rocFFT (HIP)
+3-D real/complex plan. The communicator must have exactly one rank, with the
+whole domain on that rank. A distributed run rejects this choice at startup.
+
+Omit `fft`, or set `"fft": "heffte"`, to retain the distributed HeFFTe path.
+CPU binaries currently support only `heffte`. The hardware `backend` choice
+is independent of `fft`; existing `plan_options` affect the HeFFTe path only.
+Both paths retain the same spectral layout, inverse normalization and
+preserved inverse input, but roundoff differences are possible. Startup
+prints `SPECTRAL_FFT implementation=local backend=cufft ranks=1` (or `rocfft`)
+so a run records which implementation it used.
+
 ## Inputs
 
 | Location | Format |

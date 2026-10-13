@@ -51,6 +51,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- Spectral GPU sessions accept explicit `fft = "local"` in JSON/TOML for
+  direct cuFFT/rocFFT on one actual communicator rank. HeFFTe remains the
+  default and distributed implementation (#506).
+
 - `BoundaryExtension::Linear` supplies nearest-owned cell-face Dirichlet
   extrapolation through the reflection service, with composed corners and
   unchanged default mirror reflection (#511).

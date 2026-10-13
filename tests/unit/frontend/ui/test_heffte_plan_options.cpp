@@ -136,3 +136,17 @@ TEST_CASE("cpu_spectral_plan_options_from_json uses slabs at 16 ranks",
   REQUIRE(eight.use_pencils == true);
   REQUIRE(sixteen.use_pencils == false);
 }
+
+TEST_CASE("Spectral FFT selection is explicit and validated",
+          "[ui][fft_selection]") {
+  REQUIRE(pfc::ui::spectral_fft_choice_from_json(json::object()) == "heffte");
+  REQUIRE(pfc::ui::spectral_fft_choice_from_json({{"fft", "heffte"}}) == "heffte");
+  REQUIRE(pfc::ui::spectral_fft_choice_from_json({{"fft", "local"}}) == "local");
+  for (const auto &invalid :
+       {json("auto"), json("cufft"), json(1), json(nullptr), json::object()}) {
+    REQUIRE_THROWS_AS(pfc::ui::spectral_fft_choice_from_json({{"fft", invalid}}),
+                      std::invalid_argument);
+  }
+  REQUIRE_THROWS_AS(pfc::ui::cpu_spectral_plan_options_from_json({{"fft", "local"}}),
+                    std::invalid_argument);
+}

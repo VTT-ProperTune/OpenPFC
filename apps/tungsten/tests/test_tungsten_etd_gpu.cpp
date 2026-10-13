@@ -15,6 +15,7 @@ int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
 #include <algorithm>
 #include <cmath>
 #include <numbers>
+#include <string>
 #include <vector>
 
 #include <catch2/catch_session.hpp>
@@ -73,6 +74,8 @@ json single_seed_settings() {
 double max_abs_diff(const std::vector<double> &a, const double *b, std::size_t n) {
   double m = 0.0;
   for (std::size_t i = 0; i < n; ++i) {
+    REQUIRE(std::isfinite(a[i]));
+    REQUIRE(std::isfinite(b[i]));
     m = std::max(m, std::abs(a[i] - b[i]));
   }
   return m;
@@ -138,7 +141,7 @@ TEST_CASE("TungstenETD 32^3/10-step sine IC host vs device within 1e-10",
   settings["domain"]["size"] = {32, 32, 32};
   settings["domain"]["upper"] = {32.0, 32.0, 32.0};
   settings["timestepping"] = {
-      {"t0", 0.0}, {"t1", 0.1}, {"dt", 0.01}, {"saveat", 0.05}};
+      {"t0", 0.0}, {"t1", 0.1}, {"dt", 0.01}, {"saveat", 0.01}};
   settings["initial_conditions"] =
       json::array({{{"target", "psi"}, {"type", "constant"}, {"n0", -0.4}}});
 
@@ -173,17 +176,37 @@ TEST_CASE("TungstenETD 32^3/10-step sine IC host vs device within 1e-10",
 
   tungsten::TungstenSession host(settings, rank, nproc, MPI_COMM_WORLD);
   fill_sine(host.psi().vec().data(), host.psi().vec().size());
-  host.run();
+  std::vector<std::vector<double>> host_states;
+  host.run([&] { host_states.push_back(host.psi().vec()); });
+  REQUIRE(host_states.size() == 11);
 
-  Dev dev(settings, rank, nproc, MPI_COMM_WORLD);
-  dev.psi().with_host_view([&](double *d, std::size_t n) { fill_sine(d, n); });
-  dev.run();
-
-  const auto &psi_h = host.psi().vec();
-  dev.psi().with_host_view([&](double *d, std::size_t n) {
-    REQUIRE(n == psi_h.size());
-    REQUIRE(max_abs_diff(psi_h, d, n) < 1e-10);
-  });
+  std::vector<std::vector<double>> distributed;
+  for (const char *choice : {"heffte", "local"}) {
+    if (nproc != 1 && std::string(choice) == "local") continue;
+    INFO("fft = " << choice);
+    settings["fft"] = choice;
+    Dev dev(settings, rank, nproc, MPI_COMM_WORLD);
+    CHECK(dev.stack().fft_choice() ==
+          (std::string(choice) == "local"
+               ? pfc::sim::stacks::DeviceFFTChoice::single_device
+               : pfc::sim::stacks::DeviceFFTChoice::heffte));
+    dev.psi().with_host_view([&](double *d, std::size_t n) { fill_sine(d, n); });
+    const bool reference = distributed.empty();
+    std::size_t state = 0;
+    dev.run([&] {
+      REQUIRE(state < host_states.size());
+      dev.psi().with_host_view([&](double *d, std::size_t n) {
+        REQUIRE(n == host_states[state].size());
+        REQUIRE(max_abs_diff(host_states[state], d, n) < 1e-10);
+        if (reference)
+          distributed.emplace_back(d, d + n);
+        else
+          REQUIRE(max_abs_diff(distributed[state], d, n) < 1e-10);
+      });
+      ++state;
+    });
+    REQUIRE(state == host_states.size());
+  }
 }
 
 TEST_CASE("TungstenGPUSession single_seed IC matches host within 1e-10",
