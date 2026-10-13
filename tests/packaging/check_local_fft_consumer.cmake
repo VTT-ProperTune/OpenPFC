@@ -19,3 +19,6 @@ check_command("${CMAKE_COMMAND}" -S "${source}/tests/packaging/local_fft_consume
               "-DCMAKE_C_COMPILER=${cc}" "-DCMAKE_CXX_COMPILER=${cxx}")
 check_command("${CMAKE_COMMAND}" --build "${root}/build" --parallel 2)
 check_command("${root}/build/local_fft_consumer")
+if(EXISTS "${root}/build/host_stack_consumer")
+  check_command("${root}/build/host_stack_consumer")
+endif()

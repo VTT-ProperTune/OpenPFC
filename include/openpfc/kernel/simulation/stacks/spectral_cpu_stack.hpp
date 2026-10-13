@@ -10,7 +10,7 @@
  *
  * @details
  * Programmatic (and JSON via `make_simulation_session`) spectral CPU
- * stack: Domain + Decomposition + CPUFFT + Field. JSON HeFFTe plan
+ * stack: Domain + Decomposition + host FFT + Field. JSON HeFFTe plan
  * options overlay through the optional `heffte::plan_options` constructor.
  *
  * The members are stored in a strict declaration order so that internal
@@ -21,7 +21,7 @@
  *  - Geometry (size/spacing/origin/periodicity) is extracted from the
  *    Domain and stored internally.
  *  - Decomposition is created directly from Domain.
- *  - `pfc::fft::CPUFFT` internally caches a `Decomposition`.
+ *  - The selected transform implements `pfc::fft::IHostFFT`.
  *  - `pfc::data::Field<double>` is sized to the FFT's local real-space
  *    inbox via `pfc::data::field_from_inbox(domain, fft.get_inbox_bounds())`.
  *
@@ -34,6 +34,8 @@
  * @see openpfc/frontend/ui/from_json_simulation_session.hpp — JSON factory.
  */
 
+#include <memory>
+#include <stdexcept>
 #include <utility>
 
 #include <mpi.h>
@@ -45,6 +47,7 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
+#include <openpfc/kernel/fft/local_fft.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/field/scaled_field.hpp>
 #include <openpfc/kernel/field/spectral_gradient.hpp>
@@ -77,17 +80,25 @@ public:
    */
   explicit SpectralCPUStack(pfc::Domain domain, int rank, int nproc, MPI_Comm comm,
                             const heffte::plan_options &options)
-      : m_geometry({domain.size, domain.spacing, domain.origin, domain.periodic}),
-        m_decomp(pfc::decomposition::create(
-            domain, pfc::decomposition::spectral_fft_proc_grid(domain.size, nproc))),
-        m_fft(pfc::fft::create(m_decomp, rank, comm, 0, options)),
-        m_u(pfc::data::field_from_inbox<double>(domain, m_fft.get_inbox_bounds())),
-        m_rank(rank), m_nproc(nproc), m_comm(comm) {}
+      : SpectralCPUStack(std::move(domain), rank, nproc, comm,
+                         pfc::fft::Implementation::Heffte, options) {}
 
   explicit SpectralCPUStack(pfc::Domain domain, int rank, int nproc,
                             MPI_Comm comm = MPI_COMM_WORLD)
       : SpectralCPUStack(std::move(domain), rank, nproc, comm,
                          heffte::default_options<heffte::backend::fftw>()) {}
+
+  /// Local execution requires one actual communicator rank owning the domain.
+  SpectralCPUStack(pfc::Domain domain, int rank, int nproc, MPI_Comm comm,
+                   pfc::fft::Implementation implementation,
+                   const heffte::plan_options &options =
+                       heffte::default_options<heffte::backend::fftw>())
+      : m_geometry({domain.size, domain.spacing, domain.origin, domain.periodic}),
+        m_decomp(make_decomposition(domain, rank, nproc, comm, implementation)),
+        m_fft(make_fft(domain, m_decomp, rank, comm, implementation, options)),
+        m_u(pfc::data::field_from_inbox<double>(domain, m_fft->get_inbox_bounds())),
+        m_implementation(implementation), m_rank(rank), m_nproc(nproc),
+        m_comm(comm) {}
 
   SpectralCPUStack(const SpectralCPUStack &) = delete;
   SpectralCPUStack &operator=(const SpectralCPUStack &) = delete;
@@ -106,8 +117,12 @@ public:
     return m_decomp;
   }
 
-  [[nodiscard]] pfc::fft::CPUFFT &fft() noexcept { return m_fft; }
-  [[nodiscard]] const pfc::fft::CPUFFT &fft() const noexcept { return m_fft; }
+  [[nodiscard]] pfc::fft::IHostFFT &fft() noexcept { return *m_fft; }
+  [[nodiscard]] const pfc::fft::IHostFFT &fft() const noexcept { return *m_fft; }
+
+  [[nodiscard]] pfc::fft::Implementation fft_choice() const noexcept {
+    return m_implementation;
+  }
 
   [[nodiscard]] pfc::data::Field<double> &u() noexcept { return m_u; }
   [[nodiscard]] const pfc::data::Field<double> &u() const noexcept { return m_u; }
@@ -134,7 +149,7 @@ public:
    * @tparam G  Model-owned per-point grads aggregate.
    */
   template <class G> [[nodiscard]] auto du() {
-    auto eval = pfc::field::create<G>(m_u, m_fft);
+    auto eval = pfc::field::create<G>(m_u, *m_fft);
     using EvalT = decltype(eval);
     return pfc::sim::DuField<G, EvalT>(m_u.size(), std::move(eval), []() {});
   }
@@ -144,10 +159,47 @@ public:
   [[nodiscard]] MPI_Comm mpi_comm() const noexcept { return m_comm; }
 
 private:
+  static pfc::decomposition::Decomposition
+  make_decomposition(const pfc::Domain &domain, int rank, int nproc, MPI_Comm comm,
+                     pfc::fft::Implementation implementation) {
+    if (implementation == pfc::fft::Implementation::Local) {
+      if (comm == MPI_COMM_NULL)
+        throw std::invalid_argument(
+            "SpectralCPUStack: local FFT needs a valid communicator");
+      int comm_size = 0, comm_rank = -1;
+      MPI_Comm_size(comm, &comm_size);
+      MPI_Comm_rank(comm, &comm_rank);
+      if (nproc != 1 || rank != 0 || comm_size != 1 || comm_rank != 0)
+        throw std::invalid_argument("SpectralCPUStack: local FFT needs exactly one "
+                                    "rank and matching communicator rank/size");
+    } else if (implementation != pfc::fft::Implementation::Heffte) {
+      throw std::invalid_argument("SpectralCPUStack: invalid FFT choice");
+    }
+    return pfc::decomposition::create(
+        domain, pfc::decomposition::spectral_fft_proc_grid(domain.size, nproc));
+  }
+
+  static std::unique_ptr<pfc::fft::IHostFFT>
+  make_fft(const pfc::Domain &domain,
+           const pfc::decomposition::Decomposition &decomp, int rank, MPI_Comm comm,
+           pfc::fft::Implementation implementation,
+           const heffte::plan_options &options) {
+    if (implementation == pfc::fft::Implementation::Local) {
+      if (!(pfc::decomposition::local_box(decomp, rank) ==
+            pfc::domain::index_box(domain)))
+        throw std::invalid_argument(
+            "SpectralCPUStack: local FFT needs the whole domain");
+      return std::make_unique<pfc::fft::LocalFFT>(domain.size);
+    }
+    return std::unique_ptr<pfc::fft::IHostFFT>(
+        new pfc::fft::CPUFFT(pfc::fft::create(decomp, rank, comm, 0, options)));
+  }
+
   SpectralGeometry m_geometry;
   pfc::decomposition::Decomposition m_decomp;
-  pfc::fft::CPUFFT m_fft;
+  std::unique_ptr<pfc::fft::IHostFFT> m_fft;
   pfc::data::Field<double> m_u;
+  pfc::fft::Implementation m_implementation;
   int m_rank{0};
   int m_nproc{1};
   MPI_Comm m_comm{MPI_COMM_WORLD};
