@@ -38,11 +38,15 @@ namespace {
 #if defined(OPENPFC_TEST_HIP)
 using Space = pfc::HIPSpace;
 bool available() { return pfc::gpu::test::is_hip_available(); }
-auto make_heffte(const pfc::decomposition::Decomposition &d) { return pfc::fft::create_hip(d, 0); }
+auto make_heffte(const pfc::decomposition::Decomposition &d) {
+  return pfc::fft::create_hip(d, 0);
+}
 #else
 using Space = pfc::CUDASpace;
 bool available() { return pfc::gpu::test::is_cuda_available(); }
-auto make_heffte(const pfc::decomposition::Decomposition &d) { return pfc::fft::create_cuda(d, 0); }
+auto make_heffte(const pfc::decomposition::Decomposition &d) {
+  return pfc::fft::create_cuda(d, 0);
+}
 #endif
 
 using Real = typename pfc::fft::IDeviceFFT<Space>::RealBuffer;
@@ -54,7 +58,8 @@ void ensure_mpi() {
   if (!init) MPI_Init(nullptr, nullptr);
 }
 
-double max_rel(const std::vector<std::complex<double>> &a, const std::vector<std::complex<double>> &b) {
+double max_rel(const std::vector<std::complex<double>> &a,
+               const std::vector<std::complex<double>> &b) {
   double num = 0.0, den = 0.0;
   for (std::size_t i = 0; i < a.size(); ++i) {
     num = std::max(num, std::abs(a[i] - b[i]));
@@ -70,7 +75,8 @@ double max_abs(const std::vector<double> &a, const std::vector<double> &b) {
 }
 
 void compare(const std::array<int, 3> &n) {
-  auto domain = pfc::domain::create(pfc::GridSize({n[0], n[1], n[2]}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+  auto domain = pfc::domain::create(pfc::GridSize({n[0], n[1], n[2]}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                     pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = pfc::decomposition::create(domain, 1);
   auto ref = make_heffte(decomp);
@@ -97,32 +103,59 @@ void compare(const std::array<int, 3> &n) {
   one.backward(kb, out_b);
   const auto ha = out_a.to_host(), hb = out_b.to_host();
   CHECK(max_abs(hb, ha) < 1e-12);
-  CHECK(max_abs(hb, h) < 1e-12);                 // round trip
-  CHECK(max_rel(kb.to_host(), hkb) == 0.0);      // backward input preserved
+  CHECK(max_abs(hb, h) < 1e-12); // round trip
+  CHECK(max_rel(kb.to_host(), hkb) == 0.0); // backward input preserved
 }
 
 } // namespace
 
-TEST_CASE("SingleDeviceFFT agrees with the heFFTe backend", "[gpu][fft][single_device]") {
+TEST_CASE("SingleDeviceFFT agrees with the heFFTe backend",
+          "[gpu][fft][single_device]") {
   if (!available()) SKIP("no GPU");
   ensure_mpi();
-  for (const auto &n : {std::array<int, 3>{32, 32, 32}, std::array<int, 3>{43, 819, 16},
-                        std::array<int, 3>{15, 9, 7}, std::array<int, 3>{13, 17, 11}, std::array<int, 3>{1, 24, 20}})
+  for (const auto &n :
+       {std::array<int, 3>{32, 32, 32}, std::array<int, 3>{43, 819, 16},
+        std::array<int, 3>{15, 9, 7}, std::array<int, 3>{13, 17, 11},
+        std::array<int, 3>{1, 24, 20}})
     compare(n);
 }
 
-TEST_CASE("GPUSpectralStack exposes the single-device FFT on request", "[gpu][fft][single_device]") {
+TEST_CASE("GPUSpectralStack exposes the single-device FFT on request",
+          "[gpu][fft][single_device]") {
   if (!available()) SKIP("no GPU");
   ensure_mpi();
-  auto domain = pfc::domain::create(pfc::GridSize({20, 18, 12}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+  auto domain = pfc::domain::create(pfc::GridSize({20, 18, 12}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                     pfc::GridSpacing({0.5, 0.5, 0.5}));
   pfc::sim::stacks::GPUSpectralStack<Space> heffte(domain, 0, 1, MPI_COMM_SELF);
-  pfc::sim::stacks::GPUSpectralStack<Space> single(domain, 0, 1, MPI_COMM_SELF,
-                                                   pfc::sim::stacks::DeviceFFTChoice::single_device);
+  pfc::sim::stacks::GPUSpectralStack<Space> single(
+      domain, 0, 1, MPI_COMM_SELF, pfc::sim::stacks::DeviceFFTChoice::single_device);
   CHECK(heffte.fft_choice() == pfc::sim::stacks::DeviceFFTChoice::heffte);
   CHECK(single.fft_choice() == pfc::sim::stacks::DeviceFFTChoice::single_device);
   CHECK(dynamic_cast<pfc::fft::SingleDeviceFFT<Space> *>(&single.fft()) != nullptr);
   CHECK(single.fft().get_outbox_bounds() == heffte.fft().get_outbox_bounds());
+}
+
+TEST_CASE("Local FFT rejects inconsistent ranks before device allocation",
+          "[gpu][fft][single_device][rank_rejection]") {
+  ensure_mpi();
+  auto domain = pfc::domain::from_bounds({8, 8, 8}, {0., 0., 0.}, {8., 8., 8.});
+  using Stack = pfc::sim::stacks::GPUSpectralStack<Space>;
+  const auto local = pfc::sim::stacks::DeviceFFTChoice::single_device;
+  REQUIRE_THROWS_AS((Stack(domain, 0, 2, MPI_COMM_SELF, local)),
+                    std::invalid_argument);
+  REQUIRE_THROWS_AS((Stack(domain, 1, 1, MPI_COMM_SELF, local)),
+                    std::invalid_argument);
+  int size = 0, rank = 0;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (size > 1) {
+    // Even a caller claiming one rank must not bypass the communicator check.
+    REQUIRE_THROWS_AS((Stack(domain, 0, 1, MPI_COMM_WORLD, local)),
+                      std::invalid_argument);
+    REQUIRE_THROWS_AS((Stack(domain, rank, size, MPI_COMM_WORLD, local)),
+                      std::invalid_argument);
+  }
 }
 
 int main(int argc, char *argv[]) {
