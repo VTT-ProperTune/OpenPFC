@@ -38,6 +38,18 @@
 
 namespace pfc::ui {
 
+/** @brief Read the explicit FFT implementation, independently of hardware backend.
+ */
+[[nodiscard]] inline std::string
+spectral_fft_choice_from_json(const nlohmann::json &settings) {
+  if (!settings.contains("fft")) return "heffte";
+  const auto &value = settings.at("fft");
+  if (!value.is_string() || (value != "heffte" && value != "local")) {
+    throw std::invalid_argument("fft must be \"heffte\" or \"local\"");
+  }
+  return value.get<std::string>();
+}
+
 /**
  * @brief Merge root `plan_options` with optional root-level `backend` string
  *
@@ -97,8 +109,11 @@ inline void reject_cuda_backend_for_cpu_spectral_stack(const nlohmann::json &pla
  * (`fft::create` → `CPUFFT`).
  */
 [[nodiscard]] inline heffte::plan_options
-cpu_spectral_plan_options_from_json(const nlohmann::json &settings,
-                                    int nproc = 1) {
+cpu_spectral_plan_options_from_json(const nlohmann::json &settings, int nproc = 1) {
+  if (spectral_fft_choice_from_json(settings) == "local") {
+    throw std::invalid_argument(
+        "local FFT is currently supported only by GPU spectral sessions");
+  }
   const nlohmann::json plan_opts = merged_spectral_plan_options_json(settings);
   heffte::plan_options options = heffte::default_options<heffte::backend::fftw>();
   if (!plan_opts.empty()) {
@@ -132,8 +147,7 @@ cpu_fft_from_json_and_decomposition(const nlohmann::json &settings,
  * `make_simulation_session<GPUSpectralStack<CUDASpace>>` and GPU ETD sessions.
  */
 [[nodiscard]] inline heffte::plan_options
-cuda_spectral_plan_options_from_json(const nlohmann::json &settings,
-                                     int nproc = 1) {
+cuda_spectral_plan_options_from_json(const nlohmann::json &settings, int nproc = 1) {
   const nlohmann::json merged = merged_spectral_plan_options_json(settings);
   heffte::plan_options options = heffte::default_options<heffte::backend::cufft>();
   if (!merged.empty()) {
@@ -154,8 +168,7 @@ cuda_spectral_plan_options_from_json(const nlohmann::json &settings,
  * `heffte::backend::rocfft` defaults.
  */
 [[nodiscard]] inline heffte::plan_options
-hip_spectral_plan_options_from_json(const nlohmann::json &settings,
-                                    int nproc = 1) {
+hip_spectral_plan_options_from_json(const nlohmann::json &settings, int nproc = 1) {
   const nlohmann::json merged = merged_spectral_plan_options_json(settings);
   heffte::plan_options options = heffte::default_options<heffte::backend::rocfft>();
   if (!merged.empty()) {
@@ -177,8 +190,7 @@ hip_spectral_plan_options_from_json(const nlohmann::json &settings,
  */
 template <class MemorySpace>
 [[nodiscard]] heffte::plan_options
-gpu_spectral_plan_options_from_json(const nlohmann::json &settings,
-                                    int nproc = 1);
+gpu_spectral_plan_options_from_json(const nlohmann::json &settings, int nproc = 1);
 
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
 template <>
