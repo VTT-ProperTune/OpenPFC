@@ -35,6 +35,7 @@
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL) || defined(OpenPFC_ENABLE_HIP_SPECTRAL)
 
 #include <array>
+#include <chrono>
 #include <complex>
 #include <cstddef>
 #include <stdexcept>
@@ -67,7 +68,8 @@ template <> struct single_device_vendor<CUDASpace> {
   };
   static void check(cufftResult r, const char *what) {
     if (r != CUFFT_SUCCESS)
-      throw std::runtime_error(std::string("SingleDeviceFFT<CUDA>: ") + what + " failed, cufftResult " +
+      throw std::runtime_error(std::string("SingleDeviceFFT<CUDA>: ") + what +
+                               " failed, cufftResult " +
                                std::to_string(static_cast<int>(r)));
   }
   static plans create(const std::array<int, 3> &n) {
@@ -82,11 +84,13 @@ template <> struct single_device_vendor<CUDASpace> {
     p = {};
   }
   static void forward(plans &p, const double *in, std::complex<double> *out) {
-    check(cufftExecD2Z(p.fwd, const_cast<double *>(in), reinterpret_cast<cufftDoubleComplex *>(out)),
+    check(cufftExecD2Z(p.fwd, const_cast<double *>(in),
+                       reinterpret_cast<cufftDoubleComplex *>(out)),
           "cufftExecD2Z");
   }
   static void backward(plans &p, std::complex<double> *in, double *out) {
-    check(cufftExecZ2D(p.bwd, reinterpret_cast<cufftDoubleComplex *>(in), out), "cufftExecZ2D");
+    check(cufftExecZ2D(p.bwd, reinterpret_cast<cufftDoubleComplex *>(in), out),
+          "cufftExecZ2D");
   }
   static void scaled_copy(double *dst, const double *src, double a, std::size_t n) {
     pfc::axpy_fill_cuda_impl(dst, src, a, 0.0, n);
@@ -103,29 +107,37 @@ template <> struct single_device_vendor<HIPSpace> {
   };
   static void check(rocfft_status s, const char *what) {
     if (s != rocfft_status_success)
-      throw std::runtime_error(std::string("SingleDeviceFFT<HIP>: ") + what + " failed, rocfft_status " +
+      throw std::runtime_error(std::string("SingleDeviceFFT<HIP>: ") + what +
+                               " failed, rocfft_status " +
                                std::to_string(static_cast<int>(s)));
   }
   static plans create(const std::array<int, 3> &n) {
     check(rocfft_setup(), "rocfft_setup");
     plans p;
     // rocFFT lengths are fastest first; default strides are contiguous.
-    const std::size_t len[3] = {static_cast<std::size_t>(n[0]), static_cast<std::size_t>(n[1]),
+    const std::size_t len[3] = {static_cast<std::size_t>(n[0]),
+                                static_cast<std::size_t>(n[1]),
                                 static_cast<std::size_t>(n[2])};
-    check(rocfft_plan_create(&p.fwd, rocfft_placement_notinplace, rocfft_transform_type_real_forward,
+    check(rocfft_plan_create(&p.fwd, rocfft_placement_notinplace,
+                             rocfft_transform_type_real_forward,
                              rocfft_precision_double, 3, len, 1, nullptr),
           "rocfft_plan_create (forward)");
-    check(rocfft_plan_create(&p.bwd, rocfft_placement_notinplace, rocfft_transform_type_real_inverse,
+    check(rocfft_plan_create(&p.bwd, rocfft_placement_notinplace,
+                             rocfft_transform_type_real_inverse,
                              rocfft_precision_double, 3, len, 1, nullptr),
           "rocfft_plan_create (inverse)");
     std::size_t wf = 0, wb = 0;
-    check(rocfft_plan_get_work_buffer_size(p.fwd, &wf), "rocfft_plan_get_work_buffer_size");
-    check(rocfft_plan_get_work_buffer_size(p.bwd, &wb), "rocfft_plan_get_work_buffer_size");
+    check(rocfft_plan_get_work_buffer_size(p.fwd, &wf),
+          "rocfft_plan_get_work_buffer_size");
+    check(rocfft_plan_get_work_buffer_size(p.bwd, &wb),
+          "rocfft_plan_get_work_buffer_size");
     check(rocfft_execution_info_create(&p.info), "rocfft_execution_info_create");
     const std::size_t w = wf > wb ? wf : wb;
     if (w > 0) {
-      if (hipMalloc(&p.work, w) != hipSuccess) throw std::runtime_error("SingleDeviceFFT<HIP>: hipMalloc failed");
-      check(rocfft_execution_info_set_work_buffer(p.info, p.work, w), "rocfft_execution_info_set_work_buffer");
+      if (hipMalloc(&p.work, w) != hipSuccess)
+        throw std::runtime_error("SingleDeviceFFT<HIP>: hipMalloc failed");
+      check(rocfft_execution_info_set_work_buffer(p.info, p.work, w),
+            "rocfft_execution_info_set_work_buffer");
     }
     return p;
   }
@@ -158,7 +170,8 @@ template <> struct single_device_vendor<HIPSpace> {
  * @brief One-rank device FFT through one vendor 3D plan per direction.
  * @tparam MemorySpace `CUDASpace` or `HIPSpace`.
  */
-template <class MemorySpace> class SingleDeviceFFT final : public IDeviceFFT<MemorySpace> {
+template <class MemorySpace>
+class SingleDeviceFFT final : public IDeviceFFT<MemorySpace> {
   using vendor = detail::single_device_vendor<MemorySpace>;
 
 public:
@@ -168,7 +181,8 @@ public:
   /// @param size global grid size {nx, ny, nz} (x fastest), each >= 1.
   explicit SingleDeviceFFT(const std::array<int, 3> &size) : m_n(size) {
     for (int v : size)
-      if (v < 1) throw std::invalid_argument("SingleDeviceFFT: grid sizes must be positive");
+      if (v < 1)
+        throw std::invalid_argument("SingleDeviceFFT: grid sizes must be positive");
     m_plans = vendor::create(m_n);
     m_work = ComplexBuffer(size_outbox());
   }
@@ -180,20 +194,30 @@ public:
 
   void forward(const RealBuffer &in, ComplexBuffer &out) override {
     require(in.size() == size_inbox() && out.size() == size_outbox(), "forward");
+    const auto start = std::chrono::steady_clock::now();
     vendor::forward(m_plans, in.data(), out.data());
+    m_fft_time +=
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - start)
+            .count();
   }
 
   void backward(const ComplexBuffer &in, RealBuffer &out) override {
     require(in.size() == size_outbox() && out.size() == size_inbox(), "backward");
     // Workspace copy and 1/N scaling in one pass over the complex data
     // (interleaved re/im doubles), then the C2R from the workspace.
-    vendor::scaled_copy(reinterpret_cast<double *>(m_work.data()), reinterpret_cast<const double *>(in.data()),
+    const auto start = std::chrono::steady_clock::now();
+    vendor::scaled_copy(reinterpret_cast<double *>(m_work.data()),
+                        reinterpret_cast<const double *>(in.data()),
                         1.0 / static_cast<double>(size_inbox()), 2 * size_outbox());
     vendor::backward(m_plans, m_work.data(), out.data());
+    m_fft_time +=
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - start)
+            .count();
   }
 
-  void reset_fft_time() override {}
-  [[nodiscard]] double get_fft_time() const override { return 0.0; }
+  // Host call duration, matching FFT_Impl; no extra device synchronization.
+  void reset_fft_time() override { m_fft_time = 0.0; }
+  [[nodiscard]] double get_fft_time() const override { return m_fft_time; }
   [[nodiscard]] std::size_t size_inbox() const override {
     return static_cast<std::size_t>(m_n[0]) * m_n[1] * m_n[2];
   }
@@ -213,11 +237,14 @@ public:
 
 private:
   static void require(bool ok, const char *what) {
-    if (!ok) throw std::invalid_argument(std::string("SingleDeviceFFT::") + what + ": buffer size mismatch");
+    if (!ok)
+      throw std::invalid_argument(std::string("SingleDeviceFFT::") + what +
+                                  ": buffer size mismatch");
   }
   std::array<int, 3> m_n;
   typename vendor::plans m_plans{};
   ComplexBuffer m_work;
+  double m_fft_time = 0.0;
 };
 
 } // namespace pfc::fft
