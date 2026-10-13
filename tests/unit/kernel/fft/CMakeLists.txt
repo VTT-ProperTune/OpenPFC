@@ -9,6 +9,7 @@ target_sources(openpfc-tests PRIVATE
 )
 if(OpenPFC_HAS_FFTW3)
   target_sources(openpfc-tests PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_local_fft.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_chebyshev.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_real_transform.cpp)
 endif()
@@ -43,4 +44,8 @@ if(OpenPFC_ENABLE_HEFFTE)
       ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_input_preserved.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_interface_overriders.cpp
   )
+endif()
+
+if(OpenPFC_HAS_FFTW3)
+  add_test(NAME LocalFFT COMMAND openpfc-tests "[local_fft]~[MPI]")
 endif()
