@@ -16,22 +16,23 @@ import sys
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--binary", required=True)
-    parser.add_argument("--backend", choices=("cufft", "rocfft"), required=True)
+    parser.add_argument("--backend", choices=("fftw", "cufft", "rocfft"), required=True)
     parser.add_argument("--mpiexec")
     parser.add_argument("--numproc-flag", default="-n")
     args = parser.parse_args()
-    library, probe = (("libcudart.so", "cudaGetDeviceCount")
-                      if args.backend == "cufft"
-                      else ("libamdhip64.so", "hipGetDeviceCount"))
-    try:
-        runtime = ctypes.CDLL(library)
-    except OSError:
-        print(f"SKIP: {library} is unavailable")
-        return 77
-    count = ctypes.c_int()
-    if getattr(runtime, probe)(ctypes.byref(count)) != 0 or count.value == 0:
-        print(f"SKIP: no usable {args.backend} device")
-        return 77
+    if args.backend != "fftw":
+        library, probe = (("libcudart.so", "cudaGetDeviceCount")
+                          if args.backend == "cufft"
+                          else ("libamdhip64.so", "hipGetDeviceCount"))
+        try:
+            runtime = ctypes.CDLL(library)
+        except OSError:
+            print(f"SKIP: {library} is unavailable")
+            return 77
+        count = ctypes.c_int()
+        if getattr(runtime, probe)(ctypes.byref(count)) != 0 or count.value == 0:
+            print(f"SKIP: no usable {args.backend} device")
+            return 77
     settings = {
         "fft": "local",
         "domain": {"size": [8, 8, 8], "lower": [0, 0, 0], "upper": [8, 8, 8]},
