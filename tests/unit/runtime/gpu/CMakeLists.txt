@@ -30,6 +30,13 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     target_link_libraries(test_fft_single_device_cuda PRIVATE Catch2::Catch2 openpfc
         openpfc_gpu_kernels CUDA::cudart CUDA::cufft MPI::MPI_CXX Heffte::Heffte)
     add_test(NAME GPU_FFT_SingleDevice COMMAND test_fft_single_device_cuda)
+    if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
+       (OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 2))
+      add_test(NAME GPU_FFT_LocalReject2Rank
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+          $<TARGET_FILE:test_fft_single_device_cuda> "[rank_rejection]")
+      set_tests_properties(GPU_FFT_LocalReject2Rank PROPERTIES TIMEOUT 120 RUN_SERIAL TRUE)
+    endif()
 
     # One device-vs-host ETD parity target (plain, mean-field, moving-frame toys);
     # the toy pointwise functors are instantiated for the device in the .cu TU.
@@ -221,6 +228,13 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
         target_link_libraries(test_fft_single_device_hip PRIVATE Catch2::Catch2 openpfc
             openpfc_hip_kernels hip::host MPI::MPI_CXX Heffte::Heffte)
         add_test(NAME HIP_FFT_SingleDevice COMMAND test_fft_single_device_hip)
+        if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
+           (OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 2))
+          add_test(NAME HIP_FFT_LocalReject2Rank
+            COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+              $<TARGET_FILE:test_fft_single_device_hip> "[rank_rejection]")
+          set_tests_properties(HIP_FFT_LocalReject2Rank PROPERTIES TIMEOUT 120 RUN_SERIAL TRUE)
+        endif()
 
         add_executable(test_spectral_etd_system_hip
             test_spectral_etd_system_gpu.cpp
@@ -500,3 +514,17 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
     set_tests_properties(MechanicsProjector_hip PROPERTIES TIMEOUT 120 SKIP_RETURN_CODE 4)
   endif()
 endif()
+
+# Exercise selected direct plans through a relocated installed public SDK.
+foreach(backend cuda hip)
+  string(TOUPPER "${backend}" upper_backend)
+  if(OpenPFC_ENABLE_${upper_backend}_SPECTRAL)
+    add_test(NAME LocalFFT_${backend}_InstalledConsumer
+      COMMAND ${CMAKE_COMMAND} "-Dsource=${CMAKE_SOURCE_DIR}"
+        "-Dbuild=${CMAKE_BINARY_DIR}" "-Dbackend=${backend}"
+        "-Dcc=${CMAKE_C_COMPILER}" "-Dcxx=${CMAKE_CXX_COMPILER}"
+        -P "${CMAKE_SOURCE_DIR}/tests/packaging/check_local_fft_device_consumer.cmake")
+    set_tests_properties(LocalFFT_${backend}_InstalledConsumer PROPERTIES
+      TIMEOUT 150 RUN_SERIAL TRUE SKIP_REGULAR_EXPRESSION "SKIP: no usable device")
+  endif()
+endforeach()
