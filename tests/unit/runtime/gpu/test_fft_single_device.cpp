@@ -20,7 +20,10 @@ int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
 #include <array>
 #include <cmath>
 #include <complex>
+#include <limits>
 #include <random>
+#include <stdexcept>
+#include <type_traits>
 #include <vector>
 
 #include <catch2/catch_session.hpp>
@@ -34,6 +37,46 @@ int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
 #include <openpfc/runtime/gpu/gpu_spectral_stack.hpp>
 
 namespace {
+
+struct CountingPlans {
+  struct plans {
+    std::array<bool, 4> resources{};
+  };
+  static inline int live = 0;
+  static inline int freed = 0;
+  static void destroy(plans &p) noexcept {
+    for (bool &resource : p.resources) {
+      if (resource) {
+        --live;
+        ++freed;
+        resource = false;
+      }
+    }
+  }
+};
+
+using Owner = pfc::fft::detail::PlanOwner<CountingPlans>;
+static_assert(!std::is_copy_constructible_v<Owner>);
+static_assert(!std::is_copy_assignable_v<Owner>);
+
+CountingPlans::plans make_counted_plans(int fail_after) {
+  Owner owner;
+  for (int i = 0; i < 4; ++i) {
+    if (i == fail_after) throw std::runtime_error("plan construction failed");
+    owner.get().resources[i] = true;
+    ++CountingPlans::live;
+  }
+  return owner.release();
+}
+
+struct FailedTransform {
+  Owner owner;
+  FailedTransform() {
+    owner.get() = make_counted_plans(-1);
+    // A containing constructor fails after successful plan creation.
+    throw std::bad_alloc();
+  }
+};
 
 #if defined(OPENPFC_TEST_HIP)
 using Space = pfc::HIPSpace;
@@ -120,6 +163,41 @@ void compare(const std::array<int, 3> &n) {
 }
 
 } // namespace
+
+TEST_CASE("Direct FFT rejects invalid storage before vendor planning",
+          "[fft][plan_ownership]") {
+  using Transform = pfc::fft::SingleDeviceFFT<Space>;
+  REQUIRE_THROWS_AS((Transform({0, 2, 3})), std::invalid_argument);
+  REQUIRE_THROWS_AS((Transform({2, -1, 3})), std::invalid_argument);
+  const int huge = std::numeric_limits<int>::max();
+  REQUIRE_THROWS_AS((Transform({huge, huge, huge})), std::invalid_argument);
+}
+
+TEST_CASE("Partial FFT plans are released when construction throws",
+          "[fft][plan_ownership]") {
+  for (int fail_after = 0; fail_after < 4; ++fail_after) {
+    CountingPlans::freed = 0;
+    REQUIRE_THROWS_AS(make_counted_plans(fail_after), std::runtime_error);
+    CHECK(CountingPlans::live == 0);
+    CHECK(CountingPlans::freed == fail_after);
+  }
+  CountingPlans::freed = 0;
+  REQUIRE_THROWS_AS(FailedTransform{}, std::bad_alloc);
+  CHECK(CountingPlans::live == 0);
+  CHECK(CountingPlans::freed == 4);
+}
+
+TEST_CASE("FFT plan ownership transfers exactly once", "[fft][plan_ownership]") {
+  CountingPlans::freed = 0;
+  {
+    Owner owner;
+    owner.get() = make_counted_plans(-1);
+    CHECK(CountingPlans::live == 4);
+    CHECK(CountingPlans::freed == 0);
+  }
+  CHECK(CountingPlans::live == 0);
+  CHECK(CountingPlans::freed == 4);
+}
 
 TEST_CASE("SingleDeviceFFT agrees with the heFFTe backend",
           "[gpu][fft][single_device]") {

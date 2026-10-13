@@ -38,8 +38,10 @@
 #include <chrono>
 #include <complex>
 #include <cstddef>
+#include <limits>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 #include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/runtime/gpu/databuffer_gpu.hpp>
@@ -59,6 +61,21 @@ namespace pfc::fft {
 
 namespace detail {
 
+// Own partially initialized vendor resources, including during construction.
+template <class Vendor> class PlanOwner {
+public:
+  PlanOwner() = default;
+  PlanOwner(const PlanOwner &) = delete;
+  PlanOwner &operator=(const PlanOwner &) = delete;
+  ~PlanOwner() { Vendor::destroy(m_plans); }
+
+  typename Vendor::plans &get() noexcept { return m_plans; }
+  typename Vendor::plans release() noexcept { return std::exchange(m_plans, {}); }
+
+private:
+  typename Vendor::plans m_plans{};
+};
+
 template <class MemorySpace> struct single_device_vendor;
 
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
@@ -73,10 +90,11 @@ template <> struct single_device_vendor<CUDASpace> {
                                std::to_string(static_cast<int>(r)));
   }
   static plans create(const std::array<int, 3> &n) {
-    plans p;
+    PlanOwner<single_device_vendor> owner;
+    auto &p = owner.get();
     check(cufftPlan3d(&p.fwd, n[2], n[1], n[0], CUFFT_D2Z), "cufftPlan3d D2Z");
     check(cufftPlan3d(&p.bwd, n[2], n[1], n[0], CUFFT_Z2D), "cufftPlan3d Z2D");
-    return p;
+    return owner.release();
   }
   static void destroy(plans &p) noexcept {
     if (p.fwd) cufftDestroy(p.fwd);
@@ -113,7 +131,8 @@ template <> struct single_device_vendor<HIPSpace> {
   }
   static plans create(const std::array<int, 3> &n) {
     check(rocfft_setup(), "rocfft_setup");
-    plans p;
+    PlanOwner<single_device_vendor> owner;
+    auto &p = owner.get();
     // rocFFT lengths are fastest first; default strides are contiguous.
     const std::size_t len[3] = {static_cast<std::size_t>(n[0]),
                                 static_cast<std::size_t>(n[1]),
@@ -139,7 +158,7 @@ template <> struct single_device_vendor<HIPSpace> {
       check(rocfft_execution_info_set_work_buffer(p.info, p.work, w),
             "rocfft_execution_info_set_work_buffer");
     }
-    return p;
+    return owner.release();
   }
   static void destroy(plans &p) noexcept {
     if (p.fwd) rocfft_plan_destroy(p.fwd);
@@ -180,22 +199,22 @@ public:
 
   /// @param size global grid size {nx, ny, nz} (x fastest), each >= 1.
   explicit SingleDeviceFFT(const std::array<int, 3> &size) : m_n(size) {
-    for (int v : size)
-      if (v < 1)
-        throw std::invalid_argument("SingleDeviceFFT: grid sizes must be positive");
-    m_plans = vendor::create(m_n);
+    validate_storage(size, sizeof(double));
+    validate_storage({size[0] / 2 + 1, size[1], size[2]},
+                     sizeof(std::complex<double>));
+    m_plans.get() = vendor::create(m_n);
     m_work = ComplexBuffer(size_outbox());
   }
   SingleDeviceFFT(const SingleDeviceFFT &) = delete;
   SingleDeviceFFT &operator=(const SingleDeviceFFT &) = delete;
   SingleDeviceFFT(SingleDeviceFFT &&) = delete;
   SingleDeviceFFT &operator=(SingleDeviceFFT &&) = delete;
-  ~SingleDeviceFFT() override { vendor::destroy(m_plans); }
+  ~SingleDeviceFFT() override = default;
 
   void forward(const RealBuffer &in, ComplexBuffer &out) override {
     require(in.size() == size_inbox() && out.size() == size_outbox(), "forward");
     const auto start = std::chrono::steady_clock::now();
-    vendor::forward(m_plans, in.data(), out.data());
+    vendor::forward(m_plans.get(), in.data(), out.data());
     m_fft_time +=
         std::chrono::duration<double>(std::chrono::steady_clock::now() - start)
             .count();
@@ -209,7 +228,7 @@ public:
     vendor::scaled_copy(reinterpret_cast<double *>(m_work.data()),
                         reinterpret_cast<const double *>(in.data()),
                         1.0 / static_cast<double>(size_inbox()), 2 * size_outbox());
-    vendor::backward(m_plans, m_work.data(), out.data());
+    vendor::backward(m_plans.get(), m_work.data(), out.data());
     m_fft_time +=
         std::chrono::duration<double>(std::chrono::steady_clock::now() - start)
             .count();
@@ -236,13 +255,26 @@ public:
   }
 
 private:
+  static void validate_storage(const std::array<int, 3> &size,
+                               std::size_t element_bytes) {
+    std::size_t count = 1;
+    for (int extent : size) {
+      if (extent < 1)
+        throw std::invalid_argument("SingleDeviceFFT: grid sizes must be positive");
+      if (count > std::numeric_limits<std::size_t>::max() / element_bytes /
+                      static_cast<std::size_t>(extent))
+        throw std::invalid_argument(
+            "SingleDeviceFFT: grid size exceeds addressable storage");
+      count *= static_cast<std::size_t>(extent);
+    }
+  }
   static void require(bool ok, const char *what) {
     if (!ok)
       throw std::invalid_argument(std::string("SingleDeviceFFT::") + what +
                                   ": buffer size mismatch");
   }
   std::array<int, 3> m_n;
-  typename vendor::plans m_plans{};
+  detail::PlanOwner<vendor> m_plans;
   ComplexBuffer m_work;
   double m_fft_time = 0.0;
 };

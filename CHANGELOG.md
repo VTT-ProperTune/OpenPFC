@@ -28,6 +28,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Fixed
 
+- Direct cuFFT/rocFFT plans release partial resources if construction fails
+  and reject unaddressable grid storage before vendor planning (#517).
+
 - The tungsten and aluminum fixed BC placed its band at `Lx * dx - width`,
   outside any box that does not start at 0, so the center-origin single-seed
   inputs ran with no boundary condition. BCs, the temperature-gradient
