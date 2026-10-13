@@ -64,6 +64,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <span>
 #include <stdexcept>
 #include <tuple>
 #include <type_traits>
@@ -384,12 +385,15 @@ namespace detail {
 // Keep evaluator views and already-bound halo callbacks valid by preserving
 // the Field allocations. All fields contain stage values during preparation
 // and evaluation; accepted contents are restored on normal or exceptional exit.
-template <std::size_t N> class FieldStageTransaction {
+class RuntimeFieldStageTransaction {
 public:
-  using Buffers = std::array<std::vector<double> *, N>;
-  using Sources = std::array<const std::vector<double> *, N>;
-  explicit FieldStageTransaction(Buffers fields) : m_fields(fields) {
-    for (std::size_t i = 0; i < N; ++i) {
+  using Buffers = std::vector<std::vector<double> *>;
+  using Sources = std::span<const std::vector<double> *const>;
+  explicit RuntimeFieldStageTransaction(Buffers bound_fields)
+      : m_fields(std::move(bound_fields)), m_backup(m_fields.size()),
+        m_sizes(m_fields.size()), m_addresses(m_fields.size()) {
+    const auto &fields = m_fields;
+    for (std::size_t i = 0; i < m_fields.size(); ++i) {
       for (std::size_t j = 0; j < i; ++j) {
         if (fields[i] == fields[j]) {
           throw std::invalid_argument(
@@ -402,8 +406,14 @@ public:
     }
   }
 
+  [[nodiscard]] std::size_t workspace_bytes() const noexcept {
+    std::size_t cells = 0;
+    for (const auto &buffer : m_backup) cells += buffer.capacity();
+    return cells * sizeof(double);
+  }
+
   void validate() const {
-    for (std::size_t i = 0; i < N; ++i) {
+    for (std::size_t i = 0; i < m_fields.size(); ++i) {
       if (m_fields[i]->size() != m_sizes[i] ||
           m_fields[i]->data() != m_addresses[i]) {
         throw std::invalid_argument("RK stage binding: bound field storage changed; "
@@ -415,18 +425,20 @@ public:
   template <class Fn> void evaluate(const Sources &stage, Fn &&fn) {
     // Validate every buffer before touching any bound accepted storage.
     validate();
-    for (std::size_t i = 0; i < N; ++i) {
+    if (stage.size() != m_fields.size())
+      throw std::invalid_argument("RK stage binding: field count changed");
+    for (std::size_t i = 0; i < m_fields.size(); ++i) {
       if (stage[i]->size() != m_sizes[i]) {
         throw std::invalid_argument("RK stage binding: field storage size changed");
       }
     }
-    for (std::size_t i = 0; i < N; ++i)
+    for (std::size_t i = 0; i < m_fields.size(); ++i)
       std::copy(m_fields[i]->begin(), m_fields[i]->end(), m_backup[i].begin());
     struct Restore {
-      FieldStageTransaction &binding;
+      RuntimeFieldStageTransaction &binding;
       ~Restore() { binding.restore(); }
     } restore{*this};
-    for (std::size_t i = 0; i < N; ++i)
+    for (std::size_t i = 0; i < m_fields.size(); ++i)
       std::copy(stage[i]->begin(), stage[i]->end(), m_fields[i]->begin());
     std::forward<Fn>(fn)();
     validate();
@@ -434,7 +446,7 @@ public:
 
 private:
   void restore() noexcept {
-    for (std::size_t i = 0; i < N; ++i) {
+    for (std::size_t i = 0; i < m_fields.size(); ++i) {
       if (m_fields[i]->size() != m_sizes[i] ||
           m_fields[i]->data() != m_addresses[i]) {
         // A malformed preparation callback broke the fixed-storage contract.
@@ -447,9 +459,25 @@ private:
     }
   }
   Buffers m_fields;
-  std::array<std::vector<double>, N> m_backup;
-  std::array<std::size_t, N> m_sizes;
-  std::array<double *, N> m_addresses;
+  std::vector<std::vector<double>> m_backup;
+  std::vector<std::size_t> m_sizes;
+  std::vector<double *> m_addresses;
+};
+
+// Preserve the fixed-N factory interface while sharing one transaction.
+template <std::size_t N> class FieldStageTransaction {
+public:
+  using Buffers = std::array<std::vector<double> *, N>;
+  using Sources = std::array<const std::vector<double> *, N>;
+  explicit FieldStageTransaction(Buffers fields)
+      : m_binding({fields.begin(), fields.end()}) {}
+  void validate() const { m_binding.validate(); }
+  template <class Fn> void evaluate(const Sources &stage, Fn &&fn) {
+    m_binding.evaluate(stage, std::forward<Fn>(fn));
+  }
+
+private:
+  RuntimeFieldStageTransaction m_binding;
 };
 
 // Validate preparation before any stencil reads. This is only a checked
