@@ -62,6 +62,9 @@ jobs:
       - name: App self-containment self-test
         run: bash scripts/check_app_self_containment.sh --self-test
 
+      - name: Accelerator build contract policy
+        run: python3 scripts/check_gpu_ci_policy.py
+
   # ============================================================================
   # CMake Build Matrix
   # ============================================================================
@@ -357,7 +360,6 @@ jobs:
     name: CUDA compile-only (no GPU)
     needs: [code-quality]
     runs-on: ubuntu-24.04
-    continue-on-error: true
     container: nvidia/cuda:12.6.0-devel-ubuntu24.04
     env:
       DEBIAN_FRONTEND: noninteractive
@@ -389,7 +391,6 @@ jobs:
     name: HIP compile-only (no GPU)
     needs: [code-quality]
     runs-on: ubuntu-24.04
-    continue-on-error: true
     container: rocm/dev-ubuntu-24.04:6.2-complete
     env:
       DEBIAN_FRONTEND: noninteractive
@@ -424,7 +425,7 @@ jobs:
   ci-status:
     name: CI Status
     if: always()
-    needs: [code-quality, build-and-test, clang-compile, packaging-smoke]
+    needs: [code-quality, build-and-test, clang-compile, packaging-smoke, cuda-compile, hip-compile]
     runs-on: ubuntu-24.04
     steps:
       - name: Check all jobs status
@@ -443,6 +444,10 @@ jobs:
           fi
           if [[ "${{ needs.packaging-smoke.result }}" != "success" ]]; then
             echo "❌ Packaging smoke failed"
+            exit 1
+          fi
+          if [[ "${{ needs.cuda-compile.result }}" != "success" || "${{ needs.hip-compile.result }}" != "success" ]]; then
+            echo "CUDA/HIP compile and installed host-consumer checks failed"
             exit 1
           fi
           echo "✅ All CI checks passed"

@@ -214,8 +214,10 @@ follows the message rules.
 Pull requests run a **short** set under [`.github/workflows/`](.github/workflows):
 **`ci.yml`** code-quality, gcc-13 Debug+Release `ctest` (including 2-rank MPI),
 a clang-18 compile check, and packaging smoke; **`docs.yml`** when
-docs/headers/README change. Coverage
-and CUDA/HIP compile-only run on `master` pushes (coverage also weekly).
+docs/headers/README change. CUDA/HIP compile-only and installed host-consumer checks run on PRs and
+master pushes and must pass the aggregate CI Status. These SDK checks require
+no GPU; physical device and GPU spectral/HeFFTe validation remain allocated
+cluster checks. Coverage runs on master pushes and weekly.
 Clang-tidy is weekly plus `workflow_dispatch`, not a PR gate. AddressSanitizer
 is `workflow_dispatch` only. Doc-only edits still trigger the Documentation
 link job — run `python3 scripts/check_doc_links.py` locally before pushing.
