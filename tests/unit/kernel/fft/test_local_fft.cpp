@@ -126,5 +126,29 @@ TEST_CASE("Local FFT preserves the HeFFTe contract on varied grids", "[local_fft
   }
 }
 
-
+TEST_CASE("Host local stacks reject inconsistent MPI ownership",
+          "[local_fft][MPI]") {
+  using Stack = pfc::sim::stacks::SpectralCPUStack;
+  const auto local = pfc::fft::Implementation::Local;
+  auto domain = pfc::domain::create({8, 8, 8});
+  REQUIRE_THROWS_AS((Stack(domain, 0, 1, MPI_COMM_NULL, local)),
+                    std::invalid_argument);
+  Stack independent(domain, 0, 1, MPI_COMM_SELF, local);
+  CHECK(independent.fft_choice() == local);
+  CHECK(dynamic_cast<pfc::fft::LocalFFT *>(&independent.fft()) != nullptr);
+  CHECK(independent.u().box() == pfc::domain::index_box(domain));
+  REQUIRE_THROWS_AS((Stack(domain, 0, 2, MPI_COMM_SELF, local)),
+                    std::invalid_argument);
+  REQUIRE_THROWS_AS((Stack(domain, 1, 1, MPI_COMM_SELF, local)),
+                    std::invalid_argument);
+  int count = 0, rank = 0;
+  MPI_Comm_size(MPI_COMM_WORLD, &count);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (count > 1) {
+    REQUIRE_THROWS_AS((Stack(domain, 0, 1, MPI_COMM_WORLD, local)),
+                      std::invalid_argument);
+    REQUIRE_THROWS_AS((Stack(domain, rank, count, MPI_COMM_WORLD, local)),
+                      std::invalid_argument);
+  }
+}
 #endif

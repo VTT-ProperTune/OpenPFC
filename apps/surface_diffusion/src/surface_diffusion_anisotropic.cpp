@@ -94,7 +94,7 @@ struct Sample {
 };
 
 Sample sample_surface(pfc::data::Field<double> &h, const pfc::Domain &domain,
-                      pfc::fft::CPUFFT &fft, MPI_Comm comm) {
+                      pfc::fft::IHostFFT &fft, MPI_Comm comm) {
   const auto height = pfc::sim::reduce_owned(h, comm);
   Sample s;
   s.mean_h =
