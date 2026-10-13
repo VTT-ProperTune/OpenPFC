@@ -1,0 +1,28 @@
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+cmake_minimum_required(VERSION 3.21)
+project(InstalledGrainContract LANGUAGES C CXX)
+find_package(OpenPFC 0.4 CONFIG REQUIRED)
+if(DEFINED EXPECTED_OPENPFC_REVISION AND
+   NOT OpenPFC_SOURCE_REVISION STREQUAL EXPECTED_OPENPFC_REVISION)
+    message(FATAL_ERROR "Installed OpenPFC revision does not match reviewed source")
+endif()
+if(DEFINED EXPECTED_OPENPFC_STATE AND
+   NOT OpenPFC_SOURCE_STATE STREQUAL EXPECTED_OPENPFC_STATE)
+    message(FATAL_ERROR "Installed OpenPFC source state is not qualified")
+endif()
+enable_testing()
+add_executable(grain_consumer host.cpp)
+target_compile_features(grain_consumer PRIVATE cxx_std_20)
+target_link_libraries(grain_consumer PRIVATE OpenPFC::openpfc)
+add_test(NAME grain_installed_host COMMAND grain_consumer)
+option(CHECK_CUDA "Compile the public host/device signed staging check" OFF)
+if(CHECK_CUDA)
+    enable_language(CUDA)
+    find_package(CUDAToolkit REQUIRED)
+    add_executable(grain_device_consumer device.cu)
+    set_target_properties(grain_device_consumer PROPERTIES CUDA_STANDARD 20)
+    target_compile_options(grain_device_consumer PRIVATE --expt-relaxed-constexpr -std=c++20)
+    target_link_libraries(grain_device_consumer PRIVATE OpenPFC::openpfc CUDA::cudart)
+    add_test(NAME grain_installed_cuda COMMAND grain_device_consumer)
+endif()
