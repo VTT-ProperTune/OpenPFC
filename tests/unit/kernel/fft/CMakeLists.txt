@@ -48,4 +48,11 @@ endif()
 
 if(OpenPFC_HAS_FFTW3)
   add_test(NAME LocalFFT COMMAND openpfc-tests "[local_fft]~[MPI]")
+  if(OpenPFC_ENABLE_HEFFTE AND OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
+     (OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 2))
+    add_test(NAME LocalFFT_Reject2Rank
+      COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+        $<TARGET_FILE:openpfc-tests> "[local_fft][MPI]")
+    set_tests_properties(LocalFFT_Reject2Rank PROPERTIES PROCESSORS 2 TIMEOUT 120)
+  endif()
 endif()
