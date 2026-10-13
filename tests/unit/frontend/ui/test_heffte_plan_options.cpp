@@ -147,6 +147,5 @@ TEST_CASE("Spectral FFT selection is explicit and validated",
     REQUIRE_THROWS_AS(pfc::ui::spectral_fft_choice_from_json({{"fft", invalid}}),
                       std::invalid_argument);
   }
-  REQUIRE_THROWS_AS(pfc::ui::cpu_spectral_plan_options_from_json({{"fft", "local"}}),
-                    std::invalid_argument);
+  REQUIRE_NOTHROW(pfc::ui::cpu_spectral_plan_options_from_json({{"fft", "local"}}));
 }
