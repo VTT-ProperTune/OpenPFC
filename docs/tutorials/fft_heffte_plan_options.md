@@ -53,3 +53,13 @@ Start from defaults (`fftw`, `alltoall`, `use_pencils = false`) and change **one
 - [`../app_pipeline.md`](../user_guide/app_pipeline.md) — where `SpectralCPUStack` and `GPUSpectralStack` consume `plan_options`  
 - [`../performance_profiling.md`](../hpc/performance_profiling.md) — measuring the effect of changes  
 - [`gpu_app_quickstart.md`](gpu_app_quickstart.md) — GPU binaries and CMake flags  
+
+## Direct plans for a single GPU rank
+
+JSON-driven GPU spectral sessions, including Tungsten, accept a root
+`"fft": "local"` (`fft = "local"` before any table in TOML). This uses the
+existing direct cuFFT/rocFFT 3-D plans and requires a one-rank communicator.
+`"fft": "heffte"` is the default and supports distributed execution. CPU
+spectral sessions currently reject `local`. This selection is independent
+of the hardware `backend`; HeFFTe `plan_options` do not tune the direct plan.
+The selected implementation and vendor backend are printed at startup.

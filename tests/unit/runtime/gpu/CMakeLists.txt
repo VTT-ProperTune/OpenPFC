@@ -514,3 +514,17 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
     set_tests_properties(MechanicsProjector_hip PROPERTIES TIMEOUT 120 SKIP_RETURN_CODE 4)
   endif()
 endif()
+
+# Exercise selected direct plans through a relocated installed public SDK.
+foreach(backend cuda hip)
+  string(TOUPPER "${backend}" upper_backend)
+  if(OpenPFC_ENABLE_${upper_backend}_SPECTRAL)
+    add_test(NAME LocalFFT_${backend}_InstalledConsumer
+      COMMAND ${CMAKE_COMMAND} "-Dsource=${CMAKE_SOURCE_DIR}"
+        "-Dbuild=${CMAKE_BINARY_DIR}" "-Dbackend=${backend}"
+        "-Dcc=${CMAKE_C_COMPILER}" "-Dcxx=${CMAKE_CXX_COMPILER}"
+        -P "${CMAKE_SOURCE_DIR}/tests/packaging/check_local_fft_device_consumer.cmake")
+    set_tests_properties(LocalFFT_${backend}_InstalledConsumer PROPERTIES
+      TIMEOUT 150 RUN_SERIAL TRUE SKIP_REGULAR_EXPRESSION "SKIP: no usable device")
+  endif()
+endforeach()
