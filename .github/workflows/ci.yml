@@ -341,17 +341,20 @@ jobs:
             -DCMAKE_PREFIX_PATH="$HOME/openpfc-prefix;$HOME/opt/heffte/2.4.1-cpu"
           cmake --build build-consumer -j2
           ./build-consumer/consumer
+          cmake -S tests/packaging/startup -B build-startup -GNinja \
+            -DCMAKE_PREFIX_PATH="$HOME/openpfc-prefix;$HOME/opt/heffte/2.4.1-cpu"
+          cmake --build build-startup -j2
+          ./build-startup/startup_consumer
 
   # ============================================================================
   # Compile-only GPU jobs (audit 11 / PN). GitHub runners have no GPU, but nvcc
   # / hipcc compile without one. Official devel images already ship the toolkit;
   # do not download or compile HeFFTe here (spectral GPU stays cluster-only).
   # OpenPFC_ENABLE_HEFFTE=OFF still builds FD/kernel CUDA and HIP TUs.
-  # Push to master/develop only (not PRs). continue-on-error.
+  # Run on PRs as well: host startup must consume every backend package.
   # ============================================================================
   cuda-compile:
     name: CUDA compile-only (no GPU)
-    if: github.event_name == 'push'
     needs: [code-quality]
     runs-on: ubuntu-24.04
     continue-on-error: true
@@ -376,10 +379,14 @@ jobs:
             -DOpenPFC_BUILD_TESTS=OFF -DOpenPFC_BUILD_APPS=ON \
             -DOpenPFC_BUILD_EXAMPLES=OFF -DOpenPFC_BUILD_DOCUMENTATION=OFF
           cmake --build build-cuda -j2
+          cmake --install build-cuda --prefix "$GITHUB_WORKSPACE/prefix-cuda"
+          cmake -S tests/packaging/startup -B startup-cuda -GNinja \
+            -DOpenPFC_DIR="$GITHUB_WORKSPACE/prefix-cuda/lib/cmake/OpenPFC"
+          cmake --build startup-cuda -j2
+          ./startup-cuda/startup_consumer
 
   hip-compile:
     name: HIP compile-only (no GPU)
-    if: github.event_name == 'push'
     needs: [code-quality]
     runs-on: ubuntu-24.04
     continue-on-error: true
@@ -404,6 +411,11 @@ jobs:
             -DOpenPFC_BUILD_TESTS=OFF -DOpenPFC_BUILD_APPS=ON \
             -DOpenPFC_BUILD_EXAMPLES=OFF -DOpenPFC_BUILD_DOCUMENTATION=OFF
           cmake --build build-hip -j2
+          cmake --install build-hip --prefix "$GITHUB_WORKSPACE/prefix-hip"
+          cmake -S tests/packaging/startup -B startup-hip -GNinja \
+            -DOpenPFC_DIR="$GITHUB_WORKSPACE/prefix-hip/lib/cmake/OpenPFC"
+          cmake --build startup-hip -j2
+          ./startup-hip/startup_consumer
 
   # ============================================================================
   # Status Check (required for merge)

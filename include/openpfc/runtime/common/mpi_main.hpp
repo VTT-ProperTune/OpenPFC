@@ -44,11 +44,14 @@
 
 #include <openpfc/runtime/common/cpu_affinity.hpp>
 #include <openpfc/runtime/common/heffte_tracing.hpp>
-#if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
-#include <openpfc/runtime/gpu/bind_local_device.hpp>
-#endif
 
 namespace pfc::runtime {
+
+namespace detail {
+// The configured library owns backend startup. Common host consumers must
+// not include CUDA/HIP SDK headers merely to initialize MPI.
+void bind_local_device_before_mpi();
+} // namespace detail
 
 /**
  * @brief MPI app `main` wrapper. Calls `body(argc, argv, rank, nproc)`.
@@ -71,11 +74,8 @@ namespace pfc::runtime {
  *       useful message before the abort.
  */
 template <class Body> int mpi_main(int argc, char **argv, Body &&body) {
-#if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
-  // Device must be set before MPI_Init so MPICH_OFI_NIC_POLICY=GPU binds the
-  // NIC next to this rank's GCD. All devices stay visible for GPU-aware IPC.
-  pfc::runtime::gpu::bind_local_device_before_mpi();
-#endif
+  // Preserve pre-MPI device binding for GPU libraries; CPU libraries do nothing.
+  detail::bind_local_device_before_mpi();
   MPI_Init(&argc, &argv);
   int rank = 0;
   int nproc = 1;

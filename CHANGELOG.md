@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Keep generic MPI startup headers independent of CUDA/HIP SDK headers while
+  preserving the configured library's pre-MPI device binding.
+
 ### Breaking
 
 - An input's `domain` is now the box: `"size": [Nx, Ny, Nz]`, `"lower"` and

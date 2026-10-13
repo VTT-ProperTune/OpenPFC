@@ -24,6 +24,7 @@ if(OpenPFC_FFTW3_LIBRARY)
 endif()
 
 set(_openpfc_kernel_obj_sources
+    src/openpfc/runtime/common/mpi_startup.cpp
     src/openpfc/kernel/decomposition/decomposition.cpp
     src/openpfc/kernel/decomposition/decomposition_factory.cpp
     src/openpfc/kernel/profiling/session.cpp
@@ -290,16 +291,20 @@ endif()
 
 if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
   target_link_libraries(openpfc_kernel_obj PRIVATE CUDA::cudart)
+  target_link_libraries(openpfc PRIVATE CUDA::cudart)
   if(OpenPFC_ENABLE_CUDA_SPECTRAL)
     target_compile_definitions(openpfc_kernel_obj PUBLIC OpenPFC_ENABLE_CUDA_SPECTRAL)
     target_compile_definitions(openpfc PUBLIC OpenPFC_ENABLE_CUDA_SPECTRAL)
   endif()
 endif()
 
-if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
+if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
   target_link_libraries(openpfc_kernel_obj PRIVATE hip::host)
-  target_compile_definitions(openpfc_kernel_obj PUBLIC OpenPFC_ENABLE_HIP_SPECTRAL)
-  target_compile_definitions(openpfc PUBLIC OpenPFC_ENABLE_HIP_SPECTRAL)
+  target_link_libraries(openpfc PRIVATE hip::host)
+  if(OpenPFC_ENABLE_HIP_SPECTRAL)
+    target_compile_definitions(openpfc_kernel_obj PUBLIC OpenPFC_ENABLE_HIP_SPECTRAL)
+    target_compile_definitions(openpfc PUBLIC OpenPFC_ENABLE_HIP_SPECTRAL)
+  endif()
 endif()
 
 # GPU kernel libraries. Shared TUs: sparse_vector_ops, fill, elementwise_ops.
