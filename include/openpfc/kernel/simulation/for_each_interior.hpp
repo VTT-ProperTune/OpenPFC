@@ -21,8 +21,8 @@
  *    returns; the framework never names a specific grads type.
  *  - `Eval` must expose interior bounds via `imin()/imax()`,
  *    `jmin()/jmax()`, `kmin()/kmax()`; a linear index
- *    `idx(ix,iy,iz) -> std::size_t`; an optional `prepare()` for any
- *    once-per-step backend pre-processing (e.g. spectral FFTs); and
+ *    `idx(ix,iy,iz) -> std::size_t`; `prepare(double t)` or legacy
+ *    `prepare()` for once-per-stage backend preprocessing; and
  *    `operator()(ix,iy,iz) -> G`.
  *
  * Multi-field models opt in to the tuple protocol (`as_tuple()` member
@@ -116,14 +116,18 @@ inline void scatter(DuOut &du, std::size_t k, const Inc &inc) {
  *                bundle of `double*` (multi-field).
  *
  * @param model  Physics model.
- * @param eval   Backend evaluator. `eval.prepare()` runs once per call.
+ * @param eval   Backend evaluator. `eval.prepare(t)` runs when available;
+ *               the legacy `eval.prepare()` runs.
  * @param du     Output buffer(s); see `DuOut`.
  * @param t      Simulation time forwarded to `rhs`.
  */
 template <class Model, class Eval, class DuOut>
 inline void for_each_interior(const Model &model, Eval &eval, DuOut du, double t,
                               LoopPolicy policy = LoopPolicy::Parallel) {
-  eval.prepare();
+  if constexpr (requires { eval.prepare(t); })
+    eval.prepare(t);
+  else
+    eval.prepare();
   const int kmin = eval.kmin();
   const int kmax = eval.kmax();
   const int jmin = eval.jmin();

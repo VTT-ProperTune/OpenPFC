@@ -217,3 +217,77 @@ TEST_CASE("RK fixed scratch rejects malformed RHS buffers without accepted mutat
   REQUIRE((u == std::vector<double>{1.0, 1.0}));
   REQUIRE((v == std::vector<double>{2.0, 2.0}));
 }
+
+namespace {
+struct TimedLocal {
+  double u, v, w, forcing;
+};
+struct TimedEvaluator {
+  Field &u, &v, &w;
+  std::vector<double> times;
+  double forcing = -999;
+  bool fail = false;
+  // Intentionally no prepare(): the timed hook is a standalone contract.
+  void prepare(double t) {
+    times.push_back(t);
+    forcing = t;
+    if (fail) throw std::runtime_error("timed preparation failure");
+  }
+  TimedLocal operator()(int i, int j, int k) const {
+    return {u(i, j, k), v(i, j, k), w(i, j, k), forcing};
+  }
+  std::size_t idx(int i, int j, int k) const {
+    return u.idx(i, j, k) - u.idx(0, 0, 0);
+  }
+  int imin() const { return 0; }
+  int imax() const { return u.local_size()[0]; }
+  int jmin() const { return 0; }
+  int jmax() const { return 1; }
+  int kmin() const { return 0; }
+  int kmax() const { return 1; }
+};
+struct TimedModel {
+  auto rhs(double, const TimedLocal &g) const {
+    // A nonautonomous coupled invariant with forcing cached in preparation.
+    const double a = g.forcing * g.u, b = g.forcing * g.v;
+    return std::tuple{a, b, -a - b};
+  }
+};
+} // namespace
+TEST_CASE("Coupled RK preparation receives actual stage time",
+          "[rk_stage_binding]") {
+  const auto domain = pfc::domain::create({2, 1, 1});
+  const auto box = pfc::Box3i::from_bounds({0, 0, 0}, {1, 0, 0});
+  Field u(domain, box, 1), v(domain, box, 1), w(domain, box, 1);
+  u(0, 0, 0) = 1;
+  u(1, 0, 0) = 2;
+  v(0, 0, 0) = 3;
+  v(1, 0, 0) = 4;
+  w(0, 0, 0) = -4;
+  w(1, 0, 0) = -6;
+  const auto old_u = u.vec(), old_v = v.vec(), old_w = w.vec();
+  TimedEvaluator eval{u, v, w, {}, -999, false};
+  TimedModel model;
+  auto stepper =
+      pfc::sim::steppers::create(std::tie(u, v, w), eval, model, 0.1,
+                                 pfc::sim::steppers::make_rk4_classical<double>(),
+                                 pfc::sim::LoopPolicy::Serial);
+  stepper.step(0.5, u, v, w);
+  REQUIRE(eval.times == std::vector<double>{0.5, 0.55, 0.55, 0.6});
+  // Independent scalar RK4 expansion for y'=t y.
+  const double k1 = 0.5, k2 = 0.55 * (1 + 0.05 * k1);
+  const double k3 = 0.55 * (1 + 0.05 * k2), k4 = 0.6 * (1 + 0.1 * k3);
+  const double gain = 1 + 0.1 * (k1 + 2 * k2 + 2 * k3 + k4) / 6;
+  for (int i = 0; i < 2; ++i) {
+    const auto q = u.idx(i, 0, 0);
+    REQUIRE_THAT(u.vec()[q], Catch::Matchers::WithinAbs(old_u[q] * gain, 1e-14));
+    REQUIRE_THAT(u.vec()[q] + v.vec()[q] + w.vec()[q],
+                 Catch::Matchers::WithinAbs(0, 1e-14));
+  }
+  const auto accepted_u = u.vec(), accepted_v = v.vec(), accepted_w = w.vec();
+  eval.fail = true;
+  REQUIRE_THROWS_AS(stepper.step(0.6, u, v, w), std::runtime_error);
+  REQUIRE(u.vec() == accepted_u);
+  REQUIRE(v.vec() == accepted_v);
+  REQUIRE(w.vec() == accepted_w);
+}

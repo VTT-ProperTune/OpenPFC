@@ -457,8 +457,11 @@ private:
 template <class Eval, class Binding> struct CheckedStageEvaluator {
   Eval &eval;
   Binding &binding;
-  void prepare() {
-    eval.prepare();
+  void prepare(double t) {
+    if constexpr (requires { eval.prepare(t); })
+      eval.prepare(t);
+    else
+      eval.prepare();
     binding.validate();
   }
   auto operator()(int i, int j, int k) const { return eval(i, j, k); }
