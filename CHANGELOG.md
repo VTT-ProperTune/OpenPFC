@@ -54,6 +54,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- `LocalFFT` provides direct double-precision R2C/C2R transforms with owned
+  aligned FFTW buffers, input preservation and inverse normalization (#507).
+
 - Spectral GPU sessions accept explicit `fft = "local"` in JSON/TOML for
   direct cuFFT/rocFFT on one actual communicator rank. HeFFTe remains the
   default and distributed implementation (#506).
