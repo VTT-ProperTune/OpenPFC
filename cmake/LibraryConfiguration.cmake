@@ -41,7 +41,8 @@ set(_openpfc_kernel_obj_sources
 )
 if(OpenPFC_HAS_FFTW3)
   list(APPEND _openpfc_kernel_obj_sources src/openpfc/kernel/fft/chebyshev.cpp
-       src/openpfc/kernel/fft/real_transform.cpp)
+       src/openpfc/kernel/fft/real_transform.cpp
+       src/openpfc/kernel/fft/local_fft.cpp)
 endif()
 if(OpenPFC_ENABLE_HEFFTE)
   list(APPEND _openpfc_kernel_obj_sources src/openpfc/runtime/cpu/fft.cpp)
