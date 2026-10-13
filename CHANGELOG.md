@@ -51,6 +51,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- `BoundaryExtension::Linear` supplies nearest-owned cell-face Dirichlet
+  extrapolation through the reflection service, with composed corners and
+  unchanged default mirror reflection (#511).
+
 - `pfc::sim::allreduce_sum(std::span<double>, MPI_Comm)` sums an array
   element-wise across ranks in place, next to the scalar overload, so
   applications reduce per-bin partial sums without their own

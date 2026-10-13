@@ -15,6 +15,7 @@
  * scalar mirror is not `WallPolicy::Zero`.
  */
 
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <numbers>
@@ -407,5 +408,167 @@ TEST_CASE("stage preparation reflects after the halo exchange",
                        ReflectionParity::Even, false);
   if (low[0] == 0) {
     REQUIRE(untouched(-1, 0, 0) == -1234567.0);
+  }
+}
+
+TEST_CASE("linear cell-face extension reproduces an affine profile",
+          "[kernel][field][reflection][unit]") {
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank != 0) return;
+  for (int hw : {1, 2, 4}) {
+    auto u = make_serial_field({false, true, true}, hw);
+    poison_ghosts(u);
+    const auto n = u.local_size();
+    for (int k = 0; k < n[2]; ++k)
+      for (int j = 0; j < n[1]; ++j)
+        for (int i = 0; i < n[0]; ++i) u(i, j, k) = 3.0 + 2.0 * (i + 0.5);
+    ReflectionWalls<double> walls;
+    walls.xm = {true, ReflectionParity::Odd, BoundaryCentering::CellFace, 3.0,
+                pfc::communication::BoundaryExtension::Linear};
+    walls.xp = walls.xm;
+    walls.xp.value = 3.0 + 2.0 * n[0];
+    apply_reflection_ghosts(u, walls);
+    for (int i = -hw; i < n[0] + hw; ++i)
+      REQUIRE(u(i, 0, 0) == 3.0 + 2.0 * (i + 0.5));
+
+    const std::vector<double> accepted(u.data(), u.data() + u.size());
+    walls.xm.centering = BoundaryCentering::Node;
+    REQUIRE_THROWS_AS(apply_reflection_ghosts(u, walls), std::invalid_argument);
+    REQUIRE(std::vector<double>(u.data(), u.data() + u.size()) == accepted);
+    walls.xm.centering = BoundaryCentering::CellFace;
+    walls.xp.parity = ReflectionParity::Even;
+    REQUIRE_THROWS_AS(apply_reflection_ghosts(u, walls), std::invalid_argument);
+    REQUIRE(std::vector<double>(u.data(), u.data() + u.size()) == accepted);
+  }
+}
+
+TEST_CASE("linear staged walls match tensor-product extrapolation",
+          "[MPI][reflection]") {
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 1 && size != 2 && size != 4) return;
+  const pfc::Int3 grid = size == 4   ? pfc::Int3{2, 2, 1}
+                         : size == 2 ? pfc::Int3{2, 1, 1}
+                                     : pfc::Int3{1, 1, 1};
+  auto domain = pfc::domain::create(
+      pfc::GridSize({8, 8, 4}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+      pfc::GridSpacing({1.0, 1.0, 1.0}), pfc::Bool3{false, false, false});
+  auto decomp = pfc::decomposition::create(domain, grid);
+  for (int hw : {1, 2, 4}) {
+    auto u = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+    fill_owned(u);
+    poison_ghosts(u);
+    pfc::comm::HaloExchangeOptions opt;
+    opt.connectivity = pfc::comm::HaloConnectivity::Full;
+    opt.selector = [&](int r) {
+      std::vector<pfc::Int3> kept;
+      for (const auto &d : pfc::halo::presets::Full3D().dirs)
+        if (pfc::decomposition::get_neighbor_rank(decomp, r, d) >= 0)
+          kept.push_back(d);
+      return pfc::halo::HaloDirectionSet(std::move(kept));
+    };
+    pfc::comm::HaloExchange<HostSpace, double> halo(u, decomp, rank, MPI_COMM_WORLD,
+                                                    opt);
+    auto walls =
+        reflection_walls<double>(ReflectionParity::Odd, BoundaryCentering::CellFace);
+    auto set = [](auto &side, double value) {
+      side.extension = pfc::communication::BoundaryExtension::Linear;
+      side.value = value;
+    };
+    set(walls.xm, 2);
+    set(walls.xp, 3);
+    set(walls.ym, 5);
+    set(walls.yp, 7);
+    set(walls.zm, 11);
+    set(walls.zp, 13);
+    pfc::communication::StagePreparationService<double> prep;
+    prep.bind("u", halo);
+    prep.set_reflection("u", walls, u);
+    pfc::communication::StagePreparationRequirements req;
+    req.needs_halo_exchange = req.needs_boundary_update = true;
+    const std::string_view fields[] = {"u"};
+    prep.prepare(req, fields);
+    const auto n = u.local_size();
+    const auto ng = u.global_size();
+    const double wall_values[3][2] = {{2, 3}, {5, 7}, {11, 13}};
+    for (int k = -hw; k < n[2] + hw; ++k)
+      for (int j = -hw; j < n[1] + hw; ++j)
+        for (int i = -hw; i < n[0] + hw; ++i) {
+          const auto g = u.global(i, j, k);
+          int nearest[3];
+          double a[3] = {1, 1, 1}, b[3] = {0, 0, 0};
+          for (int axis = 0; axis < 3; ++axis) {
+            nearest[axis] = std::clamp(g[axis], 0, ng[axis] - 1);
+            // Lagrange interpolation through x=0 (wall) and x=1/2 (sample).
+            // The ghost coordinate is 1/2-layer; its sample weight is 1-2*layer.
+            if (g[axis] != nearest[axis]) {
+              const int layer = std::abs(g[axis] - nearest[axis]);
+              a[axis] = 1 - 2 * layer;
+              b[axis] = 2 * layer * wall_values[axis][g[axis] >= ng[axis]];
+            }
+          }
+          const double oracle =
+              a[0] * a[1] * a[2] * sample_value(nearest[0], nearest[1], nearest[2]) +
+              b[0] * a[1] * a[2] + b[1] * a[2] + b[2];
+          INFO("rank " << rank << " local " << i << "," << j << "," << k);
+          REQUIRE(u(i, j, k) == oracle);
+        }
+    require_owned_unchanged(u);
+    // This prescribed wall is incompatible with the owned affine gradient.
+    if (u.box().low[0] == 0 && hw >= 2) {
+      REQUIRE(u(-2, 0, 0) == 8.0 - 3.0 * u(0, 0, 0));
+      REQUIRE(u(-2, 0, 0) != 4.0 - u(1, 0, 0));
+    }
+  }
+}
+
+TEST_CASE("linear and mirror walls preserve a sequential cell-face donor",
+          "[kernel][field][reflection][unit]") {
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank != 0) return;
+  constexpr double ub = -0.375;
+  for (int hw : {2, 4}) {
+    for (bool quadrant : {false, true}) {
+      auto expected = make_serial_field({false, false, true}, hw);
+      auto actual = make_serial_field({false, false, true}, hw);
+      const auto n = actual.local_size();
+      for (int j = 0; j < n[1]; ++j)
+        for (int i = 0; i < n[0]; ++i)
+          actual(i, j, 0) = expected(i, j, 0) = i * i + 2 * j * j * j + 0.5 * i * j;
+      // Frozen two-pass donor: first X for owned Y, then Y across padded X.
+      for (int j = 0; j < n[1]; ++j)
+        for (int k = 1; k <= hw; ++k) {
+          expected(-k, j, 0) = quadrant
+                                   ? expected(k - 1, j, 0)
+                                   : 2 * k * ub - (2 * k - 1) * expected(0, j, 0);
+          expected(n[0] - 1 + k, j, 0) =
+              2 * k * ub - (2 * k - 1) * expected(n[0] - 1, j, 0);
+        }
+      for (int i = -hw; i < n[0] + hw; ++i)
+        for (int k = 1; k <= hw; ++k) {
+          expected(i, -k, 0) = quadrant
+                                   ? expected(i, k - 1, 0)
+                                   : 2 * k * ub - (2 * k - 1) * expected(i, 0, 0);
+          expected(i, n[1] - 1 + k, 0) =
+              2 * k * ub - (2 * k - 1) * expected(i, n[1] - 1, 0);
+        }
+      ReflectionWalls<double> walls;
+      walls.xp =
+          walls.yp = {true, ReflectionParity::Odd, BoundaryCentering::CellFace, ub,
+                      pfc::communication::BoundaryExtension::Linear};
+      if (quadrant) {
+        walls.xm =
+            walls.ym = {true, ReflectionParity::Even, BoundaryCentering::CellFace};
+      } else {
+        walls.xm = walls.ym = walls.xp;
+      }
+      apply_reflection_ghosts(actual, walls);
+      for (int j = -hw; j < n[1] + hw; ++j)
+        for (int i = -hw; i < n[0] + hw; ++i)
+          REQUIRE(actual(i, j, 0) == expected(i, j, 0));
+    }
   }
 }

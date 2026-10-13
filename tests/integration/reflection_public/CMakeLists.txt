@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+cmake_minimum_required(VERSION 3.21)
+project(reflection_public_consumer LANGUAGES C CXX)
+find_package(OpenPFC 0.4 CONFIG REQUIRED)
+if(NOT OpenPFC_SOURCE_STATE STREQUAL "clean" OR
+   NOT OpenPFC_SOURCE_REVISION STREQUAL EXPECTED_OPENPFC_REVISION)
+  message(FATAL_ERROR "Consumer requires the exact clean installed revision")
+endif()
+add_executable(reflection_consumer main.cpp)
+target_link_libraries(reflection_consumer PRIVATE OpenPFC::openpfc)
+enable_testing()
+add_test(NAME reflection_installed_host COMMAND reflection_consumer)
+option(CHECK_CUDA "Run the installed CUDA reflection consumer" OFF)
+if(CHECK_CUDA)
+  if(NOT CUDAToolkit_FOUND)
+    message(FATAL_ERROR "CHECK_CUDA requires a CUDA-enabled installed package")
+  endif()
+  add_test(NAME reflection_installed_cuda COMMAND reflection_consumer device)
+endif()

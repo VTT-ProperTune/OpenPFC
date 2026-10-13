@@ -37,6 +37,13 @@
  * and in this rank's padded box. Node centering needs `halo_width < N` on
  * that axis. Cell-face centering needs `halo_width <= N`.
  *
+ * `BoundaryExtension::Linear` selects linear cell-face Dirichlet extrapolation
+ * through the nearest owned sample and the prescribed wall value. Layer `k`
+ * stores `2*k*value - (2*k-1)*nearest`, including composed edges/corners.
+ * It requires odd parity and cell-face centering. This is an explicit closure
+ * choice: beyond layer one it generally differs from odd reflection. It does
+ * not enforce owned node values or imply high-order boundary accuracy.
+ *
  * Even reflection makes a centered normal difference of this scalar zero
  * when the centering matches the stencil. It does not set a face current
  * to zero. Anisotropic constitutive fluxes stay a model choice and use
@@ -70,12 +77,17 @@ enum class ReflectionExtent {
   AllOutside
 };
 
-/// One global side. `value` is used only for odd reflection.
+/// How prescribed cell-face data extend into the ghost ring.
+/// Linear uses the wall value and nearest owned sample; it is not an odd mirror.
+enum class BoundaryExtension { Reflection, Linear };
+
+/// One global side. `value` is used for odd reflection and linear extension.
 template <typename T = double> struct ReflectionSide {
   bool enabled = false;
   ReflectionParity parity = ReflectionParity::Even;
   BoundaryCentering centering = BoundaryCentering::Node;
   T value{};
+  BoundaryExtension extension = BoundaryExtension::Reflection;
 };
 
 /// Six sides, in the same order as `pfc::field::fd::Walls`: −x +x −y +y −z +z.
@@ -112,6 +124,7 @@ template <typename T> struct ReflectionGeometry {
   int enabled[6]{};
   int odd[6]{};
   int cell_face[6]{};
+  int linear[6]{};
   T value[6]{};
   /// Disabled outside axes do not cancel the sample. One-axis Dirichlet
   /// sets this so a corner still receives that axis's mirror.
@@ -184,10 +197,18 @@ reflection_sample(const ReflectionGeometry<T> &geom, int i, int j, int k) noexce
       continue;
     }
     const int side = axis * 2 + (g < 0 ? 0 : 1);
-    const int gm = mirrored_global(g, geom.nglob[axis], geom.cell_face[side]);
+    const int gm = geom.linear[side]
+                       ? (g < 0 ? 0 : geom.nglob[axis] - 1)
+                       : mirrored_global(g, geom.nglob[axis], geom.cell_face[side]);
     src[axis] = gm - geom.low[axis];
     any = 1;
-    if (geom.odd[side]) {
+    if (geom.linear[side]) {
+      const int layer = g < 0 ? -g : g - geom.nglob[axis] + 1;
+      const T twice_layer = T{2} * static_cast<T>(layer);
+      const T coefficient = T{1} - twice_layer;
+      out.offset = coefficient * out.offset + twice_layer * geom.value[side];
+      out.scale *= coefficient;
+    } else if (geom.odd[side]) {
       out.offset = static_cast<T>(2) * geom.value[side] - out.offset;
       out.scale = static_cast<T>(-out.scale);
     }
@@ -224,6 +245,11 @@ build_reflection_geometry(const FieldT &u,
     geom.odd[s] = sides[s].parity == ReflectionParity::Odd ? 1 : 0;
     geom.cell_face[s] = sides[s].centering == BoundaryCentering::CellFace ? 1 : 0;
     geom.value[s] = sides[s].value;
+    geom.linear[s] = sides[s].extension == BoundaryExtension::Linear ? 1 : 0;
+    if (geom.enabled[s] && geom.linear[s] && (!geom.odd[s] || !geom.cell_face[s])) {
+      throw std::invalid_argument(
+          "apply_reflection_ghosts: linear extension requires odd cell-face data");
+    }
   }
   return geom;
 }
@@ -242,7 +268,9 @@ void validate_reflection_geometry(const ReflectionGeometry<T> &geom) {
       const int side = axis * 2 + (low_side ? 0 : 1);
       for (int layer = 1; layer <= geom.halo; ++layer) {
         const int g = low_side ? -layer : geom.nglob[axis] + layer - 1;
-        const int gm = mirrored_global(g, geom.nglob[axis], geom.cell_face[side]);
+        const int gm = geom.linear[side] ? (low_side ? 0 : geom.nglob[axis] - 1)
+                                         : mirrored_global(g, geom.nglob[axis],
+                                                           geom.cell_face[side]);
         if (gm < 0 || gm >= geom.nglob[axis]) {
           throw std::out_of_range(
               "apply_reflection_ghosts: mirror falls outside the global "

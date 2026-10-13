@@ -91,6 +91,29 @@ template <typename DeviceField> void require_device_matches_host() {
       REQUIRE(src[i] == host.data()[i]);
     }
   });
+
+  auto linear = reflection_walls<T>(
+      ReflectionParity::Odd, BoundaryCentering::CellFace, static_cast<T>(1.5));
+  for (auto *side :
+       {&linear.xm, &linear.xp, &linear.ym, &linear.yp, &linear.zm, &linear.zp})
+    side->extension = pfc::communication::BoundaryExtension::Linear;
+  apply_reflection_ghosts(host, linear);
+  apply_reflection_ghosts(device, linear);
+  REQUIRE(device.residency().device_valid());
+  REQUIRE_FALSE(device.residency().host_valid());
+  std::vector<T> accepted;
+  device.with_host_read([&](const T *src, std::size_t n) {
+    accepted.assign(src, src + n);
+    for (std::size_t i = 0; i < n; ++i) REQUIRE(src[i] == host.data()[i]);
+  });
+  // Independent tensor-product Lagrange weights: (-3)^3*u + 6*(9-3+1).
+  REQUIRE(host(-2, -2, -2) == static_cast<T>(42));
+  REQUIRE(host(9, 7, 6) == static_cast<T>(102.75));
+  linear.xm.centering = BoundaryCentering::Node;
+  REQUIRE_THROWS_AS(apply_reflection_ghosts(device, linear), std::invalid_argument);
+  device.with_host_read([&](const T *src, std::size_t n) {
+    REQUIRE(std::vector<T>(src, src + n) == accepted);
+  });
 }
 
 } // namespace

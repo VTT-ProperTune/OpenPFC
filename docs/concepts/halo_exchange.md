@@ -63,6 +63,16 @@ Use an unpadded `pfc::data::Field<T>` (`storage_halo == 0`) + `pfc::SparseHaloEx
   halo's widening passes. Periodic faces stay with the exchange. Even
   reflection of a scalar is not a zero face current; that law is
   `WallPolicy` in `face_current.hpp`, and the model chooses it.
+  For odd cell-face data, opt into `BoundaryExtension::Linear` on an
+  individual `ReflectionSide` to extrapolate through its wall value and
+  nearest owned sample: layer `k` is `2*k*value - (2*k-1)*nearest`.
+  This preserves linear cell-face closures with thick halos; it differs
+  from odd reflection beyond the first layer. The same X/Y/Z corner
+  composition applies. Invalid parity/centering combinations throw before
+  any field write or device synchronization. Owned cells stay unchanged.
+  This closure does not imply high-order boundary accuracy. Device callers
+  use the existing CUDA/HIP reflection entry point; rebuild headers and
+  libraries together because the geometry descriptor is passed by value.
 - `prepare` is **pre-evaluation** only. Post-evaluation BC enforcement after writing new owned values stays a separate driver responsibility outside `prepare`.
 - Rejection / retry does not roll back halo buffers: re-prepare from the accepted owned core.
 
