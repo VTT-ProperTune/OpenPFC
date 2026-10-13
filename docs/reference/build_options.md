@@ -60,3 +60,14 @@ Implementation detail: the `openpfc` library merges CMake **`OBJECT`** targets *
 - **[`quickstart.md`](../quickstart.md)** — minimal configure line  
 - **[`testing.md`](../development/testing.md)** — **`OpenPFC_BUILD_TESTS`**, CTest, Catch2 filters  
 - **[`troubleshooting.md`](../troubleshooting.md)** — when configure fails  
+
+## Package source identity
+
+`find_package(OpenPFC CONFIG REQUIRED)` exports `OpenPFC_SOURCE_REVISION`
+(the full configure-time Git SHA, or `unknown`) and `OpenPFC_SOURCE_STATE`
+(`clean`, `dirty`, or `unknown`). Installed and build-tree consumers read
+identical metadata. Record both when identifying numerical dependencies;
+a dirty checkout is not reproduced by its HEAD alone. Source archives
+without Git metadata report `unknown`. Reconfigure after changing sources
+before building or installing; these variables describe the configure-time
+tree and do not detect edits made after configuration.

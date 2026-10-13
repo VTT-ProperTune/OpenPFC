@@ -11,5 +11,23 @@ project(openpfc_consumer LANGUAGES C CXX)
 
 find_package(OpenPFC 0.4 CONFIG REQUIRED)
 
+if(NOT OpenPFC_SOURCE_STATE MATCHES "^(clean|dirty|unknown)$")
+  message(FATAL_ERROR "Missing or invalid OpenPFC source state")
+endif()
+if(NOT OpenPFC_SOURCE_REVISION STREQUAL "unknown")
+  string(LENGTH "${OpenPFC_SOURCE_REVISION}" revision_length)
+  if(NOT revision_length EQUAL 40 OR NOT OpenPFC_SOURCE_REVISION MATCHES "^[0-9a-f]+$")
+    message(FATAL_ERROR "Invalid OpenPFC source revision")
+  endif()
+endif()
+if(DEFINED EXPECTED_OPENPFC_REVISION AND
+    NOT OpenPFC_SOURCE_REVISION STREQUAL EXPECTED_OPENPFC_REVISION)
+  message(FATAL_ERROR "OpenPFC source revision does not match the built source")
+endif()
+if(DEFINED EXPECTED_OPENPFC_STATE AND
+    NOT OpenPFC_SOURCE_STATE STREQUAL EXPECTED_OPENPFC_STATE)
+  message(FATAL_ERROR "OpenPFC source state does not match the built source")
+endif()
+
 add_executable(consumer main.cpp spectral_state.cpp)
 target_link_libraries(consumer PRIVATE OpenPFC::openpfc)
