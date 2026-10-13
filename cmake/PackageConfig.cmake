@@ -10,6 +10,8 @@ install(EXPORT OpenPFCTargets
     DESTINATION lib/cmake/OpenPFC
 )
 
+include("${CMAKE_CURRENT_LIST_DIR}/SourceProvenance.cmake")
+
 # Generate config and write package config
 include(CMakePackageConfigHelpers)
 

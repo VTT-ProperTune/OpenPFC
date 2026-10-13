@@ -3,6 +3,11 @@
 
 @PACKAGE_INIT@
 
+# Configure-time source identity shared by installed and build-tree consumers.
+# A revision with SOURCE_STATE=dirty is not a reproducible clean source tree.
+set(OpenPFC_SOURCE_REVISION "@OpenPFC_SOURCE_REVISION@")
+set(OpenPFC_SOURCE_STATE "@OpenPFC_SOURCE_STATE@")
+
 include(CMakeFindDependencyMacro)
 
 if(NOT TARGET MPI::MPI_CXX OR NOT TARGET MPI::MPI_C)
