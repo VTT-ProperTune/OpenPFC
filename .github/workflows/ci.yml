@@ -413,6 +413,7 @@ jobs:
           cmake --build build-hip -j2
           cmake --install build-hip --prefix "$GITHUB_WORKSPACE/prefix-hip"
           cmake -S tests/packaging/startup -B startup-hip -GNinja \
+            -DCMAKE_PREFIX_PATH=/opt/rocm \
             -DOpenPFC_DIR="$GITHUB_WORKSPACE/prefix-hip/lib/cmake/OpenPFC"
           cmake --build startup-hip -j2
           ./startup-hip/startup_consumer
