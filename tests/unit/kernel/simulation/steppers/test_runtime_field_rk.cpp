@@ -370,10 +370,10 @@ TEST_CASE("runtime field RK reports scalar scratch capacity without guessing",
       MPI_COMM_WORLD);
   const auto n = group.fields[0].local_size();
   const std::size_t owned = static_cast<std::size_t>(n[0]) * n[1] * n[2];
-  // One compact accepted array + RK four stages/du/temp/candidate, and
-  // full-sized stage, accepted baseline and restoration backup per Field.
+  // Compact accepted state, RK4 rates, stage input and candidate, plus one
+  // accepted padded snapshot per field. No second stage image or backup.
   const std::size_t expected =
-      17 * (8 * owned + 3 * group.fields[0].size()) * sizeof(double);
+      17 * (7 * owned + group.fields[0].size()) * sizeof(double);
   REQUIRE(rk.workspace_bytes() == expected);
   rk.step(0.);
   REQUIRE(rk.workspace_bytes() == expected);

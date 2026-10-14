@@ -37,6 +37,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Changed
 
+- Runtime field RK keeps one accepted padded snapshot per field and writes
+  each stage rate directly into its stage buffer. Stage state, rollback and
+  admission checks are unchanged (#533).
+
 - Reflection ghost fills visit the active face, edge and corner slabs
   instead of every padded index. Centering, parity, linear extension and
   rejection before mutation are unchanged (#532).

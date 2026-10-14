@@ -109,9 +109,9 @@ public:
    */
   ExplicitRKStepper(double dt, std::size_t local_size,
                     ButcherTableau<double> tableau, Rhs rhs)
-      : m_dt(dt), m_local_size(local_size), m_du(local_size, Scalar{}),
-        m_u_temp(local_size, Scalar{}), m_candidate(local_size, Scalar{}),
-        m_tableau(std::move(tableau)), m_rhs(std::move(rhs)) {
+      : m_dt(dt), m_local_size(local_size), m_u_temp(local_size, Scalar{}),
+        m_candidate(local_size, Scalar{}), m_tableau(std::move(tableau)),
+        m_rhs(std::move(rhs)) {
     const unsigned int s = m_tableau.stage_count();
     m_k.resize(s);
     for (unsigned int i = 0; i < s; ++i) {
@@ -129,12 +129,14 @@ public:
   [[nodiscard]] Attempt attempt(double t, const std::vector<Scalar> &u) {
     const unsigned int s = m_tableau.stage_count();
     const std::size_t n = u.size();
-    if (n != m_local_size || m_du.size() != m_local_size ||
-        m_u_temp.size() != m_local_size) {
+    if (n != m_local_size || m_u_temp.size() != m_local_size) {
       throw std::invalid_argument("ExplicitRKStepper: input size changed");
     }
 
     for (unsigned int i = 0; i < s; ++i) {
+      if (m_k[i].size() != n) {
+        throw std::invalid_argument("ExplicitRKStepper: input size changed");
+      }
       m_u_temp = u;
       for (unsigned int j = 0; j < i; ++j) {
         const double a_ij = m_tableau.a(i, j);
@@ -147,12 +149,13 @@ public:
       }
 
       const double stage_time = t + m_tableau.c(i) * m_dt;
-      m_rhs(stage_time, m_u_temp, m_du);
-      if (m_du.size() != n || m_u_temp.size() != n) {
+      // The stage buffer is the rate output. Callers that need a zeroed
+      // increment clear it themselves; this stepper does not keep a second copy.
+      m_rhs(stage_time, m_u_temp, m_k[i]);
+      if (m_k[i].size() != n || m_u_temp.size() != n) {
         throw std::invalid_argument(
             "ExplicitRKStepper: RHS stage/output size changed");
       }
-      m_k[i] = m_du;
     }
 
     m_candidate = u;
@@ -179,8 +182,7 @@ public:
 
   /// Allocated scalar scratch only; excludes tableau, callback and metadata.
   [[nodiscard]] std::size_t workspace_bytes() const noexcept {
-    std::size_t cells =
-        m_du.capacity() + m_u_temp.capacity() + m_candidate.capacity();
+    std::size_t cells = m_u_temp.capacity() + m_candidate.capacity();
     for (const auto &stage : m_k) cells += stage.capacity();
     return cells * sizeof(Scalar);
   }
@@ -199,10 +201,9 @@ public:
 private:
   double m_dt{0.0};
   std::size_t m_local_size;
-  std::vector<Scalar> m_du;
   std::vector<Scalar> m_u_temp;
   std::vector<Scalar> m_candidate;
-  std::vector<std::vector<Scalar>> m_k; // scratch buffers per stage
+  std::vector<std::vector<Scalar>> m_k; // rate buffer per stage
   ButcherTableau<double> m_tableau;
   Rhs m_rhs;
 };

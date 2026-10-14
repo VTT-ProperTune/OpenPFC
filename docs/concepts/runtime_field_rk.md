@@ -8,9 +8,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 `RuntimeFieldRKStepper` in
 `openpfc/kernel/simulation/steppers/runtime_field_rk.hpp` advances a
 runtime-sized group of `Field<double, HostSpace>` objects with an existing
-explicit Butcher tableau. It reuses the vector RK engine and the same stage
-transaction as the tuple-based field factory. Existing factories remain
-available. No physical equation or boundary law is supplied by this adapter.
+explicit Butcher tableau. It reuses the vector RK engine. Each stage publishes
+owned values into the borrowed fields and restores one accepted padded
+snapshot afterwards. The tuple-based field factory keeps its own stage
+transaction. Existing factories remain available. No physical equation or
+boundary law is supplied by this adapter.
 
 `create_runtime(fields, dt, tableau, rhs, comm)` borrows a span of field
 pointers. The callback `rhs(actual_stage_time, rates)` observes all bound
@@ -48,9 +50,9 @@ resizes a field has its accepted contents restored without allocation, but
 invalidates the old binding; reconstruct the stepper before retrying.
 
 `workspace_bytes()` reports scalar scratch capacity, including compact RK
-arrays, padded stage and accepted snapshots, and transaction backups. It
-excludes caller fields, callback captures, tableau coefficients and pointer
-or index metadata. It is not process memory usage or a performance claim.
+arrays and one accepted padded snapshot per field. It excludes caller fields,
+callback captures, tableau coefficients and pointer metadata. It is not
+process memory usage or a performance claim.
 
 The qualified interface is explicit, homogeneous, CPU double precision.
 It does not provide device stepping, adaptivity or spectral evolution.

@@ -23,6 +23,9 @@ namespace pfc::sim::steppers {
  * The callback observes all published stage Fields and receives the actual
  * tableau time. It owns physical preparation and rates. Accepted padding is
  * preserved, not refreshed: the callback must prepare stage ghosts every time.
+ * One padded snapshot per field is the rollback copy. Owned stage values are
+ * published into that field and the snapshot is restored after the callback,
+ * including when the callback throws.
  *
  * Construction, attempt, commit and step are collective on comm (SELF by
  * default); candidate access and queries are local. Callbacks must
@@ -104,10 +107,9 @@ private:
     int halo;
     StageRhs rhs;
     Agreement agreement;
-    std::unique_ptr<detail::RuntimeFieldStageTransaction> binding;
-    std::vector<std::size_t> indices;
-    std::vector<std::vector<double>> stages, baseline;
-    std::vector<const std::vector<double> *> sources;
+    std::vector<std::size_t> sizes;
+    std::vector<double *> addresses;
+    std::vector<std::vector<double>> baseline;
     std::vector<std::span<double>> rates;
     std::vector<double> accepted;
     bool busy = false;
@@ -116,50 +118,90 @@ private:
         : fields(group.begin(), group.end()), domain(fields.front()->domain()),
           low(fields.front()->box().low), local(fields.front()->local_size()),
           halo(fields.front()->storage_halo()), rhs(std::move(callback)),
-          agreement{comm}, stages(fields.size()), baseline(fields.size()),
-          sources(fields.size()), rates(fields.size()) {
-      std::vector<std::vector<double> *> buffers;
-      for (auto *field : fields) buffers.push_back(&field->vec());
-      binding = std::make_unique<detail::RuntimeFieldStageTransaction>(buffers);
-      for (int k = 0; k < local[2]; ++k)
-        for (int j = 0; j < local[1]; ++j)
-          for (int i = 0; i < local[0]; ++i)
-            indices.push_back(fields[0]->idx(i, j, k));
-      if (indices.empty() ||
-          fields.size() > std::numeric_limits<std::size_t>::max() / indices.size())
+          agreement{comm}, sizes(fields.size()), addresses(fields.size()),
+          baseline(fields.size()), rates(fields.size()) {
+      const auto n = owned_count();
+      if (n == 0 || fields.size() > std::numeric_limits<std::size_t>::max() / n)
         throw std::length_error("runtime RK owned size is invalid");
-      accepted.resize(fields.size() * indices.size());
+      accepted.resize(fields.size() * n);
       for (std::size_t f = 0; f < fields.size(); ++f) {
-        stages[f].resize(fields[f]->size());
-        baseline[f].resize(fields[f]->size());
-        sources[f] = &stages[f];
+        sizes[f] = fields[f]->size();
+        addresses[f] = fields[f]->data();
+        baseline[f].resize(sizes[f]);
+      }
+    }
+
+    [[nodiscard]] std::size_t owned_count() const noexcept {
+      return static_cast<std::size_t>(local[0]) *
+             static_cast<std::size_t>(local[1]) * static_cast<std::size_t>(local[2]);
+    }
+
+    template <class Fn> void for_owned_rows(Fn &&fn) const {
+      const int nx = local[0];
+      const int ny = local[1];
+      const int nz = local[2];
+      for (int k = 0; k < nz; ++k) {
+        for (int j = 0; j < ny; ++j) {
+          const auto src = fields[0]->idx(0, j, k);
+          const auto dst =
+              static_cast<std::size_t>((static_cast<std::size_t>(k) * ny + j) * nx);
+          fn(src, dst, nx);
+        }
       }
     }
 
     void validate() const {
-      binding->validate();
-      for (auto *field : fields)
-        if (field->domain() != domain || field->box().low != low ||
-            field->local_size() != local || field->storage_halo() != halo)
+      for (std::size_t f = 0; f < fields.size(); ++f) {
+        if (fields[f]->size() != sizes[f] || fields[f]->data() != addresses[f])
+          throw std::invalid_argument(
+              "runtime RK bound field storage changed; recreate the stepper");
+        if (fields[f]->domain() != domain || fields[f]->box().low != low ||
+            fields[f]->local_size() != local || fields[f]->storage_halo() != halo)
           throw std::invalid_argument("runtime RK bound geometry changed");
+      }
+    }
+    void restore_accepted() noexcept {
+      for (std::size_t f = 0; f < fields.size(); ++f) {
+        auto &buffer = fields[f]->vec();
+        if (buffer.size() != baseline[f].size() || buffer.data() != addresses[f]) {
+          // A callback broke the fixed-storage contract. Put the accepted
+          // bytes back without allocating; validate() then fails closed.
+          buffer.swap(baseline[f]);
+        } else {
+          std::memcpy(buffer.data(), baseline[f].data(),
+                      baseline[f].size() * sizeof(double));
+        }
+      }
+    }
+    void publish(const std::vector<double> &stage) {
+      const auto n = owned_count();
+      for (std::size_t f = 0; f < fields.size(); ++f) {
+        for_owned_rows([&](std::size_t src, std::size_t dst, int nx) {
+          std::memcpy(fields[f]->data() + src, stage.data() + f * n + dst,
+                      static_cast<std::size_t>(nx) * sizeof(double));
+        });
+      }
     }
     void pack() {
       validate();
-      const auto n = indices.size();
+      const auto n = owned_count();
       for (std::size_t f = 0; f < fields.size(); ++f) {
-        std::copy(fields[f]->vec().begin(), fields[f]->vec().end(),
-                  baseline[f].begin());
-        for (std::size_t i = 0; i < n; ++i) {
-          const double value = fields[f]->vec()[indices[i]];
-          if (!std::isfinite(value))
-            throw std::invalid_argument("runtime RK accepted state is not finite");
-          accepted[f * n + i] = value;
-        }
+        std::memcpy(baseline[f].data(), fields[f]->data(),
+                    sizes[f] * sizeof(double));
+        for_owned_rows([&](std::size_t src, std::size_t dst, int nx) {
+          const double *row = fields[f]->data() + src;
+          double *out = accepted.data() + f * n + dst;
+          for (int i = 0; i < nx; ++i) {
+            if (!std::isfinite(row[i]))
+              throw std::invalid_argument("runtime RK accepted state is not finite");
+            out[i] = row[i];
+          }
+        });
       }
     }
     void evaluate(double t, const std::vector<double> &stage,
                   std::vector<double> &du) {
-      // Gate all rank-local failures before any next-stage halo callback.
+      // Gate rank-local stage metadata before any field is published.
       agreement.run([&] {
         validate();
         if (!std::isfinite(t) || stage.size() != accepted.size())
@@ -167,24 +209,23 @@ private:
         for (double value : stage)
           if (!std::isfinite(value))
             throw std::invalid_argument("runtime RK stage is not finite");
-        const auto n = indices.size();
-        std::fill(du.begin(), du.end(), 0.);
-        for (std::size_t f = 0; f < fields.size(); ++f) {
-          std::copy(fields[f]->vec().begin(), fields[f]->vec().end(),
-                    stages[f].begin());
-          for (std::size_t i = 0; i < n; ++i)
-            stages[f][indices[i]] = stage[f * n + i];
-          rates[f] = std::span<double>(du).subspan(f * n, n);
-        }
       });
       agreement.run([&] {
-        binding->evaluate(sources, [&] {
-          rhs(t, rates);
-          validate();
-          for (double value : du)
-            if (!std::isfinite(value))
-              throw std::runtime_error("runtime RK rate is not finite");
-        });
+        validate();
+        struct Restore {
+          State &self;
+          ~Restore() { self.restore_accepted(); }
+        } restore{*this};
+        publish(stage);
+        std::fill(du.begin(), du.end(), 0.);
+        const auto n = owned_count();
+        for (std::size_t f = 0; f < fields.size(); ++f)
+          rates[f] = std::span<double>(du).subspan(f * n, n);
+        rhs(t, rates);
+        validate();
+        for (double value : du)
+          if (!std::isfinite(value))
+            throw std::runtime_error("runtime RK rate is not finite");
       });
     }
   };
@@ -304,7 +345,7 @@ public:
       throw std::invalid_argument(
           "runtime RK candidate does not belong to this attempt");
     return std::span<const double>(a.candidate)
-        .subspan(field * m_state->indices.size(), m_state->indices.size());
+        .subspan(field * m_state->owned_count(), m_state->owned_count());
   }
 
   void commit(const Attempt &a) {
@@ -317,29 +358,36 @@ public:
             a.t1 != m_time + dt() || a.candidate.size() != m_state->accepted.size())
           throw std::invalid_argument(
               "runtime RK candidate is failed, stale or already committed");
-        const auto n = m_state->indices.size();
+        const auto n = m_state->owned_count();
         for (std::size_t f = 0; f < m_state->fields.size(); ++f) {
           if (std::memcmp(m_state->fields[f]->data(), m_state->baseline[f].data(),
                           m_state->baseline[f].size() * sizeof(double)) != 0)
             throw std::invalid_argument(
                 "runtime RK accepted buffer changed before commit");
-          for (std::size_t i = 0; i < n; ++i)
-            if (m_state->fields[f]->vec()[m_state->indices[i]] !=
-                    m_state->accepted[f * n + i] ||
-                !std::isfinite(a.candidate[f * n + i]))
-              throw std::invalid_argument(
-                  "runtime RK accepted state changed before commit");
+          m_state->for_owned_rows([&](std::size_t src, std::size_t dst, int nx) {
+            const double *row = m_state->fields[f]->data() + src;
+            for (int i = 0; i < nx; ++i)
+              if (row[i] !=
+                      m_state->accepted[f * n + dst + static_cast<std::size_t>(i)] ||
+                  !std::isfinite(
+                      a.candidate[f * n + dst + static_cast<std::size_t>(i)]))
+                throw std::invalid_argument(
+                    "runtime RK accepted state changed before commit");
+          });
         }
       });
     } catch (...) {
       m_candidate = nullptr;
       throw;
     }
-    const auto n = m_state->indices.size();
+    const auto n = m_state->owned_count();
     // All ranks and all fields have passed admission; writes cannot allocate.
     for (std::size_t f = 0; f < m_state->fields.size(); ++f)
-      for (std::size_t i = 0; i < n; ++i)
-        m_state->fields[f]->vec()[m_state->indices[i]] = a.candidate[f * n + i];
+      m_state->for_owned_rows([&](std::size_t src, std::size_t dst, int nx) {
+        std::memcpy(m_state->fields[f]->data() + src,
+                    a.candidate.data() + f * n + dst,
+                    static_cast<std::size_t>(nx) * sizeof(double));
+      });
     m_candidate = nullptr;
   }
 
@@ -352,11 +400,8 @@ public:
   /// Scalar scratch capacity only: excludes Fields, coefficients, callback
   /// captures and index/pointer metadata. This is not process memory usage.
   [[nodiscard]] std::size_t workspace_bytes() const noexcept {
-    std::size_t bytes =
-        m_engine->workspace_bytes() + m_state->binding->workspace_bytes();
+    std::size_t bytes = m_engine->workspace_bytes();
     bytes += m_state->accepted.capacity() * sizeof(double);
-    for (const auto &buffer : m_state->stages)
-      bytes += buffer.capacity() * sizeof(double);
     for (const auto &buffer : m_state->baseline)
       bytes += buffer.capacity() * sizeof(double);
     return bytes;
