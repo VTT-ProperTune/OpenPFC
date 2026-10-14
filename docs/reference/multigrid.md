@@ -102,13 +102,15 @@ neighbours) and restriction is $R = P^\top$. Both read one halo layer and
 write owned values only; nothing is accumulated across ranks.
 
 **Coarse operators.** From level `galerkin_from_level` on, a level stores the
-Galerkin product $P^\top A P$ as 27 weights per node. Earlier coarse levels are
+Galerkin product $P^\top A P$ as its centre and 13 forward weights per node; a
+backward weight is read from the neighbour, so the stored operator is exactly
+symmetric. Earlier coarse levels are
 rediscretized with each coarse element coefficient the mean of its 8
 children. The Q1 spaces are nested, so for a constant coefficient both are the
 same operator: $P^\top K_h P = K_{2h}$ and $P^\top M_h P = M_{2h}$. With a
 varying or discontinuous coefficient only the Galerkin product keeps the
-variational property; it costs 27 values per coarse node, so the first
-Galerkin level stores about 3.4 fine fields.
+variational property; it costs 14 values per coarse node, so the first
+Galerkin level stores about 1.8 fine fields.
 
 **Smoothers.** Chebyshev iteration on $D^{-1}A$ over
 $[\lambda/\text{range}, \lambda]$, with $\lambda$ a safety factor times a

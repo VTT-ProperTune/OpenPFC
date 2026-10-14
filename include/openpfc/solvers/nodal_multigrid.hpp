@@ -28,11 +28,11 @@
  * Both are gathers that read one halo layer; nothing is accumulated across ranks.
  *
  * Coarse operators: level l >= `galerkin_from_level` stores the Galerkin product
- * P^T A P as 27 weights per coarse node. Earlier coarse levels are rediscretized
- * with each coarse element coefficient the mean of its 8 children. For a constant
- * coefficient both coincide, because the Q1 spaces are nested: P^T K_h P = K_2h
- * and P^T M_h P = M_2h. With a varying coefficient only the Galerkin product
- * keeps that variational identity.
+ * P^T A P as its centre and 13 forward weights per coarse node (exactly symmetric).
+ * Earlier coarse levels are rediscretized with each coarse element coefficient the
+ * mean of its 8 children. For a constant coefficient both coincide, because the Q1
+ * spaces are nested: P^T K_h P = K_2h and P^T M_h P = M_2h. With a varying
+ * coefficient only the Galerkin product keeps that variational identity.
  *
  * Smoothers: Chebyshev on D^{-1} A over [lambda/range, lambda], lambda being
  * `eigenvalue_safety` times a power-iteration estimate per level whose start
@@ -110,12 +110,11 @@ template <class Space> struct Launch {
   template <class... A> static void copy_coefficient(A &&...) { unavailable(); }
   template <class... A> static void apply(A &&...) { unavailable(); }
   template <class... A> static void scaled_apply(A &&...) { unavailable(); }
-  template <class... A> static void inverse_diagonal(A &&...) { unavailable(); }
   template <class... A> static void residual(A &&...) { unavailable(); }
   template <class... A> static void chebyshev(A &&...) { unavailable(); }
   template <class... A> static void gauss_seidel(A &&...) { unavailable(); }
   template <class... A> static void restrict_residual(A &&...) { unavailable(); }
-  template <class... A> static void prolong_add(A &&...) { unavailable(); }
+  template <class... A> static void prolong(A &&...) { unavailable(); }
   template <class... A> static void restrict_coefficient(A &&...) { unavailable(); }
   template <class... A> static void galerkin(A &&...) { unavailable(); }
   template <class... A> static double dot_owned(A &&...) {
@@ -126,131 +125,99 @@ template <class Space> struct Launch {
 
 #if defined(OpenPFC_ENABLE_CUDA)
 template <> struct Launch<CUDASpace> {
-  static void fill(double *p, std::size_t n, double v) {
-    gpu::nmg::fill_cuda(p, n, v);
+  template <class... A> static void fill(A &&...a) {
+    gpu::nmg::fill_cuda(std::forward<A>(a)...);
   }
-  static void axpy_owned(const nmg::Level &L, double a, const double *x, double *y) {
-    gpu::nmg::axpy_owned_cuda(L, a, x, y);
+  template <class... A> static void axpy_owned(A &&...a) {
+    gpu::nmg::axpy_owned_cuda(std::forward<A>(a)...);
   }
-  static void add_owned(const nmg::Level &L, double *y, double v) {
-    gpu::nmg::add_owned_cuda(L, y, v);
+  template <class... A> static void add_owned(A &&...a) {
+    gpu::nmg::add_owned_cuda(std::forward<A>(a)...);
   }
-  static void hash_owned(const nmg::Level &L, double *x) {
-    gpu::nmg::hash_owned_cuda(L, x);
+  template <class... A> static void hash_owned(A &&...a) {
+    gpu::nmg::hash_owned_cuda(std::forward<A>(a)...);
   }
-  static void copy_coefficient(const nmg::Level &L, const double *src, int h,
-                               double *dst) {
-    gpu::nmg::copy_coefficient_cuda(L, src, h, dst);
+  template <class... A> static void copy_coefficient(A &&...a) {
+    gpu::nmg::copy_coefficient_cuda(std::forward<A>(a)...);
   }
-  static void apply(const nmg::Level &L, const nmg::Operator &A, const double *u,
-                    double *out) {
-    gpu::nmg::apply_cuda(L, A, u, out);
+  template <class... A> static void apply(A &&...a) {
+    gpu::nmg::apply_cuda(std::forward<A>(a)...);
   }
-  static void scaled_apply(const nmg::Level &L, const nmg::Operator &A,
-                           const double *invd, const double *u, double *out) {
-    gpu::nmg::scaled_apply_cuda(L, A, invd, u, out);
+  template <class... A> static void scaled_apply(A &&...a) {
+    gpu::nmg::scaled_apply_cuda(std::forward<A>(a)...);
   }
-  static void inverse_diagonal(const nmg::Level &L, const nmg::Operator &A,
-                               double *invd) {
-    gpu::nmg::inverse_diagonal_cuda(L, A, invd);
+  template <class... A> static void residual(A &&...a) {
+    gpu::nmg::residual_cuda(std::forward<A>(a)...);
   }
-  static void residual(const nmg::Level &L, const nmg::Operator &A, const double *f,
-                       const double *u, double *r, int z) {
-    gpu::nmg::residual_cuda(L, A, f, u, r, z);
+  template <class... A> static void chebyshev(A &&...a) {
+    gpu::nmg::chebyshev_cuda(std::forward<A>(a)...);
   }
-  static void chebyshev(const nmg::Level &L, const nmg::Operator &A, const double *f,
-                        const double *u, const double *invd, double *d, double c1,
-                        double c2, int z) {
-    gpu::nmg::chebyshev_cuda(L, A, f, u, invd, d, c1, c2, z);
+  template <class... A> static void gauss_seidel(A &&...a) {
+    gpu::nmg::gauss_seidel_cuda(std::forward<A>(a)...);
   }
-  static void gauss_seidel(const nmg::Level &L, const nmg::Operator &A,
-                           const double *f, const double *invd, double *u, int c) {
-    gpu::nmg::gauss_seidel_cuda(L, A, f, invd, u, c);
+  template <class... A> static void restrict_residual(A &&...a) {
+    gpu::nmg::restrict_residual_cuda(std::forward<A>(a)...);
   }
-  static void restrict_residual(const nmg::Level &F, const double *rf,
-                                const nmg::Level &G, double *fg, const int *off) {
-    gpu::nmg::restrict_residual_cuda(F, rf, G, fg, off);
+  template <class... A> static void prolong(A &&...a) {
+    gpu::nmg::prolong_cuda(std::forward<A>(a)...);
   }
-  static void prolong_add(const nmg::Level &F, double *uf, const nmg::Level &G,
-                          const double *ug, const int *off) {
-    gpu::nmg::prolong_add_cuda(F, uf, G, ug, off);
+  template <class... A> static void restrict_coefficient(A &&...a) {
+    gpu::nmg::restrict_coefficient_cuda(std::forward<A>(a)...);
   }
-  static void restrict_coefficient(const nmg::Level &F, const double *af,
-                                   const nmg::Level &G, double *ag, const int *off) {
-    gpu::nmg::restrict_coefficient_cuda(F, af, G, ag, off);
+  template <class... A> static void galerkin(A &&...a) {
+    gpu::nmg::galerkin_cuda(std::forward<A>(a)...);
   }
-  static void galerkin(const nmg::Level &F, const nmg::Operator &A,
-                       const nmg::Level &G, double *sg, std::size_t gp,
-                       const int *off) {
-    gpu::nmg::galerkin_cuda(F, A, G, sg, gp, off);
-  }
-  static double dot_owned(const nmg::Level &L, const double *x, const double *y) {
-    return gpu::nmg::dot_owned_cuda(L, x, y);
+  template <class... A> static double dot_owned(A &&...a) {
+    return gpu::nmg::dot_owned_cuda(std::forward<A>(a)...);
   }
 };
 #endif
 #if defined(OpenPFC_ENABLE_HIP)
 template <> struct Launch<HIPSpace> {
-  static void fill(double *p, std::size_t n, double v) {
-    gpu::nmg::fill_hip(p, n, v);
+  template <class... A> static void fill(A &&...a) {
+    gpu::nmg::fill_hip(std::forward<A>(a)...);
   }
-  static void axpy_owned(const nmg::Level &L, double a, const double *x, double *y) {
-    gpu::nmg::axpy_owned_hip(L, a, x, y);
+  template <class... A> static void axpy_owned(A &&...a) {
+    gpu::nmg::axpy_owned_hip(std::forward<A>(a)...);
   }
-  static void add_owned(const nmg::Level &L, double *y, double v) {
-    gpu::nmg::add_owned_hip(L, y, v);
+  template <class... A> static void add_owned(A &&...a) {
+    gpu::nmg::add_owned_hip(std::forward<A>(a)...);
   }
-  static void hash_owned(const nmg::Level &L, double *x) {
-    gpu::nmg::hash_owned_hip(L, x);
+  template <class... A> static void hash_owned(A &&...a) {
+    gpu::nmg::hash_owned_hip(std::forward<A>(a)...);
   }
-  static void copy_coefficient(const nmg::Level &L, const double *src, int h,
-                               double *dst) {
-    gpu::nmg::copy_coefficient_hip(L, src, h, dst);
+  template <class... A> static void copy_coefficient(A &&...a) {
+    gpu::nmg::copy_coefficient_hip(std::forward<A>(a)...);
   }
-  static void apply(const nmg::Level &L, const nmg::Operator &A, const double *u,
-                    double *out) {
-    gpu::nmg::apply_hip(L, A, u, out);
+  template <class... A> static void apply(A &&...a) {
+    gpu::nmg::apply_hip(std::forward<A>(a)...);
   }
-  static void scaled_apply(const nmg::Level &L, const nmg::Operator &A,
-                           const double *invd, const double *u, double *out) {
-    gpu::nmg::scaled_apply_hip(L, A, invd, u, out);
+  template <class... A> static void scaled_apply(A &&...a) {
+    gpu::nmg::scaled_apply_hip(std::forward<A>(a)...);
   }
-  static void inverse_diagonal(const nmg::Level &L, const nmg::Operator &A,
-                               double *invd) {
-    gpu::nmg::inverse_diagonal_hip(L, A, invd);
+  template <class... A> static void residual(A &&...a) {
+    gpu::nmg::residual_hip(std::forward<A>(a)...);
   }
-  static void residual(const nmg::Level &L, const nmg::Operator &A, const double *f,
-                       const double *u, double *r, int z) {
-    gpu::nmg::residual_hip(L, A, f, u, r, z);
+  template <class... A> static void chebyshev(A &&...a) {
+    gpu::nmg::chebyshev_hip(std::forward<A>(a)...);
   }
-  static void chebyshev(const nmg::Level &L, const nmg::Operator &A, const double *f,
-                        const double *u, const double *invd, double *d, double c1,
-                        double c2, int z) {
-    gpu::nmg::chebyshev_hip(L, A, f, u, invd, d, c1, c2, z);
+  template <class... A> static void gauss_seidel(A &&...a) {
+    gpu::nmg::gauss_seidel_hip(std::forward<A>(a)...);
   }
-  static void gauss_seidel(const nmg::Level &L, const nmg::Operator &A,
-                           const double *f, const double *invd, double *u, int c) {
-    gpu::nmg::gauss_seidel_hip(L, A, f, invd, u, c);
+  template <class... A> static void restrict_residual(A &&...a) {
+    gpu::nmg::restrict_residual_hip(std::forward<A>(a)...);
   }
-  static void restrict_residual(const nmg::Level &F, const double *rf,
-                                const nmg::Level &G, double *fg, const int *off) {
-    gpu::nmg::restrict_residual_hip(F, rf, G, fg, off);
+  template <class... A> static void prolong(A &&...a) {
+    gpu::nmg::prolong_hip(std::forward<A>(a)...);
   }
-  static void prolong_add(const nmg::Level &F, double *uf, const nmg::Level &G,
-                          const double *ug, const int *off) {
-    gpu::nmg::prolong_add_hip(F, uf, G, ug, off);
+  template <class... A> static void restrict_coefficient(A &&...a) {
+    gpu::nmg::restrict_coefficient_hip(std::forward<A>(a)...);
   }
-  static void restrict_coefficient(const nmg::Level &F, const double *af,
-                                   const nmg::Level &G, double *ag, const int *off) {
-    gpu::nmg::restrict_coefficient_hip(F, af, G, ag, off);
+  template <class... A> static void galerkin(A &&...a) {
+    gpu::nmg::galerkin_hip(std::forward<A>(a)...);
   }
-  static void galerkin(const nmg::Level &F, const nmg::Operator &A,
-                       const nmg::Level &G, double *sg, std::size_t gp,
-                       const int *off) {
-    gpu::nmg::galerkin_hip(F, A, G, sg, gp, off);
-  }
-  static double dot_owned(const nmg::Level &L, const double *x, const double *y) {
-    return gpu::nmg::dot_owned_hip(L, x, y);
+  template <class... A> static double dot_owned(A &&...a) {
+    return gpu::nmg::dot_owned_hip(std::forward<A>(a)...);
   }
 };
 #endif
@@ -453,10 +420,8 @@ public:
     sync();
     m_stats.coarse_operators = seconds(tc);
     const auto te = std::chrono::steady_clock::now();
-    for (auto &L : m_levels) {
-      inverse_diagonal(*L);
+    for (auto &L : m_levels)
       if (L.get() != m_levels.back().get() || !m_dense) estimate_lambda(*L);
-    }
     sync();
     m_stats.eigenvalues = seconds(te);
     const auto tf = std::chrono::steady_clock::now();
@@ -488,7 +453,6 @@ public:
     Lev &L = *m_levels[0];
     check_vector(r, "r", 1);
     check_vector(z, "z", 1);
-    zero(z.data(), z.size());
     cycle(0, r.data(), z.data());
     if (m_c.sigma == 0.0) project_mean(L, z.data());
     if constexpr (!is_host) z.note_device_write();
@@ -554,7 +518,7 @@ private:
     nmg::Level g;
     bool whole = false;      ///< this rank holds the whole global level
     bool replicated = false; ///< agglomerated: every rank holds it
-    Buf u, f, r, d, invd, a, s;
+    Buf u, f, r, t, a, s;    ///< t: second smoothing iterate (Chebyshev)
     std::unique_ptr<Halo> vx, ax, sx;
     double lmax = 0;
     std::vector<Box3i> regions; ///< per rank, region restricted into (agglomerated)
@@ -617,13 +581,12 @@ private:
       L.f = Buf(pv);
     }
     L.r = Buf(pv);
-    L.invd = Buf(pv);
-    if (m_c.smoother == Smoother::Chebyshev) L.d = Buf(pv);
+    if (m_c.smoother == Smoother::Chebyshev) L.t = Buf(pv);
     if (L.g.stencil)
-      L.s = Buf(27 * pv);
+      L.s = Buf(nmg::kStencilPlanes * nmg::padded_size(L.g, nmg::kStencilHalo));
     else
       L.a = Buf(nmg::padded_size(L.g, nmg::kCoefficientHalo));
-    for (Buf *b : {&L.u, &L.f, &L.r, &L.d, &L.invd, &L.a, &L.s})
+    for (Buf *b : {&L.u, &L.f, &L.r, &L.t, &L.a, &L.s})
       if (b->size()) zero(b->data(), b->size());
   }
 
@@ -632,8 +595,9 @@ private:
     L.vx = std::make_unique<Halo>(L.domain, b, L.decomp, rank, comm,
                                   nmg::kVectorHalo, 1, base);
     if (L.g.stencil)
-      L.sx = std::make_unique<Halo>(L.domain, b, L.decomp, rank, comm,
-                                    nmg::kVectorHalo, 27, base + 100);
+      L.sx =
+          std::make_unique<Halo>(L.domain, b, L.decomp, rank, comm,
+                                 nmg::kStencilHalo, nmg::kStencilPlanes, base + 100);
     else
       L.ax = std::make_unique<Halo>(L.domain, b, L.decomp, rank, comm,
                                     nmg::kCoefficientHalo, 1, base + 20);
@@ -641,8 +605,7 @@ private:
 
   static std::size_t level_bytes(const Lev &L) {
     std::size_t n = 0;
-    for (const Buf *b : {&L.u, &L.f, &L.r, &L.d, &L.invd, &L.a, &L.s})
-      n += b->size();
+    for (const Buf *b : {&L.u, &L.f, &L.r, &L.t, &L.a, &L.s}) n += b->size();
     return n * sizeof(double);
   }
 
@@ -669,7 +632,7 @@ private:
     nmg::Operator A;
     A.a = L.a.size() ? L.a.data() : nullptr;
     A.s = L.s.size() ? L.s.data() : nullptr;
-    A.plane = nmg::padded_size(L.g, nmg::kVectorHalo);
+    A.plane = nmg::padded_size(L.g, nmg::kStencilHalo);
     return A;
   }
 
@@ -723,9 +686,9 @@ private:
 
   void exchange_coefficients(Lev &L) {
     if (L.g.stencil) {
-      double *ptr[27];
-      const std::size_t pv = nmg::padded_size(L.g, nmg::kVectorHalo);
-      for (int o = 0; o < 27; ++o)
+      double *ptr[nmg::kStencilPlanes];
+      const std::size_t pv = nmg::padded_size(L.g, nmg::kStencilHalo);
+      for (int o = 0; o < nmg::kStencilPlanes; ++o)
         ptr[o] = L.s.data() + static_cast<std::size_t>(o) * pv;
       L.sx->exchange(ptr, pv);
     } else {
@@ -783,7 +746,7 @@ private:
   /// G is agglomerated from a distributed F, then exchange G's halos.
   void build_operator(Lev &F, Lev &G) {
     const auto A = op(F);
-    const std::size_t gplane = nmg::padded_size(G.g, nmg::kVectorHalo);
+    const std::size_t gplane = nmg::padded_size(G.g, nmg::kStencilHalo);
     const int rh[3] = {F.g.n[0] / 2, F.g.n[1] / 2, F.g.n[2] / 2};
     if (G.g.stencil) {
       if constexpr (is_host) {
@@ -809,9 +772,9 @@ private:
     }
     if (G.replicated && !F.whole) {
       if (G.g.stencil)
-        for (int o = 0; o < 27; ++o)
+        for (int o = 0; o < nmg::kStencilPlanes; ++o)
           gather(G, G.s.data() + static_cast<std::size_t>(o) * gplane,
-                 nmg::kVectorHalo);
+                 nmg::kStencilHalo);
       else
         gather(G, G.a.data(), nmg::kCoefficientHalo);
     }
@@ -878,22 +841,10 @@ private:
     }
   }
 
-  void inverse_diagonal(Lev &L) {
-    const auto A = op(L);
-    if constexpr (is_host) {
-      for_nodes(L.g.n, [&](int i, int j, int k) {
-        L.invd.data()[nmg::vindex(L.g, i, j, k)] =
-            1.0 / nmg::diagonal(L.g, A, i, j, k);
-      });
-    } else {
-      OPENPFC_NMG_CALL(inverse_diagonal, L.g, A, L.invd.data());
-    }
-  }
-
   /// lambda_max(D^{-1} A) by power iteration from the hashed start vector.
   void estimate_lambda(Lev &L) {
     const auto A = op(L);
-    double *x = L.r.data(), *y = L.f.size() ? L.f.data() : nullptr;
+    double *x = L.r.data(), *y = L.t.size() ? L.t.data() : nullptr;
     Buf tmp;
     if (!y) {
       tmp = Buf(nmg::padded_size(L.g, nmg::kVectorHalo));
@@ -916,17 +867,17 @@ private:
       if constexpr (is_host) {
         for_nodes(L.g.n, [&](int i, int j, int k) {
           const std::size_t q = nmg::vindex(L.g, i, j, k);
-          y[q] = L.invd.data()[q] * nmg::apply(L.g, A, x, i, j, k);
+          y[q] = nmg::apply(L.g, A, x, i, j, k) / nmg::diagonal(L.g, A, i, j, k);
         });
       } else {
-        OPENPFC_NMG_CALL(scaled_apply, L.g, A, L.invd.data(), x, y);
+        OPENPFC_NMG_CALL(scaled_apply, L.g, A, x, y);
       }
       lambda = std::sqrt(dot(L, y, y));
       std::swap(x, y);
     }
     L.lmax = m_c.eigenvalue_safety * lambda;
     zero(L.r.data(), L.r.size());
-    if (L.f.size()) zero(L.f.data(), L.f.size());
+    if (L.t.size()) zero(L.t.data(), L.t.size());
   }
 
   void scale(Lev &L, double *x, double s) {
@@ -945,7 +896,7 @@ private:
     const std::size_t pv = nmg::padded_size(L.g, nmg::kVectorHalo);
     std::vector<double> a, s;
     nmg::Operator A;
-    A.plane = pv;
+    A.plane = nmg::padded_size(L.g, nmg::kStencilHalo);
     if (L.g.stencil) {
       s.resize(L.s.size());
       to_host(L.s.data(), s.data(), s.size());
@@ -1036,13 +987,20 @@ private:
 
   // ---- cycle ---------------------------------------------------------------
 
-  /// Chebyshev smoothing of u toward A u = f (zero_u: u enters as zero).
-  void chebyshev(Lev &L, const double *f, double *u, bool zero_u) {
+  /// One Chebyshev smoothing toward A u = f with two iterate buffers. It starts
+  /// from the iterate in `s` (or from zero) and writes the next iterates
+  /// alternately into `o` and `s`; each step reads the newest iterate through
+  /// its halo and overwrites the previous one pointwise,
+  ///     u_{k+1} = u_k + c1 (u_k - u_{k-1}) + c2 D^{-1} (f - A u_k),
+  /// which is the usual d-form recurrence with d_k = u_{k+1} - u_k. Returns the
+  /// buffer holding the result: `o` for an odd degree, `s` for an even one.
+  double *chebyshev(Lev &L, const double *f, double *s, double *o, bool zero) {
     const auto A = op(L);
     const double lmax = L.lmax, lmin = lmax / m_c.smoothing_range;
     const double theta = 0.5 * (lmax + lmin), delta = 0.5 * (lmax - lmin);
     const double sigma1 = theta / delta;
     double rho = 1.0 / sigma1;
+    double *cur = s, *other = o;
     for (int k = 0; k < m_c.chebyshev_degree; ++k) {
       double c1, c2;
       if (k == 0) {
@@ -1054,26 +1012,23 @@ private:
         c2 = 2.0 * rho1 / delta;
         rho = rho1;
       }
-      const int zu = (zero_u && k == 0) ? 1 : 0;
-      if (!zu) exchange_vector(L, u);
+      const int z = (zero && k == 0) ? 1 : 0;
+      // u_{k-1} lives in `other`, except before the second step from zero.
+      const double *prev = (k == 0 || (zero && k == 1)) ? nullptr : other;
+      if (!z) exchange_vector(L, cur);
       {
         Phase t(*this, m_stats.smooth);
         if constexpr (is_host) {
           for_nodes(L.g.n, [&](int i, int j, int kk) {
-            nmg::chebyshev(L.g, A, f, u, L.invd.data(), L.d.data(), c1, c2, i, j, kk,
-                           zu);
-          });
-          for_nodes(L.g.n, [&](int i, int j, int kk) {
-            const std::size_t q = nmg::vindex(L.g, i, j, kk);
-            u[q] += L.d.data()[q];
+            nmg::chebyshev(L.g, A, f, cur, prev, other, c1, c2, i, j, kk, z);
           });
         } else {
-          OPENPFC_NMG_CALL(chebyshev, L.g, A, f, u, L.invd.data(), L.d.data(), c1,
-                           c2, zu);
-          OPENPFC_NMG_CALL(axpy_owned, L.g, 1.0, L.d.data(), u);
+          OPENPFC_NMG_CALL(chebyshev, L.g, A, f, cur, prev, other, c1, c2, z);
         }
       }
+      std::swap(cur, other);
     }
+    return cur;
   }
 
   void gauss_seidel(Lev &L, const double *f, double *u, bool forward) {
@@ -1084,21 +1039,53 @@ private:
       Phase t(*this, m_stats.smooth);
       if constexpr (is_host) {
         for_nodes(L.g.n, [&](int i, int j, int k) {
-          nmg::gauss_seidel(L.g, A, f, L.invd.data(), u, colour, i, j, k);
+          nmg::gauss_seidel(L.g, A, f, u, colour, i, j, k);
         });
       } else {
-        OPENPFC_NMG_CALL(gauss_seidel, L.g, A, f, L.invd.data(), u, colour);
+        OPENPFC_NMG_CALL(gauss_seidel, L.g, A, f, u, colour);
       }
     }
   }
 
-  void smooth(Lev &L, const double *f, double *u, int count, bool pre, bool zero_u) {
-    for (int s = 0; s < count; ++s) {
-      if (m_c.smoother == Smoother::Chebyshev)
-        chebyshev(L, f, u, zero_u && s == 0);
-      else
-        gauss_seidel(L, f, u, pre);
+  static void copy(Lev &L, const double *src, double *dst) {
+    const std::size_t n = nmg::padded_size(L.g, nmg::kVectorHalo);
+    if constexpr (is_host) {
+      std::copy(src, src + n, dst);
+    } else {
+      OPENPFC_NMG_CALL(fill, dst, n, 0.0);
+      OPENPFC_NMG_CALL(axpy_owned, L.g, 1.0, src, dst);
     }
+  }
+
+  bool odd_degree() const { return m_c.chebyshev_degree % 2 == 1; }
+
+  /// `count` smoothings of u toward A u = f, starting from zero (`zero`) or from
+  /// the iterate in `start` (u or L.t). The result is left in u.
+  void smooth(Lev &L, const double *f, double *u, double *start, int count, bool pre,
+              bool zero) {
+    if (m_c.smoother != Smoother::Chebyshev) {
+      if (zero) zero_vector(L, u);
+      for (int s = 0; s < count; ++s) gauss_seidel(L, f, u, pre);
+      return;
+    }
+    double *t = L.t.data();
+    double *where = zero ? nullptr : start;
+    for (int s = 0; s < count; ++s) {
+      const bool z = zero && s == 0;
+      // Choose the start buffer so that an odd degree ends in u.
+      double *from = z ? (odd_degree() ? t : u) : where;
+      double *to = from == u ? t : u;
+      where = chebyshev(L, f, from, to, z);
+    }
+    if (count == 0 && zero) {
+      zero_vector(L, u);
+      where = u;
+    }
+    if (where != u) copy(L, where, u);
+  }
+
+  void zero_vector(Lev &L, double *u) {
+    zero(u, nmg::padded_size(L.g, nmg::kVectorHalo));
   }
 
   void cycle(std::size_t l, const double *f, double *u) {
@@ -1106,19 +1093,18 @@ private:
     if (l + 1 == m_levels.size()) {
       if (m_dense) {
         dense_solve(L, f, u);
+      } else if (m_c.smoother == Smoother::Chebyshev) {
+        smooth(L, f, u, u, m_c.coarse_sweeps, true, true);
       } else {
+        zero_vector(L, u);
         for (int s = 0; s < m_c.coarse_sweeps; ++s) {
-          if (m_c.smoother == Smoother::Chebyshev) {
-            chebyshev(L, f, u, s == 0);
-          } else {
-            gauss_seidel(L, f, u, true);
-            gauss_seidel(L, f, u, false);
-          }
+          gauss_seidel(L, f, u, true);
+          gauss_seidel(L, f, u, false);
         }
       }
       return;
     }
-    smooth(L, f, u, m_c.pre, true, true);
+    smooth(L, f, u, u, m_c.pre, true, true);
     exchange_vector(L, u);
     const auto A = op(L);
     {
@@ -1145,20 +1131,25 @@ private:
       }
     }
     if (G.replicated && !L.whole) gather(G, G.f.data(), nmg::kVectorHalo);
-    zero(G.u.data(), G.u.size());
     cycle(l + 1, G.f.data(), G.u.data());
     exchange_vector(G, G.u.data());
+    // An odd Chebyshev degree ends in the other buffer, so the post-smoothing
+    // starts in L.t: prolongate out of place into it and finish in u.
+    double *start =
+        (m_c.smoother == Smoother::Chebyshev && m_c.post > 0 && odd_degree())
+            ? L.t.data()
+            : u;
     {
       Phase t(*this, m_stats.transfer);
       if constexpr (is_host) {
         for_nodes(L.g.n, [&](int i, int j, int k) {
-          nmg::prolong_add(L.g, u, G.g, G.u.data(), G.off, i, j, k);
+          nmg::prolong(L.g, u, start, G.g, G.u.data(), G.off, i, j, k);
         });
       } else {
-        OPENPFC_NMG_CALL(prolong_add, L.g, u, G.g, G.u.data(), G.off);
+        OPENPFC_NMG_CALL(prolong, L.g, u, start, G.g, G.u.data(), G.off);
       }
     }
-    smooth(L, f, u, m_c.post, false, false);
+    smooth(L, f, u, start, m_c.post, false, false);
   }
 
   MPI_Comm m_comm;
