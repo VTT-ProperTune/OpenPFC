@@ -519,10 +519,12 @@ endif()
 foreach(backend cuda hip)
   string(TOUPPER "${backend}" upper_backend)
   if(OpenPFC_ENABLE_${upper_backend}_SPECTRAL)
+    openpfc_installed_consumer_coverage_arguments(_local_fft_coverage)
     add_test(NAME LocalFFT_${backend}_InstalledConsumer
       COMMAND ${CMAKE_COMMAND} "-Dsource=${CMAKE_SOURCE_DIR}"
         "-Dbuild=${CMAKE_BINARY_DIR}" "-Dbackend=${backend}"
         "-Dcc=${CMAKE_C_COMPILER}" "-Dcxx=${CMAKE_CXX_COMPILER}"
+        "${_local_fft_coverage}"
         -P "${CMAKE_SOURCE_DIR}/tests/packaging/check_local_fft_device_consumer.cmake")
     set_tests_properties(LocalFFT_${backend}_InstalledConsumer PROPERTIES
       TIMEOUT 150 RUN_SERIAL TRUE SKIP_REGULAR_EXPRESSION "SKIP: no usable device")

@@ -9,6 +9,25 @@
 # exported INTERFACE and cannot be forced onto downstream consumers.
 option(OpenPFC_ENABLE_CODE_COVERAGE "Enable coverage" OFF)
 
+# Static archives drop PRIVATE link options. An out-of-tree consumer of a
+# coverage-instrumented libopenpfc.a must link libgcov itself. Callers pass
+# the result only into those consumer tests; a normal install stays unchanged.
+function(openpfc_installed_consumer_coverage_arguments out_var)
+  set(_link OFF)
+  if(OpenPFC_ENABLE_CODE_COVERAGE)
+    set(_link ON)
+  endif()
+  set(_flags "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS} ${CMAKE_EXE_LINKER_FLAGS}")
+  if(_flags MATCHES "(^|[ \t])--coverage|ftest-coverage")
+    set(_link ON)
+  endif()
+  if(_link)
+    set(${out_var} "-Dlink_coverage=ON" PARENT_SCOPE)
+  else()
+    set(${out_var} "-Dlink_coverage=OFF" PARENT_SCOPE)
+  endif()
+endfunction()
+
 if(OpenPFC_ENABLE_CODE_COVERAGE)
   message(STATUS "Enabling code coverage")
   # Directory-scope flags cover targets added after this file is included

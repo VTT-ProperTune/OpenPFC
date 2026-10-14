@@ -52,9 +52,11 @@ else()
 endif()
 
 if(OpenPFC_BUILD_TESTS AND OpenPFC_HAS_FFTW3)
+  openpfc_installed_consumer_coverage_arguments(_local_fft_coverage)
   add_test(NAME LocalFFT_InstalledConsumer
     COMMAND ${CMAKE_COMMAND} "-Dbuild=${CMAKE_BINARY_DIR}" "-Dsource=${CMAKE_SOURCE_DIR}"
       "-Dcc=${CMAKE_C_COMPILER}" "-Dcxx=${CMAKE_CXX_COMPILER}"
+      "${_local_fft_coverage}"
       -P ${CMAKE_SOURCE_DIR}/tests/packaging/check_local_fft_consumer.cmake)
   set_tests_properties(LocalFFT_InstalledConsumer PROPERTIES TIMEOUT 180 RUN_SERIAL TRUE)
 endif()
