@@ -7,6 +7,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Add `pfc::checkpoint::publish_field_bundle` / `load_field_bundle`
+  (`kernel/checkpoint/field_bundle.hpp`): save and restore a named set of
+  distributed `Field<double>` as one atomic bundle with caller-owned time,
+  method identity, boundary records and an optional JSON sidecar, restartable
+  on any decomposition.
 - Keep generic MPI startup headers independent of CUDA/HIP SDK headers while
   preserving the configured library's pre-MPI device binding.
 

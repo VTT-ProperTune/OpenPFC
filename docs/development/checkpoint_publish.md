@@ -33,7 +33,13 @@ filesystem restart.
 | `CheckpointMetadata`, `DomainParams`, `DecompositionMeta`, `kCheckpointFormatVersion`, `to_json`, `from_json` | `checkpoint_metadata.hpp` | Versioned sidecar JSON (schema version 1) |
 | `PublishOutcome`, `FieldsWriter`, `publish_checkpoint_directory(final_dir, meta, comm, write_fields)`, `make_publish_ok`, `make_publish_failed` | `publish.hpp` | MPI-collective atomic directory publish (the only publisher) |
 | `write_real_brick_mpi` | `brick_io.hpp` | Kernel MPI-IO of one owned float64 brick (no frontend include) |
+| `publish_field_bundle`, `load_field_bundle`, `FieldBundleState`, `FieldBundleSidecar`, `read_checkpoint_metadata`, `write_field_brick`, `read_field_brick` | `field_bundle.hpp` | Save/restore an explicit named set of `Field<double>` as one bundle, with caller time, method identity, boundary records and an optional JSON sidecar; restart on any decomposition |
 | `CheckpointService`, `CheckpointConfig`, `checkpoint_config_from_json` | `kernel/simulation/checkpoint_service.hpp` | Collective save/load, JSON `checkpoint.every` / `checkpoint.directory` / `restart_from` |
+
+Drivers that do not own a `SimulationState` (a model app with its own
+fields and method identity) call `publish_field_bundle` and
+`load_field_bundle` directly; `CheckpointService` is built on the same
+functions, so both produce the same layout.
 
 Callers fill `accepted_time` and `accepted_increment` from driver-owned
 `pfc::sim::Time` (`get_current()` / `get_increment()`). Publish does not

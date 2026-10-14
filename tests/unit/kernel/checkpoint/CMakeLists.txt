@@ -5,4 +5,5 @@ target_sources(openpfc-tests PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/test_checkpoint_publish.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_state_capture.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_checkpoint_service.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test_field_bundle.cpp
 )
