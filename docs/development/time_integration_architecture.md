@@ -33,6 +33,22 @@ adaptive controller can instead drive `attempt` / `commit` / `reject` and
 `set_dt`. This path is efficient for stiff diagonal linear operators; the method
 (ETD1) is fixed by the system, not by the physics.
 
+### Coupled two-field ETD2
+
+Two coupled real fields whose stiff linear part is a real 2 × 2 matrix per
+Fourier mode use `pfc::sim::CoupledSpectralETD2<Stage>`
+(`include/openpfc/kernel/simulation/coupled_spectral_etd2.hpp`). The stage
+callback `stage(t, u0, u1, f0, f1)` returns either the full right-hand side
+`F = L U + N` (the system subtracts `L Û` in Fourier space, so the split is
+exact when `L(k)` is the symbol of the applied operator, including a
+finite-difference one) or `N` alone. Each step is second-order exponential
+Runge–Kutta (Cox–Matthews ETD2RK); its ETD1 predictor is the embedded
+low-order solution, so `run_coupled_etd2_adaptive` drives
+`AdaptiveTimeController` with `error_order = 2`. The matrix functions
+`exp(hL)`, `h φ1(hL)`, `h φ2(hL)` come from `integrator::matrix_phi`
+(`matrix_phi_2x2.hpp`) and are rebuilt only when `h` or `L` changes. Host
+`IHostFFT` only.
+
 ### Gradient-access pattern
 
 Modern FD/spectral point-wise models expose a pure `rhs` that reads a grads

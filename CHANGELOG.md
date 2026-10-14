@@ -59,6 +59,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- `CoupledSpectralETD2` integrates two coupled real fields with a real 2 × 2
+  Fourier symbol by second-order exponential Runge–Kutta, with the ETD1
+  predictor as embedded error estimate; `run_coupled_etd2_adaptive` drives
+  `AdaptiveTimeController` and `pfc::Time` with clipping and rejection
+  rollback (#543).
+
 - `integrator::matrix_phi` evaluates `exp(M)`, `φ1(M)` and `φ2(M)` of a real
   2 × 2 matrix in closed form, with scaling and squaring for zero, defective
   and nearly repeated eigenvalues; `etd2_coefficients` scales them by `h`

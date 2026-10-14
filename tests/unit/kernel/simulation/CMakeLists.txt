@@ -29,6 +29,7 @@ if(OpenPFC_ENABLE_HEFFTE)
       ${CMAKE_CURRENT_SOURCE_DIR}/test_stepper_equivalence.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_spectral_etd_system.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_etd_step_doubling.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_coupled_spectral_etd2.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_spectral_flux.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_swift_hohenberg_three_way.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_simulation_session.cpp

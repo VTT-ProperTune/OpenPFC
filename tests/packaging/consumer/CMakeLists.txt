@@ -29,5 +29,5 @@ if(DEFINED EXPECTED_OPENPFC_STATE AND
   message(FATAL_ERROR "OpenPFC source state does not match the built source")
 endif()
 
-add_executable(consumer main.cpp spectral_state.cpp)
+add_executable(consumer main.cpp spectral_state.cpp coupled_etd2.cpp)
 target_link_libraries(consumer PRIVATE OpenPFC::openpfc)
