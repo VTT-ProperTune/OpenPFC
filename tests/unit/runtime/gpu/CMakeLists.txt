@@ -522,6 +522,20 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
       openpfc_gpu_kernels CUDA::cudart MPI::MPI_CXX)
   add_test(NAME FieldMultigrid_cuda COMMAND test_field_multigrid_cuda)
   set_tests_properties(FieldMultigrid_cuda PROPERTIES TIMEOUT 120 SKIP_RETURN_CODE 4)
+
+  add_executable(test_nodal_multigrid_cuda test_nodal_multigrid_device.cpp)
+  target_link_libraries(test_nodal_multigrid_cuda PRIVATE Catch2::Catch2 openpfc
+      openpfc_gpu_kernels CUDA::cudart MPI::MPI_CXX)
+  add_test(NAME NodalMultigrid_cuda COMMAND test_nodal_multigrid_cuda)
+  set_tests_properties(NodalMultigrid_cuda PROPERTIES TIMEOUT 300 SKIP_RETURN_CODE 4)
+  if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
+     (OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 2))
+    add_test(NAME NodalMultigrid_cuda_2rank
+      COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+        $<TARGET_FILE:test_nodal_multigrid_cuda>)
+    set_tests_properties(NodalMultigrid_cuda_2rank PROPERTIES TIMEOUT 300 RUN_SERIAL TRUE
+        SKIP_RETURN_CODE 4)
+  endif()
 endif()
 
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
@@ -554,6 +568,13 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
   target_compile_definitions(test_field_multigrid_hip PRIVATE OPENPFC_TEST_MECHANICS_HIP)
   add_test(NAME FieldMultigrid_hip COMMAND test_field_multigrid_hip)
   set_tests_properties(FieldMultigrid_hip PROPERTIES TIMEOUT 120 SKIP_RETURN_CODE 4)
+
+  add_executable(test_nodal_multigrid_hip test_nodal_multigrid_device.cpp)
+  target_link_libraries(test_nodal_multigrid_hip PRIVATE Catch2::Catch2 openpfc
+      openpfc_hip_kernels hip::host MPI::MPI_CXX)
+  target_compile_definitions(test_nodal_multigrid_hip PRIVATE OPENPFC_TEST_MECHANICS_HIP)
+  add_test(NAME NodalMultigrid_hip COMMAND test_nodal_multigrid_hip)
+  set_tests_properties(NodalMultigrid_hip PROPERTIES TIMEOUT 300 SKIP_RETURN_CODE 4)
 
   if(OpenPFC_ENABLE_HIP_SPECTRAL)
     find_package(rocfft REQUIRED CONFIG)
