@@ -204,6 +204,18 @@ if(OpenPFC_RUN_MPI_SUITES AND MPI_CXX_FOUND)
       TIMEOUT 120 RUN_SERIAL TRUE)
   endforeach()
 
+  foreach(_ranks 1 2 4)
+    if(OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER 0 AND
+       _ranks GREATER OpenPFC_MPI_TEST_MAX_WORLD_SIZE)
+      continue()
+    endif()
+    add_test(NAME nodal_multigrid_${_ranks}ranks
+      COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${_ranks}
+        $<TARGET_FILE:openpfc-tests> "[nodal_multigrid][MPI]")
+    set_tests_properties(nodal_multigrid_${_ranks}ranks PROPERTIES
+      TIMEOUT 300 RUN_SERIAL TRUE)
+  endforeach()
+
   # 2-process MPI suite: runs MPI tests suitable for 2 ranks
   add_test(NAME mpi_2procs_all
        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
