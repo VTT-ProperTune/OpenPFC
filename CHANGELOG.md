@@ -11,7 +11,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   (`kernel/checkpoint/field_bundle.hpp`): save and restore a named set of
   distributed `Field<double>` as one atomic bundle with caller-owned time,
   method identity, boundary records and an optional JSON sidecar, restartable
-  on any decomposition.
+  on any decomposition. `CheckpointService` now uses them; its bundles are
+  unchanged.
 - Keep generic MPI startup headers independent of CUDA/HIP SDK headers while
   preserving the configured library's pre-MPI device binding.
 

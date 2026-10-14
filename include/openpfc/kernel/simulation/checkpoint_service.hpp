@@ -33,6 +33,7 @@
 
 #include <openpfc/kernel/checkpoint/brick_io.hpp>
 #include <openpfc/kernel/checkpoint/checkpoint_metadata.hpp>
+#include <openpfc/kernel/checkpoint/field_bundle.hpp>
 #include <openpfc/kernel/checkpoint/publish.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
@@ -107,71 +108,9 @@ inline void require_checkpoint_identity(const checkpoint::CheckpointMetadata &fi
   }
 }
 
-/**
- * @brief Copy the owned cells of @p f (x-fastest, no halo) into a transport
- *        buffer. Device fields go through the host mirror.
- */
-template <typename T, typename MemorySpace>
-[[nodiscard]] std::vector<double>
-pack_owned_real(pfc::data::Field<T, MemorySpace> &f) {
-  static_assert(std::is_same_v<T, double>, "pack_owned_real is float64 only");
-  const auto sz = f.local_size();
-  std::vector<double> out(static_cast<std::size_t>(sz[0]) *
-                          static_cast<std::size_t>(sz[1]) *
-                          static_cast<std::size_t>(sz[2]));
-  if constexpr (pfc::data::Field<T, MemorySpace>::is_host_space) {
-    std::size_t n = 0;
-    for (int k = 0; k < sz[2]; ++k) {
-      for (int j = 0; j < sz[1]; ++j) {
-        for (int i = 0; i < sz[0]; ++i) {
-          out[n++] = f(i, j, k);
-        }
-      }
-    }
-  } else {
-    if (f.storage_halo() != 0) {
-      throw std::invalid_argument(
-          "pack_owned_real: device fields with storage halo are not supported");
-    }
-    f.with_host_view([&](double *d, std::size_t n) {
-      if (n != out.size()) {
-        throw std::runtime_error("pack_owned_real: host mirror size mismatch");
-      }
-      std::copy(d, d + n, out.begin());
-    });
-  }
-  return out;
-}
-
-/** @brief Inverse of @ref pack_owned_real. */
-template <typename T, typename MemorySpace>
-inline void unpack_owned_real(pfc::data::Field<T, MemorySpace> &f,
-                              const std::vector<double> &in) {
-  const auto sz = f.local_size();
-  if constexpr (pfc::data::Field<T, MemorySpace>::is_host_space) {
-    std::size_t n = 0;
-    for (int k = 0; k < sz[2]; ++k) {
-      for (int j = 0; j < sz[1]; ++j) {
-        for (int i = 0; i < sz[0]; ++i) {
-          f(i, j, k) = in[n++];
-        }
-      }
-    }
-    f.note_host_write();
-  } else {
-    if (f.storage_halo() != 0) {
-      throw std::invalid_argument(
-          "unpack_owned_real: device fields with storage halo are not supported");
-    }
-    f.with_host_view([&](double *d, std::size_t n) {
-      if (n != in.size()) {
-        throw std::runtime_error("unpack_owned_real: host mirror size mismatch");
-      }
-      std::copy(in.begin(), in.end(), d);
-    });
-    f.sync_to_device();
-  }
-}
+// Owned-cell packing lives with the bundle functions in kernel/checkpoint.
+using checkpoint::pack_owned_real;
+using checkpoint::unpack_owned_real;
 
 class CheckpointService {
 public:
@@ -217,43 +156,18 @@ public:
     if (names.empty()) {
       throw std::invalid_argument("CheckpointService::save: no fields");
     }
-    const auto &field0 = state.get_field<double, MemorySpace>(names.front());
-    const auto &dom = field0.domain();
-    const auto sz = field0.local_size();
-    const auto lo = field0.box().low;
-
-    int nproc = 1;
-    pfc::mpi::throw_on_mpi_error(MPI_Comm_size(m_comm, &nproc), "MPI_Comm_size");
-
-    checkpoint::CheckpointMetadata meta;
-    meta.accepted_time = time.get_current();
-    meta.accepted_increment = time.get_increment();
-    meta.result_counter = m_result_counter;
-    meta.domain = domain_params_from(dom);
-    meta.method_identity = pfc::sim::steppers::to_string(time.method());
-    meta.fields = names;
-    meta.boundary_conditions = m_boundary_conditions;
-    checkpoint::DecompositionMeta dm;
-    dm.mpi_size = nproc;
-    dm.local_size = {sz[0], sz[1], sz[2]};
-    dm.local_offset = {lo[0], lo[1], lo[2]};
-    meta.decomposition = dm;
-
-    const auto outcome = checkpoint::publish_checkpoint_directory(
-        step_dir(time.get_increment()), meta, m_comm,
-        [&](const std::filesystem::path &fields_dir) {
-          for (const auto &name : names) {
-            auto &f = state.get_field<double, MemorySpace>(name);
-            const auto brick = pack_owned_real(f);
-            const auto loc = f.local_size();
-            const auto off = f.box().low;
-            const auto gsz = f.global_size();
-            checkpoint::write_real_brick_mpi((fields_dir / (name + ".bin")).string(),
-                                             m_comm, {gsz[0], gsz[1], gsz[2]},
-                                             {loc[0], loc[1], loc[2]},
-                                             {off[0], off[1], off[2]}, brick);
-          }
-        });
+    std::vector<checkpoint::NamedField<MemorySpace>> fields;
+    for (const auto &name : names) {
+      fields.emplace_back(name, &state.get_field<double, MemorySpace>(name));
+    }
+    checkpoint::FieldBundleState bundle;
+    bundle.accepted_time = time.get_current();
+    bundle.accepted_increment = time.get_increment();
+    bundle.result_counter = m_result_counter;
+    bundle.method_identity = pfc::sim::steppers::to_string(time.method());
+    bundle.boundary_conditions = m_boundary_conditions;
+    const auto outcome = checkpoint::publish_field_bundle(
+        step_dir(time.get_increment()), fields, bundle, m_comm);
     if (!outcome.ok) {
       throw std::runtime_error("CheckpointService::save: " + outcome.message);
     }
@@ -261,41 +175,7 @@ public:
 
   [[nodiscard]] checkpoint::CheckpointMetadata
   read_metadata(const std::filesystem::path &dir) const {
-    int rank = 0;
-    pfc::mpi::throw_on_mpi_error(MPI_Comm_rank(m_comm, &rank), "MPI_Comm_rank");
-
-    nlohmann::json j;
-    std::string dump;
-    int have = 1;
-    if (rank == 0) {
-      try {
-        std::ifstream in(dir / "metadata.json");
-        if (!in) {
-          have = 0;
-        } else {
-          in >> j;
-          dump = j.dump();
-        }
-      } catch (...) {
-        have = 0;
-      }
-    }
-    pfc::mpi::throw_on_mpi_error(MPI_Bcast(&have, 1, MPI_INT, 0, m_comm),
-                                 "MPI_Bcast metadata present");
-    if (have == 0) {
-      throw std::invalid_argument("checkpoint load: missing metadata.json in " +
-                                  dir.string());
-    }
-    int n = static_cast<int>(dump.size());
-    pfc::mpi::throw_on_mpi_error(MPI_Bcast(&n, 1, MPI_INT, 0, m_comm),
-                                 "MPI_Bcast metadata size");
-    std::string buf(static_cast<std::size_t>(n), '\0');
-    if (rank == 0) {
-      buf = dump;
-    }
-    pfc::mpi::throw_on_mpi_error(MPI_Bcast(buf.data(), n, MPI_CHAR, 0, m_comm),
-                                 "MPI_Bcast metadata");
-    return checkpoint::from_json(nlohmann::json::parse(buf));
+    return checkpoint::read_checkpoint_metadata(dir, m_comm);
   }
 
   template <class MemorySpace = pfc::HostSpace>
@@ -339,19 +219,8 @@ public:
     m_boundary_conditions = meta.boundary_conditions;
 
     for (const auto &name : names) {
-      auto &f = state.get_field<double, MemorySpace>(name);
-      const auto loc = f.local_size();
-      const auto off = f.box().low;
-      const auto gsz = f.global_size();
-      std::vector<double> brick(static_cast<std::size_t>(loc[0]) *
-                                static_cast<std::size_t>(loc[1]) *
-                                static_cast<std::size_t>(loc[2]));
-      BinaryReader reader(m_comm);
-      reader.set_domain({gsz[0], gsz[1], gsz[2]}, {loc[0], loc[1], loc[2]},
-                        {off[0], off[1], off[2]});
-      const auto path = (dir / "fields" / (name + ".bin")).string();
-      reader.read(path, brick);
-      unpack_owned_real(f, brick);
+      checkpoint::read_field_brick(dir / "fields" / (name + ".bin"), m_comm,
+                                   state.get_field<double, MemorySpace>(name));
     }
   }
 
