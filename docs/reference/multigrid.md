@@ -59,3 +59,82 @@ explicit size bound. Periodic constants use one communicator-wide mean, so
 unequal ownership does not remove a different gauge on each rank. This is
 a two-level correction, not a distributed hierarchy with a coarse-rank
 policy.
+
+# Matrix-free nodal Q1 multigrid
+
+`openpfc/solvers/nodal_multigrid.hpp` supplies `NodalMultigrid<Space>`, a
+distributed V-cycle preconditioner for the periodic trilinear (Q1) finite
+element operator
+
+$$
+A = \sum_e a_e K_e + \sigma M ,
+$$
+
+with one coefficient $a_e > 0$ per element (indexed by its lowest node),
+the exact element stiffness $K_e$ and the exact consistent mass $M$. On a
+uniform grid with spacing $(h_x, h_y, h_z)$ and $V = h_x h_y h_z$ the element
+matrices are Kronecker products of 1-D ones,
+
+$$
+K_e = \sum_d \frac{V}{h_d^2}\, K_1 \otimes M_1 \otimes M_1,\qquad
+M_e = V\, M_1 \otimes M_1 \otimes M_1,\qquad
+K_1 = \begin{pmatrix}1&-1\\-1&1\end{pmatrix},\;
+M_1 = \begin{pmatrix}1/3&1/6\\1/6&1/3\end{pmatrix},
+$$
+
+so a row of $A$ is a 27-point stencil whose weights fold the 8 adjacent
+element coefficients. The fine operator is never assembled; `apply_operator`
+is the Krylov action and costs one read of $u$ and of the coefficients.
+
+```cpp
+using MG = pfc::solvers::NodalMultigrid<pfc::CUDASpace>;
+MG::Controls c;
+c.sigma = 1.0;
+MG mg(decomp, rank, MPI_COMM_WORLD, c);
+mg.update(element_coefficient);            // owned elements, any storage halo
+// Krylov action and preconditioner on halo-1 Fields of the owned node box:
+//   mg.apply_operator(u, y);   mg.apply(r, z);   // or mg(r, z, k)
+```
+
+**Transfers.** Coarse node $I$ sits on fine node $2I$. Prolongation $P$ is
+trilinear nodal interpolation (an odd fine index averages its two coarse
+neighbours) and restriction is $R = P^\top$. Both read one halo layer and
+write owned values only; nothing is accumulated across ranks.
+
+**Coarse operators.** From level `galerkin_from_level` on, a level stores the
+Galerkin product $P^\top A P$ as 27 weights per node. Earlier coarse levels are
+rediscretized with each coarse element coefficient the mean of its 8
+children. The Q1 spaces are nested, so for a constant coefficient both are the
+same operator: $P^\top K_h P = K_{2h}$ and $P^\top M_h P = M_{2h}$. With a
+varying or discontinuous coefficient only the Galerkin product keeps the
+variational property; it costs 27 values per coarse node, so the first
+Galerkin level stores about 3.4 fine fields.
+
+**Smoothers.** Chebyshev iteration on $D^{-1}A$ over
+$[\lambda/\text{range}, \lambda]$, with $\lambda$ a safety factor times a
+power-iteration estimate per level, or symmetric 8-colour Gauss-Seidel (nodes
+of equal global index parity never share a row). The power iteration starts
+from a hash of the global node index, so the hierarchy and every cycle are
+the same on any decomposition up to the order of floating-point reductions.
+Pre- and post-smoothing are adjoint, so the V-cycle is symmetric and can
+precondition CG.
+
+**Distribution and agglomeration.** Distributed levels keep the fine process
+grid while every local extent and offset halves evenly. When a coarse level
+has at most `agglomerate_max` nodes, or cannot be halved on the process grid,
+each rank restricts into its own region and one allgather gives every rank the
+whole level; the remaining levels are computed redundantly. Only that bounded
+coarse part is replicated, and `replicated_bytes()` reports it. The coarsest
+level is solved by a dense Cholesky factorization when it has at most
+`dense_max` nodes (`coarse_exact()`), otherwise by `coarse_sweeps` smoothings.
+
+**Nullspace.** With $\sigma = 0$ the constant is in the kernel of every level.
+The dense coarse matrix gets a rank-one constant term, its right-hand side is
+projected to zero mean, and `apply` returns a zero-mean correction. The cycle
+is then symmetric on mean-free vectors, which is the space PCG works in for a
+consistent right-hand side.
+
+`stats()` reports the setup cost (coarse operators, eigenvalue estimates,
+factorization) and, with `Controls::profile`, synchronized per-phase times of
+smoothing, residuals, transfers, halo exchange, agglomeration and the coarse
+solve. `level_info(l)` gives each level's extents, storage and bound.
