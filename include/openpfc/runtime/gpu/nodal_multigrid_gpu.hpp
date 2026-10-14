@@ -31,20 +31,19 @@ using Operator = ::pfc::solvers::nmg::Operator;
                               double *dst);                                         \
   void apply_##sfx(const Level &L, const Operator &A, const double *u,              \
                    double *out);                                                    \
-  void scaled_apply_##sfx(const Level &L, const Operator &A, const double *invd,    \
-                          const double *u, double *out);                            \
-  void inverse_diagonal_##sfx(const Level &L, const Operator &A, double *invd);     \
+  void scaled_apply_##sfx(const Level &L, const Operator &A, const double *u,       \
+                          double *out);                                             \
   void residual_##sfx(const Level &L, const Operator &A, const double *f,           \
                       const double *u, double *r, int zero_u);                      \
   void chebyshev_##sfx(const Level &L, const Operator &A, const double *f,          \
-                       const double *u, const double *invd, double *d, double c1,   \
-                       double c2, int zero_u);                                      \
+                       const double *u, const double *u_prev, double *out,          \
+                       double c1, double c2, int zero);                             \
   void gauss_seidel_##sfx(const Level &L, const Operator &A, const double *f,       \
-                          const double *invd, double *u, int colour);               \
+                          double *u, int colour);                                   \
   void restrict_residual_##sfx(const Level &F, const double *rf, const Level &G,    \
                                double *fg, const int off[3]);                       \
-  void prolong_add_##sfx(const Level &F, double *uf, const Level &G,                \
-                         const double *ug, const int off[3]);                       \
+  void prolong_##sfx(const Level &F, const double *uf, double *out, const Level &G, \
+                     const double *ug, const int off[3]);                           \
   void restrict_coefficient_##sfx(const Level &F, const double *af, const Level &G, \
                                   double *ag, const int off[3]);                    \
   void galerkin_##sfx(const Level &F, const Operator &Af, const Level &G,           \

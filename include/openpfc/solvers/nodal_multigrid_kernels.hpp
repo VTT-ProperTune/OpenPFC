@@ -34,6 +34,12 @@ namespace pfc::solvers::nmg {
 
 inline constexpr int kVectorHalo = 1;
 inline constexpr int kCoefficientHalo = 2;
+/// A stored (Galerkin) level keeps the centre and the 13 forward offsets per node;
+/// the weight of a backward offset o at node i is that of -o at node i + o, so the
+/// stored operator is exactly symmetric. Planes use storage halo 2, so a row read
+/// one node into the halo can still reach its backward neighbours.
+inline constexpr int kStencilPlanes = 14;
+inline constexpr int kStencilHalo = 2;
 
 /// Geometry and constant element data of one level (passed by value to kernels).
 struct Level {
@@ -49,7 +55,7 @@ struct Level {
 /// Operator data of one level.
 struct Operator {
   const double *a = nullptr; ///< element coefficients, halo 2 (element level)
-  const double *s = nullptr; ///< 27 stencil planes, halo 1 (stencil level)
+  const double *s = nullptr; ///< kStencilPlanes planes, halo 2 (stencil level)
   std::size_t plane = 0;     ///< padded size of one stencil plane
 };
 
@@ -141,9 +147,15 @@ OPENPFC_HD inline void element_weights(const Level &L, const double a[2][2][2],
 OPENPFC_HD inline void weights(const Level &L, const Operator &A, int i, int j,
                                int k, double w[27]) {
   if (L.stencil) {
-    const std::size_t s = vindex(L, i, j, k);
-    for (int o = 0; o < 27; ++o)
-      w[o] = A.s[static_cast<std::size_t>(o) * A.plane + s];
+    for (int oz = -1; oz <= 1; ++oz)
+      for (int oy = -1; oy <= 1; ++oy)
+        for (int ox = -1; ox <= 1; ++ox) {
+          const int o = offset_index(ox, oy, oz);
+          w[o] = o >= 13 ? A.s[static_cast<std::size_t>(o - 13) * A.plane +
+                               index(L, kStencilHalo, i, j, k)]
+                         : A.s[static_cast<std::size_t>(13 - o) * A.plane +
+                               index(L, kStencilHalo, i + ox, j + oy, k + oz)];
+        }
     return;
   }
   double a[2][2][2];
@@ -169,10 +181,15 @@ OPENPFC_HD inline double apply(const Level &L, const Operator &A, const double *
 
 OPENPFC_HD inline double diagonal(const Level &L, const Operator &A, int i, int j,
                                   int k) {
-  if (L.stencil) return A.s[13 * A.plane + vindex(L, i, j, k)];
-  double w[27];
-  weights(L, A, i, j, k, w);
-  return w[13];
+  if (L.stencil) return A.s[index(L, kStencilHalo, i, j, k)];
+  const std::ptrdiff_t ay = L.n[0] + 2 * kCoefficientHalo,
+                       az = ay * (L.n[1] + 2 * kCoefficientHalo);
+  const double *pa = A.a + index(L, kCoefficientHalo, i, j, k);
+  double sum = 0.0;
+  for (int sz = 0; sz < 2; ++sz)
+    for (int sy = 0; sy < 2; ++sy)
+      for (int sx = 0; sx < 2; ++sx) sum += pa[-sx - sy * ay - sz * az];
+  return L.ke[13] * sum + L.sigma * L.mass[13];
 }
 
 /// r = f - A u (zero_u: r = f).
@@ -183,26 +200,35 @@ OPENPFC_HD inline void residual(const Level &L, const Operator &A, const double 
   r[s] = zero_u ? f[s] : f[s] - apply(L, A, u, i, j, k);
 }
 
-/// One Chebyshev step: d = c1 d + c2 D^{-1} (f - A u) (zero_u: A u = 0).
+/// One Chebyshev step in iterate form,
+///     out = u + c1 (u - u_prev) + c2 D^{-1} (f - A u),
+/// with u read through its halo and u_prev only at the node (so `out` may alias
+/// `u_prev`, never `u`). A null u_prev is zero; `zero` means u = 0 as well, so
+/// out = c2 D^{-1} f and u is not read.
 OPENPFC_HD inline void chebyshev(const Level &L, const Operator &A, const double *f,
-                                 const double *u, const double *invd, double *d,
+                                 const double *u, const double *u_prev, double *out,
                                  double c1, double c2, int i, int j, int k,
-                                 int zero_u) {
+                                 int zero) {
   const std::size_t s = vindex(L, i, j, k);
-  const double r = zero_u ? f[s] : f[s] - apply(L, A, u, i, j, k);
-  d[s] = c1 * d[s] + c2 * invd[s] * r;
+  const double d = diagonal(L, A, i, j, k);
+  if (zero) {
+    out[s] = c2 * f[s] / d;
+    return;
+  }
+  const double uc = u[s], up = u_prev ? u_prev[s] : 0.0;
+  out[s] = uc + c1 * (uc - up) + c2 * (f[s] - apply(L, A, u, i, j, k)) / d;
 }
 
 /// Gauss-Seidel update at nodes whose global index parity equals `colour`
 /// (bit 0: x, bit 1: y, bit 2: z). Same-colour nodes never share a row.
 OPENPFC_HD inline void gauss_seidel(const Level &L, const Operator &A,
-                                    const double *f, const double *invd, double *u,
-                                    int colour, int i, int j, int k) {
+                                    const double *f, double *u, int colour, int i,
+                                    int j, int k) {
   const int c = ((L.low[0] + i) & 1) | (((L.low[1] + j) & 1) << 1) |
                 (((L.low[2] + k) & 1) << 2);
   if (c != colour) return;
   const std::size_t s = vindex(L, i, j, k);
-  u[s] += invd[s] * (f[s] - apply(L, A, u, i, j, k));
+  u[s] += (f[s] - apply(L, A, u, i, j, k)) / diagonal(L, A, i, j, k);
 }
 
 /// Interpolation weight of fine offset delta in {-1,0,1} along one axis.
@@ -224,11 +250,12 @@ OPENPFC_HD inline void restrict_residual(const Level &F, const double *rf,
   fg[vindex(G, I + off[0], J + off[1], K + off[2])] = sum;
 }
 
-/// u_f(i) += (P u_c)(i): an even fine index takes its coarse node, an odd one the
-/// mean of its two neighbours. Coarse u halos current; region offset as above.
-OPENPFC_HD inline void prolong_add(const Level &F, double *uf, const Level &G,
-                                   const double *ug, const int off[3], int i, int j,
-                                   int k) {
+/// out(i) = u_f(i) + (P u_c)(i): an even fine index takes its coarse node, an odd
+/// one the mean of its two neighbours (out may alias u_f). Coarse u halos current;
+/// region offset as above.
+OPENPFC_HD inline void prolong(const Level &F, const double *uf, double *out,
+                               const Level &G, const double *ug, const int off[3],
+                               int i, int j, int k) {
   const int f[3] = {i, j, k};
   int lo[3], cnt[3];
   for (int d = 0; d < 3; ++d) {
@@ -242,7 +269,8 @@ OPENPFC_HD inline void prolong_add(const Level &F, double *uf, const Level &G,
     for (int b = 0; b < cnt[1]; ++b)
       for (int a = 0; a < cnt[0]; ++a)
         v += wx * wy * wz * ug[vindex(G, lo[0] + a, lo[1] + b, lo[2] + c)];
-  uf[vindex(F, i, j, k)] += v;
+  const std::size_t s = vindex(F, i, j, k);
+  out[s] = uf[s] + v;
 }
 
 /// Rediscretized coarse element coefficient: the mean of its 8 children.
@@ -299,8 +327,9 @@ OPENPFC_HD inline void galerkin(const Level &F, const Operator &Af, const Level 
                         a * W[0][q] * W[1][b] * W[2][c];
             }
       }
-  const std::size_t S = vindex(G, I + off[0], J + off[1], K + off[2]);
-  for (int o = 0; o < 27; ++o) sg[static_cast<std::size_t>(o) * gplane + S] = acc[o];
+  const std::size_t S = index(G, kStencilHalo, I + off[0], J + off[1], K + off[2]);
+  for (int o = 13; o < 27; ++o)
+    sg[static_cast<std::size_t>(o - 13) * gplane + S] = acc[o];
 }
 
 /// Deterministic value in [-1, 1] from a global node index (decomposition

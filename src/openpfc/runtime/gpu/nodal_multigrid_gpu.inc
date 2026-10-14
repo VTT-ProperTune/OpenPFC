@@ -106,15 +106,11 @@ __global__ void apply_kernel(Level L, Operator A, const double *u, double *out) 
   OPENPFC_NMG_NODE(L)
   out[k::vindex(L, i, j, kk)] = k::apply(L, A, u, i, j, kk);
 }
-__global__ void scaled_apply_kernel(Level L, Operator A, const double *invd,
-                                    const double *u, double *out) {
+__global__ void scaled_apply_kernel(Level L, Operator A, const double *u,
+                                    double *out) {
   OPENPFC_NMG_NODE(L)
-  const std::size_t s = k::vindex(L, i, j, kk);
-  out[s] = invd[s] * k::apply(L, A, u, i, j, kk);
-}
-__global__ void inverse_diagonal_kernel(Level L, Operator A, double *invd) {
-  OPENPFC_NMG_NODE(L)
-  invd[k::vindex(L, i, j, kk)] = 1.0 / k::diagonal(L, A, i, j, kk);
+  out[k::vindex(L, i, j, kk)] =
+      k::apply(L, A, u, i, j, kk) / k::diagonal(L, A, i, j, kk);
 }
 __global__ void residual_kernel(Level L, Operator A, const double *f,
                                 const double *u, double *r, int zero_u) {
@@ -122,15 +118,15 @@ __global__ void residual_kernel(Level L, Operator A, const double *f,
   k::residual(L, A, f, u, r, i, j, kk, zero_u);
 }
 __global__ void chebyshev_kernel(Level L, Operator A, const double *f,
-                                 const double *u, const double *invd, double *d,
-                                 double c1, double c2, int zero_u) {
+                                 const double *u, const double *u_prev, double *out,
+                                 double c1, double c2, int zero) {
   OPENPFC_NMG_NODE(L)
-  k::chebyshev(L, A, f, u, invd, d, c1, c2, i, j, kk, zero_u);
+  k::chebyshev(L, A, f, u, u_prev, out, c1, c2, i, j, kk, zero);
 }
-__global__ void gauss_seidel_kernel(Level L, Operator A, const double *f,
-                                    const double *invd, double *u, int colour) {
+__global__ void gauss_seidel_kernel(Level L, Operator A, const double *f, double *u,
+                                    int colour) {
   OPENPFC_NMG_NODE(L)
-  k::gauss_seidel(L, A, f, invd, u, colour, i, j, kk);
+  k::gauss_seidel(L, A, f, u, colour, i, j, kk);
 }
 __global__ void restrict_residual_kernel(Level F, const double *rf, Level G,
                                          double *fg, Region R, int o0, int o1,
@@ -139,11 +135,11 @@ __global__ void restrict_residual_kernel(Level F, const double *rf, Level G,
   const int off[3] = {o0, o1, o2};
   k::restrict_residual(F, rf, G, fg, off, i, j, kk);
 }
-__global__ void prolong_add_kernel(Level F, double *uf, Level G, const double *ug,
-                                   int o0, int o1, int o2) {
+__global__ void prolong_kernel(Level F, const double *uf, double *out, Level G,
+                               const double *ug, int o0, int o1, int o2) {
   OPENPFC_NMG_NODE(F)
   const int off[3] = {o0, o1, o2};
-  k::prolong_add(F, uf, G, ug, off, i, j, kk);
+  k::prolong(F, uf, out, G, ug, off, i, j, kk);
 }
 __global__ void restrict_coefficient_kernel(Level F, const double *af, Level G,
                                             double *ag, Region R, int o0, int o1,
@@ -168,28 +164,33 @@ __global__ void galerkin_kernel(Level F, Operator Af, Level G, double *sg,
 // costs 9 u and 4 coefficient loads instead of 27 and 8.
 constexpr int KC = 32;
 
+// Epilogues get the row action, the diagonal and the centre value of u.
 struct ApplyEpi {
   double *out;
-  __device__ void operator()(std::size_t s, double au) const { out[s] = au; }
+  __device__ void operator()(std::size_t s, double au, double, double) const {
+    out[s] = au;
+  }
 };
 struct ResidualEpi {
   const double *f;
   double *r;
-  __device__ void operator()(std::size_t s, double au) const { r[s] = f[s] - au; }
+  __device__ void operator()(std::size_t s, double au, double, double) const {
+    r[s] = f[s] - au;
+  }
 };
 struct ScaledEpi {
-  const double *invd;
   double *out;
-  __device__ void operator()(std::size_t s, double au) const {
-    out[s] = invd[s] * au;
+  __device__ void operator()(std::size_t s, double au, double d, double) const {
+    out[s] = au / d;
   }
 };
 struct ChebyshevEpi {
-  const double *f, *invd;
-  double *d;
+  const double *f, *u_prev;
+  double *out;
   double c1, c2;
-  __device__ void operator()(std::size_t s, double au) const {
-    d[s] = c1 * d[s] + c2 * invd[s] * (f[s] - au);
+  __device__ void operator()(std::size_t s, double au, double d, double uc) const {
+    const double up = u_prev ? u_prev[s] : 0.0;
+    out[s] = uc + c1 * (uc - up) + c2 * (f[s] - au) / d;
   }
 };
 
@@ -273,7 +274,10 @@ __global__ void column_kernel(Level L, const double *__restrict__ a,
       }
       au += L.sigma * L.mass[13] * (27.0 / 8.0) * m;
     }
-    epi(k::vindex(L, i, j, k), au);
+    const double esum = e[0][0][0] + e[0][0][1] + e[0][1][0] + e[0][1][1] +
+                        e[1][0][0] + e[1][0][1] + e[1][1][0] + e[1][1][1];
+    epi(k::vindex(L, i, j, k), au, L.ke[13] * esum + L.sigma * L.mass[13],
+        win[1][1][1]);
     pu += uz;
     pa += az;
   }
@@ -355,18 +359,12 @@ void OPENPFC_NMG_NAME(apply)(const Level &L, const Operator &A, const double *u,
   check("apply");
 }
 void OPENPFC_NMG_NAME(scaled_apply)(const Level &L, const Operator &A,
-                                    const double *invd, const double *u,
-                                    double *out) {
+                                    const double *u, double *out) {
   if (!L.stencil)
-    columns(L, A.a, u, ScaledEpi{invd, out});
+    columns(L, A.a, u, ScaledEpi{out});
   else
-    scaled_apply_kernel<<<grid3(L.n), block3()>>>(L, A, invd, u, out);
+    scaled_apply_kernel<<<grid3(L.n), block3()>>>(L, A, u, out);
   check("scaled_apply");
-}
-void OPENPFC_NMG_NAME(inverse_diagonal)(const Level &L, const Operator &A,
-                                        double *invd) {
-  inverse_diagonal_kernel<<<grid3(L.n), block3()>>>(L, A, invd);
-  check("inverse_diagonal");
 }
 void OPENPFC_NMG_NAME(residual)(const Level &L, const Operator &A, const double *f,
                                 const double *u, double *r, int zero_u) {
@@ -377,18 +375,18 @@ void OPENPFC_NMG_NAME(residual)(const Level &L, const Operator &A, const double 
   check("residual");
 }
 void OPENPFC_NMG_NAME(chebyshev)(const Level &L, const Operator &A, const double *f,
-                                 const double *u, const double *invd, double *d,
-                                 double c1, double c2, int zero_u) {
-  if (!L.stencil && !zero_u)
-    columns(L, A.a, u, ChebyshevEpi{f, invd, d, c1, c2});
+                                 const double *u, const double *u_prev, double *out,
+                                 double c1, double c2, int zero) {
+  if (!L.stencil && !zero)
+    columns(L, A.a, u, ChebyshevEpi{f, u_prev, out, c1, c2});
   else
-    chebyshev_kernel<<<grid3(L.n), block3()>>>(L, A, f, u, invd, d, c1, c2, zero_u);
+    chebyshev_kernel<<<grid3(L.n), block3()>>>(L, A, f, u, u_prev, out, c1, c2,
+                                               zero);
   check("chebyshev");
 }
 void OPENPFC_NMG_NAME(gauss_seidel)(const Level &L, const Operator &A,
-                                    const double *f, const double *invd, double *u,
-                                    int colour) {
-  gauss_seidel_kernel<<<grid3(L.n), block3()>>>(L, A, f, invd, u, colour);
+                                    const double *f, double *u, int colour) {
+  gauss_seidel_kernel<<<grid3(L.n), block3()>>>(L, A, f, u, colour);
   check("gauss_seidel");
 }
 void OPENPFC_NMG_NAME(restrict_residual)(const Level &F, const double *rf,
@@ -399,10 +397,11 @@ void OPENPFC_NMG_NAME(restrict_residual)(const Level &F, const double *rf,
                                                      off[2]);
   check("restrict_residual");
 }
-void OPENPFC_NMG_NAME(prolong_add)(const Level &F, double *uf, const Level &G,
-                                   const double *ug, const int off[3]) {
-  prolong_add_kernel<<<grid3(F.n), block3()>>>(F, uf, G, ug, off[0], off[1], off[2]);
-  check("prolong_add");
+void OPENPFC_NMG_NAME(prolong)(const Level &F, const double *uf, double *out,
+                               const Level &G, const double *ug, const int off[3]) {
+  prolong_kernel<<<grid3(F.n), block3()>>>(F, uf, out, G, ug, off[0], off[1],
+                                           off[2]);
+  check("prolong");
 }
 void OPENPFC_NMG_NAME(restrict_coefficient)(const Level &F, const double *af,
                                             const Level &G, double *ag,
