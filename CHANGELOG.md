@@ -45,6 +45,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   method identity, boundary records and an optional JSON sidecar, restartable
   on any decomposition. `CheckpointService` now uses them; its bundles are
   unchanged.
+- `pfc::solvers::NodalMultigrid`, a matrix-free distributed geometric
+  multigrid V-cycle for the periodic Q1 (trilinear) operator
+  sum_e a_e K_e + sigma M on host, CUDA and HIP. Nodal transfers with
+  R = P^T, Galerkin or rediscretized coarse levels, Chebyshev or 8-colour
+  Gauss-Seidel smoothing, bounded agglomeration of the coarse levels with a
+  dense coarsest solve, and a communicator-wide gauge for sigma = 0. PCG
+  iteration counts do not grow with the grid (#544).
 - Keep generic MPI startup headers independent of CUDA/HIP SDK headers while
   preserving the configured library's pre-MPI device binding.
 
