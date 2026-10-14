@@ -29,6 +29,7 @@
 #include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_neighbors.hpp>
+#include <openpfc/kernel/decomposition/dirichlet_ghosts.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/reflection_ghosts.hpp>
 #include <openpfc/kernel/decomposition/stage_preparation.hpp>
@@ -570,5 +571,101 @@ TEST_CASE("linear and mirror walls preserve a sequential cell-face donor",
         for (int i = -hw; i < n[0] + hw; ++i)
           REQUIRE(actual(i, j, 0) == expected(i, j, 0));
     }
+  }
+}
+
+TEST_CASE("reflection slabs match a full-volume sample",
+          "[kernel][field][reflection][unit]") {
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank != 0) {
+    return;
+  }
+  const auto volume = [](pfc::data::Field<double, HostSpace> &u,
+                         const ReflectionWalls<double> &walls,
+                         ReflectionExtent extent, bool skip_disabled) {
+    auto geom =
+        pfc::communication::detail::build_reflection_geometry(u, walls, extent);
+    geom.skip_disabled = skip_disabled ? 1 : 0;
+    pfc::communication::detail::validate_reflection_geometry(geom);
+    const int hw = geom.halo;
+    for (int k = -hw; k < geom.nloc[2] + hw; ++k) {
+      for (int j = -hw; j < geom.nloc[1] + hw; ++j) {
+        for (int i = -hw; i < geom.nloc[0] + hw; ++i) {
+          const auto sample =
+              pfc::communication::detail::reflection_sample(geom, i, j, k);
+          if (!sample.write) {
+            continue;
+          }
+          u(i, j, k) =
+              sample.scale * u(sample.si, sample.sj, sample.sk) + sample.offset;
+        }
+      }
+    }
+  };
+  const auto same = [](const pfc::data::Field<double, HostSpace> &a,
+                       const pfc::data::Field<double, HostSpace> &b) {
+    REQUIRE(a.size() == b.size());
+    REQUIRE(std::equal(a.data(), a.data() + a.size(), b.data()));
+  };
+
+  for (int hw : {1, 2, 4}) {
+    auto domain = pfc::domain::create(
+        pfc::GridSize({16, 12, 1}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+        pfc::GridSpacing({1.0, 1.0, 1.0}), pfc::Bool3{false, false, false});
+    auto decomp = pfc::decomposition::create(domain, 1);
+    auto slab = pfc::data::field_from_subdomain<double>(decomp, 0, hw);
+    auto walked = pfc::data::field_from_subdomain<double>(decomp, 0, hw);
+    fill_owned(slab);
+    fill_owned(walked);
+    poison_ghosts(slab);
+    poison_ghosts(walked);
+    ReflectionWalls<double> walls;
+    const pfc::communication::ReflectionSide<double> even{
+        true, ReflectionParity::Even, BoundaryCentering::CellFace, 0.0,
+        pfc::communication::BoundaryExtension::Reflection};
+    const pfc::communication::ReflectionSide<double> far{
+        true, ReflectionParity::Odd, BoundaryCentering::CellFace, -0.375,
+        pfc::communication::BoundaryExtension::Linear};
+    walls.xm = walls.ym = even;
+    walls.xp = walls.yp = far;
+    volume(walked, walls, ReflectionExtent::PhysicalFaces, false);
+    apply_reflection_ghosts(slab, walls);
+    same(slab, walked);
+    REQUIRE(slab(0, 0, -1) == -1234567.0);
+    REQUIRE(slab(-1, 0, -1) == -1234567.0);
+    REQUIRE(slab(0, 0, 1) == -1234567.0);
+    const auto owned = slab.local_size();
+    REQUIRE(slab(owned[0] / 2, owned[1] / 2, 0) ==
+            sample_value(owned[0] / 2, owned[1] / 2, 0));
+  }
+
+  {
+    auto box = make_serial_field({false, false, false}, 2);
+    auto walked = make_serial_field({false, false, false}, 2);
+    fill_owned(box);
+    fill_owned(walked);
+    poison_ghosts(box);
+    poison_ghosts(walked);
+    const auto walls =
+        reflection_walls<double>(ReflectionParity::Even, BoundaryCentering::Node);
+    volume(walked, walls, ReflectionExtent::PhysicalFaces, false);
+    apply_reflection_ghosts(box, walls);
+    same(box, walked);
+  }
+
+  {
+    auto direct = make_serial_field({true, false, true}, 3);
+    auto walked = make_serial_field({true, false, true}, 3);
+    fill_owned(direct);
+    fill_owned(walked);
+    poison_ghosts(direct);
+    poison_ghosts(walked);
+    ReflectionWalls<double> walls;
+    walls.ym = {true, ReflectionParity::Odd, BoundaryCentering::Node, 1.25};
+    walls.yp = {true, ReflectionParity::Odd, BoundaryCentering::Node, -0.5};
+    volume(walked, walls, ReflectionExtent::AllOutside, true);
+    pfc::communication::apply_dirichlet_ghosts(direct, 1, 1.25, -0.5);
+    same(direct, walked);
   }
 }

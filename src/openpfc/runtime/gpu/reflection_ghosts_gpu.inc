@@ -23,28 +23,46 @@ constexpr const char *kReflectionGpuKind = "hip";
 #endif
 
 template <typename T>
-__global__ void reflection_ghosts_kernel(T *pad, ReflectionGeometry<T> geom) {
-  const int nxp = geom.nloc[0] + 2 * geom.halo;
-  const int npy = geom.nloc[1] + 2 * geom.halo;
-  const int npz = geom.nloc[2] + 2 * geom.halo;
-  const int n = nxp * npy * npz;
+__global__ void reflection_ghosts_kernel(T *pad, ReflectionGeometry<T> geom,
+                                        ReflectionVisitPlan plan) {
   const int tid = static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x);
-  if (tid >= n) {
+  if (tid >= plan.total) {
     return;
   }
-  const int i = (tid % nxp) - geom.halo;
-  const int t2 = tid / nxp;
-  const int j = (t2 % npy) - geom.halo;
-  const int k = (t2 / npy) - geom.halo;
+  int offset = tid;
+  int slab_index = 0;
+  for (; slab_index < plan.n; ++slab_index) {
+    if (offset < plan.slabs[slab_index].count) {
+      break;
+    }
+    offset -= plan.slabs[slab_index].count;
+  }
+  if (slab_index >= plan.n) {
+    return;
+  }
+  const ReflectionSlab slab = plan.slabs[slab_index];
+  const int dx = slab.end[0] - slab.begin[0];
+  const int dy = slab.end[1] - slab.begin[1];
+  if (dx <= 0 || dy <= 0) {
+    return;
+  }
+  const int i = slab.begin[0] + (offset % dx);
+  const int tiled = offset / dx;
+  const int j = slab.begin[1] + (tiled % dy);
+  const int k = slab.begin[2] + (tiled / dy);
   const ReflectionSample<T> sample = reflection_sample(geom, i, j, k);
   if (!sample.write) {
     return;
   }
+  const int nxp = geom.nloc[0] + 2 * geom.halo;
+  const int npy = geom.nloc[1] + 2 * geom.halo;
   const int si = sample.si + geom.halo;
   const int sj = sample.sj + geom.halo;
   const int sk = sample.sk + geom.halo;
   const int src = si + sj * nxp + sk * nxp * npy;
-  pad[tid] = sample.scale * pad[src] + sample.offset;
+  const int dst = (i + geom.halo) + (j + geom.halo) * nxp +
+                  (k + geom.halo) * nxp * npy;
+  pad[dst] = sample.scale * pad[src] + sample.offset;
 }
 
 template <typename T>
@@ -52,16 +70,13 @@ void launch_reflection_ghosts(T *pad, ReflectionGeometry<T> geom) {
   if (geom.halo < 1) {
     return;
   }
-  const int nxp = geom.nloc[0] + 2 * geom.halo;
-  const int npy = geom.nloc[1] + 2 * geom.halo;
-  const int npz = geom.nloc[2] + 2 * geom.halo;
-  const int n = nxp * npy * npz;
-  if (n <= 0) {
+  const ReflectionVisitPlan plan = plan_reflection_visits(geom);
+  if (plan.total <= 0) {
     return;
   }
   constexpr int threads = 256;
-  const int blocks = (n + threads - 1) / threads;
-  reflection_ghosts_kernel<<<blocks, threads>>>(pad, geom);
+  const int blocks = (plan.total + threads - 1) / threads;
+  reflection_ghosts_kernel<<<blocks, threads>>>(pad, geom, plan);
   ::pfc::gpuError_t err = ::pfc::gpuGetLastError();
   if (err != ::pfc::gpuSuccess) {
     throw std::runtime_error(

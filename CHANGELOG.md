@@ -37,6 +37,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Changed
 
+- Reflection ghost fills visit the active face, edge and corner slabs
+  instead of every padded index. Centering, parity, linear extension and
+  rejection before mutation are unchanged (#532).
+
 - The device `HaloConnectivity::Full` exchange copies a self-periodic axis
   with one fused in-place kernel for all fields instead of a pack and an
   unpack per face and field. When every axis is self-periodic, `exchange()`

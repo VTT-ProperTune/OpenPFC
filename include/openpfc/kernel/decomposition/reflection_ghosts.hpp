@@ -49,11 +49,22 @@
  * to zero. Anisotropic constitutive fluxes stay a model choice and use
  * `pfc::field::fd::WallPolicy` in `face_current.hpp`.
  *
+ * The host and device fills visit disjoint slabs. A slab is one outside
+ * run on an enabled face this rank owns, crossed with the neutral or
+ * active runs of the other axes, so each edge and corner is written
+ * once. Interior samples, periodic halos and a disabled side that
+ * cancels the sample are not visited. The stored value is still
+ * `reflection_sample`: a corner is one X-then-Y-then-Z map from the
+ * field as it stood before this fill, not a second pass over a ghost.
+ *
  * @see stage_preparation.hpp
  * @see dirichlet_ghosts.hpp
  * @see face_current.hpp
  */
 
+#include <algorithm>
+#include <cstddef>
+#include <limits>
 #include <stdexcept>
 #include <string>
 
@@ -291,22 +302,117 @@ void validate_reflection_geometry(const ReflectionGeometry<T> &geom) {
   }
 }
 
+/// One rectangular index box. `count` is the number of local indices in it.
+struct ReflectionSlab {
+  int begin[3];
+  int end[3];
+  int count;
+};
+
+/// Disjoint write boxes for one geometry. At most three runs per axis.
+struct ReflectionVisitPlan {
+  static constexpr int capacity = 27;
+  int n = 0;
+  int total = 0;
+  ReflectionSlab slabs[capacity]{};
+};
+
+template <typename T>
+[[nodiscard]] ReflectionVisitPlan
+plan_reflection_visits(const ReflectionGeometry<T> &geom) {
+  struct Run {
+    int begin = 0;
+    int end = 0;
+    int kind = 0;
+  };
+  Run runs[3][3]{};
+  int nrun[3] = {0, 0, 0};
+  for (int axis = 0; axis < 3; ++axis) {
+    const int lo = -geom.halo;
+    const int hi = geom.nloc[axis] + geom.halo;
+    const int inside = -geom.low[axis];
+    const int past = geom.nglob[axis] - geom.low[axis];
+    const int cut[4] = {lo, std::max(lo, std::min(inside, hi)),
+                        std::max(lo, std::min(past, hi)), hi};
+    for (int part = 0; part < 3; ++part) {
+      if (cut[part] >= cut[part + 1]) {
+        continue;
+      }
+      const int kind =
+          reflection_side_applies(geom, axis, geom.low[axis] + cut[part]);
+      Run &run = runs[axis][nrun[axis]++];
+      run.begin = cut[part];
+      run.end = cut[part + 1];
+      run.kind = kind;
+    }
+  }
+
+  ReflectionVisitPlan plan;
+  for (int iz = 0; iz < nrun[2]; ++iz) {
+    for (int iy = 0; iy < nrun[1]; ++iy) {
+      for (int ix = 0; ix < nrun[0]; ++ix) {
+        const int kinds[3] = {runs[0][ix].kind, runs[1][iy].kind, runs[2][iz].kind};
+        const bool active = kinds[0] > 0 || kinds[1] > 0 || kinds[2] > 0;
+        const bool cancel = kinds[0] < 0 || kinds[1] < 0 || kinds[2] < 0;
+        if (!active || (cancel && geom.skip_disabled == 0)) {
+          continue;
+        }
+        if (plan.n >= ReflectionVisitPlan::capacity) {
+          throw std::logic_error(
+              "apply_reflection_ghosts: reflection visit plan overflowed");
+        }
+        ReflectionSlab &slab = plan.slabs[plan.n];
+        const Run selected[3] = {runs[0][ix], runs[1][iy], runs[2][iz]};
+        long long count = 1;
+        for (int axis = 0; axis < 3; ++axis) {
+          slab.begin[axis] = selected[axis].begin;
+          slab.end[axis] = selected[axis].end;
+          count *= static_cast<long long>(selected[axis].end - selected[axis].begin);
+        }
+        if (count > static_cast<long long>(std::numeric_limits<int>::max()) ||
+            static_cast<long long>(plan.total) >
+                static_cast<long long>(std::numeric_limits<int>::max()) - count) {
+          throw std::length_error(
+              "apply_reflection_ghosts: reflection visit count overflowed");
+        }
+        slab.count = static_cast<int>(count);
+        plan.total += slab.count;
+        ++plan.n;
+      }
+    }
+  }
+  return plan;
+}
+
 template <typename T>
 void apply_reflection_host(pfc::data::Field<T, pfc::HostSpace> &u,
                            const ReflectionGeometry<T> &geom) {
+  const ReflectionVisitPlan plan = plan_reflection_visits(geom);
+  if (plan.total == 0) {
+    return;
+  }
   const int hw = geom.halo;
-  const int i1 = geom.nloc[0] + hw;
-  const int j1 = geom.nloc[1] + hw;
-  const int k1 = geom.nloc[2] + hw;
-  for (int k = -hw; k < k1; ++k) {
-    for (int j = -hw; j < j1; ++j) {
-      for (int i = -hw; i < i1; ++i) {
-        const ReflectionSample<T> sample = reflection_sample(geom, i, j, k);
-        if (!sample.write) {
-          continue;
+  const auto nxp = static_cast<std::size_t>(geom.nloc[0] + 2 * hw);
+  const auto npy = static_cast<std::size_t>(geom.nloc[1] + 2 * hw);
+  const auto hw_u = static_cast<std::size_t>(hw);
+  T *const pad = u.data();
+  const auto at = [&](int i, int j, int k) -> T & {
+    return pad[(static_cast<std::size_t>(i) + hw_u) +
+               (static_cast<std::size_t>(j) + hw_u) * nxp +
+               (static_cast<std::size_t>(k) + hw_u) * nxp * npy];
+  };
+  for (int s = 0; s < plan.n; ++s) {
+    const ReflectionSlab &slab = plan.slabs[s];
+    for (int k = slab.begin[2]; k < slab.end[2]; ++k) {
+      for (int j = slab.begin[1]; j < slab.end[1]; ++j) {
+        for (int i = slab.begin[0]; i < slab.end[0]; ++i) {
+          const ReflectionSample<T> sample = reflection_sample(geom, i, j, k);
+          if (!sample.write) {
+            continue;
+          }
+          at(i, j, k) =
+              sample.scale * at(sample.si, sample.sj, sample.sk) + sample.offset;
         }
-        u(i, j, k) =
-            sample.scale * u(sample.si, sample.sj, sample.sk) + sample.offset;
       }
     }
   }
