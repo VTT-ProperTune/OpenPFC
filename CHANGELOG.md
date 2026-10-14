@@ -59,6 +59,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- `integrator::matrix_phi` evaluates `exp(M)`, `φ1(M)` and `φ2(M)` of a real
+  2 × 2 matrix in closed form, with scaling and squaring for zero, defective
+  and nearly repeated eigenvalues; `etd2_coefficients` scales them by `h`
+  (#543).
+
 - `BoundaryExtension::Linear` supplies nearest-owned cell-face Dirichlet
   extrapolation through the reflection service, with composed corners and
   unchanged default mirror reflection (#511).
