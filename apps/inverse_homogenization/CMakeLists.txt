@@ -186,8 +186,10 @@ if(INVERSE_HOMOGENIZATION_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
                          PROPERTIES TIMEOUT 120)
     add_executable(test_inverse_convergence
                    tests/test_inverse_convergence.cpp)
+    # Header-only: the app headers and the library SIMP law they use.
     target_include_directories(test_inverse_convergence PRIVATE
-                               ${INVERSE_HOMOGENIZATION_INCLUDE_DIR})
+                               ${INVERSE_HOMOGENIZATION_INCLUDE_DIR}
+                               ${PROJECT_SOURCE_DIR}/include)
     target_link_libraries(test_inverse_convergence PRIVATE Catch2::Catch2)
     set_target_properties(test_inverse_convergence PROPERTIES
       CXX_STANDARD 20

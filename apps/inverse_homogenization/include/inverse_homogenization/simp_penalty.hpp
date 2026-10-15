@@ -7,29 +7,26 @@
  * @file simp_penalty.hpp
  * @brief SIMP density \(h^p\) and chain-rule \(p h^{p-1}\) used by CPU and HIP.
  *
- * \(p=1\) is linear interpolation and must not call \(\mathrm{pow}(h,0)\).
- * \(h\) is clamped to \([0,1]\) so \(h=0\) never produces NaN for \(p\ge 1\).
+ * The law is the library's `pfc::solvers::SimpInterpolation`
+ * (`openpfc/solvers/microelasticity/simp.hpp`); these are the names the
+ * drivers use. \(p=1\) is linear interpolation and \(h\) is clamped to
+ * \([0,1]\).
  */
 
-#include <algorithm>
-#include <cmath>
+#include <openpfc/solvers/microelasticity/simp.hpp>
 
 namespace pfc::apps::inverse {
 
 [[nodiscard]] inline double clamp01(double h) noexcept {
-  return std::min(1.0, std::max(0.0, h));
+  return pfc::solvers::SimpInterpolation::clamp01(h);
 }
 
 [[nodiscard]] inline double simp_density(double h, double p) noexcept {
-  h = clamp01(h);
-  if (p == 1.0) return h;
-  return std::pow(h, p);
+  return pfc::solvers::SimpInterpolation{p}.weight(h);
 }
 
 [[nodiscard]] inline double simp_chain(double h, double p) noexcept {
-  h = clamp01(h);
-  if (p == 1.0) return 1.0;
-  return p * std::pow(h, p - 1.0);
+  return pfc::solvers::SimpInterpolation{p}.slope(h);
 }
 
 } // namespace pfc::apps::inverse

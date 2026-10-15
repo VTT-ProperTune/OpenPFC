@@ -7,6 +7,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Add `pfc::solvers::SimpInterpolation` (`solvers/microelasticity/simp.hpp`):
+  the SIMP law `C(phi) = C_min + phi^p (C_max - C_min)` as the weight and
+  slope of the microelasticity solver's linear blend. The inverse
+  homogenization app's `simp_density` / `simp_chain` now call it (#553).
 - `EigenstrainMicroelasticity` runs on CUDA: `openpfc_microelasticity_cuda`
   builds the device kernels from the same single source as the HIP target,
   and `DeviceEigenstrainMicroelasticity<pfc::CUDASpace>` is the solver. A
