@@ -7,6 +7,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Add `pfc::solvers::scalar_root` (`solvers/scalar_root.hpp`): bracketed
+  Newton with bisection fallback for one scalar equation per cell, such as
+  inverting a concentration law for its diffusion potential. Host and device
+  callable, no allocation or exceptions; reports `Converged`,
+  `IterationLimit`, `NoBracket` or `NonFinite` (#560).
 - Fix: default device FFT plans (`GPUSpectralStack`, `create_hip`/
   `create_cuda` without options, `hip_/cuda_spectral_plan_options_from_json`)
   take heFFTe `use_gpu_aware` from `pfc::gpu::runtime_mpi_gpu_aware()` via
