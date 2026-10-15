@@ -66,10 +66,10 @@ __global__ void hash_owned_kernel(Level L, double *x) {
   x[k::vindex(L, i, j, kk)] =
       k::hash_value(L.low[0] + i, L.low[1] + j, L.low[2] + kk);
 }
-__global__ void copy_coefficient_kernel(Level L, const double *src, int sh,
-                                        double *dst) {
+__global__ void copy_owned_kernel(Level L, const double *src, int sh, double *dst,
+                                  int dh) {
   OPENPFC_NMG_NODE(L)
-  dst[k::index(L, k::kCoefficientHalo, i, j, kk)] = src[k::index(L, sh, i, j, kk)];
+  dst[k::index(L, dh, i, j, kk)] = src[k::index(L, sh, i, j, kk)];
 }
 __global__ void dot_kernel(Level L, const double *x, const double *y, double *out) {
   __shared__ double sums[kThreads];
@@ -345,10 +345,10 @@ void OPENPFC_NMG_NAME(hash_owned)(const Level &L, double *x) {
   hash_owned_kernel<<<grid3(L.n), block3()>>>(L, x);
   check("hash_owned");
 }
-void OPENPFC_NMG_NAME(copy_coefficient)(const Level &L, const double *src,
-                                        int src_halo, double *dst) {
-  copy_coefficient_kernel<<<grid3(L.n), block3()>>>(L, src, src_halo, dst);
-  check("copy_coefficient");
+void OPENPFC_NMG_NAME(copy_owned)(const Level &L, const double *src, int src_halo,
+                                  double *dst, int dst_halo) {
+  copy_owned_kernel<<<grid3(L.n), block3()>>>(L, src, src_halo, dst, dst_halo);
+  check("copy_owned");
 }
 void OPENPFC_NMG_NAME(apply)(const Level &L, const Operator &A, const double *u,
                              double *out) {

@@ -59,10 +59,14 @@
  * right-hand side is projected to zero mean, and `apply` projects the output to
  * zero global mean with one communicator-wide reduction.
  *
- * Vectors passed to `apply_operator` and `apply` must live on the fine owned box
- * with storage halo 1. `apply_operator` writes the halo of its input (the owned
- * values are not changed). Backends: host, CUDA and HIP; the point arithmetic is
- * shared (nodal_multigrid_kernels.hpp).
+ * Vectors passed to `apply_operator` and `apply` must live on the fine owned box.
+ * With storage halo 1 they are used in place: `apply` reads r as the fine
+ * right-hand side and iterates in z, and `apply_operator` writes the halo of its
+ * input (the owned values are not changed). Any other halo goes through two
+ * fine staging vectors allocated on first use. The fine level itself keeps only
+ * the element coefficients and one work vector (the second Chebyshev iterate,
+ * which also holds the residual). Backends: host, CUDA and HIP; the point
+ * arithmetic is shared (nodal_multigrid_kernels.hpp).
  */
 
 #include <algorithm>
@@ -107,7 +111,7 @@ template <class Space> struct Launch {
   template <class... A> static void axpy_owned(A &&...) { unavailable(); }
   template <class... A> static void add_owned(A &&...) { unavailable(); }
   template <class... A> static void hash_owned(A &&...) { unavailable(); }
-  template <class... A> static void copy_coefficient(A &&...) { unavailable(); }
+  template <class... A> static void copy_owned(A &&...) { unavailable(); }
   template <class... A> static void apply(A &&...) { unavailable(); }
   template <class... A> static void scaled_apply(A &&...) { unavailable(); }
   template <class... A> static void residual(A &&...) { unavailable(); }
@@ -137,8 +141,8 @@ template <> struct Launch<CUDASpace> {
   template <class... A> static void hash_owned(A &&...a) {
     gpu::nmg::hash_owned_cuda(std::forward<A>(a)...);
   }
-  template <class... A> static void copy_coefficient(A &&...a) {
-    gpu::nmg::copy_coefficient_cuda(std::forward<A>(a)...);
+  template <class... A> static void copy_owned(A &&...a) {
+    gpu::nmg::copy_owned_cuda(std::forward<A>(a)...);
   }
   template <class... A> static void apply(A &&...a) {
     gpu::nmg::apply_cuda(std::forward<A>(a)...);
@@ -186,8 +190,8 @@ template <> struct Launch<HIPSpace> {
   template <class... A> static void hash_owned(A &&...a) {
     gpu::nmg::hash_owned_hip(std::forward<A>(a)...);
   }
-  template <class... A> static void copy_coefficient(A &&...a) {
-    gpu::nmg::copy_coefficient_hip(std::forward<A>(a)...);
+  template <class... A> static void copy_owned(A &&...a) {
+    gpu::nmg::copy_owned_hip(std::forward<A>(a)...);
   }
   template <class... A> static void apply(A &&...a) {
     gpu::nmg::apply_hip(std::forward<A>(a)...);
@@ -401,18 +405,10 @@ public:
   void update(const FieldT &coefficient) {
     const auto t0 = std::chrono::steady_clock::now();
     Lev &L0 = *m_levels[0];
-    check_vector(coefficient, "coefficient", -1);
-    if constexpr (is_host) {
-      for_nodes(L0.g.n, [&](int i, int j, int k) {
-        L0.a.data()[nmg::index(L0.g, nmg::kCoefficientHalo, i, j, k)] =
-            coefficient
-                .data()[nmg::index(L0.g, coefficient.storage_halo(), i, j, k)];
-      });
-    } else {
-      const_cast<FieldT &>(coefficient).sync_to_device();
-      OPENPFC_NMG_CALL(copy_coefficient, L0.g, coefficient.data(),
-                       coefficient.storage_halo(), L0.a.data());
-    }
+    check_vector(coefficient, "coefficient");
+    if constexpr (!is_host) const_cast<FieldT &>(coefficient).sync_to_device();
+    copy_owned(L0, coefficient.data(), coefficient.storage_halo(), L0.a.data(),
+               nmg::kCoefficientHalo);
     exchange_coefficients(L0);
     const auto tc = std::chrono::steady_clock::now();
     for (std::size_t l = 1; l < m_levels.size(); ++l)
@@ -430,31 +426,51 @@ public:
     m_stats.setup = seconds(t0);
   }
 
-  /// out = A u at the owned fine nodes (u's halo is exchanged in place).
+  /// out = A u at the owned fine nodes. With storage halo 1 the vectors are used
+  /// in place (u's halo is exchanged in place); any other halo goes through a
+  /// fine-level staging copy.
   void apply_operator(const FieldT &u, FieldT &out) {
     Lev &L = *m_levels[0];
-    check_vector(u, "u", 1);
-    check_vector(out, "out", 1);
-    double *up = const_cast<double *>(u.data());
+    check_vector(u, "u");
+    check_vector(out, "out");
+    const bool direct = u.storage_halo() == 1 && out.storage_halo() == 1;
+    double *up = const_cast<double *>(u.data()), *yp = out.data();
+    if (!direct) {
+      stage(L);
+      copy_owned(L, up, u.storage_halo(), L.u.data(), nmg::kVectorHalo);
+      up = L.u.data();
+      yp = L.f.data();
+    }
     exchange_vector(L, up);
     if constexpr (is_host) {
       const auto A = op(L);
       for_nodes(L.g.n, [&](int i, int j, int k) {
-        out.data()[nmg::vindex(L.g, i, j, k)] = nmg::apply(L.g, A, up, i, j, k);
+        yp[nmg::vindex(L.g, i, j, k)] = nmg::apply(L.g, A, up, i, j, k);
       });
     } else {
-      OPENPFC_NMG_CALL(apply, L.g, op(L), up, out.data());
-      out.note_device_write();
+      OPENPFC_NMG_CALL(apply, L.g, op(L), up, yp);
     }
+    if (!direct) copy_owned(L, yp, nmg::kVectorHalo, out.data(), out.storage_halo());
+    if constexpr (!is_host) out.note_device_write();
   }
 
   /// z = M^{-1} r: one V-cycle from z = 0 (owned nodes of r read, of z written).
+  /// With storage halo 1, r is the fine right-hand side and z the fine iterate in
+  /// place (no fine copies); any other halo goes through a staging copy.
   void apply(const FieldT &r, FieldT &z) {
     Lev &L = *m_levels[0];
-    check_vector(r, "r", 1);
-    check_vector(z, "z", 1);
-    cycle(0, r.data(), z.data());
-    if (m_c.sigma == 0.0) project_mean(L, z.data());
+    check_vector(r, "r");
+    check_vector(z, "z");
+    if (r.storage_halo() == 1 && z.storage_halo() == 1) {
+      cycle(0, r.data(), z.data());
+      if (m_c.sigma == 0.0) project_mean(L, z.data());
+    } else {
+      stage(L);
+      copy_owned(L, r.data(), r.storage_halo(), L.f.data(), nmg::kVectorHalo);
+      cycle(0, L.f.data(), L.u.data());
+      if (m_c.sigma == 0.0) project_mean(L, L.u.data());
+      copy_owned(L, L.u.data(), nmg::kVectorHalo, z.data(), z.storage_halo());
+    }
     if constexpr (!is_host) z.note_device_write();
     ++m_stats.cycles;
   }
@@ -580,8 +596,12 @@ private:
       L.u = Buf(pv);
       L.f = Buf(pv);
     }
-    L.r = Buf(pv);
-    if (m_c.smoother == Smoother::Chebyshev) L.t = Buf(pv);
+    // With Chebyshev smoothing the residual lives in t: t is dead between the
+    // pre-smoothing and the out-of-place prolongation.
+    if (m_c.smoother == Smoother::Chebyshev)
+      L.t = Buf(pv);
+    else
+      L.r = Buf(pv);
     if (L.g.stencil)
       L.s = Buf(nmg::kStencilPlanes * nmg::padded_size(L.g, nmg::kStencilHalo));
     else
@@ -611,21 +631,41 @@ private:
 
   // ---- small helpers -----------------------------------------------------
 
+  static double *resid(Lev &L) { return L.r.size() ? L.r.data() : L.t.data(); }
+
+  /// Fine-level staging vectors for callers whose storage halo is not 1.
+  void stage(Lev &L) {
+    if (L.u.size()) return;
+    const std::size_t pv = nmg::padded_size(L.g, nmg::kVectorHalo);
+    L.u = Buf(pv);
+    L.f = Buf(pv);
+    zero(L.u.data(), pv);
+    zero(L.f.data(), pv);
+  }
+
+  /// Owned values from a buffer of storage halo sh to one of storage halo dh.
+  static void copy_owned(Lev &L, const double *src, int sh, double *dst, int dh) {
+    if constexpr (is_host) {
+      for_nodes(L.g.n, [&](int i, int j, int k) {
+        dst[nmg::index(L.g, dh, i, j, k)] = src[nmg::index(L.g, sh, i, j, k)];
+      });
+    } else {
+      OPENPFC_NMG_CALL(copy_owned, L.g, src, sh, dst, dh);
+    }
+  }
+
   template <class Fn> static void for_nodes(const int n[3], Fn &&fn) {
     for (int k = 0; k < n[2]; ++k)
       for (int j = 0; j < n[1]; ++j)
         for (int i = 0; i < n[0]; ++i) fn(i, j, k);
   }
 
-  void check_vector(const FieldT &v, const char *what, int halo) const {
+  void check_vector(const FieldT &v, const char *what) const {
     const Lev &L = *m_levels[0];
     for (int a = 0; a < 3; ++a)
       if (v.local_size()[a] != L.g.n[a] || v.box().low[a] != L.g.low[a])
         throw std::invalid_argument(std::string("NodalMultigrid: ") + what +
                                     " is not on the fine owned box");
-    if (halo >= 0 && v.storage_halo() != halo)
-      throw std::invalid_argument(std::string("NodalMultigrid: ") + what +
-                                  " must have storage halo 1");
   }
 
   static nmg::Operator op(Lev &L) {
@@ -844,13 +884,12 @@ private:
   /// lambda_max(D^{-1} A) by power iteration from the hashed start vector.
   void estimate_lambda(Lev &L) {
     const auto A = op(L);
-    double *x = L.r.data(), *y = L.t.size() ? L.t.data() : nullptr;
-    Buf tmp;
-    if (!y) {
-      tmp = Buf(nmg::padded_size(L.g, nmg::kVectorHalo));
-      zero(tmp.data(), tmp.size());
-      y = tmp.data();
-    }
+    // Two work vectors: the level's residual buffer and a transient one (fine
+    // levels own no other vector).
+    double *x = resid(L);
+    Buf tmp(nmg::padded_size(L.g, nmg::kVectorHalo));
+    zero(tmp.data(), tmp.size());
+    double *y = tmp.data();
     if constexpr (is_host) {
       for_nodes(L.g.n, [&](int i, int j, int k) {
         x[nmg::vindex(L.g, i, j, k)] =
@@ -876,8 +915,7 @@ private:
       std::swap(x, y);
     }
     L.lmax = m_c.eigenvalue_safety * lambda;
-    zero(L.r.data(), L.r.size());
-    if (L.t.size()) zero(L.t.data(), L.t.size());
+    zero(resid(L), nmg::padded_size(L.g, nmg::kVectorHalo));
   }
 
   void scale(Lev &L, double *x, double s) {
@@ -1111,23 +1149,23 @@ private:
       Phase t(*this, m_stats.residual);
       if constexpr (is_host) {
         for_nodes(L.g.n, [&](int i, int j, int k) {
-          nmg::residual(L.g, A, f, u, L.r.data(), i, j, k, 0);
+          nmg::residual(L.g, A, f, u, resid(L), i, j, k, 0);
         });
       } else {
-        OPENPFC_NMG_CALL(residual, L.g, A, f, u, L.r.data(), 0);
+        OPENPFC_NMG_CALL(residual, L.g, A, f, u, resid(L), 0);
       }
     }
-    exchange_vector(L, L.r.data());
+    exchange_vector(L, resid(L));
     Lev &G = *m_levels[l + 1];
     {
       Phase t(*this, m_stats.transfer);
       const int rh[3] = {L.g.n[0] / 2, L.g.n[1] / 2, L.g.n[2] / 2};
       if constexpr (is_host) {
         for_nodes(rh, [&](int I, int J, int K) {
-          nmg::restrict_residual(L.g, L.r.data(), G.g, G.f.data(), G.off, I, J, K);
+          nmg::restrict_residual(L.g, resid(L), G.g, G.f.data(), G.off, I, J, K);
         });
       } else {
-        OPENPFC_NMG_CALL(restrict_residual, L.g, L.r.data(), G.g, G.f.data(), G.off);
+        OPENPFC_NMG_CALL(restrict_residual, L.g, resid(L), G.g, G.f.data(), G.off);
       }
     }
     if (G.replicated && !L.whole) gather(G, G.f.data(), nmg::kVectorHalo);
