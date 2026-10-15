@@ -36,6 +36,7 @@
 
 #include <openpfc/runtime/gpu/bind_local_device.hpp>
 #include <openpfc/runtime/gpu/fft_gpu.hpp>
+#include <openpfc/runtime/gpu/fft_plan_defaults.hpp>
 #include <openpfc/runtime/gpu/fft_single_device.hpp>
 
 namespace pfc::sim::stacks {
@@ -55,7 +56,7 @@ template <class MemorySpace> struct gpu_fft_for;
 template <> struct gpu_fft_for<CUDASpace> {
   using type = fft::FFT_CUDA;
   static heffte::plan_options default_plan_options() {
-    return heffte::default_options<heffte::backend::cufft>();
+    return pfc::fft::default_device_plan_options<heffte::backend::cufft>();
   }
   static type create(const pfc::decomposition::Decomposition &decomp, int rank,
                      MPI_Comm comm, const heffte::plan_options &options) {
@@ -68,7 +69,7 @@ template <> struct gpu_fft_for<CUDASpace> {
 template <> struct gpu_fft_for<HIPSpace> {
   using type = fft::FFT_HIP;
   static heffte::plan_options default_plan_options() {
-    return heffte::default_options<heffte::backend::rocfft>();
+    return pfc::fft::default_device_plan_options<heffte::backend::rocfft>();
   }
   static type create(const pfc::decomposition::Decomposition &decomp, int rank,
                      MPI_Comm comm, const heffte::plan_options &options) {

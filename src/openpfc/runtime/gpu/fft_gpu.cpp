@@ -7,9 +7,10 @@
 #include <openpfc/kernel/fft/complex_outbox.hpp>
 #include <openpfc/runtime/common/heffte_gpu_r2c_layout.hpp>
 #include <openpfc/runtime/gpu/fft_gpu.hpp>
+#include <openpfc/runtime/gpu/fft_plan_defaults.hpp>
 
-#include <heffte.h>
 #include <cstdlib>
+#include <heffte.h>
 #include <iostream>
 #include <mpi.h>
 #include <string>
@@ -24,16 +25,14 @@ using Decomposition = pfc::decomposition::Decomposition;
                                    MPI_Comm comm, int r2c_direction,
                                    const heffte::plan_options &options) {
   const auto plan_opts =
-      pfc::fft::layout::effective_r2c_plan_options<heffte::backend::cufft>(
-          options);
+      pfc::fft::layout::effective_r2c_plan_options<heffte::backend::cufft>(options);
   auto boxes = pfc::runtime::heffte_gpu::make_default_r2c_boxes(
       decomposition, rank_id, r2c_direction, plan_opts);
   if (rank_id == 0 && std::getenv("OPENPFC_FFT_LOG_LAYOUT") != nullptr) {
     std::cerr << "FFT_R2C_LAYOUT real_grid="
               << pfc::fft::layout::format_proc_grid(boxes.real_proc_grid)
               << " complex_grid="
-              << pfc::fft::layout::format_proc_grid(boxes.complex_proc_grid)
-              << '\n';
+              << pfc::fft::layout::format_proc_grid(boxes.complex_proc_grid) << '\n';
   }
 
   using fft_r2c_cuda_type = heffte::fft3d_r2c<heffte::backend::cufft>;
@@ -46,7 +45,7 @@ using Decomposition = pfc::decomposition::Decomposition;
 [[nodiscard]] FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id,
                                    MPI_Comm comm, int r2c_direction) {
   return create_cuda(decomposition, rank_id, comm, r2c_direction,
-                     heffte::default_options<heffte::backend::cufft>());
+                     default_device_plan_options<heffte::backend::cufft>());
 }
 
 [[nodiscard]] FFT_CUDA create_cuda(const Decomposition &decomposition,
@@ -65,16 +64,14 @@ using Decomposition = pfc::decomposition::Decomposition;
                                  MPI_Comm comm, int r2c_direction,
                                  const heffte::plan_options &options) {
   const auto plan_opts =
-      pfc::fft::layout::effective_r2c_plan_options<heffte::backend::rocfft>(
-          options);
+      pfc::fft::layout::effective_r2c_plan_options<heffte::backend::rocfft>(options);
   auto boxes = pfc::runtime::heffte_gpu::make_default_r2c_boxes(
       decomposition, rank_id, r2c_direction, plan_opts);
   if (rank_id == 0 && std::getenv("OPENPFC_FFT_LOG_LAYOUT") != nullptr) {
     std::cerr << "FFT_R2C_LAYOUT real_grid="
               << pfc::fft::layout::format_proc_grid(boxes.real_proc_grid)
               << " complex_grid="
-              << pfc::fft::layout::format_proc_grid(boxes.complex_proc_grid)
-              << '\n';
+              << pfc::fft::layout::format_proc_grid(boxes.complex_proc_grid) << '\n';
   }
 
   using fft_r2c_hip_type = heffte::fft3d_r2c<heffte::backend::rocfft>;
@@ -87,7 +84,7 @@ using Decomposition = pfc::decomposition::Decomposition;
 [[nodiscard]] FFT_HIP create_hip(const Decomposition &decomposition, int rank_id,
                                  MPI_Comm comm, int r2c_direction) {
   return create_hip(decomposition, rank_id, comm, r2c_direction,
-                    heffte::default_options<heffte::backend::rocfft>());
+                    default_device_plan_options<heffte::backend::rocfft>());
 }
 
 [[nodiscard]] FFT_HIP create_hip(const Decomposition &decomposition, MPI_Comm comm) {

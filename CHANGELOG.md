@@ -7,6 +7,15 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Fix: default device FFT plans (`GPUSpectralStack`, `create_hip`/
+  `create_cuda` without options, `hip_/cuda_spectral_plan_options_from_json`)
+  take heFFTe `use_gpu_aware` from `pfc::gpu::runtime_mpi_gpu_aware()` via
+  the new `pfc::fft::default_device_plan_options<Backend>()`
+  (`runtime/gpu/fft_plan_defaults.hpp`). heFFTe's own default is always
+  GPU-aware, so a run whose MPI cannot take device pointers (Cray MPICH with
+  `MPICH_GPU_SUPPORT_ENABLED=0`, a build without `OpenPFC_MPI_*_AWARE`)
+  crashed in the first reshape; it now stages through host memory. An
+  explicit `use_gpu_aware` still wins (#561).
 - Add `pfc::solvers::LoadCaseCompliance<Solver>`
   (`solvers/microelasticity/homogenization.hpp`): the stored energy
   `U = 1/2 e:C_H:e` of one imposed mean strain on a SIMP density and its exact
