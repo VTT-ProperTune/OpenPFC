@@ -7,6 +7,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Add `pfc::solvers::PeriodicHomogenizer<Solver>`, `Voigt6`,
+  `engineering_unit_strain` and `HomogenizationResult`
+  (`solvers/microelasticity/homogenization.hpp`): six-load-case periodic
+  homogenization and the tensor-mismatch sensitivity over the host or a device
+  microelasticity solver, moved from `apps/inverse_homogenization`. The app's
+  host and HIP homogenizers are now this one implementation (#553).
 - Add `pfc::solvers::SimpInterpolation` (`solvers/microelasticity/simp.hpp`):
   the SIMP law `C(phi) = C_min + phi^p (C_max - C_min)` as the weight and
   slope of the microelasticity solver's linear blend. The inverse

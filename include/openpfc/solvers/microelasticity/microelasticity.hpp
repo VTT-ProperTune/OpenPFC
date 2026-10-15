@@ -589,6 +589,7 @@ struct MicroelasticityReport {
  */
 class EigenstrainMicroelasticity {
 public:
+  using FFT = pfc::fft::IHostFFT;
   using RealField = pfc::data::Field<double>;
   using Complex = std::complex<double>;
   using ComplexField = pfc::data::Field<Complex>;
