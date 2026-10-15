@@ -33,6 +33,7 @@
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL) || defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+#include <openpfc/runtime/gpu/fft_plan_defaults.hpp>
 #include <openpfc/runtime/gpu/memory_space_gpu.hpp>
 #endif
 
@@ -141,14 +142,16 @@ cpu_fft_from_json_and_decomposition(const nlohmann::json &settings,
 /**
  * @brief HeFFTe plan options for a cuFFT-backed spectral driver from app JSON
  *
- * Starts from `heffte::default_options<heffte::backend::cufft>()` and overlays
+ * Starts from `pfc::fft::default_device_plan_options<heffte::backend::cufft>()`
+ * (heFFTe defaults, `use_gpu_aware` from the runtime MPI decision) and overlays
  * keys from `merged_spectral_plan_options_json(settings)`. Used by
  * `make_simulation_session<GPUSpectralStack<CUDASpace>>` and GPU ETD sessions.
  */
 [[nodiscard]] inline heffte::plan_options
 cuda_spectral_plan_options_from_json(const nlohmann::json &settings, int nproc = 1) {
   const nlohmann::json merged = merged_spectral_plan_options_json(settings);
-  heffte::plan_options options = heffte::default_options<heffte::backend::cufft>();
+  heffte::plan_options options =
+      fft::default_device_plan_options<heffte::backend::cufft>();
   if (!merged.empty()) {
     detail::apply_heffte_plan_options_json_overrides(merged, options);
   }
@@ -169,7 +172,8 @@ cuda_spectral_plan_options_from_json(const nlohmann::json &settings, int nproc =
 [[nodiscard]] inline heffte::plan_options
 hip_spectral_plan_options_from_json(const nlohmann::json &settings, int nproc = 1) {
   const nlohmann::json merged = merged_spectral_plan_options_json(settings);
-  heffte::plan_options options = heffte::default_options<heffte::backend::rocfft>();
+  heffte::plan_options options =
+      fft::default_device_plan_options<heffte::backend::rocfft>();
   if (!merged.empty()) {
     detail::apply_heffte_plan_options_json_overrides(merged, options);
   }

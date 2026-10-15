@@ -20,11 +20,13 @@ int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
 #include <nlohmann/json.hpp>
 
 #include <openpfc/frontend/ui/from_json_simulation_session.hpp>
+#include <openpfc/frontend/ui/spectral_fft_stack_factory.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/simulation/session_selection.hpp>
 #include <openpfc/kernel/simulation/simulation_session.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
+#include <openpfc/runtime/gpu/gpu_aware_mpi.hpp>
 #include <openpfc/runtime/gpu/session_gpu_stack_factory.hpp>
 
 #if defined(OPENPFC_TEST_GPU_STACK_HIP)
@@ -71,6 +73,32 @@ TEST_CASE("GPUSpectralStack inbox field matches device FFT",
   REQUIRE(stack.fft().size_outbox() > 0);
   REQUIRE(stack.rank() == rank);
   REQUIRE(stack.nproc() == mpi_size);
+}
+
+TEST_CASE("default device plans follow the runtime GPU-aware MPI decision",
+          "[gpu][spectral_stack][gpu_aware]") {
+  int mpi_initialized = 0;
+  MPI_Initialized(&mpi_initialized);
+  if (mpi_initialized == 0) {
+    MPI_Init(nullptr, nullptr);
+  }
+  const bool aware = pfc::gpu::runtime_mpi_gpu_aware();
+  REQUIRE(
+      pfc::sim::stacks::gpu_fft_for<Space>::default_plan_options().use_gpu_aware ==
+      aware);
+#if defined(OPENPFC_TEST_GPU_STACK_HIP)
+  const auto from_json =
+      pfc::ui::hip_spectral_plan_options_from_json(nlohmann::json::object());
+  const auto forced = pfc::ui::hip_spectral_plan_options_from_json(
+      nlohmann::json{{"plan_options", {{"use_gpu_aware", !aware}}}});
+#else
+  const auto from_json =
+      pfc::ui::cuda_spectral_plan_options_from_json(nlohmann::json::object());
+  const auto forced = pfc::ui::cuda_spectral_plan_options_from_json(
+      nlohmann::json{{"plan_options", {{"use_gpu_aware", !aware}}}});
+#endif
+  REQUIRE(from_json.use_gpu_aware == aware);
+  REQUIRE(forced.use_gpu_aware == !aware); // an explicit setting still wins
 }
 
 TEST_CASE("make_gpu_spectral_stack from SessionSelection",
