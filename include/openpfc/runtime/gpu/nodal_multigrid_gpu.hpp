@@ -27,8 +27,8 @@ using Operator = ::pfc::solvers::nmg::Operator;
   void add_owned_##sfx(const Level &L, double *y, double v);                        \
   double dot_owned_##sfx(const Level &L, const double *x, const double *y);         \
   void hash_owned_##sfx(const Level &L, double *x);                                 \
-  void copy_coefficient_##sfx(const Level &L, const double *src, int src_halo,      \
-                              double *dst);                                         \
+  void copy_owned_##sfx(const Level &L, const double *src, int src_halo,            \
+                        double *dst, int dst_halo);                                 \
   void apply_##sfx(const Level &L, const Operator &A, const double *u,              \
                    double *out);                                                    \
   void scaled_apply_##sfx(const Level &L, const Operator &A, const double *u,       \

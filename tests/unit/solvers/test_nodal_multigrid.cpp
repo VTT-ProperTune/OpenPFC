@@ -424,3 +424,30 @@ TEST_CASE("NodalMultigrid is independent of the decomposition",
     }
   }
 }
+
+TEST_CASE("NodalMultigrid gives the same result through the staging path",
+          "[nodal_multigrid][MPI]") {
+  Grid g({16, 16, 8}, {1.0 / 16, 1.0 / 16, 1.0 / 8});
+  MG mg(g.decomp, g.rank, g.comm, controls(1.0));
+  mg.update(coefficient_field(g, jump_coefficient(g, 100.0)));
+  const auto dom = pfc::decomposition::domain(g.decomp);
+  const auto box = pfc::decomposition::local_box(g.decomp, g.rank);
+  FieldT r1 = g.field(), z1 = g.field(), y1 = g.field();
+  FieldT r2(dom, box, 2), z2(dom, box, 2), y2(dom, box, 2);
+  const Coefficient v = [](int i, int j, int k) {
+    return random_value(31u, i, j, k);
+  };
+  set(r1, v);
+  set(r2, v);
+  mg.apply(r1, z1);
+  mg.apply(r2, z2);
+  mg.apply_operator(z1, y1);
+  mg.apply_operator(z2, y2);
+  double e = 0, n = 0;
+  each(z1, [&](int i, int j, int k) {
+    e = std::max(e, std::abs(z1(i, j, k) - z2(i, j, k)) +
+                        std::abs(y1(i, j, k) - y2(i, j, k)));
+    n = std::max(n, std::abs(z1(i, j, k)) + std::abs(y1(i, j, k)));
+  });
+  REQUIRE(e <= 1e-14 * n);
+}
