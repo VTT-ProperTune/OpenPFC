@@ -415,6 +415,35 @@ foreach(_backend IN ITEMS cuda hip)
       TIMEOUT 120 SKIP_RETURN_CODE 4)
 endforeach()
 
+# User functor transform: the functors are instantiated for the device in the
+# transform_functors.cu / .hip TU, as a downstream application would.
+foreach(_backend IN ITEMS cuda hip)
+  if(_backend STREQUAL "cuda" AND OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
+    set(_runtime openpfc_gpu_kernels CUDA::cudart)
+    set(_definition OPENPFC_TEST_TRANSFORM_CUDA)
+    set(_device_tu transform_functors.cu)
+  elseif(_backend STREQUAL "hip" AND OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+    set(_runtime openpfc_hip_kernels hip::host)
+    set(_definition OPENPFC_TEST_TRANSFORM_HIP)
+    set(_device_tu transform_functors.hip)
+  else()
+    continue()
+  endif()
+  add_executable(test_transform_${_backend} test_transform.cpp ${_device_tu})
+  target_link_libraries(test_transform_${_backend} PRIVATE Catch2::Catch2 ${_runtime})
+  target_compile_definitions(test_transform_${_backend} PRIVATE ${_definition})
+  target_compile_features(test_transform_${_backend} PRIVATE cxx_std_20)
+  set_target_properties(test_transform_${_backend} PROPERTIES
+      CUDA_STANDARD 20 CUDA_STANDARD_REQUIRED ON
+      HIP_STANDARD 20 HIP_STANDARD_REQUIRED ON)
+  # std::complex functors need relaxed constexpr under nvcc (see transform_gpu.hpp).
+  target_compile_options(test_transform_${_backend} PRIVATE
+      $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>)
+  add_test(NAME Transform_${_backend} COMMAND test_transform_${_backend})
+  set_tests_properties(Transform_${_backend} PROPERTIES
+      TIMEOUT 120 SKIP_RETURN_CODE 4)
+endforeach()
+
 # Grain tracking parity uses the ordinary runtime library, without spectral FFTs.
 foreach(_grain_backend IN ITEMS cuda hip)
   if(_grain_backend STREQUAL "cuda" AND OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)

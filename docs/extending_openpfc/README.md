@@ -29,6 +29,7 @@ out-of-tree executable, follow the
 | Drive your own stepper with the shared clock, IC/BC, and save hooks | `pfc::sim::SimulationLifecycle` | [Custom stepper lifecycle](../concepts/custom_stepper.md) |
 | Parse `--key=value` in a CLI driver | `pfc::utils::CliOptions` (unknown keys fail closed) | `openpfc/frontend/utils/cli_options.hpp` |
 | Bin a spectrum or field into weighted bins (and the adjoint) on any backend | `pfc::core::BinMap`, `scatter_add` / `scatter_add_abs2` / `gather_add` | `openpfc/kernel/execution/indexed_accumulate.hpp`, `openpfc/runtime/gpu/indexed_accumulate_gpu.hpp` |
+| Apply a user pointwise functor to device buffers | `pfc::core::transform` + `OPENPFC_INSTANTIATE_TRANSFORM` | [Device pointwise functors](#device-pointwise-functors), `openpfc/runtime/gpu/transform_gpu.hpp` |
 | Overlap a GPU interior stencil with Faces MPI | `pfc::comm::GpuHaloOverlap` (`Waitall` / `Testall`) | `openpfc/runtime/gpu/halo_overlap_gpu.hpp` |
 | Add point-wise gradients or finite-difference physics | Field/gradient primitives and halo policies | [Per-point gradients](per_point_grads.md), [Halo exchange](../concepts/halo_exchange.md) |
 | Couple an external solver | `pfc::coupling::FieldHandle` + `Time::clip_attempt_dt` | [External coupling](external_coupling.md), `examples/22_external_coupling.cpp` |
@@ -96,6 +97,27 @@ Add that source to every GPU target that instantiates
 `SpectralETDSystem<Physics, CUDASpace | HIPSpace>`; a missing instantiation
 fails at link time with the functor's name in the undefined symbol. The tungsten
 and aluminum `CMakeLists.txt` show the pattern.
+
+## Device pointwise functors
+
+`pfc::core::transform(out, f, a, b, ...)` evaluates `out[i] = f(a[i], b[i],
+...)` over one to four `DataBuffer`s on the host, CUDA or HIP. The functor
+follows the same rules as a spectral-ETD pointwise functor: trivially
+copyable, constants by value, call operator marked `OPENPFC_HD`. For device
+buffers, instantiate it once in a CUDA or HIP translation unit, naming the
+functor, the output element type and the input element types:
+
+```cpp
+// src/gpu/my_transform.inc, stamped into my_transform.cu and my_transform.hip
+#include <my_app/reaction.hpp>
+#include <openpfc/runtime/gpu/transform_gpu.hpp>
+
+OPENPFC_INSTANTIATE_TRANSFORM(my_app::Reaction, double, double, double, double)
+```
+
+A functor over `std::complex` buffers needs `--expt-relaxed-constexpr` on that
+CUDA TU; the launcher refuses to compile without it. A missing instantiation
+fails at link time with the functor's name in the undefined symbol.
 
 ## API style
 

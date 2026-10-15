@@ -7,6 +7,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Add `pfc::core::transform(out, f, a, ...)` (`kernel/execution/transform.hpp`,
+  device overloads in `runtime/gpu/transform_gpu.hpp`): `out[i] = f(a[i], ...)`
+  with a user `OPENPFC_HD` functor over one to four real or complex buffers.
+  A device consumer instantiates its functor once in a `.cu` / `.hip` TU with
+  `OPENPFC_INSTANTIATE_TRANSFORM(F, Out, In...)` (#494).
 - Add `pfc::core::scatter_add`, `scatter_add_abs2` and `gather_add` over a
   host-validated `BinMap` (`kernel/execution/indexed_accumulate.hpp`, device
   overloads in `runtime/gpu/indexed_accumulate_gpu.hpp`): weighted indexed
