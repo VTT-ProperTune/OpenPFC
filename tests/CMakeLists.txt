@@ -13,7 +13,9 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/unit/runtime/test_grain_tracking_reference.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/unit/runtime/test_grain_3d_tracking.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/unit/runtime/test_grain_3d_remapping.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/unit/runtime/test_grain_public_contract.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/unit/runtime/test_grain_public_contract.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/unit/runtime/test_grain_relabel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/unit/kernel/grain/test_grain_overlap.cpp)
 
 # Isolated consumer owns the complete new/delete provider for this executable.
 add_executable(test_grain_diagnostics
