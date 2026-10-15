@@ -48,9 +48,10 @@ struct DomainParams {
  * @brief Optional MPI decomposition layout recorded in checkpoint JSON.
  *
  * Distinct from `payloads.hpp`'s `DecompositionMeta` (in-memory field
- * payload). Do not include both headers in one translation unit.
+ * payload). The names must differ: two definitions of one class in one
+ * program violate the ODR even when no translation unit sees both.
  */
-struct DecompositionMeta {
+struct DecompositionLayout {
   int mpi_size{1};
   std::array<int, 3> local_size{};
   std::array<int, 3> local_offset{};
@@ -68,7 +69,7 @@ struct CheckpointMetadata {
   int accepted_increment{0};
   int result_counter{0};
   DomainParams domain{};
-  std::optional<DecompositionMeta> decomposition{};
+  std::optional<DecompositionLayout> decomposition{};
   std::string method_identity{};
   std::vector<std::string> fields{};
   /// Optional session-owned BC configuration and state; null in older bundles.
@@ -151,7 +152,7 @@ struct CheckpointMetadata {
 
   if (j.contains("decomposition") && !j["decomposition"].is_null()) {
     const auto &d = j["decomposition"];
-    DecompositionMeta dm;
+    DecompositionLayout dm;
     dm.mpi_size = d.at("mpi_size").get<int>();
     dm.local_size = d.at("local_size").get<std::array<int, 3>>();
     dm.local_offset = d.at("local_offset").get<std::array<int, 3>>();

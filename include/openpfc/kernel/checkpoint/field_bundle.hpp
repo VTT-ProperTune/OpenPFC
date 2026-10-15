@@ -250,9 +250,9 @@ publish_field_bundle(const std::filesystem::path &dir,
   meta.domain.global_dimensions = {g[0], g[1], g[2]};
   meta.domain.physical_origin = {f0.origin()[0], f0.origin()[1], f0.origin()[2]};
   meta.domain.grid_spacing = {f0.spacing()[0], f0.spacing()[1], f0.spacing()[2]};
-  meta.decomposition = DecompositionMeta{.mpi_size = size,
-                                         .local_size = {n[0], n[1], n[2]},
-                                         .local_offset = {lo[0], lo[1], lo[2]}};
+  meta.decomposition = DecompositionLayout{.mpi_size = size,
+                                           .local_size = {n[0], n[1], n[2]},
+                                           .local_offset = {lo[0], lo[1], lo[2]}};
   meta.method_identity = state.method_identity;
   meta.boundary_conditions = state.boundary_conditions;
   for (const auto &[name, f] : fields) {

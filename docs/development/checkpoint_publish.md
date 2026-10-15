@@ -30,7 +30,7 @@ filesystem restart.
 
 | Symbol | Header | Role |
 |--------|--------|------|
-| `CheckpointMetadata`, `DomainParams`, `DecompositionMeta`, `kCheckpointFormatVersion`, `to_json`, `from_json` | `checkpoint_metadata.hpp` | Versioned sidecar JSON (schema version 1) |
+| `CheckpointMetadata`, `DomainParams`, `DecompositionLayout`, `kCheckpointFormatVersion`, `to_json`, `from_json` | `checkpoint_metadata.hpp` | Versioned sidecar JSON (schema version 1) |
 | `PublishOutcome`, `FieldsWriter`, `publish_checkpoint_directory(final_dir, meta, comm, write_fields)`, `make_publish_ok`, `make_publish_failed` | `publish.hpp` | MPI-collective atomic directory publish (the only publisher) |
 | `write_real_brick_mpi` | `brick_io.hpp` | Kernel MPI-IO of one owned float64 brick (no frontend include) |
 | `publish_field_bundle`, `load_field_bundle`, `FieldBundleState`, `FieldBundleSidecar`, `read_checkpoint_metadata`, `write_field_brick`, `read_field_brick` | `field_bundle.hpp` | Save/restore an explicit named set of `Field<double>` as one bundle, with caller time, method identity, boundary records and an optional JSON sidecar; restart on any decomposition |
@@ -111,7 +111,7 @@ publication as the fields, so no separately published sidecar is required.
    barrier make the bundle visible to all ranks at once.
 
 Kernel code does not include frontend `BinaryWriter`. Optional
-`DecompositionMeta` records the writing layout; restore currently requires
+`DecompositionLayout` records the writing layout; restore currently requires
 the same global grid (method identity and domain origin/spacing/size).
 
 ## What is published (and what is not)
