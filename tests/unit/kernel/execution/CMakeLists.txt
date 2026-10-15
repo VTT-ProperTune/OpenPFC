@@ -4,4 +4,5 @@
 # Kernel execution layer unit tests
 target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_databuffer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_indexed_accumulate.cpp
 )
