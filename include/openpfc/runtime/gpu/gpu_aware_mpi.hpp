@@ -111,17 +111,16 @@ inline bool probe_hip_device_mpi() {
   }
   const double send = 42.0;
   if (hipMemcpy(d, &send, sizeof(double), hipMemcpyHostToDevice) != hipSuccess) {
-    hipFree(d);
+    (void)hipFree(d);
     return false;
   }
   MPI_Status st{};
-  const int err =
-      MPI_Sendrecv(d, 1, MPI_DOUBLE, 0, 701, d, 1, MPI_DOUBLE, 0, 701,
-                   MPI_COMM_SELF, &st);
+  const int err = MPI_Sendrecv(d, 1, MPI_DOUBLE, 0, 701, d, 1, MPI_DOUBLE, 0, 701,
+                               MPI_COMM_SELF, &st);
   double got = 0.0;
   const bool ok_copy =
       hipMemcpy(&got, d, sizeof(double), hipMemcpyDeviceToHost) == hipSuccess;
-  hipFree(d);
+  (void)hipFree(d);
   return err == MPI_SUCCESS && ok_copy && got == send;
 }
 #endif
@@ -138,17 +137,16 @@ inline bool probe_cuda_device_mpi() {
   }
   const double send = 42.0;
   if (cudaMemcpy(d, &send, sizeof(double), cudaMemcpyHostToDevice) != cudaSuccess) {
-    cudaFree(d);
+    (void)cudaFree(d);
     return false;
   }
   MPI_Status st{};
-  const int err =
-      MPI_Sendrecv(d, 1, MPI_DOUBLE, 0, 701, d, 1, MPI_DOUBLE, 0, 701,
-                   MPI_COMM_SELF, &st);
+  const int err = MPI_Sendrecv(d, 1, MPI_DOUBLE, 0, 701, d, 1, MPI_DOUBLE, 0, 701,
+                               MPI_COMM_SELF, &st);
   double got = 0.0;
   const bool ok_copy =
       cudaMemcpy(&got, d, sizeof(double), cudaMemcpyDeviceToHost) == cudaSuccess;
-  cudaFree(d);
+  (void)cudaFree(d);
   return err == MPI_SUCCESS && ok_copy && got == send;
 }
 #endif
@@ -171,7 +169,8 @@ inline GPUAwareMPIDecision decide_gpu_aware_mpi() {
   }
 #if defined(OPENPFC_HAVE_MPIX_QUERY_CUDA_SUPPORT) && defined(OpenPFC_MPI_CUDA_AWARE)
   d.enabled = MPIX_Query_cuda_support() == 1;
-  d.how = d.enabled ? GPUAwareMPIHow::OpenMPIQueryOn : GPUAwareMPIHow::OpenMPIQueryOff;
+  d.how =
+      d.enabled ? GPUAwareMPIHow::OpenMPIQueryOn : GPUAwareMPIHow::OpenMPIQueryOff;
   return d;
 #endif
 #if defined(OPENPFC_HAVE_MPIX_QUERY_HIP_SUPPORT) && defined(OpenPFC_MPI_HIP_AWARE)
@@ -180,7 +179,8 @@ inline GPUAwareMPIDecision decide_gpu_aware_mpi() {
 #else
   d.enabled = MPIX_Query_hip_support() == 1;
 #endif
-  d.how = d.enabled ? GPUAwareMPIHow::OpenMPIQueryOn : GPUAwareMPIHow::OpenMPIQueryOff;
+  d.how =
+      d.enabled ? GPUAwareMPIHow::OpenMPIQueryOn : GPUAwareMPIHow::OpenMPIQueryOff;
   return d;
 #endif
   if (env_first_char("MPICH_GPU_SUPPORT_ENABLED", '1')) {
