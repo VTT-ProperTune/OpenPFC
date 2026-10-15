@@ -17,9 +17,20 @@ if(OpenPFC_ENABLE_HEFFTE AND TARGET Catch2::Catch2)
   add_test(NAME solvers-microelasticity COMMAND test_microelasticity)
   set_tests_properties(solvers-microelasticity PROPERTIES TIMEOUT 300)
 
+  add_executable(test_load_case_compliance test_load_case_compliance.cpp)
+  target_link_libraries(test_load_case_compliance PRIVATE OpenPFC Catch2::Catch2
+                        ${_me_heffte})
+  add_test(NAME solvers-load-case-compliance COMMAND test_load_case_compliance)
+  set_tests_properties(solvers-load-case-compliance PROPERTIES TIMEOUT 300)
+
   if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
      (OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR
       OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 2))
+    add_test(NAME solvers-load-case-compliance-mpi
+      COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS}
+        $<TARGET_FILE:test_load_case_compliance> ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(solvers-load-case-compliance-mpi PROPERTIES
+      TIMEOUT 300 PROCESSORS 2)
     add_test(NAME solvers-microelasticity-mpi
       COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS}
         $<TARGET_FILE:test_microelasticity> ${MPIEXEC_POSTFLAGS})

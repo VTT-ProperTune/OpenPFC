@@ -35,6 +35,7 @@
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 #include <openpfc/runtime/gpu/bind_local_device.hpp>
 #include <openpfc/runtime/gpu/gpu_spectral_stack.hpp>
+#include <openpfc/solvers/microelasticity/homogenization.hpp>
 #include <openpfc/solvers/microelasticity/microelasticity.hpp>
 #include <openpfc/solvers/microelasticity/microelasticity_device.hpp>
 
@@ -207,6 +208,54 @@ int main(int argc, char **argv) {
 
     int rc_cases = run_case("eshelby", solid, 1);
     rc_cases |= run_case("heterogeneous", liquid, 80);
+
+    // One load case with a SIMP density: host evaluate() against the
+    // device-resident evaluate_resident(), twice (the second is warm).
+    auto compliance_case = [&]() -> int {
+      MicroelasticityParams p;
+      p.stiffness_at_one = solid;
+      p.stiffness_at_zero = Stiffness::isotropic(1.0e-2, 0.3);
+      p.applied_strain[pfc::solvers::SYM_ZZ] = 1.0;
+      p.relative_tolerance = 1.0e-10;
+      p.max_iterations = 400;
+      p.comm = MPI_COMM_WORLD;
+      const pfc::solvers::SimpInterpolation simp{3.0};
+      pfc::solvers::LoadCaseCompliance<> host(domain, host_stack->fft(), p, simp);
+      pfc::solvers::LoadCaseCompliance<Device> device(domain, dev_stack->fft(), p,
+                                                      simp);
+      auto grad_host = pfc::data::field_from_inbox<double>(
+          domain, host_stack->fft().get_inbox_bounds());
+      typename Device::RealBuf d_phi(h.size()), d_grad(h.size());
+      int rc = 0;
+      for (int pass = 0; pass < 2; ++pass) {
+        if (pass == 1) {
+          for (auto &v : h.vec()) v = 0.9 * v + 0.05;
+          h.note_host_write();
+        }
+        const auto rh = host.evaluate(h, &grad_host);
+        d_phi.copy_from_host(h.data(), h.size());
+        const auto rd = device.evaluate_resident(d_phi.data(), d_grad.data());
+        auto grad_device = grad_host;
+        d_grad.copy_to_host(grad_device.data(), grad_device.size());
+        const double dg = field_maxdiff(grad_host, grad_device, MPI_COMM_WORLD);
+        const double du = std::abs(rh.energy_density - rd.energy_density);
+        if (rank == 0) {
+          std::cout << ELASTIC_PARITY_TAG " case=compliance pass=" << pass
+                    << " ranks=" << nproc << " host_iters=" << rh.report.iterations
+                    << " device_iters=" << rd.report.iterations
+                    << " U=" << rh.energy_density << " |dU|=" << du
+                    << " max|dgrad|=" << dg << "\n";
+          if (!rh.report.converged || !rd.report.converged || du > 1.0e-10 ||
+              dg > 1.0e-9) {
+            std::cout << ELASTIC_PARITY_TAG "_FAIL compliance\n";
+            rc = 1;
+          }
+        }
+      }
+      MPI_Bcast(&rc, 1, MPI_INT, 0, MPI_COMM_WORLD);
+      return rc;
+    };
+    rc_cases |= compliance_case();
     if (rank == 0 && rc_cases == 0) std::cout << ELASTIC_PARITY_TAG "_PASS\n";
     rc = rc_cases;
     host_stack.reset();

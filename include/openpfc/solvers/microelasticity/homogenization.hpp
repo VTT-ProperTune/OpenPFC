@@ -5,7 +5,8 @@
 
 /**
  * @file homogenization.hpp
- * @brief Periodic FFT homogenization of a two-phase linear-elastic cell.
+ * @brief Periodic FFT homogenization of a two-phase linear-elastic cell, and
+ *        the stored energy of one load case with its exact design gradient.
  *
  * @details
  * Given a scalar stiffness weight \f$h(\mathbf x)\in[0,1]\f$ on the
@@ -30,9 +31,10 @@
  * identically zero; the macroscopic strain is imposed through
  * `MicroelasticityParams::applied_strain`
  * (\f$\hat\varepsilon(\mathbf k=0)\f$). There is no second elasticity
- * implementation.
+ * implementation. `LoadCaseCompliance` is the single-load-case variant:
+ * one solve, the stored energy and its gradient.
  *
- * The homogenizer takes the solver as a template parameter, the host
+ * Both classes take the solver as a template parameter, the host
  * `EigenstrainMicroelasticity` by default or
  * `DeviceEigenstrainMicroelasticity<Space>` from `microelasticity_device.hpp`.
  *
@@ -87,6 +89,7 @@
 #include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/solvers/microelasticity/microelasticity.hpp>
+#include <openpfc/solvers/microelasticity/microelasticity_device_kernels.hpp>
 #include <openpfc/solvers/microelasticity/simp.hpp>
 
 namespace pfc::solvers {
@@ -534,6 +537,182 @@ private:
   double m_n_global{1.0};
   bool m_has_result{false};
   HomogenizationResult m_last{};
+};
+
+/// Stored energy of one load case and the solve that produced it.
+struct LoadCaseEnergy {
+  /// \f$U=\tfrac12\bar{\boldsymbol\varepsilon}:\mathbf C_H:
+  /// \bar{\boldsymbol\varepsilon}\f$, the cell-averaged energy density.
+  double energy_density{0.0};
+  /// \f$\bar{\boldsymbol\varepsilon}:\mathbf C_H:\bar{\boldsymbol\varepsilon}
+  /// /(\bar{\boldsymbol\varepsilon}:\bar{\boldsymbol\varepsilon})\f$; for
+  /// \f$\bar{\boldsymbol\varepsilon}=\mathbf e_z\otimes\mathbf e_z\f$ this is
+  /// \f$(C_H)_{33}\f$, the uniaxial-strain (constrained) axial modulus.
+  double effective_modulus{0.0};
+  MicroelasticityReport report{};
+};
+
+/**
+ * @brief Stored energy of one imposed macroscopic strain and its exact
+ *        derivative with respect to a SIMP design density.
+ *
+ * @details
+ * Under an imposed mean strain \f$\bar{\boldsymbol\varepsilon}\f$ with zero
+ * eigenstrain the periodic equilibrium minimizes the stored energy, and
+ *
+ * \f[
+ *   U(\phi)=\frac1{|\Omega|}\int_\Omega\tfrac12\boldsymbol\varepsilon:
+ *     \mathbf C(\phi):\boldsymbol\varepsilon\,\mathrm dV
+ *   =\tfrac12\bar{\boldsymbol\varepsilon}:\mathbf C_H(\phi):
+ *     \bar{\boldsymbol\varepsilon}.
+ * \f]
+ *
+ * The problem is self-adjoint (Hill–Mandel), so the strain of the solve is
+ * its own adjoint and the variational derivative needs no second solve:
+ *
+ * \f[
+ *   \frac{\delta U}{\delta\phi}(\mathbf x)
+ *   =\tfrac12\,\boldsymbol\varepsilon(\mathbf x):
+ *     \frac{\partial\mathbf C}{\partial\phi}:\boldsymbol\varepsilon(\mathbf x)
+ *   =\tfrac12\,w'(\phi)\,\boldsymbol\varepsilon:(\mathbf C_{\max}
+ *     -\mathbf C_{\min}):\boldsymbol\varepsilon \;\ge 0 .
+ * \f]
+ *
+ * On the grid, \f$\partial U/\partial\phi_e=(\delta U/\delta\phi)_e/N\f$.
+ * This is equation (7) of `EigenstrainMicroelasticity` with
+ * \f$\partial a=0\f$; the class only chooses the inputs. Maximizing \f$U\f$
+ * at fixed strain is minimizing compliance at fixed stress to first order,
+ * the classic stiffness objective of topology optimization; a caller that
+ * wants a scale-free term uses \f$\log U\f$, whose derivative is
+ * \f$(\delta U/\delta\phi)/U\f$.
+ *
+ * The strain is imposed (`applied_strain`), so this is the constrained
+ * modulus. A uniaxial-*stress* modulus needs the lateral stresses free,
+ * i.e. the six load cases of `PeriodicHomogenizer` and \f$C_H^{-1}\f$.
+ *
+ * Warm start is kept between calls: the load does not change, so a design
+ * that moved a little re-converges in a few Green applications.
+ *
+ * Host: `evaluate(density, &derivative)`. Device solver: also
+ * `evaluate_resident(density, derivative)` on device pointers, with no host
+ * copy of a field.
+ */
+template <class Solver = EigenstrainMicroelasticity> class LoadCaseCompliance {
+public:
+  using RealField = pfc::data::Field<double>;
+  using FFT = typename Solver::FFT;
+
+  /// `params.stiffness_at_zero` is \f$\mathbf C_{\min}\f$,
+  /// `params.stiffness_at_one` is \f$\mathbf C_{\max}\f$, and
+  /// `params.applied_strain` is the load. The eigenstrain is forced to zero.
+  LoadCaseCompliance(const pfc::Domain &domain, FFT &fft,
+                     MicroelasticityParams params, SimpInterpolation simp)
+      : m_solver(domain, fft, with_load_case_defaults(params)), m_simp(simp),
+        m_weight(
+            pfc::data::field_from_inbox<double>(domain, fft.get_inbox_bounds())),
+        m_slope(pfc::data::field_from_inbox<double>(domain, fft.get_inbox_bounds())),
+        m_amp(pfc::data::field_from_inbox<double>(domain, fft.get_inbox_bounds())),
+        m_n_local(m_weight.size()) {
+    m_simp.validate();
+    const Sym3 &e = params.applied_strain;
+    m_strain_norm2 = ddot(e, e);
+    if (!(m_strain_norm2 > 0.0)) {
+      throw std::invalid_argument("LoadCaseCompliance: applied_strain is zero");
+    }
+    std::fill(m_amp.vec().begin(), m_amp.vec().end(), 0.0);
+    m_amp.note_host_write();
+    m_n_global = detail::global_cell_count(m_weight);
+    const auto sp = m_weight.spacing();
+    m_volume = m_n_global * sp[0] * sp[1] * sp[2];
+  }
+
+  [[nodiscard]] Solver &solver() noexcept { return m_solver; }
+  [[nodiscard]] const Solver &solver() const noexcept { return m_solver; }
+  [[nodiscard]] const SimpInterpolation &simp() const noexcept { return m_simp; }
+
+  /**
+   * @brief Solve the load case for @p density on the host.
+   *
+   * When @p derivative is not null it receives \f$\delta U/\delta\phi\f$ on
+   * the local inbox.
+   */
+  LoadCaseEnergy evaluate(const RealField &density,
+                          RealField *derivative = nullptr) {
+    check_size(density, "density");
+    if (derivative != nullptr) check_size(*derivative, "derivative");
+    const double *phi = density.data();
+    double *w = m_weight.data();
+    double *dw = m_slope.data();
+    for (std::size_t i = 0; i < m_n_local; ++i) {
+      w[i] = m_simp.weight(phi[i]);
+      dw[i] = m_simp.slope(phi[i]);
+    }
+    m_weight.note_host_write();
+    m_slope.note_host_write();
+    LoadCaseEnergy out;
+    if (derivative != nullptr) {
+      out.report = m_solver.solve(m_weight, m_amp, &m_slope, &m_amp);
+      const auto &d = m_solver.elastic_energy_derivative();
+      std::copy(d.vec().begin(), d.vec().end(), derivative->vec().begin());
+      derivative->note_host_write();
+    } else {
+      out.report = m_solver.solve(m_weight, m_amp);
+    }
+    finish(out);
+    return out;
+  }
+
+  /**
+   * @brief Solve the load case for a device-resident @p density.
+   *
+   * @p density and @p derivative are device pointers over the local inbox of
+   * the solver's FFT; @p derivative may be null. Only scalars cross to the
+   * host.
+   */
+  LoadCaseEnergy evaluate_resident(const double *density, double *derivative)
+    requires requires(Solver &s) { s.solve_resident(true); }
+  {
+    device_detail::me_simp_weights(density, m_solver.stiffness_weight_device(),
+                                   m_solver.stiffness_weight_derivative_device(),
+                                   m_simp.exponent,
+                                   static_cast<long long>(m_n_local));
+    LoadCaseEnergy out;
+    out.report = m_solver.solve_resident(derivative != nullptr);
+    if (derivative != nullptr) {
+      device_detail::me_copy(m_solver.elastic_energy_derivative_device(), derivative,
+                             static_cast<long long>(m_n_local));
+    }
+    finish(out);
+    return out;
+  }
+
+private:
+  static MicroelasticityParams with_load_case_defaults(MicroelasticityParams p) {
+    p.eigenstrain_pattern = Sym3{};
+    return p;
+  }
+
+  void finish(LoadCaseEnergy &out) {
+    out.energy_density = m_solver.total_elastic_energy() / m_volume;
+    out.effective_modulus = 2.0 * out.energy_density / m_strain_norm2;
+  }
+
+  void check_size(const RealField &f, const char *what) const {
+    if (f.size() != m_n_local) {
+      throw std::invalid_argument(std::string("LoadCaseCompliance: '") + what +
+                                  "' has the wrong local size");
+    }
+  }
+
+  Solver m_solver;
+  SimpInterpolation m_simp;
+  RealField m_weight;
+  RealField m_slope;
+  RealField m_amp;
+  std::size_t m_n_local{0};
+  double m_n_global{1.0};
+  double m_volume{1.0};
+  double m_strain_norm2{1.0};
 };
 
 } // namespace pfc::solvers

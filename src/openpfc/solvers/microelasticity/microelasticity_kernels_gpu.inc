@@ -249,6 +249,25 @@ __global__ void fill_kernel(double *dst, double value, long long n) {
   if (i < n) dst[i] = value;
 }
 
+__global__ void copy_kernel(const double *src, double *dst, long long n) {
+  const long long i = static_cast<long long>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (i < n) dst[i] = src[i];
+}
+
+__global__ void simp_kernel(const double *phi, double *w, double *dw, double p,
+                            long long n) {
+  const long long i = static_cast<long long>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (i >= n) return;
+  const double x = fmin(1.0, fmax(0.0, phi[i]));
+  if (p == 1.0) {
+    w[i] = x;
+    dw[i] = 1.0;
+  } else {
+    w[i] = pow(x, p);
+    dw[i] = p * pow(x, p - 1.0);
+  }
+}
+
 __global__ void block_sum_kernel(const double *x, double *partial, long long n) {
   __shared__ double s[kBlock];
   const int tid = static_cast<int>(threadIdx.x);
@@ -428,6 +447,17 @@ void me_finalise(const double *h, const double *amp, const double *dh_dphi,
 void me_fill(double *dst, double value, long long n) {
   fill_kernel<<<blocks_for(n), kBlock>>>(dst, value, n);
   check(pfc::gpuGetLastError(), "me_fill");
+}
+
+void me_copy(const double *src, double *dst, long long n) {
+  copy_kernel<<<blocks_for(n), kBlock>>>(src, dst, n);
+  check(pfc::gpuGetLastError(), "me_copy");
+}
+
+void me_simp_weights(const double *phi, double *w, double *dw, double exponent,
+                     long long n) {
+  simp_kernel<<<blocks_for(n), kBlock>>>(phi, w, dw, exponent, n);
+  check(pfc::gpuGetLastError(), "me_simp_weights");
 }
 
 void me_block_sum(const double *x, double *partial, long long n, int n_blocks) {

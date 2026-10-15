@@ -7,6 +7,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Add `pfc::solvers::LoadCaseCompliance<Solver>`
+  (`solvers/microelasticity/homogenization.hpp`): the stored energy
+  `U = 1/2 e:C_H:e` of one imposed mean strain on a SIMP density and its exact
+  variational derivative from the self-adjoint strain, one warm-started solve
+  per call, on the host (`evaluate`) or device-resident (`evaluate_resident`).
+  New device kernels `me_simp_weights` and `me_copy` (#553).
 - Add `pfc::solvers::PeriodicHomogenizer<Solver>`, `Voigt6`,
   `engineering_unit_strain` and `HomogenizationResult`
   (`solvers/microelasticity/homogenization.hpp`): six-load-case periodic

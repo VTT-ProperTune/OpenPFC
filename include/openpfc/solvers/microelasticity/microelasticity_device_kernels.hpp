@@ -69,6 +69,15 @@ void me_finalise(const double *h, const double *amp, const double *dh_dphi,
 
 void me_fill(double *dst, double value, long long n);
 
+/// `dst[i] = src[i]` on the device.
+void me_copy(const double *src, double *dst, long long n);
+
+/// SIMP weight and slope of a density, \f$\phi\f$ clamped to \f$[0,1]\f$:
+/// `w = phi^p`, `dw = p phi^(p-1)` (`w = phi`, `dw = 1` for \f$p=1\f$), as
+/// `SimpInterpolation` on the host.
+void me_simp_weights(const double *phi, double *w, double *dw, double exponent,
+                     long long n);
+
 void me_block_sum(const double *x, double *partial, long long n, int n_blocks);
 
 void me_assemble_from_padded(const double *phi, const double *U, const double *theta,
