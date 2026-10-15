@@ -28,8 +28,8 @@
 #include <openpfc/runtime/gpu/fft_gpu.hpp>
 #include <openpfc/runtime/gpu/memory_space_gpu.hpp>
 #include <openpfc/solvers/microelasticity/microelasticity.hpp>
-#include <openpfc/solvers/microelasticity/microelasticity_hip.hpp>
-#include <openpfc/solvers/microelasticity/microelasticity_hip_kernels.hpp>
+#include <openpfc/solvers/microelasticity/microelasticity_device.hpp>
+#include <openpfc/solvers/microelasticity/microelasticity_device_kernels.hpp>
 
 #include <alloy_dendrite/device_step_hip.hpp>
 #include <alloy_dendrite/elasticity.hpp>
@@ -68,14 +68,15 @@ public:
       throw std::runtime_error(
           "DeviceElasticCoupling: inbox cell count does not match DeviceGeom");
     }
-    pfc::solvers::hip_detail::me_fill(m_dfel.data(), 0.0,
-                                      static_cast<long long>(m_dfel.size()));
+    pfc::solvers::device_detail::me_fill(m_dfel.data(), 0.0,
+                                         static_cast<long long>(m_dfel.size()));
     m_dfel.note_device_write();
   }
 
   [[nodiscard]] const DevField &driving_force() const noexcept { return m_dfel; }
   [[nodiscard]] DevField &driving_force() noexcept { return m_dfel; }
-  [[nodiscard]] pfc::solvers::DeviceEigenstrainMicroelasticity &solver() noexcept {
+  [[nodiscard]] pfc::solvers::DeviceEigenstrainMicroelasticity<pfc::HIPSpace> &
+  solver() noexcept {
     return m_solver;
   }
 
@@ -85,7 +86,7 @@ public:
 
   ElasticReport solve(const DevField &phi, const DevField &U,
                       const DevField &theta) {
-    pfc::solvers::hip_detail::me_assemble_from_padded(
+    pfc::solvers::device_detail::me_assemble_from_padded(
         phi.data(), U.data(), theta.data(), m_solver.stiffness_weight_device(),
         m_solver.eigenstrain_amplitude_device(),
         m_solver.eigenstrain_amplitude_derivative_device(), m_geom.nx, m_geom.ny,
@@ -104,7 +105,7 @@ public:
       m_solver.params().applied_strain = bar;
     }
     const auto rep = m_solver.solve_resident(true);
-    pfc::solvers::hip_detail::me_copy_owned_to_padded(
+    pfc::solvers::device_detail::me_copy_owned_to_padded(
         m_solver.elastic_energy_derivative_device(), m_dfel.data(), m_geom.nx,
         m_geom.ny, m_geom.nz, m_geom.hw, m_geom.sy, m_geom.sz);
     m_dfel.note_device_write();
@@ -152,7 +153,7 @@ private:
   hip::DeviceGeom m_geom{};
   pfc::fft::FFT_HIP m_fft;
   DevField m_dfel;
-  pfc::solvers::DeviceEigenstrainMicroelasticity m_solver;
+  pfc::solvers::DeviceEigenstrainMicroelasticity<pfc::HIPSpace> m_solver;
   double m_max_vm{0.0};
 };
 

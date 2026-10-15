@@ -2,13 +2,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file microelasticity_hip_parity.cpp
+ * @file microelasticity_device_parity.cpp
  * @brief CPU vs device Green-operator parity: homogeneous Eshelby, a
  *        heterogeneous modulus, and d f_el / d phi.
+ *
+ * Built once per vendor: the CUDA build runs it on `pfc::CUDASpace`, the HIP
+ * build on `pfc::HIPSpace`. The printed tag names the vendor so the HIP
+ * ctest regex is unchanged.
  */
 
-#if !defined(OpenPFC_ENABLE_HIP_SPECTRAL)
-#error "microelasticity_hip_parity requires OpenPFC_ENABLE_HIP_SPECTRAL"
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+#define ELASTIC_PARITY_TAG "ELASTIC_HIP_PARITY"
+#elif defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
+#define ELASTIC_PARITY_TAG "ELASTIC_CUDA_PARITY"
+#else
+#error "microelasticity_device_parity requires a CUDA or HIP spectral build"
 #endif
 
 #include <algorithm>
@@ -28,12 +36,17 @@
 #include <openpfc/runtime/gpu/bind_local_device.hpp>
 #include <openpfc/runtime/gpu/gpu_spectral_stack.hpp>
 #include <openpfc/solvers/microelasticity/microelasticity.hpp>
-#include <openpfc/solvers/microelasticity/microelasticity_hip.hpp>
+#include <openpfc/solvers/microelasticity/microelasticity_device.hpp>
 
 namespace {
 
 using RealField = pfc::data::Field<double>;
-using pfc::solvers::DeviceEigenstrainMicroelasticity;
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+using Space = pfc::HIPSpace;
+#else
+using Space = pfc::CUDASpace;
+#endif
+using Device = pfc::solvers::DeviceEigenstrainMicroelasticity<Space>;
 using pfc::solvers::EigenstrainMicroelasticity;
 using pfc::solvers::kSymComponents;
 using pfc::solvers::MicroelasticityParams;
@@ -87,9 +100,8 @@ int main(int argc, char **argv) {
         pfc::GridSpacing({1.0, 1.0, 1.0}));
     auto host_stack = std::make_unique<pfc::sim::stacks::SpectralCPUStack>(
         domain, rank, nproc, MPI_COMM_WORLD);
-    auto dev_stack =
-        std::make_unique<pfc::sim::stacks::GPUSpectralStack<pfc::HIPSpace>>(
-            domain, rank, nproc, MPI_COMM_WORLD);
+    auto dev_stack = std::make_unique<pfc::sim::stacks::GPUSpectralStack<Space>>(
+        domain, rank, nproc, MPI_COMM_WORLD);
 
     auto h = pfc::data::field_from_inbox<double>(
         domain, host_stack->fft().get_inbox_bounds());
@@ -134,7 +146,7 @@ int main(int argc, char **argv) {
       p.comm = MPI_COMM_WORLD;
 
       EigenstrainMicroelasticity host(domain, host_stack->fft(), p);
-      DeviceEigenstrainMicroelasticity device(domain, dev_stack->fft(), p);
+      Device device(domain, dev_stack->fft(), p);
       const auto rh = host.solve(h, amp, &dh, &damp);
       const auto rd = device.solve(h, amp, &dh, &damp);
 
@@ -154,7 +166,7 @@ int main(int argc, char **argv) {
       const auto db = device.energy_balance();
       int rc = 0;
       if (rank == 0) {
-        std::cout << "ELASTIC_HIP_PARITY case=" << name << " ranks=" << nproc
+        std::cout << ELASTIC_PARITY_TAG " case=" << name << " ranks=" << nproc
                   << " N=" << N << " host_iters=" << rh.iterations
                   << " device_iters=" << rd.iterations << " host_res=" << rh.residual
                   << " device_res=" << rd.residual << " max|deps|=" << worst_eps
@@ -162,30 +174,30 @@ int main(int argc, char **argv) {
                   << " host_el_balance_rel=" << hb.residual_rel
                   << " device_el_balance_rel=" << db.residual_rel << "\n";
         if (std::abs(rh.iterations - rd.iterations) > 1) {
-          std::cout << "ELASTIC_HIP_PARITY_FAIL " << name << " iteration count\n";
+          std::cout << ELASTIC_PARITY_TAG "_FAIL " << name << " iteration count\n";
           rc = 1;
         }
         if (rh.iterations > expect_host_iters_max) {
-          std::cout << "ELASTIC_HIP_PARITY_FAIL " << name
+          std::cout << ELASTIC_PARITY_TAG "_FAIL " << name
                     << " host iteration bound\n";
           rc = 1;
         }
         if (worst_eps > tol_strain) {
-          std::cout << "ELASTIC_HIP_PARITY_FAIL " << name << " strain\n";
+          std::cout << ELASTIC_PARITY_TAG "_FAIL " << name << " strain\n";
           rc = 1;
         }
         if (worst_dfel > tol_dfel) {
-          std::cout << "ELASTIC_HIP_PARITY_FAIL " << name << " dfel\n";
+          std::cout << ELASTIC_PARITY_TAG "_FAIL " << name << " dfel\n";
           rc = 1;
         }
         if (hb.residual_rel > 10.0 * p.relative_tolerance ||
             db.residual_rel > 10.0 * p.relative_tolerance) {
-          std::cout << "ELASTIC_HIP_PARITY_FAIL " << name << " energy balance\n";
+          std::cout << ELASTIC_PARITY_TAG "_FAIL " << name << " energy balance\n";
           rc = 1;
         }
         if (std::abs(hb.F - db.F) > 1.0e-10 ||
             std::abs(hb.W_star - db.W_star) > 1.0e-10) {
-          std::cout << "ELASTIC_HIP_PARITY_FAIL " << name << " energy integrals\n";
+          std::cout << ELASTIC_PARITY_TAG "_FAIL " << name << " energy integrals\n";
           rc = 1;
         }
       }
@@ -195,7 +207,7 @@ int main(int argc, char **argv) {
 
     int rc_cases = run_case("eshelby", solid, 1);
     rc_cases |= run_case("heterogeneous", liquid, 80);
-    if (rank == 0 && rc_cases == 0) std::cout << "ELASTIC_HIP_PARITY_PASS\n";
+    if (rank == 0 && rc_cases == 0) std::cout << ELASTIC_PARITY_TAG "_PASS\n";
     rc = rc_cases;
     host_stack.reset();
     dev_stack.reset();

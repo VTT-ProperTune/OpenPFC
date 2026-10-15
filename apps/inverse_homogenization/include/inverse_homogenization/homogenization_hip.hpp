@@ -10,8 +10,8 @@
 #include <algorithm>
 #include <array>
 
-#include <openpfc/solvers/microelasticity/microelasticity_hip.hpp>
 #include <inverse_homogenization/homogenization.hpp>
+#include <openpfc/solvers/microelasticity/microelasticity_device.hpp>
 
 namespace pfc::apps {
 
@@ -139,7 +139,7 @@ private:
   }
   MPI_Comm comm() const noexcept { return m_solver.params().comm; }
 
-  DeviceEigenstrainMicroelasticity m_solver;
+  DeviceEigenstrainMicroelasticity<pfc::HIPSpace> m_solver;
   RealField m_amp;
   std::array<SymRealFields, 6> m_strain{};
   std::size_t m_n_local{0};

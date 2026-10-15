@@ -374,13 +374,15 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
 endif()
 
 # Periodic microelasticity device kernels. A solver target, not part of the
-# generic runtime library and not an application.
+# generic runtime library and not an application. One source
+# (microelasticity_kernels_gpu.inc) compiled for the vendor of the build; the
+# CUDA and HIP targets define the same symbols, so a build has at most one.
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
   set_source_files_properties(
-      src/openpfc/solvers/microelasticity/microelasticity_hip_kernels.hip
+      src/openpfc/solvers/microelasticity/microelasticity_kernels.hip
       PROPERTIES LANGUAGE HIP)
   add_library(openpfc_microelasticity_hip
-      src/openpfc/solvers/microelasticity/microelasticity_hip_kernels.hip)
+      src/openpfc/solvers/microelasticity/microelasticity_kernels.hip)
   target_include_directories(openpfc_microelasticity_hip
       PUBLIC
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
@@ -392,6 +394,26 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
       HIP_STANDARD 17
       HIP_STANDARD_REQUIRED ON)
   message(STATUS "openpfc_microelasticity_hip (periodic microelasticity) enabled")
+endif()
+if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE AND OpenPFC_ENABLE_CUDA_SPECTRAL)
+  set_source_files_properties(
+      src/openpfc/solvers/microelasticity/microelasticity_kernels.cu
+      PROPERTIES LANGUAGE CUDA)
+  add_library(openpfc_microelasticity_cuda
+      src/openpfc/solvers/microelasticity/microelasticity_kernels.cu)
+  target_include_directories(openpfc_microelasticity_cuda
+      PUBLIC
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+      $<INSTALL_INTERFACE:include>)
+  target_link_libraries(openpfc_microelasticity_cuda PUBLIC OpenPFC CUDA::cudart)
+  target_compile_definitions(openpfc_microelasticity_cuda PUBLIC
+      OpenPFC_ENABLE_CUDA OpenPFC_ENABLE_CUDA_SPECTRAL)
+  set_target_properties(openpfc_microelasticity_cuda PROPERTIES
+      CUDA_SEPARABLE_COMPILATION ON
+      CUDA_RESOLVE_DEVICE_SYMBOLS ON
+      CUDA_STANDARD 20
+      CUDA_STANDARD_REQUIRED ON)
+  message(STATUS "openpfc_microelasticity_cuda (periodic microelasticity) enabled")
 endif()
 
 # Periodic incompressible rotational step. One backend per build: HIP and

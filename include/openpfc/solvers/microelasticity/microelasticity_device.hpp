@@ -4,22 +4,29 @@
 #pragma once
 
 /**
- * @file microelasticity_hip.hpp
+ * @file microelasticity_device.hpp
  * @brief Device FFT + Green-operator path for `EigenstrainMicroelasticity`.
  *
  * Same Eyre–Milton scheme as the host solver. Transforms use
- * `pfc::fft::IDeviceFFT` (rocFFT HeFFTe). Polarisation, Green contraction,
- * local reflection, residual reduction, and equation (7) stay on device.
- * The inner loop does not copy the six tensor fields to the host.
+ * `pfc::fft::IDeviceFFT<Space>` (cuFFT or rocFFT through HeFFTe, or the
+ * single-device FFT). Polarisation, Green contraction, local reflection,
+ * residual reduction, and equation (7) stay on device. The inner loop does
+ * not copy the six tensor fields to the host.
+ *
+ * The backend is the memory-space template parameter (`pfc::CUDASpace` or
+ * `pfc::HIPSpace`). The kernels are one source compiled for the vendor of
+ * the build; link `openpfc_microelasticity_cuda` or
+ * `openpfc_microelasticity_hip`.
  *
  * Host `Field<double>` `solve()` uploads, iterates, and downloads strain,
  * stress, the energy density, and its derivative. A caller that already
- * holds those scalars on device writes the stiffness-weight and
- * eigenstrain-amplitude buffers and calls `solve_resident()`.
+ * holds those scalars on device writes the stiffness-weight,
+ * eigenstrain-amplitude and (for equation (7)) derivative buffers and calls
+ * `solve_resident()`.
  */
 
-#if !defined(OpenPFC_ENABLE_HIP_SPECTRAL)
-#error "microelasticity_hip.hpp requires OpenPFC_ENABLE_HIP_SPECTRAL"
+#if !defined(OpenPFC_ENABLE_CUDA_SPECTRAL) && !defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+#error "microelasticity_device.hpp requires a CUDA or HIP spectral build"
 #endif
 
 #include <algorithm>
@@ -42,16 +49,22 @@
 #include <openpfc/runtime/gpu/databuffer_gpu.hpp>
 #include <openpfc/runtime/gpu/memory_space_gpu.hpp>
 #include <openpfc/solvers/microelasticity/microelasticity.hpp>
-#include <openpfc/solvers/microelasticity/microelasticity_hip_kernels.hpp>
+#include <openpfc/solvers/microelasticity/microelasticity_device_kernels.hpp>
 
 namespace pfc::solvers {
 
-class DeviceEigenstrainMicroelasticity {
+/**
+ * @brief Device twin of `EigenstrainMicroelasticity` in memory space @p Space.
+ *
+ * Only the `EyreMilton` scheme runs on the device; `Basic` stays the host
+ * reference.
+ */
+template <class Space> class DeviceEigenstrainMicroelasticity {
 public:
   using RealField = pfc::data::Field<double>;
-  using FFT = pfc::fft::IDeviceFFT<pfc::HIPSpace>;
-  using RealBuf = FFT::RealBuffer;
-  using CplxBuf = FFT::ComplexBuffer;
+  using FFT = pfc::fft::IDeviceFFT<Space>;
+  using RealBuf = typename FFT::RealBuffer;
+  using CplxBuf = typename FFT::ComplexBuffer;
   using SymRealFields = EigenstrainMicroelasticity::SymRealFields;
 
   DeviceEigenstrainMicroelasticity(const pfc::Domain &domain, FFT &fft,
@@ -95,11 +108,17 @@ public:
     m_d_kx = RealBuf(m_n_outbox);
     m_d_ky = RealBuf(m_n_outbox);
     m_d_kz = RealBuf(m_n_outbox);
-    m_n_blocks = hip_detail::me_local_block_count(static_cast<long long>(m_n_local));
+    m_n_blocks =
+        device_detail::me_local_block_count(static_cast<long long>(m_n_local));
     m_d_block = RealBuf(static_cast<std::size_t>(std::max(3 * m_n_blocks, 3)));
     m_block_host.assign(static_cast<std::size_t>(std::max(3 * m_n_blocks, 3)), 0.0);
-    hip_detail::me_fill(m_d_stiffness_weight_derivative.data(), 0.5,
-                        static_cast<long long>(m_n_local));
+    device_detail::me_fill(m_d_stiffness_weight_derivative.data(), 0.5,
+                           static_cast<long long>(m_n_local));
+    // A resident caller with no eigenstrain need not write these.
+    device_detail::me_fill(m_d_eigenstrain_amplitude.data(), 0.0,
+                           static_cast<long long>(m_n_local));
+    device_detail::me_fill(m_d_eigenstrain_amplitude_derivative.data(), 0.0,
+                           static_cast<long long>(m_n_local));
     build_and_upload_green(domain, fft);
     bind_packs();
     const auto gs = m_strain_host[0].global_size();
@@ -131,6 +150,11 @@ public:
   }
   [[nodiscard]] double *eigenstrain_amplitude_device() noexcept {
     return m_d_eigenstrain_amplitude.data();
+  }
+  /// \f$\partial w/\partial s\f$ on the device for `solve_resident(true)`.
+  /// Filled with 0.5 at construction.
+  [[nodiscard]] double *stiffness_weight_derivative_device() noexcept {
+    return m_d_stiffness_weight_derivative.data();
   }
   [[nodiscard]] double *eigenstrain_amplitude_derivative_device() noexcept {
     return m_d_eigenstrain_amplitude_derivative.data();
@@ -173,9 +197,9 @@ public:
   MicroelasticityReport solve_resident(bool want_dfel) {
     if (!m_params.warm_start || !m_has) {
       for (int c = 0; c < kSymComponents; ++c) {
-        hip_detail::me_fill(m_d_strain[static_cast<std::size_t>(c)].data(),
-                            m_params.applied_strain[c],
-                            static_cast<long long>(m_n_local));
+        device_detail::me_fill(m_d_strain[static_cast<std::size_t>(c)].data(),
+                               m_params.applied_strain[c],
+                               static_cast<long long>(m_n_local));
       }
     }
     rebuild_device_params();
@@ -204,17 +228,17 @@ public:
   }
 
   [[nodiscard]] double total_elastic_energy() {
-    hip_detail::me_block_sum(m_d_elastic_energy_density.data(), m_d_block.data(),
-                             static_cast<long long>(m_n_local), m_n_blocks);
+    device_detail::me_block_sum(m_d_elastic_energy_density.data(), m_d_block.data(),
+                                static_cast<long long>(m_n_local), m_n_blocks);
     return finish_block_sum() * m_cell;
   }
 
   [[nodiscard]] double transformation_work() {
-    hip_detail::MESym6Const sig_ro{};
+    device_detail::MESym6Const sig_ro{};
     for (int c = 0; c < kSymComponents; ++c)
       sig_ro.c[c] = m_d_stress[static_cast<std::size_t>(c)].data();
-    hip_detail::me_sigma_estar_sum(sig_ro, m_d_eigenstrain_amplitude.data(), m_dp,
-                                   m_d_block.data(), m_n_blocks);
+    device_detail::me_sigma_estar_sum(sig_ro, m_d_eigenstrain_amplitude.data(), m_dp,
+                                      m_d_block.data(), m_n_blocks);
     return -0.5 * finish_block_sum() * m_cell;
   }
 
@@ -245,12 +269,12 @@ public:
   /// Hydrostatic mean, max |dfel|, max von Mises (same σ_vm as the host
   /// dendrite snapshots). Uses `m_d_block`.
   void stress_invariants(double &mean_p, double &max_abs_dfel, double &max_vm) {
-    hip_detail::MESym6Const sig_ro{};
+    device_detail::MESym6Const sig_ro{};
     for (int c = 0; c < kSymComponents; ++c)
       sig_ro.c[c] = m_d_stress[static_cast<std::size_t>(c)].data();
-    hip_detail::me_report_stats(sig_ro, m_d_elastic_energy_derivative.data(),
-                                m_d_block.data(), static_cast<long long>(m_n_local),
-                                m_n_blocks);
+    device_detail::me_report_stats(sig_ro, m_d_elastic_energy_derivative.data(),
+                                   m_d_block.data(),
+                                   static_cast<long long>(m_n_local), m_n_blocks);
     m_d_block.copy_to_host(m_block_host.data(), m_block_host.size());
     double p_local = 0.0, adfel = 0.0, vm = 0.0;
     for (int b = 0; b < m_n_blocks; ++b) {
@@ -278,8 +302,8 @@ private:
     }
   }
 
-  static hip_detail::MEStiffness flat(const Stiffness &s) noexcept {
-    return hip_detail::MEStiffness{s.c11, s.c12, s.c44};
+  static device_detail::MEStiffness flat(const Stiffness &s) noexcept {
+    return device_detail::MEStiffness{s.c11, s.c12, s.c44};
   }
 
   void rebuild_device_params() {
@@ -307,9 +331,9 @@ private:
   }
 
   void polarise() {
-    hip_detail::me_build_polarisation(m_d_stiffness_weight.data(),
-                                      m_d_eigenstrain_amplitude.data(), m_eps_ro,
-                                      m_tau_rw, m_dp);
+    device_detail::me_build_polarisation(m_d_stiffness_weight.data(),
+                                         m_d_eigenstrain_amplitude.data(), m_eps_ro,
+                                         m_tau_rw, m_dp);
   }
 
   void apply_green() {
@@ -319,13 +343,13 @@ private:
     }
     double eapp[6];
     for (int c = 0; c < kSymComponents; ++c) eapp[c] = m_params.applied_strain[c];
-    hip_detail::me_green_multiply(m_hat_rw, m_d_kx.data(), m_d_ky.data(),
-                                  m_d_kz.data(), m_g_ro,
-                                  static_cast<long long>(m_n_outbox),
-                                  (m_zero_mode == static_cast<std::size_t>(-1))
-                                      ? -1
-                                      : static_cast<long long>(m_zero_mode),
-                                  eapp, m_n_global);
+    device_detail::me_green_multiply(m_hat_rw, m_d_kx.data(), m_d_ky.data(),
+                                     m_d_kz.data(), m_g_ro,
+                                     static_cast<long long>(m_n_outbox),
+                                     (m_zero_mode == static_cast<std::size_t>(-1))
+                                         ? -1
+                                         : static_cast<long long>(m_zero_mode),
+                                     eapp, m_n_global);
     for (int c = 0; c < kSymComponents; ++c) {
       m_fft.backward(m_d_stiffness_weightat[static_cast<std::size_t>(c)],
                      m_d_strain[static_cast<std::size_t>(c)]);
@@ -333,7 +357,7 @@ private:
   }
 
   double eyre_milton_local() {
-    hip_detail::me_eyre_milton_local(
+    device_detail::me_eyre_milton_local(
         m_d_stiffness_weight.data(), m_d_eigenstrain_amplitude.data(), m_tau_prev_ro,
         m_eps_rw, m_tau_rw, m_dp, m_d_block.data(), m_n_blocks);
     m_d_block.copy_to_host(m_block_host.data(), m_block_host.size());
@@ -349,7 +373,7 @@ private:
   }
 
   void finalise(bool want_dfel) {
-    hip_detail::me_finalise(
+    device_detail::me_finalise(
         m_d_stiffness_weight.data(), m_d_eigenstrain_amplitude.data(),
         m_d_stiffness_weight_derivative.data(),
         m_d_eigenstrain_amplitude_derivative.data(), m_eps_ro, m_sig_rw,
@@ -445,9 +469,9 @@ private:
       m_d_stiffness_weight_derivative, m_d_eigenstrain_amplitude_derivative,
       m_d_elastic_energy_density, m_d_elastic_energy_derivative, m_d_kx, m_d_ky,
       m_d_kz, m_d_block;
-  hip_detail::MEParams m_dp{};
-  hip_detail::MESym6 m_eps_rw{}, m_tau_rw{}, m_hat_rw{}, m_sig_rw{};
-  hip_detail::MESym6Const m_eps_ro{}, m_tau_prev_ro{}, m_g_ro{};
+  device_detail::MEParams m_dp{};
+  device_detail::MESym6 m_eps_rw{}, m_tau_rw{}, m_hat_rw{}, m_sig_rw{};
+  device_detail::MESym6Const m_eps_ro{}, m_tau_prev_ro{}, m_g_ro{};
   std::vector<double> m_block_host;
   std::size_t m_n_local{0}, m_n_outbox{0}, m_zero_mode{static_cast<std::size_t>(-1)};
   double m_n_global{1.0};

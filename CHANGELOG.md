@@ -7,6 +7,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- `EigenstrainMicroelasticity` runs on CUDA: `openpfc_microelasticity_cuda`
+  builds the device kernels from the same single source as the HIP target,
+  and `DeviceEigenstrainMicroelasticity<pfc::CUDASpace>` is the solver. A
+  resident caller can write the stiffness-weight derivative on the device
+  (`stiffness_weight_derivative_device()`). Parity test
+  `openpfc_microelasticity_cuda_parity` (#552).
 - Add `pfc::core::transform(out, f, a, ...)` (`kernel/execution/transform.hpp`,
   device overloads in `runtime/gpu/transform_gpu.hpp`): `out[i] = f(a[i], ...)`
   with a user `OPENPFC_HD` functor over one to four real or complex buffers.
@@ -27,6 +33,14 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   preserving the configured library's pre-MPI device binding.
 
 ### Breaking
+
+- The device microelasticity solver is the class template
+  `pfc::solvers::DeviceEigenstrainMicroelasticity<Space>` in
+  `solvers/microelasticity/microelasticity_device.hpp` (was the HIP-only
+  `DeviceEigenstrainMicroelasticity` in `microelasticity_hip.hpp`); its
+  kernels are declared in `microelasticity_device_kernels.hpp` under
+  `device_detail` (was `hip_detail`). HIP code names
+  `DeviceEigenstrainMicroelasticity<pfc::HIPSpace>` (#552).
 
 - An input's `domain` is now the box: `"size": [Nx, Ny, Nz]`, `"lower"` and
   `"upper"` limits, spacing `(upper - lower) / size` on every (periodic)

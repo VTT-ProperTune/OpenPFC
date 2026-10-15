@@ -2,30 +2,30 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file microelasticity_hip_kernels.hip
+ * @file microelasticity_kernels_gpu.inc
  * @brief Device twin of the pointwise passes of `microelasticity.hpp`.
+ *
+ * Single source for both vendors: `microelasticity_kernels.cu` and
+ * `microelasticity_kernels.hip` include this file. Runtime calls go through
+ * the `gpu_api.hpp` shims.
  */
 
-#if !defined(OpenPFC_ENABLE_HIP)
-#error "microelasticity_hip_kernels requires HIP (-DOpenPFC_ENABLE_HIP=ON)"
-#endif
-
-#include <hip/hip_runtime.h>
+#include <openpfc/runtime/gpu/gpu_api.hpp>
 
 #include <cstdio>
 #include <cstdlib>
 
-#include <openpfc/solvers/microelasticity/microelasticity_hip_kernels.hpp>
+#include <openpfc/solvers/microelasticity/microelasticity_device_kernels.hpp>
 
-namespace pfc::solvers::hip_detail {
+namespace pfc::solvers::device_detail {
 namespace {
 
 constexpr int kBlock = 256;
 
-inline void check(hipError_t e, const char *what) {
-  if (e != hipSuccess) {
-    std::fprintf(stderr, "microelasticity HIP error in %s: %s\n", what,
-                 hipGetErrorString(e));
+inline void check(pfc::gpuError_t e, const char *what) {
+  if (e != pfc::gpuSuccess) {
+    std::fprintf(stderr, "microelasticity device error in %s: %s\n", what,
+                 pfc::gpuGetErrorString(e));
     std::abort();
   }
 }
@@ -389,7 +389,7 @@ void me_build_polarisation(const double *h, const double *amp,
                            const MESym6Const &eps, const MESym6 &tau,
                            const MEParams &p) {
   build_polarisation_kernel<<<blocks_for(p.n), kBlock>>>(h, amp, eps, tau, p);
-  check(hipGetLastError(), "me_build_polarisation");
+  check(pfc::gpuGetLastError(), "me_build_polarisation");
 }
 
 void me_eyre_milton_local(const double *h, const double *amp, const MESym6Const &zin,
@@ -397,7 +397,7 @@ void me_eyre_milton_local(const double *h, const double *amp, const MESym6Const 
                           double *block_max, int n_blocks) {
   eyre_milton_local_kernel<<<n_blocks, kBlock>>>(h, amp, zin, eps, zout, p,
                                                  block_max);
-  check(hipGetLastError(), "me_eyre_milton_local");
+  check(pfc::gpuGetLastError(), "me_eyre_milton_local");
 }
 
 void me_green_multiply(const MESym6 &hat, const double *kx, const double *ky,
@@ -406,12 +406,12 @@ void me_green_multiply(const MESym6 &hat, const double *kx, const double *ky,
                        double n_global) {
   green_multiply_kernel<<<blocks_for(n_outbox), kBlock>>>(hat, kx, ky, kz, g,
                                                           n_outbox, zero_mode);
-  check(hipGetLastError(), "me_green_multiply");
+  check(pfc::gpuGetLastError(), "me_green_multiply");
   if (zero_mode >= 0) {
     green_zero_mode_kernel<<<1, 1>>>(hat, zero_mode, applied[0], applied[1],
                                      applied[2], applied[3], applied[4], applied[5],
                                      n_global);
-    check(hipGetLastError(), "me_green_multiply zero mode");
+    check(pfc::gpuGetLastError(), "me_green_multiply zero mode");
   }
 }
 
@@ -422,17 +422,17 @@ void me_finalise(const double *h, const double *amp, const double *dh_dphi,
   finalise_kernel<<<blocks_for(p.n), kBlock>>>(h, amp, dh_dphi, damp_dphi, eps, sig,
                                                f_el, elastic_energy_derivative, p,
                                                want_dfel);
-  check(hipGetLastError(), "me_finalise");
+  check(pfc::gpuGetLastError(), "me_finalise");
 }
 
 void me_fill(double *dst, double value, long long n) {
   fill_kernel<<<blocks_for(n), kBlock>>>(dst, value, n);
-  check(hipGetLastError(), "me_fill");
+  check(pfc::gpuGetLastError(), "me_fill");
 }
 
 void me_block_sum(const double *x, double *partial, long long n, int n_blocks) {
   block_sum_kernel<<<n_blocks, kBlock>>>(x, partial, n);
-  check(hipGetLastError(), "me_block_sum");
+  check(pfc::gpuGetLastError(), "me_block_sum");
 }
 
 void me_assemble_from_padded(const double *phi, const double *U, const double *theta,
@@ -443,26 +443,26 @@ void me_assemble_from_padded(const double *phi, const double *U, const double *t
   assemble_kernel<<<n_blocks, kBlock>>>(phi, U, theta, h, amp, damp, nx, ny, nz, hw,
                                         sy, sz, eps_c, eps_T, u_ref, theta_ref,
                                         block_sum);
-  check(hipGetLastError(), "me_assemble_from_padded");
+  check(pfc::gpuGetLastError(), "me_assemble_from_padded");
 }
 
 void me_copy_owned_to_padded(const double *src, double *dst, int nx, int ny, int nz,
                              int hw, long long sy, long long sz) {
   const long long n = static_cast<long long>(nx) * ny * nz;
   copy_owned_kernel<<<blocks_for(n), kBlock>>>(src, dst, nx, ny, nz, hw, sy, sz);
-  check(hipGetLastError(), "me_copy_owned_to_padded");
+  check(pfc::gpuGetLastError(), "me_copy_owned_to_padded");
 }
 
 void me_report_stats(const MESym6Const &sig, const double *dfel, double *block,
                      long long n, int n_blocks) {
   report_stats_kernel<<<n_blocks, kBlock>>>(sig, dfel, block, n);
-  check(hipGetLastError(), "me_report_stats");
+  check(pfc::gpuGetLastError(), "me_report_stats");
 }
 
 void me_sigma_estar_sum(const MESym6Const &sig, const double *amp, const MEParams &p,
                         double *partial, int n_blocks) {
   sigma_estar_kernel<<<n_blocks, kBlock>>>(sig, amp, p, partial);
-  check(hipGetLastError(), "me_sigma_estar_sum");
+  check(pfc::gpuGetLastError(), "me_sigma_estar_sum");
 }
 
-} // namespace pfc::solvers::hip_detail
+} // namespace pfc::solvers::device_detail

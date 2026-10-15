@@ -210,11 +210,12 @@
  *
  * ## Scope — what this deliberately does not do
  *
- * - **Host reference, optional HIP twin.** Every loop here is a plain host
- *   loop over `pfc::data::Field<double>` and the transforms go through
- *   `pfc::fft::IHostFFT`. The device path is `microelasticity_hip.hpp`
- *   (issue #157): same Eyre–Milton scheme on `IDeviceFFT` plus HIP
- *   kernels, not a `SpectralETDOps` template parameter.
+ * - **Host reference, optional device twin.** Every loop here is a plain
+ *   host loop over `pfc::data::Field<double>` and the transforms go through
+ *   `pfc::fft::IHostFFT`. The device path is `microelasticity_device.hpp`
+ *   (issues #157, #552): same Eyre–Milton scheme on `IDeviceFFT` plus one
+ *   single-source kernel file compiled for CUDA or HIP, not a
+ *   `SpectralETDOps` template parameter.
  * - **Periodic only.** The Green operator *is* the periodic boundary
  *   condition. A free surface or a clamped face needs a different solver.
  * - **Small strain, no plasticity, no finite rotation.** Linear kinematics

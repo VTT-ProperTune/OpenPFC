@@ -4,9 +4,13 @@
 #pragma once
 
 /**
- * @file microelasticity_hip_kernels.hpp
- * @brief HIP launch surface for the Green operator, Eyre–Milton local
+ * @file microelasticity_device_kernels.hpp
+ * @brief Device launch surface for the Green operator, Eyre–Milton local
  *        reflection, residual reduction, and equation-(7) finalise.
+ *
+ * One declaration set for both vendors. The definitions are compiled from
+ * `microelasticity_kernels_gpu.inc` into `openpfc_microelasticity_cuda` or
+ * `openpfc_microelasticity_hip`; a build links exactly one of them.
  *
  * Transcription of the host loops in `microelasticity.hpp`. Not a
  * `SpectralETDOps` path: six-component cubic contractions with a spatially
@@ -16,7 +20,7 @@
 
 #include <cstddef>
 
-namespace pfc::solvers::hip_detail {
+namespace pfc::solvers::device_detail {
 
 inline constexpr int kSym = 6;
 
@@ -84,4 +88,4 @@ void me_report_stats(const MESym6Const &sig, const double *dfel, double *block,
 void me_sigma_estar_sum(const MESym6Const &sig, const double *amp, const MEParams &p,
                         double *partial, int n_blocks);
 
-} // namespace pfc::solvers::hip_detail
+} // namespace pfc::solvers::device_detail
