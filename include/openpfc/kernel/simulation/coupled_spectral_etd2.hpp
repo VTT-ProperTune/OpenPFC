@@ -20,7 +20,7 @@
  *
  * `A` is the ETD1 step. It is the embedded low-order solution, so
  * `U_{n+1} − A` is the local error estimate of the first-order method,
- * `O(h²)`. Use `error_order = 2` in @ref AdaptiveTimeController. The
+ * `O(h²)`. Use `error_order = 2` in @ref pfc::sim::AdaptiveTimeController. The
  * accepted solution is the second-order `U_{n+1}` (local extrapolation).
  *
  * The stage callback is
@@ -28,11 +28,11 @@
  *   stage(t, u0, u1, f0, f1)
  *
  * with `std::span<const double>` inputs and `std::span<double>` outputs of
- * `fft.size_inbox()` entries. With @ref CoupledStageOutput::full_rhs it
+ * `fft.size_inbox()` entries. With @ref pfc::sim::CoupledStageOutput::full_rhs it
  * returns the whole right-hand side `F = L U + N` and the system forms
  * `N̂ = F̂ − L Û` in Fourier space; the split is then exact whenever `L(k)`
  * is the symbol of the operator the callback applies. With
- * @ref CoupledStageOutput::nonlinear it returns `N` itself.
+ * @ref pfc::sim::CoupledStageOutput::nonlinear it returns `N` itself.
  *
  * `L(k)` must be real and even in `k`, so that `L` maps real fields to real
  * fields on the half-complex outbox.
@@ -75,13 +75,13 @@
 
 namespace pfc::sim {
 
-/// What the stage callback of @ref CoupledSpectralETD2 returns.
+/// What the stage callback of @ref pfc::sim::CoupledSpectralETD2 returns.
 enum class CoupledStageOutput : std::uint8_t {
   full_rhs, ///< `F = L U + N`; the system subtracts `L Û`
   nonlinear ///< `N` only
 };
 
-/// `stage(t, u0, u1, f0, f1)` for @ref CoupledSpectralETD2.
+/// `stage(t, u0, u1, f0, f1)` for @ref pfc::sim::CoupledSpectralETD2.
 template <class F>
 concept CoupledStageFunction =
     std::invocable<F &, double, std::span<const double>, std::span<const double>,
@@ -129,7 +129,7 @@ coupled_linear_symbol(const fft::IFFTQueries &fft, const Box3i &outbox,
 /**
  * @brief Coupled two-field ETD2 on the host FFT.
  *
- * @tparam Stage models @ref CoupledStageFunction.
+ * @tparam Stage models `CoupledStageFunction`.
  */
 template <class Stage>
   requires CoupledStageFunction<Stage>
