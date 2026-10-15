@@ -41,7 +41,7 @@ TEST_CASE("relabel keeps two identities when their cores touch",
   std::vector<gr::Id> previous = b.labels;
   previous[0] = gr::background;
   std::vector<std::uint8_t> core3 = core2;
-  core3[0] = 1;  // joins the first piece through its neighbour, cell 1
+  core3[0] = 1; // joins the first piece through its neighbour, cell 1
   const auto c = ref::relabel(grid, core3, support2, previous, seq);
   REQUIRE(c.created == 0);
   REQUIRE(c.labels[0] == a.labels[1]);
@@ -73,7 +73,8 @@ TEST_CASE("relabel in 3D keeps two z-invariant columns apart",
   REQUIRE(a.labels[at(1, 1, 0)] != a.labels[at(4, 1, 0)]);
 }
 
-TEST_CASE("relabel rejects a core cell outside the support", "[grain][tracking][reference]") {
+TEST_CASE("relabel rejects a core cell outside the support",
+          "[grain][tracking][reference]") {
   gr::IdentitySequence seq;
   const std::vector<std::uint8_t> core{1, 0}, support{0, 1};
   REQUIRE_THROWS_AS(ref::relabel(gr::Grid2D{2, 1}, core, support, {}, seq),
