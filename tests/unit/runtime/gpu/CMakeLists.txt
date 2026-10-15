@@ -392,6 +392,29 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
     add_test(NAME HIP_ETD1Apply COMMAND test_etd1_apply_hip)
 endif()
 
+# Indexed scatter-add / gather-add: device overloads against the host path.
+foreach(_backend IN ITEMS cuda hip)
+  if(_backend STREQUAL "cuda" AND OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
+    set(_runtime openpfc_gpu_kernels CUDA::cudart)
+    set(_definition OPENPFC_TEST_INDEXED_CUDA)
+  elseif(_backend STREQUAL "hip" AND OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+    set(_runtime openpfc_hip_kernels hip::host)
+    set(_definition OPENPFC_TEST_INDEXED_HIP)
+  else()
+    continue()
+  endif()
+  add_executable(test_indexed_accumulate_${_backend} test_indexed_accumulate.cpp)
+  target_link_libraries(test_indexed_accumulate_${_backend} PRIVATE
+      Catch2::Catch2 ${_runtime})
+  target_compile_definitions(test_indexed_accumulate_${_backend} PRIVATE
+      ${_definition})
+  target_compile_features(test_indexed_accumulate_${_backend} PRIVATE cxx_std_20)
+  add_test(NAME IndexedAccumulate_${_backend}
+      COMMAND test_indexed_accumulate_${_backend})
+  set_tests_properties(IndexedAccumulate_${_backend} PROPERTIES
+      TIMEOUT 120 SKIP_RETURN_CODE 4)
+endforeach()
+
 # Grain tracking parity uses the ordinary runtime library, without spectral FFTs.
 foreach(_grain_backend IN ITEMS cuda hip)
   if(_grain_backend STREQUAL "cuda" AND OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)

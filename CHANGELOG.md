@@ -7,6 +7,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Add `pfc::core::scatter_add`, `scatter_add_abs2` and `gather_add` over a
+  host-validated `BinMap` (`kernel/execution/indexed_accumulate.hpp`, device
+  overloads in `runtime/gpu/indexed_accumulate_gpu.hpp`): weighted indexed
+  binning such as a power spectrum `|F_k|^2` into radial or detector bins, and
+  its adjoint, on CUDA, HIP and the host with the same semantics (#494).
 - Add `pfc::checkpoint::publish_field_bundle` / `load_field_bundle`
   (`kernel/checkpoint/field_bundle.hpp`): save and restore a named set of
   distributed `Field<double>` as one atomic bundle with caller-owned time,

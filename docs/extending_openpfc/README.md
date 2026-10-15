@@ -28,6 +28,7 @@ out-of-tree executable, follow the
 | Build a JSON/TOML-driven binary | `make_simulation_session` / `pfc::sim::run` | [Minimal custom application](../tutorials/custom_app_minimal.md) |
 | Drive your own stepper with the shared clock, IC/BC, and save hooks | `pfc::sim::SimulationLifecycle` | [Custom stepper lifecycle](../concepts/custom_stepper.md) |
 | Parse `--key=value` in a CLI driver | `pfc::utils::CliOptions` (unknown keys fail closed) | `openpfc/frontend/utils/cli_options.hpp` |
+| Bin a spectrum or field into weighted bins (and the adjoint) on any backend | `pfc::core::BinMap`, `scatter_add` / `scatter_add_abs2` / `gather_add` | `openpfc/kernel/execution/indexed_accumulate.hpp`, `openpfc/runtime/gpu/indexed_accumulate_gpu.hpp` |
 | Overlap a GPU interior stencil with Faces MPI | `pfc::comm::GpuHaloOverlap` (`Waitall` / `Testall`) | `openpfc/runtime/gpu/halo_overlap_gpu.hpp` |
 | Add point-wise gradients or finite-difference physics | Field/gradient primitives and halo policies | [Per-point gradients](per_point_grads.md), [Halo exchange](../concepts/halo_exchange.md) |
 | Couple an external solver | `pfc::coupling::FieldHandle` + `Time::clip_attempt_dt` | [External coupling](external_coupling.md), `examples/22_external_coupling.cpp` |
