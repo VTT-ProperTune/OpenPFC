@@ -5,7 +5,7 @@
 
 /**
  * @file device_session.hpp
- * @brief HIP HeFFTe session for one periodic velocity.
+ * @brief Selected device HeFFTe session for one periodic velocity.
  *
  * The host state still owns initialization and diagnostics. The session
  * owns the device integrating-factor step between those samples.
@@ -29,7 +29,7 @@ struct DeviceSessionDeleter {
 
 using DeviceSessionPtr = std::unique_ptr<DeviceSession, DeviceSessionDeleter>;
 
-/// Upload the current hats and build the rocFFT pencil for this state.
+/// Upload the current hats and build the selected vendor FFT pencil.
 [[nodiscard]] DeviceSessionPtr start_device_session(State &state, int rank,
                                                     int nproc);
 

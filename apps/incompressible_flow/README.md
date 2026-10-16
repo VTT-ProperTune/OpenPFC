@@ -13,6 +13,15 @@ temporal, and closed-box checks. This binary calls the installed Leray
 projector, the 2/3-dealiased rotational term, and integrating-factor
 RK4.
 
+With the corresponding spectral device library enabled, the same maintained
+application is also built as `incompressible_flow_cuda` or
+`incompressible_flow_hip`. Both support Taylor--Green and seeded decaying HIT
+on the existing distributed device FFTs. Initialization and sampled
+diagnostics remain on the host; the IFRK4 stages remain resident between
+samples. Metadata and help identify the actual selected backend. Forced HIT
+and the locked convergence series remain host-only. One device spectral
+backend is selected per build; neither command implements another FFT stack.
+
 ## Equation
 
 The cube is \([0,2\pi]^3\). The HeFFTe pencil may be shared across

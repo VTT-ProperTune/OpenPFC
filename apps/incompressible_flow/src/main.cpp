@@ -36,6 +36,16 @@
 
 namespace {
 
+#if defined(OPENPFC_FLOW_DEVICE)
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+constexpr const char *backend_name = "hip-heffte";
+constexpr const char *executable_name = "incompressible_flow_hip";
+#else
+constexpr const char *backend_name = "cuda-heffte";
+constexpr const char *executable_name = "incompressible_flow_cuda";
+#endif
+#endif
+
 struct Options {
   std::string which{"taylor-green"};
   std::optional<int> n;
@@ -53,13 +63,14 @@ struct Options {
 
 void usage(std::ostream &os) {
 #if defined(OPENPFC_FLOW_DEVICE)
-  os << "Usage: incompressible_flow_hip\n"
+  os << "Usage: " << executable_name
+     << "\n"
         "       --case taylor-green|decaying-hit\n"
         "       [--n N] [--nu NU] [--dt DT] [--time T] [--seed SEED]\n"
         "       [--sample-dt DT] [--volume-dt DT] [--profile] [--outdir DIR]\n"
         "\n"
         "Periodic 3-D Navier-Stokes on [0, 2pi]^3. The step uses the\n"
-        "HIP HeFFTe backend (rocFFT). Diagnostics copy the hats back\n"
+        "selected GPU HeFFTe backend. Diagnostics copy the hats back\n"
         "at a sample. --sample-dt and --volume-dt are Taylor-Green\n"
         "only. Forced HIT and the locked series stay on\n"
         "incompressible_flow.\n";
@@ -223,9 +234,8 @@ bool parse(int argc, char **argv, Options &opt) {
     std::cerr << opt.which << " does not take --profile\n";
     return false;
   }
-  if (!opt.series.empty() &&
-      (opt.n || opt.nu || opt.dt || opt.time || opt.seed || opt.power ||
-       opt.sample_dt || opt.volume_dt)) {
+  if (!opt.series.empty() && (opt.n || opt.nu || opt.dt || opt.time || opt.seed ||
+                              opt.power || opt.sample_dt || opt.volume_dt)) {
     std::cerr << "the locked series does not take n, nu, dt, time, seed, or power\n";
     return false;
   }
@@ -263,8 +273,8 @@ std::string sample_name(long long step) {
   return os.str();
 }
 
-void write_volume_frame(flow::State &state, const std::string &outdir, long long step,
-                        double time, int rank) {
+void write_volume_frame(flow::State &state, const std::string &outdir,
+                        long long step, double time, int rank) {
   const std::string dir = outdir + "/vorticity";
   if (rank == 0) std::filesystem::create_directories(dir);
   MPI_Barrier(MPI_COMM_WORLD);
@@ -274,9 +284,9 @@ void write_volume_frame(flow::State &state, const std::string &outdir, long long
     std::ofstream index(dir + "/index.csv", std::ios::app);
     index << std::scientific << std::setprecision(16) << time << ',' << path << ','
           << sample.points << '\n';
-    std::cout << "incompressible_flow volume=" << path
-              << " points=" << sample.points << " mean_square=" << std::scientific
-              << std::setprecision(8) << sample.mean_square << std::endl;
+    std::cout << "incompressible_flow volume=" << path << " points=" << sample.points
+              << " mean_square=" << std::scientific << std::setprecision(8)
+              << sample.mean_square << std::endl;
   }
 }
 
@@ -327,8 +337,8 @@ int run_taylor(const Options &opt, int rank, int nproc) {
             ? std::pow(state.nu * state.nu * state.nu / diag.dissipation, 0.25)
             : 0.0;
     if (have_sample) {
-      integrated_dissipation += 0.5 * (previous_dissipation + diag.dissipation) *
-                                (sample - previous_time);
+      integrated_dissipation +=
+          0.5 * (previous_dissipation + diag.dissipation) * (sample - previous_time);
     } else {
       ke0 = diag.ke;
     }
@@ -344,8 +354,9 @@ int run_taylor(const Options &opt, int rank, int nproc) {
         spectrum << sample << ',' << shell.index << ',' << shell.ke << '\n';
       }
       spectrum.flush();
-      scales_csv << std::scientific << std::setprecision(16) << sample << ',' << k_max
-                 << ',' << eta << ',' << static_cast<double>(k_max) * eta << '\n';
+      scales_csv << std::scientific << std::setprecision(16) << sample << ','
+                 << k_max << ',' << eta << ',' << static_cast<double>(k_max) * eta
+                 << '\n';
       scales_csv.flush();
       std::cout << "incompressible_flow sample t=" << std::scientific
                 << std::setprecision(8) << sample << " status=" << status
@@ -411,7 +422,7 @@ int run_taylor(const Options &opt, int rank, int nproc) {
     meta << std::setprecision(16);
     meta << "case=taylor-green\n"
 #if defined(OPENPFC_FLOW_DEVICE)
-         << "backend=hip-heffte\n"
+         << "backend=" << backend_name << "\n"
 #else
          << "backend=cpu-heffte\n"
 #endif
@@ -536,7 +547,7 @@ int run_hit(const Options &opt, int rank, int nproc) {
     meta << std::setprecision(16);
     meta << "case=decaying-hit\n"
 #if defined(OPENPFC_FLOW_DEVICE)
-         << "backend=hip-heffte\n"
+         << "backend=" << backend_name << "\n"
 #endif
          << "spectrum=yoffe-mccomb-2018-eq10\n"
          << "citation=arXiv:1805.01238\n"
@@ -590,9 +601,8 @@ int run_forced(const Options &opt, int rank, int nproc) {
       csv << std::scientific << std::setprecision(16) << sample << ',' << diag.ke
           << ',' << diag.enstrophy << ',' << diag.dissipation << ','
           << force.injection << ',' << force.band_ke << ',' << scales.u_rms << ','
-          << scales.re_lambda << ',' << scales.k_max_eta << ',' << diag.div_l2
-          << ',' << diag.modal_div_max << ',' << diag.cfl << ',' << status
-          << '\n';
+          << scales.re_lambda << ',' << scales.k_max_eta << ',' << diag.div_l2 << ','
+          << diag.modal_div_max << ',' << diag.cfl << ',' << status << '\n';
       csv.flush();
     }
     if (rank == 0) {
@@ -671,7 +681,7 @@ int main(int argc, char **argv) {
           return EXIT_FAILURE;
         }
         if (rank == 0) {
-          std::cout << "incompressible_flow backend=hip-heffte" << std::endl;
+          std::cout << "incompressible_flow backend=" << backend_name << std::endl;
         }
 #endif
         try {

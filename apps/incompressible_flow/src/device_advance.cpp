@@ -3,14 +3,13 @@
 
 /**
  * @file device_advance.cpp
- * @brief Host-side owner of the HIP HeFFTe velocity step.
+ * @brief Host-side owner of the selected HeFFTe device velocity step.
  *
- * Compiled into `incompressible_flow_hip` only. The device kernels live
- * in `openpfc_incompressible_hip`.
+ * CUDA and HIP share this owner; kernels remain in their installed library.
  */
 
-#if !defined(OpenPFC_ENABLE_HIP_SPECTRAL)
-#error "incompressible HIP advance requires the HIP spectral backend"
+#if !defined(OpenPFC_ENABLE_HIP_SPECTRAL) && !defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
+#error "incompressible advance requires a spectral device backend"
 #endif
 
 #include <flow/device_session.hpp>
@@ -22,17 +21,23 @@
 #include <mpi.h>
 
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/runtime/gpu/incompressible_device.hpp>
 #include <openpfc/runtime/gpu/gpu_api.hpp>
 #include <openpfc/runtime/gpu/gpu_spectral_stack.hpp>
+#include <openpfc/runtime/gpu/incompressible_device.hpp>
 
 namespace flow {
+
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+using SessionSpace = pfc::HIPSpace;
+#else
+using SessionSpace = pfc::CUDASpace;
+#endif
 
 struct DeviceSession {
   // The stack is not movable. Construct it in place, and destroy the
   // velocity buffers before the FFT they were planned against.
-  std::optional<pfc::sim::stacks::GPUSpectralStack<pfc::HIPSpace>> stack;
-  pfc::incompressible::DeviceVelocity<pfc::HIPSpace> velocity;
+  std::optional<pfc::sim::stacks::GPUSpectralStack<SessionSpace>> stack;
+  pfc::incompressible::DeviceVelocity<SessionSpace> velocity;
 };
 
 void destroy_device_session(DeviceSession *session) { delete session; }
@@ -44,9 +49,11 @@ DeviceSessionPtr start_device_session(State &state, int rank, int nproc) {
       pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
       pfc::GridSpacing({state.spacing[0], state.spacing[1], state.spacing[2]}));
   session->stack.emplace(std::move(domain), rank, nproc, MPI_COMM_WORLD);
-  pfc::incompressible::prepare_device_velocity(session->velocity, session->stack->fft(),
-                                      state.n, state.spacing, state.nu, state.dt);
-  pfc::incompressible::upload_device_velocity(session->velocity, state.u, state.v, state.w);
+  pfc::incompressible::prepare_device_velocity(session->velocity,
+                                               session->stack->fft(), state.n,
+                                               state.spacing, state.nu, state.dt);
+  pfc::incompressible::upload_device_velocity(session->velocity, state.u, state.v,
+                                              state.w);
   GPU_CHECK(pfc::gpuDeviceSynchronize());
 
   unsigned long long local = static_cast<unsigned long long>(
@@ -61,9 +68,9 @@ DeviceSessionPtr start_device_session(State &state, int rank, int nproc) {
 
 void step_device_session(DeviceSession &session, DeviceProfile *profile) {
   pfc::incompressible::StepProfile step;
-  pfc::incompressible::step_device_velocity(
-      session.velocity, session.stack->fft(), true,
-      profile == nullptr ? nullptr : &step);
+  pfc::incompressible::step_device_velocity(session.velocity, session.stack->fft(),
+                                            true,
+                                            profile == nullptr ? nullptr : &step);
   if (profile == nullptr) return;
   profile->spectral_s += step.spectral_s;
   profile->fft_s += step.fft_s;
@@ -73,7 +80,8 @@ void step_device_session(DeviceSession &session, DeviceProfile *profile) {
 
 void finish_device_session(DeviceSession &session, State &state) {
   GPU_CHECK(pfc::gpuDeviceSynchronize());
-  pfc::incompressible::download_device_velocity(session.velocity, state.u, state.v, state.w);
+  pfc::incompressible::download_device_velocity(session.velocity, state.u, state.v,
+                                                state.w);
 }
 
 } // namespace flow
