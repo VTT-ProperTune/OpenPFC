@@ -288,13 +288,10 @@ adjacency_impl(Tag, Grid grid, Slot slots, std::span<const Id> labels,
   validate(ContactGraph{std::vector<Id>(identities.begin(), identities.end()), {}});
   if (grains > std::numeric_limits<std::uint32_t>::max())
     throw std::overflow_error("grain contact hash key exceeds uint32 index");
-  const auto table_slots = contact_hash_slots(output.size());
-  const auto table_bytes = contact_hash_bytes(output.size());
   dg::Observation<Tag> observation;
   dg::Interval interval(dg::Phase::Adjacency);
   auto *counts = observation.data();
   Buffer<Id> ids(grains);
-  Buffer<unsigned long long> keys(table_slots);
   Buffer<unsigned> active(grains), error(1);
   Buffer<Contact> edges(output.size());
   if (grains) {
@@ -302,37 +299,69 @@ adjacency_impl(Tag, Grid grid, Slot slots, std::span<const Id> labels,
                         gpuMemcpyHostToDevice));
     dg::copy(Direction::HostToDevice, Field::Registry, grains * sizeof(Id));
   }
-  GPU_LAUNCH_KERNEL((zero<Observe, unsigned long long>), blocks, threads,
-                    (keys.data, table_slots, counts, Field::AdjacencyMatrix), 0);
-  GPU_LAUNCH_KERNEL(zero<Observe>, blocks, threads,
-                    (active.data, grains, counts, Field::Counts), 0);
-  GPU_LAUNCH_KERNEL(zero<Observe>, 1, 1, (error.data, 1, counts, Field::Flags), 0);
-  GPU_LAUNCH_KERNEL((contacts<Observe, Grid>), blocks, threads,
-                    (grid, slots, labels.data(), ids.data, grains, keys.data,
-                     table_slots, active.data, error.data,
-                     static_cast<int>(contact_radius), counts),
-                    0);
+  // The caller's buffer sizes the first table. A full table cannot report
+  // the contacts that did not fit, so grow until every distinct key is
+  // stored, then compare that count with the caller capacity.
+  std::size_t counted_capacity = output.size();
+  std::size_t previous_slots = 0;
+  std::size_t table_bytes = 0;
   unsigned bad = 0;
-  GPU_CHECK(gpuMemcpy(&bad, error.data, sizeof(bad), gpuMemcpyDeviceToHost));
-  dg::copy(Direction::DeviceToHost, Field::Flags, sizeof(bad));
-  dg::scan(dg::host_accesses(), dg::Phase::Adjacency, slots);
-  if (bad & 1u) return {Status::UnknownIdentity, 0, {}, table_bytes};
-  std::vector<unsigned long long> packed(table_slots);
-  if (table_slots) {
-    GPU_CHECK(
-        gpuMemcpy(packed.data(), keys.data, table_bytes, gpuMemcpyDeviceToHost));
-    dg::copy(Direction::DeviceToHost, Field::AdjacencyMatrix, table_bytes);
-  }
   std::vector<Contact> unique;
-  unique.reserve(output.size());
-  for (auto key : packed) {
-    if (key == contact_hash_empty) continue;
-    const auto ends = unpack_contact_key(key);
-    unique.push_back({identities[ends.first], identities[ends.second]});
+  for (;;) {
+    const auto table_slots = contact_hash_slots(counted_capacity);
+    if (table_slots >
+        std::numeric_limits<std::size_t>::max() / sizeof(unsigned long long)) {
+      throw std::overflow_error("grain contact table cannot count the edges");
+    }
+    table_bytes = table_slots * sizeof(unsigned long long);
+    Buffer<unsigned long long> keys(table_slots);
+    GPU_LAUNCH_KERNEL((zero<Observe, unsigned long long>), blocks, threads,
+                      (keys.data, table_slots, counts, Field::AdjacencyMatrix), 0);
+    GPU_LAUNCH_KERNEL(zero<Observe>, blocks, threads,
+                      (active.data, grains, counts, Field::Counts), 0);
+    GPU_LAUNCH_KERNEL(zero<Observe>, 1, 1, (error.data, 1, counts, Field::Flags), 0);
+    GPU_LAUNCH_KERNEL((contacts<Observe, Grid>), blocks, threads,
+                      (grid, slots, labels.data(), ids.data, grains, keys.data,
+                       table_slots, active.data, error.data,
+                       static_cast<int>(contact_radius), counts),
+                      0);
+    bad = 0;
+    GPU_CHECK(gpuMemcpy(&bad, error.data, sizeof(bad), gpuMemcpyDeviceToHost));
+    dg::copy(Direction::DeviceToHost, Field::Flags, sizeof(bad));
+    if (bad & 1u) {
+      dg::scan(dg::host_accesses(), dg::Phase::Adjacency, slots);
+      return {Status::UnknownIdentity, 0, {}, table_bytes};
+    }
+    std::vector<unsigned long long> packed(table_slots);
+    if (table_slots) {
+      GPU_CHECK(
+          gpuMemcpy(packed.data(), keys.data, table_bytes, gpuMemcpyDeviceToHost));
+      dg::copy(Direction::DeviceToHost, Field::AdjacencyMatrix, table_bytes);
+    }
+    unique.clear();
+    unique.reserve(packed.size());
+    for (auto key : packed) {
+      if (key == contact_hash_empty) continue;
+      const auto ends = unpack_contact_key(key);
+      unique.push_back({identities[ends.first], identities[ends.second]});
+    }
+    std::sort(unique.begin(), unique.end());
+    if (!(bad & 2u)) break;
+    if (table_slots <= previous_slots ||
+        counted_capacity > std::numeric_limits<std::size_t>::max() / 2) {
+      throw std::overflow_error("grain contact table cannot count the edges");
+    }
+    previous_slots = table_slots;
+    auto grown = counted_capacity * 2;
+    if (grown < table_slots) grown = table_slots;
+    if (grown <= counted_capacity) {
+      throw std::overflow_error("grain contact table cannot count the edges");
+    }
+    counted_capacity = grown;
   }
-  std::sort(unique.begin(), unique.end());
+  dg::scan(dg::host_accesses(), dg::Phase::Adjacency, slots);
   const auto found = unique.size();
-  if (found > output.size() || (bad & 2u))
+  if (found > output.size())
     return {Status::CapacityOverflow, found, {}, table_bytes};
   std::vector<unsigned> observed(grains);
   if (grains) {

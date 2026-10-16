@@ -7,6 +7,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Fix: device grain adjacency reports the full distinct-contact count when
+  the caller buffer is too small. A table sized from that buffer used to
+  stop at the keys that fit (`CUDA_Grain3D` returned 8 instead of 274).
+  The table grows until every key fits, the output is still left unchanged
+  on overflow, and a successful call keeps the table sized from the caller
+  capacity (#573).
+
 - Fix: the device solver transfer check counts one double per reduced
   scalar. `dots` copies one double per column and then does one
   collective, so `scalar_transfer_bytes == 8 * reductions.calls` rejected

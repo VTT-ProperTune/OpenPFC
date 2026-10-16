@@ -110,8 +110,10 @@ adjacency(backend::HIPTag tag, Grid grid, Slot slots, std::span<const Id> labels
 /// Output is a canonical DEVICE contact list; active is compact HOST metadata.
 /// edge_count reports required capacity, including on CapacityOverflow. Unknown
 /// labels and insufficient edge capacity leave output unchanged. Unique contacts
-/// use an open-addressed table of O(edge capacity) slots, not a dense G×G
-/// matrix. `workspace_bytes` is that table. Size overflow is rejected, and
+/// use an open-addressed table, not a dense G×G matrix. A table sized from the
+/// caller capacity that fills is replaced until every distinct key fits, and
+/// only then is that count compared with the caller capacity. `workspace_bytes`
+/// is the table that produced the count. Size overflow is rejected, and
 /// allocation/runtime failures throw.
 
 } // namespace pfc::grain::tracking
