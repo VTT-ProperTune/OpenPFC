@@ -11,6 +11,9 @@
 namespace pfc::solvers {
 struct ReductionMetrics {
   std::size_t calls = 0;
+  /// Scalars reduced by those collectives. A batched `dots` is one call and
+  /// `count` scalars.
+  std::size_t scalars = 0;
   double seconds = 0;
   /// Time inside MPI collectives. The rest of `seconds` is local arithmetic
   /// and, on a device, the scalar transfer that feeds the collective.
@@ -85,6 +88,7 @@ public:
     const double waited =
         std::chrono::duration<double>(std::chrono::steady_clock::now() - t).count();
     ++reductions.calls;
+    reductions.scalars += static_cast<std::size_t>(count);
     reductions.seconds += waited;
     reductions.collective_seconds += waited;
   }

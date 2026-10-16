@@ -131,8 +131,10 @@ public:
 #endif
       local[column] = value;
     }
-    if (y.size())
+    if (y.size()) {
       scalar_transfer_bytes += sizeof(double) * static_cast<std::size_t>(count);
+      reductions.scalars += static_cast<std::size_t>(count);
+    }
     if (comm_ != MPI_COMM_NULL) {
       const auto collective = std::chrono::steady_clock::now();
       if (MPI_Allreduce(local, out, count, MPI_DOUBLE, MPI_SUM, comm_) !=

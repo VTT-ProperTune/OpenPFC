@@ -7,6 +7,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Fix: the device solver transfer check counts one double per reduced
+  scalar. `dots` copies one double per column and then does one
+  collective, so `scalar_transfer_bytes == 8 * reductions.calls` rejected
+  a correct batched FGMRES (`2704 == 1712` in `SolverVectors_cuda`).
+  `reductions.scalars` is that column count (#574).
+
 - The finite-strain compatible projector accepts even grids. Each Nyquist
   wave-vector component is zero (`k_component_odd`), so `q_i q_j` stays
   Hermitian, and a mode reduced to `q = 0` is removed with the zero mode.

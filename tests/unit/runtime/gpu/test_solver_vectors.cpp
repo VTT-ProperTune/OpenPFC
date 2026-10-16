@@ -59,7 +59,9 @@ TEST_CASE("resident FGMRES solves a nonsymmetric cyclic operator with restarts",
       ops, [&](const Vec &v, Vec &w) { solver_toy(n, v.data(), w.data(), 0); }, b, x,
       c, [&](const Vec &v, Vec &w, int) { ops.copy(v, w); });
   REQUIRE_FALSE(fail.converged());
-  REQUIRE(ops.scalar_transfer_bytes == 8 * ops.reductions.calls);
+  // One collective per dots() call, one double copied back per column.
+  REQUIRE(ops.reductions.scalars >= ops.reductions.calls);
+  REQUIRE(ops.scalar_transfer_bytes == sizeof(double) * ops.reductions.scalars);
   auto z = ops.make(n);
   auto address = z.data();
   ops.copy(b, z);
