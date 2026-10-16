@@ -104,11 +104,13 @@ export HEAT3D_DT="${HEAT3D_DT:-0.01}"
 export BUILD_DIR="${BUILD_DIR:-${DEFAULT_BUILD}}"
 
 if [[ "${MODE}" == "build" ]]; then
-  mkdir -p "${LOGDIR}"
   if [[ "${DRY_RUN}" == "1" ]]; then
     echo "DRY_RUN ${SRC}/scripts/build.sh --machine=lumi --with-rocm --no-test --partition=${PARTITION} --build-dir=${BUILD_DIR}"
+    echo "DRY_RUN campaign ${CAMPAIGN_ROOT}"
+    echo "DRY_RUN log ${LOGDIR}"
     exit 0
   fi
+  mkdir -p "${LOGDIR}"
   cd "${SRC}"
   LUMI_ACCOUNT="${ACCOUNT}" LUMI_PARTITION="${PARTITION}" \
     "${SRC}/scripts/build.sh" \
@@ -134,7 +136,12 @@ if [[ "${DRY_RUN}" != "1" && "${OPENPFC_DIRTY}" != "0" && "${OPENPFC_DIRTY}" != 
   exit 2
 fi
 
-mkdir -p "${CAMPAIGN_ROOT}/runs" "${LOGDIR}"
+if [[ "${DRY_RUN}" == "1" ]]; then
+  echo "DRY_RUN campaign ${CAMPAIGN_ROOT}"
+  echo "DRY_RUN log ${LOGDIR}"
+else
+  mkdir -p "${CAMPAIGN_ROOT}/runs" "${LOGDIR}"
+fi
 export OPENPFC_LOG_DIR="${LOGDIR}"
 
 submit_one() {

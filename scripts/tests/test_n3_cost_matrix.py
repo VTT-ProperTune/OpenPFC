@@ -91,6 +91,8 @@ def test_submit_dry_run_three_repeats(tmp_path):
     assert "h3-n3-r1" in proc.stdout_text
     assert "h3-n3-r2" in proc.stdout_text
     assert "h3-n3-r3" in proc.stdout_text
+    assert "/scratch/project_462001519/juaho/openpfc-scaling/heat3d-n3-cost-592" in proc.stdout_text
+    assert "/scratch/project_462001519/juaho/logs" in proc.stdout_text
     assert "768" not in proc.stdout_text
     assert "fd4" not in proc.stdout_text.lower()
 
@@ -103,6 +105,7 @@ def test_build_dry_run_uses_production_heffte():
     proc = _run(["bash", str(SUBMIT), "build"], env, ROOT)
     assert proc.returncode == 0, proc.stderr_text
     assert "n3-cost-592" in proc.stdout_text
+    assert "/scratch/project_462001519/juaho/logs" in proc.stdout_text
     assert "heffte-trace" not in proc.stdout_text
 
 
