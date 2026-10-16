@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <algorithm>
+#include <array>
 #include <cstdio>
 #include <iomanip>
 #include <ios>
@@ -12,6 +13,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace pfc {
 
@@ -96,7 +98,8 @@ void VTKWriter::write_vti_header(std::ofstream &file,
   file << "_"; // Marker for data start
 }
 
-void VTKWriter::write_vti_data(std::ofstream &file, pfc::field::FieldView<double> data) {
+void VTKWriter::write_vti_data(std::ofstream &file,
+                               pfc::field::FieldView<double> data) {
   // VTK header_type="UInt64": length prefix is always 8 bytes (see
   // write_vti_header).
   const std::uint64_t appended_bytes =
@@ -110,11 +113,30 @@ void VTKWriter::write_vti_data(std::ofstream &file, pfc::field::FieldView<double
 }
 
 void VTKWriter::write_pvti_file(int increment) const {
-  // Only true rank 0 writes master file
+  // Only true rank 0 writes master file. Every rank reports its inclusive
+  // point extent first: a Piece with Source and no Extent is rejected.
+  // WholeExtent, Origin and Spacing stay on PImageData. Each piece extent
+  // is the non-overlapping owned point range, the same range the piece
+  // file writes, and the samples are PointData. VTK 9.0.1 and ParaView
+  // 5.10 still leave a one-index gap when they split those point extents
+  // in cell mode, so a multi-piece file does not load as one image.
+  // Overlapping the shared face would duplicate points. That reader gap
+  // is not closed here.
   int current_rank = 0;
   int current_size = 1;
   MPI_Comm_rank(m_comm, &current_rank);
   MPI_Comm_size(m_comm, &current_size);
+  const std::array<int, 6> local_extent{
+      m_offset[0], m_offset[0] + m_local_size[0] - 1,
+      m_offset[1], m_offset[1] + m_local_size[1] - 1,
+      m_offset[2], m_offset[2] + m_local_size[2] - 1,
+  };
+  std::vector<int> extents(static_cast<std::size_t>(current_size) * 6);
+  pfc::mpi::throw_on_mpi_error(
+      MPI_Gather(local_extent.data(), 6, MPI_INT,
+                 current_rank == 0 ? extents.data() : nullptr, 6, MPI_INT, 0,
+                 m_comm),
+      "MPI_Gather of VTK piece extents");
   if (current_rank != 0) {
     return;
   }
@@ -155,7 +177,10 @@ void VTKWriter::write_pvti_file(int increment) const {
   const std::string base = formatted_path(increment);
   for (int r = 0; r < current_size; ++r) {
     const std::string piece_filename = vtk_piece_filename_for_rank(base, r);
-    file << R"(    <Piece Source=")" << piece_filename << R"("/>)" << '\n';
+    const int *extent = extents.data() + static_cast<std::size_t>(r) * 6;
+    file << R"(    <Piece Extent=")" << extent[0] << " " << extent[1] << " "
+         << extent[2] << " " << extent[3] << " " << extent[4] << " " << extent[5]
+         << R"(" Source=")" << piece_filename << R"("/>)" << '\n';
   }
 
   file << R"(  </PImageData>)" << '\n';
@@ -259,7 +284,8 @@ MPI_Status VTKWriter::write(int increment, pfc::field::FieldView<double> data) {
   return status;
 }
 
-MPI_Status VTKWriter::write(int increment, pfc::field::FieldView<std::complex<double>> data) {
+MPI_Status VTKWriter::write(int increment,
+                            pfc::field::FieldView<std::complex<double>> data) {
   const std::size_t expected_pts =
       io::vtk_validate::expect_local_point_count(m_local_size);
 
@@ -297,7 +323,8 @@ MPI_Status VTKWriter::write(int increment, pfc::field::FieldView<std::complex<do
   std::transform(data.data(), data.data() + data.size(), magnitude.begin(),
                  [](const std::complex<double> &c) { return std::abs(c); });
 
-  // 6. Delegate to the real FieldView overload which has its own collective error agreements
+  // 6. Delegate to the real FieldView overload which has its own collective error
+  // agreements
   return write(increment, magnitude);
 }
 

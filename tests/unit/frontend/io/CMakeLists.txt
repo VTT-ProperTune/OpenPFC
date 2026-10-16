@@ -13,7 +13,19 @@ add_test(NAME vtk_writer COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 1
                  ${MPIEXEC_PREFLAGS} $<TARGET_FILE:test_vtk_writer> ${MPIEXEC_POSTFLAGS})
 add_test(NAME vtk_writer_parallel COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
                  ${MPIEXEC_PREFLAGS} $<TARGET_FILE:test_vtk_writer> ${MPIEXEC_POSTFLAGS})
-set_tests_properties(vtk_writer vtk_writer_parallel PROPERTIES RUN_SERIAL TRUE)
+# CI sets OpenPFC_MPI_TEST_MAX_WORLD_SIZE=2. A 4-rank run is registered only
+# when that cap allows it. The cache value is visible here even though the
+# option() declaration lives later in tests/CMakeLists.txt.
+if(NOT DEFINED OpenPFC_MPI_TEST_MAX_WORLD_SIZE OR
+   OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR
+   OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 4)
+  add_test(NAME vtk_writer_4ranks COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                   ${MPIEXEC_PREFLAGS} $<TARGET_FILE:test_vtk_writer> ${MPIEXEC_POSTFLAGS})
+  set_tests_properties(vtk_writer vtk_writer_parallel vtk_writer_4ranks
+                       PROPERTIES RUN_SERIAL TRUE)
+else()
+  set_tests_properties(vtk_writer vtk_writer_parallel PROPERTIES RUN_SERIAL TRUE)
+endif()
 
 add_executable(test_binary_writer test_binary_writer.cpp)
 target_link_libraries(test_binary_writer PRIVATE openpfc Catch2::Catch2 MPI::MPI_CXX)

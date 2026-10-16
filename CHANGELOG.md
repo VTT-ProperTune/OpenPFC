@@ -7,6 +7,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Parallel VTK images write `Extent` on every `Piece`. A piece that has
+  only `Source` is rejected (#521). VTK 9.0.1 and ParaView 5.10 still
+  cannot assemble a non-overlapping point partition, because the extent
+  splitter leaves a one-index gap. The pieces are not overlapped (#524).
+
 - `pfc::geometry::periodic_distance` is the Euclidean distance from each
   voxel centre to the nearest occupied voxel of a periodic isotropic mask.
   The signed companion is negative on occupied voxels (#520).

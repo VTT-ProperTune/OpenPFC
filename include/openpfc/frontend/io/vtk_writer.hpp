@@ -11,10 +11,16 @@
  * visualization tools.
  *
  * Supports:
- * - Serial output (single .vti file)
- * - Parallel output (.pvti master + .vti pieces per rank)
+ * - Serial output (single .vti file), which VTK and ParaView open directly
+ * - Parallel output (.pvti master + one .vti piece per rank)
  * - Real and complex field data
- * - Binary format (base64-encoded) for compact output
+ * - Appended raw binary with a UInt64 length prefix
+ *
+ * Parallel pieces are non-overlapping inclusive point extents. The master
+ * file records that same Extent on every Piece. VTK 9.0.1 and ParaView
+ * 5.10 do not assemble those pieces into one image; open each piece, or
+ * the serial file. The writer does not duplicate the boundary point to
+ * satisfy that reader.
  *
  * @example
  * @code

@@ -17,6 +17,8 @@
 #include <cmath>
 #include <complex>
 #include <cstddef>
+#include <cstdint>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <limits>
@@ -150,7 +152,8 @@ public:
         content.find("<VTKFile type=\"PImageData\"") != std::string::npos;
     bool has_pimage_data = content.find("<PImageData") != std::string::npos;
     bool has_ppoint_data = content.find("<PPointData>") != std::string::npos;
-    bool has_piece_source = content.find("<Piece Source=") != std::string::npos;
+    bool has_piece_source = content.find("<Piece Extent=\"") != std::string::npos &&
+                            content.find("Source=") != std::string::npos;
 
     return has_xml_header && has_pvtk_file && has_pimage_data && has_ppoint_data &&
            has_piece_source;
@@ -591,7 +594,129 @@ TEST_CASE("VTKWriter - Parallel PVTI WholeExtent", "[vtk_writer][io][parallel]")
     REQUIRE(extent[3] == 7); // 8 - 1
     REQUIRE(extent[4] == 0);
     REQUIRE(extent[5] == 7); // 8 - 1
+
+    const std::string content =
+        VTKWriterTestFixture::read_file_content("test_pvti_extent_0001.pvti");
+    for (int r = 0; r < fixture.m_num_ranks; ++r) {
+      const int x0 = r * nx_local;
+      const int x1 = x0 + nx_local - 1;
+      const std::string piece_extent =
+          "Extent=\"" + std::to_string(x0) + " " + std::to_string(x1) + " 0 7 0 7\"";
+      REQUIRE(content.find(piece_extent) != std::string::npos);
+    }
   }
+}
+
+namespace {
+
+std::vector<double> read_appended_doubles(const std::string &filename,
+                                          std::size_t expected) {
+  std::ifstream file(filename, std::ios::binary);
+  REQUIRE(file);
+  const std::string bytes((std::istreambuf_iterator<char>(file)),
+                          std::istreambuf_iterator<char>());
+  const std::string marker = "<AppendedData encoding=\"raw\">\n_";
+  const auto pos = bytes.find(marker);
+  REQUIRE(pos != std::string::npos);
+  const auto data_at = pos + marker.size();
+  REQUIRE(data_at + sizeof(std::uint64_t) <= bytes.size());
+  std::uint64_t nbytes = 0;
+  std::memcpy(&nbytes, bytes.data() + data_at, sizeof(nbytes));
+  REQUIRE(nbytes == expected * sizeof(double));
+  REQUIRE(data_at + sizeof(nbytes) + nbytes <= bytes.size());
+  std::vector<double> values(expected);
+  std::memcpy(values.data(), bytes.data() + data_at + sizeof(nbytes),
+              static_cast<std::size_t>(nbytes));
+  return values;
+}
+
+} // namespace
+
+TEST_CASE("VTKWriter uneven pieces reconstruct the global point field",
+          "[vtk_writer][io][parallel]") {
+  VTKWriterTestFixture fixture;
+  const int ranks = fixture.m_num_ranks;
+  if (ranks != 1 && ranks != 2 && ranks != 4) {
+    SKIP("This reconstruction is defined for 1, 2 and 4 ranks");
+  }
+
+  // Uneven, non-overlapping owned widths. They share no point.
+  const int width[4] = {ranks == 1   ? 5
+                        : ranks == 2 ? 3
+                                     : 2,
+                        ranks == 2 ? 8 : 5, 1, 4};
+  int nx = 0;
+  for (int r = 0; r < ranks; ++r) nx += width[r];
+  constexpr int ny = 3;
+  constexpr int nz = 2;
+  int offset_x = 0;
+  for (int r = 0; r < fixture.m_rank; ++r) offset_x += width[r];
+  const int local_nx = width[fixture.m_rank];
+
+  VTKWriter writer("test_uneven_%04d.vti");
+  writer.set_domain({nx, ny, nz}, {local_nx, ny, nz}, {offset_x, 0, 0});
+  writer.set_origin({1.25, -0.5, 0.0});
+  writer.set_spacing({0.5, 0.25, 2.0});
+  writer.set_field_name("u");
+
+  const std::size_t n_local = static_cast<std::size_t>(local_nx) * ny * nz;
+  std::vector<double> local(n_local);
+  std::size_t slot = 0;
+  for (int z = 0; z < nz; ++z) {
+    for (int y = 0; y < ny; ++y) {
+      for (int x = 0; x < local_nx; ++x, ++slot) {
+        local[slot] = static_cast<double>((offset_x + x) + 100 * y + 10000 * z);
+      }
+    }
+  }
+  writer.write(1, local);
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  if (fixture.m_rank != 0) return;
+
+  if (ranks == 1) {
+    const std::string piece = "test_uneven_0001.vti";
+    REQUIRE(fixture.file_contains(piece, "WholeExtent=\"0 4 0 2 0 1\""));
+    REQUIRE(fixture.file_contains(piece, "Origin=\"1.25 -0.5 0\""));
+    REQUIRE(fixture.file_contains(piece, "Spacing=\"0.5 0.25 2\""));
+    REQUIRE(fixture.file_contains(piece, "<PointData>"));
+    REQUIRE(fixture.file_contains(piece, "Name=\"u\""));
+    const auto got = read_appended_doubles(piece, n_local);
+    REQUIRE(got == local);
+    return;
+  }
+
+  const std::string pvti = "test_uneven_0001.pvti";
+  REQUIRE(fixture.file_exists(pvti));
+  const std::string master = VTKWriterTestFixture::read_file_content(pvti);
+  REQUIRE(master.find("WholeExtent=\"0 " + std::to_string(nx - 1) + " 0 2 0 1\"") !=
+          std::string::npos);
+  REQUIRE(master.find("Origin=\"1.25 -0.5 0\"") != std::string::npos);
+  REQUIRE(master.find("Spacing=\"0.5 0.25 2\"") != std::string::npos);
+  REQUIRE(master.find("<PPointData>") != std::string::npos);
+  REQUIRE(master.find("<CellData>") == std::string::npos);
+
+  int cursor = 0;
+  for (int r = 0; r < ranks; ++r) {
+    const int x0 = cursor;
+    const int x1 = cursor + width[r] - 1;
+    const std::string piece_extent =
+        "Extent=\"" + std::to_string(x0) + " " + std::to_string(x1) + " 0 2 0 1\"";
+    REQUIRE(master.find(piece_extent) != std::string::npos);
+    const std::string piece = "test_uneven_0001_" + std::to_string(r) + ".vti";
+    const std::size_t n = static_cast<std::size_t>(width[r]) * ny * nz;
+    const auto got = read_appended_doubles(piece, n);
+    std::size_t i = 0;
+    for (int z = 0; z < nz; ++z) {
+      for (int y = 0; y < ny; ++y) {
+        for (int x = x0; x <= x1; ++x, ++i) {
+          REQUIRE(got[i] == static_cast<double>(x + 100 * y + 10000 * z));
+        }
+      }
+    }
+    cursor = x1 + 1;
+  }
+  REQUIRE(cursor == nx);
 }
 
 TEST_CASE("VTKWriter rejects invalid VTK extents/domain metadata",
