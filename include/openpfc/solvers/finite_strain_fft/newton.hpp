@@ -154,7 +154,6 @@ template <LocalConstitutiveLaw Law>
 solve_equilibrium(CompatibleProjector &projector, const Law &law,
                   const Tensor2 &macroscopic, NewtonControls controls = {},
                   MPI_Comm comm = MPI_COMM_WORLD) {
-  require_odd_grid(projector.domain());
   if (!(controls.krylov_relative_tolerance > 0.0) ||
       !(controls.newton_relative_tolerance > 0.0)) {
     throw std::invalid_argument("solver tolerances must be positive");
@@ -258,7 +257,6 @@ template <LocalConstitutiveLaw Law>
 solve_increment(CompatibleProjector &projector, const Law &law,
                 const Tensor2 &macroscopic, const IncrementStart &start,
                 NewtonControls controls = {}, MPI_Comm comm = MPI_COMM_WORLD) {
-  require_odd_grid(projector.domain());
   if (!(controls.krylov_relative_tolerance > 0.0) ||
       !(controls.newton_relative_tolerance > 0.0)) {
     throw std::invalid_argument("solver tolerances must be positive");

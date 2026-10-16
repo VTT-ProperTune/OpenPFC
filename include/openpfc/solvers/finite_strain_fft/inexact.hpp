@@ -45,7 +45,6 @@ InexactResult solve_nonlinear_increment(CompatibleProjector &projector,
                                         const IncrementStart &start,
                                         solvers::NewtonControls controls = {},
                                         MPI_Comm comm = MPI_COMM_WORLD) {
-  require_odd_grid(projector.domain());
   if (start.deformation.size() != projector.local_size())
     throw std::invalid_argument("increment needs one deformation per inbox point");
   struct Model {

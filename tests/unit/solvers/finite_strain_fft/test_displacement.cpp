@@ -56,3 +56,15 @@ TEST_CASE("periodic displacement recovers mixed analytic modes and gauge",
   REQUIRE_THROWS_AS(reconstruct_displacement(fft, domain, {}, macro),
                     std::invalid_argument);
 }
+
+TEST_CASE("displacement reconstruction rejects an even grid",
+          "[finite_strain][displacement]") {
+  using namespace pfc;
+  using namespace pfc::finite_strain;
+  auto domain = domain::create(Int3{4, 4, 4});
+  auto decomposition = decomposition::create(domain, 1);
+  auto fft = fft::create(decomposition, 0, MPI_COMM_SELF);
+  std::vector<Tensor2> field(fft.size_inbox(), identity2());
+  REQUIRE_THROWS_AS(reconstruct_displacement(fft, domain, field, identity2()),
+                    std::invalid_argument);
+}

@@ -13,6 +13,7 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
+#include <openpfc/kernel/fft/kspace.hpp>
 #include <openpfc/kernel/fft/kspace_iterator.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
 #include <openpfc/mechanics/constitutive/saint_venant_kirchhoff.hpp>
@@ -21,6 +22,7 @@
 #include <openpfc/solvers/finite_strain_fft/inexact.hpp>
 #include <openpfc/solvers/finite_strain_fft/newton.hpp>
 
+#include <array>
 #include <cmath>
 #include <complex>
 #include <cstdint>
@@ -91,12 +93,161 @@ double max_abs_diff(const std::vector<Tensor2> &a, const std::vector<Tensor2> &b
 
 } // namespace
 
-TEST_CASE("even grids are rejected by the compatible projector",
+TEST_CASE("even-grid projection is idempotent and drops a pure Nyquist mode",
           "[finite_strain][projector]") {
-  auto domain = domain::create(Int3{4, 4, 4});
-  auto decomposition = decomposition::create(domain, 1);
-  auto fft = fft::create(decomposition);
-  REQUIRE_THROWS_AS(CompatibleProjector(fft, domain), std::invalid_argument);
+  auto tools = make_grid(Int3{4, 6, 8}, MPI_COMM_WORLD);
+  CompatibleProjector projector(tools.fft, tools.domain);
+  const auto field = random_field(projector.local_size(), 11u);
+  std::vector<Tensor2> once;
+  std::vector<Tensor2> twice;
+  projector.apply(field, once);
+  projector.apply(once, twice);
+  REQUIRE(max_abs_diff(once, twice) < 1e-10);
+
+  const auto stats =
+      tensor_field_stats(once, tools.fft.get_inbox_bounds(), MPI_COMM_WORLD, false);
+  const double scale = stats.frobenius_l2 + 1.0;
+  for (int a = 0; a < 3; ++a) {
+    for (int b = 0; b < 3; ++b) {
+      REQUIRE_THAT(stats.component[a][b].sum / scale, WithinAbs(0.0, 1e-10));
+    }
+  }
+
+  const auto box = tools.fft.get_inbox_bounds();
+  std::vector<Tensor2> nyquist(projector.local_size());
+  std::size_t index = 0;
+  for (int z = box.low[2]; z <= box.high[2]; ++z) {
+    for (int y = box.low[1]; y <= box.high[1]; ++y) {
+      for (int x = box.low[0]; x <= box.high[0]; ++x, ++index) {
+        const double sign = ((x + y + z) & 1) == 0 ? 1.0 : -1.0;
+        nyquist[index](0, 0) = sign;
+        nyquist[index](1, 2) = 0.3 * sign;
+      }
+    }
+  }
+  std::vector<Tensor2> dropped;
+  projector.apply(nyquist, dropped);
+  double local = 0.0;
+  for (const Tensor2 &value : dropped) {
+    local = std::max(local, frobenius_norm(value));
+  }
+  double reduced = 0.0;
+  MPI_Allreduce(&local, &reduced, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  REQUIRE(reduced < 1e-10);
+
+  // Compatibility: every retained mode is rank-one along k_component_odd.
+  const auto size = domain::get_size(tools.domain);
+  const auto wave = fft::kspace::k_frequency_scaling(tools.domain);
+  const std::size_t n_freq = tools.fft.size_outbox();
+  std::vector<double> real(once.size());
+  std::array<std::vector<std::complex<double>>, 9> hat;
+  for (auto &component : hat) {
+    component.resize(n_freq);
+  }
+  for (int a = 0; a < 3; ++a) {
+    for (int b = 0; b < 3; ++b) {
+      for (std::size_t i = 0; i < once.size(); ++i) {
+        real[i] = once[i](a, b);
+      }
+      tools.fft.forward(real, hat[static_cast<std::size_t>(a * 3 + b)]);
+    }
+  }
+  fft::kspace::for_each_kpoint(
+      tools.fft.get_outbox_bounds(), tools.domain,
+      [&](std::size_t mode, double, double, double, int i, int j, int k) {
+        const double qx = fft::kspace::k_component_odd(i, size[0], wave[0]);
+        const double qy = fft::kspace::k_component_odd(j, size[1], wave[1]);
+        const double qz = fft::kspace::k_component_odd(k, size[2], wave[2]);
+        const double q2 = qx * qx + qy * qy + qz * qz;
+        const double q[3] = {qx, qy, qz};
+        for (int c = 0; c < 9; ++c) {
+          if (q2 == 0.0) {
+            REQUIRE_THAT(std::abs(hat[static_cast<std::size_t>(c)][mode]),
+                         WithinAbs(0.0, 1e-8));
+          }
+        }
+        if (q2 == 0.0) {
+          return;
+        }
+        for (int a = 0; a < 3; ++a) {
+          for (int b = 0; b < 3; ++b) {
+            for (int c = 0; c < 3; ++c) {
+              const auto left =
+                  hat[static_cast<std::size_t>(a * 3 + b)][mode] * q[c];
+              const auto right =
+                  hat[static_cast<std::size_t>(a * 3 + c)][mode] * q[b];
+              REQUIRE_THAT(std::abs(left - right),
+                           WithinAbs(0.0, 1e-8 * (q2 + 1.0)));
+            }
+          }
+        }
+        // A self-conjugate Nyquist corner is real. Partner modes in a
+        // stored Nyquist plane agree as conjugates when both are local.
+        const bool self =
+            (j == 0 || j == size[1] / 2) && (k == 0 || k == size[2] / 2);
+        if ((i == 0 || i == size[0] / 2) && self) {
+          for (int c = 0; c < 9; ++c) {
+            REQUIRE_THAT(std::abs(hat[static_cast<std::size_t>(c)][mode].imag()),
+                         WithinAbs(0.0, 1e-8));
+          }
+        }
+      });
+}
+
+TEST_CASE("an even-grid spectral gradient stays and a raw Nyquist wave does not",
+          "[finite_strain][projector]") {
+  auto tools = make_grid(Int3{8, 4, 6}, MPI_COMM_WORLD);
+  CompatibleProjector projector(tools.fft, tools.domain);
+  const std::size_t n = projector.local_size();
+  const auto inbox = tools.fft.get_inbox_bounds();
+  const int nx = domain::get_size(tools.domain)[0];
+  std::vector<double> scalar(n);
+  std::size_t index = 0;
+  for (int z = inbox.low[2]; z <= inbox.high[2]; ++z) {
+    for (int y = inbox.low[1]; y <= inbox.high[1]; ++y) {
+      for (int x = inbox.low[0]; x <= inbox.high[0]; ++x, ++index) {
+        scalar[index] = std::sin(2.0 * constants::pi * static_cast<double>(x) /
+                                 static_cast<double>(nx));
+      }
+    }
+  }
+  std::vector<std::complex<double>> hat(tools.fft.size_outbox());
+  tools.fft.forward(scalar, hat);
+  const auto size = domain::get_size(tools.domain);
+  const auto wave = fft::kspace::k_frequency_scaling(tools.domain);
+  fft::kspace::for_each_kpoint(
+      tools.fft.get_outbox_bounds(), tools.domain,
+      [&](std::size_t mode, double, double, double, int i, int, int) {
+        hat[mode] *= std::complex<double>(
+            0.0, fft::kspace::k_component_odd(i, size[0], wave[0]));
+      });
+  std::vector<double> derivative(n);
+  tools.fft.backward(hat, derivative);
+  std::vector<Tensor2> gradient(n);
+  for (std::size_t i = 0; i < n; ++i) {
+    gradient[i](0, 0) = derivative[i];
+  }
+  std::vector<Tensor2> projected;
+  projector.apply(gradient, projected);
+  REQUIRE(max_abs_diff(gradient, projected) < 1e-10);
+
+  // The one-sided Nyquist wave is not the derivative this projector uses.
+  std::vector<Tensor2> raw(n);
+  index = 0;
+  for (int z = inbox.low[2]; z <= inbox.high[2]; ++z) {
+    for (int y = inbox.low[1]; y <= inbox.high[1]; ++y) {
+      for (int x = inbox.low[0]; x <= inbox.high[0]; ++x, ++index) {
+        raw[index](0, 0) = ((x & 1) == 0 ? 1.0 : -1.0) *
+                           std::sin(2.0 * constants::pi * static_cast<double>(y) /
+                                    static_cast<double>(size[1]));
+      }
+    }
+  }
+  std::vector<Tensor2> projected_raw;
+  projector.apply(raw, projected_raw);
+  REQUIRE(max_abs_diff(raw, projected_raw) > 1e-3);
+  projector.apply(projected_raw, projected);
+  REQUIRE(max_abs_diff(projected_raw, projected) < 1e-10);
 }
 
 TEST_CASE("projection removes the mean and is idempotent",
@@ -236,6 +387,70 @@ TEST_CASE("homogeneous simple shear stays affine and equilibrated",
     REQUIRE_THAT(step.correction_over_reference, WithinAbs(0.0, 1e-12));
     REQUIRE(step.krylov_iterations == 0);
   }
+}
+
+TEST_CASE("a cubic even grid accepts an in-place projection",
+          "[finite_strain][projector]") {
+  auto tools = make_grid(Int3{4, 4, 4}, MPI_COMM_WORLD);
+  CompatibleProjector projector(tools.fft, tools.domain);
+  auto field = random_field(projector.local_size(), 19u);
+  projector.apply(field, field);
+  std::vector<Tensor2> again;
+  projector.apply(field, again);
+  REQUIRE(max_abs_diff(field, again) < 1e-10);
+}
+
+TEST_CASE("even-grid homogeneous and two-phase shear reach equilibrium",
+          "[finite_strain][newton][projector]") {
+  auto tools = make_grid(Int3{8, 4, 6}, MPI_COMM_WORLD);
+  CompatibleProjector projector(tools.fft, tools.domain);
+  const IsotropicModuli soft{0.833, 0.386};
+  const std::vector<std::uint8_t> no_phase;
+  const SaintVenantKirchhoffMaterial uniform(no_phase, projector.local_size(), soft,
+                                             soft);
+  const auto solved =
+      solve_equilibrium(projector, uniform, simple_shear(0.5), {}, MPI_COMM_WORLD);
+  REQUIRE(solved.converged);
+  Tensor2 expected = identity2();
+  expected(0, 1) = 0.5;
+  REQUIRE(max_abs_diff(solved.deformation,
+                       std::vector<Tensor2>(solved.deformation.size(), expected)) <
+          1e-8);
+  REQUIRE_THAT(solved.projected_residual, WithinAbs(0.0, 1e-8));
+
+  const auto inbox = tools.fft.get_inbox_bounds();
+  std::vector<std::uint8_t> phase(projector.local_size(), 0);
+  std::size_t index = 0;
+  int hard = 0;
+  for (int z = inbox.low[2]; z <= inbox.high[2]; ++z) {
+    for (int y = inbox.low[1]; y <= inbox.high[1]; ++y) {
+      for (int x = inbox.low[0]; x <= inbox.high[0]; ++x, ++index) {
+        if (x >= 2 && y < 2 && z >= 2) {
+          phase[index] = 1;
+          ++hard;
+        }
+      }
+    }
+  }
+  int hard_global = 0;
+  MPI_Allreduce(&hard, &hard_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  REQUIRE(hard_global > 0);
+  const IsotropicModuli stiff{8.33, 3.86};
+  const SaintVenantKirchhoffMaterial material(phase, projector.local_size(), soft,
+                                              stiff);
+  NewtonControls controls;
+  controls.krylov_method = KrylovMethod::GMRES;
+  const auto mixed = solve_equilibrium(projector, material, simple_shear(0.25),
+                                       controls, MPI_COMM_WORLD);
+  REQUIRE(mixed.converged);
+  const double stress_norm =
+      tensor_field_stats(mixed.piola, inbox, MPI_COMM_WORLD, false).frobenius_l2;
+  REQUIRE(stress_norm > 0.1);
+  REQUIRE(mixed.projected_residual < 1e-6 * stress_norm);
+  controls.krylov_method = KrylovMethod::CG;
+  REQUIRE_THROWS_AS(
+      solve_equilibrium(projector, material, simple_shear(0.25), controls),
+      std::invalid_argument);
 }
 
 TEST_CASE("a two-phase shear reaches the projected equilibrium tolerance",

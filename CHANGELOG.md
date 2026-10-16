@@ -7,6 +7,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- The finite-strain compatible projector accepts even grids. Each Nyquist
+  wave-vector component is zero (`k_component_odd`), so `q_i q_j` stays
+  Hermitian, and a mode reduced to `q = 0` is removed with the zero mode.
+  Odd grids are unchanged. Displacement reconstruction still requires an
+  odd grid. The device projector still rejects even grids (#395).
+
 - Parallel VTK images write `Extent` on every `Piece`. A piece that has
   only `Source` is rejected (#521). VTK 9.0.1 and ParaView 5.10 still
   cannot assemble a non-overlapping point partition, because the extent
