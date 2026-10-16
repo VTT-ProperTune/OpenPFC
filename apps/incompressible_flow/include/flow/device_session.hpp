@@ -18,6 +18,7 @@ namespace flow {
 struct State;
 
 struct DeviceSession;
+enum class TransformChoice { Distributed, Local };
 
 void destroy_device_session(DeviceSession *session);
 
@@ -32,6 +33,9 @@ using DeviceSessionPtr = std::unique_ptr<DeviceSession, DeviceSessionDeleter>;
 /// Upload the current hats and build the selected vendor FFT pencil.
 [[nodiscard]] DeviceSessionPtr start_device_session(State &state, int rank,
                                                     int nproc);
+/// Explicit local vendor FFT, supported only on one rank. Defaults unchanged.
+[[nodiscard]] DeviceSessionPtr
+start_device_session(State &state, int rank, int nproc, TransformChoice choice);
 
 /// Accumulated seconds from profiled steps. A null profile does not sync.
 struct DeviceProfile {

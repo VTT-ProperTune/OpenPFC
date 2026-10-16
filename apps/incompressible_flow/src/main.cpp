@@ -39,9 +39,11 @@ namespace {
 #if defined(OPENPFC_FLOW_DEVICE)
 #if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
 constexpr const char *backend_name = "hip-heffte";
+constexpr const char *local_backend_name = "hip-rocfft";
 constexpr const char *executable_name = "incompressible_flow_hip";
 #else
 constexpr const char *backend_name = "cuda-heffte";
+constexpr const char *local_backend_name = "cuda-cufft";
 constexpr const char *executable_name = "incompressible_flow_cuda";
 #endif
 #endif
@@ -57,6 +59,7 @@ struct Options {
   std::optional<double> sample_dt;
   std::optional<double> volume_dt;
   bool profile{false};
+  bool local_transform{false};
   std::string series;
   std::string outdir{"results/incompressible-flow"};
 };
@@ -68,9 +71,10 @@ void usage(std::ostream &os) {
         "       --case taylor-green|decaying-hit\n"
         "       [--n N] [--nu NU] [--dt DT] [--time T] [--seed SEED]\n"
         "       [--sample-dt DT] [--volume-dt DT] [--profile] [--outdir DIR]\n"
+        "       [--fft distributed|local] (local requires one rank)\n"
         "\n"
         "Periodic 3-D Navier-Stokes on [0, 2pi]^3. The step uses the\n"
-        "selected GPU HeFFTe backend. Diagnostics copy the hats back\n"
+        "selected GPU FFT backend. Diagnostics copy the hats back\n"
         "at a sample. --sample-dt and --volume-dt are Taylor-Green\n"
         "only. Forced HIT and the locked series stay on\n"
         "incompressible_flow.\n";
@@ -140,6 +144,12 @@ bool parse(int argc, char **argv, Options &opt) {
       auto value = need("--case");
       if (!value) return false;
       opt.which = std::string(*value);
+#if defined(OPENPFC_FLOW_DEVICE)
+    } else if (flag == "--fft") {
+      auto value = need("--fft");
+      if (!value || (*value != "distributed" && *value != "local")) return false;
+      opt.local_transform = *value == "local";
+#endif
     } else if (flag == "--n") {
       auto value = need("--n");
       if (!value) return false;
@@ -383,7 +393,10 @@ int run_taylor(const Options &opt, int rank, int nproc) {
   }
 
 #if defined(OPENPFC_FLOW_DEVICE)
-  auto device = flow::start_device_session(state, rank, nproc);
+  auto device = flow::start_device_session(state, rank, nproc,
+                                           opt.local_transform
+                                               ? flow::TransformChoice::Local
+                                               : flow::TransformChoice::Distributed);
   flow::DeviceProfile profile;
 #else
   double host_step_s = 0.0;
@@ -422,7 +435,8 @@ int run_taylor(const Options &opt, int rank, int nproc) {
     meta << std::setprecision(16);
     meta << "case=taylor-green\n"
 #if defined(OPENPFC_FLOW_DEVICE)
-         << "backend=" << backend_name << "\n"
+         << "backend=" << (opt.local_transform ? local_backend_name : backend_name)
+         << "\n"
 #else
          << "backend=cpu-heffte\n"
 #endif
@@ -518,7 +532,10 @@ int run_hit(const Options &opt, int rank, int nproc) {
   }
 
 #if defined(OPENPFC_FLOW_DEVICE)
-  auto device = flow::start_device_session(state, rank, nproc);
+  auto device = flow::start_device_session(state, rank, nproc,
+                                           opt.local_transform
+                                               ? flow::TransformChoice::Local
+                                               : flow::TransformChoice::Distributed);
 #endif
   flow::Diagnostics final_diag = initial;
   flow::Scales final_scales = initial_scales;
@@ -547,7 +564,8 @@ int run_hit(const Options &opt, int rank, int nproc) {
     meta << std::setprecision(16);
     meta << "case=decaying-hit\n"
 #if defined(OPENPFC_FLOW_DEVICE)
-         << "backend=" << backend_name << "\n"
+         << "backend=" << (opt.local_transform ? local_backend_name : backend_name)
+         << "\n"
 #endif
          << "spectrum=yoffe-mccomb-2018-eq10\n"
          << "citation=arXiv:1805.01238\n"
@@ -680,8 +698,16 @@ int main(int argc, char **argv) {
           }
           return EXIT_FAILURE;
         }
+        // Before any diagnostic, collective, or FFT plan. The registered
+        // rejection test treats a status=ok line as a failure.
+        if (opt.local_transform && nproc != 1) {
+          std::cerr << "flow: local transform requires one rank" << std::endl;
+          return EXIT_FAILURE;
+        }
         if (rank == 0) {
-          std::cout << "incompressible_flow backend=" << backend_name << std::endl;
+          std::cout << "incompressible_flow backend="
+                    << (opt.local_transform ? local_backend_name : backend_name)
+                    << std::endl;
         }
 #endif
         try {

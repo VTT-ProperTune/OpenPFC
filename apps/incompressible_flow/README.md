@@ -22,6 +22,13 @@ samples. Metadata and help identify the actual selected backend. Forced HIT
 and the locked convergence series remain host-only. One device spectral
 backend is selected per build; neither command implements another FFT stack.
 
+Device commands accept `--fft distributed|local`. The default remains
+distributed HeFFTe, including at one rank. `local` explicitly selects the
+existing vendor 3-D FFT on one rank with identical boxes, scaling and IFRK4
+operations. It rejects multiple ranks and does not construct an unused
+distributed device plan. Metadata identifies cuFFT or rocFFT for this choice.
+This is not automatic policy selection; MPI decomposition is unchanged.
+
 ## Equation
 
 The cube is \([0,2\pi]^3\). The HeFFTe pencil may be shared across

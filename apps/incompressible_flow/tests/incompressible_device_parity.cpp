@@ -33,6 +33,7 @@
 #include <openpfc/runtime/gpu/incompressible_device.hpp>
 
 #include <flow/decaying_hit.hpp>
+#include <flow/device_session.hpp>
 #include <flow/taylor_green.hpp>
 
 namespace {
@@ -109,8 +110,8 @@ void compare_hats(const std::vector<flow::Complex> &host,
   pfc::sim::stacks::GPUSpectralStack<Space> device(std::move(domain), rank, nproc,
                                                    MPI_COMM_WORLD);
   pfc::incompressible::DeviceVelocity<Space> vel;
-  pfc::incompressible::prepare_device_velocity(vel, device.fft(), {n, n, n}, {h, h, h}, nu,
-                                      dt);
+  pfc::incompressible::prepare_device_velocity(vel, device.fft(), {n, n, n},
+                                               {h, h, h}, nu, dt);
   pfc::incompressible::upload_device_velocity(vel, u0, v0, w0);
   GPU_CHECK(pfc::gpuDeviceSynchronize());
   pfc::incompressible::step_device_velocity(vel, device.fft(), true);
@@ -121,7 +122,8 @@ void compare_hats(const std::vector<flow::Complex> &host,
   std::vector<flow::Complex> dw;
   const auto copy_begin = Clock::now();
   pfc::incompressible::download_device_velocity(vel, du, dv, dw);
-  const double copy_s = std::chrono::duration<double>(Clock::now() - copy_begin).count();
+  const double copy_s =
+      std::chrono::duration<double>(Clock::now() - copy_begin).count();
 
   double local = 0.0;
   compare_hats(host.u, du, local);
@@ -132,13 +134,15 @@ void compare_hats(const std::vector<flow::Complex> &host,
   unsigned long long bytes_sum = bytes;
   MPI_Allreduce(MPI_IN_PLACE, &bytes_sum, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM,
                 MPI_COMM_WORLD);
-  const double cells = static_cast<double>(n) * static_cast<double>(n) * static_cast<double>(n);
+  const double cells =
+      static_cast<double>(n) * static_cast<double>(n) * static_cast<double>(n);
 
   int bad = max_abs > 1.0e-8 || !std::isfinite(max_abs);
   bad = reduce_max_int(bad);
   if (rank == 0) {
-    std::cout << "flow_device_parity case=" << name << " n=" << n << " ranks=" << nproc
-              << " max_abs=" << max_abs << " bytes=" << bytes_sum
+    std::cout << "flow_device_parity case=" << name << " n=" << n
+              << " ranks=" << nproc << " max_abs=" << max_abs
+              << " bytes=" << bytes_sum
               << " bytes_per_cell=" << (static_cast<double>(bytes_sum) / cells)
               << " download_s=" << copy_s << "\n";
   }
@@ -165,6 +169,48 @@ void compare_hats(const std::vector<flow::Complex> &host,
   return bad;
 }
 
+int session_steps(int n, bool hit, int rank, int nproc) {
+  auto reference = flow::make_state(n, .02, .00390625, rank, nproc);
+  if (hit)
+    flow::initialize_decaying_hit(reference, 1);
+  else
+    flow::initialize_taylor_green(reference);
+  auto initial_u = reference.u, initial_v = reference.v, initial_w = reference.w;
+  for (int k = 0; k < 8; ++k) flow::step(reference);
+  int bad = 0;
+  for (auto choice :
+       {flow::TransformChoice::Distributed, flow::TransformChoice::Local}) {
+    auto actual = flow::make_state(n, .02, .00390625, rank, nproc);
+    actual.u = initial_u;
+    actual.v = initial_v;
+    actual.w = initial_w;
+    if (choice == flow::TransformChoice::Local && nproc > 1) {
+      bool rejected = false;
+      try {
+        auto session = flow::start_device_session(actual, rank, nproc, choice);
+      } catch (const std::invalid_argument &) {
+        rejected = true;
+      }
+      bad |= !rejected;
+      continue;
+    }
+    auto session = flow::start_device_session(actual, rank, nproc, choice);
+    for (int k = 0; k < 8; ++k) flow::step_device_session(*session);
+    flow::finish_device_session(*session, actual);
+    double error = 0;
+    compare_hats(reference.u, actual.u, error);
+    compare_hats(reference.v, actual.v, error);
+    compare_hats(reference.w, actual.w, error);
+    error = reduce_max(error);
+    bad |= !std::isfinite(error) || error > 1e-8;
+    if (rank == 0)
+      std::cout << "flow_session_parity case=" << (hit ? "hit" : "tgv")
+                << " local=" << (choice == flow::TransformChoice::Local)
+                << " max_abs=" << error << "\n";
+  }
+  return reduce_max_int(bad);
+}
+
 } // namespace
 
 int main(int argc, char **argv) {
@@ -179,6 +225,8 @@ int main(int argc, char **argv) {
     const Options opt = parse(argc, argv);
     rc |= one_step("taylor-green", opt.n, 0.05, 0.01, false, rank, nproc, false);
     rc |= one_step("decaying-hit", opt.n, 0.02, 0.01, true, rank, nproc, false);
+    rc |= session_steps(opt.n, false, rank, nproc);
+    rc |= session_steps(opt.n, true, rank, nproc);
     if (opt.bench) {
       for (int n : {32, 64, 128}) {
         rc |= one_step("taylor-green", n, 0.05, 0.01, false, rank, nproc, true);

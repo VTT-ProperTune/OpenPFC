@@ -3,7 +3,7 @@
 
 /**
  * @file device_advance.cpp
- * @brief Host-side owner of the selected HeFFTe device velocity step.
+ * @brief Host-side owner of the selected device velocity step.
  *
  * CUDA and HIP share this owner; kernels remain in their installed library.
  */
@@ -17,10 +17,12 @@
 
 #include <iostream>
 #include <optional>
+#include <stdexcept>
 
 #include <mpi.h>
 
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/runtime/gpu/fft_single_device.hpp>
 #include <openpfc/runtime/gpu/gpu_api.hpp>
 #include <openpfc/runtime/gpu/gpu_spectral_stack.hpp>
 #include <openpfc/runtime/gpu/incompressible_device.hpp>
@@ -37,20 +39,43 @@ struct DeviceSession {
   // The stack is not movable. Construct it in place, and destroy the
   // velocity buffers before the FFT they were planned against.
   std::optional<pfc::sim::stacks::GPUSpectralStack<SessionSpace>> stack;
+  std::unique_ptr<pfc::fft::SingleDeviceFFT<SessionSpace>> local;
   pfc::incompressible::DeviceVelocity<SessionSpace> velocity;
+  pfc::fft::IDeviceFFT<SessionSpace> &transform() {
+    return local ? *local : stack->fft();
+  }
 };
 
 void destroy_device_session(DeviceSession *session) { delete session; }
 
 DeviceSessionPtr start_device_session(State &state, int rank, int nproc) {
+  return start_device_session(state, rank, nproc, TransformChoice::Distributed);
+}
+
+DeviceSessionPtr start_device_session(State &state, int rank, int nproc,
+                                      TransformChoice choice) {
+  if (choice != TransformChoice::Distributed && choice != TransformChoice::Local)
+    throw std::invalid_argument("flow: invalid transform choice");
+  if (choice == TransformChoice::Local && nproc != 1)
+    throw std::invalid_argument("flow: local transform requires one rank");
   auto session = DeviceSessionPtr(new DeviceSession());
   auto domain = pfc::domain::create(
       pfc::GridSize({state.n[0], state.n[1], state.n[2]}),
       pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
       pfc::GridSpacing({state.spacing[0], state.spacing[1], state.spacing[2]}));
-  session->stack.emplace(std::move(domain), rank, nproc, MPI_COMM_WORLD);
-  pfc::incompressible::prepare_device_velocity(session->velocity,
-                                               session->stack->fft(), state.n,
+  if (choice == TransformChoice::Local) {
+    pfc::runtime::gpu::bind_local_device(MPI_COMM_WORLD);
+    session->local =
+        std::make_unique<pfc::fft::SingleDeviceFFT<SessionSpace>>(state.n);
+  } else {
+    session->stack.emplace(std::move(domain), rank, nproc, MPI_COMM_WORLD);
+  }
+  auto &transform = session->transform();
+  const auto &host = state.stack->fft();
+  if (!(transform.get_inbox_bounds() == host.get_inbox_bounds()) ||
+      !(transform.get_outbox_bounds() == host.get_outbox_bounds()))
+    throw std::runtime_error("flow: transform boxes differ from the host state");
+  pfc::incompressible::prepare_device_velocity(session->velocity, transform, state.n,
                                                state.spacing, state.nu, state.dt);
   pfc::incompressible::upload_device_velocity(session->velocity, state.u, state.v,
                                               state.w);
@@ -68,7 +93,7 @@ DeviceSessionPtr start_device_session(State &state, int rank, int nproc) {
 
 void step_device_session(DeviceSession &session, DeviceProfile *profile) {
   pfc::incompressible::StepProfile step;
-  pfc::incompressible::step_device_velocity(session.velocity, session.stack->fft(),
+  pfc::incompressible::step_device_velocity(session.velocity, session.transform(),
                                             true,
                                             profile == nullptr ? nullptr : &step);
   if (profile == nullptr) return;
