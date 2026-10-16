@@ -57,6 +57,9 @@ struct CUDAAlloc {
   static error_t memcpy_d2h(void *dst, const void *src, std::size_t bytes) {
     return cudaMemcpy(dst, src, bytes, cudaMemcpyDeviceToHost);
   }
+  static error_t memset_zero(void *dst, std::size_t bytes) {
+    return cudaMemset(dst, 0, bytes);
+  }
   static error_t get_last_error() { return cudaGetLastError(); }
   static const char *error_string(error_t err) { return cudaGetErrorString(err); }
 };
@@ -76,6 +79,9 @@ struct HIPAlloc {
   }
   static error_t memcpy_d2h(void *dst, const void *src, std::size_t bytes) {
     return hipMemcpy(dst, src, bytes, hipMemcpyDeviceToHost);
+  }
+  static error_t memset_zero(void *dst, std::size_t bytes) {
+    return hipMemset(dst, 0, bytes);
   }
   static error_t get_last_error() { return hipGetLastError(); }
   static const char *error_string(error_t err) { return hipGetErrorString(err); }
@@ -158,6 +164,16 @@ public:
   const T *data() const { return m_device_ptr; }
   std::size_t size() const { return m_size; }
   bool empty() const { return m_size == 0; }
+
+  /// Set every element to all-zero bytes (0 for arithmetic and complex types).
+  void zero() {
+    if (m_size > 0) {
+      auto err = Alloc::memset_zero(m_device_ptr, m_size * sizeof(T));
+      if (err != Alloc::success) {
+        throw_on_error(err, "memset failed");
+      }
+    }
+  }
 
   void copy_from_host(
       const std::vector<T> &src,

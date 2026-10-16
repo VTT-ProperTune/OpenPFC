@@ -215,6 +215,49 @@ TEST_CASE("device FieldOperations match the host dot, halo and CG",
   REQUIRE(rel(hxsol[1], dxsol[1]) < 1e-8);
 }
 
+TEST_CASE("a device Field starts zero and allocates its host mirror on demand",
+          "[field_ops][gpu]") {
+  if (!mechanics_test::available()) SKIP("no device");
+  int rank = 0, nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  auto domain =
+      pfc::domain::with_spacing({kN, kN, 4}, {1.0, 1.0, 1.0}, {true, true, true});
+  auto decomp = pfc::decomposition::create(domain, nproc);
+  const auto box = pfc::decomposition::local_box(decomp, rank);
+
+  // Never viewed on the host: the first sync zeroes the device buffer.
+  DField a(domain, box, 1);
+  std::vector<double> back(a.size(), 1.0);
+  a.sync_to_device();
+  a.buffer().copy_to_host(back.data(), back.size());
+  REQUIRE(std::all_of(back.begin(), back.end(), [](double v) { return v == 0.0; }));
+
+  // A host write still round-trips through the mirror, halo included.
+  DField b(domain, box, 1);
+  b.with_host_view([](double *p, std::size_t n) {
+    for (std::size_t q = 0; q < n; ++q) p[q] = static_cast<double>(q) + 0.5;
+  });
+  b.sync_to_device();
+  b.buffer().copy_to_host(back.data(), back.size());
+  bool same = true;
+  for (std::size_t q = 0; q < back.size(); ++q)
+    same = same && back[q] == static_cast<double>(q) + 0.5;
+  REQUIRE(same);
+
+  // A read of a field written only on the device sees the device data.
+  DField c(domain, box, 1);
+  c.sync_to_device();
+  std::vector<double> ones(c.size(), 2.0);
+  c.buffer().copy_from_host(ones.data(), ones.size());
+  c.note_device_write();
+  double sum = 0.0;
+  c.with_host_read([&](const double *p, std::size_t n) {
+    for (std::size_t q = 0; q < n; ++q) sum += p[q];
+  });
+  REQUIRE(sum == 2.0 * static_cast<double>(c.size()));
+}
+
 int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
   const int result = Catch::Session().run(argc, argv);

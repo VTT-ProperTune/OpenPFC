@@ -110,8 +110,9 @@ public:
       throw std::invalid_argument("Field: iteration halo width must be >= 0");
     }
     if constexpr (!is_host_space) {
+      // The host mirror is allocated on first use (ensure_host_mirror_); until
+      // then it stands for the zero-initialized content it would have had.
       m_residency = Residency::device_backed();
-      m_host_mirror.assign(m_buffer.size(), T{});
     }
   }
 
@@ -147,8 +148,8 @@ public:
   [[nodiscard]] pfc::field::FieldView<T> view() const noexcept
     requires is_host_space
   {
-    return pfc::field::FieldView<T>(m_buffer.data(), m_buffer.size(), padded_extents_(),
-                                    spacing(), local_origin_());
+    return pfc::field::FieldView<T>(m_buffer.data(), m_buffer.size(),
+                                    padded_extents_(), spacing(), local_origin_());
   }
 
   /** @brief Mutable non-owning view over the storage (host space only). */
@@ -176,9 +177,7 @@ public:
   /// LocalField-compatible alias of `local_size()`.
   pfc::Int3 size3() const noexcept { return m_box.size; }
   /// Global domain extents `{Nx, Ny, Nz}` (LocalField-compatible).
-  pfc::Int3 global_size() const noexcept {
-    return pfc::domain::get_size(m_domain);
-  }
+  pfc::Int3 global_size() const noexcept { return pfc::domain::get_size(m_domain); }
   /// Global index of local `(0,0,0)` (LocalField-compatible).
   pfc::Int3 lower_global() const noexcept { return m_box.low; }
   const pfc::Real3 &spacing() const noexcept {
@@ -248,8 +247,7 @@ public:
           if constexpr (std::is_invocable_v<Fn &, double, double, double, T>) {
             const auto c = coords(i, j, k);
             fn(c[0], c[1], c[2], (*this)(i, j, k));
-          } else if constexpr (std::is_invocable_v<Fn &, const pfc::Real3 &,
-                                                   T>) {
+          } else if constexpr (std::is_invocable_v<Fn &, const pfc::Real3 &, T>) {
             fn(coords(i, j, k), (*this)(i, j, k));
           } else {
             fn(i, j, k);
@@ -329,7 +327,10 @@ public:
   void sync_to_device() {
     if constexpr (!is_host_space) {
       if (m_residency.device_needs_refresh()) {
-        m_buffer.copy_from_host(m_host_mirror.data(), m_host_mirror.size());
+        if (m_host_mirror.size() != m_buffer.size())
+          m_buffer.zero(); // a mirror never allocated is all zeros
+        else
+          m_buffer.copy_from_host(m_host_mirror.data(), m_host_mirror.size());
         m_residency.note_synced();
       }
     }
@@ -345,6 +346,7 @@ public:
     if constexpr (is_host_space) {
       fn(m_buffer.data(), m_buffer.size());
     } else {
+      ensure_host_mirror_();
       if (m_residency.host_needs_refresh()) {
         m_buffer.copy_to_host(m_host_mirror.data(), m_host_mirror.size());
         m_residency.note_synced();
@@ -368,6 +370,7 @@ public:
       fn(m_buffer.data(), m_buffer.size());
       return;
     }
+    ensure_host_mirror_();
     if (m_residency.host_needs_refresh()) {
       m_buffer.copy_to_host(m_host_mirror.data(), m_host_mirror.size());
       m_residency.note_synced();
@@ -376,6 +379,12 @@ public:
   }
 
 private:
+  /// Allocate the zero-initialized host mirror the first time it is needed.
+  void ensure_host_mirror_() {
+    if (m_host_mirror.size() != m_buffer.size())
+      m_host_mirror.assign(m_buffer.size(), T{});
+  }
+
   pfc::Int3 padded_extents_() const noexcept {
     return {m_box.size[0] + 2 * m_halo, m_box.size[1] + 2 * m_halo,
             m_box.size[2] + 2 * m_halo};
@@ -400,8 +409,8 @@ private:
 
   pfc::Domain m_domain{};
   pfc::Box3i m_box{};
-  int m_halo{0};             ///< storage padding
-  int m_iteration_halo{0};   ///< LocalField-compatible stencil / interior halo
+  int m_halo{0};           ///< storage padding
+  int m_iteration_halo{0}; ///< LocalField-compatible stencil / interior halo
   storage_type m_buffer{};
   Residency m_residency{Residency::host_only()};
   // Host mirror for a device-backed field; stays empty for a host-space field.
