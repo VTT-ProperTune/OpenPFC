@@ -7,6 +7,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- `polycrystal_shear` shears a periodic FCC polycrystal with the existing
+  slip law and the GMRES finite-strain solver. Orientations, the aluminum
+  parameters and the mid-plane scalar stay in the application. The scalar
+  is the Frobenius norm of the symmetric-Piola deviator. The executable
+  follows the portable compiler flags, and a failed output directory stops
+  every rank (#572).
+
 - Fix: device grain adjacency reports the full distinct-contact count when
   the caller buffer is too small. A table sized from that buffer used to
   stop at the keys that fit (`CUDA_Grain3D` returned 8 instead of 274).

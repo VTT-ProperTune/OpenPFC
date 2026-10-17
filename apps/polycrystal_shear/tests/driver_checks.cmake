@@ -1,0 +1,178 @@
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+if(NOT DEFINED MODE OR NOT DEFINED EXE)
+  message(FATAL_ERROR "MODE and EXE are required")
+endif()
+if(NOT DEFINED TIMEOUT)
+  set(TIMEOUT 180)
+endif()
+
+function(shear_failed result)
+  if(result EQUAL 0)
+    return()
+  endif()
+  if(result MATCHES "timeout")
+    message(FATAL_ERROR "${MODE} timed out: ${result}")
+  endif()
+  set(failed TRUE PARENT_SCOPE)
+endfunction()
+
+function(require_text output pattern)
+  if(NOT output MATCHES "${pattern}")
+    message(FATAL_ERROR "${MODE} output did not match ${pattern}:\n${output}")
+  endif()
+endfunction()
+
+if(MODE STREQUAL "bad-outdir")
+  if(NOT MPIEXEC)
+    message(FATAL_ERROR "MPIEXEC is required")
+  endif()
+  set(cmd ${MPIEXEC} ${NUMPROC_FLAG} 2)
+  if(PREFLAGS)
+    separate_arguments(pre NATIVE_COMMAND "${PREFLAGS}")
+    list(APPEND cmd ${pre})
+  endif()
+  list(APPEND cmd "${EXE}" ${POSTFLAGS}
+       --size 4 --steps 1 --shear 0.002 --grains 1
+       --outdir /dev/null/polycrystal-shear --commit test)
+  execute_process(
+    COMMAND ${cmd}
+    RESULT_VARIABLE rc
+    OUTPUT_VARIABLE out
+    ERROR_VARIABLE err
+    TIMEOUT ${TIMEOUT})
+  set(failed FALSE)
+  shear_failed("${rc}")
+  if(NOT failed)
+    message(FATAL_ERROR "bad-outdir exited 0; ranks must fail together:\n${out}\n${err}")
+  endif()
+  require_text("${out}${err}" "outdir:")
+  if("${out}${err}" MATCHES "step 1/")
+    message(FATAL_ERROR "bad-outdir continued into the solve:\n${out}\n${err}")
+  endif()
+  return()
+endif()
+
+if(MODE STREQUAL "parity")
+  if(NOT MPIEXEC OR NOT ROOT)
+    message(FATAL_ERROR "MPIEXEC and ROOT are required")
+  endif()
+  file(REMOVE_RECURSE "${ROOT}")
+  foreach(ranks one two)
+    if(ranks STREQUAL "one")
+      set(nproc 1)
+    else()
+      set(nproc 2)
+    endif()
+    set(cmd ${MPIEXEC} ${NUMPROC_FLAG} ${nproc})
+    if(PREFLAGS)
+      separate_arguments(pre NATIVE_COMMAND "${PREFLAGS}")
+      list(APPEND cmd ${pre})
+    endif()
+    list(APPEND cmd "${EXE}")
+    if(POSTFLAGS)
+      separate_arguments(post NATIVE_COMMAND "${POSTFLAGS}")
+      list(APPEND cmd ${post})
+    endif()
+    list(APPEND cmd --size 8 --grains 2 --steps 2 --shear 0.002 --seed 1
+         --outdir "${ROOT}/${ranks}" --commit test)
+    execute_process(
+      COMMAND ${cmd}
+      RESULT_VARIABLE rc
+      OUTPUT_VARIABLE out
+      ERROR_VARIABLE err
+      TIMEOUT ${TIMEOUT})
+    if(NOT rc EQUAL 0)
+      message(FATAL_ERROR "${nproc}-rank parity run failed (${rc}):\n${out}\n${err}")
+    endif()
+    require_text("${out}" "status=ok grid=8x8x8 steps_completed=2")
+  endforeach()
+  foreach(slice slice-00001.f32 slice-00002.f32)
+    file(SHA256 "${ROOT}/one/${slice}" left)
+    file(SHA256 "${ROOT}/two/${slice}" right)
+    if(NOT left STREQUAL right)
+      message(FATAL_ERROR "${slice} differs across 1 and 2 ranks")
+    endif()
+  endforeach()
+  message(STATUS "mid-plane slices match")
+  return()
+endif()
+
+function(run_render label ffmpeg_value outdir)
+  file(REMOVE_RECURSE "${outdir}")
+  file(MAKE_DIRECTORY "${outdir}")
+  set(cmd ${CMAKE_COMMAND} -E env "FFMPEG=${ffmpeg_value}" "${EXE}"
+      --size 4 --steps 2 --shear 0.002 --render 1 --fps 4
+      --outdir "${outdir}" --commit test)
+  execute_process(
+    COMMAND ${cmd}
+    RESULT_VARIABLE rc
+    OUTPUT_VARIABLE out
+    ERROR_VARIABLE err
+    TIMEOUT ${TIMEOUT})
+  set(render_rc "${rc}" PARENT_SCOPE)
+  set(render_out "${out}${err}" PARENT_SCOPE)
+endfunction()
+
+if(MODE STREQUAL "render-missing")
+  if(NOT ROOT)
+    message(FATAL_ERROR "ROOT is required")
+  endif()
+  run_render("missing" "/no/such/ffmpeg" "${ROOT}")
+  set(failed FALSE)
+  shear_failed("${render_rc}")
+  if(NOT failed)
+    message(FATAL_ERROR "missing ffmpeg exited 0:\n${render_out}")
+  endif()
+  require_text("${render_out}" "ffmpeg")
+  require_text("${render_out}" "status=render-failed")
+  return()
+endif()
+
+if(MODE STREQUAL "render-injection")
+  if(NOT ROOT)
+    message(FATAL_ERROR "ROOT is required")
+  endif()
+  set(marker "${ROOT}/injection-marker")
+  file(REMOVE_RECURSE "${ROOT}")
+  # A shell would split this into `touch` plus the marker path. An argv
+  # spawn treats the whole string as one executable name.
+  run_render("injection" "touch ${marker}" "${ROOT}/out")
+  if(EXISTS "${marker}")
+    message(FATAL_ERROR "FFMPEG was executed by a shell")
+  endif()
+  set(failed FALSE)
+  shear_failed("${render_rc}")
+  if(NOT failed)
+    message(FATAL_ERROR "shell-like FFMPEG value unexpectedly succeeded:\n${render_out}")
+  endif()
+  require_text("${render_out}" "ffmpeg")
+  return()
+endif()
+
+if(MODE STREQUAL "render")
+  if(NOT ROOT OR NOT FFMPEG)
+    message(FATAL_ERROR "ROOT and FFMPEG are required")
+  endif()
+  file(REMOVE_RECURSE "${ROOT}")
+  file(MAKE_DIRECTORY "${ROOT}/bin dir")
+  file(CREATE_LINK "${FFMPEG}" "${ROOT}/bin dir/ffmpeg" SYMBOLIC)
+  set(spaced "${ROOT}/bin dir/ffmpeg")
+  set(outdir "${ROOT}/out dir")
+  run_render("spaced" "${spaced}" "${outdir}")
+  if(NOT render_rc EQUAL 0)
+    message(FATAL_ERROR "render failed (${render_rc}):\n${render_out}")
+  endif()
+  require_text("${render_out}" "rendered ")
+  if(NOT EXISTS "${outdir}/microstructure.mp4")
+    message(FATAL_ERROR "microstructure.mp4 was not written")
+  endif()
+  file(SIZE "${outdir}/microstructure.mp4" bytes)
+  if(bytes LESS 1)
+    message(FATAL_ERROR "microstructure.mp4 is empty")
+  endif()
+  return()
+endif()
+
+message(FATAL_ERROR "unknown MODE ${MODE}")
