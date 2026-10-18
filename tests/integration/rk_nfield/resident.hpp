@@ -91,7 +91,15 @@ inline double verify_three() {
   fill_constant(u, 0.25);
   fill_constant(v, 0.50);
   fill_constant(w, 0.75);
-  rk.step(t, u, v, w);
+  int final_checks = 0;
+  rk.step_checked(
+      t,
+      [&](double proposed) {
+        ++final_checks;
+        require(std::abs(proposed - (t + dt)) < 1e-15, "3-field final time");
+      },
+      u, v, w);
+  require(final_checks == 1, "3-field final check count");
   double eu = 0.25, ev = 0.50, ew = 0.75;
   rk4_triple(t, dt, eu, ev, ew);
   const double err =
@@ -125,7 +133,15 @@ inline double verify_four() {
   fill_constant(v, 0.40);
   fill_constant(w, 0.60);
   fill_constant(q, 0.80);
-  rk.step(t, u, v, w, q);
+  int final_checks = 0;
+  rk.step_checked(
+      t,
+      [&](double proposed) {
+        ++final_checks;
+        require(std::abs(proposed - (t + dt)) < 1e-15, "4-field final time");
+      },
+      u, v, w, q);
+  require(final_checks == 1, "4-field final check count");
   double eu = 0.20, ev = 0.40, ew = 0.60, eq = 0.80;
   rk4_quad(t, dt, eu, ev, ew, eq);
   const double err = std::max({max_abs_diff(u, eu), max_abs_diff(v, ev),

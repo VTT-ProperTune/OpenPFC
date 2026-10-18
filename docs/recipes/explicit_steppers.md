@@ -130,6 +130,31 @@ for (int step = 0; step < n_steps; ++step) {
 }
 ```
 
+## Check a coupled final state before acceptance
+
+A constraint on a nonlinear derived variable can fail after the final RK
+combination even when every stage was valid. The host multi-field factory
+and resident CUDA/HIP two-/three-/four-field factories expose
+`step_checked(t, check, fields...)` for this case. The ordinary `step`
+operation retains its existing behaviour.
+
+The host callback `check(t + dt)` runs once with all final fields published.
+It returns `void` and throws to reject the candidate. The complete padded
+accepted state is then restored in the same field allocations, and the
+same stepper can retry. Existing stage/backup buffers supply rollback;
+no additional device allocation or full-state host upload is introduced.
+A host callback can inspect a device field through its read-only
+`with_host_read` mirror. That explicit diagnostic download is separate
+from device-resident evolution.
+
+The check must not modify or resize the bound evolving fields. It may
+compute model-owned derived quantities, but rollback of those auxiliaries,
+external clocks and ledgers belongs to the caller. In an MPI calculation,
+the caller must agree any rank-local failure before throwing; the fixed
+field factory does not infer a communicator. A rejected step returns no
+new time. A failed stage also restores accepted fields and never calls the
+final check.
+
 ## Complete working examples
 
 See [`../../examples/19_explicit_stepper_fd.cpp`](../../examples/19_explicit_stepper_fd.cpp) for the FD backend and [`../../examples/20_explicit_stepper_spectral.cpp`](../../examples/20_explicit_stepper_spectral.cpp) for the spectral backend. Both solve the same heat equation with identical physics (`HeatModel::rhs`) but different gradient evaluators.

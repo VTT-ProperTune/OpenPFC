@@ -262,29 +262,61 @@ public:
     static_assert((std::is_same_v<U, Scalar> && ...),
                   "MultiExplicitRKStepper requires std::vector<Scalar>");
 
-    const unsigned int s = m_tableau.stage_count();
     auto u_pack = std::tie(u_buffers...);
     validate_sizes(u_pack, std::index_sequence_for<U...>{});
 
-    // Compute stages for each field
-    for (unsigned int i = 0; i < s; ++i) {
-      // Build temp states for each field
-      auto u_temp_pack =
-          make_u_temp_tuples(u_pack, std::index_sequence_for<U...>{}, i);
-
-      // Compute stage i for all fields
-      const double stage_time = t + m_tableau.c(i) * m_dt;
-      auto du_pack = make_du_tuple(std::index_sequence_for<U...>{});
-      m_rhs(stage_time, u_temp_pack, du_pack);
-
-      // Copy du to k_i for each field
-      copy_du_to_k(du_pack, std::index_sequence_for<U...>{}, i);
-    }
+    compute_stages(t, u_pack, std::index_sequence_for<U...>{});
 
     // Final accumulation for each field
     accumulate(u_pack, std::index_sequence_for<U...>{});
 
     return t + m_dt;
+  }
+
+  /**
+   * @brief Check the published final state before accepting a coupled step.
+   *
+   * `check(t + dt)` runs on the host after all final fields are published.
+   * It returns void and throws to reject. The bound evolving fields must
+   * remain read-only, with fixed storage. On rejection their complete padded
+   * values are restored in place; the same stepper may retry. Other callback
+   * state, including derived fields and MPI agreement, belongs to the caller.
+   * Existing stage scratch holds the accepted backup; no new buffer is needed.
+   */
+  template <class Check, class... U>
+    requires std::invocable<Check &, double> &&
+             std::is_void_v<std::invoke_result_t<Check &, double>>
+  double step_checked(double t, Check &&check, std::vector<U> &...u_buffers) {
+    static_assert(sizeof...(U) == N);
+    static_assert((std::is_same_v<U, Scalar> && ...));
+    auto u_pack = std::tie(u_buffers...);
+    constexpr auto indices = std::index_sequence_for<U...>{};
+    validate_sizes(u_pack, indices);
+    compute_stages(t, u_pack, indices);
+    [&]<std::size_t... I>(std::index_sequence<I...>) {
+      (std::copy(std::get<I>(u_pack).begin(), std::get<I>(u_pack).end(),
+                 m_u_temp[I].begin()),
+       ...);
+    }(indices);
+    accumulate(u_pack, indices);
+    try {
+      check(t + m_dt);
+    } catch (...) {
+      [&]<std::size_t... I>(std::index_sequence<I...>) {
+        (std::copy(m_u_temp[I].begin(), m_u_temp[I].end(),
+                   std::get<I>(u_pack).begin()),
+         ...);
+      }(indices);
+      throw;
+    }
+    return t + m_dt;
+  }
+
+  template <class Check, pfc::field::HostFieldState<Scalar>... Fs>
+    requires(sizeof...(Fs) == N) && std::invocable<Check &, double> &&
+            std::is_void_v<std::invoke_result_t<Check &, double>>
+  double step_checked(double t, Check &&check, Fs &...fields) {
+    return step_checked(t, std::forward<Check>(check), fields.vec()...);
   }
 
   /** Advance every host field by one explicit RK step (via `vec()`). */
@@ -297,6 +329,23 @@ public:
   double dt() const noexcept { return m_dt; }
 
 private:
+  template <class UPack, std::size_t... I>
+  void compute_stages(double t, UPack &u_pack, std::index_sequence<I...> indices) {
+    const unsigned int s = m_tableau.stage_count();
+    for (unsigned int i = 0; i < s; ++i) {
+      // Build temp states for each field
+      auto u_temp_pack = make_u_temp_tuples(u_pack, indices, i);
+
+      // Compute stage i for all fields
+      const double stage_time = t + m_tableau.c(i) * m_dt;
+      auto du_pack = make_du_tuple(indices);
+      m_rhs(stage_time, u_temp_pack, du_pack);
+
+      // Copy du to k_i for each field
+      copy_du_to_k(du_pack, indices, i);
+    }
+  }
+
   template <class... U, std::size_t... I>
   auto make_u_temp_tuples(std::tuple<std::vector<U> &...> &u_pack,
                           std::index_sequence<I...>, unsigned int stage_idx) {

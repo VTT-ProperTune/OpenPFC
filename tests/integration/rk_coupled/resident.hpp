@@ -3,7 +3,9 @@
 #pragma once
 #include "host.hpp"
 #include <cstdio>
+#include <cstring>
 #include <limits>
+#include <openpfc/kernel/grain/diagnostics.hpp>
 #include <openpfc/runtime/gpu/comm_halo_exchange_gpu.hpp>
 #if defined(__HIPCC__) || defined(__HIP__)
 #include <openpfc/runtime/hip/explicit_rk.hpp>
@@ -95,7 +97,12 @@ inline double verify_resident(bool fourth, bool uniform = false, double dt = .01
   stage = 0;
   maximum = 0;
   gold = &first_gold;
-  const double next = rk.step(t, u, v);
+  pfc::grain::Diagnostics ordinary_traffic;
+  double next = 0;
+  {
+    pfc::grain::diagnostics::Scope observing(&ordinary_traffic);
+    next = rk.step(t, u, v);
+  }
   require(std::abs(next - (t + dt)) < 1e-15, "wrong accepted time");
   require(stage == gold->stages, "resident missing RK stage");
   auto compare_accepted = [&](const Pair &expected) {
@@ -119,6 +126,88 @@ inline double verify_resident(bool fourth, bool uniform = false, double dt = .01
   compare_accepted(first_gold.result);
   require(maximum < 2e-11,
           "observed resident RK differs from independent stage/state oracle");
+  if (!uniform) {
+    fill_owned(global_initial);
+    stage = 0;
+    std::array<std::vector<double>, 2> before;
+    auto snapshot = [&](auto &field, int f) {
+      field.with_host_read([&](const double *ptr, std::size_t count) {
+        before[f].assign(ptr, ptr + count);
+      });
+    };
+    snapshot(u, 0);
+    snapshot(v, 1);
+    const auto *address_u = u.data(), *address_v = v.data();
+    pfc::grain::Diagnostics rejected_traffic, accepted_traffic;
+    int final_calls = 0;
+    bool rejected = false;
+    try {
+      pfc::grain::diagnostics::Scope observing(&rejected_traffic);
+      rk.step_checked(
+          t,
+          [&](double proposed) {
+            ++final_calls;
+            require(std::abs(proposed - (t + dt)) < 1e-15,
+                    "final checker received wrong time");
+            require(stage == first_gold.stages, "final checker ran before stages");
+            compare_accepted(first_gold.result);
+            // Only one rank has the physical constraint failure. The caller
+            // agrees it before throwing so every integrator restores its state.
+            int admitted = rank() != 0;
+            MPI_Allreduce(MPI_IN_PLACE, &admitted, 1, MPI_INT, MPI_MIN,
+                          MPI_COMM_WORLD);
+            if (!admitted) throw std::runtime_error("forced final rejection");
+          },
+          u, v);
+    } catch (const std::runtime_error &e) {
+      require(std::string(e.what()) == "forced final rejection",
+              "unexpected resident final-check exception");
+      rejected = true;
+    }
+    require(rejected && final_calls == 1, "final rejection not propagated");
+    auto restored = [&](auto &field, int f) {
+      require(!field.residency().device_needs_refresh(),
+              "final rejection made host state authoritative");
+      field.with_host_read([&](const double *ptr, std::size_t count) {
+        require(count == before[f].size() &&
+                    std::memcmp(ptr, before[f].data(), count * sizeof(double)) == 0,
+                "final rejection changed accepted padded device values");
+      });
+    };
+    restored(u, 0);
+    restored(v, 1);
+    require(u.data() == address_u && v.data() == address_v,
+            "final rejection replaced field storage");
+    stage = 0;
+    {
+      pfc::grain::diagnostics::Scope observing(&accepted_traffic);
+      const auto accepted_time = rk.step_checked(
+          t,
+          [&](double proposed) {
+            ++final_calls;
+            require(std::abs(proposed - (t + dt)) < 1e-15,
+                    "successful checker received wrong time");
+            compare_accepted(first_gold.result);
+          },
+          u, v);
+      require(std::abs(accepted_time - (t + dt)) < 1e-15,
+              "wrong time after resident retry");
+    }
+    require(final_calls == 2, "successful final check not called once");
+    for (const auto *traffic : {&rejected_traffic, &accepted_traffic}) {
+      require(
+          traffic->allocations(pfc::grain::diagnostics::Space::Device).requests == 0,
+          "final check allocated additional device buffers");
+      const auto direction =
+          static_cast<std::size_t>(pfc::grain::diagnostics::Direction::HostToDevice);
+      for (std::size_t f = 0; f < pfc::grain::diagnostics::field_count; ++f)
+        require(traffic->copies.bytes[direction][f] ==
+                    ordinary_traffic.copies.bytes[direction][f],
+                "final check added a host-to-device upload");
+    }
+    require(maximum < 2e-11,
+            "checked resident state differs from independent oracle");
+  }
   Pair global_accepted = first_gold.result;
   for (int step = 1; step < steps; ++step) {
     Oracle expected(global_accepted, n, t + step * dt, dt, fourth, model);

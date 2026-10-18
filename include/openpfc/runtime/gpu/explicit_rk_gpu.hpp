@@ -25,6 +25,7 @@
 #if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
 
 #include <array>
+#include <concepts>
 #include <cstddef>
 #include <stdexcept>
 #include <tuple>
@@ -224,6 +225,20 @@ public:
   }
 
   template <class... Fs> double step(double t, Fs &...fs) {
+    return step_checked(t, [](double) {}, fs...);
+  }
+
+  /**
+   * Check the published final state on the host; throw to reject it.
+   * The callback returns void and must not write the bound fields or change
+   * their storage. Caller-owned auxiliaries and collective agreement stay
+   * with the caller. Rejection restores every padded device value in place,
+   * using the existing backup; no full-state host upload is performed.
+   */
+  template <class Check, class... Fs>
+    requires std::invocable<Check &, double> &&
+             std::is_void_v<std::invoke_result_t<Check &, double>>
+  double step_checked(double t, Check &&check, Fs &...fs) {
     static_assert(sizeof...(Fs) == N, "device explicit RK: wrong field count");
     const std::array<FieldT *, N> got{&fs...};
     for (std::size_t f = 0; f < N; ++f) {
@@ -254,7 +269,13 @@ public:
       }
       restore_accepted();
     }
-    accumulate();
+    try {
+      accumulate();
+      check(t + m_dt);
+    } catch (...) {
+      restore_accepted();
+      throw;
+    }
     return t + m_dt;
   }
 

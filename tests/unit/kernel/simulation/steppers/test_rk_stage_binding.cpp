@@ -291,3 +291,72 @@ TEST_CASE("Coupled RK preparation receives actual stage time",
   REQUIRE(v.vec() == accepted_v);
   REQUIRE(w.vec() == accepted_w);
 }
+
+TEST_CASE("Coupled RK final checks restore accepted fields and allow retry",
+          "[rk_stage_binding]") {
+  const auto geometry = pfc::domain::create({2, 3, 4});
+  const auto box = pfc::Box3i::from_bounds({0, 0, 0}, {1, 2, 3});
+  struct Oscillator {
+    auto rhs(double, const CoupledLocal &q) const {
+      return std::tuple{q.v.value, -q.u.value};
+    }
+  } model;
+  for (bool fourth : {false, true}) {
+    Field u(geometry, box, 1), v(geometry, box, 1);
+    std::fill(u.vec().begin(), u.vec().end(), -777.0);
+    std::fill(v.vec().begin(), v.vec().end(), -333.0);
+    for (int k = 0; k < 4; ++k)
+      for (int j = 0; j < 3; ++j)
+        for (int i = 0; i < 2; ++i) {
+          u(i, j, k) = .3 + .1 * i + .05 * j + .02 * k;
+          v(i, j, k) = .9 - .2 * i + .03 * j - .04 * k;
+        }
+    const auto before_u = u.vec(), before_v = v.vec();
+    const auto *address_u = u.data(), *address_v = v.data();
+    bool stage_failure = false;
+    auto eval = pfc::field::create_composite<CoupledLocal>(
+        BoundEvaluator{u, &stage_failure}, BoundEvaluator{v});
+    const auto tableau = fourth ? pfc::sim::steppers::make_rk4_classical<double>()
+                                : pfc::sim::steppers::make_rk2_heun<double>();
+    auto rk = pfc::sim::steppers::create(std::tie(u, v), eval, model, .1, tableau,
+                                         pfc::sim::LoopPolicy::Serial);
+    const double dt = .1;
+    const double a = 1 - dt * dt / 2 + (fourth ? dt * dt * dt * dt / 24 : 0);
+    const double b = dt - (fourth ? dt * dt * dt / 6 : 0);
+    int calls = 0;
+    bool reject = true;
+    auto final_check = [&](double proposed_time) {
+      ++calls;
+      REQUIRE_THAT(proposed_time, Catch::Matchers::WithinAbs(.8, 1e-15));
+      REQUIRE(u.data() == address_u);
+      REQUIRE(v.data() == address_v);
+      for (int k = 0; k < 4; ++k)
+        for (int j = 0; j < 3; ++j)
+          for (int i = 0; i < 2; ++i) {
+            const auto q = u.idx(i, j, k);
+            REQUIRE_THAT(u(i, j, k), Catch::Matchers::WithinAbs(
+                                         a * before_u[q] + b * before_v[q], 1e-14));
+            REQUIRE_THAT(v(i, j, k), Catch::Matchers::WithinAbs(
+                                         a * before_v[q] - b * before_u[q], 1e-14));
+          }
+      if (reject) throw std::runtime_error("forced final rejection");
+    };
+    REQUIRE_THROWS_WITH(rk.step_checked(.7, final_check, u, v),
+                        "forced final rejection");
+    REQUIRE(calls == 1);
+    REQUIRE(u.vec() == before_u);
+    REQUIRE(v.vec() == before_v);
+    REQUIRE(u.data() == address_u);
+    REQUIRE(v.data() == address_v);
+    reject = false;
+    REQUIRE_THAT(rk.step_checked(.7, final_check, u, v),
+                 Catch::Matchers::WithinAbs(.8, 1e-15));
+    REQUIRE(calls == 2);
+    const auto accepted_u = u.vec(), accepted_v = v.vec();
+    stage_failure = true;
+    REQUIRE_THROWS_AS(rk.step_checked(.8, final_check, u, v), std::runtime_error);
+    REQUIRE(calls == 2);
+    REQUIRE(u.vec() == accepted_u);
+    REQUIRE(v.vec() == accepted_v);
+  }
+}
