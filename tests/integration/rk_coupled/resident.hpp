@@ -241,7 +241,161 @@ inline double verify_resident(bool fourth, bool uniform = false, double dt = .01
   return maximum;
 }
 
+// The point RHS reads a forcing field assembled by the host hook. Passing
+// time only to rhs() cannot make this nonautonomous problem correct.
+struct PreparedForcing {
+  OPENPFC_HD Increments rhs(double t, const Local &g) const noexcept {
+    return {g.u.value + t, -2. * g.v.value + t};
+  }
+};
+
+inline void verify_prepared_time() {
+  using namespace pfc::sim::steppers;
+  constexpr double start = .37, dt = .2;
+  const std::array<std::vector<double>, 4> clocks{
+      std::vector<double>{0.}, {0., .5}, {0., 1.}, {0., .5, .5, 1.}};
+  const std::array<std::vector<double>, 4> weights{
+      std::vector<double>{1.},
+      {0., 1.},
+      {.5, .5},
+      {1. / 6., 1. / 3., 1. / 3., 1. / 6.}};
+  const std::array<ButcherTableau<double>, 4> methods{
+      ButcherTableau<double>(1, {0.}, {1.}, {0.}, {}, "Euler", 1),
+      make_rk2_midpoint<double>(), make_rk2_heun<double>(),
+      make_rk4_classical<double>()};
+  for (std::size_t method = 0; method < methods.size(); ++method) {
+    auto geometry = domain(16);
+    auto dec = decomposition(geometry);
+    const auto box = pfc::decomposition::local_box(dec, rank());
+    pfc::data::Field<double, MemorySpace> u(geometry, box, 1), v(geometry, box, 1),
+        forcing(geometry, box, 1);
+    auto initialize = [](auto &field, double value) {
+      field.with_host_view(
+          [&](double *ptr, std::size_t n) { std::fill(ptr, ptr + n, value); });
+      field.sync_to_device();
+    };
+    initialize(u, .25);
+    initialize(v, -.75);
+    auto gu = pfc::gpu::create<UGrads>(forcing, 2);
+    auto gv = pfc::gpu::create<VGrads>(forcing, 2);
+    auto eval = pfc::gpu::create_composite_device<Local>(gu, gv);
+    std::vector<double> observed;
+    bool reject = false;
+    auto timed = [&](double time) {
+      const auto stage = observed.size();
+      require(stage < clocks[method].size(), "extra timed preparation");
+      observed.push_back(time);
+#if defined(__HIPCC__) || defined(__HIP__)
+      pfc::fill_hip_impl(forcing.data(), forcing.size(), time * time * time);
+#else
+      pfc::fill_cuda_impl(forcing.data(), forcing.size(), time * time * time);
+#endif
+      forcing.note_device_write();
+      if (reject && stage == (method == 0 ? 0 : 1))
+        throw std::runtime_error("forced timed preparation rejection");
+    };
+    eval.set_prepare(timed);
+    bool missing_clock = false;
+    try {
+      eval.prepare();
+    } catch (const std::logic_error &) {
+      missing_clock = true;
+    }
+    require(missing_clock && observed.empty(), "timed hook invented a clock");
+    int legacy_calls = 0;
+    eval.set_prepare([&] { ++legacy_calls; });
+    eval.prepare();
+    eval.prepare(start);
+    require(legacy_calls == 2 && observed.empty(), "legacy hook replacement");
+    eval.set_prepare(timed);
+    eval.set_prepare({});
+    eval.prepare();
+    eval.prepare(start);
+    eval.set_prepare(timed);
+    eval.set_prepare(nullptr);
+    eval.prepare();
+    eval.prepare(start);
+    require(observed.empty() && legacy_calls == 2, "clear retained a hook");
+    eval.set_prepare(std::function<void(double)>{});
+    eval.prepare();
+    eval.set_prepare(timed);
+    PreparedForcing model;
+    auto rk = create(std::tie(u, v), eval, model, dt, methods[method]);
+    std::array<std::vector<double>, 2> before;
+    u.with_host_read(
+        [&](const double *p, std::size_t n) { before[0].assign(p, p + n); });
+    v.with_host_read(
+        [&](const double *p, std::size_t n) { before[1].assign(p, p + n); });
+    const auto *u_address = u.data(), *v_address = v.data();
+    reject = true;
+    bool rejected = false;
+    try {
+      rk.step(start, u, v);
+    } catch (const std::runtime_error &e) {
+      require(std::string(e.what()) == "forced timed preparation rejection",
+              "unexpected timed preparation exception");
+      rejected = true;
+    }
+    require(rejected, "timed preparation rejection lost");
+    auto restored = [&](auto &field, int f) {
+      field.with_host_read([&](const double *ptr, std::size_t n) {
+        require(n == before[f].size() &&
+                    std::memcmp(ptr, before[f].data(), n * sizeof(double)) == 0,
+                "timed preparation rejection changed padded state");
+      });
+      require(!field.residency().device_needs_refresh(),
+              "timed preparation rollback requires host upload");
+    };
+    restored(u, 0);
+    restored(v, 1);
+    require(u.data() == u_address && v.data() == v_address,
+            "timed preparation rejection replaced storage");
+    reject = false;
+    double expected_u = .25, expected_v = -.75;
+    for (int step = 0; step < 2; ++step) {
+      observed.clear();
+      const double time = start + step * dt;
+      const auto next = rk.step(time, u, v);
+      require(std::abs(next - (time + dt)) < 1e-15, "timed accepted clock");
+      require(observed.size() == clocks[method].size(), "missing timed stage");
+      for (std::size_t stage = 0; stage < observed.size(); ++stage) {
+        const double expected_time = time + dt * clocks[method][stage];
+        require(std::abs(observed[stage] - expected_time) < 1e-15,
+                "wrong preparation stage clock");
+        const double force = expected_time * expected_time * expected_time;
+        expected_u += dt * weights[method][stage] * (force + expected_time);
+        expected_v += dt * weights[method][stage] * (-2. * force + expected_time);
+      }
+      auto check = [&](auto &field, double expected) {
+        field.with_host_read([&](const double *ptr, std::size_t) {
+          auto n = field.size3();
+          for (int k = 0; k < n[2]; ++k)
+            for (int j = 0; j < n[1]; ++j)
+              for (int i = 0; i < n[0]; ++i) {
+                double value = ptr[field.idx(i, j, k)];
+                require(std::isfinite(value) && std::abs(value - expected) < 3e-14,
+                        "prepared forcing changed accepted solution");
+              }
+        });
+      };
+      check(u, expected_u);
+      check(v, expected_v);
+    }
+    if (method == 3) {
+      const double end = start + 2 * dt;
+      const double linear = (end * end - start * start) / 2.;
+      const double cubic = (std::pow(end, 4) - std::pow(start, 4)) / 4.;
+      require(std::abs(expected_u - (.25 + linear + cubic)) < 3e-14 &&
+                  std::abs(expected_v - (-.75 + linear - 2 * cubic)) < 3e-14,
+              "RK4 prepared polynomial differs from analytic integral");
+    }
+    std::cout << "resident prepared-time method=" << method
+              << " clocks/forcing/rollback/retry/legacy passed\n";
+  }
+}
+
 inline int run_resident() {
+  verify_prepared_time();
   for (bool fourth : {false, true}) {
     std::cout << (fourth ? "RK4" : "RK2")
               << " resident independent nonlinear stage/RHS/halo/state error="

@@ -130,6 +130,34 @@ for (int step = 0; step < n_steps; ++step) {
 }
 ```
 
+## Prepare resident stages at their actual time
+
+The resident CUDA/HIP coupled field factories publish a stage and call
+`eval.prepare(t + c_i*dt)` before its point RHS. A composite device evaluator
+accepts either a zero-argument hook or a hook taking `double stage_time`:
+
+```cpp
+eval.set_prepare([&](double stage_time) {
+  assemble_auxiliaries(stage_time);  // application-owned physics
+  halos.exchange();
+});
+```
+
+The clock comes from the same Butcher tableau as the RHS clock. This matters
+when a time-dependent auxiliary rate enters another flux or divergence.
+Applications do not count stages themselves. Installing either hook replaces
+the previous hook; `eval.set_prepare({})` clears preparation. Legacy
+`eval.set_prepare([&] { halos.exchange(); })` works with both `prepare()` and
+`prepare(t)`. With a timed hook, calling `prepare()` throws `std::logic_error`
+because there is no stage time to supply.
+
+The hook runs on the host and may launch device assembly kernels. It must
+finish communication and reach any required collective agreement before
+throwing. Stepper rollback restores the bound evolving fields; callers own
+auxiliary restoration or rebuilding before retry. The existing
+[resident coupled test](../../tests/integration/rk_coupled/resident.hpp)
+checks stage clocks, prepared forcing, rejection/retry and legacy callbacks.
+
 ## Check a coupled final state before acceptance
 
 A constraint on a nonlinear derived variable can fail after the final RK

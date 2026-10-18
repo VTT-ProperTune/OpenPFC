@@ -69,6 +69,7 @@
 
 #if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
 
+#include <concepts>
 #include <cstddef>
 #include <functional>
 #include <stdexcept>
@@ -458,10 +459,11 @@ private:
  *
  * Mirrors CPU `pfc::field::CompositeGradient<Composite, PerField...>`:
  * constructor takes one `FDGradientDevice<PerFieldGrads>` per field,
- * `prepare()` runs an optional host callback (typically Full halo
- * exchange), and `pod()` returns the packed payload. The callback is the
- * device counterpart of `FDGradient`'s halo prepare hook; mixed
- * derivatives need valid edge and corner ghosts.
+ * `prepare(t)` runs an optional host callback with the actual stage time
+ * (typically auxiliary assembly and Full halo exchange), and `pod()`
+ * returns the packed payload. Zero-argument callbacks remain supported. The callback
+ * is the device counterpart of `FDGradient`'s halo prepare hook; mixed derivatives
+ * need valid edge and corner ghosts.
  */
 template <class Composite, class... PerFieldGrads> class CompositeGradientDevice {
 public:
@@ -477,10 +479,42 @@ public:
     }
   }
 
-  /// Host-only hook invoked by `prepare()` (halo exchange, not a kernel).
-  void set_prepare(std::function<void()> fn) { m_prepare = std::move(fn); }
+  /// Replace the host preparation hook with a clock-independent callback.
+  /// An empty function (including `{}` or `nullptr`) clears either hook.
+  void set_prepare(std::function<void()> fn) {
+    m_prepare = std::move(fn);
+    m_prepare_at_time = {};
+  }
 
+  /**
+   * @brief Replace the host hook with a callback accepting stage time.
+   *
+   * Called after publishing each stage, before evaluating its point RHS.
+   * Use this for time-dependent auxiliary fields, boundaries and halos.
+   * The callback must finish its own communication before throwing; bound
+   * evolving fields are restored by the stepper, caller auxiliaries are not.
+   * A callback accepting both signatures uses the zero-argument overload.
+   */
+  template <class Fn>
+    requires std::invocable<Fn &, double> && (!std::invocable<Fn &>)
+  void set_prepare(Fn fn) {
+    m_prepare_at_time = std::move(fn);
+    m_prepare = {};
+  }
+
+  /// Run the timed hook, or the legacy zero-argument hook when present.
+  void prepare(double stage_time) {
+    if (m_prepare_at_time)
+      m_prepare_at_time(stage_time);
+    else if (m_prepare)
+      m_prepare();
+  }
+
+  /// Run clock-independent preparation; never invent a timed hook's clock.
+  /// @throws std::logic_error if a time-dependent hook is installed.
   void prepare() {
+    if (m_prepare_at_time)
+      throw std::logic_error("timed device preparation requires stage time");
     if (m_prepare) m_prepare();
   }
 
@@ -498,6 +532,7 @@ public:
 private:
   CompositeGradientDevicePOD m_pod{};
   std::function<void()> m_prepare{};
+  std::function<void(double)> m_prepare_at_time{};
 };
 
 /**

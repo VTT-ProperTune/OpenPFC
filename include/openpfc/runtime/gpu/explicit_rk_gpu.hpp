@@ -14,8 +14,9 @@
  * The factory is `pfc::sim::steppers::create(std::tie(u, v[, w[, q]]), eval,
  * model, dt, tableau)` for two, three, or four `Field<double, CUDASpace>` /
  * `HIPSpace` fields. It uses the same `ButcherTableau`, model `rhs(t, g)`,
- * and composite evaluator as the host factory. `eval.prepare()` refreshes
- * Full halos after each stage is published into the bound fields.
+ * and composite evaluator as the host factory. `eval.prepare(t + c_i*dt)`
+ * refreshes auxiliary fields and Full halos after each stage is published
+ * into the bound fields. Existing zero-argument hooks remain supported.
  *
  * @see kernel/simulation/steppers/explicit_rk.hpp
  * @see runtime/gpu/elementwise_ops_gpu.hpp
@@ -259,8 +260,9 @@ public:
       form_stage(i);
       publish_stage();
       try {
-        m_eval.prepare();
-        evaluate_rhs(t + m_tableau.c(i) * m_dt);
+        const double stage_time = t + m_tableau.c(i) * m_dt;
+        m_eval.prepare(stage_time);
+        evaluate_rhs(stage_time);
         for (std::size_t f = 0; f < N; ++f)
           device_copy<Space>(m_k[f][i].data(), m_du[f].data(), m_n);
       } catch (...) {
@@ -368,7 +370,8 @@ private:
  *
  * Same arguments as the host `create(std::tie(u, v), eval, model, dt,
  * tableau)`. `u` and `v` stay on device. After each stage is written into
- * the bound fields, `eval.prepare()` runs (bind Full halo exchange there).
+ * the bound fields, `eval.prepare(t + c_i*dt)` runs (bind stage-dependent
+ * auxiliary assembly and Full halo exchange there).
  * The stepper does not copy a full field to the host between stages.
  *
  * Include from a CUDA/HIP TU. `Model::rhs` must be `OPENPFC_HD` and return
