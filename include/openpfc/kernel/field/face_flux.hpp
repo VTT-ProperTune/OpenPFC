@@ -47,6 +47,8 @@
 #include <span>
 #include <stdexcept>
 
+#include <openpfc/kernel/data/host_device.hpp>
+
 namespace pfc::field::fd {
 
 /// How the two cell coefficients that share a face are combined.
@@ -61,8 +63,8 @@ enum class FaceAverage { Arithmetic, Harmonic };
  * zero and the other is positive, and it returns zero whenever
  * `low + high <= 0`. That rule is not a signed harmonic mean.
  */
-[[nodiscard]] constexpr double average_face(FaceAverage kind, double low,
-                                            double high) {
+[[nodiscard]] OPENPFC_HD constexpr double average_face(FaceAverage kind, double low,
+                                                       double high) {
   switch (kind) {
   case FaceAverage::Harmonic: {
     const double sum = low + high;
@@ -74,8 +76,8 @@ enum class FaceAverage { Arithmetic, Harmonic };
 }
 
 /// @brief `a_face * (p_high - p_low) / spacing`.
-[[nodiscard]] constexpr double face_flux(double face_coefficient, double p_high,
-                                         double p_low, double spacing) {
+[[nodiscard]] OPENPFC_HD constexpr double
+face_flux(double face_coefficient, double p_high, double p_low, double spacing) {
   return face_coefficient * (p_high - p_low) / spacing;
 }
 

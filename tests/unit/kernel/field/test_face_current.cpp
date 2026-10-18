@@ -432,3 +432,99 @@ TEST_CASE("supplied face current MPI x-slab is decomposition-independent",
   MPI_Allreduce(&bad, &any, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
   REQUIRE(any == 0);
 }
+
+TEST_CASE("pointwise face divergence matches independent bulk and analytic currents",
+          "[face_current]") {
+  for (const auto n :
+       {std::array{7, 5, 3}, std::array{1, 5, 3}, std::array{3, 1, 2}}) {
+    const auto [nx, ny, nz] = n;
+    const std::array<bool, 3> active{true, true, true};
+    const double dx = 0.4, dy = 0.7, dz = 1.1;
+    auto flux = [](int axis, int i, int j, int k) {
+      const double x = i + 1, y = j + 1, z = k + 1;
+      return axis == 0   ? 2 * x * x + j - k
+             : axis == 1 ? -3 * y * y + i
+                         : 4 * z * z + j;
+    };
+    for (int policy = 0; policy < 3; ++policy) {
+      auto walls = model_walls();
+      if (policy == 1) walls = closed_walls();
+      if (policy == 2) {
+        walls.xm = {WallPolicy::Prescribed, 2.5};
+        walls.zp = {WallPolicy::Prescribed, -1.2};
+      }
+      auto gx = zeros(n_xfaces(nx, ny, nz)), gy = zeros(n_yfaces(nx, ny, nz)),
+           gz = zeros(n_zfaces(nx, ny, nz));
+      auto reference = zeros(n_cells(nx, ny, nz));
+      fill_faces(flux, gx, gy, gz, nx, ny, nz, active, walls);
+      face_divergence(gx, gy, gz, reference, nx, ny, nz, active, dx, dy, dz);
+      const auto eval = face_divergence(flux, nx, ny, nz, active, dx, dy, dz, walls);
+      for (int k = 0; k < nz; ++k)
+        for (int j = 0; j < ny; ++j)
+          for (int i = 0; i < nx; ++i) {
+            REQUIRE(eval(i, j, k) == reference[cell_index(nx, ny, i, j, k)]);
+            if (policy == 0)
+              CHECK(std::abs(eval(i, j, k) -
+                             (2 * (2 * i + 1) / dx - 3 * (2 * j + 1) / dy +
+                              4 * (2 * k + 1) / dz)) < 1e-12);
+          }
+    }
+  }
+}
+
+TEST_CASE(
+    "pointwise periodic variable-coefficient current telescopes across rank cuts",
+    "[face_current]") {
+  constexpr int nx = 11, ny = 7, nz = 5;
+  auto wrap = [](int i, int n) { return (i % n + n) % n; };
+  auto coefficient = [&](int i, int j, int k) {
+    return 1 + 0.1 * wrap(i, nx) + 0.03 * wrap(j, ny) + 0.02 * wrap(k, nz);
+  };
+  auto potential = [&](int i, int j, int k) {
+    const int x = wrap(i, nx), y = wrap(j, ny), z = wrap(k, nz);
+    return double(x * x - 3 * y + z * z);
+  };
+  auto global_flux = [&](int axis, int i, int j, int k) {
+    const int a = i + (axis == 0), b = j + (axis == 1), c = k + (axis == 2);
+    return face_flux(average_face(FaceAverage::Arithmetic, coefficient(i, j, k),
+                                  coefficient(a, b, c)),
+                     potential(a, b, c), potential(i, j, k), 0.5);
+  };
+  const auto whole = face_divergence(global_flux, nx, ny, nz, {true, true, true},
+                                     0.5, 0.5, 0.5, model_walls());
+  double total = 0;
+  // Includes a rank owning only one cell along an active global axis.
+  for (const auto cut : {std::array{0, 1}, std::array{1, 5}, std::array{5, nx}}) {
+    auto local_flux = [&](int axis, int i, int j, int k) {
+      return global_flux(axis, i + cut[0], j, k);
+    };
+    const auto local =
+        face_divergence(local_flux, cut[1] - cut[0], ny, nz, {true, true, true}, 0.5,
+                        0.5, 0.5, model_walls());
+    for (int k = 0; k < nz; ++k)
+      for (int j = 0; j < ny; ++j)
+        for (int i = 0; i < cut[1] - cut[0]; ++i) {
+          REQUIRE(local(i, j, k) == whole(i + cut[0], j, k));
+          total += local(i, j, k);
+        }
+  }
+  CHECK(std::abs(total) < 1e-10);
+}
+
+TEST_CASE(
+    "pointwise face divergence rejects invalid geometry and skips inactive axes",
+    "[face_current]") {
+  auto flux = [](int axis, int i, int, int) {
+    if (axis != 0) throw std::runtime_error("inactive axis evaluated");
+    return double(i + 1);
+  };
+  const auto eval =
+      face_divergence(flux, 3, 1, 1, {true, false, false}, 0.5, 0, 0, model_walls());
+  CHECK(eval(0, 0, 0) == 2);
+  REQUIRE_THROWS_AS(
+      face_divergence(flux, 0, 1, 1, {true, false, false}, 1, 1, 1, model_walls()),
+      std::invalid_argument);
+  REQUIRE_THROWS_AS(
+      face_divergence(flux, 1, 1, 1, {true, false, false}, 0, 1, 1, model_walls()),
+      std::invalid_argument);
+}

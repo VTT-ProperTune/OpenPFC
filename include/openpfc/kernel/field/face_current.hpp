@@ -39,6 +39,9 @@
 #include <cstddef>
 #include <span>
 #include <stdexcept>
+#include <utility>
+
+#include <openpfc/kernel/data/host_device.hpp>
 
 namespace pfc::field::fd {
 
@@ -127,6 +130,83 @@ inline void check_face_extents(int nx, int ny, int nz) {
   if (nx <= 0 || ny <= 0 || nz <= 0) {
     throw std::invalid_argument("pfc::field::fd: nx, ny and nz must be positive");
   }
+}
+
+/**
+ * Pointwise `+div G`, with the same face-current convention as `fill_faces`.
+ *
+ * The current functor receives `(axis, i, j, k)` for the low-index cell of
+ * a face. It must evaluate shared faces identically on both ranks. For a
+ * device evaluator, it must be host/device callable and contain device-safe
+ * data. This object owns no fields, buffers, halo exchange or launch policy.
+ * Its coordinates are local owned cells, including local extents of one.
+ *
+ * Construct with the `face_divergence` factory, which validates extents
+ * and active-axis spacing on the host. Walls act on owned-box outer faces,
+ * exactly as for `fill_faces`; select Model on MPI cuts and periodic seams.
+ * A caller captures its padded device samples in the current functor,
+ * refreshes their halos in stage preparation, then embeds this evaluator
+ * in the existing resident RK composite evaluator:
+ *
+ * @code
+ * auto div = face_divergence(current, nx, ny, nz, {true, true, true},
+ *                            dx, dy, dz, model_walls());
+ * // Inside a host/device per-cell RHS evaluator:
+ * double dc = div(i, j, k);
+ * @endcode
+ *
+ * Values outside the owned box must be supplied by the current's halo
+ * samples. No host fallback or automatic halo exchange is performed.
+ */
+template <class Flux> struct FaceDivergence {
+  Flux flux;
+  int extent[3];
+  bool active[3];
+  double inverse_spacing[3];
+  Wall walls[6]; // -x,+x,-y,+y,-z,+z
+
+  OPENPFC_HD double operator()(int i, int j, int k) const {
+    double div = 0.0;
+    const int cell[3] = {i, j, k};
+    for (int axis = 0; axis < 3; ++axis) {
+      if (!active[axis]) continue;
+      const Wall &lo = walls[2 * axis];
+      const Wall &hi = walls[2 * axis + 1];
+      const double low =
+          cell[axis] == 0 && lo.policy != WallPolicy::Model
+              ? (lo.policy == WallPolicy::Zero ? 0.0 : lo.value)
+              : flux(axis, i - (axis == 0), j - (axis == 1), k - (axis == 2));
+      const double high =
+          cell[axis] == extent[axis] - 1 && hi.policy != WallPolicy::Model
+              ? (hi.policy == WallPolicy::Zero ? 0.0 : hi.value)
+              : flux(axis, i, j, k);
+      div += (high - low) * inverse_spacing[axis];
+    }
+    return div;
+  }
+};
+
+/// Create a per-cell evaluator for host or resident RK evaluation.
+template <class Flux>
+[[nodiscard]] FaceDivergence<Flux>
+face_divergence(Flux flux, int nx, int ny, int nz, std::array<bool, 3> active,
+                double dx, double dy, double dz, const Walls &walls) {
+  check_face_extents(nx, ny, nz);
+  const double spacing[3] = {dx, dy, dz};
+  double inverse[3]{};
+  for (int axis = 0; axis < 3; ++axis) {
+    if (active[axis]) {
+      if (!(spacing[axis] > 0.0))
+        throw std::invalid_argument(
+            "pfc::field::fd::face_divergence: active spacing");
+      inverse[axis] = 1.0 / spacing[axis];
+    }
+  }
+  return {std::move(flux),
+          {nx, ny, nz},
+          {active[0], active[1], active[2]},
+          {inverse[0], inverse[1], inverse[2]},
+          {walls.xm, walls.xp, walls.ym, walls.yp, walls.zm, walls.zp}};
 }
 
 /// Overwrite @p rhs with `+div G` of the three face arrays.
