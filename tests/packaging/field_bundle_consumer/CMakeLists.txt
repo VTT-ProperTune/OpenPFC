@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+cmake_minimum_required(VERSION 3.21)
+project(field_bundle_consumer LANGUAGES C CXX)
+find_package(OpenPFC CONFIG REQUIRED)
+add_executable(field_bundle_consumer main.cpp)
+target_link_libraries(field_bundle_consumer PRIVATE OpenPFC::openpfc)
+set(backend host CACHE STRING "Field memory space: host, cuda or hip")
+if(backend STREQUAL "cuda")
+  target_compile_definitions(field_bundle_consumer PRIVATE CHECK_CUDA)
+  target_link_libraries(field_bundle_consumer PRIVATE CUDA::cudart)
+elseif(backend STREQUAL "hip")
+  target_compile_definitions(field_bundle_consumer PRIVATE CHECK_HIP)
+  target_link_libraries(field_bundle_consumer PRIVATE hip::host)
+elseif(NOT backend STREQUAL "host")
+  message(FATAL_ERROR "backend must be host, cuda or hip")
+endif()

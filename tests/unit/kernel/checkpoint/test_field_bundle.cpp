@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -15,6 +16,11 @@
 
 #include <mpi.h>
 #include <nlohmann/json.hpp>
+
+#if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
+#include <openpfc/runtime/gpu/databuffer_gpu.hpp>
+#include <openpfc/runtime/gpu/memory_space_gpu.hpp>
+#endif
 
 #include "openpfc/kernel/checkpoint/field_bundle.hpp"
 #include "openpfc/kernel/data/domain.hpp"
@@ -247,3 +253,178 @@ TEST_CASE("field bundle refuses mismatched restarts and inputs",
     REQUIRE_FALSE(fs::exists(tmp.root / "c"));
   }
 }
+
+namespace {
+
+template <class Space> void packing_contract() {
+  using F = pfc::data::Field<double, Space>;
+  for (const auto extent : {std::array{4, 3, 2}, std::array{1, 3, 2}}) {
+    for (int halo : {0, 1, 2}) {
+      const auto [nx, ny, nz] = extent;
+      F field(grid(), Box3i::from_bounds({1, 1, 0}, {nx, ny, nz - 1}), halo);
+      std::vector<double> expected;
+      double ghost = -777.;
+      field.with_host_view([&](double *data, std::size_t size) {
+        std::fill(data, data + size, ghost);
+        for (int k = 0; k < nz; ++k)
+          for (int j = 0; j < ny; ++j)
+            for (int i = 0; i < nx; ++i) {
+              const auto value = manufactured(i + 1, j + 1, k, 4);
+              data[field.idx(i, j, k)] = value;
+              expected.push_back(value);
+            }
+      });
+      field.sync_to_device();
+      REQUIRE(pfc::checkpoint::pack_owned_real(field) == expected);
+      CHECK_FALSE(field.residency().device_needs_refresh());
+      auto snapshot = [&] {
+        if constexpr (F::is_host_space)
+          return field.vec();
+        else
+          return field.buffer().to_host();
+      };
+      if constexpr (!F::is_host_space) {
+        // Raw-buffer canary detects a checkpoint-induced stale upload.
+        // Restore the normal Field residency protocol immediately afterward.
+        auto changed = snapshot();
+        for (double &v : changed) v += 8.;
+        field.buffer().copy_from_host(changed);
+        field.sync_to_device();
+        REQUIRE(snapshot() == changed);
+        field.note_device_write();
+        ghost += 8.;
+      }
+      const auto before = snapshot();
+      REQUIRE_THROWS_AS(pfc::checkpoint::unpack_owned_real(
+                            field, std::vector<double>(expected.size() - 1)),
+                        std::invalid_argument);
+      REQUIRE_THROWS_AS(pfc::checkpoint::unpack_owned_real(
+                            field, std::vector<double>(expected.size() + 1)),
+                        std::invalid_argument);
+      REQUIRE(snapshot() == before);
+      std::reverse(expected.begin(), expected.end());
+      pfc::checkpoint::unpack_owned_real(field, expected);
+      CHECK_FALSE(field.residency().device_needs_refresh());
+      REQUIRE(pfc::checkpoint::pack_owned_real(field) == expected);
+      const auto actual = snapshot();
+      std::size_t owned = 0;
+      // Independent padded index formula and ghost sentinels check storage.
+      for (int k = -halo; k < nz + halo; ++k)
+        for (int j = -halo; j < ny + halo; ++j)
+          for (int i = -halo; i < nx + halo; ++i) {
+            const auto idx = (i + halo) + (j + halo) * (nx + 2 * halo) +
+                             (k + halo) * (nx + 2 * halo) * (ny + 2 * halo);
+            if (i >= 0 && i < nx && j >= 0 && j < ny && k >= 0 && k < nz)
+              CHECK(actual[idx] == expected[owned++]);
+            else
+              CHECK(actual[idx] == ghost);
+          }
+    }
+  }
+}
+
+template <class Space> void device_redecomposition() {
+  using F = pfc::data::Field<double, Space>;
+  using Named = NamedField<Space>;
+  BundleDir tmp("device-redecompose");
+  if (comm_rank(MPI_COMM_WORLD) == 0) {
+    F whole(grid(), Box3i::from_bounds({0, 0, 0}, {kNx - 1, kNy - 1, kNz - 1}), 2);
+    whole.with_host_view([&](double *data, std::size_t size) {
+      std::fill(data, data + size, -777.);
+      for (int k = 0; k < kNz; ++k)
+        for (int j = 0; j < kNy; ++j)
+          for (int i = 0; i < kNx; ++i)
+            data[whole.idx(i, j, k)] = manufactured(i, j, k, 3);
+    });
+    whole.sync_to_device();
+    REQUIRE(publish_field_bundle(
+                tmp.root / "b", std::vector<Named>{{"psi", &whole}},
+                FieldBundleState{.accepted_time = 1.5,
+                                 .accepted_increment = 12,
+                                 .method_identity = "example/device-relaxation"},
+                MPI_COMM_SELF)
+                .ok);
+    CHECK_FALSE(whole.residency().device_needs_refresh());
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+  F part(grid(), x_slab(MPI_COMM_WORLD), 1);
+  part.with_host_view(
+      [](double *data, std::size_t size) { std::fill(data, data + size, -888.); });
+  part.sync_to_device();
+  const auto state = load_field_bundle(
+      tmp.root / "b", std::vector<Named>{{"psi", &part}}, MPI_COMM_WORLD);
+  REQUIRE(state.accepted_time == 1.5);
+  REQUIRE(state.accepted_increment == 12);
+  REQUIRE(state.method_identity == "example/device-relaxation");
+  CHECK_FALSE(part.residency().device_needs_refresh());
+  const auto actual = part.buffer().to_host();
+  const auto n = part.local_size(), lo = part.lower_global();
+  bool match = true;
+  for (int k = -1; k < n[2] + 1; ++k)
+    for (int j = -1; j < n[1] + 1; ++j)
+      for (int i = -1; i < n[0] + 1; ++i) {
+        const bool interior =
+            i >= 0 && i < n[0] && j >= 0 && j < n[1] && k >= 0 && k < n[2];
+        const double expected =
+            interior ? manufactured(lo[0] + i, lo[1] + j, lo[2] + k, 3) : -888.;
+        match = match && actual[part.idx(i, j, k)] == expected;
+      }
+  REQUIRE(all_ranks(match, MPI_COMM_WORLD));
+  if (comm_rank(MPI_COMM_WORLD) == 0)
+    REQUIRE(fs::file_size(tmp.root / "b/fields/psi.bin") ==
+            sizeof(double) * kNx * kNy * kNz);
+}
+
+#if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
+int node_rank() {
+  MPI_Comm node = MPI_COMM_NULL;
+  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &node);
+  int rank = 0;
+  MPI_Comm_rank(node, &rank);
+  MPI_Comm_free(&node);
+  return rank;
+}
+#endif
+} // namespace
+
+TEST_CASE("owned checkpoint packing preserves host padding and rejects wrong sizes",
+          "[checkpoint_pack]") {
+  packing_contract<pfc::HostSpace>();
+}
+
+#if defined(OpenPFC_ENABLE_CUDA)
+TEST_CASE("owned CUDA checkpoint packing preserves device residency and padding",
+          "[checkpoint_pack][cuda]") {
+  int count = 0;
+  if (cudaGetDeviceCount(&count) != cudaSuccess || count == 0)
+    SKIP("No allocated CUDA device");
+  REQUIRE(cudaSetDevice(node_rank() % count) == cudaSuccess);
+  packing_contract<pfc::CUDASpace>();
+}
+TEST_CASE("padded CUDA field bundle restarts on another decomposition",
+          "[checkpoint_device][checkpoint][MPI][cuda]") {
+  int count = 0;
+  if (cudaGetDeviceCount(&count) != cudaSuccess || count == 0)
+    SKIP("No allocated CUDA device");
+  REQUIRE(cudaSetDevice(node_rank() % count) == cudaSuccess);
+  device_redecomposition<pfc::CUDASpace>();
+}
+#endif
+#if defined(OpenPFC_ENABLE_HIP)
+TEST_CASE("owned HIP checkpoint packing preserves device residency and padding",
+          "[checkpoint_pack][hip]") {
+  int count = 0;
+  if (hipGetDeviceCount(&count) != hipSuccess || count == 0)
+    SKIP("No allocated HIP device");
+  REQUIRE(hipSetDevice(node_rank() % count) == hipSuccess);
+  packing_contract<pfc::HIPSpace>();
+}
+TEST_CASE("padded HIP field bundle restarts on another decomposition",
+          "[checkpoint_device][checkpoint][MPI][hip]") {
+  int count = 0;
+  if (hipGetDeviceCount(&count) != hipSuccess || count == 0)
+    SKIP("No allocated HIP device");
+  REQUIRE(hipSetDevice(node_rank() % count) == hipSuccess);
+  device_redecomposition<pfc::HIPSpace>();
+}
+#endif

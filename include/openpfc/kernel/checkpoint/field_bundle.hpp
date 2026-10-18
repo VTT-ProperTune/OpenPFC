@@ -20,8 +20,8 @@
  * global and x-fastest. Halos are neither stored nor refreshed.
  *
  * Fields must share one domain and one decomposition. Host and device fields
- * are supported; device fields go through the host mirror and must not carry
- * a storage halo.
+ * are supported, with or without storage halos. Device fields go through
+ * their existing host mirror; only owned cells enter the bundle.
  *
  * `pfc::sim::CheckpointService` builds on these functions for
  * `SimulationState` sessions.
@@ -84,27 +84,16 @@ pack_owned_real(pfc::data::Field<T, MemorySpace> &f) {
   std::vector<double> out(static_cast<std::size_t>(sz[0]) *
                           static_cast<std::size_t>(sz[1]) *
                           static_cast<std::size_t>(sz[2]));
-  if constexpr (pfc::data::Field<T, MemorySpace>::is_host_space) {
+  f.with_host_read([&](const T *data, std::size_t) {
     std::size_t n = 0;
     for (int k = 0; k < sz[2]; ++k) {
       for (int j = 0; j < sz[1]; ++j) {
         for (int i = 0; i < sz[0]; ++i) {
-          out[n++] = f(i, j, k);
+          out[n++] = data[f.idx(i, j, k)];
         }
       }
     }
-  } else {
-    if (f.storage_halo() != 0) {
-      throw std::invalid_argument(
-          "pack_owned_real: device fields with storage halo are not supported");
-    }
-    f.with_host_view([&](double *d, std::size_t n) {
-      if (n != out.size()) {
-        throw std::runtime_error("pack_owned_real: host mirror size mismatch");
-      }
-      std::copy(d, d + n, out.begin());
-    });
-  }
+  });
   return out;
 }
 
@@ -112,30 +101,25 @@ pack_owned_real(pfc::data::Field<T, MemorySpace> &f) {
 template <typename T, typename MemorySpace>
 inline void unpack_owned_real(pfc::data::Field<T, MemorySpace> &f,
                               const std::vector<double> &in) {
+  static_assert(std::is_same_v<T, double>, "unpack_owned_real is float64 only");
   const auto sz = f.local_size();
-  if constexpr (pfc::data::Field<T, MemorySpace>::is_host_space) {
+  const auto owned = static_cast<std::size_t>(sz[0]) *
+                     static_cast<std::size_t>(sz[1]) *
+                     static_cast<std::size_t>(sz[2]);
+  if (in.size() != owned) {
+    throw std::invalid_argument("unpack_owned_real: owned field size mismatch");
+  }
+  f.with_host_view([&](T *data, std::size_t) {
     std::size_t n = 0;
     for (int k = 0; k < sz[2]; ++k) {
       for (int j = 0; j < sz[1]; ++j) {
         for (int i = 0; i < sz[0]; ++i) {
-          f(i, j, k) = in[n++];
+          data[f.idx(i, j, k)] = in[n++];
         }
       }
     }
-    f.note_host_write();
-  } else {
-    if (f.storage_halo() != 0) {
-      throw std::invalid_argument(
-          "unpack_owned_real: device fields with storage halo are not supported");
-    }
-    f.with_host_view([&](double *d, std::size_t n) {
-      if (n != in.size()) {
-        throw std::runtime_error("unpack_owned_real: host mirror size mismatch");
-      }
-      std::copy(in.begin(), in.end(), d);
-    });
-    f.sync_to_device();
-  }
+  });
+  f.sync_to_device();
 }
 
 /** @brief Write the owned cells of @p f as brick @p path (collective). */

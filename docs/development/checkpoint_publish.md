@@ -51,6 +51,15 @@ Production uses `write_real_brick_mpi` (owned cells of a `pfc::Field`, host or
 device via the host mirror); Catch2 doubles write small one-rank bricks the
 same way, or throw to inject a mid-publish failure.
 
+Field bundles accept padded and unpadded host, CUDA and HIP fields. Packing
+reads the existing host mirror without marking the device stale; only
+owned cells are serialized, in x-fastest float64 order. Loading checks the
+owned-cell count before any write, changes only owned cells, preserves
+ghost slots and explicitly uploads a device field. The caller refreshes
+halos before the next spatial operator. Restart may use another rank
+count or decomposition; neither storage padding nor halo values enter the
+on-disk format.
+
 ## On-disk layout
 
 A checkpoint is a **directory** (not a single opaque file):
