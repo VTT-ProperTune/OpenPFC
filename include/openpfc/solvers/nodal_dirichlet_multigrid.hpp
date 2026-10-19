@@ -40,6 +40,7 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/execution/memory_space.hpp>
 #include <openpfc/solvers/nodal_multigrid_kernels.hpp>
+#include <openpfc/solvers/nodal_dirichlet_kernels.hpp>
 
 namespace pfc::solvers {
 
@@ -201,25 +202,12 @@ private:
         for (int i = 0; i < b.size[0]; ++i) fn(i, j, k);
   }
 
-  static std::array<double, 27> make_stencil(const Domain &d,
-                                               const Controls &controls) {
-    nmg::Level reference;
-    const auto spacing = domain::get_spacing(d);
-    const double h[3] = {spacing[0], spacing[1], spacing[2]};
-    nmg::set_element_data(reference, h);
-    std::array<double, 27> weights{};
-    for (int dz = -1; dz <= 1; ++dz)
-      for (int dy = -1; dy <= 1; ++dy)
-        for (int dx = -1; dx <= 1; ++dx) {
-          const int slot = nmg::offset_index(dx, dy, dz);
-          const double multiplicity =
-              (dx == 0 ? 2.0 : 1.0) * (dy == 0 ? 2.0 : 1.0) *
-              (dz == 0 ? 2.0 : 1.0);
-          weights[slot] = controls.diffusion * multiplicity *
-                              reference.ke[slot] +
-                          controls.reaction * reference.mass[slot];
-        }
-    return weights;
+  static nmg::dirichlet::Weights make_stencil(const Domain &d,
+                                                const Controls &controls) {
+    const auto &sp = domain::get_spacing(d);
+    const double h[3] = {sp[0], sp[1], sp[2]};
+    return nmg::dirichlet::make_weights(h, controls.diffusion,
+                                         controls.reaction);
   }
 
   static comm::HaloExchangeOptions full_halo() {
@@ -235,20 +223,27 @@ private:
     Box3i box;
     FieldT x, rhs, residual, ax, scratch;
     comm::HaloExchange<HostSpace, double> halo;
-    std::array<double, 27> weights;
+    nmg::Level shape{};
+    nmg::dirichlet::Weights weights;
     double jacobi = 0.0;
 
     Level(const Domain &d, const decomposition::Decomposition &dc, int rank,
-          MPI_Comm comm, const std::array<double, 27> &w,
+          MPI_Comm comm, const nmg::dirichlet::Weights &w,
           double damping)
         : domain(d), decomp(dc),
           box(decomposition::local_box(decomp, rank)),
           x(d, box, 0), rhs(d, box, 0), residual(d, box, 0), ax(d, box, 0),
           scratch(d, box, 2), halo(scratch, decomp, rank, comm, full_halo()),
           weights(w) {
-      const double diag = weights[13];
+      const auto global = domain::get_size(domain);
+      for (int d = 0; d < 3; ++d) {
+        shape.n[d] = box.size[d];
+        shape.low[d] = box.low[d];
+        shape.gn[d] = global[d];
+      }
+      const double diag = weights.v[13];
       double abs_sum = 0.0;
-      for (double v : weights) abs_sum += std::abs(v);
+      for (double v : weights.v) abs_sum += std::abs(v);
       if (!(diag > 0.0) || !(abs_sum >= diag))
         throw std::logic_error("NodalDirichletMultigrid: nonpositive Q1 diagonal");
       jacobi = std::min(damping, 1.5 * diag / abs_sum) / diag;
@@ -306,38 +301,21 @@ private:
     level.halo.exchange();
   }
 
-  static double sampled(const Level &L, int i, int j, int k) {
-    const auto size = domain::get_size(L.domain);
-    if (i < 0 || j < 0 || k < 0 ||
-        i >= size[0] || j >= size[1] || k >= size[2]) return 0.0;
-    const int li = i - L.box.low[0], lj = j - L.box.low[1],
-              lk = k - L.box.low[2];
-    for (int d = 0; d < 3; ++d) {
-      const int idx = d == 0 ? li : (d == 1 ? lj : lk);
-      if (idx < -2 || idx >= L.box.size[d] + 2)
-        throw std::logic_error("NodalDirichletMultigrid: missing Q1 halo");
-    }
-    return L.scratch(li, lj, lk);
-  }
-
   static void action(Level &L, const FieldT &input, FieldT &output) {
     load_halo(L, input);
     each_owned(L.box, [&](int i, int j, int k) {
-      double sum = 0.0;
-      for (int dz = -1; dz <= 1; ++dz)
-        for (int dy = -1; dy <= 1; ++dy)
-          for (int dx = -1; dx <= 1; ++dx)
-            sum += L.weights[nmg::offset_index(dx, dy, dz)] *
-                   L.scratch(i + dx, j + dy, k + dz);
-      output(i, j, k) = sum;
+      output(i, j, k) = nmg::dirichlet::action(
+          L.shape, L.weights, L.scratch.data(), i, j, k);
     });
   }
 
   static void smooth(Level &L, int count) {
     for (int sweep = 0; sweep < count; ++sweep) {
-      action(L, L.x, L.ax);
+      load_halo(L, L.x);
       each_owned(L.box, [&](int i, int j, int k) {
-        L.x(i, j, k) += L.jacobi * (L.rhs(i, j, k) - L.ax(i, j, k));
+        L.x(i, j, k) = nmg::dirichlet::jacobi(
+            L.shape, L.weights, L.scratch.data(), L.x(i, j, k),
+            L.rhs(i, j, k), L.jacobi, i, j, k);
       });
     }
   }
@@ -365,16 +343,8 @@ private:
       const int ci = coarse.box.low[0] + i;
       const int cj = coarse.box.low[1] + j;
       const int ck = coarse.box.low[2] + k;
-      const int fi = 2 * ci + 1, fj = 2 * cj + 1, fk = 2 * ck + 1;
-      double v = 0.0;
-      for (int dz = -1; dz <= 1; ++dz)
-        for (int dy = -1; dy <= 1; ++dy)
-          for (int dx = -1; dx <= 1; ++dx) {
-            const double weight = (dx ? 0.5 : 1.0) *
-                                  (dy ? 0.5 : 1.0) * (dz ? 0.5 : 1.0);
-            v += weight * sampled(fine, fi + dx, fj + dy, fk + dz);
-          }
-      coarse.rhs(i, j, k) = v;
+      coarse.rhs(i, j, k) = nmg::dirichlet::restrict_pt(
+          fine.shape, fine.scratch.data(), ci, cj, ck);
     });
   }
 
@@ -383,9 +353,8 @@ private:
     each_owned(fine.box, [&](int i, int j, int k) {
       const int fi = fine.box.low[0] + i, fj = fine.box.low[1] + j,
                 fk = fine.box.low[2] + k;
-      fine.x(i, j, k) += interpolate(fi, fj, fk, [&](int ci, int cj, int ck) {
-        return sampled(coarse, ci, cj, ck);
-      });
+      fine.x(i, j, k) += nmg::dirichlet::prolong_p(
+          coarse.shape, coarse.scratch.data(), fi, fj, fk);
     });
   }
 
@@ -431,7 +400,7 @@ private:
     });
   }
 
-  void factor_coarse(const std::array<double, 27> &weights) {
+  void factor_coarse(const nmg::dirichlet::Weights &weights) {
     const auto n = domain::get_size(m_coarse_domain);
     const std::size_t N = m_coarse_rhs.size();
     m_cholesky.assign(N * N, 0.0);
@@ -446,7 +415,7 @@ private:
                 if (ci >= 0 && cj >= 0 && ck >= 0 &&
                     ci < n[0] && cj < n[1] && ck < n[2])
                   m_cholesky[row * N + linear(n, ci, cj, ck)] +=
-                      weights[nmg::offset_index(dx, dy, dz)];
+                      weights.v[nmg::offset_index(dx, dy, dz)];
               }
         }
     for (std::size_t i = 0; i < N; ++i)
