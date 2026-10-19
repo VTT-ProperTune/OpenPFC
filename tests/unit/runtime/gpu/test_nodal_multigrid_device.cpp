@@ -24,6 +24,7 @@
 #include <openpfc/solvers/nodal_dirichlet_multigrid.hpp>
 #include <openpfc/solvers/nodal_dirichlet_device_operator.hpp>
 #include <openpfc/solvers/nodal_dirichlet_device_transfers.hpp>
+#include <openpfc/solvers/nodal_dirichlet_device_vcycle.hpp>
 #include <openpfc/solvers/nodal_dirichlet_kernels.hpp>
 #include <openpfc/runtime/gpu/nodal_multigrid_gpu.hpp>
 
@@ -518,6 +519,97 @@ TEST_CASE("Dirichlet Q1 device nested FieldHalo P/Pt match host bricks",
     REQUIRE(rel_diff(host_fine, device_fine) <= 1e-12);
   }
   }
+}
+
+
+
+TEST_CASE("CUDA/HIP two-level Dirichlet Q1 V-cycle matches host and preconditions CG",
+          "[nodal_dirichlet][device]") {
+  if (!mechanics_test::available()) SKIP("GPU unavailable");
+  int rank = 0, ranks = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &ranks);
+  if (ranks != 1 && ranks != 2 && ranks != 4)
+    SKIP("two-level device V-cycle gate covers 1/2/4 ranks");
+
+  const pfc::Int3 nf{15, 15, 15}, nc{7, 7, 7};
+  const pfc::Real3 hf{1.0 / 16, 1.3 / 16, 0.7 / 16};
+  const pfc::Real3 hc{2 * hf[0], 2 * hf[1], 2 * hf[2]};
+  const auto fd = pfc::domain::with_spacing(nf, hf, {false, false, false});
+  const auto cd = pfc::domain::with_spacing(nc, hc, {false, false, false});
+  const pfc::Int3 proc = ranks == 4 ? pfc::Int3{2, 2, 1}
+                                    : pfc::Int3{1, 1, ranks};
+  const auto fdec = pfc::decomposition::create(fd, proc);
+  const auto cdec = pfc::decomposition::create(cd, proc);
+  const auto box = pfc::decomposition::local_box(fdec, rank);
+  using Vcycle = pfc::solvers::NodalDirichletDeviceTwoLevelVcycle<
+      mechanics_test::Space>;
+  Vcycle device_vcycle(fdec, cdec, rank, MPI_COMM_WORLD);
+  pfc::solvers::NodalDirichletMultigrid host_vcycle(
+      fdec, rank, MPI_COMM_WORLD);
+  pfc::solvers::NodalDirichletDeviceOperator<mechanics_test::Space> A(
+      fdec, rank, MPI_COMM_WORLD);
+  REQUIRE(device_vcycle.coarse_unknowns() == 343);
+
+  HostF host_rhs(fd, box, 1), host_out(fd, box, 1);
+  DevF device_rhs(fd, box, 1), device_out(fd, box, 1);
+  for (int trial : {0, 1}) {
+    fill_both(host_rhs, device_rhs, [trial](int gx, int gy, int gz) {
+      return value(40 + trial, gx, gy, gz, 3301u);
+    });
+    host_vcycle.apply(host_rhs, host_out);
+    device_vcycle.apply(device_rhs, device_out);
+    INFO("Dirichlet GPU two-level V-cycle, ranks " << ranks << ", trial " << trial);
+    REQUIRE(rel_diff(host_out, device_out) < 2e-10);
+  }
+
+  // A fixed SPD preconditioner must be symmetric and positive for
+  // independent fields, not just produce a small residual after PCG.
+  pfc::solvers::FieldOperations<mechanics_test::Space> ops(
+      fd, box, 1, 1, MPI_COMM_WORLD);
+  auto u = ops.make(ops.size()), v = ops.make(ops.size());
+  auto mu = ops.make(ops.size()), mv = ops.make(ops.size());
+  HostF hu(fd, box, 1), hv(fd, box, 1);
+  fill_both(hu, u[0], [](int x, int y, int z) {
+    return value(61, x, y, z, 5001u);
+  });
+  fill_both(hv, v[0], [](int x, int y, int z) {
+    return value(62, x, y, z, 6001u);
+  });
+  device_vcycle.apply(u[0], mu[0]);
+  device_vcycle.apply(v[0], mv[0]);
+  const double uMv = ops.dot(u, mv), vMu = ops.dot(v, mu);
+  REQUIRE(std::abs(uMv - vMu) <=
+          1e-8 * std::max({1.0, std::abs(uMv), std::abs(vMu)}));
+  REQUIRE(ops.dot(u, mu) > 0.0);
+  REQUIRE(ops.dot(v, mv) > 0.0);
+
+  // This independently checks the preconditioner contract in the actual
+  // CUDA/HIP FieldOperations and OpenPFC CG implementation, including
+  // admission by the original unpreconditioned true global residual.
+  auto rhs = ops.make(ops.size());
+  auto exact = ops.make(ops.size());
+  auto solution = ops.make(ops.size());
+  HostF host_exact(fd, box, 1);
+  fill_both(host_exact, exact[0], [](int gx, int gy, int gz) {
+    return value(53, gx, gy, gz, 4001u);
+  });
+  A.apply_operator(exact[0], rhs[0]);
+  pfc::solvers::KrylovControls ctrl;
+  ctrl.relative_tolerance = 1e-10;
+  ctrl.maximum_iterations = 80;
+  const auto result = pfc::solvers::cg(
+      ops,
+      [&](const auto &u, auto &out) { A.apply_operator(u[0], out[0]); },
+      rhs, solution, ctrl,
+      [&](const auto &r, auto &z, int) {
+        device_vcycle.apply(r[0], z[0]);
+      });
+  INFO("two-level Dirichlet PCG on " << ranks
+                                    << " ranks, iterations " << result.iterations);
+  REQUIRE(result.converged());
+  REQUIRE(result.residual <= 1e-10 * result.rhs_norm);
+  REQUIRE(rel_diff(host_exact, solution[0]) < 1e-7);
 }
 
 

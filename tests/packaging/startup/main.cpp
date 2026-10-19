@@ -11,6 +11,7 @@
 #include <openpfc/runtime/gpu/nodal_multigrid_gpu.hpp>
 #include <openpfc/solvers/nodal_dirichlet_device_operator.hpp>
 #include <openpfc/solvers/nodal_dirichlet_device_transfers.hpp>
+#include <openpfc/solvers/nodal_dirichlet_device_vcycle.hpp>
 #include <type_traits>
 
 // Verify that the *installed* public CUDA/HIP SDK exposes the rank-owned
@@ -19,9 +20,11 @@
 #if defined(OpenPFC_ENABLE_CUDA)
 static_assert(sizeof(pfc::solvers::NodalDirichletDeviceOperator<pfc::CUDASpace>) > 0);
 static_assert(sizeof(pfc::solvers::NodalDirichletDeviceTransfers<pfc::CUDASpace>) > 0);
+static_assert(sizeof(pfc::solvers::NodalDirichletDeviceTwoLevelVcycle<pfc::CUDASpace>) > 0);
 #elif defined(OpenPFC_ENABLE_HIP)
 static_assert(sizeof(pfc::solvers::NodalDirichletDeviceOperator<pfc::HIPSpace>) > 0);
 static_assert(sizeof(pfc::solvers::NodalDirichletDeviceTransfers<pfc::HIPSpace>) > 0);
+static_assert(sizeof(pfc::solvers::NodalDirichletDeviceTwoLevelVcycle<pfc::HIPSpace>) > 0);
 #endif
 
 template <typename Function>

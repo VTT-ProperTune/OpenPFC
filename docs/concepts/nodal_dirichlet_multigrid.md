@@ -130,6 +130,31 @@ to the host reference. Neither compile-only jobs nor host tests prove
 actual accelerator numerical correctness.
 
 **
+### Bounded GPU-resident two-level V-cycle (hardware gate)
+
+`NodalDirichletDeviceTwoLevelVcycle<CUDASpace/HIPSpace>` joins the
+existing OpenPFC GPU field operator, FieldHalo smoother workspace,
+`NodalDirichletDeviceTransfers` and the **same**
+`DenseCoarseCholesky` used by the host. This first scope supports
+nested 15×15×15 → 7×7×7 and 15×15×31 → 7×7×15 **free-node** Q1 grids,
+with a verified OpenPFC process layout and symmetric fixed damped
+Jacobi pre/post passes.
+
+The fine operator, V-cycle iterates, halo exchanges, residual, P and
+Pᵀ remain on the GPU. Only the replicated coarse grid, at most 1024
+free coefficients, is downloaded/reduced with MPI, factored/solved on
+CPU, and returned to the device. Every `apply` resets the initial
+iterate to zero so that OpenPFC's ordinary SPD PCG can use a fixed
+linear V-cycle preconditioner.
+
+A CUDA/HIP device-conditional test compares the V-cycle against the
+independently qualified host `NodalDirichletMultigrid` and checks
+standard OpenPFC PCG convergence using the **true unpreconditioned
+global residual** on 1/2/4-rank OpenPFC decompositions. Hosted
+compile-only jobs build and link the test, but cannot establish actual
+GPU numerical correctness. No deep multi-level recursion or HPC
+scaling claim is made by this bounded capability.
+
 ### Bounded Q1 coarse direct solve
 
 The coarse solve uses exactly one shared, **CPU-resident**

@@ -51,6 +51,12 @@ template <> struct DirichletDevicePointLaunch<CUDASpace> {
                      const double *src, double *dst) {
     gpu::nmg::dirichlet_apply_cuda(g, w, src, dst);
   }
+  static void jacobi(const nmg::Level &g,
+                     const nmg::dirichlet::Weights &w,
+                     const double *old_u, const double *rhs,
+                     double *new_u, double scale) {
+    gpu::nmg::dirichlet_jacobi_cuda(g, w, old_u, rhs, new_u, scale);
+  }
   static void restrict_pt(const nmg::Level &fine, const double *src,
                           const nmg::Level &coarse, double *dst) {
     gpu::nmg::dirichlet_restrict_cuda(fine, src, coarse, dst);
@@ -71,6 +77,12 @@ template <> struct DirichletDevicePointLaunch<HIPSpace> {
   static void action(const nmg::Level &g, const nmg::dirichlet::Weights &w,
                      const double *src, double *dst) {
     gpu::nmg::dirichlet_apply_hip(g, w, src, dst);
+  }
+  static void jacobi(const nmg::Level &g,
+                     const nmg::dirichlet::Weights &w,
+                     const double *old_u, const double *rhs,
+                     double *new_u, double scale) {
+    gpu::nmg::dirichlet_jacobi_hip(g, w, old_u, rhs, new_u, scale);
   }
   static void restrict_pt(const nmg::Level &fine, const double *src,
                           const nmg::Level &coarse, double *dst) {
