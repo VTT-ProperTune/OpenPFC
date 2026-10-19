@@ -21,10 +21,16 @@
 static_assert(sizeof(pfc::solvers::NodalDirichletDeviceOperator<pfc::CUDASpace>) > 0);
 static_assert(sizeof(pfc::solvers::NodalDirichletDeviceTransfers<pfc::CUDASpace>) > 0);
 static_assert(sizeof(pfc::solvers::NodalDirichletDeviceTwoLevelVcycle<pfc::CUDASpace>) > 0);
+static_assert(sizeof(pfc::solvers::NodalDirichletDeviceVcycle<pfc::CUDASpace>) > 0);
+static_assert(std::is_same_v<pfc::solvers::NodalDirichletDeviceTwoLevelVcycle<pfc::CUDASpace>,
+                             pfc::solvers::NodalDirichletDeviceVcycle<pfc::CUDASpace>>);
 #elif defined(OpenPFC_ENABLE_HIP)
 static_assert(sizeof(pfc::solvers::NodalDirichletDeviceOperator<pfc::HIPSpace>) > 0);
 static_assert(sizeof(pfc::solvers::NodalDirichletDeviceTransfers<pfc::HIPSpace>) > 0);
 static_assert(sizeof(pfc::solvers::NodalDirichletDeviceTwoLevelVcycle<pfc::HIPSpace>) > 0);
+static_assert(sizeof(pfc::solvers::NodalDirichletDeviceVcycle<pfc::HIPSpace>) > 0);
+static_assert(std::is_same_v<pfc::solvers::NodalDirichletDeviceTwoLevelVcycle<pfc::HIPSpace>,
+                             pfc::solvers::NodalDirichletDeviceVcycle<pfc::HIPSpace>>);
 #endif
 
 template <typename Function>
