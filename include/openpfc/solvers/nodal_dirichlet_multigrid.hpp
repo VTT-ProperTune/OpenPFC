@@ -41,6 +41,7 @@
 #include <openpfc/kernel/execution/memory_space.hpp>
 #include <openpfc/solvers/nodal_multigrid_kernels.hpp>
 #include <openpfc/solvers/nodal_dirichlet_kernels.hpp>
+#include <openpfc/solvers/nodal_dirichlet_coarse.hpp>
 #include <openpfc/solvers/nodal_dirichlet_nested_geometry.hpp>
 
 namespace pfc::solvers {
@@ -136,7 +137,9 @@ public:
       throw std::invalid_argument("NodalDirichletMultigrid: coarse dense capacity exceeded");
     m_coarse_rhs.assign(n, 0.0);
     m_coarse_x.assign(n, 0.0);
-    factor_coarse(make_stencil(current, controls));
+    m_coarse_factor = nmg::dirichlet::DenseCoarseCholesky(
+        domain::get_size(current), make_stencil(current, controls),
+        static_cast<std::size_t>(controls.max_coarse_unknowns));
   }
 
   [[nodiscard]] int levels() const noexcept {
@@ -366,53 +369,8 @@ private:
     });
   }
 
-  void factor_coarse(const nmg::dirichlet::Weights &weights) {
-    const auto n = domain::get_size(m_coarse_domain);
-    const std::size_t N = m_coarse_rhs.size();
-    m_cholesky.assign(N * N, 0.0);
-    for (int k = 0; k < n[2]; ++k)
-      for (int j = 0; j < n[1]; ++j)
-        for (int i = 0; i < n[0]; ++i) {
-          const std::size_t row = linear(n, i, j, k);
-          for (int dz = -1; dz <= 1; ++dz)
-            for (int dy = -1; dy <= 1; ++dy)
-              for (int dx = -1; dx <= 1; ++dx) {
-                const int ci = i + dx, cj = j + dy, ck = k + dz;
-                if (ci >= 0 && cj >= 0 && ck >= 0 &&
-                    ci < n[0] && cj < n[1] && ck < n[2])
-                  m_cholesky[row * N + linear(n, ci, cj, ck)] +=
-                      weights.v[nmg::offset_index(dx, dy, dz)];
-              }
-        }
-    for (std::size_t i = 0; i < N; ++i)
-      for (std::size_t j = 0; j <= i; ++j) {
-        double entry = m_cholesky[i * N + j];
-        for (std::size_t k = 0; k < j; ++k)
-          entry -= m_cholesky[i * N + k] * m_cholesky[j * N + k];
-        if (i == j) {
-          if (!(entry > 0.0) || !std::isfinite(entry))
-            throw std::runtime_error("NodalDirichletMultigrid: coarse matrix not SPD");
-          m_cholesky[i * N + i] = std::sqrt(entry);
-        } else {
-          m_cholesky[i * N + j] = entry / m_cholesky[j * N + j];
-        }
-      }
-  }
-
   void solve_coarse() {
-    const std::size_t N = m_coarse_rhs.size();
-    for (std::size_t i = 0; i < N; ++i) {
-      double x = m_coarse_rhs[i];
-      for (std::size_t j = 0; j < i; ++j)
-        x -= m_cholesky[i * N + j] * m_coarse_x[j];
-      m_coarse_x[i] = x / m_cholesky[i * N + i];
-    }
-    for (std::size_t i = N; i-- > 0;) {
-      double x = m_coarse_x[i];
-      for (std::size_t j = i + 1; j < N; ++j)
-        x -= m_cholesky[j * N + i] * m_coarse_x[j];
-      m_coarse_x[i] = x / m_cholesky[i * N + i];
-    }
+    m_coarse_factor.solve(m_coarse_rhs, m_coarse_x);
   }
 
   void cycle(std::size_t l) {
@@ -441,7 +399,8 @@ private:
   Controls m_controls;
   std::vector<std::unique_ptr<Level>> m_levels;
   Domain m_coarse_domain;
-  std::vector<double> m_coarse_rhs, m_coarse_x, m_cholesky;
+  std::vector<double> m_coarse_rhs, m_coarse_x;
+  nmg::dirichlet::DenseCoarseCholesky m_coarse_factor;
 };
 
 } // namespace pfc::solvers

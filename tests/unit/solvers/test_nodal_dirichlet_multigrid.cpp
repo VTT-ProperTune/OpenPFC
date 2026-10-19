@@ -23,6 +23,7 @@
 #include <openpfc/solvers/nodal_dirichlet_nested_geometry.hpp>
 #include <openpfc/solvers/krylov.hpp>
 #include <openpfc/solvers/nodal_dirichlet_multigrid.hpp>
+#include <openpfc/solvers/nodal_dirichlet_coarse.hpp>
 
 namespace {
 
@@ -661,4 +662,78 @@ TEST_CASE("Dirichlet nested transfer rejects physically mismatched geometry",
   REQUIRE_THROWS_AS(
       k::dirichlet::validate_nested_transfer_reach(fine, invalid_coarse),
       std::invalid_argument);
+}
+
+
+TEST_CASE("Dirichlet coarse Q1 Cholesky matches independent Gauss FEM",
+          "[nodal_dirichlet][coarse]") {
+  namespace k = pfc::solvers::nmg;
+  using Factor = k::dirichlet::DenseCoarseCholesky;
+  for (const pfc::Int3 n : {pfc::Int3{3, 3, 3},
+                             pfc::Int3{3, 3, 7},
+                             pfc::Int3{7, 7, 7}}) {
+    const pfc::Real3 h{1.0 / (n[0] + 1), 1.3 / (n[1] + 1),
+                       0.7 / (n[2] + 1)};
+    const double spacing[3] = {h[0], h[1], h[2]};
+    const auto N = count(n);
+    for (const double reaction : {0.0, 0.3}) {
+      const double diffusion = 1.17;
+      const auto weights = k::dirichlet::make_weights(
+          spacing, diffusion, reaction);
+      Factor coarse(n, weights, N);
+      REQUIRE(coarse.unknowns() == N);
+      REQUIRE(coarse.free_nodes() == n);
+
+      std::vector<double> rhs(N), x;
+      for (int sample = 0; sample < 2; ++sample) {
+        for (int kz = 0; kz < n[2]; ++kz)
+          for (int jy = 0; jy < n[1]; ++jy)
+            for (int ix = 0; ix < n[0]; ++ix)
+              rhs[id(n, ix, jy, kz)] =
+                  sample == 0 ? sample_a(ix, jy, kz) :
+                                sample_b(ix, jy, kz);
+
+        coarse.solve(rhs, x);
+        const auto assembled = independent_action(
+            n, h, x, diffusion, reaction);
+        double err2 = 0.0, rhs2 = 0.0, energy = 0.0;
+        for (std::size_t i = 0; i < N; ++i) {
+          err2 += (assembled[i] - rhs[i]) *
+                  (assembled[i] - rhs[i]);
+          rhs2 += rhs[i] * rhs[i];
+          energy += x[i] * assembled[i];
+        }
+        INFO("independent coarse FEM, nodes " << n[0] << "x"
+             << n[1] << "x" << n[2] << ", reaction " << reaction
+             << ", sample " << sample);
+        REQUIRE(energy > 0.0);
+        REQUIRE(std::sqrt(err2 / rhs2) < 2e-11);
+      }
+      REQUIRE_THROWS_AS(coarse.solve(rhs, rhs),
+                        std::invalid_argument);
+    }
+  }
+}
+
+TEST_CASE("Dirichlet coarse factor fails closed on bad SPD or memory",
+          "[nodal_dirichlet][coarse]") {
+  namespace k = pfc::solvers::nmg;
+  using Factor = k::dirichlet::DenseCoarseCholesky;
+  const double spacing[3] = {0.1, 0.12, 0.08};
+  const auto w = k::dirichlet::make_weights(spacing, 1.0, 0.0);
+  REQUIRE_THROWS_AS(Factor(pfc::Int3{7, 7, 7}, w, 342),
+                    std::invalid_argument);
+  REQUIRE_THROWS_AS(Factor(pfc::Int3{0, 7, 7}, w, 1024),
+                    std::invalid_argument);
+  REQUIRE_THROWS_AS(Factor(pfc::Int3{3, 3, 3}, w, 0),
+                    std::invalid_argument);
+
+  auto asymmetric = w;
+  asymmetric.v[k::offset_index(1, 0, 0)] += 0.01;
+  REQUIRE_THROWS_AS(Factor(pfc::Int3{3, 3, 3}, asymmetric, 100),
+                    std::invalid_argument);
+  auto not_spd = w;
+  for (double &v : not_spd.v) v = 0.0;
+  REQUIRE_THROWS_AS(Factor(pfc::Int3{3, 3, 3}, not_spd, 100),
+                    std::runtime_error);
 }

@@ -129,7 +129,27 @@ CUDA/HIP device-conditional tests compare full FieldHalo transfer paths
 to the host reference. Neither compile-only jobs nor host tests prove
 actual accelerator numerical correctness.
 
-**The complete GPU V-cycle is not implemented by this helper.** The
+**
+### Bounded Q1 coarse direct solve
+
+The coarse solve uses exactly one shared, **CPU-resident**
+`nmg::dirichlet::DenseCoarseCholesky` implementation for all backends.
+The current CPU/MPI V-cycle has been refactored to use it without
+changing fine/intermediate rank ownership or the original test
+problem. The factor is constructed from the same 27-point Q1 element
+weights, only after checking the free-node count and dense-allocation
+budget. It separately checks symmetry and positive Cholesky pivots.
+The RHS and solution contain exactly the bounded coarse coefficients.
+
+Future CUDA/HIP cycles may reduce a small coarse RHS, solve it with
+this factor and upload only its coarse correction. This is **not**
+permission to transfer or replicate the global fine/intermediate
+fields. Host CI independently verifies diffusion and diffusion/reaction
+coarse solves against Gauss-assembled Q1 FEM and rejects invalid
+capacities or non-SPD matrices. No GPU recursion or performance claim
+is implied.
+
+The complete GPU V-cycle is not implemented by this helper.** The
 remaining steps are coupled pre/post-smoothing, residuals, coarse
 reduction/solve, and the OpenPFC Krylov preconditioner contract.
 
