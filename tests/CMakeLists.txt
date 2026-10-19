@@ -206,6 +206,20 @@ if(OpenPFC_RUN_MPI_SUITES AND MPI_CXX_FOUND)
       TIMEOUT 120 RUN_SERIAL TRUE)
   endforeach()
 
+  # Distinct numerical capability gate: free-node Q1 Dirichlet geometry
+  # with OpenPFC-owned slab/brick decomposition and full-width host halos.
+  foreach(_ranks 1 2 4)
+    if(OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER 0 AND
+       _ranks GREATER OpenPFC_MPI_TEST_MAX_WORLD_SIZE)
+      continue()
+    endif()
+    add_test(NAME nodal_dirichlet_${_ranks}ranks
+      COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${_ranks}
+        $<TARGET_FILE:openpfc-tests> "[nodal_dirichlet][MPI]")
+    set_tests_properties(nodal_dirichlet_${_ranks}ranks PROPERTIES
+      TIMEOUT 300 RUN_SERIAL TRUE)
+  endforeach()
+
   foreach(_ranks 1 2 4)
     if(OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER 0 AND
        _ranks GREATER OpenPFC_MPI_TEST_MAX_WORLD_SIZE)
