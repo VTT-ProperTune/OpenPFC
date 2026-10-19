@@ -10,6 +10,7 @@
 #include <functional>
 #include <limits>
 #include <numbers>
+#include <type_traits>
 #include <vector>
 
 #include <mpi.h>
@@ -314,4 +315,131 @@ TEST_CASE("Dirichlet Q1 OpenPFC rejects unsupported geometries",
   cap.max_coarse_unknowns = 4;
   auto fine = make({15, 15, 15}, {false, false, false});
   REQUIRE_THROWS_AS(MG(fine, rank, MPI_COMM_WORLD, cap), std::invalid_argument);
+}
+
+
+TEST_CASE("Dirichlet shared Q1 row kernels ignore poisoned physical halos",
+          "[nodal_dirichlet][kernel]") {
+  namespace k = pfc::solvers::nmg;
+  static_assert(std::is_trivially_copyable_v<k::dirichlet::Weights>);
+  const pfc::Int3 n{15, 15, 15};
+  const pfc::Real3 h{1.0 / 16, 1.3 / 16, 0.7 / 16};
+  constexpr double diffusion = 0.73, reaction = 0.41;
+  const double spacing[3] = {h[0], h[1], h[2]};
+  const auto w = k::dirichlet::make_weights(spacing, diffusion, reaction);
+  k::Level L;
+  for (int d = 0; d < 3; ++d) {
+    L.n[d] = n[d];
+    L.gn[d] = n[d];
+    L.low[d] = 0;
+  }
+  // Poison even the physical exterior ghost cells. A Dirichlet row must not
+  // read them: fixed boundary nodes are eliminated, not MPI ghost unknowns.
+  std::vector<double> padded(k::padded_size(L, k::dirichlet::kHalo), 9999.0);
+  std::vector<double> input(count(n));
+  for (int z = 0; z < n[2]; ++z)
+    for (int y = 0; y < n[1]; ++y)
+      for (int x = 0; x < n[0]; ++x) {
+        const auto v = sample_a(x, y, z);
+        input[id(n, x, y, z)] = v;
+        padded[k::index(L, k::dirichlet::kHalo, x, y, z)] = v;
+      }
+  const auto assembled =
+      independent_action(n, h, input, diffusion, reaction);
+  double err = 0.0, scale = 0.0;
+  for (int z = 0; z < n[2]; ++z)
+    for (int y = 0; y < n[1]; ++y)
+      for (int x = 0; x < n[0]; ++x) {
+        const auto a = k::dirichlet::action(L, w, padded.data(), x, y, z);
+        const auto b = assembled[id(n, x, y, z)];
+        err = std::max(err, std::abs(a - b));
+        scale = std::max(scale, std::abs(b));
+        const auto updated = k::dirichlet::jacobi(
+            L, w, padded.data(), input[id(n, x, y, z)], 0.25, 0.17,
+            x, y, z);
+        REQUIRE(std::abs(updated -
+                         (input[id(n, x, y, z)] + 0.17 * (0.25 - a))) <
+                1e-12 * std::max(1.0, std::abs(updated)));
+      }
+  REQUIRE(err <= 2e-12 * std::max(1.0, scale));
+}
+
+TEST_CASE("Dirichlet shared Q1 transfer kernels satisfy exact P transpose",
+          "[nodal_dirichlet][kernel]") {
+  namespace k = pfc::solvers::nmg;
+  for (const pfc::Int3 nf : {pfc::Int3{15, 15, 15},
+                              pfc::Int3{15, 15, 31}}) {
+    k::Level F, C;
+    for (int d = 0; d < 3; ++d) {
+      F.n[d] = nf[d];
+      F.gn[d] = nf[d];
+      C.n[d] = (nf[d] - 1) / 2;
+      C.gn[d] = C.n[d];
+    }
+    std::vector<double> f(k::padded_size(F, k::dirichlet::kHalo), 3333.0);
+    std::vector<double> c(k::padded_size(C, k::dirichlet::kHalo), 4444.0);
+    for (int z = 0; z < F.n[2]; ++z)
+      for (int y = 0; y < F.n[1]; ++y)
+        for (int x = 0; x < F.n[0]; ++x)
+          f[k::index(F, k::dirichlet::kHalo, x, y, z)] =
+              sample_a(x, y, z);
+    for (int z = 0; z < C.n[2]; ++z)
+      for (int y = 0; y < C.n[1]; ++y)
+        for (int x = 0; x < C.n[0]; ++x)
+          c[k::index(C, k::dirichlet::kHalo, x, y, z)] =
+              sample_b(x, y, z);
+    double fine_dot = 0.0, coarse_dot = 0.0;
+    for (int z = 0; z < F.n[2]; ++z)
+      for (int y = 0; y < F.n[1]; ++y)
+        for (int x = 0; x < F.n[0]; ++x)
+          fine_dot += sample_a(x, y, z) *
+                      k::dirichlet::prolong_p(C, c.data(), x, y, z);
+    for (int z = 0; z < C.n[2]; ++z)
+      for (int y = 0; y < C.n[1]; ++y)
+        for (int x = 0; x < C.n[0]; ++x)
+          coarse_dot += sample_b(x, y, z) *
+                        k::dirichlet::restrict_pt(F, f.data(), x, y, z);
+    REQUIRE(std::abs(fine_dot - coarse_dot) <=
+            1e-11 * std::max({1.0, std::abs(fine_dot),
+                               std::abs(coarse_dot)}));
+  }
+}
+
+TEST_CASE("Dirichlet shared Q1 row kernel honors shifted local bricks",
+          "[nodal_dirichlet][kernel]") {
+  namespace k = pfc::solvers::nmg;
+  const pfc::Int3 global{15, 15, 31};
+  const pfc::Real3 h{0.0625, 0.08125, 0.021875};
+  std::vector<double> input(count(global));
+  for (int z = 0; z < global[2]; ++z)
+    for (int y = 0; y < global[1]; ++y)
+      for (int x = 0; x < global[0]; ++x)
+        input[id(global, x, y, z)] = sample_a(x, y, z);
+  const auto assembled = independent_action(global, h, input, 1.0, 0.0);
+  k::Level L;
+  const int low[3] = {3, 4, 9}, local[3] = {7, 6, 5};
+  for (int d = 0; d < 3; ++d) {
+    L.n[d] = local[d];
+    L.gn[d] = global[d];
+    L.low[d] = low[d];
+  }
+  std::vector<double> ghost(k::padded_size(L, k::dirichlet::kHalo), 7777.0);
+  for (int z = -2; z < local[2] + 2; ++z)
+    for (int y = -2; y < local[1] + 2; ++y)
+      for (int x = -2; x < local[0] + 2; ++x) {
+        const int gx = low[0] + x, gy = low[1] + y, gz = low[2] + z;
+        if (gx < 0 || gy < 0 || gz < 0 || gx >= global[0] ||
+            gy >= global[1] || gz >= global[2]) continue;
+        ghost[k::index(L, k::dirichlet::kHalo, x, y, z)] =
+            input[id(global, gx, gy, gz)];
+      }
+  const double spacing[3] = {h[0], h[1], h[2]};
+  const auto weights = k::dirichlet::make_weights(spacing, 1.0, 0.0);
+  for (int z = 0; z < local[2]; ++z)
+    for (int y = 0; y < local[1]; ++y)
+      for (int x = 0; x < local[0]; ++x)
+        REQUIRE(std::abs(k::dirichlet::action(
+                             L, weights, ghost.data(), x, y, z) -
+                         assembled[id(global, low[0] + x, low[1] + y,
+                                      low[2] + z)]) < 2e-12);
 }
