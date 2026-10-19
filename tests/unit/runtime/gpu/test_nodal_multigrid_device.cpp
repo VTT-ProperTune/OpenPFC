@@ -613,6 +613,107 @@ TEST_CASE("CUDA/HIP two-level Dirichlet Q1 V-cycle matches host and precondition
 }
 
 
+
+TEST_CASE("Dirichlet Q1 three-level device V-cycle equals host and preconditions CG",
+          "[nodal_dirichlet][device]") {
+  if (!mechanics_test::available()) SKIP("GPU unavailable");
+
+  int rank = 0, ranks = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &ranks);
+  if (ranks != 1 && ranks != 2 && ranks != 4)
+    SKIP("nested GPU V-cycle gate covers 1/2/4 ranks");
+
+  using Vcycle = pfc::solvers::NodalDirichletDeviceVcycle<
+      mechanics_test::Space>;
+  using Ops = pfc::solvers::FieldOperations<mechanics_test::Space>;
+
+  for (const bool elongated : {false, true}) {
+    if (elongated && ranks == 4) continue;
+    const pfc::Int3 nf = elongated ? pfc::Int3{31, 31, 63}
+                                   : pfc::Int3{31, 31, 31};
+    const pfc::Int3 nm = elongated ? pfc::Int3{15, 15, 31}
+                                   : pfc::Int3{15, 15, 15};
+    const pfc::Int3 nc = elongated ? pfc::Int3{7, 7, 15}
+                                   : pfc::Int3{7, 7, 7};
+    const pfc::Real3 hf{1.0 / 32, 1.3 / 32,
+                        elongated ? 0.7 / 64 : 0.7 / 32};
+    const pfc::Real3 hm{2 * hf[0], 2 * hf[1], 2 * hf[2]};
+    const pfc::Real3 hc{2 * hm[0], 2 * hm[1], 2 * hm[2]};
+    const auto fd = pfc::domain::with_spacing(nf, hf, {false, false, false});
+    const auto md = pfc::domain::with_spacing(nm, hm, {false, false, false});
+    const auto cd = pfc::domain::with_spacing(nc, hc, {false, false, false});
+    const pfc::Int3 proc = ranks == 4 ? pfc::Int3{2, 2, 1}
+                                     : pfc::Int3{1, 1, ranks};
+    const auto fdec = pfc::decomposition::create(fd, proc);
+    const auto mdec = pfc::decomposition::create(md, proc);
+    const auto cdec = pfc::decomposition::create(cd, proc);
+    const auto box = pfc::decomposition::local_box(fdec, rank);
+
+    // Old two-level API is retained, while the same implementation now
+    // owns one extra GPU-resident intermediate level by recursion.
+    Vcycle vcycle(fdec, mdec, cdec, rank, MPI_COMM_WORLD);
+    REQUIRE(vcycle.levels() == 3);
+    REQUIRE(vcycle.coarse_unknowns() == (elongated ? 735u : 343u));
+    pfc::solvers::NodalDirichletMultigrid reference(
+        fdec, rank, MPI_COMM_WORLD);
+    pfc::solvers::NodalDirichletDeviceOperator<mechanics_test::Space> A(
+        fdec, rank, MPI_COMM_WORLD);
+
+    HostF host_rhs(fd, box, 1), host_out(fd, box, 1);
+    DevF dev_rhs(fd, box, 1), dev_out(fd, box, 1);
+    for (int case_id : {0, 1}) {
+      fill_both(host_rhs, dev_rhs, [case_id](int x, int y, int z) {
+        return value(70 + case_id, x, y, z, 719u);
+      });
+      reference.apply(host_rhs, host_out);
+      vcycle.apply(dev_rhs, dev_out);
+      INFO("GPU three-level Q1, elongated " << elongated
+            << ", ranks " << ranks << ", input " << case_id);
+      REQUIRE(rel_diff(host_out, dev_out) <= 4e-10);
+    }
+
+    Ops ops(fd, box, 1, 1, MPI_COMM_WORLD);
+    auto u = ops.make(ops.size()), v = ops.make(ops.size());
+    auto mu = ops.make(ops.size()), mv = ops.make(ops.size());
+    HostF hu(fd, box, 1), hv(fd, box, 1);
+    fill_both(hu, u[0], [](int x, int y, int z) {
+      return value(84, x, y, z, 811u);
+    });
+    fill_both(hv, v[0], [](int x, int y, int z) {
+      return value(85, x, y, z, 977u);
+    });
+    vcycle.apply(u[0], mu[0]);
+    vcycle.apply(v[0], mv[0]);
+    const double uMv = ops.dot(u, mv), vMu = ops.dot(v, mu);
+    REQUIRE(std::abs(uMv - vMu) <=
+            2e-8 * std::max({1.0, std::abs(uMv), std::abs(vMu)}));
+    REQUIRE(ops.dot(u, mu) > 0.0);
+    REQUIRE(ops.dot(v, mv) > 0.0);
+
+    auto exact = ops.make(ops.size()), rhs = ops.make(ops.size());
+    auto solution = ops.make(ops.size());
+    HostF host_exact(fd, box, 1);
+    fill_both(host_exact, exact[0], [](int x, int y, int z) {
+      return value(91, x, y, z, 1103u);
+    });
+    A.apply_operator(exact[0], rhs[0]);
+    pfc::solvers::KrylovControls controls;
+    controls.relative_tolerance = 1e-10;
+    controls.maximum_iterations = 120;
+    const auto result = pfc::solvers::cg(
+        ops, [&](const auto &q, auto &out) {
+          A.apply_operator(q[0], out[0]);
+        }, rhs, solution, controls,
+        [&](const auto &r, auto &z, int) { vcycle.apply(r[0], z[0]); });
+    INFO("GPU Q1 three-level true-residual PCG, rank count " << ranks
+         << ", elongated " << elongated << ", iterations " << result.iterations);
+    REQUIRE(result.converged());
+    REQUIRE(result.residual <= 1e-10 * result.rhs_norm);
+    REQUIRE(rel_diff(host_exact, solution[0]) <= 1e-7);
+  }
+}
+
 int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
   int rank = 0;
