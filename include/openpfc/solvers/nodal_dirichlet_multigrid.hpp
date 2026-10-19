@@ -93,7 +93,9 @@ public:
 
     const auto proc_grid = decomposition::get_grid(fine);
     Domain current = domain0;
-    decomposition::Decomposition current_dec = fine;
+    // OpenPFC's decomposition stores an immutable process-grid member.
+    // Keep the current value by unique ownership rather than assigning it.
+    auto current_dec = std::make_unique<decomposition::Decomposition>(fine);
     while (true) {
       const auto global = domain::get_size(current);
       bool coarsen = true;
@@ -101,8 +103,8 @@ public:
         coarsen = coarsen && global[d] > controls.coarsest_free_extent;
       if (!coarsen) break;
       m_levels.push_back(
-          std::make_unique<Level>(current, current_dec, m_rank, m_comm,
-                                  make_stencil(current, controls)));
+          std::make_unique<Level>(current, *current_dec, m_rank, m_comm,
+                                  make_stencil(current, controls), controls.jacobi_weight));
       Int3 next_size{};
       Real3 next_spacing = domain::get_spacing(current);
       for (int d = 0; d < 3; ++d) {
@@ -114,8 +116,9 @@ public:
       }
       Domain next = domain::with_spacing(next_size, next_spacing,
                                          {false, false, false});
-      auto next_dec = decomposition::create(next, proc_grid);
-      validate_transfer_reach(current_dec, next_dec, global, next_size);
+      auto next_dec = std::make_unique<decomposition::Decomposition>(
+          decomposition::create(next, proc_grid));
+      validate_transfer_reach(*current_dec, *next_dec, global, next_size);
       current = next;
       current_dec = std::move(next_dec);
     }
@@ -233,7 +236,8 @@ private:
     double jacobi = 0.0;
 
     Level(const Domain &d, const decomposition::Decomposition &dc, int rank,
-          MPI_Comm comm, const std::array<double, 27> &w)
+          MPI_Comm comm, const std::array<double, 27> &w,
+          double damping)
         : domain(d), decomp(dc),
           box(decomposition::local_box(decomp, rank)),
           x(d, box, 0), rhs(d, box, 0), residual(d, box, 0), ax(d, box, 0),
@@ -244,7 +248,7 @@ private:
       for (double v : weights) abs_sum += std::abs(v);
       if (!(diag > 0.0) || !(abs_sum >= diag))
         throw std::logic_error("NodalDirichletMultigrid: nonpositive Q1 diagonal");
-      jacobi = std::min(0.65, 1.5 * diag / abs_sum) / diag;
+      jacobi = std::min(damping, 1.5 * diag / abs_sum) / diag;
     }
   };
 
