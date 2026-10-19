@@ -80,6 +80,37 @@ bricks, and P/P^T adjointness; GPU device-vs-host point-action parity
 is a separate device-conditional test. CUDA/HIP compile-only CI
 qualifies compilation, not actual accelerator execution.
 
+### Rank-owned CUDA/HIP field and halo action (qualification gate)
+
+`solvers/nodal_dirichlet_device_operator.hpp` supplies
+`NodalDirichletDeviceOperator<CUDASpace/HIPSpace>`, the first
+**device-resident matrix-free action adapter**. It is not a second
+multigrid hierarchy and not a preconditioner. The adapter takes an
+existing OpenPFC `Decomposition`, allocates its persistent
+`FieldOperations`/`FieldHalo` scratch at **halo width 2**, performs
+the owned-only GPU copy of a caller `Field`, exchanges the 26-direction
+halo through OpenPFC's device `HaloExchange`, applies the shared Q1
+Dirichlet GPU row kernel, and copies only the owned rows back to
+the caller's field. External field storage halos of 0, 1 or 2 are
+supported; the physical exterior is always treated as zero.
+
+The device pipeline contains **no downloads of fine-grid fields to
+host memory**. The later GPU V-cycle will reuse this device/halo
+contract plus the Jacobi and P/Pᵀ point launchers. A GPU-conditional
+test in `test_nodal_multigrid_device.cpp` compares the entire
+device staging/communication/operator sequence against the host
+Dirichlet FEM reference on 1/2/4-rank layouts and checks repeated
+input and output-alias cases. It also calls OpenPFC's existing
+`FieldOperations<MemorySpace>` and CG with **no multigrid preconditioner**
+on a known discrete solution, admitting convergence only with the
+true unpreconditioned residual. This is a correctness diagnostic,
+not evidence of a fast GPU GMG solver.
+
+The GitHub-hosted CUDA/HIP jobs **compile and link** that test,
+but have no GPU hardware to execute it. Actual GPU+MPI correctness
+must be reported separately; this stage is not proof of a resident
+multilevel solver or HPC performance.
+
 The current solver has constant coefficients,
 homogeneous Dirichlet conditions, all axes nonperiodic, and a bounded
 replicated coarse solve. No HIP/CUDA, mixed boundary type, arbitrary

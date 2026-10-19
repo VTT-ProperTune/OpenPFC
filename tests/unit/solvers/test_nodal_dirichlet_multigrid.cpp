@@ -19,6 +19,7 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/solvers/field_operations.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/solvers/krylov.hpp>
 #include <openpfc/solvers/nodal_dirichlet_multigrid.hpp>
 
@@ -442,4 +443,72 @@ TEST_CASE("Dirichlet shared Q1 row kernel honors shifted local bricks",
                              L, weights, ghost.data(), x, y, z) -
                          assembled[id(global, low[0] + x, low[1] + y,
                                       low[2] + z)]) < 2e-12);
+}
+
+
+TEST_CASE("Dirichlet FieldHalo MPI stage matches independent element Q1",
+          "[nodal_dirichlet][MPI]") {
+  // HostSpace executes the identical owned-field and halo staging contract
+  // required by the GPU FieldHalo adapter, but this CI test needs no GPU.
+  // The reference is independent element-by-element Gauss Q1 integration.
+  namespace k = pfc::solvers::nmg;
+  int rank = 0, ranks = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &ranks);
+
+  const pfc::Int3 nodes{31, 31, 31};
+  const pfc::Real3 h{1.0 / 32, 1.3 / 32, 0.7 / 32};
+  auto domain = pfc::domain::with_spacing(
+      nodes, h, {false, false, false});
+
+  for (const auto process_grid : process_grids(ranks)) {
+    const auto decomp = pfc::decomposition::create(domain, process_grid);
+    const auto box = pfc::decomposition::local_box(decomp, rank);
+    Ops operations(domain, box, 1, k::dirichlet::kHalo, MPI_COMM_WORLD);
+    pfc::comm::HaloExchangeOptions options;
+    options.connectivity = pfc::comm::HaloConnectivity::Full;
+    pfc::solvers::FieldHalo<pfc::HostSpace> halo(
+        operations, decomp, rank, MPI_COMM_WORLD, options);
+    Field input(domain, box, 1), output(domain, box, 1);
+    auto &padded = halo.scratch()[0];
+    k::Level shape;
+    for (int axis = 0; axis < 3; ++axis) {
+      shape.n[axis] = box.size[axis];
+      shape.low[axis] = box.low[axis];
+      shape.gn[axis] = nodes[axis];
+    }
+    const double element_spacing[3] = {h[0], h[1], h[2]};
+    const auto weights = k::dirichlet::make_weights(
+        element_spacing, 0.75, 0.32);
+
+    for (const auto sample_kind : {0, 1}) {
+      fill(input, sample_kind == 0 ? Function(sample_a)
+                                   : Function(sample_b));
+      // Physical exterior halos deliberately contain stale values. Even
+      // after an MPI exchange, the Q1 row must mask physical boundaries.
+      std::fill(padded.vec().begin(), padded.vec().end(), 31415.0);
+      owned(input, [&](int i, int j, int kk) {
+        padded(i, j, kk) = input(i, j, kk);
+      });
+      halo.exchange();
+      owned(input, [&](int i, int j, int kk) {
+        output(i, j, kk) = k::dirichlet::action(
+            shape, weights, padded.data(), i, j, kk);
+      });
+
+      const auto global_input = gather(input, MPI_COMM_WORLD);
+      const auto global_output = gather(output, MPI_COMM_WORLD);
+      const auto assembled = independent_action(
+          nodes, h, global_input, 0.75, 0.32);
+      double worst = 0.0, scale = 0.0;
+      for (std::size_t id = 0; id < assembled.size(); ++id) {
+        worst = std::max(worst, std::abs(global_output[id] - assembled[id]));
+        scale = std::max(scale, std::abs(assembled[id]));
+      }
+      INFO("MPI process grid " << process_grid[0] << "x"
+                               << process_grid[1] << "x" << process_grid[2]
+                               << ", input kind " << sample_kind);
+      REQUIRE(worst <= 2e-11 * std::max(1.0, scale));
+    }
+  }
 }

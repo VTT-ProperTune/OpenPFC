@@ -21,6 +21,8 @@
 #include <openpfc/solvers/field_operations.hpp>
 #include <openpfc/solvers/krylov.hpp>
 #include <openpfc/solvers/nodal_multigrid.hpp>
+#include <openpfc/solvers/nodal_dirichlet_multigrid.hpp>
+#include <openpfc/solvers/nodal_dirichlet_device_operator.hpp>
 #include <openpfc/solvers/nodal_dirichlet_kernels.hpp>
 #include <openpfc/runtime/gpu/nodal_multigrid_gpu.hpp>
 
@@ -320,6 +322,95 @@ TEST_CASE("CUDA/HIP Dirichlet Q1 row launcher matches shared host kernel",
   });
   REQUIRE(restriction_error < 1e-12);
   REQUIRE(prolongation_error < 1e-12);
+}
+
+
+TEST_CASE("Dirichlet Q1 device FieldHalo operator matches host across rank bricks",
+          "[nodal_dirichlet][device]") {
+  if (!mechanics_test::available()) SKIP("GPU unavailable");
+
+  int rank = 0, ranks = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &ranks);
+  if (ranks != 1 && ranks != 2 && ranks != 4)
+    SKIP("explicit device decomposition gate covers 1, 2 or 4 ranks");
+
+  // A noncubic physical box and a two-level nested Q1 free-node hierarchy.
+  // NodalDirichletMultigrid stays the independently qualified host oracle;
+  // the device adapter owns no solver hierarchy and uses OpenPFC FieldHalo.
+  const pfc::Int3 n{31, 31, 31};
+  const pfc::Real3 h{1.0 / 32, 1.3 / 32, 0.7 / 32};
+  const auto domain = pfc::domain::with_spacing(
+      n, h, {false, false, false});
+  const auto decomp = ranks == 4
+      ? pfc::decomposition::create(domain, pfc::Int3{2, 2, 1})
+      : pfc::decomposition::create(domain, ranks);
+  const auto box = pfc::decomposition::local_box(decomp, rank);
+
+  pfc::solvers::NodalDirichletMultigrid host_solver(
+      decomp, rank, MPI_COMM_WORLD);
+  pfc::solvers::NodalDirichletDeviceOperator<mechanics_test::Space> device_action(
+      decomp, rank, MPI_COMM_WORLD);
+  REQUIRE(device_action.local_unknowns() ==
+          static_cast<std::size_t>(box.size[0]) * box.size[1] * box.size[2]);
+
+  // Different external halo widths and repeated field updates probe both
+  // the owned-copy staging and the residency/halo invalidation contract.
+  for (const auto widths : {std::array<int, 2>{1, 1},
+                            std::array<int, 2>{0, 2},
+                            std::array<int, 2>{2, 0}}) {
+    HostF hi(domain, box, widths[0]), ho(domain, box, widths[1]);
+    DevF di(domain, box, widths[0]), doutput(domain, box, widths[1]);
+    for (int sample_kind : {0, 1}) {
+      fill_both(hi, di, [=](int gx, int gy, int gz) {
+        return value(sample_kind, gx, gy, gz, 601u);
+      });
+      host_solver.apply_operator(hi, ho);
+      device_action.apply_operator(di, doutput);
+      INFO("MPI ranks " << ranks << ", input halo " << widths[0]
+                         << ", output halo " << widths[1]
+                         << ", sample " << sample_kind);
+      REQUIRE(rel_diff(ho, doutput) <= 1e-12);
+    }
+  }
+
+  // The operand can alias the destination because the shared halo-2
+  // scratch captures its owned values before device output is written.
+  HostF alias_host(domain, box, 1);
+  DevF alias_device(domain, box, 1);
+  fill_both(alias_host, alias_device,
+            [](int gx, int gy, int gz) {
+              return value(12, gx, gy, gz, 706u);
+            });
+  HostF expected(domain, box, 1);
+  host_solver.apply_operator(alias_host, expected);
+  device_action.apply_operator(alias_device, alias_device);
+  REQUIRE(rel_diff(expected, alias_device) <= 1e-12);
+
+  // A device-resident unpreconditioned CG reference exercises the existing
+  // FieldOperations and the rank-owned action, not a premature device V-cycle.
+  // The exact discrete solution is known independently from how b is formed.
+  pfc::solvers::FieldOperations<mechanics_test::Space> ops(
+      domain, box, 1, 1, MPI_COMM_WORLD);
+  auto exact = ops.make(ops.size());
+  auto rhs = ops.make(ops.size());
+  auto solution = ops.make(ops.size());
+  HostF host_exact(domain, box, 1);
+  fill_both(host_exact, exact[0],
+            [](int gx, int gy, int gz) {
+              return value(19, gx, gy, gz, 713u);
+            });
+  device_action.apply_operator(exact[0], rhs[0]);
+  pfc::solvers::KrylovControls controls;
+  controls.preconditioning = pfc::solvers::Preconditioning::None;
+  controls.relative_tolerance = 1e-8;
+  controls.maximum_iterations = 400;
+  const auto result = pfc::solvers::cg(
+      ops, [&](const auto &u, auto &out) {
+        device_action.apply_operator(u[0], out[0]);
+      }, rhs, solution, controls);
+  REQUIRE(result.converged());
+  REQUIRE(rel_diff(host_exact, solution[0]) <= 5e-6);
 }
 
 int main(int argc, char **argv) {

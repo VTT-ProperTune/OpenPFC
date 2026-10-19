@@ -9,6 +9,17 @@
 // on GitHub's device-less compile-only runners.
 #if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
 #include <openpfc/runtime/gpu/nodal_multigrid_gpu.hpp>
+#include <openpfc/solvers/nodal_dirichlet_device_operator.hpp>
+#include <type_traits>
+
+// Verify that the *installed* public CUDA/HIP SDK exposes the rank-owned
+// FieldHalo adapter. sizeof instantiates its object layout, but never
+// constructs a GPU field or launches a kernel on device-less CI runners.
+#if defined(OpenPFC_ENABLE_CUDA)
+static_assert(sizeof(pfc::solvers::NodalDirichletDeviceOperator<pfc::CUDASpace>) > 0);
+#elif defined(OpenPFC_ENABLE_HIP)
+static_assert(sizeof(pfc::solvers::NodalDirichletDeviceOperator<pfc::HIPSpace>) > 0);
+#endif
 
 template <typename Function>
 void require_device_launcher_link(Function function) {

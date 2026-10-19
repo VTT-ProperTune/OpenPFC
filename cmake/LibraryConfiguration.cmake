@@ -301,7 +301,9 @@ endif()
 
 if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
   target_link_libraries(openpfc_kernel_obj PRIVATE CUDA::cudart)
-  target_link_libraries(openpfc PRIVATE CUDA::cudart)
+  # Public GPU headers include cuda_runtime.h. Export the CUDA include dirs
+  # and runtime transitively to installed OpenPFC::openpfc consumers.
+  target_link_libraries(openpfc PUBLIC CUDA::cudart)
   if(OpenPFC_ENABLE_CUDA_SPECTRAL)
     target_compile_definitions(openpfc_kernel_obj PUBLIC OpenPFC_ENABLE_CUDA_SPECTRAL)
     target_compile_definitions(openpfc PUBLIC OpenPFC_ENABLE_CUDA_SPECTRAL)
@@ -310,7 +312,8 @@ endif()
 
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
   target_link_libraries(openpfc_kernel_obj PRIVATE hip::host)
-  target_link_libraries(openpfc PRIVATE hip::host)
+  # The same public-header contract applies to HIP runtime types.
+  target_link_libraries(openpfc PUBLIC hip::host)
   if(OpenPFC_ENABLE_HIP_SPECTRAL)
     target_compile_definitions(openpfc_kernel_obj PUBLIC OpenPFC_ENABLE_HIP_SPECTRAL)
     target_compile_definitions(openpfc PUBLIC OpenPFC_ENABLE_HIP_SPECTRAL)
