@@ -106,6 +106,14 @@ __global__ void apply_kernel(Level L, Operator A, const double *u, double *out) 
   OPENPFC_NMG_NODE(L)
   out[k::vindex(L, i, j, kk)] = k::apply(L, A, u, i, j, kk);
 }
+// First nonperiodic GPU entry point: a rank-owned constant Q1 matrix-free
+// action. Halo transport remains owned by OpenPFC's device HaloExchange.
+__global__ void dirichlet_apply_kernel(Level L, k::dirichlet::Weights w,
+                                       const double *u, double *out) {
+  OPENPFC_NMG_NODE(L)
+  out[k::index(L, k::dirichlet::kHalo, i, j, kk)] =
+      k::dirichlet::action(L, w, u, i, j, kk);
+}
 __global__ void scaled_apply_kernel(Level L, Operator A, const double *u,
                                     double *out) {
   OPENPFC_NMG_NODE(L)
@@ -357,6 +365,11 @@ void OPENPFC_NMG_NAME(apply)(const Level &L, const Operator &A, const double *u,
   else
     apply_kernel<<<grid3(L.n), block3()>>>(L, A, u, out);
   check("apply");
+}
+void OPENPFC_NMG_NAME(dirichlet_apply)(
+    const Level &L, const k::dirichlet::Weights &w, const double *u, double *out) {
+  dirichlet_apply_kernel<<<grid3(L.n), block3()>>>(L, w, u, out);
+  check("dirichlet_apply");
 }
 void OPENPFC_NMG_NAME(scaled_apply)(const Level &L, const Operator &A,
                                     const double *u, double *out) {
