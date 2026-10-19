@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
+#include <openpfc/mechanics/quaternion_orientation.hpp>
 #include <openpfc/runtime/gpu/fcc_batch.hpp>
 #include <openpfc/runtime/gpu/gpu_api.hpp>
 #include <stdexcept>
@@ -12,8 +13,20 @@ __global__ void fcc_batch_kernel(FccSlipParameters parameters, FccBatchView view
   if (p >= n) return;
   Tensor2 orientation, deformation;
   FccSlipState state;
+  if (view.use_quaternion_fields) {
+    const std::size_t source = view.quaternions.at(p);
+    const double q[4] = {view.quaternions.q[0][source],
+                         view.quaternions.q[1][source],
+                         view.quaternions.q[2][source],
+                         view.quaternions.q[3][source]};
+    if (!quaternion_sample_to_crystal(q, orientation)) {
+      view.status[p] = FccStatus::Orientation;
+      return;
+    }
+  }
   for (int c = 0; c < 9; ++c) {
-    orientation(c / 3, c % 3) = view.orientation[c * n + p];
+    if (!view.use_quaternion_fields)
+      orientation(c / 3, c % 3) = view.orientation[c * n + p];
     deformation(c / 3, c % 3) = view.deformation[c * n + p];
     state.plastic(c / 3, c % 3) = view.committed[c * n + p];
     state.velocity(c / 3, c % 3) = view.committed[(9 + c) * n + p];
@@ -47,10 +60,15 @@ void evaluate_fcc_batch_cuda(FccSlipParameters parameters, FccBatchView view) {
 void evaluate_fcc_batch_hip(FccSlipParameters parameters, FccBatchView view) {
 #endif
   if (!view.count) return;
-  if (!view.orientation || !view.deformation || !view.committed || !view.trial ||
+  if (!view.deformation || !view.committed || !view.trial ||
       !view.piola || !view.tangent || !view.status || view.committed == view.trial)
-    throw std::invalid_argument(
-        "FCC batch requires distinct committed/trial storage");
+    throw std::invalid_argument("FCC batch requires distinct committed/trial storage");
+  if (view.use_quaternion_fields) {
+    if (view.orientation || !view.quaternions.valid_for(view.count))
+      throw std::invalid_argument("FCC quaternion view has invalid layout or matrix fallback");
+  } else if (!view.orientation) {
+    throw std::invalid_argument("FCC matrix orientation field is absent");
+  }
   constexpr int threads = 64;
   fcc_batch_kernel<<<(view.count + threads - 1) / threads, threads>>>(parameters,
                                                                       view);

@@ -3,6 +3,7 @@
 #pragma once
 #include <cstddef>
 #include <openpfc/mechanics/constitutive/crystal_plasticity.hpp>
+#include <openpfc/runtime/gpu/quaternion_view.hpp>
 
 namespace pfc::finite_strain {
 /// Component-major arrays: entry(component, point) = component * count + point.
@@ -11,7 +12,7 @@ namespace pfc::finite_strain {
 /// committed after checking every status. Evaluation never modifies committed.
 struct FccBatchView {
   std::size_t count;
-  const double *orientation; // 9 components, row-major tensors
+  const double *orientation; // legacy 9 components, row-major passive tensors
   const double *deformation; // 9 components
   const double *committed;   // 42 components
   double *trial;             // 42 components
@@ -20,6 +21,11 @@ struct FccBatchView {
   FccStatus *status;
   double *resolved_shear = nullptr; // optional 12 components
   double *shear_rate = nullptr;     // optional 12 components
+  // Optional, read-only native KWC-style crystal->sample q=(w,x,y,z).
+  // Only the caller's real-space owned brick is addressed. A non-owning
+  // lifetime/decomposition check is the responsibility of FccPoints' adapter.
+  FccQuaternionFieldView quaternions{};
+  bool use_quaternion_fields = false;
 };
 struct FccBatchFailure {
   FccStatus status = FccStatus::Success;

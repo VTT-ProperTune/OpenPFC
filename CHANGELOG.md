@@ -7,6 +7,14 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- The GPU FCC point batch can consume a borrowed device-resident set of four
+  padded crystal-to-sample quaternion Fields without uploading nine-component
+  orientation matrices. The original dense API stays available, with its
+  matrix allocation now lazy. The passive conversion occurs at each point
+  in the constitutive kernel and rejects invalid quaternions. The handoff
+  requires the same owned real-space box and Domain; it does not implement
+  repartitioning, KWC export, or a coupled workflow (#585).
+
 - `polycrystal_shear` shears a periodic FCC polycrystal with the existing
   slip law and the GMRES finite-strain solver. Orientations, the aluminum
   parameters and the mid-plane scalar stay in the application. The scalar
