@@ -97,6 +97,8 @@ public:
     // Keep the current value by unique ownership rather than assigning it.
     auto current_dec = std::make_unique<decomposition::Decomposition>(fine);
     while (true) {
+      // Full-width halo exchange must never read beyond an owned brick.
+      validate_local_width(*current_dec);
       const auto global = domain::get_size(current);
       bool coarsen = true;
       for (int d = 0; d < 3; ++d)
@@ -251,6 +253,16 @@ private:
       jacobi = std::min(damping, 1.5 * diag / abs_sum) / diag;
     }
   };
+
+  static void validate_local_width(const decomposition::Decomposition &dec) {
+    for (int rank = 0; rank < decomposition::get_num_domains(dec); ++rank) {
+      const Box3i box = decomposition::local_box(dec, rank);
+      for (int d = 0; d < 3; ++d)
+        if (box.size[d] < 2)
+          throw std::invalid_argument(
+              "NodalDirichletMultigrid: owned brick too thin for halo width 2");
+    }
+  }
 
   /// Only OpenPFC's Decomposition chooses boxes. The solver checks whether
   /// geometric Q1 transfers fit the established 2-cell halo for every rank.
