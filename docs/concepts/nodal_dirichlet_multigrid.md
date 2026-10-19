@@ -58,7 +58,22 @@ axes when 4 ranks are available. The default hosted CI currently caps MPI
 world size at two ranks; a local or dedicated four-rank configuration must
 pass before claiming four-rank acceptance.
 
-This first implementation is **CPU only**, with constant coefficients,
+The full geometric V-cycle remains **CPU only**. The constant-Q1
+Dirichlet row action, symmetric Jacobi point update, and P/P^T are now
+factored into `solvers/nodal_dirichlet_kernels.hpp` with
+`OPENPFC_HD` point definitions. OpenPFC's existing CUDA/HIP nodal
+kernel translation units expose `dirichlet_apply_cuda/hip` for a
+**pre-exchanged halo-2 device array and a trivially-copyable constant
+stencil**. This does not perform any halo exchange or solve; the
+caller must supply an already consistent device buffer. OpenPFC's
+normal GPU Field/HaloExchange runtime will own this in a follow-up
+implementation. Host Catch2 tests independently check Q1 rows,
+physical-Dirichlet boundary sentinel masking, shifted rank-local
+bricks, and P/P^T adjointness; GPU device-vs-host point-action parity
+is a separate device-conditional test. CUDA/HIP compile-only CI
+qualifies compilation, not actual accelerator execution.
+
+The current solver has constant coefficients,
 homogeneous Dirichlet conditions, all axes nonperiodic, and a bounded
 replicated coarse solve. No HIP/CUDA, mixed boundary type, arbitrary
 nonuniform geometry, coefficient jumps, nonlinear mechanics, or large-scale
