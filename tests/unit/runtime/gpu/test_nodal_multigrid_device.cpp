@@ -21,6 +21,8 @@
 #include <openpfc/solvers/field_operations.hpp>
 #include <openpfc/solvers/krylov.hpp>
 #include <openpfc/solvers/nodal_multigrid.hpp>
+#include <openpfc/solvers/nodal_dirichlet_kernels.hpp>
+#include <openpfc/runtime/gpu/nodal_multigrid_gpu.hpp>
 
 namespace {
 
@@ -152,6 +154,68 @@ TEST_CASE("NodalMultigrid device operator, V-cycle and PCG match the host",
           REQUIRE(rel_diff(hx[0], dx[0]) < 1e-9);
         }
       }
+}
+
+
+TEST_CASE("CUDA/HIP Dirichlet Q1 row launcher matches shared host kernel",
+          "[nodal_dirichlet][device]") {
+  if (!mechanics_test::available()) SKIP("GPU unavailable");
+  int rank = 0, nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  if (nproc != 1) SKIP("single-rank device operator parity only");
+  const pfc::Int3 n{15, 15, 31};
+  const pfc::Real3 h{1.0 / 16, 1.3 / 16, 0.7 / 32};
+  const auto dom = pfc::domain::with_spacing(n, h, {false, false, false});
+  const auto dec = pfc::decomposition::create(dom, pfc::Int3{1, 1, 1});
+  const auto box = pfc::decomposition::local_box(dec, 0);
+  HostF host(dom, box, 2);
+  DevF device(dom, box, 2), device_out(dom, box, 2);
+  std::fill(host.vec().begin(), host.vec().end(), 8888.0);
+  const auto local = host.local_size();
+  for (int k = 0; k < local[2]; ++k)
+    for (int j = 0; j < local[1]; ++j)
+      for (int i = 0; i < local[0]; ++i) {
+        const auto g = host.global(i, j, k);
+        host(i, j, k) = value(8, g[0], g[1], g[2], 21u);
+      }
+  device.with_host_view([&](double *ptr, std::size_t extent) {
+    REQUIRE(extent == host.size());
+    std::copy(host.data(), host.data() + host.size(), ptr);
+  });
+  device.sync_to_device();
+
+  pfc::solvers::nmg::Level shape;
+  for (int a = 0; a < 3; ++a) {
+    shape.n[a] = n[a];
+    shape.low[a] = 0;
+    shape.gn[a] = n[a];
+  }
+  const double spacing[3] = {h[0], h[1], h[2]};
+  const auto weights =
+      pfc::solvers::nmg::dirichlet::make_weights(spacing, 1.0, 0.41);
+#if defined(OPENPFC_TEST_MECHANICS_HIP)
+  pfc::solvers::gpu::nmg::dirichlet_apply_hip(
+      shape, weights, device.data(), device_out.data());
+#else
+  pfc::solvers::gpu::nmg::dirichlet_apply_cuda(
+      shape, weights, device.data(), device_out.data());
+#endif
+  device_out.note_device_write();
+
+  double delta_sq = 0.0, norm_sq = 0.0;
+  device_out.with_host_read([&](const double *ptr, std::size_t) {
+    for (int k = 0; k < n[2]; ++k)
+      for (int j = 0; j < n[1]; ++j)
+        for (int i = 0; i < n[0]; ++i) {
+          const double expected = pfc::solvers::nmg::dirichlet::action(
+              shape, weights, host.data(), i, j, k);
+          const double actual = ptr[device_out.idx(i, j, k)];
+          delta_sq += (actual - expected) * (actual - expected);
+          norm_sq += expected * expected;
+        }
+  });
+  REQUIRE(std::sqrt(delta_sq / norm_sq) <= 1e-13);
 }
 
 int main(int argc, char **argv) {
