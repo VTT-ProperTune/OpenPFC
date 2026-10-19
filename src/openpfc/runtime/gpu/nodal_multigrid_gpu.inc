@@ -114,6 +114,31 @@ __global__ void dirichlet_apply_kernel(Level L, k::dirichlet::Weights w,
   out[k::index(L, k::dirichlet::kHalo, i, j, kk)] =
       k::dirichlet::action(L, w, u, i, j, kk);
 }
+// The field and device buffer ownership stay with OpenPFC. This kernel
+// implements the same damped-Jacobi point update used by the host V-cycle;
+// input and output buffers must not alias.
+__global__ void dirichlet_jacobi_kernel(Level L, k::dirichlet::Weights w,
+                                        const double *old_u, const double *rhs,
+                                        double *new_u, double scale) {
+  OPENPFC_NMG_NODE(L)
+  const auto index = k::index(L, k::dirichlet::kHalo, i, j, kk);
+  new_u[index] = k::dirichlet::jacobi(
+      L, w, old_u, old_u[index], rhs[index], scale, i, j, kk);
+}
+__global__ void dirichlet_restrict_kernel(Level F, const double *fine,
+                                          Level C, double *coarse) {
+  OPENPFC_NMG_NODE(C)
+  coarse[k::index(C, k::dirichlet::kHalo, i, j, kk)] =
+      k::dirichlet::restrict_pt(
+          F, fine, C.low[0] + i, C.low[1] + j, C.low[2] + kk);
+}
+__global__ void dirichlet_prolong_kernel(Level F, double *fine,
+                                         Level C, const double *coarse) {
+  OPENPFC_NMG_NODE(F)
+  const auto index = k::index(F, k::dirichlet::kHalo, i, j, kk);
+  fine[index] += k::dirichlet::prolong_p(
+      C, coarse, F.low[0] + i, F.low[1] + j, F.low[2] + kk);
+}
 __global__ void scaled_apply_kernel(Level L, Operator A, const double *u,
                                     double *out) {
   OPENPFC_NMG_NODE(L)
@@ -370,6 +395,23 @@ void OPENPFC_NMG_NAME(dirichlet_apply)(
     const Level &L, const k::dirichlet::Weights &w, const double *u, double *out) {
   dirichlet_apply_kernel<<<grid3(L.n), block3()>>>(L, w, u, out);
   check("dirichlet_apply");
+}
+void OPENPFC_NMG_NAME(dirichlet_jacobi)(
+    const Level &L, const k::dirichlet::Weights &w, const double *old_u,
+    const double *rhs, double *new_u, double scale) {
+  dirichlet_jacobi_kernel<<<grid3(L.n), block3()>>>(
+      L, w, old_u, rhs, new_u, scale);
+  check("dirichlet_jacobi");
+}
+void OPENPFC_NMG_NAME(dirichlet_restrict)(
+    const Level &F, const double *fine, const Level &C, double *coarse) {
+  dirichlet_restrict_kernel<<<grid3(C.n), block3()>>>(F, fine, C, coarse);
+  check("dirichlet_restrict");
+}
+void OPENPFC_NMG_NAME(dirichlet_prolong)(
+    const Level &F, double *fine, const Level &C, const double *coarse) {
+  dirichlet_prolong_kernel<<<grid3(F.n), block3()>>>(F, fine, C, coarse);
+  check("dirichlet_prolong");
 }
 void OPENPFC_NMG_NAME(scaled_apply)(const Level &L, const Operator &A,
                                     const double *u, double *out) {

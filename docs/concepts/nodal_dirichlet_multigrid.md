@@ -67,7 +67,14 @@ kernel translation units expose `dirichlet_apply_cuda/hip` for a
 stencil**. This does not perform any halo exchange or solve; the
 caller must supply an already consistent device buffer. OpenPFC's
 normal GPU Field/HaloExchange runtime will own this in a follow-up
-implementation. Host Catch2 tests independently check Q1 rows,
+implementation. OpenPFC's same vendor translation units also expose
+`dirichlet_jacobi_cuda/hip`, `dirichlet_restrict_cuda/hip` and
+`dirichlet_prolong_cuda/hip` as **separate halo-2 point kernel launches**:
+the caller provides old/new distinct Jacobi buffers, exchanged fine
+residuals and exchanged coarse corrections. The P/P^T operators do
+not invent partition rules or perform MPI transport. The full
+GPU-resident hierarchy is **not yet implemented**.
+Host Catch2 tests independently check Q1 rows,
 physical-Dirichlet boundary sentinel masking, shifted rank-local
 bricks, and P/P^T adjointness; GPU device-vs-host point-action parity
 is a separate device-conditional test. CUDA/HIP compile-only CI

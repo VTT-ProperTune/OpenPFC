@@ -216,6 +216,110 @@ TEST_CASE("CUDA/HIP Dirichlet Q1 row launcher matches shared host kernel",
         }
   });
   REQUIRE(std::sqrt(delta_sq / norm_sq) <= 1e-13);
+
+  // Fused damped Jacobi: read the old owned+halo field but write to a
+  // distinct new buffer, exactly as the host symmetric smoother does.
+  DevF rhs(dom, box, 2), next(dom, box, 2);
+  rhs.with_host_view([&](double *p, std::size_t size) {
+    std::fill(p, p + size, 0.0);
+    for (int k = 0; k < n[2]; ++k)
+      for (int j = 0; j < n[1]; ++j)
+        for (int i = 0; i < n[0]; ++i)
+          p[rhs.idx(i, j, k)] = 0.17 + 0.01 * (i + 2 * j + 3 * k);
+  });
+  rhs.sync_to_device();
+#if defined(OPENPFC_TEST_MECHANICS_HIP)
+  pfc::solvers::gpu::nmg::dirichlet_jacobi_hip(
+      shape, weights, device.data(), rhs.data(), next.data(), 0.19);
+#else
+  pfc::solvers::gpu::nmg::dirichlet_jacobi_cuda(
+      shape, weights, device.data(), rhs.data(), next.data(), 0.19);
+#endif
+  next.note_device_write();
+  double jacobi_error = 0.0;
+  next.with_host_read([&](const double *p, std::size_t) {
+    for (int k = 0; k < n[2]; ++k)
+      for (int j = 0; j < n[1]; ++j)
+        for (int i = 0; i < n[0]; ++i) {
+          const double b = 0.17 + 0.01 * (i + 2 * j + 3 * k);
+          const double expected = pfc::solvers::nmg::dirichlet::jacobi(
+              shape, weights, host.data(), host(i, j, k), b, 0.19, i, j, k);
+          jacobi_error = std::max(jacobi_error,
+                                   std::abs(expected - p[next.idx(i, j, k)]));
+        }
+  });
+  REQUIRE(jacobi_error < 1e-12);
+
+  // Adjacent Q1 free-node spaces. The launchers own only numerical point
+  // arithmetic; the caller's Field handles device residency and padding.
+  const pfc::Int3 nc{7, 7, 15};
+  const auto domc = pfc::domain::with_spacing(
+      nc, {2 * h[0], 2 * h[1], 2 * h[2]},
+      {false, false, false});
+  const auto decc = pfc::decomposition::create(domc, pfc::Int3{1, 1, 1});
+  const auto boxc = pfc::decomposition::local_box(decc, 0);
+  DevF coarse(domc, boxc, 2), reduced(domc, boxc, 2), prolongated(dom, box, 2);
+  pfc::solvers::nmg::Level coarseshape;
+  for (int a = 0; a < 3; ++a) {
+    coarseshape.n[a] = nc[a];
+    coarseshape.gn[a] = nc[a];
+    coarseshape.low[a] = 0;
+  }
+  std::vector<double> coarse_host(
+      pfc::solvers::nmg::padded_size(
+          coarseshape, pfc::solvers::nmg::dirichlet::kHalo), 1111.0);
+  for (int k = 0; k < nc[2]; ++k)
+    for (int j = 0; j < nc[1]; ++j)
+      for (int i = 0; i < nc[0]; ++i)
+        coarse_host[pfc::solvers::nmg::index(
+            coarseshape, pfc::solvers::nmg::dirichlet::kHalo, i, j, k)] =
+            value(6, i, j, k, 35u);
+  coarse.with_host_view([&](double *p, std::size_t size) {
+    REQUIRE(size == coarse_host.size());
+    std::copy(coarse_host.begin(), coarse_host.end(), p);
+  });
+  coarse.sync_to_device();
+  prolongated.with_host_view([&](double *p, std::size_t size) {
+    std::fill(p, p + size, 0.0);
+  });
+  prolongated.sync_to_device();
+#if defined(OPENPFC_TEST_MECHANICS_HIP)
+  pfc::solvers::gpu::nmg::dirichlet_restrict_hip(
+      shape, device.data(), coarseshape, reduced.data());
+  pfc::solvers::gpu::nmg::dirichlet_prolong_hip(
+      shape, prolongated.data(), coarseshape, coarse.data());
+#else
+  pfc::solvers::gpu::nmg::dirichlet_restrict_cuda(
+      shape, device.data(), coarseshape, reduced.data());
+  pfc::solvers::gpu::nmg::dirichlet_prolong_cuda(
+      shape, prolongated.data(), coarseshape, coarse.data());
+#endif
+  reduced.note_device_write();
+  prolongated.note_device_write();
+  double restriction_error = 0.0, prolongation_error = 0.0;
+  reduced.with_host_read([&](const double *p, std::size_t) {
+    for (int k = 0; k < nc[2]; ++k)
+      for (int j = 0; j < nc[1]; ++j)
+        for (int i = 0; i < nc[0]; ++i) {
+          const double expected = pfc::solvers::nmg::dirichlet::restrict_pt(
+              shape, host.data(), i, j, k);
+          restriction_error = std::max(
+              restriction_error, std::abs(expected - p[reduced.idx(i, j, k)]));
+        }
+  });
+  prolongated.with_host_read([&](const double *p, std::size_t) {
+    for (int k = 0; k < n[2]; ++k)
+      for (int j = 0; j < n[1]; ++j)
+        for (int i = 0; i < n[0]; ++i) {
+          const double expected = pfc::solvers::nmg::dirichlet::prolong_p(
+              coarseshape, coarse_host.data(), i, j, k);
+          prolongation_error = std::max(
+              prolongation_error,
+              std::abs(expected - p[prolongated.idx(i, j, k)]));
+        }
+  });
+  REQUIRE(restriction_error < 1e-12);
+  REQUIRE(prolongation_error < 1e-12);
 }
 
 int main(int argc, char **argv) {
