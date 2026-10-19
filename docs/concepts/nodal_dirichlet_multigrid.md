@@ -106,6 +106,33 @@ on a known discrete solution, admitting convergence only with the
 true unpreconditioned residual. This is a correctness diagnostic,
 not evidence of a fast GPU GMG solver.
 
+### Rank-owned two-level GPU transfers
+
+`NodalDirichletDeviceTransfers<CUDASpace/HIPSpace>` connects the existing
+GPU point launchers for `R=Pᵀ` and `P` to *two caller-supplied OpenPFC
+decompositions*. It does not create a partition, implement a second
+multigrid solver, or store a replicated fine grid. The fine residual
+and coarse correction are copied by owned-only device kernels into
+persistent padded `FieldHalo` workspaces, exchanged by OpenPFC's
+26-direction device halo mechanism, then restriction/prolongation
+operate on the uniquely owned nodes. External fields may use different
+storage halo widths; no fine-grid data is downloaded to the host.
+
+For this Dirichlet free-node convention, adjacent levels satisfy
+`n_f=2*n_c+1` and `h_c=2*h_f`. The shared
+`nodal_dirichlet_nested_geometry.hpp` gate checks those relations and
+all MPI ranks' adjacent-level two-cell transfer reach. The CPU
+`NodalDirichletMultigrid` uses the **same** geometry validator.
+Independent host MPI acceptance assembles `P` and `Pᵀ` by a test-only
+scatter, verifies adjointness across ranks and checks 2×2 brick layouts;
+CUDA/HIP device-conditional tests compare full FieldHalo transfer paths
+to the host reference. Neither compile-only jobs nor host tests prove
+actual accelerator numerical correctness.
+
+**The complete GPU V-cycle is not implemented by this helper.** The
+remaining steps are coupled pre/post-smoothing, residuals, coarse
+reduction/solve, and the OpenPFC Krylov preconditioner contract.
+
 The GitHub-hosted CUDA/HIP jobs **compile and link** that test,
 but have no GPU hardware to execute it. Actual GPU+MPI correctness
 must be reported separately; this stage is not proof of a resident

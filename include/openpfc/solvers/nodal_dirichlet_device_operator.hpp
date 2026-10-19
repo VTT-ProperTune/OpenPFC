@@ -51,6 +51,14 @@ template <> struct DirichletDevicePointLaunch<CUDASpace> {
                      const double *src, double *dst) {
     gpu::nmg::dirichlet_apply_cuda(g, w, src, dst);
   }
+  static void restrict_pt(const nmg::Level &fine, const double *src,
+                          const nmg::Level &coarse, double *dst) {
+    gpu::nmg::dirichlet_restrict_cuda(fine, src, coarse, dst);
+  }
+  static void prolong_add(const nmg::Level &fine, double *dst,
+                          const nmg::Level &coarse, const double *src) {
+    gpu::nmg::dirichlet_prolong_cuda(fine, dst, coarse, src);
+  }
 };
 #endif
 
@@ -63,6 +71,14 @@ template <> struct DirichletDevicePointLaunch<HIPSpace> {
   static void action(const nmg::Level &g, const nmg::dirichlet::Weights &w,
                      const double *src, double *dst) {
     gpu::nmg::dirichlet_apply_hip(g, w, src, dst);
+  }
+  static void restrict_pt(const nmg::Level &fine, const double *src,
+                          const nmg::Level &coarse, double *dst) {
+    gpu::nmg::dirichlet_restrict_hip(fine, src, coarse, dst);
+  }
+  static void prolong_add(const nmg::Level &fine, double *dst,
+                          const nmg::Level &coarse, const double *src) {
+    gpu::nmg::dirichlet_prolong_hip(fine, dst, coarse, src);
   }
 };
 #endif

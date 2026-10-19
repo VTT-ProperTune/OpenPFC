@@ -41,6 +41,7 @@
 #include <openpfc/kernel/execution/memory_space.hpp>
 #include <openpfc/solvers/nodal_multigrid_kernels.hpp>
 #include <openpfc/solvers/nodal_dirichlet_kernels.hpp>
+#include <openpfc/solvers/nodal_dirichlet_nested_geometry.hpp>
 
 namespace pfc::solvers {
 
@@ -100,7 +101,7 @@ public:
     auto current_dec = std::make_unique<decomposition::Decomposition>(fine);
     while (true) {
       // Full-width halo exchange must never read beyond an owned brick.
-      validate_local_width(*current_dec);
+      nmg::dirichlet::validate_nested_local_width(*current_dec);
       const auto global = domain::get_size(current);
       bool coarsen = true;
       for (int d = 0; d < 3; ++d)
@@ -122,7 +123,7 @@ public:
                                          {false, false, false});
       auto next_dec = std::make_unique<decomposition::Decomposition>(
           decomposition::create(next, proc_grid));
-      validate_transfer_reach(*current_dec, *next_dec, global, next_size);
+      nmg::dirichlet::validate_nested_transfer_reach(*current_dec, *next_dec);
       current = next;
       current_dec = std::move(next_dec);
     }
@@ -249,41 +250,6 @@ private:
       jacobi = std::min(damping, 1.5 * diag / abs_sum) / diag;
     }
   };
-
-  static void validate_local_width(const decomposition::Decomposition &dec) {
-    for (int rank = 0; rank < decomposition::get_num_domains(dec); ++rank) {
-      const Box3i box = decomposition::local_box(dec, rank);
-      for (int d = 0; d < 3; ++d)
-        if (box.size[d] < 2)
-          throw std::invalid_argument(
-              "NodalDirichletMultigrid: owned brick too thin for halo width 2");
-    }
-  }
-
-  /// Only OpenPFC's Decomposition chooses boxes. The solver checks whether
-  /// geometric Q1 transfers fit the established 2-cell halo for every rank.
-  static void validate_transfer_reach(const decomposition::Decomposition &fine,
-                                      const decomposition::Decomposition &coarse,
-                                      const Int3 &nf, const Int3 &nc) {
-    const int nproc = decomposition::get_num_domains(fine);
-    if (decomposition::get_num_domains(coarse) != nproc)
-      throw std::invalid_argument("NodalDirichletMultigrid: process count changed");
-    constexpr int H = 2;
-    for (int rank = 0; rank < nproc; ++rank) {
-      const Box3i f = decomposition::local_box(fine, rank);
-      const Box3i c = decomposition::local_box(coarse, rank);
-      for (int d = 0; d < 3; ++d) {
-        const int rlo = std::max(0, 2 * c.low[d]);
-        const int rhi = std::min(nf[d] - 1, 2 * c.high[d] + 2);
-        const int plo = std::max(0, (f.low[d] + 1) / 2 - 1);
-        const int phi = std::min(nc[d] - 1, (f.high[d] + 1) / 2);
-        if (rlo < f.low[d] - H || rhi > f.high[d] + H ||
-            plo < c.low[d] - H || phi > c.high[d] + H)
-          throw std::invalid_argument(
-              "NodalDirichletMultigrid: nested Q1 transfer exceeds 2-cell halo");
-      }
-    }
-  }
 
   void check_field(const FieldT &field) const {
     const auto &fine = *m_levels.front();

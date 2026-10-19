@@ -23,6 +23,7 @@
 #include <openpfc/solvers/nodal_multigrid.hpp>
 #include <openpfc/solvers/nodal_dirichlet_multigrid.hpp>
 #include <openpfc/solvers/nodal_dirichlet_device_operator.hpp>
+#include <openpfc/solvers/nodal_dirichlet_device_transfers.hpp>
 #include <openpfc/solvers/nodal_dirichlet_kernels.hpp>
 #include <openpfc/runtime/gpu/nodal_multigrid_gpu.hpp>
 
@@ -412,6 +413,113 @@ TEST_CASE("Dirichlet Q1 device FieldHalo operator matches host across rank brick
   REQUIRE(result.converged());
   REQUIRE(rel_diff(host_exact, solution[0]) <= 5e-6);
 }
+
+
+TEST_CASE("Dirichlet Q1 device nested FieldHalo P/Pt match host bricks",
+          "[nodal_dirichlet][device]") {
+  if (!mechanics_test::available()) SKIP("GPU unavailable");
+  int rank = 0, ranks = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &ranks);
+  if (ranks != 1 && ranks != 2 && ranks != 4)
+    SKIP("device nested-Q1 MPI parity covers 1, 2 or 4 ranks");
+
+  // Check the 2:1 element-count elongated family as well as cubic Q1.
+  for (const pfc::Int3 nf :
+       {pfc::Int3{31, 31, 31}, pfc::Int3{31, 31, 63}}) {
+  const pfc::Int3 nc{(nf[0] - 1) / 2, (nf[1] - 1) / 2, (nf[2] - 1) / 2};
+  const pfc::Real3 hf{1.0 / 32, 1.3 / 32,
+                      0.7 / static_cast<double>(nf[2] + 1)};
+  const pfc::Real3 hc{2 * hf[0], 2 * hf[1], 2 * hf[2]};
+  const auto df = pfc::domain::with_spacing(nf, hf, {false, false, false});
+  const auto dc = pfc::domain::with_spacing(nc, hc, {false, false, false});
+  const pfc::Int3 process_grid = ranks == 4 ? pfc::Int3{2, 2, 1}
+                                            : pfc::Int3{1, 1, ranks};
+  const auto decomp_f = pfc::decomposition::create(df, process_grid);
+  const auto decomp_c = pfc::decomposition::create(dc, process_grid);
+  const auto bf = pfc::decomposition::local_box(decomp_f, rank);
+  const auto bc = pfc::decomposition::local_box(decomp_c, rank);
+
+  pfc::solvers::NodalDirichletDeviceTransfers<mechanics_test::Space> transfer(
+      decomp_f, decomp_c, rank, MPI_COMM_WORLD);
+  REQUIRE(transfer.fine_owned_box().size == bf.size);
+  REQUIRE(transfer.coarse_owned_box().size == bc.size);
+
+  pfc::solvers::FieldOperations<pfc::HostSpace> fops(df, bf, 1, 2,
+                                                     MPI_COMM_WORLD);
+  pfc::solvers::FieldOperations<pfc::HostSpace> cops(dc, bc, 1, 2,
+                                                     MPI_COMM_WORLD);
+  pfc::comm::HaloExchangeOptions options;
+  options.connectivity = pfc::comm::HaloConnectivity::Full;
+  pfc::solvers::FieldHalo<pfc::HostSpace> fh(
+      fops, decomp_f, rank, MPI_COMM_WORLD, options);
+  pfc::solvers::FieldHalo<pfc::HostSpace> ch(
+      cops, decomp_c, rank, MPI_COMM_WORLD, options);
+  pfc::solvers::nmg::Level F, C;
+  for (int d = 0; d < 3; ++d) {
+    F.n[d] = bf.size[d]; F.low[d] = bf.low[d]; F.gn[d] = nf[d];
+    C.n[d] = bc.size[d]; C.low[d] = bc.low[d]; C.gn[d] = nc[d];
+  }
+
+  HostF source_h(df, bf, 0), correction_h(dc, bc, 1);
+  DevF source_d(df, bf, 0), correction_d(dc, bc, 1);
+  HostF host_coarse(dc, bc, 0), host_fine(df, bf, 1);
+  DevF device_coarse(dc, bc, 0), device_fine(df, bf, 1);
+
+  for (int trial = 0; trial < 2; ++trial) {
+    fill_both(source_h, source_d, [trial](int x, int y, int z) {
+      return value(10 + trial, x, y, z, 1201u);
+    });
+    fill_both(correction_h, correction_d, [trial](int x, int y, int z) {
+      return value(20 + trial, x, y, z, 1601u);
+    });
+    fill_both(host_fine, device_fine, [trial](int x, int y, int z) {
+      return value(30 + trial, x, y, z, 1801u);
+    });
+
+    auto &rf = fh.scratch()[0];
+    std::fill(rf.vec().begin(), rf.vec().end(), -1024.0);
+    for (int z = 0; z < bf.size[2]; ++z)
+      for (int y = 0; y < bf.size[1]; ++y)
+        for (int x = 0; x < bf.size[0]; ++x)
+          rf(x, y, z) = source_h(x, y, z);
+    fh.exchange();
+
+    auto &uc = ch.scratch()[0];
+    std::fill(uc.vec().begin(), uc.vec().end(), 2048.0);
+    for (int z = 0; z < bc.size[2]; ++z)
+      for (int y = 0; y < bc.size[1]; ++y)
+        for (int x = 0; x < bc.size[0]; ++x)
+          uc(x, y, z) = correction_h(x, y, z);
+    ch.exchange();
+
+    for (int z = 0; z < bc.size[2]; ++z)
+      for (int y = 0; y < bc.size[1]; ++y)
+        for (int x = 0; x < bc.size[0]; ++x)
+          host_coarse(x, y, z) =
+              pfc::solvers::nmg::dirichlet::restrict_pt(
+                  F, rf.data(), bc.low[0] + x, bc.low[1] + y,
+                  bc.low[2] + z);
+
+    for (int z = 0; z < bf.size[2]; ++z)
+      for (int y = 0; y < bf.size[1]; ++y)
+        for (int x = 0; x < bf.size[0]; ++x)
+          host_fine(x, y, z) +=
+              pfc::solvers::nmg::dirichlet::prolong_p(
+                  C, uc.data(), bf.low[0] + x, bf.low[1] + y,
+                  bf.low[2] + z);
+
+    transfer.restrict_pt(source_d, device_coarse);
+    transfer.prolong_add(correction_d, device_fine);
+    INFO("MPI ranks " << ranks << " process grid " << process_grid[0]
+                      << "x" << process_grid[1] << "x" << process_grid[2]
+                      << ", trial " << trial);
+    REQUIRE(rel_diff(host_coarse, device_coarse) <= 1e-12);
+    REQUIRE(rel_diff(host_fine, device_fine) <= 1e-12);
+  }
+  }
+}
+
 
 int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);

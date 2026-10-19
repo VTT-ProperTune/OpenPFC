@@ -20,6 +20,7 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/solvers/field_operations.hpp>
 #include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
+#include <openpfc/solvers/nodal_dirichlet_nested_geometry.hpp>
 #include <openpfc/solvers/krylov.hpp>
 #include <openpfc/solvers/nodal_dirichlet_multigrid.hpp>
 
@@ -511,4 +512,153 @@ TEST_CASE("Dirichlet FieldHalo MPI stage matches independent element Q1",
       REQUIRE(worst <= 2e-11 * std::max(1.0, scale));
     }
   }
+}
+
+
+TEST_CASE("Dirichlet nested OpenPFC FieldHalo P/Pt preserve adjointness on MPI",
+          "[nodal_dirichlet][MPI]") {
+  namespace k = pfc::solvers::nmg;
+  int rank = 0, ranks = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &ranks);
+  // Qualify both isotropic node counts and 2:1 element-count geometry.
+  // These cover the same Cartesian aspect family as DiscretizationLab's
+  // independent physical-Galerkin acceptance without allocating HPC grids.
+  for (const pfc::Int3 fine_size :
+       {pfc::Int3{31, 31, 31}, pfc::Int3{31, 31, 63}}) {
+    const pfc::Int3 coarse_size{(fine_size[0] - 1) / 2,
+                                (fine_size[1] - 1) / 2,
+                                (fine_size[2] - 1) / 2};
+    const pfc::Real3 hf{1.0 / 32, 1.3 / 32,
+                        0.7 / static_cast<double>(fine_size[2] + 1)};
+    const pfc::Real3 hc{2 * hf[0], 2 * hf[1], 2 * hf[2]};
+    const auto fine_domain = pfc::domain::with_spacing(
+        fine_size, hf, {false, false, false});
+    const auto coarse_domain = pfc::domain::with_spacing(
+        coarse_size, hc, {false, false, false});
+
+  for (const auto process_grid : process_grids(ranks)) {
+    const auto df = pfc::decomposition::create(fine_domain, process_grid);
+    const auto dc = pfc::decomposition::create(coarse_domain, process_grid);
+    REQUIRE_NOTHROW(k::dirichlet::validate_nested_transfer_reach(df, dc));
+    const auto bf = pfc::decomposition::local_box(df, rank);
+    const auto bc = pfc::decomposition::local_box(dc, rank);
+    Ops fops(fine_domain, bf, 1, 2, MPI_COMM_WORLD);
+    Ops cops(coarse_domain, bc, 1, 2, MPI_COMM_WORLD);
+    pfc::comm::HaloExchangeOptions options;
+    options.connectivity = pfc::comm::HaloConnectivity::Full;
+    pfc::solvers::FieldHalo<pfc::HostSpace> fhalo(
+        fops, df, rank, MPI_COMM_WORLD, options);
+    pfc::solvers::FieldHalo<pfc::HostSpace> chalo(
+        cops, dc, rank, MPI_COMM_WORLD, options);
+    Field rf(fine_domain, bf, 0), xc(coarse_domain, bc, 0);
+    Field restricted(coarse_domain, bc, 0), prolonged(fine_domain, bf, 0);
+    fill(rf, sample_a);
+    fill(xc, sample_b);
+
+    auto &fh = fhalo.scratch()[0];
+    std::fill(fh.vec().begin(), fh.vec().end(), 9999.0);
+    owned(rf, [&](int i, int j, int z) { fh(i, j, z) = rf(i, j, z); });
+    fhalo.exchange();
+
+    auto &ch = chalo.scratch()[0];
+    std::fill(ch.vec().begin(), ch.vec().end(), 11111.0);
+    owned(xc, [&](int i, int j, int z) { ch(i, j, z) = xc(i, j, z); });
+    chalo.exchange();
+
+    k::Level F, C;
+    for (int d = 0; d < 3; ++d) {
+      F.n[d] = bf.size[d];
+      F.low[d] = bf.low[d];
+      F.gn[d] = fine_size[d];
+      C.n[d] = bc.size[d];
+      C.low[d] = bc.low[d];
+      C.gn[d] = coarse_size[d];
+    }
+    owned(restricted, [&](int i, int j, int z) {
+      restricted(i, j, z) = k::dirichlet::restrict_pt(
+          F, fh.data(), bc.low[0] + i, bc.low[1] + j, bc.low[2] + z);
+    });
+    owned(prolonged, [&](int i, int j, int z) {
+      prolonged(i, j, z) = k::dirichlet::prolong_p(
+          C, ch.data(), bf.low[0] + i, bf.low[1] + j, bf.low[2] + z);
+    });
+
+    const auto all_f = gather(rf, MPI_COMM_WORLD);
+    const auto all_c = gather(xc, MPI_COMM_WORLD);
+    const auto all_r = gather(restricted, MPI_COMM_WORLD);
+    const auto all_p = gather(prolonged, MPI_COMM_WORLD);
+
+    // Independent Galerkin transfer oracle: assemble R=P^T as a scatter
+    // from each fine-node coefficient into up to eight coarse nodes.
+    std::vector<double> expected_r(count(coarse_size), 0.0);
+    double largest_p_error = 0.0;
+    for (int fk = 0; fk < fine_size[2]; ++fk)
+      for (int fj = 0; fj < fine_size[1]; ++fj)
+        for (int fi = 0; fi < fine_size[0]; ++fi) {
+          const int f[3] = {fi + 1, fj + 1, fk + 1};
+          const int base[3] = {f[0] / 2 - 1, f[1] / 2 - 1, f[2] / 2 - 1};
+          const int count_d[3] = {(f[0] & 1) ? 2 : 1,
+                                  (f[1] & 1) ? 2 : 1,
+                                  (f[2] & 1) ? 2 : 1};
+          const double weight = ((f[0] & 1) ? 0.5 : 1.0) *
+                                ((f[1] & 1) ? 0.5 : 1.0) *
+                                ((f[2] & 1) ? 0.5 : 1.0);
+          double p_ref = 0.0;
+          const double fine_value = all_f[id(fine_size, fi, fj, fk)];
+          for (int dz = 0; dz < count_d[2]; ++dz)
+            for (int dy = 0; dy < count_d[1]; ++dy)
+              for (int dx = 0; dx < count_d[0]; ++dx) {
+                const int ci = base[0] + dx, cj = base[1] + dy,
+                          ck = base[2] + dz;
+                if (ci < 0 || cj < 0 || ck < 0 ||
+                    ci >= coarse_size[0] || cj >= coarse_size[1] ||
+                    ck >= coarse_size[2])
+                  continue;
+                const auto ci_index = id(coarse_size, ci, cj, ck);
+                p_ref += weight * all_c[ci_index];
+                expected_r[ci_index] += weight * fine_value;
+              }
+          largest_p_error = std::max(
+              largest_p_error,
+              std::abs(p_ref - all_p[id(fine_size, fi, fj, fk)]));
+        }
+
+    double largest_r_error = 0.0, fine_dot = 0.0, coarse_dot = 0.0;
+    for (std::size_t i = 0; i < all_r.size(); ++i) {
+      largest_r_error = std::max(
+          largest_r_error, std::abs(all_r[i] - expected_r[i]));
+      coarse_dot += all_c[i] * all_r[i];
+    }
+    for (std::size_t i = 0; i < all_f.size(); ++i)
+      fine_dot += all_f[i] * all_p[i];
+
+    INFO("OpenPFC nested rank layout " << process_grid[0] << "x"
+         << process_grid[1] << "x" << process_grid[2]);
+    REQUIRE(largest_r_error <= 1e-11);
+    REQUIRE(largest_p_error <= 1e-12);
+    REQUIRE(std::abs(fine_dot - coarse_dot) <=
+            1e-11 * std::max({1.0, std::abs(fine_dot),
+                               std::abs(coarse_dot)}));
+  }
+  }
+}
+
+TEST_CASE("Dirichlet nested transfer rejects physically mismatched geometry",
+          "[nodal_dirichlet][MPI]") {
+  namespace k = pfc::solvers::nmg;
+  int ranks = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &ranks);
+  const pfc::Int3 dims{1, 1, ranks};
+  const auto fine = pfc::decomposition::create(
+      pfc::domain::with_spacing({31, 31, 31},
+                                {0.03125, 0.03125, 0.03125},
+                                {false, false, false}), dims);
+  const auto invalid_coarse = pfc::decomposition::create(
+      pfc::domain::with_spacing({15, 15, 15},
+                                {0.0625, 0.075, 0.0625},
+                                {false, false, false}), dims);
+  REQUIRE_THROWS_AS(
+      k::dirichlet::validate_nested_transfer_reach(fine, invalid_coarse),
+      std::invalid_argument);
 }
