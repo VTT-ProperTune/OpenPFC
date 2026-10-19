@@ -130,15 +130,25 @@ to the host reference. Neither compile-only jobs nor host tests prove
 actual accelerator numerical correctness.
 
 **
-### Bounded GPU-resident two-level V-cycle (hardware gate)
+### Bounded GPU-resident two- and three-level V-cycles (hardware gate)
 
-`NodalDirichletDeviceTwoLevelVcycle<CUDASpace/HIPSpace>` joins the
-existing OpenPFC GPU field operator, FieldHalo smoother workspace,
+`NodalDirichletDeviceVcycle<CUDASpace/HIPSpace>` joins the existing
+OpenPFC GPU field operator, FieldHalo smoother workspace,
 `NodalDirichletDeviceTransfers` and the **same**
-`DenseCoarseCholesky` used by the host. This first scope supports
-nested 15×15×15 → 7×7×7 and 15×15×31 → 7×7×15 **free-node** Q1 grids,
-with a verified OpenPFC process layout and symmetric fixed damped
-Jacobi pre/post passes.
+`DenseCoarseCholesky` used by the host. The historical
+`NodalDirichletDeviceTwoLevelVcycle` type is retained as a source-compatible
+alias of the same implementation. The existing two-level constructor accepts
+15×15×15 → 7×7×7 and 15×15×31 → 7×7×15 **free-node** Q1 grids.
+
+The new three-level constructor takes three existing OpenPFC Decompositions
+and composes the **same V-cycle recursively** on the middle level.
+Currently admitted shapes are 31³ → 15³ → 7³ and
+31×31×63 → 15×15×31 → 7×7×15 free nodes. Every middle-level action,
+smoothing, residual and P/Pᵀ exchange remains device-resident; there
+is no host download or global replication of that intermediate level.
+Only the terminal 7³ or 7×7×15 coarse problem crosses to the host.
+The limited grids and halo-reach checks are explicit qualification gates,
+not limits proven for a future general deep hierarchy.
 
 The fine operator, V-cycle iterates, halo exchanges, residual, P and
 Pᵀ remain on the GPU. Only the replicated coarse grid, at most 1024
@@ -152,8 +162,9 @@ independently qualified host `NodalDirichletMultigrid` and checks
 standard OpenPFC PCG convergence using the **true unpreconditioned
 global residual** on 1/2/4-rank OpenPFC decompositions. Hosted
 compile-only jobs build and link the test, but cannot establish actual
-GPU numerical correctness. No deep multi-level recursion or HPC
-scaling claim is made by this bounded capability.
+GPU numerical correctness. Three levels are the current bounded recursion limit. Neither
+actual GPU numerical correctness nor large-scale HPC performance is
+established by hosted GPU-less compile-only CI.
 
 ### Bounded Q1 coarse direct solve
 
