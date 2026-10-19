@@ -35,6 +35,7 @@ MyST, and Breathe render the final site.
 | Run an existing application | [Run simulations](learning_paths.md#i-want-to-run-simulations) | [Applications](user_guide/applications.md), [configuration](user_guide/configuration.md) |
 | Add or change physics | [Extend the physics](learning_paths.md#i-want-to-extend-the-physics) | [Architecture](concepts/architecture.md), [extension guide](extending_openpfc/README.md) |
 | Integrate the library | [Integrate the library](learning_paths.md#i-want-to-integrate-the-library) | [Quick-start CMake example](quickstart.md#link-openpfc-from-your-own-project), [API reference](api/index.md) |
+| Qualify homogeneous Dirichlet Q1 FEM/GMG on CPU/MPI | [Nodal Dirichlet multigrid](concepts/nodal_dirichlet_multigrid.md) | Existing periodic [numerics limits](science/numerics_limits.md) |
 | Run on a cluster | [HPC operator guide](hpc/operator_guide.md) | [Slurm day one](tutorials/hpc_slurm_day_one.md), [GPU decision guide](hpc/gpu_path_decision.md) |
 | Decide whether OpenPFC fits | [When to use OpenPFC](when_not_to_use_openpfc.md) | [Numerical limits](science/numerics_limits.md) |
 
