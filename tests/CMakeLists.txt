@@ -236,7 +236,7 @@ if(OpenPFC_RUN_MPI_SUITES AND MPI_CXX_FOUND)
   add_test(NAME mpi_2procs_all
        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
            $<TARGET_FILE:openpfc-tests>
-           "[MPI]~[grid]~[ring]~[multiple]"
+           "[MPI]~[grid]~[ring]~[multiple]~[nodal_dirichlet]"
   )
   set_tests_properties(
     mpi_2procs_all
