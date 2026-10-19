@@ -355,6 +355,9 @@ jobs:
   # do not download or compile HeFFTe here (spectral GPU stays cluster-only).
   # OpenPFC_ENABLE_HEFFTE=OFF still builds FD/kernel CUDA and HIP TUs.
   # Run on PRs as well: host startup must consume every backend package.
+  # After install, reconfigure the same tree with tests enabled and BUILD,
+  # but NEVER RUN, the real nodal-multigrid vendor test executable. This
+  # verifies Catch2 device-test C++/launch symbols even without allocated GPUs.
   # ============================================================================
   cuda-compile:
     name: CUDA compile-only (no GPU)
@@ -367,7 +370,7 @@ jobs:
       - name: Install git and host build deps
         run: |
           apt-get update && apt-get install -y --no-install-recommends \
-            git ca-certificates cmake ninja-build gcc-13 g++-13 \
+            git ca-certificates cmake ninja-build gcc-13 g++-13 catch2 \
             libopenmpi-dev openmpi-bin nlohmann-json3-dev
       - uses: actions/checkout@v5
         with: { submodules: true }
@@ -386,6 +389,14 @@ jobs:
             -DOpenPFC_DIR="$GITHUB_WORKSPACE/prefix-cuda/lib/cmake/OpenPFC"
           cmake --build startup-cuda -j2
           ./startup-cuda/startup_consumer
+      - name: Compile and link actual CUDA nodal Q1 tests (never execute)
+        env: { CC: gcc-13, CXX: g++-13 }
+        run: |
+          # Reuse the completed device kernel archive and compiler cache.
+          # A missing Catch2 v3, a missing target, or broken CUDA/host
+          # launcher declaration must fail this CI job, not silently skip.
+          cmake -S . -B build-cuda -DOpenPFC_BUILD_TESTS=ON
+          cmake --build build-cuda --target test_nodal_multigrid_cuda -j2
 
   hip-compile:
     name: HIP compile-only (no GPU)
@@ -398,7 +409,7 @@ jobs:
       - name: Install git and host build deps
         run: |
           apt-get update && apt-get install -y --no-install-recommends \
-            git ca-certificates cmake ninja-build \
+            git ca-certificates cmake ninja-build catch2 \
             libopenmpi-dev openmpi-bin nlohmann-json3-dev
       - uses: actions/checkout@v5
         with: { submodules: true }
@@ -418,6 +429,10 @@ jobs:
             -DOpenPFC_DIR="$GITHUB_WORKSPACE/prefix-hip/lib/cmake/OpenPFC"
           cmake --build startup-hip -j2
           ./startup-hip/startup_consumer
+      - name: Compile and link actual HIP nodal Q1 tests (never execute)
+        run: |
+          cmake -S . -B build-hip -DOpenPFC_BUILD_TESTS=ON
+          cmake --build build-hip --target test_nodal_multigrid_hip -j2
 
   # ============================================================================
   # Status Check (required for merge)
