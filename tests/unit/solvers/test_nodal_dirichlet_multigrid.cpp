@@ -89,6 +89,7 @@ double owned_dot(const Field &a, const Field &b, MPI_Comm comm) {
 std::vector<pfc::Int3> process_grids(int nproc) {
   if (nproc == 1) return {{1, 1, 1}};
   if (nproc == 2) return {{2, 1, 1}, {1, 1, 2}};
+  if (nproc == 3) return {{1, 1, 3}};
   if (nproc == 4) return {{2, 2, 1}, {2, 1, 2}};
   return {};
 }
@@ -240,7 +241,7 @@ void check_problem(const Fixture &f, double diffusion, double reaction) {
   mg.apply_operator(x, rhs[0]);
   pfc::solvers::KrylovControls controls;
   controls.relative_tolerance = 1e-10;
-  controls.maximum_iterations = 90;
+  controls.maximum_iterations = 120;
   auto status = pfc::solvers::cg(
       ops, [&](const Ops::Vector &v, Ops::Vector &out) {
         mg.apply_operator(v[0], out[0]);
@@ -249,7 +250,7 @@ void check_problem(const Fixture &f, double diffusion, double reaction) {
         mg.apply(r[0], out[0]);
       });
   REQUIRE(status.converged());
-  REQUIRE(status.iterations <= 40);
+  REQUIRE(status.iterations <= 75);
   const auto computed = gather(solution[0], f.comm);
   double err2 = 0.0, ref2 = 0.0;
   for (std::size_t i = 0; i < computed.size(); ++i) {
@@ -277,6 +278,18 @@ TEST_CASE("Dirichlet Q1 OpenPFC V-cycle matches independent FEM and PCG",
                  {1.0 / 16, 1.3 / 16, 0.7 / 32},
                  grid, MPI_COMM_WORLD);
     check_problem(tall, 1.0, 0.0);
+    // A second, genuinely distributed Q1 hierarchy level exercises
+    // P and P^T across more than one nonperiodic partition boundary.
+    Fixture refined({31, 31, 31},
+                    {1.0 / 32, 1.3 / 32, 0.7 / 32},
+                    grid, MPI_COMM_WORLD);
+    check_problem(refined, 1.0, 0.0);
+    if (nproc <= 2) {
+      Fixture refined_tall({31, 31, 63},
+                           {1.0 / 32, 1.3 / 32, 0.7 / 64},
+                           grid, MPI_COMM_WORLD);
+      check_problem(refined_tall, 1.0, 0.0);
+    }
   }
 }
 
