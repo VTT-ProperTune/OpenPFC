@@ -15,6 +15,7 @@
 #include <cstddef>
 
 #include <openpfc/solvers/nodal_multigrid_kernels.hpp>
+#include <openpfc/solvers/nodal_dirichlet_kernels.hpp>
 
 namespace pfc::solvers::gpu::nmg {
 
@@ -33,6 +34,10 @@ using Operator = ::pfc::solvers::nmg::Operator;
                    double *out);                                                    \
   void scaled_apply_##sfx(const Level &L, const Operator &A, const double *u,       \
                           double *out);                                             \
+  /* Input and output have halo-2 padding. Physical exterior coefficients   */      \
+  /* are zero; caller arranges device halos through OpenPFC.                */      \
+  void dirichlet_apply_##sfx(const Level &L,                                    \
+     const ::pfc::solvers::nmg::dirichlet::Weights &w, const double *u, double *out); \
   void residual_##sfx(const Level &L, const Operator &A, const double *f,           \
                       const double *u, double *r, int zero_u);                      \
   void chebyshev_##sfx(const Level &L, const Operator &A, const double *f,          \
