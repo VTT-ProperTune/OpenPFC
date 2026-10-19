@@ -4,9 +4,9 @@
 
 /**
  * @file nodal_dirichlet_device_vcycle.hpp
- * @brief Bounded symmetric two-level Dirichlet Q1 V-cycle on OpenPFC GPU fields.
+ * @brief Bounded symmetric 2/3-level Dirichlet Q1 V-cycle on OpenPFC GPU fields.
  *
- * One nested pair of caller-provided Decompositions, not another partitioner.
+ * Caller-provided nested OpenPFC Decompositions, never another partitioner.
  * Every fine-grid operation is device resident and calls OpenPFC FieldOps,
  * FieldHalo and the shared Q1 CUDA/HIP kernels. Only the capacity-bounded
  * replicated coarse free-node RHS and correction cross the host boundary.
@@ -22,6 +22,7 @@
 #include <cmath>
 #include <cstddef>
 #include <limits>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -32,18 +33,20 @@
 namespace pfc::solvers {
 
 /**
- * Fixed SPD preconditioner on exactly two geometric Q1 levels.
+ * Fixed SPD preconditioner on two or three geometric Q1 levels.
  *
  * This is a deliberately bounded validation gate: the coarsest free-node
  * system has at most 1024 unknowns, replicated and factored with the SAME
  * DenseCoarseCholesky used by the CPU Dirichlet GMG. Global fine/coarse
  * partitions must already have been created by OpenPFC Decomposition.
  *
- * Fine-level action, damping, residual, transfers and Krylov vectors
- * remain CUDA/HIP resident. Only the tiny coarse problem is reduced and
- * solved on the host. This does NOT qualify a deep multi-level GPU solve.
+ * Fine/intermediate action, damping, residual, transfers and Krylov vectors
+ * remain CUDA/HIP resident. A recursive instance on the next nested level
+ * invokes the identical numerical V-cycle rather than cloning a solver.
+ * Only the tiny terminal coarse problem is reduced and solved on the host.
+ * This still does NOT qualify an arbitrary deep GPU multigrid solve.
  */
-template <class Space> class NodalDirichletDeviceTwoLevelVcycle {
+template <class Space> class NodalDirichletDeviceVcycle {
 public:
   using FieldT = data::Field<double, Space>;
   using Ops = FieldOperations<Space>;
@@ -60,19 +63,44 @@ public:
     std::size_t max_coarse_unknowns = 1024;
   };
 
-  NodalDirichletDeviceTwoLevelVcycle(
+  /// Existing 2-level API, retained for source compatibility.
+  NodalDirichletDeviceVcycle(
       const decomposition::Decomposition &fine,
       const decomposition::Decomposition &coarse, int rank, MPI_Comm comm)
-      : NodalDirichletDeviceTwoLevelVcycle(fine, coarse, rank, comm, Controls{}) {}
+      : NodalDirichletDeviceVcycle(fine, coarse, nullptr, rank, comm, Controls{}) {}
 
-  NodalDirichletDeviceTwoLevelVcycle(
+  NodalDirichletDeviceVcycle(
       const decomposition::Decomposition &fine,
       const decomposition::Decomposition &coarse, int rank, MPI_Comm comm,
+      Controls controls)
+      : NodalDirichletDeviceVcycle(fine, coarse, nullptr, rank, comm, controls) {}
+
+  /// New 3-level path. The middle grid is GPU-resident, never reduced to host.
+  NodalDirichletDeviceVcycle(
+      const decomposition::Decomposition &fine,
+      const decomposition::Decomposition &middle,
+      const decomposition::Decomposition &coarse, int rank, MPI_Comm comm)
+      : NodalDirichletDeviceVcycle(
+            fine, middle, &coarse, rank, comm, Controls{}) {}
+
+  NodalDirichletDeviceVcycle(
+      const decomposition::Decomposition &fine,
+      const decomposition::Decomposition &middle,
+      const decomposition::Decomposition &coarse, int rank, MPI_Comm comm,
+      Controls controls)
+      : NodalDirichletDeviceVcycle(
+            fine, middle, &coarse, rank, comm, controls) {}
+
+private:
+  NodalDirichletDeviceVcycle(
+      const decomposition::Decomposition &fine,
+      const decomposition::Decomposition &coarse,
+      const decomposition::Decomposition *bottom, int rank, MPI_Comm comm,
       Controls controls)
       : m_fd(decomposition::domain(fine)),
         m_cd(decomposition::domain(coarse)),
         m_fdec(fine), m_cdec(coarse),
-        m_fb(validated_box(fine, coarse, rank, comm, controls)),
+        m_fb(validated_box(fine, coarse, bottom, rank, comm, controls)),
         m_cb(decomposition::local_box(coarse, rank)),
         m_comm(comm), m_controls(controls),
         m_fops(m_fd, m_fb, 1, nmg::dirichlet::kHalo, comm),
@@ -108,29 +136,41 @@ public:
     m_jacobi = std::min(controls.jacobi_weight,
                          1.5 * diag / row_bound) / diag;
 
-    const auto nc = domain::get_size(m_cd);
-    const auto hc = domain::get_spacing(m_cd);
-    const double coarse_spacing[3] = {hc[0], hc[1], hc[2]};
-    m_factor = nmg::dirichlet::DenseCoarseCholesky(
-        nc, nmg::dirichlet::make_weights(
-                coarse_spacing, controls.diffusion, controls.reaction),
-        controls.max_coarse_unknowns);
-    m_local_coarse.assign(m_factor.unknowns(), 0.0);
-    m_global_coarse.assign(m_factor.unknowns(), 0.0);
-    m_coarse_solution.assign(m_factor.unknowns(), 0.0);
+    if (bottom) {
+      // The child works only with GPU-resident middle-level Fields.
+      // It owns the one terminal host coarse factor; this outer level
+      // never allocates a host copy of its intermediate global grid.
+      m_child = std::make_unique<NodalDirichletDeviceVcycle>(
+          coarse, *bottom, rank, comm, controls);
+    } else {
+      const auto nc = domain::get_size(m_cd);
+      const auto hc = domain::get_spacing(m_cd);
+      const double coarse_spacing[3] = {hc[0], hc[1], hc[2]};
+      m_factor = nmg::dirichlet::DenseCoarseCholesky(
+          nc, nmg::dirichlet::make_weights(
+                  coarse_spacing, controls.diffusion, controls.reaction),
+          controls.max_coarse_unknowns);
+      m_local_coarse.assign(m_factor.unknowns(), 0.0);
+      m_global_coarse.assign(m_factor.unknowns(), 0.0);
+      m_coarse_solution.assign(m_factor.unknowns(), 0.0);
+    }
   }
 
-  NodalDirichletDeviceTwoLevelVcycle(
-      const NodalDirichletDeviceTwoLevelVcycle &) = delete;
-  NodalDirichletDeviceTwoLevelVcycle &operator=(
-      const NodalDirichletDeviceTwoLevelVcycle &) = delete;
+public:
+  NodalDirichletDeviceVcycle(
+      const NodalDirichletDeviceVcycle &) = delete;
+  NodalDirichletDeviceVcycle &operator=(
+      const NodalDirichletDeviceVcycle &) = delete;
 
   [[nodiscard]] std::size_t coarse_unknowns() const noexcept {
-    return m_factor.unknowns();
+    return m_child ? m_child->coarse_unknowns() : m_factor.unknowns();
+  }
+  [[nodiscard]] int levels() const noexcept {
+    return m_child ? 1 + m_child->levels() : 2;
   }
   [[nodiscard]] const Box3i &owned_box() const noexcept { return m_fb; }
 
-  /// Apply a zero-initialized, symmetric two-level V-cycle. Input and
+  /// Apply a zero-initialized symmetric 2/3-level V-cycle. Input and
   /// output may alias, and either may have a different nonnegative halo.
   /// All ranks of m_comm must participate in the same call order.
   void apply(const FieldT &rhs, FieldT &out) {
@@ -176,7 +216,8 @@ private:
 
   static Box3i validated_box(
       const decomposition::Decomposition &fine,
-      const decomposition::Decomposition &coarse, int rank, MPI_Comm comm,
+      const decomposition::Decomposition &coarse,
+      const decomposition::Decomposition *bottom, int rank, MPI_Comm comm,
       const Controls &c) {
     if (comm == MPI_COMM_NULL)
       throw std::invalid_argument("DirichletDeviceVcycle: null MPI communicator");
@@ -196,15 +237,33 @@ private:
 
     nmg::dirichlet::validate_nested_transfer_reach(fine, coarse);
     const auto nc = domain::get_size(decomposition::domain(coarse));
-    // The pilot supports the exact 7x7x7 or 7x7x15 free-node coarse
-    // systems of one Q1 geometric V-cycle. A larger coarse hierarchy
-    // must be admitted explicitly, not accidentally factored.
-    if (!(nc == Int3{7, 7, 7} || nc == Int3{7, 7, 15}))
-      throw std::invalid_argument(
-          "DirichletDeviceVcycle: bounded pilot expects 7x7x7 or 7x7x15 coarse");
-    const std::size_t N = static_cast<std::size_t>(nc[0]) * nc[1] * nc[2];
-    if (N > c.max_coarse_unknowns)
-      throw std::invalid_argument("DirichletDeviceVcycle: coarse capacity exceeded");
+    if (bottom) {
+      // Exactly one device-resident middle level is admitted in this gate.
+      // Check all ranks and both adjacencies before creating any exchanger.
+      nmg::dirichlet::validate_nested_transfer_reach(coarse, *bottom);
+      const auto nf = domain::get_size(decomposition::domain(fine));
+      const auto nb = domain::get_size(decomposition::domain(*bottom));
+      const bool cube = nf == Int3{31, 31, 31} &&
+                        nc == Int3{15, 15, 15} &&
+                        nb == Int3{7, 7, 7};
+      const bool tall = nf == Int3{31, 31, 63} &&
+                        nc == Int3{15, 15, 31} &&
+                        nb == Int3{7, 7, 15};
+      if (!cube && !tall)
+        throw std::invalid_argument(
+            "DirichletDeviceVcycle: unsupported 3-level nested Q1 shapes");
+      const std::size_t N = static_cast<std::size_t>(nb[0]) * nb[1] * nb[2];
+      if (N > c.max_coarse_unknowns)
+        throw std::invalid_argument("DirichletDeviceVcycle: bottom coarse capacity exceeded");
+    } else {
+      // The leaf owns the only replicated bounded coarse Cholesky.
+      if (!(nc == Int3{7, 7, 7} || nc == Int3{7, 7, 15}))
+        throw std::invalid_argument(
+            "DirichletDeviceVcycle: bounded leaf expects 7x7x7 or 7x7x15 coarse");
+      const std::size_t N = static_cast<std::size_t>(nc[0]) * nc[1] * nc[2];
+      if (N > c.max_coarse_unknowns)
+        throw std::invalid_argument("DirichletDeviceVcycle: coarse capacity exceeded");
+    }
     return decomposition::local_box(fine, rank);
   }
 
@@ -234,6 +293,12 @@ private:
   }
 
   void solve_coarse() {
+    if (m_child) {
+      // The middle-level correction is computed wholly on the device.
+      // Only the terminal 7x7x7 or 7x7x15 solve inside m_child sees host.
+      m_child->apply(m_crhs[0], m_cx[0]);
+      return;
+    }
     const auto global = domain::get_size(m_cd);
     std::fill(m_local_coarse.begin(), m_local_coarse.end(), 0.0);
     // Only the <=1024 coarse coefficients are downloaded; no fine-grid
@@ -274,11 +339,16 @@ private:
   NodalDirichletDeviceTransfers<Space> m_transfers;
   Vector m_rhs, m_x, m_next, m_ax, m_residual, m_crhs, m_cx;
   nmg::dirichlet::DenseCoarseCholesky m_factor;
+  std::unique_ptr<NodalDirichletDeviceVcycle> m_child;
   nmg::Level m_shape{};
   nmg::dirichlet::Weights m_weights{};
   double m_jacobi = 0.0;
   std::vector<double> m_local_coarse, m_global_coarse, m_coarse_solution;
 };
+
+/// Preserve the original qualified two-level public source API.
+template <class Space>
+using NodalDirichletDeviceTwoLevelVcycle = NodalDirichletDeviceVcycle<Space>;
 
 } // namespace pfc::solvers
 
