@@ -208,7 +208,7 @@ if(OpenPFC_RUN_MPI_SUITES AND MPI_CXX_FOUND)
 
   # Distinct numerical capability gate: free-node Q1 Dirichlet geometry
   # with OpenPFC-owned slab/brick decomposition and full-width host halos.
-  foreach(_ranks 1 2 4)
+  foreach(_ranks 1 2 3 4)
     if(OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER 0 AND
        _ranks GREATER OpenPFC_MPI_TEST_MAX_WORLD_SIZE)
       continue()
