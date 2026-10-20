@@ -198,6 +198,25 @@ if(OpenPFC_RUN_MPI_SUITES AND MPI_CXX_FOUND)
       TIMEOUT 300 RUN_SERIAL TRUE)
   endforeach()
 
+  # End-to-end CPU/MPI Q1 PCG with planned active-rank contraction.
+  # The normal hosted suite is capped at 2 ranks; higher-rank acceptance
+  # runs from the targeted CI step or via --mpi-tests on a capable host.
+  foreach(_ranks 1 2 3 4 6)
+    if(OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER 0 AND
+       _ranks GREATER OpenPFC_MPI_TEST_MAX_WORLD_SIZE)
+      continue()
+    endif()
+    if(_ranks GREATER _openpfc_mpi_configure_cores AND
+       NOT OpenPFC_MPI_TEST_REGISTER_HIGH_RANK_ALWAYS)
+      continue()
+    endif()
+    add_test(NAME dirichlet_plan_vcycle_${_ranks}ranks
+      COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${_ranks}
+        $<TARGET_FILE:openpfc-tests> "[nodal_dirichlet_plan][MPI]")
+    set_tests_properties(dirichlet_plan_vcycle_${_ranks}ranks PROPERTIES
+      TIMEOUT 300 RUN_SERIAL TRUE)
+  endforeach()
+
   # Owned Q1 P/P^T across MultigridPlan rank-agglomeration boundaries.
   # The 6-rank case is an opt-in high-rank/local-cluster gate; device CI
   # with a two-rank cap still runs only the available host qualification.
