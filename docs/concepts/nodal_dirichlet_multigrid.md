@@ -58,7 +58,7 @@ axes when 4 ranks are available. The default hosted CI currently caps MPI
 world size at two ranks; a local or dedicated four-rank configuration must
 pass before claiming four-rank acceptance.
 
-The full geometric V-cycle remains **CPU only**. The constant-Q1
+The independent host Q1 V-cycle is CPU-resident; the same Q1 point mathematics also supports a **device-resident nested V-cycle**. CUDA/HIP runtime correctness still needs hardware qualification. The constant-Q1
 Dirichlet row action, symmetric Jacobi point update, and P/P^T are now
 factored into `solvers/nodal_dirichlet_kernels.hpp` with
 `OPENPFC_HD` point definitions. OpenPFC's existing CUDA/HIP nodal
@@ -72,8 +72,9 @@ implementation. OpenPFC's same vendor translation units also expose
 `dirichlet_prolong_cuda/hip` as **separate halo-2 point kernel launches**:
 the caller provides old/new distinct Jacobi buffers, exchanged fine
 residuals and exchanged coarse corrections. The P/P^T operators do
-not invent partition rules or perform MPI transport. The full
-GPU-resident hierarchy is **not yet implemented**.
+not invent partition rules or perform MPI transport. The nested GPU
+V-cycle now composes these operations, but its numerical device run
+remains a separate mandatory acceptance gate.
 Host Catch2 tests independently check Q1 rows,
 physical-Dirichlet boundary sentinel masking, shifted rank-local
 bricks, and P/P^T adjointness; GPU device-vs-host point-action parity
@@ -129,42 +130,68 @@ CUDA/HIP device-conditional tests compare full FieldHalo transfer paths
 to the host reference. Neither compile-only jobs nor host tests prove
 actual accelerator numerical correctness.
 
-**
-### Bounded GPU-resident two- and three-level V-cycles (hardware gate)
+### Nested GPU-resident Dirichlet Q1 V-cycle (hardware gate)
 
-`NodalDirichletDeviceVcycle<CUDASpace/HIPSpace>` joins the existing
-OpenPFC GPU field operator, FieldHalo smoother workspace,
+`NodalDirichletDeviceVcycle<CUDASpace/HIPSpace>` composes the existing
+OpenPFC GPU field operator, `FieldHalo` smoother workspace,
 `NodalDirichletDeviceTransfers` and the **same**
-`DenseCoarseCholesky` used by the host. The historical
-`NodalDirichletDeviceTwoLevelVcycle` type is retained as a source-compatible
-alias of the same implementation. The existing two-level constructor accepts
-15×15×15 → 7×7×7 and 15×15×31 → 7×7×15 **free-node** Q1 grids.
+`DenseCoarseCholesky` as the CPU reference. The previous two- and
+three-decomposition constructors and
+`NodalDirichletDeviceTwoLevelVcycle` alias are preserved.
 
-The new three-level constructor takes three existing OpenPFC Decompositions
-and composes the **same V-cycle recursively** on the middle level.
-Currently admitted shapes are 31³ → 15³ → 7³ and
-31×31×63 → 15×15×31 → 7×7×15 free nodes. Every middle-level action,
-smoothing, residual and P/Pᵀ exchange remains device-resident; there
-is no host download or global replication of that intermediate level.
-Only the terminal 7³ or 7×7×15 coarse problem crosses to the host.
-The limited grids and halo-reach checks are explicit qualification gates,
-not limits proven for a future general deep hierarchy.
+The new `Hierarchy` constructor accepts **any nested count >=2** of
+caller-established OpenPFC `Decomposition` objects. Alternatively,
+`make_hierarchy(fine)` calls OpenPFC's existing decomposition factory,
+reusing the caller's process grid and uniformly coarsening valid
+nonperiodic cubic or 2:1-element free-node Q1 grids (`2^k-1` nodes
+per short axis). The physical free-node origin is shifted consistently
+at each coarsening step. The same factory and transfer-reach validation
+can be tested on CPU without GPU hardware.
 
-The fine operator, V-cycle iterates, halo exchanges, residual, P and
-Pᵀ remain on the GPU. Only the replicated coarse grid, at most 1024
-free coefficients, is downloaded/reduced with MPI, factored/solved on
-CPU, and returned to the device. Every `apply` resets the initial
-iterate to zero so that OpenPFC's ordinary SPD PCG can use a fixed
-linear V-cycle preconditioner.
+Supported examples include 15³ → 7³, 31³ → 15³ → 7³,
+63³ → 31³ → 15³ → 7³, and the corresponding 2:1 elongated
+15×15×31 → 7×7×15, 31×31×63 → 15×15×31 → 7×7×15,
+63×63×127 → 31×31×63 → 15×15×31 → 7×7×15.
+Every MPI rank's local box, nested spacing and transfer reach are
+validated **before** GPU halo construction. Unsupported partitions
+fail rather than silently adopting a private slab splitter.
 
-A CUDA/HIP device-conditional test compares the V-cycle against the
-independently qualified host `NodalDirichletMultigrid` and checks
-standard OpenPFC PCG convergence using the **true unpreconditioned
-global residual** on 1/2/4-rank OpenPFC decompositions. Hosted
-compile-only jobs build and link the test, but cannot establish actual
-GPU numerical correctness. Three levels are the current bounded recursion limit. Neither
-actual GPU numerical correctness nor large-scale HPC performance is
-established by hosted GPU-less compile-only CI.
+Fine and intermediate operators, symmetric pre/post Jacobi, residuals,
+iterates, `Pᵀ` and `P` remain GPU-resident. A recursive child uses
+the same V-cycle implementation, with no host copy of its intermediate
+field. Only the terminal **343/735-free-node** coarse system crosses
+to the CPU, with an explicit maximum of 1024 unknowns. Each application
+starts from zero to preserve a fixed linear SPD preconditioner for
+OpenPFC's CG, whose convergence is admitted by true global
+unpreconditioned residual.
+
+#### Hardware-required correctness gate
+
+Device-conditional CUDA/HIP tests compare the 2-, 3- and **4-level**
+V-cycle to the independent host Dirichlet reference; check the
+`P/Pᵀ` identity, independent-vector symmetry/positivity and exact-field
+recovery in OpenPFC CG, including the true global residual, on supported
+1/2/4-rank process grids. Additional CPU-only MPI tests independently
+verify four-level geometry and the SPD V-cycle.
+
+GitHub CI compiles and links the actual CUDA/HIP test executables but
+**does not execute numerical kernels on a GPU**. For real Tohtori/LUMI
+validation, build and test through `scripts/build.sh` with:
+
+```text
+--cmake-arg=-DOpenPFC_REQUIRE_GPU_DIRICHLET_TESTS=ON --mpi-tests --test
+```
+
+in the appropriate already allocated GPU environment, using
+`--with-cuda` on Tohtori or `--with-rocm` on LUMI. This registers
+`DirichletGPU_cuda_1rank_Required`,
+`DirichletGPU_cuda_2ranks_Required`,
+`DirichletGPU_cuda_4ranks_Required` (and HIP equivalents), respecting
+configured MPI rank caps. The tests set
+`OPENPFC_REQUIRE_GPU_TESTS=1`: a missing GPU or failed binding on
+**any rank** causes failure rather than an accepted Catch2 SKIP.
+No physical-device correctness, scaling or time-to-accuracy result
+is asserted until those tests have actually been run and recorded.
 
 ### Bounded Q1 coarse direct solve
 
@@ -177,28 +204,19 @@ weights, only after checking the free-node count and dense-allocation
 budget. It separately checks symmetry and positive Cholesky pivots.
 The RHS and solution contain exactly the bounded coarse coefficients.
 
-Future CUDA/HIP cycles may reduce a small coarse RHS, solve it with
-this factor and upload only its coarse correction. This is **not**
-permission to transfer or replicate the global fine/intermediate
-fields. Host CI independently verifies diffusion and diffusion/reaction
-coarse solves against Gauss-assembled Q1 FEM and rejects invalid
-capacities or non-SPD matrices. No GPU recursion or performance claim
-is implied.
+In the implemented GPU hierarchy, only this small coarse RHS and
+correction are transferred across the host-device boundary. No
+fine-grid or intermediate global fields are replicated. The host
+reference and independent Gauss-FEM coarse tests preserve failure
+guards for invalid sizes and non-SPD matrices.
 
-The complete GPU V-cycle is not implemented by this helper.** The
-remaining steps are coupled pre/post-smoothing, residuals, coarse
-reduction/solve, and the OpenPFC Krylov preconditioner contract.
-
-The GitHub-hosted CUDA/HIP jobs **compile and link** that test,
-but have no GPU hardware to execute it. Actual GPU+MPI correctness
-must be reported separately; this stage is not proof of a resident
-multilevel solver or HPC performance.
 
 The current solver has constant coefficients,
 homogeneous Dirichlet conditions, all axes nonperiodic, and a bounded
-replicated coarse solve. No HIP/CUDA, mixed boundary type, arbitrary
-nonuniform geometry, coefficient jumps, nonlinear mechanics, or large-scale
-performance claim has been qualified. Do not extrapolate the host results
+replicated coarse solve. CUDA/HIP compilation and host numerical verification are qualified, but
+actual GPU numerical correctness, mixed boundary types, arbitrary
+nonuniform geometry, coefficient jumps, nonlinear mechanics, and large-scale
+performance remain unqualified. Do not extrapolate the host results
 to LUMI. Once accepted, downstream DiscretizationLab should call the
 installed OpenPFC solver and retain only independent FEM oracles and
 experiments. The two nodal solver variants can then be consolidated without
