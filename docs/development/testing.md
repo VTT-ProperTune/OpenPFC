@@ -71,6 +71,39 @@ Minimal new-test walkthrough: [`tutorials/add_catch2_test.md`](../tutorials/add_
 | `find_package(OpenPFC)` packaging smoke | yes (`packaging-smoke` job) | `tests/packaging/consumer` |
 | CUDA/HIP **compile** (no GPU) | best-effort `cuda-compile` / `hip-compile` jobs (`continue-on-error` until validated) | `build.sh --with-cuda --no-test`, `build.sh --with-rocm --no-test` |
 | CUDA/HIP **run** (parity, VTK, IC residency) | not possible (no GPU) | tohtori (CUDA), LUMI (HIP) |
+
+### Fail-closed Dirichlet GMG numerical device qualification
+
+OpenPFC's CUDA/HIP GitHub jobs compile and link
+`test_nodal_multigrid_cuda` and `test_nodal_multigrid_hip`; they
+**do not run** the device numerical tests. A Catch2 SKIP is not
+evidence of GPU correctness.
+
+On an *already approved/allocated* GPU system, use the normal
+`scripts/build.sh` workflow with:
+
+```text
+--cmake-arg=-DOpenPFC_REQUIRE_GPU_DIRICHLET_TESTS=ON --mpi-tests --test
+```
+
+Select `--machine=tohtori --with-cuda` for NVIDIA or
+`--machine=lumi --with-rocm` for AMD, and follow the usual cluster
+partition/allocation rules. The opt-in mode registers strict
+`DirichletGPU_{cuda,hip}_{1rank,2ranks,4ranks}_Required` CTests
+(subject to the configured world-size cap). Each runs the **entire**
+`[nodal_dirichlet][device]` numerical acceptance: operator,
+halo, transfer, two-/three-/four-level Q1 V-cycle, preconditioned
+true-residual CG, and independent manufactured-source physical
+`L²` refinement order. `OPENPFC_REQUIRE_GPU_TESTS=1` rejects
+missing/unbindable devices on *any rank*, rather than returning a
+green SKIP.
+
+Store actual machine/driver/GPU binding, MPI/ROCm/CUDA versions,
+requested and achieved rank worlds, exact source SHA, true residuals,
+iterations, errors and any negative outcomes with the **owning
+DiscretizationLab HPC campaign evidence**. No performance claim or
+repeated HPC batch is implied by these software test definitions.
+
 | Golden trajectories / performance baselines | CPU checksum pins (`tungsten-cpu-golden`, `allen-cahn-cpu-golden`, `wave2d-cpu-golden`) | GPU parity and perf JSON (see `tests/baselines/`) |
 
 The authoritative GPU compile check today is `scripts/build.sh --with-cuda --no-test`
