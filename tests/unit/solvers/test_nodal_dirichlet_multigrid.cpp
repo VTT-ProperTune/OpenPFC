@@ -737,3 +737,90 @@ TEST_CASE("Dirichlet coarse factor fails closed on bad SPD or memory",
   REQUIRE_THROWS_AS(Factor(pfc::Int3{3, 3, 3}, not_spd, 100),
                     std::runtime_error);
 }
+
+
+TEST_CASE("Dirichlet OpenPFC nested geometry supports four GPU-ready levels",
+          "[nodal_dirichlet][MPI]") {
+  namespace q1 = pfc::solvers::nmg::dirichlet;
+  int rank = 0, ranks = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &ranks);
+  for (const auto layout : process_grids(ranks)) {
+    for (bool tall : {false, true}) {
+      const pfc::Int3 nn{63, 63, tall ? 127 : 63};
+      const pfc::Real3 h{1.0 / 64, 1.3 / 64,
+                         tall ? 0.7 / 128 : 0.7 / 64};
+      const auto domain = pfc::domain::create(
+          pfc::GridSize(nn), pfc::PhysicalOrigin(h), pfc::GridSpacing(h),
+          pfc::Bool3{false, false, false});
+      const auto initial = pfc::decomposition::create(domain, layout);
+      const auto hierarchy = q1::make_nested_decompositions(initial);
+      REQUIRE(hierarchy.size() == 4);
+      for (std::size_t index = 0; index < hierarchy.size(); ++index) {
+        const auto &d = pfc::decomposition::domain(hierarchy[index]);
+        const auto n = pfc::domain::get_size(d);
+        const int short_axis = ((nn[0] + 1) >> static_cast<int>(index)) - 1;
+        const int long_axis = ((nn[2] + 1) >> static_cast<int>(index)) - 1;
+        REQUIRE(n == pfc::Int3{short_axis, short_axis, long_axis});
+        const auto spacing = pfc::domain::get_spacing(d);
+        const auto origin = pfc::domain::get_origin(d);
+        for (int axis = 0; axis < 3; ++axis) {
+          const double physical_step = h[axis] *
+              static_cast<double>(1 << index);
+          REQUIRE(std::abs(spacing[axis] - physical_step) < 1e-14);
+          REQUIRE(std::abs(origin[axis] - physical_step) < 1e-14);
+        }
+        if (index + 1 < hierarchy.size())
+          REQUIRE_NOTHROW(q1::validate_nested_transfer_reach(
+              hierarchy[index], hierarchy[index + 1]));
+      }
+      const auto leaf = pfc::domain::get_size(
+          pfc::decomposition::domain(hierarchy.back()));
+      REQUIRE(leaf == (tall ? pfc::Int3{7, 7, 15}
+                            : pfc::Int3{7, 7, 7}));
+
+      // The existing host reference also exercises the same four-level Q1
+      // hierarchy and independently verifies that its fixed V-cycle is SPD.
+      MG reference(initial, rank, MPI_COMM_WORLD);
+      REQUIRE(reference.levels() == 4);
+      const auto box = pfc::decomposition::local_box(initial, rank);
+      Field a(domain, box, 1), b(domain, box, 1), ma(domain, box, 1),
+            mb(domain, box, 1);
+      fill(a, sample_a);
+      fill(b, sample_b);
+      reference.apply(a, ma);
+      reference.apply(b, mb);
+      const double ab = owned_dot(a, mb, MPI_COMM_WORLD);
+      const double ba = owned_dot(b, ma, MPI_COMM_WORLD);
+      REQUIRE(std::abs(ab - ba) <=
+              2e-9 * std::max({1.0, std::abs(ab), std::abs(ba)}));
+      REQUIRE(owned_dot(a, ma, MPI_COMM_WORLD) > 0.0);
+      REQUIRE(owned_dot(b, mb, MPI_COMM_WORLD) > 0.0);
+    }
+  }
+}
+
+TEST_CASE("Dirichlet nested geometry fails before invalid GPU hierarchy",
+          "[nodal_dirichlet][MPI]") {
+  namespace q1 = pfc::solvers::nmg::dirichlet;
+  int ranks = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &ranks);
+  const pfc::Int3 grid{1, 1, ranks};
+  for (const pfc::Int3 invalid : {pfc::Int3{64, 64, 64},
+                                  pfc::Int3{31, 31, 32},
+                                  pfc::Int3{7, 7, 7}}) {
+    const auto d = pfc::domain::with_spacing(
+        invalid, {0.05, 0.05, 0.05}, {false, false, false});
+    const auto decomp = pfc::decomposition::create(d, grid);
+    REQUIRE_THROWS_AS(q1::make_nested_decompositions(decomp),
+                      std::invalid_argument);
+  }
+  // A process grid leaving fewer than two coarse nodes per rank must
+  // fail regardless of the actual executing MPI world.
+  const auto d = pfc::domain::with_spacing(
+      {31, 31, 31}, {0.03125, 0.03125, 0.03125},
+      {false, false, false});
+  const auto dec = pfc::decomposition::create(d, pfc::Int3{1, 1, 8});
+  REQUIRE_THROWS_AS(q1::make_nested_decompositions(dec),
+                    std::invalid_argument);
+}
