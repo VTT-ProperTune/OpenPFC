@@ -21,6 +21,7 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/solvers/field_operations.hpp>
 #include <openpfc/solvers/krylov.hpp>
+#include <openpfc/solvers/multigrid_plan.hpp>
 #include <openpfc/solvers/nodal_dirichlet_coarse.hpp>
 #include <openpfc/solvers/nodal_dirichlet_multigrid.hpp>
 #include <openpfc/solvers/nodal_dirichlet_nested_geometry.hpp>
@@ -763,4 +764,300 @@ TEST_CASE("Dirichlet nested geometry fails before invalid GPU hierarchy",
                                            {false, false, false});
   const auto dec = pfc::decomposition::create(d, pfc::Int3{1, 1, 8});
   REQUIRE_THROWS_AS(q1::make_nested_decompositions(dec), std::invalid_argument);
+}
+
+
+namespace {
+
+std::vector<pfc::Int3> plan_grids(int ranks) {
+  if (ranks == 1) return {{1, 1, 1}};
+  if (ranks == 2) return {{2, 1, 1}, {1, 1, 2}};
+  if (ranks == 3) return {{3, 1, 1}};
+  if (ranks == 4) return {{2, 2, 1}, {1, 2, 2}};
+  if (ranks == 6) return {{6, 1, 1}};
+  return {};
+}
+
+void check_agglomerated(const Fixture &f, int min_extent,
+                         double reaction = 0.0) {
+  using Plan = pfc::solvers::MultigridPlan;
+  pfc::solvers::MultigridPlanOptions options;
+  options.minimum_owned_extent = min_extent;
+  const auto plan = Plan::build(f.decomposition, options);
+  MG::Controls config;
+  config.diffusion = 1.0;
+  config.reaction = reaction;
+  MG mg(plan, f.rank, f.comm, config);
+  REQUIRE(mg.levels() == static_cast<int>(plan.levels().size()));
+  REQUIRE(mg.coarse_unknowns() ==
+          (f.nodes[2] == f.nodes[0] ? 343 : 735));
+  REQUIRE(mg.local_unknowns() ==
+          count(pfc::decomposition::local_box(f.decomposition, f.rank).size));
+  for (std::size_t level = 0; level < plan.levels().size(); ++level) {
+    const auto &active = plan.levels()[level].active_world_ranks;
+    REQUIRE(mg.active_on_level(level) ==
+            (std::find(active.begin(), active.end(), f.rank) != active.end()));
+  }
+  REQUIRE(plan.levels().back().active_count() == 1);
+
+  Field x = f.field(), y = f.field();
+  fill(x, sample_a);
+  mg.apply_operator(x, y);
+  const auto oracle = independent_action(
+      f.nodes, f.h, gather(x, f.comm), 1.0, reaction);
+  const auto action_result = gather(y, f.comm);
+  double mismatch = 0.0;
+  for (std::size_t k = 0; k < oracle.size(); ++k)
+    mismatch = std::max(mismatch, std::abs(oracle[k] - action_result[k]));
+  INFO("planned MPI grid " << f.proc_grid[0] << "x" << f.proc_grid[1]
+       << "x" << f.proc_grid[2] << " n=" << f.nodes[0]
+       << " by " << f.nodes[2]);
+  REQUIRE(mismatch < 3e-11);
+
+  // Two independent Krylov vectors check symmetry and positive energy
+  // of the entire recursively rank-agglomerated preconditioner.
+  Field a = f.field(), b = f.field(), ma = f.field(), mb = f.field();
+  fill(a, sample_a);
+  fill(b, sample_b);
+  mg.apply(a, ma);
+  mg.apply(b, mb);
+  const double dot_ab = owned_dot(a, mb, f.comm);
+  const double dot_ba = owned_dot(b, ma, f.comm);
+  REQUIRE(std::abs(dot_ab - dot_ba) <
+          2e-9 * std::max({1.0, std::abs(dot_ab), std::abs(dot_ba)}));
+  REQUIRE(owned_dot(a, ma, f.comm) > 0.0);
+  REQUIRE(owned_dot(b, mb, f.comm) > 0.0);
+
+  // Solve an independently assembled discrete Q1 problem, never accepting
+  // CG's stopping flag without the recomputed UNPRECONDITIONED residual.
+  const auto box = pfc::decomposition::local_box(f.decomposition, f.rank);
+  Ops ops(f.domain, box, 1, 1, f.comm);
+  auto rhs = ops.make(ops.size());
+  auto solution = ops.make(ops.size());
+  owned(rhs[0], [&](int i, int j, int k) {
+    const auto g = rhs[0].global(i, j, k);
+    rhs[0](i, j, k) = oracle[id(f.nodes, g[0], g[1], g[2])];
+  });
+  pfc::solvers::KrylovControls cg_controls;
+  cg_controls.relative_tolerance = 1e-10;
+  cg_controls.maximum_iterations = 150;
+  const auto status = pfc::solvers::cg(
+      ops,
+      [&](const Ops::Vector &v, Ops::Vector &out) {
+        mg.apply_operator(v[0], out[0]);
+      },
+      rhs, solution, cg_controls,
+      [&](const Ops::Vector &r, Ops::Vector &z, int) {
+        mg.apply(r[0], z[0]);
+      });
+  INFO("agglomerated PCG iterations=" << status.iterations);
+  REQUIRE(status.converged());
+  REQUIRE(status.iterations <= 100);
+  Field ax = f.field();
+  mg.apply_operator(solution[0], ax);
+  double r2 = 0.0, b2 = 0.0, e2 = 0.0, x2 = 0.0;
+  owned(ax, [&](int i, int j, int k) {
+    const double res = rhs[0](i, j, k) - ax(i, j, k);
+    const double err = solution[0](i, j, k) - x(i, j, k);
+    r2 += res * res;
+    b2 += rhs[0](i, j, k) * rhs[0](i, j, k);
+    e2 += err * err;
+    x2 += x(i, j, k) * x(i, j, k);
+  });
+  double local[4] = {r2, b2, e2, x2}, global[4] = {};
+  MPI_Allreduce(local, global, 4, MPI_DOUBLE, MPI_SUM, f.comm);
+  REQUIRE(std::sqrt(global[0] / global[1]) < 1e-9);
+  REQUIRE(std::sqrt(global[2] / global[3]) < 1e-8);
+
+  // Fixed zero-initialized V-cycle must not keep hidden state across calls.
+  Field again = f.field();
+  mg.apply(a, again);
+  double local_delta = 0.0;
+  owned(again, [&](int i, int j, int k) {
+    local_delta = std::max(local_delta,
+                           std::abs(again(i, j, k) - ma(i, j, k)));
+  });
+  double max_delta = 0.0;
+  MPI_Allreduce(&local_delta, &max_delta, 1, MPI_DOUBLE, MPI_MAX, f.comm);
+  REQUIRE(max_delta < 2e-13);
+}
+
+// Manufactured Poisson forcing integrated independently on each Q1 element.
+// This is NOT A*u_exact and does not use the multigrid row kernel.
+std::vector<double> manufactured_load(const pfc::Int3 &n,
+                                      const pfc::Real3 &h) {
+  const double pi = std::numbers::pi_v<double>;
+  const double length[3] = {(n[0] + 1) * h[0], (n[1] + 1) * h[1],
+                            (n[2] + 1) * h[2]};
+  const double eigen = pi * pi *
+      (1.0 / (length[0] * length[0]) +
+       1.0 / (length[1] * length[1]) +
+       1.0 / (length[2] * length[2]));
+  const double gauss[2] = {0.5 - 0.5 / std::sqrt(3.0),
+                           0.5 + 0.5 / std::sqrt(3.0)};
+  const double volume = h[0] * h[1] * h[2];
+  std::vector<double> load(count(n), 0.0);
+  for (int ez = 0; ez <= n[2]; ++ez)
+    for (int ey = 0; ey <= n[1]; ++ey)
+      for (int ex = 0; ex <= n[0]; ++ex)
+        for (int gz = 0; gz < 2; ++gz)
+          for (int gy = 0; gy < 2; ++gy)
+            for (int gx = 0; gx < 2; ++gx) {
+              const double q[3] = {gauss[gx], gauss[gy], gauss[gz]};
+              const double source = eigen *
+                  std::sin(pi * (ex + q[0]) * h[0] / length[0]) *
+                  std::sin(pi * (ey + q[1]) * h[1] / length[1]) *
+                  std::sin(pi * (ez + q[2]) * h[2] / length[2]);
+              for (int a = 0; a < 8; ++a) {
+                const int node[3] = {
+                    ex + ((a >> 0) & 1) - 1,
+                    ey + ((a >> 1) & 1) - 1,
+                    ez + ((a >> 2) & 1) - 1};
+                if (node[0] < 0 || node[1] < 0 || node[2] < 0 ||
+                    node[0] >= n[0] || node[1] >= n[1] ||
+                    node[2] >= n[2]) continue;
+                const double shape =
+                    (((a >> 0) & 1) ? q[0] : 1 - q[0]) *
+                    (((a >> 1) & 1) ? q[1] : 1 - q[1]) *
+                    (((a >> 2) & 1) ? q[2] : 1 - q[2]);
+                load[id(n, node[0], node[1], node[2])] +=
+                    volume / 8.0 * shape * source;
+              }
+            }
+  return load;
+}
+
+double physical_l2(const pfc::Int3 &n, const pfc::Real3 &h,
+                   const std::vector<double> &values) {
+  const double pi = std::numbers::pi_v<double>;
+  const double g[3] = {(1.0 - std::sqrt(3.0 / 5.0)) / 2.0,
+                       0.5, (1.0 + std::sqrt(3.0 / 5.0)) / 2.0};
+  const double w[3] = {5.0 / 18.0, 8.0 / 18.0, 5.0 / 18.0};
+  const double volume = h[0] * h[1] * h[2];
+  double error = 0.0;
+  for (int ez = 0; ez <= n[2]; ++ez)
+    for (int ey = 0; ey <= n[1]; ++ey)
+      for (int ex = 0; ex <= n[0]; ++ex)
+        for (int gz = 0; gz < 3; ++gz)
+          for (int gy = 0; gy < 3; ++gy)
+            for (int gx = 0; gx < 3; ++gx) {
+              const double q[3] = {g[gx], g[gy], g[gz]};
+              double uh = 0.0;
+              for (int a = 0; a < 8; ++a) {
+                const int node[3] = {
+                    ex + ((a >> 0) & 1) - 1,
+                    ey + ((a >> 1) & 1) - 1,
+                    ez + ((a >> 2) & 1) - 1};
+                if (node[0] < 0 || node[1] < 0 || node[2] < 0 ||
+                    node[0] >= n[0] || node[1] >= n[1] ||
+                    node[2] >= n[2]) continue;
+                const double shape =
+                    (((a >> 0) & 1) ? q[0] : 1 - q[0]) *
+                    (((a >> 1) & 1) ? q[1] : 1 - q[1]) *
+                    (((a >> 2) & 1) ? q[2] : 1 - q[2]);
+                uh += shape * values[id(n,node[0],node[1],node[2])];
+              }
+              const double u = std::sin(pi * (ex + q[0]) / (n[0] + 1)) *
+                               std::sin(pi * (ey + q[1]) / (n[1] + 1)) *
+                               std::sin(pi * (ez + q[2]) / (n[2] + 1));
+              error += volume * w[gx] * w[gy] * w[gz] * (uh - u) * (uh - u);
+            }
+  return std::sqrt(error);
+}
+
+double check_manufactured(const Fixture &f) {
+  pfc::solvers::MultigridPlanOptions option;
+  option.minimum_owned_extent = 4;
+  const auto plan = pfc::solvers::MultigridPlan::build(f.decomposition, option);
+  MG mg(plan, f.rank, f.comm);
+  const auto rhs_full = manufactured_load(f.nodes, f.h);
+  const auto box = pfc::decomposition::local_box(f.decomposition, f.rank);
+  Ops ops(f.domain, box, 1, 1, f.comm);
+  auto rhs = ops.make(ops.size()), solution = ops.make(ops.size());
+  owned(rhs[0], [&](int i, int j, int k) {
+    const auto g = rhs[0].global(i, j, k);
+    rhs[0](i, j, k) = rhs_full[id(f.nodes, g[0], g[1], g[2])];
+  });
+  pfc::solvers::KrylovControls controls;
+  controls.relative_tolerance = 1e-11;
+  controls.maximum_iterations = 150;
+  const auto status = pfc::solvers::cg(
+      ops,
+      [&](const Ops::Vector &x, Ops::Vector &y) {
+        mg.apply_operator(x[0], y[0]);
+      },
+      rhs, solution, controls,
+      [&](const Ops::Vector &r, Ops::Vector &z, int) {
+        mg.apply(r[0], z[0]);
+      });
+  REQUIRE(status.converged());
+  Field ax = f.field();
+  mg.apply_operator(solution[0], ax);
+  double res2 = 0.0, rhs2 = 0.0;
+  owned(ax, [&](int i, int j, int k) {
+    const double diff = ax(i, j, k) - rhs[0](i, j, k);
+    res2 += diff * diff;
+    rhs2 += rhs[0](i, j, k) * rhs[0](i, j, k);
+  });
+  double local[2] = {res2, rhs2}, global[2] = {};
+  MPI_Allreduce(local, global, 2, MPI_DOUBLE, MPI_SUM, f.comm);
+  REQUIRE(std::sqrt(global[0] / global[1]) < 1e-9);
+  // Test-only gather, never part of the OpenPFC solver/runtime.
+  const auto globally_owned = gather(solution[0], f.comm);
+  return physical_l2(f.nodes, f.h, globally_owned);
+}
+
+} // namespace
+
+TEST_CASE("rank-agglomerated Dirichlet V-cycle solves Q1 on active MPI levels",
+          "[nodal_dirichlet_plan][MPI]") {
+  int rank = 0, ranks = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &ranks);
+  const auto grids = plan_grids(ranks);
+  if (grids.empty()) SKIP("bounded active MPI ranks: 1, 2, 3, 4, or 6");
+
+  for (const auto &grid : grids) {
+    const pfc::Int3 n{31,31,31};
+    const pfc::Real3 h{1.0/32,1.3/32,0.7/32};
+    Fixture cubic(n,h,grid,MPI_COMM_WORLD);
+    check_agglomerated(cubic,4);
+    if (ranks == 6) {
+      const auto plan = pfc::solvers::MultigridPlan::build(
+          cubic.decomposition,
+          pfc::solvers::MultigridPlanOptions{.minimum_owned_extent=4});
+      REQUIRE(plan.levels().size() == 3);
+      REQUIRE(plan.levels()[0].active_count() == 6);
+      REQUIRE(plan.levels()[1].active_count() == 3);
+      REQUIRE(plan.levels()[2].active_count() == 1);
+    }
+    if (ranks <= 3 || ranks == 6) {
+      Fixture tall({31,31,63},{1.0/32,1.3/32,0.7/64},
+                   grid,MPI_COMM_WORLD);
+      check_agglomerated(tall,4);
+    }
+    if (ranks <= 2) {
+      Fixture refined({63,63,63},{1.0/64,1.3/64,0.7/64},
+                      grid,MPI_COMM_WORLD);
+      check_agglomerated(refined,8,0.2);
+    }
+  }
+}
+
+TEST_CASE("rank-agglomerated Q1 Galerkin manufactured solution is second order",
+          "[nodal_dirichlet_plan][MPI]") {
+  int rank = 0, ranks = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &ranks);
+  if (ranks > 2) SKIP("physical accuracy control runs on one/two MPI ranks");
+  const pfc::Int3 grid{ranks,1,1};
+  Fixture coarse({15,15,15},{1.0/16,1.3/16,0.7/16},
+                 grid,MPI_COMM_WORLD);
+  Fixture fine({31,31,31},{1.0/32,1.3/32,0.7/32},
+               grid,MPI_COMM_WORLD);
+  const double error_coarse = check_manufactured(coarse);
+  const double error_fine = check_manufactured(fine);
+  INFO("L2 error coarse=" << error_coarse << " fine=" << error_fine);
+  REQUIRE(error_coarse > error_fine);
+  REQUIRE(std::log2(error_coarse / error_fine) > 1.8);
 }
