@@ -149,6 +149,19 @@ jobs:
           echo "${{ matrix.compiler }}/${{ matrix.build_type }} CTest — ${total:-time unavailable}" \
             >> "$GITHUB_STEP_SUMMARY"
 
+      # This capability changes the active world from 6 to 3 to 1 ranks.
+      # The normal hosted CTest suite is capped at 2 MPI slots; run the
+      # targeted independent correctness tests with explicit oversubscription.
+      # Avoid extrapolating the two-rank gate to actual rank agglomeration.
+      - name: Verify multigrid plan MPI transfers on 3, 4 and 6 ranks
+        run: |
+          set -euo pipefail
+          for ranks in 3 4 6; do
+            echo "Checking Q1 planned P/Pt routes on ${ranks} ranks"
+            timeout 300s mpiexec --oversubscribe -n "${ranks}" \
+              ./build/tests/openpfc-tests "[multigrid_plan_mpi][MPI]"
+          done
+
       - name: Compile benchmarks
         env:
           CC: ${{ matrix.cc }}
