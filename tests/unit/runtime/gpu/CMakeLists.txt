@@ -603,3 +603,46 @@ foreach(backend cuda hip)
       TIMEOUT 150 RUN_SERIAL TRUE SKIP_REGULAR_EXPRESSION "SKIP: no usable device")
   endif()
 endforeach()
+
+
+# Opt-in numerical admission on REAL allocated Tohtori/LUMI devices only.
+# GitHub's device-less CUDA/HIP builders continue to compile/link tests, but
+# do not register this strict gate by default.
+option(OpenPFC_REQUIRE_GPU_DIRICHLET_TESTS
+  "Register fail-closed Dirichlet Q1 GPU numerical CTests" OFF)
+
+if(OpenPFC_REQUIRE_GPU_DIRICHLET_TESTS)
+  foreach(_backend cuda hip)
+    if(TARGET test_nodal_multigrid_${_backend})
+      foreach(_ranks 1 2 4)
+        if(_ranks GREATER 1 AND NOT OpenPFC_RUN_MPI_SUITES)
+          continue()
+        endif()
+        if(OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER 0 AND
+           _ranks GREATER OpenPFC_MPI_TEST_MAX_WORLD_SIZE)
+          continue()
+        endif()
+        if(_ranks EQUAL 1)
+          set(_test DirichletGPU_${_backend}_1rank_Required)
+          add_test(NAME ${_test}
+            COMMAND ${CMAKE_COMMAND} -E env OPENPFC_REQUIRE_GPU_TESTS=1
+              $<TARGET_FILE:test_nodal_multigrid_${_backend}>
+              "[nodal_dirichlet][device]")
+        elseif(MPIEXEC_EXECUTABLE)
+          set(_test DirichletGPU_${_backend}_${_ranks}ranks_Required)
+          add_test(NAME ${_test}
+            COMMAND ${CMAKE_COMMAND} -E env OPENPFC_REQUIRE_GPU_TESTS=1
+              ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${_ranks}
+              $<TARGET_FILE:test_nodal_multigrid_${_backend}>
+              "[nodal_dirichlet][device]")
+        else()
+          message(FATAL_ERROR
+            "Strict Dirichlet GPU MPI tests requested without an MPI launcher")
+        endif()
+        set_tests_properties(${_test} PROPERTIES
+          TIMEOUT 900 RUN_SERIAL TRUE PROCESSORS ${_ranks}
+          LABELS "gpu;dirichlet;required-device")
+      endforeach()
+    endif()
+  endforeach()
+endif()
