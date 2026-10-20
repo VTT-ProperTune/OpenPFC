@@ -42,6 +42,8 @@
 #include <openpfc/solvers/nodal_dirichlet_coarse.hpp>
 #include <openpfc/solvers/nodal_dirichlet_kernels.hpp>
 #include <openpfc/solvers/nodal_dirichlet_nested_geometry.hpp>
+#include <openpfc/solvers/multigrid_mpi_transfers.hpp>
+#include <openpfc/solvers/multigrid_plan.hpp>
 #include <openpfc/solvers/nodal_multigrid_kernels.hpp>
 
 namespace pfc::solvers {
@@ -146,11 +148,90 @@ public:
         static_cast<std::size_t>(controls.max_coarse_unknowns));
   }
 
+  /**
+   * Rank-agglomerated host V-cycle using the already-verified MultigridPlan.
+   *
+   * Construct on EVERY world rank in the supplied communicator. Fine and
+   * intermediate Levels are allocated only on their active ranks. The leaf
+   * factor and vectors live only on the sole active coarse rank.
+   *
+   * This is a second layout policy for the SAME matrix-free Q1 kernel,
+   * smoother and fixed symmetric V-cycle, not another numerical solver.
+   */
+  NodalDirichletMultigrid(const MultigridPlan &plan, int rank,
+                          MPI_Comm comm)
+      : NodalDirichletMultigrid(plan, rank, comm, Controls{}) {}
+
+  NodalDirichletMultigrid(const MultigridPlan &plan, int rank,
+                          MPI_Comm comm, Controls controls)
+      : m_comm(comm), m_rank(rank), m_controls(controls) {
+    if (comm == MPI_COMM_NULL)
+      throw std::invalid_argument("NodalDirichletMultigrid: null communicator");
+    MPI_Comm_rank(comm, &m_rank);
+    MPI_Comm_size(comm, &m_size);
+    if (rank != m_rank || m_size != plan.world_size() ||
+        !(controls.diffusion > 0.0) || !std::isfinite(controls.diffusion) ||
+        !(controls.reaction >= 0.0) || !std::isfinite(controls.reaction) ||
+        !(controls.jacobi_weight > 0.0 && controls.jacobi_weight < 1.0) ||
+        !std::isfinite(controls.jacobi_weight) || controls.pre < 1 ||
+        controls.pre != controls.post ||
+        controls.coarsest_free_extent != 7 ||
+        controls.max_coarse_unknowns < 1 || plan.levels().size() < 2)
+      throw std::invalid_argument(
+          "NodalDirichletMultigrid: invalid agglomerated plan or controls");
+
+    m_plan = std::make_unique<MultigridPlan>(plan);
+    // MPI_Comm_split happens collectively before any level allocates fields.
+    m_transfers = std::make_unique<MultigridMPITransfers>(*m_plan, comm);
+    const auto &hierarchy = m_plan->levels();
+    m_levels.reserve(hierarchy.size() - 1);
+    for (std::size_t i = 0; i + 1 < hierarchy.size(); ++i) {
+      const auto &level = hierarchy[i];
+      const auto it = std::find(level.active_world_ranks.begin(),
+                                level.active_world_ranks.end(), m_rank);
+      if (it == level.active_world_ranks.end()) {
+        m_levels.emplace_back(nullptr);
+        continue;
+      }
+      const int local = static_cast<int>(
+          std::distance(level.active_world_ranks.begin(), it));
+      nmg::dirichlet::validate_nested_local_width(level.partition);
+      m_levels.push_back(std::make_unique<Level>(
+          level.domain, level.partition, local,
+          m_transfers->level_comm(i), make_stencil(level.domain, controls),
+          controls.jacobi_weight));
+    }
+
+    m_coarse_domain = hierarchy.back().domain;
+    const auto n = product(domain::get_size(m_coarse_domain));
+    if (n > static_cast<std::size_t>(controls.max_coarse_unknowns) ||
+        n > static_cast<std::size_t>(std::numeric_limits<int>::max()))
+      throw std::invalid_argument(
+          "NodalDirichletMultigrid: coarse dense capacity exceeded");
+    if (m_rank == hierarchy.back().active_world_ranks.front()) {
+      m_coarse_rhs.assign(n, 0.0);
+      m_coarse_x.assign(n, 0.0);
+      m_coarse_factor = nmg::dirichlet::DenseCoarseCholesky(
+          domain::get_size(m_coarse_domain),
+          make_stencil(m_coarse_domain, controls),
+          static_cast<std::size_t>(controls.max_coarse_unknowns));
+    }
+  }
+
   [[nodiscard]] int levels() const noexcept {
     return static_cast<int>(m_levels.size()) + 1;
   }
   [[nodiscard]] std::size_t coarse_unknowns() const noexcept {
-    return m_coarse_rhs.size();
+    return m_plan ? static_cast<std::size_t>(
+        m_plan->levels().back().global_nodes) : m_coarse_rhs.size();
+  }
+
+  [[nodiscard]] bool active_on_level(std::size_t index) const {
+    if (index >= levels()) 
+      throw std::out_of_range("NodalDirichletMultigrid: level out of range");
+    if (!m_plan) return true; // Legacy hierarchy has replicated leaf.
+    const auto &ranks = m_plan->levels()[index].active_world_ranks;
+    return std::find(ranks.begin(), ranks.end(), m_rank) != ranks.end();
   }
   [[nodiscard]] std::size_t local_unknowns() const noexcept {
     return owned_count(m_levels.front()->box);
@@ -363,6 +444,35 @@ private:
 
   void solve_coarse() { m_coarse_factor.solve(m_coarse_rhs, m_coarse_x); }
 
+  static std::vector<double> pack(const FieldT &field) {
+    std::vector<double> out;
+    out.reserve(owned_count(field.box()));
+    each_owned(field.box(), [&](int i, int j, int k) {
+      out.push_back(field(i, j, k));
+    });
+    return out;
+  }
+
+  static void unpack(const std::vector<double> &source, FieldT &target) {
+    if (source.size() != owned_count(target.box()))
+      throw std::invalid_argument(
+          "NodalDirichletMultigrid: coarse owned size mismatch");
+    std::size_t k = 0;
+    each_owned(target.box(), [&](int i, int j, int z) {
+      target(i, j, z) = source[k++];
+    });
+  }
+
+  static void add_owned(const std::vector<double> &source, FieldT &target) {
+    if (source.size() != owned_count(target.box()))
+      throw std::invalid_argument(
+          "NodalDirichletMultigrid: fine correction size mismatch");
+    std::size_t k = 0;
+    each_owned(target.box(), [&](int i, int j, int z) {
+      target(i, j, z) += source[k++];
+    });
+  }
+
   void cycle(std::size_t l) {
     Level &fine = *m_levels[l];
     smooth(fine, m_controls.pre);
@@ -370,7 +480,33 @@ private:
     each_owned(fine.box, [&](int i, int j, int k) {
       fine.residual(i, j, k) = fine.rhs(i, j, k) - fine.ax(i, j, k);
     });
-    if (l + 1 < m_levels.size()) {
+    if (m_transfers) {
+      // Every fine-active rank sends its uniquely owned residual to the
+      // planned coarse owners; inactive coarse ranks do not allocate fields.
+      std::vector<double> restricted;
+      m_transfers->restrict_pt(l, pack(fine.residual), restricted);
+      const bool intermediate = l + 1 < m_levels.size();
+      if (intermediate && m_levels[l + 1]) {
+        Level &coarse = *m_levels[l + 1];
+        unpack(restricted, coarse.rhs);
+        std::fill(coarse.x.vec().begin(), coarse.x.vec().end(), 0.0);
+        cycle(l + 1);
+      } else if (!intermediate && active_on_level(l + 1)) {
+        // Only the single active terminal rank stores/factors the leaf.
+        m_coarse_rhs = std::move(restricted);
+        solve_coarse();
+      }
+
+      // Fine-only ranks wait here while coarse ranks execute the child.
+      // Reverse exactly the same owner routes to correct owned fine rows.
+      std::vector<double> coefficients, correction;
+      if (intermediate && m_levels[l + 1])
+        coefficients = pack(m_levels[l + 1]->x);
+      else if (!intermediate && active_on_level(l + 1))
+        coefficients = m_coarse_x;
+      m_transfers->prolong(l, coefficients, correction);
+      add_owned(correction, fine.x);
+    } else if (l + 1 < m_levels.size()) {
       Level &coarse = *m_levels[l + 1];
       restrict_distributed(fine, coarse);
       std::fill(coarse.x.vec().begin(), coarse.x.vec().end(), 0.0);
@@ -387,6 +523,10 @@ private:
   MPI_Comm m_comm;
   int m_rank, m_size = 1;
   Controls m_controls;
+  // Lifetimes: Levels/halos are destroyed before active communicators;
+  // transfers are destroyed before the immutable plan they reference.
+  std::unique_ptr<MultigridPlan> m_plan;
+  std::unique_ptr<MultigridMPITransfers> m_transfers;
   std::vector<std::unique_ptr<Level>> m_levels;
   Domain m_coarse_domain;
   std::vector<double> m_coarse_rhs, m_coarse_x;
