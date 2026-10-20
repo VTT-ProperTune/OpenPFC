@@ -916,6 +916,72 @@ TEST_CASE("CUDA/HIP four-level Dirichlet Q1 hierarchy matches independent host",
 }
 
 
+
+TEST_CASE("CUDA/HIP Q1 Dirichlet manufactured load has physical L2 order two",
+          "[nodal_dirichlet][device]") {
+  if (!mechanics_test::available()) SKIP("GPU unavailable");
+  int rank = 0, ranks = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &ranks);
+  if (ranks != 1 && ranks != 2 && ranks != 4)
+    SKIP("physical Q1 GPU admission uses 1/2/4 ranks");
+
+  using Vcycle = pfc::solvers::NodalDirichletDeviceVcycle<
+      mechanics_test::Space>;
+  using Ops = pfc::solvers::FieldOperations<mechanics_test::Space>;
+  double previous_l2 = 0.0;
+  for (int nfree : {31, 63}) {
+    const pfc::Int3 n{nfree, nfree, nfree};
+    const pfc::Real3 h{1.0 / (nfree + 1), 1.3 / (nfree + 1),
+                        0.7 / (nfree + 1)};
+    const auto domain = pfc::domain::create(
+        pfc::GridSize(n), pfc::PhysicalOrigin(h),
+        pfc::GridSpacing(h), pfc::Bool3{false, false, false});
+    const pfc::Int3 proc = ranks == 4 ? pfc::Int3{2, 2, 1}
+                                      : pfc::Int3{1, 1, ranks};
+    const auto decomposition = pfc::decomposition::create(domain, proc);
+    const auto hierarchy = Vcycle::make_hierarchy(decomposition);
+    Vcycle preconditioner(hierarchy, rank, MPI_COMM_WORLD);
+    pfc::solvers::NodalDirichletDeviceOperator<mechanics_test::Space> A(
+        decomposition, rank, MPI_COMM_WORLD);
+    const auto box = pfc::decomposition::local_box(decomposition, rank);
+    Ops ops(domain, box, 1, 1, MPI_COMM_WORLD);
+    auto rhs = ops.make(ops.size()), sol = ops.make(ops.size());
+    HostF reference_rhs(domain, box, 1);
+    fill_both(reference_rhs, rhs[0], [&h](int gi, int gj, int gk) {
+      return dirichlet_manufactured_load(gi, gj, gk, h);
+    });
+    pfc::solvers::KrylovControls controls;
+    controls.relative_tolerance = 1e-10;
+    controls.maximum_iterations = 150;
+    const auto result = pfc::solvers::cg(
+        ops, [&](const auto &x, auto &y) {
+          A.apply_operator(x[0], y[0]);
+        }, rhs, sol, controls,
+        [&](const auto &r, auto &z, int) {
+          preconditioner.apply(r[0], z[0]);
+        });
+    INFO("Dirichlet physical Galerkin " << nfree << "^3, ranks "
+         << ranks << ", PCG " << result.iterations);
+    REQUIRE(result.converged());
+    REQUIRE(result.residual <= 1e-10 * result.rhs_norm);
+
+    const auto all_free = gathered_dirichlet_free_solution(sol[0], n);
+    const double l2 = independent_dirichlet_physical_l2(n, h, all_free);
+    REQUIRE(std::isfinite(l2));
+    REQUIRE(l2 > 0.0);
+    if (previous_l2 > 0.0) {
+      const double rate = std::log(previous_l2 / l2) / std::log(2.0);
+      INFO("Q1 manufactured physical L2 order " << rate
+           << " on " << ranks << " ranks");
+      REQUIRE(rate >= 1.8);
+      REQUIRE(rate <= 2.2);
+    }
+    previous_l2 = l2;
+  }
+}
+
+
 int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
   int rank = 0;
