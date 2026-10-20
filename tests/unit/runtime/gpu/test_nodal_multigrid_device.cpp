@@ -811,32 +811,33 @@ int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
   int rank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  // On device-less hosted CI the Catch2 tests may SKIP. Hardware acceptance
-  // must NEVER report a green result when any requested MPI rank lacks a
-  // working CUDA/HIP device. The explicit strict mode fails before Catch2.
-  const char *required = std::getenv("OPENPFC_REQUIRE_GPU_TESTS");
-  if (required && std::string_view(required) == "1") {
-    int available = mechanics_test::available() ? 1 : 0;
-    int all_available = 0;
-    MPI_Allreduce(&available, &all_available, 1, MPI_INT, MPI_MIN,
-                  MPI_COMM_WORLD);
-    if (!all_available) {
-      if (rank == 0)
-        std::cerr << "FAIL: required CUDA/HIP Q1 numerical tests have "
-                     "no usable GPU on at least one MPI rank\n";
-      MPI_Finalize();
-      return 2;
-    }
-  }
+  // Hosted GPU-less CI may legitimately SKIP, but opted-in hardware
+  // acceptance must fail on ANY rank with no device or failed binding.
+  int device_ready = 0;
   if (mechanics_test::available()) {
     int count = 0;
 #if defined(OPENPFC_TEST_MECHANICS_HIP)
-    hipGetDeviceCount(&count);
-    if (count > 0) hipSetDevice(rank % count);
+    if (hipGetDeviceCount(&count) == hipSuccess && count > 0 &&
+        hipSetDevice(rank % count) == hipSuccess)
+      device_ready = 1;
 #else
-    cudaGetDeviceCount(&count);
-    if (count > 0) cudaSetDevice(rank % count);
+    if (cudaGetDeviceCount(&count) == cudaSuccess && count > 0 &&
+        cudaSetDevice(rank % count) == cudaSuccess)
+      device_ready = 1;
 #endif
+  }
+  const char *required = std::getenv("OPENPFC_REQUIRE_GPU_TESTS");
+  if (required && std::string_view(required) == "1") {
+    int all_ready = 0;
+    MPI_Allreduce(&device_ready, &all_ready, 1, MPI_INT, MPI_MIN,
+                  MPI_COMM_WORLD);
+    if (!all_ready) {
+      if (rank == 0)
+        std::cerr << "FAIL: required CUDA/HIP Q1 numerical admission lacks "
+                     "a working GPU on one or more MPI ranks\n";
+      MPI_Finalize();
+      return 2;
+    }
   }
   const int result = Catch::Session().run(argc, argv);
   MPI_Finalize();
