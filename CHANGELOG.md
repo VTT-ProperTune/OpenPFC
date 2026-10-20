@@ -7,6 +7,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Add CPU-testable `solvers::MultigridPlan`: plan OpenPFC-owned Q1
+  rank-agglomerated hierarchies with 1/2/3 process-grid contractions,
+  active world ranks, exact additive Pᵀ and reverse P routing (including
+  cross-group support), and checked 64-bit field-budget estimates.
+  No MPI communicators, GPU buffers or runtime transfers are allocated.
+  The existing V-cycle behavior remains unchanged (issue #420).
+
 - The GPU FCC point batch can consume a borrowed device-resident set of four
   padded crystal-to-sample quaternion Fields without uploading nine-component
   orientation matrices. The original dense API stays available, with its
