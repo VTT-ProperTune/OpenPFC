@@ -4,7 +4,7 @@
 
 /**
  * @file nodal_dirichlet_device_vcycle.hpp
- * @brief Bounded symmetric 2/3-level Dirichlet Q1 V-cycle on OpenPFC GPU fields.
+ * @brief Arbitrary-depth nested Dirichlet Q1 GPU V-cycle using OpenPFC fields.
  *
  * Caller-provided nested OpenPFC Decompositions, never another partitioner.
  * Every fine-grid operation is device resident and calls OpenPFC FieldOps,
@@ -24,6 +24,7 @@
 #include <limits>
 #include <memory>
 #include <stdexcept>
+#include <vector>
 #include <string>
 #include <utility>
 #include <vector>
@@ -33,7 +34,7 @@
 namespace pfc::solvers {
 
 /**
- * Fixed SPD preconditioner on two or three geometric Q1 levels.
+ * Fixed SPD preconditioner over an OpenPFC-owned nested Q1 hierarchy.
  *
  * This is a deliberately bounded validation gate: the coarsest free-node
  * system has at most 1024 unknowns, replicated and factored with the SAME
@@ -44,7 +45,7 @@ namespace pfc::solvers {
  * remain CUDA/HIP resident. A recursive instance on the next nested level
  * invokes the identical numerical V-cycle rather than cloning a solver.
  * Only the tiny terminal coarse problem is reduced and solved on the host.
- * This still does NOT qualify an arbitrary deep GPU multigrid solve.
+ * Hardware numerical qualification remains distinct from compile-only CI.
  */
 template <class Space> class NodalDirichletDeviceVcycle {
 public:
@@ -63,25 +64,29 @@ public:
     std::size_t max_coarse_unknowns = 1024;
   };
 
-  /// Existing 2-level API, retained for source compatibility.
+  using Hierarchy = std::vector<decomposition::Decomposition>;
+
+  /// Backwards-compatible two-level Q1 constructor.
   NodalDirichletDeviceVcycle(
       const decomposition::Decomposition &fine,
       const decomposition::Decomposition &coarse, int rank, MPI_Comm comm)
-      : NodalDirichletDeviceVcycle(fine, coarse, nullptr, rank, comm, Controls{}) {}
+      : NodalDirichletDeviceVcycle(
+            Hierarchy{fine, coarse}, rank, comm, Controls{}) {}
 
   NodalDirichletDeviceVcycle(
       const decomposition::Decomposition &fine,
       const decomposition::Decomposition &coarse, int rank, MPI_Comm comm,
       Controls controls)
-      : NodalDirichletDeviceVcycle(fine, coarse, nullptr, rank, comm, controls) {}
+      : NodalDirichletDeviceVcycle(
+            Hierarchy{fine, coarse}, rank, comm, controls) {}
 
-  /// New 3-level path. The middle grid is GPU-resident, never reduced to host.
+  /// Backwards-compatible three-level constructor.
   NodalDirichletDeviceVcycle(
       const decomposition::Decomposition &fine,
       const decomposition::Decomposition &middle,
       const decomposition::Decomposition &coarse, int rank, MPI_Comm comm)
       : NodalDirichletDeviceVcycle(
-            fine, middle, &coarse, rank, comm, Controls{}) {}
+            Hierarchy{fine, middle, coarse}, rank, comm, Controls{}) {}
 
   NodalDirichletDeviceVcycle(
       const decomposition::Decomposition &fine,
@@ -89,19 +94,79 @@ public:
       const decomposition::Decomposition &coarse, int rank, MPI_Comm comm,
       Controls controls)
       : NodalDirichletDeviceVcycle(
-            fine, middle, &coarse, rank, comm, controls) {}
+            Hierarchy{fine, middle, coarse}, rank, comm, controls) {}
+
+  /// Any nested level count >=2. Levels are OpenPFC Decompositions ordered
+  /// finest to coarsest; callers may supply nontrivial MPI brick grids.
+  NodalDirichletDeviceVcycle(const Hierarchy &levels, int rank, MPI_Comm comm)
+      : NodalDirichletDeviceVcycle(levels, rank, comm, Controls{}) {}
+
+  NodalDirichletDeviceVcycle(const Hierarchy &levels, int rank, MPI_Comm comm,
+                             Controls controls)
+      : NodalDirichletDeviceVcycle(levels, 0, rank, comm, controls) {}
+
+  /// Build an isotropically nested free-node Q1 hierarchy using only the
+  /// existing OpenPFC decomposition factory and process grid. This is NOT
+  /// another partitioner. Physical origin shifts by one fine spacing at
+  /// each coarsening step because free Q1 boundary nodes are eliminated.
+  [[nodiscard]] static Hierarchy
+  make_hierarchy(const decomposition::Decomposition &fine) {
+    const auto &d = decomposition::domain(fine);
+    const auto n = domain::get_size(d);
+    const auto p = domain::get_periodic(d);
+    const auto is_pow2 = [](long long x) {
+      return x > 0 && (x & (x - 1)) == 0;
+    };
+    if (n[0] < 15 || n[1] != n[0] ||
+        !(n[2] == n[0] ||
+          static_cast<long long>(n[2]) == 2LL * n[0] + 1) ||
+        !is_pow2(static_cast<long long>(n[0]) + 1) ||
+        !is_pow2(static_cast<long long>(n[2]) + 1) ||
+        p[0] || p[1] || p[2])
+      throw std::invalid_argument(
+          "DirichletDeviceVcycle: expected cubic or 2:1 nonperiodic 2^k-1 free-node grid");
+    Hierarchy result{fine};
+    auto domain_value = d;
+    const auto grid = decomposition::get_grid(fine);
+    while (domain_value.size[0] > 7) {
+      Int3 next_size{};
+      Real3 next_spacing{}, next_origin{};
+      for (int axis = 0; axis < 3; ++axis) {
+        next_size[axis] = (domain_value.size[axis] - 1) / 2;
+        next_spacing[axis] = 2.0 * domain_value.spacing[axis];
+        next_origin[axis] = domain_value.origin[axis] +
+                            domain_value.spacing[axis];
+      }
+      const auto next = domain::create(GridSize(next_size),
+                                       PhysicalOrigin(next_origin),
+                                       GridSpacing(next_spacing),
+                                       Bool3{false, false, false});
+      auto dec = decomposition::create(next, grid);
+      nmg::dirichlet::validate_nested_transfer_reach(result.back(), dec);
+      result.push_back(std::move(dec));
+      domain_value = next;
+    }
+    if (result.size() < 2)
+      throw std::invalid_argument("DirichletDeviceVcycle: at least two levels required");
+    return result;
+  }
 
 private:
+  static const decomposition::Decomposition &at(const Hierarchy &levels,
+                                                 std::size_t index) {
+    if (index >= levels.size())
+      throw std::invalid_argument("DirichletDeviceVcycle: missing nested grid level");
+    return levels[index];
+  }
+
   NodalDirichletDeviceVcycle(
-      const decomposition::Decomposition &fine,
-      const decomposition::Decomposition &coarse,
-      const decomposition::Decomposition *bottom, int rank, MPI_Comm comm,
+      const Hierarchy &levels, std::size_t index, int rank, MPI_Comm comm,
       Controls controls)
-      : m_fd(decomposition::domain(fine)),
-        m_cd(decomposition::domain(coarse)),
-        m_fdec(fine), m_cdec(coarse),
-        m_fb(validated_box(fine, coarse, bottom, rank, comm, controls)),
-        m_cb(decomposition::local_box(coarse, rank)),
+      : m_fd(decomposition::domain(at(levels, index))),
+        m_cd(decomposition::domain(at(levels, index + 1))),
+        m_fdec(at(levels, index)), m_cdec(at(levels, index + 1)),
+        m_fb(validated_box(levels, index, rank, comm, controls)),
+        m_cb(decomposition::local_box(m_cdec, rank)),
         m_comm(comm), m_controls(controls),
         m_fops(m_fd, m_fb, 1, nmg::dirichlet::kHalo, comm),
         m_cops(m_cd, m_cb, 1, nmg::dirichlet::kHalo, comm),
@@ -136,12 +201,11 @@ private:
     m_jacobi = std::min(controls.jacobi_weight,
                          1.5 * diag / row_bound) / diag;
 
-    if (bottom) {
-      // The child works only with GPU-resident middle-level Fields.
-      // It owns the one terminal host coarse factor; this outer level
-      // never allocates a host copy of its intermediate global grid.
-      m_child = std::make_unique<NodalDirichletDeviceVcycle>(
-          coarse, *bottom, rank, comm, controls);
+    if (index + 2 < levels.size()) {
+      // The same GPU hierarchy on the next level. All fine/intermediate
+      // Fields remain resident; only the leaf reduces a bounded coarse RHS.
+      m_child.reset(new NodalDirichletDeviceVcycle(
+          levels, index + 1, rank, comm, controls));
     } else {
       const auto nc = domain::get_size(m_cd);
       const auto hc = domain::get_spacing(m_cd);
@@ -170,7 +234,7 @@ public:
   }
   [[nodiscard]] const Box3i &owned_box() const noexcept { return m_fb; }
 
-  /// Apply a zero-initialized symmetric 2/3-level V-cycle. Input and
+  /// Apply a zero-initialized symmetric nested V-cycle. Input and
   /// output may alias, and either may have a different nonnegative halo.
   /// All ranks of m_comm must participate in the same call order.
   void apply(const FieldT &rhs, FieldT &out) {
@@ -214,57 +278,43 @@ private:
     return opts;
   }
 
-  static Box3i validated_box(
-      const decomposition::Decomposition &fine,
-      const decomposition::Decomposition &coarse,
-      const decomposition::Decomposition *bottom, int rank, MPI_Comm comm,
-      const Controls &c) {
+  static Box3i validated_box(const Hierarchy &levels, std::size_t index,
+                             int rank, MPI_Comm comm, const Controls &c) {
     if (comm == MPI_COMM_NULL)
       throw std::invalid_argument("DirichletDeviceVcycle: null MPI communicator");
     int actual = -1, size = 0;
     MPI_Comm_rank(comm, &actual);
     MPI_Comm_size(comm, &size);
-    if (actual != rank || decomposition::get_num_domains(fine) != size ||
-        decomposition::get_num_domains(coarse) != size)
-      throw std::invalid_argument("DirichletDeviceVcycle: MPI rank mismatch");
+    if (actual != rank || levels.size() < 2 || index + 1 >= levels.size())
+      throw std::invalid_argument("DirichletDeviceVcycle: invalid MPI level/index");
     if (!(c.diffusion > 0.0) || !std::isfinite(c.diffusion) ||
         !(c.reaction >= 0.0) || !std::isfinite(c.reaction) ||
         !(c.jacobi_weight > 0.0 && c.jacobi_weight < 1.0) ||
-        !std::isfinite(c.jacobi_weight) ||
-        c.pre < 1 || c.post != c.pre ||
-        c.max_coarse_unknowns < 1 || c.max_coarse_unknowns > 1024)
+        !std::isfinite(c.jacobi_weight) || c.pre < 1 ||
+        c.post != c.pre || c.max_coarse_unknowns < 1 ||
+        c.max_coarse_unknowns > 1024)
       throw std::invalid_argument("DirichletDeviceVcycle: unsupported controls");
 
-    nmg::dirichlet::validate_nested_transfer_reach(fine, coarse);
-    const auto nc = domain::get_size(decomposition::domain(coarse));
-    if (bottom) {
-      // Exactly one device-resident middle level is admitted in this gate.
-      // Check all ranks and both adjacencies before creating any exchanger.
-      nmg::dirichlet::validate_nested_transfer_reach(coarse, *bottom);
-      const auto nf = domain::get_size(decomposition::domain(fine));
-      const auto nb = domain::get_size(decomposition::domain(*bottom));
-      const bool cube = nf == Int3{31, 31, 31} &&
-                        nc == Int3{15, 15, 15} &&
-                        nb == Int3{7, 7, 7};
-      const bool tall = nf == Int3{31, 31, 63} &&
-                        nc == Int3{15, 15, 31} &&
-                        nb == Int3{7, 7, 15};
-      if (!cube && !tall)
+    // All ranks inspect the SAME hierarchy BEFORE any rank creates a
+    // device HaloExchange. Fail closed on an incompatible intermediate
+    // partition, rather than hanging one rank inside a collective.
+    for (std::size_t k = 0; k + 1 < levels.size(); ++k) {
+      if (decomposition::get_num_domains(levels[k]) != size ||
+          decomposition::get_num_domains(levels[k + 1]) != size)
         throw std::invalid_argument(
-            "DirichletDeviceVcycle: unsupported 3-level nested Q1 shapes");
-      const std::size_t N = static_cast<std::size_t>(nb[0]) * nb[1] * nb[2];
-      if (N > c.max_coarse_unknowns)
-        throw std::invalid_argument("DirichletDeviceVcycle: bottom coarse capacity exceeded");
-    } else {
-      // The leaf owns the only replicated bounded coarse Cholesky.
-      if (!(nc == Int3{7, 7, 7} || nc == Int3{7, 7, 15}))
-        throw std::invalid_argument(
-            "DirichletDeviceVcycle: bounded leaf expects 7x7x7 or 7x7x15 coarse");
-      const std::size_t N = static_cast<std::size_t>(nc[0]) * nc[1] * nc[2];
-      if (N > c.max_coarse_unknowns)
-        throw std::invalid_argument("DirichletDeviceVcycle: coarse capacity exceeded");
+            "DirichletDeviceVcycle: MPI rank count differs among levels");
+      nmg::dirichlet::validate_nested_transfer_reach(
+          levels[k], levels[k + 1]);
     }
-    return decomposition::local_box(fine, rank);
+    const auto leaf = domain::get_size(decomposition::domain(levels.back()));
+    if (!(leaf == Int3{7, 7, 7} || leaf == Int3{7, 7, 15}))
+      throw std::invalid_argument(
+          "DirichletDeviceVcycle: expected 7x7x7 or 7x7x15 terminal free nodes");
+    const std::size_t N = static_cast<std::size_t>(leaf[0]) * leaf[1] * leaf[2];
+    if (N > c.max_coarse_unknowns)
+      throw std::invalid_argument(
+          "DirichletDeviceVcycle: leaf coarse factor exceeds capacity");
+    return decomposition::local_box(levels[index], rank);
   }
 
   static void validate_field(const FieldT &v, const Domain &d,
