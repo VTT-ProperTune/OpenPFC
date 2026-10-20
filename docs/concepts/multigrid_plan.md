@@ -151,6 +151,21 @@ the six-rank case additionally requires at least six configured logical
 cores or an explicit high-rank registration override. A passing compile
 does not qualify CUDA/HIP execution or a complete multigrid solve.
 
+## CPU/MPI V-cycle integration
+
+\`NodalDirichletMultigrid\` now has an opt-in
+\`MultigridPlan\` constructor. Its existing action, Jacobi, and Cholesky
+are reused; levels own fields/halos only where the plan marks their MPI
+rank active. Verified owned \`P\`/\`Pᵀ\` routes connect successive levels.
+The terminal factor lives on its sole rank. The original constructor
+and GPU V-cycle interfaces remain unchanged. Higher-rank physical
+correctness is checked via the tagged MPI V-cycle tests in CI.
+
+This completes the **host CPU/MPI numerical integration**, not the device
+workspace or performance stage. Buffers in the MPI transfer adapter are
+still temporary. Real GPU/HIP correctness, coarse-rank performance policy,
+64-bit runtime indexing and large-scale capacity remain unresolved.
+
 ## Integration boundary and acceptance
 
 The planning phase (#606) and this host MPI transfer layer do **not**
