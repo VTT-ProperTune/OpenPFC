@@ -47,6 +47,44 @@ dense Cholesky allocation. OpenPFC's `FieldOperations` + `solvers::cg`
 provide rank-owned Krylov vectors, global reductions and true-residual
 admission.
 
+## Rank-agglomerated CPU/MPI V-cycle
+
+An optional \`NodalDirichletMultigrid(const MultigridPlan&, rank, comm,
+Controls)\` constructor executes the **same** matrix-free free-node Q1 row,
+Jacobi smoother and bounded \`DenseCoarseCholesky\` as the original
+same-process-grid constructor.
+
+Construct the plan before the solver on every rank of the fine-level
+communicator. The constructor creates the plan's nested active MPI
+communicators via \`MultigridMPITransfers\`, and allocates \`Level\` Fields,
+halo buffers and smoothing scratch only on active ranks. Inactive ranks
+participate in their last active fine-level transfer but do not execute
+deeper levels. The tiny terminal 7³ or 7×7×15 Cholesky factor and RHS
+live **only on the single terminal rank**, instead of being replicated
+among idle ranks.
+
+Each V-cycle pre-smooths, applies the existing 27-point Q1 row operator,
+forms its owned residual, uses the verified \`Pᵀ\` MPI route to the smaller
+active communicator, recursively solves, reverses the route via \`P\`
+and post-smooths. The symmetric zero-initialized preconditioner is a
+fixed linear operator suitable for CG. The old constructor and the GPU
+V-cycle remain unchanged.
+
+This is still a **host-only correctness implementation**. Intermediate
+vectors are never globally gathered. The current transfer adapter
+allocates local packing/route buffers per V-cycle; device workspaces,
+amortized allocations, rank-policy tuning, and accelerator performance
+are deferred. This is not a GPU-validated result.
+
+Numerical admission is recorded by \`[nodal_dirichlet_plan][MPI]\`:
+independently assembled Gauss Q1 owned action, V-cycle symmetry,
+positive energy, true global unpreconditioned PCG residual, repeated
+preconditioner calls, and independent manufactured Galerkin forcing
+and physical L² refinement on 1–2 ranks. The rank-agglomeration cases
+include actual 3/4/6-rank executions and 6→3→1 contraction.
+The default two-slot hosted CTest suite does **not** cover these higher
+rank counts without the separate explicit CI step.
+
 ## Validation and limits
 
 The separate Catch2/MPI checks compare the matrix-free operator against
