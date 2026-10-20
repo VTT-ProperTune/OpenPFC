@@ -105,50 +105,11 @@ public:
                              Controls controls)
       : NodalDirichletDeviceVcycle(levels, 0, rank, comm, controls) {}
 
-  /// Build an isotropically nested free-node Q1 hierarchy using only the
-  /// existing OpenPFC decomposition factory and process grid. This is NOT
-  /// another partitioner. Physical origin shifts by one fine spacing at
-  /// each coarsening step because free Q1 boundary nodes are eliminated.
+  /// Reuse OpenPFC's host-testable geometry factory: no device-specific
+  /// splitter and no rank-local partition policy is defined in the solver.
   [[nodiscard]] static Hierarchy
   make_hierarchy(const decomposition::Decomposition &fine) {
-    const auto &d = decomposition::domain(fine);
-    const auto n = domain::get_size(d);
-    const auto p = domain::get_periodic(d);
-    const auto is_pow2 = [](long long x) {
-      return x > 0 && (x & (x - 1)) == 0;
-    };
-    if (n[0] < 15 || n[1] != n[0] ||
-        !(n[2] == n[0] ||
-          static_cast<long long>(n[2]) == 2LL * n[0] + 1) ||
-        !is_pow2(static_cast<long long>(n[0]) + 1) ||
-        !is_pow2(static_cast<long long>(n[2]) + 1) ||
-        p[0] || p[1] || p[2])
-      throw std::invalid_argument(
-          "DirichletDeviceVcycle: expected cubic or 2:1 nonperiodic 2^k-1 free-node grid");
-    Hierarchy result{fine};
-    auto domain_value = d;
-    const auto grid = decomposition::get_grid(fine);
-    while (domain_value.size[0] > 7) {
-      Int3 next_size{};
-      Real3 next_spacing{}, next_origin{};
-      for (int axis = 0; axis < 3; ++axis) {
-        next_size[axis] = (domain_value.size[axis] - 1) / 2;
-        next_spacing[axis] = 2.0 * domain_value.spacing[axis];
-        next_origin[axis] = domain_value.origin[axis] +
-                            domain_value.spacing[axis];
-      }
-      const auto next = domain::create(GridSize(next_size),
-                                       PhysicalOrigin(next_origin),
-                                       GridSpacing(next_spacing),
-                                       Bool3{false, false, false});
-      auto dec = decomposition::create(next, grid);
-      nmg::dirichlet::validate_nested_transfer_reach(result.back(), dec);
-      result.push_back(std::move(dec));
-      domain_value = next;
-    }
-    if (result.size() < 2)
-      throw std::invalid_argument("DirichletDeviceVcycle: at least two levels required");
-    return result;
+    return nmg::dirichlet::make_nested_decompositions(fine);
   }
 
 private:
