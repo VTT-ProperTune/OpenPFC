@@ -13,6 +13,7 @@ target_sources(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_field_mult
 target_sources(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_nodal_multigrid.cpp)
 target_sources(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_nodal_dirichlet_multigrid.cpp)
 target_sources(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_multigrid_plan.cpp)
+target_sources(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_multigrid_mpi_transfers.cpp)
 
 add_executable(test_interface_diffusion test_interface_diffusion.cpp)
 target_include_directories(test_interface_diffusion PRIVATE ${CMAKE_SOURCE_DIR}/include)
