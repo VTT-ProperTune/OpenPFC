@@ -153,17 +153,15 @@ does not qualify CUDA/HIP execution or a complete multigrid solve.
 
 ## Integration boundary and acceptance
 
-This PR **does not change the existing**
-\`NodalDirichletDeviceVcycle\`, \`NodalDirichletMultigrid\`, or their
-field layouts. Future separate changes will:
+The planning phase (#606) and this host MPI transfer layer do **not**
+change \`NodalDirichletDeviceVcycle\`, \`NodalDirichletMultigrid\`, or
+their existing Field layouts. The next separate stages are:
 
-1. Use the plan to construct level-specific active MPI communicators
-   and cross-group P/Pᵀ routing, first verifying exact independent
-   CPU/MPI ownership, conservation and adjointness.
-2. Reserve device and halo/message workspaces once, from an inspected
-   memory budget, then execute the existing OpenPFC kernels and Krylov
-   algebra without per-cycle setup.
-3. Validate real CUDA/HIP multi-rank physical correctness before any
+1. Build \`MultigridWorkspace\` with once-only host/device, halo and
+   message-buffer resources, including explicit capacity admission.
+2. Integrate the verified active communicators and Q1 transfers with the
+   existing OpenPFC V-cycle and Krylov algebra, without replacing its kernels.
+3. Qualify real CUDA/HIP multi-rank physical correctness before any
    deferred HPC scaling campaign.
 
 The CPU tests under \`test_multigrid_plan.cpp\` check 64→8→1,
