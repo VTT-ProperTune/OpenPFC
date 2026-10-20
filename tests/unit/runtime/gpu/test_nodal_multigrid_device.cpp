@@ -9,7 +9,10 @@
 #include "mechanics_backend.hpp"
 
 #include <cmath>
+#include <cstdlib>
+#include <iostream>
 #include <random>
+#include <string_view>
 
 #include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -714,10 +717,117 @@ TEST_CASE("Dirichlet Q1 three-level device V-cycle equals host and preconditions
   }
 }
 
+
+TEST_CASE("CUDA/HIP four-level Dirichlet Q1 hierarchy matches independent host",
+          "[nodal_dirichlet][device]") {
+  if (!mechanics_test::available()) SKIP("GPU unavailable");
+  int rank = 0, ranks = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &ranks);
+  if (ranks != 1 && ranks != 2 && ranks != 4)
+    SKIP("four-level GPU Q1 admission uses 1, 2 or 4 ranks");
+
+  using Vcycle = pfc::solvers::NodalDirichletDeviceVcycle<
+      mechanics_test::Space>;
+  using Ops = pfc::solvers::FieldOperations<mechanics_test::Space>;
+
+  for (bool tall : {false, true}) {
+    const pfc::Int3 nn{63, 63, tall ? 127 : 63};
+    const pfc::Real3 h{1.0 / 64, 1.3 / 64,
+                        tall ? 0.7 / 128 : 0.7 / 64};
+    const auto domain = pfc::domain::create(
+        pfc::GridSize(nn), pfc::PhysicalOrigin(h), pfc::GridSpacing(h),
+        pfc::Bool3{false, false, false});
+    const pfc::Int3 proc = ranks == 4 ? pfc::Int3{2, 2, 1}
+                                      : pfc::Int3{1, 1, ranks};
+    const auto dec = pfc::decomposition::create(domain, proc);
+    const auto levels = Vcycle::make_hierarchy(dec);
+    REQUIRE(levels.size() == 4);
+    Vcycle gpu(levels, rank, MPI_COMM_WORLD);
+    REQUIRE(gpu.levels() == 4);
+    REQUIRE(gpu.coarse_unknowns() == (tall ? 735u : 343u));
+
+    pfc::solvers::NodalDirichletMultigrid host(dec, rank, MPI_COMM_WORLD);
+    REQUIRE(host.levels() == gpu.levels());
+    const auto box = pfc::decomposition::local_box(dec, rank);
+    HostF hrhs(domain, box, 0), hcorrected(domain, box, 0);
+    DevF drhs(domain, box, 0), dcorrected(domain, box, 0);
+    for (int sample : {0, 1}) {
+      fill_both(hrhs, drhs, [sample](int x, int y, int z) {
+        return value(101 + sample, x, y, z, 2903u);
+      });
+      host.apply(hrhs, hcorrected);
+      gpu.apply(drhs, dcorrected);
+      INFO("four-level GPU Dirichlet, tall " << tall
+           << ", ranks " << ranks << ", input " << sample);
+      REQUIRE(rel_diff(hcorrected, dcorrected) <= 8e-10);
+    }
+
+    Ops ops(domain, box, 1, 1, MPI_COMM_WORLD);
+    auto u = ops.make(ops.size()), v = ops.make(ops.size());
+    auto mu = ops.make(ops.size()), mv = ops.make(ops.size());
+    HostF hu(domain, box, 1), hv(domain, box, 1);
+    fill_both(hu, u[0], [](int x, int y, int z) {
+      return value(106, x, y, z, 3109u);
+    });
+    fill_both(hv, v[0], [](int x, int y, int z) {
+      return value(107, x, y, z, 3119u);
+    });
+    gpu.apply(u[0], mu[0]);
+    gpu.apply(v[0], mv[0]);
+    const double uMv = ops.dot(u, mv), vMu = ops.dot(v, mu);
+    REQUIRE(std::abs(uMv - vMu) <=
+            2e-8 * std::max({1.0, std::abs(uMv), std::abs(vMu)}));
+    REQUIRE(ops.dot(u, mu) > 0.0);
+    REQUIRE(ops.dot(v, mv) > 0.0);
+
+    pfc::solvers::NodalDirichletDeviceOperator<mechanics_test::Space> A(
+        dec, rank, MPI_COMM_WORLD);
+    auto exact = ops.make(ops.size()), rhs = ops.make(ops.size());
+    auto solution = ops.make(ops.size());
+    HostF host_exact(domain, box, 1);
+    fill_both(host_exact, exact[0], [](int x, int y, int z) {
+      return value(115, x, y, z, 4441u);
+    });
+    A.apply_operator(exact[0], rhs[0]);
+    pfc::solvers::KrylovControls controls;
+    controls.relative_tolerance = 1e-10;
+    controls.maximum_iterations = 120;
+    const auto result = pfc::solvers::cg(
+        ops, [&](const auto &q, auto &out) {
+          A.apply_operator(q[0], out[0]);
+        }, rhs, solution, controls,
+        [&](const auto &r, auto &z, int) { gpu.apply(r[0], z[0]); });
+    INFO("GPU Q1 four-level true-residual PCG, tall " << tall
+         << ", ranks " << ranks << ", iterations " << result.iterations);
+    REQUIRE(result.converged());
+    REQUIRE(result.residual <= 1e-10 * result.rhs_norm);
+    REQUIRE(rel_diff(host_exact, solution[0]) <= 1e-7);
+  }
+}
+
+
 int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
   int rank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  // On device-less hosted CI the Catch2 tests may SKIP. Hardware acceptance
+  // must NEVER report a green result when any requested MPI rank lacks a
+  // working CUDA/HIP device. The explicit strict mode fails before Catch2.
+  const char *required = std::getenv("OPENPFC_REQUIRE_GPU_TESTS");
+  if (required && std::string_view(required) == "1") {
+    int available = mechanics_test::available() ? 1 : 0;
+    int all_available = 0;
+    MPI_Allreduce(&available, &all_available, 1, MPI_INT, MPI_MIN,
+                  MPI_COMM_WORLD);
+    if (!all_available) {
+      if (rank == 0)
+        std::cerr << "FAIL: required CUDA/HIP Q1 numerical tests have "
+                     "no usable GPU on at least one MPI rank\n";
+      MPI_Finalize();
+      return 2;
+    }
+  }
   if (mechanics_test::available()) {
     int count = 0;
 #if defined(OPENPFC_TEST_MECHANICS_HIP)
