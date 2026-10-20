@@ -549,6 +549,14 @@ development record since 0.4.0.
   CUDA build targets `sm_80;86;90`, and `build_tohtori.sh --cuda` now also
   builds HeFFTe's cuFFT backend (#613).
 
+- Add an opt-in rank-agglomerated CPU/MPI Dirichlet Q1 V-cycle to the
+  existing NodalDirichletMultigrid. The same Q1/GMG/CG mathematics now
+  consumes planned active communicators and owned P/P-transpose routes,
+  allocating intermediate Fields and the terminal Cholesky only on
+  active ranks. GPU numerical execution and optimization remain deferred
+  (#608).
+
+
 - Add CPU-testable `solvers::MultigridPlan`: plan OpenPFC-owned Q1
   rank-agglomerated hierarchies with 1/2/3 process-grid contractions,
   active world ranks, exact additive Pᵀ and reverse P routing (including
