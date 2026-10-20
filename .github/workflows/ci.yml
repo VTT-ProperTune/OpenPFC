@@ -395,8 +395,12 @@ jobs:
           # Reuse the completed device kernel archive and compiler cache.
           # A missing Catch2 v3, a missing target, or broken CUDA/host
           # launcher declaration must fail this CI job, not silently skip.
-          cmake -S . -B build-cuda -DOpenPFC_BUILD_TESTS=ON
+          cmake -S . -B build-cuda -DOpenPFC_BUILD_TESTS=ON \
+            -DOpenPFC_REQUIRE_GPU_DIRICHLET_TESTS=ON
           cmake --build build-cuda --target test_nodal_multigrid_cuda -j2
+          # Verify mandatory hardware tests are registered, without executing
+          # any GPU operation on a device-less hosted CI runner.
+          ctest --test-dir build-cuda -N -R DirichletGPU_cuda_1rank_Required
 
   hip-compile:
     name: HIP compile-only (no GPU)
@@ -431,8 +435,10 @@ jobs:
           ./startup-hip/startup_consumer
       - name: Compile and link actual HIP nodal Q1 tests (never execute)
         run: |
-          cmake -S . -B build-hip -DOpenPFC_BUILD_TESTS=ON
+          cmake -S . -B build-hip -DOpenPFC_BUILD_TESTS=ON \
+            -DOpenPFC_REQUIRE_GPU_DIRICHLET_TESTS=ON
           cmake --build build-hip --target test_nodal_multigrid_hip -j2
+          ctest --test-dir build-hip -N -R DirichletGPU_hip_1rank_Required
 
   # ============================================================================
   # Status Check (required for merge)
