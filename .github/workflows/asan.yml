@@ -21,6 +21,7 @@ jobs:
   asan:
     name: GCC 13 / Debug / ASan
     runs-on: ubuntu-24.04
+    timeout-minutes: 120
     env:
       CC: gcc-13
       CXX: g++-13

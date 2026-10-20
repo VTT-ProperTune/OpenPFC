@@ -21,6 +21,7 @@ jobs:
   code-quality:
     name: Code Quality
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -72,6 +73,7 @@ jobs:
     name: ${{ matrix.os }} / ${{ matrix.compiler }} / ${{ matrix.build_type }}
     needs: [code-quality]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
@@ -192,6 +194,7 @@ jobs:
     if: github.event_name == 'push'
     needs: [code-quality]
     runs-on: ubuntu-24.04
+    timeout-minutes: 120
     env:
       CC: gcc-11
       CXX: g++-11
@@ -252,6 +255,7 @@ jobs:
     name: Clang compile check (library + FFT backend)
     needs: [code-quality]
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -301,6 +305,7 @@ jobs:
     name: Packaging (find_package consumer)
     needs: [code-quality]
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -376,6 +381,7 @@ jobs:
     name: CUDA compile-only (no GPU)
     needs: [code-quality]
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
     container: nvidia/cuda:12.6.0-devel-ubuntu24.04
     env:
       DEBIAN_FRONTEND: noninteractive
@@ -419,6 +425,7 @@ jobs:
     name: HIP compile-only (no GPU)
     needs: [code-quality]
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
     container: rocm/dev-ubuntu-24.04:6.2-complete
     env:
       DEBIAN_FRONTEND: noninteractive
@@ -461,6 +468,7 @@ jobs:
     if: always()
     needs: [code-quality, build-and-test, clang-compile, packaging-smoke, cuda-compile, hip-compile]
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: Check all jobs status
         run: |

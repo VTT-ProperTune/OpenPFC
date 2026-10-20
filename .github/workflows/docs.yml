@@ -36,6 +36,7 @@ jobs:
   check-documentation-source:
     name: Check documentation source
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -87,6 +88,7 @@ jobs:
     name: Build unified documentation
     needs: check-documentation-source
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -147,6 +149,7 @@ jobs:
     needs: build-documentation
     runs-on: ubuntu-24.04
 
+    timeout-minutes: 15
     permissions:
       contents: read
       pages: write
