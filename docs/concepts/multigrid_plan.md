@@ -119,6 +119,38 @@ CUDA/HIP launchers, local device offsets, MPI counts or accelerator
 memory can execute such a problem. Actual memory admission and
 64-bit runtime indexing remain mandatory work before large runs.
 
+## CPU/MPI owned transfer layer
+
+`openpfc/solvers/multigrid_mpi_transfers.hpp` adds
+`pfc::solvers::MultigridMPITransfers`, a separate runtime consumer of the
+immutable plan. Every world rank constructs it collectively once; the class
+uses `MPI_Comm_split` to create a compact communicator for each level's exact
+active-rank list. Rank IDs are the plan's world identities, not assumptions
+about contiguous rank groups.
+
+`restrict_pt(transition, fine_owned, coarse_owned)` evaluates **additive**
+`P^T` on the uniquely owned fine-node values. Planned owner-to-owner messages
+accumulate at the unique coarse owner. `prolong(transition, coarse_owned,
+fine_owned)` reverses those routes and interpolates to uniquely owned
+fine nodes. Both use the same Q1 support and exact coarse-owner blocks,
+including contributions crossing process-group boundaries. No global fine
+field is assembled. Inactive coarse ranks return empty outputs and do not
+participate in inactive-level collectives.
+
+The initial transport uses **host FP64 owned-only contiguous arrays** and
+allocates its route buffers per call. It does not change the production
+`NodalDirichletDeviceVcycle`, allocate a GPU workspace, or claim MPI
+performance. Its independent Catch2 tests compare Q1 interpolation and
+restriction against directly evaluated analytical-array oracles, verify
+global `<Pc,f> = <c,P^T f>`, repeated-call determinism, cubic/2:1
+rectangular grids, and 1/2/3/4/6-rank plans including 6 -> 3 -> 1.
+
+Enable `OpenPFC_RUN_MPI_SUITES=ON` to register the
+`multigrid_plan_transfer_*ranks` CTests. Existing rank caps are respected;
+the six-rank case additionally requires at least six configured logical
+cores or an explicit high-rank registration override. A passing compile
+does not qualify CUDA/HIP execution or a complete multigrid solve.
+
 ## Integration boundary and acceptance
 
 This PR **does not change the existing**
