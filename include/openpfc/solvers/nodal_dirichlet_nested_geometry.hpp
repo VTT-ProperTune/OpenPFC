@@ -14,6 +14,8 @@
 #include <cmath>
 #include <limits>
 #include <stdexcept>
+#include <vector>
+#include <utility>
 
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
@@ -86,6 +88,65 @@ inline void validate_nested_transfer_reach(
             "Dirichlet Q1: OpenPFC nested P/P^T exceeds two-cell owned halo");
     }
   }
+}
+
+
+/// Construct an arbitrary-depth hierarchy with *OpenPFC's own* Cartesian
+/// decomposition factory. This code chooses geometric grid RESOLUTION only,
+/// not MPI ownership; the original process grid is reused at each level.
+/// The physical origin of coarse free nodes shifts by one fine spacing.
+[[nodiscard]] inline std::vector<decomposition::Decomposition>
+make_nested_decompositions(const decomposition::Decomposition &fine) {
+  const auto &d = decomposition::domain(fine);
+  const auto n = domain::get_size(d);
+  const auto p = domain::get_periodic(d);
+  const auto is_pow2 = [](long long value) {
+    return value > 0 && (value & (value - 1)) == 0;
+  };
+  if (n[0] < 15 || n[1] != n[0] ||
+      !(n[2] == n[0] ||
+        static_cast<long long>(n[2]) == 2LL * n[0] + 1) ||
+      !is_pow2(static_cast<long long>(n[0]) + 1) ||
+      !is_pow2(static_cast<long long>(n[2]) + 1) ||
+      p[0] || p[1] || p[2])
+    throw std::invalid_argument(
+        "Dirichlet Q1 hierarchy: expected nonperiodic cubic/2:1 2^k-1 free nodes");
+  for (int d_axis = 0; d_axis < 3; ++d_axis)
+    if (!(d.spacing[d_axis] > 0.0) ||
+        !std::isfinite(d.spacing[d_axis]) ||
+        !std::isfinite(d.origin[d_axis]))
+      throw std::invalid_argument(
+          "Dirichlet Q1 hierarchy: nonfinite spacing or origin");
+
+  std::vector<decomposition::Decomposition> levels{fine};
+  auto current = d;
+  const auto grid = decomposition::get_grid(fine);
+  while (current.size[0] > 7) {
+    Int3 next_size{};
+    Real3 spacing{}, origin{};
+    for (int axis = 0; axis < 3; ++axis) {
+      next_size[axis] = (current.size[axis] - 1) / 2;
+      spacing[axis] = 2.0 * current.spacing[axis];
+      origin[axis] = current.origin[axis] + current.spacing[axis];
+      // Inadequately sized owned subdomains cannot support full width-2
+      // halos. Reject before decomposition/communicator construction.
+      if (next_size[axis] < 2 * grid[axis] ||
+          !std::isfinite(spacing[axis]) || !std::isfinite(origin[axis]))
+        throw std::invalid_argument(
+            "Dirichlet Q1 hierarchy: insufficient coarse MPI owned width");
+    }
+    const auto next = domain::create(
+        GridSize(next_size), PhysicalOrigin(origin),
+        GridSpacing(spacing), Bool3{false, false, false});
+    auto next_dec = decomposition::create(next, grid);
+    validate_nested_transfer_reach(levels.back(), next_dec);
+    levels.push_back(std::move(next_dec));
+    current = next;
+  }
+  if (levels.size() < 2)
+    throw std::invalid_argument(
+        "Dirichlet Q1 hierarchy: need two or more levels");
+  return levels;
 }
 
 } // namespace pfc::solvers::nmg::dirichlet
