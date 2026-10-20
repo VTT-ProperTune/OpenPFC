@@ -106,13 +106,16 @@ struct Fixture {
   pfc::Domain domain;
   pfc::decomposition::Decomposition decomposition;
 
-  Fixture(pfc::Int3 n, pfc::Real3 spacing, pfc::Int3 grid, MPI_Comm c)
+  Fixture(pfc::Int3 n, pfc::Real3 spacing, pfc::Int3 grid, MPI_Comm c,
+          pfc::Real3 origin = {0.0, 0.0, 0.0})
       : nodes(n), h(spacing), proc_grid(grid), comm(c), rank([&]() {
           int value = 0;
           MPI_Comm_rank(c, &value);
           return value;
         }()),
-        domain(pfc::domain::with_spacing(n, spacing, {false, false, false})),
+        domain(pfc::domain::create(
+            pfc::GridSize(n), pfc::PhysicalOrigin(origin),
+            pfc::GridSpacing(spacing), pfc::Bool3{false, false, false})),
         decomposition(pfc::decomposition::create(domain, grid)) {}
 
   Field field() const {
@@ -1051,10 +1054,12 @@ TEST_CASE("rank-agglomerated Q1 Galerkin manufactured solution is second order",
   MPI_Comm_size(MPI_COMM_WORLD, &ranks);
   if (ranks > 2) SKIP("physical accuracy control runs on one/two MPI ranks");
   const pfc::Int3 grid{ranks,1,1};
+  // A free-node Domain starts one element spacing inside the physical
+  // Dirichlet boundary. Do not accidentally test a shifted physical field.
   Fixture coarse({15,15,15},{1.0/16,1.3/16,0.7/16},
-                 grid,MPI_COMM_WORLD);
+                 grid,MPI_COMM_WORLD,{1.0/16,1.3/16,0.7/16});
   Fixture fine({31,31,31},{1.0/32,1.3/32,0.7/32},
-               grid,MPI_COMM_WORLD);
+               grid,MPI_COMM_WORLD,{1.0/32,1.3/32,0.7/32});
   const double error_coarse = check_manufactured(coarse);
   const double error_fine = check_manufactured(fine);
   INFO("L2 error coarse=" << error_coarse << " fine=" << error_fine);
