@@ -81,6 +81,115 @@ double rel_diff(const HostF &h, DevF &d) {
   return std::sqrt(g[0] / g[1]);
 }
 
+
+// Independent physical Galerkin reference, deliberately NOT formed as b=A*u.
+// Free-node global index i corresponds to physical Q1 node i+1.
+double dirichlet_manufactured_mode(double x, double y, double z) {
+  const double pi = std::acos(-1.0);
+  return std::sin(pi * x) * std::sin(pi * y / 1.3) *
+         std::sin(pi * z / 0.7);
+}
+
+double dirichlet_manufactured_load(int i, int j, int k,
+                                   const pfc::Real3 &h) {
+  const double pi = std::acos(-1.0);
+  const double lambda = pi * pi * (1.0 + 1.0 / (1.3 * 1.3) +
+                                   1.0 / (0.7 * 0.7));
+  const double q[2] = {0.5 - 0.5 / std::sqrt(3.0),
+                       0.5 + 0.5 / std::sqrt(3.0)};
+  const int node[3] = {i + 1, j + 1, k + 1};
+  double rhs = 0.0;
+  for (int dz = 0; dz < 2; ++dz)
+    for (int dy = 0; dy < 2; ++dy)
+      for (int dx = 0; dx < 2; ++dx) {
+        const int element[3] = {node[0] - 1 + dx,
+                                node[1] - 1 + dy,
+                                node[2] - 1 + dz};
+        for (int qz = 0; qz < 2; ++qz)
+          for (int qy = 0; qy < 2; ++qy)
+            for (int qx = 0; qx < 2; ++qx) {
+              const double coord[3] = {
+                  (element[0] + q[qx]) * h[0],
+                  (element[1] + q[qy]) * h[1],
+                  (element[2] + q[qz]) * h[2]};
+              const double phi = (dx == 0 ? q[qx] : 1.0 - q[qx]) *
+                                 (dy == 0 ? q[qy] : 1.0 - q[qy]) *
+                                 (dz == 0 ? q[qz] : 1.0 - q[qz]);
+              rhs += lambda * dirichlet_manufactured_mode(
+                  coord[0], coord[1], coord[2]) *
+                  phi * (h[0] * h[1] * h[2] / 8.0);
+            }
+      }
+  return rhs;
+}
+
+// This bounded, test-only MPI gather is an INDEPENDENT physical-error oracle.
+// It is never called by production GPU operators, V-cycles or preconditioners.
+std::vector<double> gathered_dirichlet_free_solution(
+    DevF &device, const pfc::Int3 &n) {
+  const std::size_t total =
+      static_cast<std::size_t>(n[0]) * n[1] * n[2];
+  std::vector<double> local(total, 0.0), global(total, 0.0);
+  const auto box = device.box();
+  device.with_host_read([&](const double *values, std::size_t) {
+    for (int k = 0; k < box.size[2]; ++k)
+      for (int j = 0; j < box.size[1]; ++j)
+        for (int i = 0; i < box.size[0]; ++i) {
+          const int gi = box.low[0] + i, gj = box.low[1] + j,
+                    gk = box.low[2] + k;
+          local[static_cast<std::size_t>(gi) + n[0] *
+                (static_cast<std::size_t>(gj) +
+                 static_cast<std::size_t>(n[1]) * gk)] =
+              values[device.idx(i, j, k)];
+        }
+  });
+  MPI_Allreduce(local.data(), global.data(), static_cast<int>(total),
+                MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  return global;
+}
+
+double independent_dirichlet_physical_l2(
+    const pfc::Int3 &n, const pfc::Real3 &h,
+    const std::vector<double> &free_nodes) {
+  const double q[2] = {0.5 - 0.5 / std::sqrt(3.0),
+                       0.5 + 0.5 / std::sqrt(3.0)};
+  double squared = 0.0;
+  for (int ez = 0; ez <= n[2]; ++ez)
+    for (int ey = 0; ey <= n[1]; ++ey)
+      for (int ex = 0; ex <= n[0]; ++ex)
+        for (int qz = 0; qz < 2; ++qz)
+          for (int qy = 0; qy < 2; ++qy)
+            for (int qx = 0; qx < 2; ++qx) {
+              const double xi[3] = {q[qx], q[qy], q[qz]};
+              double interpolated = 0.0;
+              for (int az = 0; az < 2; ++az)
+                for (int ay = 0; ay < 2; ++ay)
+                  for (int ax = 0; ax < 2; ++ax) {
+                    const int i = ex + ax - 1, j = ey + ay - 1,
+                              k = ez + az - 1;
+                    if (i < 0 || j < 0 || k < 0 ||
+                        i >= n[0] || j >= n[1] || k >= n[2])
+                      continue;
+                    const double basis =
+                        (ax ? xi[0] : 1.0 - xi[0]) *
+                        (ay ? xi[1] : 1.0 - xi[1]) *
+                        (az ? xi[2] : 1.0 - xi[2]);
+                    const std::size_t id =
+                        static_cast<std::size_t>(i) +
+                        static_cast<std::size_t>(n[0]) *
+                        (static_cast<std::size_t>(j) +
+                         static_cast<std::size_t>(n[1]) * k);
+                    interpolated += basis * free_nodes[id];
+                  }
+              const double expected = dirichlet_manufactured_mode(
+                  (ex + xi[0]) * h[0], (ey + xi[1]) * h[1],
+                  (ez + xi[2]) * h[2]);
+              const double error = interpolated - expected;
+              squared += error * error * h[0] * h[1] * h[2] / 8.0;
+            }
+  return std::sqrt(squared);
+}
+
 } // namespace
 
 TEST_CASE("NodalMultigrid device operator, V-cycle and PCG match the host",
