@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 This document is the supported source build guide. On Tohtori, the current site Open MPI 5.0.10 module uses GCC 15.2.0. Other compilers may work, but OpenPFC, HeFFTe, and MPI must use one matching compiler/MPI stack.
 
-### Reference stack (at a glance)
+## Reference stack (at a glance)
 
 | Piece | Documented / exercised baseline |
 |--------|----------------------------------|
@@ -24,7 +24,7 @@ For common failures (`mpi.h`, wrong compiler in cache, HeFFTe not found, **link 
 
 Contributing (builds, tests, documentation, changelog notes): [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-### MPI: OpenMPI from modules — do not improvise with another stack
+## MPI: OpenMPI from modules — do not improvise with another stack
 
 This guide’s source of truth for MPI is Open MPI from environment modules (`module load openmpi` after `module load gcc/…`), as in §1 below. That matches how OpenPFC and HeFFTe are meant to be built together on clusters and many dev machines.
 

@@ -55,7 +55,7 @@ CFL is at most 0.32, on the coarsest temporal step at \(t=0\).
 `test_taylor_green3d` passed, 22 assertions in 2 cases. The smoke case
 is \(N=16\), \(\Delta t=1/64\), through \(t=1/32\).
 
-### Fixed-dt field error
+## Fixed-dt field error
 
 One step, \(\Delta t=1/256\), on \(N=32\), \(64\), \(128\), and \(256\).
 The reference is \(N=256\). A second \(N=64\) series uses \(\Delta t/2\)
@@ -97,7 +97,7 @@ absolute \(L^2\) of \(2.11\times 10^{-12}\) at \(t=1\). The \(N=64\)
 versus \(N=256\) gap at that time is \(8.87\times 10^{-10}\), about
 420 times larger. The spatial table is not timestep-limited.
 
-### Fixed-grid temporal order
+## Fixed-grid temporal order
 
 The spatial table changes \(N\) at one \(\Delta t\). This run holds
 \(N=64\) and uses
