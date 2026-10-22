@@ -38,7 +38,7 @@ The `App` path logs with the `[app]` prefix on rank 0 (see `include/openpfc/fron
 - `[app] Initializing model...`  
 - `[app] Starting time integration (Simulator integrator API)`  
 
-If `model.params` validation is enabled in your binary, you may also see a Configuration Validation Summary block (root `README.md`, [`parameter_validation.md`](../user_guide/parameter_validation.md)) before the time loop.
+If `model.params` validation is enabled in your binary, you may also see a Configuration Validation Summary block ([`parameter_validation.md`](../user_guide/parameter_validation.md)) before the time loop.
 
 Exit code 0 from `mpirun` and completion without an exception mean the driver finished; output files appear only when `saveat` and `fields` / writers are configured (see [`io_results.md`](../user_guide/io_results.md)).
 
