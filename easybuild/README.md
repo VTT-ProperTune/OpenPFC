@@ -104,15 +104,15 @@ What these recipes do **not** cover, deliberately:
 
 LUMI's `buildtools/25.09` provides CMake 4.2.3, which no longer accepts
 `cmake_minimum_required` below 3.5. The `nlohmann_json` 3.11.2 that OpenPFC
-pins still declares one, so the OpenPFC easyconfigs pass CMake's documented
-escape hatch:
+0.4.0 pins still declares one, so the 0.4.0 easyconfigs pass CMake's
+documented escape hatch:
 
 ```
 -D CMAKE_POLICY_VERSION_MINIMUM=3.5
 ```
 
-The same pin is on `master`, so any CMake 4 toolchain hits it. The real fix is
-to bump the fetched `nlohmann_json`, after which the flag can be dropped here.
+`master` after 0.4.0 fetches `nlohmann_json` 3.11.3, which configures under
+CMake 4 without it. Drop the flag from the easyconfigs of the next release.
 
 ## Verified
 
