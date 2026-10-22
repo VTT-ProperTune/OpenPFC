@@ -1,0 +1,188 @@
+/* OpenPFC theme for Sphinx Furo: the handbook and the API reference.
+ *
+ * Load after Furo, with tokens.css and ../fonts/fonts.css:
+ *   html_css_files = ["openpfc/fonts/fonts.css", "openpfc/sphinx/tokens.css",
+ *                     "openpfc/sphinx/furo.css"]
+ * Every colour is a --openpfc-* token; Furo's own variables are only mapped.
+ */
+
+body {
+  --font-stack: var(--openpfc-font-sans);
+  --font-stack--monospace: var(--openpfc-font-mono);
+  --font-stack--headings: var(--openpfc-font-serif);
+
+  --color-foreground-primary: var(--openpfc-text);
+  --color-foreground-secondary: var(--openpfc-muted);
+  --color-foreground-muted: var(--openpfc-muted);
+  --color-foreground-border: rgb(var(--openpfc-text-rgb) / 0.28);
+
+  --color-background-primary: var(--openpfc-paper);
+  --color-background-secondary: var(--openpfc-stone);
+  --color-background-hover: rgb(var(--openpfc-text-rgb) / 0.06);
+  --color-background-hover--transparent: rgb(var(--openpfc-text-rgb) / 0);
+  --color-background-border: rgb(var(--openpfc-text-rgb) / 0.14);
+  --color-background-item: var(--openpfc-wash);
+
+  --color-brand-primary: var(--openpfc-copper-ink);
+  --color-brand-content: var(--openpfc-tide);
+  --color-brand-visited: var(--openpfc-tide);
+
+  --color-link: var(--openpfc-tide);
+  --color-link--hover: var(--openpfc-copper-ink);
+  --color-link-underline: rgb(var(--openpfc-tide-rgb) / 0.35);
+  --color-link-underline--hover: var(--openpfc-copper-ink);
+  --color-link--visited: var(--openpfc-tide);
+
+  --color-sidebar-background: var(--openpfc-stone);
+  --color-sidebar-background-border: rgb(var(--openpfc-text-rgb) / 0.14);
+  --color-sidebar-brand-text: var(--openpfc-text);
+  --color-sidebar-caption-text: var(--openpfc-copper-ink);
+  --color-sidebar-link-text: var(--openpfc-text);
+  --color-sidebar-link-text--top-level: var(--openpfc-text);
+  --color-sidebar-item-background--current: rgb(var(--openpfc-copper-rgb) / 0.12);
+  --color-sidebar-item-background--hover: rgb(var(--openpfc-text-rgb) / 0.06);
+  --color-sidebar-search-background: var(--openpfc-paper);
+  --color-sidebar-search-border: rgb(var(--openpfc-text-rgb) / 0.28);
+
+  --color-inline-code-background: var(--openpfc-wash);
+  --color-code-background: var(--openpfc-wash);
+  --color-code-foreground: var(--openpfc-text);
+  --color-highlight-on-target: rgb(var(--openpfc-copper-rgb) / 0.16);
+  --color-highlighted-background: rgb(var(--openpfc-copper-rgb) / 0.12);
+  --color-highlighted-text: var(--openpfc-text);
+
+  --color-api-background: var(--openpfc-wash);
+  --color-api-background-hover: var(--openpfc-stone);
+  --color-api-overall: var(--openpfc-muted);
+  --color-api-name: var(--openpfc-copper-ink);
+  --color-api-pre-name: var(--openpfc-tide);
+  --color-api-paren: var(--openpfc-muted);
+  --color-api-keyword: var(--openpfc-tide);
+
+  --color-admonition-background: var(--openpfc-wash);
+  --color-admonition-title: var(--openpfc-tide);
+  --color-admonition-title-background: rgb(var(--openpfc-tide-rgb) / 0.12);
+  --color-admonition-title--note: var(--openpfc-tide);
+  --color-admonition-title-background--note: rgb(var(--openpfc-tide-rgb) / 0.12);
+  --color-admonition-title--tip: var(--openpfc-tide);
+  --color-admonition-title-background--tip: rgb(var(--openpfc-tide-rgb) / 0.12);
+  --color-admonition-title--important: var(--openpfc-copper-ink);
+  --color-admonition-title-background--important: rgb(var(--openpfc-copper-rgb) / 0.14);
+  --color-admonition-title--warning: var(--openpfc-copper-ink);
+  --color-admonition-title-background--warning: rgb(var(--openpfc-copper-rgb) / 0.14);
+
+  --color-announcement-background: var(--openpfc-ink);
+  --color-announcement-text: var(--openpfc-paper);
+}
+
+/* Dark mode: the ink surfaces and on-ink pairings of the site. Furo sets
+ * its dark variables on these two selectors, so ours must match them. */
+body[data-theme="dark"] {
+  --color-foreground-primary: var(--openpfc-paper);
+  --color-foreground-secondary: var(--openpfc-cream-dim);
+  --color-foreground-muted: var(--openpfc-faint);
+  --color-foreground-border: rgb(var(--openpfc-paper-rgb) / 0.28);
+  --color-background-primary: var(--openpfc-ink);
+  --color-background-secondary: var(--openpfc-ink-2);
+  --color-background-hover: rgb(var(--openpfc-paper-rgb) / 0.06);
+  --color-background-border: rgb(var(--openpfc-paper-rgb) / 0.14);
+  --color-background-item: var(--openpfc-ink-2);
+  --color-brand-primary: var(--openpfc-copper-soft);
+  --color-brand-content: var(--openpfc-copper-soft);
+  --color-brand-visited: var(--openpfc-copper-soft);
+  --color-link: var(--openpfc-copper-soft);
+  --color-link--hover: var(--openpfc-paper);
+  --color-link-underline: rgb(var(--openpfc-copper-soft-rgb) / 0.4);
+  --color-link--visited: var(--openpfc-copper-soft);
+  --color-sidebar-background: var(--openpfc-ink-2);
+  --color-sidebar-background-border: rgb(var(--openpfc-paper-rgb) / 0.14);
+  --color-sidebar-brand-text: var(--openpfc-paper);
+  --color-sidebar-caption-text: var(--openpfc-copper-soft);
+  --color-sidebar-link-text: var(--openpfc-paper);
+  --color-sidebar-link-text--top-level: var(--openpfc-paper);
+  --color-sidebar-search-background: var(--openpfc-ink);
+  --color-inline-code-background: var(--openpfc-ink-2);
+  --color-code-background: var(--openpfc-ink-2);
+  --color-code-foreground: var(--openpfc-paper);
+  --color-api-background: var(--openpfc-ink-2);
+  --color-api-overall: var(--openpfc-cream-dim);
+  --color-api-name: var(--openpfc-copper-soft);
+  --color-api-pre-name: var(--openpfc-cream-dim);
+  --color-api-paren: var(--openpfc-cream-dim);
+  --color-api-keyword: var(--openpfc-copper-soft);
+  --color-admonition-background: var(--openpfc-ink-2);
+  --color-admonition-title: var(--openpfc-copper-soft);
+  --color-highlighted-text: var(--openpfc-paper);
+}
+
+@media (prefers-color-scheme: dark) {
+  body:not([data-theme="light"]) {
+    --color-foreground-primary: var(--openpfc-paper);
+    --color-foreground-secondary: var(--openpfc-cream-dim);
+    --color-foreground-muted: var(--openpfc-faint);
+    --color-foreground-border: rgb(var(--openpfc-paper-rgb) / 0.28);
+    --color-background-primary: var(--openpfc-ink);
+    --color-background-secondary: var(--openpfc-ink-2);
+    --color-background-hover: rgb(var(--openpfc-paper-rgb) / 0.06);
+    --color-background-border: rgb(var(--openpfc-paper-rgb) / 0.14);
+    --color-background-item: var(--openpfc-ink-2);
+    --color-brand-primary: var(--openpfc-copper-soft);
+    --color-brand-content: var(--openpfc-copper-soft);
+    --color-brand-visited: var(--openpfc-copper-soft);
+    --color-link: var(--openpfc-copper-soft);
+    --color-link--hover: var(--openpfc-paper);
+    --color-link-underline: rgb(var(--openpfc-copper-soft-rgb) / 0.4);
+    --color-link--visited: var(--openpfc-copper-soft);
+    --color-sidebar-background: var(--openpfc-ink-2);
+    --color-sidebar-background-border: rgb(var(--openpfc-paper-rgb) / 0.14);
+    --color-sidebar-brand-text: var(--openpfc-paper);
+    --color-sidebar-caption-text: var(--openpfc-copper-soft);
+    --color-sidebar-link-text: var(--openpfc-paper);
+    --color-sidebar-link-text--top-level: var(--openpfc-paper);
+    --color-sidebar-search-background: var(--openpfc-ink);
+    --color-inline-code-background: var(--openpfc-ink-2);
+    --color-code-background: var(--openpfc-ink-2);
+    --color-code-foreground: var(--openpfc-paper);
+    --color-api-background: var(--openpfc-ink-2);
+    --color-api-overall: var(--openpfc-cream-dim);
+    --color-api-name: var(--openpfc-copper-soft);
+    --color-api-pre-name: var(--openpfc-cream-dim);
+    --color-api-paren: var(--openpfc-cream-dim);
+    --color-api-keyword: var(--openpfc-copper-soft);
+    --color-admonition-background: var(--openpfc-ink-2);
+    --color-admonition-title: var(--openpfc-copper-soft);
+    --color-highlighted-text: var(--openpfc-paper);
+  }
+}
+
+/* Headings follow the site: serif, medium weight, tight tracking. */
+.content h1,
+.content h2,
+.content h3 {
+  font-family: var(--openpfc-font-serif);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+
+.content h1 {
+  letter-spacing: -0.035em;
+}
+
+/* Kicker-style captions in the sidebar. */
+.sidebar-tree .caption,
+.sidebar-tree :not(.caption) > .caption-text {
+  font-family: var(--openpfc-font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* The link back to the site in Furo's announcement bar. */
+.announcement a {
+  color: var(--openpfc-copper-soft);
+}
+
+:focus-visible {
+  outline: 2px solid var(--openpfc-copper);
+  outline-offset: 3px;
+}

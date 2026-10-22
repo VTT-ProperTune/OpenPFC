@@ -72,3 +72,27 @@ SPDX-License-Identifier = "AGPL-3.0-or-later"
 path = ["examples/symbolic_rhs/dependency_manifest.json"]
 SPDX-FileCopyrightText = "2026 VTT Technical Research Centre of Finland Ltd"
 SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+# Vendored from ahojukka5/OpenPFCDesignSystem (docs/_static/openpfc/SOURCE):
+# the Furo theme of the handbook and API reference, and its webfonts.
+[[annotations]]
+path = [
+    "docs/_static/openpfc/SOURCE",
+    "docs/_static/openpfc/sphinx/**",
+    "docs/_static/openpfc/fonts/fonts.css",
+    "docs/_static/openpfc/fonts/NOTICE.md",
+]
+SPDX-FileCopyrightText = "2026 Jukka Aho"
+SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+[[annotations]]
+path = [
+    "docs/_static/openpfc/fonts/*.woff2",
+    "docs/_static/openpfc/fonts/OFL.txt",
+]
+SPDX-FileCopyrightText = [
+    "2020 The Newsreader Project Authors",
+    "2021 The Outfit Project Authors",
+    "2017 IBM Corp.",
+]
+SPDX-License-Identifier = "OFL-1.1"
