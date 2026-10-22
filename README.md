@@ -5,76 +5,36 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # OpenPFC
 
-[![DOI][doi-badge-img]][doi-badge-url]
-[![Documentation][docs-site-img]][docs-site-url]
 [![Release][releases-img]][releases-url]
+[![DOI][doi-badge-img]][doi-badge-url]
+[![Website][site-badge-img]][site-badge-url]
 [![CI][ci-badge-img]][ci-badge-url]
-[![Documentation build][docs-badge-img]][docs-badge-url]
-[![Coverage][coverage-badge-img]][coverage-badge-url]
 [![License][license-img]][license-url]
 
 ![OpenPFC simulation result](docs/img/simulation.png)
 
-OpenPFC is an open-source C++20 framework for high-performance partial
-differential equations on structured grids. Spectral and finite-difference
-discretizations share MPI domain decomposition; spectral transforms use
-HeFFTe. Use it as a library or through the applications under `apps/`.
+OpenPFC is an open-source C++20 framework for partial differential equations
+on structured, periodic grids. Spectral and finite-difference methods share
+one MPI domain decomposition, distributed transforms use HeFFTe, and the same
+models run on CPUs and on NVIDIA and AMD GPUs. Use it as a library or through
+the configuration-driven applications in `apps/`. Phase-field crystal models
+are where the project began.
 
-Phase-field crystal (PFC) models are the origin of the project and remain an
-important application family, including solidification, defect evolution,
-elastic-plastic response, epitaxial growth, and related phase transformations
-at atomic resolution on diffusive time scales. That origin is not the
-architectural boundary. Other structured-grid PDE problems use the same
-mathematics, runtime, and services.
+**Everything else is on the website: <https://vtt-propertune.github.io/OpenPFC/>**
 
-**0.3 is a source-level break from 0.2.** Installed applications link
-`OpenPFC::openpfc` only. ABI compatibility is not claimed. The 0.3.0
-changelog highlights are the application-facing summary.
-
-**0.2 is a breaking release.** The 0.1 `Model` / `Simulator` / `App` / `World`
-path is gone. See [Migrating from 0.1 to 0.2](docs/MIGRATION_0.1_to_0.2.md).
-
-## Start here
-
-Choose the shortest path that matches your goal:
-
-| Goal | Start with |
-|------|------------|
-| Build and run one MPI example | [15-minute start](docs/start_here_15_minutes.md) |
-| Run a shipped JSON or TOML application | [Quick start](docs/quickstart.md) |
-| Choose a sequenced path by role | [Learning paths](docs/learning_paths.md) |
-| Decide whether OpenPFC fits the problem | [When not to use OpenPFC](docs/when_not_to_use_openpfc.md) |
-| Install dependencies and toolchains | [Installation guide](INSTALL.md) |
-| Run on a cluster or GPU | [HPC operator guide](docs/hpc/operator_guide.md) |
-| Add a model, application, or writer | [Extension guide](docs/extending_openpfc/README.md) |
-| Look up classes and function signatures | [Integrated C++ API reference][api-url] |
-
-The complete source documentation index is [docs/README.md](docs/README.md).
-The published site combines tutorials, configuration, cluster operation,
-architecture, and generated C++ declarations in one navigation tree and search
-index.
-
-## Capabilities
-
-- distributed-memory simulations using MPI and HeFFTe;
-- CPU spectral execution through FFTW;
-- CUDA and HIP execution paths when built with matching GPU toolchains and
-  HeFFTe backends;
-- configuration-driven applications with JSON and TOML input;
-- parameter validation with actionable startup diagnostics;
-- binary, VTK, PNG, and application-specific result workflows;
-- extension points for models, field modifiers, coordinate systems, writers,
-  and application wiring;
-- examples, tutorials, recipes, testing guidance, and HPC runbooks maintained
-  alongside the source.
-
-See the [CMake option reference](docs/reference/build_options.md) for the exact
-build switches supported by the current checkout.
+| | |
+|---|---|
+| What it does | [Capabilities][capabilities] · [Applications][applications] · [Performance][performance] |
+| Get started | [Installing OpenPFC][install] · [15-minute start][fifteen] · [Quick start][quickstart] |
+| Look things up | [Handbook][docs] · [C++ API reference][api] · [Release notes][releases-url] |
+| Decide | [When not to use OpenPFC][fit] |
+| Cite | [How to cite OpenPFC][cite] |
 
 ## Build and run
 
-OpenPFC requires a consistent compiler, MPI, and HeFFTe stack. Follow the
-[installation guide](INSTALL.md), then use the minimal first-run sequence:
+OpenPFC needs a consistent compiler, MPI and HeFFTe stack; the
+[installation guide][install] covers workstations and the supported clusters.
+Then:
 
 ```bash
 cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
@@ -83,86 +43,56 @@ cd build
 mpirun -n 1 ./examples/05_simulator
 ```
 
-Increase the rank count after the single-rank run succeeds and your local MPI
-or scheduler allocation provides the requested slots.
-
 ## Use the installed library
 
-An installed OpenPFC package exports `OpenPFC::openpfc`. The minimal downstream
-CMake project enables both C and C++ because the package resolves MPI C and C++
-components:
+An installed OpenPFC exports `OpenPFC::openpfc`. The package resolves the MPI
+C and C++ components, so a consumer enables both languages:
 
 ```cmake
 cmake_minimum_required(VERSION 3.21)
 project(my_sim LANGUAGES C CXX)
 
-find_package(OpenPFC REQUIRED)
+find_package(OpenPFC 0.5 CONFIG REQUIRED)
 
 add_executable(my_sim main.cpp)
 target_link_libraries(my_sim PRIVATE OpenPFC::openpfc)
 ```
 
-Set `CMAKE_PREFIX_PATH` or `OpenPFC_DIR` to the OpenPFC installation prefix.
-The longer walkthrough is in
-[docs/getting_started/01-basics/README.md](docs/getting_started/01-basics/README.md).
+## Contributing
 
-## Scalability
-
-OpenPFC has been exercised on domains up to `8192 x 8192 x 4096` using 25,600
-CPU cores and approximately 25 TB of memory. The spectral solver is dominated
-by distributed FFT work with `O(N log N)` complexity.
-
-![OpenPFC scalability](docs/img/scalability.png)
-
-For experiment context, assumptions, and current performance guidance, use the
-[performance profiling guide](docs/hpc/performance_profiling.md) and the
-[scalability analysis plan](docs/hpc/scalability_analysis_plan.md) rather than
-treating the landing page as a benchmark specification.
-
-## Documentation and quality checks
-
-Documentation changes are checked for relative-link integrity, example-catalog
-consistency, shell syntax, Doxygen XML warnings, and strict Sphinx rendering.
-Contributor instructions are in [CONTRIBUTING.md](CONTRIBUTING.md) and
-[docs/development/contributing-docs.md](docs/development/contributing-docs.md).
-
-The development documentation follows the repository default branch. For
-reproducible simulations, record the OpenPFC commit or release tag together
-with the HeFFTe and MPI versions; see
-[documentation versioning](docs/development/documentation_versioning.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for tests, CI and commit conventions.
 
 ## Citation
 
-If OpenPFC contributes to published work, cite the paper below. Its title
-names the original application family; the bibliographic title is unchanged.
+If OpenPFC contributes to published work, cite T. Pinomaa, J. Aho,
+J. Suviranta, P. Jreidini, N. Provatas and A. Laukkanen, "OpenPFC: an
+open-source framework for high performance 3D phase field crystal
+simulations", *Modelling and Simulation in Materials Science and
+Engineering*, 2024, doi:[10.1088/1361-651X/ad269e](https://doi.org/10.1088/1361-651X/ad269e).
+BibTeX and version DOIs are on the [citation page][cite].
 
-> T. Pinomaa, J. Aho, J. Suviranta, P. Jreidini, N. Provatas, and
-> A. Laukkanen, “OpenPFC: an open-source framework for high performance 3D
-> phase field crystal simulations,” *Modelling and Simulation in Materials
-> Science and Engineering*, 2024. DOI: 10.1088/1361-651X/ad269e.
+## License
 
-```bibtex
-@article{pinomaa2024openpfc,
-  title   = {OpenPFC: an open-source framework for high performance 3D phase field crystal simulations},
-  author  = {Pinomaa, Tatu and Aho, Jukka and Suviranta, Jaarli and Jreidini, Paul and Provatas, Nikolaos and Laukkanen, Anssi},
-  journal = {Modelling and Simulation in Materials Science and Engineering},
-  year    = {2024},
-  doi     = {10.1088/1361-651X/ad269e}
-}
-```
+AGPL-3.0-or-later; see [LICENSE.md](LICENSE.md).
 
-[doi-badge-img]: https://zenodo.org/badge/DOI/10.5281/zenodo.10799936.svg
-[doi-badge-url]: https://zenodo.org/doi/10.5281/zenodo.10799935
-[docs-site-img]: https://img.shields.io/badge/docs-Sphinx-blue.svg
-[docs-site-url]: https://vtt-propertune.github.io/OpenPFC/
-[api-url]: https://vtt-propertune.github.io/OpenPFC/api/
+[site]: https://vtt-propertune.github.io/OpenPFC/
+[capabilities]: https://vtt-propertune.github.io/OpenPFC/capabilities/
+[applications]: https://vtt-propertune.github.io/OpenPFC/applications/
+[performance]: https://vtt-propertune.github.io/OpenPFC/performance/
+[cite]: https://vtt-propertune.github.io/OpenPFC/cite/
+[docs]: https://vtt-propertune.github.io/OpenPFC/docs/
+[install]: https://vtt-propertune.github.io/OpenPFC/docs/project/install/
+[fifteen]: https://vtt-propertune.github.io/OpenPFC/docs/start_here_15_minutes/
+[quickstart]: https://vtt-propertune.github.io/OpenPFC/docs/quickstart/
+[fit]: https://vtt-propertune.github.io/OpenPFC/docs/when_not_to_use_openpfc/
+[api]: https://vtt-propertune.github.io/OpenPFC/docs/api/
 [releases-img]: https://img.shields.io/github/v/release/VTT-ProperTune/OpenPFC
 [releases-url]: https://github.com/VTT-ProperTune/OpenPFC/releases/latest
-[ci-badge-img]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/ci.yml/badge.svg
-[ci-badge-url]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/ci.yml
-[docs-badge-img]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/docs.yml/badge.svg
-[docs-badge-url]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/docs.yml
-[coverage-badge-img]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/coverage.yml/badge.svg
-[coverage-badge-url]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/coverage.yml
+[doi-badge-img]: https://zenodo.org/badge/DOI/10.5281/zenodo.10799936.svg
+[doi-badge-url]: https://zenodo.org/doi/10.5281/zenodo.10799935
+[site-badge-img]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/docs.yml/badge.svg
+[site-badge-url]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/docs.yml
+[ci-badge-img]: https://github.com/ahojukka5/OpenPFC/actions/workflows/ci.yml/badge.svg
+[ci-badge-url]: https://github.com/ahojukka5/OpenPFC/actions/workflows/ci.yml
 [license-img]: https://img.shields.io/github/license/VTT-ProperTune/OpenPFC
 [license-url]: https://github.com/VTT-ProperTune/OpenPFC/blob/master/LICENSE.md

@@ -28,7 +28,7 @@ authors:
     given-names: Anssi
     affiliation: VTT Technical Research Centre of Finland Ltd
 repository-code: "https://github.com/VTT-ProperTune/OpenPFC"
-url: "https://vtt-propertune.github.io/OpenPFC/dev/"
+url: "https://vtt-propertune.github.io/OpenPFC/"
 license: AGPL-3.0-or-later
 keywords:
   - phase-field-crystal

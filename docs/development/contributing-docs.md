@@ -41,9 +41,13 @@ one navigation tree, and one search index.
 | Finished 0.2 planning documents | `docs/archive/` (not a source of current work) |
 
 Large subtrees have their own `README.md` index. Add new pages to the nearest
-local index and to `docs/index.md` when they belong in primary navigation. Only
-add a root README link when the page is an important entry point for a broad
-audience.
+local index and to `docs/index.md` when they belong in primary navigation.
+User-facing content goes on the website: a handbook page here, or a site page
+in openpfc-pages. The root README stays a short entry that links to the site;
+add a link there only for a top-level entry point, and use the published URL.
+Guides beside the code (`INSTALL.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, every
+`apps/**/README.md` and `examples/**/README.md`) are published automatically
+by `docs/_ext/repo_pages.py`.
 
 ## Before opening a pull request
 
@@ -162,7 +166,7 @@ bash scripts/build_handbook.sh
 - [ ] `bash scripts/build_docs.sh build` succeeds.
 - [ ] Maintained Sphinx documentation is warning-free.
 - [ ] Doxygen diagnostics stay within the recorded baseline and add no unknown warning.
-- [ ] The root README remains a landing page rather than a duplicate manual.
+- [ ] The root README stays a short entry that links to the website rather than a duplicate manual.
 
 ## See also
 
