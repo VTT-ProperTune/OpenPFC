@@ -15,7 +15,7 @@ building it:
 ```bash
 module use /task/juajukka/modulefiles
 module avail openpfc
-module load openpfc/0.4.0-cpu
+module load openpfc/0.5.0-cpu
 srun --mpi=pmix -p all6 -n 4 tungsten case.json
 ```
 
@@ -33,7 +33,7 @@ compiled for A100, A40 and H100 (`sm_80`, `sm_86`, `sm_90`), so it runs on the
 has no CUDA 13. Request one GPU per rank:
 
 ```bash
-module load openpfc/0.4.0-cuda
+module load openpfc/0.5.0-cuda
 srun --mpi=pmix -p cuda -n 2 --gres=gpu:2 -c 4 --mem=16G -t 1:00:00 \
   aluminum_etd_cuda case.json
 ```
