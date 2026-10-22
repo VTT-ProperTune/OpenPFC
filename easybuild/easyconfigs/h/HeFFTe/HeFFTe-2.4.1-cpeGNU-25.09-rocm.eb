@@ -1,0 +1,65 @@
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# HeFFTe 2.4.1 with the ROCm (rocFFT) and FFTW backends for LUMI-G, cpeGNU.
+# Mirrors scripts/build_heffte_rocm.sh. LUMI-EasyBuild-contrib ships a cpeAMD
+# variant only; OpenPFC builds with cpeGNU, and both must share one toolchain.
+
+easyblock = 'CMakeMake'
+
+name =          'HeFFTe'
+version =       '2.4.1'
+versionsuffix = '-rocm'
+
+homepage = 'https://icl.utk.edu/fft'
+
+whatis = [
+    'Description: Highly Efficient FFT for Exascale (HeFFTe), ROCm + FFTW backends for cpeGNU',
+]
+
+description = """
+HeFFTe provides distributed multidimensional FFTs. This build enables the
+rocFFT backend for MI250X (gfx90a) next to FFTW from cray-fftw, with
+GPU-aware Cray MPICH. It is intended for the ROCm OpenPFC module.
+"""
+
+toolchain = {'name': 'cpeGNU', 'version': '25.09'}
+toolchainopts = {'usempi': True, 'openmp': True}
+
+sources = {
+    'download_filename': 'v%(version)s.tar.gz',
+    'filename':          SOURCELOWER_TAR_GZ,
+    'source_urls':       ['https://github.com/icl-utk-edu/heffte/archive/refs/tags/'],
+}
+checksums = ['de2cf26df5d61baac7841525db3f393cb007f79612ac7534fd4757f154ba3e6c']
+
+builddependencies = [
+    ('buildtools', '%(toolchain_version)s', '', True),
+]
+
+dependencies = [
+    ('cray-fftw', EXTERNAL_MODULE),
+    ('rocm',      EXTERNAL_MODULE),
+]
+
+build_shared_libs = True
+
+# hipcc compiles HeFFTe's .hip sources without the Cray wrapper, so the
+# MPICH headers are passed explicitly; MPICH_DIR is set by cray-mpich.
+configopts  = '-D CMAKE_BUILD_TYPE=Release '
+configopts += '-D CMAKE_C_COMPILER=cc '
+configopts += '-D CMAKE_CXX_COMPILER=CC '
+configopts += '-D MPI_CXX_COMPILER=CC '
+configopts += '-D Heffte_ENABLE_FFTW=ON '
+configopts += '-D Heffte_ENABLE_ROCM=ON '
+configopts += '-D Heffte_ENABLE_CUDA=OFF '
+configopts += '-D Heffte_ENABLE_GPU_AWARE_MPI=ON '
+configopts += '-D CMAKE_HIP_ARCHITECTURES=gfx90a '
+configopts += '-D CMAKE_HIP_FLAGS="-I$MPICH_DIR/include" '
+
+sanity_check_paths = {
+    'files': ['lib/libheffte.%s' % SHLIB_EXT],
+    'dirs':  ['include', 'lib/cmake/Heffte'],
+}
+
+moduleclass = 'lib'

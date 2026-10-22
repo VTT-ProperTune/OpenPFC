@@ -7,6 +7,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- LUMI modules for 0.4.0 install into the project's shared EasyBuild tree:
+  the CPU easyconfig moves from 0.2.0 to 0.4.0, and new `cpeGNU` ROCm
+  easyconfigs build HeFFTe with rocFFT and OpenPFC with HIP for `gfx90a` and
+  GPU-aware Cray MPICH (#614).
+
 - `scripts/install_release_module.sh` installs a released tag on Tohtori as a
   shared Lmod module, `openpfc/<version>-cpu` or `-cuda`, under `/task/$USER`
   for the `propertune` group. It builds with the tag's own `build.sh`,

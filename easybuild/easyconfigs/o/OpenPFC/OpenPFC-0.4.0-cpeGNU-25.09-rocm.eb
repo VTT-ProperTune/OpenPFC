@@ -1,0 +1,82 @@
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Module install of OpenPFC 0.4.0 on LUMI-G with HIP/ROCm. The configure
+# options mirror `scripts/build.sh --machine=lumi --with-rocm`; see
+# docs/hpc/INSTALL.LUMI.md.
+
+easyblock = 'CMakeMake'
+
+name =          'OpenPFC'
+version =       '0.4.0'
+versionsuffix = '-rocm'
+
+homepage = 'https://github.com/VTT-ProperTune/OpenPFC'
+
+whatis = [
+    'Description: OpenPFC - framework for phase field crystal and structured-grid PDE simulations',
+]
+
+description = """
+OpenPFC solves PDEs on structured, periodic, MPI-distributed grids with
+spectral and finite-difference stacks. This module is the LUMI-G build:
+HIP for MI250X (gfx90a), HeFFTe with rocFFT, and GPU-aware Cray MPICH. It
+provides the shipped CPU and HIP applications, the headers, and the CMake
+package for building against OpenPFC.
+"""
+
+toolchain = {'name': 'cpeGNU', 'version': '25.09'}
+toolchainopts = {'usempi': True, 'openmp': True}
+
+sources = {
+    'download_filename': 'v%(version)s.tar.gz',
+    'filename':          SOURCELOWER_TAR_GZ,
+    'source_urls':       ['https://github.com/VTT-ProperTune/OpenPFC/archive/refs/tags/'],
+}
+checksums = ['2b3770347a4d0bb879c0ea2e0b9d1eaad2b2d78c109d27a7e53adee9f4535b81']
+
+builddependencies = [
+    ('buildtools', '%(toolchain_version)s', '', True),
+]
+
+dependencies = [
+    ('HeFFTe',    '2.4.1', '-rocm'),
+    ('cray-fftw', EXTERNAL_MODULE),
+    ('rocm',      EXTERNAL_MODULE),
+]
+
+# FindMPI on the Cray PE needs dynamic wrapper links to populate the MPI
+# library names, and GPU-aware MPICH needs MPICH_GPU_SUPPORT_ENABLED at run
+# time; the module sets the latter for its users.
+preconfigopts = 'export CRAYPE_LINK_TYPE=dynamic && '
+modextravars = {'MPICH_GPU_SUPPORT_ENABLED': '1'}
+
+# See OpenPFC-0.4.0-cpeGNU-25.09.eb for CMAKE_POLICY_VERSION_MINIMUM and the
+# FetchContent network requirement.
+configopts  = '-D CMAKE_POLICY_VERSION_MINIMUM=3.5 '
+configopts += '-D CMAKE_BUILD_TYPE=Release '
+configopts += '-D CMAKE_C_COMPILER=cc '
+configopts += '-D CMAKE_CXX_COMPILER=CC '
+configopts += '-D MPI_C_HEADER_DIR="$MPICH_DIR/include" '
+# hipcc compiles the .hip sources without the Cray wrapper, which is what
+# otherwise adds the MPICH include path.
+configopts += '-D CMAKE_HIP_FLAGS="-I$MPICH_DIR/include" '
+configopts += '-D OpenPFC_ENABLE_HEFFTE=ON '
+configopts += '-D OpenPFC_ENABLE_HIP=ON '
+configopts += '-D OpenPFC_MPI_HIP_AWARE=ON '
+configopts += '-D GPU_TARGETS=gfx90a '
+configopts += '-D OpenPFC_ENABLE_HDF5=OFF '
+configopts += '-D OpenPFC_BUILD_APPS=ON '
+configopts += '-D OpenPFC_BUILD_EXAMPLES=OFF '
+configopts += '-D OpenPFC_BUILD_TESTS=OFF '
+
+sanity_check_paths = {
+    'files': ['bin/tungsten', 'bin/allen_cahn_hip', 'lib/libopenpfc.a'],
+    'dirs':  ['include/openpfc', 'lib/cmake'],
+}
+
+sanity_check_commands = [
+    'tungsten --help 2>&1 | head -1',
+]
+
+moduleclass = 'phys'
