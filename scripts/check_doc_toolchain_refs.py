@@ -16,9 +16,15 @@ FORBIDDEN = {
 }
 
 
+def is_build_output(path: Path) -> bool:
+    """The docs virtualenv and the handbook copies written by docs/_ext/repo_pages.py
+    (their sources are checked instead)."""
+    return ".venv" in path.parts or any((parent / ".generated").exists() for parent in path.parents)
+
+
 def source_files() -> list[Path]:
     files = [ROOT / "README.md"]
-    files.extend((ROOT / "docs").rglob("*.md"))
+    files.extend(p for p in (ROOT / "docs").rglob("*.md") if not is_build_output(p))
     files.extend(
         [
             ROOT / ".github" / "workflows" / "docs.yml",

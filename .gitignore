@@ -61,3 +61,8 @@ _build/
 runs/
 run.log
 inst.log
+
+# Handbook pages generated from repository guides (docs/_ext/repo_pages.py)
+/docs/project/
+/docs/apps/
+/docs/examples/

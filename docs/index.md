@@ -22,6 +22,7 @@ learning_paths
 
 start_here_15_minutes
 quickstart
+project/install
 MIGRATION_0.1_to_0.2
 getting_started/README
 getting_started/01-basics/README
@@ -74,6 +75,29 @@ hpc/heffte_bandwidth_calibrate
 hpc/INSTALL.LUMI
 hpc/INSTALL.tohtori
 lumi_slurm/README
+project/easybuild
+project/containers
+```
+
+```{toctree}
+:hidden:
+:caption: Applications
+:maxdepth: 2
+:glob:
+
+apps/index
+apps/*/index
+apps/*/*/index
+```
+
+```{toctree}
+:hidden:
+:caption: Examples
+:maxdepth: 2
+:glob:
+
+examples/index
+examples/*/index
 ```
 
 ```{toctree}
@@ -114,6 +138,8 @@ api/index
 :caption: Project
 :maxdepth: 3
 
+project/changelog
+project/contributing
 development/README
 development/testing
 development/debugging

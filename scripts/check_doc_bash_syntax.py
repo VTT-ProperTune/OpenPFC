@@ -46,8 +46,14 @@ def check_block(script: str, path: Path, index: int) -> bool:
     return True
 
 
+def is_build_output(path: Path) -> bool:
+    """The docs virtualenv and the handbook copies written by docs/_ext/repo_pages.py
+    (their sources are checked instead)."""
+    return ".venv" in path.parts or any((parent / ".generated").exists() for parent in path.parents)
+
+
 def main() -> int:
-    md_files = sorted(DOCS.rglob("*.md"))
+    md_files = sorted(p for p in DOCS.rglob("*.md") if not is_build_output(p))
     failed = False
     total = 0
     for path in md_files:

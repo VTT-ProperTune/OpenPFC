@@ -34,11 +34,17 @@ def strip_fenced_code(text: str) -> str:
     return re.sub(r"^\s*```.*?^\s*```", "", text, flags=re.MULTILINE | re.DOTALL)
 
 
+def is_build_output(path: Path) -> bool:
+    """The docs virtualenv and the handbook copies written by docs/_ext/repo_pages.py
+    (their sources are checked instead)."""
+    return ".venv" in path.parts or any((parent / ".generated").exists() for parent in path.parents)
+
+
 def collect_markdown_files() -> list[Path]:
     out: list[Path] = []
     for pattern in SCAN_GLOBS:
         out.extend(ROOT.glob(pattern))
-    return sorted(set(p.resolve() for p in out if p.is_file()))
+    return sorted(set(p.resolve() for p in out if p.is_file() and not is_build_output(p)))
 
 
 def check_file(md_path: Path) -> list[tuple[str, str]]:
