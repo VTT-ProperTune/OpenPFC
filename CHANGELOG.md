@@ -7,6 +7,59 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-22
+
+Source-level break from 0.4.0 for inputs and some public APIs. ABI
+compatibility is not claimed. C++20 remains the language baseline.
+OpenPFC is still pre-1.0.
+
+**Breaking**
+
+- An input's `domain` is the box: `size`, `lower` and `upper`. `Lx`/`dx`,
+  `origin` and root-level domain keys are rejected with the equivalent
+  block in the message. `scripts/migrate_domain_block.py` rewrites JSON and
+  TOML inputs with the grid unchanged.
+- `domain::lower`, `upper`, `extent` and `center` replace
+  `get_lower_bounds` and `get_upper_bounds`. `upper` is the end of the box,
+  not the last grid point.
+- `SpectralCPUStack::fft()` returns the `pfc::fft::IHostFFT` interface.
+- The device microelasticity solver is
+  `DeviceEigenstrainMicroelasticity<Space>` for HIP and CUDA.
+
+**Highlights**
+
+- Matrix-free geometric multigrid: `FieldMultigrid` on padded Fields and
+  `NodalMultigrid` for the periodic Q1 operator, on host, CUDA and HIP.
+  `cg`, `gmres` and `newton` run on blocks of Fields.
+- Restarted and flexible GMRES, and a residual-based inexact Newton with
+  rollback hooks.
+- Finite strain: one constitutive evaluation returns stress, tangent and
+  trial history. FCC material batches run on CUDA and HIP, and the
+  compatible projector accepts even grids.
+- Microelasticity runs on CUDA. Periodic homogenization, SIMP
+  interpolation and load-case compliance moved into
+  `solvers/microelasticity`.
+- Time integration: `CoupledSpectralETD2` with an adaptive driver,
+  runtime-field RK, owned-cell Euler, and device-resident RK for two to
+  four fields.
+- Cartesian implicit interfaces, a transmission operator across them, and
+  a periodic distance transform.
+- Kernel utilities: `core::transform`, indexed `scatter_add` and
+  `gather_add`, `solvers::scalar_root`, and atomic field-bundle
+  checkpoints.
+- A one-rank cuFFT or rocFFT path, `SingleDeviceFFT`, opt-in through
+  `GPUSpectralStack`.
+- Default device FFT plans follow the MPI's GPU awareness instead of
+  assuming it, and stage through host memory when it is off.
+- The installed `simulation_state.hpp` compiles, CMake 4 configures
+  without a policy override, and the tungsten and aluminum fixed BC acts on
+  boxes that do not start at 0.
+- Released versions install as modules on Tohtori and LUMI.
+
+Applications that need these APIs should require
+`find_package(OpenPFC 0.5 CONFIG REQUIRED)`. The entries below are the
+development record since 0.4.0.
+
 - LUMI modules for 0.4.0 install into the project's shared EasyBuild tree:
   the CPU easyconfig moves from 0.2.0 to 0.4.0, and new `cpeGNU` ROCm
   easyconfigs build HeFFTe with rocFFT and OpenPFC with HIP for `gfx90a` and
@@ -132,6 +185,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   preserving the configured library's pre-MPI device binding.
 
 ### Breaking
+
+- `SpectralCPUStack::fft()` returns `pfc::fft::IHostFFT` (was
+  `pfc::fft::CPUFFT`). The stack can own a direct one-rank FFTW transform,
+  `pfc::fft::Implementation::Local`, which checks the actual communicator
+  rank and size before planning; HeFFTe stays the default. Concrete
+  `CPUFFT` overloads remain available through `fft::create`.
 
 - The device microelasticity solver is the class template
   `pfc::solvers::DeviceEigenstrainMicroelasticity<Space>` in
