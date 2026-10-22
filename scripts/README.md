@@ -70,6 +70,20 @@ the GCC 15.2/Open MPI 5.0.10/CUDA 13.1, H100-targeted installation. Override it
 with `HEFFTE_MODULE` when testing another stack. Run `./scripts/build.sh --help`
 for all module, architecture, and CMake override options.
 
+### install_release_module.sh
+
+Installs a released tag on Tohtori as a shared Lmod module under `/task/$USER`
+(`apps/openpfc/<version>-<backend>` and `modulefiles/openpfc/`). The build
+runs through the tag's own `build.sh`; the script adds the install step, the
+provenance record, the modulefile and a refusal of any RUNPATH under `/home`.
+See [docs/hpc/INSTALL.tohtori.md](../docs/hpc/INSTALL.tohtori.md) §0.
+
+```bash
+scripts/install_release_module.sh --help
+srun -p all6 -c 32 --mem=64G -t 2:00:00 \
+  scripts/install_release_module.sh --version=0.4.0 --backend=cpu
+```
+
 ### build_tohtori.sh
 
 End-to-end CPU build matching [INSTALL.md](../INSTALL.md) (§1 modules, §3 HeFFTe under `$HOME/opt/heffte/2.4.1-cpu`, §5 OpenPFC) and [cmake/toolchains/tohtori-gcc11-openmpi.cmake](../cmake/toolchains/tohtori-gcc11-openmpi.cmake).

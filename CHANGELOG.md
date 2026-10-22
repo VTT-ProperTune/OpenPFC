@@ -7,6 +7,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- `scripts/install_release_module.sh` installs a released tag on Tohtori as a
+  shared Lmod module, `openpfc/<version>-cpu` or `-cuda`, under `/task/$USER`
+  for the `propertune` group. It builds with the tag's own `build.sh`,
+  records the install provenance and refuses any RUNPATH under `/home`. The
+  CUDA build targets `sm_80;86;90`, and `build_tohtori.sh --cuda` now also
+  builds HeFFTe's cuFFT backend (#613).
+
 - Add CPU-testable `solvers::MultigridPlan`: plan OpenPFC-owned Q1
   rank-agglomerated hierarchies with 1/2/3 process-grid contractions,
   active world ranks, exact additive Pᵀ and reverse P routing (including

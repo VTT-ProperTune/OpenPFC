@@ -7,6 +7,72 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 This note complements the generic instructions in [INSTALL.md](../../INSTALL.md). The current Tohtori `openmpi/5.0.10` site module loads GCC 15.2.0 and provides PMI/PMIx support for Slurm `srun`. The historically named [`cmake/toolchains/tohtori-gcc11-openmpi.cmake`](../../cmake/toolchains/tohtori-gcc11-openmpi.cmake) defaults to those current site paths. For a custom stack, set both `OPENPFC_GCC_ROOT` and `OPENMPI_ROOT`.
 
+## 0. Released modules (no build)
+
+Members of the `propertune` group can load a released OpenPFC instead of
+building it:
+
+```bash
+module use /task/juajukka/modulefiles
+module avail openpfc
+module load openpfc/0.4.0-cpu
+srun --mpi=pmix -p all6 -n 4 tungsten case.json
+```
+
+Pass `--mpi=pmix`: Tohtori's Slurm has no MPI default, and without it each
+task starts as its own one-rank job. The module loads its MPI stack, puts the
+shipped applications on `PATH`, and adds the install to `CMAKE_PREFIX_PATH`,
+so `find_package(OpenPFC)` works for code built against it. The package asks
+MPI for its C and CXX components, so a consumer declares
+`project(<name> C CXX)`. Only one `openpfc` module loads at a time.
+
+`openpfc/<version>-cuda` adds the `*_cuda` applications and GPU-aware MPI
+(UCX 1.20 and Open MPI 5.0.10 built with CUDA 13.1, HeFFTe with cuFFT). It is
+compiled for A100, A40 and H100 (`sm_80`, `sm_86`, `sm_90`), so it runs on the
+`cuda` partition nodes with those GPUs and on `nvidia_h100`. The P100 node
+has no CUDA 13. Request one GPU per rank:
+
+```bash
+module load openpfc/0.4.0-cuda
+srun --mpi=pmix -p cuda -n 2 --gres=gpu:2 -c 4 --mem=16G -t 1:00:00 \
+  aluminum_etd_cuda case.json
+```
+`$OPENPFC_ROOT/share/openpfc/install-provenance.txt` records the tag,
+revision, HeFFTe and MPI of the install.
+
+Maintainers install a new release with
+[`scripts/install_release_module.sh`](../../scripts/install_release_module.sh).
+It builds the tag with that tag's own `scripts/build.sh`, installs under
+`/task/$USER/apps/openpfc/<version>-<backend>`, and writes the modulefile.
+Nothing it installs may resolve through `/home`, which is private to its
+owner. Run it inside an allocation:
+
+```bash
+git fetch --tags origin
+srun -p all6 -c 32 --mem=64G -t 2:00:00 \
+  scripts/install_release_module.sh --version=0.4.0 --backend=cpu
+```
+
+An existing install is never replaced. `--help` lists the HeFFTe and MPI
+prefixes it expects. The CPU build uses the site `openmpi/5.0.10` and
+`/task/$USER/apps/heffte/2.4.1-cpu-ompi5`. The CUDA stack under
+`/task/$USER/apps` comes from [`scripts/build_tohtori.sh`](../../scripts/build_tohtori.sh):
+
+```bash
+T=/task/$USER
+srun -p cuda -c 16 --mem=64G -t 4:00:00 bash -lc "
+  module purge; module load gcc/15.2.0 cuda/13.1
+  export OPENPFC_GCC_MODULE=gcc/15.2.0 CUDA_ARCHITECTURES='80;86;90'
+  export UCX_PREFIX=$T/apps/ucx/1.20.0-cuda UCX_BUILD_DIR=$T/build/ucx-1.20.0-cuda
+  export OPENMPI_PREFIX=$T/apps/openmpi/5.0.10-cuda OPENMPI_BUILD_DIR=$T/build/openmpi-5.0.10-cuda
+  export HEFFTE_PREFIX=$T/apps/heffte/2.4.1-cuda-ompi5 HEFFTE_BUILD_DIR=$T/build/heffte-2.4.1-cuda-ompi5
+  scripts/build_tohtori.sh --build-ucx --build-openmpi --heffte-only --cuda"
+```
+
+Some `all` nodes (for example `c1007`) lack `libefa.so.1`, which the site
+Open MPI needs through libfabric; `ompi_info` fails there. Use `all6` or
+`week` until that is fixed.
+
 ## 1. CPU build (reference)
 
 In an interactive shell:
