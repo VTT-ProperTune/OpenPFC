@@ -177,6 +177,18 @@ body[data-theme="dark"] {
   text-transform: uppercase;
 }
 
+/* The lattice mark beside the project name, not a full-width image.
+ * Set light_logo / dark_logo to brand/mark.svg and brand/mark-on-ink.svg. */
+.sidebar-logo {
+  width: 4.5rem;
+  max-width: 100%;
+}
+
+.sidebar-brand-text {
+  font-family: var(--openpfc-font-sans);
+  font-weight: 500;
+}
+
 /* The link back to the site in Furo's announcement bar. */
 .announcement a {
   color: var(--openpfc-copper-soft);

@@ -3,6 +3,11 @@ SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/_static/openpfc/brand/mark-on-ink.svg">
+  <img src="docs/_static/openpfc/brand/mark.svg" alt="OpenPFC mark: a lattice of density peaks in a square frame" width="72">
+</picture>
+
 # OpenPFC
 
 [![Release][releases-img]][releases-url]

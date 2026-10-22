@@ -80,8 +80,7 @@ breathe_domain_by_extension = {
 
 html_theme = "furo"
 html_title = "OpenPFC documentation"
-html_logo = "img/logo.png"
-html_favicon = "img/logo.png"
+html_favicon = "_static/openpfc/brand/favicon.svg"
 # The site serves this build at docs/. Its theme is vendored from the
 # OpenPFC design system; docs/_static/openpfc/SOURCE records the commit.
 _site_url = os.environ.get("OPENPFC_SITE_URL", "https://vtt-propertune.github.io/OpenPFC/")
@@ -96,6 +95,8 @@ html_theme_options = {
     "source_branch": "master",
     "source_directory": "docs/",
     "announcement": f'<a href="{_site_url}">OpenPFC</a> · Documentation and API reference',
+    "light_logo": "openpfc/brand/mark.svg",
+    "dark_logo": "openpfc/brand/mark-on-ink.svg",
 }
 
 html_show_sourcelink = True

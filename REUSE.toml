@@ -79,6 +79,7 @@ SPDX-License-Identifier = "AGPL-3.0-or-later"
 path = [
     "docs/_static/openpfc/SOURCE",
     "docs/_static/openpfc/sphinx/**",
+    "docs/_static/openpfc/brand/**",
     "docs/_static/openpfc/fonts/fonts.css",
     "docs/_static/openpfc/fonts/NOTICE.md",
 ]
