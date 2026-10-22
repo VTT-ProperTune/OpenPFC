@@ -135,70 +135,100 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      - name: Upload unified documentation artifact
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/master'
+      - name: Upload documentation for the site
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/master' && github.repository == 'VTT-ProperTune/OpenPFC'
         uses: actions/upload-artifact@v5
         with:
           name: documentation-html
           path: site
           retention-days: 1
 
-  deploy-pages:
-    name: Deploy documentation
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+  # The website is ahojukka5/openpfc-pages (private, Quarto). VTT-ProperTune
+  # receives master as a mirror of ahojukka5/OpenPFC and is the only place it
+  # is published; the fork builds the documentation but does not deploy.
+  build-site:
+    name: Render the website with the documentation
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master' && github.repository == 'VTT-ProperTune/OpenPFC'
     needs: build-documentation
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: OpenPFC
+    env:
+      QUARTO_VERSION: 1.10.19
+    steps:
+      - name: Check out the website source
+        uses: actions/checkout@v5
+        with:
+          repository: ahojukka5/openpfc-pages
+          ref: master
+          token: ${{ secrets.OPENPFC_PAGES_REPO }}
+          path: pages
+          persist-credentials: false
 
+      - name: Install pinned Quarto
+        run: |
+          set -euo pipefail
+          prefix="$RUNNER_TEMP/quarto"
+          mkdir -p "$prefix"
+          curl -fsSL "https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz" \
+            | tar -xz -C "$prefix" --strip-components=1
+          echo "$prefix/bin" >> "$GITHUB_PATH"
+
+      - name: Render the website
+        working-directory: pages
+        run: quarto render
+
+      - name: Download the documentation
+        uses: actions/download-artifact@v5
+        with:
+          name: documentation-html
+          path: documentation
+
+      - name: Serve the handbook at docs/ and keep the old API URLs
+        run: |
+          set -euo pipefail
+          rm -rf pages/_site/docs
+          mv documentation pages/_site/docs
+          for old in dev api; do
+            mkdir -p "pages/_site/${old}"
+            cat > "pages/_site/${old}/index.html" <<'EOF'
+          <!doctype html>
+          <meta charset="utf-8">
+          <link rel="canonical" href="../docs/api/">
+          <meta http-equiv="refresh" content="0; url=../docs/api/">
+          <title>OpenPFC API reference moved</title>
+          <p>The API reference moved to <a href="../docs/api/">docs/api/</a>.</p>
+          EOF
+          done
+          {
+            echo "openpfc: ${{ github.sha }}"
+            echo "openpfc-pages: $(git -C pages rev-parse HEAD)"
+          } > pages/_site/revision.txt
+
+      - name: Check links and resources of the combined site
+        run: python3 pages/tools/check_site.py pages/_site
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: pages/_site
+
+  deploy-pages:
+    name: Deploy the website
+    needs: build-site
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       contents: read
       pages: write
       id-token: write
-
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
-      - name: Download unified documentation
-        uses: actions/download-artifact@v5
-        with:
-          name: documentation-html
-          path: ./pages
-
-      - name: Preserve legacy Doxygen URL
-        run: |
-          mkdir -p pages/dev
-          cat > pages/dev/index.html <<'EOF'
-          <!doctype html>
-          <meta charset="utf-8">
-          <link rel="canonical" href="../api/">
-          <meta http-equiv="refresh" content="0; url=../api/">
-          <title>OpenPFC API reference moved</title>
-          <p>The API reference moved to <a href="../api/">the unified documentation site</a>.</p>
-          EOF
-
       - name: Setup Pages
         uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: ./pages
 
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-      - name: Comment on commit after deployment
-        if: success()
-        uses: actions/github-script@v8
-        continue-on-error: true
-        with:
-          script: |
-            github.rest.repos.createCommitComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              commit_sha: context.sha,
-              body: `Documentation deployed: ${{ steps.deployment.outputs.page_url }}`
-            })

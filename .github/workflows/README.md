@@ -53,33 +53,34 @@ Typical Duration: ~45–60 minutes.
 
 ---
 
-### `docs.yml` - Documentation
+### `docs.yml` - Documentation and website
 
-Runs on: 
-- Push to master/main
-- PRs to master/main (when docs/, include/, or README.md changed)
+Runs on:
+- Push to master
+- PRs to master (when documentation sources change)
 - Manual trigger (workflow_dispatch)
-
-Purpose: Build and deploy Doxygen documentation.
 
 Jobs:
 
-1. Build Documentation
- - Installs Doxygen, Graphviz, LaTeX
- - Generates HTML and PDF documentation
- - Checks for Doxygen warnings (fails on warnings)
- - Uploads documentation artifact
+1. Check documentation source: relative links, toolchain references, the
+   examples catalog, the Allen-Cahn tutorial and fenced shell syntax.
+2. Build unified documentation: Sphinx handbook with the Breathe API from
+   Doxygen XML, themed from `docs/_static/openpfc/` (vendored from
+   OpenPFCDesignSystem; `SOURCE` records the commit). Fails on new Doxygen
+   or Sphinx diagnostics.
+3. Render the website (VTT-ProperTune/OpenPFC, push to master only): checks
+   out `ahojukka5/openpfc-pages` `master` with the `OPENPFC_PAGES_REPO`
+   secret of the `OpenPFC` environment, renders it with pinned Quarto, puts
+   the handbook at `docs/` (API at `docs/api/`), redirects the old `dev/` and
+   `api/` URLs, and checks every link.
+4. Deploy the website (same condition) to
+   <https://vtt-propertune.github.io/OpenPFC/> with the Pages Actions API.
+   Pages must be set to "GitHub Actions" in VTT-ProperTune/OpenPFC.
 
-2. Deploy to GitHub Pages (master branch only)
- - Deploys to GitHub Pages
- - Comments deployment URL on commit
- - Requires Pages to be enabled in repository settings
+The fork builds and checks the documentation but does not deploy; the site
+is published from the mirror push to VTT-ProperTune.
 
-Typical Duration: 10-15 minutes
-
-Setup Required:
-1. Enable GitHub Pages in repository settings
-2. Set source to "GitHub Actions"
+Typical Duration: 5-10 minutes
 
 ---
 
