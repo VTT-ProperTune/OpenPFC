@@ -123,8 +123,9 @@ Options:
   --build-ucx        Build UCX from source; sets UCX_HOME for OpenMPI when combined.
   --ucx-only         Only build/install UCX.
   --clean-ucx        Remove UCX VPATH build dir before configuring UCX.
-  --cuda             Build UCX with cuda_copy/cuda_ipc transports and Open MPI's
-                     accelerator/cuda component. Load cuda/X.Y first (or set
+  --cuda             Build UCX with cuda_copy/cuda_ipc transports, Open MPI's
+                     accelerator/cuda component, and HeFFTe's cuFFT backend
+                     (CUDA_ARCHITECTURES, default 90). Load cuda/X.Y first (or set
                      CUDA_HOME) so configure finds the toolkit; combine with
                      --build-ucx --build-openmpi (distinct UCX_PREFIX/OPENMPI_PREFIX
                      recommended, e.g. UCX_VER=1.20.0-cuda OPENMPI_VER=5.0.10-cuda).
@@ -515,14 +516,28 @@ build_heffte() {
     gen="Ninja"
   fi
 
-  log "Configuring HeFFTe (CPU, FFTW) -> ${HEFFTE_PREFIX} (generator: ${gen})"
+  # --cuda adds the cuFFT backend for H100 next to FFTW. The host compiler is
+  # pinned so nvcc does not pick up an older g++ from PATH.
+  local -a cuda_args=(-DHeffte_ENABLE_CUDA=OFF)
+  local kind="CPU, FFTW"
+  if [[ "${WITH_CUDA}" -eq 1 ]]; then
+    cuda_args=(
+      -DHeffte_ENABLE_CUDA=ON
+      -DHeffte_ENABLE_GPU_AWARE_MPI=ON
+      -DCMAKE_CUDA_ARCHITECTURES="${CUDA_ARCHITECTURES:-90}"
+      -DCMAKE_CUDA_HOST_COMPILER="${CXX}"
+    )
+    kind="FFTW + CUDA, sm_${CUDA_ARCHITECTURES:-90}"
+  fi
+
+  log "Configuring HeFFTe (${kind}) -> ${HEFFTE_PREFIX} (generator: ${gen})"
   cmake -S "${src}" -B "${HEFFTE_BUILD_DIR}" -G "${gen}" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER="${CC}" \
     -DCMAKE_CXX_COMPILER="${CXX}" \
     -DCMAKE_INSTALL_PREFIX="${HEFFTE_PREFIX}" \
     -DHeffte_ENABLE_FFTW=ON \
-    -DHeffte_ENABLE_CUDA=OFF
+    "${cuda_args[@]}"
 
   log "Building and installing HeFFTe..."
   cmake --build "${HEFFTE_BUILD_DIR}" -j"${NINJA_JOBS}"
