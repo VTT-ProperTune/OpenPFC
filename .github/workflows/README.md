@@ -84,7 +84,8 @@ Jobs:
    Doxygen XML, themed from `docs/_static/openpfc/` (vendored from
    OpenPFCDesignSystem; `SOURCE` records the commit). Fails on new Doxygen
    or Sphinx diagnostics.
-3. Render the website (VTT-ProperTune/OpenPFC, push to master only): checks
+3. Render the website (VTT-ProperTune/OpenPFC master, on push or
+   `workflow_dispatch`; dispatch it after an openpfc-pages change): checks
    out `ahojukka5/openpfc-pages` `master` with the `OPENPFC_PAGES_REPO`
    secret of the `OpenPFC` environment, renders it with pinned Quarto, puts
    the handbook at `docs/` (API at `docs/api/`), redirects the old `dev/` and

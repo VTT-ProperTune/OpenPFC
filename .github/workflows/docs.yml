@@ -136,7 +136,7 @@ jobs:
           retention-days: 7
 
       - name: Upload documentation for the site
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/master' && github.repository == 'VTT-ProperTune/OpenPFC'
+        if: success() && github.event_name != 'pull_request' && github.ref == 'refs/heads/master' && github.repository == 'VTT-ProperTune/OpenPFC'
         uses: actions/upload-artifact@v5
         with:
           name: documentation-html
@@ -148,7 +148,7 @@ jobs:
   # is published; the fork builds the documentation but does not deploy.
   build-site:
     name: Render the website with the documentation
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master' && github.repository == 'VTT-ProperTune/OpenPFC'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master' && github.repository == 'VTT-ProperTune/OpenPFC'
     needs: build-documentation
     runs-on: ubuntu-24.04
     timeout-minutes: 30
