@@ -14,8 +14,8 @@ are installed once into the project's shared EasyBuild tree, so members of
 |---|---|
 | [`h/HeFFTe/HeFFTe-2.4.1-cpeGNU-25.09-fftw.eb`](easyconfigs/h/HeFFTe/HeFFTe-2.4.1-cpeGNU-25.09-fftw.eb) | HeFFTe 2.4.1, FFTW backend, `cpeGNU` (LUMI-C) |
 | [`h/HeFFTe/HeFFTe-2.4.1-cpeGNU-25.09-rocm.eb`](easyconfigs/h/HeFFTe/HeFFTe-2.4.1-cpeGNU-25.09-rocm.eb) | HeFFTe 2.4.1, rocFFT + FFTW, GPU-aware MPI, `gfx90a` (LUMI-G) |
-| [`o/OpenPFC/OpenPFC-0.4.0-cpeGNU-25.09.eb`](easyconfigs/o/OpenPFC/OpenPFC-0.4.0-cpeGNU-25.09.eb) | OpenPFC 0.4.0, CPU applications |
-| [`o/OpenPFC/OpenPFC-0.4.0-cpeGNU-25.09-rocm.eb`](easyconfigs/o/OpenPFC/OpenPFC-0.4.0-cpeGNU-25.09-rocm.eb) | OpenPFC 0.4.0, CPU and HIP applications, GPU-aware MPI |
+| [`o/OpenPFC/OpenPFC-0.5.0-cpeGNU-25.09.eb`](easyconfigs/o/OpenPFC/OpenPFC-0.5.0-cpeGNU-25.09.eb) | OpenPFC 0.5.0, CPU applications |
+| [`o/OpenPFC/OpenPFC-0.5.0-cpeGNU-25.09-rocm.eb`](easyconfigs/o/OpenPFC/OpenPFC-0.5.0-cpeGNU-25.09-rocm.eb) | OpenPFC 0.5.0, CPU and HIP applications, GPU-aware MPI |
 
 ## Use
 
@@ -26,7 +26,7 @@ the project's EasyBuild tree to the module path from it.
 export EBU_USER_PREFIX=/projappl/project_462001519/EasyBuild
 
 module load LUMI/25.09 partition/C
-module load OpenPFC/0.4.0-cpeGNU-25.09
+module load OpenPFC/0.5.0-cpeGNU-25.09
 srun -p small -n 4 tungsten case.json
 ```
 
@@ -36,7 +36,7 @@ On LUMI-G:
 export EBU_USER_PREFIX=/projappl/project_462001519/EasyBuild
 
 module load LUMI/25.09 partition/G
-module load OpenPFC/0.4.0-cpeGNU-25.09-rocm
+module load OpenPFC/0.5.0-cpeGNU-25.09-rocm
 srun -p standard-g -N 1 --ntasks-per-node=2 --gpus-per-node=2 \
   bash -c 'export ROCR_VISIBLE_DEVICES=$SLURM_LOCALID; exec tungsten_hip case.json'
 ```
@@ -61,13 +61,13 @@ umask 0007
 module load LUMI/25.09 partition/C
 module load EasyBuild-user
 eb --robot="$PWD/easybuild/easyconfigs" \
-   easybuild/easyconfigs/o/OpenPFC/OpenPFC-0.4.0-cpeGNU-25.09.eb
+   easybuild/easyconfigs/o/OpenPFC/OpenPFC-0.5.0-cpeGNU-25.09.eb
 
 module --force purge
 module load LUMI/25.09 partition/G
 module load EasyBuild-user
 eb --parallel=16 --robot="$PWD/easybuild/easyconfigs" \
-   easybuild/easyconfigs/o/OpenPFC/OpenPFC-0.4.0-cpeGNU-25.09-rocm.eb
+   easybuild/easyconfigs/o/OpenPFC/OpenPFC-0.5.0-cpeGNU-25.09-rocm.eb
 ```
 
 `--robot` resolves the HeFFTe dependency from this directory. Run `eb` on a
@@ -93,42 +93,29 @@ find `MPI_C_LIB_NAMES`, and configure stops.
 
 What these recipes do **not** cover, deliberately:
 
-* **The current checkout.** The recipes install the released **0.4.0** tag
+* **The current checkout.** The recipes install the released **0.5.0** tag
   from GitHub, so a module does not include work merged after that tag. Build
   from source for that.
 * **Tests.** `OpenPFC_BUILD_TESTS=OFF`, because the module build is not the
   place to run the suite. Use `scripts/build.sh`.
 * **HDF5** on LUMI-G, which `scripts/build.sh` also leaves off there.
 
-## Known wart: CMake 4
-
-LUMI's `buildtools/25.09` provides CMake 4.2.3, which no longer accepts
-`cmake_minimum_required` below 3.5. The `nlohmann_json` 3.11.2 that OpenPFC
-0.4.0 pins still declares one, so the 0.4.0 easyconfigs pass CMake's
-documented escape hatch:
-
-```
--D CMAKE_POLICY_VERSION_MINIMUM=3.5
-```
-
-`master` after 0.4.0 fetches `nlohmann_json` 3.11.3, which configures under
-CMake 4 without it. Drop the flag from the easyconfigs of the next release.
-
 ## Verified
 
 Built into `/projappl/project_462001519/EasyBuild` and run on LUMI
 (2026-10-22), with `apps/aluminumNew/inputs_json/smoke.json` from the tag:
 
-* `HeFFTe/2.4.1-cpeGNU-25.09-fftw` and `OpenPFC/0.4.0-cpeGNU-25.09` on a login
-  node; `aluminumNew` on 4 ranks on `debug`:
-  `SPECTRAL_CHECKSUM sum=-24.576000000000043`.
-* `HeFFTe/2.4.1-cpeGNU-25.09-rocm` (2 min) and
-  `OpenPFC/0.4.0-cpeGNU-25.09-rocm` (9 min 29 s); `aluminum_etd_hip` on 2 GCDs
-  on `dev-g` with `mpi:from-gpu`: `sum=-24.576000000000487`, the same value as
-  the 2-rank CPU and CUDA runs on Tohtori.
+* `OpenPFC/0.5.0-cpeGNU-25.09` (3 min 48 s) on a login node; `aluminumNew`
+  on 4 ranks on `debug`: `SPECTRAL_CHECKSUM sum=-24.576000000000043`.
+* `OpenPFC/0.5.0-cpeGNU-25.09-rocm` (5 min 52 s); `aluminum_etd_hip` on 2
+  GCDs on `dev-g` with `mpi:from-gpu`: `sum=-24.576000000000487`, the same
+  value as the 2-rank CPU and CUDA runs on Tohtori.
+* Both configure under CMake 4.2.3 without `CMAKE_POLICY_VERSION_MINIMUM`.
 
-Pre-create the case's results directory for multi-rank runs of 0.4.0:
-rank 0 creates it without a barrier (#615).
+The 0.4.0 modules stay installed next to them.
+
+Pre-create the case's results directory for multi-rank runs: rank 0 creates
+it without a barrier (#615).
 
 ## Updating for a new release
 
@@ -141,6 +128,13 @@ sha256sum openpfc.tar.gz
 ```
 
 The tag must be on VTT-ProperTune/OpenPFC; the recipes download from there.
+EasyBuild's own download of that archive has failed on LUMI login nodes while
+`curl` worked. Put the checksummed archive in the shared source cache first:
+
+```bash
+curl -fsSL -o /projappl/project_462001519/EasyBuild/sources/o/OpenPFC/openpfc-X.Y.Z.tar.gz \
+  https://github.com/VTT-ProperTune/OpenPFC/archive/refs/tags/vX.Y.Z.tar.gz
+```
 If the LUMI stack moves off `25.09`, rename all files and update the
 `toolchain` version in each. Keep the toolchain versions identical: HeFFTe and
 OpenPFC must be built with the same one.

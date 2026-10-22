@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- LUMI easyconfigs install OpenPFC 0.5.0 (CPU and ROCm) without the CMake 4
+  policy override, which 0.5.0 no longer needs (#620).
+
 ## [0.5.0] - 2026-10-22
 
 Source-level break from 0.4.0 for inputs and some public APIs. ABI

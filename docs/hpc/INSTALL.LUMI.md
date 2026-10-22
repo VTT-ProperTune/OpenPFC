@@ -241,11 +241,11 @@ the project's shared EasyBuild tree:
 ```bash
 export EBU_USER_PREFIX=/projappl/project_462001519/EasyBuild
 module load LUMI/25.09 partition/C
-module load OpenPFC/0.4.0-cpeGNU-25.09
+module load OpenPFC/0.5.0-cpeGNU-25.09
 srun -p small -n 4 tungsten case.json
 ```
 
-On LUMI-G load `partition/G` and `OpenPFC/0.4.0-cpeGNU-25.09-rocm`, which adds
+On LUMI-G load `partition/G` and `OpenPFC/0.5.0-cpeGNU-25.09-rocm`, which adds
 the HIP applications and sets `MPICH_GPU_SUPPORT_ENABLED=1`. Installing a new
 release, the GPU binding and the recipe limits are in
 [`easybuild/README.md`](../../easybuild/README.md).
