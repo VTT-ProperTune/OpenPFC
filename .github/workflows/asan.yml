@@ -7,6 +7,9 @@
 name: AddressSanitizer
 
 on:
+  # Monthly with the compatibility matrix (compatibility.yml), and on demand.
+  schedule:
+    - cron: "0 2 4 * *"
   workflow_dispatch:
 
 concurrency:
@@ -20,6 +23,7 @@ env:
 jobs:
   asan:
     name: GCC 13 / Debug / ASan
+    if: github.repository == 'ahojukka5/OpenPFC'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     env:

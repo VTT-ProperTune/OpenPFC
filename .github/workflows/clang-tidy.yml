@@ -8,8 +8,9 @@
 name: Clang-Tidy
 
 on:
+  # Monthly with the compatibility matrix (compatibility.yml), and on demand.
   schedule:
-    - cron: "35 3 * * 0"
+    - cron: "0 2 3 * *"
   workflow_dispatch:
 
 concurrency:
@@ -19,6 +20,7 @@ concurrency:
 jobs:
   clang-tidy:
     name: Clang-Tidy Analysis
+    if: github.repository == 'ahojukka5/OpenPFC'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:

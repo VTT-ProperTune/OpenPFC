@@ -4,11 +4,9 @@
 name: Coverage
 
 on:
-  push:
-    branches: [ "master", "main", "develop" ]
+  # Monthly with the compatibility matrix (compatibility.yml), and on demand.
   schedule:
-    # Run coverage weekly on Sunday at 00:00 UTC
-    - cron: '0 0 * * 0'
+    - cron: '0 2 2 * *'
   workflow_dispatch:
 
 jobs:
@@ -17,6 +15,7 @@ jobs:
   # ============================================================================
   coverage:
     name: Code Coverage
+    if: github.repository == 'ahojukka5/OpenPFC'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:

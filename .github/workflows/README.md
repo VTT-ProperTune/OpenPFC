@@ -9,43 +9,59 @@ This directory contains CI/CD workflows for the OpenPFC project.
 
 ## Workflows
 
-### `ci.yml` - Main CI Pipeline
+## Tiers
 
-Runs on: Push to master/main/develop, PRs to master/main
+| Event | What runs | Typical time |
+| --- | --- | --- |
+| Pull request | Code quality; GCC 13 Release with the full unit and 2-rank MPI tests | ~30 min |
+| Push to master | The pull-request jobs plus the small matrix: GCC 13 Debug with the 3/4/6-rank multigrid transfers and the benchmark compile, the Clang compile check, packaging, CUDA and HIP compile-only | ~45 min |
+| Monthly (and on demand) | `compatibility.yml`, then coverage, clang-tidy and ASan on the following days | a few hours |
 
-Purpose: Primary continuous integration pipeline ensuring code quality and functionality.
+Every job runs in `ahojukka5/OpenPFC` only. VTT-ProperTune/OpenPFC mirrors
+`master` and runs only the documentation and website workflow.
 
-Jobs: `code-quality` → `build-and-test` + `clang-compile` + `packaging-smoke`. If Code Quality fails, the build matrix is skipped.
+### `ci.yml` - Pull request and master tiers
 
-1. Code Quality
- - clang-format 20 (advisory)
- - REUSE compliance (must pass)
- - kernel layering and GPU memcpy single-source checks
+Runs on: pull requests to master, pushes to master, `workflow_dispatch`.
 
-2. CMake Build Matrix
- - PRs: gcc-13 Debug + Release only
- - Pushes to master/develop: also gcc-11 Debug
- - Caches HeFFTe; full `ctest` including 2-rank MPI (`OpenPFC_MPI_TEST_MAX_WORLD_SIZE=2`)
+Jobs: `code-quality` → `build-and-test` on every event; `debug-and-mpi`,
+`clang-compile`, `packaging-smoke`, `cuda-compile` and `hip-compile` on
+pushes only. `CI Status` fails when a job it needs failed; on a pull request
+the push-only jobs may be skipped. A newer pull-request push cancels the
+running check; master runs are not cancelled.
 
-3. Clang compile check (`clang-compile`)
- - clang-18 builds the library and the test TU that instantiates the host `FFT_Impl`
- - Compile only; guards headers against rules only Clang enforces (issue #373)
+1. Code Quality: clang-format 20 (advisory), REUSE compliance, kernel
+   layering, GPU memcpy single-source, app self-containment and the
+   accelerator build policy (`scripts/check_gpu_ci_policy.py`).
+2. Common build (`build-and-test`): GCC 13 Release with HeFFTe, examples
+   and apps, full `ctest` including 2-rank MPI
+   (`OpenPFC_MPI_TEST_MAX_WORLD_SIZE=2`). Release is the `scripts/build.sh`
+   default and the configuration installed as modules.
+3. `debug-and-mpi`: GCC 13 Debug `ctest`, the multigrid plan on 3, 4 and 6
+   oversubscribed ranks, and the benchmark compile.
+4. `clang-compile`: clang-18 builds the library and the test TU that
+   instantiates the host `FFT_Impl` (issue #373); compile only.
+5. `packaging-smoke`: install and build `find_package(OpenPFC)` consumers.
+6. `cuda-compile` / `hip-compile`: compile-only in the official CUDA and ROCm
+   images, without HeFFTe; required on every master push.
 
-4. Packaging smoke (`find_package` consumer)
+Host jobs set up through `.github/actions/setup-build` (apt packages and the
+cached HeFFTe build).
 
-5. CUDA/HIP compile-only: **push to master/develop only** (not PRs), `continue-on-error`
+### `compatibility.yml` - Monthly compatibility matrix
 
-6. CI Status
- - Required for merging
- - Aggregates Code Quality, build-and-test, clang-compile, and packaging-smoke
+Runs on: the 1st of each month 02:00 UTC, and `workflow_dispatch`.
 
-Typical Duration: ~10–15 minutes on a PR (with HeFFTe cache)
+Full unit and 2-rank MPI tests on GCC 11 (Ubuntu 22.04, Debug and Release),
+GCC 12 (22.04 and 24.04), GCC 14 (Debug and Release), Clang 18, MPICH, and
+the build without HeFFTe. `fail-fast` is off so every cell reports. A red
+cell is a finding; open an issue for it rather than editing the matrix.
 
 ---
 
 ### `clang-tidy.yml` - Static analysis (non-blocking)
 
-Runs on: weekly Sunday 03:00 UTC, and `workflow_dispatch`. Not on pull requests.
+Runs on: the 3rd of each month 02:00 UTC, and `workflow_dispatch`. Not on pull requests or master.
 
 Purpose: Run `scripts/run-clang-tidy.sh` with HeFFTe + `compile_commands.json`. A full-tree pass is ~45–60 min on GitHub runners and is `continue-on-error` until the WarningsAsErrors backlog is clear. Do not add this job as a required check.
 
@@ -86,12 +102,13 @@ Typical Duration: 5-10 minutes
 
 ### `coverage.yml` - Code Coverage
 
-Runs on:
-- Push to master/main/develop
-- Weekly schedule (Sunday 00:00 UTC)
-- Manual trigger (workflow_dispatch)
+Runs on: the 2nd of each month 02:00 UTC, and `workflow_dispatch`. Not on
+pull requests or master.
 
-Not on pull requests (duplicates a Debug `ctest` already in `ci.yml`).
+### `asan.yml` - AddressSanitizer
+
+Runs on: the 4th of each month 02:00 UTC, and `workflow_dispatch`. GCC 13
+Debug with HeFFTe and OpenPFC built with `-fsanitize=address`.
 
 Purpose: Measure and report test coverage (target: >90%).
 
@@ -132,8 +149,10 @@ Required secrets (configure in repository settings):
 
 All workflows use GitHub Actions cache to speed up builds:
 
-- HeFFTe builds: Cached per OS/compiler/build-type
-- Cache retention: 7 days
+- HeFFTe builds: cached by `.github/actions/setup-build` per OS image,
+  compiler, MPI implementation, build type and `scripts/install-heffte-ci.sh`
+  content
+- Cache retention: 7 days without use
 
 Expected speedup: 2-3x faster on cache hits
 
@@ -190,11 +209,11 @@ Test workflows locally before pushing:
 # Run CI workflow
 act push
 
-# Run specific job
-act -j build-and-test
+# Run the pull-request tier's common build
+act pull_request -j build-and-test
 
-# Run with specific matrix combination
-act -j build-and-test --matrix os:ubuntu-24.04 --matrix compiler:gcc-11
+# Run one cell of the compatibility matrix
+act workflow_dispatch -W .github/workflows/compatibility.yml --matrix cc:gcc-14 --matrix build_type:Release
 ```
 
 ---
@@ -203,16 +222,8 @@ act -j build-and-test --matrix os:ubuntu-24.04 --matrix compiler:gcc-11
 
 ### Adding New Compilers
 
-Edit `ci.yml` matrix section:
-
-```yaml
-matrix:
- compiler: [gcc-11, gcc-13, gcc-14] # Add gcc-14
- include:
- - compiler: gcc-14
- cc: gcc-14
- cxx: g++-14
-```
+Add a row to the `include:` matrix of `compatibility.yml`. Change the
+pull-request or master tier in `ci.yml` only when the common setup changes.
 
 ### Updating Dependencies
 
@@ -223,4 +234,4 @@ When bumping HeFFTe (current release: v2.4.1), update the shared installer and c
 
 ---
 
-Last Updated: 2026-03-30
+Last Updated: 2026-10-23

@@ -211,16 +211,24 @@ follows the message rules.
 
 ## CI (GitHub Actions)
 
-Pull requests run a **short** set under [`.github/workflows/`](.github/workflows):
-**`ci.yml`** code-quality, gcc-13 Debug+Release `ctest` (including 2-rank MPI),
-a clang-18 compile check, and packaging smoke; **`docs.yml`** when
-docs/headers/README change. CUDA/HIP compile-only and installed host-consumer checks run on PRs and
-master pushes and must pass the aggregate CI Status. These SDK checks require
-no GPU; physical device and GPU spectral/HeFFTe validation remain allocated
-cluster checks. Coverage runs on master pushes and weekly.
-Clang-tidy is weekly plus `workflow_dispatch`, not a PR gate. AddressSanitizer
-is `workflow_dispatch` only. Doc-only edits still trigger the Documentation
-link job — run `python3 scripts/check_doc_links.py` locally before pushing.
+CI under [`.github/workflows/`](.github/workflows) has three tiers (details in
+its README):
+
+- **Pull request:** `ci.yml` code quality and one build, GCC 13 Release with
+  the full `ctest` including 2-rank MPI; `docs.yml` when documentation
+  sources change.
+- **Push to master:** adds GCC 13 Debug with the 3/4/6-rank multigrid
+  transfers and the benchmark compile, the clang-18 compile check,
+  packaging smoke, and CUDA/HIP compile-only. All must pass CI Status. These
+  SDK checks need no GPU; device and GPU spectral/HeFFTe validation remain
+  allocated cluster checks.
+- **Monthly:** `compatibility.yml` (GCC 11–14, Clang 18, Ubuntu 22.04/24.04,
+  MPICH, no HeFFTe), then coverage, clang-tidy and AddressSanitizer; all also
+  `workflow_dispatch`.
+
+CI runs in `ahojukka5/OpenPFC`; VTT-ProperTune/OpenPFC only publishes the
+website. Doc-only edits still trigger the Documentation link job — run
+`python3 scripts/check_doc_links.py` locally before pushing.
 
 Passing checks make a PR mergeable, not right. Fix only lint/test
 failures **this PR introduced**; fold those fixes into the commit that
