@@ -3,16 +3,24 @@
 
 name: Unit Tests
 
+# Three tiers (see README.md in this directory):
+#   pull request  code quality + one build: GCC 13, Release, unit and 2-rank MPI tests
+#   push master   adds the small matrix: GCC 13 Debug with the 3/4/6-rank
+#                 multigrid transfers and benchmark compile, the Clang compile
+#                 check, packaging, CUDA and HIP compile-only
+#   monthly       compatibility.yml
+# VTT-ProperTune/OpenPFC mirrors master and runs none of these jobs.
 on:
   push:
-    branches: [ "master", "main", "develop" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "master", "main" ]
+    branches: [ "master" ]
+  workflow_dispatch:
 
-# Cancel in-progress runs when a new workflow with the same group name starts
+# A newer pull-request push replaces the running check; master runs finish.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # ============================================================================
@@ -20,6 +28,7 @@ jobs:
   # ============================================================================
   code-quality:
     name: Code Quality
+    if: github.repository == 'ahojukka5/OpenPFC'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -67,67 +76,38 @@ jobs:
         run: python3 scripts/check_gpu_ci_policy.py
 
   # ============================================================================
-  # CMake Build Matrix
+  # The common build, on every event: GCC 13, Release, full unit and MPI tests.
   # ============================================================================
   build-and-test:
-    name: ${{ matrix.os }} / ${{ matrix.compiler }} / ${{ matrix.build_type }}
+    name: ubuntu-24.04 / gcc-13 / Release
+    if: github.repository == 'ahojukka5/OpenPFC'
     needs: [code-quality]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04]
-        compiler: [gcc-13]
-        build_type: [Debug, Release]
-        include:
-          - compiler: gcc-13
-            cc: gcc-13
-            cxx: g++-13
-
+    env:
+      CC: gcc-13
+      CXX: g++-13
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
           submodules: true
 
-      - name: Install dependencies (Ubuntu)
-        run: |
-          bash scripts/ci/apt_update.sh
-          sudo apt-get install -y \
-            ${{ matrix.cc }} \
-            ${{ matrix.cxx }} \
-            cmake \
-            ninja-build \
-            libopenmpi-dev \
-            openmpi-bin \
-            libfftw3-dev \
-            libfftw3-mpi-dev \
-            nlohmann-json3-dev
-
-      - name: Cache HeFFTe
-        id: cache-heffte
-        uses: actions/cache@v5
+      - name: Set up the build
+        id: setup
+        uses: ./.github/actions/setup-build
         with:
-          path: ~/opt/heffte/2.4.1-cpu
-          key: heffte-2.4.1-cpu-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.build_type }}
-
-      - name: Build and Install HeFFTe
-        if: steps.cache-heffte.outputs.cache-hit != 'true'
-        env:
-          CC: ${{ matrix.cc }}
-          CXX: ${{ matrix.cxx }}
-        run: scripts/install-heffte-ci.sh "${{ matrix.build_type }}" /tmp/heffte-build-openpfc-ci
+          os: ubuntu-24.04
+          compiler-packages: gcc-13 g++-13
+          cc: gcc-13
+          cxx: g++-13
+          build-type: Release
 
       - name: Configure OpenPFC
-        env:
-          CC: ${{ matrix.cc }}
-          CXX: ${{ matrix.cxx }}
         run: |
-          cmake -S . -B build \
-            -GNinja \
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu \
+          cmake -S . -B build -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH=${{ steps.setup.outputs.heffte-prefix }} \
             -DOpenPFC_BUILD_TESTS=ON \
             -DOpenPFC_BUILD_EXAMPLES=ON \
             -DOpenPFC_BUILD_APPS=ON \
@@ -138,23 +118,71 @@ jobs:
       - name: Build OpenPFC
         run: cmake --build build -j2
 
-      - name: Run Tests
+      - name: Run tests
         working-directory: build
         run: |
           set -o pipefail
-          # Run tests with verbose output on failure
-          ctest --output-on-failure -j2 \
-            --exclude-regex "benchmark" \
-            --timeout 300 | tee ctest.log
-          # Record CTest wall-time.
+          ctest --output-on-failure -j2 --exclude-regex "benchmark" --timeout 300 | tee ctest.log
           total=$(grep -E "Total Test time" ctest.log | tail -1 || true)
-          echo "${{ matrix.compiler }}/${{ matrix.build_type }} CTest — ${total:-time unavailable}" \
-            >> "$GITHUB_STEP_SUMMARY"
+          echo "gcc-13/Release CTest — ${total:-time unavailable}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: test-results-gcc-13-Release
+          path: build/Testing/Temporary/LastTest.log
+
+  # ============================================================================
+  # Master only: Debug, the multi-rank multigrid transfers and benchmarks.
+  # ============================================================================
+  debug-and-mpi:
+    name: ubuntu-24.04 / gcc-13 / Debug + 3/4/6-rank MPI
+    if: github.repository == 'ahojukka5/OpenPFC' && github.event_name != 'pull_request'
+    needs: [code-quality]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      CC: gcc-13
+      CXX: g++-13
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          submodules: true
+
+      - name: Set up the build
+        id: setup
+        uses: ./.github/actions/setup-build
+        with:
+          os: ubuntu-24.04
+          compiler-packages: gcc-13 g++-13
+          cc: gcc-13
+          cxx: g++-13
+          build-type: Debug
+
+      - name: Configure OpenPFC
+        run: |
+          cmake -S . -B build -GNinja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_PREFIX_PATH=${{ steps.setup.outputs.heffte-prefix }} \
+            -DOpenPFC_BUILD_TESTS=ON \
+            -DOpenPFC_BUILD_EXAMPLES=ON \
+            -DOpenPFC_BUILD_APPS=ON \
+            -DOpenPFC_BUILD_DOCUMENTATION=OFF \
+            -DOpenPFC_RUN_MPI_SUITES=ON \
+            -DOpenPFC_MPI_TEST_MAX_WORLD_SIZE=2
+
+      - name: Build OpenPFC
+        run: cmake --build build -j2
+
+      - name: Run tests
+        working-directory: build
+        run: ctest --output-on-failure -j2 --exclude-regex "benchmark" --timeout 300
 
       # This capability changes the active world from 6 to 3 to 1 ranks.
       # The normal hosted CTest suite is capped at 2 MPI slots; run the
       # targeted independent correctness tests with explicit oversubscription.
-      # Avoid extrapolating the two-rank gate to actual rank agglomeration.
       - name: Verify multigrid plan MPI transfers on 3, 4 and 6 ranks
         run: |
           set -euo pipefail
@@ -165,14 +193,10 @@ jobs:
           done
 
       - name: Compile benchmarks
-        env:
-          CC: ${{ matrix.cc }}
-          CXX: ${{ matrix.cxx }}
         run: |
-          cmake -S . -B build-benchmarks \
-            -GNinja \
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu \
+          cmake -S . -B build-benchmarks -GNinja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_PREFIX_PATH=${{ steps.setup.outputs.heffte-prefix }} \
             -DOpenPFC_BUILD_TESTS=ON \
             -DOpenPFC_BUILD_BENCHMARKS=ON \
             -DOpenPFC_BUILD_EXAMPLES=OFF \
@@ -185,64 +209,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v5
         with:
-          name: test-results-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.build_type }}
-          path: build/Testing/Temporary/LastTest.log
-
-  # Second compiler on branch pushes only (not pull requests).
-  build-gcc11-debug:
-    name: ubuntu-24.04 / gcc-11 / Debug
-    if: github.event_name == 'push'
-    needs: [code-quality]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 120
-    env:
-      CC: gcc-11
-      CXX: g++-11
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-        with:
-          submodules: true
-      - name: Install dependencies (Ubuntu)
-        run: |
-          bash scripts/ci/apt_update.sh
-          sudo apt-get install -y gcc-11 g++-11 cmake ninja-build \
-            libopenmpi-dev openmpi-bin libfftw3-dev libfftw3-mpi-dev \
-            nlohmann-json3-dev
-      - name: Cache HeFFTe
-        id: cache-heffte
-        uses: actions/cache@v5
-        with:
-          path: ~/opt/heffte/2.4.1-cpu
-          key: heffte-2.4.1-cpu-ubuntu-24.04-gcc-11-Debug
-      - name: Build and Install HeFFTe
-        if: steps.cache-heffte.outputs.cache-hit != 'true'
-        run: scripts/install-heffte-ci.sh Debug /tmp/heffte-build-openpfc-ci
-      - name: Configure OpenPFC
-        run: |
-          cmake -S . -B build \
-            -GNinja \
-            -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu \
-            -DOpenPFC_BUILD_TESTS=ON \
-            -DOpenPFC_BUILD_EXAMPLES=ON \
-            -DOpenPFC_BUILD_APPS=ON \
-            -DOpenPFC_BUILD_DOCUMENTATION=OFF \
-            -DOpenPFC_RUN_MPI_SUITES=ON \
-            -DOpenPFC_MPI_TEST_MAX_WORLD_SIZE=2
-      - name: Build OpenPFC
-        run: cmake --build build -j2
-      - name: Run Tests
-        working-directory: build
-        run: |
-          ctest --output-on-failure -j2 \
-            --exclude-regex "benchmark" \
-            --timeout 300
-      - name: Upload test results
-        if: failure()
-        uses: actions/upload-artifact@v5
-        with:
-          name: test-results-ubuntu-24.04-gcc-11-Debug
+          name: test-results-gcc-13-Debug
           path: build/Testing/Temporary/LastTest.log
 
   # ============================================================================
@@ -253,6 +220,7 @@ jobs:
   # ============================================================================
   clang-compile:
     name: Clang compile check (library + FFT backend)
+    if: github.repository == 'ahojukka5/OpenPFC' && github.event_name != 'pull_request'
     needs: [code-quality]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -262,30 +230,22 @@ jobs:
         with:
           submodules: true
 
-      - name: Install dependencies (Ubuntu)
-        run: |
-          bash scripts/ci/apt_update.sh
-          sudo apt-get install -y clang-18 libomp-18-dev gcc-13 g++-13 cmake ninja-build \
-            libopenmpi-dev openmpi-bin libfftw3-dev libfftw3-mpi-dev nlohmann-json3-dev
-
-      - name: Cache HeFFTe
-        id: cache-heffte
-        uses: actions/cache@v5
+      - name: Set up the build
+        id: setup
+        uses: ./.github/actions/setup-build
         with:
-          path: ~/opt/heffte/2.4.1-cpu
-          key: heffte-2.4.1-cpu-ubuntu-24.04-gcc-13-Release
-
-      - name: Build and Install HeFFTe
-        if: steps.cache-heffte.outputs.cache-hit != 'true'
-        env: { CC: gcc-13, CXX: g++-13 }
-        run: scripts/install-heffte-ci.sh Release /tmp/heffte-build-openpfc-ci
+          os: ubuntu-24.04
+          compiler-packages: clang-18 libomp-18-dev gcc-13 g++-13
+          cc: gcc-13
+          cxx: g++-13
+          build-type: Release
 
       - name: Configure OpenPFC with Clang
         env: { CC: clang-18, CXX: clang++-18 }
         run: |
           cmake -S . -B build -GNinja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu \
+            -DCMAKE_PREFIX_PATH=${{ steps.setup.outputs.heffte-prefix }} \
             -DOpenPFC_BUILD_TESTS=ON -DOpenPFC_BUILD_APPS=OFF \
             -DOpenPFC_BUILD_EXAMPLES=OFF -DOpenPFC_BUILD_DOCUMENTATION=OFF
 
@@ -299,43 +259,37 @@ jobs:
   # Packaging smoke test (audit 11 / PN): install OpenPFC and build a downstream
   # consumer against it via find_package(OpenPFC). Guards the export set, the
   # OpenPFCConfig transitive dependencies, and the header-only install filter.
-  # Validated locally on tohtori; the flow mirrors tests/packaging/consumer.
   # ============================================================================
   packaging-smoke:
     name: Packaging (find_package consumer)
+    if: github.repository == 'ahojukka5/OpenPFC' && github.event_name != 'pull_request'
     needs: [code-quality]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    env:
+      CC: gcc-13
+      CXX: g++-13
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
           submodules: true
 
-      - name: Install dependencies (Ubuntu)
-        run: |
-          bash scripts/ci/apt_update.sh
-          sudo apt-get install -y gcc-13 g++-13 cmake ninja-build \
-            libopenmpi-dev openmpi-bin libfftw3-dev libfftw3-mpi-dev nlohmann-json3-dev
-
-      - name: Cache HeFFTe
-        id: cache-heffte
-        uses: actions/cache@v5
+      - name: Set up the build
+        id: setup
+        uses: ./.github/actions/setup-build
         with:
-          path: ~/opt/heffte/2.4.1-cpu
-          key: heffte-2.4.1-cpu-ubuntu-24.04-gcc-13-Release
-
-      - name: Build and Install HeFFTe
-        if: steps.cache-heffte.outputs.cache-hit != 'true'
-        env: { CC: gcc-13, CXX: g++-13 }
-        run: scripts/install-heffte-ci.sh Release /tmp/heffte-build-openpfc-ci
+          os: ubuntu-24.04
+          compiler-packages: gcc-13 g++-13
+          cc: gcc-13
+          cxx: g++-13
+          build-type: Release
 
       - name: Configure + build + install OpenPFC
-        env: { CC: gcc-13, CXX: g++-13 }
         run: |
           cmake -S . -B build -GNinja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu \
+            -DCMAKE_PREFIX_PATH=${{ steps.setup.outputs.heffte-prefix }} \
             -DCMAKE_INSTALL_PREFIX=$HOME/openpfc-prefix \
             -DOpenPFC_BUILD_TESTS=OFF -DOpenPFC_BUILD_APPS=OFF \
             -DOpenPFC_BUILD_EXAMPLES=OFF -DOpenPFC_BUILD_DOCUMENTATION=OFF
@@ -356,14 +310,14 @@ jobs:
           fi
 
       - name: Build + run downstream consumer via find_package
-        env: { CC: gcc-13, CXX: g++-13 }
         run: |
+          heffte="${{ steps.setup.outputs.heffte-prefix }}"
           cmake -S tests/packaging/consumer -B build-consumer -GNinja \
-            -DCMAKE_PREFIX_PATH="$HOME/openpfc-prefix;$HOME/opt/heffte/2.4.1-cpu"
+            -DCMAKE_PREFIX_PATH="$HOME/openpfc-prefix;${heffte}"
           cmake --build build-consumer -j2
           ./build-consumer/consumer
           cmake -S tests/packaging/startup -B build-startup -GNinja \
-            -DCMAKE_PREFIX_PATH="$HOME/openpfc-prefix;$HOME/opt/heffte/2.4.1-cpu"
+            -DCMAKE_PREFIX_PATH="$HOME/openpfc-prefix;${heffte}"
           cmake --build build-startup -j2
           ./build-startup/startup_consumer
 
@@ -372,13 +326,14 @@ jobs:
   # / hipcc compile without one. Official devel images already ship the toolkit;
   # do not download or compile HeFFTe here (spectral GPU stays cluster-only).
   # OpenPFC_ENABLE_HEFFTE=OFF still builds FD/kernel CUDA and HIP TUs.
-  # Run on PRs as well: host startup must consume every backend package.
+  # Pushes to master only (the small matrix).
   # After install, reconfigure the same tree with tests enabled and BUILD,
   # but NEVER RUN, the real nodal-multigrid vendor test executable. This
   # verifies Catch2 device-test C++/launch symbols even without allocated GPUs.
   # ============================================================================
   cuda-compile:
     name: CUDA compile-only (no GPU)
+    if: github.repository == 'ahojukka5/OpenPFC' && github.event_name != 'pull_request'
     needs: [code-quality]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -423,6 +378,7 @@ jobs:
 
   hip-compile:
     name: HIP compile-only (no GPU)
+    if: github.repository == 'ahojukka5/OpenPFC' && github.event_name != 'pull_request'
     needs: [code-quality]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -461,35 +417,33 @@ jobs:
           ctest --test-dir build-hip -N -R DirichletGPU_hip_1rank_Required
 
   # ============================================================================
-  # Status Check (required for merge)
+  # Status Check. A pull request needs code quality and the common build; a
+  # push to master needs every job.
   # ============================================================================
   ci-status:
     name: CI Status
-    if: always()
-    needs: [code-quality, build-and-test, clang-compile, packaging-smoke, cuda-compile, hip-compile]
+    if: always() && github.repository == 'ahojukka5/OpenPFC'
+    needs: [code-quality, build-and-test, debug-and-mpi, clang-compile, packaging-smoke, cuda-compile, hip-compile]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Check all jobs status
+        env:
+          EVENT: ${{ github.event_name }}
+          RESULTS: ${{ toJSON(needs) }}
         run: |
-          if [[ "${{ needs.code-quality.result }}" != "success" ]]; then
-            echo "❌ Code quality checks failed"
-            exit 1
-          fi
-          if [[ "${{ needs.build-and-test.result }}" != "success" ]]; then
-            echo "❌ Build and test failed"
-            exit 1
-          fi
-          if [[ "${{ needs.clang-compile.result }}" != "success" ]]; then
-            echo "❌ Clang compile check failed"
-            exit 1
-          fi
-          if [[ "${{ needs.packaging-smoke.result }}" != "success" ]]; then
-            echo "❌ Packaging smoke failed"
-            exit 1
-          fi
-          if [[ "${{ needs.cuda-compile.result }}" != "success" || "${{ needs.hip-compile.result }}" != "success" ]]; then
-            echo "CUDA/HIP compile and installed host-consumer checks failed"
-            exit 1
-          fi
-          echo "✅ All CI checks passed"
+          python3 - <<'PY'
+          import json, os, sys
+          pr = os.environ["EVENT"] == "pull_request"
+          required = {"code-quality", "build-and-test"}
+          failed = []
+          for job, info in json.loads(os.environ["RESULTS"]).items():
+              result = info["result"]
+              if result == "success" or (pr and job not in required and result == "skipped"):
+                  continue
+              failed.append(f"{job}: {result}")
+          if failed:
+              print("CI failed:", *failed, sep="\n  ")
+              sys.exit(1)
+          print("All CI checks passed")
+          PY

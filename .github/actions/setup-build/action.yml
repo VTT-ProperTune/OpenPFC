@@ -1,0 +1,82 @@
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+name: Set up an OpenPFC host build
+description: >
+  Install the compiler, MPI, FFTW and nlohmann-json from apt, then restore or
+  build HeFFTe 2.4.1 (CPU) with the same compiler and MPI. The caller exports
+  CC and CXX for its own configure step.
+
+inputs:
+  os:
+    description: Runner image name, part of the HeFFTe cache key (matrix.os)
+    required: true
+  compiler-packages:
+    description: Apt packages that provide the compiler, e.g. "gcc-13 g++-13"
+    required: true
+  cc:
+    description: C compiler command
+    required: true
+  cxx:
+    description: C++ compiler command
+    required: true
+  build-type:
+    description: CMake build type for HeFFTe
+    required: true
+  mpi:
+    description: openmpi or mpich
+    default: openmpi
+  heffte:
+    description: Build or restore HeFFTe ("true" or "false")
+    default: "true"
+  extra-packages:
+    description: Further apt packages
+    default: ""
+
+outputs:
+  heffte-prefix:
+    description: HeFFTe install prefix (empty when heffte is false)
+    value: ${{ steps.prefix.outputs.path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install packages
+      shell: bash
+      run: |
+        set -euo pipefail
+        case "${{ inputs.mpi }}" in
+          openmpi) mpi_packages="libopenmpi-dev openmpi-bin" ;;
+          mpich) mpi_packages="libmpich-dev mpich" ;;
+          *) echo "::error::unknown mpi '${{ inputs.mpi }}'"; exit 1 ;;
+        esac
+        bash scripts/ci/apt_update.sh
+        sudo apt-get install -y ${{ inputs.compiler-packages }} cmake ninja-build \
+          ${mpi_packages} libfftw3-dev libfftw3-mpi-dev nlohmann-json3-dev \
+          ${{ inputs.extra-packages }}
+
+    - name: HeFFTe prefix
+      id: prefix
+      shell: bash
+      run: |
+        if [[ "${{ inputs.heffte }}" == "true" ]]; then
+          echo "path=$HOME/opt/heffte/2.4.1-cpu" >> "$GITHUB_OUTPUT"
+        else
+          echo "path=" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Cache HeFFTe
+      id: cache
+      if: inputs.heffte == 'true'
+      uses: actions/cache@v5
+      with:
+        path: ~/opt/heffte/2.4.1-cpu
+        key: heffte-2.4.1-cpu-${{ inputs.os }}-${{ inputs.cc }}-${{ inputs.mpi }}-${{ inputs.build-type }}-${{ hashFiles('scripts/install-heffte-ci.sh') }}
+
+    - name: Build and install HeFFTe
+      if: inputs.heffte == 'true' && steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        CC: ${{ inputs.cc }}
+        CXX: ${{ inputs.cxx }}
+      run: scripts/install-heffte-ci.sh "${{ inputs.build-type }}" /tmp/heffte-build-openpfc-ci

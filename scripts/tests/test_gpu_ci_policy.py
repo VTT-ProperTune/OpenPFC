@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""An optional, omitted or conditionally skipped GPU job must fail policy."""
+"""An optional, omitted, skipped-on-master or unchecked GPU job must fail policy."""
 import importlib.util
 from pathlib import Path
 
@@ -23,10 +23,10 @@ def test_policy_rejects_hidden_failures(name, failure):
     if failure == 'optional':
         broken = SOURCE.replace(f'  {name}:', f'  {name}:\n    continue-on-error: true')
     elif failure == 'skipped':
-        broken = SOURCE.replace(f'  {name}:', f"  {name}:\n    if: github.event_name == 'push'")
+        broken = SOURCE.replace(policy.MASTER_TIER, policy.MASTER_TIER + " && github.actor == 'nobody'")
     elif failure == 'omitted':
         broken = SOURCE.replace(f', {name}', '')
     else:
-        broken = SOURCE.replace(f'needs.{name}.result', 'needs.unrelated.result')
+        broken = SOURCE.replace('RESULTS: ${{ toJSON(needs) }}', 'RESULTS: "{}"')
     with pytest.raises(AssertionError):
         policy.check(broken)
