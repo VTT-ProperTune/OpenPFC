@@ -11,6 +11,7 @@ install(EXPORT OpenPFCTargets
 )
 
 include("${CMAKE_CURRENT_LIST_DIR}/SourceProvenance.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/BuildManifest.cmake")
 
 # Generate config and write package config
 include(CMakePackageConfigHelpers)
@@ -33,6 +34,8 @@ install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/OpenPFCConfig.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/OpenPFCConfigVersion.cmake
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindFFTW3.cmake
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/OpenPFCCompatibility.cmake
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/openpfc_sdk_probe.cpp
   DESTINATION lib/cmake/OpenPFC
 )
 
@@ -59,4 +62,20 @@ if(OpenPFC_BUILD_TESTS AND OpenPFC_HAS_FFTW3)
       "${_local_fft_coverage}"
       -P ${CMAKE_SOURCE_DIR}/tests/packaging/check_local_fft_consumer.cmake)
   set_tests_properties(LocalFFT_InstalledConsumer PROPERTIES TIMEOUT 180 RUN_SERIAL TRUE)
+endif()
+
+# Build-tree consumers use the same helper and probe as installed consumers.
+foreach(_file OpenPFCCompatibility.cmake openpfc_sdk_probe.cpp)
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/${_file}"
+    "${CMAKE_CURRENT_BINARY_DIR}/${_file}" COPYONLY)
+endforeach()
+
+if(OpenPFC_BUILD_TESTS)
+  openpfc_installed_consumer_coverage_arguments(_manifest_coverage)
+  add_test(NAME SDK_InstalledCompatibility
+    COMMAND ${CMAKE_COMMAND} "-Dbuild=${CMAKE_BINARY_DIR}" "-Dsource=${CMAKE_SOURCE_DIR}"
+      "-Dcc=${CMAKE_C_COMPILER}" "-Dcxx=${CMAKE_CXX_COMPILER}"
+      "-Dconfiguration=$<CONFIG>" "${_manifest_coverage}"
+      -P ${CMAKE_SOURCE_DIR}/tests/packaging/check_sdk_consumer.cmake)
+  set_tests_properties(SDK_InstalledCompatibility PROPERTIES TIMEOUT 300 RUN_SERIAL TRUE)
 endif()

@@ -7,6 +7,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Installed SDKs export a relocatable JSON build manifest with compiler, MPI
+  library/ABI evidence and effective CUDA/HIP configuration. CMake consumers can
+  query `OpenPFC_BUILD_MANIFEST` and run `openpfc_check_compatibility` (#634).
+
 - LUMI easyconfigs install OpenPFC 0.5.0 (CPU and ROCm) without the CMake 4
   policy override, which 0.5.0 no longer needs (#620).
 

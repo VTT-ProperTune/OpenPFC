@@ -26,10 +26,10 @@ endif()
 # these, find_package(OpenPFC) on a CUDA/HIP/HDF5-enabled install fails unless
 # the consumer happens to have already found them. The flags are stamped from
 # the configure that produced this package.
-if(@OpenPFC_ENABLE_CUDA@)
+if(@OpenPFC_SDK_CUDA@)
   find_dependency(CUDAToolkit)
 endif()
-if(@OpenPFC_ENABLE_HIP@)
+if(@OpenPFC_SDK_HIP@)
   find_dependency(hip)
 endif()
 if(@OpenPFC_ENABLE_HDF5@)
@@ -60,4 +60,19 @@ include ( "${CMAKE_CURRENT_LIST_DIR}/OpenPFCTargets.cmake" )
 set_property(TARGET OpenPFC::openpfc APPEND PROPERTY
     INTERFACE_LINK_LIBRARIES nlohmann_json::nlohmann_json)
 
-message(STATUS "Found OpenPFC: @CMAKE_INSTALL_PREFIX@ (found version @PROJECT_VERSION@)")
+# Installed paths are relative to this config, independent of the build host.
+set(OpenPFC_BUILD_CONFIGURATIONS "@OpenPFC_BUILD_CONFIGURATIONS@")
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/share/openpfc")
+  set(_OpenPFC_configuration "${CMAKE_BUILD_TYPE}")
+  if(NOT _OpenPFC_configuration IN_LIST OpenPFC_BUILD_CONFIGURATIONS)
+    list(GET OpenPFC_BUILD_CONFIGURATIONS 0 _OpenPFC_configuration)
+  endif()
+  set(OpenPFC_BUILD_MANIFEST "${CMAKE_CURRENT_LIST_DIR}/share/openpfc/${_OpenPFC_configuration}/build-manifest.json")
+  unset(_OpenPFC_configuration)
+else()
+  get_filename_component(OpenPFC_BUILD_MANIFEST
+    "${CMAKE_CURRENT_LIST_DIR}/../../../share/openpfc/build-manifest.json" ABSOLUTE)
+endif()
+include("${CMAKE_CURRENT_LIST_DIR}/OpenPFCCompatibility.cmake")
+
+message(STATUS "Found OpenPFC @PROJECT_VERSION@ (manifest: ${OpenPFC_BUILD_MANIFEST})")

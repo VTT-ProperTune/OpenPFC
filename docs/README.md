@@ -67,6 +67,7 @@ Documentation is easier to maintain when each fact has one primary home:
 | 0.1 → 0.2 API replacement list | [`MIGRATION_0.1_to_0.2.md`](MIGRATION_0.1_to_0.2.md) |
 | Broad build/run/integration overview | [`quickstart.md`](quickstart.md) |
 | Exact CMake option defaults | [`reference/build_options.md`](reference/build_options.md) |
+| Installed SDK identity and compatibility | [Build manifest and consumer probe](reference/build_options.md#installed-sdk-build-manifest-and-compatibility) |
 | JSON/TOML configuration keys | [`reference/spectral_app_config_reference.md`](reference/spectral_app_config_reference.md) |
 | Application inventory | [`user_guide/applications.md`](user_guide/applications.md) |
 | Example inventory | [`reference/examples_catalog.md`](reference/examples_catalog.md) |

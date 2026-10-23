@@ -71,3 +71,99 @@ a dirty checkout is not reproduced by its HEAD alone. Source archives
 without Git metadata report `unknown`. Reconfigure after changing sources
 before building or installing; these variables describe the configure-time
 tree and do not detect edits made after configuration.
+
+## Installed SDK build manifest and compatibility
+
+Every configuration writes a schema-versioned JSON manifest to
+`<build>/share/openpfc/<configuration>/build-manifest.json`. Installation selects
+that configuration and installs it as `<prefix>/share/openpfc/build-manifest.json`.
+Use separate install prefixes for CPU, CUDA, HIP and build configurations.
+`OpenPFC_BUILD_MANIFEST` points to the file after `find_package`; it needs neither
+the original checkout nor its cache. The installed location remains valid when
+the prefix moves. `OpenPFC_BUILD_CONFIGURATIONS` lists provider configurations;
+in a multi-configuration build tree, select the corresponding manifest explicitly
+when checking another configuration.
+
+```cmake
+cmake_minimum_required(VERSION 3.21)
+project(my_model LANGUAGES C CXX)
+find_package(OpenPFC 0.5 CONFIG REQUIRED)
+file(READ "${OpenPFC_BUILD_MANIFEST}" sdk)
+string(JSON compiler_version GET "${sdk}" toolchains CXX CMAKE_CXX_COMPILER_VERSION)
+openpfc_check_compatibility(RESULT status REPORT report REQUIRED BACKEND CPU)
+message(STATUS "${report}")
+add_executable(my_model main.cpp)
+target_link_libraries(my_model PRIVATE OpenPFC::openpfc)
+```
+
+Provision a compatible installed SDK and its dependencies, then set `OpenPFC_DIR`
+or `CMAKE_PREFIX_PATH`. A missing SDK or dependency is a provisioning error;
+consumer configuration does not fetch or rebuild OpenPFC. Link public targets to
+obtain includes, C++20, backend/ABI definitions and transitive dependencies.
+The libstdc++ dual-ABI mode, and debug mode when enabled, are public requirements.
+Do not copy historical optimization, architecture or compiler-path settings into
+consumer flags.
+
+Schema 1 has these top-level fields. Unknown evidence is the string `unknown`
+(or a probe status beginning `unknown:`); disabled capabilities are JSON booleans.
+Empty flags/definitions mean no explicit setting. CMake list values use semicolon
+separators. `targets` preserves generator expressions verbatim, for their original
+language/configuration context; they are not JSON expressions to evaluate.
+
+| Field | Meaning |
+|---|---|
+| `version`, `source_revision`, `source_state`, `configuration` | Package/source identity and selected artifact configuration. |
+| `capabilities` | Effective CPU, MPI, CUDA/HIP runtime APIs, HeFFTe, FFTW, HDF5 and vendor spectral facilities. Device targets, rather than cached toolkit discoveries, determine GPU availability. |
+| `components` | Selected applications, examples, tests, profiling, NaN checks and other build components. |
+| `toolchains` | Exact compiler families/versions, launchers, target/host compiler hints, implicit link libraries and GPU architecture targets. Disabled GPU toolchains do not expose stale flags. |
+| `platform` | System, target triple, pointer size, toolchain hint, linker identity and compiler-resolved runtime candidates. Candidate paths/hashes are diagnostics, not proof that the dynamic loader used them. |
+| `flags` | Configuration-specific C/C++/CUDA/HIP and linker flags, including explicit numerical options such as `--fmad`, `--use_fast_math` or `-ffp-contract` when supplied. Absent overrides leave compiler defaults in force. Directory options retain their CMake expressions; target records describe individual libraries. |
+| `targets` | Actual SDK targets and their transitive imported targets, include/definition/link interfaces, resolved imported locations/SONAMEs where provided, target options, device-source options, standards, separable compilation and device-link policy. |
+| `mpi` | C and C++ wrappers, compile/link arguments, definitions, resolved libraries, file SHA256 identities/SONAMEs and GPU-awareness settings/probe evidence. MPI_CXX_VERSION is the MPI *standard* version; vendor versions come from `host_probe`. |
+| `stack` | Available package version/variant discovery hints for HeFFTe, FFTW, HDF5, CUDA and ROCm. These hints alone do not imply capability; check `capabilities` and actual `targets`. |
+| `host_probe`, `probe_status` | Compiled standard-library identity/version/ABI/debug mode, MPI header vendor/version and `MPI_Get_library_version` from an executable host probe. |
+
+Only selected build variables and dependency evidence are recorded; the manifest
+does not dump the environment or cache. Credential-like assignments and URL
+userinfo in diagnostic strings are redacted. Absolute paths are diagnostic and are
+never used by the checker to locate consumer compilers or dependencies. As with
+source provenance, reconfigure after changing the toolchain, flags or sources.
+
+`openpfc_check_compatibility` returns `compatible`, `incompatible` or `unverified`
+through `RESULT`, with concrete reasons in `REPORT`. `REQUIRED` rejects either
+non-compatible outcome. It compiles, links and runs a tiny program against the
+public installed target, checking standard-library ABI/debug mode, pointer size,
+MPI implementation, header/library version evidence and resolved MPI library file
+identities. Equal MPI version strings or SONAMEs alone never yield success.
+A file SHA256 identifies bytes; it is not an invented cross-vendor MPI ABI ID.
+Different library files, failed probes and unknown identities remain unverified.
+GCC and Clang can pass with the same demonstrated runtime/ABI evidence; exact
+compiler-version equality is not required. This bounded host probe is not a
+proof of every possible C++ ABI interaction or numerical equivalence.
+
+Optional arguments are `CONFIGURATION <name>`, `MANIFEST <path>`,
+`BACKEND CPU|CUDA|HIP`, and `GPU_ARCHITECTURE <target>`. An absent requested
+backend is incompatible. GPU requests remain unverified until the consumer runs
+its device probes; non-exact architecture matches also need runtime validation
+(for example, CUDA virtual ISA forward compatibility). The checker does not
+confuse these unknowns with an incompatible GPU. Cross-compiling skips execution
+and reports unverified; run the installed `openpfc_sdk_probe.cpp` with the target
+compiler/MPI/public target on the target machine to collect host evidence.
+
+For GPU consumers, extend the host probe with a translation unit using the
+selected CUDA/HIP compiler and the SDK's public runtime types, link the installed
+kernel target (`OpenPFC::openpfc_gpu_kernels` for CUDA or
+`OpenPFC::openpfc_hip_kernels` for HIP), then call an exported fill kernel and
+verify its output on each intended device architecture. This checks CUDA's host compiler and device-link/runtime compatibility, or HIP's
+host standard library and ROCm dependencies. Test spectral APIs separately if
+needed: a runtime/kernel SDK does not guarantee a HeFFTe GPU backend. Finally,
+run a two-rank device-buffer send/receive with the site's actual MPI launcher and
+transport, and validate the received values. Use the existing
+`verify_gpu_aware_mpi` program where available. Neither a version label nor
+`MPIX_Query_cuda_support` proves that UCX/Cray MPICH transports can move device
+buffers; `mpi.gpu_aware_runtime` therefore remains explicitly unknown.
+
+The relocatable consumer regression in
+[`tests/packaging/sdk_consumer`](../../tests/packaging/sdk_consumer) exercises the
+public contract, manifest queries and mismatch diagnostics. It is registered as
+`SDK_InstalledCompatibility` and runs through `scripts/build.sh` with tests enabled.
