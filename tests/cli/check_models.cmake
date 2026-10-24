@@ -279,11 +279,17 @@ endif()
 file(WRITE "${project}/factor.hpp" "#pragma once\ninline constexpr int factor = 6;\n")
 file(WRITE "${project}/input.json" "{\"value\":8}\n")
 execute_process(
-  COMMAND "${cli}" run "${project}/model.cpp" "${project}/input.json" --launcher=none ${common}
+  # execute_process pipelines multiple COMMANDs. Keep the first caller's
+  # stdout out of that pipe: the second caller never consumes stdin and may
+  # exit first, otherwise causing SIGPIPE in a successful concurrent request.
+  # The shell program is constant; every pathname remains a positional argv.
+  COMMAND /bin/sh -c "out=$1; shift; exec \"$@\" > \"$out\"" sh "${root}/concurrent-first.stdout"
+    "${cli}" run "${project}/model.cpp" "${project}/input.json" --launcher=none ${common}
   COMMAND "${cli}" run "${project}/model.cpp" "${project}/input.json" --launcher=none ${common}
   RESULTS_VARIABLE statuses OUTPUT_VARIABLE out ERROR_VARIABLE err)
 if(NOT statuses STREQUAL "0;0")
-  message(FATAL_ERROR "Concurrent requests failed: ${statuses}: ${out} ${err}")
+  file(READ "${root}/concurrent-first.stdout" first_output)
+  message(FATAL_ERROR "Concurrent requests failed: ${statuses}: ${first_output} ${out} ${err}")
 endif()
 # SDK metadata, header bytes and compiler options are part of the build identity.
 build_record(before)
