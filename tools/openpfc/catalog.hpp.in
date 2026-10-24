@@ -1,0 +1,6 @@
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+// SPDX-License-Identifier: AGPL-3.0-or-later
+#pragma once
+namespace openpfc_cli {
+inline constexpr char catalog_json[] = R"openpfc_catalog(@OPENPFC_CATALOG_JSON@)openpfc_catalog";
+}

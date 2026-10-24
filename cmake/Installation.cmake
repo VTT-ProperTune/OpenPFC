@@ -3,13 +3,10 @@
 #
 # Installation rules for headers, libraries, and binaries
 
-# Python CLI is usable from the build tree and relocatable after installation.
-configure_file(${CMAKE_SOURCE_DIR}/scripts/openpfc ${CMAKE_BINARY_DIR}/bin/openpfc
-    COPYONLY FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
-    GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+# The installed CLI is native and deliberately does not link the simulation runtime.
+add_subdirectory(tools/openpfc)
 file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/share/openpfc/version
     CONTENT "${PROJECT_VERSION}${OpenPFC_VERSION_SUFFIX}\n")
-install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/openpfc DESTINATION bin)
 install(FILES ${CMAKE_BINARY_DIR}/share/openpfc/version DESTINATION share/openpfc)
 
 # Keep source, build-tree and relocatable installed CLI presets identical.
@@ -25,38 +22,40 @@ foreach(_app aluminumNew cahn_hilliard thin_film surface_diffusion kawahara ehd_
         DESTINATION share/openpfc/cases/${_app})
 endforeach()
 
-if(OpenPFC_BUILD_TESTS AND TARGET tungsten)
-    find_package(Python3 3.8 COMPONENTS Interpreter QUIET)
-    if(Python3_Interpreter_FOUND)
-        add_test(NAME openpfc-cli-smoke
-            COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/tests/cli_smoke.py
-                --cli ${CMAKE_BINARY_DIR}/bin/openpfc
-                --binary $<TARGET_FILE:tungsten>)
-        set_tests_properties(openpfc-cli-smoke PROPERTIES TIMEOUT 120)
-        foreach(_pair "aluminum,aluminum_etd" "cahn_hilliard,cahn_hilliard"
-                      "thin_film,thin_film" "surface_diffusion,surface_diffusion"
-                      "kawahara,kawahara" "ehd_film,ehd_film"
-                      "gradient_elasticity,gradient_elasticity"
-                      "higher_order_pfc,higher_order_pfc")
-            string(REPLACE "," ";" _entry ${_pair})
-            list(GET _entry 0 _app)
-            list(GET _entry 1 _binary)
-            if(TARGET ${_binary})
-                add_test(NAME openpfc-cli-${_app}-smoke
-                    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/tests/cli_smoke.py
-                        --cli ${CMAKE_BINARY_DIR}/bin/openpfc
-                        --binary $<TARGET_FILE:${_binary}> --app ${_app})
-                set_tests_properties(openpfc-cli-${_app}-smoke PROPERTIES TIMEOUT 120)
-            endif()
-        endforeach()
-        if(TARGET cahn_hilliard AND OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
-           (OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 2))
+if(OpenPFC_BUILD_TESTS)
+    add_test(NAME NativeCLI_Cases
+      COMMAND ${CMAKE_COMMAND} "-Dcli=$<TARGET_FILE:openpfc_cli>" "-Dbuild=${CMAKE_BINARY_DIR}"
+        -P ${CMAKE_SOURCE_DIR}/tests/cli/check_cases.cmake)
+    set_tests_properties(NativeCLI_Cases PROPERTIES TIMEOUT 120)
+    openpfc_installed_consumer_coverage_arguments(_native_cli_coverage)
+    add_test(NAME NativeCLI_InstalledModels
+      COMMAND ${CMAKE_COMMAND} "-Dbuild=${CMAKE_BINARY_DIR}" "-Dsource=${CMAKE_SOURCE_DIR}"
+        "-Dcc=${CMAKE_C_COMPILER}" "-Dcxx=${CMAKE_CXX_COMPILER}" "-Dconfiguration=$<CONFIG>"
+        "${_native_cli_coverage}" -P ${CMAKE_SOURCE_DIR}/tests/cli/check_models.cmake)
+    set_tests_properties(NativeCLI_InstalledModels PROPERTIES TIMEOUT 600 RUN_SERIAL TRUE)
+    foreach(_pair "tungsten,tungsten" "aluminum,aluminum_etd" "cahn_hilliard,cahn_hilliard"
+                  "thin_film,thin_film" "surface_diffusion,surface_diffusion"
+                  "kawahara,kawahara" "ehd_film,ehd_film"
+                  "gradient_elasticity,gradient_elasticity" "higher_order_pfc,higher_order_pfc")
+        string(REPLACE "," ";" _entry ${_pair})
+        list(GET _entry 0 _app)
+        list(GET _entry 1 _binary)
+        if(TARGET ${_binary})
+            add_test(NAME openpfc-cli-${_app}-smoke
+              COMMAND ${CMAKE_COMMAND} "-Dcli=$<TARGET_FILE:openpfc_cli>" "-Dbinary=$<TARGET_FILE:${_binary}>"
+                "-Dapp=${_app}" "-Dbuild=${CMAKE_BINARY_DIR}"
+                -P ${CMAKE_SOURCE_DIR}/tests/cli/smoke_case.cmake)
+            set_tests_properties(openpfc-cli-${_app}-smoke PROPERTIES TIMEOUT 120)
+        endif()
+    endforeach()
+    if(TARGET cahn_hilliard AND OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
+       (OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 2))
+        find_package(Python3 3.8 COMPONENTS Interpreter QUIET)
+        if(Python3_Interpreter_FOUND)
             add_test(NAME cahn-hilliard-diagnostics-workflow
-                COMMAND ${Python3_EXECUTABLE}
-                    ${CMAKE_SOURCE_DIR}/scripts/tests/cahn_hilliard_diagnostics_smoke.py
+                COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/tests/cahn_hilliard_diagnostics_smoke.py
                     --binary $<TARGET_FILE:cahn_hilliard> --mpiexec ${MPIEXEC_EXECUTABLE})
-            set_tests_properties(cahn-hilliard-diagnostics-workflow PROPERTIES
-                TIMEOUT 180 PROCESSORS 2)
+            set_tests_properties(cahn-hilliard-diagnostics-workflow PROPERTIES TIMEOUT 180 PROCESSORS 2)
         endif()
     endif()
 endif()

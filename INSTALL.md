@@ -15,6 +15,13 @@ This document is the supported source build guide. On Tohtori, the current site 
 | GCC | 15.2.x with the current Tohtori Open MPI 5.0.10 module |
 | Open MPI | **5.0.10** (Slurm `srun` needs PMI/PMIx); **[OPENMPI_ROOT](#1-environment-modules-recommended-on-clusters)** overrides IDE toolchain paths if your site differs |
 | HeFFTe | 2.4.1 (separate install per CPU/CUDA/ROCm variant) |
+| Native CLI cryptography | OpenSSL Crypto 1.1 or newer, with development headers |
+
+The native `openpfc` CLI requires OpenSSL development files (`libssl-dev` on
+Debian/Ubuntu, `openssl-devel` on RPM-based systems). It uses Crypto for SHA-256
+and does not link the simulation runtime. Python remains optional tooling for
+scientific reference checks, documentation and build scripts; the installed CLI
+and generated model projects do not require it.
 
 One-page matrix (optional / QA tooling, doc check scripts): [`docs/dependency_matrix.md`](docs/reference/dependency_matrix.md).
 

@@ -30,7 +30,7 @@ MyST, and Breathe render the final site.
 | Goal | Start here | Continue with |
 |------|------------|---------------|
 | Verify a clone and dependency stack | [Start here](start_here_15_minutes.md) | [Quick start](quickstart.md) |
-| Create and run a tungsten case | [Command-line workflow](user_guide/cli.md) | [HPC operator guide](hpc/operator_guide.md) |
+| Compile a model or run a catalogued case | [Native command-line workflow](user_guide/cli.md) | [HPC operator guide](hpc/operator_guide.md) |
 | Understand what each application solves | Applications catalog (research) | [Applications overview](user_guide/applications.md) |
 | Run an existing application | [Run simulations](learning_paths.md#i-want-to-run-simulations) | [Applications](user_guide/applications.md), [configuration](user_guide/configuration.md) |
 | Add or change physics | [Extend the physics](learning_paths.md#i-want-to-extend-the-physics) | [Architecture](concepts/architecture.md), [extension guide](extending_openpfc/README.md) |

@@ -1,0 +1,154 @@
+{
+  "tungsten": {
+    "directory": "tungsten",
+    "binaries": {
+      "cpu": "tungsten",
+      "cuda": "tungsten_cuda",
+      "hip": "tungsten_hip"
+    },
+    "presets": [
+      [
+        "smoke",
+        null
+      ]
+    ],
+    "description": "Small PFC runtime check"
+  },
+  "aluminum": {
+    "directory": "aluminumNew",
+    "binaries": {
+      "cpu": "aluminum_etd",
+      "cuda": "aluminum_etd_cuda",
+      "hip": "aluminum_etd_hip"
+    },
+    "presets": [
+      [
+        "smoke",
+        "inputs_json/smoke.json"
+      ]
+    ],
+    "description": "Small aluminum ETD runtime check"
+  },
+  "cahn_hilliard": {
+    "directory": "cahn_hilliard",
+    "binaries": {
+      "cpu": "cahn_hilliard",
+      "hip": "cahn_hilliard_hip"
+    },
+    "presets": [
+      [
+        "spinodal",
+        "inputs_json/coarsening.json"
+      ],
+      [
+        "mode",
+        "inputs_json/fe_cr_spinodal.json"
+      ],
+      [
+        "early_stage",
+        "inputs_json/fe_cr_early_stage.json"
+      ],
+      [
+        "coarsening",
+        "inputs_json/fe_cr_coarsening.json"
+      ]
+    ],
+    "description": "Fe-Cr spinodal decomposition and ageing, or single-mode verification"
+  },
+  "thin_film": {
+    "directory": "thin_film",
+    "binaries": {
+      "cpu": "thin_film",
+      "hip": "thin_film_hip"
+    },
+    "presets": [
+      [
+        "leveling",
+        "inputs_json/leveling.json"
+      ],
+      [
+        "dewetting",
+        "inputs_json/dewetting.json"
+      ]
+    ],
+    "description": "Constant-mobility film leveling/dewetting"
+  },
+  "surface_diffusion": {
+    "directory": "surface_diffusion",
+    "binaries": {
+      "cpu": "surface_diffusion",
+      "hip": "surface_diffusion_hip"
+    },
+    "presets": [
+      [
+        "smoothing",
+        "inputs_json/smoothing.json"
+      ]
+    ],
+    "description": "Multimode surface smoothing"
+  },
+  "kawahara": {
+    "directory": "kawahara",
+    "binaries": {
+      "cpu": "kawahara",
+      "hip": "kawahara_hip"
+    },
+    "presets": [
+      [
+        "pulse",
+        "inputs_json/pulse.json"
+      ]
+    ],
+    "description": "Dispersive pulse on a periodic line"
+  },
+  "ehd_film": {
+    "directory": "ehd_film",
+    "binaries": {
+      "cpu": "ehd_film",
+      "hip": "ehd_film_hip"
+    },
+    "presets": [
+      [
+        "relaxation",
+        "inputs_json/relaxation.json"
+      ]
+    ],
+    "description": "Sixth-order film relaxation"
+  },
+  "gradient_elasticity": {
+    "directory": "gradient_elasticity",
+    "binaries": {
+      "cpu": "gradient_elasticity",
+      "hip": "gradient_elasticity_hip"
+    },
+    "presets": [
+      [
+        "inclusion",
+        "inputs_json/inclusion.json"
+      ],
+      [
+        "gaussian",
+        "inputs_json/gaussian.json"
+      ]
+    ],
+    "description": "Helmholtz-Navier eigenstrain inclusion"
+  },
+  "higher_order_pfc": {
+    "directory": "higher_order_pfc",
+    "binaries": {
+      "cpu": "higher_order_pfc",
+      "hip": "higher_order_pfc_hip"
+    },
+    "presets": [
+      [
+        "two_mode",
+        "inputs_json/two_mode_square.json"
+      ],
+      [
+        "single_mode",
+        "inputs_json/single_mode_triangular.json"
+      ]
+    ],
+    "description": "Eighth-order two-mode PFC correlation kernel"
+  }
+}

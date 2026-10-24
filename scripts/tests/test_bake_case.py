@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import shlex
+import shutil
 import subprocess
 import sys
 
@@ -21,6 +22,11 @@ def bundle(tmp_path):
     build = tmp_path / "build"
     (build / "share/openpfc").mkdir(parents=True)
     (build / "share/openpfc/version").write_text("0.2.0\n")
+    native_cli = os.environ.get("OPENPFC_TEST_CLI")
+    if not native_cli:
+        pytest.skip("run through scripts/build.sh with the native CLI built")
+    (build / "bin").mkdir()
+    shutil.copy2(native_cli, build / "bin/openpfc")
     app = build / "tungsten"
     app.write_bytes(b"#!/bin/sh\nexit 0\n")
     app.chmod(0o755)
@@ -125,6 +131,11 @@ def cray_bundle(tmp_path):
     build = tmp_path / "build"
     (build / "share/openpfc").mkdir(parents=True)
     (build / "share/openpfc/version").write_text("0.2.0\n")
+    native_cli = os.environ.get("OPENPFC_TEST_CLI")
+    if not native_cli:
+        pytest.skip("run through scripts/build.sh with the native CLI built")
+    (build / "bin").mkdir()
+    shutil.copy2(native_cli, build / "bin/openpfc")
     app = build / "tungsten"
     app.write_bytes(b"#!/bin/sh\nexit 0\n")
     app.chmod(0o755)

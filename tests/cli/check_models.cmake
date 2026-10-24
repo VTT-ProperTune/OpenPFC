@@ -1,0 +1,281 @@
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+function(check)
+  execute_process(COMMAND ${ARGV} RESULT_VARIABLE code OUTPUT_VARIABLE out ERROR_VARIABLE err)
+  if(NOT code EQUAL 0)
+    message(FATAL_ERROR "Native model check failed (${code}): ${out}\n${err}")
+  endif()
+endfunction()
+function(cli_call expected)
+  execute_process(COMMAND "${cli}" ${ARGN} RESULT_VARIABLE code OUTPUT_VARIABLE out ERROR_VARIABLE err)
+  if(NOT code EQUAL expected)
+    file(GLOB model_logs "${cache}/runs/*/attempts/*/stderr.log")
+    foreach(log IN LISTS model_logs)
+      file(READ "${log}" model_error LIMIT 16384)
+      if(NOT model_error STREQUAL "")
+        string(APPEND err "\n${log}:\n${model_error}")
+      endif()
+    endforeach()
+    message(FATAL_ERROR "Native model CLI returned ${code}, expected ${expected}: ${out}\n${err}")
+  endif()
+  set(output "${out}" PARENT_SCOPE)
+  set(error "${err}" PARENT_SCOPE)
+endfunction()
+function(build_record result)
+  file(GLOB entries "${cache}/builds/openpfc-build-*")
+  list(LENGTH entries count)
+  set(${result} ${count} PARENT_SCOPE)
+endfunction()
+string(RANDOM LENGTH 12 label)
+set(root "${build}/cli-models-${label}")
+check("${CMAKE_COMMAND}" --install "${build}" --config "${configuration}" --prefix "${root}/install")
+file(RENAME "${root}/install" "${root}/SDK relocated ü")
+set(sdk "${root}/SDK relocated ü")
+set(cli "${sdk}/bin/openpfc")
+set(cache "${root}/cache with spaces")
+set(ENV{OPENPFC_CACHE} "${cache}")
+if(link_coverage)
+  set(ENV{LDFLAGS} "$ENV{LDFLAGS} --coverage")
+endif()
+# Exclude every Python executable. All CLI/project/model checks below run under
+# this restricted PATH; CMake, compiler, binutils and MPI stay pre-provisioned.
+# Open MPI 4 validates its ssh/rsh agent even for a local two-rank launch.
+file(MAKE_DIRECTORY "${root}/native-tools")
+foreach(program cmake ninja make gcc g++ cc c++ as ld ar ranlib strip pkg-config mpicc mpicxx mpiexec mpirun ssh rsh uname)
+  unset(found CACHE)
+  find_program(found "${program}")
+  if(found)
+    file(CREATE_LINK "${found}" "${root}/native-tools/${program}" SYMBOLIC)
+  endif()
+endforeach()
+set(ENV{PATH} "${root}/native-tools")
+foreach(rank OMPI_COMM_WORLD_RANK PMI_RANK PMIX_RANK SLURM_PROCID SLURM_JOB_ID)
+  unset(ENV{${rank}})
+endforeach()
+cli_call(0 --version)
+cli_call(0 init "${root}/installed case")
+cli_call(0 run "${root}/installed case" --launcher=none --executable=/bin/true)
+# A complete model owns its JSON interpretation and writes only to results/.
+set(project "${root}/project with spaces ü ' $(touch should-not-exist)")
+file(MAKE_DIRECTORY "${project}")
+file(WRITE "${project}/factor.hpp" "#pragma once\ninline constexpr int factor = 3;\n")
+file(WRITE "${project}/model.cpp" [=[
+#include "factor.hpp"
+#include <openpfc/kernel/utils/logging.hpp>
+#include <filesystem>
+#include <fstream>
+#include <nlohmann/json.hpp>
+#include <iostream>
+int main(int argc, char **argv) {
+  if (argc < 2) return 41;
+  pfc::log(pfc::k_null_logger, pfc::LogLevel::Debug, "native SDK model");
+  nlohmann::json input; std::ifstream(argv[1]) >> input;
+  std::filesystem::create_directories("results");
+  std::ofstream("results/answer.txt") << input.at("value").get<int>() * factor;
+  std::cout << "native model stdout\n";
+  std::cerr << "native model stderr\n";
+  return argc > 2 ? 17 : 0;
+}
+]=])
+file(WRITE "${project}/input.json" "{\"value\":7}\n")
+set(common "--sdk=${sdk}" "--cc=${cc}" "--cxx=${cxx}")
+cli_call(0 compile "${project}/model.cpp" ${common})
+if(NOT output MATCHES "Built:")
+  message(FATAL_ERROR "First compile did not build: ${output}")
+endif()
+build_record(count)
+if(NOT count EQUAL 1)
+  message(FATAL_ERROR "Expected one cached build")
+endif()
+file(GLOB builds "${cache}/builds/openpfc-build-*")
+list(GET builds 0 first_build)
+file(SHA256 "${first_build}/model" binary_before)
+file(READ "${first_build}/build-manifest.json" build_metadata)
+string(JSON recorded_binary GET "${build_metadata}" binary_sha256)
+if(NOT binary_before STREQUAL recorded_binary)
+  message(FATAL_ERROR "Native artifact digest differs from CMake SHA-256")
+endif()
+cli_call(0 compile "${project}/model.cpp" ${common})
+if(NOT output MATCHES "Cache hit:")
+  message(FATAL_ERROR "Unchanged source was not a cache hit: ${output}")
+endif()
+file(SHA256 "${first_build}/model" binary_after)
+if(NOT binary_before STREQUAL binary_after)
+  message(FATAL_ERROR "Cache hit changed the model artifact")
+endif()
+cli_call(0 run "${project}/model.cpp" "${project}/input.json" --launcher=none ${common})
+file(GLOB runs "${cache}/runs/openpfc-run-*")
+list(GET runs 0 first_run)
+file(GLOB attempts "${first_run}/attempts/*")
+list(GET attempts 0 first_attempt)
+file(READ "${first_attempt}/results/answer.txt" answer)
+if(NOT answer STREQUAL "21")
+  message(FATAL_ERROR "Unexpected model output: ${answer}")
+endif()
+foreach(stream stdout stderr)
+  file(READ "${first_attempt}/${stream}.log" log)
+  if(NOT log MATCHES "native model ${stream}")
+    message(FATAL_ERROR "Model ${stream} was not preserved")
+  endif()
+endforeach()
+cli_call(0 run "${project}/model.cpp" "${project}/input.json" --launcher=none ${common})
+file(GLOB attempts "${first_run}/attempts/*")
+list(LENGTH attempts count)
+if(NOT count EQUAL 2)
+  message(FATAL_ERROR "Repeated requests overwrote an attempt")
+endif()
+file(WRITE "${project}/input.json" "{\"value\":8}\n")
+cli_call(0 run "${project}/model.cpp" "${project}/input.json" --launcher=none ${common})
+build_record(count)
+file(GLOB runs "${cache}/runs/openpfc-run-*")
+list(LENGTH runs run_count)
+if(NOT count EQUAL 1 OR NOT run_count EQUAL 2)
+  message(FATAL_ERROR "Input-only change recompiled source or reused run identity")
+endif()
+file(WRITE "${project}/factor.hpp" "#pragma once\ninline constexpr int factor = 4;\n")
+cli_call(0 compile "${project}/model.cpp" ${common})
+build_record(count)
+if(NOT count EQUAL 2)
+  message(FATAL_ERROR "Local header change failed to invalidate the build")
+endif()
+cli_call(0 compile "${project}/model.cpp" --define=MODEL_OPTION=1 ${common})
+build_record(count)
+if(NOT count EQUAL 3)
+  message(FATAL_ERROR "Build options failed to invalidate the build")
+endif()
+cli_call(17 run "${project}/model.cpp" "${project}/input.json" --launcher=none --arg=fail ${common})
+if(NOT error MATCHES "logs and partial output preserved")
+  message(FATAL_ERROR "Failure did not preserve its diagnostic location")
+endif()
+file(READ "${first_attempt}/status.json" saved_status)
+string(JSON active_status SET "${saved_status}" state "\"running\"")
+file(WRITE "${first_attempt}/status.json" "${active_status}\n")
+cli_call(2 export "${first_run}" "${root}/active export")
+if(NOT error MATCHES "active")
+  message(FATAL_ERROR "Active attempt was not rejected on export")
+endif()
+file(WRITE "${first_attempt}/status.json" "${saved_status}")
+cli_call(0 export "${first_run}" "${root}/durable record")
+cli_call(2 export "${first_run}" "${root}/durable record")
+cli_call(0 export "${first_build}" "${root}/editable CMake project")
+# A copied project is reusable through the documented CMake public target.
+check("${CMAKE_COMMAND}" -S "${root}/editable CMake project" -B "${root}/fresh consumer"
+  "-DOpenPFC_DIR=${sdk}/lib/cmake/OpenPFC" "-DCMAKE_C_COMPILER=${cc}" "-DCMAKE_CXX_COMPILER=${cxx}"
+  "-DCMAKE_BUILD_TYPE=${configuration}" -G Ninja)
+check("${CMAKE_COMMAND}" --build "${root}/fresh consumer" --parallel 2)
+# Cache poisoning cannot turn a stale or substituted binary into a cache hit.
+file(CHMOD "${first_build}/model" PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
+file(APPEND "${first_build}/model" "tampered")
+file(WRITE "${project}/factor.hpp" "#pragma once\ninline constexpr int factor = 3;\n")
+cli_call(2 compile "${project}/model.cpp" ${common})
+if(NOT error MATCHES "fingerprint mismatch")
+  message(FATAL_ERROR "Tampered cached executable was accepted")
+endif()
+# Diagnose missing SDK/backend/source/input dependencies without dependency fetching.
+cli_call(2 compile "${project}/model.cpp" "--sdk=${root}/missing SDK")
+cli_call(2 compile "${project}/model.cpp" --backend=hip ${common})
+file(WRITE "${project}/input.json" "{\"value\":8,\"file\":\"mutable.bin\"}\n")
+file(WRITE "${project}/mutable.bin" "immutable data")
+cli_call(2 run "${project}/model.cpp" "${project}/input.json" --launcher=none ${common})
+if(NOT error MATCHES "undeclared file")
+  message(FATAL_ERROR "Unregistered mutable input was accepted")
+endif()
+# Use a new header value to avoid the deliberately damaged build above.
+file(WRITE "${project}/factor.hpp" "#pragma once\ninline constexpr int factor = 5;\n")
+cli_call(0 run "${project}/model.cpp" "${project}/input.json" --input-file=mutable.bin --launcher=none ${common})
+file(WRITE "${project}/input.json" "{\"value\":8,\"file\":\"../mutable.bin\"}\n")
+cli_call(2 run "${project}/model.cpp" "${project}/input.json" --launcher=none ${common})
+file(WRITE "${project}/broken.cpp" "this is deliberately invalid C++\n")
+cli_call(1 compile "${project}/broken.cpp" ${common})
+if(NOT error MATCHES "Logs:")
+  message(FATAL_ERROR "Failed build logs were not retained")
+endif()
+file(CREATE_LINK "${project}/factor.hpp" "${project}/alias.hpp" SYMBOLIC)
+cli_call(2 compile "${project}/model.cpp" --file=alias.hpp ${common})
+# The CLI itself must have no MPI, CUDA or HIP runtime dependency.
+execute_process(COMMAND /usr/bin/readelf -d "${cli}" OUTPUT_VARIABLE dynamic RESULT_VARIABLE status)
+if(status EQUAL 0 AND dynamic MATCHES "NEEDED[^\n]*(libopenpfc|libmpi|libcudart|libamdhip64)")
+  message(FATAL_ERROR "Native project CLI links simulation runtime libraries: ${dynamic}")
+endif()
+
+# Build publication and run-attempt allocation are safe under concurrent callers.
+file(WRITE "${project}/factor.hpp" "#pragma once\ninline constexpr int factor = 6;\n")
+file(WRITE "${project}/input.json" "{\"value\":8}\n")
+execute_process(
+  COMMAND "${cli}" run "${project}/model.cpp" "${project}/input.json" --launcher=none ${common}
+  COMMAND "${cli}" run "${project}/model.cpp" "${project}/input.json" --launcher=none ${common}
+  RESULTS_VARIABLE statuses OUTPUT_VARIABLE out ERROR_VARIABLE err)
+if(NOT statuses STREQUAL "0;0")
+  message(FATAL_ERROR "Concurrent requests failed: ${statuses}: ${out} ${err}")
+endif()
+# SDK metadata, header bytes and compiler options are part of the build identity.
+build_record(before)
+file(READ "${sdk}/share/openpfc/build-manifest.json" original_sdk)
+string(JSON changed SET "${original_sdk}" test_sdk_revision 1)
+file(WRITE "${sdk}/share/openpfc/build-manifest.json" "${changed}\n")
+cli_call(0 compile "${project}/model.cpp" ${common})
+build_record(after)
+math(EXPR expected "${before} + 1")
+if(NOT after EQUAL expected)
+  message(FATAL_ERROR "SDK manifest change did not invalidate the build")
+endif()
+file(APPEND "${sdk}/include/openpfc/kernel/utils/logging.hpp" "\n// SDK header revision fixture\n")
+cli_call(0 compile "${project}/model.cpp" ${common})
+build_record(after)
+math(EXPR expected "${expected} + 1")
+if(NOT after EQUAL expected)
+  message(FATAL_ERROR "SDK header change did not invalidate the build")
+endif()
+cli_call(0 compile "${project}/model.cpp" --build-type=Debug ${common})
+build_record(after)
+math(EXPR expected "${expected} + 1")
+if(NOT after EQUAL expected)
+  message(FATAL_ERROR "Compiler configuration change did not invalidate the build")
+endif()
+
+# A declared project root supports ordinary src/ and include/ layouts and
+# additional C++ translation units without exposing mutable originals to CMake.
+file(MAKE_DIRECTORY "${project}/src" "${project}/include")
+file(WRITE "${project}/include/value.hpp" "#pragma once\nint supplied_value();\n")
+file(WRITE "${project}/src/value.cpp" "#include \"../include/value.hpp\"\nint supplied_value() { return 7; }\n")
+file(WRITE "${project}/src/main.cpp" "#include \"../include/value.hpp\"\nint main() { return supplied_value() == 7 ? 0 : 1; }\n")
+cli_call(0 compile "${project}/src/main.cpp" "--source-root=${project}" --file=src/../src/value.cpp ${common})
+file(WRITE "${project}/input.json" "{\"value\":8}\n")
+cli_call(0 run "${project}/src/main.cpp" "${project}/input.json" "--source-root=${project}" --file=src/value.cpp --launcher=none ${common})
+
+# One source CLI process owns the attempt and launches a real two-rank MPI model.
+file(WRITE "${project}/mpi.cpp" [=[
+#include <mpi.h>
+#include <fstream>
+int main(int argc, char **argv) {
+  MPI_Init(&argc, &argv);
+  int rank = 0, size = 0, total = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Reduce(&rank, &total, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+  if (rank == 0) std::ofstream("results/mpi.txt") << size << ":" << total;
+  MPI_Finalize();
+  return size == 2 ? 0 : 3;
+}
+]=])
+cli_call(0 run "${project}/mpi.cpp" "${project}/input.json" --ranks=2 --launcher=mpirun ${common})
+file(GLOB_RECURSE mpi_results "${cache}/runs/*/attempts/*/results/mpi.txt")
+list(LENGTH mpi_results count)
+if(NOT count EQUAL 1)
+  message(FATAL_ERROR "Two-rank MPI output was not preserved")
+endif()
+list(GET mpi_results 0 result)
+file(READ "${result}" sum)
+if(NOT sum STREQUAL "2:1")
+  message(FATAL_ERROR "Incorrect MPI rank count or reduction: ${sum}")
+endif()
+
+# Cache artifacts are executable code: a group-writable cache is not trusted.
+file(MAKE_DIRECTORY "${root}/shared cache")
+file(CHMOD "${root}/shared cache" PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_WRITE GROUP_EXECUTE)
+set(ENV{OPENPFC_CACHE} "${root}/shared cache")
+cli_call(2 compile "${project}/mpi.cpp" ${common})
+if(NOT error MATCHES "writable by other users")
+  message(FATAL_ERROR "A shared writable executable cache was accepted")
+endif()
+set(ENV{OPENPFC_CACHE} "${cache}")
