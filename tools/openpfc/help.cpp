@@ -10,6 +10,7 @@ void print_help(const std::string &command) {
                  "  openpfc --version\n"
                  "  openpfc doctor [--sdk PREFIX]\n"
                  "  openpfc apps\n"
+                 "  openpfc init DIRECTORY --model=diffusion\n"
                  "  openpfc init CASE [--app NAME] [--preset NAME]\n"
                  "  openpfc compile MODEL.cpp [--sdk PREFIX]\n"
                  "  openpfc run MODEL.cpp INPUT.json [--sdk PREFIX]\n"
@@ -49,10 +50,18 @@ void print_help(const std::string &command) {
                  "This catalog does not check which binaries are installed.\n";
   } else if (command == "init") {
     std::cout
-        << "Usage: openpfc init CASE [--app NAME] [--preset NAME]\n\n"
+        << "Usage: openpfc init DIRECTORY --model=diffusion\n"
+           "       openpfc init CASE [--app NAME] [--preset NAME]\n\n"
+           "--model=diffusion creates editable model.cpp, input.json and "
+           "README.md.\n"
+           "Then run openpfc doctor, compile model.cpp, and run model.cpp "
+           "input.json.\n"
+           "The starter uses periodic finite-difference diffusion on CPU.\n\n"
            "Create a new catalogued app case with input.json and openpfc.json.\n"
            "Default app: tungsten. List apps and presets with openpfc apps.\n"
-           "The destination must not exist. No SDK or compiler is needed.\n";
+           "The destination must not exist. No SDK or compiler is needed to "
+           "initialize.\n"
+           "--model cannot be combined with --app or --preset.\n";
   } else if (command == "compile" || command == "run") {
     if (command == "compile") {
       std::cout << "Usage: openpfc compile MODEL.cpp [options]\n"

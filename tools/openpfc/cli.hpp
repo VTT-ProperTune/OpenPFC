@@ -77,6 +77,7 @@ struct App {
 };
 const std::map<std::string, App> &catalog();
 int catalog_command(const Arguments &args);
+int init_model(const Arguments &args);
 int compile_case(const Arguments &args);
 int run_case(const Arguments &args);
 struct Build {

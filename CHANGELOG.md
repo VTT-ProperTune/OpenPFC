@@ -7,6 +7,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Add `openpfc init DIR --model=diffusion` to create an editable C++20
+  finite-difference model, input and usage guide. The starter runs with an
+  installed CPU SDK on one or multiple MPI ranks and writes field CSVs and
+  global diagnostics to each attempt's results directory.
+
 - Add `openpfc doctor` to check an installed SDK against the active CPU
   compiler/MPI environment, report compatibility and preserve probe diagnostics.
 
