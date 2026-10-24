@@ -8,6 +8,7 @@ void print_help(const std::string &command) {
   if (command.empty() || command == "help") {
     std::cout << "OpenPFC native C++ CLI\n\n"
                  "  openpfc --version\n"
+                 "  openpfc doctor [--sdk PREFIX]\n"
                  "  openpfc apps\n"
                  "  openpfc init CASE [--app NAME] [--preset NAME]\n"
                  "  openpfc compile MODEL.cpp [--sdk PREFIX]\n"
@@ -20,6 +21,28 @@ void print_help(const std::string &command) {
                  "environment.\n"
                  "Cache: $OPENPFC_CACHE, then $XDG_CACHE_HOME/openpfc or "
                  "~/.cache/openpfc.\n";
+  } else if (command == "doctor") {
+    std::cout
+        << "Usage: openpfc doctor [--sdk PREFIX] [options]\n\n"
+           "Check the CPU model build environment using the installed SDK "
+           "compatibility checker.\n"
+           "This compiles, links and runs a small host probe; it never fetches or "
+           "builds the SDK.\n"
+           "Reports the resolved SDK, compiler, MPI launcher and recorded SDK "
+           "backends.\n"
+           "GPU hardware and MPI launches are not tested. Run once outside "
+           "mpirun/srun,\n"
+           "in an allocation or permitted build environment on LUMI.\n\n"
+           "Options: --cc COMPILER --cxx COMPILER --toolchain FILE\n"
+           "         --generator NAME --build-type TYPE --backend cpu --profile "
+           "local-cpu\n"
+           "Defaults: Ninja, Release, CPU. Load matching compiler/MPI modules "
+           "first.\n"
+           "SDK discovery: --sdk, OpenPFC_DIR, SDK beside CLI, then "
+           "CMAKE_PREFIX_PATH.\n"
+           "Exit status: 0 compatible; 1 failed check; 2 invalid usage or execution "
+           "context.\n"
+           "Probe files and logs remain in the printed diagnostics directory.\n";
   } else if (command == "apps") {
     std::cout << "Usage: openpfc apps\n\n"
                  "List shipped applications, presets and build backends.\n"

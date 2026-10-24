@@ -16,6 +16,33 @@ Use `openpfc --help` for the command list, then `openpfc compile --help`
 or `openpfc help run` for command-specific options and defaults. Help works
 without a configured SDK, compiler, MPI launcher or Python interpreter.
 
+## Check the installed environment
+
+After loading the compiler and MPI modules for an installed SDK, run:
+
+```bash
+openpfc doctor --sdk /path/to/openpfc-sdk
+```
+
+`doctor` uses the same CMake discovery and SDK compatibility checker as source
+builds. It compiles, links and runs a small host probe, then reports the resolved
+SDK, C++ compiler, MPI launcher, recorded SDK backends and compatibility result.
+It leaves its probe files and logs in the printed diagnostics directory under
+the cache. A compatible CPU result returns zero; a failed check returns one
+with recovery instructions. Invalid usage or a disallowed execution context
+returns two. It never installs or rebuilds dependencies.
+
+SDK discovery matches `compile`: `--sdk`, `OpenPFC_DIR`, an SDK beside the
+installed CLI, then CMake discovery through `CMAKE_PREFIX_PATH`. Options such as
+`--cc`, `--cxx`, `--toolchain`, `--generator` and `--build-type` select the
+environment to check; pass the same options when compiling the model.
+
+Run `doctor` once outside an MPI launch. On LUMI use an allocation or permitted
+build environment, since the probe invokes a compiler. A successful check
+verifies the host build contract; it does not launch MPI ranks or certify GPU
+execution. An SDK's recorded CUDA/HIP capabilities do not qualify those source
+profiles. Use `--launcher=none` for a one-rank run when no MPI launcher is present.
+
 ## Compile a user model
 
 Load the pre-provisioned compiler/MPI environment and installed SDK, then run:

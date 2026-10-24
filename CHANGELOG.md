@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Add `openpfc doctor` to check an installed SDK against the active CPU
+  compiler/MPI environment, report compatibility and preserve probe diagnostics.
+
 - Add command-specific CLI help through `openpfc COMMAND --help` and
   `openpfc help COMMAND`, including SDK discovery, source/case options and
   run-record locations.
