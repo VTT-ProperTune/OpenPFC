@@ -126,7 +126,9 @@ std::array<T, 3> read_triple(const json &d, const char *key, const char *what,
   std::array<T, 3> out{};
   for (std::size_t a = 0; a < 3; ++a) {
     const json &e = v[a];
-    if constexpr (std::is_integral_v<T>) {
+    if constexpr (std::is_same_v<T, bool>) {
+      if (!e.is_boolean()) fail(v.dump());
+    } else if constexpr (std::is_integral_v<T>) {
       if (!e.is_number_integer()) fail(v.dump());
     } else {
       if (!e.is_number()) fail(v.dump());
@@ -151,9 +153,10 @@ std::array<T, 3> read_triple(const json &d, const char *key, const char *what,
  * - `size`: grid points per axis, positive integers.
  * - `lower`, `upper`: limits of the box, finite, `upper > lower` per axis.
  *
- * Every axis is periodic, so the spacing is `(upper - lower) / size` and
- * `upper` is the periodic image of `lower`, not a stored point (see
- * `domain::from_bounds`). Index `i` sits at `lower + i * spacing`.
+ * `periodic` is an optional array of three booleans (default: all true).
+ * Periodic axes use `(upper - lower) / size`; bounded axes include both
+ * endpoints and use `(upper - lower) / (size - 1)`, requiring size >= 2.
+ * This metadata does not give Fourier operators a non-periodic basis.
  *
  * @param j The input root (with a `domain` object) or the domain object.
  * @throws std::invalid_argument on a missing or invalid key, and on the
@@ -182,9 +185,18 @@ template <> [[nodiscard]] inline Domain from_json<Domain>(const json &j) {
           "\"lower\": [0.0, 0.0, 0.0], \"upper\": [64.0, 64.0, 64.0]"));
     }
   }
+  const auto periodic = d.contains("periodic")
+      ? detail::read_triple<bool>(d, "periodic", "per-axis periodicity",
+            "three booleans", "[true, true, false]", [](bool) { return true; })
+      : pfc::Bool3{true, true, true};
+  for (int a = 0; a < 3; ++a) {
+    if (!periodic[a] && size[a] < 2) {
+      throw std::invalid_argument("domain.size: non-periodic axes require at least two grid points");
+    }
+  }
   return pfc::domain::from_bounds({size[0], size[1], size[2]},
                                   {lower[0], lower[1], lower[2]},
-                                  {upper[0], upper[1], upper[2]});
+                                  {upper[0], upper[1], upper[2]}, periodic);
 }
 
 template <> [[nodiscard]] inline Time from_json<Time>(const json &j) {

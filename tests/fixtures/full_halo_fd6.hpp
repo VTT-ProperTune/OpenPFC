@@ -6,6 +6,7 @@
 #include <array>
 #include <catch2/catch_test_macros.hpp>
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/frontend/ui/from_json_world_time.hpp>
 #include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 
@@ -84,6 +85,14 @@ void run(const pfc::Bool3 &periodic, bool slab, Producer producer) {
   const pfc::Int3 extent =
       slab ? pfc::Int3{7 * ranks + 1, 11, 1} : pfc::Int3{19, 15, 11};
   auto domain = pfc::domain::with_spacing(extent, {0.13, 0.27, 0.41}, periodic);
+  if (!slab) {
+    pfc::Real3 upper{};
+    for (int axis = 0; axis < 3; ++axis)
+      upper[axis] = domain.spacing[axis] * (extent[axis] - (periodic[axis] ? 0 : 1));
+    const nlohmann::json config{{"domain", {{"size", extent}, {"lower", {0,0,0}},
+                                            {"upper", upper}, {"periodic", periodic}}}};
+    domain = pfc::ui::from_json<pfc::Domain>(config);
+  }
   auto decomp = pfc::decomposition::create(domain, grid);
   pfc::data::Field<double, Space> u(
       domain, pfc::decomposition::local_box(decomp, rank), width);

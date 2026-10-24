@@ -234,6 +234,7 @@ publish_field_bundle(const std::filesystem::path &dir,
   meta.domain.global_dimensions = {g[0], g[1], g[2]};
   meta.domain.physical_origin = {f0.origin()[0], f0.origin()[1], f0.origin()[2]};
   meta.domain.grid_spacing = {f0.spacing()[0], f0.spacing()[1], f0.spacing()[2]};
+  meta.domain.periodic = f0.domain().periodic;
   meta.decomposition = DecompositionLayout{.mpi_size = size,
                                            .local_size = {n[0], n[1], n[2]},
                                            .local_offset = {lo[0], lo[1], lo[2]}};
@@ -242,7 +243,7 @@ publish_field_bundle(const std::filesystem::path &dir,
   for (const auto &[name, f] : fields) {
     if (f == nullptr || f->global_size() != g || f->local_size() != n ||
         f->lower_global() != lo || f->origin() != f0.origin() ||
-        f->spacing() != f0.spacing()) {
+        f->spacing() != f0.spacing() || f->domain().periodic != f0.domain().periodic) {
       throw std::invalid_argument(
           "publish_field_bundle: fields differ in grid or layout: " + name);
     }
@@ -291,6 +292,9 @@ load_field_bundle(const std::filesystem::path &dir,
   }
   for (const auto &[name, f] : fields) {
     const auto g = f->global_size();
+    if (meta.domain.periodic != f->domain().periodic) {
+      throw std::invalid_argument("load_field_bundle: bundle periodicity differs from field " + name);
+    }
     for (int a = 0; a < 3; ++a) {
       if (meta.domain.global_dimensions[a] != g[a] ||
           meta.domain.grid_spacing[a] != f->spacing()[a] ||

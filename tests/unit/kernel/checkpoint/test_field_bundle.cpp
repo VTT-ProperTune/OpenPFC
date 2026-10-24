@@ -428,3 +428,62 @@ TEST_CASE("padded HIP field bundle restarts on another decomposition",
   device_redecomposition<pfc::HIPSpace>();
 }
 #endif
+
+TEST_CASE("field bundle rejects periodicity mismatch before destination writes",
+          "[checkpoint][field_bundle][MPI]") {
+  auto source_grid = grid();
+  source_grid.periodic = {true, true, false};
+  const auto local_box = x_slab(MPI_COMM_WORLD);
+  Field first_source(source_grid, local_box);
+  Field second_source(source_grid, local_box);
+  first_source.with_host_view([](double *data, std::size_t size) {
+    std::fill(data, data + size, 3.0);
+  });
+  second_source.with_host_view([](double *data, std::size_t size) {
+    std::fill(data, data + size, 5.0);
+  });
+  auto destination_grid = source_grid;
+  destination_grid.periodic = {true, true, true};
+  // The first destination is compatible; the second must reject the complete
+  // bundle before even the first field has been overwritten, on every rank.
+  Field first_destination(source_grid, local_box);
+  Field second_destination(destination_grid, local_box);
+  auto poison = [](Field &field) {
+    field.with_host_view([](double *data, std::size_t size) {
+      std::fill(data, data + size, -7.0);
+    });
+  };
+  auto unchanged = [](Field &field) {
+    bool intact = false;
+    field.with_host_view([&](double *data, std::size_t size) {
+      intact = std::all_of(data, data + size, [](double value) { return value == -7.0; });
+    });
+    return intact;
+  };
+  poison(first_destination);
+  poison(second_destination);
+  BundleDir tmp("periodicity");
+  const auto dir = tmp.root / "bundle";
+  FieldBundleState state;
+  const auto saved = publish_field_bundle(
+      dir, std::vector<NamedField<>>{{"u", &first_source}, {"v", &second_source}},
+      state, MPI_COMM_WORLD);
+  REQUIRE(all_ranks(saved.ok, MPI_COMM_WORLD));
+  REQUIRE_THROWS_AS(load_field_bundle(
+      dir, std::vector<NamedField<>>{{"u", &first_destination}, {"v", &second_destination}},
+      MPI_COMM_WORLD), std::invalid_argument);
+  REQUIRE(all_ranks(unchanged(first_destination) && unchanged(second_destination), MPI_COMM_WORLD));
+  Field compatible_destination(source_grid, local_box);
+  const auto restored = load_field_bundle(
+      dir, std::vector<NamedField<>>{{"u", &first_destination}, {"v", &compatible_destination}},
+      MPI_COMM_WORLD);
+  REQUIRE(restored.domain.periodic == source_grid.periodic);
+  bool first_ok = false, second_ok = false;
+  first_destination.with_host_view([&](double *data, std::size_t size) {
+    first_ok = std::all_of(data, data + size, [](double value) { return value == 3.0; });
+  });
+  compatible_destination.with_host_view([&](double *data, std::size_t size) {
+    second_ok = std::all_of(data, data + size, [](double value) { return value == 5.0; });
+  });
+  REQUIRE(all_ranks(first_ok && second_ok, MPI_COMM_WORLD));
+}

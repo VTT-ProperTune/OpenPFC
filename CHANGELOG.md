@@ -355,6 +355,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   copies records to durable storage. Existing catalogued case commands remain
   available (#635). Building the CLI requires OpenSSL Crypto 1.1 or newer.
 
+- JSON/TOML domains accept per-axis `periodic` booleans; checkpoint bundles
+  preserve and validate periodicity on restart (#136).
+
 - Installed SDKs export a relocatable JSON build manifest with compiler, MPI
   library/ABI evidence and effective CUDA/HIP configuration. CMake consumers can
   query `OpenPFC_BUILD_MANIFEST` and run `openpfc_check_compatibility` (#634).

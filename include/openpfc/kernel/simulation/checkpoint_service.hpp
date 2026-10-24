@@ -80,6 +80,7 @@ domain_params_from(const pfc::Domain &d) {
       .global_dimensions = domain_size_array(d),
       .physical_origin = {d.origin[0], d.origin[1], d.origin[2]},
       .grid_spacing = {d.spacing[0], d.spacing[1], d.spacing[2]},
+      .periodic = d.periodic,
   };
 }
 
@@ -99,6 +100,9 @@ inline void require_checkpoint_identity(const checkpoint::CheckpointMetadata &fi
       file.domain.physical_origin != want.domain.physical_origin) {
     throw std::invalid_argument(
         "checkpoint identity mismatch: grid (origin/spacing)");
+  }
+  if (file.domain.periodic != want.domain.periodic) {
+    throw std::invalid_argument("checkpoint identity mismatch: domain periodicity");
   }
   if (!want.method_identity.empty() &&
       file.method_identity != want.method_identity) {

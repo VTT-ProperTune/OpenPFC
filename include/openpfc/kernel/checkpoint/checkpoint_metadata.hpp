@@ -42,6 +42,7 @@ struct DomainParams {
   std::array<int, 3> global_dimensions{};
   std::array<double, 3> physical_origin{};
   std::array<double, 3> grid_spacing{};
+  std::array<bool, 3> periodic{true, true, true};
 };
 
 /**
@@ -91,6 +92,7 @@ struct CheckpointMetadata {
       {"global_dimensions", meta.domain.global_dimensions},
       {"physical_origin", meta.domain.physical_origin},
       {"grid_spacing", meta.domain.grid_spacing},
+      {"periodic", meta.domain.periodic},
   };
   if (meta.decomposition.has_value()) {
     const auto &d = *meta.decomposition;
@@ -149,6 +151,15 @@ struct CheckpointMetadata {
   meta.domain.physical_origin =
       dom.at("physical_origin").get<std::array<double, 3>>();
   meta.domain.grid_spacing = dom.at("grid_spacing").get<std::array<double, 3>>();
+
+  if (dom.contains("periodic")) {
+    const auto &flags = dom.at("periodic");
+    if (!flags.is_array() || flags.size() != 3 ||
+        !flags[0].is_boolean() || !flags[1].is_boolean() || !flags[2].is_boolean()) {
+      throw std::invalid_argument("CheckpointMetadata: domain.periodic must be three booleans");
+    }
+    meta.domain.periodic = flags.get<std::array<bool, 3>>();
+  }
 
   if (j.contains("decomposition") && !j["decomposition"].is_null()) {
     const auto &d = j["decomposition"];

@@ -87,3 +87,29 @@ Smaller programs may only validate 3–5 critical scalars; you can still use the
 
 - [`tutorials/custom_app_minimal.md`](../tutorials/custom_app_minimal.md) — minimal config-driven application
 - [`styleguide.md`](../development/styleguide.md) — API and header conventions
+
+## Domain periodicity
+
+The current `domain` block uses `size`, `lower` and `upper`. Set one optional
+`periodic` array of exactly three booleans, in x/y/z order:
+
+```json
+"domain": {
+  "size": [128, 128, 64],
+  "lower": [0.0, 0.0, 0.0],
+  "upper": [128.0, 128.0, 63.0],
+  "periodic": [true, true, false]
+}
+```
+
+The same array is supported in TOML. Omitting it preserves fully periodic
+behavior. A periodic axis has spacing `(upper-lower)/size`; a bounded axis
+includes both endpoints, uses `(upper-lower)/(size-1)` and requires at least two
+grid points. Decomposition and halo exchange use these flags to identify physical
+faces; boundary-stage operators must still provide the desired boundary values.
+Fourier/HeFFTe operators retain their periodic basis assumptions. Setting domain
+metadata does not make a Fourier operator a bounded spectral method.
+
+Checkpoint domain metadata records periodicity and restart rejects mismatches
+before restoring fields. Older bundles without the field are interpreted as
+fully periodic, so they cannot silently restart a mixed-periodic configuration.

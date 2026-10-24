@@ -7,7 +7,7 @@ TEST_CASE("Host Full FD6 global-coordinate halos and fresh stage values",
   auto producer = [](auto &, int, int) {};
   for (const auto periodic :
        {pfc::Bool3{true, true, true}, pfc::Bool3{false, false, false},
-        pfc::Bool3{false, true, false}})
+        pfc::Bool3{false, true, false}, pfc::Bool3{true, true, false}})
     full_halo_fd6::run<pfc::HostSpace>(periodic, false, producer);
   full_halo_fd6::run<pfc::HostSpace>({true, true, false}, true, producer);
 }
