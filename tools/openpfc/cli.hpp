@@ -32,6 +32,7 @@ struct Arguments {
   void allow(const std::vector<std::string> &keys) const;
 };
 Arguments parse(int argc, char **argv);
+void print_help(const std::string &command = {});
 std::string env(const std::string &name);
 fs::path executable();
 fs::path prefix();
