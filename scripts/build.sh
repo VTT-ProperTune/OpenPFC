@@ -897,7 +897,7 @@ if (( RUN_TESTS )); then
       fi
     done
     if [[ -n "${PYTEST_PYTHON}" ]]; then
-      if ! "${PYTEST_PYTHON}" -m pytest "${REPO_ROOT}/scripts/tests" 2>&1 |
+      if ! OPENPFC_TEST_CLI="${BUILD_DIR}/bin/openpfc" "${PYTEST_PYTHON}" -m pytest "${REPO_ROOT}/scripts/tests" 2>&1 |
            tee "${BUILD_DIR}/python-test.log"; then
         TEST_SECONDS=$(( $(date +%s) - phase_start ))
         FAILED_PHASE="python tests"

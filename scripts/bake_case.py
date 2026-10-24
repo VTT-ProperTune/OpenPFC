@@ -73,7 +73,7 @@ def under(path, prefix):
     return path == prefix or prefix in path.parents
 
 
-def parse_ldd(output):
+def parse_ldd(output, require_mpi=True):
     if "not found" in output:
         raise ValueError("unresolved runtime library; load the build's compiler/MPI modules first")
     libraries = {}
@@ -84,7 +84,7 @@ def parse_ldd(output):
             if "/" in name or not path.startswith("/"):
                 raise ValueError("unsupported ldd entry: " + line)
             libraries[name] = Path(path).resolve()
-    if not any(MPI_MARKER.match(name) for name in libraries):
+    if require_mpi and not any(MPI_MARKER.match(name) for name in libraries):
         raise ValueError("expected a dynamically linked MPI application")
     return libraries
 
@@ -138,6 +138,18 @@ def prepare(args):
         if not prefix.is_dir() or prefix == Path("/") or any(c in str(prefix) for c in ",:\n"):
             raise ValueError("host prefix must be a directory without commas, colons, or newlines")
     libraries = parse_ldd(subprocess.check_output(["ldd", str(executable)], text=True))
+    native_cli = Path(manifest["build_dir"]) / "bin/openpfc"
+    if not native_cli.is_file():
+        raise ValueError("native OpenPFC CLI missing from case build directory")
+    with native_cli.open("rb") as stream:
+        if stream.read(4) != b"\x7fELF":
+            raise ValueError("case build contains a legacy CLI; rebuild its native bin/openpfc")
+    # The native CLI has its own C++/crypto runtime closure, independently of MPI.
+    for name, path in parse_ldd(subprocess.check_output(["ldd", str(native_cli)], text=True),
+                                require_mpi=False).items():
+        if name in libraries and libraries[name] != path:
+            raise ValueError("CLI and model resolve incompatible runtime libraries: " + name)
+        libraries[name] = path
     mpi_stack = MPI_STACK[args.site]
     bundled, external, host_files, system = {}, {}, {}, {}
     for name, path in libraries.items():
@@ -162,7 +174,7 @@ def prepare(args):
     # Bind destinations must already exist in the image.
     (payload / "hostlib/.keep").write_text("")
     shutil.copy2(executable, payload / "bin/tungsten")
-    shutil.copy2(ROOT / "scripts/openpfc", payload / "bin/openpfc")
+    shutil.copy2(native_cli, payload / "bin/openpfc")
     shutil.copy2(ROOT / "containers/runtime/baked_case.py", payload / "bin/baked-case")
     (payload / "bin/baked-case").chmod(0o755)
     build = Path(manifest["build_dir"])

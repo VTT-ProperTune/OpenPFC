@@ -3,138 +3,188 @@ SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-# Create, compile, and run a case
+# Compile and run with the native CLI
 
-The `openpfc` command creates a shipped app case, builds the application
-through `scripts/build.sh`, and launches it with MPI or Slurm. It requires
-Python 3.8 or newer. It selects shipped physics; it does not
-compile custom C++ models or build container images.
+`openpfc` is a native C++20 executable. It can compile a user-owned C++ model
+against an installed OpenPFC SDK, preserve its inputs and run records, or manage
+the existing catalogued app cases. The installed CLI and its generated model
+projects require no Python interpreter. The CLI links the C++ and OpenSSL Crypto
+runtimes; it does not load OpenPFC, MPI or CUDA merely to print help or scaffold a
+case. Install OpenSSL development files (Crypto 1.1 or newer) when building it.
 
-From a checkout on Tohtori, run:
+## Compile a user model
 
-```bash
-./scripts/openpfc --version
-./scripts/openpfc init results/mycase
-./scripts/openpfc compile results/mycase --profile=local
-# Restore the matching compiler/MPI environment in this shell:
-module load openmpi/5.0.10
-./scripts/openpfc run results/mycase --ranks=1
-```
-
-`init` creates `input.json`, a small `openpfc.json` project manifest, and a
-README. It refuses an existing project directory. Edit `input.json` to change
-the model parameters, domain, and time interval. The default 16³ seed case is
-a quick runtime check, not a quantitatively calibrated materials prediction.
-
-`compile` runs the canonical build and test script. The first build needs
-the documented compiler, MPI, and HeFFTe stack, plus network access for missing
-dependencies. It records the binary and MPI launcher only after a successful
-build. `--jobs=N` controls build parallelism; `--no-test` explicitly skips the
-suite for subsequent development builds. `--build-dir=/absolute/path` selects
-an existing compatible build tree. Never mix CPU and GPU backends in one tree.
-
-## Choose an app
+Load the pre-provisioned compiler/MPI environment and installed SDK, then run:
 
 ```bash
-./scripts/openpfc apps
-./scripts/openpfc init results/spinodal --app=cahn_hilliard --preset=spinodal
-./scripts/openpfc compile results/spinodal --profile=local
-module load openmpi/5.0.10
-./scripts/openpfc run results/spinodal --ranks=2
+openpfc compile my_model.cpp --sdk /path/to/openpfc-sdk
+openpfc run my_model.cpp my_input.json --sdk /path/to/openpfc-sdk --launcher=none
 ```
 
-The catalog covers eight JSON-session apps. `init` without options still creates
-the tungsten smoke case; otherwise the first listed preset is the app default.
+A model is a complete C++20 translation unit with `main(argc, argv)`. It owns its
+JSON interpretation. The CLI passes the frozen input's pathname as `argv[1]`;
+it does not generate a scientific model or assume that arbitrary C++ understands
+JSON. See the [installed consumer test](../../tests/cli/check_models.cmake) for a
+small model that uses public OpenPFC headers and writes to `results/`.
 
-| App | Presets | Backends |
-|-----|---------|----------|
-| `tungsten` | `smoke` | CPU, CUDA, HIP |
-| `aluminum` | `smoke` | CPU, CUDA, HIP |
-| `cahn_hilliard` | `spinodal`, `mode` | CPU, HIP |
-| `thin_film` | `leveling`, `dewetting` | CPU, HIP |
-| `surface_diffusion` | `smoothing` | CPU, HIP |
-| `kawahara` | `pulse` | CPU, HIP |
-| `ehd_film` | `relaxation` | CPU, HIP |
-| `gradient_elasticity` | `inclusion`, `gaussian` | CPU, HIP |
+`--sdk` accepts an install prefix or the directory containing
+`OpenPFCConfig.cmake`. Without it, the CLI uses `OpenPFC_DIR`, an SDK next to the
+installed CLI, or normal CMake discovery through `CMAKE_PREFIX_PATH`. A missing
+or incompatible SDK is an error. Provision a compatible SDK before compiling;
+this workflow never fetches or rebuilds OpenPFC, MPI, HeFFTe or GPU toolkits.
+The [SDK compatibility contract](../reference/build_options.md#installed-sdk-build-manifest-and-compatibility)
+explains the evidence and remaining unknowns.
 
-Support means a build target exists, not that it is installed or verified on
-the current machine. Presets are installed alongside the CLI, so initialization
-does not require a source checkout. Unsupported app/profile combinations fail
-before building. The positional-argument teaching apps (`allen_cahn`, `heat3d`,
-`wave2d`, `kobayashi`) retain their own interfaces.
+The CLI generates a visible CMake project that calls
+`find_package(OpenPFC 0.5 CONFIG REQUIRED)` and links `OpenPFC::openpfc`. CMake
+owns dependency discovery and public usage requirements. The CLI launches tools
+with argument vectors, without shell interpolation of filenames.
 
-The Cahn–Hilliard `spinodal` preset seeds reproducible broadband perturbations
-and writes `results/cahn_hilliard/diagnostics.csv`. `mode` retains the original
-single-cosine verification case. See the [app guide](../../apps/cahn_hilliard/README.md)
-for energy interpretation and timestep limitations. Aluminum's small uniform
-case is a runtime check, not a solidification demonstration.
+Source-model builds currently qualify CPU execution. CUDA/HIP source profiles
+fail explicitly pending separate device/compiler/MPI qualification. Do not
+interpret source portability as compatibility between GPU vendors or MPI stacks.
+On LUMI, run model builds in a permitted build environment or allocation rather
+than on a login node.
 
-## Profiles
+## Source and input dependencies
 
-| Profile | Backend | Build route |
-|---------|-------------|-------------|
-| `local` (default) | CPU | Machine auto-detection, build in this process; `builds/cli-local` |
-| `tohtori` | CUDA | Tohtori CUDA stack; `builds/cli-tohtori` |
-| `lumi` | HIP | LUMI HIP stack and Slurm build with `--wait`; flash build tree |
-
-Profiles use the machines and toolchains already supported by
-[`scripts/build.sh`](../../scripts/build.sh); `local` currently needs a supported
-development environment such as Tohtori. It does not add a generic laptop
-toolchain. On LUMI, select `lumi`, which builds under
-`$LUMI_FLASH_ROOT/openpfc-cli-lumi` (default root
-`/flash/project_462001519/juaho/build`). Keep large cases and output on scratch.
-The build script retains ownership of modules, GPU settings, and Slurm account
-selection. Run `compile` once outside `mpirun` or `srun`.
-
-Both `compile --dry-run` and `run --dry-run` print the command and working
-directory without building, running, or updating the project.
-
-## MPI and output
-
-`run` uses the case directory as its working directory, so the default output
-lands in `<case>/results/` regardless of where you invoke the CLI. The scaffold
-writes VTK snapshots and a checkpoint at step 10. Use fresh output paths for
-subsequent runs: result writers can replace existing snapshots, while checkpoint
-publication refuses to replace an existing bundle.
-
-Outside Slurm, `run` uses the MPI launcher recorded by `compile`, or `mpirun`
-from `PATH`, with one rank by default. Within a Slurm allocation, it uses
-`srun` and inherits the allocation's task count unless `--ranks` overrides it.
-Load the same compiler/MPI modules used for the build before running; module
-changes made inside the build subprocess do not alter your parent shell.
-`--launcher=mpirun`, `--launcher=srun`, and `--launcher=none` select an explicit
-route; `none` is for a singleton run or an existing MPI launch.
-
-You can also control MPI directly:
+Local quoted includes within the source directory are snapshotted recursively.
+Declare additional local headers, data needed at compilation, or translation
+units with repeatable `--file relative/path`. Paths are relative to the primary
+source directory. Set `--source-root` to a containing project directory when
+using a layout such as `src/model.cpp` and `include/material.hpp`; declared
+paths are then relative to that root. For example:
 
 ```bash
-mpirun -n 2 ./scripts/openpfc run results/mycase
-# Inside a Slurm allocation:
-srun ./scripts/openpfc run /scratch/project_462001519/juaho/mycase
+openpfc compile model.cpp --file include/material.hpp --file material.cpp
+openpfc run model.cpp input.json --input-file initial/field.bin --launcher=none
 ```
 
-The driver detects MPI rank environment variables and invokes the app directly
-in each rank. It rejects a second `--ranks` setting or an explicit nested
-launcher. It propagates nonzero build and application exit codes.
+`--input-file` paths are relative to the input JSON's directory. Input bytes are
+preserved without rewriting JSON. Each attempt receives its own copies of the
+input and declared data; relative references resolve from the attempt directory.
+Output paths must be under `results/`. Path-like JSON strings that name inputs
+must be declared; absolute paths, parent-directory escapes and source/input
+symlinks are rejected. These rules bound the initial workflow: declare all
+consumed data rather than reading unrelated mutable files from the model.
+This is a provenance contract for user-owned code, not a sandbox for arbitrary
+C++ programs.
 
-For restarts, follow the [tungsten restart guide](../../apps/tungsten/README.md#restart-a-moving-front).
-Keep `t0`, `dt`, physics, grid, and boundary configuration consistent with the
-checkpoint; extend `t1`, set `restart_from`, and select new output locations.
+Build options include `--build-type=Release|Debug|RelWithDebInfo|MinSizeRel`,
+`--generator`, `--toolchain`, `--cc`, `--cxx`, `--jobs` (default 2), and repeatable
+`--define=NAME=VALUE`. The active compiler environment is retained. Use
+`--arg=VALUE` to pass additional model arguments after the input pathname;
+these arguments participate in the run identity.
 
-## Build trees and installations
+## Cache, runs and durable export
 
-Configuration also creates `<build>/bin/openpfc`. The normal installation rules
-install `bin/openpfc` and `share/openpfc/version`. A relocated installation can
-print its version and initialize cases without the source checkout. `run` can
-use a sibling installed `tungsten` executable without compiling first.
+The cache uses `$OPENPFC_CACHE`, otherwise `$XDG_CACHE_HOME/openpfc`, otherwise
+`~/.cache/openpfc`. The cache must be owned by the invoking user and must not be
+writable by other users; new caches are private. It contains ordinary inspectable
+directories:
 
-An installed driver needs a source checkout for `compile`: pass
-`--source=/path/to/OpenPFC` or set `OPENPFC_SOURCE_DIR`. The source-tree and
-build-tree drivers discover their checkout automatically. `run --executable`
-selects a particular installed CPU/CUDA/HIP binary and overrides the case's
-recorded build path; load its matching MPI environment.
+```text
+builds/openpfc-build-<sha256>/
+  CMakeLists.txt
+  model-files.cmake
+  src/
+  model
+  build-manifest.json
+  configure.stdout.log
+  compile.stderr.log
+runs/openpfc-run-<sha256>/
+  model/
+  inputs/
+  run-manifest.json
+  attempts/<attempt-id>/
+    input.json
+    results/
+    stdout.log
+    stderr.log
+    status.json
+```
 
-The separate [CPU runtime baker](../../containers/runtime/README.md) can package
-a compiled local tungsten case into an Apptainer image with host-MPI bindings. The CLI
-itself does not produce images. Development images, GPU profiles for images,
-and multi-node network integration remain packaging work.
+Build fingerprints include the frozen source closure, generated CMake template,
+SDK manifest and library evidence, actual compiler/toolchain identity and build
+options. An unchanged build is a cache hit only after verifying the source,
+project, executable digest and executable permissions. Changing a local header,
+SDK/toolchain or build option changes the build identity. Changing only input
+JSON changes the run identity without recompiling the model.
+
+Run fingerprints add exact input/data bytes, arguments, MPI ranks, launcher and
+recorded numerical runtime settings. Repeated requests get distinct attempt IDs;
+previous output is preserved. Failed compilation leaves its staged project and
+logs under `staging/`. Failed models retain stdout, stderr, partial results and
+exit status. Output checksums are recorded after execution, separately from the
+requested-run fingerprint. A fingerprint identifies the requested case, not a
+promise of deterministic floating-point results.
+
+The CLI records common OpenMP, GPU-device selection and MPI transport settings.
+Add a numerically meaningful setting with `--record-env=NAME`; credential-like
+names are rejected. Compiler environment values that participate in build
+identity are hashed; the CLI does not dump the process environment.
+
+The cache is disposable. To preserve a completed run or build:
+
+```bash
+openpfc export /path/to/cache/runs/openpfc-run-<sha256> /durable/new-record
+```
+
+Export refuses an existing destination, active attempts and damaged artifacts.
+The saved `model/` directory, or exported build directory, is a reusable CMake
+project. Copy it, make your development copy writable, and configure a fresh
+build directory against a provisioned SDK. Its original build cache is diagnostic
+and may contain paths to the original location.
+
+## MPI execution
+
+For source models, invoke the CLI once, outside an MPI launch:
+
+```bash
+openpfc run model.cpp input.json --ranks=2 --launcher=mpirun
+```
+
+`auto` selects `srun` inside a Slurm allocation and `mpirun` otherwise. Source runs
+default to one explicitly selected rank; `--launcher=none` supports one rank.
+The MPI executable discovered by CMake is preferred for `mpirun`. Load the
+matching runtime modules in the invoking shell. The CLI propagates application
+exit codes and records attempts even when the model fails.
+
+## Existing catalogued app cases
+
+The directory-based workflow remains available:
+
+```bash
+openpfc apps
+openpfc init results/mycase --app=tungsten --preset=smoke
+openpfc compile results/mycase --profile=local --source=/path/to/OpenPFC
+openpfc run results/mycase --ranks=1
+```
+
+`init` refuses an existing directory and uses installed preset data. It creates
+`input.json`, a version-1 `openpfc.json` manifest and a README. The catalog lists
+available presets and build targets; it does not imply that every backend is
+installed or qualified on this machine. Small presets are runtime or verification
+examples, not calibrated material predictions.
+
+Directory-case `compile` retains the existing `scripts/build.sh` route for shipped
+applications. `local` selects CPU, `tohtori` selects CUDA, and `lumi` selects HIP
+with the script's Slurm/flash policy. `--build-dir`, `--jobs`, `--no-test` and
+`--dry-run` retain their meanings. Only successful builds publish the executable
+selection to the case manifest. This source-checkout build route is separate
+from the new user-source workflow against an installed SDK.
+
+Case `run` uses the directory as its working directory. It accepts `--executable`
+to select an installed app and detects an existing outer `mpirun`/`srun` launch,
+executing directly in each rank. It rejects nested launchers. Reusing a legacy
+case can replace its ordinary snapshot outputs; select fresh output paths to
+preserve them. Source-model run records always use separate attempts.
+
+From a source checkout, build through `scripts/build.sh` first.
+`./scripts/openpfc` is a POSIX-sh convenience launcher for
+`builds/release/bin/openpfc`; set `OPENPFC_CLI` for another build directory.
+Only the native executable is installed as `bin/openpfc`.
+
+For existing baked tungsten cases, the [legacy CPU runtime baker](../../containers/runtime/README.md)
+continues to package the native CLI and its runtime dependencies. Native
+model-specific SIF bundling is the separate follow-up in issue #636.
