@@ -3,32 +3,6 @@
 #include "cli.hpp"
 #include <iostream>
 
-namespace {
-void help() {
-  std::cout
-      << "OpenPFC native C++ CLI\n\n"
-         "  openpfc --version\n  openpfc apps\n  openpfc init CASE [--app NAME] "
-         "[--preset NAME]\n"
-         "  openpfc compile CASE [--profile local|tohtori|lumi] [--source "
-         "CHECKOUT]\n"
-         "  openpfc run CASE [--launcher auto|none|mpirun|srun] [--ranks N]\n"
-         "  openpfc compile MODEL.cpp [--sdk PREFIX] [--file relative/header.hpp]\n"
-         "  openpfc run MODEL.cpp INPUT.json [--input-file relative/data.bin] "
-         "[--ranks N]\n"
-         "  openpfc export CACHED_RECORD NEW_DIRECTORY\n\n"
-         "Source builds require a compatible preinstalled SDK and compiler/MPI "
-         "environment.\n"
-         "Build options: --build-type TYPE --generator NAME --cxx COMPILER --cc "
-         "COMPILER\n"
-         "               --jobs N --define NAME=VALUE (repeatable) --backend cpu\n"
-         "               --toolchain FILE --source-root DIRECTORY\n"
-         "Run options:   --launcher auto|none|mpirun|srun --ranks N --arg VALUE\n"
-         "               --record-env NAME (repeatable; numerical runtime settings "
-         "only)\n"
-         "Cache: $OPENPFC_CACHE, then $XDG_CACHE_HOME/openpfc or "
-         "~/.cache/openpfc.\n";
-}
-} // namespace
 int main(int argc, char **argv) {
   using namespace openpfc_cli;
   try {
@@ -43,14 +17,20 @@ int main(int argc, char **argv) {
       std::cout << "OpenPFC " << value << '\n';
       return 0;
     }
-    if (args.has("help")) {
+    if (args.has("help") || args.command == "help") {
       args.allow({"help"});
-      help();
+      if (args.command == "help") {
+        if (args.positional.size() > 1)
+          throw Error("help expects at most one command");
+        print_help(args.positional.empty() ? "" : args.positional.front());
+      } else {
+        print_help(args.command);
+      }
       return 0;
     }
     if (args.command.empty()) {
       args.allow({});
-      help();
+      print_help();
       return 0;
     }
     if (args.command == "init" || args.command == "apps")

@@ -7,6 +7,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Add command-specific CLI help through `openpfc COMMAND --help` and
+  `openpfc help COMMAND`, including SDK discovery, source/case options and
+  run-record locations.
+
 - Replace the installed Python CLI with a native C++20 executable. Source-based
   `compile`/`run` use a compatible installed SDK, immutable source/input snapshots,
   content-addressed build/run records and non-overwriting attempts; `export`

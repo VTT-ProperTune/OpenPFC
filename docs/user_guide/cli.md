@@ -12,6 +12,10 @@ projects require no Python interpreter. The CLI links the C++ and OpenSSL Crypto
 runtimes; it does not load OpenPFC, MPI or CUDA merely to print help or scaffold a
 case. Install OpenSSL development files (Crypto 1.1 or newer) when building it.
 
+Use `openpfc --help` for the command list, then `openpfc compile --help`
+or `openpfc help run` for command-specific options and defaults. Help works
+without a configured SDK, compiler, MPI launcher or Python interpreter.
+
 ## Compile a user model
 
 Load the pre-provisioned compiler/MPI environment and installed SDK, then run:
