@@ -184,6 +184,11 @@ follows the message rules.
 
 ## Pull requests and merging
 
+`ahojukka5/OpenPFC` is the source of truth for development, issues and pull
+requests. `VTT-ProperTune/OpenPFC` mirrors the reviewed code and publishes the
+website. Replicate canonical commits to the mirror without developing a separate
+history there; keep its `master` at the same commit as the canonical `master`.
+
 - Branch from the latest `master`. A PR can and often should contain
   multiple commits, as long as each is a small, coherent, independently
   reviewable/revertable unit.
@@ -244,5 +249,5 @@ do not bundle an unrelated Unreleased dump.
 
 ## Questions
 
-Use [GitHub Issues](https://github.com/VTT-ProperTune/OpenPFC/issues)
+Use [GitHub Issues](https://github.com/ahojukka5/OpenPFC/issues)
 for bugs and feature discussion.
