@@ -188,6 +188,20 @@ void no_login_build() {
     throw Error("configure/build the model in a permitted build environment or "
                 "allocation, not a LUMI login node");
 }
+void model_environment(const Arguments &args) {
+  require_single_process();
+  no_login_build();
+  if (args.get("backend", "cpu") != "cpu" ||
+      (args.get("profile", "local") != "local" &&
+       args.get("profile") != "local-cpu"))
+    throw Error("source workflow currently qualifies local CPU only; CUDA/HIP "
+                "target profiles require explicit device/MPI qualification");
+  const auto type = args.get("build-type", "Release");
+  if (type != "Release" && type != "Debug" && type != "RelWithDebInfo" &&
+      type != "MinSizeRel")
+    throw Error("unsupported --build-type");
+  (void)args.positive("jobs", 2);
+}
 Files input_files(const Arguments &args) {
   const auto input = absolute_path(args.positional.at(1));
   auto reserved = [](const fs::path &name) {
@@ -287,20 +301,69 @@ void copy_record(const fs::path &from, const fs::path &to) {
   }
 }
 } // namespace
+int doctor(const Arguments &args) {
+  args.allow({"sdk", "cc", "cxx", "generator", "toolchain", "build-type", "backend",
+              "profile"});
+  if (!args.positional.empty()) throw Error("doctor takes no positional arguments");
+  model_environment(args);
+  std::cout << "OpenPFC doctor: CPU source build environment\n";
+  fs::path stage;
+  try {
+    const auto cache = cache_root();
+    stage = cache / "staging" / ("doctor-" + unique_id());
+    safe_directory(stage);
+    write(stage / "CMakeLists.txt",
+          read(prefix() / "share/openpfc/templates/model.cmake"));
+    auto command = configure(args, stage, stage / "query");
+    command.insert(command.end(),
+                   {"-DOPENPFC_DISCOVERY_ONLY=ON", "-DOPENPFC_DOCTOR=ON",
+                    "-DOPENPFC_QUERY_REPORT=" + (stage / "consumer.json").string()});
+    checked_run(command, stage, stage / "configure.stdout.log",
+                stage / "configure.stderr.log");
+    const auto report = read_json(stage / "consumer.json");
+    auto value = [&](const std::string &name) {
+      return report.at(name).at("value").get<std::string>();
+    };
+    std::cout << "SDK: " << value("OpenPFC_DIR")
+              << "\nCMake: " << value("CMAKE_VERSION") << " ("
+              << value("CMAKE_GENERATOR")
+              << ")\nC++ compiler: " << value("CMAKE_CXX_COMPILER") << " ("
+              << value("CMAKE_CXX_COMPILER_ID") << ' '
+              << value("CMAKE_CXX_COMPILER_VERSION")
+              << ")\nMPI compiler: " << value("MPI_CXX_COMPILER") << '\n';
+    const auto mpi = value("MPIEXEC_EXECUTABLE");
+    try {
+      const auto resolved = find_program(mpi);
+      std::cout << "MPI launcher: " << resolved.string() << " (not launched)\n";
+    } catch (const Error &) {
+      std::cout << "MPI launcher unavailable; use --launcher=none for one rank "
+                   "or load matching MPI runtime modules.\n";
+    }
+    std::cout << "SDK backends:";
+    for (const auto *backend : {"cpu", "cuda", "hip"})
+      std::cout << ' ' << backend << '='
+                << (report.at("sdk").at("capabilities").value(backend, false)
+                        ? "yes"
+                        : "no");
+    std::cout << '\n' << value("sdk_report") << "\nDiagnostics: " << stage << '\n';
+    if (value("sdk_status") == "compatible") {
+      std::cout << "Ready for CPU source builds. MPI launches and GPU execution "
+                   "require separate runtime checks.\n";
+      return 0;
+    }
+  } catch (const std::exception &error) {
+    std::cerr << "openpfc doctor: " << error.what() << '\n';
+    if (!stage.empty()) std::cerr << "Diagnostics: " << stage << '\n';
+  }
+  std::cerr << "Load compatible compiler/MPI modules, select an installed SDK "
+               "with --sdk or OpenPFC_DIR/CMAKE_PREFIX_PATH, and make the "
+               "requested CMake generator available. Then rerun openpfc doctor.\n";
+  return 1;
+}
 Build compile_source(const Arguments &args) {
   if (args.positional.empty()) throw Error("compile expects a C++ translation unit");
-  require_single_process();
-  no_login_build();
-  if (args.get("backend", "cpu") != "cpu" ||
-      (args.get("profile", "local") != "local" &&
-       args.get("profile") != "local-cpu"))
-    throw Error("source workflow currently qualifies local CPU only; CUDA/HIP "
-                "target profiles require explicit device/MPI qualification");
+  model_environment(args);
   const auto type = args.get("build-type", "Release");
-  if (type != "Release" && type != "Debug" && type != "RelWithDebInfo" &&
-      type != "MinSizeRel")
-    throw Error("unsupported --build-type");
-  (void)args.positive("jobs", 2);
   auto files = source_files(args);
   auto contents = read(prefix() / "share/openpfc/templates/model.cmake");
   const auto declarations = project_files(args, files);
