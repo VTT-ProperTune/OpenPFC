@@ -43,6 +43,42 @@ verifies the host build contract; it does not launch MPI ranks or certify GPU
 execution. An SDK's recorded CUDA/HIP capabilities do not qualify those source
 profiles. Use `--launcher=none` for a one-rank run when no MPI launcher is present.
 
+## Create an editable starter model
+
+```bash
+openpfc init my-model --model=diffusion
+cd my-model
+openpfc doctor
+openpfc compile model.cpp
+openpfc run model.cpp input.json --launcher=none
+```
+
+Add `--sdk /path/to/openpfc-sdk` to doctor, compile and run when needed. The
+starter can be initialized before installing an SDK; compilation and execution
+require a compatible provisioned environment. The destination must be new, so
+initialization never replaces edits. `--model` cannot be mixed with the
+catalogued-case `--app` or `--preset` options.
+
+The generated `model.cpp` uses public OpenPFC fields, periodic halo exchange,
+finite differences and an owned-cell Euler stepper for the heat equation.
+`input.json` sets the grid, diffusivity, timestep and step count; the model
+validates its input and explicit stability bound. Edit `Diffusion::rhs` to change
+the physics. The starter is a numerical example, not a calibrated material model.
+
+The CLI prints the attempt directory containing `stdout.log`, `stderr.log`,
+`status.json` and `results/`. Inspect `results/diagnostics.csv` and
+`results/summary.json`: with the default input the mean stays near 1 and the L2
+norm decreases. `results/field_rank_0.csv` holds rank zero's final field.
+The generated README explains these files, input limits and durable export.
+
+Changing only `input.json` reuses the compiled model. Repeating a run preserves a
+new attempt. To use two MPI ranks, invoke the CLI once with
+`--ranks=2 --launcher=mpirun` in place of `--launcher=none`; each rank writes a
+separate field CSV, and the diagnostics remain global. GPU source profiles are
+not part of this starter. For further library examples see
+[`examples/19_explicit_stepper_fd.cpp`](../../examples/19_explicit_stepper_fd.cpp)
+and the [extension guide](../extending_openpfc/README.md).
+
 ## Compile a user model
 
 Load the pre-provisioned compiler/MPI environment and installed SDK, then run:

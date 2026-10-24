@@ -34,6 +34,7 @@ int main(int argc, char **argv) {
       return 0;
     }
     if (args.command == "doctor") return doctor(args);
+    if (args.command == "init" && args.has("model")) return init_model(args);
     if (args.command == "init" || args.command == "apps")
       return catalog_command(args);
     if (args.command == "export") return export_record(args);

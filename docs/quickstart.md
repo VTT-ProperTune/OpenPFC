@@ -15,6 +15,27 @@ For install details — modules, HeFFTe 2.4.1, CUDA, HIP, and site-specific
 toolchains — use [`INSTALL.md`](../INSTALL.md). This page assumes the dependency
 stack is already available.
 
+## Start from an installed SDK
+
+With `openpfc` on `PATH`, you can create an editable CPU model and run it without
+an OpenPFC checkout or a handwritten CMake project:
+
+```bash
+openpfc init my-model --model=diffusion
+cd my-model
+openpfc doctor
+openpfc compile model.cpp
+openpfc run model.cpp input.json --launcher=none
+```
+
+Load the compiler/MPI environment for your installed SDK first. Add
+`--sdk /path/to/openpfc-sdk` to doctor, compile and run if needed.
+The CLI prints the attempt directory; `results/summary.json` and
+`results/diagnostics.csv` there show a conserved mean and a decreasing L2 norm.
+Edit `input.json` and rerun to reuse the build with a new saved attempt.
+See the [native CLI guide](user_guide/cli.md) for diagnostics, MPI, output files,
+input limits and export. `openpfc COMMAND --help` lists command-specific options.
+
 ## What you are building toward
 
 OpenPFC is a compiled C++ library with public headers. You can use it directly
