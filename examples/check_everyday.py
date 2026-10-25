@@ -69,6 +69,44 @@ def check_patterns(binary, root, launch):
     run(binary, root / "bad-pattern", launch, {"width": 0}, success=False)
 
 
+def check_catalog(binary, root, launch):
+    for specification in (
+        {"type": "affine", "offset": 1, "slope": [0.2, -0.1, 0.05]},
+        {"type": "constant", "n0": 0.4},
+    ):
+        folder = root / ("catalog-" + specification["type"])
+        run(
+            binary,
+            folder,
+            launch,
+            {"n": 16, "nz": 2, "initial_condition": specification},
+        )
+        data = fields(folder, "fields_rank_*.csv")
+        unique_grid(data, 16, 16, 2, (-4, -4, 0), (0.5, 0.5, 0.5))
+        for row in data:
+            x, y, z = (float(row[key]) for key in ("x", "y", "z"))
+            exact = (
+                1 + 0.2 * x - 0.1 * y + 0.05 * z
+                if specification["type"] == "affine"
+                else 0.4
+            )
+            assert abs(float(row["u"]) - exact) < 2e-14
+    result = run(
+        binary,
+        root / "unknown-catalog",
+        launch,
+        {"initial_condition": {"type": "unknown"}},
+        success=False,
+    )
+    run(
+        binary,
+        root / "bad-catalog",
+        launch,
+        {"initial_condition": {"type": "affine"}},
+        success=False,
+    )
+
+
 def verify_first_domain(bin_dir, root, launch, ranks):
     assert "(-0.625,0.5,0)" in run(bin_dir / "first_domain", root)
     axes = table(root / "results/domain.csv")
@@ -83,7 +121,8 @@ def main():
     parser.add_argument("--rank-flag", default="-n")
     parser.add_argument("--ranks", default=1, type=int)
     parser.add_argument(
-        "--case", choices=["first_domain", "14_custom_field_initializer"]
+        "--case",
+        choices=["first_domain", "14_custom_field_initializer", "10_ui_register_ic"],
     )
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
@@ -102,6 +141,10 @@ def main():
             root = base / "14_custom_field_initializer"
             root.mkdir()
             check_patterns(bin_dir / "14_custom_field_initializer", root, launch)
+        if args.case in (None, "10_ui_register_ic"):
+            root = base / "10_ui_register_ic"
+            root.mkdir()
+            check_catalog(bin_dir / "10_ui_register_ic", root, launch)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

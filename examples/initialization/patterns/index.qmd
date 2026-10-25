@@ -86,7 +86,7 @@ the Gaussian and vortex tails are not made periodic by the grid metadata.
 
 Change `width`, `core` or `circulation`. Then increase `n` and decide
 which features are resolved. To select a pattern by name in a file,
-continue with the modifier catalog.
+continue with [the modifier catalog](../catalog/index.qmd).
 Keep the [source](model.cpp), [input](input.json) and
 [shared helper](../lesson.hpp) together.
 :::

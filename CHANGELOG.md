@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Teach native modifier registration and validated configuration through a short runnable chapter. Preserve the executable and check complete selected fields plus invalid catalog controls.
+
 - Replace the large initializer demonstration with small Gaussian, vortex and checkerboard callables. Preserve its target and check every native field value on one and two ranks.
 
 - Turn the former introductory source into a built first-domain lesson with explicit physical samples. Check the coordinate map and domain extents through the actual entry point.

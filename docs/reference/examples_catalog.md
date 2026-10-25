@@ -77,7 +77,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `07_array` | `geometry/field-storage/model.cpp` | Array helpers |
 | `08_discrete_fields` | `geometry/coordinate-fields/model.cpp` | `pfc::data::Field` with domain geometry |
 | `09_parallel_fft_high_level` | `fourier/field-layout/model.cpp` | Higher-level FFT usage |
-| `10_ui_register_ic` | `10_ui_register_ic.cpp` | UI and field-modifier registration patterns |
+| `10_ui_register_ic` | `initialization/catalog/model.cpp` | UI and field-modifier registration patterns |
 | `11_write_results` | `11_write_results.cpp` | Writing simulation results |
 | `12_cahn_hilliard` | `12_cahn_hilliard.cpp` | Cahn–Hilliard-style spectral workflow |
 | `fft_kspace_helpers_example` | `fft_kspace_helpers_example.cpp` | k-space helper functions |

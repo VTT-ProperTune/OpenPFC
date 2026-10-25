@@ -21,7 +21,7 @@ out-of-tree executable, follow the
 |------|-------------------------|----------------|
 | Add a PDE or phase-field model | physics `step(t)` on a stack / `SimulationState` | `examples/04_diffusion_model.cpp`, `examples/12_cahn_hilliard.cpp` |
 | Add a stiff spectral-ETD (PFC) model | `pfc::sim::SpectralETDPhysics` consumed by `SpectralETDSystem` | [Add a spectral-ETD physics](#add-a-spectral-etd-physics), `tests/fixtures/swift_hohenberg.hpp` |
-| Add a config-selected initial or boundary condition | `pfc::FieldModifier` and a modifier catalog | `examples/10_ui_register_ic.cpp`, `examples/initialization/patterns/model.cpp` |
+| Add a config-selected initial or boundary condition | `pfc::FieldModifier` and a modifier catalog | `examples/initialization/catalog/model.cpp`, `examples/initialization/patterns/model.cpp` |
 | Apply programmatic field operations | Namespace free functions and field iteration helpers | [Functional field operations](../getting_started/functional_field_ops.md) |
 | Add an output format | `pfc::ResultsWriter` or a writer catalog | `examples/11_write_results.cpp` |
 | Add custom spatial interpretation | Domain and coordinate helper functions | `examples/17_custom_coordinate_system.cpp` |

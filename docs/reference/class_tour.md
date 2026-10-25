@@ -48,7 +48,7 @@ The shortest useful mental model is:
 | Physics / `SpectralETDSystem` | Fields, k-space symbols, and a device-capable `pointwise()` nonlinearity; the system owns the ETD update on host or device | `tungsten_physics.hpp`, `aluminum_physics.hpp`, `openpfc/kernel/simulation/spectral_etd_system.hpp` | `tests/fixtures/swift_hohenberg.hpp`, `examples/04_diffusion_model.cpp` |
 | `Time` | Start, stop, step size, current time, and save cadence | `openpfc/kernel/simulation/time.hpp` | `examples/integration/output-clock/model.cpp` |
 | `pfc::sim::run` / `SimulationDriver` | Time loop over physics `step` plus optional IC/BC/save hooks | `openpfc/kernel/simulation/simulation_driver.hpp` | `examples/05_simulator.cpp` |
-| `FieldModifier` + `apply_field_modifier` | Initial and boundary conditions on a host or device `Field` (JSON catalog or programmatic) | `openpfc/kernel/simulation/field_modifier.hpp`, `apply_field_modifier.hpp` | `examples/10_ui_register_ic.cpp` |
+| `FieldModifier` + `apply_field_modifier` | Initial and boundary conditions on a host or device `Field` (JSON catalog or programmatic) | `openpfc/kernel/simulation/field_modifier.hpp`, `apply_field_modifier.hpp` | `examples/initialization/catalog/model.cpp` |
 | `ResultsWriter` | Stable interface for persisted simulation fields | `openpfc/kernel/simulation/results_writer.hpp` | `examples/11_write_results.cpp` |
 | `FileResultsWriter` | File sink with `$ENV` expansion and increment path templating | `openpfc/frontend/io/file_results_writer.hpp` | `BinaryWriter`, `VTKWriter` |
 | `World` | Deprecated A0 adapter around `Domain` | `openpfc/kernel/data/world.hpp` | `examples/geometry/anisotropic-grid/model.cpp` uses `Domain` |

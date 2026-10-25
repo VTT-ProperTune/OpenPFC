@@ -1,0 +1,78 @@
+---
+title: "Let configuration choose an initial condition"
+description: "Extend the native FieldModifierCatalog with an affine field while keeping the catalog local to the program."
+order: 55
+categories: [Initial conditions, Configuration]
+targets: [10_ui_register_ic]
+capabilities: [field-initialization, modifier-catalog, configuration, dependency-injection]
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[OpenPFC / A small extension point]{.lesson-kicker}
+
+# Let configuration choose an initial condition
+
+[Keep the mathematics in C++. Put the choice and its parameters in the input file.]{.lesson-deck}
+:::
+
+The [pattern lesson](../patterns/index.qmd) passes a callable directly to
+a field. A configurable application can instead create a `FieldModifier`
+from a name. This refactoring of `10_ui_register_ic` uses OpenPFC's actual
+catalog rather than maintaining an unrelated map of functions.
+
+## Describe one new field
+
+Our extension fills an affine function,
+
+$$
+u(\mathbf x)=b+a_xx+a_yy+a_zz.
+$$ {#eq-affine}
+
+```{.cpp include="model.cpp" snippet="modifier"}
+```
+
+The modifier receives a mutable host view, the physical domain and the
+owned box. `pfc::field::apply` performs the coordinate traversal. This
+keeps the formula independent of both the local array layout and the
+application's configuration format.
+
+## Register the constructor, then apply its result
+
+```{.cpp include="model.cpp" snippet="catalog" dedent=4}
+```
+
+The catalog starts with built-in initial conditions and adds `affine`.
+Its factory validates the supplied parameters and constructs the modifier.
+An unknown name reports the registered choices. Every MPI process builds
+its own catalog and applies its modifier to its own field.
+
+This catalog is an ordinary local object. It does not mutate the
+process-wide default catalog, and the modifier's mathematics does not
+depend on registration. A larger JSON-driven session can perform the
+same wiring for named simulation fields.
+
+## Make a change without recompiling the physics
+
+```sh
+openpfc run model.cpp input.json --source-root .. --launcher=none
+```
+
+Change `offset` or `slope` in `initial_condition`. As a second experiment,
+replace the whole object with `{"type":"constant","n0":0.4}`.
+That selects a built-in modifier through the same catalog. Try an unknown
+type and read the diagnostic instead of guessing what was selected.
+
+The program writes the actual owned field to `results/fields_rank_*.csv`.
+Both the affine and constant cases are checked globally on one and two
+ranks. The default x/y interval is $[-4,4)$, so this affine profile is
+not generally continuous across a periodic seam; this lesson fills and
+inspects it without evolving a periodic PDE.
+
+Keep the [model](model.cpp), [input](input.json) and
+[shared helper](../lesson.hpp). Continue with
+a native configuration-driven session.
+:::

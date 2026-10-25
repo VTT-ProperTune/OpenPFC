@@ -89,7 +89,7 @@ When `saveat > 0` and `fields` is present, `parse_result_writers_from_json` cons
 | `initial_conditions` | array | Objects with `type`, optional `target`, type-specific fields |
 | `boundary_conditions` | array | Same pattern |
 
-Modifier types must be **registered** in `main` before `App` runs (`register_field_modifier<…>`). See [`app_pipeline.md`](../user_guide/app_pipeline.md) and `examples/10_ui_register_ic.cpp`.
+Modifier types must be **registered** in `main` before `App` runs (`register_field_modifier<…>`). See [`app_pipeline.md`](../user_guide/app_pipeline.md) and `examples/initialization/catalog/model.cpp`.
 
 ## Optional sections
 

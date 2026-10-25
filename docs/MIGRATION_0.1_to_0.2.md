@@ -150,7 +150,7 @@ no Gen-1 `restore_gen1_from_checkpoint`.
 | Spectral-ETD JSON session | `include/openpfc/frontend/ui/json_spectral_etd_session.hpp` |
 | Tungsten production | `apps/tungsten/include/tungsten/tungsten_session.hpp`, `tungsten_physics.hpp` |
 | Spectral example | `examples/04_diffusion_model.cpp`, `examples/05_simulator.cpp` |
-| Custom JSON IC | `examples/10_ui_register_ic.cpp` |
+| Custom JSON IC | `examples/initialization/catalog/model.cpp` |
 | API catalog | `docs/api/examples/` |
 
 ## Adapters A0–A2

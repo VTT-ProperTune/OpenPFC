@@ -78,9 +78,14 @@
     },
     {
       "target": "10_ui_register_ic",
-      "source": "10_ui_register_ic.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "initialization/catalog/model.cpp",
+      "chapter": "initialization/catalog/index.qmd",
+      "capabilities": [
+        "field-initialization",
+        "modifier-catalog",
+        "configuration",
+        "dependency-injection"
+      ]
     },
     {
       "target": "11_write_results",
@@ -918,7 +923,8 @@
       ],
       "chapters": [
         "geometry/coordinate-fields/index.qmd",
-        "initialization/patterns/index.qmd"
+        "initialization/patterns/index.qmd",
+        "initialization/catalog/index.qmd"
       ]
     },
     {
@@ -927,7 +933,9 @@
         "json_session_main.hpp",
         "parameter_schema.hpp"
       ],
-      "chapters": []
+      "chapters": [
+        "initialization/catalog/index.qmd"
+      ]
     },
     {
       "name": "field output and visualization",
