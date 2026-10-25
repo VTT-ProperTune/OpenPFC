@@ -41,6 +41,8 @@
  */
 
 #include <cstddef>
+#include <openpfc/kernel/data/box3i.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <tuple>
 #include <utility>
 
