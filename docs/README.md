@@ -29,7 +29,8 @@ MyST, and Breathe render the final site.
 
 | Goal | Start here | Continue with |
 |------|------------|---------------|
-| Verify a clone and dependency stack | [Start here](start_here_15_minutes.md) | [Quick start](quickstart.md) |
+| Run a first model and inspect its results | [Start here](start_here_15_minutes.md#run-your-first-model-with-an-installed-sdk) | [Native CLI guide](user_guide/cli.md) |
+| Verify a clone and dependency stack | [Source-build check](start_here_15_minutes.md#verify-a-source-build) | [Quick start](quickstart.md) |
 | Compile a model or run a catalogued case | [Native command-line workflow](user_guide/cli.md) | [HPC operator guide](hpc/operator_guide.md) |
 | Understand what each application solves | Applications catalog (research) | [Applications overview](user_guide/applications.md) |
 | Run an existing application | [Run simulations](learning_paths.md#i-want-to-run-simulations) | [Applications](user_guide/applications.md), [configuration](user_guide/configuration.md) |

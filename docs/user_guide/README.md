@@ -5,17 +5,18 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # User guide
 
-This section covers the operation of existing OpenPFC applications and the
-configuration-driven frontend. It assumes OpenPFC has already been built and a
-basic example runs successfully.
+This section covers compiling user models with the native CLI, running existing
+OpenPFC applications and using the configuration-driven frontend. It assumes
+you have an installed SDK or a working source build.
 
-For installation use [`INSTALL.md`](../../INSTALL.md). For the first build and
-run use [Start here](../start_here_15_minutes.md).
+For installation use [`INSTALL.md`](../../INSTALL.md). To check the SDK, run a
+starter model and inspect its results, use [Start here](../start_here_15_minutes.md).
 
 ## Run applications
 
 | Topic | Document |
 |------|----------|
+| Compile user models or run catalogued cases | [Native CLI workflow](cli.md) |
 | Available binaries and sample inputs | [Applications](applications.md) |
 | Configuration vocabulary | [Configuration](configuration.md) |
 | JSON/TOML to runtime objects | [Application pipeline](app_pipeline.md) |

@@ -7,7 +7,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 OpenPFC is easier to learn when you follow one story at a time. The same pages appear in several places in the documentation, but you do not need to read everything. Choose the route that matches what you are trying to do now, follow it until you can run or modify something real, and only then branch into reference pages.
 
-If you have not yet built the project, start with [`start_here_15_minutes.md`](start_here_15_minutes.md). It gives you one clean success path: configure, build, and run a small MPI example. The routes below assume that first run works.
+Start with [your first model](start_here_15_minutes.md) to check an installed
+SDK, run the CPU diffusion starter and inspect its results. If you are working
+from a checkout, use the [source-build check](start_here_15_minutes.md#verify-a-source-build)
+instead. The routes below continue from a successful first run.
 
 ## I want to run simulations
 
@@ -24,6 +27,12 @@ For a complete “run and inspect output” walkthrough, read [`tutorials/end_to
 ## I want to extend the physics
 
 This route is for someone who wants to write or modify a model, add parameters, or build a custom config-driven application.
+
+For an editable starting point, create and run the
+[CPU diffusion starter](start_here_15_minutes.md#run-your-first-model-with-an-installed-sdk),
+then change `Diffusion::rhs` in its `model.cpp`. The
+[native CLI guide](user_guide/cli.md) explains compilation, inputs and saved
+attempts as the model grows.
 
 Start with [`concepts/architecture.md`](concepts/architecture.md), because it explains where the kernel, runtime and frontend responsibilities begin and end. Then read [`reference/class_tour.md`](reference/class_tour.md), which connects the important names — `Domain`, `SimulationDriver`, stacks, fields and writers — to the headers you will actually open. Porting 0.1 code: [`MIGRATION_0.1_to_0.2.md`](MIGRATION_0.1_to_0.2.md).
 

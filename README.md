@@ -39,14 +39,18 @@ are where the project began.
 
 OpenPFC needs a consistent compiler, MPI and HeFFTe stack; the
 [installation guide][install] covers workstations and the supported clusters.
-Then:
+For a first model using an installed SDK, follow the [15-minute start][fifteen].
+To build and test a checkout on Tohtori:
 
 ```bash
-cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
-cmake --build build -j"$(nproc)"
-cd build
-mpirun -n 1 ./examples/05_simulator
+./scripts/build.sh --machine=tohtori --cpu
+module load openmpi/5.0.10
+mpirun -n 1 ./builds/release/examples/05_simulator
 ```
+
+On an ordinary workstation with dependencies installed, use
+`--machine=portable --cpu`. For LUMI's scheduled build and run workflow, follow
+the [installation guide][install].
 
 ## Use the installed library
 

@@ -6,10 +6,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 # Quick start
 
 If you are brand new, start with
-[`start_here_15_minutes.md`](start_here_15_minutes.md). It is the smallest
-possible success path. This page is the broader quick start: it shows how to
-build OpenPFC, run an example, run a shipped application, and consume an
-installed OpenPFC package from another CMake project.
+[`start_here_15_minutes.md`](start_here_15_minutes.md) for a first model or a
+source-build check. This page shows how to build OpenPFC, run an example,
+run a shipped application, and consume an installed OpenPFC package from
+another CMake project.
 
 For install details — modules, HeFFTe 2.4.1, CUDA, HIP, and site-specific
 toolchains — use [`INSTALL.md`](../INSTALL.md). This page assumes the dependency
@@ -17,22 +17,10 @@ stack is already available.
 
 ## Start from an installed SDK
 
-With `openpfc` on `PATH`, you can create an editable CPU model and run it without
-an OpenPFC checkout or a handwritten CMake project:
-
-```bash
-openpfc init my-model --model=diffusion
-cd my-model
-openpfc doctor
-openpfc compile model.cpp
-openpfc run model.cpp input.json --launcher=none
-```
-
-Load the compiler/MPI environment for your installed SDK first. Add
-`--sdk /path/to/openpfc-sdk` to doctor, compile and run if needed.
-The CLI prints the attempt directory; `results/summary.json` and
-`results/diagnostics.csv` there show a conserved mean and a decreasing L2 norm.
-Edit `input.json` and rerun to reuse the build with a new saved attempt.
+Follow [Your first model](start_here_15_minutes.md#run-your-first-model-with-an-installed-sdk)
+to check the installed SDK with `openpfc doctor`, create an editable CPU
+diffusion model, compile and run it, and inspect the result files. This route
+needs no OpenPFC checkout or handwritten CMake project.
 See the [native CLI guide](user_guide/cli.md) for diagnostics, MPI, output files,
 input limits, export and CPU image packaging. `openpfc COMMAND --help` lists
 command-specific options. `openpfc bundle` packages a compiled CPU model as a
@@ -49,24 +37,29 @@ JSON or TOML input and are the normal entry point for deployable simulations.
 
 ## Configure and build
 
-From the repository root, after loading the compiler and MPI environment
-described in [`INSTALL.md`](../INSTALL.md):
+Use the canonical build script from the repository root. On Tohtori:
 
 ```bash
-cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
-cmake --build build -j"$(nproc)"
+./scripts/build.sh --machine=tohtori --cpu
+module load openmpi/5.0.10
 ```
 
-Use separate build directories for CPU and GPU configurations; see
-[`build_cpu_gpu.md`](hpc/build_cpu_gpu.md). The default configuration builds
-examples, applications, and tests. Disable targets explicitly when you want a
-smaller build:
+The module load sets up the launch shell for the examples below; the build
+script's module changes apply only inside its own process.
+
+On an ordinary workstation with the dependencies from
+[INSTALL.md](../INSTALL.md) installed, use:
 
 ```bash
-cmake -S . -B build \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DOpenPFC_BUILD_TESTS=OFF
+./scripts/build.sh --machine=portable --cpu
 ```
+
+Both commands build and test in `builds/release`. Use `--build-dir` for a
+different tree and `--cmake-arg` for a configuration option; run
+`./scripts/build.sh --help` for details. Keep CPU and GPU trees separate; see
+[build CPU/GPU](hpc/build_cpu_gpu.md). On LUMI, follow the
+[LUMI guide](hpc/INSTALL.LUMI.md) for flash storage and scheduled compilation
+and execution.
 
 If CMake Tools runs without your shell `module load`, it may select the wrong
 compiler or fail to find MPI. The repository ships `CMakePresets.json`:
@@ -84,8 +77,7 @@ Examples are built under `<build>/examples/` when
 the command works on a workstation or restricted CI environment:
 
 ```bash
-cd build
-mpirun -n 1 ./examples/05_simulator
+mpirun -n 1 ./builds/release/examples/05_simulator
 ```
 
 Success means the process exits with status zero. Rank zero normally prints
@@ -102,14 +94,22 @@ is `02_domain_decomposition`, `03_parallel_fft`, `05_simulator`, and
 ## Run an application
 
 Shipped applications live under `apps/`. The complete list and input-file
-pointers are in
-[`user_guide/applications.md`](user_guide/applications.md). A first CPU tungsten
-run is:
+pointers are in [`user_guide/applications.md`](user_guide/applications.md).
+For a first CPU tungsten run, make a local copy of the sample input from the
+repository root:
 
 ```bash
-cd build
-mpirun -n 1 ./apps/tungsten/tungsten \
-  ../apps/tungsten/inputs_json/tungsten_single_seed.json
+mkdir -p results/first-tungsten
+cp apps/tungsten/inputs_json/tungsten_single_seed.json results/first-tungsten/input.json
+```
+
+In the copied input, change the `data` value for the `psi` field to
+`results/first-tungsten/psi_%d.bin` and for `psiMF` to
+`results/first-tungsten/psimf_%d.bin`. The shipped sample contains absolute
+output paths for its original site. Then run from the repository root:
+
+```bash
+mpirun -n 1 ./builds/release/apps/tungsten/tungsten results/first-tungsten/input.json
 ```
 
 If the process exits with status zero, the application initialized and ran.
@@ -170,7 +170,7 @@ Migrating from 0.1 `Model`/`Simulator`/`App`:
 - Diagnose configuration, link, and runtime failures in
   [`troubleshooting.md`](troubleshooting.md).
 
-If a path under `build/examples/` or `build/apps/` is missing, reconfigure with
-the corresponding build option enabled. If `find_package(OpenPFC)` fails, check
-the installation prefix and the active compiler/MPI stack before changing the
-consumer project.
+If a path under `builds/release/examples/` or `builds/release/apps/` is missing,
+reconfigure with the corresponding build option enabled. If
+`find_package(OpenPFC)` fails, check the installation prefix and the active
+compiler/MPI stack before changing the consumer project.

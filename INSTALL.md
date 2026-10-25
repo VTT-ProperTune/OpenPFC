@@ -7,6 +7,25 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 This document is the supported source build guide. On Tohtori, the current site Open MPI 5.0.10 module uses GCC 15.2.0. Other compilers may work, but OpenPFC, HeFFTe, and MPI must use one matching compiler/MPI stack.
 
+## Choose an installation route
+
+If your site already provides an OpenPFC installation, load its module and
+matching compiler/MPI environment. The [Tohtori](docs/hpc/INSTALL.tohtori.md)
+and [LUMI](docs/hpc/INSTALL.LUMI.md) guides list the site modules. The
+[first-model walkthrough](docs/start_here_15_minutes.md#run-your-first-model-with-an-installed-sdk)
+then checks the SDK with `openpfc doctor`, creates a CPU diffusion model and
+shows how to inspect its output. This requires an installation containing the
+native CLI commands described here; older release modules may not include them.
+
+For a source checkout, use [`scripts/build.sh`](scripts/build.sh) for routine
+builds and tests. On Tohtori, run `./scripts/build.sh --machine=tohtori --cpu`.
+On an ordinary workstation with the dependencies below installed, use
+`./scripts/build.sh --machine=portable --cpu`; this preserves your environment
+and package discovery. On LUMI, follow the site's scheduled build instructions
+and keep build trees on flash outside the clone. Run `./scripts/build.sh --help`
+for options. The remaining sections provide manual dependency and toolchain
+details.
+
 ## Reference stack (at a glance)
 
 | Piece | Documented / exercised baseline |
@@ -27,7 +46,11 @@ One-page matrix (optional / QA tooling, doc check scripts): [`docs/dependency_ma
 
 For common failures (`mpi.h`, wrong compiler in cache, HeFFTe not found, **link errors involving `libheffte.so` and `GLIBCXX_*`**), see [`docs/troubleshooting.md`](docs/troubleshooting.md).
 
-**After a successful install**, continue with [`docs/quickstart.md`](docs/quickstart.md) and pick a sequenced track in [`docs/learning_paths.md`](docs/learning_paths.md). For the shortest linear path (build → one `mpirun`), use [`docs/start_here_15_minutes.md`](docs/start_here_15_minutes.md). The full prose index is [`docs/README.md`](docs/README.md) (tutorials, HPC, troubleshooting — not only Doxygen).
+After a successful install, use [Start here](docs/start_here_15_minutes.md) for
+your first model and result files. For source examples, applications and CMake
+integration, continue with [Quick start](docs/quickstart.md). The
+[learning paths](docs/learning_paths.md) and [documentation index](docs/README.md)
+help you choose the next step.
 
 Contributing (builds, tests, documentation, changelog notes): [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
