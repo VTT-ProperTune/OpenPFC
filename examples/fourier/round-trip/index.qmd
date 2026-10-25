@@ -96,7 +96,7 @@ test additionally verifies all 40 stored mode indices and the three known
 coefficients. This qualifies this small signal, not every transform size
 or hardware backend.
 
-Continue with choosing an FFT implementation and its layout.
+Continue with [choosing an FFT implementation and its layout](../field-layout/index.qmd).
 
 The complete [C++ model](model.cpp) and [starting input](input.json)
 are available with this lesson.

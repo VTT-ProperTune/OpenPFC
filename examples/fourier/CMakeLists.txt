@@ -4,3 +4,7 @@
 add_executable(03_parallel_fft round-trip/model.cpp)
 target_link_libraries(03_parallel_fft PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(03_parallel_fft PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(09_parallel_fft_high_level field-layout/model.cpp)
+target_link_libraries(09_parallel_fft_high_level PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(09_parallel_fft_high_level PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")

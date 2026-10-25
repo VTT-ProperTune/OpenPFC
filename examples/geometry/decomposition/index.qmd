@@ -87,7 +87,7 @@ The example check launches one and two ranks and validates every owned
 global index. It does not claim optimal communication volume, load balance
 for arbitrary physics, or support for more ranks than meaningful cells.
 FFT algorithms may redistribute values between a real-space inbox and a
-Fourier-space outbox; the FFT layout lesson
+Fourier-space outbox; the [FFT layout lesson](../../fourier/field-layout/index.qmd)
 explains why those are separate ownership descriptions.
 
 For exact API contracts see the

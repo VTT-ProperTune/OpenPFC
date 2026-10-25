@@ -93,6 +93,21 @@ def verify_07_array(bin_dir, root, launch, ranks):
     )
 
 
+def verify_layout(bin_dir, root, launch, ranks):
+    binary = bin_dir / "09_parallel_fft_high_level"
+    run(binary, root / "layout", launch)
+    if ranks == 1:
+        run(binary, root / "local", parameters={"implementation": "local"})
+    else:
+        run(
+            binary,
+            root / "rejected-local",
+            launch,
+            {"implementation": "local"},
+            success=False,
+        )
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -108,6 +123,7 @@ def main():
             "07_array",
             "08_discrete_fields",
             "03_parallel_fft",
+            "09_parallel_fft_high_level",
         ],
     )
     args = parser.parse_args()
@@ -139,6 +155,10 @@ def main():
             root = base / "03_parallel_fft"
             root.mkdir()
             verify_03_parallel_fft(bin_dir, root, launch, ranks)
+        if args.case in (None, "09_parallel_fft_high_level"):
+            root = base / "09_parallel_fft_high_level"
+            root.mkdir()
+            verify_layout(bin_dir, root, launch, ranks)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

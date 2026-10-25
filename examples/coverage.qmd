@@ -17,7 +17,7 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 :::
 
 There are 45 declared runnable example targets and
-10 Quarto teaching chapters. The table includes older programs
+11 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -84,7 +84,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `06_multi_index` | [Read the lesson](geometry/index-boxes/index.qmd) |
 | `07_array` | [Read the lesson](geometry/field-storage/index.qmd) |
 | `08_discrete_fields` | [Read the lesson](geometry/coordinate-fields/index.qmd) |
-| `09_parallel_fft_high_level` | Pending conversion. |
+| `09_parallel_fft_high_level` | [Read the lesson](fourier/field-layout/index.qmd) |
 | `10_ui_register_ic` | Pending conversion. |
 | `11_write_results` | Pending conversion. |
 | `12_cahn_hilliard` | Pending conversion. |
@@ -139,7 +139,7 @@ fixed-step restart does not establish an adaptive restart contract.
 |---|---|
 | geometry | [decomposition](geometry/decomposition/index.qmd), [index-boxes](geometry/index-boxes/index.qmd), [field-storage](geometry/field-storage/index.qmd) |
 | distributed fields and MPI | [coordinate-fields](geometry/coordinate-fields/index.qmd), [finite-differences](heat/finite-differences/index.qmd) |
-| local and distributed FFT | [round-trip](fourier/round-trip/index.qmd) |
+| local and distributed FFT | [round-trip](fourier/round-trip/index.qmd), [field-layout](fourier/field-layout/index.qmd) |
 | finite differences and spectral gradients | [periodic](differentiation/periodic/index.qmd) |
 | conservative fluxes and nonperiodic boundaries | Pending a teaching chapter. |
 | fixed and adaptive integration | [finite-differences](heat/finite-differences/index.qmd) |

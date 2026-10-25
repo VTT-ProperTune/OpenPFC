@@ -29,8 +29,6 @@ target_link_libraries(05_simulator PRIVATE OpenPFC::openpfc )
 
 
 
-add_executable(09_parallel_fft_high_level 09_parallel_fft_high_level.cpp)
-target_link_libraries(09_parallel_fft_high_level PRIVATE OpenPFC::openpfc )
 
 add_executable(10_ui_register_ic 10_ui_register_ic.cpp)
 target_link_libraries(10_ui_register_ic PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json )
@@ -194,6 +192,16 @@ if(OpenPFC_BUILD_TESTS)
              COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_foundations.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 03_parallel_fft
                      --launcher "${MPIEXEC_EXECUTABLE}" "--rank-flag=${MPIEXEC_NUMPROC_FLAG}" --ranks 2)
     set_tests_properties(example-03-parallel-fft-mpi PROPERTIES PROCESSORS 2 TIMEOUT 360
+                         ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+  endif()
+  add_test(NAME example-09-parallel-fft-high-level
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_foundations.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 09_parallel_fft_high_level)
+  set_tests_properties(example-09-parallel-fft-high-level PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
+    add_test(NAME example-09-parallel-fft-high-level-mpi
+             COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_foundations.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 09_parallel_fft_high_level
+                     --launcher "${MPIEXEC_EXECUTABLE}" "--rank-flag=${MPIEXEC_NUMPROC_FLAG}" --ranks 2)
+    set_tests_properties(example-09-parallel-fft-high-level-mpi PROPERTIES PROCESSORS 2 TIMEOUT 360
                          ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
   endif()
 endif()

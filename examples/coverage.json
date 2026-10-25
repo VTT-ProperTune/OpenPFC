@@ -67,9 +67,14 @@
     },
     {
       "target": "09_parallel_fft_high_level",
-      "source": "09_parallel_fft_high_level.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "fourier/field-layout/model.cpp",
+      "chapter": "fourier/field-layout/index.qmd",
+      "capabilities": [
+        "local-fft",
+        "distributed-fft",
+        "fields",
+        "fft-layout"
+      ]
     },
     {
       "target": "10_ui_register_ic",
@@ -642,7 +647,8 @@
         "fft_interface.hpp"
       ],
       "chapters": [
-        "fourier/round-trip/index.qmd"
+        "fourier/round-trip/index.qmd",
+        "fourier/field-layout/index.qmd"
       ]
     },
     {
