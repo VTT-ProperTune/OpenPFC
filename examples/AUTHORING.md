@@ -86,6 +86,27 @@ and `stability`. The matching executables are `periodic_collocation`,
 uses `waves/variable-transport/trefethen-p6.json`.
 
 
+## Reproduce the polynomials figures
+
+To regenerate the seven polynomial figures, run in an allocated environment:
+
+```sh
+example_binaries="$(pwd)/builds/release/examples"
+for lesson in interpolation nodal-polynomials differentiation regularity integration boundary-values nonlinear-boundary; do
+  target="polynomial_${lesson//-/_}"
+  run_directory="results/example-book/polynomials/$lesson"
+  mkdir -p "$run_directory"
+  (cd "$run_directory" && "$example_binaries/$target")
+done
+uv run --with matplotlib==3.11.2 python examples/render_polynomials.py \
+  --runs results/example-book/polynomials
+```
+
+The shell loop uses Bash's string replacement. These defaults match the
+book's degrees and profiles. The plotting script reads the C++ CSV files;
+it does not run an independent Python numerical solver to supply the curves.
+
+
 ## Render within the scientific website
 
 Use a disposable copy of `openpfc-pages`:
