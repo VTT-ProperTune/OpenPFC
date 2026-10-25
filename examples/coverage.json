@@ -235,6 +235,17 @@
       ]
     },
     {
+      "target": "allen_cahn_driven",
+      "source": "polynomials/allen-cahn-driven/model.cpp",
+      "chapter": "polynomials/allen-cahn-driven/index.qmd",
+      "capabilities": [
+        "chebyshev-reference",
+        "explicit-euler",
+        "nonlinear-models",
+        "time-dependent-boundaries"
+      ]
+    },
+    {
       "target": "allen_cahn_fixed",
       "source": "polynomials/allen-cahn-fixed/model.cpp",
       "chapter": "polynomials/allen-cahn-fixed/index.qmd",
@@ -1034,7 +1045,7 @@
       "program": 35,
       "title": "Allen-Cahn eq. as in p34.m, but with boundary condition",
       "source": "https://people.maths.ox.ac.uk/trefethen/p35.m",
-      "chapter": null,
+      "chapter": "polynomials/allen-cahn-driven/index.qmd",
       "scope": "Original degree-20 Allen–Cahn equation with u(1,t)=1+sin(t/5)^2, full Chebyshev D2, and explicit endpoint replacement after every Euler step through t=100. Native EulerStepper and barycentric display evaluation preserve the discrete evolution. An operator-based timestep cap applies to refinements and preserves the original degree-20 default."
     },
     {
@@ -1284,6 +1295,7 @@
       "chapters": [
         "waves/kdv/index.qmd",
         "polynomials/allen-cahn-fixed/index.qmd",
+        "polynomials/allen-cahn-driven/index.qmd",
         "phase-fields/cahn-hilliard/index.qmd"
       ]
     }

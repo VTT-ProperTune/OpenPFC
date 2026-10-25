@@ -80,3 +80,7 @@ set_target_properties(disk_poisson PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_
 add_executable(allen_cahn_fixed allen-cahn-fixed/model.cpp)
 target_link_libraries(allen_cahn_fixed PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(allen_cahn_fixed PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(allen_cahn_driven allen-cahn-driven/model.cpp)
+target_link_libraries(allen_cahn_driven PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(allen_cahn_driven PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")

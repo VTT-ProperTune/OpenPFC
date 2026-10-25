@@ -142,6 +142,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `mixed_wave_tank` | `waves/mixed-tank/model.cpp` | A wave tank has two kinds of edge |
 | `kdv_integrating_factor` | `waves/kdv/model.cpp` | Let dispersion evolve exactly between stages |
 | `allen_cahn_fixed` | `polynomials/allen-cahn-fixed/model.cpp` | Lift the boundary before evolving the interior |
+| `allen_cahn_driven` | `polynomials/allen-cahn-driven/model.cpp` | A changing wall must enter the next derivative |
 
 ## Research prototypes
 

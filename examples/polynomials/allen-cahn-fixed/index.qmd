@@ -130,7 +130,7 @@ Lagrange-basis derivatives and check temporal convergence separately.
 This is a serial reference with [source](model.cpp), [input](input.json),
 [evolution helper](../allen_cahn.hpp) and
 [collocation helper](../collocation.hpp). Continue with
-a boundary that changes in time.
+[a boundary that changes in time](../allen-cahn-driven/index.qmd).
 
 ## References
 ::: {#refs}

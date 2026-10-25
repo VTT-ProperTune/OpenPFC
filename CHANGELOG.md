@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Compare a time-driven boundary with the fixed-endpoint treatment using the same nonlinear model. Verify complete evolving fields and the prescribed endpoint independently.
+
 - Make boundary lifting visible in a native Euler spectral evolution. Check full fields, timestep convergence, symmetry diagnostics and stability limits at two resolutions.
 
 - Use native complex-state RK4 with an integrating factor for KdV. Explain the unfiltered collocation choice and check complete fields with direct Fourier sums and cyclic convolutions.

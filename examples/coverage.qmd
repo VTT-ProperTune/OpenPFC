@@ -16,15 +16,15 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 [Follow what is taught, what is adapted, and what still needs a chapter.]{.lesson-deck}
 :::
 
-There are 81 declared runnable example targets and
-67 Quarto teaching chapters. The table includes older programs
+There are 82 declared runnable example targets and
+68 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
 ## Spectral Methods in MATLAB
 
 The [author's collection](https://people.maths.ox.ac.uk/trefethen/spectral.html)
-contains forty programs. Currently 39 have a corresponding lesson.
+contains forty programs. Currently 40 have a corresponding lesson.
 A link means that the lesson declares coverage of that experiment; the
 scope column states changes in method or presentation. It does not mean
 an unmodified MATLAB program was translated line for line. Pending rows
@@ -66,7 +66,7 @@ remain in the inventory while applicability and implementation are assessed.
 | [32](https://people.maths.ox.ac.uk/trefethen/p32.m) | solve u_xx = exp(4x), u(-1)=0, u(1)=1 (compare p13.m) | [Read the lesson](polynomials/boundary-values/index.qmd). Original nonzero Dirichlet problem with an affine lift and native GMRES. |
 | [33](https://people.maths.ox.ac.uk/trefethen/p33.m) | solve linear BVP u_xx = exp(4x), u'(-1)=u(1)=0 | [Read the lesson](polynomials/boundary-values/index.qmd). Original mixed Neumann/Dirichlet problem with a derivative row and native GMRES. |
 | [34](https://people.maths.ox.ac.uk/trefethen/p34.m) | Allen-Cahn eq. u_t = eps*u_xx+u-u^3, u(-1)=-1, u(1)=1 | [Read the lesson](polynomials/allen-cahn-fixed/index.qmd). Original degree-20 Allen–Cahn equation, epsilon=.01, fixed endpoints, lifted full Chebyshev D2 and explicit Euler through t=100. Native EulerStepper advances the vector; barycentric interpolation replaces monomial display fitting. An operator-based timestep cap applies to refinements and preserves the original degree-20 default. |
-| [35](https://people.maths.ox.ac.uk/trefethen/p35.m) | Allen-Cahn eq. as in p34.m, but with boundary condition | Pending assessment and implementation. |
+| [35](https://people.maths.ox.ac.uk/trefethen/p35.m) | Allen-Cahn eq. as in p34.m, but with boundary condition | [Read the lesson](polynomials/allen-cahn-driven/index.qmd). Original degree-20 Allen–Cahn equation with u(1,t)=1+sin(t/5)^2, full Chebyshev D2, and explicit endpoint replacement after every Euler step through t=100. Native EulerStepper and barycentric display evaluation preserve the discrete evolution. An operator-based timestep cap applies to refinements and preserves the original degree-20 default. |
 | [36](https://people.maths.ox.ac.uk/trefethen/p36.m) | Laplace eq. on [-1,1]x[-1,1] with nonzero BCs | [Read the lesson](polynomials/laplace-square/index.qmd). Original degree-24 nonzero-boundary Laplace problem; equivalent boundary elimination replaces identity boundary rows. |
 | [37](https://people.maths.ox.ac.uk/trefethen/p37.m) | 2D "wave tank" with Neumann BCs for \|y\|=1 | [Read the lesson](waves/mixed-tank/index.qmd). Original A=3, Nx=50, Ny=15 wave tank, Gaussian, nominal-step startup and Neumann reconstruction after each leapfrog update. FFT actions replace equivalent dense Fourier/Chebyshev matrices. Exact standing-mode and Taylor-start presets are additional checks. |
 | [38](https://people.maths.ox.ac.uk/trefethen/p38.m) | solve u_xxxx = exp(x), u(-1)=u(1)=u'(-1)=u'(1)=0 | [Read the lesson](polynomials/clamped-beam/index.qmd). Original degree-15 clamped fourth-order problem. Native Chebyshev nodes/derivatives construct the weighted operator; native GMRES replaces backslash, and barycentric reconstruction of the auxiliary polynomial preserves zero values and slopes. Complete values and slopes are checked against an independently determined analytic solution. |
@@ -100,6 +100,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `23_halo_microtiming` | Pending conversion. |
 | `24_adaptive_etd` | [Read the lesson](integration/adaptive-etd/index.qmd) |
 | `airy_eigenproblem` | [Read the lesson](polynomials/airy/index.qmd) |
+| `allen_cahn_driven` | [Read the lesson](polynomials/allen-cahn-driven/index.qmd) |
 | `allen_cahn_fixed` | [Read the lesson](polynomials/allen-cahn-fixed/index.qmd) |
 | `cardinal_interpolation` | [Read the lesson](interpolation/cardinal/index.qmd) |
 | `chebyshev_eigenmodes` | [Read the lesson](polynomials/eigenmodes/index.qmd) |
@@ -191,7 +192,7 @@ fixed-step restart does not establish an adaptive restart contract.
 | coupling and transactional attempts | [host-orchestrator](coupling/host-orchestrator/index.qmd), [adaptive-rk](integration/adaptive-rk/index.qmd), [adaptive-etd](integration/adaptive-etd/index.qmd) |
 | profiling and communication diagnostics | [mpi-timing](diagnostics/mpi-timing/index.qmd), [profiling](diagnostics/profiling/index.qmd) |
 | CUDA and HIP execution | Pending a teaching chapter. |
-| nonlinear models and incompressible flow | [kdv](waves/kdv/index.qmd), [allen-cahn-fixed](polynomials/allen-cahn-fixed/index.qmd), [cahn-hilliard](phase-fields/cahn-hilliard/index.qmd) |
+| nonlinear models and incompressible flow | [kdv](waves/kdv/index.qmd), [allen-cahn-fixed](polynomials/allen-cahn-fixed/index.qmd), [allen-cahn-driven](polynomials/allen-cahn-driven/index.qmd), [cahn-hilliard](phase-fields/cahn-hilliard/index.qmd) |
 
 Every family needs an actual model, a useful mathematical story and appropriate runtime evidence.
 

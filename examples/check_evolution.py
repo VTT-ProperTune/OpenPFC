@@ -390,6 +390,7 @@ def main():
             "mixed_wave_tank",
             "kdv_integrating_factor",
             "allen_cahn_fixed",
+            "allen_cahn_driven",
         ],
     )
     args = parser.parse_args()
@@ -421,6 +422,10 @@ def main():
             root = base / "allen_cahn_fixed"
             root.mkdir()
             check_allen(bin_dir / "allen_cahn_fixed", root, False)
+        if args.case in (None, "allen_cahn_driven"):
+            root = base / "allen_cahn_driven"
+            root.mkdir()
+            check_allen(bin_dir / "allen_cahn_driven", root, True)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 
