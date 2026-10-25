@@ -74,7 +74,7 @@ using PointFnT = std::function<double(double, double, double, double)>;
 /**
  * @brief Diffusion coefficient \f$D\f$ shared by every heat3d binary.
  *
- * Hard-pinned to `1.0` to match `examples/15_finite_difference_heat.cpp`
+ * Hard-pinned to `1.0` to match `examples/heat/separated-halos/model.cpp`
  * and to keep the L2 numbers reported by the heat3d drivers comparable.
  * Change the literal here (and rebuild) to experiment with a different
  * coefficient — every driver, the analytic reference solution, and the

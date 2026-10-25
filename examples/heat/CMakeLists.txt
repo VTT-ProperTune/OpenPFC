@@ -12,3 +12,7 @@ set_target_properties(20_explicit_stepper_spectral PROPERTIES RUNTIME_OUTPUT_DIR
 add_executable(heat_exponential exponential/model.cpp)
 target_link_libraries(heat_exponential PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(heat_exponential PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(15_finite_difference_heat separated-halos/model.cpp)
+target_link_libraries(15_finite_difference_heat PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(15_finite_difference_heat PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")

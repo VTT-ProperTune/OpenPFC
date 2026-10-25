@@ -30,7 +30,7 @@
  *    indexing matches `pfc::halo::make_structured_halos` +
  *    `pfc::halo::copy_to_face_layout`. This is the
  *    correct primitive for periodic problems on a separated layout
- *    (e.g. `apps/allen_cahn/`, `examples/15_finite_difference_heat.cpp`).
+ *    (e.g. `apps/allen_cahn/`, `examples/heat/separated-halos/model.cpp`).
  *
  * @see docs/halo_exchange.md
  * @see kernel/decomposition/comm_halo_exchange.hpp

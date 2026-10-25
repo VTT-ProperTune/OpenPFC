@@ -1,0 +1,105 @@
+---
+title: "Keep the field compact and the neighbours separate"
+description: "Solve the same periodic heat problem with a contiguous owned core and six independent face halos."
+order: 53
+categories: [Diffusion, Finite differences, MPI]
+targets: [15_finite_difference_heat]
+capabilities: [fields, finite-differences, separated-halos, sparse-exchange, mpi-reductions]
+bibliography: ../../references.bib
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[OpenPFC / One equation, different storage]{.lesson-kicker}
+
+# Keep the field compact and the neighbours separate
+
+[Ghost cells need not surround the owned array. The stencil can find them in six side buffers instead.]{.lesson-deck}
+:::
+
+The [first finite-difference heat lesson](../finite-differences/index.qmd)
+stores its owned field inside a padded array. This refactoring of
+`15_finite_difference_heat.cpp` keeps the other supported arrangement:
+an unpadded owned core and separate face halos. It uses the same
+cosine-mode initial condition and parameters as the other heat lessons,
+replacing the earlier Gaussian demonstration so that storage choices
+can be compared without changing the PDE.
+
+## Change the representation, keep the equation
+
+On a periodic cube $[0,2\pi)^3$,
+
+$$
+\begin{aligned}
+u_t&=D\Delta u,\\
+u(\mathbf x,0)&=1+.2\cos x\cos y\cos z.
+\end{aligned}
+$$ {#eq-heat}
+
+The exact continuum amplitude is $.2e^{-3Dt}$. The central stencil
+instead has the discrete decay rate
+
+$$
+\lambda_h=\frac{12D}{h^2}\sin^2(h/2).
+$$ {#eq-discrete}
+
+After $m$ Euler steps its amplitude is
+$.2(1-\Delta t\lambda_h)^m$. This checks every owned sample,
+including samples next to a rank boundary. The difference between
+continuum and discrete errors also motivates the comparisons in
+@trefethen2000, chapter 1.
+
+## Own the core; borrow the neighbours
+
+```{.cpp include="model.cpp" snippet="storage" dedent=4}
+```
+
+The zero padding argument means `u.vec()` contains exactly the owned
+`nx*ny*nz` samples, with x fastest. `SparseExchange` borrows that vector
+and manages packed communication buffers. The six `faces` arrays adapt
+its received values to the stencil's expected face layout. Keep the
+core allocation and side buffers alive while the exchange and pointers
+use them.
+
+This stencil needs only axial neighbours. A wider or mixed-derivative
+stencil may need a different communication pattern.
+
+## Refresh, adapt, differentiate, update
+
+```{.cpp include="model.cpp" snippet="exchange" dedent=4}
+```
+
+`laplacian_periodic_separated<2>` writes the **whole owned region**.
+It reads a neighbour from the core when available and otherwise from
+the corresponding face slab. Computing only an interior sub-box would
+leave the owned cells next to the rank interface unevolved. A separate
+Laplacian buffer keeps every stencil on the old time level.
+
+The Euler condition is $D\Delta t/h^2\le1/6$. Opposite periodic fluxes
+cancel, so the global mean stays one, up to roundoff.
+
+## Compare the layouts
+
+```sh
+openpfc run model.cpp input.json --source-root .. --launcher=none
+openpfc run model.cpp input.json --source-root .. --ranks=2 --launcher=mpirun
+```
+
+Use the same input with the padded model. Their final physical fields
+should agree up to roundoff. The compact core is also suitable as FFT
+input on the matching decomposition; the side halos are not part of
+that transform. This lesson demonstrates the layout without performing
+an FFT or claiming a performance advantage.
+
+`results/field_rank_*.csv` records each physical sample once across
+ranks. Rank zero writes `results/diagnostics.csv`. The executable name
+`15_finite_difference_heat` is retained. Keep the [source](model.cpp),
+[input](input.json) and [heat helper](../lesson.hpp) together.
+
+## References
+::: {#refs}
+:::
+:::

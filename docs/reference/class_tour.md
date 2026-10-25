@@ -91,7 +91,7 @@ the data must also remain FFT-compatible.
 | sparse halo exchange | Explicit remote-index lists and structured separated halos |
 | FD gradients and stencils | Per-cell differential operators and reusable coefficients |
 
-Start with `examples/15_finite_difference_heat.cpp` and
+Start with `examples/heat/separated-halos/model.cpp` and
 [`../concepts/halo_exchange.md`](../concepts/halo_exchange.md).
 
 ## Configuration and extension catalogs

@@ -24,7 +24,7 @@
  *    linear indexing, accesses the data as `u_ptr[lin]` /
  *    `u_ptr[lin + sx]` / etc., and stores the per-step Laplacian in a
  *    plain `std::vector<double>` of size `nx*ny*nz` with **no halo**
- *    (matching `examples/15_finite_difference_heat.cpp`).
+ *    (matching `examples/heat/separated-halos/model.cpp`).
  *
  * The OpenPFC pieces still used (because rebuilding them would just
  * duplicate the design) are:

@@ -93,7 +93,7 @@ def main():
     parser.add_argument("--launcher")
     parser.add_argument("--rank-flag", default="-n")
     parser.add_argument("--ranks", default=1, type=int)
-    parser.add_argument("--case", choices=['periodic_differentiation', '19_explicit_stepper_fd', '20_explicit_stepper_spectral', 'heat_exponential'])
+    parser.add_argument("--case", choices=['periodic_differentiation', '19_explicit_stepper_fd', '20_explicit_stepper_spectral', 'heat_exponential', '15_finite_difference_heat'])
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     bin_dir = args.bin_dir.resolve()
@@ -117,6 +117,10 @@ def main():
             root = base / "heat_exponential"
             root.mkdir()
             check_heat(str(bin_dir / "heat_exponential"), "exponential", root, launch)
+        if args.case in (None, "15_finite_difference_heat"):
+            root = base / "15_finite_difference_heat"
+            root.mkdir()
+            check_heat(str(bin_dir / "15_finite_difference_heat"), "separated", root, launch)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

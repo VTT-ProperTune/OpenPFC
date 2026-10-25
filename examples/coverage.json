@@ -75,9 +75,15 @@
     },
     {
       "target": "15_finite_difference_heat",
-      "source": "15_finite_difference_heat.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "heat/separated-halos/model.cpp",
+      "chapter": "heat/separated-halos/index.qmd",
+      "capabilities": [
+        "fields",
+        "finite-differences",
+        "separated-halos",
+        "sparse-exchange",
+        "mpi-reductions"
+      ]
     },
     {
       "target": "16_strong_types_demo",

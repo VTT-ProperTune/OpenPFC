@@ -30,7 +30,7 @@ also gives us an exact decay rate. We can check conservation and accuracy
 without guessing what a plausible field should look like.
 
 This lesson refactors the former `19_explicit_stepper_fd.cpp`. The
-separated-halo lesson studies the
+[separated-halo lesson](../separated-halos/index.qmd) studies the
 communication buffers while keeping the same physical problem.
 
 ## One problem, three methods

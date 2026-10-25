@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Refactor the separated-halo heat demonstration into the same periodic-mode comparison. Retain the established executable and verify owned values, conservation and invalid controls on one and two MPI ranks.
+
 - Apply the exact linear Fourier propagator to separate spatial approximation from timestep error. Include the mathematical derivation and independent full-field checks alongside the runnable model.
 
 - Recast the spectral Euler example as the same heat experiment in Fourier space. Preserve its executable name and verify every output value against an independent discrete modal solution.
