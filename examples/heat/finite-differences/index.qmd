@@ -35,7 +35,7 @@ communication buffers while keeping the same physical problem.
 
 ## One problem, three methods
 
-Let $\Omega=0,2\pi)^3$ be periodic in every direction, with dimensionless
+Let $\Omega=[0,2\pi)^3$ be periodic in every direction, with dimensionless
 coordinates and temperature. For constant diffusivity $D>0$,
 
 $$
@@ -55,7 +55,7 @@ The spatial mean is one. The root-mean-square fluctuation about that mean
 is $0.2e^{-3Dt}/\sqrt8$. Both identities follow directly from the mode;
 they are stronger checks than a decreasing maximum alone.
 
-The [Fourier and
+The [Fourier](../fourier/index.qmd) and
 exponential lessons use precisely this problem.
 The shared `lesson.hpp` owns input validation and diagnostics; each
 `model.cpp` owns its numerical method.
@@ -162,7 +162,7 @@ unstable inputs. One- and two-rank runs check the communication boundary.
 These are periodic constant-coefficient teaching cases, not a model of
 heat loss through a material surface.
 
-Next: keep the physics and change the spatial derivative.
+Next: [keep the physics and change the spatial derivative](../fourier/index.qmd).
 
 The complete [C++ model](model.cpp) and [starting input](input.json)
 are available with this lesson. It also uses the shared [lesson.hpp](../lesson.hpp);

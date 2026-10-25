@@ -110,9 +110,14 @@
     },
     {
       "target": "20_explicit_stepper_spectral",
-      "source": "20_explicit_stepper_spectral.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "heat/fourier/model.cpp",
+      "chapter": "heat/fourier/index.qmd",
+      "capabilities": [
+        "fields",
+        "fft",
+        "spectral-gradients",
+        "explicit-euler"
+      ]
     },
     {
       "target": "21_adaptive_stepping",

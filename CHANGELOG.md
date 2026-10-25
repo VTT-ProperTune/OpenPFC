@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Recast the spectral Euler example as the same heat experiment in Fourier space. Preserve its executable name and verify every output value against an independent discrete modal solution.
+
 - Move the explicit finite-difference heat example into a focused chapter while retaining its binary name. Explain the stencil and stability bound, share only input and observation helpers, and check complete periodic fields on one and two ranks.
 
 - Compare second- and fourth-order differences with native Fourier differentiation on one smooth periodic function. Include a refinement story, actual source and an independent convergence check on one and two ranks.

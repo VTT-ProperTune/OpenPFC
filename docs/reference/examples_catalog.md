@@ -98,7 +98,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `18_sobel_edge_detection` | `18_sobel_edge_detection.cpp` | Sobel-style field operations and edge detection |
 | `world_strong_types_example` | `world_strong_types_example.cpp` | Strong types with `Domain` compatibility helpers |
 | `19_explicit_stepper_fd` | `heat/finite-differences/model.cpp` | Explicit stepping with finite-difference operators |
-| `20_explicit_stepper_spectral` | `20_explicit_stepper_spectral.cpp` | Explicit stepping with spectral operators |
+| `20_explicit_stepper_spectral` | `heat/fourier/model.cpp` | Explicit stepping with spectral operators |
 | `21_adaptive_stepping` | `21_adaptive_stepping.cpp` | Adaptive Bogacki–Shampine 3(2) with `Time` attempt transactions |
 | `22_external_coupling` | `22_external_coupling.cpp` | Mock FEM loop: `FieldHandle` export, `clip_attempt_dt`, FieldModifier-shaped source |
 | `23_halo_microtiming` | `23_halo_microtiming.cpp` | Timed `HaloExchange` loop; schema-v2 JSON (`--cuda` / `--hip` / `--full`) |

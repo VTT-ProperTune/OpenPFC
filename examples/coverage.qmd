@@ -17,7 +17,7 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 :::
 
 There are 44 declared runnable example targets and
-2 Quarto teaching chapters. The table includes older programs
+3 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -94,7 +94,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `17_custom_coordinate_system` | Pending conversion. |
 | `18_sobel_edge_detection` | Pending conversion. |
 | `19_explicit_stepper_fd` | [Read the lesson](heat/finite-differences/index.qmd) |
-| `20_explicit_stepper_spectral` | Pending conversion. |
+| `20_explicit_stepper_spectral` | [Read the lesson](heat/fourier/index.qmd) |
 | `21_adaptive_stepping` | Pending conversion. |
 | `22_external_coupling` | Pending conversion. |
 | `23_halo_microtiming` | Pending conversion. |
