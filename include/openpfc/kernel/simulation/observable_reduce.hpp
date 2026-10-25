@@ -13,7 +13,7 @@
  * `MPI_Allreduce`s with `MPI_SUM`.
  *
  * Device fields (`CUDASpace` / `HIPSpace`) pull a current host mirror via
- * `with_host_view` and sum the owned interior of that mirror. There is no
+ * `with_host_read` and sum the owned interior of that mirror. There is no
  * separate device reduction. Kernel-safe: no runtime GPU headers.
  *
  * `reduce_owned(field, comm, map)` maps one owned cell to one scalar
@@ -58,16 +58,17 @@ namespace pfc::sim {
  * @brief Sum owned cells of @p field on this rank (halo excluded).
  *
  * Host fields iterate `for_each_owned`. Device fields refresh the host
- * mirror and sum the owned index box.
+ * mirror and sum the owned index box. Reads preserve device validity and
+ * never schedule a host-to-device upload.
  */
 template <class T, class MemorySpace = pfc::HostSpace>
-[[nodiscard]] double sum_owned(pfc::data::Field<T, MemorySpace> &field) {
+[[nodiscard]] double sum_owned(const pfc::data::Field<T, MemorySpace> &field) {
   double acc = 0.0;
   if constexpr (pfc::data::Field<T, MemorySpace>::is_host_space) {
     field.for_each_owned(
         [&](int i, int j, int k) { acc += static_cast<double>(field(i, j, k)); });
   } else {
-    field.with_host_view([&](T *data, std::size_t) {
+    field.with_host_read([&](const T *data, std::size_t) {
       const int nx = field.box().size[0];
       const int ny = field.box().size[1];
       const int nz = field.box().size[2];
@@ -110,7 +111,7 @@ inline void allreduce_sum(std::span<double> values, MPI_Comm comm) {
  * @brief Global integral ∫ field dV ≈ (sum owned) × Δx Δy Δz, all ranks.
  */
 template <class T, class MemorySpace = pfc::HostSpace>
-[[nodiscard]] double integrate_owned(pfc::data::Field<T, MemorySpace> &field,
+[[nodiscard]] double integrate_owned(const pfc::data::Field<T, MemorySpace> &field,
                                      MPI_Comm comm) {
   const double local = sum_owned(field) * cell_volume(field.domain());
   return allreduce_sum(local, comm);
@@ -185,8 +186,8 @@ inline void consume(PartialMoments &m, double x, double origin) {
 }
 
 template <class T, class MemorySpace, class Map>
-[[nodiscard]] PartialMoments local_moments(pfc::data::Field<T, MemorySpace> &field,
-                                           Map &&map) {
+[[nodiscard]] PartialMoments
+local_moments(const pfc::data::Field<T, MemorySpace> &field, Map &&map) {
   PartialMoments m;
   double origin = 0.0;
   bool started = false;
@@ -202,7 +203,7 @@ template <class T, class MemorySpace, class Map>
     field.for_each_owned(
         [&](int i, int j, int k) { take(static_cast<double>(field(i, j, k))); });
   } else {
-    field.with_host_view([&](T *data, std::size_t) {
+    field.with_host_read([&](const T *data, std::size_t) {
       const int nx = field.box().size[0];
       const int ny = field.box().size[1];
       const int nz = field.box().size[2];
@@ -227,11 +228,14 @@ template <class T, class MemorySpace, class Map>
  * `map` receives one cell and returns one scalar. It does not receive
  * neighbors or another field. Empty fields reduce to a zero count and a
  * NaN min/max. Variance is `M2 / count` after a rank-order Chan merge, so
- * a large baseline does not cancel the fluctuation.
+ * a large baseline does not cancel the fluctuation. Host fields are read
+ * directly; device fields download a read-only mirror without invalidating
+ * device storage or scheduling an upload.
  */
 template <class T, class MemorySpace, class Map>
-[[nodiscard]] FieldReduction reduce_owned(pfc::data::Field<T, MemorySpace> &field,
-                                          MPI_Comm comm, Map &&map) {
+[[nodiscard]] FieldReduction
+reduce_owned(const pfc::data::Field<T, MemorySpace> &field, MPI_Comm comm,
+             Map &&map) {
   if (comm == MPI_COMM_NULL) {
     throw std::invalid_argument("reduce_owned: pass an explicit communicator");
   }
@@ -272,8 +276,8 @@ template <class T, class MemorySpace, class Map>
 }
 
 template <class T, class MemorySpace = pfc::HostSpace>
-[[nodiscard]] FieldReduction reduce_owned(pfc::data::Field<T, MemorySpace> &field,
-                                          MPI_Comm comm) {
+[[nodiscard]] FieldReduction
+reduce_owned(const pfc::data::Field<T, MemorySpace> &field, MPI_Comm comm) {
   return reduce_owned(field, comm, [](double v) { return v; });
 }
 

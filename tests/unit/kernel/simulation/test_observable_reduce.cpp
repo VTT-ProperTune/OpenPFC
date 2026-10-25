@@ -15,6 +15,64 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/simulation/observable_reduce.hpp>
 
+// A host-allocated two-sided field tests coherence without a vendor runtime.
+// Copies are counted at the storage boundary actually used by Field.
+namespace pfc {
+struct ObserverTestSpace {};
+struct ObserverTestBackend {};
+template <> struct memory_space_to_backend<ObserverTestSpace> {
+  using type = ObserverTestBackend;
+};
+namespace core {
+template <class T>
+struct DataBuffer<ObserverTestBackend, T> : DataBuffer<backend::CPUTag, T> {
+  using Base = DataBuffer<backend::CPUTag, T>;
+  using Base::Base;
+  static inline int uploads = 0;
+  static inline int downloads = 0;
+  void zero() { std::fill(this->data(), this->data() + this->size(), T{}); }
+  void copy_from_host(const T *data, std::size_t n) {
+    ++uploads;
+    Base::copy_from_host(data, n);
+  }
+  void copy_to_host(T *data, std::size_t n) const {
+    ++downloads;
+    Base::copy_to_host(data, n);
+  }
+};
+} // namespace core
+} // namespace pfc
+
+TEST_CASE("read-only reductions preserve device residency",
+          "[observable][residency]") {
+  auto domain = pfc::domain::create(pfc::Int3{2, 1, 1});
+  const auto box = pfc::Box3i::from_bounds({0, 0, 0}, {1, 0, 0});
+  pfc::Field<double, pfc::ObserverTestSpace> field(domain, box, 1);
+  field.with_host_view([&](double *data, std::size_t n) {
+    std::fill(data, data + n, -99.0);
+    data[field.idx(0, 0, 0)] = 2.0;
+    data[field.idx(1, 0, 0)] = 4.0;
+  });
+  field.sync_to_device();
+  field.note_device_write();
+  using Storage = pfc::core::DataBuffer<pfc::ObserverTestBackend, double>;
+  Storage::uploads = Storage::downloads = 0;
+  const auto &read_only = field;
+  REQUIRE(pfc::sim::sum_owned(read_only) == 6.0);
+  REQUIRE(Storage::downloads == 1);
+  const auto stats = pfc::sim::reduce_owned(read_only, MPI_COMM_SELF);
+  REQUIRE(stats.count == 2);
+  REQUIRE(stats.sum == 6.0);
+  REQUIRE(stats.variance == 1.0);
+  REQUIRE(field.residency().device_valid());
+  field.sync_to_device();
+  REQUIRE(Storage::uploads == 0);
+  REQUIRE(Storage::downloads == 1);
+  read_only.with_host_read([&](const double *data, std::size_t) {
+    REQUIRE(data[field.idx(-1, 0, 0)] == -99.0);
+  });
+}
+
 using Catch::Approx;
 using pfc::Box3i;
 using pfc::Domain;

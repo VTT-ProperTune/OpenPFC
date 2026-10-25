@@ -13,6 +13,7 @@ int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_session.hpp>
@@ -112,7 +113,11 @@ TEST_CASE("device reduce_owned matches a host-known field", "[gpu][observable]")
   u.with_host_view([&](double *data, std::size_t) {
     for (int i = 0; i < 4; ++i) data[u.idx(i, 0, 0)] = base + devs[i];
   });
-  const auto r = pfc::sim::reduce_owned(u, MPI_COMM_WORLD);
+  u.sync_to_device();
+  u.note_device_write();
+  const auto r = pfc::sim::reduce_owned(std::as_const(u), MPI_COMM_WORLD);
+  REQUIRE(u.residency().device_valid());
+  REQUIRE_FALSE(u.residency().device_needs_refresh());
   REQUIRE(r.count == 4);
   REQUIRE(r.min == Approx(base - 2.0));
   REQUIRE(r.max == Approx(base + 2.0));

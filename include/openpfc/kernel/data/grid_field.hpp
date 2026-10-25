@@ -371,9 +371,9 @@ public:
    * 3-D HIP growth dumper GPU-faulted after a few MPI-IO snapshots for this
    * reason. 2-D dumps survived because the halo traffic is smaller.
    */
-  template <typename Fn> void with_host_read(Fn &&fn) {
+  template <typename Fn> void with_host_read(Fn &&fn) const {
     if constexpr (is_host_space) {
-      fn(m_buffer.data(), m_buffer.size());
+      fn(static_cast<const T *>(m_buffer.data()), m_buffer.size());
       return;
     }
     ensure_host_mirror_();
@@ -386,7 +386,7 @@ public:
 
 private:
   /// Allocate the zero-initialized host mirror the first time it is needed.
-  void ensure_host_mirror_() {
+  void ensure_host_mirror_() const {
     if (m_host_mirror.size() != m_buffer.size())
       m_host_mirror.assign(m_buffer.size(), T{});
   }
@@ -418,9 +418,9 @@ private:
   int m_halo{0};           ///< storage padding
   int m_iteration_halo{0}; ///< LocalField-compatible stencil / interior halo
   storage_type m_buffer{};
-  Residency m_residency{Residency::host_only()};
+  mutable Residency m_residency{Residency::host_only()};
   // Host mirror for a device-backed field; stays empty for a host-space field.
-  std::vector<T> m_host_mirror{};
+  mutable std::vector<T> m_host_mirror{};
 };
 
 } // namespace pfc::data
