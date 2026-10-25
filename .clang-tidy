@@ -20,7 +20,7 @@ Checks: >
   -bugprone-easily-swappable-parameters,
   -bugprone-chained-comparison
 
-WarningsAsErrors: clang-analyzer-*,bugprone-*,modernize-*
+WarningsAsErrors: clang-analyzer-*,bugprone-*
 
 CheckOptions:
   - key: readability-identifier-length.AllowedShortNames

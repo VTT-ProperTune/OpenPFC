@@ -3,7 +3,7 @@
 #
 # Optional static analysis. Not on pull requests: a full-tree clang-tidy pass
 # is ~45–60 min on GitHub runners and is continue-on-error until the
-# WarningsAsErrors backlog is cleared. Weekly + manual is enough until then.
+# WarningsAsErrors backlog is cleared. Monthly + manual is enough until then.
 
 name: Clang-Tidy
 

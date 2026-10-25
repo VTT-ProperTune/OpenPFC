@@ -31,7 +31,7 @@ usage() {
   cat <<EOF
 Usage: $(basename "$0") [options]
 
-Run clang-tidy on all *.cpp under src/, apps/, and tests/ (same file set as CI).
+Run clang-tidy on configured *.cpp under src/, apps/, tests/, and examples/.
 Failures follow .clang-tidy (WarningsAsErrors) unless --fail-fast is set.
 
 Options:
@@ -75,7 +75,10 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-BUILD_ABS="${ROOT}/${BUILD_DIR}"
+case "$BUILD_DIR" in
+  /*) BUILD_ABS="$BUILD_DIR" ;;
+  *) BUILD_ABS="${ROOT}/${BUILD_DIR}" ;;
+esac
 
 if [[ "$CONFIGURE" -eq 1 ]]; then
   echo "Configuring ${BUILD_ABS} (toolchain: ${TOOLCHAIN})"
@@ -119,28 +122,36 @@ if [[ "$FAIL_FAST" -eq 1 ]]; then
   echo "Fail-fast: --warnings-as-errors=* enabled; will exit on the first failing .cpp."
 fi
 
-# Source set matched to GitHub Actions CI "Run clang-tidy" (CPU-only: skip TUs that
-# use #error or HIP/CUDA headers when GPU toolchains are not configured).
+# Analyze exactly configured project C++ translation units. This includes
+# examples and backend .cpp files only when their toolchain was configured.
 list_cpp_for_tidy() {
-  cd "$ROOT" && find src apps tests -name '*.cpp' \
-    ! -name 'test_tungsten_cuda_vtk.cpp' \
-    ! -name 'test_tungsten_hip_vtk.cpp' \
-    ! -name 'test_tungsten_cpu_vs_cuda.cpp' \
-    ! -name 'test_tungsten_cpu_vs_hip.cpp' \
-    ! -name 'test_diffop.cpp' \
-    ! -name 'test_sparsevector_cuda.cpp' \
-    ! -path 'apps/tungsten/src/cuda/tungsten.cpp' \
-    ! -path 'apps/tungsten/src/hip/tungsten.cpp' \
-    ! -path 'apps/tungsten/src/verify_gpu_aware_mpi.cpp' \
-    -print0
-}
-
-list_cpp_for_tidy_stream() {
-  if [[ -n "$FILE_FILTER" ]]; then
-    printf '%s\0' "$FILE_FILTER"
-  else
-    list_cpp_for_tidy
-  fi
+  python3 - "$ROOT" "$BUILD_ABS/compile_commands.json" "$FILE_FILTER" <<'PY'
+import json
+import os
+from pathlib import Path
+import sys
+root = Path(sys.argv[1]).resolve()
+files = set()
+with open(sys.argv[2]) as stream:
+    for entry in json.load(stream):
+        path = Path(entry["file"])
+        if not path.is_absolute():
+            path = Path(entry["directory"]) / path
+        try:
+            relative = path.resolve().relative_to(root)
+        except ValueError:
+            continue
+        if relative.suffix == ".cpp" and relative.parts[0] in {
+                "src", "apps", "tests", "examples"}:
+            files.add(relative.as_posix())
+if sys.argv[3]:
+    if sys.argv[3] not in files:
+        print("No configured compile command for: " + sys.argv[3], file=sys.stderr)
+        sys.exit(2)
+    files = {sys.argv[3]}
+for name in sorted(files):
+    sys.stdout.buffer.write(os.fsencode(name) + b"\0")
+PY
 }
 
 TIDY_EXTRA=()
@@ -148,10 +159,11 @@ if [[ "$FAIL_FAST" -eq 1 ]]; then
   TIDY_EXTRA+=(--warnings-as-errors='*')
 fi
 
+list_cpp_for_tidy | {
 failed=0
 while IFS= read -r -d '' file; do
   if ! clang-tidy -p "$BUILD_ABS" --quiet \
-    -header-filter='include/openpfc/.*' \
+    -header-filter='(include/openpfc/|(apps|examples)/[^/]+/include/)' \
     "${TIDY_EXTRA[@]}" \
     "$file"; then
     failed=1
@@ -160,6 +172,6 @@ while IFS= read -r -d '' file; do
       exit 1
     fi
   fi
-done < <(cd "$ROOT" && list_cpp_for_tidy_stream)
-
+done
 exit "$failed"
+}
