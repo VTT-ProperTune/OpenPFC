@@ -531,6 +531,16 @@
       ]
     },
     {
+      "target": "square_helmholtz",
+      "source": "polynomials/helmholtz-square/model.cpp",
+      "chapter": "polynomials/helmholtz-square/index.qmd",
+      "capabilities": [
+        "gmres",
+        "tensor-operators",
+        "helmholtz"
+      ]
+    },
+    {
       "target": "square_poisson",
       "source": "polynomials/poisson-square/model.cpp",
       "chapter": "polynomials/poisson-square/index.qmd",
@@ -745,7 +755,7 @@
       "program": 17,
       "title": "Helmholtz eq. u_xx + u_yy + (k^2)u = f",
       "source": "https://people.maths.ox.ac.uk/trefethen/p17.m",
-      "chapter": null,
+      "chapter": "polynomials/helmholtz-square/index.qmd",
       "scope": "Original k=9 degree-24 Helmholtz problem with a native tensor-action GMRES solve."
     },
     {

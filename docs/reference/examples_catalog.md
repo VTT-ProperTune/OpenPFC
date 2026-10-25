@@ -127,6 +127,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `airy_eigenproblem` | `polynomials/airy/model.cpp` | A zero weight is a constraint |
 | `membrane_eigenmodes` | `polynomials/membrane/model.cpp` | An asymmetric potential reshapes a membrane mode |
 | `square_poisson` | `polynomials/poisson-square/model.cpp` | Solve a square without a giant Kronecker matrix |
+| `square_helmholtz` | `polynomials/helmholtz-square/model.cpp` | A wave number can make a solve delicate |
 
 ## Research prototypes
 
