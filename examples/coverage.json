@@ -155,9 +155,15 @@
     },
     {
       "target": "17_custom_coordinate_system",
-      "source": "17_custom_coordinate_system.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "geometry/polar-patterns/model.cpp",
+      "chapter": "geometry/polar-patterns/index.qmd",
+      "capabilities": [
+        "domain",
+        "coordinate-mapping",
+        "callable-initialization",
+        "distributed-fields",
+        "mpi"
+      ]
     },
     {
       "target": "18_sobel_edge_detection",

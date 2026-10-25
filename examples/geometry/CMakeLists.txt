@@ -36,3 +36,7 @@ set_target_properties(world_strong_types_example PROPERTIES RUNTIME_OUTPUT_DIREC
 add_executable(first_domain first-domain/model.cpp)
 target_link_libraries(first_domain PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(first_domain PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(17_custom_coordinate_system polar-patterns/model.cpp)
+target_link_libraries(17_custom_coordinate_system PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(17_custom_coordinate_system PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")

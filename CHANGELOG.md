@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Replace the large coordinate wrapper demonstration with a small native Cartesian-field callable. Preserve its executable, explain the smooth origin limit and verify complete fields against independent Cartesian polynomials on one and two MPI ranks.
+
 - Compare a time-driven boundary with the fixed-endpoint treatment using the same nonlinear model. Verify complete evolving fields and the prescribed endpoint independently.
 
 - Make boundary lifting visible in a native Euler spectral evolution. Check full fields, timestep convergence, symmetry diagnostics and stability limits at two resolutions.

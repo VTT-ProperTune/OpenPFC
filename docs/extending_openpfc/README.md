@@ -24,7 +24,7 @@ out-of-tree executable, follow the
 | Add a config-selected initial or boundary condition | `pfc::FieldModifier` and a modifier catalog | `examples/initialization/catalog/model.cpp`, `examples/initialization/patterns/model.cpp` |
 | Apply programmatic field operations | Namespace free functions and field iteration helpers | [Functional field operations](../getting_started/functional_field_ops.md) |
 | Add an output format | `pfc::ResultsWriter` or a writer catalog | `examples/output/vtk-series/model.cpp` |
-| Add custom spatial interpretation | Domain and coordinate helper functions | `examples/17_custom_coordinate_system.cpp` |
+| Add custom spatial interpretation | Domain and coordinate helper functions | `examples/geometry/polar-patterns/model.cpp` |
 | Build a JSON/TOML-driven binary | `make_simulation_session` / `pfc::sim::run` | [Minimal custom application](../tutorials/custom_app_minimal.md) |
 | Drive your own stepper with the shared clock, IC/BC, and save hooks | `pfc::sim::SimulationLifecycle` | [Custom stepper lifecycle](../concepts/custom_stepper.md) |
 | Parse `--key=value` in a CLI driver | `pfc::utils::CliOptions` (unknown keys fail closed) | `openpfc/frontend/utils/cli_options.hpp` |

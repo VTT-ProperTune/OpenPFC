@@ -46,8 +46,6 @@ target_link_libraries(diffusion_model_with_custom_initial_condition PRIVATE Open
 
 
 
-add_executable(17_custom_coordinate_system 17_custom_coordinate_system.cpp)
-target_link_libraries(17_custom_coordinate_system PRIVATE OpenPFC::openpfc )
 
 add_executable(18_sobel_edge_detection 18_sobel_edge_detection.cpp)
 target_link_libraries(18_sobel_edge_detection PRIVATE OpenPFC::openpfc )
@@ -465,6 +463,16 @@ if(OpenPFC_BUILD_TESTS)
   add_test(NAME example-allen-cahn-driven
            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_evolution.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case allen_cahn_driven)
   set_tests_properties(example-allen-cahn-driven PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  add_test(NAME example-17-custom-coordinate-system
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_coordinates.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks")
+  set_tests_properties(example-17-custom-coordinate-system PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
+    add_test(NAME example-17-custom-coordinate-system-mpi
+             COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_coordinates.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks"
+                     --launcher "${MPIEXEC_EXECUTABLE}" "--rank-flag=${MPIEXEC_NUMPROC_FLAG}" --ranks 2)
+    set_tests_properties(example-17-custom-coordinate-system-mpi PROPERTIES PROCESSORS 2 TIMEOUT 360
+                         ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+  endif()
   add_executable(test_example_eigensystem tests/eigensystem.cpp)
   target_link_libraries(test_example_eigensystem PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
   add_test(NAME example-eigensystem-reference COMMAND test_example_eigensystem)
