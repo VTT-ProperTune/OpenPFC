@@ -240,6 +240,17 @@
       "capabilities": []
     },
     {
+      "target": "first_domain",
+      "source": "geometry/first-domain/model.cpp",
+      "chapter": "geometry/first-domain/index.qmd",
+      "capabilities": [
+        "domain",
+        "strong-types",
+        "coordinates",
+        "periodicity"
+      ]
+    },
+    {
       "target": "heat_exponential",
       "source": "heat/exponential/model.cpp",
       "chapter": "heat/exponential/index.qmd",
@@ -511,8 +522,8 @@
   ],
   "additional_sources": [
     {
-      "source": "01_hello_world/world.cpp",
-      "chapter": null
+      "source": "geometry/first-domain/model.cpp",
+      "chapter": "geometry/first-domain/index.qmd"
     },
     {
       "source": "symbolic_rhs/generate.py",

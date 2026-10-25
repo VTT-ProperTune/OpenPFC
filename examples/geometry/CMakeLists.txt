@@ -32,3 +32,7 @@ set_target_properties(16_strong_types_demo PROPERTIES RUNTIME_OUTPUT_DIRECTORY "
 add_executable(world_strong_types_example anisotropic-grid/model.cpp)
 target_link_libraries(world_strong_types_example PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(world_strong_types_example PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(first_domain first-domain/model.cpp)
+target_link_libraries(first_domain PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(first_domain PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")

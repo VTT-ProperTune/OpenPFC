@@ -1,0 +1,72 @@
+---
+title: "Give the grid a physical meaning"
+description: "Create a domain, map an index to a coordinate and distinguish samples from box boundaries."
+order: 0
+categories: [Getting started, Geometry]
+targets: [first_domain]
+capabilities: [domain, strong-types, coordinates, periodicity]
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[OpenPFC / A first program]{.lesson-kicker}
+
+# Give the grid a physical meaning
+
+[Sixteen samples do not define a physical length until we say where they are.]{.lesson-deck}
+:::
+
+A `Domain` describes the global grid. Its dimensions count samples;
+its origin and spacing assign those samples physical coordinates.
+It does not allocate a solution field or choose a differential operator.
+This small program replaces the introductory `01_hello_world/world.cpp`.
+
+## State the geometry in one expression
+
+```{.cpp include="model.cpp" snippet="domain" dedent=4}
+```
+
+The named argument types help the compiler distinguish sample counts,
+origin and spacing. The first coordinate follows
+
+$$
+\begin{gathered}
+x_i=-1+.125i, \\
+i=0,\ldots,15.
+\end{gathered}
+$$ {#eq-coordinate}
+
+Thus $i=3$ means $x=-.625$. Likewise, $j=5$ means $y=.5$.
+`to_indices` maps that sample's coordinate back to its original index.
+This exact round trip concerns grid samples; arbitrary points require
+attention to the API's rounding and bounds conventions.
+
+## Count a periodic endpoint once
+
+The last x sample is .875, while the periodic box's upper boundary is 1.
+The point at 1 is identified with the point at -1, so storing both would
+duplicate a sample. A nonperiodic axis instead spans its first and last
+samples. Here the nonperiodic z axis has one sample, representing a plane.
+
+The program writes all three axes to `results/domain.csv`, including
+their last sample and upper boundary. Compare those columns before
+moving on to [endpoint conventions](../grid-spacing/index.qmd).
+
+## Run your first experiment
+
+```sh
+openpfc run model.cpp input.json --launcher=none
+```
+
+The geometry is deliberately visible in `model.cpp`; this lesson's input
+is empty. Change the origin or spacing, then predict the printed coordinate
+before running again. Try changing the periodicity of x and compare its
+reported upper boundary. This program does not initialize MPI.
+
+The complete [source](model.cpp) and [input](input.json) are available.
+Continue with [distributed ownership](../decomposition/index.qmd) or
+[a first derivative](../../differentiation/periodic/index.qmd).
+:::

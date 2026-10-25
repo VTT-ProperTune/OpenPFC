@@ -16,8 +16,8 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 [Follow what is taught, what is adapted, and what still needs a chapter.]{.lesson-deck}
 :::
 
-There are 59 declared runnable example targets and
-37 Quarto teaching chapters. The table includes older programs
+There are 60 declared runnable example targets and
+38 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -105,6 +105,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `diffusion_model_with_custom_initial_condition` | Pending conversion. |
 | `fft_backend_benchmark` | Pending conversion. |
 | `fft_kspace_helpers_example` | Pending conversion. |
+| `first_domain` | [Read the lesson](geometry/first-domain/index.qmd) |
 | `heat_exponential` | [Read the lesson](heat/exponential/index.qmd) |
 | `json_read` | Pending conversion. |
 | `mhd2d` | Pending conversion. |
@@ -139,7 +140,7 @@ remain in the inventory while applicability and implementation are assessed.
 
 ## Additional sources
 
-- `01_hello_world/world.cpp`: Pending conversion.
+- `geometry/first-domain/model.cpp`: [Read the lesson](geometry/first-domain/index.qmd)
 - `symbolic_rhs/generate.py`: Pending conversion.
 
 ## Capability coverage

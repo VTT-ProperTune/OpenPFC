@@ -120,6 +120,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `polynomial_nonlinear_boundary` | `polynomials/nonlinear-boundary/model.cpp` | Program 14 adapted to native Newton–GMRES, checked by an analytic solution and scalar root |
 | `runtime_coupled_fields` | `coupling/runtime-fields/model.cpp` | Runtime field RK4 staging, two-field oscillator and exact recurrence |
 | `checkpoint_restart` | `output/checkpoint-restart/model.cpp` | Collective checkpoint publication, fresh-state restart and discrete trajectory equivalence |
+| `first_domain` | `geometry/first-domain/model.cpp` | Give the grid a physical meaning |
 
 ## Research prototypes
 
@@ -135,7 +136,7 @@ catalog entries.
 
 ## Sources not built by default
 
-`examples/01_hello_world/world.cpp` is used as a tutorial source; the matching `add_executable` in `examples/CMakeLists.txt` is commented out. Other `.cpp` files may exist under `examples/` without a CMake target—check `examples/CMakeLists.txt` for the authoritative list.
+The former `01_hello_world/world.cpp` is now the runnable `first_domain` lesson under `examples/geometry/first-domain/`.
 
 ## See also
 
