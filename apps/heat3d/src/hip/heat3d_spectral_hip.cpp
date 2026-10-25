@@ -23,6 +23,7 @@
 #endif
 
 #include <hip/hip_runtime.h>
+#include <openpfc/runtime/gpu/check_error.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -53,11 +54,7 @@ namespace {
 using HostField = pfc::data::Field<double, pfc::HostSpace>;
 using DevField = pfc::data::Field<double, pfc::HIPSpace>;
 
-void hip_check(hipError_t e, const char *what) {
-  if (e != hipSuccess) {
-    throw std::runtime_error(std::string(what) + ": " + hipGetErrorString(e));
-  }
-}
+using pfc::runtime::gpu::hip_check;
 
 void copy_host_to_device(const HostField &host, DevField &dev) {
   if (host.size() != dev.size()) {
@@ -88,14 +85,10 @@ int env_int(const char *name, int fallback) {
 
 const char *reshape_alg_name(heffte::reshape_algorithm alg) {
   switch (alg) {
-  case heffte::reshape_algorithm::alltoall:
-    return "alltoall";
-  case heffte::reshape_algorithm::alltoallv:
-    return "alltoallv";
-  case heffte::reshape_algorithm::p2p:
-    return "p2p";
-  case heffte::reshape_algorithm::p2p_plined:
-    return "p2p_plined";
+  case heffte::reshape_algorithm::alltoall: return "alltoall";
+  case heffte::reshape_algorithm::alltoallv: return "alltoallv";
+  case heffte::reshape_algorithm::p2p: return "p2p";
+  case heffte::reshape_algorithm::p2p_plined: return "p2p_plined";
   }
   return "unknown";
 }
@@ -162,8 +155,7 @@ int run_heat3d_spectral_hip(const heat3d::RunConfig &cfg, int rank, int nproc) {
   } else if (aware_ov == 0) {
     opts.use_gpu_aware = false;
   } else if (aware_ov != -1) {
-    throw std::runtime_error(
-        "heat3d_spectral_hip: HEAT3D_GPU_AWARE must be 0 or 1");
+    throw std::runtime_error("heat3d_spectral_hip: HEAT3D_GPU_AWARE must be 0 or 1");
   }
   pfc::sim::stacks::HIPSpectralStack stack(domain, rank, nproc, MPI_COMM_WORLD,
                                            opts);
@@ -183,23 +175,20 @@ int run_heat3d_spectral_hip(const heat3d::RunConfig &cfg, int rank, int nproc) {
     const int cgx = outbox.size[0] > 0
                         ? (cfg.Nx / 2 + 1 + outbox.size[0] - 1) / outbox.size[0]
                         : 0;
-    const int cgy = outbox.size[1] > 0
-                        ? (cfg.Ny + outbox.size[1] - 1) / outbox.size[1]
-                        : 0;
-    const int cgz = outbox.size[2] > 0
-                        ? (cfg.Nz + outbox.size[2] - 1) / outbox.size[2]
-                        : 0;
+    const int cgy =
+        outbox.size[1] > 0 ? (cfg.Ny + outbox.size[1] - 1) / outbox.size[1] : 0;
+    const int cgz =
+        outbox.size[2] > 0 ? (cfg.Nz + outbox.size[2] - 1) / outbox.size[2] : 0;
     std::cout << "HEAT3D_SPECTRAL_HIP"
               << " N=" << cfg.Nx << "x" << cfg.Ny << "x" << cfg.Nz
-              << " ranks=" << nproc
-              << " inbox=" << stack.fft().size_inbox()
+              << " ranks=" << nproc << " inbox=" << stack.fft().size_inbox()
               << " outbox=" << stack.fft().size_outbox()
               << " inbox_xyz=" << inbox.size[0] << "x" << inbox.size[1] << "x"
               << inbox.size[2] << " outbox_xyz=" << outbox.size[0] << "x"
               << outbox.size[1] << "x" << outbox.size[2]
               << " real_grid=" << real_grid[0] << "x" << real_grid[1] << "x"
-              << real_grid[2] << " complex_grid=" << cgx << "x" << cgy << "x"
-              << cgz << " use_pencils=" << (opts.use_pencils ? 1 : 0)
+              << real_grid[2] << " complex_grid=" << cgx << "x" << cgy << "x" << cgz
+              << " use_pencils=" << (opts.use_pencils ? 1 : 0)
               << " use_reorder=" << (opts.use_reorder ? 1 : 0)
               << " reshape=" << reshape_alg_name(opts.algorithm)
               << " gpu_aware=" << (opts.use_gpu_aware ? 1 : 0) << "\n";

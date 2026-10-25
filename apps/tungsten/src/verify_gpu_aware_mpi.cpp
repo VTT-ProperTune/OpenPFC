@@ -4,12 +4,14 @@
 // Minimal check: MPI_Send/MPI_Recv with device pointers (GPU-aware MPI).
 // Requires MPICH_GPU_SUPPORT_ENABLED=1 on Cray MPICH (LUMI-G).
 
-#include <mpi.h>
 #include <hip/hip_runtime.h>
+#include <mpi.h>
 
 #include <cstdio>
 #include <cstdlib>
 
+// This MPI transport verifier aborts immediately on runtime failure: a throw
+// could strand a peer in MPI. Ordinary app calls use runtime::gpu::hip_check.
 static void hip_check(hipError_t e, const char *what) {
   if (e != hipSuccess) {
     std::fprintf(stderr, "HIP error in %s: %s\n", what, hipGetErrorString(e));
@@ -26,9 +28,8 @@ int main(int argc, char **argv) {
 
   if (size < 2) {
     if (rank == 0) {
-      std::printf(
-          "[verify_gpu_aware_mpi] SKIP: need at least 2 MPI ranks "
-          "(e.g. srun -n2 ...)\n");
+      std::printf("[verify_gpu_aware_mpi] SKIP: need at least 2 MPI ranks "
+                  "(e.g. srun -n2 ...)\n");
     }
     MPI_Finalize();
     return 0;
@@ -87,10 +88,9 @@ int main(int argc, char **argv) {
       std::printf(
           "[verify_gpu_aware_mpi] OK: device-buffer MPI_Send/Recv succeeded.\n");
     } else {
-      std::fprintf(
-          stderr,
-          "[verify_gpu_aware_mpi] FAIL: wrong payload on rank 1 (GPU-aware "
-          "MPI likely off or broken).\n");
+      std::fprintf(stderr,
+                   "[verify_gpu_aware_mpi] FAIL: wrong payload on rank 1 (GPU-aware "
+                   "MPI likely off or broken).\n");
     }
   }
 

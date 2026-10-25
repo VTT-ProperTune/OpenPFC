@@ -5,6 +5,7 @@
 
 #include <kobayashi/defaults.hpp>
 #include <kobayashi/device_step_hip.hpp>
+#include <openpfc/runtime/gpu/check_error.hpp>
 
 #include <hip/hip_runtime.h>
 
@@ -30,13 +31,10 @@ __device__ inline std::size_t brick_lin(int i, int j, int k, int hw, int nx_pad,
              static_cast<std::size_t>(ny_pad);
 }
 
-__global__ void kobayashi_stage_a_kernel(const double *phi, const double *tempr,
-                                         double *lap_phi, double *lap_t,
-                                         double *phidx, double *phidy,
-                                         double *epsilon, double *epsilon_deriv,
-                                         int nx, int ny, int /*nz*/, int hw,
-                                         double inv_dx, double inv_dy,
-                                         double inv_lap_den) {
+__global__ void kobayashi_stage_a_kernel(
+    const double *phi, const double *tempr, double *lap_phi, double *lap_t,
+    double *phidx, double *phidy, double *epsilon, double *epsilon_deriv, int nx,
+    int ny, int /*nz*/, int hw, double inv_dx, double inv_dy, double inv_lap_den) {
   const int ix = static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x);
   const int iy = static_cast<int>(blockIdx.y * blockDim.y + threadIdx.y);
   if (ix >= nx || iy >= ny) {
@@ -62,21 +60,18 @@ __global__ void kobayashi_stage_a_kernel(const double *phi, const double *tempr,
   const double Tnn = tempr[brick_lin(ix, iy + 1, iz, hw, nx_pad, ny_pad)];
   lap_t[c] = (Tne + Tnw + Tns + Tnn - 4.0 * Tnc) * inv_lap_den;
 
-  const double dpx =
-      (phi[brick_lin(ix + 1, iy, iz, hw, nx_pad, ny_pad)] -
-       phi[brick_lin(ix - 1, iy, iz, hw, nx_pad, ny_pad)]) *
-      inv_dx;
-  const double dpy =
-      (phi[brick_lin(ix, iy + 1, iz, hw, nx_pad, ny_pad)] -
-       phi[brick_lin(ix, iy - 1, iz, hw, nx_pad, ny_pad)]) *
-      inv_dy;
+  const double dpx = (phi[brick_lin(ix + 1, iy, iz, hw, nx_pad, ny_pad)] -
+                      phi[brick_lin(ix - 1, iy, iz, hw, nx_pad, ny_pad)]) *
+                     inv_dx;
+  const double dpy = (phi[brick_lin(ix, iy + 1, iz, hw, nx_pad, ny_pad)] -
+                      phi[brick_lin(ix, iy - 1, iz, hw, nx_pad, ny_pad)]) *
+                     inv_dy;
   phidx[c] = dpx;
   phidy[c] = dpy;
 
   const double theta = atan2(dpy, dpx);
   epsilon[c] = kEpsilonb * (1.0 + kDelta * cos(kAniso * (theta - kTheta0)));
-  epsilon_deriv[c] =
-      -kEpsilonb * kAniso * kDelta * sin(kAniso * (theta - kTheta0));
+  epsilon_deriv[c] = -kEpsilonb * kAniso * kDelta * sin(kAniso * (theta - kTheta0));
 }
 
 __global__ void kobayashi_stage_b_kernel(double *phi, double *tempr,
@@ -120,8 +115,7 @@ __global__ void kobayashi_stage_b_kernel(double *phi, double *tempr,
   const double ep = epsilon[c];
   const double term3 = ep * ep * lap_phi[c];
 
-  const double m =
-      kAlpha / kPi * atan(kGamma * (kTeq - tempr[c]));
+  const double m = kAlpha / kPi * atan(kGamma * (kTeq - tempr[c]));
   const double term4 = phiold * (1.0 - phiold) * (phiold - 0.5 + m);
 
   phi[c] = phiold + (dt / kTau) * (term1 + term2 + term3 + term4);
@@ -129,16 +123,13 @@ __global__ void kobayashi_stage_b_kernel(double *phi, double *tempr,
   tempr[c] = tempr[c] + dt * lap_t[c] + kKappa * (phi[c] - phiold);
 }
 
-void hip_check(hipError_t e, const char *what) {
-  if (e != hipSuccess) {
-    throw std::runtime_error(std::string(what) + ": " + hipGetErrorString(e));
-  }
-}
+using pfc::runtime::gpu::hip_check;
 
 void launch_rect(int nx, int ny, dim3 *grid, dim3 *block) {
 #if defined(OpenPFC_ENABLE_GPU_AUTOTUNING) && defined(OpenPFC_ENABLE_HIP)
   size_t total_elements = static_cast<size_t>(nx) * static_cast<size_t>(ny);
-  auto config = pfc::gpu::AutoTuner::instance().get_config("kobayashi_fd_3d", total_elements);
+  auto config =
+      pfc::gpu::AutoTuner::instance().get_config("kobayashi_fd_3d", total_elements);
   block->x = config.block_size_x;
   block->y = config.block_size_y;
   block->z = config.block_size_z;
@@ -174,9 +165,10 @@ void kobayashi_stage_a_hip(const double *phi_dev, const double *tempr_dev,
 
 void kobayashi_stage_b_hip(double *phi_dev, double *tempr_dev,
                            const double *lap_phi_dev, const double *lap_t_dev,
-                           const double *epsilon_dev, const double *epsilon_deriv_dev,
-                           const double *phidx_dev, const double *phidy_dev, int nx, int ny,
-                           int nz, int hw, double inv_dx, double inv_dy, double dt) {
+                           const double *epsilon_dev,
+                           const double *epsilon_deriv_dev, const double *phidx_dev,
+                           const double *phidy_dev, int nx, int ny, int nz, int hw,
+                           double inv_dx, double inv_dy, double dt) {
   if (nz != 1) {
     throw std::runtime_error("kobayashi_stage_b_hip: nz must be 1 (2D slab)");
   }
@@ -184,8 +176,8 @@ void kobayashi_stage_b_hip(double *phi_dev, double *tempr_dev,
   dim3 block{};
   launch_rect(nx, ny, &grid, &block);
   hipLaunchKernelGGL(kobayashi_stage_b_kernel, grid, block, 0, 0, phi_dev, tempr_dev,
-                     lap_phi_dev, lap_t_dev, epsilon_dev, epsilon_deriv_dev, phidx_dev,
-                     phidy_dev, nx, ny, nz, hw, inv_dx, inv_dy, dt);
+                     lap_phi_dev, lap_t_dev, epsilon_dev, epsilon_deriv_dev,
+                     phidx_dev, phidy_dev, nx, ny, nz, hw, inv_dx, inv_dy, dt);
   hip_check(hipDeviceSynchronize(), "kobayashi_stage_b_hip sync");
   hip_check(hipGetLastError(), "kobayashi_stage_b_hip launch");
 }

@@ -29,6 +29,7 @@
 #endif
 
 #include <cuda_runtime.h>
+#include <openpfc/runtime/gpu/check_error.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -97,11 +98,7 @@ public:
   MPI_Comm get() const { return comm_; }
 };
 
-void cuda_check(cudaError_t e, const char *what) {
-  if (e != cudaSuccess) {
-    throw std::runtime_error(std::string(what) + ": " + cudaGetErrorString(e));
-  }
-}
+using pfc::runtime::gpu::cuda_check;
 
 void copy_host_to_device(const HostField &host, DevField &dev) {
   if (host.size() != dev.size()) {

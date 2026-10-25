@@ -5,6 +5,7 @@
 
 #include <kobayashi/defaults.hpp>
 #include <kobayashi/device_step_cuda.hpp>
+#include <openpfc/runtime/gpu/check_error.hpp>
 
 #include <cuda_runtime.h>
 
@@ -181,11 +182,7 @@ __global__ void kobayashi_stage_b_kernel(double *phi, double *tempr,
   tempr[c] = tempr[c] + dt * lap_t[c] + kKappa * (phi[c] - phiold);
 }
 
-void cuda_check(cudaError_t e, const char *what) {
-  if (e != cudaSuccess) {
-    throw std::runtime_error(std::string(what) + ": " + cudaGetErrorString(e));
-  }
-}
+using pfc::runtime::gpu::cuda_check;
 
 void launch_rect(int nx, int ny, dim3 *grid, dim3 *block, int extend = 0) {
   // Default 32² matches large GPUs (e.g. H100); override with

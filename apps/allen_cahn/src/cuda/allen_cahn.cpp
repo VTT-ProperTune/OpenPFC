@@ -6,6 +6,7 @@
 #endif
 
 #include <cuda_runtime.h>
+#include <openpfc/runtime/gpu/check_error.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -13,6 +14,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <mpi.h>
+#include <openpfc/runtime/gpu/bind_local_device.hpp>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -22,10 +24,10 @@
 
 #include <allen_cahn/common.hpp>
 #include <allen_cahn/device_step.hpp>
-#include <openpfc/frontend/io/png_writer.hpp>
-#include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/domain/create.hpp>
+#include <openpfc/frontend/io/png_writer.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 
@@ -33,35 +35,14 @@ namespace {
 
 using DevField = pfc::data::Field<double, pfc::CUDASpace>;
 
-void cuda_check(cudaError_t e, const char *what) {
-  if (e != cudaSuccess) {
-    throw std::runtime_error(std::string(what) + ": " + cudaGetErrorString(e));
-  }
-}
-
-void bind_local_gpu() {
-  MPI_Comm node_comm = MPI_COMM_NULL;
-  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
-                      &node_comm);
-  int local_rank = 0;
-  if (node_comm != MPI_COMM_NULL) {
-    MPI_Comm_rank(node_comm, &local_rank);
-    MPI_Comm_free(&node_comm);
-  }
-  int n_dev = 0;
-  cuda_check(cudaGetDeviceCount(&n_dev), "cudaGetDeviceCount");
-  if (n_dev < 1) {
-    throw std::runtime_error("No CUDA devices visible to this rank");
-  }
-  cuda_check(cudaSetDevice(local_rank % n_dev), "cudaSetDevice");
-}
+using pfc::runtime::gpu::cuda_check;
 
 } // namespace
 
 int main(int argc, char *argv[]) {
   return pfc::runtime::mpi_main(
       argc, argv, [](int app_argc, char **app_argv, int rank, int nproc) {
-        bind_local_gpu();
+        pfc::runtime::gpu::bind_local_device();
         const allen_cahn::RunConfig cfg = allen_cahn::parse_args(app_argc, app_argv);
         if (cfg.nx_glob < 4 || cfg.ny_glob < 4 || cfg.n_steps < 1) {
           if (rank == 0) {
@@ -69,9 +50,9 @@ int main(int argc, char *argv[]) {
           }
           return EXIT_FAILURE;
         }
-        auto domain = pfc::domain::create(pfc::GridSize({cfg.nx_glob, cfg.ny_glob, 1}),
-                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                          pfc::GridSpacing({1.0, 1.0, 1.0}));
+        auto domain = pfc::domain::create(
+            pfc::GridSize({cfg.nx_glob, cfg.ny_glob, 1}),
+            pfc::PhysicalOrigin({0.0, 0.0, 0.0}), pfc::GridSpacing({1.0, 1.0, 1.0}));
         auto decomp = pfc::decomposition::create(domain, nproc);
         const auto &local_box = pfc::decomposition::local_box(decomp, rank);
         auto local_size = local_box.size;
@@ -95,14 +76,17 @@ int main(int argc, char *argv[]) {
         const std::int64_t n_local_initial = allen_cahn::count_cells_above(
             u_host, allen_cahn::RunConfig::kLevelSetThreshold);
         if (!cfg.png_output_initial.empty()) {
-          pfc::io::write_mpi_scalar_field_png_xy(MPI_COMM_WORLD, decomp, rank, u_host,
-                                                 cfg.png_output_initial, -1.0, 1.0);
+          pfc::io::write_mpi_scalar_field_png_xy(MPI_COMM_WORLD, decomp, rank,
+                                                 u_host, cfg.png_output_initial,
+                                                 -1.0, 1.0);
           if (rank == 0) {
-            std::cout << "Wrote initial-state PNG: " << cfg.png_output_initial << "\n";
+            std::cout << "Wrote initial-state PNG: " << cfg.png_output_initial
+                      << "\n";
           }
         }
         constexpr int halo_width = allen_cahn::RunConfig::kHaloWidth;
-        DevField u(domain, local_box, /*storage_halo=*/0, /*iteration_halo=*/halo_width);
+        DevField u(domain, local_box, /*storage_halo=*/0,
+                   /*iteration_halo=*/halo_width);
         u.with_host_view([&](double *data, std::size_t n) {
           if (n != u_host.size()) {
             throw std::runtime_error("Allen–Cahn CUDA: field size mismatch");
@@ -111,8 +95,8 @@ int main(int argc, char *argv[]) {
         });
         u.sync_to_device();
 
-        pfc::comm::SparseExchange<pfc::CUDASpace, double> exchanger(
-            u, decomp, rank, MPI_COMM_WORLD);
+        pfc::comm::SparseExchange<pfc::CUDASpace, double> exchanger(u, decomp, rank,
+                                                                    MPI_COMM_WORLD);
         if (rank == 0) {
           std::cout << "ALLEN_CAHN_CUDA_HALO_MODE=device"
                     << " gpu_aware=" << (exchanger.uses_gpu_aware_mpi() ? 1 : 0)
@@ -126,11 +110,12 @@ int main(int argc, char *argv[]) {
         // front had actually settled by then. Two extra device->host copies in
         // a run of thousands of steps.
         allen_cahn::AreaSamples areas;
-        areas.initial = allen_cahn::global_area_cells(MPI_COMM_WORLD, n_local_initial);
+        areas.initial =
+            allen_cahn::global_area_cells(MPI_COMM_WORLD, n_local_initial);
         allen_cahn::SubcellSamples sub;
         sub.planar = cfg.two_front;
-        allen_cahn::sample_subcell(MPI_COMM_WORLD, decomp, rank, u_host.data(), nx, ny,
-                                   &sub, allen_cahn::SampleWhen::Initial);
+        allen_cahn::sample_subcell(MPI_COMM_WORLD, decomp, rank, u_host.data(), nx,
+                                   ny, &sub, allen_cahn::SampleWhen::Initial);
         const int step_half = cfg.n_steps / 2;
         const int step_three_quarter = (3 * cfg.n_steps) / 4;
 
@@ -141,8 +126,8 @@ int main(int argc, char *argv[]) {
           const auto faces = exchanger.face_recv_ptrs();
           allen_cahn::allen_cahn_step_cuda(u.data(), faces[0], faces[1], faces[2],
                                            faces[3], faces[4], faces[5], nx, ny, nz,
-                                           halo_width, inv_dx2, inv_dy2, cfg.dt, cfg.M,
-                                           inv_eps2, cfg.driving_force);
+                                           halo_width, inv_dx2, inv_dy2, cfg.dt,
+                                           cfg.M, inv_eps2, cfg.driving_force);
           u.note_device_write();
           const int done = step + 1;
           if (done == step_half || done == step_three_quarter) {
@@ -151,12 +136,12 @@ int main(int argc, char *argv[]) {
               n_local = allen_cahn::count_cells_above(
                   data, n, allen_cahn::RunConfig::kLevelSetThreshold);
               if (done == step_half) {
-                allen_cahn::sample_subcell(MPI_COMM_WORLD, decomp, rank, data, nx, ny,
-                                           &sub, allen_cahn::SampleWhen::Half);
+                allen_cahn::sample_subcell(MPI_COMM_WORLD, decomp, rank, data, nx,
+                                           ny, &sub, allen_cahn::SampleWhen::Half);
               }
               if (done == step_three_quarter) {
-                allen_cahn::sample_subcell(MPI_COMM_WORLD, decomp, rank, data, nx, ny,
-                                           &sub,
+                allen_cahn::sample_subcell(MPI_COMM_WORLD, decomp, rank, data, nx,
+                                           ny, &sub,
                                            allen_cahn::SampleWhen::ThreeQuarter);
               }
             });
@@ -171,12 +156,11 @@ int main(int argc, char *argv[]) {
         }
         MPI_Barrier(MPI_COMM_WORLD);
         const double step_elapsed_s = MPI_Wtime() - step_t0;
-        u.with_host_view([&](double *data, std::size_t n) {
-          u_host.assign(data, data + n);
-        });
+        u.with_host_view(
+            [&](double *data, std::size_t n) { u_host.assign(data, data + n); });
         if (!cfg.png_output.empty()) {
-          pfc::io::write_mpi_scalar_field_png_xy(MPI_COMM_WORLD, decomp, rank, u_host,
-                                                 cfg.png_output, -1.0, 1.0);
+          pfc::io::write_mpi_scalar_field_png_xy(MPI_COMM_WORLD, decomp, rank,
+                                                 u_host, cfg.png_output, -1.0, 1.0);
           if (rank == 0) {
             std::cout << "Wrote PNG: " << cfg.png_output << "\n";
           }
@@ -188,18 +172,19 @@ int main(int argc, char *argv[]) {
         double sum_global = 0.0;
         MPI_Reduce(&sum_u, &sum_global, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
         if (rank == 0) {
-          std::cout << "Allen–Cahn FD (CUDA): grid " << cfg.nx_glob << "x" << cfg.ny_glob
-                    << "x1, ranks=" << nproc << ", steps=" << cfg.n_steps << "\n";
+          std::cout << "Allen–Cahn FD (CUDA): grid " << cfg.nx_glob << "x"
+                    << cfg.ny_glob << "x1, ranks=" << nproc
+                    << ", steps=" << cfg.n_steps << "\n";
           std::cout << "Bulk driving force: " << cfg.driving_force << "\n";
           std::cout << "Global sum(phi) after stepping: " << sum_global << "\n";
         }
-        allen_cahn::report_step_timing(MPI_COMM_WORLD, rank, cfg.n_steps, step_elapsed_s);
+        allen_cahn::report_step_timing(MPI_COMM_WORLD, rank, cfg.n_steps,
+                                       step_elapsed_s);
         areas.final_ = allen_cahn::global_area_cells(
-            MPI_COMM_WORLD,
-            allen_cahn::count_cells_above(
-                u_host, allen_cahn::RunConfig::kLevelSetThreshold));
-        allen_cahn::sample_subcell(MPI_COMM_WORLD, decomp, rank, u_host.data(), nx, ny,
-                                   &sub, allen_cahn::SampleWhen::Final);
+            MPI_COMM_WORLD, allen_cahn::count_cells_above(
+                                u_host, allen_cahn::RunConfig::kLevelSetThreshold));
+        allen_cahn::sample_subcell(MPI_COMM_WORLD, decomp, rank, u_host.data(), nx,
+                                   ny, &sub, allen_cahn::SampleWhen::Final);
         auto kinetics = allen_cahn::analyse_interface_kinetics(areas, cfg, dx);
         if (cfg.two_front) {
           allen_cahn::skip_disc_check_for_flat_fronts(&kinetics);

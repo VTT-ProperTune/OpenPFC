@@ -6,6 +6,7 @@
 #endif
 
 #include <hip/hip_runtime.h>
+#include <openpfc/runtime/gpu/check_error.hpp>
 
 #include <algorithm>
 #include <array>
@@ -14,6 +15,7 @@
 #include <iostream>
 #include <memory>
 #include <mpi.h>
+#include <openpfc/runtime/gpu/bind_local_device.hpp>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -36,28 +38,7 @@ namespace {
 
 using DevField = pfc::data::Field<double, pfc::HIPSpace>;
 
-void hip_check(hipError_t e, const char *what) {
-  if (e != hipSuccess) {
-    throw std::runtime_error(std::string(what) + ": " + hipGetErrorString(e));
-  }
-}
-
-void bind_local_gpu() {
-  MPI_Comm node_comm = MPI_COMM_NULL;
-  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
-                      &node_comm);
-  int local_rank = 0;
-  if (node_comm != MPI_COMM_NULL) {
-    MPI_Comm_rank(node_comm, &local_rank);
-    MPI_Comm_free(&node_comm);
-  }
-  int n_dev = 0;
-  hip_check(hipGetDeviceCount(&n_dev), "hipGetDeviceCount");
-  if (n_dev < 1) {
-    throw std::runtime_error("No HIP devices visible to this rank");
-  }
-  hip_check(hipSetDevice(local_rank % n_dev), "hipSetDevice");
-}
+using pfc::runtime::gpu::hip_check;
 
 void copy_host_to_device(const std::vector<double> &host, DevField &dev) {
   dev.with_host_view([&](double *data, std::size_t n) {
@@ -80,7 +61,7 @@ void copy_device_to_host(DevField &dev, std::vector<double> &host) {
 namespace {
 
 int run_wave2d_hip(const wave2d::RunConfig &cfg, int rank, int nproc) {
-  bind_local_gpu();
+  pfc::runtime::gpu::bind_local_device();
   const int Nx = cfg.Nx;
   const int Ny = cfg.Ny;
   const int n_steps = cfg.n_steps;

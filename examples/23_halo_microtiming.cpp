@@ -35,6 +35,7 @@
 #include <openpfc/kernel/decomposition/decomposition_neighbors.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/profiling/profiling.hpp>
+#include <openpfc/runtime/gpu/bind_local_device.hpp>
 
 #if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
 #include <openpfc/runtime/gpu/comm_halo_exchange_gpu.hpp>
@@ -128,30 +129,6 @@ Options parse_args(int argc, char **argv) {
   return opt;
 }
 
-void bind_local_gpu() {
-  MPI_Comm node = MPI_COMM_NULL;
-  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &node);
-  int local = 0;
-  MPI_Comm_rank(node, &local);
-  MPI_Comm_free(&node);
-#if defined(OpenPFC_ENABLE_CUDA)
-  int n = 0;
-  if (cudaGetDeviceCount(&n) == cudaSuccess && n > 0) {
-    cudaSetDevice(local % n);
-  }
-#endif
-#if defined(OpenPFC_ENABLE_HIP)
-  int n = 0;
-  if (hipGetDeviceCount(&n) == hipSuccess && n > 0) {
-    const hipError_t err = hipSetDevice(local % n);
-    if (err != hipSuccess) {
-      throw std::runtime_error(std::string("hipSetDevice: ") +
-                               hipGetErrorString(err));
-    }
-  }
-#endif
-}
-
 template <typename Space>
 void fill_owned(data::Field<double, Space> &u, double rank_val) {
   u.with_host_view([&](double *data, std::size_t) {
@@ -208,7 +185,7 @@ int main(int argc, char **argv) {
 
   try {
     if (opt.use_cuda || opt.use_hip) {
-      bind_local_gpu();
+      pfc::runtime::gpu::bind_local_device();
     }
     auto domain = domain::create({opt.nx, opt.ny, opt.nz});
     auto decomp = decomposition::create(domain, nproc);

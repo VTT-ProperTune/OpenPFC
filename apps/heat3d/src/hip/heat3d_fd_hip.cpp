@@ -27,6 +27,7 @@
 #endif
 
 #include <hip/hip_runtime.h>
+#include <openpfc/runtime/gpu/check_error.hpp>
 
 #include <algorithm>
 #include <array>
@@ -69,11 +70,7 @@ namespace {
 using HostField = pfc::data::Field<double, pfc::HostSpace>;
 using DevField = pfc::data::Field<double, pfc::HIPSpace>;
 
-void hip_check(hipError_t e, const char *what) {
-  if (e != hipSuccess) {
-    throw std::runtime_error(std::string(what) + ": " + hipGetErrorString(e));
-  }
-}
+using pfc::runtime::gpu::hip_check;
 
 void copy_host_to_device(const HostField &host, DevField &dev) {
   if (host.size() != dev.size()) {

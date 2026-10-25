@@ -6,6 +6,7 @@
 #endif
 
 #include <hip/hip_runtime.h>
+#include <openpfc/runtime/gpu/check_error.hpp>
 
 #include <stdexcept>
 #include <string>
@@ -16,11 +17,7 @@
 
 namespace {
 
-void hip_check(hipError_t e, const char *what) {
-  if (e != hipSuccess) {
-    throw std::runtime_error(std::string(what) + ": " + hipGetErrorString(e));
-  }
-}
+using pfc::runtime::gpu::hip_check;
 
 struct HeatDeviceModel {
   OPENPFC_HD double rhs(double /*t*/, const heat3d::HeatGrads &g) const noexcept {
@@ -41,8 +38,8 @@ __global__ void euler_axpy_kernel(double *u, const double *du, double dt,
 
 namespace heat3d {
 
-void fd_rhs_hip(const pfc::gpu::FDGradientDevice<HeatGrads> &eval,
-                double *du_padded, double t, int nx, int ny, int nz) {
+void fd_rhs_hip(const pfc::gpu::FDGradientDevice<HeatGrads> &eval, double *du_padded,
+                double t, int nx, int ny, int nz) {
   HeatDeviceModel model;
   pfc::sim::gpu::for_each_interior_device<HeatDeviceModel, HeatGrads>(
       model, eval, du_padded, t, nx, ny, nz);
