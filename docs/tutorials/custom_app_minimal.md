@@ -141,5 +141,5 @@ same subtree before construction.
 ## Next steps
 
 - Register JSON ICs with a catalog: `examples/initialization/catalog/model.cpp`.
-- Attach writers on the `on_save` hook: `examples/11_write_results.cpp`.
+- Attach writers on the `on_save` hook: `examples/output/vtk-series/model.cpp`.
 - Extension checklist: [`extending_openpfc/README.md`](../extending_openpfc/README.md).

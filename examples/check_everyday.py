@@ -205,6 +205,80 @@ def check_binary(binary, root, launch):
     )
 
 
+def vtk_piece(path):
+    data = path.read_bytes()
+    marker = re.search(rb"<AppendedData[^>]*>\s*_", data)
+    assert marker
+    xml = ET.fromstring(data[: marker.start()] + b"</VTKFile>")
+    endian = "<" if xml.attrib["byte_order"] == "LittleEndian" else ">"
+    assert xml.attrib["header_type"] == "UInt64"
+    image = xml.find("ImageData")
+    piece = image.find("Piece")
+    extent = list(map(int, piece.attrib["Extent"].split()))
+    array = piece.find("PointData/DataArray")
+    assert array.attrib["Name"] == "density" and array.attrib["type"] == "Float64"
+    begin = marker.end() + int(array.attrib["offset"])
+    length = struct.unpack_from(endian + "Q", data, begin)[0]
+    values = struct.unpack_from(endian + "d" * (length // 8), data, begin + 8)
+    assert length == 8 * math.prod(
+        extent[2 * a + 1] - extent[2 * a] + 1 for a in range(3)
+    )
+    return image, extent, values
+
+
+def check_vtk(binary, root, launch, ranks):
+    folder = root / "vtk"
+    run(binary, folder, launch, {"n": 8})
+    manifest = json.loads((folder / "results/lesson_manifest.json").read_text())
+    assert manifest["steps"] == [0, 4, 8] and manifest["times"] == [0, 0.25, 0.5]
+    assert manifest["origin"] == [-1, 2, 3]
+    assert (manifest["dx"], manifest["dy"], manifest["dz"]) == (0.25, 0.5, 0.75)
+    assert manifest["order"] == "fortran" and manifest["dtype"] == "float64"
+    assert manifest["fields"] == ["density", "density_raw"]
+    for frame in range(3):
+        values = binary_values(folder / f"results/lesson_density_raw_{frame:04d}.bin")
+        assert values == tuple(
+            affine(i, j, k, 0.25 * frame)
+            for k in range(2)
+            for j in range(4)
+            for i in range(8)
+        )
+        pieces = sorted((folder / "results").glob(f"density_{frame:04d}*.vti"))
+        assert len(pieces) == ranks, pieces
+        seen = set()
+        for path in pieces:
+            image, extent, values = vtk_piece(path)
+            assert list(map(float, image.attrib["Origin"].split())) == [-1, 2, 3]
+            assert list(map(float, image.attrib["Spacing"].split())) == [
+                0.25,
+                0.5,
+                0.75,
+            ]
+            indices = [
+                (i, j, k)
+                for k in range(extent[4], extent[5] + 1)
+                for j in range(extent[2], extent[3] + 1)
+                for i in range(extent[0], extent[1] + 1)
+            ]
+            for index, value in zip(indices, values):
+                assert index not in seen and value == affine(*index, 0.25 * frame)
+                seen.add(index)
+        assert len(seen) == 64
+    xdmf = list((folder / "results").glob("*.xmf")) + list(
+        (folder / "results").glob("*.xdmf")
+    )
+    assert len(xdmf) == 1, xdmf
+    document = ET.parse(xdmf[0])
+    assert [float(item.attrib["Value"]) for item in document.findall(".//Time")] == [
+        0,
+        0.25,
+        0.5,
+    ]
+    for item in document.findall(".//DataItem"):
+        if item.attrib.get("Format") == "Binary":
+            assert (xdmf[0].parent / item.text.strip()).is_file()
+
+
 def verify_first_domain(bin_dir, root, launch, ranks):
     assert "(-0.625,0.5,0)" in run(bin_dir / "first_domain", root)
     axes = table(root / "results/domain.csv")
@@ -228,6 +302,7 @@ def main():
             "04_diffusion_model",
             "05_simulator",
             "write_results",
+            "11_write_results",
         ],
     )
     args = parser.parse_args()
@@ -267,6 +342,10 @@ def main():
             root = base / "write_results"
             root.mkdir()
             check_binary(bin_dir / "write_results", root, launch)
+        if args.case in (None, "11_write_results"):
+            root = base / "11_write_results"
+            root.mkdir()
+            check_vtk(bin_dir / "11_write_results", root, launch, ranks)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

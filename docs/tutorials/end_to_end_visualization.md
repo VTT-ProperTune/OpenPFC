@@ -66,7 +66,7 @@ The stock file [`apps/tungsten/inputs_json/tungsten_single_seed.json`](../../app
 
 4. **Success**: exit code 0; rank 0 logs progress. **Artifacts**: binary files under `./data/` whose names match your `data` templates (frame index in place of `%d`). **On-disk layout:** [`binary_field_io_spec.md`](../reference/binary_field_io_spec.md); overview: [`io_results.md`](../user_guide/io_results.md).
 
-5. **Visualization**: VTK/ParaView from the default JSON path is not automatic — the stock wiring registers binary writers. For VTK, attach `VTKWriter` in code (see [`io_results.md`](../user_guide/io_results.md) and `examples/11_write_results.cpp`). For large campaigns, binary + postprocessing is typical.
+5. **Visualization**: VTK/ParaView from the default JSON path is not automatic — the stock wiring registers binary writers. For VTK, attach `VTKWriter` in code (see [`io_results.md`](../user_guide/io_results.md) and `examples/output/vtk-series/model.cpp`). For large campaigns, binary + postprocessing is typical.
 
 ---
 

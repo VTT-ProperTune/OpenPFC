@@ -1,0 +1,82 @@
+---
+title: "A result series remembers geometry and time"
+description: "Write padded fields through SnapshotSeries and inspect VTK pieces, raw arrays, the manifest and XDMF."
+order: 60
+categories: [Output, Visualization, MPI]
+targets: [11_write_results]
+capabilities: [snapshot-series, vtk-writer, xdmf-series, owned-field-packing, output-metadata]
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[OpenPFC / From arrays to an inspectable result]{.lesson-kicker}
+
+# A result series remembers geometry and time
+
+[A frame number is not a simulation step, and neither one tells us the physical time. Store all three deliberately.]{.lesson-deck}
+:::
+
+This refactoring of `11_write_results` uses native `SnapshotSeries` in
+place of the old example-only VTK wrapper. The field is deliberately
+padded, the geometry is nontrivial, and the three saved states have
+steps 0,4,8 at times 0,.25,.5:
+
+$$
+u(x,y,z,t)=1+x+2y+3z+t.
+$$ {#eq-field}
+
+These are prescribed fields for studying output. No PDE solver is hidden
+inside this example.
+
+## Register a field, then write output opportunities
+
+```{.cpp include="model.cpp" snippet="series" dedent=4}
+```
+
+The VTK slot and raw binary slot borrow the same field. The series packs
+only owned samples before writing, so halo storage does not leak into
+either file. The field and its allocation must remain valid while the
+series uses them. All communicator ranks participate in each write and
+in `close`.
+
+The frame ordinal chooses the filename suffix 0000,0001,0002. Simulation
+steps and physical times are separate metadata. `close()` writes the
+manifest and XDMF information and reports errors on the successful path;
+relying only on destructor cleanup would lose that opportunity.
+
+## Inspect the files before interpreting a picture
+
+`results/lesson_manifest.json` records dimensions, spacing, origin,
+field names, filename patterns, steps and times. VTK files include physical
+geometry and an appended binary scalar array. The raw binary slot also
+gets a generated XDMF time series, which supplies geometry and time to
+the otherwise headerless arrays.
+
+In serial, open `density_0000.vti` in a VTK-compatible viewer. In parallel,
+the writer emits `.vti` pieces and a `.pvti` master with non-overlapping
+point extents. Some VTK/ParaView readers do not assemble those pieces
+into a single image; individual pieces remain readable. The generated
+XDMF series describes the global binary field and is another route for
+viewing the whole result.
+
+## Verify the content, not just the existence of a file
+
+```sh
+openpfc run model.cpp input.json --source-root .. --launcher=none
+openpfc run model.cpp input.json --source-root .. --ranks=2 --launcher=mpirun
+```
+
+The tests parse each VTK piece's XML and binary payload, reconstruct the
+whole field, check origin and spacing, and compare each saved value with
+@eq-field. They separately decode the binary frames and inspect the
+manifest and XDMF times. None of the halo sentinel values should appear
+in the saved fields.
+
+Change the geometry in [the helper](../lesson.hpp), then check that the
+header and physical sample values both change. Keep the [model](model.cpp)
+and [input](input.json) with it. For actual simulation evolution, continue
+with Cahn–Hilliard.
+:::

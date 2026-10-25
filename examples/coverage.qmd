@@ -17,7 +17,7 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 :::
 
 There are 60 declared runnable example targets and
-44 Quarto teaching chapters. The table includes older programs
+45 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -86,7 +86,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `08_discrete_fields` | [Read the lesson](geometry/coordinate-fields/index.qmd) |
 | `09_parallel_fft_high_level` | [Read the lesson](fourier/field-layout/index.qmd) |
 | `10_ui_register_ic` | [Read the lesson](initialization/catalog/index.qmd) |
-| `11_write_results` | Pending conversion. |
+| `11_write_results` | [Read the lesson](output/vtk-series/index.qmd) |
 | `12_cahn_hilliard` | Pending conversion. |
 | `14_custom_field_initializer` | [Read the lesson](initialization/patterns/index.qmd) |
 | `15_finite_difference_heat` | [Read the lesson](heat/separated-halos/index.qmd) |
@@ -162,7 +162,7 @@ fixed-step restart does not establish an adaptive restart contract.
 | exponential and adaptive ETD | [exponential](heat/exponential/index.qmd), [adaptive-etd](integration/adaptive-etd/index.qmd) |
 | initial conditions and modifiers | [coordinate-fields](geometry/coordinate-fields/index.qmd), [patterns](initialization/patterns/index.qmd), [catalog](initialization/catalog/index.qmd) |
 | JSON/TOML validation and application sessions | [session](configuration/session/index.qmd), [catalog](initialization/catalog/index.qmd) |
-| field output and visualization | [binary-field](output/binary-field/index.qmd) |
+| field output and visualization | [binary-field](output/binary-field/index.qmd), [vtk-series](output/vtk-series/index.qmd) |
 | checkpoints and restart | [checkpoint-restart](output/checkpoint-restart/index.qmd) |
 | Krylov and nonlinear solves | [integration](polynomials/integration/index.qmd), [boundary-values](polynomials/boundary-values/index.qmd), [nonlinear-boundary](polynomials/nonlinear-boundary/index.qmd) |
 | geometric multigrid | Pending a teaching chapter. |

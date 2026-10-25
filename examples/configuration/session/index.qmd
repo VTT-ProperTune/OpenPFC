@@ -82,5 +82,5 @@ application-specific `model.params` schema.
 Keep the [source](model.cpp), [JSON input](input.json) and
 [TOML input](input.toml) together. Continue with
 [time-loop hooks](../../heat/driver-hooks/index.qmd) or
-writing a result series.
+[writing a result series](../../output/vtk-series/index.qmd).
 :::

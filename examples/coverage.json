@@ -98,9 +98,15 @@
     },
     {
       "target": "11_write_results",
-      "source": "11_write_results.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "output/vtk-series/model.cpp",
+      "chapter": "output/vtk-series/index.qmd",
+      "capabilities": [
+        "snapshot-series",
+        "vtk-writer",
+        "xdmf-series",
+        "owned-field-packing",
+        "output-metadata"
+      ]
     },
     {
       "target": "12_cahn_hilliard",
@@ -966,7 +972,8 @@
         "png_writer.hpp"
       ],
       "chapters": [
-        "output/binary-field/index.qmd"
+        "output/binary-field/index.qmd",
+        "output/vtk-series/index.qmd"
       ]
     },
     {

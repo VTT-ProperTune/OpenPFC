@@ -24,11 +24,11 @@ mpirun -n 2 ./examples/11_write_results
 
 **Artifact:** `results.vti` in the **current working directory** (usually `build/`).
 
-**ParaView:** *File → Open* → select `results.vti` → *Apply*. Choose the point array named `density` (see source: `examples/11_write_results.cpp`).
+**ParaView:** *File → Open* → select `results.vti` → *Apply*. Choose the point array named `density` (see source: `examples/output/vtk-series/model.cpp`).
 
 **Modern API:** The field is created using `pfc::data::field_from_subdomain()` from decomposition geometry, which returns a `pfc::data::Field<T, HostSpace>` with correct domain, local box, and spacing metadata. This is the canonical M2 approach for allocating fields that match MPI subdomain layouts.
 
-**Source:** [`examples/11_write_results.cpp`](../../examples/11_write_results.cpp) — shows `set_uri`, `set_field_name`, `set_domain`, `set_origin`, `set_spacing`, `initialize`, `write`.
+**Source:** [`examples/output/vtk-series/model.cpp`](../../examples/output/vtk-series/model.cpp) — shows `set_uri`, `set_field_name`, `set_domain`, `set_origin`, `set_spacing`, `initialize`, `write`.
 
 ## Example 2: time series (`12_cahn_hilliard`)
 

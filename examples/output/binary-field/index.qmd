@@ -45,7 +45,7 @@ brick product. Ghost padding is not part of this raw file.
 The filename's increment is 5, hence `results/field_0005.bin`. Writing
 a file does not store the field's geometry or a complete simulation
 checkpoint. Keep that metadata separately, or use
-the snapshot series or
+[the snapshot series](../vtk-series/index.qmd) or
 [checkpoint service](../checkpoint-restart/index.qmd) as appropriate.
 
 ## Inspect the global layout independently

@@ -23,7 +23,7 @@ out-of-tree executable, follow the
 | Add a stiff spectral-ETD (PFC) model | `pfc::sim::SpectralETDPhysics` consumed by `SpectralETDSystem` | [Add a spectral-ETD physics](#add-a-spectral-etd-physics), `tests/fixtures/swift_hohenberg.hpp` |
 | Add a config-selected initial or boundary condition | `pfc::FieldModifier` and a modifier catalog | `examples/initialization/catalog/model.cpp`, `examples/initialization/patterns/model.cpp` |
 | Apply programmatic field operations | Namespace free functions and field iteration helpers | [Functional field operations](../getting_started/functional_field_ops.md) |
-| Add an output format | `pfc::ResultsWriter` or a writer catalog | `examples/11_write_results.cpp` |
+| Add an output format | `pfc::ResultsWriter` or a writer catalog | `examples/output/vtk-series/model.cpp` |
 | Add custom spatial interpretation | Domain and coordinate helper functions | `examples/17_custom_coordinate_system.cpp` |
 | Build a JSON/TOML-driven binary | `make_simulation_session` / `pfc::sim::run` | [Minimal custom application](../tutorials/custom_app_minimal.md) |
 | Drive your own stepper with the shared clock, IC/BC, and save hooks | `pfc::sim::SimulationLifecycle` | [Custom stepper lifecycle](../concepts/custom_stepper.md) |

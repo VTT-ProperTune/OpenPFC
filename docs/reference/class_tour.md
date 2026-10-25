@@ -49,7 +49,7 @@ The shortest useful mental model is:
 | `Time` | Start, stop, step size, current time, and save cadence | `openpfc/kernel/simulation/time.hpp` | `examples/integration/output-clock/model.cpp` |
 | `pfc::sim::run` / `SimulationDriver` | Time loop over physics `step` plus optional IC/BC/save hooks | `openpfc/kernel/simulation/simulation_driver.hpp` | `examples/heat/driver-hooks/model.cpp` |
 | `FieldModifier` + `apply_field_modifier` | Initial and boundary conditions on a host or device `Field` (JSON catalog or programmatic) | `openpfc/kernel/simulation/field_modifier.hpp`, `apply_field_modifier.hpp` | `examples/initialization/catalog/model.cpp` |
-| `ResultsWriter` | Stable interface for persisted simulation fields | `openpfc/kernel/simulation/results_writer.hpp` | `examples/11_write_results.cpp` |
+| `ResultsWriter` | Stable interface for persisted simulation fields | `openpfc/kernel/simulation/results_writer.hpp` | `examples/output/vtk-series/model.cpp` |
 | `FileResultsWriter` | File sink with `$ENV` expansion and increment path templating | `openpfc/frontend/io/file_results_writer.hpp` | `BinaryWriter`, `VTKWriter` |
 | `World` | Deprecated A0 adapter around `Domain` | `openpfc/kernel/data/world.hpp` | `examples/geometry/anisotropic-grid/model.cpp` uses `Domain` |
 | `SpectralCPUStack` | Owns the CPU domain, decomposition, FFT, and field stack | `openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp` | `user_guide/app_pipeline.md` |
