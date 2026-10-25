@@ -17,11 +17,11 @@ model.
 | 2 | `05_simulator` | Add `pfc::sim::run`, `Time`, host ICs, and lifecycle orchestration |
 | 3 | `12_cahn_hilliard` | Declare conserved nonlinear physics and advance it with native ETD1 |
 
-Read the Quarto lessons for [implicit heat](../../examples/heat/implicit-euler/index.qmd),
-[driver hooks](../../examples/heat/driver-hooks/index.qmd), and
-[Cahn–Hilliard](../../examples/phase-fields/cahn-hilliard/index.qmd).
+Read the Quarto lessons for [implicit heat](https://vtt-propertune.github.io/OpenPFC/learn/heat/implicit-euler/),
+[driver hooks](https://vtt-propertune.github.io/OpenPFC/learn/heat/driver-hooks/), and
+[Cahn–Hilliard](https://vtt-propertune.github.io/OpenPFC/learn/phase-fields/cahn-hilliard/).
 They develop the equations, show source excerpts and give independent checks.
-The [snapshot-series lesson](../../examples/output/vtk-series/index.qmd) covers
+The [snapshot-series lesson](https://vtt-propertune.github.io/OpenPFC/learn/output/vtk-series/) covers
 visualization output separately.
 
 ## Build and run

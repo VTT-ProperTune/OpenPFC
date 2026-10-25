@@ -20,7 +20,7 @@ The detailed evidence is in `results/events_rank_*.csv` and
 `results/field_rank_*.csv`. The ledger records the start/apply/step/save
 hooks and the actual intervals .07,.07,.06. The field can be checked
 against the product of its backward-Euler mode multipliers.
-See [the Quarto lesson](../../examples/heat/driver-hooks/index.qmd) for
+See [the Quarto lesson](https://vtt-propertune.github.io/OpenPFC/learn/heat/driver-hooks/) for
 commands and the mathematical check. A printed completion message alone
 does not establish numerical accuracy.
 
