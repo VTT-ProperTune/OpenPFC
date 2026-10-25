@@ -22,6 +22,19 @@ on:
       - 'scripts/check_doxygen_log.py'
       - 'scripts/check_sphinx_log.py'
       - 'scripts/check_examples_catalog.py'
+      - 'scripts/stage_example_book.py'
+      - 'scripts/check_example_book.py'
+      - 'scripts/audit_example_book.py'
+      - 'examples/**/*.qmd'
+      - 'examples/**/*.hpp'
+      - 'examples/**/*.json'
+      - 'examples/**/*.toml'
+      - 'examples/**/CMakeLists.txt'
+      - 'examples/**/*.svg'
+      - 'examples/**/*.yml'
+      - 'examples/**/*.bib'
+      - 'examples/**/*.css'
+      - 'examples/_extensions/**'
       - 'scripts/check_end_to_end_allen_cahn.py'
       - 'scripts/build_docs.sh'
       - 'scripts/build_handbook.sh'
@@ -69,6 +82,8 @@ jobs:
             python3 scripts/check_doc_toolchain_refs.py
           run_check "Examples catalog" \
             python3 scripts/check_examples_catalog.py
+          run_check "Example teaching coverage" \
+            python3 scripts/audit_example_book.py
           run_check "Allen-Cahn tutorial consistency" \
             python3 scripts/check_end_to_end_allen_cahn.py
           run_check "Fenced shell syntax" \
@@ -123,6 +138,29 @@ jobs:
         if: success()
         run: python3 scripts/check_doxygen_log.py build/docs/doxygen.log
 
+      - name: Install Quarto for the teaching chapters
+        env:
+          QUARTO_VERSION: 1.10.19
+        run: |
+          set -euo pipefail
+          prefix="$RUNNER_TEMP/quarto"
+          mkdir -p "$prefix"
+          curl -fsSL "https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.tar.gz" \
+            | tar -xz -C "$prefix" --strip-components=1
+          echo "$prefix/bin" >> "$GITHUB_PATH"
+
+      - name: Render native Quarto teaching chapters
+        run: |
+          quarto render examples
+          python3 scripts/check_example_book.py examples/_build/site
+
+      - name: Upload teaching chapters for review
+        uses: actions/upload-artifact@v5
+        with:
+          name: example-lessons-html
+          path: examples/_build/site
+          retention-days: 7
+
       - name: Upload build diagnostics
         if: failure()
         uses: actions/upload-artifact@v5
@@ -156,6 +194,13 @@ jobs:
     env:
       QUARTO_VERSION: 1.10.19
     steps:
+      - name: Check out the matching OpenPFC examples
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          path: openpfc
+          persist-credentials: false
+
       - name: Check out the website source
         uses: actions/checkout@v5
         with:
@@ -174,9 +219,14 @@ jobs:
             | tar -xz -C "$prefix" --strip-components=1
           echo "$prefix/bin" >> "$GITHUB_PATH"
 
-      - name: Render the website
+      - name: Import the teaching chapters from this OpenPFC revision
+        run: python3 openpfc/scripts/stage_example_book.py pages
+
+      - name: Render the website and native Quarto lessons
         working-directory: pages
-        run: quarto render
+        run: |
+          quarto render --profile examples
+          python3 ../openpfc/scripts/check_example_book.py _site/learn
 
       - name: Download the documentation
         uses: actions/download-artifact@v5
