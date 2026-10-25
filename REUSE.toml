@@ -97,3 +97,17 @@ SPDX-FileCopyrightText = [
     "2017 IBM Corp.",
 ]
 SPDX-License-Identifier = "OFL-1.1"
+
+# Keep the pinned Quarto extension source unchanged.
+[[annotations]]
+path = [
+    "examples/_extensions/include-code-files/_extension.yml",
+    "examples/_extensions/include-code-files/include-code-files.lua",
+]
+SPDX-FileCopyrightText = "2020–2022 Bruno BEAUFILS"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = ["examples/_extensions/include-code-files/UPSTREAM.md"]
+SPDX-FileCopyrightText = "2026 VTT Technical Research Centre of Finland Ltd"
+SPDX-License-Identifier = "AGPL-3.0-or-later"
