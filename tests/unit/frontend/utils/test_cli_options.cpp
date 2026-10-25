@@ -23,8 +23,8 @@ std::vector<char *> argv_from(std::vector<std::string> &args) {
 
 TEST_CASE("CliOptions parses typed --key=value and bare flags",
           "[frontend][cli_options]") {
-  std::vector<std::string> args{"prog", "--nx=64", "--dx=0.5", "--elastic",
-                                "--csv=out.csv", "--help"};
+  std::vector<std::string> args{"prog",      "--nx=64",       "--dx=0.5",
+                                "--elastic", "--csv=out.csv", "--help"};
   auto argv = argv_from(args);
   pfc::utils::CliOptions opt(static_cast<int>(argv.size()), argv.data());
 

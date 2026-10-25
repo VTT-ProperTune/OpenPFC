@@ -33,8 +33,7 @@ TEST_CASE("Gather data from source", "[SparseVector (HIP)]") {
   std::vector<double> h_big_data = {1.0, 2.0, 3.0, 4.0};
 
   double *d_big_data = nullptr;
-  REQUIRE(hipMalloc(&d_big_data, h_big_data.size() * sizeof(double)) ==
-          hipSuccess);
+  REQUIRE(hipMalloc(&d_big_data, h_big_data.size() * sizeof(double)) == hipSuccess);
   REQUIRE(hipMemcpy(d_big_data, h_big_data.data(),
                     h_big_data.size() * sizeof(double),
                     hipMemcpyHostToDevice) == hipSuccess);
@@ -59,8 +58,7 @@ TEST_CASE("Scatter data to destination", "[SparseVector (HIP)]") {
 
   std::vector<double> h_big_data(4, 0.0);
   double *d_big_data = nullptr;
-  REQUIRE(hipMalloc(&d_big_data, h_big_data.size() * sizeof(double)) ==
-          hipSuccess);
+  REQUIRE(hipMalloc(&d_big_data, h_big_data.size() * sizeof(double)) == hipSuccess);
   REQUIRE(hipMemcpy(d_big_data, h_big_data.data(),
                     h_big_data.size() * sizeof(double),
                     hipMemcpyHostToDevice) == hipSuccess);
@@ -85,8 +83,7 @@ TEST_CASE("Gather OOB throws", "[SparseVector (HIP)][error]") {
   std::vector<double> h_big_data = {1.0, 2.0, 3.0, 4.0};
 
   double *d_big_data = nullptr;
-  REQUIRE(hipMalloc(&d_big_data, h_big_data.size() * sizeof(double)) ==
-          hipSuccess);
+  REQUIRE(hipMalloc(&d_big_data, h_big_data.size() * sizeof(double)) == hipSuccess);
   REQUIRE(hipMemcpy(d_big_data, h_big_data.data(),
                     h_big_data.size() * sizeof(double),
                     hipMemcpyHostToDevice) == hipSuccess);
@@ -104,8 +101,7 @@ TEST_CASE("Scatter OOB throws", "[SparseVector (HIP)][error]") {
 
   std::vector<double> h_big_data(4, 0.0);
   double *d_big_data = nullptr;
-  REQUIRE(hipMalloc(&d_big_data, h_big_data.size() * sizeof(double)) ==
-          hipSuccess);
+  REQUIRE(hipMalloc(&d_big_data, h_big_data.size() * sizeof(double)) == hipSuccess);
   REQUIRE(hipMemcpy(d_big_data, h_big_data.data(),
                     h_big_data.size() * sizeof(double),
                     hipMemcpyHostToDevice) == hipSuccess);

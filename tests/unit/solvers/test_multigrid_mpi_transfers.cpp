@@ -24,11 +24,9 @@ using Plan = pfc::solvers::MultigridPlan;
 using Transfers = pfc::solvers::MultigridMPITransfers;
 
 pfc::Domain free_q1(const Int3 &n) {
-  const Real3 h{1.0 / (n[0] + 1), 1.3 / (n[1] + 1),
-                0.7 / (n[2] + 1)};
-  return pfc::domain::create(
-      pfc::GridSize(n), pfc::PhysicalOrigin(h),
-      pfc::GridSpacing(h), pfc::Bool3{false, false, false});
+  const Real3 h{1.0 / (n[0] + 1), 1.3 / (n[1] + 1), 0.7 / (n[2] + 1)};
+  return pfc::domain::create(pfc::GridSize(n), pfc::PhysicalOrigin(h),
+                             pfc::GridSpacing(h), pfc::Bool3{false, false, false});
 }
 
 const Plan::Rank *rank_for(const Plan::Level &level, int world) {
@@ -60,10 +58,9 @@ double reference_restrict(const Int3 &coarse, const Int3 &fine_size) {
   for (int dz = 0; dz <= 2; ++dz)
     for (int dy = 0; dy <= 2; ++dy)
       for (int dx = 0; dx <= 2; ++dx) {
-        const Int3 at{2 * coarse[0] + dx, 2 * coarse[1] + dy,
-                      2 * coarse[2] + dz};
-        if (at[0] >= fine_size[0] || at[1] >= fine_size[1] ||
-            at[2] >= fine_size[2]) continue;
+        const Int3 at{2 * coarse[0] + dx, 2 * coarse[1] + dy, 2 * coarse[2] + dz};
+        if (at[0] >= fine_size[0] || at[1] >= fine_size[1] || at[2] >= fine_size[2])
+          continue;
         const double wx = dx == 1 ? 1.0 : 0.5;
         const double wy = dy == 1 ? 1.0 : 0.5;
         const double wz = dz == 1 ? 1.0 : 0.5;
@@ -74,37 +71,34 @@ double reference_restrict(const Int3 &coarse, const Int3 &fine_size) {
 
 double reference_prolong(const Int3 &fine, const Int3 &coarse_size) {
   double result = 0.0;
-  const Int3 lo{
-      std::max(0, fine[0] / 2 - 1),
-      std::max(0, fine[1] / 2 - 1),
-      std::max(0, fine[2] / 2 - 1)};
-  const Int3 hi{
-      std::min(coarse_size[0] - 1, fine[0] / 2),
-      std::min(coarse_size[1] - 1, fine[1] / 2),
-      std::min(coarse_size[2] - 1, fine[2] / 2)};
+  const Int3 lo{std::max(0, fine[0] / 2 - 1), std::max(0, fine[1] / 2 - 1),
+                std::max(0, fine[2] / 2 - 1)};
+  const Int3 hi{std::min(coarse_size[0] - 1, fine[0] / 2),
+                std::min(coarse_size[1] - 1, fine[1] / 2),
+                std::min(coarse_size[2] - 1, fine[2] / 2)};
   for (int z = lo[2]; z <= hi[2]; ++z)
     for (int y = lo[1]; y <= hi[1]; ++y)
       for (int x = lo[0]; x <= hi[0]; ++x) {
         const Int3 j{x, y, z};
-        result += basis(fine[0], x) * basis(fine[1], y) *
-                  basis(fine[2], z) * coarse_value(j);
+        result += basis(fine[0], x) * basis(fine[1], y) * basis(fine[2], z) *
+                  coarse_value(j);
       }
   return result;
 }
 
 std::vector<Int3> layouts(int size) {
   switch (size) {
-    case 1: return {{1, 1, 1}};
-    case 2: return {{2, 1, 1}, {1, 1, 2}};
-    case 3: return {{3, 1, 1}, {1, 1, 3}};
-    case 4: return {{2, 2, 1}, {1, 2, 2}};
-    case 6: return {{6, 1, 1}};
-    default: return {};
+  case 1: return {{1, 1, 1}};
+  case 2: return {{2, 1, 1}, {1, 1, 2}};
+  case 3: return {{3, 1, 1}, {1, 1, 3}};
+  case 4: return {{2, 2, 1}, {1, 2, 2}};
+  case 6: return {{6, 1, 1}};
+  default: return {};
   }
 }
 
-void verify_step(const Plan &plan, const Transfers &transfers,
-                 std::size_t step, int rank) {
+void verify_step(const Plan &plan, const Transfers &transfers, std::size_t step,
+                 int rank) {
   const auto &fine = plan.levels()[step];
   const auto &coarse = plan.levels()[step + 1];
   const auto *fr = rank_for(fine, rank);
@@ -134,7 +128,8 @@ void verify_step(const Plan &plan, const Transfers &transfers,
       local_error = std::max(local_error, std::abs(pf[index] - expected));
       local_dot_f += f[index] * pf[index];
     });
-  } else REQUIRE(pf.empty());
+  } else
+    REQUIRE(pf.empty());
   if (cr) {
     REQUIRE(ptf.size() == c.size());
     pfc::for_each_index(cr->owned, [&](const Int3 &at) {
@@ -143,21 +138,19 @@ void verify_step(const Plan &plan, const Transfers &transfers,
       local_error = std::max(local_error, std::abs(ptf[index] - expected));
       local_dot_c += c[index] * ptf[index];
     });
-  } else REQUIRE(ptf.empty());
+  } else
+    REQUIRE(ptf.empty());
 
   double max_error = 0.0;
-  MPI_Allreduce(&local_error, &max_error, 1, MPI_DOUBLE, MPI_MAX,
-                MPI_COMM_WORLD);
+  MPI_Allreduce(&local_error, &max_error, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
   const double local_pair[2] = {local_dot_f, local_dot_c};
   double global_pair[2] = {};
-  MPI_Allreduce(local_pair, global_pair, 2, MPI_DOUBLE, MPI_SUM,
-                MPI_COMM_WORLD);
-  INFO("transition " << step << " on "
-       << plan.world_size() << " ranks");
+  MPI_Allreduce(local_pair, global_pair, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  INFO("transition " << step << " on " << plan.world_size() << " ranks");
   REQUIRE(max_error < 4e-12);
   REQUIRE(std::abs(global_pair[0] - global_pair[1]) <
-          4e-12 * std::max({1.0, std::abs(global_pair[0]),
-                             std::abs(global_pair[1])}));
+          4e-12 *
+              std::max({1.0, std::abs(global_pair[0]), std::abs(global_pair[1])}));
 
   // One more invocation checks that the MPI route state is reusable and that
   // repeating the same transfer has no hidden additive accumulation.
@@ -167,7 +160,8 @@ void verify_step(const Plan &plan, const Transfers &transfers,
     REQUIRE(again.size() == ptf.size());
     for (std::size_t i = 0; i < again.size(); ++i)
       local_error = std::max(local_error, std::abs(again[i] - ptf[i]));
-  } else REQUIRE(again.empty());
+  } else
+    REQUIRE(again.empty());
   double repeated_error = 0.0;
   MPI_Allreduce(&local_error, &repeated_error, 1, MPI_DOUBLE, MPI_MAX,
                 MPI_COMM_WORLD);
@@ -190,14 +184,12 @@ TEST_CASE("planned MPI Q1 transfers match independent P and P-transpose",
       const int short_nodes = size == 1 ? 31 : size == 6 ? 127 : 63;
       const Int3 n{short_nodes, short_nodes,
                    tall ? 2 * short_nodes + 1 : short_nodes};
-      const Plan plan = Plan::build(pfc::decomposition::create(
-          free_q1(n), grid));
+      const Plan plan = Plan::build(pfc::decomposition::create(free_q1(n), grid));
       Transfers transfers(plan, MPI_COMM_WORLD);
 
       for (std::size_t l = 0; l < plan.levels().size(); ++l) {
         const auto *r = rank_for(plan.levels()[l], rank);
-        REQUIRE((r != nullptr) ==
-                (transfers.level_comm(l) != MPI_COMM_NULL));
+        REQUIRE((r != nullptr) == (transfers.level_comm(l) != MPI_COMM_NULL));
         if (r) {
           int local = -1, active_count = 0;
           MPI_Comm_rank(transfers.level_comm(l), &local);

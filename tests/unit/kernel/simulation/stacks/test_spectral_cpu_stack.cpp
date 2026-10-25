@@ -17,9 +17,8 @@ TEST_CASE("SpectralCPUStack constructs from Domain", "[cpu_stack][stacks][unit]"
   constexpr int rank = 0;
   constexpr int nproc = 1;
 
-  const auto domain = pfc::domain::create(pfc::GridSize(size),
-                                          pfc::PhysicalOrigin(origin),
-                                          pfc::GridSpacing(spacing));
+  const auto domain = pfc::domain::create(
+      pfc::GridSize(size), pfc::PhysicalOrigin(origin), pfc::GridSpacing(spacing));
 
   SpectralCPUStack stack(domain, rank, nproc);
 
@@ -73,9 +72,8 @@ TEST_CASE("SpectralCPUStack with non-default Domain parameters",
   constexpr int rank = 0;
   constexpr int nproc = 1;
 
-  const auto domain = pfc::domain::create(pfc::GridSize(size),
-                                          pfc::PhysicalOrigin(origin),
-                                          pfc::GridSpacing(spacing));
+  const auto domain = pfc::domain::create(
+      pfc::GridSize(size), pfc::PhysicalOrigin(origin), pfc::GridSpacing(spacing));
 
   SpectralCPUStack stack(domain, rank, nproc);
 
@@ -93,10 +91,9 @@ TEST_CASE("SpectralCPUStack with non-periodic Domain", "[cpu_stack][stacks][unit
   constexpr int rank = 0;
   constexpr int nproc = 1;
 
-  const auto domain = pfc::domain::create(pfc::GridSize(size),
-                                          pfc::PhysicalOrigin(origin),
-                                          pfc::GridSpacing(spacing),
-                                          periodic);
+  const auto domain =
+      pfc::domain::create(pfc::GridSize(size), pfc::PhysicalOrigin(origin),
+                          pfc::GridSpacing(spacing), periodic);
 
   SpectralCPUStack stack(domain, rank, nproc);
 
@@ -108,7 +105,8 @@ TEST_CASE("SpectralCPUStack with non-periodic Domain", "[cpu_stack][stacks][unit
   REQUIRE(pfc::domain::get_periodic(domain) == periodic);
 }
 
-TEST_CASE("SpectralCPUStack is non-copyable and non-movable", "[cpu_stack][stacks][unit]") {
+TEST_CASE("SpectralCPUStack is non-copyable and non-movable",
+          "[cpu_stack][stacks][unit]") {
   const auto domain = pfc::domain::create(Int3{16, 16, 16});
   SpectralCPUStack stack(domain, 0, 1);
 

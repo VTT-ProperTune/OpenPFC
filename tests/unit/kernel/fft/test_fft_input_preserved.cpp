@@ -38,10 +38,10 @@
  * thousands of steps later on someone else's machine.
  */
 
-#include <complex>
-#include <cstddef>
 #include <algorithm>
 #include <cmath>
+#include <complex>
+#include <cstddef>
 #include <numbers>
 #include <vector>
 
@@ -152,9 +152,9 @@ TEST_CASE("a transform still round-trips after the input is protected",
   }
   // Guarding the input must not change what the transform computes; a copy
   // that quietly transformed the wrong buffer would pass both tests above.
-  auto domain = domain::create(GridSize({512, 1, 1}),
-                               PhysicalOrigin({0.0, 0.0, 0.0}),
-                               GridSpacing({0.25, 1.0, 1.0}));
+  auto domain =
+      domain::create(GridSize({512, 1, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({0.25, 1.0, 1.0}));
   auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
 

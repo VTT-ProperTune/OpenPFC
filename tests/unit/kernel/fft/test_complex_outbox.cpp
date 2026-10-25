@@ -19,12 +19,12 @@
 #include <openpfc/kernel/fft/fft_layout.hpp>
 
 using namespace pfc;
-using pfc::fft::layout::ComplexOutboxCost;
 using pfc::fft::layout::complex_proc_grid_for_r2c;
 using pfc::fft::layout::complex_proc_grid_is_legal;
+using pfc::fft::layout::ComplexOutboxCost;
 using pfc::fft::layout::effective_r2c_plan_options;
-using pfc::fft::layout::legal_complex_proc_grids;
 using pfc::fft::layout::legacy_complex_proc_grid_for_r2c;
+using pfc::fft::layout::legal_complex_proc_grids;
 using pfc::fft::layout::plan_r2c_outbox_cost;
 using pfc::fft::layout::r2c_complex_world_box;
 using pfc::fft::layout::real_world_box;
@@ -112,8 +112,8 @@ TEST_CASE("r2c planner reproduces 1 vs 2 MPI reshapes",
     const auto yslab = cost_for(n, z32, Int3{1, 32, 1}, 0, opts);
     REQUIRE(yslab.n_mpi_reshapes == 1);
     REQUIRE(yslab.predicted_all_peer_rounds_per_cycle == 2);
-    REQUIRE(legacy_complex_proc_grid_for_r2c(z32, r2c_complex_world_box(n, 0),
-                                             0) == Int3{1, 32, 1});
+    REQUIRE(legacy_complex_proc_grid_for_r2c(z32, r2c_complex_world_box(n, 0), 0) ==
+            Int3{1, 32, 1});
   }
   {
     const Int3 n{1216, 1216, 1216};
@@ -124,8 +124,8 @@ TEST_CASE("r2c planner reproduces 1 vs 2 MPI reshapes",
     const auto current = cost_for(n, z32, Int3{1, 1, 32}, 0, opts);
     REQUIRE(current.n_mpi_reshapes == 2);
     REQUIRE(current.predicted_all_peer_rounds_per_cycle == 4);
-    REQUIRE(legacy_complex_proc_grid_for_r2c(z32, r2c_complex_world_box(n, 0),
-                                             0) == z32);
+    REQUIRE(legacy_complex_proc_grid_for_r2c(z32, r2c_complex_world_box(n, 0), 0) ==
+            z32);
   }
 }
 
@@ -135,12 +135,12 @@ TEST_CASE("selector picks a 1-MPI-reshape outbox on 1200×1200×1152",
   const Int3 real_g{1, 1, 32};
   const auto opts = production_slab_r2c_options();
   REQUIRE(cost_for(n, real_g, Int3{1, 1, 32}, 0, opts).n_mpi_reshapes == 2);
-  for (const Int3 g : {Int3{1, 32, 1}, Int3{2, 16, 1}, Int3{4, 8, 1},
-                       Int3{8, 4, 1}, Int3{16, 2, 1}, Int3{32, 1, 1}}) {
+  for (const Int3 g : {Int3{1, 32, 1}, Int3{2, 16, 1}, Int3{4, 8, 1}, Int3{8, 4, 1},
+                       Int3{16, 2, 1}, Int3{32, 1, 1}}) {
     REQUIRE(cost_for(n, real_g, g, 0, opts).n_mpi_reshapes == 1);
   }
-  for (const Int3 g : {Int3{1, 16, 2}, Int3{1, 8, 4}, Int3{1, 4, 8},
-                       Int3{1, 2, 16}, Int3{2, 8, 2}}) {
+  for (const Int3 g : {Int3{1, 16, 2}, Int3{1, 8, 4}, Int3{1, 4, 8}, Int3{1, 2, 16},
+                       Int3{2, 8, 2}}) {
     REQUIRE(cost_for(n, real_g, g, 0, opts).n_mpi_reshapes == 2);
   }
   const Int3 selected = select_for(n, real_g, 0, opts);
@@ -155,8 +155,7 @@ TEST_CASE("min_reshape keeps already-good even y-slabs",
   REQUIRE(select_for({1152, 1152, 1152}, {1, 1, 32}, 0, opts) == Int3{1, 32, 1});
   REQUIRE(select_for({1216, 1216, 1216}, {1, 1, 32}, 0, opts) == Int3{1, 32, 1});
   REQUIRE(select_for({1536, 1536, 1536}, {1, 1, 64}, 0, opts) == Int3{1, 64, 1});
-  REQUIRE(select_for({1920, 1920, 1920}, {1, 1, 128}, 0, opts) ==
-          Int3{1, 128, 1});
+  REQUIRE(select_for({1920, 1920, 1920}, {1, 1, 128}, 0, opts) == Int3{1, 128, 1});
 }
 
 TEST_CASE("reshape_algorithm and gpu_aware do not change the logic plan",
@@ -217,8 +216,7 @@ TEST_CASE("rocFFT r2c effective options match the HIP factory path",
   auto opts = heffte::default_options<heffte::backend::rocfft>();
   opts.algorithm = heffte::reshape_algorithm::p2p_plined;
   opts.use_pencils = false;
-  const auto effective =
-      effective_r2c_plan_options<heffte::backend::rocfft>(opts);
+  const auto effective = effective_r2c_plan_options<heffte::backend::rocfft>(opts);
   REQUIRE(effective.use_reorder == true);
   REQUIRE(select_for({1200, 1200, 1152}, {1, 1, 32}, 0, effective) ==
           Int3{2, 16, 1});
@@ -229,8 +227,7 @@ TEST_CASE("rocFFT r2c effective options match the HIP factory path",
 TEST_CASE("cuFFT r2c defaults keep use_reorder unless the caller sets it",
           "[fft][layout][unit][complex_outbox][plan_options][cuda]") {
   const auto raw = heffte::default_options<heffte::backend::cufft>();
-  const auto effective =
-      effective_r2c_plan_options<heffte::backend::cufft>(raw);
+  const auto effective = effective_r2c_plan_options<heffte::backend::cufft>(raw);
   REQUIRE(effective.use_reorder == raw.use_reorder);
   REQUIRE(select_for({1200, 1200, 1152}, {1, 1, 32}, 0, effective) ==
           Int3{2, 16, 1});
@@ -246,28 +243,19 @@ TEST_CASE("selector matrix does not regress n_mpi versus the legacy heuristic",
     int r2c;
   };
   const Case cases[] = {
-      {{8, 8, 8}, {1, 1, 1}, 0},
-      {{16, 16, 16}, {1, 1, 2}, 0},
-      {{16, 16, 16}, {1, 2, 1}, 0},
-      {{16, 16, 16}, {2, 1, 1}, 0},
-      {{32, 16, 8}, {1, 1, 4}, 0},
-      {{32, 16, 8}, {1, 1, 4}, 1},
-      {{32, 16, 8}, {1, 1, 4}, 2},
-      {{64, 32, 16}, {1, 2, 2}, 0},
-      {{64, 64, 64}, {2, 2, 2}, 0},
-      {{48, 48, 48}, {1, 1, 8}, 0},
-      {{96, 96, 96}, {1, 1, 16}, 0},
-      {{96, 80, 64}, {1, 1, 8}, 0},
-      {{128, 96, 80}, {1, 4, 2}, 0},
-      {{64, 64, 64}, {1, 8, 1}, 0},
+      {{8, 8, 8}, {1, 1, 1}, 0},     {{16, 16, 16}, {1, 1, 2}, 0},
+      {{16, 16, 16}, {1, 2, 1}, 0},  {{16, 16, 16}, {2, 1, 1}, 0},
+      {{32, 16, 8}, {1, 1, 4}, 0},   {{32, 16, 8}, {1, 1, 4}, 1},
+      {{32, 16, 8}, {1, 1, 4}, 2},   {{64, 32, 16}, {1, 2, 2}, 0},
+      {{64, 64, 64}, {2, 2, 2}, 0},  {{48, 48, 48}, {1, 1, 8}, 0},
+      {{96, 96, 96}, {1, 1, 16}, 0}, {{96, 80, 64}, {1, 1, 8}, 0},
+      {{128, 96, 80}, {1, 4, 2}, 0}, {{64, 64, 64}, {1, 8, 1}, 0},
   };
   for (const auto &c : cases) {
     const auto world = r2c_complex_world_box(c.size, c.r2c);
-    const Int3 legacy =
-        legacy_complex_proc_grid_for_r2c(c.real_grid, world, c.r2c);
+    const Int3 legacy = legacy_complex_proc_grid_for_r2c(c.real_grid, world, c.r2c);
     const Int3 selected = select_for(c.size, c.real_grid, c.r2c, opts);
-    const auto sel_cost =
-        cost_for(c.size, c.real_grid, selected, c.r2c, opts);
+    const auto sel_cost = cost_for(c.size, c.real_grid, selected, c.r2c, opts);
     const auto old_cost = cost_for(c.size, c.real_grid, legacy, c.r2c, opts);
     REQUIRE(sel_cost.n_mpi_reshapes <= old_cost.n_mpi_reshapes);
     require_exact_cover(world, selected);

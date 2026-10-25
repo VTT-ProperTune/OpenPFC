@@ -3,17 +3,16 @@
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <cmath>
 #include <mpi.h>
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
-#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/field/spectral_gradient.hpp>
 #include <openpfc/kernel/simulation/for_each_interior.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
-#include <cmath>
 #include <vector>
 
 using Catch::Approx;
@@ -30,32 +29,32 @@ struct DiffusionGrads {
 // Physics model for explicit Euler diffusion
 struct DiffusionModel {
   double D = 1.0;
-  [[nodiscard]] double rhs(double /*t*/, const DiffusionGrads& g) const noexcept {
+  [[nodiscard]] double rhs(double /*t*/, const DiffusionGrads &g) const noexcept {
     return D * (g.xx + g.yy + g.zz);
   }
 };
 
 // Helper: compute L2 norm of local field
-double compute_local_l2(const std::vector<double>& u) {
+double compute_local_l2(const std::vector<double> &u) {
   double l2 = 0.0;
-  for (const auto& v : u) {
+  for (const auto &v : u) {
     l2 += v * v;
   }
   return l2;
 }
 
 // Helper: compute mean of local field
-double compute_local_mean(const std::vector<double>& u) {
+double compute_local_mean(const std::vector<double> &u) {
   double sum = 0.0;
-  for (const auto& v : u) {
+  for (const auto &v : u) {
     sum += v;
   }
   return sum / static_cast<double>(u.size());
 }
 
 // Helper: compute max absolute difference between two local fields
-double compute_local_max_diff(const std::vector<double>& u1,
-                                const std::vector<double>& u2) {
+double compute_local_max_diff(const std::vector<double> &u1,
+                              const std::vector<double> &u2) {
   double max_diff = 0.0;
   for (size_t i = 0; i < u1.size(); ++i) {
     max_diff = std::max(max_diff, std::abs(u1[i] - u2[i]));
@@ -64,7 +63,7 @@ double compute_local_max_diff(const std::vector<double>& u1,
 }
 
 // Helper: apply Gaussian initial condition u(x,y,z) = exp(-r²/(4D))
-void apply_gaussian_initial_condition(data::Field<double>& u, double D) {
+void apply_gaussian_initial_condition(data::Field<double> &u, double D) {
   u.apply([&](double x, double y, double z) {
     double r2 = x * x + y * y + z * z;
     return std::exp(-r2 / (4.0 * D));
@@ -79,7 +78,9 @@ TEST_CASE("Manual explicit Euler with spectral gradients",
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // Setup: world, decomposition, FFT, field
-  auto domain = domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, size);
   auto fft = fft::create(decomp);
   auto u = pfc::data::field_from_inbox<double>(domain, fft.get_inbox_bounds());
@@ -110,7 +111,7 @@ TEST_CASE("Manual explicit Euler with spectral gradients",
     // Compute RHS: du = D * (∂²u/∂x² + ∂²u/∂y² + ∂²u/∂z²)
     // for_each_interior calls grad.prepare() internally
     for_each_interior(model, grad, du.data(), 0.0);
-    
+
     // Explicit Euler update: u += dt * du
     for (size_t i = 0; i < u.size(); ++i) {
       u.vec()[i] += dt * du[i];
@@ -118,7 +119,7 @@ TEST_CASE("Manual explicit Euler with spectral gradients",
   }
 
   // Validate: field is finite
-  for (const auto& v : u.vec()) {
+  for (const auto &v : u.vec()) {
     REQUIRE(std::isfinite(v));
   }
 
@@ -128,7 +129,7 @@ TEST_CASE("Manual explicit Euler with spectral gradients",
   MPI_Allreduce(&local_mean_final, &global_mean_final, 1, MPI_DOUBLE, MPI_SUM,
                 MPI_COMM_WORLD);
   global_mean_final /= static_cast<double>(size);
-  
+
   REQUIRE(global_mean_final == Approx(global_mean_initial).margin(1e-10));
 }
 
@@ -140,7 +141,9 @@ TEST_CASE("EulerStepper infrastructure with spectral gradients",
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // Setup: world, decomposition, FFT, field
-  auto domain = domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, size);
   auto fft = fft::create(decomp);
   auto u = pfc::data::field_from_inbox<double>(domain, fft.get_inbox_bounds());
@@ -176,7 +179,7 @@ TEST_CASE("EulerStepper infrastructure with spectral gradients",
   }
 
   // Validate: field is finite
-  for (const auto& v : u.vec()) {
+  for (const auto &v : u.vec()) {
     REQUIRE(std::isfinite(v));
   }
 
@@ -186,7 +189,7 @@ TEST_CASE("EulerStepper infrastructure with spectral gradients",
   MPI_Allreduce(&local_mean_final, &global_mean_final, 1, MPI_DOUBLE, MPI_SUM,
                 MPI_COMM_WORLD);
   global_mean_final /= static_cast<double>(size);
-  
+
   REQUIRE(global_mean_final == Approx(global_mean_initial).margin(1e-10));
 }
 
@@ -198,21 +201,24 @@ TEST_CASE("Stepper contract equivalence: manual vs infrastructure",
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // Common setup
-  auto domain = domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, size);
   auto fft = fft::create(decomp);
-  
+
   const double D = 1.0;
   const double dt = 0.0001;
   const int steps = 10;
 
   // Manual implementation
-  auto u_manual = pfc::data::field_from_inbox<double>(domain, fft.get_inbox_bounds());
+  auto u_manual =
+      pfc::data::field_from_inbox<double>(domain, fft.get_inbox_bounds());
   apply_gaussian_initial_condition(u_manual, D);
   auto grad_manual = field::create<DiffusionGrads>(u_manual, fft);
   std::vector<double> du_manual(u_manual.size(), 0.0);
   DiffusionModel model{D};
-  
+
   for (int step = 0; step < steps; ++step) {
     // for_each_interior calls grad_manual.prepare() internally
     for_each_interior(model, grad_manual, du_manual.data(), 0.0);
@@ -226,7 +232,7 @@ TEST_CASE("Stepper contract equivalence: manual vs infrastructure",
   apply_gaussian_initial_condition(u_infra, D);
   auto grad_infra = field::create<DiffusionGrads>(u_infra, fft);
   auto stepper = pfc::sim::steppers::create(u_infra, grad_infra, model, dt);
-  
+
   double t = 0.0;
   for (int step = 0; step < steps; ++step) {
     t = stepper.step(t, u_infra.vec());
@@ -242,7 +248,7 @@ TEST_CASE("Stepper contract equivalence: manual vs infrastructure",
   MPI_Allreduce(&local_l2_diff, &global_l2_diff, 1, MPI_DOUBLE, MPI_SUM,
                 MPI_COMM_WORLD);
   global_l2_diff = std::sqrt(global_l2_diff);
-  
+
   // Compute mean values for mass conservation check
   double local_mean_manual = compute_local_mean(u_manual.vec());
   double local_mean_infra = compute_local_mean(u_infra.vec());
@@ -254,7 +260,7 @@ TEST_CASE("Stepper contract equivalence: manual vs infrastructure",
                 MPI_COMM_WORLD);
   global_mean_manual /= static_cast<double>(size);
   global_mean_infra /= static_cast<double>(size);
-  
+
   // Compute max absolute difference
   double local_max_diff = compute_local_max_diff(u_manual.vec(), u_infra.vec());
   double global_max_diff = 0.0;

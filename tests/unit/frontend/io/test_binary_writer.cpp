@@ -150,8 +150,12 @@ TEST_CASE("ResultsWriter default-constructs without a filename",
   public:
     void set_domain(const std::array<int, 3> &, const std::array<int, 3> &,
                     const std::array<int, 3> &) override {}
-    MPI_Status write(int, pfc::field::FieldView<double>) override { return MPI_Status{}; }
-    MPI_Status write(int, pfc::field::FieldView<std::complex<double>>) override { return MPI_Status{}; }
+    MPI_Status write(int, pfc::field::FieldView<double>) override {
+      return MPI_Status{};
+    }
+    MPI_Status write(int, pfc::field::FieldView<std::complex<double>>) override {
+      return MPI_Status{};
+    }
   };
   REQUIRE_NOTHROW(StdoutSink{});
 }
@@ -213,8 +217,9 @@ TEST_CASE("BinaryWriter std::vector<double> round-trip via BinaryReader",
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST_CASE("BinaryWriter std::vector<std::complex<double>> round-trip via BinaryReader",
-          "[binary_writer][io]") {
+TEST_CASE(
+    "BinaryWriter std::vector<std::complex<double>> round-trip via BinaryReader",
+    "[binary_writer][io]") {
   const int rank = mpi::get_rank();
   const int size = mpi::get_size();
   if (size > 2) {
@@ -335,7 +340,8 @@ TEST_CASE("BinaryWriter and BinaryReader reject invalid domain geometry",
                       std::invalid_argument);
     // Domain members stay default (non-positive); write fails closed before
     // MPI-IO (checked_local_extent_product), not via a successful configure.
-    REQUIRE_THROWS_AS(writer.write(0, std::vector<double>(1)), std::invalid_argument);
+    REQUIRE_THROWS_AS(writer.write(0, std::vector<double>(1)),
+                      std::invalid_argument);
   }
 }
 
@@ -350,7 +356,8 @@ TEST_CASE("BinaryWriter does not leak an MPI_File handle when MPI_File_open fail
   // MPI_File_open itself fails here (nonexistent directory), so no MPI_File
   // handle is ever produced to leak -- the property under test is simply
   // that the failure propagates as a clean exception rather than hanging.
-  REQUIRE_THROWS_AS(writer.write(1, std::vector<double>(4, 1.0)), std::runtime_error);
+  REQUIRE_THROWS_AS(writer.write(1, std::vector<double>(4, 1.0)),
+                    std::runtime_error);
 }
 
 TEST_CASE("checked_local_extent_product rejects overflow and non-positive extents",
@@ -381,8 +388,10 @@ TEST_CASE("BinaryWriter::write fails closed on buffer size mismatch",
   BinaryWriter writer(template_path);
   writer.set_domain(domain.global, domain.local, domain.offset);
 
-  REQUIRE_THROWS_AS(writer.write(0, std::vector<double>(n - 1, 0.0)), std::runtime_error);
-  REQUIRE_THROWS_AS(writer.write(0, std::vector<double>(n + 1, 0.0)), std::runtime_error);
+  REQUIRE_THROWS_AS(writer.write(0, std::vector<double>(n - 1, 0.0)),
+                    std::runtime_error);
+  REQUIRE_THROWS_AS(writer.write(0, std::vector<double>(n + 1, 0.0)),
+                    std::runtime_error);
 }
 
 TEST_CASE("BinaryReader::read fails closed on buffer size mismatch",
@@ -440,7 +449,8 @@ TEST_CASE("BinaryWriter buffer mismatch on one rank fails closed for all ranks",
 
   // Rank 0 posts a wrong-sized buffer; rank 1 is correctly sized. Allreduce
   // must make every rank throw before MPI_File_open.
-  std::vector<double> data = (rank == 0) ? std::vector<double>(n + 1, 0.0) : make_real(domain, rank);
+  std::vector<double> data =
+      (rank == 0) ? std::vector<double>(n + 1, 0.0) : make_real(domain, rank);
   REQUIRE_THROWS_AS(writer.write(0, data), std::runtime_error);
 }
 
@@ -467,7 +477,8 @@ TEST_CASE("BinaryReader buffer mismatch on one rank fails closed for all ranks",
   BinaryReader reader;
   reader.set_domain(domain.global, domain.local, domain.offset);
 
-  std::vector<double> data = (rank == 0) ? std::vector<double>(n - 1) : std::vector<double>(n);
+  std::vector<double> data =
+      (rank == 0) ? std::vector<double>(n - 1) : std::vector<double>(n);
   REQUIRE_THROWS_AS(reader.read(path, data), std::runtime_error);
 
   MPI_Barrier(MPI_COMM_WORLD);

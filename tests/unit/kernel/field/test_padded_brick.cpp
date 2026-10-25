@@ -5,13 +5,13 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
-#include <openpfc/kernel/data/grid_field.hpp>
 
 using namespace pfc;
-using pfc::data::field_from_subdomain;
 using Catch::Approx;
+using pfc::data::field_from_subdomain;
 
 TEST_CASE("Field: storage size matches (n+2hw)^3 and idx round-trip",
           "[field][grid_field]") {
@@ -36,8 +36,8 @@ TEST_CASE("Field: storage size matches (n+2hw)^3 and idx round-trip",
   REQUIRE(u.vec().size() == expected_size);
 
   REQUIRE(u.idx(-hw, -hw, -hw) == 0);
-  REQUIRE(u.idx(u.local_size()[0] + hw - 1, u.local_size()[1] + hw - 1, u.local_size()[2] + hw - 1) ==
-          expected_size - 1);
+  REQUIRE(u.idx(u.local_size()[0] + hw - 1, u.local_size()[1] + hw - 1,
+                u.local_size()[2] + hw - 1) == expected_size - 1);
   REQUIRE(u.idx(0, 0, 0) == static_cast<std::size_t>(hw) +
                                 static_cast<std::size_t>(hw) *
                                     static_cast<std::size_t>(u.padded_extent(0)) +
@@ -119,8 +119,7 @@ TEST_CASE("Field: apply fills only owned cells, halos stay zero",
   REQUIRE(values_match);
 }
 
-TEST_CASE("Field: coords extrapolates across the halo ring",
-          "[field][grid_field]") {
+TEST_CASE("Field: coords extrapolates across the halo ring", "[field][grid_field]") {
   auto domain = domain::create(GridSize({4, 4, 4}).to_vector3());
   auto decomp = decomposition::create(domain, 1);
 
@@ -136,8 +135,7 @@ TEST_CASE("Field: coords extrapolates across the halo ring",
   REQUIRE(ppos[0] == Approx(p0[0] + u.local_size()[0] * dx));
 }
 
-TEST_CASE("Field: hw=0 reduces to plain owned-only buffer",
-          "[field][grid_field]") {
+TEST_CASE("Field: hw=0 reduces to plain owned-only buffer", "[field][grid_field]") {
   auto domain = domain::create(GridSize({3, 3, 3}).to_vector3());
   auto decomp = decomposition::create(domain, 1);
 
@@ -155,11 +153,12 @@ TEST_CASE("Field: rejects negative halo width", "[field][grid_field]") {
                     std::invalid_argument);
 }
 
-// NOTE: Field does not carry rank or decomposition internally - passed via construction
-// This test was specific to PaddedBrick's member storage pattern.
+// NOTE: Field does not carry rank or decomposition internally - passed via
+// construction This test was specific to PaddedBrick's member storage pattern.
 
-// NOTE: Field uses for_each_owned() and for_each_interior() instead of iterator-based
-// indices() and indices_inner(). These tests were specific to PaddedBrick's iteration API.
+// NOTE: Field uses for_each_owned() and for_each_interior() instead of
+// iterator-based indices() and indices_inner(). These tests were specific to
+// PaddedBrick's iteration API.
 
 TEST_CASE("Field: Int3 overloads of idx/operator() match scalar form",
           "[field][grid_field]") {
@@ -187,11 +186,12 @@ TEST_CASE("Field: Int3 overloads of idx/operator() match scalar form",
   REQUIRE(count == u.local_size()[0] * u.local_size()[1] * u.local_size()[2]);
 }
 
-// NOTE: Field uses natural overflow behavior; checked_product_3d is a PaddedBrick-specific helper.
-// Removed extent calculation overflow test as it depends on PaddedBrick's internal checks.
+// NOTE: Field uses natural overflow behavior; checked_product_3d is a
+// PaddedBrick-specific helper. Removed extent calculation overflow test as it
+// depends on PaddedBrick's internal checks.
 
-// NOTE: checked_product_3d is a PaddedBrick-specific helper function not present in Field.
-// Replaces with Field's natural overflow behavior test.
+// NOTE: checked_product_3d is a PaddedBrick-specific helper function not present in
+// Field. Replaces with Field's natural overflow behavior test.
 TEST_CASE("Field: verified basic overflow behavior matches expectations",
           "[field][grid_field]") {
   auto domain = domain::create(GridSize({4, 5, 6}).to_vector3());

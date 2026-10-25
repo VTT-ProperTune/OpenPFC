@@ -15,16 +15,15 @@ class MockFieldModifier : public FieldModifier {
 public:
   bool applied = false;
   void apply(pfc::field::FieldOutput<double> /*field*/, const Domain & /*domain*/,
-             const Box3i & /*box*/,
-             double /*time*/) override {
+             const Box3i & /*box*/, double /*time*/) override {
     applied = true;
   }
 };
 
 class MockIC : public FieldModifier {
 public:
-  void apply(pfc::field::FieldOutput<double> field, const Domain & /*domain*/, const Box3i & /*box*/,
-             double /*time*/) override {
+  void apply(pfc::field::FieldOutput<double> field, const Domain & /*domain*/,
+             const Box3i & /*box*/, double /*time*/) override {
     std::fill(field.begin(), field.end(), 1.0);
   }
 };

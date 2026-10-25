@@ -25,8 +25,7 @@ Box3i whole_box(int nx, int ny, int nz) {
 }
 } // namespace
 
-TEST_CASE("Field: idx and size for unpadded field (halo 0)",
-          "[grid_field][unit]") {
+TEST_CASE("Field: idx and size for unpadded field (halo 0)", "[grid_field][unit]") {
   const int nx = 8, ny = 6, nz = 4;
   data::Field<double> f(domain::create({nx, ny, nz}), whole_box(nx, ny, nz), 0);
 
@@ -37,22 +36,21 @@ TEST_CASE("Field: idx and size for unpadded field (halo 0)",
   for (int k = 0; k < nz; ++k)
     for (int j = 0; j < ny; ++j)
       for (int i = 0; i < nx; ++i) {
-        std::size_t expected_idx =
-            static_cast<std::size_t>(i) +
-            static_cast<std::size_t>(j) * nx +
-            static_cast<std::size_t>(k) * nx * ny;
+        std::size_t expected_idx = static_cast<std::size_t>(i) +
+                                   static_cast<std::size_t>(j) * nx +
+                                   static_cast<std::size_t>(k) * nx * ny;
         REQUIRE(f.idx(i, j, k) == expected_idx);
       }
 }
 
-TEST_CASE("Field: idx and size across padded halo (halo n)",
-          "[grid_field][unit]") {
+TEST_CASE("Field: idx and size across padded halo (halo n)", "[grid_field][unit]") {
   const int nx = 8, ny = 6, nz = 4;
   const int hw = 2;
   data::Field<double> f(domain::create({nx, ny, nz}), whole_box(nx, ny, nz), hw);
 
   // Expected size for padded field: prod(size + 2*halo)
-  REQUIRE(f.size() == static_cast<std::size_t>((nx + 2 * hw) * (ny + 2 * hw) * (nz + 2 * hw)));
+  REQUIRE(f.size() ==
+          static_cast<std::size_t>((nx + 2 * hw) * (ny + 2 * hw) * (nz + 2 * hw)));
 
   // For row-major (x-fastest) padded layout:
   // idx = (i+hw) + (j+hw)*(nx+2*hw) + (k+hw)*(nx+2*hw)*(ny+2*hw)
@@ -63,10 +61,9 @@ TEST_CASE("Field: idx and size across padded halo (halo n)",
   for (int k = -hw; k < nz + hw; ++k)
     for (int j = -hw; j < ny + hw; ++j)
       for (int i = -hw; i < nx + hw; ++i) {
-        std::size_t expected_idx =
-            (static_cast<std::size_t>(i) + hw) +
-            (static_cast<std::size_t>(j) + hw) * npx +
-            (static_cast<std::size_t>(k) + hw) * npx * npy;
+        std::size_t expected_idx = (static_cast<std::size_t>(i) + hw) +
+                                   (static_cast<std::size_t>(j) + hw) * npx +
+                                   (static_cast<std::size_t>(k) + hw) * npx * npy;
         REQUIRE(f.idx(i, j, k) == expected_idx);
       }
 }
@@ -81,7 +78,8 @@ TEST_CASE("Field: coordinate queries (global and physical)", "[grid_field][unit]
   for (int k = 0; k < nz; ++k)
     for (int j = 0; j < ny; ++j)
       for (int i = 0; i < nx; ++i) {
-        // Global indices: local + low offset (which is 0 for whole_box starting at 0)
+        // Global indices: local + low offset (which is 0 for whole_box starting at
+        // 0)
         const auto g = f.global(i, j, k);
         REQUIRE(g[0] == i);
         REQUIRE(g[1] == j);

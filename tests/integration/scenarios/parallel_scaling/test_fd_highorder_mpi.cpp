@@ -8,7 +8,6 @@
 #include <vector>
 
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/field/finite_difference.hpp>
 
@@ -32,7 +31,9 @@ TEST_CASE("even-order (2..20) interior Laplacian of constant field is zero",
     return;
   }
 
-  auto domain = domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, {2, 1, 1});
 
   const auto local_world = decomposition::local_box(decomp, rank);
@@ -96,7 +97,9 @@ TEST_CASE("even-order (2..20) Laplacian of global quadratic is exact (6)",
     return;
   }
 
-  auto domain = domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, {2, 1, 1});
 
   const auto local_world = decomposition::local_box(decomp, rank);

@@ -45,8 +45,7 @@ struct PNGWriterTestFixture {
   create_test_decomp(int nx_global, int ny_global) {
     pfc::Domain domain = pfc::domain::create(
         pfc::GridSize({nx_global, ny_global, 1}),
-        pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-        pfc::GridSpacing({1.0, 1.0, 1.0}));
+        pfc::PhysicalOrigin({0.0, 0.0, 0.0}), pfc::GridSpacing({1.0, 1.0, 1.0}));
     auto decomp = decomposition::create(domain, m_num_ranks);
     return {domain, decomp};
   }
@@ -149,9 +148,9 @@ TEST_CASE("PNGWriter - Global nz validation (single rank)", "[png_writer][io]") 
   PNGWriterTestFixture fixture;
 
   // Create a 3D domain (nz=8) which should fail validation
-  pfc::Domain domain = pfc::domain::create(
-      pfc::GridSize({8, 8, 8}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-      pfc::GridSpacing({1.0, 1.0, 1.0}));
+  pfc::Domain domain = pfc::domain::create(pfc::GridSize({8, 8, 8}),
+                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                           pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, fixture.m_num_ranks);
 
   const auto local_box = decomposition::local_box(decomp, fixture.m_rank);

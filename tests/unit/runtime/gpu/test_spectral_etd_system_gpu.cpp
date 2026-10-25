@@ -8,7 +8,8 @@
  * spectral_etd_toys_pointwise.cu / .hip (same target).
  */
 
-#if !defined(OPENPFC_TEST_SPECTRAL_ETD_HIP) && !defined(OPENPFC_TEST_SPECTRAL_ETD_CUDA)
+#if !defined(OPENPFC_TEST_SPECTRAL_ETD_HIP) &&                                      \
+    !defined(OPENPFC_TEST_SPECTRAL_ETD_CUDA)
 
 #include <catch2/catch_session.hpp>
 
@@ -82,8 +83,7 @@ double max_abs_diff(const std::vector<double> &a, const double *b, std::size_t n
 
 /// Run `steps` ETD steps on host and device for the same physics; return
 /// max |psi_host - psi_device| and both systems' free energies.
-template <template <class> class PhysicsT>
-struct ParityResult {
+template <template <class> class PhysicsT> struct ParityResult {
   double max_diff{};
   double fe_host{};
   double fe_device{};

@@ -21,9 +21,8 @@ using Complex = std::complex<double>;
 namespace {
 
 void host_reference(const std::vector<double> &exp_Ldt,
-                    const std::vector<double> &phi1_L,
-                    const std::vector<double> &u, const std::vector<double> &nlin,
-                    std::vector<double> &out) {
+                    const std::vector<double> &phi1_L, const std::vector<double> &u,
+                    const std::vector<double> &nlin, std::vector<double> &out) {
   pfc::integrator::apply_etd1_update(
       std::span<const double>{exp_Ldt}, std::span<const double>{phi1_L},
       std::span<const double>{u}, std::span<const double>{nlin},
@@ -31,8 +30,7 @@ void host_reference(const std::vector<double> &exp_Ldt,
 }
 
 void host_reference(const std::vector<double> &exp_Ldt,
-                    const std::vector<double> &phi1_L,
-                    const std::vector<Complex> &u,
+                    const std::vector<double> &phi1_L, const std::vector<Complex> &u,
                     const std::vector<Complex> &nlin, std::vector<Complex> &out) {
   pfc::integrator::apply_etd1_update(
       std::span<const double>{exp_Ldt}, std::span<const double>{phi1_L},
@@ -74,8 +72,7 @@ TEST_CASE("device ETD1 apply CUDA matches host (real and complex)",
                                 Complex{-0.5, 0.25}};
   std::vector<Complex> host_c(3);
   host_reference(exp_Ldt, phi1_L, uc, nc, host_c);
-  pfc::core::DataBuffer<pfc::backend::CUDATag, Complex> d_uc(3), d_nc(3),
-      d_oc(3);
+  pfc::core::DataBuffer<pfc::backend::CUDATag, Complex> d_uc(3), d_nc(3), d_oc(3);
   d_uc.copy_from_host(uc);
   d_nc.copy_from_host(nc);
   pfc::integrator::apply_etd1_update_cuda(d_uc.data(), d_nc.data(), d_exp.data(),

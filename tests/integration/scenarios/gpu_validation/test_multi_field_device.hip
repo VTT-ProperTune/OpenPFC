@@ -87,7 +87,7 @@ struct WaveDeviceModel {
   double inv_dx2{1.0};
   double inv_dy2{1.0};
   OPENPFC_HD pfc::sim::hip::DeviceInc2 rhs(double /*t*/,
-                                            const WaveLocal &g) const noexcept {
+                                           const WaveLocal &g) const noexcept {
     const double lap_u = inv_dx2 * g.u.xx + inv_dy2 * g.u.yy;
     return pfc::sim::hip::DeviceInc2{g.v.value, kWaveC * kWaveC * lap_u};
   }
@@ -108,11 +108,11 @@ struct KobayashiLocal {
 
 struct KobayashiDeviceModel {
   double alpha{0.5};
-  OPENPFC_HD pfc::sim::hip::DeviceInc2
-  rhs(double /*t*/, const KobayashiLocal &g) const noexcept {
+  OPENPFC_HD pfc::sim::hip::DeviceInc2 rhs(double /*t*/,
+                                           const KobayashiLocal &g) const noexcept {
     const double lap = g.phi.xx + g.phi.yy;
     return pfc::sim::hip::DeviceInc2{g.phi.value * (1.0 - g.phi.value) + alpha * lap,
-                                      -g.tempr.value + g.phi.value};
+                                     -g.tempr.value + g.phi.value};
   }
 };
 
@@ -133,7 +133,7 @@ struct TripleLocal {
 
 struct TripleDeviceModel {
   OPENPFC_HD pfc::sim::hip::DeviceInc3 rhs(double /*t*/,
-                                            const TripleLocal &g) const noexcept {
+                                           const TripleLocal &g) const noexcept {
     return pfc::sim::hip::DeviceInc3{g.a.value, g.b.xx, g.c.yy};
   }
 };
@@ -149,9 +149,8 @@ struct CompEvalOut {
   double v_value{};
 };
 
-__global__ void evaluate_composite_kernel(
-    pfc::hip::CompositeGradientDevicePOD eval, CompEvalOut *out, int nx, int ny,
-    int nz) {
+__global__ void evaluate_composite_kernel(pfc::hip::CompositeGradientDevicePOD eval,
+                                          CompEvalOut *out, int nx, int ny, int nz) {
   const int ix = static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x);
   const int iy = static_cast<int>(blockIdx.y * blockDim.y + threadIdx.y);
   const int iz = static_cast<int>(blockIdx.z * blockDim.z + threadIdx.z);
@@ -159,8 +158,8 @@ __global__ void evaluate_composite_kernel(
     return;
   }
   const CompEvalLocal g =
-      pfc::hip::evaluate_fd_grad_composite<CompEvalLocal, UGrads, VGrads>(
-          eval, ix, iy, iz);
+      pfc::hip::evaluate_fd_grad_composite<CompEvalLocal, UGrads, VGrads>(eval, ix,
+                                                                          iy, iz);
   const auto &f0 = eval.fields[0];
   const std::ptrdiff_t c = static_cast<std::ptrdiff_t>(ix + f0.hw) +
                            static_cast<std::ptrdiff_t>(iy + f0.hw) * f0.sy +
@@ -171,8 +170,8 @@ __global__ void evaluate_composite_kernel(
 }
 
 __global__ void scatter_device_kernel(pfc::sim::hip::DevicePtrPack3 du,
-                                     pfc::sim::hip::DeviceInc3 inc,
-                                     std::ptrdiff_t c) {
+                                      pfc::sim::hip::DeviceInc3 inc,
+                                      std::ptrdiff_t c) {
   if (threadIdx.x == 0 && blockIdx.x == 0) {
     pfc::sim::hip::detail::scatter_device(du, inc, c);
   }
@@ -205,12 +204,12 @@ TEST_CASE("test_scatter_device_tuple",
   REQUIRE(hipDeviceSynchronize() == hipSuccess);
 
   std::vector<double> h0(n, 0.0), h1(n, 0.0), h2(n, 0.0);
-  REQUIRE(hipMemcpy(h0.data(), d0, n * sizeof(double),
-                     hipMemcpyDeviceToHost) == hipSuccess);
-  REQUIRE(hipMemcpy(h1.data(), d1, n * sizeof(double),
-                     hipMemcpyDeviceToHost) == hipSuccess);
-  REQUIRE(hipMemcpy(h2.data(), d2, n * sizeof(double),
-                     hipMemcpyDeviceToHost) == hipSuccess);
+  REQUIRE(hipMemcpy(h0.data(), d0, n * sizeof(double), hipMemcpyDeviceToHost) ==
+          hipSuccess);
+  REQUIRE(hipMemcpy(h1.data(), d1, n * sizeof(double), hipMemcpyDeviceToHost) ==
+          hipSuccess);
+  REQUIRE(hipMemcpy(h2.data(), d2, n * sizeof(double), hipMemcpyDeviceToHost) ==
+          hipSuccess);
 
   CHECK(h0[static_cast<std::size_t>(c)] == Catch::Approx(1.25));
   CHECK(h1[static_cast<std::size_t>(c)] == Catch::Approx(-2.5));
@@ -264,17 +263,14 @@ TEST_CASE("test_evaluate_fd_grad_composite",
   REQUIRE(hipMalloc(&d_v, total * sizeof(double)) == hipSuccess);
   REQUIRE(hipMalloc(&d_out, total * sizeof(CompEvalOut)) == hipSuccess);
   REQUIRE(hipMemcpy(d_u, h_u.data(), total * sizeof(double),
-                     hipMemcpyHostToDevice) == hipSuccess);
+                    hipMemcpyHostToDevice) == hipSuccess);
   REQUIRE(hipMemcpy(d_v, h_v.data(), total * sizeof(double),
-                     hipMemcpyHostToDevice) == hipSuccess);
+                    hipMemcpyHostToDevice) == hipSuccess);
   REQUIRE(hipMemset(d_out, 0, total * sizeof(CompEvalOut)) == hipSuccess);
 
-  pfc::hip::FDGradientDevice<UGrads> eval_u(d_u, nx, ny, nz, dx, dy, dz, hw,
-                                             order);
-  pfc::hip::FDGradientDevice<VGrads> eval_v(d_v, nx, ny, nz, dx, dy, dz, hw,
-                                             order);
-  auto composite =
-      pfc::hip::create_composite_device<CompEvalLocal>(eval_u, eval_v);
+  pfc::hip::FDGradientDevice<UGrads> eval_u(d_u, nx, ny, nz, dx, dy, dz, hw, order);
+  pfc::hip::FDGradientDevice<VGrads> eval_v(d_v, nx, ny, nz, dx, dy, dz, hw, order);
+  auto composite = pfc::hip::create_composite_device<CompEvalLocal>(eval_u, eval_v);
 
   dim3 block(8, 8, 1);
   dim3 grid(1, 1, 1);
@@ -283,7 +279,7 @@ TEST_CASE("test_evaluate_fd_grad_composite",
 
   std::vector<CompEvalOut> h_out(total);
   REQUIRE(hipMemcpy(h_out.data(), d_out, total * sizeof(CompEvalOut),
-                     hipMemcpyDeviceToHost) == hipSuccess);
+                    hipMemcpyDeviceToHost) == hipSuccess);
 
   auto brick_u = make_padded_host_field(nx, ny, nz, dx, dy, dz, hw);
   auto brick_v = make_padded_host_field(nx, ny, nz, dx, dy, dz, hw);
@@ -314,8 +310,8 @@ TEST_CASE("test_evaluate_fd_grad_composite",
         // Analytic: u_xx=2, u_yy=4, v=3+x
         match &= std::abs(got.u_xx - 2.0) <= 1e-12;
         match &= std::abs(got.u_yy - 4.0) <= 1e-12;
-        match &= std::abs(got.v_value - (3.0 + static_cast<double>(ix) * dx)) <=
-                 1e-12;
+        match &=
+            std::abs(got.v_value - (3.0 + static_cast<double>(ix) * dx)) <= 1e-12;
       }
     }
   }
@@ -363,10 +359,9 @@ TEST_CASE("test_wave2d_double_field_kernel",
   auto grad_v = pfc::field::create<VGrads>(v, order);
   auto composite = pfc::field::create_composite<WaveLocal>(grad_u, grad_v);
   WaveDeviceModel cpu_model{.inv_dx2 = inv_dx2, .inv_dy2 = inv_dy2};
-  auto du_tuple = std::make_tuple(du_cpu.data() + owned_origin(hw, u.padded_extent(0),
-                                                               u.padded_extent(1)),
-                                  dv_cpu.data() + owned_origin(hw, v.padded_extent(0),
-                                                               v.padded_extent(1)));
+  auto du_tuple = std::make_tuple(
+      du_cpu.data() + owned_origin(hw, u.padded_extent(0), u.padded_extent(1)),
+      dv_cpu.data() + owned_origin(hw, v.padded_extent(0), v.padded_extent(1)));
   // Padded Field FDGradient indexes from owned origin with padded strides; du
   // pointers must share that base.
   pfc::sim::for_each_interior(cpu_model, composite, du_tuple, /*t=*/0.0);
@@ -384,39 +379,36 @@ TEST_CASE("test_wave2d_double_field_kernel",
   REQUIRE(hipMalloc(&d_v, total * sizeof(double)) == hipSuccess);
   REQUIRE(hipMalloc(&d_du, total * sizeof(double)) == hipSuccess);
   REQUIRE(hipMalloc(&d_dv, total * sizeof(double)) == hipSuccess);
-  REQUIRE(hipMemcpy(d_u, u.data(), total * sizeof(double),
-                     hipMemcpyHostToDevice) == hipSuccess);
-  REQUIRE(hipMemcpy(d_v, v.data(), total * sizeof(double),
-                     hipMemcpyHostToDevice) == hipSuccess);
+  REQUIRE(hipMemcpy(d_u, u.data(), total * sizeof(double), hipMemcpyHostToDevice) ==
+          hipSuccess);
+  REQUIRE(hipMemcpy(d_v, v.data(), total * sizeof(double), hipMemcpyHostToDevice) ==
+          hipSuccess);
   REQUIRE(hipMemset(d_du, 0, total * sizeof(double)) == hipSuccess);
   REQUIRE(hipMemset(d_dv, 0, total * sizeof(double)) == hipSuccess);
 
-  pfc::hip::FDGradientDevice<UGrads> dev_u(d_u, nx, ny, nz, dx, dy, dz, hw,
-                                            order);
-  pfc::hip::FDGradientDevice<VGrads> dev_v(d_v, nx, ny, nz, dx, dy, dz, hw,
-                                            order);
-  auto dev_composite =
-      pfc::hip::create_composite_device<WaveLocal>(dev_u, dev_v);
+  pfc::hip::FDGradientDevice<UGrads> dev_u(d_u, nx, ny, nz, dx, dy, dz, hw, order);
+  pfc::hip::FDGradientDevice<VGrads> dev_v(d_v, nx, ny, nz, dx, dy, dz, hw, order);
+  auto dev_composite = pfc::hip::create_composite_device<WaveLocal>(dev_u, dev_v);
   WaveDeviceModel gpu_model{.inv_dx2 = inv_dx2, .inv_dy2 = inv_dy2};
   auto pack = pfc::sim::hip::make_device_ptr_pack(d_du, d_dv);
 
   pfc::sim::hip::for_each_interior_device<WaveDeviceModel, WaveLocal, UGrads,
-                                           VGrads>(gpu_model, dev_composite.pod(),
-                                                   pack, /*t=*/0.0, nx, ny, nz);
+                                          VGrads>(gpu_model, dev_composite.pod(),
+                                                  pack, /*t=*/0.0, nx, ny, nz);
 
   std::vector<double> h_du(total, 0.0), h_dv(total, 0.0);
   REQUIRE(hipMemcpy(h_du.data(), d_du, total * sizeof(double),
-                     hipMemcpyDeviceToHost) == hipSuccess);
+                    hipMemcpyDeviceToHost) == hipSuccess);
   REQUIRE(hipMemcpy(h_dv.data(), d_dv, total * sizeof(double),
-                     hipMemcpyDeviceToHost) == hipSuccess);
+                    hipMemcpyDeviceToHost) == hipSuccess);
 
   bool match = true;
   bool halo_ok = true;
   for (int pk = 0; pk < nzp; ++pk) {
     for (int pj = 0; pj < nyp; ++pj) {
       for (int pi = 0; pi < nxp; ++pi) {
-        const bool owned = (pi >= hw && pi < nx + hw) && (pj >= hw && pj < ny + hw) &&
-                           (pk >= hw && pk < nz + hw);
+        const bool owned = (pi >= hw && pi < nx + hw) &&
+                           (pj >= hw && pj < ny + hw) && (pk >= hw && pk < nz + hw);
         const std::size_t i = lin(pi, pj, pk, nxp, nyp);
         if (owned) {
           const int ix = pi - hw, iy = pj - hw, iz = pk - hw;
@@ -471,8 +463,7 @@ TEST_CASE("test_kobayashi_double_field_kernel",
 
   auto gphi = pfc::field::create<PhiGrads>(phi, order);
   auto gtempr = pfc::field::create<TemprGrads>(tempr, order);
-  auto composite =
-      pfc::field::create_composite<KobayashiLocal>(gphi, gtempr);
+  auto composite = pfc::field::create_composite<KobayashiLocal>(gphi, gtempr);
   KobayashiDeviceModel cpu_model{};
   const int nxp = phi.padded_extent(0);
   const int nyp = phi.padded_extent(1);
@@ -481,34 +472,35 @@ TEST_CASE("test_kobayashi_double_field_kernel",
   pfc::sim::for_each_interior(cpu_model, composite, du_tuple, 0.0);
 
   const std::size_t total = phi.size();
-  double *d_phi = nullptr, *d_tempr = nullptr, *d_dphi = nullptr, *d_dtempr = nullptr;
+  double *d_phi = nullptr, *d_tempr = nullptr, *d_dphi = nullptr,
+         *d_dtempr = nullptr;
   REQUIRE(hipMalloc(&d_phi, total * sizeof(double)) == hipSuccess);
   REQUIRE(hipMalloc(&d_tempr, total * sizeof(double)) == hipSuccess);
   REQUIRE(hipMalloc(&d_dphi, total * sizeof(double)) == hipSuccess);
   REQUIRE(hipMalloc(&d_dtempr, total * sizeof(double)) == hipSuccess);
   REQUIRE(hipMemcpy(d_phi, phi.data(), total * sizeof(double),
-                     hipMemcpyHostToDevice) == hipSuccess);
+                    hipMemcpyHostToDevice) == hipSuccess);
   REQUIRE(hipMemcpy(d_tempr, tempr.data(), total * sizeof(double),
-                     hipMemcpyHostToDevice) == hipSuccess);
+                    hipMemcpyHostToDevice) == hipSuccess);
   REQUIRE(hipMemset(d_dphi, 0, total * sizeof(double)) == hipSuccess);
   REQUIRE(hipMemset(d_dtempr, 0, total * sizeof(double)) == hipSuccess);
 
   pfc::hip::FDGradientDevice<PhiGrads> dev_phi(d_phi, nx, ny, nz, dx, dy, dz, hw,
-                                                order);
-  pfc::hip::FDGradientDevice<TemprGrads> dev_tempr(d_tempr, nx, ny, nz, dx, dy,
-                                                    dz, hw, order);
+                                               order);
+  pfc::hip::FDGradientDevice<TemprGrads> dev_tempr(d_tempr, nx, ny, nz, dx, dy, dz,
+                                                   hw, order);
   auto dev_composite =
       pfc::hip::create_composite_device<KobayashiLocal>(dev_phi, dev_tempr);
   KobayashiDeviceModel gpu_model{};
   auto pack = pfc::sim::hip::make_device_ptr_pack(d_dphi, d_dtempr);
   pfc::sim::hip::for_each_interior_device(gpu_model, dev_composite, pack, 0.0, nx,
-                                           ny, nz);
+                                          ny, nz);
 
   std::vector<double> h_dphi(total), h_dtempr(total);
   REQUIRE(hipMemcpy(h_dphi.data(), d_dphi, total * sizeof(double),
-                     hipMemcpyDeviceToHost) == hipSuccess);
+                    hipMemcpyDeviceToHost) == hipSuccess);
   REQUIRE(hipMemcpy(h_dtempr.data(), d_dtempr, total * sizeof(double),
-                     hipMemcpyDeviceToHost) == hipSuccess);
+                    hipMemcpyDeviceToHost) == hipSuccess);
 
   bool match = true;
   const int nzp = phi.padded_extent(2);
@@ -570,8 +562,8 @@ TEST_CASE("test_synthetic_triple_field_kernel",
   const int nxp = a.padded_extent(0);
   const int nyp = a.padded_extent(1);
   const auto off = owned_origin(hw, nxp, nyp);
-  auto du_tuple = std::make_tuple(da_cpu.data() + off, db_cpu.data() + off,
-                                  dc_cpu.data() + off);
+  auto du_tuple =
+      std::make_tuple(da_cpu.data() + off, db_cpu.data() + off, dc_cpu.data() + off);
   pfc::sim::for_each_interior(cpu_model, composite, du_tuple, 0.0);
 
   const std::size_t total = a.size();
@@ -583,12 +575,12 @@ TEST_CASE("test_synthetic_triple_field_kernel",
   REQUIRE(hipMalloc(&d_da, total * sizeof(double)) == hipSuccess);
   REQUIRE(hipMalloc(&d_db, total * sizeof(double)) == hipSuccess);
   REQUIRE(hipMalloc(&d_dc, total * sizeof(double)) == hipSuccess);
-  REQUIRE(hipMemcpy(d_a, a.data(), total * sizeof(double),
-                     hipMemcpyHostToDevice) == hipSuccess);
-  REQUIRE(hipMemcpy(d_b, b.data(), total * sizeof(double),
-                     hipMemcpyHostToDevice) == hipSuccess);
-  REQUIRE(hipMemcpy(d_c, c.data(), total * sizeof(double),
-                     hipMemcpyHostToDevice) == hipSuccess);
+  REQUIRE(hipMemcpy(d_a, a.data(), total * sizeof(double), hipMemcpyHostToDevice) ==
+          hipSuccess);
+  REQUIRE(hipMemcpy(d_b, b.data(), total * sizeof(double), hipMemcpyHostToDevice) ==
+          hipSuccess);
+  REQUIRE(hipMemcpy(d_c, c.data(), total * sizeof(double), hipMemcpyHostToDevice) ==
+          hipSuccess);
   REQUIRE(hipMemset(d_da, 0, total * sizeof(double)) == hipSuccess);
   REQUIRE(hipMemset(d_db, 0, total * sizeof(double)) == hipSuccess);
   REQUIRE(hipMemset(d_dc, 0, total * sizeof(double)) == hipSuccess);
@@ -601,15 +593,15 @@ TEST_CASE("test_synthetic_triple_field_kernel",
   TripleDeviceModel gpu_model{};
   auto pack = pfc::sim::hip::make_device_ptr_pack(d_da, d_db, d_dc);
   pfc::sim::hip::for_each_interior_device(gpu_model, dev_composite, pack, 0.0, nx,
-                                           ny, nz);
+                                          ny, nz);
 
   std::vector<double> h_da(total), h_db(total), h_dc(total);
   REQUIRE(hipMemcpy(h_da.data(), d_da, total * sizeof(double),
-                     hipMemcpyDeviceToHost) == hipSuccess);
+                    hipMemcpyDeviceToHost) == hipSuccess);
   REQUIRE(hipMemcpy(h_db.data(), d_db, total * sizeof(double),
-                     hipMemcpyDeviceToHost) == hipSuccess);
+                    hipMemcpyDeviceToHost) == hipSuccess);
   REQUIRE(hipMemcpy(h_dc.data(), d_dc, total * sizeof(double),
-                     hipMemcpyDeviceToHost) == hipSuccess);
+                    hipMemcpyDeviceToHost) == hipSuccess);
 
   bool match = true;
   for (int iz = 0; iz < nz; ++iz) {

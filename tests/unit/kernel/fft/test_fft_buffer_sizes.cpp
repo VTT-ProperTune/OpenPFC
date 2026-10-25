@@ -17,7 +17,8 @@ using namespace pfc;
 
 TEST_CASE("FFT_Impl vector forward rejects wrong buffer sizes",
           "[fft][buffer_size][unit]") {
-  auto domain = domain::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto domain = domain::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}),
+                               GridSpacing({1.0, 1.0, 1.0}));
   auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
 
@@ -50,7 +51,8 @@ TEST_CASE("FFT_Impl vector forward rejects wrong buffer sizes",
 
 TEST_CASE("FFT_Impl vector backward rejects wrong buffer sizes",
           "[fft][buffer_size][unit]") {
-  auto domain = domain::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto domain = domain::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}),
+                               GridSpacing({1.0, 1.0, 1.0}));
   auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
 
@@ -86,7 +88,8 @@ TEST_CASE("FFT_Impl vector backward rejects wrong buffer sizes",
 
 TEST_CASE("FFT_Impl vector forward accepts correctly sized buffers",
           "[fft][buffer_size][unit]") {
-  auto domain = domain::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto domain = domain::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}),
+                               GridSpacing({1.0, 1.0, 1.0}));
   auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
 

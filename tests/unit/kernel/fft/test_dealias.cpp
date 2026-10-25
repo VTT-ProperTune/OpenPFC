@@ -16,8 +16,7 @@
 using namespace pfc;
 using namespace pfc::fft::kspace;
 
-TEST_CASE("2/3-rule mask zeros the top third of the spectrum",
-          "[fft][dealias]") {
+TEST_CASE("2/3-rule mask zeros the top third of the spectrum", "[fft][dealias]") {
   constexpr int N = 16;
   auto domain = domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
                                GridSpacing({1.0, 1.0, 1.0}));
@@ -31,15 +30,15 @@ TEST_CASE("2/3-rule mask zeros the top third of the spectrum",
 
   bool mask_matches = true;
   std::size_t n_zero = 0;
-  for_each_kpoint(outbox, gsize, spacing,
-                  [&](std::size_t idx, double kx, double ky, double kz, int, int,
-                      int) {
-                    const bool keep = two_thirds_keep(kx, ky, kz, spacing);
-                    mask_matches &= mask[idx] == (keep ? 1.0 : 0.0);
-                    if (!keep) {
-                      ++n_zero;
-                    }
-                  });
+  for_each_kpoint(
+      outbox, gsize, spacing,
+      [&](std::size_t idx, double kx, double ky, double kz, int, int, int) {
+        const bool keep = two_thirds_keep(kx, ky, kz, spacing);
+        mask_matches &= mask[idx] == (keep ? 1.0 : 0.0);
+        if (!keep) {
+          ++n_zero;
+        }
+      });
   REQUIRE(mask_matches);
   REQUIRE(n_zero > 0);
 }

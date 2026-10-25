@@ -18,7 +18,9 @@ using namespace pfc;
 using namespace pfc::fft;
 
 TEST_CASE("CUDA backend instantiation smoke", "[integration][gpu][cuda]") {
-  auto domain = domain::create(GridSize({16, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      domain::create(GridSize({16, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
   int size = 1;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   auto decomp = decomposition::create(domain, size);
@@ -36,7 +38,9 @@ TEST_CASE("CUDA backend instantiation smoke", "[integration][gpu][cuda]") {
 }
 
 TEST_CASE("HIP backend instantiation smoke", "[integration][gpu][hip]") {
-  auto domain = domain::create(GridSize({16, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      domain::create(GridSize({16, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
   int size = 1, rank = 0;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);

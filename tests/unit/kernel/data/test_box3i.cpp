@@ -54,7 +54,8 @@ TEST_CASE("Box3i stream operator", "[box3i][unit]") {
 }
 
 TEST_CASE("for_each_index visits all indices in x-fastest order", "[box3i][unit]") {
-  Box3i box = Box3i::from_bounds({0, 0, 0}, {2, 1, 1});  // small non-cubic: 3x2x2 = 12 points
+  Box3i box =
+      Box3i::from_bounds({0, 0, 0}, {2, 1, 1}); // small non-cubic: 3x2x2 = 12 points
 
   std::vector<std::array<int, 3>> visited;
   pfc::for_each_index(box, [&](std::array<int, 3> idx) { visited.push_back(idx); });
@@ -70,8 +71,8 @@ TEST_CASE("for_each_index visits all indices in x-fastest order", "[box3i][unit]
 
   SECTION("x varies fastest") {
     REQUIRE(visited[1] != visited[0]);
-    REQUIRE(visited[1][0] == visited[0][0] + 1);  // x increment
-    REQUIRE(visited[1][1] == visited[0][1]);       // y unchanged
-    REQUIRE(visited[1][2] == visited[0][2]);       // z unchanged
+    REQUIRE(visited[1][0] == visited[0][0] + 1); // x increment
+    REQUIRE(visited[1][1] == visited[0][1]);     // y unchanged
+    REQUIRE(visited[1][2] == visited[0][2]);     // z unchanged
   }
 }

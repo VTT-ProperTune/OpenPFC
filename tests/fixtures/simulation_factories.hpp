@@ -9,8 +9,8 @@
 #ifndef OPENPFC_TESTS_FIXTURES_SIMULATION_FACTORIES_HPP
 #define OPENPFC_TESTS_FIXTURES_SIMULATION_FACTORIES_HPP
 
-#include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 
@@ -53,12 +53,12 @@ public:
    * @param periodic Per-axis periodicity flags
    * @return Domain with specified parameters
    */
-  static Domain create_custom_domain(
-      const pfc::types::Int3 &size,
-      const pfc::types::Real3 &origin,
-      const pfc::types::Real3 &spacing,
-      const pfc::types::Bool3 &periodic = {true, true, true}) {
-    return domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing), periodic);
+  static Domain
+  create_custom_domain(const pfc::types::Int3 &size, const pfc::types::Real3 &origin,
+                       const pfc::types::Real3 &spacing,
+                       const pfc::types::Bool3 &periodic = {true, true, true}) {
+    return domain::create(GridSize(size), PhysicalOrigin(origin),
+                          GridSpacing(spacing), periodic);
   }
 
   /**
@@ -68,11 +68,12 @@ public:
    * @param periodic Per-axis periodicity flags
    * @return Domain with specified parameters
    */
-  static Domain create_domain_with_spacing(
-      const pfc::types::Int3 &size,
-      const pfc::types::Real3 &spacing,
-      const pfc::types::Bool3 &periodic = {true, true, true}) {
-    return domain::create(GridSize(size), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing(spacing), periodic);
+  static Domain create_domain_with_spacing(const pfc::types::Int3 &size,
+                                           const pfc::types::Real3 &spacing,
+                                           const pfc::types::Bool3 &periodic = {
+                                               true, true, true}) {
+    return domain::create(GridSize(size), PhysicalOrigin({0.0, 0.0, 0.0}),
+                          GridSpacing(spacing), periodic);
   }
 };
 
@@ -90,8 +91,8 @@ public:
 class SimulationModelFixture {
 public:
   /** @brief Access to the domain object */
-  Domain& domain() { return domain_; }
-  const Domain& domain() const { return domain_; }
+  Domain &domain() { return domain_; }
+  const Domain &domain() const { return domain_; }
 
 protected:
   Domain domain_;
@@ -107,19 +108,18 @@ protected:
   }
 
   /** @brief Set up custom domain with size, origin, and spacing */
-  void SetUpCustomDomain(
-      const pfc::types::Int3 &size,
-      const pfc::types::Real3 &origin,
-      const pfc::types::Real3 &spacing,
-      const pfc::types::Bool3 &periodic = {true, true, true}) {
+  void SetUpCustomDomain(const pfc::types::Int3 &size,
+                         const pfc::types::Real3 &origin,
+                         const pfc::types::Real3 &spacing,
+                         const pfc::types::Bool3 &periodic = {true, true, true}) {
     domain_ = DomainFactory::create_custom_domain(size, origin, spacing, periodic);
   }
 
   /** @brief Set up domain with size and spacing (origin at zero) */
-  void SetUpCustomDomainWithSpacing(
-      const pfc::types::Int3 &size,
-      const pfc::types::Real3 &spacing,
-      const pfc::types::Bool3 &periodic = {true, true, true}) {
+  void SetUpCustomDomainWithSpacing(const pfc::types::Int3 &size,
+                                    const pfc::types::Real3 &spacing,
+                                    const pfc::types::Bool3 &periodic = {true, true,
+                                                                         true}) {
     domain_ = DomainFactory::create_domain_with_spacing(size, spacing, periodic);
   }
 };

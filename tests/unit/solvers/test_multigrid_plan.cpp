@@ -27,10 +27,9 @@ using pfc::Real3;
 
 pfc::Domain free_q1(const Int3 &n) {
   return pfc::domain::create(
-      pfc::GridSize(n), pfc::PhysicalOrigin({
-          1.0 / (n[0] + 1), 1.3 / (n[1] + 1), 0.7 / (n[2] + 1)}),
-      pfc::GridSpacing({
-          1.0 / (n[0] + 1), 1.3 / (n[1] + 1), 0.7 / (n[2] + 1)}),
+      pfc::GridSize(n),
+      pfc::PhysicalOrigin({1.0 / (n[0] + 1), 1.3 / (n[1] + 1), 0.7 / (n[2] + 1)}),
+      pfc::GridSpacing({1.0 / (n[0] + 1), 1.3 / (n[1] + 1), 0.7 / (n[2] + 1)}),
       pfc::Bool3{false, false, false});
 }
 
@@ -62,23 +61,22 @@ void check_hierarchy_invariants(const Plan &plan) {
     const auto &L = levels[i];
     REQUIRE(L.index == static_cast<int>(i));
     REQUIRE(L.ranks.size() == L.active_world_ranks.size());
-    REQUIRE(static_cast<std::uint64_t>(L.active_count()) ==
-            volume(L.process_grid));
-    std::set<int> active(L.active_world_ranks.begin(),
-                         L.active_world_ranks.end());
+    REQUIRE(static_cast<std::uint64_t>(L.active_count()) == volume(L.process_grid));
+    std::set<int> active(L.active_world_ranks.begin(), L.active_world_ranks.end());
     REQUIRE(active.size() == L.ranks.size());
     std::uint64_t owned = 0, estimated = 0;
     for (std::size_t k = 0; k < L.ranks.size(); ++k) {
       const auto &r = L.ranks[k];
       REQUIRE(r.level_rank == static_cast<int>(k));
       REQUIRE(r.world_rank == L.active_world_ranks[k]);
-      REQUIRE(r.owned == pfc::decomposition::local_box(
-          L.partition, static_cast<int>(k)));
+      REQUIRE(r.owned ==
+              pfc::decomposition::local_box(L.partition, static_cast<int>(k)));
       REQUIRE(r.owned_nodes == volume(r.owned.size));
       REQUIRE(r.padded_nodes >= r.owned_nodes);
-      REQUIRE(r.estimated_device_bytes ==
-              8u * static_cast<std::uint64_t>(
-                  plan.options().estimated_padded_fields) * r.padded_nodes);
+      REQUIRE(
+          r.estimated_device_bytes ==
+          8u * static_cast<std::uint64_t>(plan.options().estimated_padded_fields) *
+              r.padded_nodes);
       owned += r.owned_nodes;
       estimated += r.estimated_device_bytes;
     }
@@ -94,40 +92,33 @@ void check_hierarchy_invariants(const Plan &plan) {
     REQUIRE(T.groups.size() == C.ranks.size());
     for (int axis = 0; axis < 3; ++axis) {
       REQUIRE(L.domain.size[axis] == 2 * C.domain.size[axis] + 1);
-      REQUIRE(C.domain.spacing[axis] == Catch::Approx(
-          2.0 * L.domain.spacing[axis]));
-      REQUIRE(C.domain.origin[axis] == Catch::Approx(
-          L.domain.origin[axis] + L.domain.spacing[axis]));
+      REQUIRE(C.domain.spacing[axis] == Catch::Approx(2.0 * L.domain.spacing[axis]));
+      REQUIRE(C.domain.origin[axis] ==
+              Catch::Approx(L.domain.origin[axis] + L.domain.spacing[axis]));
       REQUIRE(L.process_grid[axis] ==
               T.rank_contraction[axis] * C.process_grid[axis]);
-      REQUIRE((T.rank_contraction[axis] == 1 ||
-               T.rank_contraction[axis] == 2 ||
+      REQUIRE((T.rank_contraction[axis] == 1 || T.rank_contraction[axis] == 2 ||
                T.rank_contraction[axis] == 3));
     }
     std::set<int> grouped;
     for (std::size_t c = 0; c < T.groups.size(); ++c) {
       const auto &g = T.groups[c];
       REQUIRE(g.coarse_world_rank == C.active_world_ranks[c]);
-      REQUIRE(std::find(g.fine_world_ranks.begin(),
-                        g.fine_world_ranks.end(),
+      REQUIRE(std::find(g.fine_world_ranks.begin(), g.fine_world_ranks.end(),
                         g.coarse_world_rank) != g.fine_world_ranks.end());
-      for (int w : g.fine_world_ranks)
-        REQUIRE(grouped.insert(w).second);
+      for (int w : g.fine_world_ranks) REQUIRE(grouped.insert(w).second);
     }
     REQUIRE(grouped == active);
 
     std::uint64_t messages = 0;
     for (const auto &route : T.routes) {
       REQUIRE(active.count(route.fine_world_rank) == 1);
-      REQUIRE(std::find(C.active_world_ranks.begin(),
-                        C.active_world_ranks.end(),
+      REQUIRE(std::find(C.active_world_ranks.begin(), C.active_world_ranks.end(),
                         route.coarse_world_rank) != C.active_world_ranks.end());
       REQUIRE(route.coarse_overlap.is_consistent());
       REQUIRE(route.fine_support_overlap.is_consistent());
-      REQUIRE(route.values_per_direction ==
-              volume(route.coarse_overlap.size));
-      REQUIRE(route.values_per_direction <=
-              plan.options().maximum_route_elements);
+      REQUIRE(route.values_per_direction == volume(route.coarse_overlap.size));
+      REQUIRE(route.values_per_direction <= plan.options().maximum_route_elements);
       for (int a = 0; a < 3; ++a) {
         REQUIRE(route.fine_support_overlap.low[a] >= 0);
         REQUIRE(route.fine_support_overlap.high[a] < L.domain.size[a]);
@@ -143,14 +134,12 @@ void check_hierarchy_invariants(const Plan &plan) {
     // exactly one owner of every coarse support point. This is true for
     // R=P^T additive reductions and reverse P interpolation broadcasts.
     for (const auto &f : L.ranks) {
-      const int lo[3] = {
-          std::max(0, (f.owned.low[0] + 1) / 2 - 1),
-          std::max(0, (f.owned.low[1] + 1) / 2 - 1),
-          std::max(0, (f.owned.low[2] + 1) / 2 - 1)};
-      const int hi[3] = {
-          std::min(C.domain.size[0] - 1, f.owned.high[0] / 2),
-          std::min(C.domain.size[1] - 1, f.owned.high[1] / 2),
-          std::min(C.domain.size[2] - 1, f.owned.high[2] / 2)};
+      const int lo[3] = {std::max(0, (f.owned.low[0] + 1) / 2 - 1),
+                         std::max(0, (f.owned.low[1] + 1) / 2 - 1),
+                         std::max(0, (f.owned.low[2] + 1) / 2 - 1)};
+      const int hi[3] = {std::min(C.domain.size[0] - 1, f.owned.high[0] / 2),
+                         std::min(C.domain.size[1] - 1, f.owned.high[1] / 2),
+                         std::min(C.domain.size[2] - 1, f.owned.high[2] / 2)};
       for (int z = lo[2]; z <= hi[2]; ++z)
         for (int y = lo[1]; y <= hi[1]; ++y)
           for (int x = lo[0]; x <= hi[0]; ++x) {
@@ -175,8 +164,8 @@ void check_hierarchy_invariants(const Plan &plan) {
 
 TEST_CASE("MultigridPlan contracts 64 ranks over a five-level Q1 hierarchy",
           "[multigrid_plan]") {
-  const auto first = pfc::decomposition::create(
-      free_q1({127, 127, 127}), Int3{4, 4, 4});
+  const auto first =
+      pfc::decomposition::create(free_q1({127, 127, 127}), Int3{4, 4, 4});
   const auto p = Plan::build(first);
   REQUIRE(p.world_size() == 64);
   REQUIRE(p.levels().size() == 5);
@@ -201,8 +190,8 @@ TEST_CASE("MultigridPlan contracts 64 ranks over a five-level Q1 hierarchy",
 
 TEST_CASE("MultigridPlan admits divisible 6 to 3 to 1 rank contraction",
           "[multigrid_plan]") {
-  const auto first = pfc::decomposition::create(
-      free_q1({255, 255, 255}), Int3{6, 1, 1});
+  const auto first =
+      pfc::decomposition::create(free_q1({255, 255, 255}), Int3{6, 1, 1});
   const auto p = Plan::build(first);
   REQUIRE(p.levels().size() == 6);
   REQUIRE(p.levels()[0].active_count() == 6);
@@ -217,8 +206,8 @@ TEST_CASE("MultigridPlan admits divisible 6 to 3 to 1 rank contraction",
 
 TEST_CASE("MultigridPlan retains Q1 anisotropy and 64-bit global counts",
           "[multigrid_plan]") {
-  const auto p = Plan::build(pfc::decomposition::create(
-      free_q1({127, 127, 255}), Int3{2, 4, 8}));
+  const auto p = Plan::build(
+      pfc::decomposition::create(free_q1({127, 127, 255}), Int3{2, 4, 8}));
   REQUIRE(p.levels().front().active_count() == 64);
   REQUIRE((p.levels().back().domain.size == Int3{7, 7, 15}));
   check_hierarchy_invariants(p);
@@ -226,8 +215,8 @@ TEST_CASE("MultigridPlan retains Q1 anisotropy and 64-bit global counts",
   // Planning does not allocate these arrays. The analytical scalar count
   // exceeds the 32-bit limit but remains a checked 64-bit quantity.
   const Int3 massive{4095, 4095, 8191};
-  const auto huge = Plan::build(pfc::decomposition::create(
-      free_q1(massive), Int3{2, 4, 8}));
+  const auto huge =
+      Plan::build(pfc::decomposition::create(free_q1(massive), Int3{2, 4, 8}));
   REQUIRE(huge.levels().front().global_nodes >
           std::numeric_limits<std::uint32_t>::max());
   REQUIRE(huge.levels().front().global_nodes == volume(massive));
@@ -239,17 +228,17 @@ TEST_CASE("MultigridPlan retains Q1 anisotropy and 64-bit global counts",
 
 TEST_CASE("MultigridPlan rejects illegal rank factors, geometry and budgets",
           "[multigrid_plan]") {
-  REQUIRE_THROWS_AS(Plan::build(pfc::decomposition::create(
-                        free_q1({127, 127, 127}), Int3{5, 1, 1})),
+  REQUIRE_THROWS_AS(Plan::build(pfc::decomposition::create(free_q1({127, 127, 127}),
+                                                           Int3{5, 1, 1})),
                     std::invalid_argument);
-  REQUIRE_THROWS_AS(Plan::build(pfc::decomposition::create(
-                        free_q1({64, 64, 64}), Int3{1, 1, 1})),
-                    std::invalid_argument);
-  REQUIRE_THROWS_AS(Plan::build(pfc::decomposition::create(
-                        free_q1({31, 31, 32}), Int3{1, 1, 1})),
-                    std::invalid_argument);
-  const auto fine = pfc::decomposition::create(
-      free_q1({127, 127, 127}), Int3{4, 4, 4});
+  REQUIRE_THROWS_AS(
+      Plan::build(pfc::decomposition::create(free_q1({64, 64, 64}), Int3{1, 1, 1})),
+      std::invalid_argument);
+  REQUIRE_THROWS_AS(
+      Plan::build(pfc::decomposition::create(free_q1({31, 31, 32}), Int3{1, 1, 1})),
+      std::invalid_argument);
+  const auto fine =
+      pfc::decomposition::create(free_q1({127, 127, 127}), Int3{4, 4, 4});
   Options wrong;
   wrong.halo_width = 1;
   REQUIRE_THROWS_AS(Plan::build(fine, wrong), std::invalid_argument);

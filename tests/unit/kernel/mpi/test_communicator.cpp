@@ -16,8 +16,7 @@ TEST_CASE("communicator::duplicate isolates a copy of WORLD",
   REQUIRE(static_cast<MPI_Comm>(dup) != MPI_COMM_NULL);
 }
 
-TEST_CASE("communicator wrapping WORLD does not free WORLD",
-          "[mpi][communicator]") {
+TEST_CASE("communicator wrapping WORLD does not free WORLD", "[mpi][communicator]") {
   pfc::mpi::communicator world;
   REQUIRE(static_cast<MPI_Comm>(world) == MPI_COMM_WORLD);
   REQUIRE(world.size() >= 1);

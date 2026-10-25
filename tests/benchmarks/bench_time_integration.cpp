@@ -29,15 +29,14 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
-#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
+#include <openpfc/kernel/simulation/for_each_interior.hpp>
 #include <openpfc/kernel/simulation/steppers/butcher_tableau.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
 #include <openpfc/kernel/simulation/steppers/explicit_rk.hpp>
-#include <openpfc/kernel/simulation/for_each_interior.hpp>
 
 using namespace pfc;
 using namespace pfc::sim::steppers;
@@ -62,8 +61,7 @@ class HeatEquation {
 public:
   explicit HeatEquation(double alpha = 1.0) : m_alpha(alpha) {}
 
-  template <class G>
-  double rhs(double /*t*/, const G& g) const {
+  template <class G> double rhs(double /*t*/, const G &g) const {
     return m_alpha * (g.xx + g.yy + g.zz);
   }
 
@@ -87,8 +85,7 @@ class WaveEquation {
 public:
   explicit WaveEquation(double c = 1.0) : m_c(c) {}
 
-  template <class G>
-  double rhs(double /*t*/, const G& g) const {
+  template <class G> double rhs(double /*t*/, const G &g) const {
     // First-order system: dv/dt = c²∇²u, du/dt = v
     // Returns velocity increment for displacement field
     return m_c * m_c * (g.xx + g.yy + g.zz);
@@ -115,32 +112,36 @@ TEST_CASE("Time integration - single-step timing", "[time_integration][benchmark
   const Real3 spacing = {1.0, 1.0, 1.0};
 
   SECTION("Euler stepper - FD gradient - heat equation - 32³") {
-    auto domain = pfc::domain::create(GridSize(size_32), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto domain = pfc::domain::create(GridSize(size_32), PhysicalOrigin(origin),
+                                      GridSpacing(spacing));
     auto decomp = pfc::decomposition::create(domain, 1);
-    auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
+    auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0,
+                                                                  /*halo_width=*/1);
     auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
     HeatEquation model(1.0);
     auto stepper = create(field, eval, model, 0.01);
 
-    BENCHMARK("Euler single step") {
-      return stepper.step(0.0, field.vec());
-    };
+    BENCHMARK("Euler single step") { return stepper.step(0.0, field.vec()); };
 
     INFO("Expected: ~10-100 μs per step (32³, FD, 2nd order)");
   }
 
   SECTION("RK2 midpoint stepper - FD gradient - heat equation - 32³") {
-    auto domain = pfc::domain::create(GridSize(size_32), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto domain = pfc::domain::create(GridSize(size_32), PhysicalOrigin(origin),
+                                      GridSpacing(spacing));
     auto decomp = pfc::decomposition::create(domain, 1);
-    auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
+    auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0,
+                                                                  /*halo_width=*/1);
     auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
     HeatEquation model(1.0);
 
-    auto rk2_rhs = [&eval, &model](double t, const std::vector<double>& u, std::vector<double>& du) {
+    auto rk2_rhs = [&eval, &model](double t, const std::vector<double> &u,
+                                   std::vector<double> &du) {
       pfc::sim::for_each_interior(model, eval, du.data(), t);
     };
     auto rk2_tableau = make_rk2_midpoint<double>();
-    ExplicitRKStepper<decltype(rk2_rhs)> rk2_stepper(0.01, field.size(), rk2_tableau, rk2_rhs);
+    ExplicitRKStepper<decltype(rk2_rhs)> rk2_stepper(0.01, field.size(), rk2_tableau,
+                                                     rk2_rhs);
 
     BENCHMARK("RK2 midpoint single step") {
       return rk2_stepper.step(0.0, field.vec());
@@ -150,9 +151,11 @@ TEST_CASE("Time integration - single-step timing", "[time_integration][benchmark
   }
 
   SECTION("RK4 classical stepper - FD gradient - heat equation - 32³") {
-    auto domain = pfc::domain::create(GridSize(size_32), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto domain = pfc::domain::create(GridSize(size_32), PhysicalOrigin(origin),
+                                      GridSpacing(spacing));
     auto decomp = pfc::decomposition::create(domain, 1);
-    auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
+    auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0,
+                                                                  /*halo_width=*/1);
     auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
     HeatEquation model(1.0);
     auto stepper = create(field, eval, model, 0.01, make_rk4_classical<double>());
@@ -165,32 +168,36 @@ TEST_CASE("Time integration - single-step timing", "[time_integration][benchmark
   }
 
   SECTION("Euler stepper - FD gradient - heat equation - 64³") {
-    auto domain = pfc::domain::create(GridSize(size_64), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto domain = pfc::domain::create(GridSize(size_64), PhysicalOrigin(origin),
+                                      GridSpacing(spacing));
     auto decomp = pfc::decomposition::create(domain, 1);
-    auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
+    auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0,
+                                                                  /*halo_width=*/1);
     auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
     HeatEquation model(1.0);
     auto stepper = create(field, eval, model, 0.01);
 
-    BENCHMARK("Euler single step (64³)") {
-      return stepper.step(0.0, field.vec());
-    };
+    BENCHMARK("Euler single step (64³)") { return stepper.step(0.0, field.vec()); };
 
     INFO("Expected: ~80-800 μs per step (64³, FD, 2nd order)");
   }
 
   SECTION("RK2 midpoint stepper - FD gradient - heat equation - 64³") {
-    auto domain = pfc::domain::create(GridSize(size_64), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto domain = pfc::domain::create(GridSize(size_64), PhysicalOrigin(origin),
+                                      GridSpacing(spacing));
     auto decomp = pfc::decomposition::create(domain, 1);
-    auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
+    auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0,
+                                                                  /*halo_width=*/1);
     auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
     HeatEquation model(1.0);
 
-    auto rk2_rhs = [&eval, &model](double t, const std::vector<double>& u, std::vector<double>& du) {
+    auto rk2_rhs = [&eval, &model](double t, const std::vector<double> &u,
+                                   std::vector<double> &du) {
       pfc::sim::for_each_interior(model, eval, du.data(), t);
     };
     auto rk2_tableau = make_rk2_midpoint<double>();
-    ExplicitRKStepper<decltype(rk2_rhs)> rk2_stepper(0.01, field.size(), rk2_tableau, rk2_rhs);
+    ExplicitRKStepper<decltype(rk2_rhs)> rk2_stepper(0.01, field.size(), rk2_tableau,
+                                                     rk2_rhs);
 
     BENCHMARK("RK2 midpoint single step (64³)") {
       return rk2_stepper.step(0.0, field.vec());
@@ -200,9 +207,11 @@ TEST_CASE("Time integration - single-step timing", "[time_integration][benchmark
   }
 
   SECTION("RK4 classical stepper - FD gradient - heat equation - 64³") {
-    auto domain = pfc::domain::create(GridSize(size_64), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto domain = pfc::domain::create(GridSize(size_64), PhysicalOrigin(origin),
+                                      GridSpacing(spacing));
     auto decomp = pfc::decomposition::create(domain, 1);
-    auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
+    auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0,
+                                                                  /*halo_width=*/1);
     auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
     HeatEquation model(1.0);
     auto stepper = create(field, eval, model, 0.01, make_rk4_classical<double>());
@@ -215,9 +224,11 @@ TEST_CASE("Time integration - single-step timing", "[time_integration][benchmark
   }
 
   SECTION("RK4 classical stepper - FD gradient - wave equation - 32³") {
-    auto domain = pfc::domain::create(GridSize(size_32), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto domain = pfc::domain::create(GridSize(size_32), PhysicalOrigin(origin),
+                                      GridSpacing(spacing));
     auto decomp = pfc::decomposition::create(domain, 1);
-    auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
+    auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0,
+                                                                  /*halo_width=*/1);
     auto eval = pfc::field::create<WaveGrads>(field, /*order=*/2);
     WaveEquation model(1.0);
     auto stepper = create(field, eval, model, 0.01, make_rk4_classical<double>());
@@ -234,7 +245,8 @@ TEST_CASE("Time integration - single-step timing", "[time_integration][benchmark
 // Full Simulation Timing Benchmarks
 // ============================================================================
 
-TEST_CASE("Time integration - full simulation timing", "[time_integration][benchmark]") {
+TEST_CASE("Time integration - full simulation timing",
+          "[time_integration][benchmark]") {
   using namespace test_models;
 
   const Int3 size = {32, 32, 32};
@@ -242,15 +254,17 @@ TEST_CASE("Time integration - full simulation timing", "[time_integration][bench
   const Real3 spacing = {1.0, 1.0, 1.0};
 
   SECTION("Euler vs RK2 vs RK4 - heat equation - FD gradient") {
-    auto domain = pfc::domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto domain = pfc::domain::create(GridSize(size), PhysicalOrigin(origin),
+                                      GridSpacing(spacing));
     auto decomp = pfc::decomposition::create(domain, 1);
-    auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
+    auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0,
+                                                                  /*halo_width=*/1);
     auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
     HeatEquation model(1.0);
 
     const double dt_euler = 0.001;
-    const double dt_rk2 = 0.01;   // Larger due to higher order
-    const double dt_rk4 = 0.02;   // Larger due to higher order
+    const double dt_rk2 = 0.01; // Larger due to higher order
+    const double dt_rk4 = 0.02; // Larger due to higher order
     const int steps_euler = 1000;
     const int steps_rk2 = 100;
     const int steps_rk4 = 50;
@@ -267,11 +281,13 @@ TEST_CASE("Time integration - full simulation timing", "[time_integration][bench
 
     BENCHMARK("RK2 midpoint full simulation") {
       auto field_copy = field;
-      auto rk2_rhs = [&eval, &model](double t, const std::vector<double>& u, std::vector<double>& du) {
+      auto rk2_rhs = [&eval, &model](double t, const std::vector<double> &u,
+                                     std::vector<double> &du) {
         pfc::sim::for_each_interior(model, eval, du.data(), t);
       };
       auto rk2_tableau = make_rk2_midpoint<double>();
-      ExplicitRKStepper<decltype(rk2_rhs)> stepper(dt_rk2, field_copy.size(), rk2_tableau, rk2_rhs);
+      ExplicitRKStepper<decltype(rk2_rhs)> stepper(dt_rk2, field_copy.size(),
+                                                   rk2_tableau, rk2_rhs);
       double t = 0.0;
       for (int i = 0; i < steps_rk2; ++i) {
         t = stepper.step(t, field_copy.vec());
@@ -281,7 +297,8 @@ TEST_CASE("Time integration - full simulation timing", "[time_integration][bench
 
     BENCHMARK("RK4 classical full simulation") {
       auto field_copy = field;
-      auto stepper = create(field_copy, eval, model, dt_rk4, make_rk4_classical<double>());
+      auto stepper =
+          create(field_copy, eval, model, dt_rk4, make_rk4_classical<double>());
       double t = 0.0;
       for (int i = 0; i < steps_rk4; ++i) {
         t = stepper.step(t, field_copy.vec());
@@ -304,25 +321,32 @@ TEST_CASE("Time integration - memory usage", "[time_integration][benchmark]") {
   const std::size_t local_size = 32 * 32 * 32;
 
   SECTION("Stepper object sizes") {
-    auto domain = pfc::domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                               GridSpacing({1.0, 1.0, 1.0}));
+    auto domain =
+        pfc::domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                            GridSpacing({1.0, 1.0, 1.0}));
     auto decomp = pfc::decomposition::create(domain, 1);
-    auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
+    auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0,
+                                                                  /*halo_width=*/1);
     auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
     HeatEquation model(1.0);
 
     auto euler_stepper = create(field, eval, model, 0.01);
 
-    auto rk2_rhs = [&eval, &model](double t, const std::vector<double>& u, std::vector<double>& du) {
+    auto rk2_rhs = [&eval, &model](double t, const std::vector<double> &u,
+                                   std::vector<double> &du) {
       pfc::sim::for_each_interior(model, eval, du.data(), t);
     };
     auto rk2_tableau = make_rk2_midpoint<double>();
-    auto rk2_stepper = ExplicitRKStepper<decltype(rk2_rhs)>(0.01, field.size(), rk2_tableau, rk2_rhs);
+    auto rk2_stepper = ExplicitRKStepper<decltype(rk2_rhs)>(0.01, field.size(),
+                                                            rk2_tableau, rk2_rhs);
 
-    auto rk4_stepper = create(field, eval, model, 0.01, make_rk4_classical<double>());
+    auto rk4_stepper =
+        create(field, eval, model, 0.01, make_rk4_classical<double>());
 
     BENCHMARK("EulerStepper sizeof") { return sizeof(euler_stepper); };
-    BENCHMARK("ExplicitRKStepper (RK2 midpoint) sizeof") { return sizeof(rk2_stepper); };
+    BENCHMARK("ExplicitRKStepper (RK2 midpoint) sizeof") {
+      return sizeof(rk2_stepper);
+    };
     BENCHMARK("ExplicitRKStepper sizeof") { return sizeof(rk4_stepper); };
 
     INFO("Expected: Euler ~O(n), RK2 ~O(3n), RK4 ~O(5n) for buffer storage");
@@ -330,38 +354,47 @@ TEST_CASE("Time integration - memory usage", "[time_integration][benchmark]") {
   }
 
   SECTION("Buffer size scaling") {
-    const std::vector<std::size_t> sizes = {32*32*32, 64*64*64};
+    const std::vector<std::size_t> sizes = {32 * 32 * 32, 64 * 64 * 64};
 
     for (auto sz : sizes) {
       const Int3 size = {static_cast<int>(std::cbrt(sz)),
                          static_cast<int>(std::cbrt(sz)),
                          static_cast<int>(std::cbrt(sz))};
-      auto domain = pfc::domain::create(GridSize(size), PhysicalOrigin({0.0, 0.0, 0.0}),
-                                 GridSpacing({1.0, 1.0, 1.0}));
+      auto domain =
+          pfc::domain::create(GridSize(size), PhysicalOrigin({0.0, 0.0, 0.0}),
+                              GridSpacing({1.0, 1.0, 1.0}));
       auto decomp = pfc::decomposition::create(domain, 1);
-      auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
+      auto field = pfc::data::field_from_subdomain_unpadded<double>(
+          decomp, 0, /*halo_width=*/1);
       auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
       HeatEquation model(1.0);
 
-      const std::string label_euler = "Euler buffer size " + std::to_string(static_cast<int>(std::cbrt(sz))) + "³";
+      const std::string label_euler =
+          "Euler buffer size " + std::to_string(static_cast<int>(std::cbrt(sz))) +
+          "³";
       BENCHMARK(label_euler.c_str()) {
         auto stepper = create(field, eval, model, 0.01);
         return field.size(); // Approximate buffer size
       };
 
-      const std::string label_rk2 = "RK2 buffer size " + std::to_string(static_cast<int>(std::cbrt(sz))) + "³";
+      const std::string label_rk2 =
+          "RK2 buffer size " + std::to_string(static_cast<int>(std::cbrt(sz))) + "³";
       BENCHMARK(label_rk2.c_str()) {
-        auto rk2_rhs = [&eval, &model](double t, const std::vector<double>& u, std::vector<double>& du) {
+        auto rk2_rhs = [&eval, &model](double t, const std::vector<double> &u,
+                                       std::vector<double> &du) {
           pfc::sim::for_each_interior(model, eval, du.data(), t);
         };
         auto rk2_tableau = make_rk2_midpoint<double>();
-        ExplicitRKStepper<decltype(rk2_rhs)> stepper(0.01, field.size(), rk2_tableau, rk2_rhs);
+        ExplicitRKStepper<decltype(rk2_rhs)> stepper(0.01, field.size(), rk2_tableau,
+                                                     rk2_rhs);
         return field.size() * 3; // RK2 stores ~3 buffers
       };
 
-      const std::string label_rk4 = "RK4 buffer size " + std::to_string(static_cast<int>(std::cbrt(sz))) + "³";
+      const std::string label_rk4 =
+          "RK4 buffer size " + std::to_string(static_cast<int>(std::cbrt(sz))) + "³";
       BENCHMARK(label_rk4.c_str()) {
-        auto stepper = create(field, eval, model, 0.01, make_rk4_classical<double>());
+        auto stepper =
+            create(field, eval, model, 0.01, make_rk4_classical<double>());
         return field.size() * 5; // RK4 stores ~5 buffers
       };
     }
@@ -374,7 +407,8 @@ TEST_CASE("Time integration - memory usage", "[time_integration][benchmark]") {
 // Scaling with Problem Size Benchmarks
 // ============================================================================
 
-TEST_CASE("Time integration - scaling with problem size", "[time_integration][benchmark]") {
+TEST_CASE("Time integration - scaling with problem size",
+          "[time_integration][benchmark]") {
   using namespace test_models;
 
   const std::vector<Int3> grid_sizes = {{32, 32, 32}, {64, 64, 64}, {128, 128, 128}};
@@ -382,18 +416,18 @@ TEST_CASE("Time integration - scaling with problem size", "[time_integration][be
   const Real3 spacing = {1.0, 1.0, 1.0};
 
   SECTION("Euler stepper - FD gradient - heat equation - scaling") {
-    for (const auto& size : grid_sizes) {
-      auto domain = pfc::domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+    for (const auto &size : grid_sizes) {
+      auto domain = pfc::domain::create(GridSize(size), PhysicalOrigin(origin),
+                                        GridSpacing(spacing));
       auto decomp = pfc::decomposition::create(domain, 1);
-      auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
+      auto field = pfc::data::field_from_subdomain_unpadded<double>(
+          decomp, 0, /*halo_width=*/1);
       auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
       HeatEquation model(1.0);
       auto stepper = create(field, eval, model, 0.01);
 
       const std::string label = "Euler " + std::to_string(size[0]) + "³";
-      BENCHMARK(label.c_str()) {
-        return stepper.step(0.0, field.vec());
-      };
+      BENCHMARK(label.c_str()) { return stepper.step(0.0, field.vec()); };
     }
 
     INFO("Expected: Linear O(N) scaling across grid sizes");
@@ -401,23 +435,25 @@ TEST_CASE("Time integration - scaling with problem size", "[time_integration][be
   }
 
   SECTION("RK2 midpoint stepper - FD gradient - heat equation - scaling") {
-    for (const auto& size : grid_sizes) {
-      auto domain = pfc::domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+    for (const auto &size : grid_sizes) {
+      auto domain = pfc::domain::create(GridSize(size), PhysicalOrigin(origin),
+                                        GridSpacing(spacing));
       auto decomp = pfc::decomposition::create(domain, 1);
-      auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
+      auto field = pfc::data::field_from_subdomain_unpadded<double>(
+          decomp, 0, /*halo_width=*/1);
       auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
       HeatEquation model(1.0);
 
-      auto rk2_rhs = [&eval, &model](double t, const std::vector<double>& u, std::vector<double>& du) {
+      auto rk2_rhs = [&eval, &model](double t, const std::vector<double> &u,
+                                     std::vector<double> &du) {
         pfc::sim::for_each_interior(model, eval, du.data(), t);
       };
       auto rk2_tableau = make_rk2_midpoint<double>();
-      ExplicitRKStepper<decltype(rk2_rhs)> stepper(0.01, field.size(), rk2_tableau, rk2_rhs);
+      ExplicitRKStepper<decltype(rk2_rhs)> stepper(0.01, field.size(), rk2_tableau,
+                                                   rk2_rhs);
 
       const std::string label = "RK2 midpoint " + std::to_string(size[0]) + "³";
-      BENCHMARK(label.c_str()) {
-        return stepper.step(0.0, field.vec());
-      };
+      BENCHMARK(label.c_str()) { return stepper.step(0.0, field.vec()); };
     }
 
     INFO("Expected: Linear O(N) scaling across grid sizes");
@@ -425,18 +461,18 @@ TEST_CASE("Time integration - scaling with problem size", "[time_integration][be
   }
 
   SECTION("RK4 classical stepper - FD gradient - heat equation - scaling") {
-    for (const auto& size : grid_sizes) {
-      auto domain = pfc::domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+    for (const auto &size : grid_sizes) {
+      auto domain = pfc::domain::create(GridSize(size), PhysicalOrigin(origin),
+                                        GridSpacing(spacing));
       auto decomp = pfc::decomposition::create(domain, 1);
-      auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
+      auto field = pfc::data::field_from_subdomain_unpadded<double>(
+          decomp, 0, /*halo_width=*/1);
       auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
       HeatEquation model(1.0);
       auto stepper = create(field, eval, model, 0.01, make_rk4_classical<double>());
 
       const std::string label = "RK4 classical " + std::to_string(size[0]) + "³";
-      BENCHMARK(label.c_str()) {
-        return stepper.step(0.0, field.vec());
-      };
+      BENCHMARK(label.c_str()) { return stepper.step(0.0, field.vec()); };
     }
 
     INFO("Expected: Linear O(N) scaling across grid sizes");
@@ -448,7 +484,8 @@ TEST_CASE("Time integration - scaling with problem size", "[time_integration][be
 // Spectral Gradient Backend Benchmarks
 // ============================================================================
 
-TEST_CASE("Time integration - spectral gradient backend", "[time_integration][benchmark]") {
+TEST_CASE("Time integration - spectral gradient backend",
+          "[time_integration][benchmark]") {
   using namespace test_models;
 
   const Int3 size = {32, 32, 32};
@@ -457,7 +494,8 @@ TEST_CASE("Time integration - spectral gradient backend", "[time_integration][be
 
   SECTION("Spectral vs FD gradient - RK4 stepper - heat equation") {
     // Spectral gradient setup with FFT
-    auto domain = pfc::domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto domain = pfc::domain::create(GridSize(size), PhysicalOrigin(origin),
+                                      GridSpacing(spacing));
     auto decomp = pfc::decomposition::create(domain, 1);
     auto fft = fft::create(decomp);
 
@@ -465,27 +503,32 @@ TEST_CASE("Time integration - spectral gradient backend", "[time_integration][be
     auto spectral_eval = pfc::field::create<HeatGrads>(field, fft);
 
     HeatEquation model(1.0);
-    auto spectral_stepper = create(field, spectral_eval, model, 0.01, make_rk4_classical<double>());
+    auto spectral_stepper =
+        create(field, spectral_eval, model, 0.01, make_rk4_classical<double>());
 
     BENCHMARK("Spectral gradient - RK4 single step") {
       return spectral_stepper.step(0.0, field.vec());
     };
 
     // FD gradient benchmark for comparison
-    auto field_fd = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
+    auto field_fd = pfc::data::field_from_subdomain_unpadded<double>(
+        decomp, 0, /*halo_width=*/1);
     auto fd_eval = pfc::field::create<HeatGrads>(field_fd, /*order=*/2);
-    auto fd_stepper = create(field_fd, fd_eval, model, 0.01, make_rk4_classical<double>());
+    auto fd_stepper =
+        create(field_fd, fd_eval, model, 0.01, make_rk4_classical<double>());
 
     BENCHMARK("FD gradient - RK4 single step") {
       return fd_stepper.step(0.0, field_fd.vec());
     };
 
     INFO("Expected: Spectral has higher per-step cost due to FFT overhead");
-    INFO("Spectral advantage appears for high-accuracy requirements or smooth solutions");
+    INFO("Spectral advantage appears for high-accuracy requirements or smooth "
+         "solutions");
   }
 
   SECTION("Spectral vs FD gradient - Euler stepper - heat equation") {
-    auto domain = pfc::domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto domain = pfc::domain::create(GridSize(size), PhysicalOrigin(origin),
+                                      GridSpacing(spacing));
     auto decomp = pfc::decomposition::create(domain, 1);
     auto fft = fft::create(decomp);
 
@@ -499,7 +542,8 @@ TEST_CASE("Time integration - spectral gradient backend", "[time_integration][be
       return spectral_stepper.step(0.0, field.vec());
     };
 
-    auto field_fd = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
+    auto field_fd = pfc::data::field_from_subdomain_unpadded<double>(
+        decomp, 0, /*halo_width=*/1);
     auto fd_eval = pfc::field::create<HeatGrads>(field_fd, /*order=*/2);
     auto fd_stepper = create(field_fd, fd_eval, model, 0.01);
 
@@ -511,7 +555,8 @@ TEST_CASE("Time integration - spectral gradient backend", "[time_integration][be
   }
 
   SECTION("Spectral vs FD gradient - RK2 midpoint stepper - heat equation") {
-    auto domain = pfc::domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto domain = pfc::domain::create(GridSize(size), PhysicalOrigin(origin),
+                                      GridSpacing(spacing));
     auto decomp = pfc::decomposition::create(domain, 1);
     auto fft = fft::create(decomp);
 
@@ -520,23 +565,29 @@ TEST_CASE("Time integration - spectral gradient backend", "[time_integration][be
 
     HeatEquation model(1.0);
 
-    auto spectral_rk2_rhs = [&spectral_eval, &model](double t, const std::vector<double>& u, std::vector<double>& du) {
+    auto spectral_rk2_rhs = [&spectral_eval, &model](double t,
+                                                     const std::vector<double> &u,
+                                                     std::vector<double> &du) {
       pfc::sim::for_each_interior(model, spectral_eval, du.data(), t);
     };
     auto rk2_tableau = make_rk2_midpoint<double>();
-    ExplicitRKStepper<decltype(spectral_rk2_rhs)> spectral_stepper(0.01, field.size(), rk2_tableau, spectral_rk2_rhs);
+    ExplicitRKStepper<decltype(spectral_rk2_rhs)> spectral_stepper(
+        0.01, field.size(), rk2_tableau, spectral_rk2_rhs);
 
     BENCHMARK("Spectral gradient - RK2 midpoint single step") {
       return spectral_stepper.step(0.0, field.vec());
     };
 
-    auto field_fd = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
+    auto field_fd = pfc::data::field_from_subdomain_unpadded<double>(
+        decomp, 0, /*halo_width=*/1);
     auto fd_eval = pfc::field::create<HeatGrads>(field_fd, /*order=*/2);
 
-    auto fd_rk2_rhs = [&fd_eval, &model](double t, const std::vector<double>& u, std::vector<double>& du) {
+    auto fd_rk2_rhs = [&fd_eval, &model](double t, const std::vector<double> &u,
+                                         std::vector<double> &du) {
       pfc::sim::for_each_interior(model, fd_eval, du.data(), t);
     };
-    ExplicitRKStepper<decltype(fd_rk2_rhs)> fd_stepper(0.01, field_fd.size(), rk2_tableau, fd_rk2_rhs);
+    ExplicitRKStepper<decltype(fd_rk2_rhs)> fd_stepper(0.01, field_fd.size(),
+                                                       rk2_tableau, fd_rk2_rhs);
 
     BENCHMARK("FD gradient - RK2 midpoint single step") {
       return fd_stepper.step(0.0, field_fd.vec());

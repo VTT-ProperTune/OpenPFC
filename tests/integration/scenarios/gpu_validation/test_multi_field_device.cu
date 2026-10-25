@@ -106,10 +106,11 @@ struct KobayashiLocal {
 
 struct KobayashiDeviceModel {
   double alpha{0.5};
-  OPENPFC_HD pfc::sim::cuda::DeviceInc2
-  rhs(double /*t*/, const KobayashiLocal &g) const noexcept {
+  OPENPFC_HD pfc::sim::cuda::DeviceInc2 rhs(double /*t*/,
+                                            const KobayashiLocal &g) const noexcept {
     const double lap = g.phi.xx + g.phi.yy;
-    return pfc::sim::cuda::DeviceInc2{g.phi.value * (1.0 - g.phi.value) + alpha * lap,
+    return pfc::sim::cuda::DeviceInc2{g.phi.value * (1.0 - g.phi.value) +
+                                          alpha * lap,
                                       -g.tempr.value + g.phi.value};
   }
 };
@@ -147,9 +148,8 @@ struct CompEvalOut {
   double v_value{};
 };
 
-__global__ void evaluate_composite_kernel(
-    pfc::cuda::CompositeGradientDevicePOD eval, CompEvalOut *out, int nx, int ny,
-    int nz) {
+__global__ void evaluate_composite_kernel(pfc::cuda::CompositeGradientDevicePOD eval,
+                                          CompEvalOut *out, int nx, int ny, int nz) {
   const int ix = static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x);
   const int iy = static_cast<int>(blockIdx.y * blockDim.y + threadIdx.y);
   const int iz = static_cast<int>(blockIdx.z * blockDim.z + threadIdx.z);
@@ -157,8 +157,8 @@ __global__ void evaluate_composite_kernel(
     return;
   }
   const CompEvalLocal g =
-      pfc::cuda::evaluate_fd_grad_composite<CompEvalLocal, UGrads, VGrads>(
-          eval, ix, iy, iz);
+      pfc::cuda::evaluate_fd_grad_composite<CompEvalLocal, UGrads, VGrads>(eval, ix,
+                                                                           iy, iz);
   const auto &f0 = eval.fields[0];
   const std::ptrdiff_t c = static_cast<std::ptrdiff_t>(ix + f0.hw) +
                            static_cast<std::ptrdiff_t>(iy + f0.hw) * f0.sy +
@@ -169,8 +169,8 @@ __global__ void evaluate_composite_kernel(
 }
 
 __global__ void scatter_device_kernel(pfc::sim::cuda::DevicePtrPack3 du,
-                                     pfc::sim::cuda::DeviceInc3 inc,
-                                     std::ptrdiff_t c) {
+                                      pfc::sim::cuda::DeviceInc3 inc,
+                                      std::ptrdiff_t c) {
   if (threadIdx.x == 0 && blockIdx.x == 0) {
     pfc::sim::cuda::detail::scatter_device(du, inc, c);
   }
@@ -203,12 +203,12 @@ TEST_CASE("test_scatter_device_tuple",
   REQUIRE(cudaDeviceSynchronize() == cudaSuccess);
 
   std::vector<double> h0(n, 0.0), h1(n, 0.0), h2(n, 0.0);
-  REQUIRE(cudaMemcpy(h0.data(), d0, n * sizeof(double),
-                     cudaMemcpyDeviceToHost) == cudaSuccess);
-  REQUIRE(cudaMemcpy(h1.data(), d1, n * sizeof(double),
-                     cudaMemcpyDeviceToHost) == cudaSuccess);
-  REQUIRE(cudaMemcpy(h2.data(), d2, n * sizeof(double),
-                     cudaMemcpyDeviceToHost) == cudaSuccess);
+  REQUIRE(cudaMemcpy(h0.data(), d0, n * sizeof(double), cudaMemcpyDeviceToHost) ==
+          cudaSuccess);
+  REQUIRE(cudaMemcpy(h1.data(), d1, n * sizeof(double), cudaMemcpyDeviceToHost) ==
+          cudaSuccess);
+  REQUIRE(cudaMemcpy(h2.data(), d2, n * sizeof(double), cudaMemcpyDeviceToHost) ==
+          cudaSuccess);
 
   CHECK(h0[static_cast<std::size_t>(c)] == Catch::Approx(1.25));
   CHECK(h1[static_cast<std::size_t>(c)] == Catch::Approx(-2.5));
@@ -267,12 +267,9 @@ TEST_CASE("test_evaluate_fd_grad_composite",
                      cudaMemcpyHostToDevice) == cudaSuccess);
   REQUIRE(cudaMemset(d_out, 0, total * sizeof(CompEvalOut)) == cudaSuccess);
 
-  pfc::cuda::FDGradientDevice<UGrads> eval_u(d_u, nx, ny, nz, dx, dy, dz, hw,
-                                             order);
-  pfc::cuda::FDGradientDevice<VGrads> eval_v(d_v, nx, ny, nz, dx, dy, dz, hw,
-                                             order);
-  auto composite =
-      pfc::cuda::create_composite_device<CompEvalLocal>(eval_u, eval_v);
+  pfc::cuda::FDGradientDevice<UGrads> eval_u(d_u, nx, ny, nz, dx, dy, dz, hw, order);
+  pfc::cuda::FDGradientDevice<VGrads> eval_v(d_v, nx, ny, nz, dx, dy, dz, hw, order);
+  auto composite = pfc::cuda::create_composite_device<CompEvalLocal>(eval_u, eval_v);
 
   dim3 block(8, 8, 1);
   dim3 grid(1, 1, 1);
@@ -312,8 +309,8 @@ TEST_CASE("test_evaluate_fd_grad_composite",
         // Analytic: u_xx=2, u_yy=4, v=3+x
         match &= std::abs(got.u_xx - 2.0) <= 1e-12;
         match &= std::abs(got.u_yy - 4.0) <= 1e-12;
-        match &= std::abs(got.v_value - (3.0 + static_cast<double>(ix) * dx)) <=
-                 1e-12;
+        match &=
+            std::abs(got.v_value - (3.0 + static_cast<double>(ix) * dx)) <= 1e-12;
       }
     }
   }
@@ -361,10 +358,9 @@ TEST_CASE("test_wave2d_double_field_kernel",
   auto grad_v = pfc::field::create<VGrads>(v, order);
   auto composite = pfc::field::create_composite<WaveLocal>(grad_u, grad_v);
   WaveDeviceModel cpu_model{.inv_dx2 = inv_dx2, .inv_dy2 = inv_dy2};
-  auto du_tuple = std::make_tuple(du_cpu.data() + owned_origin(hw, u.padded_extent(0),
-                                                               u.padded_extent(1)),
-                                  dv_cpu.data() + owned_origin(hw, v.padded_extent(0),
-                                                               v.padded_extent(1)));
+  auto du_tuple = std::make_tuple(
+      du_cpu.data() + owned_origin(hw, u.padded_extent(0), u.padded_extent(1)),
+      dv_cpu.data() + owned_origin(hw, v.padded_extent(0), v.padded_extent(1)));
   // Padded Field FDGradient indexes from owned origin with padded strides; du
   // pointers must share that base.
   pfc::sim::for_each_interior(cpu_model, composite, du_tuple, /*t=*/0.0);
@@ -389,12 +385,9 @@ TEST_CASE("test_wave2d_double_field_kernel",
   REQUIRE(cudaMemset(d_du, 0, total * sizeof(double)) == cudaSuccess);
   REQUIRE(cudaMemset(d_dv, 0, total * sizeof(double)) == cudaSuccess);
 
-  pfc::cuda::FDGradientDevice<UGrads> dev_u(d_u, nx, ny, nz, dx, dy, dz, hw,
-                                            order);
-  pfc::cuda::FDGradientDevice<VGrads> dev_v(d_v, nx, ny, nz, dx, dy, dz, hw,
-                                            order);
-  auto dev_composite =
-      pfc::cuda::create_composite_device<WaveLocal>(dev_u, dev_v);
+  pfc::cuda::FDGradientDevice<UGrads> dev_u(d_u, nx, ny, nz, dx, dy, dz, hw, order);
+  pfc::cuda::FDGradientDevice<VGrads> dev_v(d_v, nx, ny, nz, dx, dy, dz, hw, order);
+  auto dev_composite = pfc::cuda::create_composite_device<WaveLocal>(dev_u, dev_v);
   WaveDeviceModel gpu_model{.inv_dx2 = inv_dx2, .inv_dy2 = inv_dy2};
   auto pack = pfc::sim::cuda::make_device_ptr_pack(d_du, d_dv);
 
@@ -413,8 +406,8 @@ TEST_CASE("test_wave2d_double_field_kernel",
   for (int pk = 0; pk < nzp; ++pk) {
     for (int pj = 0; pj < nyp; ++pj) {
       for (int pi = 0; pi < nxp; ++pi) {
-        const bool owned = (pi >= hw && pi < nx + hw) && (pj >= hw && pj < ny + hw) &&
-                           (pk >= hw && pk < nz + hw);
+        const bool owned = (pi >= hw && pi < nx + hw) &&
+                           (pj >= hw && pj < ny + hw) && (pk >= hw && pk < nz + hw);
         const std::size_t i = lin(pi, pj, pk, nxp, nyp);
         if (owned) {
           const int ix = pi - hw, iy = pj - hw, iz = pk - hw;
@@ -469,8 +462,7 @@ TEST_CASE("test_kobayashi_double_field_kernel",
 
   auto gphi = pfc::field::create<PhiGrads>(phi, order);
   auto gtempr = pfc::field::create<TemprGrads>(tempr, order);
-  auto composite =
-      pfc::field::create_composite<KobayashiLocal>(gphi, gtempr);
+  auto composite = pfc::field::create_composite<KobayashiLocal>(gphi, gtempr);
   KobayashiDeviceModel cpu_model{};
   const int nxp = phi.padded_extent(0);
   const int nyp = phi.padded_extent(1);
@@ -479,7 +471,8 @@ TEST_CASE("test_kobayashi_double_field_kernel",
   pfc::sim::for_each_interior(cpu_model, composite, du_tuple, 0.0);
 
   const std::size_t total = phi.size();
-  double *d_phi = nullptr, *d_tempr = nullptr, *d_dphi = nullptr, *d_dtempr = nullptr;
+  double *d_phi = nullptr, *d_tempr = nullptr, *d_dphi = nullptr,
+         *d_dtempr = nullptr;
   REQUIRE(cudaMalloc(&d_phi, total * sizeof(double)) == cudaSuccess);
   REQUIRE(cudaMalloc(&d_tempr, total * sizeof(double)) == cudaSuccess);
   REQUIRE(cudaMalloc(&d_dphi, total * sizeof(double)) == cudaSuccess);
@@ -493,8 +486,8 @@ TEST_CASE("test_kobayashi_double_field_kernel",
 
   pfc::cuda::FDGradientDevice<PhiGrads> dev_phi(d_phi, nx, ny, nz, dx, dy, dz, hw,
                                                 order);
-  pfc::cuda::FDGradientDevice<TemprGrads> dev_tempr(d_tempr, nx, ny, nz, dx, dy,
-                                                    dz, hw, order);
+  pfc::cuda::FDGradientDevice<TemprGrads> dev_tempr(d_tempr, nx, ny, nz, dx, dy, dz,
+                                                    hw, order);
   auto dev_composite =
       pfc::cuda::create_composite_device<KobayashiLocal>(dev_phi, dev_tempr);
   KobayashiDeviceModel gpu_model{};
@@ -568,8 +561,8 @@ TEST_CASE("test_synthetic_triple_field_kernel",
   const int nxp = a.padded_extent(0);
   const int nyp = a.padded_extent(1);
   const auto off = owned_origin(hw, nxp, nyp);
-  auto du_tuple = std::make_tuple(da_cpu.data() + off, db_cpu.data() + off,
-                                  dc_cpu.data() + off);
+  auto du_tuple =
+      std::make_tuple(da_cpu.data() + off, db_cpu.data() + off, dc_cpu.data() + off);
   pfc::sim::for_each_interior(cpu_model, composite, du_tuple, 0.0);
 
   const std::size_t total = a.size();

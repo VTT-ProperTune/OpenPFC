@@ -32,13 +32,12 @@
 #include <vector>
 
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
 #include <openpfc/kernel/decomposition/halo_pattern.hpp>
-#include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
-#include <openpfc/kernel/data/domain.hpp>
 
 using namespace pfc;
 using Int3 = pfc::types::Int3;
@@ -110,8 +109,9 @@ TEST_CASE("SparseExchange: Axes3D self-wrap on a single rank",
 
   constexpr int N = 4;
   constexpr int hw = 1;
-  auto global_domain = pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
+  auto global_domain =
+      pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                          GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(global_domain, nproc);
 
   const std::size_t nlocal = static_cast<std::size_t>(N) *
@@ -131,8 +131,7 @@ TEST_CASE("SparseExchange: Axes3D self-wrap on a single rank",
   }
 
   auto face_halos = halo::allocate_face_halos<double>(decomp, rank, hw);
-  comm::SparseExchange<HostSpace, double> ex(u, decomp, rank,
-                                             MPI_COMM_WORLD, hw);
+  comm::SparseExchange<HostSpace, double> ex(u, decomp, rank, MPI_COMM_WORLD, hw);
   ex.exchange();
   halo::copy_to_face_layout(ex.halos(), face_halos);
 
@@ -180,8 +179,9 @@ TEST_CASE("SparseExchange: Full3D self-wrap delivers edge data",
 
   constexpr int N = 4;
   constexpr int hw = 1;
-  auto global_domain = pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
+  auto global_domain =
+      pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                          GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(global_domain, nproc);
 
   const std::size_t nlocal = static_cast<std::size_t>(N) *
@@ -201,8 +201,8 @@ TEST_CASE("SparseExchange: Full3D self-wrap delivers edge data",
 
   comm::SparseExchangeOptions opt;
   opt.dirs = halo::presets::Full3D();
-  comm::SparseExchange<HostSpace, double> ex(u, decomp, rank,
-                                             MPI_COMM_WORLD, hw, opt);
+  comm::SparseExchange<HostSpace, double> ex(u, decomp, rank, MPI_COMM_WORLD, hw,
+                                             opt);
   ex.exchange();
 
   // Find the (1, 1, 0) edge entry: send slab is the (x=N-1, y=N-1) line,
@@ -243,8 +243,9 @@ TEST_CASE("SparseExchange: Axes3D X-split on np=2 delivers neighbour data",
   constexpr int Ny = 4;
   constexpr int Nz = 1;
   constexpr int hw = 1;
-  auto global_domain = pfc::domain::create(GridSize({Nx, Ny, Nz}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
+  auto global_domain =
+      pfc::domain::create(GridSize({Nx, Ny, Nz}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                          GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(global_domain, {2, 1, 1});
 
   const auto local_world = decomposition::local_box(decomp, rank);
@@ -272,8 +273,7 @@ TEST_CASE("SparseExchange: Axes3D X-split on np=2 delivers neighbour data",
   }
 
   auto face_halos = halo::allocate_face_halos<double>(decomp, rank, hw);
-  comm::SparseExchange<HostSpace, double> ex(u, decomp, rank,
-                                             MPI_COMM_WORLD, hw);
+  comm::SparseExchange<HostSpace, double> ex(u, decomp, rank, MPI_COMM_WORLD, hw);
   ex.exchange();
   halo::copy_to_face_layout(ex.halos(), face_halos);
 
@@ -308,8 +308,9 @@ TEST_CASE("Connectivity::Edges yields faces+edges, no corners",
 
   constexpr int N = 6;
   constexpr int hw = 1;
-  auto global_domain = pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
+  auto global_domain =
+      pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                          GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(global_domain, nproc);
 
   auto patterns = halo::create_halo_patterns<backend::CPUTag>(

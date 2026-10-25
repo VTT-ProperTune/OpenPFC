@@ -10,10 +10,9 @@
 #include <mpi.h>
 
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 
 using namespace pfc;
@@ -30,7 +29,9 @@ TEST_CASE("HaloExchange syncs face values across ranks",
   }
 
   // 2x1x1 decomposition: rank 0 = left half, rank 1 = right half in X
-  auto domain = domain::create(GridSize({24, 24, 24}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      domain::create(GridSize({24, 24, 24}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, {2, 1, 1});
 
   constexpr int hw = 1;

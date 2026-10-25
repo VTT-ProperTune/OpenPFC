@@ -3,9 +3,9 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <vector>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <openpfc/kernel/simulation/binary_reader.hpp>
+#include <vector>
 
 #include "../../../fixtures/mpi_file_guard_test_utils.hpp"
 

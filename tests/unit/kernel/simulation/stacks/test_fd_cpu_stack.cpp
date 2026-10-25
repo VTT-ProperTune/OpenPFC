@@ -18,9 +18,8 @@ TEST_CASE("FDCPUStack constructs from Domain", "[cpu_stack][stacks][unit]") {
   constexpr int rank = 0;
   constexpr int nproc = 1;
 
-  const auto domain = pfc::domain::create(pfc::GridSize(size),
-                                          pfc::PhysicalOrigin(origin),
-                                          pfc::GridSpacing(spacing));
+  const auto domain = pfc::domain::create(
+      pfc::GridSize(size), pfc::PhysicalOrigin(origin), pfc::GridSpacing(spacing));
 
   FDCPUStack stack(domain, fd_order, rank, nproc);
 
@@ -81,7 +80,8 @@ TEST_CASE("FDCPUStack constructs from Domain", "[cpu_stack][stacks][unit]") {
   }
 }
 
-TEST_CASE("FDCPUStack with non-default Domain parameters", "[cpu_stack][stacks][unit]") {
+TEST_CASE("FDCPUStack with non-default Domain parameters",
+          "[cpu_stack][stacks][unit]") {
   const Int3 size{64, 48, 16};
   const Real3 origin{-10.0, -5.0, 0.0};
   const Real3 spacing{0.5, 0.25, 1.0};
@@ -89,9 +89,8 @@ TEST_CASE("FDCPUStack with non-default Domain parameters", "[cpu_stack][stacks][
   constexpr int rank = 0;
   constexpr int nproc = 1;
 
-  const auto domain = pfc::domain::create(pfc::GridSize(size),
-                                          pfc::PhysicalOrigin(origin),
-                                          pfc::GridSpacing(spacing));
+  const auto domain = pfc::domain::create(
+      pfc::GridSize(size), pfc::PhysicalOrigin(origin), pfc::GridSpacing(spacing));
 
   FDCPUStack stack(domain, fd_order, rank, nproc);
 
@@ -112,10 +111,9 @@ TEST_CASE("FDCPUStack with non-periodic Domain", "[cpu_stack][stacks][unit]") {
   constexpr int rank = 0;
   constexpr int nproc = 1;
 
-  const auto domain = pfc::domain::create(pfc::GridSize(size),
-                                          pfc::PhysicalOrigin(origin),
-                                          pfc::GridSpacing(spacing),
-                                          periodic);
+  const auto domain =
+      pfc::domain::create(pfc::GridSize(size), pfc::PhysicalOrigin(origin),
+                          pfc::GridSpacing(spacing), periodic);
 
   FDCPUStack stack(domain, fd_order, rank, nproc);
 
@@ -127,7 +125,8 @@ TEST_CASE("FDCPUStack with non-periodic Domain", "[cpu_stack][stacks][unit]") {
   REQUIRE(pfc::domain::get_periodic(domain) == periodic);
 }
 
-TEST_CASE("FDCPUStack is non-copyable and non-movable", "[cpu_stack][stacks][unit]") {
+TEST_CASE("FDCPUStack is non-copyable and non-movable",
+          "[cpu_stack][stacks][unit]") {
   const auto domain = pfc::domain::create(Int3{16, 16, 16});
   FDCPUStack stack(domain, 2, 0, 1);
 

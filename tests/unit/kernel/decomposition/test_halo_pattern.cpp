@@ -11,7 +11,6 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_pattern.hpp>
 #include <openpfc/kernel/decomposition/sparse_vector_ops.hpp>
@@ -182,8 +181,7 @@ TEST_CASE("create_send_halo throws when active axis thinner than halo_width",
   const Int3 direction = {1, 0, 0};
 
   REQUIRE_THROWS_AS(
-      (halo::create_send_halo<backend::CPUTag>(decomp, rank, direction,
-                                               halo_width)),
+      (halo::create_send_halo<backend::CPUTag>(decomp, rank, direction, halo_width)),
       std::invalid_argument);
   try {
     (void)halo::create_send_halo<backend::CPUTag>(decomp, rank, direction,
@@ -205,8 +203,7 @@ TEST_CASE("create_recv_halo throws when active axis thinner than halo_width",
   const Int3 direction = {1, 0, 0};
 
   REQUIRE_THROWS_AS(
-      (halo::create_recv_halo<backend::CPUTag>(decomp, rank, direction,
-                                               halo_width)),
+      (halo::create_recv_halo<backend::CPUTag>(decomp, rank, direction, halo_width)),
       std::invalid_argument);
   try {
     (void)halo::create_recv_halo<backend::CPUTag>(decomp, rank, direction,
@@ -223,8 +220,8 @@ TEST_CASE("create_send_halo allows flat inactive axis (nz==1, ±X only)",
           "[halo][pattern]") {
   auto domain = pfc::domain::create(Int3{16, 8, 1});
   auto decomp = decomposition::create(domain, {2, 1, 1});
-  REQUIRE_NOTHROW(halo::create_send_halo<backend::CPUTag>(
-      decomp, 0, Int3{1, 0, 0}, 1));
-  REQUIRE_NOTHROW(halo::create_recv_halo<backend::CPUTag>(
-      decomp, 0, Int3{1, 0, 0}, 1));
+  REQUIRE_NOTHROW(
+      halo::create_send_halo<backend::CPUTag>(decomp, 0, Int3{1, 0, 0}, 1));
+  REQUIRE_NOTHROW(
+      halo::create_recv_halo<backend::CPUTag>(decomp, 0, Int3{1, 0, 0}, 1));
 }

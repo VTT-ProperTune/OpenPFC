@@ -80,10 +80,11 @@ TEST_CASE("load_settings_file_rejects_directories", "[ui][settings]") {
   // Create directory instead of file
   std::filesystem::create_directory(path);
 
-  // Verify that load_settings_file() throws std::invalid_argument with correct message
+  // Verify that load_settings_file() throws std::invalid_argument with correct
+  // message
   REQUIRE_THROWS_AS(load_settings_file(path), std::invalid_argument);
   REQUIRE_THROWS_WITH(load_settings_file(path),
-                     Catch::Matchers::ContainsSubstring("not a regular file"));
+                      Catch::Matchers::ContainsSubstring("not a regular file"));
 
   // Clean up
   std::filesystem::remove_all(path);

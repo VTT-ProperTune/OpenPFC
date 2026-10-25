@@ -9,16 +9,15 @@
 #include <numbers>
 #include <vector>
 
-#include <openpfc/kernel/data/strong_types.hpp>
-#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
-#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/data/strong_types.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
-#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
-#include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/field/finite_difference.hpp>
 
@@ -54,8 +53,9 @@ TEST_CASE("5-point XY Laplacian of constant field is zero (nz=1)", "[MPI][fd][xy
     return;
   }
 
-  auto global_domain = pfc::domain::create(pfc::GridSize({24, 24, 1}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                             pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto global_domain = pfc::domain::create(pfc::GridSize({24, 24, 1}),
+                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                           pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(global_domain, {2, 1, 1});
 
   constexpr int halo_width = 1;
@@ -100,8 +100,9 @@ TEST_CASE("laplacian2d_xy_periodic_separated<2> matches analytic 2D Laplacian on
   const double dx = 2.0 * std::numbers::pi / static_cast<double>(N);
   const double inv_dx2 = 1.0 / (dx * dx);
 
-  auto global_domain = pfc::domain::create(pfc::GridSize({N, N, 1}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                             pfc::GridSpacing({dx, dx, dx}));
+  auto global_domain = pfc::domain::create(pfc::GridSize({N, N, 1}),
+                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                           pfc::GridSpacing({dx, dx, dx}));
   auto decomp = decomposition::create(global_domain, {2, 1, 1});
 
   const auto local_world = decomposition::local_box(decomp, rank);
@@ -129,8 +130,8 @@ TEST_CASE("laplacian2d_xy_periodic_separated<2> matches analytic 2D Laplacian on
 
   constexpr int halo_width = 1;
   auto face_halos = halo::allocate_face_halos<double>(decomp, rank, halo_width);
-  comm::SparseExchange<HostSpace, double> sex(
-      u, decomp, rank, MPI_COMM_WORLD, halo_width);
+  comm::SparseExchange<HostSpace, double> sex(u, decomp, rank, MPI_COMM_WORLD,
+                                              halo_width);
   sex.exchange();
   halo::copy_to_face_layout(sex.halos(), face_halos);
 
@@ -168,9 +169,9 @@ TEST_CASE("Separated face halos contain opposite periodic neighbor faces (XY)",
 
   constexpr int nx_glob = 12;
   constexpr int ny_glob = 5;
-  auto global_domain =
-      pfc::domain::create(pfc::GridSize({nx_glob, ny_glob, 1}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto global_domain = pfc::domain::create(pfc::GridSize({nx_glob, ny_glob, 1}),
+                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                           pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(global_domain, {3, 1, 1});
 
   const auto local_world = decomposition::local_box(decomp, rank);
@@ -195,8 +196,8 @@ TEST_CASE("Separated face halos contain opposite periodic neighbor faces (XY)",
 
   constexpr int halo_width = 1;
   auto face_halos = halo::allocate_face_halos<double>(decomp, rank, halo_width);
-  comm::SparseExchange<HostSpace, double> exchanger(
-      u, decomp, rank, MPI_COMM_WORLD, halo_width);
+  comm::SparseExchange<HostSpace, double> exchanger(u, decomp, rank, MPI_COMM_WORLD,
+                                                    halo_width);
   exchanger.exchange();
   halo::copy_to_face_layout(exchanger.halos(), face_halos);
 
@@ -226,9 +227,9 @@ TEST_CASE("5-point XY separated periodic Laplacian matches serial global formula
 
   constexpr int nx_glob = 12;
   constexpr int ny_glob = 12;
-  auto global_domain =
-      pfc::domain::create(pfc::GridSize({nx_glob, ny_glob, 1}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto global_domain = pfc::domain::create(pfc::GridSize({nx_glob, ny_glob, 1}),
+                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                           pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = (size == 2) ? decomposition::create(global_domain, {2, 1, 1})
                             : decomposition::create(global_domain, {2, 2, 1});
 
@@ -257,8 +258,8 @@ TEST_CASE("5-point XY separated periodic Laplacian matches serial global formula
 
   constexpr int halo_width = 1;
   auto face_halos = halo::allocate_face_halos<double>(decomp, rank, halo_width);
-  comm::SparseExchange<HostSpace, double> exchanger(
-      u, decomp, rank, MPI_COMM_WORLD, halo_width);
+  comm::SparseExchange<HostSpace, double> exchanger(u, decomp, rank, MPI_COMM_WORLD,
+                                                    halo_width);
   exchanger.exchange();
   halo::copy_to_face_layout(exchanger.halos(), face_halos);
 

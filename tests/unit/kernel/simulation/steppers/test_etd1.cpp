@@ -54,10 +54,9 @@ struct QuadraticN {
 struct TwoFieldConstantN {
   double n0{0.0};
   double n1{0.0};
-  void operator()(double /*t*/,
-                  std::tuple<std::vector<double> &, std::vector<double> &> u_pack,
-                  std::tuple<std::vector<double> &, std::vector<double> &>
-                      du_pack) const {
+  void operator()(
+      double /*t*/, std::tuple<std::vector<double> &, std::vector<double> &> u_pack,
+      std::tuple<std::vector<double> &, std::vector<double> &> du_pack) const {
     auto &u0 = std::get<0>(u_pack);
     auto &u1 = std::get<1>(u_pack);
     auto &du0 = std::get<0>(du_pack);
@@ -73,8 +72,8 @@ struct TwoFieldConstantN {
   }
 };
 
-[[nodiscard]] std::vector<double>
-integrate_etd1(double L, QuadraticN rhs, double u0, double T, double dt) {
+[[nodiscard]] std::vector<double> integrate_etd1(double L, QuadraticN rhs, double u0,
+                                                 double T, double dt) {
   const std::size_t n_steps = static_cast<std::size_t>(std::llround(T / dt));
   std::vector<double> Lvec{L};
   std::vector<double> exp_buf(1);
@@ -213,10 +212,9 @@ TEST_CASE("etd1_multi_field_bundle", "[stepper][etd1]") {
 
   TwoFieldConstantN rhs{0.5, -0.25};
   MultiETD1Stepper<TwoFieldConstantN, 2> stepper(dt, {1, 1}, rhs);
-  stepper.set_coefficients({std::span<const double>{exp0},
-                            std::span<const double>{exp1}},
-                           {std::span<const double>{phi0},
-                            std::span<const double>{phi1}});
+  stepper.set_coefficients(
+      {std::span<const double>{exp0}, std::span<const double>{exp1}},
+      {std::span<const double>{phi0}, std::span<const double>{phi1}});
 
   std::vector<double> u0{2.0};
   std::vector<double> u1{4.0};
@@ -244,8 +242,7 @@ struct ThreeFieldConstantN {
       double /*t*/,
       std::tuple<std::vector<double> &, std::vector<double> &,
                  std::vector<double> &> /*u_pack*/,
-      std::tuple<std::vector<double> &, std::vector<double> &,
-                 std::vector<double> &>
+      std::tuple<std::vector<double> &, std::vector<double> &, std::vector<double> &>
           du_pack) const {
     std::get<0>(du_pack)[0] = n0;
     std::get<1>(du_pack)[0] = n1;
@@ -375,8 +372,7 @@ struct TwoFieldConstantComplexN {
   void operator()(
       double /*t*/,
       std::tuple<std::vector<Complex> &, std::vector<Complex> &> /*u_pack*/,
-      std::tuple<std::vector<Complex> &, std::vector<Complex> &> du_pack)
-      const {
+      std::tuple<std::vector<Complex> &, std::vector<Complex> &> du_pack) const {
     std::get<0>(du_pack)[0] = n0;
     std::get<1>(du_pack)[0] = n1;
   }
@@ -396,12 +392,10 @@ TEST_CASE("etd1_multi_field_complex_bundle", "[stepper][etd1][complex]") {
   const Complex n1{-0.3, 0.05};
 
   TwoFieldConstantComplexN rhs{n0, n1};
-  MultiETD1Stepper<TwoFieldConstantComplexN, 2, Complex> stepper(dt, {1, 1},
-                                                                 rhs);
-  stepper.set_coefficients({std::span<const double>{exp0},
-                            std::span<const double>{exp1}},
-                           {std::span<const double>{phi0},
-                            std::span<const double>{phi1}});
+  MultiETD1Stepper<TwoFieldConstantComplexN, 2, Complex> stepper(dt, {1, 1}, rhs);
+  stepper.set_coefficients(
+      {std::span<const double>{exp0}, std::span<const double>{exp1}},
+      {std::span<const double>{phi0}, std::span<const double>{phi1}});
 
   std::vector<Complex> u0{u0_val};
   std::vector<Complex> u1{u1_val};
@@ -417,14 +411,10 @@ TEST_CASE("etd1_multi_field_complex_bundle", "[stepper][etd1][complex]") {
   const auto r1 = spectral_exp_coeffs(L1[0], dt);
   const Complex e0 = Complex(r0.exp_Ldt) * u0_val + Complex(r0.phi1_L) * n0;
   const Complex e1 = Complex(r1.exp_Ldt) * u1_val + Complex(r1.phi1_L) * n1;
-  REQUIRE(stepper.candidate(0)[0].real() ==
-          Catch::Approx(e0.real()).margin(1e-12));
-  REQUIRE(stepper.candidate(0)[0].imag() ==
-          Catch::Approx(e0.imag()).margin(1e-12));
-  REQUIRE(stepper.candidate(1)[0].real() ==
-          Catch::Approx(e1.real()).margin(1e-12));
-  REQUIRE(stepper.candidate(1)[0].imag() ==
-          Catch::Approx(e1.imag()).margin(1e-12));
+  REQUIRE(stepper.candidate(0)[0].real() == Catch::Approx(e0.real()).margin(1e-12));
+  REQUIRE(stepper.candidate(0)[0].imag() == Catch::Approx(e0.imag()).margin(1e-12));
+  REQUIRE(stepper.candidate(1)[0].real() == Catch::Approx(e1.real()).margin(1e-12));
+  REQUIRE(stepper.candidate(1)[0].imag() == Catch::Approx(e1.imag()).margin(1e-12));
 
   pfc::sim::steppers::commit_step_attempt(u0, u1, attempt);
   REQUIRE(u0[0].real() == Catch::Approx(e0.real()).margin(1e-12));
@@ -441,9 +431,8 @@ TEST_CASE("apply_etd1_update host real and complex", "[integrator][etd1_apply]")
   std::vector<double> nlin{4.0, 8.0};
   std::vector<double> out(2, 0.0);
   apply_etd1_update(std::span<const double>{exp_Ldt},
-                    std::span<const double>{phi1_L},
-                    std::span<const double>{u}, std::span<const double>{nlin},
-                    std::span<double>{out});
+                    std::span<const double>{phi1_L}, std::span<const double>{u},
+                    std::span<const double>{nlin}, std::span<double>{out});
   REQUIRE(out[0] == Catch::Approx(0.5 * 1.0 + 0.25 * 4.0).margin(1e-14));
   REQUIRE(out[1] == Catch::Approx(2.0 * -2.0 + -0.1 * 8.0).margin(1e-14));
 
@@ -451,9 +440,8 @@ TEST_CASE("apply_etd1_update host real and complex", "[integrator][etd1_apply]")
   std::vector<Complex> nc{Complex{0.2, -0.1}, Complex{1.0, 0.0}};
   std::vector<Complex> oc(2);
   apply_etd1_update(std::span<const double>{exp_Ldt},
-                    std::span<const double>{phi1_L},
-                    std::span<const Complex>{uc}, std::span<const Complex>{nc},
-                    std::span<Complex>{oc});
+                    std::span<const double>{phi1_L}, std::span<const Complex>{uc},
+                    std::span<const Complex>{nc}, std::span<Complex>{oc});
   const Complex e0 = Complex(exp_Ldt[0]) * uc[0] + Complex(phi1_L[0]) * nc[0];
   REQUIRE(oc[0].real() == Catch::Approx(e0.real()).margin(1e-14));
   REQUIRE(oc[0].imag() == Catch::Approx(e0.imag()).margin(1e-14));

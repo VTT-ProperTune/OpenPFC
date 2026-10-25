@@ -57,10 +57,9 @@ TEST_CASE("field::apply_with_time uses time parameter", "[field_ops][unit]") {
 TEST_CASE("field::apply_inplace modifies field based on current value",
           "[field_ops][unit]") {
   InboxFixture fx({4, 2, 2}, 1.0);
-  field::apply_inplace(fx.u, fx.domain, fx.fft,
-                       [](const Real3 & /*x*/, double current) {
-                         return 2.0 * current;
-                       });
+  field::apply_inplace(
+      fx.u, fx.domain, fx.fft,
+      [](const Real3 & /*x*/, double current) { return 2.0 * current; });
 
   bool values_match = true;
   for (const auto &val : fx.u) {
@@ -72,13 +71,12 @@ TEST_CASE("field::apply_inplace modifies field based on current value",
 TEST_CASE("field::apply_inplace selective update preserves untouched cells",
           "[field_ops][unit]") {
   InboxFixture fx({8, 1, 1}, 0.0);
-  field::apply_inplace(fx.u, fx.domain, fx.fft,
-                       [](const Real3 &x, double current) {
-                         if (x[0] > 4.0) {
-                           return 1.0;
-                         }
-                         return current;
-                       });
+  field::apply_inplace(fx.u, fx.domain, fx.fft, [](const Real3 &x, double current) {
+    if (x[0] > 4.0) {
+      return 1.0;
+    }
+    return current;
+  });
 
   bool has_zero = false;
   bool has_one = false;

@@ -108,7 +108,7 @@ TEST_CASE("GridSize construction and conversion", "[strong_types][construction]"
 
   SECTION("Explicit conversion back to Int3 works") {
     GridSize size({100, 100, 100});
-    Int3 converted = size.to_vector3();  // Explicit conversion
+    Int3 converted = size.to_vector3(); // Explicit conversion
 
     REQUIRE(converted[0] == 100);
     REQUIRE(converted[1] == 100);
@@ -122,8 +122,6 @@ TEST_CASE("GridSize construction and conversion", "[strong_types][construction]"
     REQUIRE(size.get() == raw);
   }
 }
-
-
 
 TEST_CASE("GridSpacing construction and conversion",
           "[strong_types][construction]") {
@@ -164,7 +162,7 @@ TEST_CASE("GridSpacing construction and conversion",
 
   SECTION("Explicit conversion back to Real3 works") {
     GridSpacing spacing({0.25, 0.25, 0.25});
-    Real3 converted = spacing.to_vector3();  // Explicit conversion
+    Real3 converted = spacing.to_vector3(); // Explicit conversion
 
     REQUIRE(converted[0] == 0.25);
     REQUIRE(converted[1] == 0.25);
@@ -248,8 +246,6 @@ TEST_CASE("GridSize comparison operators", "[strong_types][comparison]") {
     REQUIRE(size1 != size3);
   }
 }
-
-
 
 TEST_CASE("GridSpacing comparison operators", "[strong_types][comparison]") {
   SECTION("Equality operator") {

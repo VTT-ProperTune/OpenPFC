@@ -3,10 +3,10 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
-#include <openpfc/kernel/simulation/steppers/stepper_validation.hpp>
+#include <openpfc/kernel/field/composite_gradient.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/field/spectral_gradient.hpp>
-#include <openpfc/kernel/field/composite_gradient.hpp>
+#include <openpfc/kernel/simulation/steppers/stepper_validation.hpp>
 
 // Mock grad types for testing
 struct TestGrads {
@@ -24,7 +24,7 @@ public:
 // Mock models for testing
 class ValidScalarModel {
 public:
-  double rhs(double t, const TestGrads&) const { return 0.0; }
+  double rhs(double t, const TestGrads &) const { return 0.0; }
 };
 
 // Tuple protocol model
@@ -33,27 +33,28 @@ public:
   struct TupleReturn {
     double first;
     double second;
-    
+
     auto as_tuple() & { return std::tie(first, second); }
     auto as_tuple() const & { return std::tie(first, second); }
   };
-  
-  TupleReturn rhs(double t, const TestGrads&) const { return {0.0, 0.0}; }
+
+  TupleReturn rhs(double t, const TestGrads &) const { return {0.0, 0.0}; }
 };
 
 class ValidStdTupleModel {
 public:
-  std::tuple<double, double, double> rhs(double t, const TestGrads&) const { return {0.0, 0.0, 0.0}; }
+  std::tuple<double, double, double> rhs(double t, const TestGrads &) const {
+    return {0.0, 0.0, 0.0};
+  }
 };
 
 class InvalidReturnModel {
 public:
-  std::string rhs(double t, const TestGrads&) const { return "invalid"; }
+  std::string rhs(double t, const TestGrads &) const { return "invalid"; }
 };
 
 // Helper that matches MultiEulerStepper's template signature
-template <class Rhs, std::size_t N>
-class TestMultiStepper {
+template <class Rhs, std::size_t N> class TestMultiStepper {
 public:
   using RhsType = Rhs;
   static constexpr std::size_t field_count = N;
@@ -65,7 +66,8 @@ TEST_CASE("validate_rhs_signature accepts scalar return") {
 }
 
 TEST_CASE("validate_rhs_signature accepts tuple protocol return") {
-  pfc::sim::steppers::validate_rhs_signature<ValidTupleProtocolModel, MockEvaluator>();
+  pfc::sim::steppers::validate_rhs_signature<ValidTupleProtocolModel,
+                                             MockEvaluator>();
   SUCCEED();
 }
 
@@ -102,59 +104,72 @@ TEST_CASE("validate_spatial_compatibility accepts composite gradient") {
 TEST_CASE("validate_spatial_compatibility rejects unknown backend") {
   struct UnknownEvaluator {};
   REQUIRE_THROWS_AS(
-    pfc::sim::steppers::validate_spatial_compatibility<UnknownEvaluator>(),
-    pfc::sim::steppers::StepperValidationError
-  );
-  
+      pfc::sim::steppers::validate_spatial_compatibility<UnknownEvaluator>(),
+      pfc::sim::steppers::StepperValidationError);
+
   try {
     pfc::sim::steppers::validate_spatial_compatibility<UnknownEvaluator>();
     FAIL("Should have thrown StepperValidationError");
-  } catch (const pfc::sim::steppers::StepperValidationError& ex) {
-    REQUIRE(ex.error_type() == pfc::sim::steppers::StepperValidationError::ErrorType::IncompatibleBackend);
-    REQUIRE_THAT(ex.what(), Catch::Matchers::ContainsSubstring("not a recognized gradient backend"));
+  } catch (const pfc::sim::steppers::StepperValidationError &ex) {
+    REQUIRE(
+        ex.error_type() ==
+        pfc::sim::steppers::StepperValidationError::ErrorType::IncompatibleBackend);
+    REQUIRE_THAT(ex.what(), Catch::Matchers::ContainsSubstring(
+                                "not a recognized gradient backend"));
   }
 }
 
 TEST_CASE("validate_field_count accepts matching type and count") {
-  using ModelRhs = decltype(std::declval<ValidStdTupleModel&>().rhs(0.0, std::declval<const TestGrads&>()));
-  pfc::sim::steppers::validate_field_count<TestMultiStepper<ModelRhs, 3>, ValidStdTupleModel, MockEvaluator>();
+  using ModelRhs = decltype(std::declval<ValidStdTupleModel &>().rhs(
+      0.0, std::declval<const TestGrads &>()));
+  pfc::sim::steppers::validate_field_count<TestMultiStepper<ModelRhs, 3>,
+                                           ValidStdTupleModel, MockEvaluator>();
   SUCCEED();
 }
 
 TEST_CASE("validate_field_count rejects mismatched type") {
-  using WrongRhs = std::tuple<int, int, int>;  // Wrong type, same count
+  using WrongRhs = std::tuple<int, int, int>; // Wrong type, same count
   // This should fail to compile due to static_assert
   // Uncomment to verify error message:
-  // pfc::sim::steppers::validate_field_count<TestMultiStepper<WrongRhs, 3>, ValidStdTupleModel, MockEvaluator>();
+  // pfc::sim::steppers::validate_field_count<TestMultiStepper<WrongRhs, 3>,
+  // ValidStdTupleModel, MockEvaluator>();
   SUCCEED("Test verified by compilation failure when uncommented");
 }
 
 TEST_CASE("validate_field_count rejects mismatched count") {
-  using ModelRhs = decltype(std::declval<ValidStdTupleModel&>().rhs(0.0, std::declval<const TestGrads&>()));
+  using ModelRhs = decltype(std::declval<ValidStdTupleModel &>().rhs(
+      0.0, std::declval<const TestGrads &>()));
   // This should fail to compile due to static_assert
   // Uncomment to verify error message:
-  // pfc::sim::steppers::validate_field_count<TestMultiStepper<ModelRhs, 2>, ValidStdTupleModel, MockEvaluator>();
+  // pfc::sim::steppers::validate_field_count<TestMultiStepper<ModelRhs, 2>,
+  // ValidStdTupleModel, MockEvaluator>();
   SUCCEED("Test verified by compilation failure when uncommented");
 }
 
 TEST_CASE("stepper_validation_error type and message") {
   using namespace pfc::sim::steppers;
-  
+
   SECTION("SignatureMismatch error") {
-    StepperValidationError err(StepperValidationError::ErrorType::SignatureMismatch, "test message");
-    REQUIRE(err.error_type() == StepperValidationError::ErrorType::SignatureMismatch);
+    StepperValidationError err(StepperValidationError::ErrorType::SignatureMismatch,
+                               "test message");
+    REQUIRE(err.error_type() ==
+            StepperValidationError::ErrorType::SignatureMismatch);
     REQUIRE_THAT(err.what(), Catch::Matchers::Equals("test message"));
   }
-  
+
   SECTION("IncompatibleBackend error") {
-    StepperValidationError err(StepperValidationError::ErrorType::IncompatibleBackend, "backend error");
-    REQUIRE(err.error_type() == StepperValidationError::ErrorType::IncompatibleBackend);
+    StepperValidationError err(
+        StepperValidationError::ErrorType::IncompatibleBackend, "backend error");
+    REQUIRE(err.error_type() ==
+            StepperValidationError::ErrorType::IncompatibleBackend);
     REQUIRE_THAT(err.what(), Catch::Matchers::Equals("backend error"));
   }
-  
+
   SECTION("FieldCountMismatch error") {
-    StepperValidationError err(StepperValidationError::ErrorType::FieldCountMismatch, "field count error");
-    REQUIRE(err.error_type() == StepperValidationError::ErrorType::FieldCountMismatch);
+    StepperValidationError err(StepperValidationError::ErrorType::FieldCountMismatch,
+                               "field count error");
+    REQUIRE(err.error_type() ==
+            StepperValidationError::ErrorType::FieldCountMismatch);
     REQUIRE_THAT(err.what(), Catch::Matchers::Equals("field count error"));
   }
 }

@@ -218,14 +218,12 @@ TEST_CASE("inner D2 at widths 1,2,4,6,10 does not read poisoned halo",
     REQUIRE(pfc::field::fd::lookup_even_central_d2(2 * r, &st));
     for (int k = 0; k < n; ++k)
       for (int j = 0; j < n; ++j)
-        for (int i = 0; i < n; ++i)
-          u(i, j, k) = static_cast<double>(i + j + k);
+        for (int i = 0; i < n; ++i) u(i, j, k) = static_cast<double>(i + j + k);
     const double nan = std::nan("");
     for (int k = -r; k < n + r; ++k) {
       for (int j = -r; j < n + r; ++j) {
         for (int i = -r; i < n + r; ++i) {
-          const bool halo =
-              i < 0 || i >= n || j < 0 || j >= n || k < 0 || k >= n;
+          const bool halo = i < 0 || i >= n || j < 0 || j >= n || k < 0 || k >= n;
           if (halo) u(i, j, k) = nan;
         }
       }
@@ -288,13 +286,13 @@ TEST_CASE("for_each_coords fills every owned cell from physical coordinates",
       u, [](double x, double y, double z, double &v) { v = x + 2.0 * y + 3.0 * z; });
   field::for_each_owned(u, [&](int i, int j, int k) {
     const auto xyz = u.coords(i, j, k);
-    values_match &= u(i, j, k) == Catch::Approx(xyz[0] + 2.0 * xyz[1] + 3.0 * xyz[2]);
+    values_match &=
+        u(i, j, k) == Catch::Approx(xyz[0] + 2.0 * xyz[1] + 3.0 * xyz[2]);
   });
   REQUIRE(values_match);
 }
 
-TEST_CASE("data::Field operator() for Int3",
-          "[field][brick_iteration]") {
+TEST_CASE("data::Field operator() for Int3", "[field][brick_iteration]") {
   auto u = make_brick(3, /*hw=*/1);
   const pfc::Int3 idx{1, 2, 0};
   u(idx) = 42.0;

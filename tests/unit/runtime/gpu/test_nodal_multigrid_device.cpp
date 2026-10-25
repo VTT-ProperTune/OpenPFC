@@ -21,15 +21,15 @@
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/runtime/gpu/gpu_api.hpp>
+#include <openpfc/runtime/gpu/nodal_multigrid_gpu.hpp>
 #include <openpfc/solvers/field_operations.hpp>
 #include <openpfc/solvers/krylov.hpp>
-#include <openpfc/solvers/nodal_multigrid.hpp>
-#include <openpfc/solvers/nodal_dirichlet_multigrid.hpp>
 #include <openpfc/solvers/nodal_dirichlet_device_operator.hpp>
 #include <openpfc/solvers/nodal_dirichlet_device_transfers.hpp>
 #include <openpfc/solvers/nodal_dirichlet_device_vcycle.hpp>
 #include <openpfc/solvers/nodal_dirichlet_kernels.hpp>
-#include <openpfc/runtime/gpu/nodal_multigrid_gpu.hpp>
+#include <openpfc/solvers/nodal_dirichlet_multigrid.hpp>
+#include <openpfc/solvers/nodal_multigrid.hpp>
 
 namespace {
 
@@ -81,43 +81,36 @@ double rel_diff(const HostF &h, DevF &d) {
   return std::sqrt(g[0] / g[1]);
 }
 
-
 // Independent physical Galerkin reference, deliberately NOT formed as b=A*u.
 // Free-node global index i corresponds to physical Q1 node i+1.
 double dirichlet_manufactured_mode(double x, double y, double z) {
   const double pi = std::acos(-1.0);
-  return std::sin(pi * x) * std::sin(pi * y / 1.3) *
-         std::sin(pi * z / 0.7);
+  return std::sin(pi * x) * std::sin(pi * y / 1.3) * std::sin(pi * z / 0.7);
 }
 
-double dirichlet_manufactured_load(int i, int j, int k,
-                                   const pfc::Real3 &h) {
+double dirichlet_manufactured_load(int i, int j, int k, const pfc::Real3 &h) {
   const double pi = std::acos(-1.0);
-  const double lambda = pi * pi * (1.0 + 1.0 / (1.3 * 1.3) +
-                                   1.0 / (0.7 * 0.7));
-  const double q[2] = {0.5 - 0.5 / std::sqrt(3.0),
-                       0.5 + 0.5 / std::sqrt(3.0)};
+  const double lambda = pi * pi * (1.0 + 1.0 / (1.3 * 1.3) + 1.0 / (0.7 * 0.7));
+  const double q[2] = {0.5 - 0.5 / std::sqrt(3.0), 0.5 + 0.5 / std::sqrt(3.0)};
   const int node[3] = {i + 1, j + 1, k + 1};
   double rhs = 0.0;
   for (int dz = 0; dz < 2; ++dz)
     for (int dy = 0; dy < 2; ++dy)
       for (int dx = 0; dx < 2; ++dx) {
-        const int element[3] = {node[0] - 1 + dx,
-                                node[1] - 1 + dy,
+        const int element[3] = {node[0] - 1 + dx, node[1] - 1 + dy,
                                 node[2] - 1 + dz};
         for (int qz = 0; qz < 2; ++qz)
           for (int qy = 0; qy < 2; ++qy)
             for (int qx = 0; qx < 2; ++qx) {
-              const double coord[3] = {
-                  (element[0] + q[qx]) * h[0],
-                  (element[1] + q[qy]) * h[1],
-                  (element[2] + q[qz]) * h[2]};
+              const double coord[3] = {(element[0] + q[qx]) * h[0],
+                                       (element[1] + q[qy]) * h[1],
+                                       (element[2] + q[qz]) * h[2]};
               const double phi = (dx == 0 ? q[qx] : 1.0 - q[qx]) *
                                  (dy == 0 ? q[qy] : 1.0 - q[qy]) *
                                  (dz == 0 ? q[qz] : 1.0 - q[qz]);
-              rhs += lambda * dirichlet_manufactured_mode(
-                  coord[0], coord[1], coord[2]) *
-                  phi * (h[0] * h[1] * h[2] / 8.0);
+              rhs += lambda *
+                     dirichlet_manufactured_mode(coord[0], coord[1], coord[2]) *
+                     phi * (h[0] * h[1] * h[2] / 8.0);
             }
       }
   return rhs;
@@ -125,34 +118,30 @@ double dirichlet_manufactured_load(int i, int j, int k,
 
 // This bounded, test-only MPI gather is an INDEPENDENT physical-error oracle.
 // It is never called by production GPU operators, V-cycles or preconditioners.
-std::vector<double> gathered_dirichlet_free_solution(
-    DevF &device, const pfc::Int3 &n) {
-  const std::size_t total =
-      static_cast<std::size_t>(n[0]) * n[1] * n[2];
+std::vector<double> gathered_dirichlet_free_solution(DevF &device,
+                                                     const pfc::Int3 &n) {
+  const std::size_t total = static_cast<std::size_t>(n[0]) * n[1] * n[2];
   std::vector<double> local(total, 0.0), global(total, 0.0);
   const auto box = device.box();
   device.with_host_read([&](const double *values, std::size_t) {
     for (int k = 0; k < box.size[2]; ++k)
       for (int j = 0; j < box.size[1]; ++j)
         for (int i = 0; i < box.size[0]; ++i) {
-          const int gi = box.low[0] + i, gj = box.low[1] + j,
-                    gk = box.low[2] + k;
-          local[static_cast<std::size_t>(gi) + n[0] *
-                (static_cast<std::size_t>(gj) +
-                 static_cast<std::size_t>(n[1]) * gk)] =
+          const int gi = box.low[0] + i, gj = box.low[1] + j, gk = box.low[2] + k;
+          local[static_cast<std::size_t>(gi) +
+                n[0] * (static_cast<std::size_t>(gj) +
+                        static_cast<std::size_t>(n[1]) * gk)] =
               values[device.idx(i, j, k)];
         }
   });
-  MPI_Allreduce(local.data(), global.data(), static_cast<int>(total),
-                MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(local.data(), global.data(), static_cast<int>(total), MPI_DOUBLE,
+                MPI_SUM, MPI_COMM_WORLD);
   return global;
 }
 
-double independent_dirichlet_physical_l2(
-    const pfc::Int3 &n, const pfc::Real3 &h,
-    const std::vector<double> &free_nodes) {
-  const double q[2] = {0.5 - 0.5 / std::sqrt(3.0),
-                       0.5 + 0.5 / std::sqrt(3.0)};
+double independent_dirichlet_physical_l2(const pfc::Int3 &n, const pfc::Real3 &h,
+                                         const std::vector<double> &free_nodes) {
+  const double q[2] = {0.5 - 0.5 / std::sqrt(3.0), 0.5 + 0.5 / std::sqrt(3.0)};
   double squared = 0.0;
   for (int ez = 0; ez <= n[2]; ++ez)
     for (int ey = 0; ey <= n[1]; ++ey)
@@ -165,25 +154,21 @@ double independent_dirichlet_physical_l2(
               for (int az = 0; az < 2; ++az)
                 for (int ay = 0; ay < 2; ++ay)
                   for (int ax = 0; ax < 2; ++ax) {
-                    const int i = ex + ax - 1, j = ey + ay - 1,
-                              k = ez + az - 1;
-                    if (i < 0 || j < 0 || k < 0 ||
-                        i >= n[0] || j >= n[1] || k >= n[2])
+                    const int i = ex + ax - 1, j = ey + ay - 1, k = ez + az - 1;
+                    if (i < 0 || j < 0 || k < 0 || i >= n[0] || j >= n[1] ||
+                        k >= n[2])
                       continue;
-                    const double basis =
-                        (ax ? xi[0] : 1.0 - xi[0]) *
-                        (ay ? xi[1] : 1.0 - xi[1]) *
-                        (az ? xi[2] : 1.0 - xi[2]);
-                    const std::size_t id =
-                        static_cast<std::size_t>(i) +
-                        static_cast<std::size_t>(n[0]) *
-                        (static_cast<std::size_t>(j) +
-                         static_cast<std::size_t>(n[1]) * k);
+                    const double basis = (ax ? xi[0] : 1.0 - xi[0]) *
+                                         (ay ? xi[1] : 1.0 - xi[1]) *
+                                         (az ? xi[2] : 1.0 - xi[2]);
+                    const std::size_t id = static_cast<std::size_t>(i) +
+                                           static_cast<std::size_t>(n[0]) *
+                                               (static_cast<std::size_t>(j) +
+                                                static_cast<std::size_t>(n[1]) * k);
                     interpolated += basis * free_nodes[id];
                   }
               const double expected = dirichlet_manufactured_mode(
-                  (ex + xi[0]) * h[0], (ey + xi[1]) * h[1],
-                  (ez + xi[2]) * h[2]);
+                  (ex + xi[0]) * h[0], (ey + xi[1]) * h[1], (ez + xi[2]) * h[2]);
               const double error = interpolated - expected;
               squared += error * error * h[0] * h[1] * h[2] / 8.0;
             }
@@ -272,7 +257,6 @@ TEST_CASE("NodalMultigrid device operator, V-cycle and PCG match the host",
       }
 }
 
-
 TEST_CASE("CUDA/HIP Dirichlet Q1 row launcher matches shared host kernel",
           "[nodal_dirichlet][device]") {
   if (!mechanics_test::available()) SKIP("GPU unavailable");
@@ -311,11 +295,11 @@ TEST_CASE("CUDA/HIP Dirichlet Q1 row launcher matches shared host kernel",
   const auto weights =
       pfc::solvers::nmg::dirichlet::make_weights(spacing, 1.0, 0.41);
 #if defined(OPENPFC_TEST_MECHANICS_HIP)
-  pfc::solvers::gpu::nmg::dirichlet_apply_hip(
-      shape, weights, device.data(), device_out.data());
+  pfc::solvers::gpu::nmg::dirichlet_apply_hip(shape, weights, device.data(),
+                                              device_out.data());
 #else
-  pfc::solvers::gpu::nmg::dirichlet_apply_cuda(
-      shape, weights, device.data(), device_out.data());
+  pfc::solvers::gpu::nmg::dirichlet_apply_cuda(shape, weights, device.data(),
+                                               device_out.data());
 #endif
   device_out.note_device_write();
 
@@ -345,11 +329,11 @@ TEST_CASE("CUDA/HIP Dirichlet Q1 row launcher matches shared host kernel",
   });
   rhs.sync_to_device();
 #if defined(OPENPFC_TEST_MECHANICS_HIP)
-  pfc::solvers::gpu::nmg::dirichlet_jacobi_hip(
-      shape, weights, device.data(), rhs.data(), next.data(), 0.19);
+  pfc::solvers::gpu::nmg::dirichlet_jacobi_hip(shape, weights, device.data(),
+                                               rhs.data(), next.data(), 0.19);
 #else
-  pfc::solvers::gpu::nmg::dirichlet_jacobi_cuda(
-      shape, weights, device.data(), rhs.data(), next.data(), 0.19);
+  pfc::solvers::gpu::nmg::dirichlet_jacobi_cuda(shape, weights, device.data(),
+                                                rhs.data(), next.data(), 0.19);
 #endif
   next.note_device_write();
   double jacobi_error = 0.0;
@@ -360,8 +344,8 @@ TEST_CASE("CUDA/HIP Dirichlet Q1 row launcher matches shared host kernel",
           const double b = 0.17 + 0.01 * (i + 2 * j + 3 * k);
           const double expected = pfc::solvers::nmg::dirichlet::jacobi(
               shape, weights, host.data(), host(i, j, k), b, 0.19, i, j, k);
-          jacobi_error = std::max(jacobi_error,
-                                   std::abs(expected - p[next.idx(i, j, k)]));
+          jacobi_error =
+              std::max(jacobi_error, std::abs(expected - p[next.idx(i, j, k)]));
         }
   });
   REQUIRE(jacobi_error < 1e-12);
@@ -369,9 +353,8 @@ TEST_CASE("CUDA/HIP Dirichlet Q1 row launcher matches shared host kernel",
   // Adjacent Q1 free-node spaces. The launchers own only numerical point
   // arithmetic; the caller's Field handles device residency and padding.
   const pfc::Int3 nc{7, 7, 15};
-  const auto domc = pfc::domain::with_spacing(
-      nc, {2 * h[0], 2 * h[1], 2 * h[2]},
-      {false, false, false});
+  const auto domc = pfc::domain::with_spacing(nc, {2 * h[0], 2 * h[1], 2 * h[2]},
+                                              {false, false, false});
   const auto decc = pfc::decomposition::create(domc, pfc::Int3{1, 1, 1});
   const auto boxc = pfc::decomposition::local_box(decc, 0);
   DevF coarse(domc, boxc, 2), reduced(domc, boxc, 2), prolongated(dom, box, 2);
@@ -382,8 +365,9 @@ TEST_CASE("CUDA/HIP Dirichlet Q1 row launcher matches shared host kernel",
     coarseshape.low[a] = 0;
   }
   std::vector<double> coarse_host(
-      pfc::solvers::nmg::padded_size(
-          coarseshape, pfc::solvers::nmg::dirichlet::kHalo), 1111.0);
+      pfc::solvers::nmg::padded_size(coarseshape,
+                                     pfc::solvers::nmg::dirichlet::kHalo),
+      1111.0);
   for (int k = 0; k < nc[2]; ++k)
     for (int j = 0; j < nc[1]; ++j)
       for (int i = 0; i < nc[0]; ++i)
@@ -395,20 +379,19 @@ TEST_CASE("CUDA/HIP Dirichlet Q1 row launcher matches shared host kernel",
     std::copy(coarse_host.begin(), coarse_host.end(), p);
   });
   coarse.sync_to_device();
-  prolongated.with_host_view([&](double *p, std::size_t size) {
-    std::fill(p, p + size, 0.0);
-  });
+  prolongated.with_host_view(
+      [&](double *p, std::size_t size) { std::fill(p, p + size, 0.0); });
   prolongated.sync_to_device();
 #if defined(OPENPFC_TEST_MECHANICS_HIP)
-  pfc::solvers::gpu::nmg::dirichlet_restrict_hip(
-      shape, device.data(), coarseshape, reduced.data());
-  pfc::solvers::gpu::nmg::dirichlet_prolong_hip(
-      shape, prolongated.data(), coarseshape, coarse.data());
+  pfc::solvers::gpu::nmg::dirichlet_restrict_hip(shape, device.data(), coarseshape,
+                                                 reduced.data());
+  pfc::solvers::gpu::nmg::dirichlet_prolong_hip(shape, prolongated.data(),
+                                                coarseshape, coarse.data());
 #else
-  pfc::solvers::gpu::nmg::dirichlet_restrict_cuda(
-      shape, device.data(), coarseshape, reduced.data());
-  pfc::solvers::gpu::nmg::dirichlet_prolong_cuda(
-      shape, prolongated.data(), coarseshape, coarse.data());
+  pfc::solvers::gpu::nmg::dirichlet_restrict_cuda(shape, device.data(), coarseshape,
+                                                  reduced.data());
+  pfc::solvers::gpu::nmg::dirichlet_prolong_cuda(shape, prolongated.data(),
+                                                 coarseshape, coarse.data());
 #endif
   reduced.note_device_write();
   prolongated.note_device_write();
@@ -417,10 +400,10 @@ TEST_CASE("CUDA/HIP Dirichlet Q1 row launcher matches shared host kernel",
     for (int k = 0; k < nc[2]; ++k)
       for (int j = 0; j < nc[1]; ++j)
         for (int i = 0; i < nc[0]; ++i) {
-          const double expected = pfc::solvers::nmg::dirichlet::restrict_pt(
-              shape, host.data(), i, j, k);
-          restriction_error = std::max(
-              restriction_error, std::abs(expected - p[reduced.idx(i, j, k)]));
+          const double expected =
+              pfc::solvers::nmg::dirichlet::restrict_pt(shape, host.data(), i, j, k);
+          restriction_error = std::max(restriction_error,
+                                       std::abs(expected - p[reduced.idx(i, j, k)]));
         }
   });
   prolongated.with_host_read([&](const double *p, std::size_t) {
@@ -430,14 +413,12 @@ TEST_CASE("CUDA/HIP Dirichlet Q1 row launcher matches shared host kernel",
           const double expected = pfc::solvers::nmg::dirichlet::prolong_p(
               coarseshape, coarse_host.data(), i, j, k);
           prolongation_error = std::max(
-              prolongation_error,
-              std::abs(expected - p[prolongated.idx(i, j, k)]));
+              prolongation_error, std::abs(expected - p[prolongated.idx(i, j, k)]));
         }
   });
   REQUIRE(restriction_error < 1e-12);
   REQUIRE(prolongation_error < 1e-12);
 }
-
 
 TEST_CASE("Dirichlet Q1 device FieldHalo operator matches host across rank bricks",
           "[nodal_dirichlet][device]") {
@@ -454,15 +435,13 @@ TEST_CASE("Dirichlet Q1 device FieldHalo operator matches host across rank brick
   // the device adapter owns no solver hierarchy and uses OpenPFC FieldHalo.
   const pfc::Int3 n{31, 31, 31};
   const pfc::Real3 h{1.0 / 32, 1.3 / 32, 0.7 / 32};
-  const auto domain = pfc::domain::with_spacing(
-      n, h, {false, false, false});
+  const auto domain = pfc::domain::with_spacing(n, h, {false, false, false});
   const auto decomp = ranks == 4
-      ? pfc::decomposition::create(domain, pfc::Int3{2, 2, 1})
-      : pfc::decomposition::create(domain, ranks);
+                          ? pfc::decomposition::create(domain, pfc::Int3{2, 2, 1})
+                          : pfc::decomposition::create(domain, ranks);
   const auto box = pfc::decomposition::local_box(decomp, rank);
 
-  pfc::solvers::NodalDirichletMultigrid host_solver(
-      decomp, rank, MPI_COMM_WORLD);
+  pfc::solvers::NodalDirichletMultigrid host_solver(decomp, rank, MPI_COMM_WORLD);
   pfc::solvers::NodalDirichletDeviceOperator<mechanics_test::Space> device_action(
       decomp, rank, MPI_COMM_WORLD);
   REQUIRE(device_action.local_unknowns() ==
@@ -470,8 +449,7 @@ TEST_CASE("Dirichlet Q1 device FieldHalo operator matches host across rank brick
 
   // Different external halo widths and repeated field updates probe both
   // the owned-copy staging and the residency/halo invalidation contract.
-  for (const auto widths : {std::array<int, 2>{1, 1},
-                            std::array<int, 2>{0, 2},
+  for (const auto widths : {std::array<int, 2>{1, 1}, std::array<int, 2>{0, 2},
                             std::array<int, 2>{2, 0}}) {
     HostF hi(domain, box, widths[0]), ho(domain, box, widths[1]);
     DevF di(domain, box, widths[0]), doutput(domain, box, widths[1]);
@@ -481,9 +459,8 @@ TEST_CASE("Dirichlet Q1 device FieldHalo operator matches host across rank brick
       });
       host_solver.apply_operator(hi, ho);
       device_action.apply_operator(di, doutput);
-      INFO("MPI ranks " << ranks << ", input halo " << widths[0]
-                         << ", output halo " << widths[1]
-                         << ", sample " << sample_kind);
+      INFO("MPI ranks " << ranks << ", input halo " << widths[0] << ", output halo "
+                        << widths[1] << ", sample " << sample_kind);
       REQUIRE(rel_diff(ho, doutput) <= 1e-12);
     }
   }
@@ -493,9 +470,7 @@ TEST_CASE("Dirichlet Q1 device FieldHalo operator matches host across rank brick
   HostF alias_host(domain, box, 1);
   DevF alias_device(domain, box, 1);
   fill_both(alias_host, alias_device,
-            [](int gx, int gy, int gz) {
-              return value(12, gx, gy, gz, 706u);
-            });
+            [](int gx, int gy, int gz) { return value(12, gx, gy, gz, 706u); });
   HostF expected(domain, box, 1);
   host_solver.apply_operator(alias_host, expected);
   device_action.apply_operator(alias_device, alias_device);
@@ -504,29 +479,26 @@ TEST_CASE("Dirichlet Q1 device FieldHalo operator matches host across rank brick
   // A device-resident unpreconditioned CG reference exercises the existing
   // FieldOperations and the rank-owned action, not a premature device V-cycle.
   // The exact discrete solution is known independently from how b is formed.
-  pfc::solvers::FieldOperations<mechanics_test::Space> ops(
-      domain, box, 1, 1, MPI_COMM_WORLD);
+  pfc::solvers::FieldOperations<mechanics_test::Space> ops(domain, box, 1, 1,
+                                                           MPI_COMM_WORLD);
   auto exact = ops.make(ops.size());
   auto rhs = ops.make(ops.size());
   auto solution = ops.make(ops.size());
   HostF host_exact(domain, box, 1);
   fill_both(host_exact, exact[0],
-            [](int gx, int gy, int gz) {
-              return value(19, gx, gy, gz, 713u);
-            });
+            [](int gx, int gy, int gz) { return value(19, gx, gy, gz, 713u); });
   device_action.apply_operator(exact[0], rhs[0]);
   pfc::solvers::KrylovControls controls;
   controls.preconditioning = pfc::solvers::Preconditioning::None;
   controls.relative_tolerance = 1e-8;
   controls.maximum_iterations = 400;
   const auto result = pfc::solvers::cg(
-      ops, [&](const auto &u, auto &out) {
-        device_action.apply_operator(u[0], out[0]);
-      }, rhs, solution, controls);
+      ops,
+      [&](const auto &u, auto &out) { device_action.apply_operator(u[0], out[0]); },
+      rhs, solution, controls);
   REQUIRE(result.converged());
   REQUIRE(rel_diff(host_exact, solution[0]) <= 5e-6);
 }
-
 
 TEST_CASE("Dirichlet Q1 device nested FieldHalo P/Pt match host bricks",
           "[nodal_dirichlet][device]") {
@@ -538,105 +510,98 @@ TEST_CASE("Dirichlet Q1 device nested FieldHalo P/Pt match host bricks",
     SKIP("device nested-Q1 MPI parity covers 1, 2 or 4 ranks");
 
   // Check the 2:1 element-count elongated family as well as cubic Q1.
-  for (const pfc::Int3 nf :
-       {pfc::Int3{31, 31, 31}, pfc::Int3{31, 31, 63}}) {
-  const pfc::Int3 nc{(nf[0] - 1) / 2, (nf[1] - 1) / 2, (nf[2] - 1) / 2};
-  const pfc::Real3 hf{1.0 / 32, 1.3 / 32,
-                      0.7 / static_cast<double>(nf[2] + 1)};
-  const pfc::Real3 hc{2 * hf[0], 2 * hf[1], 2 * hf[2]};
-  const auto df = pfc::domain::with_spacing(nf, hf, {false, false, false});
-  const auto dc = pfc::domain::with_spacing(nc, hc, {false, false, false});
-  const pfc::Int3 process_grid = ranks == 4 ? pfc::Int3{2, 2, 1}
-                                            : pfc::Int3{1, 1, ranks};
-  const auto decomp_f = pfc::decomposition::create(df, process_grid);
-  const auto decomp_c = pfc::decomposition::create(dc, process_grid);
-  const auto bf = pfc::decomposition::local_box(decomp_f, rank);
-  const auto bc = pfc::decomposition::local_box(decomp_c, rank);
+  for (const pfc::Int3 nf : {pfc::Int3{31, 31, 31}, pfc::Int3{31, 31, 63}}) {
+    const pfc::Int3 nc{(nf[0] - 1) / 2, (nf[1] - 1) / 2, (nf[2] - 1) / 2};
+    const pfc::Real3 hf{1.0 / 32, 1.3 / 32, 0.7 / static_cast<double>(nf[2] + 1)};
+    const pfc::Real3 hc{2 * hf[0], 2 * hf[1], 2 * hf[2]};
+    const auto df = pfc::domain::with_spacing(nf, hf, {false, false, false});
+    const auto dc = pfc::domain::with_spacing(nc, hc, {false, false, false});
+    const pfc::Int3 process_grid =
+        ranks == 4 ? pfc::Int3{2, 2, 1} : pfc::Int3{1, 1, ranks};
+    const auto decomp_f = pfc::decomposition::create(df, process_grid);
+    const auto decomp_c = pfc::decomposition::create(dc, process_grid);
+    const auto bf = pfc::decomposition::local_box(decomp_f, rank);
+    const auto bc = pfc::decomposition::local_box(decomp_c, rank);
 
-  pfc::solvers::NodalDirichletDeviceTransfers<mechanics_test::Space> transfer(
-      decomp_f, decomp_c, rank, MPI_COMM_WORLD);
-  REQUIRE(transfer.fine_owned_box().size == bf.size);
-  REQUIRE(transfer.coarse_owned_box().size == bc.size);
+    pfc::solvers::NodalDirichletDeviceTransfers<mechanics_test::Space> transfer(
+        decomp_f, decomp_c, rank, MPI_COMM_WORLD);
+    REQUIRE(transfer.fine_owned_box().size == bf.size);
+    REQUIRE(transfer.coarse_owned_box().size == bc.size);
 
-  pfc::solvers::FieldOperations<pfc::HostSpace> fops(df, bf, 1, 2,
-                                                     MPI_COMM_WORLD);
-  pfc::solvers::FieldOperations<pfc::HostSpace> cops(dc, bc, 1, 2,
-                                                     MPI_COMM_WORLD);
-  pfc::comm::HaloExchangeOptions options;
-  options.connectivity = pfc::comm::HaloConnectivity::Full;
-  pfc::solvers::FieldHalo<pfc::HostSpace> fh(
-      fops, decomp_f, rank, MPI_COMM_WORLD, options);
-  pfc::solvers::FieldHalo<pfc::HostSpace> ch(
-      cops, decomp_c, rank, MPI_COMM_WORLD, options);
-  pfc::solvers::nmg::Level F, C;
-  for (int d = 0; d < 3; ++d) {
-    F.n[d] = bf.size[d]; F.low[d] = bf.low[d]; F.gn[d] = nf[d];
-    C.n[d] = bc.size[d]; C.low[d] = bc.low[d]; C.gn[d] = nc[d];
-  }
+    pfc::solvers::FieldOperations<pfc::HostSpace> fops(df, bf, 1, 2, MPI_COMM_WORLD);
+    pfc::solvers::FieldOperations<pfc::HostSpace> cops(dc, bc, 1, 2, MPI_COMM_WORLD);
+    pfc::comm::HaloExchangeOptions options;
+    options.connectivity = pfc::comm::HaloConnectivity::Full;
+    pfc::solvers::FieldHalo<pfc::HostSpace> fh(fops, decomp_f, rank, MPI_COMM_WORLD,
+                                               options);
+    pfc::solvers::FieldHalo<pfc::HostSpace> ch(cops, decomp_c, rank, MPI_COMM_WORLD,
+                                               options);
+    pfc::solvers::nmg::Level F, C;
+    for (int d = 0; d < 3; ++d) {
+      F.n[d] = bf.size[d];
+      F.low[d] = bf.low[d];
+      F.gn[d] = nf[d];
+      C.n[d] = bc.size[d];
+      C.low[d] = bc.low[d];
+      C.gn[d] = nc[d];
+    }
 
-  HostF source_h(df, bf, 0), correction_h(dc, bc, 1);
-  DevF source_d(df, bf, 0), correction_d(dc, bc, 1);
-  HostF host_coarse(dc, bc, 0), host_fine(df, bf, 1);
-  DevF device_coarse(dc, bc, 0), device_fine(df, bf, 1);
+    HostF source_h(df, bf, 0), correction_h(dc, bc, 1);
+    DevF source_d(df, bf, 0), correction_d(dc, bc, 1);
+    HostF host_coarse(dc, bc, 0), host_fine(df, bf, 1);
+    DevF device_coarse(dc, bc, 0), device_fine(df, bf, 1);
 
-  for (int trial = 0; trial < 2; ++trial) {
-    fill_both(source_h, source_d, [trial](int x, int y, int z) {
-      return value(10 + trial, x, y, z, 1201u);
-    });
-    fill_both(correction_h, correction_d, [trial](int x, int y, int z) {
-      return value(20 + trial, x, y, z, 1601u);
-    });
-    fill_both(host_fine, device_fine, [trial](int x, int y, int z) {
-      return value(30 + trial, x, y, z, 1801u);
-    });
+    for (int trial = 0; trial < 2; ++trial) {
+      fill_both(source_h, source_d, [trial](int x, int y, int z) {
+        return value(10 + trial, x, y, z, 1201u);
+      });
+      fill_both(correction_h, correction_d, [trial](int x, int y, int z) {
+        return value(20 + trial, x, y, z, 1601u);
+      });
+      fill_both(host_fine, device_fine, [trial](int x, int y, int z) {
+        return value(30 + trial, x, y, z, 1801u);
+      });
 
-    auto &rf = fh.scratch()[0];
-    std::fill(rf.vec().begin(), rf.vec().end(), -1024.0);
-    for (int z = 0; z < bf.size[2]; ++z)
-      for (int y = 0; y < bf.size[1]; ++y)
-        for (int x = 0; x < bf.size[0]; ++x)
-          rf(x, y, z) = source_h(x, y, z);
-    fh.exchange();
+      auto &rf = fh.scratch()[0];
+      std::fill(rf.vec().begin(), rf.vec().end(), -1024.0);
+      for (int z = 0; z < bf.size[2]; ++z)
+        for (int y = 0; y < bf.size[1]; ++y)
+          for (int x = 0; x < bf.size[0]; ++x) rf(x, y, z) = source_h(x, y, z);
+      fh.exchange();
 
-    auto &uc = ch.scratch()[0];
-    std::fill(uc.vec().begin(), uc.vec().end(), 2048.0);
-    for (int z = 0; z < bc.size[2]; ++z)
-      for (int y = 0; y < bc.size[1]; ++y)
-        for (int x = 0; x < bc.size[0]; ++x)
-          uc(x, y, z) = correction_h(x, y, z);
-    ch.exchange();
+      auto &uc = ch.scratch()[0];
+      std::fill(uc.vec().begin(), uc.vec().end(), 2048.0);
+      for (int z = 0; z < bc.size[2]; ++z)
+        for (int y = 0; y < bc.size[1]; ++y)
+          for (int x = 0; x < bc.size[0]; ++x) uc(x, y, z) = correction_h(x, y, z);
+      ch.exchange();
 
-    for (int z = 0; z < bc.size[2]; ++z)
-      for (int y = 0; y < bc.size[1]; ++y)
-        for (int x = 0; x < bc.size[0]; ++x)
-          host_coarse(x, y, z) =
-              pfc::solvers::nmg::dirichlet::restrict_pt(
-                  F, rf.data(), bc.low[0] + x, bc.low[1] + y,
-                  bc.low[2] + z);
+      for (int z = 0; z < bc.size[2]; ++z)
+        for (int y = 0; y < bc.size[1]; ++y)
+          for (int x = 0; x < bc.size[0]; ++x)
+            host_coarse(x, y, z) = pfc::solvers::nmg::dirichlet::restrict_pt(
+                F, rf.data(), bc.low[0] + x, bc.low[1] + y, bc.low[2] + z);
 
-    for (int z = 0; z < bf.size[2]; ++z)
-      for (int y = 0; y < bf.size[1]; ++y)
-        for (int x = 0; x < bf.size[0]; ++x)
-          host_fine(x, y, z) +=
-              pfc::solvers::nmg::dirichlet::prolong_p(
-                  C, uc.data(), bf.low[0] + x, bf.low[1] + y,
-                  bf.low[2] + z);
+      for (int z = 0; z < bf.size[2]; ++z)
+        for (int y = 0; y < bf.size[1]; ++y)
+          for (int x = 0; x < bf.size[0]; ++x)
+            host_fine(x, y, z) += pfc::solvers::nmg::dirichlet::prolong_p(
+                C, uc.data(), bf.low[0] + x, bf.low[1] + y, bf.low[2] + z);
 
-    transfer.restrict_pt(source_d, device_coarse);
-    transfer.prolong_add(correction_d, device_fine);
-    INFO("MPI ranks " << ranks << " process grid " << process_grid[0]
-                      << "x" << process_grid[1] << "x" << process_grid[2]
-                      << ", trial " << trial);
-    REQUIRE(rel_diff(host_coarse, device_coarse) <= 1e-12);
-    REQUIRE(rel_diff(host_fine, device_fine) <= 1e-12);
-  }
+      transfer.restrict_pt(source_d, device_coarse);
+      transfer.prolong_add(correction_d, device_fine);
+      INFO("MPI ranks " << ranks << " process grid " << process_grid[0] << "x"
+                        << process_grid[1] << "x" << process_grid[2] << ", trial "
+                        << trial);
+      REQUIRE(rel_diff(host_coarse, device_coarse) <= 1e-12);
+      REQUIRE(rel_diff(host_fine, device_fine) <= 1e-12);
+    }
   }
 }
 
-
-
-TEST_CASE("CUDA/HIP two-level Dirichlet Q1 V-cycle matches host and preconditions CG",
-          "[nodal_dirichlet][device]") {
+TEST_CASE(
+    "CUDA/HIP two-level Dirichlet Q1 V-cycle matches host and preconditions CG",
+    "[nodal_dirichlet][device]") {
   if (!mechanics_test::available()) SKIP("GPU unavailable");
   int rank = 0, ranks = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -649,16 +614,14 @@ TEST_CASE("CUDA/HIP two-level Dirichlet Q1 V-cycle matches host and precondition
   const pfc::Real3 hc{2 * hf[0], 2 * hf[1], 2 * hf[2]};
   const auto fd = pfc::domain::with_spacing(nf, hf, {false, false, false});
   const auto cd = pfc::domain::with_spacing(nc, hc, {false, false, false});
-  const pfc::Int3 proc = ranks == 4 ? pfc::Int3{2, 2, 1}
-                                    : pfc::Int3{1, 1, ranks};
+  const pfc::Int3 proc = ranks == 4 ? pfc::Int3{2, 2, 1} : pfc::Int3{1, 1, ranks};
   const auto fdec = pfc::decomposition::create(fd, proc);
   const auto cdec = pfc::decomposition::create(cd, proc);
   const auto box = pfc::decomposition::local_box(fdec, rank);
-  using Vcycle = pfc::solvers::NodalDirichletDeviceTwoLevelVcycle<
-      mechanics_test::Space>;
+  using Vcycle =
+      pfc::solvers::NodalDirichletDeviceTwoLevelVcycle<mechanics_test::Space>;
   Vcycle device_vcycle(fdec, cdec, rank, MPI_COMM_WORLD);
-  pfc::solvers::NodalDirichletMultigrid host_vcycle(
-      fdec, rank, MPI_COMM_WORLD);
+  pfc::solvers::NodalDirichletMultigrid host_vcycle(fdec, rank, MPI_COMM_WORLD);
   pfc::solvers::NodalDirichletDeviceOperator<mechanics_test::Space> A(
       fdec, rank, MPI_COMM_WORLD);
   REQUIRE(device_vcycle.coarse_unknowns() == 343);
@@ -677,17 +640,13 @@ TEST_CASE("CUDA/HIP two-level Dirichlet Q1 V-cycle matches host and precondition
 
   // A fixed SPD preconditioner must be symmetric and positive for
   // independent fields, not just produce a small residual after PCG.
-  pfc::solvers::FieldOperations<mechanics_test::Space> ops(
-      fd, box, 1, 1, MPI_COMM_WORLD);
+  pfc::solvers::FieldOperations<mechanics_test::Space> ops(fd, box, 1, 1,
+                                                           MPI_COMM_WORLD);
   auto u = ops.make(ops.size()), v = ops.make(ops.size());
   auto mu = ops.make(ops.size()), mv = ops.make(ops.size());
   HostF hu(fd, box, 1), hv(fd, box, 1);
-  fill_both(hu, u[0], [](int x, int y, int z) {
-    return value(61, x, y, z, 5001u);
-  });
-  fill_both(hv, v[0], [](int x, int y, int z) {
-    return value(62, x, y, z, 6001u);
-  });
+  fill_both(hu, u[0], [](int x, int y, int z) { return value(61, x, y, z, 5001u); });
+  fill_both(hv, v[0], [](int x, int y, int z) { return value(62, x, y, z, 6001u); });
   device_vcycle.apply(u[0], mu[0]);
   device_vcycle.apply(v[0], mv[0]);
   const double uMv = ops.dot(u, mv), vMu = ops.dot(v, mu);
@@ -703,28 +662,22 @@ TEST_CASE("CUDA/HIP two-level Dirichlet Q1 V-cycle matches host and precondition
   auto exact = ops.make(ops.size());
   auto solution = ops.make(ops.size());
   HostF host_exact(fd, box, 1);
-  fill_both(host_exact, exact[0], [](int gx, int gy, int gz) {
-    return value(53, gx, gy, gz, 4001u);
-  });
+  fill_both(host_exact, exact[0],
+            [](int gx, int gy, int gz) { return value(53, gx, gy, gz, 4001u); });
   A.apply_operator(exact[0], rhs[0]);
   pfc::solvers::KrylovControls ctrl;
   ctrl.relative_tolerance = 1e-10;
   ctrl.maximum_iterations = 80;
   const auto result = pfc::solvers::cg(
-      ops,
-      [&](const auto &u, auto &out) { A.apply_operator(u[0], out[0]); },
-      rhs, solution, ctrl,
-      [&](const auto &r, auto &z, int) {
-        device_vcycle.apply(r[0], z[0]);
-      });
-  INFO("two-level Dirichlet PCG on " << ranks
-                                    << " ranks, iterations " << result.iterations);
+      ops, [&](const auto &u, auto &out) { A.apply_operator(u[0], out[0]); }, rhs,
+      solution, ctrl,
+      [&](const auto &r, auto &z, int) { device_vcycle.apply(r[0], z[0]); });
+  INFO("two-level Dirichlet PCG on " << ranks << " ranks, iterations "
+                                     << result.iterations);
   REQUIRE(result.converged());
   REQUIRE(result.residual <= 1e-10 * result.rhs_norm);
   REQUIRE(rel_diff(host_exact, solution[0]) < 1e-7);
 }
-
-
 
 TEST_CASE("Dirichlet Q1 three-level device V-cycle equals host and preconditions CG",
           "[nodal_dirichlet][device]") {
@@ -736,27 +689,21 @@ TEST_CASE("Dirichlet Q1 three-level device V-cycle equals host and preconditions
   if (ranks != 1 && ranks != 2 && ranks != 4)
     SKIP("nested GPU V-cycle gate covers 1/2/4 ranks");
 
-  using Vcycle = pfc::solvers::NodalDirichletDeviceVcycle<
-      mechanics_test::Space>;
+  using Vcycle = pfc::solvers::NodalDirichletDeviceVcycle<mechanics_test::Space>;
   using Ops = pfc::solvers::FieldOperations<mechanics_test::Space>;
 
   for (const bool elongated : {false, true}) {
     if (elongated && ranks == 4) continue;
-    const pfc::Int3 nf = elongated ? pfc::Int3{31, 31, 63}
-                                   : pfc::Int3{31, 31, 31};
-    const pfc::Int3 nm = elongated ? pfc::Int3{15, 15, 31}
-                                   : pfc::Int3{15, 15, 15};
-    const pfc::Int3 nc = elongated ? pfc::Int3{7, 7, 15}
-                                   : pfc::Int3{7, 7, 7};
-    const pfc::Real3 hf{1.0 / 32, 1.3 / 32,
-                        elongated ? 0.7 / 64 : 0.7 / 32};
+    const pfc::Int3 nf = elongated ? pfc::Int3{31, 31, 63} : pfc::Int3{31, 31, 31};
+    const pfc::Int3 nm = elongated ? pfc::Int3{15, 15, 31} : pfc::Int3{15, 15, 15};
+    const pfc::Int3 nc = elongated ? pfc::Int3{7, 7, 15} : pfc::Int3{7, 7, 7};
+    const pfc::Real3 hf{1.0 / 32, 1.3 / 32, elongated ? 0.7 / 64 : 0.7 / 32};
     const pfc::Real3 hm{2 * hf[0], 2 * hf[1], 2 * hf[2]};
     const pfc::Real3 hc{2 * hm[0], 2 * hm[1], 2 * hm[2]};
     const auto fd = pfc::domain::with_spacing(nf, hf, {false, false, false});
     const auto md = pfc::domain::with_spacing(nm, hm, {false, false, false});
     const auto cd = pfc::domain::with_spacing(nc, hc, {false, false, false});
-    const pfc::Int3 proc = ranks == 4 ? pfc::Int3{2, 2, 1}
-                                     : pfc::Int3{1, 1, ranks};
+    const pfc::Int3 proc = ranks == 4 ? pfc::Int3{2, 2, 1} : pfc::Int3{1, 1, ranks};
     const auto fdec = pfc::decomposition::create(fd, proc);
     const auto mdec = pfc::decomposition::create(md, proc);
     const auto cdec = pfc::decomposition::create(cd, proc);
@@ -767,8 +714,7 @@ TEST_CASE("Dirichlet Q1 three-level device V-cycle equals host and preconditions
     Vcycle vcycle(fdec, mdec, cdec, rank, MPI_COMM_WORLD);
     REQUIRE(vcycle.levels() == 3);
     REQUIRE(vcycle.coarse_unknowns() == (elongated ? 735u : 343u));
-    pfc::solvers::NodalDirichletMultigrid reference(
-        fdec, rank, MPI_COMM_WORLD);
+    pfc::solvers::NodalDirichletMultigrid reference(fdec, rank, MPI_COMM_WORLD);
     pfc::solvers::NodalDirichletDeviceOperator<mechanics_test::Space> A(
         fdec, rank, MPI_COMM_WORLD);
 
@@ -780,8 +726,8 @@ TEST_CASE("Dirichlet Q1 three-level device V-cycle equals host and preconditions
       });
       reference.apply(host_rhs, host_out);
       vcycle.apply(dev_rhs, dev_out);
-      INFO("GPU three-level Q1, elongated " << elongated
-            << ", ranks " << ranks << ", input " << case_id);
+      INFO("GPU three-level Q1, elongated " << elongated << ", ranks " << ranks
+                                            << ", input " << case_id);
       REQUIRE(rel_diff(host_out, dev_out) <= 4e-10);
     }
 
@@ -789,12 +735,10 @@ TEST_CASE("Dirichlet Q1 three-level device V-cycle equals host and preconditions
     auto u = ops.make(ops.size()), v = ops.make(ops.size());
     auto mu = ops.make(ops.size()), mv = ops.make(ops.size());
     HostF hu(fd, box, 1), hv(fd, box, 1);
-    fill_both(hu, u[0], [](int x, int y, int z) {
-      return value(84, x, y, z, 811u);
-    });
-    fill_both(hv, v[0], [](int x, int y, int z) {
-      return value(85, x, y, z, 977u);
-    });
+    fill_both(hu, u[0],
+              [](int x, int y, int z) { return value(84, x, y, z, 811u); });
+    fill_both(hv, v[0],
+              [](int x, int y, int z) { return value(85, x, y, z, 977u); });
     vcycle.apply(u[0], mu[0]);
     vcycle.apply(v[0], mv[0]);
     const double uMv = ops.dot(u, mv), vMu = ops.dot(v, mu);
@@ -806,26 +750,24 @@ TEST_CASE("Dirichlet Q1 three-level device V-cycle equals host and preconditions
     auto exact = ops.make(ops.size()), rhs = ops.make(ops.size());
     auto solution = ops.make(ops.size());
     HostF host_exact(fd, box, 1);
-    fill_both(host_exact, exact[0], [](int x, int y, int z) {
-      return value(91, x, y, z, 1103u);
-    });
+    fill_both(host_exact, exact[0],
+              [](int x, int y, int z) { return value(91, x, y, z, 1103u); });
     A.apply_operator(exact[0], rhs[0]);
     pfc::solvers::KrylovControls controls;
     controls.relative_tolerance = 1e-10;
     controls.maximum_iterations = 120;
     const auto result = pfc::solvers::cg(
-        ops, [&](const auto &q, auto &out) {
-          A.apply_operator(q[0], out[0]);
-        }, rhs, solution, controls,
+        ops, [&](const auto &q, auto &out) { A.apply_operator(q[0], out[0]); }, rhs,
+        solution, controls,
         [&](const auto &r, auto &z, int) { vcycle.apply(r[0], z[0]); });
-    INFO("GPU Q1 three-level true-residual PCG, rank count " << ranks
-         << ", elongated " << elongated << ", iterations " << result.iterations);
+    INFO("GPU Q1 three-level true-residual PCG, rank count "
+         << ranks << ", elongated " << elongated << ", iterations "
+         << result.iterations);
     REQUIRE(result.converged());
     REQUIRE(result.residual <= 1e-10 * result.rhs_norm);
     REQUIRE(rel_diff(host_exact, solution[0]) <= 1e-7);
   }
 }
-
 
 TEST_CASE("CUDA/HIP four-level Dirichlet Q1 hierarchy matches independent host",
           "[nodal_dirichlet][device]") {
@@ -836,19 +778,16 @@ TEST_CASE("CUDA/HIP four-level Dirichlet Q1 hierarchy matches independent host",
   if (ranks != 1 && ranks != 2 && ranks != 4)
     SKIP("four-level GPU Q1 admission uses 1, 2 or 4 ranks");
 
-  using Vcycle = pfc::solvers::NodalDirichletDeviceVcycle<
-      mechanics_test::Space>;
+  using Vcycle = pfc::solvers::NodalDirichletDeviceVcycle<mechanics_test::Space>;
   using Ops = pfc::solvers::FieldOperations<mechanics_test::Space>;
 
   for (bool tall : {false, true}) {
     const pfc::Int3 nn{63, 63, tall ? 127 : 63};
-    const pfc::Real3 h{1.0 / 64, 1.3 / 64,
-                        tall ? 0.7 / 128 : 0.7 / 64};
-    const auto domain = pfc::domain::create(
-        pfc::GridSize(nn), pfc::PhysicalOrigin(h), pfc::GridSpacing(h),
-        pfc::Bool3{false, false, false});
-    const pfc::Int3 proc = ranks == 4 ? pfc::Int3{2, 2, 1}
-                                      : pfc::Int3{1, 1, ranks};
+    const pfc::Real3 h{1.0 / 64, 1.3 / 64, tall ? 0.7 / 128 : 0.7 / 64};
+    const auto domain =
+        pfc::domain::create(pfc::GridSize(nn), pfc::PhysicalOrigin(h),
+                            pfc::GridSpacing(h), pfc::Bool3{false, false, false});
+    const pfc::Int3 proc = ranks == 4 ? pfc::Int3{2, 2, 1} : pfc::Int3{1, 1, ranks};
     const auto dec = pfc::decomposition::create(domain, proc);
     const auto levels = Vcycle::make_hierarchy(dec);
     REQUIRE(levels.size() == 4);
@@ -867,8 +806,8 @@ TEST_CASE("CUDA/HIP four-level Dirichlet Q1 hierarchy matches independent host",
       });
       host.apply(hrhs, hcorrected);
       gpu.apply(drhs, dcorrected);
-      INFO("four-level GPU Dirichlet, tall " << tall
-           << ", ranks " << ranks << ", input " << sample);
+      INFO("four-level GPU Dirichlet, tall " << tall << ", ranks " << ranks
+                                             << ", input " << sample);
       REQUIRE(rel_diff(hcorrected, dcorrected) <= 8e-10);
     }
 
@@ -876,12 +815,10 @@ TEST_CASE("CUDA/HIP four-level Dirichlet Q1 hierarchy matches independent host",
     auto u = ops.make(ops.size()), v = ops.make(ops.size());
     auto mu = ops.make(ops.size()), mv = ops.make(ops.size());
     HostF hu(domain, box, 1), hv(domain, box, 1);
-    fill_both(hu, u[0], [](int x, int y, int z) {
-      return value(106, x, y, z, 3109u);
-    });
-    fill_both(hv, v[0], [](int x, int y, int z) {
-      return value(107, x, y, z, 3119u);
-    });
+    fill_both(hu, u[0],
+              [](int x, int y, int z) { return value(106, x, y, z, 3109u); });
+    fill_both(hv, v[0],
+              [](int x, int y, int z) { return value(107, x, y, z, 3119u); });
     gpu.apply(u[0], mu[0]);
     gpu.apply(v[0], mv[0]);
     const double uMv = ops.dot(u, mv), vMu = ops.dot(v, mu);
@@ -895,27 +832,23 @@ TEST_CASE("CUDA/HIP four-level Dirichlet Q1 hierarchy matches independent host",
     auto exact = ops.make(ops.size()), rhs = ops.make(ops.size());
     auto solution = ops.make(ops.size());
     HostF host_exact(domain, box, 1);
-    fill_both(host_exact, exact[0], [](int x, int y, int z) {
-      return value(115, x, y, z, 4441u);
-    });
+    fill_both(host_exact, exact[0],
+              [](int x, int y, int z) { return value(115, x, y, z, 4441u); });
     A.apply_operator(exact[0], rhs[0]);
     pfc::solvers::KrylovControls controls;
     controls.relative_tolerance = 1e-10;
     controls.maximum_iterations = 120;
     const auto result = pfc::solvers::cg(
-        ops, [&](const auto &q, auto &out) {
-          A.apply_operator(q[0], out[0]);
-        }, rhs, solution, controls,
+        ops, [&](const auto &q, auto &out) { A.apply_operator(q[0], out[0]); }, rhs,
+        solution, controls,
         [&](const auto &r, auto &z, int) { gpu.apply(r[0], z[0]); });
-    INFO("GPU Q1 four-level true-residual PCG, tall " << tall
-         << ", ranks " << ranks << ", iterations " << result.iterations);
+    INFO("GPU Q1 four-level true-residual PCG, tall "
+         << tall << ", ranks " << ranks << ", iterations " << result.iterations);
     REQUIRE(result.converged());
     REQUIRE(result.residual <= 1e-10 * result.rhs_norm);
     REQUIRE(rel_diff(host_exact, solution[0]) <= 1e-7);
   }
 }
-
-
 
 TEST_CASE("CUDA/HIP Q1 Dirichlet manufactured load has physical L2 order two",
           "[nodal_dirichlet][device]") {
@@ -926,19 +859,16 @@ TEST_CASE("CUDA/HIP Q1 Dirichlet manufactured load has physical L2 order two",
   if (ranks != 1 && ranks != 2 && ranks != 4)
     SKIP("physical Q1 GPU admission uses 1/2/4 ranks");
 
-  using Vcycle = pfc::solvers::NodalDirichletDeviceVcycle<
-      mechanics_test::Space>;
+  using Vcycle = pfc::solvers::NodalDirichletDeviceVcycle<mechanics_test::Space>;
   using Ops = pfc::solvers::FieldOperations<mechanics_test::Space>;
   double previous_l2 = 0.0;
   for (int nfree : {31, 63}) {
     const pfc::Int3 n{nfree, nfree, nfree};
-    const pfc::Real3 h{1.0 / (nfree + 1), 1.3 / (nfree + 1),
-                        0.7 / (nfree + 1)};
-    const auto domain = pfc::domain::create(
-        pfc::GridSize(n), pfc::PhysicalOrigin(h),
-        pfc::GridSpacing(h), pfc::Bool3{false, false, false});
-    const pfc::Int3 proc = ranks == 4 ? pfc::Int3{2, 2, 1}
-                                      : pfc::Int3{1, 1, ranks};
+    const pfc::Real3 h{1.0 / (nfree + 1), 1.3 / (nfree + 1), 0.7 / (nfree + 1)};
+    const auto domain =
+        pfc::domain::create(pfc::GridSize(n), pfc::PhysicalOrigin(h),
+                            pfc::GridSpacing(h), pfc::Bool3{false, false, false});
+    const pfc::Int3 proc = ranks == 4 ? pfc::Int3{2, 2, 1} : pfc::Int3{1, 1, ranks};
     const auto decomposition = pfc::decomposition::create(domain, proc);
     const auto hierarchy = Vcycle::make_hierarchy(decomposition);
     Vcycle preconditioner(hierarchy, rank, MPI_COMM_WORLD);
@@ -955,14 +885,11 @@ TEST_CASE("CUDA/HIP Q1 Dirichlet manufactured load has physical L2 order two",
     controls.relative_tolerance = 1e-10;
     controls.maximum_iterations = 150;
     const auto result = pfc::solvers::cg(
-        ops, [&](const auto &x, auto &y) {
-          A.apply_operator(x[0], y[0]);
-        }, rhs, sol, controls,
-        [&](const auto &r, auto &z, int) {
-          preconditioner.apply(r[0], z[0]);
-        });
-    INFO("Dirichlet physical Galerkin " << nfree << "^3, ranks "
-         << ranks << ", PCG " << result.iterations);
+        ops, [&](const auto &x, auto &y) { A.apply_operator(x[0], y[0]); }, rhs, sol,
+        controls,
+        [&](const auto &r, auto &z, int) { preconditioner.apply(r[0], z[0]); });
+    INFO("Dirichlet physical Galerkin " << nfree << "^3, ranks " << ranks << ", PCG "
+                                        << result.iterations);
     REQUIRE(result.converged());
     REQUIRE(result.residual <= 1e-10 * result.rhs_norm);
 
@@ -972,15 +899,14 @@ TEST_CASE("CUDA/HIP Q1 Dirichlet manufactured load has physical L2 order two",
     REQUIRE(l2 > 0.0);
     if (previous_l2 > 0.0) {
       const double rate = std::log(previous_l2 / l2) / std::log(2.0);
-      INFO("Q1 manufactured physical L2 order " << rate
-           << " on " << ranks << " ranks");
+      INFO("Q1 manufactured physical L2 order " << rate << " on " << ranks
+                                                << " ranks");
       REQUIRE(rate >= 1.8);
       REQUIRE(rate <= 2.2);
     }
     previous_l2 = l2;
   }
 }
-
 
 int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
@@ -1004,8 +930,7 @@ int main(int argc, char **argv) {
   const char *required = std::getenv("OPENPFC_REQUIRE_GPU_TESTS");
   if (required && std::string_view(required) == "1") {
     int all_ready = 0;
-    MPI_Allreduce(&device_ready, &all_ready, 1, MPI_INT, MPI_MIN,
-                  MPI_COMM_WORLD);
+    MPI_Allreduce(&device_ready, &all_ready, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
     if (!all_ready) {
       if (rank == 0)
         std::cerr << "FAIL: required CUDA/HIP Q1 numerical admission lacks "

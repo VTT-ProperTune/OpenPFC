@@ -16,7 +16,9 @@ TEST_CASE("Domain decomposition basic properties",
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  auto domain = domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, size);
   auto fft = fft::create(decomp);
 

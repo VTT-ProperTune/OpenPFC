@@ -9,18 +9,16 @@
 #include <stdexcept>
 #include <string>
 
-TEST_CASE("expect_mpi_io_count accepts zero and INT_MAX",
-          "[mpi_io_helpers][mpi]") {
+TEST_CASE("expect_mpi_io_count accepts zero and INT_MAX", "[mpi_io_helpers][mpi]") {
   REQUIRE(pfc::mpi::expect_mpi_io_count(0u, "test") == 0);
-  REQUIRE(pfc::mpi::expect_mpi_io_count(static_cast<std::size_t>(INT_MAX),
-                                        "test") == INT_MAX);
+  REQUIRE(pfc::mpi::expect_mpi_io_count(static_cast<std::size_t>(INT_MAX), "test") ==
+          INT_MAX);
 }
 
 TEST_CASE("expect_mpi_io_count throws on INT_MAX+1", "[mpi_io_helpers][mpi]") {
   const std::size_t oversize = static_cast<std::size_t>(INT_MAX) + 1u;
-  REQUIRE_THROWS_AS(
-      pfc::mpi::expect_mpi_io_count(oversize, "BinaryWriter::write"),
-      std::overflow_error);
+  REQUIRE_THROWS_AS(pfc::mpi::expect_mpi_io_count(oversize, "BinaryWriter::write"),
+                    std::overflow_error);
 
   try {
     (void)pfc::mpi::expect_mpi_io_count(oversize, "BinaryWriter::write");

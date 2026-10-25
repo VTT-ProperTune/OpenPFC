@@ -800,16 +800,10 @@ TEST_CASE("Contrast: the accelerated scheme beats the basic one as sqrt(r)",
         (hist.size() >= 2) ? std::pow(hist.back() / hist.front(),
                                       1.0 / static_cast<double>(hist.size() - 1))
                            : 0.0;
-    return Outcome{rep.iterations,
-                   rep.residual,
-                   observed,
-                   solver.predicted_contraction(),
-                   rep.converged,
-                   monotone,
-                   windowed,
-                   worst_step,
-                   bumps,
-                   last_bump};
+    return Outcome{
+        rep.iterations, rep.residual, observed, solver.predicted_contraction(),
+        rep.converged,  monotone,     windowed, worst_step,
+        bumps,          last_bump};
   };
 
   for (double ratio : {2.0, 4.0, 10.0, 100.0}) {

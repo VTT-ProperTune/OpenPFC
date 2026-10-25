@@ -8,15 +8,13 @@
 #include <numbers>
 #include <vector>
 
-#include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/decomposition/halo_face_layout.hpp>
 #include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/decomposition/halo_face_layout.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/field/finite_difference.hpp>
 
@@ -34,7 +32,9 @@ TEST_CASE("Laplacian of constant field is zero after halo exchange", "[MPI][fd]"
     return;
   }
 
-  auto domain = domain::create(GridSize({24, 24, 24}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      domain::create(GridSize({24, 24, 24}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, {2, 1, 1});
 
   constexpr int halo_width = 1;
@@ -54,8 +54,7 @@ TEST_CASE("Laplacian of constant field is zero after halo exchange", "[MPI][fd]"
   REQUIRE(all_values_are_zero);
 }
 
-TEST_CASE("HaloExchange start/finish matches blocking face sync",
-          "[MPI][fd]") {
+TEST_CASE("HaloExchange start/finish matches blocking face sync", "[MPI][fd]") {
   int rank = 0;
   int size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -66,7 +65,9 @@ TEST_CASE("HaloExchange start/finish matches blocking face sync",
     return;
   }
 
-  auto domain = domain::create(GridSize({16, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      domain::create(GridSize({16, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, {1, 1, 2});
 
   constexpr int halo_width = 1;
@@ -114,7 +115,8 @@ TEST_CASE("laplacian_periodic_separated<2> matches analytic Laplacian on every "
   const double dx = 2.0 * std::numbers::pi / static_cast<double>(N);
   const double inv_dx2 = 1.0 / (dx * dx);
 
-  auto domain = domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({dx, dx, dx}));
+  auto domain = domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                               GridSpacing({dx, dx, dx}));
   auto decomp = decomposition::create(domain, {2, 1, 1});
 
   const auto local_world = decomposition::local_box(decomp, rank);
@@ -146,8 +148,8 @@ TEST_CASE("laplacian_periodic_separated<2> matches analytic Laplacian on every "
 
   constexpr int halo_width = 1;
   auto face_halos = halo::allocate_face_halos<double>(decomp, rank, halo_width);
-  comm::SparseExchange<HostSpace, double> sex(
-      u, decomp, rank, MPI_COMM_WORLD, halo_width);
+  comm::SparseExchange<HostSpace, double> sex(u, decomp, rank, MPI_COMM_WORLD,
+                                              halo_width);
   sex.exchange();
   halo::copy_to_face_layout(sex.halos(), face_halos);
 

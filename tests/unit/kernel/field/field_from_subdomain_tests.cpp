@@ -4,8 +4,8 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 
@@ -16,24 +16,23 @@ namespace {
 
 // Helper to compute expected geometry from decomposition context
 struct FieldGeometry {
-  std::array<int, 3> owned_core;  // local_owned from decomposition
-  std::array<int, 3> with_halo;    // owned_core + 2*halo_extents
-  int halo_depth;                 // from context
+  std::array<int, 3> owned_core; // local_owned from decomposition
+  std::array<int, 3> with_halo;  // owned_core + 2*halo_extents
+  int halo_depth;                // from context
 };
 
-FieldGeometry compute_expected(const decomposition::Decomposition& decomp, int rank,
-                               const std::array<int,3>& halo) {
+FieldGeometry compute_expected(const decomposition::Decomposition &decomp, int rank,
+                               const std::array<int, 3> &halo) {
   auto local_box = decomposition::local_box(decomp, rank);
-  return {
-    {local_box.size[0], local_box.size[1], local_box.size[2]},
-    {local_box.size[0] + 2*halo[0], local_box.size[1] + 2*halo[1], local_box.size[2] + 2*halo[2]},
-    halo[0]
-  };
+  return {{local_box.size[0], local_box.size[1], local_box.size[2]},
+          {local_box.size[0] + 2 * halo[0], local_box.size[1] + 2 * halo[1],
+           local_box.size[2] + 2 * halo[2]},
+          halo[0]};
 }
 
 // Test geometry invariants for field_from_subdomain
 template <typename T>
-void verify_field_from_subdomain_geometry(const decomposition::Decomposition& decomp,
+void verify_field_from_subdomain_geometry(const decomposition::Decomposition &decomp,
                                           int rank, int halo) {
   auto field = pfc::data::field_from_subdomain<T>(decomp, rank, halo);
 
@@ -41,10 +40,9 @@ void verify_field_from_subdomain_geometry(const decomposition::Decomposition& de
   auto geom = compute_expected(decomp, rank, {halo, halo, halo});
 
   // Verify total field size includes halo padding
-  REQUIRE(field.size() ==
-          static_cast<std::size_t>(geom.with_halo[0]) *
-          static_cast<std::size_t>(geom.with_halo[1]) *
-          static_cast<std::size_t>(geom.with_halo[2]));
+  REQUIRE(field.size() == static_cast<std::size_t>(geom.with_halo[0]) *
+                              static_cast<std::size_t>(geom.with_halo[1]) *
+                              static_cast<std::size_t>(geom.with_halo[2]));
 
   // Verify halo extents
   REQUIRE(field.storage_halo() == halo);
@@ -84,12 +82,15 @@ void verify_field_from_subdomain_geometry(const decomposition::Decomposition& de
         REQUIRE(global[2] >= 0);
 
         // Physical coordinates should be reasonable
-        REQUIRE(coords[0] == Approx(
-          field.origin()[0] + static_cast<double>(global[0]) * field.spacing()[0]));
-        REQUIRE(coords[1] == Approx(
-          field.origin()[1] + static_cast<double>(global[1]) * field.spacing()[1]));
-        REQUIRE(coords[2] == Approx(
-          field.origin()[2] + static_cast<double>(global[2]) * field.spacing()[2]));
+        REQUIRE(coords[0] ==
+                Approx(field.origin()[0] +
+                       static_cast<double>(global[0]) * field.spacing()[0]));
+        REQUIRE(coords[1] ==
+                Approx(field.origin()[1] +
+                       static_cast<double>(global[1]) * field.spacing()[1]));
+        REQUIRE(coords[2] ==
+                Approx(field.origin()[2] +
+                       static_cast<double>(global[2]) * field.spacing()[2]));
       }
     }
   }
@@ -98,8 +99,8 @@ void verify_field_from_subdomain_geometry(const decomposition::Decomposition& de
   for (int k = -halo; k < geom.owned_core[2] + halo; ++k) {
     for (int j = -halo; j < geom.owned_core[1] + halo; ++j) {
       for (int i = -halo; i < geom.owned_core[0] + halo; ++i) {
-        const T test_value = static_cast<T>(
-          i + geom.owned_core[0] * (j + geom.owned_core[1] * k));
+        const T test_value =
+            static_cast<T>(i + geom.owned_core[0] * (j + geom.owned_core[1] * k));
         field(i, j, k) = test_value;
         REQUIRE(field(i, j, k) == test_value);
       }
@@ -109,18 +110,18 @@ void verify_field_from_subdomain_geometry(const decomposition::Decomposition& de
 
 // Test geometry invariants for field_from_subdomain_unpadded
 template <typename T>
-void verify_field_from_subdomain_unpadded_geometry(const decomposition::Decomposition& decomp,
-                                                   int rank, int iteration_halo) {
-  auto field = pfc::data::field_from_subdomain_unpadded<T>(decomp, rank, iteration_halo);
+void verify_field_from_subdomain_unpadded_geometry(
+    const decomposition::Decomposition &decomp, int rank, int iteration_halo) {
+  auto field =
+      pfc::data::field_from_subdomain_unpadded<T>(decomp, rank, iteration_halo);
 
   // Compute expected geometry (no storage halo)
   auto geom = compute_expected(decomp, rank, {0, 0, 0});
 
   // Verify total field size is unpadded
-  REQUIRE(field.size() ==
-          static_cast<std::size_t>(geom.owned_core[0]) *
-          static_cast<std::size_t>(geom.owned_core[1]) *
-          static_cast<std::size_t>(geom.owned_core[2]));
+  REQUIRE(field.size() == static_cast<std::size_t>(geom.owned_core[0]) *
+                              static_cast<std::size_t>(geom.owned_core[1]) *
+                              static_cast<std::size_t>(geom.owned_core[2]));
 
   // Verify halo properties
   REQUIRE(field.storage_halo() == 0);
@@ -173,8 +174,8 @@ void verify_field_from_subdomain_unpadded_geometry(const decomposition::Decompos
 
 // Test geometry invariants for field_from_inbox
 template <typename T>
-void verify_field_from_inbox_geometry(const pfc::Domain& domain,
-                                      const pfc::Box3i& inbox) {
+void verify_field_from_inbox_geometry(const pfc::Domain &domain,
+                                      const pfc::Box3i &inbox) {
   auto field = pfc::data::field_from_inbox<T>(domain, inbox);
 
   // Compute expected geometry
@@ -182,10 +183,9 @@ void verify_field_from_inbox_geometry(const pfc::Domain& domain,
   int halo = 0;
 
   // Verify total field size is unpadded
-  REQUIRE(field.size() ==
-          static_cast<std::size_t>(owned_core[0]) *
-          static_cast<std::size_t>(owned_core[1]) *
-          static_cast<std::size_t>(owned_core[2]));
+  REQUIRE(field.size() == static_cast<std::size_t>(owned_core[0]) *
+                              static_cast<std::size_t>(owned_core[1]) *
+                              static_cast<std::size_t>(owned_core[2]));
 
   // Verify no halo padding
   REQUIRE(field.storage_halo() == halo);
@@ -202,8 +202,10 @@ void verify_field_from_inbox_geometry(const pfc::Domain& domain,
   REQUIRE(field.box().size == inbox.size);
 
   // Verify domain is preserved
-  REQUIRE(pfc::domain::get_origin(field.domain()) == pfc::domain::get_origin(domain));
-  REQUIRE(pfc::domain::get_spacing(field.domain()) == pfc::domain::get_spacing(domain));
+  REQUIRE(pfc::domain::get_origin(field.domain()) ==
+          pfc::domain::get_origin(domain));
+  REQUIRE(pfc::domain::get_spacing(field.domain()) ==
+          pfc::domain::get_spacing(domain));
   REQUIRE(pfc::domain::get_size(field.domain()) == pfc::domain::get_size(domain));
 
   // Verify padded extents match owned (no padding)
@@ -241,7 +243,8 @@ void verify_field_from_inbox_geometry(const pfc::Domain& domain,
 
 } // namespace
 
-TEST_CASE("field_from_subdomain: basic geometry verification", "[field_factory][unit]") {
+TEST_CASE("field_from_subdomain: basic geometry verification",
+          "[field_factory][unit]") {
   const int nx = 8, ny = 6, nz = 4;
   auto domain = domain::create({nx, ny, nz});
   auto decomp = decomposition::create(domain, 1);
@@ -274,7 +277,8 @@ TEST_CASE("field_from_subdomain: rejects negative halo", "[field_factory][unit]"
                     std::invalid_argument);
 }
 
-TEST_CASE("field_from_subdomain: geometry matches decomposition", "[field_factory][unit]") {
+TEST_CASE("field_from_subdomain: geometry matches decomposition",
+          "[field_factory][unit]") {
   const int nx = 16, ny = 12, nz = 8;
   auto domain = domain::create({nx, ny, nz});
   auto decomp = decomposition::create(domain, 4);
@@ -283,14 +287,17 @@ TEST_CASE("field_from_subdomain: geometry matches decomposition", "[field_factor
     auto field = pfc::data::field_from_subdomain<double>(decomp, rank, 2);
 
     // Verify domain geometry is preserved
-    const auto& field_domain = field.domain();
+    const auto &field_domain = field.domain();
     const auto decomp_domain = decomposition::domain(decomp);
-    REQUIRE(pfc::domain::get_origin(field_domain) == pfc::domain::get_origin(decomp_domain));
-    REQUIRE(pfc::domain::get_spacing(field_domain) == pfc::domain::get_spacing(decomp_domain));
-    REQUIRE(pfc::domain::get_size(field_domain) == pfc::domain::get_size(decomp_domain));
+    REQUIRE(pfc::domain::get_origin(field_domain) ==
+            pfc::domain::get_origin(decomp_domain));
+    REQUIRE(pfc::domain::get_spacing(field_domain) ==
+            pfc::domain::get_spacing(decomp_domain));
+    REQUIRE(pfc::domain::get_size(field_domain) ==
+            pfc::domain::get_size(decomp_domain));
 
     // Verify local box matches decomposition
-    const auto& field_box = field.box();
+    const auto &field_box = field.box();
     const auto local_box = decomposition::local_box(decomp, rank);
     REQUIRE(field_box.low == local_box.low);
     REQUIRE(field_box.high == local_box.high);
@@ -320,7 +327,8 @@ TEST_CASE("field_from_subdomain: creates valid field with varying sizes",
   }
 }
 
-TEST_CASE("field_from_subdomain_unpadded: basic geometry verification", "[field_factory][unit]") {
+TEST_CASE("field_from_subdomain_unpadded: basic geometry verification",
+          "[field_factory][unit]") {
   const int nx = 8, ny = 6, nz = 4;
   auto domain = domain::create({nx, ny, nz});
   auto decomp = decomposition::create(domain, 1);
@@ -364,14 +372,17 @@ TEST_CASE("field_from_subdomain_unpadded: geometry matches decomposition",
     auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, rank, 2);
 
     // Verify domain geometry is preserved
-    const auto& field_domain = field.domain();
+    const auto &field_domain = field.domain();
     const auto decomp_domain = decomposition::domain(decomp);
-    REQUIRE(pfc::domain::get_origin(field_domain) == pfc::domain::get_origin(decomp_domain));
-    REQUIRE(pfc::domain::get_spacing(field_domain) == pfc::domain::get_spacing(decomp_domain));
-    REQUIRE(pfc::domain::get_size(field_domain) == pfc::domain::get_size(decomp_domain));
+    REQUIRE(pfc::domain::get_origin(field_domain) ==
+            pfc::domain::get_origin(decomp_domain));
+    REQUIRE(pfc::domain::get_spacing(field_domain) ==
+            pfc::domain::get_spacing(decomp_domain));
+    REQUIRE(pfc::domain::get_size(field_domain) ==
+            pfc::domain::get_size(decomp_domain));
 
     // Verify local box matches decomposition
-    const auto& field_box = field.box();
+    const auto &field_box = field.box();
     const auto local_box = decomposition::local_box(decomp, rank);
     REQUIRE(field_box.low == local_box.low);
     REQUIRE(field_box.high == local_box.high);
@@ -388,12 +399,12 @@ TEST_CASE("field_from_inbox: basic geometry verification", "[field_factory][unit
 
   // Test various inbox configurations
   std::vector<pfc::Box3i> inboxes = {
-    Box3i::from_bounds({0, 0, 0}, {3, 2, 1}),  // size {4, 3, 2}
-    Box3i::from_bounds({4, 3, 2}, {7, 5, 3}),  // size {4, 3, 2}
-    Box3i::from_bounds({0, 0, 0}, {7, 5, 3}),  // size {8, 6, 4} full domain
+      Box3i::from_bounds({0, 0, 0}, {3, 2, 1}), // size {4, 3, 2}
+      Box3i::from_bounds({4, 3, 2}, {7, 5, 3}), // size {4, 3, 2}
+      Box3i::from_bounds({0, 0, 0}, {7, 5, 3}), // size {8, 6, 4} full domain
   };
 
-  for (const auto& inbox : inboxes) {
+  for (const auto &inbox : inboxes) {
     verify_field_from_inbox_geometry<double>(domain, inbox);
     verify_field_from_inbox_geometry<float>(domain, inbox);
   }
@@ -402,7 +413,8 @@ TEST_CASE("field_from_inbox: basic geometry verification", "[field_factory][unit
 TEST_CASE("field_from_inbox: with spacing and origin", "[field_factory][unit]") {
   const Real3 spacing{1.5, 2.0, 2.5};
   const Real3 origin{1.0, 1.0, 1.0};
-  auto domain = pfc::domain::create(GridSize({8, 6, 4}), PhysicalOrigin(origin), GridSpacing(spacing));
+  auto domain = pfc::domain::create(GridSize({8, 6, 4}), PhysicalOrigin(origin),
+                                    GridSpacing(spacing));
 
   Box3i inbox = Box3i::from_bounds({2, 1, 1}, {5, 4, 2}); // size will be {4, 4, 2}
   auto field = pfc::data::field_from_inbox<double>(domain, inbox);
@@ -414,12 +426,16 @@ TEST_CASE("field_from_inbox: with spacing and origin", "[field_factory][unit]") 
   // Verify coordinates are correctly computed
   int i = 0, j = 0, k = 0;
   auto coords = field.coords(i, j, k);
-  REQUIRE(coords[0] == Approx(origin[0] + static_cast<double>(inbox.low[0] + i) * spacing[0]));
-  REQUIRE(coords[1] == Approx(origin[1] + static_cast<double>(inbox.low[1] + j) * spacing[1]));
-  REQUIRE(coords[2] == Approx(origin[2] + static_cast<double>(inbox.low[2] + k) * spacing[2]));
+  REQUIRE(coords[0] ==
+          Approx(origin[0] + static_cast<double>(inbox.low[0] + i) * spacing[0]));
+  REQUIRE(coords[1] ==
+          Approx(origin[1] + static_cast<double>(inbox.low[1] + j) * spacing[1]));
+  REQUIRE(coords[2] ==
+          Approx(origin[2] + static_cast<double>(inbox.low[2] + k) * spacing[2]));
 }
 
-TEST_CASE("field_from_subdomain: dual-construct consistency", "[field_factory][unit]") {
+TEST_CASE("field_from_subdomain: dual-construct consistency",
+          "[field_factory][unit]") {
   const int nx = 12, ny = 8, nz = 6;
   auto domain = domain::create({nx, ny, nz});
   auto decomp = decomposition::create(domain, 4);
@@ -462,7 +478,8 @@ TEST_CASE("field_from_subdomain: dual-construct consistency", "[field_factory][u
   }
 }
 
-TEST_CASE("field_from_subdomain: vs unpadded consistency (halo=0)", "[field_factory][unit]") {
+TEST_CASE("field_from_subdomain: vs unpadded consistency (halo=0)",
+          "[field_factory][unit]") {
   const int nx = 12, ny = 8, nz = 6;
   auto domain = domain::create({nx, ny, nz});
   auto decomp = decomposition::create(domain, 4);
@@ -470,7 +487,8 @@ TEST_CASE("field_from_subdomain: vs unpadded consistency (halo=0)", "[field_fact
   for (int rank = 0; rank < 4; ++rank) {
     // When halo=0, padded and unpadded should have identical geometry
     auto padded = pfc::data::field_from_subdomain<double>(decomp, rank, 0);
-    auto unpadded = pfc::data::field_from_subdomain_unpadded<double>(decomp, rank, 0);
+    auto unpadded =
+        pfc::data::field_from_subdomain_unpadded<double>(decomp, rank, 0);
 
     // Verify storage is identical
     REQUIRE(padded.size() == unpadded.size());

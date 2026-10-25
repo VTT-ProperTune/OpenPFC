@@ -98,8 +98,7 @@ TEST_CASE("MPICH_GPU_SUPPORT_ENABLED=1 enables when no Open MPI query",
   const auto d = decide_gpu_aware_mpi();
   REQUIRE(d.enabled);
   REQUIRE(d.how == GPUAwareMPIHow::CrayMpichEnv);
-  REQUIRE(std::string(gpu_aware_how_cstr(d.how)) ==
-          "MPICH_GPU_SUPPORT_ENABLED=1");
+  REQUIRE(std::string(gpu_aware_how_cstr(d.how)) == "MPICH_GPU_SUPPORT_ENABLED=1");
 #endif
 }
 

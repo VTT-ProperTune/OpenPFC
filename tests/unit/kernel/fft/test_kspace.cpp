@@ -16,7 +16,9 @@ using Catch::Matchers::WithinRel;
 TEST_CASE("k_frequency_scaling computes correct scaling factors", "[fft][kspace]") {
 
   SECTION("3D uniform cubic domain") {
-    auto domain = domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({0.1, 0.1, 0.1}));
+    auto domain =
+        domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                       GridSpacing({0.1, 0.1, 0.1}));
     auto [fx, fy, fz] = k_frequency_scaling(domain);
 
     double expected = two_pi / (0.1 * 128);
@@ -53,7 +55,9 @@ TEST_CASE("k_frequency_scaling computes correct scaling factors", "[fft][kspace]
   }
 
   SECTION("Matches manual calculation") {
-    auto domain = domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({two_pi / 8.0, two_pi / 8.0, two_pi / 8.0}));
+    auto domain =
+        domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                       GridSpacing({two_pi / 8.0, two_pi / 8.0, two_pi / 8.0}));
     auto [fx, fy, fz] = k_frequency_scaling(domain);
 
     // Manual calculation (like in examples)
@@ -202,7 +206,9 @@ TEST_CASE("Integration with World API", "[fft][kspace][integration]") {
 
   SECTION("Typical diffusion model operator construction") {
     // Simulate the pattern from 04_diffusion_model.cpp
-    auto domain = domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({two_pi / 8.0, two_pi / 8.0, two_pi / 8.0}));
+    auto domain =
+        domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                       GridSpacing({two_pi / 8.0, two_pi / 8.0, two_pi / 8.0}));
     auto size = domain::get_size(domain);
     auto [fx, fy, fz] = k_frequency_scaling(domain);
 
@@ -226,7 +232,9 @@ TEST_CASE("Integration with World API", "[fft][kspace][integration]") {
   }
 
   SECTION("Compare against manual calculation across full domain") {
-    auto domain = domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({0.1, 0.1, 0.1}));
+    auto domain =
+        domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                       GridSpacing({0.1, 0.1, 0.1}));
     auto size = domain::get_size(domain);
     auto spacing = domain::get_spacing(domain);
 
@@ -287,7 +295,9 @@ TEST_CASE("Helper functions are noexcept", "[fft][kspace][static]") {
   STATIC_REQUIRE(noexcept(k_laplacian_value(1.0, 1.0, 1.0)));
   STATIC_REQUIRE(noexcept(k_squared_value(1.0, 1.0, 1.0)));
 
-  auto domain = domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({0.1, 0.1, 0.1}));
+  auto domain =
+      domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({0.1, 0.1, 0.1}));
   STATIC_REQUIRE(noexcept(k_frequency_scaling(domain)));
   static_cast<void>(domain);
 }

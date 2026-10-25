@@ -58,8 +58,7 @@ TEST_CASE("SparseExchange HIPSpace: custom RemoteHalo scatter stays on device",
     return;
   }
 
-  data::Field<double, HIPSpace> u(domain::create({8, 1, 1}), whole_box(8, 1, 1),
-                                  0);
+  data::Field<double, HIPSpace> u(domain::create({8, 1, 1}), whole_box(8, 1, 1), 0);
   u.with_host_view([&](double *data, std::size_t) {
     for (int i = 0; i < 8; ++i) {
       data[u.idx(i, 0, 0)] = static_cast<double>(i + 1);
@@ -76,8 +75,7 @@ TEST_CASE("SparseExchange HIPSpace: custom RemoteHalo scatter stays on device",
       core::SparseVector<backend::CPUTag, double>(std::vector<std::size_t>{6, 7});
   h.scatter_after_recv = true;
 
-  comm::SparseExchange<HIPSpace, double> ex(u, {std::move(h)}, rank,
-                                            MPI_COMM_WORLD);
+  comm::SparseExchange<HIPSpace, double> ex(u, {std::move(h)}, rank, MPI_COMM_WORLD);
   REQUIRE(ex.num_halos() == 1);
   REQUIRE_THROWS_AS(ex.start(), std::logic_error);
   ex.exchange();
@@ -124,8 +122,7 @@ TEST_CASE("SparseExchange CUDASpace: custom RemoteHalo scatter stays on device",
     return;
   }
 
-  data::Field<double, CUDASpace> u(domain::create({8, 1, 1}), whole_box(8, 1, 1),
-                                   0);
+  data::Field<double, CUDASpace> u(domain::create({8, 1, 1}), whole_box(8, 1, 1), 0);
   u.with_host_view([&](double *data, std::size_t) {
     for (int i = 0; i < 8; ++i) {
       data[u.idx(i, 0, 0)] = static_cast<double>(i + 1);
@@ -145,9 +142,8 @@ TEST_CASE("SparseExchange CUDASpace: custom RemoteHalo scatter stays on device",
   comm::SparseExchange<CUDASpace, double> ex(u, {std::move(h)}, rank,
                                              MPI_COMM_WORLD);
   ex.exchange();
-  u.with_host_view([&](double *data, std::size_t) {
-    REQUIRE(data[u.idx(6, 0, 0)] == 3.0);
-  });
+  u.with_host_view(
+      [&](double *data, std::size_t) { REQUIRE(data[u.idx(6, 0, 0)] == 3.0); });
 }
 #endif
 

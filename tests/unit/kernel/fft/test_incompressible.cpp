@@ -291,8 +291,8 @@ TEST_CASE("spectral curl, gradient, and viscosity symbols match their definition
     REQUIRE_THAT(lap[decay_mode].imag(), WithinAbs(0.5, 1.0e-12));
 
     std::vector<double> exp_dt, exp_half;
-    pfc::incompressible::viscous_exponentials(grid.outbox, grid.size, grid.spacing, 0.1, 0.05,
-                                     exp_dt, exp_half);
+    pfc::incompressible::viscous_exponentials(grid.outbox, grid.size, grid.spacing,
+                                              0.1, 0.05, exp_dt, exp_half);
     REQUIRE_THAT(exp_dt[decay_mode], WithinAbs(std::exp(-0.005), 1.0e-12));
     REQUIRE_THAT(exp_half[decay_mode], WithinAbs(std::exp(-0.0025), 1.0e-12));
     REQUIRE_THAT(exp_dt[mode_at(grid.outbox, 0, 0, 0)], WithinAbs(1.0, 1.0e-15));
@@ -325,10 +325,10 @@ TEST_CASE("a 2/3 mask stops unresolved products from entering a retained mode",
     const std::size_t slot = mode_at(grid.outbox, 2, n - 2, 0);
 
     std::vector<Complex> raw_u, raw_v, raw_w, clean_u, clean_v, clean_w;
-    pfc::incompressible::rotational_tendency(grid.fft, grid.size, grid.spacing, u, v, w,
-                                    raw_u, raw_v, raw_w, false);
-    pfc::incompressible::rotational_tendency(grid.fft, grid.size, grid.spacing, u, v, w,
-                                    clean_u, clean_v, clean_w, true);
+    pfc::incompressible::rotational_tendency(grid.fft, grid.size, grid.spacing, u, v,
+                                             w, raw_u, raw_v, raw_w, false);
+    pfc::incompressible::rotational_tendency(grid.fft, grid.size, grid.spacing, u, v,
+                                             w, clean_u, clean_v, clean_w, true);
     REQUIRE(std::abs(raw_u[slot]) > 1.0);
     REQUIRE(std::abs(raw_v[slot]) > 1.0);
     REQUIRE(std::abs(clean_u[slot]) < 1.0e-4);
@@ -414,8 +414,8 @@ TEST_CASE("rotational form matches advective and skew forms on a resolved field"
 
     std::vector<Complex> rot_u, rot_v, rot_w, adv_u, adv_v, adv_w, skew_u, skew_v,
         skew_w;
-    pfc::incompressible::rotational_tendency(grid.fft, grid.size, grid.spacing, u, v, w,
-                                    rot_u, rot_v, rot_w, true);
+    pfc::incompressible::rotational_tendency(grid.fft, grid.size, grid.spacing, u, v,
+                                             w, rot_u, rot_v, rot_w, true);
     project_negated(grid, ax, ay, az, adv_u, adv_v, adv_w);
     project_negated(grid, sx, sy, sz, skew_u, skew_v, skew_w);
     require_relative(adv_u, rot_u, 1.0e-8);
@@ -451,8 +451,8 @@ TEST_CASE(
     const double dt = 0.05;
     const double expected = std::exp(-nu * dt);
     std::vector<double> exp_dt, exp_half;
-    pfc::incompressible::viscous_exponentials(grid.outbox, grid.size, grid.spacing, nu, dt,
-                                     exp_dt, exp_half);
+    pfc::incompressible::viscous_exponentials(grid.outbox, grid.size, grid.spacing,
+                                              nu, dt, exp_dt, exp_half);
 
     auto zero = [](const std::vector<Complex> &state, const std::vector<Complex> &,
                    const std::vector<Complex> &, std::vector<Complex> &tu,
@@ -463,8 +463,8 @@ TEST_CASE(
     };
     std::vector<Complex> u(grid.nhat), v(grid.nhat), w(grid.nhat);
     u[mode] = Complex(1.0, 0.0);
-    pfc::incompressible::ifrk4_velocity(grid.outbox, grid.size, grid.spacing, u, v, w, exp_dt,
-                               exp_half, dt, zero, true);
+    pfc::incompressible::ifrk4_velocity(grid.outbox, grid.size, grid.spacing, u, v,
+                                        w, exp_dt, exp_half, dt, zero, true);
     REQUIRE_THAT(u[mode].real(), WithinAbs(expected, 1.0e-12));
     REQUIRE_THAT(u[mode].imag(), WithinAbs(0.0, 1.0e-12));
     REQUIRE_THAT(std::abs(v[mode]), WithinAbs(0.0, 1.0e-12));
@@ -490,8 +490,8 @@ TEST_CASE(
     std::fill(v.begin(), v.end(), Complex{});
     std::fill(w.begin(), w.end(), Complex{});
     u[mode] = Complex(1.0, 0.0);
-    pfc::incompressible::ifrk4_velocity(grid.outbox, grid.size, grid.spacing, u, v, w, exp_dt,
-                               exp_half, dt, longitudinal, true);
+    pfc::incompressible::ifrk4_velocity(grid.outbox, grid.size, grid.spacing, u, v,
+                                        w, exp_dt, exp_half, dt, longitudinal, true);
     REQUIRE_THAT(u[mode].real(), WithinAbs(expected, 1.0e-12));
     REQUIRE_THAT(std::abs(v[mode]), WithinAbs(0.0, 1.0e-12));
     REQUIRE_THAT(std::abs(w[mode]), WithinAbs(0.0, 1.0e-12));

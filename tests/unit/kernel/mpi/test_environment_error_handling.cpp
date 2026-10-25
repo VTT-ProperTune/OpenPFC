@@ -9,8 +9,8 @@
  * independently of the global MPI initialization in the main test harness.
  */
 
-#include <openpfc/kernel/mpi/environment.hpp>
 #include <iostream>
+#include <openpfc/kernel/mpi/environment.hpp>
 #include <stdexcept>
 
 int main() {
@@ -36,7 +36,7 @@ int main() {
     // MPI_Finalize called automatically when env goes out of scope
     std::cout << "Test completed successfully" << std::endl;
     return 0;
-  } catch (const std::exception& e) {
+  } catch (const std::exception &e) {
     std::cerr << "Error: " << e.what() << std::endl;
     return 1;
   } catch (...) {

@@ -32,8 +32,7 @@ TEST_CASE("embedded_pair_scalar_normalize_accept", "[error_evidence]") {
 
 TEST_CASE("embedded_pair_scalar_normalize_reject", "[error_evidence]") {
   const double norms[] = {0.05};
-  auto ev =
-      make_embedded_pair_evidence(norms, AggregationScope::AlreadyReduced);
+  auto ev = make_embedded_pair_evidence(norms, AggregationScope::AlreadyReduced);
   const ErrorTolerances tol{.absolute = 1e-2, .relative = 0.0};
   const auto n = normalize_error_evidence(ev, tol);
   REQUIRE(n.decision_available);
@@ -44,9 +43,9 @@ TEST_CASE("embedded_pair_scalar_normalize_reject", "[error_evidence]") {
 TEST_CASE("residual_multifield_normalize", "[error_evidence]") {
   const double norms[] = {1e-4, 2e-4};
   const double weights[] = {1.0, 2.0};
-  auto ev = make_residual_evidence(norms, AggregationScope::AlreadyReduced,
-                                   /*order_tag=*/{},
-                                   std::span<const double>{weights});
+  auto ev =
+      make_residual_evidence(norms, AggregationScope::AlreadyReduced,
+                             /*order_tag=*/{}, std::span<const double>{weights});
   REQUIRE(ev.valid);
   REQUIRE(ev.kind == EvidenceKind::ResidualAPosteriori);
   REQUIRE(ev.field_norms.size() == 2);
@@ -60,8 +59,7 @@ TEST_CASE("residual_multifield_normalize", "[error_evidence]") {
 
   // Same normalize path as EmbeddedPair — no kind-specific controller code.
   auto embedded = make_embedded_pair_evidence(
-      norms, AggregationScope::AlreadyReduced, {},
-      std::span<const double>{weights});
+      norms, AggregationScope::AlreadyReduced, {}, std::span<const double>{weights});
   const auto n2 = normalize_error_evidence(embedded, tol);
   REQUIRE_THAT(n2.metric, WithinAbs(n.metric, 1e-15));
   REQUIRE(n2.verdict == n.verdict);
@@ -96,8 +94,7 @@ TEST_CASE("reduce_rank_local_single_rank_identity", "[error_evidence]") {
 
 TEST_CASE("already_reduced_not_double_reduced", "[error_evidence]") {
   const double norms[] = {0.7, 0.8};
-  auto ev =
-      make_residual_evidence(norms, AggregationScope::AlreadyReduced);
+  auto ev = make_residual_evidence(norms, AggregationScope::AlreadyReduced);
   REQUIRE(ev.scope == AggregationScope::AlreadyReduced);
 
   auto once = reduce_error_evidence(ev, MPI_COMM_WORLD);
@@ -173,13 +170,14 @@ TEST_CASE("mixed atol and rtol", "[error_evidence]") {
 TEST_CASE("unit scale is explicit and unspecified rtol fails closed",
           "[error_evidence]") {
   const double norms[] = {2e-5};
-  auto unit = make_embedded_pair_evidence(norms, AggregationScope::AlreadyReduced, {},
-                                          {}, SolutionScale::Unit);
+  auto unit = make_embedded_pair_evidence(norms, AggregationScope::AlreadyReduced,
+                                          {}, {}, SolutionScale::Unit);
   const ErrorTolerances tol{.absolute = 1e-5, .relative = 1e-5};
   const auto n = normalize_error_evidence(unit, tol);
   REQUIRE_THAT(n.metric, WithinAbs(1.0, 1e-12));
 
-  auto missing = make_embedded_pair_evidence(norms, AggregationScope::AlreadyReduced);
+  auto missing =
+      make_embedded_pair_evidence(norms, AggregationScope::AlreadyReduced);
   const auto closed = normalize_error_evidence(missing, tol);
   REQUIRE_FALSE(closed.decision_available);
   REQUIRE(closed.verdict == StepAttemptVerdict::NoDecision);
@@ -245,8 +243,7 @@ TEST_CASE("weights override a requested unit scale", "[error_evidence]") {
   REQUIRE_THAT(n.metric, WithinAbs(1.0, 1e-12));
 }
 
-TEST_CASE("reduce maxes norms and scales or fails closed",
-          "[error_evidence][MPI]") {
+TEST_CASE("reduce maxes norms and scales or fails closed", "[error_evidence][MPI]") {
   int rank = 0;
   int size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -289,17 +286,17 @@ TEST_CASE("reduce maxes norms and scales or fails closed",
 
   const double first[] = {0.1};
   const double second[] = {0.1, 0.2};
-  auto shaped = (rank == 0)
-                    ? make_embedded_pair_evidence(first, AggregationScope::RankLocal)
-                    : make_embedded_pair_evidence(second, AggregationScope::RankLocal);
+  auto shaped =
+      (rank == 0) ? make_embedded_pair_evidence(first, AggregationScope::RankLocal)
+                  : make_embedded_pair_evidence(second, AggregationScope::RankLocal);
   auto bad_shape = reduce_error_evidence(shaped);
   REQUIRE_FALSE(bad_shape.valid);
 
   // One invalid rank must not leave the collective. The other ranks fail
   // closed with it, before any field buffer is reduced.
-  ErrorEvidence mixed = (rank == 0)
-                            ? make_invalid_evidence(EvidenceKind::EmbeddedPair)
-                            : make_embedded_pair_evidence(one, AggregationScope::RankLocal);
+  ErrorEvidence mixed =
+      (rank == 0) ? make_invalid_evidence(EvidenceKind::EmbeddedPair)
+                  : make_embedded_pair_evidence(one, AggregationScope::RankLocal);
   auto bad_valid = reduce_error_evidence(mixed);
   REQUIRE_FALSE(bad_valid.valid);
   REQUIRE(bad_valid.scope == AggregationScope::AlreadyReduced);

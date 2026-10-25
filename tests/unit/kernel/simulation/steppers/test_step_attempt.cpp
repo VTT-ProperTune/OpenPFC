@@ -36,10 +36,10 @@ struct DecayRhs {
 };
 
 struct TwoFieldRhs {
-  void operator()(double /*t*/,
-                  std::tuple<std::vector<double> &, std::vector<double> &> /*u*/,
-                  std::tuple<std::vector<double> &, std::vector<double> &> du)
-      const {
+  void
+  operator()(double /*t*/,
+             std::tuple<std::vector<double> &, std::vector<double> &> /*u*/,
+             std::tuple<std::vector<double> &, std::vector<double> &> du) const {
     auto &d0 = std::get<0>(du);
     auto &d1 = std::get<1>(du);
     for (double &v : d0) {
@@ -56,8 +56,7 @@ struct ThreeFieldRhs {
       double /*t*/,
       std::tuple<std::vector<double> &, std::vector<double> &,
                  std::vector<double> &> /*u*/,
-      std::tuple<std::vector<double> &, std::vector<double> &,
-                 std::vector<double> &>
+      std::tuple<std::vector<double> &, std::vector<double> &, std::vector<double> &>
           du) const {
     std::get<0>(du)[0] = 1.0;
     std::get<1>(du)[0] = 2.0;
@@ -81,8 +80,7 @@ TEST_CASE("success_isolates_accepted_until_commit", "[step_attempt][unit]") {
   REQUIRE(result.t1 == Catch::Approx(0.75));
   REQUIRE(accepted == fingerprint);
   for (std::size_t i = 0; i < accepted.size(); ++i) {
-    REQUIRE(result.candidate[i] ==
-            Catch::Approx(fingerprint[i] + 0.25 * 1.0));
+    REQUIRE(result.candidate[i] == Catch::Approx(fingerprint[i] + 0.25 * 1.0));
   }
 
   commit_step_attempt(accepted, result);
@@ -177,17 +175,16 @@ TEST_CASE("multi_field_host_field_pack_isolation", "[step_attempt][unit][field]"
 using Complex = std::complex<double>;
 
 struct MixedScalarRhs {
-  void operator()(
-      double /*t*/,
-      std::tuple<std::vector<double> &, std::vector<Complex> &> /*u*/,
-      std::tuple<std::vector<double> &, std::vector<Complex> &> du) const {
+  void
+  operator()(double /*t*/,
+             std::tuple<std::vector<double> &, std::vector<Complex> &> /*u*/,
+             std::tuple<std::vector<double> &, std::vector<Complex> &> du) const {
     std::get<0>(du)[0] = 1.0;
     std::get<1>(du)[0] = Complex{0.0, 2.0};
   }
 };
 
-TEST_CASE("packed_euler_mixed_scalar_isolation",
-          "[step_attempt][unit][packed]") {
+TEST_CASE("packed_euler_mixed_scalar_isolation", "[step_attempt][unit][packed]") {
   static_assert(PackedStageFunction<MixedScalarRhs, double, Complex>);
   MixedScalarRhs rhs{};
   PackedEulerStepper<MixedScalarRhs, double, Complex> stepper(0.5, {1, 1}, rhs);
@@ -201,8 +198,7 @@ TEST_CASE("packed_euler_mixed_scalar_isolation",
   REQUIRE(u0 == fp0);
   REQUIRE(u1 == fp1);
   REQUIRE(result.candidate<0>()[0] == Catch::Approx(2.0 + 0.5 * 1.0));
-  REQUIRE(result.candidate<1>()[0].real() ==
-          Catch::Approx(1.0).margin(1e-12));
+  REQUIRE(result.candidate<1>()[0].real() == Catch::Approx(1.0).margin(1e-12));
   REQUIRE(result.candidate<1>()[0].imag() ==
           Catch::Approx(-1.0 + 0.5 * 2.0).margin(1e-12));
 
@@ -218,12 +214,10 @@ TEST_CASE("packed_euler_mixed_scalar_isolation",
   REQUIRE(u1[0].imag() == Catch::Approx(0.0).margin(1e-12));
 }
 
-TEST_CASE("packed_euler_mixed_host_fields",
-          "[step_attempt][unit][packed][field]") {
+TEST_CASE("packed_euler_mixed_host_fields", "[step_attempt][unit][packed][field]") {
   using pfc::data::Field;
   MixedScalarRhs rhs{};
-  PackedEulerStepper<MixedScalarRhs, double, Complex> stepper(0.25, {1, 1},
-                                                              rhs);
+  PackedEulerStepper<MixedScalarRhs, double, Complex> stepper(0.25, {1, 1}, rhs);
   const auto domain = pfc::domain::create({1, 1, 1});
   const auto box = pfc::Box3i::from_bounds({0, 0, 0}, {0, 0, 0});
   Field<double> a(domain, box, 0);

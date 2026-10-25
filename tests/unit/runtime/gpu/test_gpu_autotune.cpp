@@ -3,13 +3,13 @@
 
 #ifdef OpenPFC_ENABLE_GPU_AUTOTUNING
 
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/catch_session.hpp>
-#include <catch2/matchers/catch_matchers_string.hpp>
-#include <fstream>
-#include <filesystem>
-#include <cstdlib>
 #include "openpfc/runtime/common/gpu_autotune.hpp"
+#include <catch2/catch_session.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
 
 using namespace pfc::gpu;
 
@@ -19,9 +19,9 @@ struct EnvVarGuard {
   std::string original_;
   bool was_set_;
 
-  explicit EnvVarGuard(const std::string& name, const std::string& value)
-    : name_(name) {
-    const char* val = std::getenv(name.c_str());
+  explicit EnvVarGuard(const std::string &name, const std::string &value)
+      : name_(name) {
+    const char *val = std::getenv(name.c_str());
     was_set_ = (val != nullptr);
     original_ = was_set_ ? val : "";
     setenv(name.c_str(), value.c_str(), 1);
@@ -35,8 +35,8 @@ struct EnvVarGuard {
     }
   }
 
-  EnvVarGuard(const EnvVarGuard&) = delete;
-  EnvVarGuard& operator=(const EnvVarGuard&) = delete;
+  EnvVarGuard(const EnvVarGuard &) = delete;
+  EnvVarGuard &operator=(const EnvVarGuard &) = delete;
 };
 
 TEST_CASE("test_cache_save_load") {
@@ -48,14 +48,15 @@ TEST_CASE("test_cache_save_load") {
   EnvVarGuard cache_guard("OPENPFC_GPU_AUTOTUNE_CACHE_DIR", cache_dir);
 
   // Reset singleton to pick up new environment variable
-  AutoTuner& tuner = AutoTuner::instance();
+  AutoTuner &tuner = AutoTuner::instance();
   tuner.reset();
 
   // Use set_cache_config to populate cache for testing
   KernelConfig config{"test_kernel", 128, 2, 1, 0, 0, 0, {100, 10000}};
   tuner.set_cache_config("test_kernel", config);
 
-  std::string cache_file = cache_dir + "/" + get_device_id() + "_autotune_cache.json";
+  std::string cache_file =
+      cache_dir + "/" + get_device_id() + "_autotune_cache.json";
   tuner.save_cache(cache_file);
 
   // Verify file exists and contains valid JSON
@@ -104,7 +105,7 @@ TEST_CASE("test_device_detection_hip") {
 #endif
 
 TEST_CASE("test_fallback_defaults") {
-  AutoTuner& tuner = AutoTuner::instance();
+  AutoTuner &tuner = AutoTuner::instance();
   tuner.reset();
   EnvVarGuard mode_guard("OPENPFC_GPU_AUTOTUNE_MODE", "fallback_only");
   tuner.reset();
@@ -129,14 +130,14 @@ TEST_CASE("test_cache_invalid_json") {
   file << "{ invalid json content";
   file.close();
 
-  AutoTuner& tuner = AutoTuner::instance();
+  AutoTuner &tuner = AutoTuner::instance();
   REQUIRE_THROWS(tuner.load_cache(cache_file));
 
   std::filesystem::remove(cache_file);
 }
 
 TEST_CASE("test_cache_missing_file") {
-  AutoTuner& tuner = AutoTuner::instance();
+  AutoTuner &tuner = AutoTuner::instance();
 
   // Should throw when loading non-existent file
   REQUIRE_THROWS(tuner.load_cache("nonexistent_cache.json"));
@@ -149,28 +150,24 @@ TEST_CASE("test_cache_missing_file") {
 }
 
 TEST_CASE("test_cache_save_error_handling") {
-  AutoTuner& tuner = AutoTuner::instance();
+  AutoTuner &tuner = AutoTuner::instance();
   tuner.reset();
 
   // Attempt to save to a non-existent directory
   std::string invalid_path = "/nonexistent/path/cache.json";
 
   // Should throw std::runtime_error when file cannot be opened
-  REQUIRE_THROWS_AS(
-    tuner.save_cache(invalid_path),
-    std::runtime_error
-  );
+  REQUIRE_THROWS_AS(tuner.save_cache(invalid_path), std::runtime_error);
 
   // Verify the error message contains the filepath and a descriptive message
   REQUIRE_THROWS_WITH(
-    tuner.save_cache(invalid_path),
-    Catch::Matchers::ContainsSubstring(invalid_path) &&
-    Catch::Matchers::ContainsSubstring("Cannot open cache file")
-  );
+      tuner.save_cache(invalid_path),
+      Catch::Matchers::ContainsSubstring(invalid_path) &&
+          Catch::Matchers::ContainsSubstring("Cannot open cache file"));
 }
 
 TEST_CASE("test_autotuner_get_config") {
-  AutoTuner& tuner = AutoTuner::instance();
+  AutoTuner &tuner = AutoTuner::instance();
   tuner.reset();
   EnvVarGuard mode_guard("OPENPFC_GPU_AUTOTUNE_MODE", "fallback_only");
   tuner.reset();
@@ -187,16 +184,17 @@ TEST_CASE("test_autotuner_get_config") {
 }
 
 TEST_CASE("test_tune_kernel_unknown_kernel") {
-  AutoTuner& tuner = AutoTuner::instance();
+  AutoTuner &tuner = AutoTuner::instance();
   tuner.reset();
 
   // Should throw std::invalid_argument for unknown kernel name
-  REQUIRE_THROWS_AS(tuner.tune_kernel("unknown_kernel", [](const KernelConfig&) {}, 1000),
-                     std::invalid_argument);
+  REQUIRE_THROWS_AS(tuner.tune_kernel(
+                        "unknown_kernel", [](const KernelConfig &) {}, 1000),
+                    std::invalid_argument);
 }
 
 TEST_CASE("test_environment_variable_disable") {
-  AutoTuner& tuner = AutoTuner::instance();
+  AutoTuner &tuner = AutoTuner::instance();
   tuner.reset();
 
   // Test disable environment variable with RAII guard
@@ -213,7 +211,7 @@ TEST_CASE("test_environment_variable_disable") {
 }
 
 TEST_CASE("test_environment_variable_mode_cache_only") {
-  AutoTuner& tuner = AutoTuner::instance();
+  AutoTuner &tuner = AutoTuner::instance();
   tuner.reset();
 
   // Test cache_only mode with non-existent cache
@@ -237,13 +235,14 @@ TEST_CASE("test_environment_variable_cache_dir") {
   EnvVarGuard cache_guard("OPENPFC_GPU_AUTOTUNE_CACHE_DIR", cache_dir);
 
   // Reset tuner to pick up new environment variable
-  AutoTuner& tuner = AutoTuner::instance();
+  AutoTuner &tuner = AutoTuner::instance();
   tuner.reset();
 
   // Add config and save
   KernelConfig config{"test_env_kernel", 512, 1, 1, 0, 0, 0, {0, SIZE_MAX}};
   tuner.set_cache_config("test_env_kernel", config);
-  std::string cache_file = cache_dir + "/" + get_device_id() + "_autotune_cache.json";
+  std::string cache_file =
+      cache_dir + "/" + get_device_id() + "_autotune_cache.json";
   tuner.save_cache(cache_file);
 
   // Verify file was created in the specified directory
@@ -254,7 +253,7 @@ TEST_CASE("test_environment_variable_cache_dir") {
 }
 
 TEST_CASE("test_problem_size_range_validation") {
-  AutoTuner& tuner = AutoTuner::instance();
+  AutoTuner &tuner = AutoTuner::instance();
   tuner.reset();
 
   // Test problem size validation in cache
@@ -271,7 +270,7 @@ TEST_CASE("test_problem_size_range_validation") {
 }
 
 TEST_CASE("test_unknown_kernel_uses_default") {
-  AutoTuner& tuner = AutoTuner::instance();
+  AutoTuner &tuner = AutoTuner::instance();
   tuner.reset();
   EnvVarGuard mode_guard("OPENPFC_GPU_AUTOTUNE_MODE", "fallback_only");
   tuner.reset();
@@ -284,8 +283,5 @@ TEST_CASE("test_unknown_kernel_uses_default") {
   REQUIRE(config.block_size_z == 1);
 }
 
-
-int main(int argc, char *argv[]) {
-  return Catch::Session().run(argc, argv);
-}
+int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
 #endif // OpenPFC_ENABLE_GPU_AUTOTUNING

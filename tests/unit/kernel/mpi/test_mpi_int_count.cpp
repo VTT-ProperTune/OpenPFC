@@ -9,18 +9,16 @@
 #include <stdexcept>
 #include <string>
 
-TEST_CASE("ensure_mpi_int_count accepts INT_MAX and below",
-          "[mpi][int_count]") {
+TEST_CASE("ensure_mpi_int_count accepts INT_MAX and below", "[mpi][int_count]") {
   REQUIRE(pfc::mpi::ensure_mpi_int_count(0u, "t") == 0);
-  REQUIRE(pfc::mpi::ensure_mpi_int_count(static_cast<std::size_t>(INT_MAX),
-                                         "t") == INT_MAX);
+  REQUIRE(pfc::mpi::ensure_mpi_int_count(static_cast<std::size_t>(INT_MAX), "t") ==
+          INT_MAX);
 }
 
 TEST_CASE("ensure_mpi_int_count throws above INT_MAX", "[mpi][int_count]") {
   const std::size_t oversize = static_cast<std::size_t>(INT_MAX) + 1u;
-  REQUIRE_THROWS_AS(
-      pfc::mpi::ensure_mpi_int_count(oversize, "exchange::send"),
-      std::overflow_error);
+  REQUIRE_THROWS_AS(pfc::mpi::ensure_mpi_int_count(oversize, "exchange::send"),
+                    std::overflow_error);
 
   try {
     (void)pfc::mpi::ensure_mpi_int_count(oversize, "exchange::send");

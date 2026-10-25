@@ -3,12 +3,13 @@
 
 /**
  * @file test_be_02.cpp
- * @brief Regression test for PF (coordinate rounding) - M1: Domain-level coordinate rounding validation
+ * @brief Regression test for PF (coordinate rounding) - M1: Domain-level coordinate
+ * rounding validation
  *
  * This is the re-pointed version of the Pre-M0 PF regression test, now exercising
  * the Domain abstraction instead of World. The test validates that Domain correctly
- * uses nearest-grid rounding when converting physical coordinates to indices, ensuring
- * the documented contract (round to nearest integer) is honored.
+ * uses nearest-grid rounding when converting physical coordinates to indices,
+ * ensuring the documented contract (round to nearest integer) is honored.
  */
 
 #include <catch2/catch_test_macros.hpp>
@@ -25,8 +26,9 @@ using pfc::Real3;
 // Domain namespace helpers
 namespace domain = pfc::domain;
 
-TEST_CASE("Domain regression test PF: coordinate rounding uses nearest-grid rounding",
-          "[domain][regression][PF]") {
+TEST_CASE(
+    "Domain regression test PF: coordinate rounding uses nearest-grid rounding",
+    "[domain][regression][PF]") {
   // PF (audit 4.6): World's to_index truncated while to_indices documented (and
   // DiscreteField used) rounding. The fix standardized on std::lround.
   // This test validates that Domain::to_indices uses proper rounding to nearest
@@ -35,7 +37,8 @@ TEST_CASE("Domain regression test PF: coordinate rounding uses nearest-grid roun
   const Int3 dimensions = {100, 100, 100};
   const Real3 origin = {0.0, 0.0, 0.0};
   const Real3 spacing = {1.0, 1.0, 1.0};
-  const Domain d = domain::create(GridSize(dimensions), PhysicalOrigin(origin), GridSpacing(spacing));
+  const Domain d = domain::create(GridSize(dimensions), PhysicalOrigin(origin),
+                                  GridSpacing(spacing));
 
   SECTION("Standard nearest-grid rounding behavior") {
     // 10.6 must round up to 11 (truncation would wrongly give 10);
@@ -81,7 +84,8 @@ TEST_CASE("Domain regression test PF: coordinate rounding uses nearest-grid roun
     // Test with non-unit spacing to ensure rounding works with different scales
     const Domain d2 = domain::with_spacing({100, 100, 100}, {0.1, 0.2, 0.5});
 
-    // At spacing 0.1, 1.06 should map to index 11 (coords / 0.1 = 10.6 -> round to 11)
+    // At spacing 0.1, 1.06 should map to index 11 (coords / 0.1 = 10.6 -> round to
+    // 11)
     const Real3 coords1 = {1.06, 0.0, 0.0};
     const Int3 indices1 = domain::to_indices(d2, coords1);
     REQUIRE(indices1[0] == 11);

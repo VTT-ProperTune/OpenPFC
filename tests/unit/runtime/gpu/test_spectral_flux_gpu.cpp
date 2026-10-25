@@ -7,7 +7,7 @@
  * `spectral_flux_pointwise.cu` / `.hip`.
  */
 
-#if !defined(OPENPFC_TEST_SPECTRAL_FLUX_HIP) &&                                    \
+#if !defined(OPENPFC_TEST_SPECTRAL_FLUX_HIP) &&                                     \
     !defined(OPENPFC_TEST_SPECTRAL_FLUX_CUDA)
 
 #include <catch2/catch_session.hpp>
@@ -34,9 +34,9 @@ int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/simulation/spectral_etd_ops.hpp>
+#include <openpfc/kernel/simulation/spectral_flux.hpp>
 #include <openpfc/runtime/gpu/memory_space_gpu.hpp>
 #include <openpfc/runtime/gpu/spectral_etd_ops_gpu.hpp>
-#include <openpfc/kernel/simulation/spectral_flux.hpp>
 
 #if defined(OPENPFC_TEST_SPECTRAL_FLUX_HIP)
 #include <openpfc/runtime/hip/fft_hip.hpp>

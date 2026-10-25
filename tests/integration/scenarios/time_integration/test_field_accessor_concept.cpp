@@ -3,12 +3,12 @@
 
 #include <vector>
 
-#include <openpfc/kernel/field/field_accessor_concept.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/field/field_accessor_concept.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 
-using pfc::field::FieldAccessor;
 using pfc::data::Field;
+using pfc::field::FieldAccessor;
 
 void test_local_field_satisfies_concept() {
   static_assert(FieldAccessor<Field<double>>);

@@ -24,7 +24,7 @@ using namespace pfc;
 // Utility to create a small test world
 static inline Domain make_world(int nx, int ny, int nz) {
   return domain::create(GridSize({nx, ny, nz}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                       GridSpacing({1.0, 1.0, 1.0}));
+                        GridSpacing({1.0, 1.0, 1.0}));
 }
 
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)

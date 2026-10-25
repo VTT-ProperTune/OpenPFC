@@ -202,9 +202,9 @@ TEST_CASE("create_padded_face_types_6: throws on negative halo width",
   const int ny = 4;
   const int nz = 4;
 
-  REQUIRE_THROWS_AS(pfc::halo::create_padded_face_types_6(nx, ny, nz, -1,
-                                                         MPI_DOUBLE),
-                    std::invalid_argument);
+  REQUIRE_THROWS_AS(
+      pfc::halo::create_padded_face_types_6(nx, ny, nz, -1, MPI_DOUBLE),
+      std::invalid_argument);
 }
 
 TEST_CASE("create_padded_face_types_6: thin owned core throws before MPI",

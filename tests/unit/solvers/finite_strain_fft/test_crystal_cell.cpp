@@ -19,8 +19,8 @@
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
-#include <openpfc/solvers/finite_strain_fft/newton.hpp>
 #include <openpfc/mechanics/constitutive/crystal_plasticity.hpp>
+#include <openpfc/solvers/finite_strain_fft/newton.hpp>
 
 #include "aluminum_slip.hpp"
 

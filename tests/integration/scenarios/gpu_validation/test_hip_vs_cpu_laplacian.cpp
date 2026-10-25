@@ -25,7 +25,7 @@ using namespace pfc::fft::kspace;
 
 static inline Domain make_world(int nx, int ny, int nz) {
   return domain::create(GridSize({nx, ny, nz}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                       GridSpacing({1.0, 1.0, 1.0}));
+                        GridSpacing({1.0, 1.0, 1.0}));
 }
 
 #if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
@@ -112,8 +112,7 @@ TEST_CASE("CPU vs HIP Laplacian equivalence (double) [integration][gpu][hip]",
 
   auto l2 = [](const std::vector<double> &v) {
     long double s = 0.0L;
-    for (double x : v)
-      s += static_cast<long double>(x) * x;
+    for (double x : v) s += static_cast<long double>(x) * x;
     return std::sqrt(static_cast<double>(s));
   };
 
@@ -127,8 +126,9 @@ TEST_CASE("CPU vs HIP Laplacian equivalence (double) [integration][gpu][hip]",
   REQUIRE(fields_match);
 }
 #else
-TEST_CASE("CPU vs HIP Laplacian skipped (HIP spectral disabled) [integration][gpu][hip]",
-          "[gpu][hip]") {
+TEST_CASE(
+    "CPU vs HIP Laplacian skipped (HIP spectral disabled) [integration][gpu][hip]",
+    "[gpu][hip]") {
   SUCCEED("HIP spectral not enabled; skipping CPU-vs-HIP Laplacian test");
 }
 #endif

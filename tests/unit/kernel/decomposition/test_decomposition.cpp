@@ -130,8 +130,8 @@ TEST_CASE("Decomposition - per-axis periodicity in get_neighbor_rank (M1.3)",
           "[decomposition][unit]") {
   using namespace pfc;
   // Non-periodic in x, periodic in y and z.
-  auto domain =
-      domain::from_bounds({16, 16, 16}, {0, 0, 0}, {16, 16, 16}, {false, true, true});
+  auto domain = domain::from_bounds({16, 16, 16}, {0, 0, 0}, {16, 16, 16},
+                                    {false, true, true});
   auto decomp = decomposition::create(domain, Int3{2, 2, 2});
   REQUIRE(decomposition::get_num_domains(decomp) == 8);
 

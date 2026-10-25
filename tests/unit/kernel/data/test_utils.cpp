@@ -35,11 +35,12 @@ TEST_CASE("utils - string formatting", "[utils][unit]") {
 
   SECTION("Handles encoding errors") {
     // Use an invalid format specifier that triggers snprintf to return negative
-    // Different snprintf implementations may behave differently; this is a common case
+    // Different snprintf implementations may behave differently; this is a common
+    // case
     REQUIRE_THROWS_AS(
-      utils::string_format("%lc", static_cast<wchar_t>(0xD800)),  // invalid UTF-16 surrogate
-      std::runtime_error
-    );
+        utils::string_format(
+            "%lc", static_cast<wchar_t>(0xD800)), // invalid UTF-16 surrogate
+        std::runtime_error);
   }
 }
 
@@ -80,9 +81,11 @@ TEST_CASE("utils - sizeof_vec", "[utils][unit]") {
   }
 }
 
-TEST_CASE("utils - format_with_number validation rejects dangerous patterns", "[utils][unit]") {
+TEST_CASE("utils - format_with_number validation rejects dangerous patterns",
+          "[utils][unit]") {
   SECTION("Rejects %n specifier") {
-    REQUIRE_THROWS_AS(utils::format_with_number("output_%n.dat", 7), std::invalid_argument);
+    REQUIRE_THROWS_AS(utils::format_with_number("output_%n.dat", 7),
+                      std::invalid_argument);
     try {
       utils::format_with_number("output_%n.dat", 7);
       FAIL("Should have thrown std::invalid_argument");
@@ -94,31 +97,38 @@ TEST_CASE("utils - format_with_number validation rejects dangerous patterns", "[
   }
 
   SECTION("Rejects %s specifier") {
-    REQUIRE_THROWS_AS(utils::format_with_number("file_%s.txt", 1), std::invalid_argument);
+    REQUIRE_THROWS_AS(utils::format_with_number("file_%s.txt", 1),
+                      std::invalid_argument);
   }
 
   SECTION("Rejects %f specifier") {
-    REQUIRE_THROWS_AS(utils::format_with_number("data_%f.bin", 42), std::invalid_argument);
+    REQUIRE_THROWS_AS(utils::format_with_number("data_%f.bin", 42),
+                      std::invalid_argument);
   }
 
   SECTION("Rejects multiple %d specifiers") {
-    REQUIRE_THROWS_AS(utils::format_with_number("step_%d_rank_%d.dat", 1), std::invalid_argument);
+    REQUIRE_THROWS_AS(utils::format_with_number("step_%d_rank_%d.dat", 1),
+                      std::invalid_argument);
   }
 
   SECTION("Rejects mixed specifiers (%d and %f)") {
-    REQUIRE_THROWS_AS(utils::format_with_number("out_%d_%f.dat", 1), std::invalid_argument);
+    REQUIRE_THROWS_AS(utils::format_with_number("out_%d_%f.dat", 1),
+                      std::invalid_argument);
   }
 
   SECTION("Rejects %x specifier") {
-    REQUIRE_THROWS_AS(utils::format_with_number("hex_%x.dat", 10), std::invalid_argument);
+    REQUIRE_THROWS_AS(utils::format_with_number("hex_%x.dat", 10),
+                      std::invalid_argument);
   }
 
   SECTION("Rejects %p specifier") {
-    REQUIRE_THROWS_AS(utils::format_with_number("ptr_%p.dat", 1), std::invalid_argument);
+    REQUIRE_THROWS_AS(utils::format_with_number("ptr_%p.dat", 1),
+                      std::invalid_argument);
   }
 }
 
-TEST_CASE("utils - format_with_number validation accepts valid patterns", "[utils][unit]") {
+TEST_CASE("utils - format_with_number validation accepts valid patterns",
+          "[utils][unit]") {
   SECTION("Accepts %d and produces correct output") {
     std::string result = utils::format_with_number("step_%d.dat", 123);
     REQUIRE(result == "step_123.dat");
@@ -131,7 +141,8 @@ TEST_CASE("utils - format_with_number validation accepts valid patterns", "[util
 
   SECTION("Accepts %-5d (left-align) and produces correct output") {
     std::string result = utils::format_with_number("result_%-5d.bin", 42);
-    REQUIRE(result == "result_42   .bin");  // Note: left-align with space padding to width 5
+    REQUIRE(result ==
+            "result_42   .bin"); // Note: left-align with space padding to width 5
   }
 
   SECTION("Accepts pattern with no % specifier unchanged") {
@@ -226,10 +237,13 @@ TEST_CASE("utils - expand_env_in_path", "[utils][unit]") {
 
   SECTION("Fails closed on stray $") {
     REQUIRE_THROWS_AS(utils::expand_env_in_path("data$.bin"), std::invalid_argument);
-    REQUIRE_THROWS_AS(utils::expand_env_in_path("data$$.bin"), std::invalid_argument);
-    REQUIRE_THROWS_AS(utils::expand_env_in_path("$123/x.bin"), std::invalid_argument);
+    REQUIRE_THROWS_AS(utils::expand_env_in_path("data$$.bin"),
+                      std::invalid_argument);
+    REQUIRE_THROWS_AS(utils::expand_env_in_path("$123/x.bin"),
+                      std::invalid_argument);
     REQUIRE_THROWS_AS(utils::expand_env_in_path("${}/x.bin"), std::invalid_argument);
-    REQUIRE_THROWS_AS(utils::expand_env_in_path("${OPEN/x.bin"), std::invalid_argument);
+    REQUIRE_THROWS_AS(utils::expand_env_in_path("${OPEN/x.bin"),
+                      std::invalid_argument);
     REQUIRE_THROWS_AS(utils::expand_env_in_path("${bad-name}/x.bin"),
                       std::invalid_argument);
     try {

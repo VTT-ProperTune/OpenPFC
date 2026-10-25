@@ -6,10 +6,10 @@
 #include <tuple>
 
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/field/composite_gradient.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
-#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
 #include <wave2d/wave_model.hpp>
@@ -18,25 +18,26 @@
 
 // Per-field gradient aggregates using FDGradient-recognized member names
 struct UGrads {
-  double xx{};  // Second derivative in x (for u Laplacian)
-  double yy{};  // Second derivative in y (for u Laplacian)
+  double xx{}; // Second derivative in x (for u Laplacian)
+  double yy{}; // Second derivative in y (for u Laplacian)
 };
 
 struct VGrads {
-  double value{};  // Current v value (for du = v term)
+  double value{}; // Current v value (for du = v term)
 };
 
 // Composite gradient aggregate passed to model.rhs()
 struct WaveLocal {
-  UGrads u;  // u's Laplacian components (xx, yy)
-  VGrads v;  // v's current value
+  UGrads u; // u's Laplacian components (xx, yy)
+  VGrads v; // v's current value
 };
 
 // Model wrapper adapter that transforms WaveModel::rhs signature
 struct WaveModelAdapter {
   wave2d::WaveModel model;
 
-  [[nodiscard]] wave2d::WaveIncrements rhs(double t, const WaveLocal &g) const noexcept {
+  [[nodiscard]] wave2d::WaveIncrements rhs(double t,
+                                           const WaveLocal &g) const noexcept {
     // Transform UGrads (xx, yy) to WaveLaplacian (lxx, lyy)
     wave2d::WaveLaplacian lap{.lxx = g.u.xx, .lyy = g.u.yy};
     // Call legacy WaveModel::rhs with v value from VGrads
@@ -61,8 +62,7 @@ double v_exact(double x, double y, double t) {
   return c * x_shifted / (sigma * sigma) * u_exact(x, y, t);
 }
 
-double compute_l2_error(const pfc::data::Field<double> &field,
-                        double t,
+double compute_l2_error(const pfc::data::Field<double> &field, double t,
                         double (*exact)(double, double, double)) {
   const auto &spacing = field.spacing();
   const auto &size = field.size3();
@@ -92,10 +92,12 @@ double compute_l2_error(const pfc::data::Field<double> &field,
 // Test fixture for wave model tests
 class WaveModelMultifieldFixture : public pfc::test::SimulationModelFixture {
 public:
-  WaveModelMultifieldFixture() = default; // Default constructor for parameterless TEST_CASE_METHOD
+  WaveModelMultifieldFixture() =
+      default; // Default constructor for parameterless TEST_CASE_METHOD
 
   // Custom constructor for test-specific setup
-  WaveModelMultifieldFixture(int Nx, int Ny, int Nz, double Lx, double Ly, double Lz) {
+  WaveModelMultifieldFixture(int Nx, int Ny, int Nz, double Lx, double Ly,
+                             double Lz) {
     double dx = Lx / Nx;
     double dy = Ly / Ny;
     double dz = Lz / Nz;
@@ -106,14 +108,15 @@ public:
   }
 };
 
-TEST_CASE_METHOD(WaveModelMultifieldFixture, "WaveModel multi-field Gaussian pulse convergence") {
+TEST_CASE_METHOD(WaveModelMultifieldFixture,
+                 "WaveModel multi-field Gaussian pulse convergence") {
   constexpr int Nx = 64, Ny = 64, Nz = 4;
   constexpr double Lx = 1.0, Ly = 1.0, Lz = 0.1;
   constexpr double dx = Lx / Nx, dy = Ly / Ny, dz = Lz / Nz;
   constexpr int fd_order = 2;
-  constexpr int halo_width = fd_order / 2;  // = 1 for order 2
-  constexpr double t_end = 0.01;  // Shorter time to avoid boundary reflections
-  constexpr double dt_coarse = 0.0001;  // Smaller dt for stability
+  constexpr int halo_width = fd_order / 2; // = 1 for order 2
+  constexpr double t_end = 0.01;       // Shorter time to avoid boundary reflections
+  constexpr double dt_coarse = 0.0001; // Smaller dt for stability
   constexpr double dt_fine = dt_coarse / 2.0;
 
   // Manually set up domain with specific parameters for this test
@@ -126,26 +129,25 @@ TEST_CASE_METHOD(WaveModelMultifieldFixture, "WaveModel multi-field Gaussian pul
   auto decomp = pfc::decomposition::create(domain(), /*nparts=*/1);
 
   auto run_with_dt = [&](double dt) -> double {
-    auto u_field = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, halo_width);
-    auto v_field = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, halo_width);
+    auto u_field = pfc::data::field_from_subdomain_unpadded<double>(
+        decomp, /*rank=*/0, halo_width);
+    auto v_field = pfc::data::field_from_subdomain_unpadded<double>(
+        decomp, /*rank=*/0, halo_width);
 
-    u_field.apply([&](double x, double y, double z) -> double {
-      return u_exact(x, y, 0.0);
-    });
-    v_field.apply([&](double x, double y, double z) -> double {
-      return v_exact(x, y, 0.0);
-    });
+    u_field.apply(
+        [&](double x, double y, double z) -> double { return u_exact(x, y, 0.0); });
+    v_field.apply(
+        [&](double x, double y, double z) -> double { return v_exact(x, y, 0.0); });
 
     auto grad_u = pfc::field::create<UGrads>(u_field, fd_order);
     auto grad_v = pfc::field::create<VGrads>(v_field, fd_order);
     auto composite = pfc::field::create_composite<WaveLocal>(grad_u, grad_v);
 
-    WaveModelAdapter adapter{.model = wave2d::WaveModel{
-      .inv_dx2 = 1.0 / (dx * dx),
-      .inv_dy2 = 1.0 / (dy * dy)
-    }};
+    WaveModelAdapter adapter{.model = wave2d::WaveModel{.inv_dx2 = 1.0 / (dx * dx),
+                                                        .inv_dy2 = 1.0 / (dy * dy)}};
 
-    auto stepper = pfc::sim::steppers::create(std::tie(u_field, v_field), composite, adapter, dt);
+    auto stepper = pfc::sim::steppers::create(std::tie(u_field, v_field), composite,
+                                              adapter, dt);
 
     double t = 0.0;
     int n_steps = static_cast<int>(t_end / dt);
@@ -165,13 +167,14 @@ TEST_CASE_METHOD(WaveModelMultifieldFixture, "WaveModel multi-field Gaussian pul
   CHECK(convergence_ratio >= 1.5);
 }
 
-TEST_CASE_METHOD(WaveModelMultifieldFixture, "WaveModel multi-field factory workflow") {
+TEST_CASE_METHOD(WaveModelMultifieldFixture,
+                 "WaveModel multi-field factory workflow") {
   constexpr int Nx = 32, Ny = 32, Nz = 4;
   constexpr double Lx = 1.0, Ly = 1.0, Lz = 0.1;
   constexpr double dx = Lx / Nx, dy = Ly / Ny, dz = Lz / Nz;
   constexpr int fd_order = 2;
-  constexpr int halo_width = fd_order / 2;  // = 1 for order 2
-  constexpr double t_end = 0.01;  // Shorter time to avoid boundary reflections
+  constexpr int halo_width = fd_order / 2; // = 1 for order 2
+  constexpr double t_end = 0.01; // Shorter time to avoid boundary reflections
   constexpr double dt = 0.0001;  // Smaller dt for stability
 
   // Manually set up domain with specific parameters for this test
@@ -183,26 +186,25 @@ TEST_CASE_METHOD(WaveModelMultifieldFixture, "WaveModel multi-field factory work
   }
   auto decomp = pfc::decomposition::create(domain(), /*nparts=*/1);
 
-  auto u_field = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, halo_width);
-  auto v_field = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, halo_width);
+  auto u_field = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0,
+                                                                  halo_width);
+  auto v_field = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0,
+                                                                  halo_width);
 
-  u_field.apply([&](double x, double y, double z) -> double {
-    return u_exact(x, y, 0.0);
-  });
-  v_field.apply([&](double x, double y, double z) -> double {
-    return v_exact(x, y, 0.0);
-  });
+  u_field.apply(
+      [&](double x, double y, double z) -> double { return u_exact(x, y, 0.0); });
+  v_field.apply(
+      [&](double x, double y, double z) -> double { return v_exact(x, y, 0.0); });
 
   auto grad_u = pfc::field::create<UGrads>(u_field, fd_order);
   auto grad_v = pfc::field::create<VGrads>(v_field, fd_order);
   auto composite = pfc::field::create_composite<WaveLocal>(grad_u, grad_v);
 
-  WaveModelAdapter adapter{.model = wave2d::WaveModel{
-    .inv_dx2 = 1.0 / (dx * dx),
-    .inv_dy2 = 1.0 / (dy * dy)
-  }};
+  WaveModelAdapter adapter{.model = wave2d::WaveModel{.inv_dx2 = 1.0 / (dx * dx),
+                                                      .inv_dy2 = 1.0 / (dy * dy)}};
 
-  auto stepper = pfc::sim::steppers::create(std::tie(u_field, v_field), composite, adapter, dt);
+  auto stepper =
+      pfc::sim::steppers::create(std::tie(u_field, v_field), composite, adapter, dt);
 
   double t = 0.0;
   int n_steps = static_cast<int>(t_end / dt);
@@ -216,8 +218,8 @@ TEST_CASE_METHOD(WaveModelMultifieldFixture, "WaveModel multi-field factory work
 
   CHECK(!std::isnan(error_u));
   CHECK(error_u > 0.0);
-  CHECK(error_u < 100.0);  // Relaxed tolerance for workflow validation
+  CHECK(error_u < 100.0); // Relaxed tolerance for workflow validation
   CHECK(!std::isnan(error_v));
   CHECK(error_v > 0.0);
-  CHECK(error_v < 100.0);  // Relaxed tolerance for workflow validation
+  CHECK(error_v < 100.0); // Relaxed tolerance for workflow validation
 }

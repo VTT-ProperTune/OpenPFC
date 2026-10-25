@@ -18,14 +18,14 @@ using pfc::sim::add_declared_field;
 using pfc::sim::DeclaresFields;
 using pfc::sim::FieldDeclaration;
 using pfc::sim::FieldElementKind;
-using pfc::sim::HasParameters;
 using pfc::sim::HasCorrelationKernel;
 using pfc::sim::HasMeanFieldFilter;
+using pfc::sim::HasParameters;
 using pfc::sim::HasSpectralPointwise;
 using pfc::sim::PointwisePhysics;
 using pfc::sim::PointwiseRhs;
-using pfc::sim::SpectralLinearSymbol;
 using pfc::sim::SpectralETDPhysics;
+using pfc::sim::SpectralLinearSymbol;
 
 namespace {
 

@@ -24,7 +24,7 @@ using namespace pfc;
 
 static inline Domain make_world(int nx, int ny, int nz) {
   return domain::create(GridSize({nx, ny, nz}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                       GridSpacing({1.0, 1.0, 1.0}));
+                        GridSpacing({1.0, 1.0, 1.0}));
 }
 
 #if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
@@ -98,8 +98,9 @@ TEST_CASE("HIP FFT roundtrip (float) [integration][gpu][hip]", "[gpu][hip]") {
   REQUIRE(roundtrip_matches);
 }
 #else
-TEST_CASE("HIP FFT roundtrip skipped (HIP spectral disabled) [integration][gpu][hip]",
-          "[gpu][hip]") {
+TEST_CASE(
+    "HIP FFT roundtrip skipped (HIP spectral disabled) [integration][gpu][hip]",
+    "[gpu][hip]") {
   SUCCEED("HIP spectral not enabled; skipping GPU roundtrip test");
 }
 #endif

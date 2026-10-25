@@ -3,17 +3,16 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <complex>
-#include <openpfc/kernel/field/field_factory.hpp>
-#include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 
 TEST_CASE("field_from_subdomain creates Field with matching geometry",
           "[field_factory][unit]") {
   const int nx = 2, ny = 2, nz = 2;
   const pfc::Domain domain = pfc::domain::create({nx, ny, nz});
   const int num_ranks = 2;
-  const pfc::Decomposition decomp =
-      pfc::decomposition::create(domain, num_ranks);
+  const pfc::Decomposition decomp = pfc::decomposition::create(domain, num_ranks);
   const int halo = 1;
 
   SECTION("All ranks get correctly sized fields") {
@@ -59,18 +58,15 @@ TEST_CASE("field_from_subdomain throws on invalid rank", "[field_factory][unit]"
   const pfc::Decomposition decomp = pfc::decomposition::create(domain, 2);
 
   SECTION("Negative rank throws") {
-    REQUIRE_THROWS_AS(
-        pfc::data::field_from_subdomain<double>(decomp, -1, 0),
-        std::out_of_range);
+    REQUIRE_THROWS_AS(pfc::data::field_from_subdomain<double>(decomp, -1, 0),
+                      std::out_of_range);
   }
 
   SECTION("Rank >= num_domains throws") {
-    REQUIRE_THROWS_AS(
-        pfc::data::field_from_subdomain<double>(decomp, 2, 0),
-        std::out_of_range);
-    REQUIRE_THROWS_AS(
-        pfc::data::field_from_subdomain<double>(decomp, 100, 0),
-        std::out_of_range);
+    REQUIRE_THROWS_AS(pfc::data::field_from_subdomain<double>(decomp, 2, 0),
+                      std::out_of_range);
+    REQUIRE_THROWS_AS(pfc::data::field_from_subdomain<double>(decomp, 100, 0),
+                      std::out_of_range);
   }
 }
 
@@ -78,8 +74,7 @@ TEST_CASE("field_from_subdomain with larger domain", "[field_factory][unit]") {
   const int nx = 8, ny = 4, nz = 2;
   const pfc::Domain domain = pfc::domain::create({nx, ny, nz});
   const int num_ranks = 4;
-  const pfc::Decomposition decomp =
-      pfc::decomposition::create(domain, num_ranks);
+  const pfc::Decomposition decomp = pfc::decomposition::create(domain, num_ranks);
 
   SECTION("All ranks partition domain correctly") {
     int total_cells = 0;

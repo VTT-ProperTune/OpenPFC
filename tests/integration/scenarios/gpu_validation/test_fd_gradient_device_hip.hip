@@ -193,8 +193,7 @@ TEST_CASE("HIP for_each_interior_device + FDGradientDevice<G> agree with "
                     hipMemcpyHostToDevice) == hipSuccess);
   REQUIRE(hipMemset(d_du, 0, total * sizeof(double)) == hipSuccess);
 
-  pfc::hip::FDGradientDevice<TestGrads> eval(d_u, nx, ny, nz, dx, dy, dz, hw,
-                                              order);
+  pfc::hip::FDGradientDevice<TestGrads> eval(d_u, nx, ny, nz, dx, dy, dz, hw, order);
   TestModel model;
 
   pfc::sim::hip::for_each_interior_device<TestModel, TestGrads>(
@@ -256,8 +255,8 @@ TEST_CASE("HIP FDGradientDevice mixed xy/xz/yz polynomial Hessian cross-terms",
   }
 
   const auto mixed_poly = [](double x, double y, double z) {
-    return kA + kB * x + kC * x * x + kD * y + kE * y * y + kF * z +
-           kG * z * z + kH * x * y + kI * x * z + kJ * y * z;
+    return kA + kB * x + kC * x * x + kD * y + kE * y * y + kF * z + kG * z * z +
+           kH * x * y + kI * x * z + kJ * y * z;
   };
   const auto mixed_rhs = [&](double x, double y, double z) {
     return mixed_poly(x, y, z) + kH + kI + kJ;
@@ -353,8 +352,7 @@ TEST_CASE("HIP FDGradientDevice mixed-only OnlyXY loads D1 weights",
   double *d_u = nullptr;
   REQUIRE(hipMalloc(&d_u, total) == hipSuccess);
 
-  pfc::hip::FDGradientDevice<OnlyXY> eval(d_u, nx, ny, nz, 1.0, 1.0, 1.0, hw,
-                                          order);
+  pfc::hip::FDGradientDevice<OnlyXY> eval(d_u, nx, ny, nz, 1.0, 1.0, 1.0, hw, order);
   const auto &pod = eval.pod();
   REQUIRE(pod.hw1 == 1);
   REQUIRE(pod.cx1[1] != 0.0);
@@ -381,9 +379,9 @@ TEST_CASE("HIP FDGradientDevice<G> ctor rejects an order without a D1 stencil ta
 
   double *d_u = nullptr;
   REQUIRE(hipMalloc(&d_u, total) == hipSuccess);
-  REQUIRE_THROWS_AS((pfc::hip::FDGradientDevice<OnlyX>(d_u, nx, ny, nz, 1.0, 1.0,
-                                                       1.0, hw, order)),
-                    std::invalid_argument);
+  REQUIRE_THROWS_AS(
+      (pfc::hip::FDGradientDevice<OnlyX>(d_u, nx, ny, nz, 1.0, 1.0, 1.0, hw, order)),
+      std::invalid_argument);
   hipFree(d_u);
 }
 
@@ -497,8 +495,7 @@ TEST_CASE("HIP inner+border device stencil covers owned cells exactly once",
   REQUIRE(hipMemset(d_full, 0, total * sizeof(double)) == hipSuccess);
   REQUIRE(hipMemset(d_split, 0, total * sizeof(double)) == hipSuccess);
 
-  pfc::gpu::FDGradientDevice<TestGrads> eval(d_u, nx, ny, nz, dx, dy, dz, hw,
-                                             order);
+  pfc::gpu::FDGradientDevice<TestGrads> eval(d_u, nx, ny, nz, dx, dy, dz, hw, order);
   TestModel model;
   pfc::sim::gpu::for_each_interior_device<TestModel, TestGrads>(
       model, eval, d_full, /*t=*/0.0, nx, ny, nz);

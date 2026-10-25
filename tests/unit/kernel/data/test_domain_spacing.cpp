@@ -13,34 +13,34 @@ namespace domain = pfc::domain;
 
 TEST_CASE("Domain::from_bounds periodic spacing matches documented formula",
           "[domain][unit]") {
-    double lower = 0.0;
-    double upper = 1.0;
-    int size = 10;
-    Bool3 periodic = {true, true, true};
+  double lower = 0.0;
+  double upper = 1.0;
+  int size = 10;
+  Bool3 periodic = {true, true, true};
 
-    auto domain_result = domain::from_bounds({size, size, size}, {lower, lower, lower},
-                                             {upper, upper, upper}, periodic);
+  auto domain_result = domain::from_bounds({size, size, size}, {lower, lower, lower},
+                                           {upper, upper, upper}, periodic);
 
-    double expected_spacing = (upper - lower) / size;
+  double expected_spacing = (upper - lower) / size;
 
-    REQUIRE(domain_result.spacing[0] == Catch::Approx(expected_spacing));
-    REQUIRE(domain_result.spacing[1] == Catch::Approx(expected_spacing));
-    REQUIRE(domain_result.spacing[2] == Catch::Approx(expected_spacing));
+  REQUIRE(domain_result.spacing[0] == Catch::Approx(expected_spacing));
+  REQUIRE(domain_result.spacing[1] == Catch::Approx(expected_spacing));
+  REQUIRE(domain_result.spacing[2] == Catch::Approx(expected_spacing));
 }
 
 TEST_CASE("Domain::from_bounds non-periodic spacing matches documented formula",
           "[domain][unit]") {
-    double lower = 0.0;
-    double upper = 1.0;
-    int size = 10;
-    Bool3 periodic = {false, false, false};
+  double lower = 0.0;
+  double upper = 1.0;
+  int size = 10;
+  Bool3 periodic = {false, false, false};
 
-    auto domain_result = domain::from_bounds({size, size, size}, {lower, lower, lower},
-                                             {upper, upper, upper}, periodic);
+  auto domain_result = domain::from_bounds({size, size, size}, {lower, lower, lower},
+                                           {upper, upper, upper}, periodic);
 
-    double expected_spacing = (upper - lower) / (size - 1);
+  double expected_spacing = (upper - lower) / (size - 1);
 
-    REQUIRE(domain_result.spacing[0] == Catch::Approx(expected_spacing));
-    REQUIRE(domain_result.spacing[1] == Catch::Approx(expected_spacing));
-    REQUIRE(domain_result.spacing[2] == Catch::Approx(expected_spacing));
+  REQUIRE(domain_result.spacing[0] == Catch::Approx(expected_spacing));
+  REQUIRE(domain_result.spacing[1] == Catch::Approx(expected_spacing));
+  REQUIRE(domain_result.spacing[2] == Catch::Approx(expected_spacing));
 }

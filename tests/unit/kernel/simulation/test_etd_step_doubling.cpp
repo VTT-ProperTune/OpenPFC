@@ -53,7 +53,9 @@ struct LinearHeat {
     pfc::sim::add_declared_field<double>(state, "psi", domain, box, 0);
   }
 
-  [[nodiscard]] double linear_symbol(double k_laplacian) const { return k_laplacian; }
+  [[nodiscard]] double linear_symbol(double k_laplacian) const {
+    return k_laplacian;
+  }
 
   [[nodiscard]] ZeroNonlinearity pointwise() const { return {}; }
 };
@@ -138,7 +140,8 @@ TEST_CASE("ETD1 step doubling is exact on a diagonal heat mode", "[etd_doubling]
   // match a system that was built at dt/2. They are not the full-step cache.
   SimulationState half_state;
   physics.declare_fields(half_state);
-  pfc::sim::SpectralETDSystem<LinearHeat> half_sys(physics, fft, half_state, dt * 0.5);
+  pfc::sim::SpectralETDSystem<LinearHeat> half_sys(physics, fft, half_state,
+                                                   dt * 0.5);
   REQUIRE(sys.nonlinear_weight() == half_sys.nonlinear_weight());
   SimulationState full_state;
   physics.declare_fields(full_state);
@@ -249,7 +252,8 @@ AdaptiveRecord run_sh(StepController kind, double rtol, double t_end,
     const double dt = time.get_attempted_dt();
     doubling.attempt(time.get_accepted_time(), dt);
     const auto decision = controller.decide_from_embedded_error(
-        dt, doubling.raw_difference(), doubling.saved_state(), doubling.half_steps());
+        dt, doubling.raw_difference(), doubling.saved_state(),
+        doubling.half_steps());
     if (guard == 0) {
       rec.first_metric = decision.metric;
     }
@@ -310,10 +314,10 @@ TEST_CASE("tighter ETD tolerances reduce Swift-Hohenberg global error",
   const auto again = run_sh(StepController::memoryless, 2.5e-7, t_end, reference);
 
   const auto report = [](const char *label, const AdaptiveRecord &rec) {
-    std::cout << label << " accepted=" << rec.accepted << " rejected=" << rec.rejected
-              << " nonlinear=" << rec.nonlinear << " transforms=" << rec.transforms
-              << " error=" << rec.error << " first_metric=" << rec.first_metric
-              << " dt";
+    std::cout << label << " accepted=" << rec.accepted
+              << " rejected=" << rec.rejected << " nonlinear=" << rec.nonlinear
+              << " transforms=" << rec.transforms << " error=" << rec.error
+              << " first_metric=" << rec.first_metric << " dt";
     for (double h : rec.dt) {
       std::cout << ' ' << h;
     }

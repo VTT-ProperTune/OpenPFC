@@ -22,16 +22,16 @@
 using pfc::Time;
 using pfc::integrator::AggregationScope;
 using pfc::integrator::ErrorEvidence;
-using pfc::integrator::SolutionScale;
 using pfc::integrator::make_embedded_pair_evidence;
 using pfc::integrator::make_invalid_evidence;
+using pfc::integrator::SolutionScale;
 using pfc::sim::AdaptiveControlConfig;
-using pfc::sim::AdaptiveControlMode;
 using pfc::sim::AdaptiveControllerState;
+using pfc::sim::AdaptiveControlMode;
 using pfc::sim::AdaptiveTimeController;
 using pfc::sim::StepController;
-using pfc::sim::steppers::EmbeddedRKStepper;
 using pfc::sim::steppers::commit_step_attempt;
+using pfc::sim::steppers::EmbeddedRKStepper;
 using pfc::sim::steppers::make_embedded_rk23;
 
 namespace {
@@ -51,8 +51,7 @@ AdaptiveControlConfig make_adaptive_cfg() {
 }
 
 struct PiecewiseStiffRhs {
-  void operator()(double t, std::vector<double> &u,
-                  std::vector<double> &du) const {
+  void operator()(double t, std::vector<double> &u, std::vector<double> &du) const {
     const double k = (t < 0.15) ? 50.0 : 1.0;
     for (std::size_t i = 0; i < u.size(); ++i) {
       du[i] = -k * u[i];
@@ -90,8 +89,7 @@ TEST_CASE("fixed mode always accepts and keeps dt", "[adaptive_controller]") {
   cfg.mode = AdaptiveControlMode::fixed;
   AdaptiveTimeController ctl(cfg, 3);
   const double norms[1] = {1e3};
-  auto ev = make_embedded_pair_evidence(
-      norms, AggregationScope::AlreadyReduced, 3);
+  auto ev = make_embedded_pair_evidence(norms, AggregationScope::AlreadyReduced, 3);
   const auto d = ctl.decide(0.1, ev);
   REQUIRE(d.accepted);
   REQUIRE(d.next_dt == Catch::Approx(0.1));
@@ -115,8 +113,7 @@ TEST_CASE("tiny error accepts and may grow dt", "[adaptive_controller]") {
   REQUIRE(d.next_dt <= make_adaptive_cfg().max_dt);
 }
 
-TEST_CASE("apply commit/reject updates Time and counters",
-          "[adaptive_controller]") {
+TEST_CASE("apply commit/reject updates Time and counters", "[adaptive_controller]") {
   AdaptiveTimeController ctl(make_adaptive_cfg(), 3);
   Time time({0.0, 1.0, 0.1}, 0.0);
 
@@ -209,8 +206,7 @@ TEST_CASE("pure atol ignores the solution scale", "[adaptive_controller]") {
   REQUIRE(d.metric == Catch::Approx(0.1));
 }
 
-TEST_CASE("solution scale changes a pure relative metric",
-          "[adaptive_controller]") {
+TEST_CASE("solution scale changes a pure relative metric", "[adaptive_controller]") {
   AdaptiveControlConfig cfg = make_adaptive_cfg();
   cfg.atol = 0.0;
   cfg.rtol = 1e-2;
@@ -300,8 +296,7 @@ TEST_CASE("embedded zero state uses atol and rejects pure rtol",
   AdaptiveTimeController abs_ctl(absolute, 3);
   const double error[1] = {1e-8};
   const double zero[1] = {0.0};
-  const auto with_atol =
-      abs_ctl.decide_from_embedded_error(0.1, error, zero, zero);
+  const auto with_atol = abs_ctl.decide_from_embedded_error(0.1, error, zero, zero);
   REQUIRE(with_atol.accepted);
   REQUIRE(with_atol.metric == Catch::Approx(0.01));
 
@@ -342,8 +337,7 @@ TEST_CASE("memoryless exponent is one over error_order", "[adaptive_controller]"
   REQUIRE(d.next_dt == Catch::Approx(4.0));
 }
 
-TEST_CASE("growth shrink and dt bounds clip the proposal",
-          "[adaptive_controller]") {
+TEST_CASE("growth shrink and dt bounds clip the proposal", "[adaptive_controller]") {
   AdaptiveControlConfig cfg = make_adaptive_cfg();
   cfg.safety_factor = 1.0;
   cfg.growth_max = 2.0;
@@ -412,8 +406,7 @@ TEST_CASE("PI history follows accepted metrics only", "[adaptive_controller]") {
   pi.apply(time, rejected);
   REQUIRE(time.get_accepted_time() == Catch::Approx(t_before));
   REQUIRE(pi.previous_accepted_metric() == Catch::Approx(previous));
-  REQUIRE(rejected.next_dt ==
-          Catch::Approx(0.1 * 0.9 * std::pow(4.0, -1.0 / 3.0)));
+  REQUIRE(rejected.next_dt == Catch::Approx(0.1 * 0.9 * std::pow(4.0, -1.0 / 3.0)));
 
   time.begin_attempt(0.1);
   const auto after_reject = pi.decide(0.1, unit_norm(0.25 * 2e-5));
@@ -552,8 +545,7 @@ TEST_CASE("restored PI history reproduces the next dt", "[adaptive_controller]")
 
   restored.reset_history();
   const auto forgotten = restored.decide(0.1, unit_norm(0.3 * 2e-5));
-  REQUIRE(forgotten.next_dt ==
-          Catch::Approx(0.1 * 0.9 * std::pow(0.3, -1.0 / 3.0)));
+  REQUIRE(forgotten.next_dt == Catch::Approx(0.1 * 0.9 * std::pow(0.3, -1.0 / 3.0)));
   REQUIRE(restored.sequential_rejections() == 2);
 
   // The streak still counts. Two further rejections reach the cap of 4.

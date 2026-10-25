@@ -41,15 +41,17 @@ TEST_CASE("World coordinate transformations - microbenchmarks",
   const Int3 size = {128, 128, 128};
   const Real3 origin = {0.0, 0.0, 0.0};
   const Real3 spacing = {0.1, 0.1, 0.1};
-  const pfc::Domain domain =
-      pfc::domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+  const pfc::Domain domain = pfc::domain::create(
+      GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
 
   // Test indices - use values that prevent compiler optimizations
   volatile int idx_base = 42; // volatile prevents constant folding
   const Int3 test_indices = {idx_base, idx_base + 10, idx_base + 20};
 
   SECTION("to_coords - index to physical coordinate conversion") {
-    BENCHMARK("to_coords (single call)") { return pfc::domain::to_coords(domain, test_indices); };
+    BENCHMARK("to_coords (single call)") {
+      return pfc::domain::to_coords(domain, test_indices);
+    };
 
     INFO("Expected: ~1-5 ns per call");
     INFO("This should inline to: origin[i] + indices[i] * spacing[i]");
@@ -58,7 +60,9 @@ TEST_CASE("World coordinate transformations - microbenchmarks",
   SECTION("to_indices - physical coordinate to index conversion") {
     const Real3 test_coords = {4.2, 5.3, 6.4};
 
-    BENCHMARK("to_indices (single call)") { return pfc::domain::to_indices(domain, test_coords); };
+    BENCHMARK("to_indices (single call)") {
+      return pfc::domain::to_indices(domain, test_coords);
+    };
 
     INFO("Expected: ~1-5 ns per call");
     INFO("This should inline to: (coords[i] - origin[i]) / spacing[i]");
@@ -83,7 +87,7 @@ TEST_CASE("World accessor functions - microbenchmarks",
           "[world][accessors][benchmark]") {
   const pfc::Domain domain =
       pfc::domain::create(GridSize({128, 128, 128}), PhysicalOrigin({1.0, 2.0, 3.0}),
-                    GridSpacing({0.1, 0.1, 0.1}));
+                          GridSpacing({0.1, 0.1, 0.1}));
 
   SECTION("get_spacing (all dimensions)") {
     BENCHMARK("get_spacing (Real3)") { return pfc::domain::get_spacing(domain); };
@@ -92,7 +96,9 @@ TEST_CASE("World accessor functions - microbenchmarks",
   }
 
   SECTION("get_spacing (single dimension)") {
-    BENCHMARK("get_spacing (dimension 0)") { return pfc::domain::get_spacing(domain, 0); };
+    BENCHMARK("get_spacing (dimension 0)") {
+      return pfc::domain::get_spacing(domain, 0);
+    };
 
     INFO("Expected: <1 ns (should inline to return m_cs.m_spacing[0])");
   }
@@ -104,7 +110,9 @@ TEST_CASE("World accessor functions - microbenchmarks",
   }
 
   SECTION("get_origin (single dimension)") {
-    BENCHMARK("get_origin (dimension 0)") { return pfc::domain::get_origin(domain, 0); };
+    BENCHMARK("get_origin (dimension 0)") {
+      return pfc::domain::get_origin(domain, 0);
+    };
 
     INFO("Expected: <1 ns (should inline to return m_cs.m_offset[0])");
   }
@@ -170,7 +178,7 @@ TEST_CASE("World operations in loops - realistic usage patterns",
           "[world][loop][benchmark]") {
   const pfc::Domain domain =
       pfc::domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                    GridSpacing({0.1, 0.1, 0.1}));
+                          GridSpacing({0.1, 0.1, 0.1}));
   const auto size = pfc::domain::get_size(domain);
 
   SECTION("Loop over all grid points - coordinate conversion") {
@@ -260,12 +268,14 @@ TEST_CASE("World zero-cost abstraction validation",
   }
 
   SECTION("World abstraction (should match baseline)") {
-    const pfc::Domain domain =
-        pfc::domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                      GridSpacing({0.1, 0.1, 0.1}));
+    const pfc::Domain domain = pfc::domain::create(GridSize({128, 128, 128}),
+                                                   PhysicalOrigin({0.0, 0.0, 0.0}),
+                                                   GridSpacing({0.1, 0.1, 0.1}));
     const Int3 indices = {42, 53, 64};
 
-    BENCHMARK("World to_coords (abstraction)") { return pfc::domain::to_coords(domain, indices); };
+    BENCHMARK("World to_coords (abstraction)") {
+      return pfc::domain::to_coords(domain, indices);
+    };
 
     INFO("Should be within ~10% of baseline if properly inlined");
     INFO("Significant difference indicates abstraction overhead");
@@ -280,8 +290,8 @@ TEST_CASE("World cache and memory access patterns", "[world][memory][benchmark]"
   SECTION("Sequential world creation and destruction") {
     BENCHMARK("Create and destroy World (stack)") {
       auto domain = pfc::domain::create(GridSize({128, 128, 128}),
-                                 PhysicalOrigin({128.0, 128.0, 128.0}),
-                                 GridSpacing({128.0, 128.0, 128.0}));
+                                        PhysicalOrigin({128.0, 128.0, 128.0}),
+                                        GridSpacing({128.0, 128.0, 128.0}));
       return pfc::domain::get_total_size(domain);
     };
 
@@ -290,9 +300,9 @@ TEST_CASE("World cache and memory access patterns", "[world][memory][benchmark]"
   }
 
   SECTION("World copy performance") {
-    const pfc::Domain domain1 =
-        pfc::domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                            GridSpacing({1.0, 1.0, 1.0}));
+    const pfc::Domain domain1 = pfc::domain::create(GridSize({128, 128, 128}),
+                                                    PhysicalOrigin({0.0, 0.0, 0.0}),
+                                                    GridSpacing({1.0, 1.0, 1.0}));
 
     BENCHMARK("Copy World object") {
       auto domain2 = domain1; // Copy constructor
@@ -304,12 +314,12 @@ TEST_CASE("World cache and memory access patterns", "[world][memory][benchmark]"
   }
 
   SECTION("World equality comparison") {
-    const pfc::Domain domain1 =
-        pfc::domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                      GridSpacing({0.1, 0.1, 0.1}));
-    const pfc::Domain domain2 =
-        pfc::domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                      GridSpacing({0.1, 0.1, 0.1}));
+    const pfc::Domain domain1 = pfc::domain::create(GridSize({128, 128, 128}),
+                                                    PhysicalOrigin({0.0, 0.0, 0.0}),
+                                                    GridSpacing({0.1, 0.1, 0.1}));
+    const pfc::Domain domain2 = pfc::domain::create(GridSize({128, 128, 128}),
+                                                    PhysicalOrigin({0.0, 0.0, 0.0}),
+                                                    GridSpacing({0.1, 0.1, 0.1}));
 
     BENCHMARK("World equality comparison") { return domain1 == domain2; };
 

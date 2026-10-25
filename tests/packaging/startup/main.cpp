@@ -18,23 +18,29 @@
 // FieldHalo adapter. sizeof instantiates its object layout, but never
 // constructs a GPU field or launches a kernel on device-less CI runners.
 #if defined(OpenPFC_ENABLE_CUDA)
-static_assert(sizeof(pfc::solvers::NodalDirichletDeviceOperator<pfc::CUDASpace>) > 0);
-static_assert(sizeof(pfc::solvers::NodalDirichletDeviceTransfers<pfc::CUDASpace>) > 0);
-static_assert(sizeof(pfc::solvers::NodalDirichletDeviceTwoLevelVcycle<pfc::CUDASpace>) > 0);
+static_assert(sizeof(pfc::solvers::NodalDirichletDeviceOperator<pfc::CUDASpace>) >
+              0);
+static_assert(sizeof(pfc::solvers::NodalDirichletDeviceTransfers<pfc::CUDASpace>) >
+              0);
+static_assert(
+    sizeof(pfc::solvers::NodalDirichletDeviceTwoLevelVcycle<pfc::CUDASpace>) > 0);
 static_assert(sizeof(pfc::solvers::NodalDirichletDeviceVcycle<pfc::CUDASpace>) > 0);
-static_assert(std::is_same_v<pfc::solvers::NodalDirichletDeviceTwoLevelVcycle<pfc::CUDASpace>,
-                             pfc::solvers::NodalDirichletDeviceVcycle<pfc::CUDASpace>>);
+static_assert(
+    std::is_same_v<pfc::solvers::NodalDirichletDeviceTwoLevelVcycle<pfc::CUDASpace>,
+                   pfc::solvers::NodalDirichletDeviceVcycle<pfc::CUDASpace>>);
 #elif defined(OpenPFC_ENABLE_HIP)
 static_assert(sizeof(pfc::solvers::NodalDirichletDeviceOperator<pfc::HIPSpace>) > 0);
-static_assert(sizeof(pfc::solvers::NodalDirichletDeviceTransfers<pfc::HIPSpace>) > 0);
-static_assert(sizeof(pfc::solvers::NodalDirichletDeviceTwoLevelVcycle<pfc::HIPSpace>) > 0);
+static_assert(sizeof(pfc::solvers::NodalDirichletDeviceTransfers<pfc::HIPSpace>) >
+              0);
+static_assert(
+    sizeof(pfc::solvers::NodalDirichletDeviceTwoLevelVcycle<pfc::HIPSpace>) > 0);
 static_assert(sizeof(pfc::solvers::NodalDirichletDeviceVcycle<pfc::HIPSpace>) > 0);
-static_assert(std::is_same_v<pfc::solvers::NodalDirichletDeviceTwoLevelVcycle<pfc::HIPSpace>,
-                             pfc::solvers::NodalDirichletDeviceVcycle<pfc::HIPSpace>>);
+static_assert(
+    std::is_same_v<pfc::solvers::NodalDirichletDeviceTwoLevelVcycle<pfc::HIPSpace>,
+                   pfc::solvers::NodalDirichletDeviceVcycle<pfc::HIPSpace>>);
 #endif
 
-template <typename Function>
-void require_device_launcher_link(Function function) {
+template <typename Function> void require_device_launcher_link(Function function) {
   // A volatile function pointer forces a link-time symbol reference. This
   // does not dereference device memory or require a GPU at runtime.
   Function volatile resolved = function;

@@ -47,8 +47,7 @@ TEST_CASE("CUDA isend/irecv fail closed without OpenPFC_MPI_CUDA_AWARE",
   const std::vector<double> values = {1.0, 3.0, 5.0};
   auto sparse =
       pfc::sparsevector::create<double, pfc::backend::CUDATag>(indices, values);
-  auto empty =
-      pfc::sparsevector::create<double, pfc::backend::CUDATag>({}, {});
+  auto empty = pfc::sparsevector::create<double, pfc::backend::CUDATag>({}, {});
 
   MPI_Request req = MPI_REQUEST_NULL;
 
@@ -83,9 +82,8 @@ TEST_CASE("CUDA isend/irecv fail closed without OpenPFC_MPI_CUDA_AWARE",
       pfc::exchange::irecv_data(sparse, rank, other, MPI_COMM_WORLD, &req));
   REQUIRE(req == MPI_REQUEST_NULL);
 
-  REQUIRE_THROWS_AS(
-      pfc::cuda::detail::cuda_check(cudaErrorInvalidValue, "injected"),
-      std::runtime_error);
+  REQUIRE_THROWS_AS(pfc::cuda::detail::cuda_check(cudaErrorInvalidValue, "injected"),
+                    std::runtime_error);
 #else
   SKIP("fail-closed path requires OpenPFC_MPI_CUDA_AWARE=OFF");
   (void)rank;

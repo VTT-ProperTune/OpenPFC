@@ -40,7 +40,8 @@ namespace {
 }
 
 [[nodiscard]] const AdaptiveConfigIssue *
-find_parameter(const AdaptiveConfigValidationResult &result, std::string_view needle) {
+find_parameter(const AdaptiveConfigValidationResult &result,
+               std::string_view needle) {
   for (const auto &issue : result.issues) {
     if (issue.parameter.find(needle) != std::string::npos) {
       return &issue;
@@ -61,9 +62,8 @@ TEST_CASE("AdaptiveControlConfig fixed mode defaults validate",
   }
 
   SECTION("explicit fixed with zero tolerances") {
-    const AdaptiveControlConfig cfg{.mode = AdaptiveControlMode::fixed,
-                                    .atol = 0.0,
-                                    .rtol = 0.0};
+    const AdaptiveControlConfig cfg{
+        .mode = AdaptiveControlMode::fixed, .atol = 0.0, .rtol = 0.0};
     REQUIRE(validate(cfg).ok());
     REQUIRE_NOTHROW(make_adaptive_control_config(cfg));
   }
@@ -129,7 +129,8 @@ TEST_CASE("AdaptiveControlConfig rejects both-zero tolerances",
     cfg.atol = 0.0;
     cfg.rtol = 0.0;
     REQUIRE_THROWS_AS(make_adaptive_control_config(cfg), std::invalid_argument);
-    REQUIRE_THROWS_WITH(make_adaptive_control_config(cfg), ContainsSubstring("atol"));
+    REQUIRE_THROWS_WITH(make_adaptive_control_config(cfg),
+                        ContainsSubstring("atol"));
   }
 }
 
@@ -215,10 +216,12 @@ TEST_CASE("AdaptiveControlConfig identity stable for identical parameters",
           "[adaptive_control_config][unit]") {
   const AdaptiveControlConfig a = valid_adaptive_scalar();
   AdaptiveControlConfig b = valid_adaptive_scalar();
-  REQUIRE(make_identity(a).parameter_signature == make_identity(b).parameter_signature);
+  REQUIRE(make_identity(a).parameter_signature ==
+          make_identity(b).parameter_signature);
 
   b.atol = 2e-6;
-  REQUIRE(make_identity(a).parameter_signature != make_identity(b).parameter_signature);
+  REQUIRE(make_identity(a).parameter_signature !=
+          make_identity(b).parameter_signature);
 }
 
 TEST_CASE("AdaptiveControlConfig checks PI gains only in PI mode",

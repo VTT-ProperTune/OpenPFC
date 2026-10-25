@@ -35,8 +35,8 @@ TEST_CASE("Field<std::complex<double>> size and indexing with halo 0",
   SECTION("size equals padded volume") {
     const int halo = 0;
     const std::size_t expected_volume = static_cast<std::size_t>(nx + 2 * halo) *
-                                         static_cast<std::size_t>(ny + 2 * halo) *
-                                         static_cast<std::size_t>(nz + 2 * halo);
+                                        static_cast<std::size_t>(ny + 2 * halo) *
+                                        static_cast<std::size_t>(nz + 2 * halo);
     REQUIRE(f.size() == expected_volume);
   }
 
@@ -62,8 +62,8 @@ TEST_CASE("Field<std::complex<double>> size and indexing with halo 2",
 
   SECTION("size equals padded volume") {
     std::size_t expected_volume = static_cast<std::size_t>(nx + 2 * halo) *
-                                   static_cast<std::size_t>(ny + 2 * halo) *
-                                   static_cast<std::size_t>(nz + 2 * halo);
+                                  static_cast<std::size_t>(ny + 2 * halo) *
+                                  static_cast<std::size_t>(nz + 2 * halo);
     REQUIRE(f.size() == expected_volume);
   }
 
@@ -101,7 +101,7 @@ TEST_CASE("HostSpace Field copy has value semantics",
   const int nx = 6, ny = 6, nz = 6;
   const int halo = 1;
   data::Field<double, pfc::HostSpace> original(domain::create({nx, ny, nz}),
-                                                whole_box(nx, ny, nz), halo);
+                                               whole_box(nx, ny, nz), halo);
 
   // Populate some values
   original(2, 2, 2) = 1.5;
@@ -176,7 +176,5 @@ TEST_CASE("HostSpace Field copy has value semantics",
     REQUIRE(copy.padded_extent(2) == original.padded_extent(2));
   }
 
-  SECTION("copy has same total size") {
-    REQUIRE(copy.size() == original.size());
-  }
+  SECTION("copy has same total size") { REQUIRE(copy.size() == original.size()); }
 }

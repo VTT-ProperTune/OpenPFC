@@ -121,11 +121,12 @@ CutoffCompare compare_cutoff(int n) {
           if (a > cut[d]) old_drop = true;
           if (a == cut[d]) on_cutoff = true;
         }
-        const bool dropped =
-            !pfc::fft::kspace::two_thirds_keep(kx, ky, kz, spacing);
+        const bool dropped = !pfc::fft::kspace::two_thirds_keep(kx, ky, kz, spacing);
         if (old_drop == dropped) {
-          if (dropped) ++result.dropped_by_both;
-          else ++result.kept_by_both;
+          if (dropped)
+            ++result.dropped_by_both;
+          else
+            ++result.kept_by_both;
         } else if (on_cutoff && !old_drop && dropped) {
           ++result.exact_cutoff_only;
         } else {
@@ -141,7 +142,8 @@ double max_abs_divergence(int n, int mode) {
                                     pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = pfc::decomposition::create(domain, 1);
   auto fft = pfc::fft::create(decomp);
-  const double k = 2.0 * pfc::pi * static_cast<double>(mode) / static_cast<double>(n);
+  const double k =
+      2.0 * pfc::pi * static_cast<double>(mode) / static_cast<double>(n);
   Field<double> potential(domain, fft.get_inbox_bounds(), 0);
   potential.apply([k](double x, double, double) { return std::cos(k * x); });
   Field<double> state(domain, fft.get_inbox_bounds(), 0);
@@ -154,7 +156,8 @@ double max_abs_divergence(int n, int mode) {
   Field<double> got(domain, fft.get_inbox_bounds(), 0);
   SpectralETDOps<pfc::HostSpace>::backward(fft, out_hat, got);
   double m = 0.0;
-  for (std::size_t i = 0; i < got.size(); ++i) m = std::max(m, std::abs(got.data()[i]));
+  for (std::size_t i = 0; i < got.size(); ++i)
+    m = std::max(m, std::abs(got.data()[i]));
   return m;
 }
 
@@ -283,7 +286,8 @@ TEST_CASE("an exactly-on-cutoff mode is removed", "[spectral_flux][dealias]") {
   auto decomp = pfc::decomposition::create(domain, 1);
   auto fft = pfc::fft::create(decomp);
   const int mode = n / 3 - 1;
-  const double k = 2.0 * pfc::pi * static_cast<double>(mode) / static_cast<double>(n);
+  const double k =
+      2.0 * pfc::pi * static_cast<double>(mode) / static_cast<double>(n);
   Field<double> potential(domain, fft.get_inbox_bounds(), 0);
   potential.apply([k](double x, double, double) { return std::cos(k * x); });
   Field<double> state(domain, fft.get_inbox_bounds(), 0);
@@ -295,8 +299,7 @@ TEST_CASE("an exactly-on-cutoff mode is removed", "[spectral_flux][dealias]") {
   flux.divergence(p_hat, state, ScaleMobility{1.0}, out_hat);
   Field<double> got(domain, fft.get_inbox_bounds(), 0);
   SpectralETDOps<pfc::HostSpace>::backward(fft, out_hat, got);
-  const auto expected = sample(potential, [k](double x, double) {
-    return (-k * k) * std::cos(k * x);
-  });
+  const auto expected = sample(
+      potential, [k](double x, double) { return (-k * k) * std::cos(k * x); });
   REQUIRE(max_abs_against(got, expected) < 1.0e-8);
 }

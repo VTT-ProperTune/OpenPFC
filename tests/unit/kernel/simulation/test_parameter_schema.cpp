@@ -15,9 +15,9 @@
 using json = nlohmann::json;
 using pfc::sim::HasParameterSchema;
 using pfc::sim::ParameterSchema;
-using pfc::sim::SchemaSpec;
 using pfc::sim::schema_config_error;
 using pfc::sim::schema_json_value_string;
+using pfc::sim::SchemaSpec;
 
 namespace {
 
@@ -30,16 +30,15 @@ struct SHParams {
 ParameterSchema<SHParams> make_sh_schema() {
   ParameterSchema<SHParams> schema;
   schema.model_name("SwiftHohenberg")
-      .real(&SHParams::epsilon,
-            SchemaSpec{.name = "epsilon",
-                       .description = "reduced undercooling",
-                       .required = true,
-                       .min = 0.0,
-                       .max = 1.0,
-                       .typical = 0.3,
-                       .default_value = {},
-                       .units = {},
-                       .example = "\"epsilon\": 0.3"})
+      .real(&SHParams::epsilon, SchemaSpec{.name = "epsilon",
+                                           .description = "reduced undercooling",
+                                           .required = true,
+                                           .min = 0.0,
+                                           .max = 1.0,
+                                           .typical = 0.3,
+                                           .default_value = {},
+                                           .units = {},
+                                           .example = "\"epsilon\": 0.3"})
       .real(&SHParams::r0, SchemaSpec{.name = "r0",
                                       .description = "peak wavenumber",
                                       .required = false,
@@ -67,29 +66,26 @@ static_assert(pfc::sim::HasParameters<SHPhysics>);
 TEST_CASE("schema_config_error matches format_config_error snapshots",
           "[parameter_schema][unit]") {
   const auto missing = schema_config_error(
-      "Lx", "number of grid points in X direction", "positive integer",
-      "missing");
+      "Lx", "number of grid points in X direction", "positive integer", "missing");
   REQUIRE(missing.find("Field 'Lx' is missing") != std::string::npos);
   REQUIRE(missing.find("positive integer") != std::string::npos);
   REQUIRE(missing.find("number of grid points") != std::string::npos);
 
-  const auto invalid = schema_config_error(
-      "Lx", "number of grid points", "integer", "256.5 (type: float)");
+  const auto invalid = schema_config_error("Lx", "number of grid points", "integer",
+                                           "256.5 (type: float)");
   REQUIRE(invalid.find("has invalid value") != std::string::npos);
   REQUIRE(invalid.find("256.5") != std::string::npos);
   REQUIRE(invalid.find("integer") != std::string::npos);
 
-  const auto with_example = schema_config_error(
-      "Lx", "grid points", "integer", "missing", "\"Lx\": 256");
+  const auto with_example =
+      schema_config_error("Lx", "grid points", "integer", "missing", "\"Lx\": 256");
   REQUIRE(with_example.find("Example: \"Lx\": 256") != std::string::npos);
 
-  const auto n_newlines =
-      std::count(missing.begin(), missing.end(), '\n');
+  const auto n_newlines = std::count(missing.begin(), missing.end(), '\n');
   REQUIRE(1 + static_cast<int>(n_newlines) <= 10);
 }
 
-TEST_CASE("schema_json_value_string reports missing",
-          "[parameter_schema][unit]") {
+TEST_CASE("schema_json_value_string reports missing", "[parameter_schema][unit]") {
   json j = {{"foo", 42}};
   REQUIRE(schema_json_value_string(j, "bar") == "missing");
 }
@@ -113,8 +109,7 @@ TEST_CASE("ParameterSchema applies defaults for missing optional keys",
   REQUIRE(p.seed == 0);
   const auto result = schema.validate(config);
   REQUIRE(result.is_valid());
-  REQUIRE(result.validated_params.at("r0").find("default") !=
-          std::string::npos);
+  REQUIRE(result.validated_params.at("r0").find("default") != std::string::npos);
 }
 
 TEST_CASE("ParameterSchema missing required key matches config-error quality",
@@ -126,8 +121,7 @@ TEST_CASE("ParameterSchema missing required key matches config-error quality",
   REQUIRE(result.errors.size() == 1);
   REQUIRE(result.errors.front().find("Field 'epsilon' is missing") !=
           std::string::npos);
-  REQUIRE(result.errors.front().find("reduced undercooling") !=
-          std::string::npos);
+  REQUIRE(result.errors.front().find("reduced undercooling") != std::string::npos);
   REQUIRE(result.errors.front().find("Expected: number") != std::string::npos);
   REQUIRE(result.errors.front().find("Got: missing") != std::string::npos);
   REQUIRE_THROWS_AS(schema.parse(config), std::invalid_argument);
@@ -157,8 +151,7 @@ TEST_CASE("ParameterSchema range errors name the parameter",
   REQUIRE(high.errors.front().find("exceeds maximum") != std::string::npos);
 }
 
-TEST_CASE("ParameterSchema integer rejects floats",
-          "[parameter_schema][unit]") {
+TEST_CASE("ParameterSchema integer rejects floats", "[parameter_schema][unit]") {
   const auto schema = make_sh_schema();
   const auto result = schema.validate({{"epsilon", 0.2}, {"seed", 1.5}});
   REQUIRE_FALSE(result.is_valid());

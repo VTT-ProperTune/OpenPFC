@@ -69,9 +69,9 @@ TEST_CASE("Swift-Hohenberg: point-wise Euler vs spectral ETD",
           "[swift_hohenberg][unit]") {
   constexpr int N = 8;
   constexpr double dt = 1e-5;
-  auto domain = pfc::domain::create(
-      pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-      pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto domain = pfc::domain::create(pfc::GridSize({N, N, N}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = pfc::decomposition::create(domain, 1);
   auto fft = pfc::fft::create(decomp);
   const auto inbox = fft.get_inbox_bounds();
@@ -123,10 +123,7 @@ TEST_CASE("Swift-Hohenberg: point-wise Euler vs spectral ETD",
       }
     }
   };
-  pfc::sim::steppers::EulerStepper<decltype(pw_rhs)> euler(dt, u.size(),
-                                                           pw_rhs);
+  pfc::sim::steppers::EulerStepper<decltype(pw_rhs)> euler(dt, u.size(), pw_rhs);
   euler.step(0.0, u.vec());
   REQUIRE(max_abs_diff(u.vec(), etd_psi) < 1e-5);
 }
-
-

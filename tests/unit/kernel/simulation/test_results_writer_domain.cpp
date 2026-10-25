@@ -38,8 +38,12 @@ public:
     spacing = arr_spacing;
     geometry_set = true;
   }
-  MPI_Status write(int, pfc::field::FieldView<double>) override { return MPI_Status{}; }
-  MPI_Status write(int, pfc::field::FieldView<std::complex<double>>) override { return MPI_Status{}; }
+  MPI_Status write(int, pfc::field::FieldView<double>) override {
+    return MPI_Status{};
+  }
+  MPI_Status write(int, pfc::field::FieldView<std::complex<double>>) override {
+    return MPI_Status{};
+  }
 };
 
 } // namespace

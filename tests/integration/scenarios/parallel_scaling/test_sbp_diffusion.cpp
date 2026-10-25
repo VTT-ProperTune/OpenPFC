@@ -4,8 +4,8 @@
 #include <limits>
 #include <mpi.h>
 #include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
-#include <openpfc/kernel/field/sbp_diffusion.hpp>
 #include <openpfc/kernel/field/reaction_flux.hpp>
+#include <openpfc/kernel/field/sbp_diffusion.hpp>
 #include <openpfc/kernel/integrator/stage_context.hpp>
 #include <set>
 using pfc::field::fd::DiffusionAxis;
@@ -96,68 +96,79 @@ TEST_CASE("Physical SBP faces survive thin distributed partitions", "[mpi][sbp]"
   FluxLedger ledger;
   ledger.begin();
   auto law = [](const ReactionPoint &p, double k) {
-    return ReactionRate{k*p.state*p.state + p.stage_time*p.outward_normal[0]};
+    return ReactionRate{k * p.state * p.state + p.stage_time * p.outward_normal[0]};
   };
   auto valid = [](const ReactionPoint &, double) { return true; };
   FaceCondition reaction_left, reaction_right;
   if (rank == 0) {
-    reaction_left = reaction_face({u[0], {}, {0,0,0}, {-1,0,0}, stage.time},
-                                  .2, law, valid, ledger);
-    ledger.stage(reaction_left.flux(stage.time,d[0]),1,.1);
+    reaction_left = reaction_face({u[0], {}, {0, 0, 0}, {-1, 0, 0}, stage.time}, .2,
+                                  law, valid, ledger);
+    ledger.stage(reaction_left.flux(stage.time, d[0]), 1, .1);
   }
-  if (rank == size-1) {
-    reaction_right = reaction_face({u[n-1], {}, {1,0,0}, {1,0,0}, stage.time},
+  if (rank == size - 1) {
+    reaction_right = reaction_face({u[n - 1], {}, {1, 0, 0}, {1, 0, 0}, stage.time},
                                    .2, law, valid, ledger);
-    ledger.stage(reaction_right.flux(stage.time,d[n-1]),1,.1);
+    ledger.stage(reaction_right.flux(stage.time, d[n - 1]), 1, .1);
   }
-  mass=0;
-  for(int i=offsets[rank];i<offsets[rank+1];++i)
-    mass+=axis.weight(i)*axis.apply(i,[&](int j){return u[j];},
-      [&](int j){return d[j];},stage.time,&reaction_left,&reaction_right);
+  mass = 0;
+  for (int i = offsets[rank]; i < offsets[rank + 1]; ++i)
+    mass += axis.weight(i) * axis.apply(
+                                 i, [&](int j) { return u[j]; },
+                                 [&](int j) { return d[j]; }, stage.time,
+                                 &reaction_left, &reaction_right);
   ledger.accept();
-  double accepted=ledger.accepted(), integrated=0;
-  MPI_Allreduce(&mass,&total,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
-  MPI_Allreduce(&accepted,&integrated,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
-  const double exact_flux=.2*(exact_u(0)*exact_u(0)+exact_u(n-1)*exact_u(n-1));
-  REQUIRE(std::abs(total+exact_flux)<=1e-11*total_scale);
-  REQUIRE(std::abs(integrated-.1*exact_flux)<=1e-11*total_scale);
-  REQUIRE(std::abs(.1*total+integrated)<=1e-11*total_scale);
+  double accepted = ledger.accepted(), integrated = 0;
+  MPI_Allreduce(&mass, &total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&accepted, &integrated, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  const double exact_flux =
+      .2 * (exact_u(0) * exact_u(0) + exact_u(n - 1) * exact_u(n - 1));
+  REQUIRE(std::abs(total + exact_flux) <= 1e-11 * total_scale);
+  REQUIRE(std::abs(integrated - .1 * exact_flux) <= 1e-11 * total_scale);
+  REQUIRE(std::abs(.1 * total + integrated) <= 1e-11 * total_scale);
   ledger.begin();
-  ledger.stage(1000,1,1);
+  ledger.stage(1000, 1, 1);
   ledger.reject();
-  REQUIRE(ledger.accepted()==accepted);
-
+  REQUIRE(ledger.accepted() == accepted);
 }
 
 TEST_CASE("Supplied circular surface source has unique distributed owners",
           "[mpi][sbp][reaction]") {
   using namespace pfc::field::fd;
-  int rank,size;
-  MPI_Comm_rank(MPI_COMM_WORLD,&rank); MPI_Comm_size(MPI_COMM_WORLD,&size);
-  const int n=128; const double h=2./n,R=.3,eps=std::sqrt(R*h),dt=.01;
-  FluxLedger ledger; ledger.begin();
-  double change=0,area=0,serial=0;
-  auto law=[](const ReactionPoint& p,double){return ReactionRate{p.state*p.state-1+p.stage_time};};
-  auto valid=[](const ReactionPoint& p,double){return p.state>=0;};
-  for(int j=0;j<n;++j) for(int i=0;i<n;++i){
-    double x=-1+(i+.25)*h,y=-1+(j+.25)*h,r=std::hypot(x,y),d=r-R;
-    if(std::abs(d)>=eps)continue;
-    double rho=(1+std::cos(std::acos(-1.)*d/eps))/(2*eps);
-    double u=2+.2*x/r;
-    serial+=(u*u-1+.3)*rho*h*h*dt;
-    if(i*size/n!=rank)continue;
-    ReactionPoint p{u,{}, {x,y,0},{x/r,y/r,0},.3};
-    double rhs=reaction_source(p,rho,h*h,dt,0.,law,valid,ledger);
-    change+=rhs*h*h*dt;area+=rho*h*h;
-  }
-  ledger.accept();
-  double local[3]={change,ledger.accepted(),area},global[3];
-  MPI_Allreduce(local,global,3,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
-  REQUIRE(std::abs(global[0]+global[1])<1e-12);
-  REQUIRE(std::abs(global[1]-serial)<1e-12);
-  REQUIRE(std::abs(global[2]/(2*std::acos(-1.)*R)-1)<1e-3);
+  int rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  const int n = 128;
+  const double h = 2. / n, R = .3, eps = std::sqrt(R * h), dt = .01;
+  FluxLedger ledger;
   ledger.begin();
-  reaction_source({2,{}, {0,0,0},{.6,.8,0},0},1,1,.1,0.,law,valid,ledger);
+  double change = 0, area = 0, serial = 0;
+  auto law = [](const ReactionPoint &p, double) {
+    return ReactionRate{p.state * p.state - 1 + p.stage_time};
+  };
+  auto valid = [](const ReactionPoint &p, double) { return p.state >= 0; };
+  for (int j = 0; j < n; ++j)
+    for (int i = 0; i < n; ++i) {
+      double x = -1 + (i + .25) * h, y = -1 + (j + .25) * h, r = std::hypot(x, y),
+             d = r - R;
+      if (std::abs(d) >= eps) continue;
+      double rho = (1 + std::cos(std::acos(-1.) * d / eps)) / (2 * eps);
+      double u = 2 + .2 * x / r;
+      serial += (u * u - 1 + .3) * rho * h * h * dt;
+      if (i * size / n != rank) continue;
+      ReactionPoint p{u, {}, {x, y, 0}, {x / r, y / r, 0}, .3};
+      double rhs = reaction_source(p, rho, h * h, dt, 0., law, valid, ledger);
+      change += rhs * h * h * dt;
+      area += rho * h * h;
+    }
+  ledger.accept();
+  double local[3] = {change, ledger.accepted(), area}, global[3];
+  MPI_Allreduce(local, global, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  REQUIRE(std::abs(global[0] + global[1]) < 1e-12);
+  REQUIRE(std::abs(global[1] - serial) < 1e-12);
+  REQUIRE(std::abs(global[2] / (2 * std::acos(-1.) * R) - 1) < 1e-3);
+  ledger.begin();
+  reaction_source({2, {}, {0, 0, 0}, {.6, .8, 0}, 0}, 1, 1, .1, 0., law, valid,
+                  ledger);
   ledger.reject();
-  REQUIRE(ledger.accepted()==local[1]);
+  REQUIRE(ledger.accepted() == local[1]);
 }

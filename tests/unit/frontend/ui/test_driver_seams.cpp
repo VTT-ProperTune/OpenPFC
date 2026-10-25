@@ -25,13 +25,12 @@ TEST_CASE("configure_json_driver_hooks sets from_json log rank", "[ui][hooks]") 
 }
 
 TEST_CASE("unknown results writer type is a hard error", "[ui][writers]") {
-  REQUIRE_THROWS_AS(
-      pfc::ui::default_results_writer_catalog().create_writer(
-          "nope", "out.bin", MPI_COMM_WORLD, "psi"),
-      std::invalid_argument);
+  REQUIRE_THROWS_AS(pfc::ui::default_results_writer_catalog().create_writer(
+                        "nope", "out.bin", MPI_COMM_WORLD, "psi"),
+                    std::invalid_argument);
   try {
-    pfc::ui::default_results_writer_catalog().create_writer(
-        "nope", "out.bin", MPI_COMM_WORLD, "psi");
+    pfc::ui::default_results_writer_catalog().create_writer("nope", "out.bin",
+                                                            MPI_COMM_WORLD, "psi");
   } catch (const std::invalid_argument &e) {
     REQUIRE_THAT(std::string(e.what()),
                  Catch::Matchers::ContainsSubstring("writer"));

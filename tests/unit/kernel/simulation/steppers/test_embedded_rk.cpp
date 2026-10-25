@@ -67,9 +67,8 @@ TEST_CASE("rejects_non_embedded_tableau", "[embedded_rk][unit]") {
     FAIL("expected std::invalid_argument");
   } catch (const std::invalid_argument &ex) {
     const std::string msg = ex.what();
-    const bool mentions_embedded =
-        msg.find("embedded") != std::string::npos ||
-        msg.find("has_embedded") != std::string::npos;
+    const bool mentions_embedded = msg.find("embedded") != std::string::npos ||
+                                   msg.find("has_embedded") != std::string::npos;
     REQUIRE(mentions_embedded);
   }
 }
@@ -205,8 +204,7 @@ struct ConstantComplexRhs {
   }
 };
 
-TEST_CASE("embedded rk23 complex constant RHS",
-          "[embedded_rk][unit][complex]") {
+TEST_CASE("embedded rk23 complex constant RHS", "[embedded_rk][unit][complex]") {
   using Complex = std::complex<double>;
   constexpr Complex c{0.15, -0.05};
   constexpr Complex u0{2.0, -1.0};
@@ -226,7 +224,6 @@ TEST_CASE("embedded rk23 complex constant RHS",
           Catch::Approx(expected.imag()).margin(1e-12));
   REQUIRE(stepper.u_high()[0].real() ==
           Catch::Approx(expected.real()).margin(1e-12));
-  REQUIRE(stepper.u_low()[0].real() ==
-          Catch::Approx(expected.real()).margin(1e-12));
+  REQUIRE(stepper.u_low()[0].real() == Catch::Approx(expected.real()).margin(1e-12));
   REQUIRE(std::abs(stepper.error()[0]) == Catch::Approx(0.0).margin(1e-12));
 }

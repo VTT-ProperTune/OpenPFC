@@ -25,12 +25,13 @@ using namespace pfc::fft::kspace;
 
 static inline Domain make_world(int nx, int ny, int nz) {
   return domain::create(GridSize({nx, ny, nz}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                       GridSpacing({1.0, 1.0, 1.0}));
+                        GridSpacing({1.0, 1.0, 1.0}));
 }
 
 #if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
-TEST_CASE("CPU vs HIP Laplacian equivalence (multi-rank) [integration][gpu][hip][mpi]",
-          "[gpu][hip][mpi]") {
+TEST_CASE(
+    "CPU vs HIP Laplacian equivalence (multi-rank) [integration][gpu][hip][mpi]",
+    "[gpu][hip][mpi]") {
   int rank = 0, size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -123,8 +124,7 @@ TEST_CASE("CPU vs HIP Laplacian equivalence (multi-rank) [integration][gpu][hip]
 
   auto local_l2_sq = [&]() {
     long double s = 0.0L;
-    for (double x : real_out_cpu)
-      s += static_cast<long double>(x) * x;
+    for (double x : real_out_cpu) s += static_cast<long double>(x) * x;
     return s;
   }();
   double local_cpu_l2 = static_cast<double>(local_l2_sq);
@@ -133,8 +133,7 @@ TEST_CASE("CPU vs HIP Laplacian equivalence (multi-rank) [integration][gpu][hip]
                 MPI_COMM_WORLD);
 
   long double s2 = 0.0L;
-  for (double x : real_out_gpu_host)
-    s2 += static_cast<long double>(x) * x;
+  for (double x : real_out_gpu_host) s2 += static_cast<long double>(x) * x;
   double local_gpu_l2 = static_cast<double>(s2);
   double global_gpu_l2 = 0.0;
   MPI_Allreduce(&local_gpu_l2, &global_gpu_l2, 1, MPI_DOUBLE, MPI_SUM,

@@ -62,8 +62,10 @@ TEST_CASE("Gaussian product equals isotropic Gaussian amplitude",
 TEST_CASE("L1 and L2 exponential families differ off-axis at matched f",
           "[field][periodic-spectra][unit]") {
   const double k_c = 8.0;
-  const double iso = sp::mode_amplitude(sp::isotropic_exponential(), 4, 4, 0, k_c, 2);
-  const double sep = sp::mode_amplitude(sp::separable_exponential(), 4, 4, 0, k_c, 2);
+  const double iso =
+      sp::mode_amplitude(sp::isotropic_exponential(), 4, 4, 0, k_c, 2);
+  const double sep =
+      sp::mode_amplitude(sp::separable_exponential(), 4, 4, 0, k_c, 2);
   REQUIRE(iso > sep);
   REQUIRE(iso > 5.0 * sep);
 }
@@ -115,20 +117,18 @@ TEST_CASE("Gaussian 3D map is independent of even N at fixed f",
   const double reference =
       sp::predict_heat_l2_error(sp::gaussian(), 4, 0.3, 128, sp::kDiffusionTime, 3);
   for (int N : {48, 64, 96}) {
-    REQUIRE_THAT(sp::predict_heat_l2_error(sp::gaussian(), 4, 0.3, N,
-                                           sp::kDiffusionTime, 3),
-                 WithinRel(reference, 1e-6));
+    REQUIRE_THAT(
+        sp::predict_heat_l2_error(sp::gaussian(), 4, 0.3, N, sp::kDiffusionTime, 3),
+        WithinRel(reference, 1e-6));
   }
 }
 
 TEST_CASE("odd-N 1D tophat is consistent with the neighbouring even grid",
           "[field][periodic-spectra][unit]") {
-  const double e_even =
-      sp::predict_heat_l2_error(sp::isotropic_tophat(), 2, 0.4, 32,
-                                sp::kDiffusionTime, 1);
-  const double e_odd =
-      sp::predict_heat_l2_error(sp::isotropic_tophat(), 2, 0.4, 31,
-                                sp::kDiffusionTime, 1);
+  const double e_even = sp::predict_heat_l2_error(sp::isotropic_tophat(), 2, 0.4, 32,
+                                                  sp::kDiffusionTime, 1);
+  const double e_odd = sp::predict_heat_l2_error(sp::isotropic_tophat(), 2, 0.4, 31,
+                                                 sp::kDiffusionTime, 1);
   REQUIRE_THAT(e_odd, WithinRel(e_even, 0.15));
 }
 
@@ -145,12 +145,10 @@ TEST_CASE("including even-grid Nyquist changes a cutoff-at-Nyquist tophat",
 
 TEST_CASE("Gaussian FD-2 error scales near order 2 at small f in 1D",
           "[field][periodic-spectra][unit]") {
-  const double e1 = sp::predict_heat_l2_error(sp::gaussian(), 2, 0.20,
-                                              sp::auto_map_grid(0.20),
-                                              sp::kDiffusionTime, 1);
-  const double e2 = sp::predict_heat_l2_error(sp::gaussian(), 2, 0.10,
-                                              sp::auto_map_grid(0.10),
-                                              sp::kDiffusionTime, 1);
+  const double e1 = sp::predict_heat_l2_error(
+      sp::gaussian(), 2, 0.20, sp::auto_map_grid(0.20), sp::kDiffusionTime, 1);
+  const double e2 = sp::predict_heat_l2_error(
+      sp::gaussian(), 2, 0.10, sp::auto_map_grid(0.10), sp::kDiffusionTime, 1);
   const double p = std::log(e1 / e2) / std::log(2.0);
   REQUIRE(p > 1.6);
   REQUIRE(p < 2.4);
@@ -171,9 +169,8 @@ TEST_CASE("a 1D top-hat with k_c < 1 is a constant field of amplitude 1",
           "[field][periodic-spectra][unit]") {
   const int N = 32;
   const double f = 0.5 / 16.0;
-  const double u =
-      sp::evaluate_periodic_field(sp::isotropic_tophat(), 0.3, 0.0, 0.0, 0.0, f, N,
-                                  1);
+  const double u = sp::evaluate_periodic_field(sp::isotropic_tophat(), 0.3, 0.0, 0.0,
+                                               0.0, f, N, 1);
   REQUIRE_THAT(u, WithinAbs(1.0, 1e-12));
 }
 
@@ -207,8 +204,8 @@ TEST_CASE("equal-accuracy search reports unattainable targets instead of f_min",
   const auto miss = sp::content_fraction_at(fam, 2, too_tight);
   REQUIRE_FALSE(miss.attainable);
 
-  const auto pick = sp::pick_equal_accuracy(
-      fam, too_tight, {{2, 6.73}, {12, 24.69}}, 213.82);
+  const auto pick =
+      sp::pick_equal_accuracy(fam, too_tight, {{2, 6.73}, {12, 24.69}}, 213.82);
   REQUIRE(pick.fd_order == 0);
   REQUIRE(pick.f_star == Catch::Approx(1.0));
   REQUIRE(pick.attainable);

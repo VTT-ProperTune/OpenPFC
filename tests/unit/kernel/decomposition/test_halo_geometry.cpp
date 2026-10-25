@@ -46,8 +46,7 @@ TEST_CASE("face slot and direction round-trip", "[halo][geometry]") {
   REQUIRE_THROWS_AS(face_slot_to_direction(6), std::out_of_range);
 }
 
-TEST_CASE("send_tag(d) equals recv_tag(-d) on the same field",
-          "[halo][geometry]") {
+TEST_CASE("send_tag(d) equals recv_tag(-d) on the same field", "[halo][geometry]") {
   constexpr int base = 100;
   constexpr int field = 2;
   const Int3 d{1, 0, 0};
@@ -79,8 +78,7 @@ TEST_CASE("same exchange base and field collide across two callers",
           "[halo][geometry][tags]") {
   // Documents why exchangers must pick distinct bases: the scheme is
   // deterministic, not a runtime allocator.
-  REQUIRE(send_tag(0, 0, kFaceDirections[0]) ==
-          send_tag(0, 0, kFaceDirections[0]));
+  REQUIRE(send_tag(0, 0, kFaceDirections[0]) == send_tag(0, 0, kFaceDirections[0]));
   REQUIRE(field_tag_base(0, 1) - field_tag_base(0, 0) == kCanonicalTagCount);
 }
 
@@ -88,9 +86,9 @@ TEST_CASE("padded face slabs match analytic face volumes", "[halo][geometry]") {
   const Int3 owned{32, 16, 8};
   constexpr int hw = 2;
   const std::size_t expect[6] = {
-      static_cast<std::size_t>(hw) * 16u * 8u,  // ±X
+      static_cast<std::size_t>(hw) * 16u * 8u, // ±X
       static_cast<std::size_t>(hw) * 16u * 8u,
-      32u * static_cast<std::size_t>(hw) * 8u,  // ±Y
+      32u * static_cast<std::size_t>(hw) * 8u, // ±Y
       32u * static_cast<std::size_t>(hw) * 8u,
       32u * 16u * static_cast<std::size_t>(hw), // ±Z
       32u * 16u * static_cast<std::size_t>(hw),
@@ -102,8 +100,7 @@ TEST_CASE("padded face slabs match analytic face volumes", "[halo][geometry]") {
   }
 }
 
-TEST_CASE("padded +X send/recv sit on the owned/halo boundary",
-          "[halo][geometry]") {
+TEST_CASE("padded +X send/recv sit on the owned/halo boundary", "[halo][geometry]") {
   const Int3 owned{10, 6, 4};
   constexpr int hw = 2;
   const Int3 plus_x{1, 0, 0};

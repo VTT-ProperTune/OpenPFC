@@ -47,8 +47,7 @@ TEST_CASE("HIP isend/irecv fail closed without OpenPFC_MPI_HIP_AWARE",
   const std::vector<double> values = {1.0, 3.0, 5.0};
   auto sparse =
       pfc::sparsevector::create<double, pfc::backend::HIPTag>(indices, values);
-  auto empty =
-      pfc::sparsevector::create<double, pfc::backend::HIPTag>({}, {});
+  auto empty = pfc::sparsevector::create<double, pfc::backend::HIPTag>({}, {});
 
   MPI_Request req = MPI_REQUEST_NULL;
 
@@ -80,9 +79,8 @@ TEST_CASE("HIP isend/irecv fail closed without OpenPFC_MPI_HIP_AWARE",
       pfc::exchange::irecv_data(sparse, rank, other, MPI_COMM_WORLD, &req));
   REQUIRE(req == MPI_REQUEST_NULL);
 
-  REQUIRE_THROWS_AS(
-      pfc::hip::detail::hip_check(hipErrorInvalidValue, "injected"),
-      std::runtime_error);
+  REQUIRE_THROWS_AS(pfc::hip::detail::hip_check(hipErrorInvalidValue, "injected"),
+                    std::runtime_error);
 #else
   SKIP("fail-closed path requires OpenPFC_MPI_HIP_AWARE=OFF");
   (void)rank;

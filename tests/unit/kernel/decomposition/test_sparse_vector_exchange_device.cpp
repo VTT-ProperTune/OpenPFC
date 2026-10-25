@@ -96,10 +96,10 @@ TEST_CASE("CUDATag blocking send_data/receive_data host-stage roundtrip",
   }
 
   const std::vector<size_t> indices = {1, 3, 5};
-  auto send_sv =
-      pfc::sparsevector::create<double, pfc::backend::CUDATag>(indices, {10.0, 30.0, 50.0});
-  auto recv_sv =
-      pfc::sparsevector::create<double, pfc::backend::CUDATag>(indices, {0.0, 0.0, 0.0});
+  auto send_sv = pfc::sparsevector::create<double, pfc::backend::CUDATag>(
+      indices, {10.0, 30.0, 50.0});
+  auto recv_sv = pfc::sparsevector::create<double, pfc::backend::CUDATag>(
+      indices, {0.0, 0.0, 0.0});
 
   if (rank == 0) {
     pfc::exchange::send_data(send_sv, 0, 1, MPI_COMM_WORLD);
@@ -183,10 +183,10 @@ TEST_CASE("HIPTag blocking send_data/receive_data host-stage roundtrip",
   }
 
   const std::vector<size_t> indices = {1, 3, 5};
-  auto send_sv =
-      pfc::sparsevector::create<double, pfc::backend::HIPTag>(indices, {10.0, 30.0, 50.0});
-  auto recv_sv =
-      pfc::sparsevector::create<double, pfc::backend::HIPTag>(indices, {0.0, 0.0, 0.0});
+  auto send_sv = pfc::sparsevector::create<double, pfc::backend::HIPTag>(
+      indices, {10.0, 30.0, 50.0});
+  auto recv_sv = pfc::sparsevector::create<double, pfc::backend::HIPTag>(
+      indices, {0.0, 0.0, 0.0});
 
   if (rank == 0) {
     pfc::exchange::send_data(send_sv, 0, 1, MPI_COMM_WORLD);
