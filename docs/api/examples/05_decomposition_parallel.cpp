@@ -107,7 +107,9 @@ void scenario_manual_grid() {
     auto local_domain = decomposition::local_box(decomp, rank);
     auto local_size = local_domain.size;
     auto local_origin = domain::get_origin(decomposition::domain(decomp));
-    auto local_bounds = domain::to_coords(decomposition::domain(decomp), Int3{local_domain.high[0], local_domain.high[1], local_domain.high[2]});
+    auto local_bounds = domain::to_coords(
+        decomposition::domain(decomp),
+        Int3{local_domain.high[0], local_domain.high[1], local_domain.high[2]});
 
     std::ostringstream oss;
     oss << rank_prefix(rank) << "Local subdomain:\n";
@@ -165,8 +167,8 @@ void scenario_automatic_grid() {
     std::cout << "Subdomain sizes:\n";
     for (int i = 0; i < std::min(4, num_domains); ++i) {
       auto box = decomposition::local_box(decomp, i);
-      std::cout << "  Rank " << i << ": [" << box.size[0] << ", " << box.size[1] << ", "
-                << box.size[2] << "]\n";
+      std::cout << "  Rank " << i << ": [" << box.size[0] << ", " << box.size[1]
+                << ", " << box.size[2] << "]\n";
     }
     if (num_domains > 4) {
       std::cout << "  ... (total " << num_domains << " subdomains)\n";
@@ -178,7 +180,11 @@ void scenario_automatic_grid() {
   // Each rank gets its local domain
   auto local_domain = decomposition::local_box(decomp, rank);
   auto local_size = local_domain.size;
-  auto local_vol = (static_cast<double>(local_domain.size[0])*local_domain.size[1]*local_domain.size[2]*domain::get_spacing(decomposition::domain(decomp),0)*domain::get_spacing(decomposition::domain(decomp),1)*domain::get_spacing(decomposition::domain(decomp),2));
+  auto local_vol =
+      (static_cast<double>(local_domain.size[0]) * local_domain.size[1] *
+       local_domain.size[2] * domain::get_spacing(decomposition::domain(decomp), 0) *
+       domain::get_spacing(decomposition::domain(decomp), 1) *
+       domain::get_spacing(decomposition::domain(decomp), 2));
 
   std::ostringstream oss;
   oss << rank_prefix(rank) << "Size: [" << local_size[0] << ", " << local_size[1]
@@ -397,8 +403,9 @@ void scenario_aspect_ratios() {
                                  {{1024, 256, 64}, "Thin film (16:4:1)"}};
 
   for (const auto &test : cases) {
-    auto domain = domain::create(GridSize(test.size), PhysicalOrigin({0.0, 0.0, 0.0}),
-                                 GridSpacing({1.0, 1.0, 1.0}));
+    auto domain =
+        domain::create(GridSize(test.size), PhysicalOrigin({0.0, 0.0, 0.0}),
+                       GridSpacing({1.0, 1.0, 1.0}));
     auto decomp = decomposition::create(domain, size);
     auto grid = decomposition::get_grid(decomp);
 

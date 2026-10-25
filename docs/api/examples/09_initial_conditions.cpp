@@ -119,8 +119,9 @@ void demo_constant_ic() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Create domain and model
-  auto domain = domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                               GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
   DemoHost host(domain);
 
   if (rank == 0) {
@@ -344,8 +345,9 @@ void demo_file_reader() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Create domain and model
-  auto domain = domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                               GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
   DemoHost host(domain);
 
   if (rank == 0) {
@@ -371,8 +373,7 @@ void demo_file_reader() {
   // Save to file
   std::string checkpoint_file = "checkpoint_test.bin";
   BinaryWriter writer(checkpoint_file);
-  writer.set_domain(domain::get_size(domain), host.box().size,
-                    host.box().low);
+  writer.set_domain(domain::get_size(domain), host.box().size, host.box().low);
   writer.write(0, host.field());
 
   if (rank == 0) {
@@ -466,8 +467,7 @@ void demo_composition() {
   Constant background(0.285);
   background.set_field_name("density");
   apply_mod(background, host, 0.0);
-  print_field_stats(host.field(), "  After background",
-                    MPI_COMM_WORLD);
+  print_field_stats(host.field(), "  After background", MPI_COMM_WORLD);
 
   // Step 2: Add single seed at center
   if (rank == 0) {
@@ -478,8 +478,7 @@ void demo_composition() {
   central_seed.set_density(0.285);
   central_seed.set_amplitude(0.15);
   apply_mod(central_seed, host, 0.0);
-  print_field_stats(host.field(), "  After central seed",
-                    MPI_COMM_WORLD);
+  print_field_stats(host.field(), "  After central seed", MPI_COMM_WORLD);
 
   // Step 3: Add smaller grid of seeds around it
   if (rank == 0) {
@@ -496,8 +495,7 @@ void demo_composition() {
   secondary_grid.set_density(0.285);
   secondary_grid.set_amplitude(0.12); // Slightly different amplitude
   apply_mod(secondary_grid, host, 0.0);
-  print_field_stats(host.field(), "  After secondary grid",
-                    MPI_COMM_WORLD);
+  print_field_stats(host.field(), "  After secondary grid", MPI_COMM_WORLD);
 
   if (rank == 0) {
     std::cout << "\nComposition principles:\n";

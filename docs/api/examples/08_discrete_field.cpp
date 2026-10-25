@@ -73,15 +73,19 @@ void demo_creation_and_initialization() {
   print_section("SCENARIO 1: Creating and Initializing Fields");
 
   // Create a domain and a 3D field covering the full domain
-  auto domain = domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({0.5, 0.5, 0.5}));
+  auto domain =
+      domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({0.5, 0.5, 0.5}));
   Field<double> field(domain, Box3i::from_bounds({0, 0, 0}, {31, 31, 31}), 0);
 
   std::cout << "Created Field<double>:\n";
-  std::cout << "  Local size: [" << field.local_size()[0] << ", " << field.local_size()[1] << ", "
-            << field.local_size()[2] << "]\n";
-  std::cout << "  Origin: [" << pfc::domain::get_origin(domain)[0] << ", " << pfc::domain::get_origin(domain)[1] << ", "
+  std::cout << "  Local size: [" << field.local_size()[0] << ", "
+            << field.local_size()[1] << ", " << field.local_size()[2] << "]\n";
+  std::cout << "  Origin: [" << pfc::domain::get_origin(domain)[0] << ", "
+            << pfc::domain::get_origin(domain)[1] << ", "
             << pfc::domain::get_origin(domain)[2] << "]\n";
-  std::cout << "  Spacing: [" << pfc::domain::get_spacing(domain)[0] << ", " << pfc::domain::get_spacing(domain)[1] << ", "
+  std::cout << "  Spacing: [" << pfc::domain::get_spacing(domain)[0] << ", "
+            << pfc::domain::get_spacing(domain)[1] << ", "
             << pfc::domain::get_spacing(domain)[2] << "]\n\n";
 
   // Initialize with mathematical function - Method 1: 3D lambda
@@ -100,7 +104,9 @@ void demo_creation_and_initialization() {
 
   // Initialize with 1D function - only uses x coordinate
   std::cout << "Method 2: Initialize with 1D function f(x)\n";
-  field.apply([](double x, double /*y*/, double /*z*/) { return std::tanh((x - 8.0) / 2.0); });
+  field.apply([](double x, double /*y*/, double /*z*/) {
+    return std::tanh((x - 8.0) / 2.0);
+  });
   std::cout << "  f(0, any, any) = " << field(0, 0, 0) << "\n";
   std::cout << "  f(8, any, any) = " << field(8, 0, 0) << " (should be ~0)\n";
   std::cout << "  f(16, any, any) = " << field(16, 0, 0) << "\n\n";
@@ -117,7 +123,9 @@ void demo_creation_and_initialization() {
   std::cout << "  f(20, 0, 0) = " << field(20, 0, 0) << " (x=20 index)\n\n";
 
   // Create 2D field for comparison (using 3D field with z-size=1)
-  auto domain2d = domain::create(GridSize({64, 64, 1}), PhysicalOrigin({-32.0, -32.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto domain2d =
+      domain::create(GridSize({64, 64, 1}), PhysicalOrigin({-32.0, -32.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
   Field<double> field2d(domain2d, Box3i::from_bounds({0, 0, 0}, {63, 63, 0}), 0);
 
   field2d.apply([](double x, double y, double /*z*/) {
@@ -139,7 +147,9 @@ void demo_creation_and_initialization() {
 void demo_indexing() {
   print_section("SCENARIO 2: Array-Style Indexing and Data Access");
 
-  auto domain = domain::create(GridSize({16, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      domain::create(GridSize({16, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
   Field<double> field(domain, Box3i::from_bounds({0, 0, 0}, {15, 15, 15}), 0);
 
   // Initialize with constant
@@ -176,11 +186,12 @@ void demo_indexing() {
   std::cout << "3. Geometry information:\n";
   print_array(field.origin(), "   Origin");
   print_array(field.spacing(), "   Spacing");
-  std::cout << "   Owned box: [" << field.box().low[0] << "," << field.box().low[1] << ","
-            << field.box().low[2] << "] to [" << field.box().high[0] << ","
+  std::cout << "   Owned box: [" << field.box().low[0] << "," << field.box().low[1]
+            << "," << field.box().low[2] << "] to [" << field.box().high[0] << ","
             << field.box().high[1] << "," << field.box().high[2] << "]\n";
   print_array_int(field.local_size(), "   Local size");
-  std::cout << "   Domain size: [" << pfc::domain::get_size(domain)[0] << "," << pfc::domain::get_size(domain)[1] << ","
+  std::cout << "   Domain size: [" << pfc::domain::get_size(domain)[0] << ","
+            << pfc::domain::get_size(domain)[1] << ","
             << pfc::domain::get_size(domain)[2] << "]\n";
 }
 
@@ -191,7 +202,9 @@ void demo_indexing() {
 void demo_coordinate_operations() {
   print_section("SCENARIO 3: Coordinate-Space Operations");
 
-  auto domain = domain::create(GridSize({32, 32, 32}), PhysicalOrigin({5.0, 5.0, 5.0}), GridSpacing({0.5, 0.5, 0.5}));
+  auto domain =
+      domain::create(GridSize({32, 32, 32}), PhysicalOrigin({5.0, 5.0, 5.0}),
+                     GridSpacing({0.5, 0.5, 0.5}));
   Field<double> field(domain, Box3i::from_bounds({0, 0, 0}, {31, 31, 31}), 0);
 
   std::cout << "Field geometry:\n";
@@ -222,9 +235,12 @@ void demo_coordinate_operations() {
   };
 
   for (const auto &coord : test_coords) {
-    int i = static_cast<int>((coord[0] - pfc::domain::get_origin(domain)[0]) / pfc::domain::get_spacing(domain)[0]);
-    int j = static_cast<int>((coord[1] - pfc::domain::get_origin(domain)[1]) / pfc::domain::get_spacing(domain)[1]);
-    int k = static_cast<int>((coord[2] - pfc::domain::get_origin(domain)[2]) / pfc::domain::get_spacing(domain)[2]);
+    int i = static_cast<int>((coord[0] - pfc::domain::get_origin(domain)[0]) /
+                             pfc::domain::get_spacing(domain)[0]);
+    int j = static_cast<int>((coord[1] - pfc::domain::get_origin(domain)[1]) /
+                             pfc::domain::get_spacing(domain)[1]);
+    int k = static_cast<int>((coord[2] - pfc::domain::get_origin(domain)[2]) /
+                             pfc::domain::get_spacing(domain)[2]);
     std::cout << "   Coord [" << coord[0] << "," << coord[1] << "," << coord[2]
               << "] → Index [" << i << "," << j << "," << k << "]\n";
   }
@@ -243,11 +259,17 @@ void demo_coordinate_operations() {
   for (const auto &coord : test_bounds) {
     // Check if coordinate is within physical bounds
     bool in = (coord[0] >= pfc::domain::get_origin(domain)[0] &&
-               coord[0] < pfc::domain::get_origin(domain)[0] + pfc::domain::get_size(domain)[0] * pfc::domain::get_spacing(domain)[0] &&
+               coord[0] < pfc::domain::get_origin(domain)[0] +
+                              pfc::domain::get_size(domain)[0] *
+                                  pfc::domain::get_spacing(domain)[0] &&
                coord[1] >= pfc::domain::get_origin(domain)[1] &&
-               coord[1] < pfc::domain::get_origin(domain)[1] + pfc::domain::get_size(domain)[1] * pfc::domain::get_spacing(domain)[1] &&
+               coord[1] < pfc::domain::get_origin(domain)[1] +
+                              pfc::domain::get_size(domain)[1] *
+                                  pfc::domain::get_spacing(domain)[1] &&
                coord[2] >= pfc::domain::get_origin(domain)[2] &&
-               coord[2] < pfc::domain::get_origin(domain)[2] + pfc::domain::get_size(domain)[2] * pfc::domain::get_spacing(domain)[2]);
+               coord[2] < pfc::domain::get_origin(domain)[2] +
+                              pfc::domain::get_size(domain)[2] *
+                                  pfc::domain::get_spacing(domain)[2]);
     std::cout << "   [" << coord[0] << "," << coord[1] << "," << coord[2] << "] → "
               << (in ? "INSIDE" : "OUTSIDE") << "\n";
   }
@@ -261,7 +283,9 @@ void demo_interpolation() {
   print_section("SCENARIO 4: Direct Access at Grid Points");
 
   // Create field with known analytical function
-  auto domain = domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
   Field<double> field(domain, Box3i::from_bounds({0, 0, 0}, {63, 63, 63}), 0);
 
   // Initialize: f(x,y,z) = x² + y² + z²
@@ -276,21 +300,21 @@ void demo_interpolation() {
   std::cout << std::string(75, '-') << "\n";
 
   std::vector<std::array<int, 3>> grid_points = {
-      {10, 10, 10}, {10, 5, 0}, {20, 20, 20}, {0, 0, 0}, {63, 63, 63}
-  };
+      {10, 10, 10}, {10, 5, 0}, {20, 20, 20}, {0, 0, 0}, {63, 63, 63}};
 
   for (const auto &idx : grid_points) {
     auto coords = field.coords(idx[0], idx[1], idx[2]);
     double value = field(idx[0], idx[1], idx[2]);
-    double exact_val = coords[0] * coords[0] + coords[1] * coords[1] + coords[2] * coords[2];
+    double exact_val =
+        coords[0] * coords[0] + coords[1] * coords[1] + coords[2] * coords[2];
     double error = std::abs(value - exact_val);
 
-    printf("[%d,%d,%d]\t\t[%.1f,%.1f,%.1f]\t\t%.2f\t\t%.2f\t\t%.2f\n",
-           idx[0], idx[1], idx[2], coords[0], coords[1], coords[2],
-           value, exact_val, error);
+    printf("[%d,%d,%d]\t\t[%.1f,%.1f,%.1f]\t\t%.2f\t\t%.2f\t\t%.2f\n", idx[0],
+           idx[1], idx[2], coords[0], coords[1], coords[2], value, exact_val, error);
   }
 
-  std::cout << "\nNote: The Field API provides direct access to grid-point values.\n";
+  std::cout
+      << "\nNote: The Field API provides direct access to grid-point values.\n";
   std::cout << "      For interpolation between grid points, use appropriate\n";
   std::cout << "      interpolation libraries or implement interpolation manually\n";
   std::cout << "      using the grid-point values and coordinate transformations.\n";
@@ -306,7 +330,8 @@ void demo_interpolation() {
       test_index[2] >= 0 && test_index[2] < field.local_size()[2]) {
     auto coords = field.coords(test_index[0], test_index[1], test_index[2]);
     double value = field(test_index[0], test_index[1], test_index[2]);
-    std::cout << "Physical coord: [" << coords[0] << "," << coords[1] << "," << coords[2] << "]\n";
+    std::cout << "Physical coord: [" << coords[0] << "," << coords[1] << ","
+              << coords[2] << "]\n";
     std::cout << "Value: " << value << " (VALID INDEX)\n";
   } else {
     std::cout << "Result: OUT OF BOUNDS\n";
@@ -323,13 +348,19 @@ void demo_complex_fields() {
   using Complex = std::complex<double>;
 
   // Real-space field
-  auto domain_real = domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
-  Field<double> real_field(domain_real, Box3i::from_bounds({0, 0, 0}, {63, 63, 63}), 0);
+  auto domain_real =
+      domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
+  Field<double> real_field(domain_real, Box3i::from_bounds({0, 0, 0}, {63, 63, 63}),
+                           0);
 
   // Complex k-space field (after real-to-complex FFT)
   // Size is (nx, ny, nz/2+1) for real-to-complex transform
-  auto domain_k = domain::create(GridSize({64, 64, 33}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
-  Field<Complex> kspace_field(domain_k, Box3i::from_bounds({0, 0, 0}, {63, 63, 32}), 0);
+  auto domain_k =
+      domain::create(GridSize({64, 64, 33}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
+  Field<Complex> kspace_field(domain_k, Box3i::from_bounds({0, 0, 0}, {63, 63, 32}),
+                              0);
 
   std::cout << "Real-space field: 64 x 64 x 64 = " << real_field.size()
             << " points\n";
@@ -367,8 +398,8 @@ void demo_complex_fields() {
   for (size_t i = 0; i < kspace_field.size(); ++i) {
     if (std::abs(kspace_field.data()[i]) > 1e-10) non_zero++;
   }
-  std::cout << "Non-zero k-space modes: " << non_zero << " / "
-            << kspace_field.size() << "\n";
+  std::cout << "Non-zero k-space modes: " << non_zero << " / " << kspace_field.size()
+            << "\n";
 }
 
 //==============================================================================
@@ -404,16 +435,18 @@ int main() {
                  "   ║\n";
     std::cout << "║                                                                 "
                  "   ║\n";
-    std::cout
-        << "║  1. Field<T> bridges discrete grids and physical space             ║\n";
+    std::cout << "║  1. Field<T> bridges discrete grids and physical space          "
+                 "   ║\n";
     std::cout << "║  2. Multiple initialization methods: apply() with lambdas       "
                  "   ║\n";
-    std::cout << "║  3. Flexible indexing: multi-dimensional (i,j,k) or linear data()  "
-                 "   ║\n";
+    std::cout
+        << "║  3. Flexible indexing: multi-dimensional (i,j,k) or linear data()  "
+           "   ║\n";
     std::cout << "║  4. Coordinate transformations: indices ↔ physical coords       "
                  "   ║\n";
-    std::cout << "║  5. Direct grid-point access (implement interpolation separately)  "
-                 "   ║\n";
+    std::cout
+        << "║  5. Direct grid-point access (implement interpolation separately)  "
+           "   ║\n";
     std::cout << "║  6. Works with real and complex fields (FFT integration)        "
                  "   ║\n";
     std::cout << "║  7. Domain-aware with Box3i for decomposition support          "

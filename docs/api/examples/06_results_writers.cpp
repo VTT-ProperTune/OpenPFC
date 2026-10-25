@@ -75,7 +75,8 @@ public:
     }
   }
 
-  void write_statistics(int step, double time, pfc::field::FieldView<double> local_data) {
+  void write_statistics(int step, double time,
+                        pfc::field::FieldView<double> local_data) {
     // Compute local statistics
     double local_min = *std::min_element(local_data.begin(), local_data.end());
     double local_max = *std::max_element(local_data.begin(), local_data.end());
@@ -128,8 +129,9 @@ void scenario_basic_binary() {
   }
 
   // Create domain
-  auto domain = domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                               GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, size);
   auto local_domain = decomposition::local_box(decomp, rank);
 
@@ -254,8 +256,9 @@ void scenario_checkpoint_restart() {
   }
 
   // Create domain
-  auto domain = domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                               GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, size);
   auto local_domain = decomposition::local_box(decomp, rank);
 

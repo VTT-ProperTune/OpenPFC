@@ -91,8 +91,8 @@ public:
       : m_center(center), m_amplitude(amplitude), m_width(width),
         m_background(background) {}
 
-  void apply(pfc::field::FieldOutput<double> field, const Domain &domain, const Box3i &box,
-             double /*time*/) override {
+  void apply(pfc::field::FieldOutput<double> field, const Domain &domain,
+             const Box3i &box, double /*time*/) override {
     int idx = 0;
     for (int k = box.low[2]; k <= box.high[2]; k++) {
       for (int j = box.low[1]; j <= box.high[1]; j++) {
@@ -123,8 +123,9 @@ void demo_custom_initial_condition() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Create a small domain for demonstration
-  auto domain = domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                               GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
 
   // Create FFT with decomposition
   DemoHost host(domain);
@@ -185,8 +186,8 @@ public:
 
   const std::string &get_modifier_name() const override { return m_name; }
 
-  void apply(pfc::field::FieldOutput<double> field, const Domain &domain, const Box3i &box,
-             double /*time*/) override {
+  void apply(pfc::field::FieldOutput<double> field, const Domain &domain,
+             const Box3i &box, double /*time*/) override {
     double Lx = domain::get_size(domain, 0) * domain::get_spacing(domain, 0);
     double dx = domain::get_spacing(domain, 0);
     double x0 = domain::get_origin(domain, 0);
@@ -218,8 +219,9 @@ void demo_boundary_condition() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Create domain and model
-  auto domain = domain::create(GridSize({64, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                               GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      domain::create(GridSize({64, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
   DemoHost host(domain);
 
   // Initialize with constant value
@@ -290,8 +292,8 @@ public:
 
   const std::string &get_modifier_name() const override { return m_name; }
 
-  void apply(pfc::field::FieldOutput<double> field, const Domain & /*domain*/, const Box3i &box,
-             double time) override {
+  void apply(pfc::field::FieldOutput<double> field, const Domain & /*domain*/,
+             const Box3i &box, double time) override {
 
     // Time-varying amplitude (sinusoidal)
     double bc_value =
@@ -319,8 +321,9 @@ void demo_space_time_bc() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Create domain and model
-  auto domain = domain::create(GridSize({32, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                               GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      domain::create(GridSize({32, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
   DemoHost host(domain);
 
   // Initialize field
@@ -384,8 +387,9 @@ void demo_composition() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Create domain and model
-  auto domain = domain::create(GridSize({64, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                               GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      domain::create(GridSize({64, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
   DemoHost host(domain);
 
   if (rank == 0) {

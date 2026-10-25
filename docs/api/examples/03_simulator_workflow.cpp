@@ -50,8 +50,8 @@ public:
     set_field_name(field_name);
   }
 
-  void apply(pfc::field::FieldOutput<double> field, const Domain &domain, const Box3i &box,
-             double /*t*/) override {
+  void apply(pfc::field::FieldOutput<double> field, const Domain &domain,
+             const Box3i &box, double /*t*/) override {
     auto spacing = domain::get_spacing(domain);
     int idx = 0;
     for (int k = box.low[2]; k <= box.high[2]; ++k) {
@@ -77,7 +77,8 @@ public:
                   const std::array<int, 3> & /*arr_local*/,
                   const std::array<int, 3> & /*arr_offset*/) override {}
 
-  MPI_Status write(int iteration, const pfc::field::FieldOutput<double> field) override {
+  MPI_Status write(int iteration,
+                   const pfc::field::FieldOutput<double> field) override {
     double sum = 0.0, sum2 = 0.0;
     double min_val = std::numeric_limits<double>::max();
     double max_val = std::numeric_limits<double>::lowest();
@@ -98,7 +99,8 @@ public:
     if (mpi::get_rank() == 0) {
       size_t total_points = field.size() * static_cast<size_t>(mpi::get_size());
       double mean = global_sum / static_cast<double>(total_points);
-      double variance = global_sum2 / static_cast<double>(total_points) - mean * mean;
+      double variance =
+          global_sum2 / static_cast<double>(total_points) - mean * mean;
       double stddev = std::sqrt(std::max(0.0, variance));
 
       std::cout << "Iteration " << std::setw(4) << iteration << ": "
@@ -110,7 +112,8 @@ public:
     return st;
   }
 
-  MPI_Status write(int /*iteration*/, pfc::field::FieldView<std::complex<double>> /*field*/) override {
+  MPI_Status write(int /*iteration*/,
+                   pfc::field::FieldView<std::complex<double>> /*field*/) override {
     MPI_Status st{};
     return st;
   }
@@ -218,9 +221,11 @@ int main(int argc, char **argv) {
       std::cout << std::string(60, '=') << "\n\n";
       std::cout << "Key takeaways:\n";
       std::cout << "  ✓ SpectralCPUStack owns domain, FFT, and the host field\n";
-      std::cout << "  ✓ FieldModifier::apply takes std::vector<double> + Domain + Box3i\n";
+      std::cout
+          << "  ✓ FieldModifier::apply takes std::vector<double> + Domain + Box3i\n";
       std::cout << "  ✓ pfc::sim::run drives Time and optional save hooks\n";
-      std::cout << "\nSee include/openpfc/kernel/simulation/simulation_driver.hpp.\n";
+      std::cout
+          << "\nSee include/openpfc/kernel/simulation/simulation_driver.hpp.\n";
     }
 
   } catch (const std::exception &e) {

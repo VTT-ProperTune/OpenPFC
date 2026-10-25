@@ -128,8 +128,9 @@ void example_round_trip() {
 void example_laplacian() {
   print_section("Example 3: Computing Laplacian in K-Space");
 
-  auto domain = pfc::domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                                    GridSpacing({0.1, 0.1, 0.1}));
+  auto domain =
+      pfc::domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                          GridSpacing({0.1, 0.1, 0.1}));
   auto decomp = decomposition::create(domain, mpi::get_size());
   auto fft = fft::create(decomp);
 
