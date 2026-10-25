@@ -77,7 +77,7 @@ The regression checks compare selected matrix actions with an independently
 constructed Lagrange polynomial derivative and test degree-10 exactness.
 The plotted error is measured at nodes; it does not directly certify a
 continuous maximum over the entire interval. Next, turn differentiation
-around and calculate an integral.
+around and [calculate an integral](../integration/index.qmd).
 The log plot places zero errors at its $10^{-17}$ display floor; the CSV
 retains the computed values.
 

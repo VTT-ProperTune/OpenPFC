@@ -16,3 +16,7 @@ set_target_properties(polynomial_differentiation PROPERTIES RUNTIME_OUTPUT_DIREC
 add_executable(polynomial_regularity regularity/model.cpp)
 target_link_libraries(polynomial_regularity PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(polynomial_regularity PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(polynomial_integration integration/model.cpp)
+target_link_libraries(polynomial_integration PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(polynomial_integration PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")

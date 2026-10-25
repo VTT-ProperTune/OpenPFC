@@ -16,15 +16,15 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 [Follow what is taught, what is adapted, and what still needs a chapter.]{.lesson-deck}
 :::
 
-There are 54 declared runnable example targets and
-24 Quarto teaching chapters. The table includes older programs
+There are 55 declared runnable example targets and
+25 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
 ## Spectral Methods in MATLAB
 
 The [author's collection](https://people.maths.ox.ac.uk/trefethen/spectral.html)
-contains forty programs. Currently 13 have a corresponding lesson.
+contains forty programs. Currently 14 have a corresponding lesson.
 A link means that the lesson declares coverage of that experiment; the
 scope column states changes in method or presentation. It does not mean
 an unmodified MATLAB program was translated line for line. Pending rows
@@ -61,7 +61,7 @@ remain in the inventory while applicability and implementation are assessed.
 | [27](https://people.maths.ox.ac.uk/trefethen/p27.m) | Solve KdV eq. u_t + uu_x + u_xxx = 0 on [-pi,pi] by | Pending assessment and implementation. |
 | [28](https://people.maths.ox.ac.uk/trefethen/p28.m) | eigenmodes of Laplacian on the disk (compare p22.m) | Pending assessment and implementation. |
 | [29](https://people.maths.ox.ac.uk/trefethen/p29.m) | solve Poisson equation on the unit disk | Pending assessment and implementation. |
-| [30](https://people.maths.ox.ac.uk/trefethen/p30.m) | spectral integration, ODE style (compare p12.m) | Pending assessment and implementation. |
+| [30](https://people.maths.ox.ac.uk/trefethen/p30.m) | spectral integration, ODE style (compare p12.m) | [Read the lesson](polynomials/integration/index.qmd). Original antiderivative collocation experiment for four profiles and degrees 1..50; native GMRES replaces the explicit inverse. |
 | [31](https://people.maths.ox.ac.uk/trefethen/p31.m) | gamma function via complex integral, trapezoid rule | Pending assessment and implementation. |
 | [32](https://people.maths.ox.ac.uk/trefethen/p32.m) | solve u_xx = exp(4x), u(-1)=0, u(1)=1 (compare p13.m) | Pending assessment and implementation. |
 | [33](https://people.maths.ox.ac.uk/trefethen/p33.m) | solve linear BVP u_xx = exp(4x), u'(-1)=u(1)=0 | Pending assessment and implementation. |
@@ -118,6 +118,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `periodic_collocation` | [Read the lesson](differentiation/collocation/index.qmd) |
 | `periodic_differentiation` | [Read the lesson](differentiation/periodic/index.qmd) |
 | `polynomial_differentiation` | [Read the lesson](polynomials/differentiation/index.qmd) |
+| `polynomial_integration` | [Read the lesson](polynomials/integration/index.qmd) |
 | `polynomial_interpolation` | [Read the lesson](polynomials/interpolation/index.qmd) |
 | `polynomial_nodal_polynomials` | [Read the lesson](polynomials/nodal-polynomials/index.qmd) |
 | `polynomial_regularity` | [Read the lesson](polynomials/regularity/index.qmd) |
@@ -158,7 +159,7 @@ fixed-step restart does not establish an adaptive restart contract.
 | JSON/TOML validation and application sessions | Pending a teaching chapter. |
 | field output and visualization | Pending a teaching chapter. |
 | checkpoints and restart | Pending a teaching chapter. |
-| Krylov and nonlinear solves | Pending a teaching chapter. |
+| Krylov and nonlinear solves | [integration](polynomials/integration/index.qmd) |
 | geometric multigrid | Pending a teaching chapter. |
 | microelasticity and homogenization | Pending a teaching chapter. |
 | coupling and transactional attempts | Pending a teaching chapter. |

@@ -128,6 +128,46 @@ def check_regularity(binary, directory):
             assert error < 1e-10
 
 
+def check_integration(binary, directory):
+    run(binary, directory)
+    data = rows(directory / "results/integrals.csv")
+    assert len(data) == 200
+    exacts = [
+        0.5,
+        2 * (math.exp(-1) - math.sqrt(math.pi) * math.erfc(1)),
+        math.pi / 2,
+        2 / 11,
+    ]
+    for row in data:
+        n, kind = int(row["n"]), int(row["profile"])
+        value = float(row["integral"])
+        assert abs(float(row["exact"]) - exacts[kind]) < 1e-14
+        if kind == 3 and n >= 11:
+            assert abs(value - 2 / 11) < 2e-9
+        if n == 50:
+            assert abs(value - exacts[kind]) < (1e-5 if kind == 0 else 1e-7)
+        if n <= 6:
+            # Integrate the degree-(n-1) polynomial through f at the first n nodes.
+            nodes = [math.cos(math.pi * j / n) for j in range(n)]
+            integral = 0
+            for j, node in enumerate(nodes):
+                coefficients = [1.0]
+                for k, other in enumerate(nodes):
+                    if k == j:
+                        continue
+                    result = [0.0] * (len(coefficients) + 1)
+                    for power, coefficient in enumerate(coefficients):
+                        result[power] -= other * coefficient / (node - other)
+                        result[power + 1] += coefficient / (node - other)
+                    coefficients = result
+                integral += sample(kind, node)[0] * sum(
+                    2 * c / (power + 1)
+                    for power, c in enumerate(coefficients)
+                    if power % 2 == 0
+                )
+            assert abs(value - integral) < 2e-11
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -142,6 +182,7 @@ def main():
             "polynomial_nodal_polynomials",
             "polynomial_differentiation",
             "polynomial_regularity",
+            "polynomial_integration",
         ],
     )
     args = parser.parse_args()
@@ -189,6 +230,16 @@ def main():
             check_regularity(bin_dir / "polynomial_regularity", root / "valid")
             run(
                 bin_dir / "polynomial_regularity",
+                root / "invalid",
+                parameters={"n": 0, "sizes": [0]},
+                success=False,
+            )
+        if args.case in (None, "polynomial_integration"):
+            root = base / "polynomial_integration"
+            root.mkdir()
+            check_integration(bin_dir / "polynomial_integration", root / "valid")
+            run(
+                bin_dir / "polynomial_integration",
                 root / "invalid",
                 parameters={"n": 0, "sizes": [0]},
                 success=False,

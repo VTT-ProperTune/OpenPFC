@@ -260,6 +260,9 @@ if(OpenPFC_BUILD_TESTS)
   add_test(NAME example-polynomial-regularity
            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_polynomials.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case polynomial_regularity)
   set_tests_properties(example-polynomial-regularity PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  add_test(NAME example-polynomial-integration
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_polynomials.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case polynomial_integration)
+  set_tests_properties(example-polynomial-integration PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
 endif()
 
 add_executable(23_halo_microtiming 23_halo_microtiming.cpp)

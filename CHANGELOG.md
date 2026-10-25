@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Teach integration as a first-order boundary problem solved through native GMRES. Check polynomial and nonpolynomial integrals independently and expose quadrature weights.
+
 - Connect finite smoothness, analyticity and approximation error on a finite interval. Validate complete error tables against independent nodal differentiation.
 
 - Compose cosine-mapped collocation through native local FFT building blocks. Explain endpoint conventions and check full derivative tables against independent product derivatives.

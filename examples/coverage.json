@@ -314,6 +314,15 @@
       ]
     },
     {
+      "target": "polynomial_integration",
+      "source": "polynomials/integration/model.cpp",
+      "chapter": "polynomials/integration/index.qmd",
+      "capabilities": [
+        "gmres",
+        "chebyshev-reference"
+      ]
+    },
+    {
       "target": "polynomial_interpolation",
       "source": "polynomials/interpolation/model.cpp",
       "chapter": "polynomials/interpolation/index.qmd",
@@ -641,7 +650,7 @@
       "program": 30,
       "title": "spectral integration, ODE style (compare p12.m)",
       "source": "https://people.maths.ox.ac.uk/trefethen/p30.m",
-      "chapter": null,
+      "chapter": "polynomials/integration/index.qmd",
       "scope": "Original antiderivative collocation experiment for four profiles and degrees 1..50; native GMRES replaces the explicit inverse."
     },
     {
@@ -845,7 +854,9 @@
         "newton.hpp",
         "scalar_root.hpp"
       ],
-      "chapters": []
+      "chapters": [
+        "polynomials/integration/index.qmd"
+      ]
     },
     {
       "name": "geometric multigrid",
