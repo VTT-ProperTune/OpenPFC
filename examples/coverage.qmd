@@ -17,7 +17,7 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 :::
 
 There are 57 declared runnable example targets and
-30 Quarto teaching chapters. The table includes older programs
+31 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -96,7 +96,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `19_explicit_stepper_fd` | [Read the lesson](heat/finite-differences/index.qmd) |
 | `20_explicit_stepper_spectral` | [Read the lesson](heat/fourier/index.qmd) |
 | `21_adaptive_stepping` | [Read the lesson](integration/adaptive-rk/index.qmd) |
-| `22_external_coupling` | Pending conversion. |
+| `22_external_coupling` | [Read the lesson](coupling/host-orchestrator/index.qmd) |
 | `23_halo_microtiming` | Pending conversion. |
 | `24_adaptive_etd` | [Read the lesson](integration/adaptive-etd/index.qmd) |
 | `cardinal_interpolation` | [Read the lesson](interpolation/cardinal/index.qmd) |
@@ -164,7 +164,7 @@ fixed-step restart does not establish an adaptive restart contract.
 | Krylov and nonlinear solves | [integration](polynomials/integration/index.qmd), [boundary-values](polynomials/boundary-values/index.qmd), [nonlinear-boundary](polynomials/nonlinear-boundary/index.qmd) |
 | geometric multigrid | Pending a teaching chapter. |
 | microelasticity and homogenization | Pending a teaching chapter. |
-| coupling and transactional attempts | [adaptive-rk](integration/adaptive-rk/index.qmd), [adaptive-etd](integration/adaptive-etd/index.qmd) |
+| coupling and transactional attempts | [host-orchestrator](coupling/host-orchestrator/index.qmd), [adaptive-rk](integration/adaptive-rk/index.qmd), [adaptive-etd](integration/adaptive-etd/index.qmd) |
 | profiling and communication diagnostics | Pending a teaching chapter. |
 | CUDA and HIP execution | Pending a teaching chapter. |
 | nonlinear models and incompressible flow | Pending a teaching chapter. |

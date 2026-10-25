@@ -164,6 +164,37 @@ def check_clock(binary, directory):
     run(binary, directory.parent / "bad-clock", parameters={"dt": 0}, success=False)
 
 
+def check_host(binary, directory, launch):
+    run(binary, directory, launch)
+    expected = [0.1, 0.15, 0.25, 0.3, 0.4]
+    base_sum = sum(
+        math.sin(0.25 * i) * math.cos(0.5 * j)
+        for i in range(8)
+        for j in range(8)
+        for _ in range(2)
+    )
+    for path in (directory / "results").glob("coupling_rank_*.csv"):
+        ledger = rows(path)
+        assert len(ledger) == 5
+        previous = 0
+        for i, (row, t) in enumerate(zip(ledger, expected)):
+            assert abs(float(row["time"]) - t) < 1e-13
+            assert abs(float(row["dt"]) - (t - previous)) < 1e-13
+            assert (
+                abs(
+                    float(row["read_sum"])
+                    - (0 if i == 0 else base_sum + 128 * 0.1 * previous)
+                )
+                < 1e-11
+            )
+            previous = t
+    data = rank_rows(directory, "field")
+    assert len(data) == 128
+    for row in data:
+        x, y, z, value = (float(row[key]) for key in ("x", "y", "z", "u"))
+        assert abs(value - (math.sin(x) * math.cos(y) + 0.04)) < 1e-14
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -172,7 +203,13 @@ def main():
     parser.add_argument("--rank-flag", default="-n")
     parser.add_argument("--ranks", default=1, type=int)
     parser.add_argument(
-        "--case", choices=["21_adaptive_stepping", "24_adaptive_etd", "time"]
+        "--case",
+        choices=[
+            "21_adaptive_stepping",
+            "24_adaptive_etd",
+            "time",
+            "22_external_coupling",
+        ],
     )
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
@@ -195,6 +232,10 @@ def main():
             root = base / "time"
             root.mkdir()
             check_clock(bin_dir / "time", root / "clock")
+        if args.case in (None, "22_external_coupling"):
+            root = base / "22_external_coupling"
+            root.mkdir()
+            check_host(bin_dir / "22_external_coupling", root / "host", launch)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

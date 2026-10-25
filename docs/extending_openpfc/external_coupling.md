@@ -8,7 +8,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 OpenPFC can run as a library inside a host solver (FEM, another PDE code, or a
 custom orchestrator). The stable surface is small on purpose.
 
-Runnable sketch: [`examples/22_external_coupling.cpp`](../../examples/22_external_coupling.cpp).
+Runnable sketch: [`examples/coupling/host-orchestrator/model.cpp`](../../examples/coupling/host-orchestrator/model.cpp).
 
 ## What is stable
 

@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Show how a host orchestrator advances OpenPFC through a small visible protocol. Keep the existing executable and validate complete coupled fields and ordering on one and two ranks.
+
 - Replace the clock printout with an output-scheduling story that exposes partial final steps. Preserve the target and verify exact accepted times and output alignment.
 
 - Recast ETD adaptation as a readable experiment separating linear decay and nonlinear reaction. Preserve the target and independently check fields and accepted-step ledgers on one and two MPI ranks.

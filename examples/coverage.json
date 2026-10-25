@@ -168,9 +168,14 @@
     },
     {
       "target": "22_external_coupling",
-      "source": "22_external_coupling.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "coupling/host-orchestrator/model.cpp",
+      "chapter": "coupling/host-orchestrator/index.qmd",
+      "capabilities": [
+        "field-handle",
+        "communicator-isolation",
+        "simulation-state",
+        "coupling"
+      ]
     },
     {
       "target": "23_halo_microtiming",
@@ -922,6 +927,7 @@
         "simulation_lifecycle.hpp"
       ],
       "chapters": [
+        "coupling/host-orchestrator/index.qmd",
         "integration/adaptive-rk/index.qmd",
         "integration/adaptive-etd/index.qmd"
       ]

@@ -1,0 +1,86 @@
+---
+title: "Let another solver own the loop"
+description: "Export a borrowed host field, negotiate an interval and impose new data at the accepted endpoint."
+order: 30
+categories: [Coupling, Simulation workflows]
+capabilities: ["field-handle", "communicator-isolation", "simulation-state", "coupling"]
+targets: [22_external_coupling]
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[OpenPFC / Build a simulation]{.lesson-kicker}
+
+# Let another solver own the loop
+
+[Export a borrowed host field, negotiate an interval and impose new data at the accepted endpoint.]{.lesson-deck}
+:::
+
+OpenPFC need not own the outermost time loop. This refactors the external
+coupling example into a small host orchestrator that reads a field, chooses
+an interval and imposes an endpoint value. It demonstrates the interface
+seam; the host is not an implemented finite-element solver.
+
+## Give the session a lifetime and a communicator
+
+```{.cpp include="model.cpp" snippet="session" dedent=4}
+```
+
+Duplicating a communicator preserves the rank group while creating a
+separate message-matching context. The example uses that communicator for
+its host reduction. A coupled application must also pass the isolated
+communicator into each communicating OpenPFC operation it constructs;
+duplication alone cannot redirect an operation that still uses WORLD.
+The session and its fields are destroyed before MPI finalizes.
+
+## Borrow, read, impose, commit
+
+```{.cpp include="model.cpp" snippet="orchestrate" dedent=4}
+```
+
+The host allows 0.25 time units, while OpenPFC proposes 0.1. The clock takes
+the smaller limit and clips it again at save boundaries and the final time.
+`export_host_field` returns a read-only borrowed view plus geometry. It
+neither copies the field nor transfers ownership to the external solver.
+This example uses compact, unpadded storage, so its view contains only
+owned samples; a padded field requires more careful owned-region handling.
+The exported origin is the domain origin. Add `owned_box.low` to local
+indices before multiplying by spacing to recover physical coordinates.
+
+The source adapter writes
+
+$$u(x,y,z,t)=\sin x\cos y+0.1t.$$ {#eq-imposed}
+
+```{.cpp include="source.hpp" snippet="source"}
+```
+
+It imposes values at the new endpoint; it is not an Euler increment or a
+force integrated over the interval. The initial field is zero, so the first
+host read is zero; subsequent reads see the last imposed field.
+
+## Start a host-owned experiment
+
+```sh
+openpfc run model.cpp input.json --launcher=none
+```
+
+The empty input is unused; edit the domain and time constants in C++.
+The sibling `source.hpp` is included in the CLI's source snapshot. Two-rank
+execution uses `--ranks=2 --launcher=mpirun`. Each rank records the time
+negotiation and its complete final field under `results/`.
+
+The checks verify the five clipped intervals, every host read against the
+previous accepted state, and all final samples against the imposed formula.
+Borrowed handles must not outlive or survive reallocation of their field.
+Use the modifier's public field operations for writes so residency tracking
+can observe them. A rejected coupled attempt would also need to restore
+external solver state; this accept-only orchestrator does not hide that duty.
+
+The complete [C++ model](model.cpp) and [starting input](input.json)
+are available with this lesson. It also uses the shared [source.hpp](source.hpp);
+keep its relative location when saving the files.
+
+:::

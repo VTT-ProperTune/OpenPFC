@@ -32,7 +32,7 @@ out-of-tree executable, follow the
 | Apply a user pointwise functor to device buffers | `pfc::core::transform` + `OPENPFC_INSTANTIATE_TRANSFORM` | [Device pointwise functors](#device-pointwise-functors), `openpfc/runtime/gpu/transform_gpu.hpp` |
 | Overlap a GPU interior stencil with Faces MPI | `pfc::comm::GpuHaloOverlap` (`Waitall` / `Testall`) | `openpfc/runtime/gpu/halo_overlap_gpu.hpp` |
 | Add point-wise gradients or finite-difference physics | Field/gradient primitives and halo policies | [Per-point gradients](per_point_grads.md), [Halo exchange](../concepts/halo_exchange.md) |
-| Couple an external solver | `pfc::coupling::FieldHandle` + `Time::clip_attempt_dt` | [External coupling](external_coupling.md), `examples/22_external_coupling.cpp` |
+| Couple an external solver | `pfc::coupling::FieldHandle` + `Time::clip_attempt_dt` | [External coupling](external_coupling.md), `examples/coupling/host-orchestrator/model.cpp` |
 | Restart from a checkpoint bundle | `CheckpointService` / `restart_from` | [Checkpoint publication](../development/checkpoint_publish.md) |
 
 The [Examples catalog](../reference/examples_catalog.md) is the authoritative
