@@ -5,6 +5,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Contributing to OpenPFC
 
+[OodiHandbook](https://github.com/ahojukka5/OodiHandbook/blob/v0.1.0/index.qmd)
+is the source of common rules. Follow the repository's explicitly adopted
+immutable release (AUTH-003). Use [reviewed master guidance](https://github.com/ahojukka5/OodiHandbook/blob/master/index.qmd)
+as a voluntary improvement target (AUTH-006). Local instructions provide
+technical details and do not override the Handbook.
+
 Every commit is a small, self-contained, reviewable, revertable unit that
 tells one clear story. That is the bar for humans and agents alike.
 
@@ -24,8 +30,10 @@ tells one clear story. That is the bar for humans and agents alike.
 
 ## Build and test
 
-Use [`scripts/build.sh`](scripts/build.sh) — do not invoke `cmake` / `ctest` by
-hand for routine work. The script loads the correct modules and toolchain.
+Use [`scripts/build.sh`](scripts/build.sh) with the local toolchain;
+`--machine=portable` preserves an ordinary workstation environment. Direct
+local CMake/CTest commands are appropriate when the script does not support
+the available environment. Report missing dependencies and unrun checks.
 See [`AGENTS.md`](AGENTS.md) for Tohtori vs LUMI. Manual toolchain notes live
 in [`INSTALL.md`](INSTALL.md).
 
@@ -130,7 +138,7 @@ Rules:
 
 **Scope** (where it lives). Type and scope are independent: write
 `test(halo): …`, not a collapsed `test:` or `halo:` when both help a
-skimmer. Scope is optional when the type alone is unambiguous. Prefer
+skimmer. Include a meaningful scope (ENG-005). Prefer
 these OpenPFC names and reuse them consistently:
 
 `kernel`, `data`, `field`, `domain`, `decomp`, `halo`, `fft`, `gpu`,
@@ -211,8 +219,8 @@ history there; keep its `master` at the same commit as the canonical `master`.
   commit (`git rebase -i`). Do not append a correction on top: a commit
   that is only correct after a later "fix" was never self-contained, and
   `git bisect` lands on the broken intermediate.
-- Never push directly to `master` (or any branch others commit to). The
-  one narrow exception for Limina gate agents is in [`AGENTS.md`](AGENTS.md).
+- Never push directly to `master`. Limina gate agents use the same reviewed
+  PR and authorized rebase-merge process (ENG-007, ENG-018).
 
 ## CI (GitHub Actions)
 

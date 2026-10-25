@@ -5,17 +5,25 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Agent and contributor notes (OpenPFC)
 
+[OodiHandbook](https://github.com/ahojukka5/OodiHandbook/blob/v0.1.0/index.qmd)
+is the source of common rules. Follow the repository's explicitly adopted
+immutable release (AUTH-003). Use [reviewed master guidance](https://github.com/ahojukka5/OodiHandbook/blob/master/index.qmd)
+as a voluntary improvement target (AUTH-006). Local instructions provide
+technical details and do not override the Handbook.
+
 Short orientation for people and automated agents working in this repository. For full prose documentation, start from [`docs/README.md`](docs/README.md) and the root [`README.md`](README.md).
 
 ## Install and build
 
-**Always build and test through [`scripts/build.sh`](scripts/build.sh).** Do not
-invoke `cmake`, `cmake --build`, or `ctest` by hand for routine work. The
-script loads the correct Lmod stack (compiler, MPI, HeFFTe), picks the
-machine toolchain, configures, builds, and runs tests.
+Use [`scripts/build.sh`](scripts/build.sh) with the local toolchain;
+`--machine=portable` preserves an ordinary workstation environment. Direct
+local CMake/CTest commands are appropriate when the script does not support
+the available environment. Report missing dependencies and unrun checks.
+The cluster modes load the compiler, MPI and HeFFTe modules.
 
 ```bash
 ./scripts/build.sh --help
+./scripts/build.sh --machine=portable --cpu     # local workstation
 ./scripts/build.sh                              # auto-detects Tohtori vs LUMI
 ./scripts/build.sh --machine=tohtori --with-cuda
 ./scripts/build.sh --machine=lumi --with-rocm   # default LUMI path (HIP)
@@ -23,7 +31,7 @@ machine toolchain, configures, builds, and runs tests.
 ```
 
 - **Tohtori:** default is a Release CPU build in `builds/release`. `--with-cuda` loads `cuda/13.1` and the matching HeFFTe prefix/module.
-- **LUMI:** default is HIP/ROCm. The script loads `LUMI/25.09 partition/G cpeGNU cray-fftw lumi-CrayPath` and the `heffte-rocm` module from `$HOME/privatemodules`. Configure runs on the login node (FetchContent needs the network). Compile and `ctest` are submitted to a GPU partition so AMD devices are available: **`standard-g`** (default) or **`dev-g`**. CUDA is not available on LUMI — use Tohtori for NVIDIA. **Source checkout** is `/flash/project_462001519/juaho/dev/openpfc-master` tracking `origin/master` (`git pull --ff-only`). **HIP build tree** is `/flash/project_462001519/juaho/build/openpfc-lumi-rocm-master`. Do not configure or compile inside the git clone (inode quota). Do **not** rsync onto `/users/juaho/dev/openpfc-0.2` (frozen HIP-scaling tree on `feat/lumi-hip-strong-scale-2-3-nodes`). Job logs go to `/scratch/project_462001519/juaho/logs/`. Slurm account is **`project_462001519`** (do not submit as `project_462001245` — those jobs never start).
+- **LUMI:** default is HIP/ROCm. The script loads `LUMI/25.09 partition/G cpeGNU cray-fftw lumi-CrayPath` and the `heffte-rocm` module from `$HOME/privatemodules`. Configure runs on the login node (FetchContent needs the network). Compile and `ctest` are submitted to a GPU partition so AMD devices are available: **`standard-g`** (default) or **`dev-g`**. CUDA is not available on LUMI — use Tohtori for NVIDIA. Use a checkout of canonical `ahojukka5/OpenPFC`; `VTT-ProperTune/OpenPFC` is the publication mirror. Use a separate build directory for each worktree. Do not configure or compile inside the git clone (inode quota). Do **not** rsync onto `/users/juaho/dev/openpfc-0.2` (frozen HIP-scaling tree on `feat/lumi-hip-strong-scale-2-3-nodes`). Job logs go to `/scratch/project_462001519/juaho/logs/`. Slurm account is **`project_462001519`** (do not submit as `project_462001245` — those jobs never start).
 - **Canonical install guide** (manual toolchain / HeFFTe details): [`INSTALL.md`](INSTALL.md). Cluster notes: [`docs/hpc/INSTALL.tohtori.md`](docs/hpc/INSTALL.tohtori.md), [`docs/hpc/INSTALL.LUMI.md`](docs/hpc/INSTALL.LUMI.md).
 - **After install:** [`docs/quickstart.md`](docs/quickstart.md). **15-minute path:** [`docs/start_here_15_minutes.md`](docs/start_here_15_minutes.md).
 - **CMake options:** [`docs/reference/build_options.md`](docs/reference/build_options.md). **When builds fail:** [`docs/troubleshooting.md`](docs/troubleshooting.md).
@@ -72,8 +80,8 @@ Project-specific guidance for Cursor lives under [`.cursor/rules/`](.cursor/rule
 
 When you are a **Limina gate role** (especially `implement` / `code_review`)
 driven by `scripts/run_*.sh` and the living prompt from `limina-rpc`, that
-**living prompt wins** for board and git workflow on the prepared work
-branch. Implementers may commit, rebase onto the base branch, squash/amend
+**living prompt supplies task details** for the prepared work branch,
+subject to the Handbook and repository rules. Implementers may commit, rebase onto the base branch, squash/amend
 for a clean history, and `git push --force-with-lease` **only that work
 branch** when history was rewritten. Never rewrite or force-push `master` /
 `main`. Interactive Cursor chats (human-driven, no Limina Mode A) still
