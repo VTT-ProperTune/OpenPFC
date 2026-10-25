@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Reproduce the degree-70 complex oscillator experiment without forming normal equations. Check small singular values with independent shifted solves and show the original complex-plane grid.
+
 - Use reflection sectors to explain twenty-five clamped-square vibration modes. Verify complete fields, boundary slopes, eigenvector independence and small-grid spectral multiplicity.
 
 - Compose native Chebyshev derivatives into a boundary-constrained fourth-order operator. Check complete beam values and slopes against an independently determined analytic solution.

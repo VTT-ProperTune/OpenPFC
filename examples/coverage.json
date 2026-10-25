@@ -293,6 +293,17 @@
       "capabilities": []
     },
     {
+      "target": "davies_pseudospectra",
+      "source": "polynomials/pseudospectra/model.cpp",
+      "chapter": "polynomials/pseudospectra/index.qmd",
+      "capabilities": [
+        "native-chebyshev",
+        "complex-arithmetic",
+        "singular-value-reference",
+        "pseudospectra"
+      ]
+    },
+    {
       "target": "diffusion_model_with_custom_initial_condition",
       "source": "diffusion_model_with_custom_initial_condition.cpp",
       "chapter": null,
@@ -856,7 +867,7 @@
       "program": 24,
       "title": "pseudospectra of Davies's complex harmonic oscillator",
       "source": "https://people.maths.ox.ac.uk/trefethen/p24.m",
-      "chapter": null,
+      "chapter": "polynomials/pseudospectra/index.qmd",
       "scope": "Original degree 70, half-length 6, all 69 eigenvalues and 26 by 21 complex grid with increments of two. Native Chebyshev derivatives; one-sided complex Jacobi singular values avoid normal equations. Complete original grid independently qualified."
     },
     {

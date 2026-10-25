@@ -16,15 +16,15 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 [Follow what is taught, what is adapted, and what still needs a chapter.]{.lesson-deck}
 :::
 
-There are 72 declared runnable example targets and
-58 Quarto teaching chapters. The table includes older programs
+There are 73 declared runnable example targets and
+59 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
 ## Spectral Methods in MATLAB
 
 The [author's collection](https://people.maths.ox.ac.uk/trefethen/spectral.html)
-contains forty programs. Currently 30 have a corresponding lesson.
+contains forty programs. Currently 31 have a corresponding lesson.
 A link means that the lesson declares coverage of that experiment; the
 scope column states changes in method or presentation. It does not mean
 an unmodified MATLAB program was translated line for line. Pending rows
@@ -55,7 +55,7 @@ remain in the inventory while applicability and implementation are assessed.
 | [21](https://people.maths.ox.ac.uk/trefethen/p21.m) | eigenvalues of Mathieu operator -u_xx + 2qcos(2x)u | [Read the lesson](fourier/mathieu/index.qmd). Original N=42 and q=0:.2:15 Mathieu sweep; native LocalFFT plus example-owned symmetric Jacobi diagonalization. |
 | [22](https://people.maths.ox.ac.uk/trefethen/p22.m) | 5th eigenvector of Airy equation u_xx = lambda*x*u | [Read the lesson](polynomials/airy/index.qmd). Original four-degree Airy experiment; explicitly eliminate the zero-weight constraint before a finite eigenproblem. |
 | [23](https://people.maths.ox.ac.uk/trefethen/p23.m) | eigenvalues of perturbed Laplacian on [-1,1]x[-1,1] | [Read the lesson](polynomials/membrane/index.qmd). Original degree-16 perturbed-square Laplacian and four low modes with example-owned dense QR. |
-| [24](https://people.maths.ox.ac.uk/trefethen/p24.m) | pseudospectra of Davies's complex harmonic oscillator | Pending assessment and implementation. |
+| [24](https://people.maths.ox.ac.uk/trefethen/p24.m) | pseudospectra of Davies's complex harmonic oscillator | [Read the lesson](polynomials/pseudospectra/index.qmd). Original degree 70, half-length 6, all 69 eigenvalues and 26 by 21 complex grid with increments of two. Native Chebyshev derivatives; one-sided complex Jacobi singular values avoid normal equations. Complete original grid independently qualified. |
 | [25](https://people.maths.ox.ac.uk/trefethen/p25.m) | stability regions for ODE formulas | [Read the lesson](integration/stability/index.qmd). Original AB/AM/BDF root-locus families and RK stability boundaries; native RK tableaus plus example-owned multistep references. |
 | [26](https://people.maths.ox.ac.uk/trefethen/p26.m) | eigenvalues of 2nd-order Chebyshev diff. matrix | [Read the lesson](polynomials/eigenmodes/index.qmd). Original degree-60 spectrum and grid-scale mode; physical mode labelled and selected consistently as N/4. |
 | [27](https://people.maths.ox.ac.uk/trefethen/p27.m) | Solve KdV eq. u_t + uu_x + u_xxx = 0 on [-pi,pi] by | Pending assessment and implementation. |
@@ -106,6 +106,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `clamped_beam` | [Read the lesson](polynomials/clamped-beam/index.qmd) |
 | `clamped_plate` | [Read the lesson](polynomials/clamped-plate/index.qmd) |
 | `coupled_fields_example` | Pending conversion. |
+| `davies_pseudospectra` | [Read the lesson](polynomials/pseudospectra/index.qmd) |
 | `diffusion_model_with_custom_initial_condition` | Pending conversion. |
 | `fft_backend_benchmark` | Pending conversion. |
 | `fft_kspace_helpers_example` | Pending conversion. |
