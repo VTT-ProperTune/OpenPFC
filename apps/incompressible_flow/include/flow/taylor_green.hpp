@@ -26,6 +26,7 @@
 #include <fstream>
 #include <limits>
 #include <memory>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -140,32 +141,31 @@ struct VolumeSample {
   state.u.assign(nhat, Complex{});
   state.v.assign(nhat, Complex{});
   state.w.assign(nhat, Complex{});
-  pfc::incompressible::viscous_exponentials(fft.get_outbox_bounds(), state.n, state.spacing,
-                                   nu, dt, state.exp_dt, state.exp_half);
+  pfc::incompressible::viscous_exponentials(fft.get_outbox_bounds(), state.n,
+                                            state.spacing, nu, dt, state.exp_dt,
+                                            state.exp_half);
   return state;
 }
 
 inline void initialize_taylor_green(State &state) {
   auto &fft = state.stack->fft();
   const auto inbox = fft.get_inbox_bounds();
-  const auto nreal = fft.size_inbox();
-  std::vector<double> rx(nreal, 0.0), ry(nreal, 0.0), rz(nreal, 0.0);
-  for (int k = inbox.low[2]; k <= inbox.high[2]; ++k) {
-    for (int j = inbox.low[1]; j <= inbox.high[1]; ++j) {
-      for (int i = inbox.low[0]; i <= inbox.high[0]; ++i) {
-        const auto idx = static_cast<std::size_t>(inbox.to_linear({i, j, k}));
-        const double x = static_cast<double>(i) * state.spacing[0];
-        const double y = static_cast<double>(j) * state.spacing[1];
-        const double z = static_cast<double>(k) * state.spacing[2];
-        rx[idx] = std::sin(x) * std::cos(y) * std::cos(z);
-        ry[idx] = -std::cos(x) * std::sin(y) * std::cos(z);
-        rz[idx] = 0.0;
-      }
-    }
-  }
-  fft.forward(rx, state.u);
-  fft.forward(ry, state.v);
-  fft.forward(rz, state.w);
+  const auto domain = pfc::domain::create(pfc::GridSize(state.n),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing(state.spacing));
+  pfc::Field<double> rx(domain, inbox, 0), ry(domain, inbox, 0),
+      rz(domain, inbox, 0);
+  // Keep model formulas with this independent app/example owner; Field owns
+  // the reusable indexing rather than introducing a model API in the SDK.
+  rx.apply([](double x, double y, double z) {
+    return std::sin(x) * std::cos(y) * std::cos(z);
+  });
+  ry.apply([](double x, double y, double z) {
+    return -std::cos(x) * std::sin(y) * std::cos(z);
+  });
+  fft.forward(rx.vec(), state.u);
+  fft.forward(ry.vec(), state.v);
+  fft.forward(rz.vec(), state.w);
   const auto outbox = fft.get_outbox_bounds();
   const auto nhat = state.u.size();
   pfc::field::leray_project(outbox, state.n, state.spacing, state.u.data(),
@@ -183,8 +183,8 @@ inline void step(State &state) {
       [&](const std::vector<Complex> &u, const std::vector<Complex> &v,
           const std::vector<Complex> &w, std::vector<Complex> &tu,
           std::vector<Complex> &tv, std::vector<Complex> &tw) {
-        pfc::incompressible::rotational_tendency(fft, state.n, state.spacing, u, v, w, tu, tv,
-                                        tw, true);
+        pfc::incompressible::rotational_tendency(fft, state.n, state.spacing, u, v,
+                                                 w, tu, tv, tw, true);
       },
       true);
 }
@@ -270,10 +270,10 @@ inline void step(State &state) {
     }
   }
   double sums[7] = {ke_sum, enstrophy_sum, w2, su, sv, sw, div2};
-  double peaks[4] = {
-      peak, max_w, div_linf,
-      pfc::field::max_modal_divergence(outbox, state.n, state.spacing, state.u.data(),
-                                       state.v.data(), state.w.data(), nhat)};
+  double peaks[4] = {peak, max_w, div_linf,
+                     pfc::field::max_modal_divergence(outbox, state.n, state.spacing,
+                                                      state.u.data(), state.v.data(),
+                                                      state.w.data(), nhat)};
   int finite = diag.finite ? 1 : 0;
   const MPI_Comm comm = state.stack->mpi_comm();
   MPI_Allreduce(MPI_IN_PLACE, sums, 7, MPI_DOUBLE, MPI_SUM, comm);
@@ -299,8 +299,8 @@ inline void step(State &state) {
 
 /// Gather |ω| onto rank 0 and write one x-fastest float32 cube.
 /// Every rank blocks until that file is closed.
-[[nodiscard]] inline VolumeSample write_vorticity_magnitude(State &state,
-                                                            const std::string &path) {
+[[nodiscard]] inline VolumeSample
+write_vorticity_magnitude(State &state, const std::string &path) {
   auto &fft = state.stack->fft();
   const auto outbox = fft.get_outbox_bounds();
   const auto inbox = fft.get_inbox_bounds();
@@ -312,8 +312,9 @@ inline void step(State &state) {
   MPI_Comm_size(comm, &nproc);
 
   std::vector<Complex> ox(nhat), oy(nhat), oz(nhat);
-  pfc::field::curl_hat(outbox, state.n, state.spacing, state.u.data(), state.v.data(),
-                       state.w.data(), ox.data(), oy.data(), oz.data(), nhat);
+  pfc::field::curl_hat(outbox, state.n, state.spacing, state.u.data(),
+                       state.v.data(), state.w.data(), ox.data(), oy.data(),
+                       oz.data(), nhat);
   std::vector<double> oxr(fft.size_inbox()), oyr(fft.size_inbox()),
       ozr(fft.size_inbox());
   fft.backward(ox, oxr);
@@ -327,8 +328,8 @@ inline void step(State &state) {
     for (int j = inbox.low[1]; j <= inbox.high[1]; ++j) {
       for (int i = inbox.low[0]; i <= inbox.high[0]; ++i) {
         const auto idx = static_cast<std::size_t>(inbox.to_linear({i, j, k}));
-        const double mag =
-            std::sqrt(oxr[idx] * oxr[idx] + oyr[idx] * oyr[idx] + ozr[idx] * ozr[idx]);
+        const double mag = std::sqrt(oxr[idx] * oxr[idx] + oyr[idx] * oyr[idx] +
+                                     ozr[idx] * ozr[idx]);
         local[idx] = static_cast<float>(mag);
         sum += mag * mag;
       }
@@ -404,10 +405,11 @@ inline void step(State &state) {
                 static_cast<std::size_t>(gi);
             if (hits[g] != 0) wrote = 0;
             hits[g] = 1;
-            cube[g] = src[(static_cast<std::size_t>(k) * static_cast<std::size_t>(ly) +
-                           static_cast<std::size_t>(j)) *
-                              static_cast<std::size_t>(lx) +
-                          static_cast<std::size_t>(i)];
+            cube[g] =
+                src[(static_cast<std::size_t>(k) * static_cast<std::size_t>(ly) +
+                     static_cast<std::size_t>(j)) *
+                        static_cast<std::size_t>(lx) +
+                    static_cast<std::size_t>(i)];
           }
         }
       }

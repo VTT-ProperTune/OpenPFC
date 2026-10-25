@@ -27,6 +27,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/fft/power_spectrum.hpp>
 #include <stdexcept>
 #include <unordered_map>
@@ -158,24 +159,22 @@ struct Flow {
 inline void initialize_taylor_green(Flow &flow) {
   auto &fft = flow.stack->fft();
   const auto inbox = fft.get_inbox_bounds();
-  const auto nreal = fft.size_inbox();
-  std::vector<double> rx(nreal, 0.0), ry(nreal, 0.0), rz(nreal, 0.0);
-  for (int k = inbox.low[2]; k <= inbox.high[2]; ++k) {
-    for (int j = inbox.low[1]; j <= inbox.high[1]; ++j) {
-      for (int i = inbox.low[0]; i <= inbox.high[0]; ++i) {
-        const auto idx = static_cast<std::size_t>(inbox.to_linear({i, j, k}));
-        const double x = static_cast<double>(i) * flow.spacing[0];
-        const double y = static_cast<double>(j) * flow.spacing[1];
-        const double z = static_cast<double>(k) * flow.spacing[2];
-        rx[idx] = std::sin(x) * std::cos(y) * std::cos(z);
-        ry[idx] = -std::cos(x) * std::sin(y) * std::cos(z);
-        rz[idx] = 0.0;
-      }
-    }
-  }
-  fft.forward(rx, flow.u);
-  fft.forward(ry, flow.v);
-  fft.forward(rz, flow.w);
+  const auto domain = pfc::domain::create(pfc::GridSize(flow.n),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing(flow.spacing));
+  pfc::Field<double> rx(domain, inbox, 0), ry(domain, inbox, 0),
+      rz(domain, inbox, 0);
+  // Keep model formulas with this independent app/example owner; Field owns
+  // the reusable indexing rather than introducing a model API in the SDK.
+  rx.apply([](double x, double y, double z) {
+    return std::sin(x) * std::cos(y) * std::cos(z);
+  });
+  ry.apply([](double x, double y, double z) {
+    return -std::cos(x) * std::sin(y) * std::cos(z);
+  });
+  fft.forward(rx.vec(), flow.u);
+  fft.forward(ry.vec(), flow.v);
+  fft.forward(rz.vec(), flow.w);
   const auto outbox = fft.get_outbox_bounds();
   const auto nhat = flow.u.size();
   pfc::field::leray_project(outbox, flow.n, flow.spacing, flow.u.data(),
