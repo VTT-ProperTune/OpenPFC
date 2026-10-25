@@ -93,7 +93,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `world_query_helpers_example` | `geometry/domain-queries/model.cpp` | `Domain` query helpers (volume, dimensionality, bounds) |
 | `14_custom_field_initializer` | `14_custom_field_initializer.cpp` | Custom field initializer |
 | `15_finite_difference_heat` | `heat/separated-halos/model.cpp` | Finite-difference heat with separated halos; see [`halo_exchange.md`](../concepts/halo_exchange.md) |
-| `16_strong_types_demo` | `16_strong_types_demo.cpp` | Strongly typed domain inputs |
+| `16_strong_types_demo` | `geometry/strong-arguments/model.cpp` | Strongly typed domain inputs |
 | `17_custom_coordinate_system` | `17_custom_coordinate_system.cpp` | Custom coordinate setup |
 | `18_sobel_edge_detection` | `18_sobel_edge_detection.cpp` | Sobel-style field operations and edge detection |
 | `world_strong_types_example` | `world_strong_types_example.cpp` | Strong types with `Domain` compatibility helpers |

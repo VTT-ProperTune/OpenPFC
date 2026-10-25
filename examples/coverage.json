@@ -114,9 +114,13 @@
     },
     {
       "target": "16_strong_types_demo",
-      "source": "16_strong_types_demo.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "geometry/strong-arguments/model.cpp",
+      "chapter": "geometry/strong-arguments/index.qmd",
+      "capabilities": [
+        "domain",
+        "strong-types",
+        "coordinates"
+      ]
     },
     {
       "target": "17_custom_coordinate_system",

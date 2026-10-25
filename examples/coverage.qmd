@@ -17,7 +17,7 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 :::
 
 There are 48 declared runnable example targets and
-16 Quarto teaching chapters. The table includes older programs
+17 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -90,7 +90,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `12_cahn_hilliard` | Pending conversion. |
 | `14_custom_field_initializer` | Pending conversion. |
 | `15_finite_difference_heat` | [Read the lesson](heat/separated-halos/index.qmd) |
-| `16_strong_types_demo` | Pending conversion. |
+| `16_strong_types_demo` | [Read the lesson](geometry/strong-arguments/index.qmd) |
 | `17_custom_coordinate_system` | Pending conversion. |
 | `18_sobel_edge_detection` | Pending conversion. |
 | `19_explicit_stepper_fd` | [Read the lesson](heat/finite-differences/index.qmd) |

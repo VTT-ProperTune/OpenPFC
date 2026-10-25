@@ -184,6 +184,17 @@ def verify_world_query_helpers_example(bin_dir, root, launch, ranks):
         assert float(row["volume"]) == 90
 
 
+def verify_16_strong_types_demo(bin_dir, root, launch, ranks):
+    binary = lambda name: bin_dir / name
+    strong = list(
+        csv.DictReader(
+            io.StringIO(run(binary("16_strong_types_demo"), root / "strong"))
+        )
+    )
+    assert len(strong) == 1 and int(strong[0]["points"]) == 64
+    assert [float(strong[0][key]) for key in ("cx", "cy", "cz")] == [0, 0, 2]
+
+
 def verify_06_multi_index(bin_dir, root, launch, ranks):
     binary = lambda name: bin_dir / name
     offsets = run(binary("06_multi_index"), root / "boxes").splitlines()
@@ -257,6 +268,7 @@ def main():
             "spectral_smoothness",
             "world_helpers_example",
             "world_query_helpers_example",
+            "16_strong_types_demo",
         ],
     )
     args = parser.parse_args()
@@ -312,6 +324,10 @@ def main():
             root = base / "world_query_helpers_example"
             root.mkdir()
             verify_world_query_helpers_example(bin_dir, root, launch, ranks)
+        if args.case in (None, "16_strong_types_demo"):
+            root = base / "16_strong_types_demo"
+            root.mkdir()
+            verify_16_strong_types_demo(bin_dir, root, launch, ranks)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

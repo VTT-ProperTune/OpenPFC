@@ -71,8 +71,6 @@ add_executable(14_custom_field_initializer 14_custom_field_initializer.cpp)
 target_link_libraries(14_custom_field_initializer PRIVATE OpenPFC::openpfc )
 
 
-add_executable(16_strong_types_demo 16_strong_types_demo.cpp)
-target_link_libraries(16_strong_types_demo PRIVATE OpenPFC::openpfc )
 
 add_executable(17_custom_coordinate_system 17_custom_coordinate_system.cpp)
 target_link_libraries(17_custom_coordinate_system PRIVATE OpenPFC::openpfc )
@@ -230,6 +228,9 @@ if(OpenPFC_BUILD_TESTS)
   add_test(NAME example-world-query-helpers-example
            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_foundations.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case world_query_helpers_example)
   set_tests_properties(example-world-query-helpers-example PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  add_test(NAME example-16-strong-types-demo
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_foundations.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 16_strong_types_demo)
+  set_tests_properties(example-16-strong-types-demo PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
 endif()
 
 add_executable(23_halo_microtiming 23_halo_microtiming.cpp)
