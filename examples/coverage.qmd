@@ -16,15 +16,15 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 [Follow what is taught, what is adapted, and what still needs a chapter.]{.lesson-deck}
 :::
 
-There are 76 declared runnable example targets and
-62 Quarto teaching chapters. The table includes older programs
+There are 77 declared runnable example targets and
+63 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
 ## Spectral Methods in MATLAB
 
 The [author's collection](https://people.maths.ox.ac.uk/trefethen/spectral.html)
-contains forty programs. Currently 34 have a corresponding lesson.
+contains forty programs. Currently 35 have a corresponding lesson.
 A link means that the lesson declares coverage of that experiment; the
 scope column states changes in method or presentation. It does not mean
 an unmodified MATLAB program was translated line for line. Pending rows
@@ -50,7 +50,7 @@ remain in the inventory while applicability and implementation are assessed.
 | [16](https://people.maths.ox.ac.uk/trefethen/p16.m) | Poisson eq. on [-1,1]x[-1,1] with u=0 on boundary | [Read the lesson](polynomials/poisson-square/index.qmd). Original degree-24 Chebyshev Poisson problem; native GMRES applies the tensor operator without forming a Kronecker matrix. |
 | [17](https://people.maths.ox.ac.uk/trefethen/p17.m) | Helmholtz eq. u_xx + u_yy + (k^2)u = f | [Read the lesson](polynomials/helmholtz-square/index.qmd). Original k=9 degree-24 Helmholtz problem with a native tensor-action GMRES solve. |
 | [18](https://people.maths.ox.ac.uk/trefethen/p18.m) | Chebyshev differentiation via FFT (compare p11.m) | [Read the lesson](polynomials/differentiation/index.qmd). Same polynomial derivative via native LocalFFT cosine coefficients, with explicit O(N²) coefficient-sum evaluation and endpoint limits. |
-| [19](https://people.maths.ox.ac.uk/trefethen/p19.m) | 2nd-order wave eq. on Chebyshev grid (compare p6.m) | Pending assessment and implementation. |
+| [19](https://people.maths.ox.ac.uk/trefethen/p19.m) | 2nd-order wave eq. on Chebyshev grid (compare p6.m) | [Read the lesson](waves/chebyshev-line/index.qmd). FFT-based Chebyshev wave with the original N=80 Gaussian, leapfrog startup and rounded save schedule; direct chain-rule second derivatives replace two successive chebfft calls. Taylor startup and an exact standing mode are additional checks. |
 | [20](https://people.maths.ox.ac.uk/trefethen/p20.m) | 2nd-order wave eq. in 2D via FFT (compare p19.m) | Pending assessment and implementation. |
 | [21](https://people.maths.ox.ac.uk/trefethen/p21.m) | eigenvalues of Mathieu operator -u_xx + 2qcos(2x)u | [Read the lesson](fourier/mathieu/index.qmd). Original N=42 and q=0:.2:15 Mathieu sweep; native LocalFFT plus example-owned symmetric Jacobi diagonalization. |
 | [22](https://people.maths.ox.ac.uk/trefethen/p22.m) | 5th eigenvector of Airy equation u_xx = lambda*x*u | [Read the lesson](polynomials/airy/index.qmd). Original four-degree Airy experiment; explicitly eliminate the zero-weight constraint before a finite eigenproblem. |
@@ -102,6 +102,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `airy_eigenproblem` | [Read the lesson](polynomials/airy/index.qmd) |
 | `cardinal_interpolation` | [Read the lesson](interpolation/cardinal/index.qmd) |
 | `chebyshev_eigenmodes` | [Read the lesson](polynomials/eigenmodes/index.qmd) |
+| `chebyshev_wave_line` | [Read the lesson](waves/chebyshev-line/index.qmd) |
 | `checkpoint_restart` | [Read the lesson](output/checkpoint-restart/index.qmd) |
 | `clamped_beam` | [Read the lesson](polynomials/clamped-beam/index.qmd) |
 | `clamped_plate` | [Read the lesson](polynomials/clamped-plate/index.qmd) |

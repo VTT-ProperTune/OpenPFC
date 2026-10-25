@@ -254,6 +254,17 @@
       ]
     },
     {
+      "target": "chebyshev_wave_line",
+      "source": "waves/chebyshev-line/model.cpp",
+      "chapter": "waves/chebyshev-line/index.qmd",
+      "capabilities": [
+        "local-fft",
+        "chebyshev-reference",
+        "leapfrog",
+        "boundary-conditions"
+      ]
+    },
+    {
       "target": "checkpoint_restart",
       "source": "output/checkpoint-restart/model.cpp",
       "chapter": "output/checkpoint-restart/index.qmd",
@@ -866,7 +877,7 @@
       "program": 19,
       "title": "2nd-order wave eq. on Chebyshev grid (compare p6.m)",
       "source": "https://people.maths.ox.ac.uk/trefethen/p19.m",
-      "chapter": null,
+      "chapter": "waves/chebyshev-line/index.qmd",
       "scope": "FFT-based Chebyshev wave with the original N=80 Gaussian, leapfrog startup and rounded save schedule; direct chain-rule second derivatives replace two successive chebfft calls. Taylor startup and an exact standing mode are additional checks."
     },
     {
