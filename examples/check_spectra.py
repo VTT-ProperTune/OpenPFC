@@ -233,6 +233,31 @@ def check_airy(binary, directory):
     )
 
 
+def check_membrane(binary, directory):
+    run(binary, directory)
+    data = rows(directory / "results/spectrum.csv")
+    fields = rows(directory / "results/modes.csv")
+    assert len(data) == 4 and len(fields) == 4 * 17**2
+    x, a = lagrange_second(16)
+    for row in data:
+        mode = int(row["mode"])
+        lam = float(row["eigenvalue"])
+        u = [[0.0] * 17 for _ in x]
+        for r in fields:
+            if int(r["mode"]) == mode:
+                u[int(r["j"])][int(r["i"])] = float(r["u"])
+        assert all(u[0][i] == u[-1][i] == u[i][0] == u[i][-1] == 0 for i in range(17))
+        error = 0
+        for j in range(1, 16):
+            for i in range(1, 16):
+                value = -sum(a[i][k] * u[j][k] + a[j][k] * u[k][i] for k in range(17))
+                value += (math.exp(20 * (x[j] - x[i] - 1)) - lam) * u[j][i]
+                error = max(error, abs(value))
+        assert error < 1e-7, (mode, error)
+    assert float(data[0]["eigenvalue"]) > math.pi**2 / 2
+    run(binary, directory.parent / "bad-membrane", parameters={"n": 21}, success=False)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -247,6 +272,7 @@ def main():
             "mathieu_spectrum",
             "chebyshev_eigenmodes",
             "airy_eigenproblem",
+            "membrane_eigenmodes",
         ],
     )
     args = parser.parse_args()
@@ -274,6 +300,10 @@ def main():
             root = base / "airy_eigenproblem"
             root.mkdir()
             check_airy(bin_dir / "airy_eigenproblem", root)
+        if args.case in (None, "membrane_eigenmodes"):
+            root = base / "membrane_eigenmodes"
+            root.mkdir()
+            check_membrane(bin_dir / "membrane_eigenmodes", root)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

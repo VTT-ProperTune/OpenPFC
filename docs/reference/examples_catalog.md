@@ -125,6 +125,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `mathieu_spectrum` | `fourier/mathieu/model.cpp` | A periodic potential splits eigenvalues |
 | `chebyshev_eigenmodes` | `polynomials/eigenmodes/model.cpp` | A grid has its own spectrum |
 | `airy_eigenproblem` | `polynomials/airy/model.cpp` | A zero weight is a constraint |
+| `membrane_eigenmodes` | `polynomials/membrane/model.cpp` | An asymmetric potential reshapes a membrane mode |
 
 ## Research prototypes
 

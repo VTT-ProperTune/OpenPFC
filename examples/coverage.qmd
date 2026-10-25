@@ -16,15 +16,15 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 [Follow what is taught, what is adapted, and what still needs a chapter.]{.lesson-deck}
 :::
 
-There are 64 declared runnable example targets and
-50 Quarto teaching chapters. The table includes older programs
+There are 65 declared runnable example targets and
+51 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
 ## Spectral Methods in MATLAB
 
 The [author's collection](https://people.maths.ox.ac.uk/trefethen/spectral.html)
-contains forty programs. Currently 23 have a corresponding lesson.
+contains forty programs. Currently 24 have a corresponding lesson.
 A link means that the lesson declares coverage of that experiment; the
 scope column states changes in method or presentation. It does not mean
 an unmodified MATLAB program was translated line for line. Pending rows
@@ -54,7 +54,7 @@ remain in the inventory while applicability and implementation are assessed.
 | [20](https://people.maths.ox.ac.uk/trefethen/p20.m) | 2nd-order wave eq. in 2D via FFT (compare p19.m) | Pending assessment and implementation. |
 | [21](https://people.maths.ox.ac.uk/trefethen/p21.m) | eigenvalues of Mathieu operator -u_xx + 2qcos(2x)u | [Read the lesson](fourier/mathieu/index.qmd). Original N=42 and q=0:.2:15 Mathieu sweep; native LocalFFT plus example-owned symmetric Jacobi diagonalization. |
 | [22](https://people.maths.ox.ac.uk/trefethen/p22.m) | 5th eigenvector of Airy equation u_xx = lambda*x*u | [Read the lesson](polynomials/airy/index.qmd). Original four-degree Airy experiment; explicitly eliminate the zero-weight constraint before a finite eigenproblem. |
-| [23](https://people.maths.ox.ac.uk/trefethen/p23.m) | eigenvalues of perturbed Laplacian on [-1,1]x[-1,1] | Pending assessment and implementation. |
+| [23](https://people.maths.ox.ac.uk/trefethen/p23.m) | eigenvalues of perturbed Laplacian on [-1,1]x[-1,1] | [Read the lesson](polynomials/membrane/index.qmd). Original degree-16 perturbed-square Laplacian and four low modes with example-owned dense QR. |
 | [24](https://people.maths.ox.ac.uk/trefethen/p24.m) | pseudospectra of Davies's complex harmonic oscillator | Pending assessment and implementation. |
 | [25](https://people.maths.ox.ac.uk/trefethen/p25.m) | stability regions for ODE formulas | [Read the lesson](integration/stability/index.qmd). Original AB/AM/BDF root-locus families and RK stability boundaries; native RK tableaus plus example-owned multistep references. |
 | [26](https://people.maths.ox.ac.uk/trefethen/p26.m) | eigenvalues of 2nd-order Chebyshev diff. matrix | [Read the lesson](polynomials/eigenmodes/index.qmd). Original degree-60 spectrum and grid-scale mode; physical mode labelled and selected consistently as N/4. |
@@ -112,6 +112,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `heat_exponential` | [Read the lesson](heat/exponential/index.qmd) |
 | `json_read` | [Read the lesson](configuration/session/index.qmd) |
 | `mathieu_spectrum` | [Read the lesson](fourier/mathieu/index.qmd) |
+| `membrane_eigenmodes` | [Read the lesson](polynomials/membrane/index.qmd) |
 | `mhd2d` | Pending conversion. |
 | `mpi_timers` | [Read the lesson](diagnostics/mpi-timing/index.qmd) |
 | `mpi_worker` | [Read the lesson](parallel/hello/index.qmd) |

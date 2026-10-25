@@ -36,3 +36,7 @@ set_target_properties(chebyshev_eigenmodes PROPERTIES RUNTIME_OUTPUT_DIRECTORY "
 add_executable(airy_eigenproblem airy/model.cpp)
 target_link_libraries(airy_eigenproblem PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(airy_eigenproblem PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(membrane_eigenmodes membrane/model.cpp)
+target_link_libraries(membrane_eigenmodes PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(membrane_eigenmodes PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
