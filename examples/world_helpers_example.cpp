@@ -19,11 +19,13 @@ int main() {
   auto d1 = domain::create({64, 64, 64});
   std::cout << "create({64,64,64}): " << d1 << "\n";
 
-  auto d2 = domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                           GridSpacing({0.5, 0.5, 0.5}));
+  auto d2 =
+      domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({0.5, 0.5, 0.5}));
   std::cout << "custom spacing: " << d2 << "\n";
 
-  auto d3 = domain::from_bounds({100, 100, 100}, {0.0, 0.0, 0.0}, {10.0, 10.0, 10.0});
+  auto d3 =
+      domain::from_bounds({100, 100, 100}, {0.0, 0.0, 0.0}, {10.0, 10.0, 10.0});
   std::cout << "from_bounds periodic: " << d3 << "\n";
 
   auto d4 = domain::from_bounds({100, 100, 100}, {0.0, 0.0, 0.0}, {10.0, 10.0, 10.0},

@@ -25,8 +25,8 @@
  *
  * In this example, we introduce two fields representing different parts of a
  * decomposed domain, demonstrating field construction, indexing, and coordinate
- * mapping. We use a 2D simulation extended to 3D (with size 1 in the third dimension)
- * to preserve the educational intent while using the 3D field API.
+ * mapping. We use a 2D simulation extended to 3D (with size 1 in the third
+ * dimension) to preserve the educational intent while using the 3D field API.
  */
 
 using namespace pfc;
@@ -51,27 +51,33 @@ int main() {
   auto domain = domain::create({Lx, Ly, Lz});
 
   // "Process 0" contains the first part of domain
-  Field<double> field0(domain, Box3i::from_bounds({0, 0, 0}, {Lx / 2 - 1, Ly - 1, 0}), 0);
+  Field<double> field0(domain,
+                       Box3i::from_bounds({0, 0, 0}, {Lx / 2 - 1, Ly - 1, 0}), 0);
   // "Process 1" contains the second part of domain
-  Field<double> field1(domain, Box3i::from_bounds({Lx / 2, 0, 0}, {Lx - 1, Ly - 1, 0}), 0);
+  Field<double> field1(domain,
+                       Box3i::from_bounds({Lx / 2, 0, 0}, {Lx - 1, Ly - 1, 0}), 0);
 
   std::cout << "Field 0 (process 0):" << std::endl;
-  std::cout << "  Owned box: [" << field0.box().low[0] << "," << field0.box().low[1] << ","
-            << field0.box().low[2] << "] to [" << field0.box().high[0] << ","
-            << field0.box().high[1] << "," << field0.box().high[2] << "]" << std::endl;
-  std::cout << "  Local size: [" << field0.local_size()[0] << "," << field0.local_size()[1]
-            << "," << field0.local_size()[2] << "]" << std::endl;
+  std::cout << "  Owned box: [" << field0.box().low[0] << "," << field0.box().low[1]
+            << "," << field0.box().low[2] << "] to [" << field0.box().high[0] << ","
+            << field0.box().high[1] << "," << field0.box().high[2] << "]"
+            << std::endl;
+  std::cout << "  Local size: [" << field0.local_size()[0] << ","
+            << field0.local_size()[1] << "," << field0.local_size()[2] << "]"
+            << std::endl;
 
   std::cout << "Field 1 (process 1):" << std::endl;
-  std::cout << "  Owned box: [" << field1.box().low[0] << "," << field1.box().low[1] << ","
-            << field1.box().low[2] << "] to [" << field1.box().high[0] << ","
-            << field1.box().high[1] << "," << field1.box().high[2] << "]" << std::endl;
-  std::cout << "  Local size: [" << field1.local_size()[0] << "," << field1.local_size()[1]
-            << "," << field1.local_size()[2] << "]" << std::endl;
+  std::cout << "  Owned box: [" << field1.box().low[0] << "," << field1.box().low[1]
+            << "," << field1.box().low[2] << "] to [" << field1.box().high[0] << ","
+            << field1.box().high[1] << "," << field1.box().high[2] << "]"
+            << std::endl;
+  std::cout << "  Local size: [" << field1.local_size()[0] << ","
+            << field1.local_size()[1] << "," << field1.local_size()[2] << "]"
+            << std::endl;
 
   // Accessing fields:
   field0(0, 0, 0) = 1.0;
-  field1(0, 0, 0) = 2.0;  // Local index (0,0,0) corresponds to global (8,0,0)
+  field1(0, 0, 0) = 2.0; // Local index (0,0,0) corresponds to global (8,0,0)
   std::cout << "First item of field0: " << field0(0, 0, 0) << std::endl;
   std::cout << "First item of field1: " << field1(0, 0, 0) << std::endl;
 
@@ -84,12 +90,8 @@ int main() {
   // In practice, one might want to apply some function to fields, where each
   // field contains different part of domain. This can be done with `apply`,
   // which takes a function of physical coordinates (x, y, z):
-  field0.apply([](double x, double y, double /*z*/) {
-    return 1.0 + x + y * y;
-  });
-  field1.apply([](double x, double y, double /*z*/) {
-    return 1.0 + x + y * y;
-  });
+  field0.apply([](double x, double y, double /*z*/) { return 1.0 + x + y * y; });
+  field1.apply([](double x, double y, double /*z*/) { return 1.0 + x + y * y; });
 
   std::cout << "First item of field0: " << field0(0, 0, 0)
             << std::endl; // 1.0 + 0.0 + 0.0 * 0.0 = 1

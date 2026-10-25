@@ -44,8 +44,7 @@ struct CommonBandError {
 /// Modes with `max(|k_i|, |k_j|) > N/6` over the full vorticity RMS.
 /// The 2/3 rule already zeros modes past about `N/3`, so this fraction
 /// is the outer half of the retained band, not energy in the masked tail.
-inline double outer_band_rms_fraction(VorticityStreamCPU &solver,
-                                      MPI_Comm comm) {
+inline double outer_band_rms_fraction(VorticityStreamCPU &solver, MPI_Comm comm) {
   std::vector<SpectralPlane::Complex> hat;
   solver.copy_omega_hat(hat);
   auto &plane = solver.plane();
@@ -77,10 +76,10 @@ inline double outer_band_rms_fraction(VorticityStreamCPU &solver,
   return std::sqrt(g_high / g_full);
 }
 
-inline CommonBandError common_band_error_from_hat(
-    SpectralPlane &reference_plane,
-    const std::vector<SpectralPlane::Complex> &reference_hat,
-    VorticityStreamCPU &coarse, MPI_Comm comm) {
+inline CommonBandError
+common_band_error_from_hat(SpectralPlane &reference_plane,
+                           const std::vector<SpectralPlane::Complex> &reference_hat,
+                           VorticityStreamCPU &coarse, MPI_Comm comm) {
   coarse.recover_velocity_from_omega();
   std::vector<SpectralPlane::Complex> restricted;
   restrict_hat_by_k(reference_plane, reference_hat, coarse.plane(), restricted);

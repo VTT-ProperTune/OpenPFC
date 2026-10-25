@@ -5,11 +5,11 @@
 #include <iostream>
 #include <mpi.h>
 
+#include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/domain/create.hpp>
-#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
@@ -50,15 +50,15 @@ struct HeatGrads {
 
 // Physics model: pure function rhs(t, grads) -> du/dt
 struct HeatModel {
-  double kD;  // thermal diffusivity
+  double kD; // thermal diffusivity
 
-  [[nodiscard]] double rhs(double /*t*/, const HeatGrads& g) const noexcept {
+  [[nodiscard]] double rhs(double /*t*/, const HeatGrads &g) const noexcept {
     return kD * (g.xx + g.yy + g.zz);
   }
 };
 
 // Helper: compute global L2 norm across all ranks
-double compute_l2_norm(const pfc::data::Field<double>& u) {
+double compute_l2_norm(const pfc::data::Field<double> &u) {
   double local_sum = 0.0;
   u.for_each_owned([&](double /*x*/, double /*y*/, double /*z*/, double val) {
     local_sum += val * val;
@@ -67,12 +67,13 @@ double compute_l2_norm(const pfc::data::Field<double>& u) {
   double global_sum = 0.0;
   MPI_Allreduce(&local_sum, &global_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-  const auto& global_size = u.global_size();
-  const double volume = static_cast<double>(global_size[0] * global_size[1] * global_size[2]);
+  const auto &global_size = u.global_size();
+  const double volume =
+      static_cast<double>(global_size[0] * global_size[1] * global_size[2]);
   return std::sqrt(global_sum / volume);
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
   int rank = 0, nproc = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -83,30 +84,32 @@ int main(int argc, char* argv[]) {
   constexpr double dx = 1.0;
   constexpr double D = 1.0;
   constexpr int n_steps = 40;
-  constexpr int fd_order = 2;  // second-order central differences
+  constexpr int fd_order = 2; // second-order central differences
 
   // Stability: dt <= dx^2 / (6*D) for explicit Euler in 3D
   const double dt = 0.15 * dx * dx / (6.0 * D);
 
   // Build domain and decomposition
-  const auto domain = pfc::domain::create(
-    pfc::GridSize{{N, N, N}},
-    pfc::PhysicalOrigin{{0.0, 0.0, 0.0}},
-    pfc::GridSpacing{{dx, dx, dx}});
+  const auto domain = pfc::domain::create(pfc::GridSize{{N, N, N}},
+                                          pfc::PhysicalOrigin{{0.0, 0.0, 0.0}},
+                                          pfc::GridSpacing{{dx, dx, dx}});
   const auto decomp = pfc::decomposition::create(domain, nproc);
 
   // Create padded Field with halo width = fd_order / 2
   const int hw = fd_order / 2;
-  pfc::data::Field<double> u = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+  pfc::data::Field<double> u =
+      pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 
   // Halo exchanger for the field
-  pfc::comm::HaloExchange<pfc::HostSpace, double> halo(u, decomp, rank, MPI_COMM_WORLD);
+  pfc::comm::HaloExchange<pfc::HostSpace, double> halo(u, decomp, rank,
+                                                       MPI_COMM_WORLD);
 
   // Initialize field with Gaussian initial condition
   const double cx = 0.5 * static_cast<double>(N - 1);
   const double sigma = static_cast<double>(N) / 6.0;
   u.apply([&](double x, double y, double z) {
-    const double r2 = (x - cx) * (x - cx) + (y - cx) * (y - cx) + (z - cx) * (z - cx);
+    const double r2 =
+        (x - cx) * (x - cx) + (y - cx) * (y - cx) + (z - cx) * (z - cx);
     return std::exp(-r2 / (2.0 * sigma * sigma));
   });
 
@@ -135,8 +138,8 @@ int main(int argc, char* argv[]) {
     // Monitor dissipation
     l2_norm = compute_l2_norm(u);
     if (rank == 0 && step % 10 == 0) {
-      std::cout << "Step " << step << ", t = " << t
-                << ", L2 norm = " << l2_norm << "\n";
+      std::cout << "Step " << step << ", t = " << t << ", L2 norm = " << l2_norm
+                << "\n";
     }
   }
 

@@ -34,16 +34,11 @@ enum class MHDCase {
 
 [[nodiscard]] inline const char *mhd_case_name(MHDCase c) noexcept {
   switch (c) {
-  case MHDCase::orszag_tang:
-    return "orszag_tang";
-  case MHDCase::hydro_control:
-    return "hydro_control";
-  case MHDCase::force_free:
-    return "force_free";
-  case MHDCase::alfven:
-    return "alfven";
-  case MHDCase::island_coalescence:
-    return "island_coalescence";
+  case MHDCase::orszag_tang: return "orszag_tang";
+  case MHDCase::hydro_control: return "hydro_control";
+  case MHDCase::force_free: return "force_free";
+  case MHDCase::alfven: return "alfven";
+  case MHDCase::island_coalescence: return "island_coalescence";
   }
   return "unknown";
 }

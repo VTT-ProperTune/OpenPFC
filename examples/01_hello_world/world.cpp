@@ -27,9 +27,9 @@
  *
  * This maps each grid point (i, j, k) to a point in physical space (x, y, z).
  *
- * In this set of examples, we explore several different ways of constructing `Domain`
- * objects and using their features, showcasing the flexibility and design philosophy
- * of the OpenPFC framework.
+ * In this set of examples, we explore several different ways of constructing
+ * `Domain` objects and using their features, showcasing the flexibility and design
+ * philosophy of the OpenPFC framework.
  */
 
 /**
@@ -83,9 +83,9 @@ void example1_basic_cartesian_domain() {
   std::array<double, 3> origin = {0.0, 0.0, 0.0};
   std::array<double, 3> discretization = {0.1, 0.1, 0.1};
 
-  pfc::Domain d = pfc::domain::create(pfc::GridSize(dimensions),
-                                      pfc::PhysicalOrigin(origin),
-                                      pfc::GridSpacing(discretization));
+  pfc::Domain d =
+      pfc::domain::create(pfc::GridSize(dimensions), pfc::PhysicalOrigin(origin),
+                          pfc::GridSpacing(discretization));
 
   std::cout << "Domain created:\n" << d << std::endl;
 

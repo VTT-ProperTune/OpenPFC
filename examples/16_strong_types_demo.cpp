@@ -73,8 +73,7 @@ void print_domain_info(GridSize size, GridSpacing spacing, PhysicalOrigin origin
   // Calculate physical domain size using explicit conversions
   Int3 size_raw = size.to_vector3();
   Real3 spacing_raw = spacing.to_vector3();
-  Real3 domain_size = {size_raw[0] * spacing_raw[0],
-                       size_raw[1] * spacing_raw[1],
+  Real3 domain_size = {size_raw[0] * spacing_raw[0], size_raw[1] * spacing_raw[1],
                        size_raw[2] * spacing_raw[2]};
 
   std::cout << "  Physical domain: " << domain_size[0] << " x " << domain_size[1]
@@ -83,9 +82,10 @@ void print_domain_info(GridSize size, GridSpacing spacing, PhysicalOrigin origin
 
 // Note: LocalOffset and IndexBounds types removed - using Int3 directly
 /**
- * @brief Calculate subdomain bounds using Int3 arrays (removed LocalOffset/IndexBounds types)
+ * @brief Calculate subdomain bounds using Int3 arrays (removed
+ * LocalOffset/IndexBounds types)
  */
-Int3 calculate_subdomain_upper(GridSize total_size, const Int3& local_offset,
+Int3 calculate_subdomain_upper(GridSize total_size, const Int3 &local_offset,
                                GridSize local_size) {
   return {local_offset[0] + local_size.get()[0] - 1,
           local_offset[1] + local_size.get()[1] - 1,
@@ -95,8 +95,7 @@ Int3 calculate_subdomain_upper(GridSize total_size, const Int3& local_offset,
 /**
  * @brief Map index to physical coordinates
  */
-Real3 index_to_physical(Int3 index, PhysicalOrigin origin,
-                        GridSpacing spacing) {
+Real3 index_to_physical(Int3 index, PhysicalOrigin origin, GridSpacing spacing) {
   return {origin.get()[0] + index[0] * spacing.get()[0],
           origin.get()[1] + index[1] * spacing.get()[1],
           origin.get()[2] + index[2] * spacing.get()[2]};
@@ -165,14 +164,16 @@ int main() {
   auto upper2 = calculate_subdomain_upper(size, subdomain2_offset, subdomain2_size);
 
   std::cout << "Subdomain 1 bounds:\n";
-  std::cout << "  Lower: [" << subdomain1_offset[0] << ", " << subdomain1_offset[1] << ", "
-            << subdomain1_offset[2] << "]\n";
-  std::cout << "  Upper: [" << upper1[0] << ", " << upper1[1] << ", " << upper1[2] << "]\n\n";
+  std::cout << "  Lower: [" << subdomain1_offset[0] << ", " << subdomain1_offset[1]
+            << ", " << subdomain1_offset[2] << "]\n";
+  std::cout << "  Upper: [" << upper1[0] << ", " << upper1[1] << ", " << upper1[2]
+            << "]\n\n";
 
   std::cout << "Subdomain 2 bounds:\n";
-  std::cout << "  Lower: [" << subdomain2_offset[0] << ", " << subdomain2_offset[1] << ", "
-            << subdomain2_offset[2] << "]\n";
-  std::cout << "  Upper: [" << upper2[0] << ", " << upper2[1] << ", " << upper2[2] << "]\n\n";
+  std::cout << "  Lower: [" << subdomain2_offset[0] << ", " << subdomain2_offset[1]
+            << ", " << subdomain2_offset[2] << "]\n";
+  std::cout << "  Upper: [" << upper2[0] << ", " << upper2[1] << ", " << upper2[2]
+            << "]\n\n";
 
   // ========================================================================
   // Example 4: Index to Physical Coordinate Mapping
@@ -187,8 +188,8 @@ int main() {
   for (const auto &idx : test_indices) {
     Real3 coords = index_to_physical(idx, origin, spacing);
     std::cout << "Index [" << idx[0] << ", " << idx[1] << ", " << idx[2] << "] → ";
-    std::cout << "Physical (" << coords[0] << ", " << coords[1] << ", "
-              << coords[2] << ")\n";
+    std::cout << "Physical (" << coords[0] << ", " << coords[1] << ", " << coords[2]
+              << ")\n";
   }
 
   std::cout << "\n";
@@ -205,11 +206,13 @@ int main() {
   Real3 upper{32.0, 32.0, 32.0};
 
   std::cout << "Physical domain bounds:\n";
-  std::cout << "  Lower: (" << lower[0] << ", " << lower[1] << ", " << lower[2] << ")\n";
-  std::cout << "  Upper: (" << upper[0] << ", " << upper[1] << ", " << upper[2] << ")\n";
+  std::cout << "  Lower: (" << lower[0] << ", " << lower[1] << ", " << lower[2]
+            << ")\n";
+  std::cout << "  Upper: (" << upper[0] << ", " << upper[1] << ", " << upper[2]
+            << ")\n";
 
-  double volume = (upper[0] - lower[0]) * (upper[1] - lower[1]) *
-                  (upper[2] - lower[2]);
+  double volume =
+      (upper[0] - lower[0]) * (upper[1] - lower[1]) * (upper[2] - lower[2]);
 
   std::cout << "  Volume: " << volume << " cubic units\n\n";
 
@@ -232,7 +235,8 @@ int main() {
 
   std::cout << "\nImplicit conversions are no longer supported:\n";
   std::cout << "  // print_domain_info(old_size, old_spacing, old_origin);\n";
-  std::cout << "  // Error: no implicit conversion from Int3/Real3 to strong types\n\n";
+  std::cout
+      << "  // Error: no implicit conversion from Int3/Real3 to strong types\n\n";
 
   // ========================================================================
   // Example 7: Zero-Cost Verification

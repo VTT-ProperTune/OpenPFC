@@ -69,8 +69,8 @@ Held make_solver(int n, double dt, double nu, int rank, int nproc) {
   Held h;
   h.stack = std::make_unique<pfc::sim::stacks::SpectralCPUStack>(
       ns2d::make_unit_slab(n), rank, nproc, MPI_COMM_WORLD);
-  h.solver = std::make_unique<ns2d::VorticityStreamCPU>(
-      *h.stack, ns2d::Params{nu, dt});
+  h.solver =
+      std::make_unique<ns2d::VorticityStreamCPU>(*h.stack, ns2d::Params{nu, dt});
   return h;
 }
 
@@ -100,12 +100,11 @@ bool field_is_finite(ns2d::VorticityStreamCPU &solver) {
   return global == 1;
 }
 
-std::vector<Sample> integrate(int n, double dt, double nu, double rho, double eps,
-                              const std::vector<long long> &save_steps,
-                              ns2d::SpectralPlane *reference_plane,
-                              const std::vector<std::vector<ns2d::SpectralPlane::Complex>>
-                                  *reference_hats,
-                              bool keep_hats, int rank, int nproc) {
+std::vector<Sample> integrate(
+    int n, double dt, double nu, double rho, double eps,
+    const std::vector<long long> &save_steps, ns2d::SpectralPlane *reference_plane,
+    const std::vector<std::vector<ns2d::SpectralPlane::Complex>> *reference_hats,
+    bool keep_hats, int rank, int nproc) {
   auto held = make_solver(n, dt, nu, rank, nproc);
   auto &solver = *held.solver;
   solver.initialize_omega([&](double x, double y, double) {
@@ -157,11 +156,11 @@ void write_row(std::ostream &os, const std::string &kind, int n, int reference,
                double dt, const Sample &s) {
   os << kind << ',' << n << ',' << reference << ',' << std::scientific
      << std::setprecision(16) << dt << ',' << s.step << ',' << s.time << ','
-     << s.err.omega_l2 << ',' << s.err.omega_l2_rel << ',' << s.err.omega_linf
-     << ',' << s.err.velocity_l2 << ',' << s.err.velocity_l2_rel << ','
-     << s.diag.ke << ',' << s.diag.enstrophy << ',' << s.diag.max_abs_omega
-     << ',' << s.diag.div_linf << ',' << s.diag.div_l2 << ',' << s.diag.cfl
-     << ',' << s.diag.mean_omega << ',' << s.outer << ',' << s.status << '\n';
+     << s.err.omega_l2 << ',' << s.err.omega_l2_rel << ',' << s.err.omega_linf << ','
+     << s.err.velocity_l2 << ',' << s.err.velocity_l2_rel << ',' << s.diag.ke << ','
+     << s.diag.enstrophy << ',' << s.diag.max_abs_omega << ',' << s.diag.div_linf
+     << ',' << s.diag.div_l2 << ',' << s.diag.cfl << ',' << s.diag.mean_omega << ','
+     << s.outer << ',' << s.status << '\n';
 }
 
 std::vector<int> parse_ints(std::string_view text) {
@@ -298,9 +297,9 @@ int main(int argc, char **argv) {
         if (rank == 0) {
           std::filesystem::create_directories(opt.outdir);
           std::cout << "spatial ladder reference N=" << opt.reference
-                    << " dt=" << std::scientific << std::setprecision(8)
-                    << opt.dt << " nu=" << opt.nu << " rho=" << opt.rho
-                    << " eps=" << opt.eps << "\n";
+                    << " dt=" << std::scientific << std::setprecision(8) << opt.dt
+                    << " nu=" << opt.nu << " rho=" << opt.rho << " eps=" << opt.eps
+                    << "\n";
         }
 
         auto ref_samples =
@@ -333,8 +332,8 @@ int main(int argc, char **argv) {
                << "  \"box\": \"unit\",\n"
                << "  \"revision\": \"" << opt.revision << "\",\n"
                << "  \"reference_N\": " << opt.reference << ",\n"
-               << "  \"dt\": " << std::scientific << std::setprecision(16)
-               << opt.dt << ",\n"
+               << "  \"dt\": " << std::scientific << std::setprecision(16) << opt.dt
+               << ",\n"
                << "  \"nu\": " << opt.nu << ",\n"
                << "  \"rho\": " << opt.rho << ",\n"
                << "  \"eps\": " << opt.eps << ",\n"
@@ -352,9 +351,9 @@ int main(int argc, char **argv) {
         if (ok) {
           for (int n : opt.resolutions) {
             if (n == opt.reference) continue;
-            const auto samples = integrate(
-                n, opt.dt, opt.nu, opt.rho, opt.eps, save_steps,
-                &reference.solver->plane(), &ref_hats, false, rank, nproc);
+            const auto samples =
+                integrate(n, opt.dt, opt.nu, opt.rho, opt.eps, save_steps,
+                          &reference.solver->plane(), &ref_hats, false, rank, nproc);
             if (samples.size() != save_steps.size()) ok = false;
             for (const auto &s : samples) {
               if (s.status != "ok") ok = false;
@@ -387,16 +386,14 @@ int main(int argc, char **argv) {
           if (base_ok) {
             auto control_plane =
                 make_solver(opt.control_n, opt.dt, opt.nu, rank, nproc);
-            const auto halved =
-                integrate(opt.control_n, dt_fine, opt.nu, opt.rho, opt.eps,
-                          fine_steps, &control_plane.solver->plane(), &base_hats,
-                          false, rank, nproc);
+            const auto halved = integrate(
+                opt.control_n, dt_fine, opt.nu, opt.rho, opt.eps, fine_steps,
+                &control_plane.solver->plane(), &base_hats, false, rank, nproc);
             if (halved.size() != fine_steps.size()) ok = false;
             for (const auto &s : halved) {
               if (s.status != "ok") ok = false;
               if (rank == 0) {
-                write_row(csv, "temporal", opt.control_n, opt.control_n, dt_fine,
-                          s);
+                write_row(csv, "temporal", opt.control_n, opt.control_n, dt_fine, s);
               }
             }
           }
@@ -406,8 +403,7 @@ int main(int argc, char **argv) {
           csv.close();
           std::cout << "spatial_refine rows written to " << opt.outdir
                     << "/spatial_errors.csv\n";
-          std::cout << "spatial_refine status=" << (ok ? "ok" : "failed")
-                    << "\n";
+          std::cout << "spatial_refine status=" << (ok ? "ok" : "failed") << "\n";
         }
         return ok ? EXIT_SUCCESS : EXIT_FAILURE;
       });

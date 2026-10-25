@@ -8,9 +8,9 @@
 
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
+#include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
-#include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
 #include <openpfc/kernel/field/finite_difference.hpp>
 
 using namespace pfc;
@@ -51,9 +51,9 @@ int main(int argc, char *argv[]) {
   const double dt = 0.15 * dx * dx / (6.0 * D);
 
   // Create Domain with physical coordinates
-  auto domain = domain::create(pfc::GridSize({N, N, N}),
-                               pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                               pfc::GridSpacing({dx, dx, dx}));
+  auto domain =
+      domain::create(pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                     pfc::GridSpacing({dx, dx, dx}));
   auto decomp = decomposition::create(domain, nproc);
 
   // Get local subdomain box using decomposition::local_box (Domain-based API)
@@ -93,8 +93,8 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  comm::SparseExchange<HostSpace, double> exchanger(
-      u, decomp, rank, MPI_COMM_WORLD, halo_width);
+  comm::SparseExchange<HostSpace, double> exchanger(u, decomp, rank, MPI_COMM_WORLD,
+                                                    halo_width);
 
   std::array<const double *, 6> face_ptrs;
   for (int i = 0; i < 6; ++i) {

@@ -65,8 +65,9 @@ double reduce_max(double local) {
 TEST_CASE("Poisson invert recovers Taylor-Green streamfunction velocity",
           "[ns2d][poisson]") {
   StackSolver ss(32, ns2d::Params{0.1, 0.01});
-  ss.solver.initialize_omega(
-      [](double x, double y, double) { return ns2d::taylor_green_omega(x, y, 0.1, 0.0); });
+  ss.solver.initialize_omega([](double x, double y, double) {
+    return ns2d::taylor_green_omega(x, y, 0.1, 0.0);
+  });
 
   double u_err = 0.0, v_err = 0.0;
   ss.stack.u().for_each_owned([&](int i, int j, int k) {
@@ -127,17 +128,17 @@ TEST_CASE("unprojected high-k product aliases into k=1; 2/3 projection does not"
   constexpr int N = 32;
   auto k1_probe = [](const pfc::data::Field<double> &w) {
     double s = 0.0;
-    w.for_each_owned([&](double x, double, double, double val) {
-      s += val * std::cos(x);
-    });
+    w.for_each_owned(
+        [&](double x, double, double, double val) { s += val * std::cos(x); });
     double g = 0.0;
     MPI_Allreduce(&s, &g, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     return std::abs(g);
   };
 
   StackSolver unproj(N, ns2d::Params{0.0, 0.01});
-  unproj.stack.u().apply(
-      [](double x, double, double) { return std::sin(12.0 * x) * std::sin(13.0 * x); });
+  unproj.stack.u().apply([](double x, double, double) {
+    return std::sin(12.0 * x) * std::sin(13.0 * x);
+  });
   const double aliased = k1_probe(unproj.stack.u());
 
   StackSolver proj(N, ns2d::Params{0.0, 0.01});
@@ -162,19 +163,19 @@ TEST_CASE("Taylor-Green decays to spectral accuracy under IFRK4",
   const double dt = 0.05;
   const int steps = 8;
   StackSolver ss(32, ns2d::Params{nu, dt});
-  ss.solver.initialize_omega(
-      [nu](double x, double y, double) { return ns2d::taylor_green_omega(x, y, nu, 0.0); });
+  ss.solver.initialize_omega([nu](double x, double y, double) {
+    return ns2d::taylor_green_omega(x, y, nu, 0.0);
+  });
   for (int i = 0; i < steps; ++i) ss.solver.step();
   const auto d = ss.solver.diagnostics(MPI_COMM_WORLD);
   const double T = static_cast<double>(steps) * dt;
-  const double linf = ss.solver.linf_omega_error(
-      MPI_COMM_WORLD, [nu, T](double x, double y) {
+  const double linf =
+      ss.solver.linf_omega_error(MPI_COMM_WORLD, [nu, T](double x, double y) {
         return ns2d::taylor_green_omega(x, y, nu, T);
       });
   REQUIRE_THAT(linf, WithinAbs(0.0, 1.0e-11));
   REQUIRE_THAT(d.ke, WithinAbs(ns2d::taylor_green_ke(nu, T), 1.0e-12));
-  REQUIRE_THAT(d.enstrophy,
-               WithinAbs(ns2d::taylor_green_enstrophy(nu, T), 1.0e-12));
+  REQUIRE_THAT(d.enstrophy, WithinAbs(ns2d::taylor_green_enstrophy(nu, T), 1.0e-12));
   REQUIRE_THAT(d.div_linf, WithinAbs(0.0, 1.0e-11));
   REQUIRE_THAT(d.mean_omega, WithinAbs(0.0, 1.0e-14));
 }
@@ -187,8 +188,9 @@ TEST_CASE("Taylor-Green error is already at roundoff on N=16 and N=32",
   const double T = steps * dt;
   auto run = [&](int n) {
     StackSolver ss(n, ns2d::Params{nu, dt});
-    ss.solver.initialize_omega(
-        [nu](double x, double y, double) { return ns2d::taylor_green_omega(x, y, nu, 0.0); });
+    ss.solver.initialize_omega([nu](double x, double y, double) {
+      return ns2d::taylor_green_omega(x, y, nu, 0.0);
+    });
     for (int i = 0; i < steps; ++i) ss.solver.step();
     return ss.solver.linf_omega_error(MPI_COMM_WORLD, [nu, T](double x, double y) {
       return ns2d::taylor_green_omega(x, y, nu, T);
@@ -265,8 +267,9 @@ TEST_CASE("Minion-Brown unit-square shear has two opposite sheets at t=0",
   constexpr double rho = 30.0;
   constexpr double eps = 0.05;
   StackSolver ss(64, ns2d::Params{1.0e-4, 0.005}, 1.0);
-  ss.solver.initialize_omega(
-      [](double x, double y, double) { return ns2d::double_shear_omega(x, y, rho, eps); });
+  ss.solver.initialize_omega([](double x, double y, double) {
+    return ns2d::double_shear_omega(x, y, rho, eps);
+  });
   const auto d = ss.solver.diagnostics(MPI_COMM_WORLD);
   REQUIRE(d.max_abs_omega > 20.0);
   // N=64 places y=1/2 on a node; the two tanh branches then have 33 vs 31
@@ -286,8 +289,7 @@ TEST_CASE("observed order is log2 of successive errors above the floor",
   REQUIRE_FALSE(ns2d::observed_order(1.0e-4, 0.0, 1.0e-11).has_value());
 }
 
-TEST_CASE("spectral face flux matches the integral of a cosine",
-          "[ns2d][flux]") {
+TEST_CASE("spectral face flux matches the integral of a cosine", "[ns2d][flux]") {
   StackSolver ss(32, ns2d::Params{0.0, 0.01}, 1.0);
   ss.stack.u().apply(
       [](double x, double, double) { return std::cos(2.0 * pfc::pi * x); });
@@ -307,11 +309,11 @@ TEST_CASE("spectral face flux matches the integral of a cosine",
   REQUIRE(ns2d::modal_div_amplitude(ss.solver.plane(), u_hat, v_hat) > 0.1);
 }
 
-TEST_CASE("streamfunction velocity has roundoff closed-box flux",
-          "[ns2d][flux]") {
+TEST_CASE("streamfunction velocity has roundoff closed-box flux", "[ns2d][flux]") {
   StackSolver ss(32, ns2d::Params{0.1, 0.01});
-  ss.solver.initialize_omega(
-      [](double x, double y, double) { return ns2d::taylor_green_omega(x, y, 0.1, 0.0); });
+  ss.solver.initialize_omega([](double x, double y, double) {
+    return ns2d::taylor_green_omega(x, y, 0.1, 0.0);
+  });
   std::vector<ns2d::SpectralPlane::Complex> u_hat(ss.solver.plane().out_n());
   std::vector<ns2d::SpectralPlane::Complex> v_hat(ss.solver.plane().out_n());
   ss.solver.plane().fft().forward(ss.solver.u(), u_hat);
@@ -342,16 +344,15 @@ TEST_CASE("streamfunction velocity has roundoff closed-box flux",
   unequal.solver.plane().fft().forward(unequal.solver.v(), vv);
   const ns2d::AxisBox cell{2.0 * dx, 7.0 * dx, dx, 4.0 * dx};
   const auto spectral = ns2d::face_flux(unequal.solver.plane(), uu, vv, cell);
-  const auto trap = ns2d::trapezoid_flux(
-      unequal.solver.plane(), unequal.solver.u(), unequal.solver.v(), cell);
+  const auto trap = ns2d::trapezoid_flux(unequal.solver.plane(), unequal.solver.u(),
+                                         unequal.solver.v(), cell);
   REQUIRE(trap.has_value());
   REQUIRE_THAT(spectral.net, WithinAbs(0.0, 1.0e-9));
   REQUIRE(std::abs(*trap) > 1.0e-4);
   REQUIRE(std::abs(*trap) > 100.0 * std::abs(spectral.net));
 }
 
-TEST_CASE("common-band error vanishes for a shared Fourier mode",
-          "[ns2d][band]") {
+TEST_CASE("common-band error vanishes for a shared Fourier mode", "[ns2d][band]") {
   StackSolver fine(32, ns2d::Params{0.0, 0.01}, 1.0);
   StackSolver coarse(16, ns2d::Params{0.0, 0.01}, 1.0);
   const auto ic = [](double x, double y, double) {
@@ -361,8 +362,8 @@ TEST_CASE("common-band error vanishes for a shared Fourier mode",
   coarse.solver.initialize_omega(ic);
   std::vector<ns2d::SpectralPlane::Complex> hat;
   fine.solver.copy_omega_hat(hat);
-  const auto err = ns2d::common_band_error_from_hat(
-      fine.solver.plane(), hat, coarse.solver, MPI_COMM_WORLD);
+  const auto err = ns2d::common_band_error_from_hat(fine.solver.plane(), hat,
+                                                    coarse.solver, MPI_COMM_WORLD);
   REQUIRE_THAT(err.omega_l2, WithinAbs(0.0, 1.0e-10));
   REQUIRE_THAT(err.omega_linf, WithinAbs(0.0, 1.0e-10));
   REQUIRE_THAT(err.velocity_l2, WithinAbs(0.0, 1.0e-10));

@@ -57,21 +57,25 @@ int main() {
   auto field4 = pfc::data::field_from_subdomain<double>(decomposition, 3, 0);
 
   std::cout << "\nField 1:" << std::endl;
-  std::cout << "  Owned box: [" << field1.box().low[0] << "," << field1.box().low[1] << ","
-            << field1.box().low[2] << "] to [" << field1.box().high[0] << ","
-            << field1.box().high[1] << "," << field1.box().high[2] << "]" << std::endl;
+  std::cout << "  Owned box: [" << field1.box().low[0] << "," << field1.box().low[1]
+            << "," << field1.box().low[2] << "] to [" << field1.box().high[0] << ","
+            << field1.box().high[1] << "," << field1.box().high[2] << "]"
+            << std::endl;
   std::cout << "\nField 2:" << std::endl;
-  std::cout << "  Owned box: [" << field2.box().low[0] << "," << field2.box().low[1] << ","
-            << field2.box().low[2] << "] to [" << field2.box().high[0] << ","
-            << field2.box().high[1] << "," << field2.box().high[2] << "]" << std::endl;
+  std::cout << "  Owned box: [" << field2.box().low[0] << "," << field2.box().low[1]
+            << "," << field2.box().low[2] << "] to [" << field2.box().high[0] << ","
+            << field2.box().high[1] << "," << field2.box().high[2] << "]"
+            << std::endl;
   std::cout << "\nField 3:" << std::endl;
-  std::cout << "  Owned box: [" << field3.box().low[0] << "," << field3.box().low[1] << ","
-            << field3.box().low[2] << "] to [" << field3.box().high[0] << ","
-            << field3.box().high[1] << "," << field3.box().high[2] << "]" << std::endl;
+  std::cout << "  Owned box: [" << field3.box().low[0] << "," << field3.box().low[1]
+            << "," << field3.box().low[2] << "] to [" << field3.box().high[0] << ","
+            << field3.box().high[1] << "," << field3.box().high[2] << "]"
+            << std::endl;
   std::cout << "\nField 4:" << std::endl;
-  std::cout << "  Owned box: [" << field4.box().low[0] << "," << field4.box().low[1] << ","
-            << field4.box().low[2] << "] to [" << field4.box().high[0] << ","
-            << field4.box().high[1] << "," << field4.box().high[2] << "]" << std::endl;
+  std::cout << "  Owned box: [" << field4.box().low[0] << "," << field4.box().low[1]
+            << "," << field4.box().low[2] << "] to [" << field4.box().high[0] << ","
+            << field4.box().high[1] << "," << field4.box().high[2] << "]"
+            << std::endl;
 
   // Define functions that are applied to fields. Field::apply() takes a callable
   // that accepts physical coordinates (x, y, z) as separate arguments.
@@ -81,14 +85,17 @@ int main() {
   auto func2 = [](double x, double y, double z) { return 1.0 + x + y * y; };
 
   // Alternative: lambda taking separate coordinates
-  auto func3 = [](double x, double y, double z) { return 1.0 + x + y * y + 0.0 * z; };
+  auto func3 = [](double x, double y, double z) {
+    return 1.0 + x + y * y + 0.0 * z;
+  };
 
   // Apply functions to the four sub-domains. Field API handles coordinate
   // transforms correctly for each part of the domain.
   field1.apply(func1);
   field2.apply(func2);
   field3.apply(func3);
-  field4.apply([](double x, double y, double z) { return 1.0 + x + y * y + 0.0 * z; });
+  field4.apply(
+      [](double x, double y, double z) { return 1.0 + x + y * y + 0.0 * z; });
 
   // Keep in mind that in general, one would define only one decomposition and
   // thus one field for each MPI process. It requires extra work to determine
@@ -115,8 +122,10 @@ int main() {
 
       if (inbounds) {
         // Map coordinate to local indices
-        int i = static_cast<int>((coords[0] - origin[0]) / spacing[0]) - field.box().low[0];
-        int j = static_cast<int>((coords[1] - origin[1]) / spacing[1]) - field.box().low[1];
+        int i = static_cast<int>((coords[0] - origin[0]) / spacing[0]) -
+                field.box().low[0];
+        int j = static_cast<int>((coords[1] - origin[1]) / spacing[1]) -
+                field.box().low[1];
         int k = 0; // z is fixed at 0
 
         if (i >= 0 && i < local_size[0] && j >= 0 && j < local_size[1]) {

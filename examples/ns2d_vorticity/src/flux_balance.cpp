@@ -92,13 +92,13 @@ bool field_is_finite(ns2d::VorticityStreamCPU &solver) {
 }
 
 Held make_solver(Kind kind, int n, double dt, double nu, int rank, int nproc) {
-  const auto domain = (kind == Kind::Shear) ? ns2d::make_unit_slab(n)
-                                             : ns2d::make_twopi_slab(n);
+  const auto domain =
+      (kind == Kind::Shear) ? ns2d::make_unit_slab(n) : ns2d::make_twopi_slab(n);
   Held h;
-  h.stack = std::make_unique<pfc::sim::stacks::SpectralCPUStack>(
-      domain, rank, nproc, MPI_COMM_WORLD);
-  h.solver = std::make_unique<ns2d::VorticityStreamCPU>(*h.stack,
-                                                        ns2d::Params{nu, dt});
+  h.stack = std::make_unique<pfc::sim::stacks::SpectralCPUStack>(domain, rank, nproc,
+                                                                 MPI_COMM_WORLD);
+  h.solver =
+      std::make_unique<ns2d::VorticityStreamCPU>(*h.stack, ns2d::Params{nu, dt});
   return h;
 }
 
@@ -127,8 +127,7 @@ std::vector<NamedBox> control_volumes(double length, int n) {
   return {
       {"full", {0.0, length, 0.0, length}},
       {"half", {0.0, 0.5 * length, 0.0, 0.5 * length}},
-      {"quarter",
-       {0.125 * length, 0.375 * length, 0.125 * length, 0.375 * length}},
+      {"quarter", {0.125 * length, 0.375 * length, 0.125 * length, 0.375 * length}},
       {"cell", {0.0, dx, 0.0, dx}},
       {"offset", {0.2 * length, 0.7 * length, 0.15 * length, 0.45 * length}},
   };
@@ -210,13 +209,13 @@ bool run_spec(const Spec &spec, std::ostream &csv, int rank, int nproc) {
                                       named.box);
         }
         csv << spec.name << ',' << spec.n << ',' << std::scientific
-            << std::setprecision(16) << spec.dt << ',' << step << ',' << time
-            << ',' << named.name << ',' << named.box.x0 << ',' << named.box.x1
-            << ',' << named.box.y0 << ',' << named.box.y1 << ',' << flux.net
-            << ',' << flux.imag << ',' << flux.abs_faces << ',' << flux.relative
-            << ',' << csv_trap(trap) << ',' << diag.div_linf << ','
-            << diag.div_l2 << ',' << modal << ',' << domain_div << ',' << diag.ke
-            << ',' << diag.enstrophy << ',' << diag.mean_omega << ','
+            << std::setprecision(16) << spec.dt << ',' << step << ',' << time << ','
+            << named.name << ',' << named.box.x0 << ',' << named.box.x1 << ','
+            << named.box.y0 << ',' << named.box.y1 << ',' << flux.net << ','
+            << flux.imag << ',' << flux.abs_faces << ',' << flux.relative << ','
+            << csv_trap(trap) << ',' << diag.div_linf << ',' << diag.div_l2 << ','
+            << modal << ',' << domain_div << ',' << diag.ke << ',' << diag.enstrophy
+            << ',' << diag.mean_omega << ','
             << (status == "nonfinite" ? 0.0 : diag.mean_omega - mean0) << ','
             << diag.cfl << ',' << status << '\n';
       }
@@ -384,9 +383,8 @@ bool parse(int argc, char **argv, Options &opt) {
       opt.which != "all") {
     return false;
   }
-  if (opt.which == "all" &&
-      (opt.set_n || opt.set_dt || opt.set_times || opt.set_nu || opt.set_rho ||
-       opt.set_eps)) {
+  if (opt.which == "all" && (opt.set_n || opt.set_dt || opt.set_times ||
+                             opt.set_nu || opt.set_rho || opt.set_eps)) {
     std::cerr << "ns2d_flux_balance: overrides require a single --case\n";
     return false;
   }
@@ -464,8 +462,7 @@ int main(int argc, char **argv) {
           csv.close();
           std::cout << "flux_balance rows written to " << opt.outdir
                     << "/flux_balance.csv\n";
-          std::cout << "flux_balance status=" << (ok ? "ok" : "failed")
-                    << std::endl;
+          std::cout << "flux_balance status=" << (ok ? "ok" : "failed") << std::endl;
         }
         return ok ? EXIT_SUCCESS : EXIT_FAILURE;
       });

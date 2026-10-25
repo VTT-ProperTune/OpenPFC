@@ -46,8 +46,7 @@ int main() {
   });
 
   std::cout << "data = [";
-  for (const auto &v : data)
-    std::cout << v << ((&v != &data.back()) ? ", " : "]\n");
+  for (const auto &v : data) std::cout << v << ((&v != &data.back()) ? ", " : "]\n");
 
   std::cout << "Linear index of {2, 1, 2} = " << box.to_linear({2, 1, 2})
             << std::endl;

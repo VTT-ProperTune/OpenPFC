@@ -176,8 +176,7 @@ public:
     MPI_Allreduce(&div_linf, &g_divinf, 1, MPI_DOUBLE, MPI_MAX, comm);
 
     const auto gs = m_plane.gsize();
-    const double ncells =
-        static_cast<double>(gs[0]) * gs[1] * gs[2];
+    const double ncells = static_cast<double>(gs[0]) * gs[1] * gs[2];
     const auto sp = m_plane.spacing();
     const double dx = std::min(sp[0], sp[1]);
     Diagnostics d;
@@ -193,8 +192,7 @@ public:
     return d;
   }
 
-  [[nodiscard]] double linf_omega_error(MPI_Comm comm,
-                                        const auto &exact) const {
+  [[nodiscard]] double linf_omega_error(MPI_Comm comm, const auto &exact) const {
     double local = 0.0;
     m_stack->u().for_each_owned([&](double x, double y, double /*z*/, double w) {
       local = std::max(local, std::abs(w - exact(x, y)));

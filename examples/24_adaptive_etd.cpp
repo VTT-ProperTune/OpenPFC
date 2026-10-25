@@ -39,7 +39,9 @@ struct Heat {
   void declare_fields(pfc::SimulationState &state) const {
     pfc::sim::add_declared_field<double>(state, "psi", domain, box, 0);
   }
-  [[nodiscard]] double linear_symbol(double k_laplacian) const { return k_laplacian; }
+  [[nodiscard]] double linear_symbol(double k_laplacian) const {
+    return k_laplacian;
+  }
   [[nodiscard]] Zero pointwise() const { return {}; }
 };
 
@@ -54,7 +56,9 @@ struct CubicReaction {
   void declare_fields(pfc::SimulationState &state) const {
     pfc::sim::add_declared_field<double>(state, "psi", domain, box, 0);
   }
-  [[nodiscard]] double linear_symbol(double k_laplacian) const { return k_laplacian; }
+  [[nodiscard]] double linear_symbol(double k_laplacian) const {
+    return k_laplacian;
+  }
   [[nodiscard]] Cubic pointwise() const { return {}; }
 };
 
@@ -135,7 +139,8 @@ int main(int argc, char **argv) {
     const double dt = time.get_attempted_dt();
     doubling.attempt(time.get_accepted_time(), dt);
     const auto decision = controller.decide_from_embedded_error(
-        dt, doubling.raw_difference(), doubling.saved_state(), doubling.half_steps());
+        dt, doubling.raw_difference(), doubling.saved_state(),
+        doubling.half_steps());
     if (decision.accepted) {
       doubling.commit();
       accepted_dt.push_back(dt);
@@ -147,13 +152,14 @@ int main(int argc, char **argv) {
     controller.apply(time, decision);
     ++guard;
   }
-  const double wall_ms =
-      std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0)
-          .count();
+  const double wall_ms = std::chrono::duration<double, std::milli>(
+                             std::chrono::steady_clock::now() - t0)
+                             .count();
   std::cout << "adaptive t=" << time.get_accepted_time()
             << " accepted=" << controller.accepted_count()
-            << " rejected=" << controller.rejected_count() << " nonlinear=" << nonlinear
-            << " transforms=" << transforms << " wall_ms=" << wall_ms << "\n";
+            << " rejected=" << controller.rejected_count()
+            << " nonlinear=" << nonlinear << " transforms=" << transforms
+            << " wall_ms=" << wall_ms << "\n";
   std::cout << "adaptive dt";
   for (double h : accepted_dt) {
     std::cout << ' ' << h;

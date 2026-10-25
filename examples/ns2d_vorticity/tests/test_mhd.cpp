@@ -49,8 +49,7 @@ struct MHDStack {
   pfc::sim::stacks::SpectralCPUStack stack;
   ns2d::MHDSolver solver;
   MHDStack(int n, ns2d::MHDParams p)
-      : stack(ns2d::make_twopi_slab(n), world_rank(), world_size(),
-              MPI_COMM_WORLD),
+      : stack(ns2d::make_twopi_slab(n), world_rank(), world_size(), MPI_COMM_WORLD),
         solver(stack, p) {}
 };
 
@@ -78,8 +77,8 @@ TEST_CASE("a=0 MHD reproduces the NS solver on a two-mode field",
   }
   double local = 0.0;
   ns.omega().for_each_owned([&](int i, int j, int k) {
-    local = std::max(local, std::abs(ns.omega()(i, j, k) -
-                                     mhd.solver.omega()(i, j, k)));
+    local =
+        std::max(local, std::abs(ns.omega()(i, j, k) - mhd.solver.omega()(i, j, k)));
   });
   REQUIRE(reduce_max(local) < 1.0e-11);
   const auto d = mhd.solver.diagnostics(MPI_COMM_WORLD);
@@ -93,14 +92,13 @@ TEST_CASE("force-free Fourier mode decays as exp(-eta k^2 t) with u=0",
   const double dt = 0.02;
   const int steps = 10;
   MHDStack mhd(32, ns2d::MHDParams{0.05, eta, dt, +1.0});
-  mhd.solver.initialize([](double, double, double) { return 0.0; },
-                        [](double x, double y, double) {
-                          return ns2d::force_free_a(x, y);
-                        });
+  mhd.solver.initialize(
+      [](double, double, double) { return 0.0; },
+      [](double x, double y, double) { return ns2d::force_free_a(x, y); });
   for (int i = 0; i < steps; ++i) mhd.solver.step();
   const double T = steps * dt;
-  const double aerr = mhd.solver.linf_a_error(
-      MPI_COMM_WORLD, [eta, T](double x, double y) {
+  const double aerr =
+      mhd.solver.linf_a_error(MPI_COMM_WORLD, [eta, T](double x, double y) {
         return ns2d::force_free_a_exact(x, y, eta, T);
       });
   const auto d = mhd.solver.diagnostics(MPI_COMM_WORLD);
@@ -220,8 +218,7 @@ TEST_CASE("diagonal Elsasser propagation makes the 2-D sum CFL larger",
   REQUIRE_THAT(cfl_sum, WithinAbs(2.0 * cfl_comp, 1.0e-15));
 }
 
-TEST_CASE("A2 uses the zero-mean gauge and a_hat(0) is removed",
-          "[mhd][a2-gauge]") {
+TEST_CASE("A2 uses the zero-mean gauge and a_hat(0) is removed", "[mhd][a2-gauge]") {
   MHDStack mhd(32, ns2d::MHDParams{0.02, 0.02, 0.01, +1.0});
   mhd.solver.initialize(
       [](double x, double y, double) { return ns2d::ot_omega(x, y); },
@@ -309,8 +306,8 @@ TEST_CASE("restrict_hat_by_k maps a shared trigonometric polynomial",
   };
   fine_stack.u().apply(trig);
   coarse_stack.u().apply(trig);
-  std::vector<ns2d::SpectralPlane::Complex> fhat(fine.out_n()),
-      chat(coarse.out_n()), rhat;
+  std::vector<ns2d::SpectralPlane::Complex> fhat(fine.out_n()), chat(coarse.out_n()),
+      rhat;
   fine.fft().forward(fine_stack.u().vec(), fhat);
   coarse.fft().forward(coarse_stack.u().vec(), chat);
   ns2d::restrict_hat_by_k(fine, fhat, coarse, rhat);
@@ -331,8 +328,7 @@ TEST_CASE("restrict_hat_by_k maps a shared trigonometric polynomial",
   REQUIRE(reduce_max(rerr) < 1.0e-10);
 }
 
-TEST_CASE("u and B remain solenoidal to transform roundoff",
-          "[mhd][divergence]") {
+TEST_CASE("u and B remain solenoidal to transform roundoff", "[mhd][divergence]") {
   MHDStack mhd(32, ns2d::MHDParams{0.02, 0.02, 0.01, +1.0});
   mhd.solver.initialize(
       [](double x, double y, double) { return ns2d::ot_omega(x, y); },
@@ -373,9 +369,7 @@ TEST_CASE("coalescence perturbation is frozen, divergence-free, and diagonal",
       [](double x, double y, double) { return ns2d::coalescence_omega(x, y); },
       [](double x, double y, double) { return ns2d::coalescence_a(x, y); });
   const double aerr = mhd.solver.linf_a_error(
-      MPI_COMM_WORLD, [](double x, double y) {
-        return ns2d::coalescence_a(x, y);
-      });
+      MPI_COMM_WORLD, [](double x, double y) { return ns2d::coalescence_a(x, y); });
   REQUIRE_THAT(aerr, WithinAbs(0.0, 1.0e-12));
   const auto d = mhd.solver.diagnostics(MPI_COMM_WORLD);
   REQUIRE_THAT(d.mean_sq_j, WithinAbs(8.0 * d.a2, 1.0e-10));
@@ -401,8 +395,8 @@ TEST_CASE("unperturbed coalescence flux is a static decaying eigenmode",
   REQUIRE(mhd.solver.n_omega_linf(MPI_COMM_WORLD) < 1.0e-10);
   for (int i = 0; i < steps; ++i) mhd.solver.step();
   const double T = steps * dt;
-  const double aerr = mhd.solver.linf_a_error(
-      MPI_COMM_WORLD, [eta, T](double x, double y) {
+  const double aerr =
+      mhd.solver.linf_a_error(MPI_COMM_WORLD, [eta, T](double x, double y) {
         return ns2d::coalescence_a_exact(x, y, eta, T);
       });
   const auto d = mhd.solver.diagnostics(MPI_COMM_WORLD);

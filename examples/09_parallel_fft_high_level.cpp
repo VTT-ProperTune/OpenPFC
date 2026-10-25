@@ -5,8 +5,8 @@
 
 #include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/detail/array_format.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/detail/array_format.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/mpi/worker.hpp>
@@ -22,7 +22,8 @@ int main(int argc, char *argv[]) {
   auto decomp = decomposition::create(domain, worker.get_num_ranks());
 
   // Create input field for this rank
-  auto input = data::field_from_subdomain_unpadded<double>(decomp, worker.get_rank(), 0);
+  auto input =
+      data::field_from_subdomain_unpadded<double>(decomp, worker.get_rank(), 0);
 
   // Create a random number generator
   std::random_device rd;

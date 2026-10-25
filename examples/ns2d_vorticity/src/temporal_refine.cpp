@@ -17,9 +17,9 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
-#include <functional>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <memory>
@@ -94,15 +94,14 @@ struct Protocol {
   double dt_ref{0.0};
 };
 
-Held make_solver(CaseKind kind, int n, double dt, double nu, int rank,
-                 int nproc) {
-  const auto domain = (kind == CaseKind::Shear) ? ns2d::make_unit_slab(n)
-                                                 : ns2d::make_twopi_slab(n);
+Held make_solver(CaseKind kind, int n, double dt, double nu, int rank, int nproc) {
+  const auto domain =
+      (kind == CaseKind::Shear) ? ns2d::make_unit_slab(n) : ns2d::make_twopi_slab(n);
   Held h;
-  h.stack = std::make_unique<pfc::sim::stacks::SpectralCPUStack>(
-      domain, rank, nproc, MPI_COMM_WORLD);
-  h.solver = std::make_unique<ns2d::VorticityStreamCPU>(*h.stack,
-                                                        ns2d::Params{nu, dt});
+  h.stack = std::make_unique<pfc::sim::stacks::SpectralCPUStack>(domain, rank, nproc,
+                                                                 MPI_COMM_WORLD);
+  h.solver =
+      std::make_unique<ns2d::VorticityStreamCPU>(*h.stack, ns2d::Params{nu, dt});
   return h;
 }
 
@@ -159,13 +158,11 @@ long long subdivision(double dt, double dt_ref) {
   return sub;
 }
 
-std::vector<Sample>
-integrate(CaseKind kind, int n, double dt, double nu, double rho, double eps,
-          const std::vector<long long> &save_steps,
-          ns2d::SpectralPlane *reference_plane,
-          const std::vector<std::vector<ns2d::SpectralPlane::Complex>>
-              *reference_hats,
-          bool keep_hats, int rank, int nproc) {
+std::vector<Sample> integrate(
+    CaseKind kind, int n, double dt, double nu, double rho, double eps,
+    const std::vector<long long> &save_steps, ns2d::SpectralPlane *reference_plane,
+    const std::vector<std::vector<ns2d::SpectralPlane::Complex>> *reference_hats,
+    bool keep_hats, int rank, int nproc) {
   auto held = make_solver(kind, n, dt, nu, rank, nproc);
   auto &solver = *held.solver;
   if (kind == CaseKind::Shear) {
@@ -232,35 +229,33 @@ void assign_orders(std::vector<std::vector<Sample>> &by_dt, double dt_ref,
   if (by_dt.size() != dts.size()) return;
   for (std::size_t i = 0; i + 1 < dts.size(); ++i) {
     if (dts[i + 1] == dt_ref) continue;
-    const std::size_t ntime =
-        std::min(by_dt[i].size(), by_dt[i + 1].size());
+    const std::size_t ntime = std::min(by_dt[i].size(), by_dt[i + 1].size());
     for (std::size_t t = 0; t < ntime; ++t) {
       auto &coarse = by_dt[i][t];
       const auto &fine = by_dt[i + 1][t];
       if (coarse.status != "ok" || fine.status != "ok") continue;
-      coarse.order_omega = format_order(ns2d::observed_order(
-          coarse.err.omega_l2, fine.err.omega_l2, floor));
-      coarse.order_velocity = format_order(ns2d::observed_order(
-          coarse.err.velocity_l2, fine.err.velocity_l2, floor));
+      coarse.order_omega = format_order(
+          ns2d::observed_order(coarse.err.omega_l2, fine.err.omega_l2, floor));
+      coarse.order_velocity = format_order(
+          ns2d::observed_order(coarse.err.velocity_l2, fine.err.velocity_l2, floor));
     }
   }
 }
 
-void write_row(std::ostream &os, const Protocol &proto, double dt,
-               const Sample *ref, const Sample &s) {
+void write_row(std::ostream &os, const Protocol &proto, double dt, const Sample *ref,
+               const Sample &s) {
   const double ke_diff = (ref != nullptr) ? s.diag.ke - ref->diag.ke : 0.0;
   const double z_diff =
       (ref != nullptr) ? s.diag.enstrophy - ref->diag.enstrophy : 0.0;
   os << proto.name << ',' << proto.n << ',' << std::scientific
-     << std::setprecision(16) << dt << ',' << proto.dt_ref << ',' << s.step
-     << ',' << s.time << ',' << s.err.omega_l2 << ',' << s.err.omega_l2_rel
-     << ',' << s.err.omega_linf << ',' << s.err.velocity_l2 << ','
-     << s.err.velocity_l2_rel << ',' << s.diag.ke << ',' << ke_diff << ','
-     << s.diag.enstrophy << ',' << z_diff << ',' << s.diag.max_abs_omega << ','
-     << s.diag.div_linf << ',' << s.diag.div_l2 << ',' << s.diag.cfl << ','
-     << s.diag.mean_omega << ',' << (s.diag.mean_omega - s.mean0) << ','
-     << s.outer << ',' << s.order_omega << ',' << s.order_velocity << ','
-     << s.status << '\n';
+     << std::setprecision(16) << dt << ',' << proto.dt_ref << ',' << s.step << ','
+     << s.time << ',' << s.err.omega_l2 << ',' << s.err.omega_l2_rel << ','
+     << s.err.omega_linf << ',' << s.err.velocity_l2 << ',' << s.err.velocity_l2_rel
+     << ',' << s.diag.ke << ',' << ke_diff << ',' << s.diag.enstrophy << ','
+     << z_diff << ',' << s.diag.max_abs_omega << ',' << s.diag.div_linf << ','
+     << s.diag.div_l2 << ',' << s.diag.cfl << ',' << s.diag.mean_omega << ','
+     << (s.diag.mean_omega - s.mean0) << ',' << s.outer << ',' << s.order_omega
+     << ',' << s.order_velocity << ',' << s.status << '\n';
 }
 
 std::vector<double> parse_doubles(std::string_view text) {
@@ -402,9 +397,8 @@ bool parse(int argc, char **argv, Options &opt) {
   if (opt.which != "shear" && opt.which != "two-mode" && opt.which != "both") {
     return false;
   }
-  if (opt.which == "both" &&
-      (opt.set_n || opt.set_dts || opt.set_times || opt.set_nu || opt.set_rho ||
-       opt.set_eps)) {
+  if (opt.which == "both" && (opt.set_n || opt.set_dts || opt.set_times ||
+                              opt.set_nu || opt.set_rho || opt.set_eps)) {
     std::cerr << "ns2d_temporal_refine: overrides require a single --case\n";
     return false;
   }
@@ -422,10 +416,9 @@ bool run_protocol(const Protocol &proto, const Options &opt, std::ostream &csv,
   }
 
   const long long ref_sub = subdivision(proto.dt_ref, proto.dt_ref);
-  auto ref_samples =
-      integrate(proto.kind, proto.n, proto.dt_ref, proto.nu, proto.rho, proto.eps,
-                coarse_steps(ref_steps, ref_sub), nullptr, nullptr, true, rank,
-                nproc);
+  auto ref_samples = integrate(
+      proto.kind, proto.n, proto.dt_ref, proto.nu, proto.rho, proto.eps,
+      coarse_steps(ref_steps, ref_sub), nullptr, nullptr, true, rank, nproc);
   bool ref_ok = ref_samples.size() == ref_steps.size();
   for (const auto &s : ref_samples) {
     if (s.status != "ok") ref_ok = false;
@@ -435,8 +428,8 @@ bool run_protocol(const Protocol &proto, const Options &opt, std::ostream &csv,
   for (const auto &s : ref_samples) ref_hats.push_back(s.hat);
   std::optional<Held> reference;
   if (ref_ok) {
-    reference = make_solver(proto.kind, proto.n, proto.dt_ref, proto.nu, rank,
-                            nproc);
+    reference =
+        make_solver(proto.kind, proto.n, proto.dt_ref, proto.nu, rank, nproc);
   }
 
   std::vector<double> dts = proto.dts;
@@ -455,10 +448,10 @@ bool run_protocol(const Protocol &proto, const Options &opt, std::ostream &csv,
     } else if (!ref_ok) {
       continue;
     } else {
-      samples = integrate(proto.kind, proto.n, dt_use, proto.nu, proto.rho,
-                          proto.eps, coarse_steps(ref_steps, sub),
-                          &reference->solver->plane(), &ref_hats, false, rank,
-                          nproc);
+      samples =
+          integrate(proto.kind, proto.n, dt_use, proto.nu, proto.rho, proto.eps,
+                    coarse_steps(ref_steps, sub), &reference->solver->plane(),
+                    &ref_hats, false, rank, nproc);
     }
     by_dt.push_back(std::move(samples));
   }
@@ -486,8 +479,7 @@ bool run_protocol(const Protocol &proto, const Options &opt, std::ostream &csv,
       for (std::size_t t = 0; t < by_dt[i].size(); ++t) {
         ref_row = nullptr;
         if (dt != proto.dt_ref && ref_index < by_dt.size() &&
-            t < by_dt[ref_index].size() &&
-            by_dt[ref_index][t].status == "ok") {
+            t < by_dt[ref_index].size() && by_dt[ref_index][t].status == "ok") {
           ref_row = &by_dt[ref_index][t];
         }
         write_row(csv, proto, dt, ref_row, by_dt[i][t]);
@@ -541,8 +533,8 @@ int main(int argc, char **argv) {
           meta << "{\n"
                << "  \"issue\": 225,\n"
                << "  \"revision\": \"" << opt.revision << "\",\n"
-               << "  \"order_floor\": " << std::scientific
-               << std::setprecision(16) << opt.order_floor << ",\n"
+               << "  \"order_floor\": " << std::scientific << std::setprecision(16)
+               << opt.order_floor << ",\n"
                << "  \"order\": \"log2(e(dt)/e(dt/2)) on absolute L2 against "
                   "the finest dt; withheld at or below the floor and on the "
                   "finest measured step\",\n"

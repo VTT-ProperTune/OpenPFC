@@ -22,7 +22,8 @@
  * - `HeatModel`: pure function `rhs(t, grads)` returning `du/dt` (same as FD)
  * - `SpectralCPUStack`: field management with FFT
  * - `pfc::field::create<HeatGrads>(u, fft)`: spectral gradient evaluator
- * - `pfc::sim::steppers::create(u, grad, model, dt)`: stepper factory (same signature as FD)
+ * - `pfc::sim::steppers::create(u, grad, model, dt)`: stepper factory (same
+ * signature as FD)
  *
  * Time loop pattern (no halo exchange needed for spectral):
  * ```cpp
@@ -44,13 +45,13 @@ struct HeatGrads {
 struct HeatModel {
   double kD;
 
-  [[nodiscard]] double rhs(double /*t*/, const HeatGrads& g) const noexcept {
+  [[nodiscard]] double rhs(double /*t*/, const HeatGrads &g) const noexcept {
     return kD * (g.xx + g.yy + g.zz);
   }
 };
 
 // Helper: compute global L2 norm across all ranks
-double compute_l2_norm(const pfc::data::Field<double>& u) {
+double compute_l2_norm(const pfc::data::Field<double> &u) {
   double local_sum = 0.0;
   u.for_each_owned([&](double /*x*/, double /*y*/, double /*z*/, double val) {
     local_sum += val * val;
@@ -59,12 +60,13 @@ double compute_l2_norm(const pfc::data::Field<double>& u) {
   double global_sum = 0.0;
   MPI_Allreduce(&local_sum, &global_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-  const auto& global_size = u.global_size();
-  const double volume = static_cast<double>(global_size[0] * global_size[1] * global_size[2]);
+  const auto &global_size = u.global_size();
+  const double volume =
+      static_cast<double>(global_size[0] * global_size[1] * global_size[2]);
   return std::sqrt(global_sum / volume);
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
   int rank = 0, nproc = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -79,15 +81,18 @@ int main(int argc, char* argv[]) {
 
   // Build spectral stack (Domain + Decomposition + FFT + inbox-sized Field)
   pfc::sim::stacks::SpectralCPUStack stack(
-    pfc::domain::create(pfc::GridSize{{N, N, N}}, pfc::PhysicalOrigin{{0.0, 0.0, 0.0}}, pfc::GridSpacing{{dx, dx, dx}}),
-    rank, nproc);
+      pfc::domain::create(pfc::GridSize{{N, N, N}},
+                          pfc::PhysicalOrigin{{0.0, 0.0, 0.0}},
+                          pfc::GridSpacing{{dx, dx, dx}}),
+      rank, nproc);
 
   // Initialize field with same Gaussian initial condition
-  auto& u = stack.u();
+  auto &u = stack.u();
   const double cx = 0.5 * static_cast<double>(N - 1);
   const double sigma = static_cast<double>(N) / 6.0;
   u.apply([&](double x, double y, double z) {
-    const double r2 = (x - cx) * (x - cx) + (y - cx) * (y - cx) + (z - cx) * (z - cx);
+    const double r2 =
+        (x - cx) * (x - cx) + (y - cx) * (y - cx) + (z - cx) * (z - cx);
     return std::exp(-r2 / (2.0 * sigma * sigma));
   });
 
@@ -112,8 +117,8 @@ int main(int argc, char* argv[]) {
 
     l2_norm = compute_l2_norm(u);
     if (rank == 0 && step % 10 == 0) {
-      std::cout << "Step " << step << ", t = " << t
-                << ", L2 norm = " << l2_norm << "\n";
+      std::cout << "Step " << step << ", t = " << t << ", L2 norm = " << l2_norm
+                << "\n";
     }
   }
 

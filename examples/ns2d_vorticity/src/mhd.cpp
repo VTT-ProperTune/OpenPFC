@@ -187,8 +187,8 @@ int run(const Cli &cli, int rank, int nproc) {
 
   if (rank == 0) {
     std::cout << "mhd2d case=" << ns2d::mhd_case_name(cli.cse) << " N=" << cli.n
-              << " nu=" << cli.nu << " eta=" << cli.eta << " Pm="
-              << (cli.eta > 0.0 ? cli.nu / cli.eta : 0.0) << " dt=" << dt
+              << " nu=" << cli.nu << " eta=" << cli.eta
+              << " Pm=" << (cli.eta > 0.0 ? cli.nu / cli.eta : 0.0) << " dt=" << dt
               << " cfl_nominal=" << (dt / dx) << " integrator=IFRK4\n";
     std::cout << "signs: omega=-lap phi, j=-lap a, Lorentz=+B.grad j "
                  "(not Strauss RMHD)\n";
@@ -196,31 +196,26 @@ int run(const Cli &cli, int rank, int nproc) {
                  "dt*max(|zx|/dx+|zy|/dy); abort if that > 2\n";
   }
 
-  pfc::sim::stacks::SpectralCPUStack stack(ns2d::make_twopi_slab(cli.n), rank,
-                                           nproc, MPI_COMM_WORLD);
+  pfc::sim::stacks::SpectralCPUStack stack(ns2d::make_twopi_slab(cli.n), rank, nproc,
+                                           MPI_COMM_WORLD);
   ns2d::MHDSolver solver(stack, ns2d::MHDParams{cli.nu, cli.eta, dt, +1.0});
 
   if (cli.cse == ns2d::MHDCase::orszag_tang) {
     const double drive = cli.drive;
     solver.initialize(
-        [drive](double x, double y, double) {
-          return drive * ns2d::ot_omega(x, y);
-        },
+        [drive](double x, double y, double) { return drive * ns2d::ot_omega(x, y); },
         [](double x, double y, double) { return ns2d::ot_a(x, y); });
   } else if (cli.cse == ns2d::MHDCase::hydro_control) {
     solver.initialize(
         [](double x, double y, double) { return ns2d::ot_omega(x, y); },
         [](double, double, double) { return 0.0; });
   } else if (cli.cse == ns2d::MHDCase::force_free) {
-    solver.initialize([](double, double, double) { return 0.0; },
-                      [](double x, double y, double) {
-                        return ns2d::force_free_a(x, y);
-                      });
+    solver.initialize(
+        [](double, double, double) { return 0.0; },
+        [](double x, double y, double) { return ns2d::force_free_a(x, y); });
   } else if (cli.cse == ns2d::MHDCase::island_coalescence) {
     solver.initialize(
-        [](double x, double y, double) {
-          return ns2d::coalescence_omega(x, y);
-        },
+        [](double x, double y, double) { return ns2d::coalescence_omega(x, y); },
         [](double x, double y, double) { return ns2d::coalescence_a(x, y); });
   } else {
     solver.initialize(
@@ -254,8 +249,7 @@ int run(const Cli &cli, int rank, int nproc) {
       csv.open(cli.outdir + "/diagnostics.csv");
       write_csv_header(csv);
       std::ofstream meta(cli.outdir + "/run.json");
-      const int issue =
-          cli.cse == ns2d::MHDCase::island_coalescence ? 113 : 23;
+      const int issue = cli.cse == ns2d::MHDCase::island_coalescence ? 113 : 23;
       meta << "{\n"
            << "  \"issue\": " << issue << ",\n"
            << "  \"case\": \"" << ns2d::mhd_case_name(cli.cse) << "\",\n"
@@ -306,21 +300,19 @@ int run(const Cli &cli, int rank, int nproc) {
               << " me=" << d.me << " max|j|=" << d.max_abs_j
               << " max|w|=" << d.max_abs_omega << " divu=" << d.div_u_linf
               << " divb=" << d.div_b_linf << " budget=" << d.energy_budget_residual
-              << " cfl_nom=" << d.cfl_nominal
-              << " cfl_sum=" << d.cfl_elsasser_sum
+              << " cfl_nom=" << d.cfl_nominal << " cfl_sum=" << d.cfl_elsasser_sum
               << " wall_step_s=" << wall << "\n";
     if (csv) {
       csv << std::setprecision(16) << step << "," << d.time << "," << d.ke << ","
-          << d.me << ","
-          << d.energy << "," << d.cross_helicity << "," << d.a2 << ","
+          << d.me << "," << d.energy << "," << d.cross_helicity << "," << d.a2 << ","
           << d.enstrophy << "," << d.mean_sq_j << "," << d.max_abs_omega << ","
           << d.max_abs_j << "," << d.max_speed << "," << d.max_b << ","
           << d.div_u_linf << "," << d.div_b_linf << "," << d.dissipation << ","
           << d.energy_budget_residual << "," << d.cfl_nominal << "," << d.cfl_ub
           << "," << d.cfl_elsasser << "," << d.cfl_elsasser_mag << ","
-          << d.cfl_elsasser_sum << "," << d.max_z_inf << "," << d.max_z_mag
-          << "," << d.max_z_l1 << "," << d.mean_omega << "," << d.mean_a << ","
-          << wall << "\n";
+          << d.cfl_elsasser_sum << "," << d.max_z_inf << "," << d.max_z_mag << ","
+          << d.max_z_l1 << "," << d.mean_omega << "," << d.mean_a << "," << wall
+          << "\n";
     }
   };
 
@@ -348,9 +340,9 @@ int run(const Cli &cli, int rank, int nproc) {
   if (fail_closed(0, d0) != EXIT_SUCCESS) return EXIT_FAILURE;
   if (w.omega) dump_all(w, 0, solver);
 
-  const int diag_every =
-      cli.diag_every > 0 ? cli.diag_every
-                         : (cli.dump_every > 0 ? cli.dump_every : cli.steps);
+  const int diag_every = cli.diag_every > 0
+                             ? cli.diag_every
+                             : (cli.dump_every > 0 ? cli.dump_every : cli.steps);
 
   double wall_acc = 0.0;
   int timed = 0;
@@ -366,8 +358,7 @@ int run(const Cli &cli, int rank, int nproc) {
         (diag_every > 0 && step % diag_every == 0) || step == cli.steps;
     const bool want_dump =
         static_cast<bool>(w.omega) &&
-        ((cli.dump_every > 0 && step % cli.dump_every == 0) ||
-         step == cli.steps);
+        ((cli.dump_every > 0 && step % cli.dump_every == 0) || step == cli.steps);
     if (want_diag) {
       auto d = solver.diagnostics(MPI_COMM_WORLD);
       emit(step, d, wall);
@@ -382,8 +373,8 @@ int run(const Cli &cli, int rank, int nproc) {
   if (cli.verify) {
     const double T = solver.time();
     const double eta = cli.eta;
-    const double linf = solver.linf_a_error(
-        MPI_COMM_WORLD, [eta, T](double x, double y) {
+    const double linf =
+        solver.linf_a_error(MPI_COMM_WORLD, [eta, T](double x, double y) {
           return ns2d::force_free_a_exact(x, y, eta, T);
         });
     const bool pass = linf < 1.0e-9;

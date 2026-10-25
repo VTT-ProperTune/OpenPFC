@@ -154,8 +154,7 @@ int run(const Cli &cli, int rank, int nproc) {
 
   if (cli.cse == ns2d::Case::shear && rank == 0) {
     const double cells = ns2d::shear_cells_per_thickness(cli.n, cli.rho);
-    const double cells23 =
-        ns2d::shear_effective_cells_per_thickness(cli.n, cli.rho);
+    const double cells23 = ns2d::shear_effective_cells_per_thickness(cli.n, cli.rho);
     std::cout << "Minion-Brown unit-square shear rho=" << cli.rho
               << " thickness=1/rho=" << ns2d::shear_thickness(cli.rho)
               << " dx=" << dx << " cells/thickness=" << cells
@@ -217,9 +216,9 @@ int run(const Cli &cli, int rank, int nproc) {
 
   auto emit = [&](int step, const ns2d::Diagnostics &d, double wall_step,
                   double omega_linf) {
-    const double ke_ex =
-        (cli.cse == ns2d::Case::taylor_green) ? ns2d::taylor_green_ke(cli.nu, d.time)
-                                              : -1.0;
+    const double ke_ex = (cli.cse == ns2d::Case::taylor_green)
+                             ? ns2d::taylor_green_ke(cli.nu, d.time)
+                             : -1.0;
     const double ens_ex = (cli.cse == ns2d::Case::taylor_green)
                               ? ns2d::taylor_green_enstrophy(cli.nu, d.time)
                               : -1.0;
@@ -294,8 +293,9 @@ int run(const Cli &cli, int rank, int nproc) {
     constexpr double tol = 1.0e-9;
     const bool pass = linf < tol;
     if (rank == 0) {
-      std::cout << (pass ? "VERIFY PASS" : "VERIFY FAIL") << " taylor_green Linf="
-                << std::scientific << linf << " tol=" << tol << "\n";
+      std::cout << (pass ? "VERIFY PASS" : "VERIFY FAIL")
+                << " taylor_green Linf=" << std::scientific << linf << " tol=" << tol
+                << "\n";
     }
     return pass ? EXIT_SUCCESS : EXIT_FAILURE;
   }

@@ -41,8 +41,8 @@ struct FaceFlux {
 
 namespace detail {
 
-[[nodiscard]] inline SpectralPlane::Complex
-integrate_exp(double k, double a, double b) {
+[[nodiscard]] inline SpectralPlane::Complex integrate_exp(double k, double a,
+                                                          double b) {
   if (k == 0.0) return SpectralPlane::Complex(b - a, 0.0);
   const SpectralPlane::Complex ik(0.0, k);
   return (std::exp(ik * b) - std::exp(ik * a)) / ik;
@@ -84,8 +84,8 @@ face_flux(const SpectralPlane &plane,
     throw std::invalid_argument("ns2d: control-volume box is inverted");
   }
   const auto gs = plane.gsize();
-  const double ntot =
-      static_cast<double>(gs[0]) * static_cast<double>(gs[1]) * static_cast<double>(gs[2]);
+  const double ntot = static_cast<double>(gs[0]) * static_cast<double>(gs[1]) *
+                      static_cast<double>(gs[2]);
   const double inv = 1.0 / ntot;
   detail::FaceAccum acc;
   pfc::fft::kspace::for_each_kpoint(
@@ -125,15 +125,14 @@ modal_div_amplitude(const SpectralPlane &plane,
     throw std::invalid_argument("ns2d: velocity hat size does not match the plane");
   }
   const auto gs = plane.gsize();
-  const double ntot =
-      static_cast<double>(gs[0]) * static_cast<double>(gs[1]) * static_cast<double>(gs[2]);
+  const double ntot = static_cast<double>(gs[0]) * static_cast<double>(gs[1]) *
+                      static_cast<double>(gs[2]);
   const auto &kx = plane.kx_odd();
   const auto &ky = plane.ky_odd();
   double max_amp = 0.0;
   for (std::size_t i = 0; i < u_hat.size(); ++i) {
-    const auto div =
-        u_hat[i] * SpectralPlane::Complex(0.0, kx[i]) +
-        v_hat[i] * SpectralPlane::Complex(0.0, ky[i]);
+    const auto div = u_hat[i] * SpectralPlane::Complex(0.0, kx[i]) +
+                     v_hat[i] * SpectralPlane::Complex(0.0, ky[i]);
     max_amp = std::max(max_amp, std::abs(div) / ntot);
   }
   return max_amp;
@@ -150,10 +149,10 @@ domain_divergence(const SpectralPlane &plane,
   }
   const auto gs = plane.gsize();
   const auto sp = plane.spacing();
-  const double ntot =
-      static_cast<double>(gs[0]) * static_cast<double>(gs[1]) * static_cast<double>(gs[2]);
-  const double area = (static_cast<double>(gs[0]) * sp[0]) *
-                      (static_cast<double>(gs[1]) * sp[1]);
+  const double ntot = static_cast<double>(gs[0]) * static_cast<double>(gs[1]) *
+                      static_cast<double>(gs[2]);
+  const double area =
+      (static_cast<double>(gs[0]) * sp[0]) * (static_cast<double>(gs[1]) * sp[1]);
   const auto &kx = plane.kx_odd();
   const auto &ky = plane.ky_odd();
   double value = 0.0;

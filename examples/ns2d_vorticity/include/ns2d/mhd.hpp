@@ -100,10 +100,10 @@ public:
 
   MHDSolver(pfc::sim::stacks::SpectralCPUStack &stack, MHDParams params)
       : m_stack(&stack), m_plane(stack.fft(), stack.u()), m_params(params),
-        m_a(pfc::data::field_from_inbox<double>(
-            stack.u().domain(), stack.fft().get_inbox_bounds())),
-        m_j(pfc::data::field_from_inbox<double>(
-            stack.u().domain(), stack.fft().get_inbox_bounds())) {
+        m_a(pfc::data::field_from_inbox<double>(stack.u().domain(),
+                                                stack.fft().get_inbox_bounds())),
+        m_j(pfc::data::field_from_inbox<double>(stack.u().domain(),
+                                                stack.fft().get_inbox_bounds())) {
     if (params.nu < 0.0 || params.eta < 0.0 || params.dt <= 0.0) {
       throw std::invalid_argument("mhd2d: nu, eta >= 0 and dt > 0");
     }
@@ -159,8 +159,7 @@ public:
     return m_nw1;
   }
 
-  template <class Fw, class Fa>
-  void initialize(Fw &&fw, Fa &&fa) {
+  template <class Fw, class Fa> void initialize(Fw &&fw, Fa &&fa) {
     m_stack->u().apply(std::forward<Fw>(fw));
     m_a.apply(std::forward<Fa>(fa));
     m_time = 0.0;
@@ -216,9 +215,8 @@ public:
         m_plane, m_w_hat, m_a_hat, m_ew_dt, m_ew_half, m_ea_dt, m_ea_half,
         m_params.dt,
         [&](const std::vector<Complex> &wh, const std::vector<Complex> &ah,
-            std::vector<Complex> &nw, std::vector<Complex> &na) {
-          nonlinear_from_hat(wh, ah, nw, na);
-        },
+            std::vector<Complex> &nw,
+            std::vector<Complex> &na) { nonlinear_from_hat(wh, ah, nw, na); },
         m_nw1, m_na1, m_nw2, m_na2, m_nw3, m_na3, m_nw4, m_na4, m_sw, m_sa);
     m_plane.zero_dc(m_a_hat);
     m_plane.fft().backward(m_w_hat, m_stack->u().vec());
@@ -307,8 +305,7 @@ public:
     d.max_b = g_maxb;
     d.div_u_linf = g_du;
     d.div_b_linf = g_db;
-    d.dissipation =
-        m_params.nu * (2.0 * d.enstrophy) + m_params.eta * d.mean_sq_j;
+    d.dissipation = m_params.nu * (2.0 * d.enstrophy) + m_params.eta * d.mean_sq_j;
     d.cfl_nominal = m_params.dt / dx;
     d.cfl_ub = m_params.dt * std::max(g_maxu, g_maxb) / dx;
     d.max_z_inf = g_zinf;
@@ -319,8 +316,7 @@ public:
     d.cfl_elsasser_sum = m_params.dt * g_zsum;
     if (m_have_prev_energy && d.time > m_prev_time) {
       const double dedt = (d.energy - m_prev_energy) / (d.time - m_prev_time);
-      d.energy_budget_residual =
-          dedt + 0.5 * (d.dissipation + m_prev_dissipation);
+      d.energy_budget_residual = dedt + 0.5 * (d.dissipation + m_prev_dissipation);
     } else {
       d.energy_budget_residual = 0.0;
     }
@@ -331,8 +327,7 @@ public:
     return d;
   }
 
-  [[nodiscard]] double linf_omega_error(MPI_Comm comm,
-                                        const auto &exact) const {
+  [[nodiscard]] double linf_omega_error(MPI_Comm comm, const auto &exact) const {
     double local = 0.0;
     m_stack->u().for_each_owned([&](double x, double y, double /*z*/, double w) {
       local = std::max(local, std::abs(w - exact(x, y)));

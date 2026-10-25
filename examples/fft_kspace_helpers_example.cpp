@@ -28,7 +28,9 @@ void example_old_way() {
   std::cout << "\n=== OLD WAY (Manual Calculation - 30 lines) ===\n\n";
 
   // Setup domain (typical example parameters)
-  auto domain = domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({two_pi / 8.0, two_pi / 8.0, two_pi / 8.0}));
+  auto domain =
+      domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({two_pi / 8.0, two_pi / 8.0, two_pi / 8.0}));
   auto size = domain::get_size(domain);
   auto spacing = domain::get_spacing(domain);
 
@@ -94,7 +96,9 @@ void example_new_way() {
   std::cout << "\n=== NEW WAY (K-Space Helpers - Clean & Clear) ===\n\n";
 
   // Setup domain (same as above)
-  auto domain = domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({two_pi / 8.0, two_pi / 8.0, two_pi / 8.0}));
+  auto domain =
+      domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({two_pi / 8.0, two_pi / 8.0, two_pi / 8.0}));
   auto size = domain::get_size(domain);
 
   // Simulate FFT outbox bounds
@@ -179,7 +183,9 @@ void example_benefits() {
 void example_higher_order_operators() {
   std::cout << "\n=== HIGHER-ORDER OPERATORS ===\n\n";
 
-  auto domain = domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({0.1, 0.1, 0.1}));
+  auto domain =
+      domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({0.1, 0.1, 0.1}));
   auto size = domain::get_size(domain);
   auto [fx, fy, fz] = fft::kspace::k_frequency_scaling(domain);
 

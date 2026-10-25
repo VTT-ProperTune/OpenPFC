@@ -29,8 +29,7 @@
 namespace {
 
 struct PiecewiseStiffRhs {
-  void operator()(double t, std::vector<double> &u,
-                  std::vector<double> &du) const {
+  void operator()(double t, std::vector<double> &u, std::vector<double> &du) const {
     const double k = (t < 0.15) ? 50.0 : 1.0;
     for (std::size_t i = 0; i < u.size(); ++i) {
       du[i] = -k * u[i];
@@ -48,8 +47,8 @@ int main(int argc, char **argv) {
   using pfc::sim::AdaptiveControlMode;
   using pfc::sim::AdaptiveTimeController;
   using pfc::sim::StepController;
-  using pfc::sim::steppers::EmbeddedRKStepper;
   using pfc::sim::steppers::commit_step_attempt;
+  using pfc::sim::steppers::EmbeddedRKStepper;
   using pfc::sim::steppers::make_embedded_rk23;
 
   const auto run = [](StepController kind, const char *name) {

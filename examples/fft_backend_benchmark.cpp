@@ -55,12 +55,9 @@ constexpr int NUM_ITERATIONS = 10; // Number of iterations for averaging
 
 static const char *backend_label(fft::Backend backend) {
   switch (backend) {
-  case fft::Backend::FFTW:
-    return "FFTW (CPU)";
-  case fft::Backend::CUDA:
-    return "CUDA (GPU)";
-  case fft::Backend::HIP:
-    return "HIP (GPU)";
+  case fft::Backend::FFTW: return "FFTW (CPU)";
+  case fft::Backend::CUDA: return "CUDA (GPU)";
+  case fft::Backend::HIP: return "HIP (GPU)";
   }
   return "unknown";
 }
@@ -170,8 +167,7 @@ double benchmark_fft(fft::Backend backend, const Domain &world,
     auto gpu = fft::create_cuda(decomp, rank_id);
     std::cout << "Real data size: " << gpu.size_inbox() << " (local)\n";
     std::cout << "Complex data size: " << gpu.size_outbox() << " (local)\n";
-    return benchmark_gpu_fft<backend::CUDATag>(gpu,
-                                               [] { cudaDeviceSynchronize(); });
+    return benchmark_gpu_fft<backend::CUDATag>(gpu, [] { cudaDeviceSynchronize(); });
 #else
     throw std::runtime_error("CUDA support not compiled in");
 #endif
@@ -182,8 +178,7 @@ double benchmark_fft(fft::Backend backend, const Domain &world,
     auto gpu = fft::create_hip(decomp, rank_id, MPI_COMM_WORLD);
     std::cout << "Real data size: " << gpu.size_inbox() << " (local)\n";
     std::cout << "Complex data size: " << gpu.size_outbox() << " (local)\n";
-    return benchmark_gpu_fft<backend::HIPTag>(gpu,
-                                              [] { hipDeviceSynchronize(); });
+    return benchmark_gpu_fft<backend::HIPTag>(gpu, [] { hipDeviceSynchronize(); });
 #else
     throw std::runtime_error("HIP spectral support not compiled in");
 #endif
@@ -208,8 +203,7 @@ static void print_gpu_summary(const char *gpu_name, const char *config_key,
     std::cout << "GPU is " << speedup << "x faster than CPU\n";
   } else {
     std::cout << "CPU is " << (1.0 / speedup) << "x faster than GPU\n";
-    std::cout
-        << "  (Note: GPU may be slower for small problems due to overhead)\n";
+    std::cout << "  (Note: GPU may be slower for small problems due to overhead)\n";
   }
 
   size_t total_points = static_cast<size_t>(GRID_SIZE) * GRID_SIZE * GRID_SIZE;
@@ -217,10 +211,8 @@ static void print_gpu_summary(const char *gpu_name, const char *config_key,
   double gpu_throughput = total_points / (gpu_time_ms * 1e-3) / 1e6;
 
   std::cout << "\nThroughput:\n";
-  std::cout << "  CPU: " << std::setprecision(1) << cpu_throughput
-            << " Mpoints/s\n";
-  std::cout << "  GPU: " << std::setprecision(1) << gpu_throughput
-            << " Mpoints/s\n";
+  std::cout << "  CPU: " << std::setprecision(1) << cpu_throughput << " Mpoints/s\n";
+  std::cout << "  GPU: " << std::setprecision(1) << gpu_throughput << " Mpoints/s\n";
 
   std::cout << "\n========================================\n";
   std::cout << "Recommendation:\n";
@@ -252,9 +244,8 @@ int main(int argc, char *argv[]) {
   }
 
   try {
-    auto domain =
-        domain::from_bounds({GRID_SIZE, GRID_SIZE, GRID_SIZE},
-                                          {1.0, 1.0, 1.0}, {128.0, 128.0, 128.0});
+    auto domain = domain::from_bounds({GRID_SIZE, GRID_SIZE, GRID_SIZE},
+                                      {1.0, 1.0, 1.0}, {128.0, 128.0, 128.0});
 
     auto decomp = decomposition::create(domain, size);
 

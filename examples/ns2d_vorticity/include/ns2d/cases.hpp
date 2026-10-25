@@ -24,12 +24,9 @@ enum class Case { taylor_green, shear, two_mode };
 
 [[nodiscard]] inline const char *case_name(Case c) noexcept {
   switch (c) {
-  case Case::taylor_green:
-    return "taylor_green";
-  case Case::shear:
-    return "shear";
-  case Case::two_mode:
-    return "two_mode";
+  case Case::taylor_green: return "taylor_green";
+  case Case::shear: return "shear";
+  case Case::two_mode: return "two_mode";
   }
   return "unknown";
 }
@@ -106,8 +103,8 @@ enum class Case { taylor_green, shear, two_mode };
     const double c = std::cosh(z);
     return 1.0 / (c * c);
   };
-  const double dudy = (y <= 0.5) ? rho * sech2(rho * (y - 0.25))
-                                 : -rho * sech2(rho * (0.75 - y));
+  const double dudy =
+      (y <= 0.5) ? rho * sech2(rho * (y - 0.25)) : -rho * sech2(rho * (0.75 - y));
   return 2.0 * pfc::pi * eps * std::cos(2.0 * pfc::pi * x) - dudy;
 }
 
@@ -124,8 +121,8 @@ enum class Case { taylor_green, shear, two_mode };
   return static_cast<double>(n) / rho;
 }
 
-[[nodiscard]] inline double shear_effective_cells_per_thickness(int n,
-                                                                double rho) noexcept {
+[[nodiscard]] inline double
+shear_effective_cells_per_thickness(int n, double rho) noexcept {
   return (2.0 / 3.0) * static_cast<double>(n) / rho;
 }
 
