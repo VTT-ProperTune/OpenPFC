@@ -34,6 +34,10 @@
  */
 
 #pragma once
+// Deliberate app-owned copy: these are solidification-model rules, not a
+// physics-agnostic OpenPFC API. Independently buildable apps cannot include a
+// sibling app. Share them only after extraction to their model's software owner;
+// until then retain parity with the other solidification app's boundary rules.
 
 #include <algorithm>
 #include <cmath>
