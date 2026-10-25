@@ -48,6 +48,10 @@ struct IFFTQueries {
   virtual ~IFFTQueries() = default;
 
   virtual void reset_fft_time() = 0;
+  /// Rank-local accumulated elapsed seconds since reset. HeFFTe uses
+  /// MPI_Wtime(); direct local backends use a steady clock.
+  /// Device backends need not synchronize solely for timing; this is not
+  /// necessarily elapsed GPU kernel time. No MPI reduction is performed.
   [[nodiscard]] virtual double get_fft_time() const = 0;
 
   /** @brief Local real-buffer element count required by `forward`/`backward`. */
@@ -60,14 +64,20 @@ struct IFFTQueries {
 
   /// Local real-space index box (inclusive corners) for this rank.
   [[nodiscard]] virtual Box3i get_inbox_bounds() const = 0;
-  /// Local Fourier-space index box for this rank.
+  /// Local r2c Fourier-space index box (inclusive corners).
+  /// Values use x-fastest storage within this box; the reduced axis stores
+  /// only indices 0..N_axis/2. Ownership may differ from the real inbox.
   [[nodiscard]] virtual Box3i get_outbox_bounds() const = 0;
 };
 
 /// Host-container FFT (`std::vector` / host Field). Device backends are not this.
 struct IHostFFT : IFFTQueries {
   /**
-   * @brief Forward real-to-complex transform on this rank's local boxes.
+   * @brief Collective, unscaled real-to-complex transform on the plan communicator.
+   *
+   * Every rank must call the same transform in the same order with valid
+   * local buffers. The output uses get_outbox_bounds(), with x-fastest
+   * ordering; its partition can differ from the input box.
    *
    * @param in Real buffer; must satisfy `in.size() == size_inbox()`
    * @param out Complex buffer; must satisfy `out.size() == size_outbox()`
@@ -77,7 +87,11 @@ struct IHostFFT : IFFTQueries {
   virtual void forward(const RealVector &in, ComplexVector &out) = 0;
 
   /**
-   * @brief Backward complex-to-real transform on this rank's local boxes.
+   * @brief Collective complex-to-real transform, scaled by 1/N globally.
+   *
+   * N is the product of the full real-grid dimensions (not the local size).
+   * This normalization makes backward(forward(x)) recover x to roundoff.
+   * All plan ranks must participate in the same transform order.
    *
    * @param in Complex buffer; must satisfy `in.size() == size_outbox()`
    * @param out Real buffer; must satisfy `out.size() == size_inbox()`
@@ -94,13 +108,26 @@ struct IHostFFT : IFFTQueries {
  * matching runtime memory-space header so `memory_space_to_backend_t` is
  * defined. Double is the interface precision; float overloads stay on the
  * concrete `FFT_Impl`.
+ *
+ * Both transforms are collective on the plan communicator. forward() is
+ * unscaled; backward() applies 1/N for the full real grid. Buffers use the
+ * rank-local inbox/outbox shapes and x-fastest storage. Size mismatches throw
+ * std::invalid_argument locally; this is not an MPI vote.
+ *
+ * This interface has no stream parameter or asynchronous completion token.
+ * The HeFFTe implementation uses its plan's default stream and adds no explicit
+ * device-wide synchronization here. Order external producers/consumers on that
+ * stream or synchronize explicitly before cross-stream access. Keep buffers
+ * alive until the backend has completed their device work.
  */
 template <typename MemorySpace> struct IDeviceFFT : IFFTQueries {
   using backend_tag = memory_space_to_backend_t<MemorySpace>;
   using RealBuffer = core::DataBuffer<backend_tag, double>;
   using ComplexBuffer = core::DataBuffer<backend_tag, std::complex<double>>;
 
+  /// Collective unscaled r2c; input/output sizes are size_inbox()/size_outbox().
   virtual void forward(const RealBuffer &in, ComplexBuffer &out) = 0;
+  /// Collective c2r with full-grid 1/N scaling; sizes reverse the forward pair.
   virtual void backward(const ComplexBuffer &in, RealBuffer &out) = 0;
 };
 
@@ -115,7 +142,7 @@ template <typename MemorySpace> struct IDeviceFFT : IFFTQueries {
 /** @brief Clear accumulated FFT timing (preferred over `reset_fft_time()`). */
 inline void reset_fft_time(IFFTQueries &fft) noexcept { fft.reset_fft_time(); }
 
-/** @brief Accumulated FFT time since last reset (preferred over `get_fft_time()`).
+/** @brief Rank-local accumulated elapsed seconds since reset.
  */
 [[nodiscard]] inline double get_fft_time(const IFFTQueries &fft) noexcept {
   return fft.get_fft_time();
