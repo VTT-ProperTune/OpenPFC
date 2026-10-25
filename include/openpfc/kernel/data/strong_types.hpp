@@ -125,7 +125,7 @@
  * - Optimizes away completely
  *
  * @see core/types.hpp for raw type definitions (Int3, Real3)
- * @see core/world.hpp for usage in World construction
+ * @see domain.hpp for usage in Domain construction
  *
  * @author OpenPFC Development Team
  * @date 2025-11-24

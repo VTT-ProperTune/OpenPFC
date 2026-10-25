@@ -101,7 +101,7 @@ std::array<std::vector<T>, 6> allocate_face_halos(const FaceHaloCounts &c) {
 }
 
 /**
- * @brief Convenience: counts from subworld size + allocate.
+ * @brief Convenience: counts from owned-box size + allocate.
  */
 template <typename T>
 std::array<std::vector<T>, 6>

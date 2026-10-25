@@ -27,11 +27,7 @@
  * - `to_coords(idx)  = origin + idx * spacing`
  * - `to_indices(xyz) = lround((xyz - origin) / spacing)`  (nearest-grid-point)
  *
- * This header is additive in M1.2: nothing migrates onto it yet. `World`,
- * `csys`, and `world_*` remain untouched until M1.3–M1.5.
- *
- * @see box3i.hpp for the canonical index box
- * @see world.hpp for the (to-be-deprecated) `World` it replaces
+ * @see box3i.hpp for inclusive global index boxes
  */
 
 #pragma once

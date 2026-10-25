@@ -50,7 +50,7 @@
  * All functions are inline, noexcept, and zero-cost abstractions that compile
  * to identical machine code as the manual implementation.
  *
- * @see kernel/data/world.hpp for World coordinate system
+ * @see kernel/data/domain.hpp for the physical coordinate system
  * @see fft.hpp for FFT interface
  * @see constants.hpp for mathematical constants (two_pi)
  *
@@ -78,7 +78,7 @@ namespace pfc::fft::kspace {
  * multiplications by wave vectors in Fourier space. The frequency scaling
  * establishes the relationship between grid indices and physical wave numbers.
  *
- * @param world Simulation world containing grid size and spacing
+ * @param domain Simulation world containing grid size and spacing
  * @return Array of frequency scaling factors [fx, fy, fz] in rad/unit_length
  *
  * @note This is a zero-cost abstraction (inline, noexcept)
@@ -86,8 +86,9 @@ namespace pfc::fft::kspace {
  * @note Replaces: `double fx = 2.0 * pi / (spacing[0] * size[0]);`
  *
  * @code
- * auto domain = domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({0.1, 0.1, 0.1}));
- * auto [fx, fy, fz] = k_frequency_scaling(domain);
+ * auto domain = domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0,
+ * 0.0}), GridSpacing({0.1, 0.1, 0.1})); auto [fx, fy, fz] =
+ * k_frequency_scaling(domain);
  * // fx = fy = fz = 2π / (0.1 * 128) ≈ 0.490873...
  * @endcode
  *

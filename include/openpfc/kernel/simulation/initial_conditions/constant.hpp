@@ -20,7 +20,7 @@
  * @endcode
  *
  * @see field_modifier.hpp for base class
- * @see simulator.hpp for how initial conditions are applied
+ * @see apply_field_modifier.hpp for applying initial conditions
  *
  * @author OpenPFC Contributors
  * @date 2025
@@ -75,8 +75,8 @@ public:
    *
    * 0.2 path: no Model / FFT. @p field must have `box` voxel count.
    */
-  void apply(pfc::field::FieldOutput<double> field, const Domain &domain, const Box3i &box,
-             double time = 0.0) override {
+  void apply(pfc::field::FieldOutput<double> field, const Domain &domain,
+             const Box3i &box, double time = 0.0) override {
     (void)time;
     pfc::field::apply(field, domain, box,
                       [n0 = m_n0](const pfc::Real3 &) { return n0; });

@@ -46,8 +46,8 @@
 
 #include <cstdint>
 #include <map>
-#include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_neighbors.hpp>
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>
@@ -146,7 +146,7 @@ create_send_halo(const decomposition::Decomposition &decomp, int rank,
   Int3 send_upper = local_upper;
 
   // Adjust boundaries based on direction
-  // Loops use exclusive end: coord in [lo, hi_excl). World::get_upper() is
+  // Loops use exclusive end: coord in [lo, hi_excl). Box3i::high is
   // inclusive, so hi_excl for the owned box is local_upper + 1. For a positive
   // face (e.g. +X), the last halo_width owned cells are
   // [local_upper - halo_width + 1, local_upper] inclusive →
