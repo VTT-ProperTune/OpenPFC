@@ -116,6 +116,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `polynomial_differentiation` | `polynomials/differentiation/model.cpp` | Programs 11 and 18: Chebyshev matrix versus public LocalFFT coefficients |
 | `polynomial_regularity` | `polynomials/regularity/model.cpp` | Program 12: four regularity classes on Chebyshev grids |
 | `polynomial_integration` | `polynomials/integration/model.cpp` | Program 30: antiderivative boundary problem with native GMRES |
+| `polynomial_boundary_values` | `polynomials/boundary-values/model.cpp` | Programs 13, 32 and 33: homogeneous, lifted and mixed boundary conditions with GMRES |
 
 ## Research prototypes
 

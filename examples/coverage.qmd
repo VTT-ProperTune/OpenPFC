@@ -16,15 +16,15 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 [Follow what is taught, what is adapted, and what still needs a chapter.]{.lesson-deck}
 :::
 
-There are 55 declared runnable example targets and
-25 Quarto teaching chapters. The table includes older programs
+There are 56 declared runnable example targets and
+26 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
 ## Spectral Methods in MATLAB
 
 The [author's collection](https://people.maths.ox.ac.uk/trefethen/spectral.html)
-contains forty programs. Currently 14 have a corresponding lesson.
+contains forty programs. Currently 17 have a corresponding lesson.
 A link means that the lesson declares coverage of that experiment; the
 scope column states changes in method or presentation. It does not mean
 an unmodified MATLAB program was translated line for line. Pending rows
@@ -44,7 +44,7 @@ remain in the inventory while applicability and implementation are assessed.
 | [10](https://people.maths.ox.ac.uk/trefethen/p10.m) | polynomials and corresponding equipotential curves | [Read the lesson](polynomials/nodal-polynomials/index.qmd). Original signed nodal products and complex-plane magnitude contours, evaluated directly from their roots. |
 | [11](https://people.maths.ox.ac.uk/trefethen/p11.m) | Chebyshev differentation of a smooth function | [Read the lesson](polynomials/differentiation/index.qmd). Original smooth profile at degrees 10 and 20, differentiated with the Chebyshev collocation matrix. |
 | [12](https://people.maths.ox.ac.uk/trefethen/p12.m) | accuracy of Chebyshev spectral differentiation | [Read the lesson](polynomials/regularity/index.qmd). All four original profiles and degrees 1..50, with limiting bump values handled explicitly. |
-| [13](https://people.maths.ox.ac.uk/trefethen/p13.m) | solve linear BVP u_xx = exp(4x), u(-1)=u(1)=0 | Pending assessment and implementation. |
+| [13](https://people.maths.ox.ac.uk/trefethen/p13.m) | solve linear BVP u_xx = exp(4x), u(-1)=u(1)=0 | [Read the lesson](polynomials/boundary-values/index.qmd). Original degree-16 homogeneous Dirichlet collocation problem, solved with native GMRES. |
 | [14](https://people.maths.ox.ac.uk/trefethen/p14.m) | solve nonlinear BVP u_xx = exp(u), u(-1)=u(1)=0 | Pending assessment and implementation. |
 | [15](https://people.maths.ox.ac.uk/trefethen/p15.m) | solve eigenvalue BVP u_xx = lambda*u, u(-1)=u(1)=0 | Pending assessment and implementation. |
 | [16](https://people.maths.ox.ac.uk/trefethen/p16.m) | Poisson eq. on [-1,1]x[-1,1] with u=0 on boundary | Pending assessment and implementation. |
@@ -63,8 +63,8 @@ remain in the inventory while applicability and implementation are assessed.
 | [29](https://people.maths.ox.ac.uk/trefethen/p29.m) | solve Poisson equation on the unit disk | Pending assessment and implementation. |
 | [30](https://people.maths.ox.ac.uk/trefethen/p30.m) | spectral integration, ODE style (compare p12.m) | [Read the lesson](polynomials/integration/index.qmd). Original antiderivative collocation experiment for four profiles and degrees 1..50; native GMRES replaces the explicit inverse. |
 | [31](https://people.maths.ox.ac.uk/trefethen/p31.m) | gamma function via complex integral, trapezoid rule | Pending assessment and implementation. |
-| [32](https://people.maths.ox.ac.uk/trefethen/p32.m) | solve u_xx = exp(4x), u(-1)=0, u(1)=1 (compare p13.m) | Pending assessment and implementation. |
-| [33](https://people.maths.ox.ac.uk/trefethen/p33.m) | solve linear BVP u_xx = exp(4x), u'(-1)=u(1)=0 | Pending assessment and implementation. |
+| [32](https://people.maths.ox.ac.uk/trefethen/p32.m) | solve u_xx = exp(4x), u(-1)=0, u(1)=1 (compare p13.m) | [Read the lesson](polynomials/boundary-values/index.qmd). Original nonzero Dirichlet problem with an affine lift and native GMRES. |
+| [33](https://people.maths.ox.ac.uk/trefethen/p33.m) | solve linear BVP u_xx = exp(4x), u'(-1)=u(1)=0 | [Read the lesson](polynomials/boundary-values/index.qmd). Original mixed Neumann/Dirichlet problem with a derivative row and native GMRES. |
 | [34](https://people.maths.ox.ac.uk/trefethen/p34.m) | Allen-Cahn eq. u_t = eps*u_xx+u-u^3, u(-1)=-1, u(1)=1 | Pending assessment and implementation. |
 | [35](https://people.maths.ox.ac.uk/trefethen/p35.m) | Allen-Cahn eq. as in p34.m, but with boundary condition | Pending assessment and implementation. |
 | [36](https://people.maths.ox.ac.uk/trefethen/p36.m) | Laplace eq. on [-1,1]x[-1,1] with nonzero BCs | Pending assessment and implementation. |
@@ -117,6 +117,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `ns2d_vorticity` | Pending conversion. |
 | `periodic_collocation` | [Read the lesson](differentiation/collocation/index.qmd) |
 | `periodic_differentiation` | [Read the lesson](differentiation/periodic/index.qmd) |
+| `polynomial_boundary_values` | [Read the lesson](polynomials/boundary-values/index.qmd) |
 | `polynomial_differentiation` | [Read the lesson](polynomials/differentiation/index.qmd) |
 | `polynomial_integration` | [Read the lesson](polynomials/integration/index.qmd) |
 | `polynomial_interpolation` | [Read the lesson](polynomials/interpolation/index.qmd) |
@@ -159,7 +160,7 @@ fixed-step restart does not establish an adaptive restart contract.
 | JSON/TOML validation and application sessions | Pending a teaching chapter. |
 | field output and visualization | Pending a teaching chapter. |
 | checkpoints and restart | Pending a teaching chapter. |
-| Krylov and nonlinear solves | [integration](polynomials/integration/index.qmd) |
+| Krylov and nonlinear solves | [integration](polynomials/integration/index.qmd), [boundary-values](polynomials/boundary-values/index.qmd) |
 | geometric multigrid | Pending a teaching chapter. |
 | microelasticity and homogenization | Pending a teaching chapter. |
 | coupling and transactional attempts | Pending a teaching chapter. |

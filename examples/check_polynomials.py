@@ -168,6 +168,36 @@ def check_integration(binary, directory):
             assert abs(value - integral) < 2e-11
 
 
+def check_boundaries(binary, directory):
+    run(binary, directory)
+    data = rows(directory / "results/solutions.csv")
+    assert len(data) == 3 * (17 + 401)
+    for boundary in ("zero", "lifted", "mixed"):
+        for row in (r for r in data if r["boundary"] == boundary):
+            x, value = float(row["x"]), float(row["u"])
+            if boundary == "mixed":
+                exact = (
+                    math.exp(4 * x) - 4 * math.exp(-4) * (x - 1) - math.exp(4)
+                ) / 16
+            else:
+                exact = (math.exp(4 * x) - x * math.sinh(4) - math.cosh(4)) / 16
+                if boundary == "lifted":
+                    exact += (x + 1) / 2
+            assert abs(value - exact) < 1e-8, (boundary, x, value, exact)
+        nodes = [r for r in data if r["boundary"] == boundary and r["kind"] == "node"]
+        assert abs(float(nodes[0]["u"]) - (1 if boundary == "lifted" else 0)) < 1e-12
+        if boundary == "mixed":
+            derivative = lagrange(
+                [float(r["x"]) for r in nodes],
+                [float(r["u"]) for r in nodes],
+                -1,
+                derivative=True,
+            )
+            assert abs(derivative) < 1e-8
+        else:
+            assert abs(float(nodes[-1]["u"])) < 1e-12
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -183,6 +213,7 @@ def main():
             "polynomial_differentiation",
             "polynomial_regularity",
             "polynomial_integration",
+            "polynomial_boundary_values",
         ],
     )
     args = parser.parse_args()
@@ -240,6 +271,16 @@ def main():
             check_integration(bin_dir / "polynomial_integration", root / "valid")
             run(
                 bin_dir / "polynomial_integration",
+                root / "invalid",
+                parameters={"n": 0, "sizes": [0]},
+                success=False,
+            )
+        if args.case in (None, "polynomial_boundary_values"):
+            root = base / "polynomial_boundary_values"
+            root.mkdir()
+            check_boundaries(bin_dir / "polynomial_boundary_values", root / "valid")
+            run(
+                bin_dir / "polynomial_boundary_values",
                 root / "invalid",
                 parameters={"n": 0, "sizes": [0]},
                 success=False,

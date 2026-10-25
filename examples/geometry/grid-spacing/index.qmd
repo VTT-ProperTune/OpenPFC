@@ -52,7 +52,7 @@ Keep every nonperiodic axis at least two samples wide in this experiment.
 Periodicity is geometric metadata here. It does not choose a derivative,
 exchange a halo, or impose a boundary equation by itself. Compare the
 [periodic heat stencil](../../heat/finite-differences/index.qmd) with
-explicit boundary equations.
+[explicit boundary equations](../../polynomials/boundary-values/index.qmd).
 The regression checks all ten coordinates against independent interval
 counts. The exact contract is in the public
 [domain header](https://github.com/VTT-ProperTune/OpenPFC/blob/master/include/openpfc/kernel/data/domain.hpp).

@@ -305,6 +305,16 @@
       ]
     },
     {
+      "target": "polynomial_boundary_values",
+      "source": "polynomials/boundary-values/model.cpp",
+      "chapter": "polynomials/boundary-values/index.qmd",
+      "capabilities": [
+        "gmres",
+        "boundary-conditions",
+        "chebyshev-reference"
+      ]
+    },
+    {
       "target": "polynomial_differentiation",
       "source": "polynomials/differentiation/model.cpp",
       "chapter": "polynomials/differentiation/index.qmd",
@@ -531,7 +541,7 @@
       "program": 13,
       "title": "solve linear BVP u_xx = exp(4x), u(-1)=u(1)=0",
       "source": "https://people.maths.ox.ac.uk/trefethen/p13.m",
-      "chapter": null,
+      "chapter": "polynomials/boundary-values/index.qmd",
       "scope": "Original degree-16 homogeneous Dirichlet collocation problem, solved with native GMRES."
     },
     {
@@ -664,14 +674,14 @@
       "program": 32,
       "title": "solve u_xx = exp(4x), u(-1)=0, u(1)=1 (compare p13.m)",
       "source": "https://people.maths.ox.ac.uk/trefethen/p32.m",
-      "chapter": null,
+      "chapter": "polynomials/boundary-values/index.qmd",
       "scope": "Original nonzero Dirichlet problem with an affine lift and native GMRES."
     },
     {
       "program": 33,
       "title": "solve linear BVP u_xx = exp(4x), u'(-1)=u(1)=0",
       "source": "https://people.maths.ox.ac.uk/trefethen/p33.m",
-      "chapter": null,
+      "chapter": "polynomials/boundary-values/index.qmd",
       "scope": "Original mixed Neumann/Dirichlet problem with a derivative row and native GMRES."
     },
     {
@@ -855,7 +865,8 @@
         "scalar_root.hpp"
       ],
       "chapters": [
-        "polynomials/integration/index.qmd"
+        "polynomials/integration/index.qmd",
+        "polynomials/boundary-values/index.qmd"
       ]
     },
     {

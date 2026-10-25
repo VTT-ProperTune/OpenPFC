@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Explain homogeneous, lifted and mixed boundary equations with the same collocation operator. Check entire fields and exact boundary constraints through independent formulas.
+
 - Teach integration as a first-order boundary problem solved through native GMRES. Check polynomial and nonpolynomial integrals independently and expose quadrature weights.
 
 - Connect finite smoothness, analyticity and approximation error on a finite interval. Validate complete error tables against independent nodal differentiation.
