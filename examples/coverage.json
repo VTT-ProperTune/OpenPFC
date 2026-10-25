@@ -265,6 +265,17 @@
       ]
     },
     {
+      "target": "chebyshev_wave_square",
+      "source": "waves/chebyshev-square/model.cpp",
+      "chapter": "waves/chebyshev-square/index.qmd",
+      "capabilities": [
+        "local-fft",
+        "chebyshev-reference",
+        "tensor-operators",
+        "leapfrog"
+      ]
+    },
+    {
       "target": "checkpoint_restart",
       "source": "output/checkpoint-restart/model.cpp",
       "chapter": "output/checkpoint-restart/index.qmd",
@@ -884,7 +895,7 @@
       "program": 20,
       "title": "2nd-order wave eq. in 2D via FFT (compare p19.m)",
       "source": "https://people.maths.ox.ac.uk/trefethen/p20.m",
-      "chapter": null,
+      "chapter": "waves/chebyshev-square/index.qmd",
       "scope": "Original N=24 Chebyshev square, Gaussian and leapfrog startup. Native LocalFFT evaluates both tensor derivatives; initial Gaussian boundary tails are retained. Nodal plots replace cubic display interpolation; Taylor startup exposes the initial-velocity error."
     },
     {

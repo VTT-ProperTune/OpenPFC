@@ -111,7 +111,7 @@ This complete-domain reference runs on one process.
 
 Keep the [C++ model](model.cpp), [input](input.json) and
 [theme helper](../lesson.hpp) together. Continue with
-a square wave problem.
+[a square wave problem](../chebyshev-square/index.qmd).
 
 ## References
 ::: {#refs}

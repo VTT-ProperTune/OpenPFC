@@ -79,6 +79,67 @@ def check_line(binary, root):
     run(binary, root / "bad-line", parameters={"n": 32, "dt": 1}, success=False)
 
 
+def square_action(d2, values):
+    width = len(d2)
+    out = [0.0] * len(values)
+    for j in range(1, width - 1):
+        for i in range(1, width - 1):
+            out[i + width * j] = sum(
+                d2[i][k] * values[k + width * j] + d2[j][k] * values[i + width * k]
+                for k in range(width)
+            )
+    return out
+
+
+def check_square(binary, root):
+    folder = root / "square-reference"
+    n, dt = 8, 0.001
+    run(binary, folder, parameters={"n": n, "dt": dt, "end": 0.02, "saveat": 0.01})
+    saved = snapshots(folder / "results/wave.csv")
+    x, d2 = lagrange_second(n)
+    u = [math.exp(-40 * ((a - 0.4) ** 2 + b * b)) for b in x for a in x]
+    old = u[:]
+    close(saved[0], u)
+    for step in range(1, 21):
+        acceleration = square_action(d2, u)
+        u, old = [2 * a - b + dt * dt * c for a, b, c in zip(u, old, acceleration)], u
+        if step in saved:
+            close(saved[step], u)
+    for startup, expected_ratio in (("book", 2), ("taylor", 4)):
+        errors = []
+        for dt in (0.004, 0.002):
+            folder = root / f"square-mode-{startup}-{dt}"
+            run(
+                binary,
+                folder,
+                parameters={
+                    "n": 24,
+                    "dt": dt,
+                    "end": 0.4,
+                    "saveat": 0.4,
+                    "initial": "mode",
+                    "startup": startup,
+                },
+            )
+            data = table(folder / "results/wave.csv")
+            errors.append(
+                max(
+                    abs(
+                        float(r["u"])
+                        - math.cos(math.pi * float(r["x"]) / 2)
+                        * math.cos(math.pi * float(r["y"]) / 2)
+                        * math.cos(math.pi * 0.4 / math.sqrt(2))
+                    )
+                    for r in data
+                    if float(r["time"]) > 0.39
+                )
+            )
+        assert (
+            0.95 * expected_ratio < errors[0] / errors[1] < 1.05 * expected_ratio
+        ), errors
+    run(binary, root / "bad-square", parameters={"startup": "unknown"}, success=False)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -86,7 +147,9 @@ def main():
     parser.add_argument("--launcher")
     parser.add_argument("--rank-flag", default="-n")
     parser.add_argument("--ranks", default=1, type=int)
-    parser.add_argument("--case", choices=["chebyshev_wave_line"])
+    parser.add_argument(
+        "--case", choices=["chebyshev_wave_line", "chebyshev_wave_square"]
+    )
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     bin_dir = args.bin_dir.resolve()
@@ -100,6 +163,10 @@ def main():
             root = base / "chebyshev_wave_line"
             root.mkdir()
             check_line(bin_dir / "chebyshev_wave_line", root)
+        if args.case in (None, "chebyshev_wave_square"):
+            root = base / "chebyshev_wave_square"
+            root.mkdir()
+            check_square(bin_dir / "chebyshev_wave_square", root)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

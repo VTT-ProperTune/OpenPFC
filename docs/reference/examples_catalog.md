@@ -138,6 +138,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `disk_eigenmodes` | `polynomials/disk-modes/model.cpp` | Fourier/Chebyshev disk modes and Bessel frequency checks |
 | `disk_poisson` | `polynomials/poisson-disk/model.cpp` | Polar Poisson, manufactured fields and regularity-limited convergence |
 | `chebyshev_wave_line` | `waves/chebyshev-line/model.cpp` | A pulse meets the end of an interval |
+| `chebyshev_wave_square` | `waves/chebyshev-square/model.cpp` | Let a wave spread across a square |
 
 ## Research prototypes
 

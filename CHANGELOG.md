@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Build a tensor wave action from native one-dimensional derivatives. Explain startup error and verify complete evolving fields through independent nodal differentiation.
+
 - Follow a reflecting pulse with native Chebyshev differentiation. Distinguish the original first-order startup from a Taylor startup and check complete fields and timestep refinement.
 
 - Complete the disk eigenmode and Poisson pair with native Chebyshev differentiation, FFTs and GMRES. Explain signed-radius parity and check Bessel spectra, exact forcing, manufactured fields and radial refinement.
