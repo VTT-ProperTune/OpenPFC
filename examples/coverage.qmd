@@ -16,15 +16,15 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 [Follow what is taught, what is adapted, and what still needs a chapter.]{.lesson-deck}
 :::
 
-There are 73 declared runnable example targets and
-59 Quarto teaching chapters. The table includes older programs
+There are 74 declared runnable example targets and
+60 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
 ## Spectral Methods in MATLAB
 
 The [author's collection](https://people.maths.ox.ac.uk/trefethen/spectral.html)
-contains forty programs. Currently 31 have a corresponding lesson.
+contains forty programs. Currently 32 have a corresponding lesson.
 A link means that the lesson declares coverage of that experiment; the
 scope column states changes in method or presentation. It does not mean
 an unmodified MATLAB program was translated line for line. Pending rows
@@ -71,7 +71,7 @@ remain in the inventory while applicability and implementation are assessed.
 | [37](https://people.maths.ox.ac.uk/trefethen/p37.m) | 2D "wave tank" with Neumann BCs for \|y\|=1 | Pending assessment and implementation. |
 | [38](https://people.maths.ox.ac.uk/trefethen/p38.m) | solve u_xxxx = exp(x), u(-1)=u(1)=u'(-1)=u'(1)=0 | [Read the lesson](polynomials/clamped-beam/index.qmd). Original degree-15 clamped fourth-order problem. Native Chebyshev nodes/derivatives construct the weighted operator; native GMRES replaces backslash, and barycentric reconstruction of the auxiliary polynomial preserves zero values and slopes. Complete values and slopes are checked against an independently determined analytic solution. |
 | [39](https://people.maths.ox.ac.uk/trefethen/p39.m) | eigenmodes of biharmonic on a square with clamped BCs | [Read the lesson](polynomials/clamped-plate/index.qmd). All 25 degree-17 clamped square-plate modes and relative frequencies; native Chebyshev D4 and the original interior D2 tensor operator. Symmetry blocks preserve repeated modes; constrained barycentric display replaces cubic image interpolation. |
-| [40](https://people.maths.ox.ac.uk/trefethen/p40.m) | eigenvalues of Orr-Sommerfeld operator (compare p38.m) | Pending assessment and implementation. |
+| [40](https://people.maths.ox.ac.uk/trefethen/p40.m) | eigenvalues of Orr-Sommerfeld operator (compare p38.m) | [Read the lesson](polynomials/orr-sommerfeld/index.qmd). Original R=5772 and degrees 40,60,80,100; native Chebyshev D4/D2 construction and complete complex generalized spectra. Pivoted mass solves plus example-owned shifted QR replace a generalized eigensolver; original-pencil residuals and independent qualification are explicit. |
 
 ## Existing runnable examples
 
@@ -127,6 +127,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `ns2d_spatial_refine` | Pending conversion. |
 | `ns2d_temporal_refine` | Pending conversion. |
 | `ns2d_vorticity` | Pending conversion. |
+| `orr_sommerfeld` | [Read the lesson](polynomials/orr-sommerfeld/index.qmd) |
 | `periodic_collocation` | [Read the lesson](differentiation/collocation/index.qmd) |
 | `periodic_differentiation` | [Read the lesson](differentiation/periodic/index.qmd) |
 | `polynomial_boundary_values` | [Read the lesson](polynomials/boundary-values/index.qmd) |

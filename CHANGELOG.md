@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Teach a complex generalized eigenproblem at all four original resolutions. Check every original-pencil residual, leading-mode refinement and a second Reynolds number, with native helper regression coverage.
+
 - Reproduce the degree-70 complex oscillator experiment without forming normal equations. Check small singular values with independent shifted solves and show the original complex-plane grid.
 
 - Use reflection sectors to explain twenty-five clamped-square vibration modes. Verify complete fields, boundary slopes, eigenvector independence and small-grid spectral multiplicity.

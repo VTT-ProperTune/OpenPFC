@@ -469,6 +469,17 @@
       "capabilities": []
     },
     {
+      "target": "orr_sommerfeld",
+      "source": "polynomials/orr-sommerfeld/model.cpp",
+      "chapter": "polynomials/orr-sommerfeld/index.qmd",
+      "capabilities": [
+        "native-chebyshev",
+        "generalized-eigenproblem-reference",
+        "complex-arithmetic",
+        "stability"
+      ]
+    },
+    {
       "target": "periodic_collocation",
       "source": "differentiation/collocation/model.cpp",
       "chapter": "differentiation/collocation/index.qmd",
@@ -979,7 +990,7 @@
       "program": 40,
       "title": "eigenvalues of Orr-Sommerfeld operator (compare p38.m)",
       "source": "https://people.maths.ox.ac.uk/trefethen/p40.m",
-      "chapter": null,
+      "chapter": "polynomials/orr-sommerfeld/index.qmd",
       "scope": "Original R=5772 and degrees 40,60,80,100; native Chebyshev D4/D2 construction and complete complex generalized spectra. Pivoted mass solves plus example-owned shifted QR replace a generalized eigensolver; original-pencil residuals and independent qualification are explicit."
     }
   ],

@@ -141,7 +141,7 @@ This complete-domain reference runs on one process and accepts degrees
 0.5 through 10. Keep the [source](model.cpp),
 [singular-value helper](../singular_values.hpp),
 [eigensolver](../eigensystem.hpp) and [collocation helper](../collocation.hpp)
-together. Continue to the Orr–Sommerfeld example
+together. Continue to the [Orr–Sommerfeld example](../orr-sommerfeld/index.qmd)
 to see why sensitivity and resolution matter for a small growth rate.
 
 ## References

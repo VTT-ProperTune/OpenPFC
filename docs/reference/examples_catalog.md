@@ -134,6 +134,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `clamped_beam` | `polynomials/clamped-beam/model.cpp` | Build the clamped ends into the trial function |
 | `clamped_plate` | `polynomials/clamped-plate/model.cpp` | Twenty-five clamped square-plate modes and repeated frequencies |
 | `davies_pseudospectra` | `polynomials/pseudospectra/model.cpp` | Small singular values reveal spectral sensitivity |
+| `orr_sommerfeld` | `polynomials/orr-sommerfeld/model.cpp` | Complex generalized Orr–Sommerfeld spectra and near-neutral growth |
 
 ## Research prototypes
 

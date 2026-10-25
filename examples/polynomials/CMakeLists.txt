@@ -64,3 +64,7 @@ set_target_properties(clamped_plate PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE
 add_executable(davies_pseudospectra pseudospectra/model.cpp)
 target_link_libraries(davies_pseudospectra PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(davies_pseudospectra PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(orr_sommerfeld orr-sommerfeld/model.cpp)
+target_link_libraries(orr_sommerfeld PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(orr_sommerfeld PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
