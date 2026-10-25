@@ -16,6 +16,56 @@ int main(int argc, char **argv) {
   try {
     require(ranks == 1 || ranks == 2 || ranks == 4 || ranks == 8,
             "supported fixture rank count");
+    // Pure stage regressions are independent of MPI rank count.
+    {
+      const Grid3D global{4, 1, 1, false, false, false, Connectivity::Six};
+      std::vector<dg::Observation> obs(2);
+      obs[0].partition = {global, {0, 0, 0}, {2, 1, 1}};
+      obs[1].partition = {global, {2, 0, 0}, {2, 1, 1}};
+      dg::detail::validate_partition_cover(obs, global);
+      auto invalid = obs;
+      invalid[1].partition.lower[0] = 1;
+      bool rejected = false;
+      try {
+        dg::detail::validate_partition_cover(invalid, global);
+      } catch (const std::invalid_argument &) {
+        rejected = true;
+      }
+      require(rejected, "partition validation rejects overlap before contacts");
+      invalid = obs;
+      invalid.pop_back();
+      rejected = false;
+      try {
+        dg::detail::validate_partition_cover(invalid, global);
+      } catch (const std::invalid_argument &) {
+        rejected = true;
+      }
+      require(rejected, "partition validation rejects missing global coverage");
+      obs[0].components = {{1, 0, 11, 1}};
+      obs[1].components = {{1, 0, 11, 1}};
+      obs[0].boundary = {{1, 1, 0}};
+      obs[1].boundary = {{2, 1, 0}};
+      auto topology = dg::detail::index_components(obs, 2);
+      const auto contacts =
+          dg::detail::collect_component_contacts(obs, global, 1, topology);
+      require(contacts.size() == 1, "contact stage finds the cross-rank seam");
+      require(topology.root(0) == topology.root(1),
+              "same-slot seam joins components independently of their local keys");
+      obs[1].components[0].slot = 1;
+      obs[1].boundary[0].slot = 1;
+      topology = dg::detail::index_components(obs, 2);
+      dg::detail::collect_component_contacts(obs, global, 1, topology);
+      require(topology.root(0) != topology.root(1),
+              "contact alone never merges different slots");
+      obs[1].boundary[0].cell = 0;
+      rejected = false;
+      try {
+        dg::detail::collect_component_contacts(obs, global, 1, topology);
+      } catch (const std::invalid_argument &) {
+        rejected = true;
+      }
+      require(rejected, "contact validation rejects non-owned shell cells");
+    }
     for (auto connectivity : {Connectivity::Six, Connectivity::TwentySix}) {
       Fixture f(rank, ranks, connectivity);
       remapping::Options options;

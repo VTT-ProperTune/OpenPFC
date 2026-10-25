@@ -1,5 +1,9 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
+/**
+ * @file distributed_grain.hpp
+ * @brief Collective compact grain observation, planning and publication.
+ */
 #pragma once
 #include <climits>
 #include <mpi.h>
@@ -168,6 +172,121 @@ inline Observation decode(std::span<const Id> words) {
   validate(o.partition);
   return o;
 }
+// Pure validation: throws before graph construction; contains no collectives.
+inline void validate_partition_cover(std::span<const Observation> obs,
+                                     Grid3D global) {
+  std::size_t volume = 0;
+  for (std::size_t r = 0; r < obs.size(); ++r) {
+    volume += cell_count(obs[r].partition.local());
+    for (std::size_t s = 0; s < r; ++s) {
+      bool overlap = true;
+      for (int d = 0; d < 3; ++d)
+        overlap &= obs[r].partition.lower[d] <
+                       obs[s].partition.lower[d] + obs[s].partition.extent[d] &&
+                   obs[s].partition.lower[d] <
+                       obs[r].partition.lower[d] + obs[r].partition.extent[d];
+      if (overlap) throw std::invalid_argument("overlapping grain partitions");
+    }
+  }
+  if (volume != cell_count(global))
+    throw std::invalid_argument("grain partitions do not cover global volume");
+}
+
+// Component identity is (rank, local key), never the reusable slot number.
+struct ComponentTopology {
+  using Key = std::pair<std::size_t, Id>;
+  std::map<Key, std::size_t> indices;
+  std::vector<Component> components;
+  std::vector<std::size_t> parent;
+  std::size_t root(std::size_t i) const {
+    while (i != parent[i]) i = parent[i];
+    return i;
+  }
+  std::size_t index(std::size_t rank, Id key) const {
+    auto it = indices.find({rank, key});
+    if (it == indices.end())
+      throw std::invalid_argument("unknown boundary component");
+    return it->second;
+  }
+};
+
+inline ComponentTopology index_components(std::span<const Observation> obs,
+                                          Slot slots) {
+  ComponentTopology topology;
+  for (std::size_t r = 0; r < obs.size(); ++r)
+    for (auto c : obs[r].components) {
+      if (!c.key || c.slot >= slots || !c.samples ||
+          !topology.indices
+               .emplace(ComponentTopology::Key{r, c.key}, topology.components.size())
+               .second)
+        throw std::invalid_argument("invalid component summary");
+      topology.components.push_back(c);
+    }
+  topology.parent.resize(topology.components.size());
+  std::iota(topology.parent.begin(), topology.parent.end(), 0);
+  return topology;
+}
+
+// Reconcile same-slot neighbours and collect contacts without MPI or UID
+// publication. Every boundary sample must belong to the observed owned shell.
+inline std::set<std::pair<std::size_t, std::size_t>>
+collect_component_contacts(std::span<const Observation> obs, Grid3D global,
+                           std::size_t contact_radius, ComponentTopology &topology) {
+  std::unordered_map<Id, std::vector<std::pair<std::size_t, std::size_t>>> shell;
+  for (std::size_t r = 0; r < obs.size(); ++r) {
+    std::set<std::pair<Id, Slot>> seen;
+    for (auto b : obs[r].boundary) {
+      const auto component = topology.index(r, b.component);
+      if (b.cell >= cell_count(global) ||
+          b.slot != topology.components[component].slot ||
+          !seen.emplace(b.cell, b.slot).second)
+        throw std::invalid_argument("invalid or duplicate boundary sample");
+      const auto &p = obs[r].partition;
+      const std::array<std::size_t, 3> x{b.cell % global.nx,
+                                         (b.cell / global.nx) % global.ny,
+                                         b.cell / (global.nx * global.ny)};
+      std::size_t cell = 0;
+      for (int d = 0; d < 3; ++d)
+        if (x[d] < p.lower[d] || x[d] >= p.lower[d] + p.extent[d])
+          throw std::invalid_argument("boundary sample outside owned box");
+      cell = x[0] - p.lower[0] +
+             p.extent[0] * (x[1] - p.lower[1] + p.extent[1] * (x[2] - p.lower[2]));
+      if (!boundary(p, cell, contact_radius))
+        throw std::invalid_argument("boundary sample outside shell");
+      shell[b.cell].push_back({r, component});
+    }
+  }
+  std::set<std::pair<std::size_t, std::size_t>> edges;
+  for (std::size_t r = 0; r < obs.size(); ++r)
+    for (auto e : obs[r].contacts) {
+      auto a = topology.index(r, e.first), b = topology.index(r, e.second);
+      if (a != b) edges.emplace(std::min(a, b), std::max(a, b));
+    }
+  const int radius = static_cast<int>(contact_radius);
+  for (const auto &[cell, entries] : shell)
+    for (int dz = -radius; dz <= radius; ++dz)
+      for (int dy = -radius; dy <= radius; ++dy)
+        for (int dx = -radius; dx <= radius; ++dx) {
+          if (!pfc::grain::detail::stencil(global, dx, dy, dz, radius)) continue;
+          std::size_t other;
+          if (!pfc::grain::detail::offset(global, cell, dx, dy, dz, other)) continue;
+          const auto found = shell.find(other);
+          if (found == shell.end()) continue;
+          for (auto [r, a] : entries)
+            for (auto [s, b] : found->second) {
+              if (a == b) continue;
+              edges.emplace(std::min(a, b), std::max(a, b));
+              if (topology.components[a].slot == topology.components[b].slot &&
+                  pfc::grain::detail::stencil(global, dx, dy, dz, 1) &&
+                  std::abs(dx) <= 1 && std::abs(dy) <= 1 && std::abs(dz) <= 1) {
+                auto ra = topology.root(a), rb = topology.root(b);
+                topology.parent[std::max(ra, rb)] = std::min(ra, rb);
+              }
+            }
+        }
+  return edges;
+}
+
 } // namespace detail
 
 /// Collective calls must occur in identical order. Only compact shells,
@@ -202,7 +321,7 @@ inline Plan prepare(const Observation &local, std::span<const Grain> grains,
   int rank = 0;
   detail::mpi(MPI_Comm_rank(comm, &rank));
   try {
-    [&] {
+    const auto prepare_local_plan = [&] {
       std::vector<Observation> obs;
       const auto header = 23 + grains.size() * 3;
       for (const auto &w : packets) {
@@ -218,172 +337,105 @@ inline Plan prepare(const Observation &local, std::span<const Grain> grains,
         plan.status = Status::Deferred;
         return;
       }
-      std::size_t volume = 0;
-      for (std::size_t r = 0; r < obs.size(); ++r) {
-        volume += cell_count(obs[r].partition.local());
-        for (std::size_t s = 0; s < r; ++s) {
-          bool overlap = true;
-          for (int d = 0; d < 3; ++d)
-            overlap &= obs[r].partition.lower[d] <
-                           obs[s].partition.lower[d] + obs[s].partition.extent[d] &&
-                       obs[s].partition.lower[d] <
-                           obs[r].partition.lower[d] + obs[r].partition.extent[d];
-          if (overlap) throw std::invalid_argument("overlapping grain partitions");
-        }
-      }
-      if (volume != cell_count(local.partition.global))
-        throw std::invalid_argument("grain partitions do not cover global volume");
-      using Key = std::pair<std::size_t, Id>;
-      std::map<Key, std::size_t> indices;
-      std::vector<Component> components;
-      for (std::size_t r = 0; r < obs.size(); ++r)
-        for (auto c : obs[r].components) {
-          if (!c.key || c.slot >= slots || !c.samples ||
-              !indices.emplace(Key{r, c.key}, components.size()).second)
-            throw std::invalid_argument("invalid component summary");
-          components.push_back(c);
-        }
-      std::vector<std::size_t> parent(components.size());
-      std::iota(parent.begin(), parent.end(), 0);
-      const auto root = [&](std::size_t i) {
-        while (i != parent[i]) i = parent[i];
-        return i;
-      };
+      // All following stages are rank-local; the final vote is unchanged.
+      detail::validate_partition_cover(obs, local.partition.global);
+      auto topology = detail::index_components(obs, slots);
+      const auto edges = detail::collect_component_contacts(
+          obs, local.partition.global, options.contact_radius, topology);
+      const auto &components = topology.components;
+      const auto root = [&](std::size_t i) { return topology.root(i); };
       const auto index = [&](std::size_t r, Id key) {
-        auto it = indices.find({r, key});
-        if (it == indices.end())
-          throw std::invalid_argument("unknown boundary component");
-        return it->second;
+        return topology.index(r, key);
       };
-      std::unordered_map<Id, std::vector<std::pair<std::size_t, std::size_t>>> shell;
-      const auto global = local.partition.global;
-      for (std::size_t r = 0; r < obs.size(); ++r) {
-        std::set<std::pair<Id, Slot>> seen;
-        for (auto b : obs[r].boundary) {
-          const auto component = index(r, b.component);
-          if (b.cell >= cell_count(global) || b.slot != components[component].slot ||
-              !seen.emplace(b.cell, b.slot).second)
-            throw std::invalid_argument("invalid or duplicate boundary sample");
-          const auto &p = obs[r].partition;
-          const std::array<std::size_t, 3> x{b.cell % global.nx,
-                                             (b.cell / global.nx) % global.ny,
-                                             b.cell / (global.nx * global.ny)};
-          std::size_t cell = 0;
-          for (int d = 0; d < 3; ++d)
-            if (x[d] < p.lower[d] || x[d] >= p.lower[d] + p.extent[d])
-              throw std::invalid_argument("boundary sample outside owned box");
-          cell =
-              x[0] - p.lower[0] +
-              p.extent[0] * (x[1] - p.lower[1] + p.extent[1] * (x[2] - p.lower[2]));
-          if (!boundary(p, cell, options.contact_radius))
-            throw std::invalid_argument("boundary sample outside shell");
-          shell[b.cell].push_back({r, component});
-        }
-      }
-      std::set<std::pair<std::size_t, std::size_t>> edges;
-      for (std::size_t r = 0; r < obs.size(); ++r)
-        for (auto e : obs[r].contacts) {
-          auto a = index(r, e.first), b = index(r, e.second);
-          if (a != b) edges.emplace(std::min(a, b), std::max(a, b));
-        }
-      const int radius = static_cast<int>(options.contact_radius);
-      for (const auto &[cell, entries] : shell)
-        for (int dz = -radius; dz <= radius; ++dz)
-          for (int dy = -radius; dy <= radius; ++dy)
-            for (int dx = -radius; dx <= radius; ++dx) {
-              if (!pfc::grain::detail::stencil(global, dx, dy, dz, radius)) continue;
-              std::size_t other;
-              if (!pfc::grain::detail::offset(global, cell, dx, dy, dz, other))
-                continue;
-              const auto found = shell.find(other);
-              if (found == shell.end()) continue;
-              for (auto [r, a] : entries)
-                for (auto [s, b] : found->second) {
-                  if (a == b) continue;
-                  edges.emplace(std::min(a, b), std::max(a, b));
-                  if (components[a].slot == components[b].slot &&
-                      pfc::grain::detail::stencil(global, dx, dy, dz, 1) &&
-                      std::abs(dx) <= 1 && std::abs(dy) <= 1 && std::abs(dz) <= 1) {
-                    auto ra = root(a), rb = root(b);
-                    parent[std::max(ra, rb)] = std::min(ra, rb);
-                  }
-                }
-            }
       std::vector<Id> uids(components.size(), 0);
-      for (std::size_t i = 0; i < components.size(); ++i) {
-        auto &id = uids[root(i)];
-        if (components[i].seed && id && id != components[i].seed) {
-          plan.status = Status::UnsafeCadence;
-          break;
-        }
-        if (components[i].seed) id = components[i].seed;
-      }
-      if (plan.status != Status::Success) return;
       std::map<Id, std::uint64_t> counts;
-      for (std::size_t i = 0; i < components.size(); ++i) {
-        const Id uid = uids[root(i)];
-        if (!uid) {
-          plan.status = Status::Unseeded;
-          break;
-        }
-        auto g = std::lower_bound(grains.begin(), grains.end(), uid,
-                                  [](Grain g, Id id) { return g.id < id; });
-        if (g == grains.end() || g->id != uid || !g->active) {
-          plan.status = Status::UnknownIdentity;
-          break;
-        }
-        if (g->slot != components[i].slot)
-          throw std::invalid_argument("UID slot mismatch");
-        if (counts[uid] > UINT64_MAX - components[i].samples)
-          throw std::overflow_error("grain support overflow");
-        counts[uid] += components[i].samples;
-      }
-      if (plan.status != Status::Success) return;
-      std::vector<Id> vertices;
-      std::vector<Contact> contacts;
-      for (auto g : grains)
-        if (g.active) {
-          if (!counts.contains(g.id)) {
-            plan.status = Status::MissingSupport;
+      const auto resolve_identity_and_support = [&] {
+        for (std::size_t i = 0; i < components.size(); ++i) {
+          auto &id = uids[root(i)];
+          if (components[i].seed && id && id != components[i].seed) {
+            plan.status = Status::UnsafeCadence;
             break;
           }
-          vertices.push_back(g.id);
+          if (components[i].seed) id = components[i].seed;
         }
+        if (plan.status != Status::Success) return;
+        for (std::size_t i = 0; i < components.size(); ++i) {
+          const Id uid = uids[root(i)];
+          if (!uid) {
+            plan.status = Status::Unseeded;
+            break;
+          }
+          auto g = std::lower_bound(grains.begin(), grains.end(), uid,
+                                    [](Grain g, Id id) { return g.id < id; });
+          if (g == grains.end() || g->id != uid || !g->active) {
+            plan.status = Status::UnknownIdentity;
+            break;
+          }
+          if (g->slot != components[i].slot)
+            throw std::invalid_argument("UID slot mismatch");
+          if (counts[uid] > UINT64_MAX - components[i].samples)
+            throw std::overflow_error("grain support overflow");
+          counts[uid] += components[i].samples;
+        }
+        if (plan.status != Status::Success) return;
+      };
+      resolve_identity_and_support();
       if (plan.status != Status::Success) return;
-      for (auto [a, b] : edges)
-        if (uids[root(a)] != uids[root(b)])
-          contacts.push_back({uids[root(a)], uids[root(b)]});
-      auto graph = make_contact_graph(vertices, contacts);
-      if (graph.edges.size() > options.contact_capacity) {
-        plan.status = Status::CapacityOverflow;
-        return;
-      }
-      std::vector<double> weights;
-      for (auto id : graph.vertices) weights.push_back(double(counts[id]));
-      auto decision =
-          remapping::detail::decide(graph, grains, slots, weights, options);
-      if (decision.status != remapping::Status::Success) {
-        plan.status = decision.status == remapping::Status::Infeasible
-                          ? Status::Infeasible
-                          : Status::SearchLimit;
-        return;
-      }
-      auto prepared =
-          pfc::grain::detail::prepare_transfer(slots, grains, decision.moves);
-      plan.snapshot = {options.epoch, std::move(prepared.grains), std::move(graph)};
-      plan.slots = slots;
-      plan.global_moves = decision.moves;
-      std::set<Id> present;
-      for (auto c : local.components) {
-        auto uid = uids[root(index(rank, c.key))];
-        plan.bindings.push_back({c.key, uid});
-        present.insert(uid);
-      }
-      for (auto g : grains)
-        if (present.contains(g.id)) plan.local_grains.push_back(g);
-      for (auto m : decision.moves)
-        if (present.contains(m.id)) plan.local_moves.push_back(m);
-    }();
+      const auto decide_and_prepare_transfer = [&] {
+        std::vector<Id> vertices;
+        std::vector<Contact> contacts;
+        for (auto g : grains)
+          if (g.active) {
+            if (!counts.contains(g.id)) {
+              plan.status = Status::MissingSupport;
+              break;
+            }
+            vertices.push_back(g.id);
+          }
+        if (plan.status != Status::Success) return;
+        for (auto [a, b] : edges)
+          if (uids[root(a)] != uids[root(b)])
+            contacts.push_back({uids[root(a)], uids[root(b)]});
+        auto graph = make_contact_graph(vertices, contacts);
+        if (graph.edges.size() > options.contact_capacity) {
+          plan.status = Status::CapacityOverflow;
+          return;
+        }
+        std::vector<double> weights;
+        for (auto id : graph.vertices) weights.push_back(double(counts[id]));
+        auto decision =
+            remapping::detail::decide(graph, grains, slots, weights, options);
+        if (decision.status != remapping::Status::Success) {
+          plan.status = decision.status == remapping::Status::Infeasible
+                            ? Status::Infeasible
+                            : Status::SearchLimit;
+          return;
+        }
+        auto prepared =
+            pfc::grain::detail::prepare_transfer(slots, grains, decision.moves);
+        plan.snapshot = {options.epoch, std::move(prepared.grains),
+                         std::move(graph)};
+        plan.slots = slots;
+        plan.global_moves = decision.moves;
+      };
+      decide_and_prepare_transfer();
+      if (plan.status != Status::Success) return;
+      // Bind local component keys only after a complete global decision.
+      const auto bind_local_components = [&] {
+        std::set<Id> present;
+        for (auto c : local.components) {
+          auto uid = uids[root(index(rank, c.key))];
+          plan.bindings.push_back({c.key, uid});
+          present.insert(uid);
+        }
+        for (auto g : grains)
+          if (present.contains(g.id)) plan.local_grains.push_back(g);
+        for (auto m : plan.global_moves)
+          if (present.contains(m.id)) plan.local_moves.push_back(m);
+      };
+      bind_local_components();
+    };
+    prepare_local_plan();
   } catch (const std::bad_alloc &) {
     plan.status = Status::CapacityOverflow;
   } catch (...) {
