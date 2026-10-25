@@ -74,6 +74,12 @@ struct Decomposition {
   std::vector<pfc::Box3i> m_local_boxes; ///< Local subdomain boxes.
   pfc::Domain m_domain;                  ///< Global Domain this partitions.
 
+  /**
+   * @brief Locally partition domain with a positive, x-fastest process grid.
+   * @throws std::invalid_argument If the grid is invalid or would make empty boxes.
+   * @throws std::runtime_error If the splitter violates x-fastest rank ordering.
+   * No MPI calls are made. Geometry and boxes are owned by value.
+   */
   Decomposition(const Domain &domain, const Int3 &grid);
 
   friend std::ostream &operator<<(std::ostream &os, const Decomposition &d) {
@@ -180,6 +186,14 @@ inline const auto &get_grid(const Decomposition &decomposition) noexcept {
  * area. This overload accepts Domain directly for M1 migration convenience.
  *
  * @param[in] domain The global computational domain to partition
+ * No MPI calls are made; callers choose nparts to match their communicator.
+ * OPENPFC_FD_PROC_GRID, when nonempty, overrides automatic selection and must
+ * specify a valid Cartesian grid whose product equals nparts and which divides
+ * each domain extent. Invalid overrides throw rather than silently falling back.
+ *
+ * @throws std::invalid_argument If nparts is invalid, exceeds grid points,
+ *         or OPENPFC_FD_PROC_GRID is malformed/incompatible.
+ * @throws std::runtime_error If splitter rank ordering is not x-fastest.
  * @param[in] nparts Number of subdomains (typically MPI size)
  * @return Decomposition with optimally chosen grid pattern
  *

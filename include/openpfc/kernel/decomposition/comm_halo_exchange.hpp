@@ -976,6 +976,17 @@ template <typename MemorySpace, typename T = double> class HaloExchange {
 
 /**
  * @brief Host structured halo exchange over one or more padded Fields.
+ *
+ * Fields, their decomposition and communicator must outlive the exchanger.
+ * Keep geometry and storage stable; persistent requests capture data() during
+ * construction, so moving/reallocating a field requires rebuilding the exchanger.
+ * Use identical options and field/tag order on communicating ranks.
+ *
+ * exchange(), or paired start()/finish(), require participation of all ranks
+ * connected by the halo pattern (including ranks with no remote neighbor).
+ * These are matched point-to-point operations, not a communicator barrier.
+ * Complete an outstanding exchange before touching its send/receive regions,
+ * starting another exchange, destroying fields, or finalizing MPI.
  */
 template <typename T> class HaloExchange<HostSpace, T> {
 public:
@@ -1089,7 +1100,10 @@ public:
     }
   }
 
-  /// Wait for `start()`.
+  /// Complete the preceding start() on every participating rank.
+  /// Precondition: exactly one start() is outstanding. Calling finish() without
+  /// start(), calling it twice, or nesting start() is outside this API contract.
+  /// Throws std::logic_error for Full connectivity (use exchange() instead).
   void finish() {
     if (!m_full.empty()) {
       throw std::logic_error(
