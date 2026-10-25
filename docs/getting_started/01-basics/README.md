@@ -183,7 +183,7 @@ example sequence:
 
 1. `examples/heat/implicit-euler/model.cpp`;
 2. `examples/heat/driver-hooks/model.cpp`;
-3. `examples/12_cahn_hilliard.cpp`.
+3. `examples/phase-fields/cahn-hilliard/model.cpp`.
 
 The guided reading is in
 [Spectral examples sequence](../../tutorials/spectral_examples_sequence.md).

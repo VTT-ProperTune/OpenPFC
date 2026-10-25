@@ -32,7 +32,7 @@ Copy patterns from that file into your own TOML or translate key names to JSON a
 | Tungsten | [`apps/tungsten/inputs_json/`](../../apps/tungsten/inputs_json/README.md), `inputs_toml/` | Large validated parameter sets; JSON and TOML mirrors. |
 | AluminumNew | [`apps/aluminumNew/aluminumNew.json`](../../apps/aluminumNew/aluminumNew.json), `aluminumNew.toml` | `SpectralETDSession<AluminumPhysics, …>` (`constant` + app-registered `seed_grid_fcc`). |
 
-Examples that use JSON for demonstration include `examples/12_cahn_hilliard.cpp` and `examples/initialization/catalog/model.cpp` — inspect the source for the expected file shape.
+Examples that use JSON for demonstration include `examples/phase-fields/cahn-hilliard/model.cpp` and `examples/initialization/catalog/model.cpp` — inspect the source for the expected file shape.
 
 ## Profiling block
 

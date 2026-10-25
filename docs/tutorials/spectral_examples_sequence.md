@@ -6,33 +6,34 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 # Spectral examples sequence
 
 This page gives a reading and running order through three programs that add one
-concept at a time: a spectral model, simulator orchestration, and a nonlinear
-model with output.
+concept at a time: a spectral model, simulator orchestration, and a conserved nonlinear
+model.
 
 ## Sequence
 
 | Step | Executable | New idea |
 |------|------------|----------|
-| 1 | `04_diffusion_model` | Subclass `Model`, implement `initialize` and `step`, and apply a Fourier-space operator |
+| 1 | `04_diffusion_model` | Apply a backward-Euler multiplier to a distributed Fourier field |
 | 2 | `05_simulator` | Add `pfc::sim::run`, `Time`, host ICs, and lifecycle orchestration |
-| 3 | `12_cahn_hilliard` | Add a nonlinear operator split, initial data, and VTK output |
+| 3 | `12_cahn_hilliard` | Declare conserved nonlinear physics and advance it with native ETD1 |
 
-Together they mirror how a research application usually grows: first verify the
-physics step, then add framework-managed lifecycle and output.
+Read the Quarto lessons for [implicit heat](../../examples/heat/implicit-euler/index.qmd),
+[driver hooks](../../examples/heat/driver-hooks/index.qmd), and
+[Cahn–Hilliard](../../examples/phase-fields/cahn-hilliard/index.qmd).
+They develop the equations, show source excerpts and give independent checks.
+The [snapshot-series lesson](../../examples/output/vtk-series/index.qmd) covers
+visualization output separately.
 
 ## Build and run
 
 From the repository root:
 
 ```bash
-cmake --build build --target \
-  04_diffusion_model \
-  05_simulator \
-  12_cahn_hilliard
+./scripts/build.sh
 
-mpirun -n 1 ./build/examples/04_diffusion_model
-mpirun -n 1 ./build/examples/05_simulator
-mpirun -n 1 ./build/examples/12_cahn_hilliard
+mpirun -n 1 ./builds/release/examples/04_diffusion_model
+mpirun -n 1 ./builds/release/examples/05_simulator
+mpirun -n 1 ./builds/release/examples/12_cahn_hilliard
 ```
 
 Begin with one rank. After all three programs exit with status zero, repeat with
@@ -46,7 +47,7 @@ The programs do not share one mandatory success message; see
 |------|----------|
 | [`examples/heat/implicit-euler/model.cpp`](../../examples/heat/implicit-euler/model.cpp) | Field allocation, Fourier-space operator construction, and forward/backward transforms |
 | [`examples/heat/driver-hooks/model.cpp`](../../examples/heat/driver-hooks/model.cpp) | `pfc::sim::run`, host IC callable, time control |
-| [`examples/12_cahn_hilliard.cpp`](../../examples/12_cahn_hilliard.cpp) | Nonlinear split, initial state, and VTK write cadence |
+| [`examples/phase-fields/cahn-hilliard/model.cpp`](../../examples/phase-fields/cahn-hilliard/model.cpp) | Linear/nonlinear symbols, pointwise cubic, state declaration and diagnostics |
 
 Treat these compiled examples as the code-level source of truth. This page
 explains their order rather than copying their implementations.

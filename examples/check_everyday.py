@@ -279,6 +279,146 @@ def check_vtk(binary, root, launch, ranks):
             assert (xdmf[0].parent / item.text.strip()).is_file()
 
 
+def fourier_matrix(n):
+    return [
+        [
+            cmath.exp(-2j * math.pi * (i * p + j * q) / n)
+            for j in range(n)
+            for i in range(n)
+        ]
+        for q in range(n)
+        for p in range(n)
+    ]
+
+
+def transform(matrix, values, inverse=False):
+    if inverse:
+        return [
+            sum(matrix[k][j].conjugate() * value for k, value in enumerate(values))
+            / len(values)
+            for j in range(len(values))
+        ]
+    return [sum(a * b for a, b in zip(row, values)) for row in matrix]
+
+
+def phase_snapshots(folder, n, length):
+    data = fields(folder, "fields_rank_*.csv")
+    snapshots = {}
+    for step in sorted({int(row["step"]) for row in data}):
+        grid = {}
+        for row in data:
+            if int(row["step"]) != step:
+                continue
+            index = (
+                round(float(row["x"]) * n / length),
+                round(float(row["y"]) * n / length),
+            )
+            assert index not in grid
+            grid[index] = float(row["u"])
+        assert len(grid) == n * n
+        snapshots[step] = [grid[i, j] for j in range(n) for i in range(n)]
+    return snapshots
+
+
+def check_phase(binary, root, launch):
+    n, dt = 8, 0.002
+    matrix = fourier_matrix(n)
+    for neutral in (False, True):
+        folder = root / f"phase-reference-{neutral}"
+        length = 2 * math.pi if neutral else 20
+        gamma = 0.5 if neutral else 0.01
+        mobility = 0.7 if neutral else 1.3
+        cubic = 1.0 if neutral else 0.7
+        parameters = {
+            "n": n,
+            "steps": 5,
+            "save_every": 1,
+            "dt": dt,
+            "length": length,
+            "gamma": gamma,
+            "mobility": mobility,
+            "cubic": cubic,
+            "mean": 0 if neutral else -0.1,
+            "amplitude": 0.1 if neutral else 0.05,
+            "initial": "mode" if neutral else "mixture",
+        }
+        run(binary, folder, launch, parameters)
+        saved = phase_snapshots(folder, n, length)
+        u = []
+        for j in range(n):
+            for i in range(n):
+                a, b = 2 * math.pi * i / n, 2 * math.pi * j / n
+                u.append(
+                    parameters["mean"]
+                    + parameters["amplitude"]
+                    * (
+                        math.cos(a) * math.cos(b)
+                        if neutral
+                        else math.cos(a) + math.sin(2 * b) + math.cos(2 * a + b)
+                    )
+                )
+        k = [i if i < n // 2 else i - n for i in range(n)]
+        k2 = [(2 * math.pi / length) ** 2 * (a * a + b * b) for b in k for a in k]
+        linear = [mobility * v * (1 - gamma * v) for v in k2]
+        for step in range(6):
+            assert max(abs(a - b) for a, b in zip(saved[step], u)) < 2e-12
+            if step == 5:
+                break
+            modes = transform(matrix, u)
+            nonlinear = transform(matrix, [cubic * v**3 for v in u])
+            advanced = [
+                cmath.exp(l * dt) * v
+                - mobility * q * (math.expm1(l * dt) / l if abs(l) > 1e-12 else dt) * w
+                for l, q, v, w in zip(linear, k2, modes, nonlinear)
+            ]
+            u = [v.real for v in transform(matrix, advanced, inverse=True)]
+        diagnostic = table(folder / "results/diagnostics.csv")
+        for row in diagnostic:
+            values = saved[int(row["step"])]
+            modes = transform(matrix, values)
+            energy = (
+                sum(0.25 * cubic * v**4 - 0.5 * v * v + 0.25 for v in values) / (n * n)
+                + gamma
+                / 2
+                * sum(q * abs(v) ** 2 for q, v in zip(k2, modes))
+                / (n * n) ** 2
+            )
+            assert abs(float(row["mean"]) - parameters["mean"]) < 2e-14
+            assert abs(float(row["energy"]) - energy) < 2e-13
+    for initial, cubic in (("constant", 1), ("mode", 0)):
+        folder = root / f"phase-{initial}"
+        run(
+            binary,
+            folder,
+            launch,
+            {
+                "n": 16,
+                "steps": 10,
+                "save_every": 10,
+                "length": 2 * math.pi,
+                "initial": initial,
+                "cubic": cubic,
+                "gamma": 0.01,
+                "mean": -0.2 if initial == "constant" else 0,
+            },
+        )
+        saved = phase_snapshots(folder, 16, 2 * math.pi)
+        expected = [
+            (
+                -0.2
+                if initial == "constant"
+                else 0.05
+                * math.exp(1.96 * 0.01)
+                * math.cos(2 * math.pi * i / 16)
+                * math.cos(2 * math.pi * j / 16)
+            )
+            for j in range(16)
+            for i in range(16)
+        ]
+        assert max(abs(a - b) for a, b in zip(saved[10], expected)) < 2e-13
+    run(binary, root / "bad-phase", launch, {"gamma": 0}, success=False)
+
+
 def verify_first_domain(bin_dir, root, launch, ranks):
     assert "(-0.625,0.5,0)" in run(bin_dir / "first_domain", root)
     axes = table(root / "results/domain.csv")
@@ -303,6 +443,7 @@ def main():
             "05_simulator",
             "write_results",
             "11_write_results",
+            "12_cahn_hilliard",
         ],
     )
     args = parser.parse_args()
@@ -346,6 +487,10 @@ def main():
             root = base / "11_write_results"
             root.mkdir()
             check_vtk(bin_dir / "11_write_results", root, launch, ranks)
+        if args.case in (None, "12_cahn_hilliard"):
+            root = base / "12_cahn_hilliard"
+            root.mkdir()
+            check_phase(bin_dir / "12_cahn_hilliard", root, launch)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

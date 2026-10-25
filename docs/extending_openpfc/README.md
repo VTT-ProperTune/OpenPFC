@@ -19,7 +19,7 @@ out-of-tree executable, follow the
 
 | Goal | Primary extension point | Starting point |
 |------|-------------------------|----------------|
-| Add a PDE or phase-field model | physics `step(t)` on a stack / `SimulationState` | `examples/heat/implicit-euler/model.cpp`, `examples/12_cahn_hilliard.cpp` |
+| Add a PDE or phase-field model | physics `step(t)` on a stack / `SimulationState` | `examples/heat/implicit-euler/model.cpp`, `examples/phase-fields/cahn-hilliard/model.cpp` |
 | Add a stiff spectral-ETD (PFC) model | `pfc::sim::SpectralETDPhysics` consumed by `SpectralETDSystem` | [Add a spectral-ETD physics](#add-a-spectral-etd-physics), `tests/fixtures/swift_hohenberg.hpp` |
 | Add a config-selected initial or boundary condition | `pfc::FieldModifier` and a modifier catalog | `examples/initialization/catalog/model.cpp`, `examples/initialization/patterns/model.cpp` |
 | Apply programmatic field operations | Namespace free functions and field iteration helpers | [Functional field operations](../getting_started/functional_field_ops.md) |

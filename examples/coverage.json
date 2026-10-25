@@ -110,9 +110,15 @@
     },
     {
       "target": "12_cahn_hilliard",
-      "source": "12_cahn_hilliard.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "phase-fields/cahn-hilliard/model.cpp",
+      "chapter": "phase-fields/cahn-hilliard/index.qmd",
+      "capabilities": [
+        "spectral-etd-system",
+        "etd1",
+        "simulation-state",
+        "nonlinear-symbol",
+        "conserved-phase-field"
+      ]
     },
     {
       "target": "14_custom_field_initializer",
@@ -1054,7 +1060,9 @@
         "spectral_flux.hpp",
         "fourier_vector.hpp"
       ],
-      "chapters": []
+      "chapters": [
+        "phase-fields/cahn-hilliard/index.qmd"
+      ]
     }
   ]
 }

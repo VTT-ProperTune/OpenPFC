@@ -28,8 +28,6 @@ endif()
 
 
 
-add_executable(12_cahn_hilliard 12_cahn_hilliard.cpp)
-target_link_libraries(12_cahn_hilliard PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json )
 
 add_executable(fft_kspace_helpers_example fft_kspace_helpers_example.cpp)
 target_link_libraries(fft_kspace_helpers_example PRIVATE OpenPFC::openpfc )
@@ -75,6 +73,7 @@ add_subdirectory(integration)
 add_subdirectory(interpolation)
 add_subdirectory(output)
 add_subdirectory(parallel)
+add_subdirectory(phase-fields)
 add_subdirectory(polynomials)
 add_subdirectory(waves)
 
@@ -389,6 +388,16 @@ if(OpenPFC_BUILD_TESTS)
              COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_everyday.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 11_write_results
                      --launcher "${MPIEXEC_EXECUTABLE}" "--rank-flag=${MPIEXEC_NUMPROC_FLAG}" --ranks 2)
     set_tests_properties(example-11-write-results-mpi PROPERTIES PROCESSORS 2 TIMEOUT 360
+                         ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+  endif()
+  add_test(NAME example-12-cahn-hilliard
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_everyday.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 12_cahn_hilliard)
+  set_tests_properties(example-12-cahn-hilliard PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
+    add_test(NAME example-12-cahn-hilliard-mpi
+             COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_everyday.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 12_cahn_hilliard
+                     --launcher "${MPIEXEC_EXECUTABLE}" "--rank-flag=${MPIEXEC_NUMPROC_FLAG}" --ranks 2)
+    set_tests_properties(example-12-cahn-hilliard-mpi PROPERTIES PROCESSORS 2 TIMEOUT 360
                          ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
   endif()
 endif()

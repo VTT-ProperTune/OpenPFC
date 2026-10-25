@@ -78,5 +78,5 @@ in the saved fields.
 Change the geometry in [the helper](../lesson.hpp), then check that the
 header and physical sample values both change. Keep the [model](model.cpp)
 and [input](input.json) with it. For actual simulation evolution, continue
-with Cahn–Hilliard.
+with [Cahn–Hilliard](../../phase-fields/cahn-hilliard/index.qmd).
 :::

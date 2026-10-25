@@ -43,7 +43,7 @@ mpirun -n 4 ./examples/12_cahn_hilliard
 
 **ParaView:** *File → Open* → select **all** `cahn_hilliard_*.vti` → ParaView offers to group them as a time sequence; use the playback controls.
 
-**Source:** [`examples/12_cahn_hilliard.cpp`](../../examples/12_cahn_hilliard.cpp) — `VtkWriter` updates `set_uri` each output.
+**Source:** [`examples/phase-fields/cahn-hilliard/model.cpp`](../../examples/phase-fields/cahn-hilliard/model.cpp) — `VtkWriter` updates `set_uri` each output.
 
 ## Tips
 
