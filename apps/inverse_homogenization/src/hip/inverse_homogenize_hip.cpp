@@ -30,6 +30,8 @@
 #include <mpi.h>
 
 #include <inverse_homogenization/auxetic_geometry.hpp>
+#include <inverse_homogenization/driver_support.hpp>
+#include <inverse_homogenization/homogenization_hip.hpp>
 #include <inverse_homogenization/inverse_checkpoint.hpp>
 #include <inverse_homogenization/inverse_convergence.hpp>
 #include <inverse_homogenization/manufacturability.hpp>
@@ -49,9 +51,9 @@
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
 #include <openpfc/runtime/gpu/gpu_spectral_stack.hpp>
-#include <inverse_homogenization/homogenization_hip.hpp>
 
 namespace {
+namespace driver = pfc::apps::inverse::driver;
 
 using RealField = pfc::data::Field<double>;
 using ComplexField = pfc::data::Field<std::complex<double>>;
@@ -457,25 +459,7 @@ ac_step(pfc::apps::PeriodicHomogenizerHIP &hom, const pfc::Domain &domain, FFT &
   return out;
 }
 
-int run(int argc, char **argv, int rank, int nproc) {
-  Config cfg;
-  if (!parse_args(argc, argv, cfg)) {
-    if (rank == 0)
-      usage(std::cerr, argc >= 1 ? argv[0] : "openpfc_inverse_homogenize_hip");
-    return 2;
-  }
-  if (cfg.checkpoint_dir.empty() && !cfg.restart_dir.empty())
-    cfg.checkpoint_dir = cfg.restart_dir;
-  if (cfg.checkpoint_dir.empty() && !cfg.fields.dir.empty())
-    cfg.checkpoint_dir = cfg.fields.dir + "/checkpoint";
-  int rc = 0;
-  const pfc::Domain domain = pfc::domain::create(
-      pfc::GridSize({cfg.nx, cfg.ny, cfg.nz}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-      pfc::GridSpacing({cfg.dx, cfg.dx, cfg.dx}));
-  pfc::sim::stacks::GPUSpectralStack<pfc::HIPSpace> stack(domain, rank, nproc,
-                                                          MPI_COMM_WORLD);
-  auto &fft = stack.fft();
-  auto h = pfc::data::field_from_inbox<double>(domain, fft.get_inbox_bounds());
+int initialize_design(const Config &cfg, pfc::Field<double> &h, int rank) {
   const auto n = h.local_size();
   for (int k = 0; k < n[2]; ++k)
     for (int j = 0; j < n[1]; ++j)
@@ -511,38 +495,38 @@ int run(int argc, char **argv, int rank, int nproc) {
     }
   }
   h.note_host_write();
+  return 0;
+}
 
-  pfc::solvers::MicroelasticityParams p;
-  p.stiffness_at_one = pfc::solvers::Stiffness::isotropic(cfg.E_solid, cfg.nu_solid);
-  p.stiffness_at_zero = pfc::solvers::Stiffness::isotropic(cfg.E_void, cfg.nu_void);
-  p.relative_tolerance = 1.0e-8;
-  p.max_iterations = cfg.n_el_iter;
-  p.warm_start = false;
-  p.comm = MPI_COMM_WORLD;
+int run(int argc, char **argv, int rank, int nproc) {
+  Config cfg;
+  if (!parse_args(argc, argv, cfg)) {
+    if (rank == 0)
+      usage(std::cerr, argc >= 1 ? argv[0] : "openpfc_inverse_homogenize_hip");
+    return 2;
+  }
+  if (cfg.checkpoint_dir.empty() && !cfg.restart_dir.empty())
+    cfg.checkpoint_dir = cfg.restart_dir;
+  if (cfg.checkpoint_dir.empty() && !cfg.fields.dir.empty())
+    cfg.checkpoint_dir = cfg.fields.dir + "/checkpoint";
+  int rc = 0;
+  const pfc::Domain domain = pfc::domain::create(
+      pfc::GridSize({cfg.nx, cfg.ny, cfg.nz}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+      pfc::GridSpacing({cfg.dx, cfg.dx, cfg.dx}));
+  pfc::sim::stacks::GPUSpectralStack<pfc::HIPSpace> stack(domain, rank, nproc,
+                                                          MPI_COMM_WORLD);
+  auto &fft = stack.fft();
+  auto h = pfc::data::field_from_inbox<double>(domain, fft.get_inbox_bounds());
+  if (const int status = initialize_design(cfg, h, rank); status != 0) return status;
+
+  const auto p = driver::configure_elasticity(cfg);
 
   pfc::apps::inverse::InverseSpec spec;
   try {
-    spec.C_target = make_target(cfg);
+    spec = driver::configure_problem(cfg, make_target(cfg));
   } catch (const std::exception &e) {
     if (rank == 0) std::cerr << e.what() << '\n';
     return 2;
-  }
-  spec.volume_target = cfg.volume;
-  spec.lambda_volume = cfg.lambda_volume;
-  spec.lambda_reg = cfg.lambda_reg;
-  spec.epsilon = cfg.epsilon;
-  spec.dt = cfg.dt;
-  spec.normalize_grad = cfg.normalize != 0;
-  spec.max_abs_delta = cfg.max_delta;
-  spec.project_volume = cfg.project_volume != 0;
-  spec.simp_p = cfg.simp;
-  if (cfg.no_tensor != 0) {
-    spec.W = pfc::apps::Voigt6{};
-  } else if (cfg.w12 != 1.0 || cfg.target == "auxetic") {
-    const double w = (cfg.target == "auxetic" && cfg.w12 == 1.0) ? 4.0 : cfg.w12;
-    spec.W(0, 1) = spec.W(1, 0) = w;
-    spec.W(0, 2) = spec.W(2, 0) = w;
-    spec.W(1, 2) = spec.W(2, 1) = w;
   }
 
   pfc::apps::PeriodicHomogenizerHIP hom(domain, fft, p);
@@ -581,7 +565,7 @@ int run(int argc, char **argv, int rank, int nproc) {
     report_hbm(rank, nproc, MPI_COMM_WORLD, n_global, n_owned * sizeof(double));
   }
 
-  std::ofstream csv;
+  auto csv = driver::open_csv(cfg, rank);
   if (rank == 0) {
     std::cout << "backend hip ranks " << nproc << " grid " << cfg.nx << 'x' << cfg.ny
               << 'x' << cfg.nz << " init " << cfg.init << " target " << cfg.target
@@ -590,18 +574,7 @@ int run(int argc, char **argv, int rank, int nproc) {
     std::cout << "step J J_tensor volume grey C11 C12 nu_eff design_rms dJ_rel "
                  "dC_rel morph_frac step_rms grad_rms simp lambda_reg frozen "
                  "window candidate verify ms conv\n";
-    if (!cfg.csv.empty()) {
-      const bool resume =
-          !cfg.restart_dir.empty() && std::filesystem::exists(cfg.csv);
-      csv.open(cfg.csv, resume ? std::ios::app : std::ios::out);
-      if (!resume) csv << pfc::apps::inverse::kInverseCsvHeader << '\n';
-    }
   }
-
-  auto nu_of = [](double c11, double c12) {
-    const double den = c11 + c12;
-    return (std::abs(den) > 1.0e-30) ? c12 / den : 0.0;
-  };
 
   int last_dumped = -1;
   auto dump = [&](int step, bool force) {
@@ -618,14 +591,7 @@ int run(int argc, char **argv, int rank, int nproc) {
   const double lreg1 =
       (cfg.lambda_reg_end >= 0.0) ? cfg.lambda_reg_end : cfg.lambda_reg;
 
-  pfc::apps::inverse::ConvergenceTracker tracker;
-  tracker.cfg.continuation_steps = cfg.continuation_steps;
-  tracker.cfg.max_steps = cfg.steps;
-  tracker.cfg.conv_window = cfg.conv_window;
-  tracker.cfg.verify_steps = cfg.verify_steps;
-  tracker.cfg.tol_design = cfg.tol_design;
-  tracker.cfg.tol_objective = cfg.tol_objective;
-  tracker.cfg.tol_tensor = cfg.tol_tensor;
+  auto tracker = driver::configure_tracker(cfg);
 
   for (std::size_t i = 0; i < h.size(); ++i) h_prev.data()[i] = h.data()[i];
   h_prev.note_host_write();
@@ -638,77 +604,39 @@ int run(int argc, char **argv, int rank, int nproc) {
                         pfc::apps::inverse::TerminationReason why =
                             pfc::apps::inverse::TerminationReason::Running) {
     if (cfg.checkpoint_dir.empty()) return true;
-    pfc::apps::inverse::InverseCheckpoint ck;
-    pfc::apps::inverse::capture_problem(ck, cfg, spec.C_target, spec.W);
-    ck.nx = cfg.nx;
-    ck.ny = cfg.ny;
-    ck.nz = cfg.nz;
-    pfc::apps::inverse::capture_tracker(ck, tracker, next_step);
-    ck.have_prev = have_prev ? 1 : 0;
+    auto ck = driver::capture_checkpoint(cfg, spec, tracker, next_step, have_prev,
+                                         J_prev, C_prev, why);
     ck.n_snap = snapshots.frames();
     ck.last_dumped = last_dumped;
-    ck.termination = static_cast<int>(why);
-    ck.J_prev = J_prev;
-    pfc::apps::inverse::store_voigt6(ck.C_prev, C_prev);
-    const auto root = std::filesystem::path(cfg.checkpoint_dir);
-    const auto gen = pfc::apps::inverse::checkpoint_generation_name(next_step);
-    int ready = 1;
-    if (rank == 0)
-      ready = pfc::apps::inverse::prepare_checkpoint_staging(root) ? 1 : 0;
-    MPI_Bcast(&ready, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    if (!ready) {
-      if (rank == 0) std::cerr << "checkpoint: failed to prepare staging\n";
-      return false;
-    }
-    const auto staging = pfc::apps::inverse::checkpoint_staging_dir(root).string();
-    pfc::io::write_scalar_brick(h, MPI_COMM_WORLD,
-                                std::filesystem::path(staging) / "h.bin");
-    pfc::io::write_scalar_brick(h_prev, MPI_COMM_WORLD,
-                                std::filesystem::path(staging) / "h_prev.bin");
-    if (rank == 0) {
-      ready = pfc::apps::inverse::checkpoint_field_sizes_match(staging, ck);
-      ready = ready &&
-              pfc::apps::inverse::write_checkpoint_file(staging + "/state.txt", ck);
-      ready = ready && pfc::apps::inverse::write_dump_steps(
-                           staging + "/dump_steps.txt", snapshots.progress().steps);
-      ready = ready && pfc::apps::inverse::publish_checkpoint_generation(root, gen);
-      if (!ready) std::cerr << "checkpoint: failed to publish " << gen << '\n';
-    }
-    MPI_Bcast(&ready, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    return ready != 0;
+    return driver::publish_checkpoint(
+        cfg.checkpoint_dir, ck, rank,
+        [&](const std::string &staging) {
+          pfc::io::write_scalar_brick(h, MPI_COMM_WORLD,
+                                      std::filesystem::path(staging) / "h.bin");
+          pfc::io::write_scalar_brick(h_prev, MPI_COMM_WORLD,
+                                      std::filesystem::path(staging) / "h_prev.bin");
+          return true;
+        },
+        [&](const std::string &staging) {
+          return pfc::apps::inverse::write_dump_steps(staging + "/dump_steps.txt",
+                                                      snapshots.progress().steps);
+        });
   };
 
   if (!cfg.restart_dir.empty()) {
-    pfc::apps::inverse::InverseCheckpoint ck;
-    std::string bundle;
     std::vector<int> dump_steps;
-    int ok = 1;
-    if (rank == 0) {
-      bundle =
-          pfc::apps::inverse::resolve_checkpoint_bundle(cfg.restart_dir).string();
-      if (bundle.empty()) {
-        ok = 0;
-      } else {
-        std::ifstream in(bundle + "/state.txt");
-        if (!in || !pfc::apps::inverse::read_checkpoint_text(in, ck) ||
-            !pfc::apps::inverse::checkpoint_matches_problem(ck, cfg, spec.C_target,
-                                                            spec.W) ||
-            !pfc::apps::inverse::checkpoint_is_restartable(ck, cfg.steps))
-          ok = 0;
-        else if (ck.last_dumped > ck.next_step ||
-                 !pfc::apps::inverse::read_dump_steps(bundle + "/dump_steps.txt",
-                                                      dump_steps, ck.n_snap,
-                                                      ck.last_dumped))
-          ok = 0;
-      }
-    }
-    MPI_Bcast(&ok, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    int n_bundle = static_cast<int>(bundle.size());
-    MPI_Bcast(&n_bundle, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    bundle.resize(static_cast<std::size_t>(n_bundle));
-    if (n_bundle > 0)
-      MPI_Bcast(bundle.data(), n_bundle, MPI_CHAR, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&ck, static_cast<int>(sizeof(ck)), MPI_BYTE, 0, MPI_COMM_WORLD);
+    const auto restart = driver::inspect_restart(
+        cfg, spec, rank,
+        [&](const std::string &path,
+            const pfc::apps::inverse::InverseCheckpoint &ck) {
+          return ck.last_dumped <= ck.next_step &&
+                 pfc::apps::inverse::read_dump_steps(path + "/dump_steps.txt",
+                                                     dump_steps, ck.n_snap,
+                                                     ck.last_dumped);
+        });
+    const auto &ck = restart.checkpoint;
+    const auto &bundle = restart.path;
+    const bool ok = restart.ready;
     int n_dump = static_cast<int>(dump_steps.size());
     MPI_Bcast(&n_dump, 1, MPI_INT, 0, MPI_COMM_WORLD);
     dump_steps.resize(static_cast<std::size_t>(std::max(0, n_dump)));
@@ -752,205 +680,176 @@ int run(int argc, char **argv, int rank, int nproc) {
   int n_done = start_s;
   const auto gs = h.global_size();
   const double n_global = static_cast<double>(gs[0]) * gs[1] * gs[2];
-  for (int s = start_s; s < cfg.steps; ++s) {
-    const double t =
-        pfc::apps::inverse::continuation_fraction(s, cfg.continuation_steps);
-    spec.simp_p = simp0 + t * (simp1 - simp0);
-    spec.lambda_reg = lreg0 + t * (lreg1 - lreg0);
-    // Accepted-state pair: (h_s, J(h_s), C_H(h_s)) vs previous accepted
-    // state. Measure ||h_s-h_{s-1}|| before the update that produces h_{s+1}.
-    double local_dh2 = 0.0, local_morph = 0.0;
-    for (std::size_t i = 0; i < h.size(); ++i) {
-      const double d = h.data()[i] - h_prev.data()[i];
-      local_dh2 += d * d;
-      if ((h.data()[i] > 0.5) != (h_prev.data()[i] > 0.5)) local_morph += 1.0;
-    }
-    double glo_dh2 = 0.0, glo_morph = 0.0;
-    MPI_Allreduce(&local_dh2, &glo_dh2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(&local_morph, &glo_morph, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    const double design_rms = std::sqrt(glo_dh2 / n_global);
-    const double morph_frac = glo_morph / n_global;
-    for (std::size_t i = 0; i < h.size(); ++i) h_prev.data()[i] = h.data()[i];
-    h_prev.note_host_write();
-    const auto t0 = std::chrono::steady_clock::now();
-    last = ac_step(hom, domain, fft, h, spec, hat, lap, dJdh, g, penalized, d_real,
-                   d_hat, MPI_COMM_WORLD);
-    const auto t1 = std::chrono::steady_clock::now();
-    const double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
-    double dC2 = 0.0;
-    if (have_prev) {
-      for (int i = 0; i < 6; ++i)
-        for (int j = 0; j < 6; ++j) {
-          const double d = last.C(i, j) - C_prev(i, j);
-          dC2 += d * d;
-        }
-    }
-    auto metrics = pfc::apps::inverse::make_metrics(
-        design_rms, last.J, have_prev ? J_prev : last.J, std::sqrt(dC2),
-        have_prev ? C_prev.frobenius_norm() : last.C_fro, morph_frac, tracker.cfg);
-    if (!have_prev) metrics.quiet = false;
-    reason = tracker.after_step(s, last.elasticity_converged, metrics);
-    const double nu = nu_of(last.C11, last.C12);
-    const int frozen =
-        pfc::apps::inverse::params_frozen(s, cfg.continuation_steps) ? 1 : 0;
-    if (rank == 0) {
-      std::cout << std::setprecision(8) << s << ' ' << last.J << ' ' << last.J_tensor
-                << ' ' << last.volume_accepted << ' ' << last.grey_fraction << ' '
-                << last.C11 << ' ' << last.C12 << ' ' << nu << ' ' << design_rms
-                << ' ' << metrics.dJ_rel << ' ' << metrics.dC_rel << ' '
-                << morph_frac << ' ' << last.step_rms << ' ' << last.grad_rms << ' '
-                << spec.simp_p << ' ' << spec.lambda_reg << ' ' << frozen << ' '
-                << tracker.quiet_count << ' ' << (tracker.candidate ? 1 : 0) << ' '
-                << tracker.verify_left << ' ' << std::setprecision(3) << ms << ' '
-                << (last.elasticity_converged ? "yes" : "no") << ' '
-                << pfc::apps::inverse::termination_name(reason) << '\n';
-      if (csv.is_open()) {
-        pfc::apps::inverse::InverseCsvRow row;
-        row.step = s;
-        row.J = last.J;
-        row.J_tensor = last.J_tensor;
-        row.J_volume = last.J_volume;
-        row.J_reg = last.J_reg;
-        row.volume = last.volume_accepted;
-        row.grey = last.grey_fraction;
-        row.C11 = last.C11;
-        row.C12 = last.C12;
-        row.nu_eff = nu;
-        row.C_fro = last.C_fro;
-        row.design_rms = design_rms;
-        row.dJ_rel = metrics.dJ_rel;
-        row.dC_rel = metrics.dC_rel;
-        row.morph_frac = morph_frac;
-        row.step_rms = last.step_rms;
-        row.grad_rms = last.grad_rms;
-        row.simp_p = spec.simp_p;
-        row.lambda_reg = spec.lambda_reg;
-        row.frozen = frozen;
-        row.conv_window = tracker.quiet_count;
-        row.candidate = tracker.candidate ? 1 : 0;
-        row.verified = tracker.verified ? 1 : 0;
-        row.ms = ms;
-        row.elasticity = last.elasticity_converged ? 1 : 0;
-        row.termination = pfc::apps::inverse::termination_name(reason);
-        pfc::apps::inverse::write_inverse_csv_row(csv, row);
-        csv.flush();
+  const auto evolve = [&] {
+    for (int s = start_s; s < cfg.steps; ++s) {
+      const double t =
+          pfc::apps::inverse::continuation_fraction(s, cfg.continuation_steps);
+      spec.simp_p = simp0 + t * (simp1 - simp0);
+      spec.lambda_reg = lreg0 + t * (lreg1 - lreg0);
+      // Accepted-state pair: (h_s, J(h_s), C_H(h_s)) vs previous accepted
+      // state. Measure ||h_s-h_{s-1}|| before the update that produces h_{s+1}.
+      double local_dh2 = 0.0, local_morph = 0.0;
+      for (std::size_t i = 0; i < h.size(); ++i) {
+        const double d = h.data()[i] - h_prev.data()[i];
+        local_dh2 += d * d;
+        if ((h.data()[i] > 0.5) != (h_prev.data()[i] > 0.5)) local_morph += 1.0;
       }
-    }
-    n_done = s + 1;
-    C_prev = last.C;
-    J_prev = last.J;
-    have_prev = true;
-    if (reason != pfc::apps::inverse::TerminationReason::Running) {
-      pfc::apps::inverse::copy_design_buffer(h_prev.data(), h.data(), h.size());
-      h.note_host_write();
-      if (!write_ckpt(n_done, reason)) {
+      double glo_dh2 = 0.0, glo_morph = 0.0;
+      MPI_Allreduce(&local_dh2, &glo_dh2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(&local_morph, &glo_morph, 1, MPI_DOUBLE, MPI_SUM,
+                    MPI_COMM_WORLD);
+      const double design_rms = std::sqrt(glo_dh2 / n_global);
+      const double morph_frac = glo_morph / n_global;
+      for (std::size_t i = 0; i < h.size(); ++i) h_prev.data()[i] = h.data()[i];
+      h_prev.note_host_write();
+      const auto t0 = std::chrono::steady_clock::now();
+      last = ac_step(hom, domain, fft, h, spec, hat, lap, dJdh, g, penalized, d_real,
+                     d_hat, MPI_COMM_WORLD);
+      const auto t1 = std::chrono::steady_clock::now();
+      const double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
+      const auto metrics = driver::diagnose_step(
+          last, C_prev, J_prev, have_prev, design_rms, morph_frac, tracker.cfg);
+      reason = tracker.after_step(s, last.elasticity_converged, metrics);
+      const double nu = driver::effective_poisson_ratio(last.C11, last.C12);
+      const int frozen =
+          pfc::apps::inverse::params_frozen(s, cfg.continuation_steps) ? 1 : 0;
+      if (rank == 0) {
+        std::cout << std::setprecision(8) << s << ' ' << last.J << ' '
+                  << last.J_tensor << ' ' << last.volume_accepted << ' '
+                  << last.grey_fraction << ' ' << last.C11 << ' ' << last.C12 << ' '
+                  << nu << ' ' << design_rms << ' ' << metrics.dJ_rel << ' '
+                  << metrics.dC_rel << ' ' << morph_frac << ' ' << last.step_rms
+                  << ' ' << last.grad_rms << ' ' << spec.simp_p << ' '
+                  << spec.lambda_reg << ' ' << frozen << ' ' << tracker.quiet_count
+                  << ' ' << (tracker.candidate ? 1 : 0) << ' ' << tracker.verify_left
+                  << ' ' << std::setprecision(3) << ms << ' '
+                  << (last.elasticity_converged ? "yes" : "no") << ' '
+                  << pfc::apps::inverse::termination_name(reason) << '\n';
+        if (csv.is_open()) {
+          driver::write_step_csv(csv, s, last, spec, metrics, tracker, reason,
+                                 design_rms, morph_frac, ms, frozen);
+          csv.flush();
+        }
+      }
+      n_done = s + 1;
+      C_prev = last.C;
+      J_prev = last.J;
+      have_prev = true;
+      if (reason != pfc::apps::inverse::TerminationReason::Running) {
+        pfc::apps::inverse::copy_design_buffer(h_prev.data(), h.data(), h.size());
+        h.note_host_write();
+        if (!write_ckpt(n_done, reason)) {
+          rc = 2;
+          break;
+        }
+        if (reason == pfc::apps::inverse::TerminationReason::ElasticityFailure)
+          rc = 1;
+        break;
+      }
+      dump(s + 1, false);
+      if (!write_ckpt(n_done)) {
         rc = 2;
         break;
       }
-      if (reason == pfc::apps::inverse::TerminationReason::ElasticityFailure) rc = 1;
-      break;
+      if (cfg.stop_after > 0 && n_done >= cfg.stop_after) break;
     }
-    dump(s + 1, false);
-    if (!write_ckpt(n_done)) {
-      rc = 2;
-      break;
-    }
-    if (cfg.stop_after > 0 && n_done >= cfg.stop_after) break;
-  }
+  };
+  evolve();
   if (rc == 2) return rc;
   if (cfg.stop_after > 0 &&
       reason == pfc::apps::inverse::TerminationReason::Running) {
     if (rank == 0) std::cout << "STOP_AFTER steps_done " << n_done << '\n';
     return rc;
   }
-  const int certified_step = std::max(0, n_done - 1);
-  dump(certified_step, true);
+  const auto finalize_output = [&] {
+    const int certified_step = std::max(0, n_done - 1);
+    dump(certified_step, true);
 
-  const auto final = hom.compute(h);
-  if (rank == 0) {
-    const auto &C = final.stiffness;
-    const double nu = nu_of(C(0, 0), C(0, 1));
-    const double Jt = pfc::apps::tensor_mismatch(C, spec.C_target, spec.W);
-    std::cout << std::setprecision(16) << "FINAL_RECOMPUTE J_tensor " << Jt
-              << " C11 " << C(0, 0) << " C12 " << C(0, 1) << " nu_eff " << nu
-              << " C_fro " << C.symmetrized().frobenius_norm() << " elasticity "
-              << (final.all_converged() ? 1 : 0) << '\n';
-    if (csv.is_open()) {
-      csv << "# CERTIFIED_STEP " << certified_step << " termination "
-          << pfc::apps::inverse::termination_name(reason) << '\n';
-      csv << "# FINAL_RECOMPUTE unpenalized C_H of certified accepted h; "
-             "not an iterate J_tensor="
-          << Jt << " C11=" << C(0, 0) << " C12=" << C(0, 1) << " nu_eff=" << nu
-          << " C_fro=" << C.symmetrized().frobenius_norm()
-          << " elasticity=" << (final.all_converged() ? 1 : 0) << '\n';
-      csv.flush();
+    const auto final = hom.compute(h);
+    if (rank == 0) {
+      const auto &C = final.stiffness;
+      const double nu = driver::effective_poisson_ratio(C(0, 0), C(0, 1));
+      const double Jt = pfc::apps::tensor_mismatch(C, spec.C_target, spec.W);
+      std::cout << std::setprecision(16) << "FINAL_RECOMPUTE J_tensor " << Jt
+                << " C11 " << C(0, 0) << " C12 " << C(0, 1) << " nu_eff " << nu
+                << " C_fro " << C.symmetrized().frobenius_norm() << " elasticity "
+                << (final.all_converged() ? 1 : 0) << '\n';
+      if (csv.is_open()) {
+        csv << "# CERTIFIED_STEP " << certified_step << " termination "
+            << pfc::apps::inverse::termination_name(reason) << '\n';
+        csv << "# FINAL_RECOMPUTE unpenalized C_H of certified accepted h; "
+               "not an iterate J_tensor="
+            << Jt << " C11=" << C(0, 0) << " C12=" << C(0, 1) << " nu_eff=" << nu
+            << " C_fro=" << C.symmetrized().frobenius_norm()
+            << " elasticity=" << (final.all_converged() ? 1 : 0) << '\n';
+        csv.flush();
+      }
     }
-  }
-  auto hbin = h;
-  for (std::size_t i = 0; i < h.size(); ++i)
-    hbin.data()[i] = (h.data()[i] > 0.5) ? 1.0 : 0.0;
-  hbin.note_host_write();
-  const auto bin = hom.compute(hbin);
-  if (!cfg.fields.dir.empty()) {
-    const auto out = std::filesystem::path(cfg.fields.dir);
-    pfc::io::write_scalar_brick(h, MPI_COMM_WORLD, out / "h_final.bin");
-    pfc::io::write_scalar_brick(hbin, MPI_COMM_WORLD, out / "h_thresh.bin");
-    const auto n = pfc::domain::get_size(h.domain());
-    const auto spacing = pfc::domain::get_spacing(h.domain());
-    const auto origin = pfc::domain::get_origin(h.domain());
-    const pfc::io::BinarySeriesGeometry geometry{.nx = n[0],
-                                                 .ny = n[1],
-                                                 .nz = n[2],
-                                                 .x0 = origin[0],
-                                                 .y0 = origin[1],
-                                                 .z0 = origin[2],
-                                                 .dx = spacing[0],
-                                                 .dy = spacing[1],
-                                                 .dz = n[2] > 1 ? spacing[2] : 1.0};
-    pfc::io::write_scalar_xdmf(MPI_COMM_WORLD, out / "h_final.xdmf", geometry, "h",
-                               "h_final.bin");
-    pfc::io::write_scalar_xdmf(MPI_COMM_WORLD, out / "h_thresh.xdmf", geometry, "h",
-                               "h_thresh.bin");
-  }
-  snapshots.close();
-  if (rank == 0) {
+    auto hbin = h;
+    for (std::size_t i = 0; i < h.size(); ++i)
+      hbin.data()[i] = (h.data()[i] > 0.5) ? 1.0 : 0.0;
+    hbin.note_host_write();
+    const auto bin = hom.compute(hbin);
     if (!cfg.fields.dir.empty()) {
-      const auto write_report = [&](const char *name, const char *field,
-                                    const pfc::apps::HomogenizationResult &result) {
-        const auto path = std::filesystem::path(cfg.fields.dir) / name;
-        std::ofstream stream(path);
-        stream << pfc::apps::inverse::material_report(field, certified_step, reason,
-                                                      {cfg.nx, cfg.ny, cfg.nz},
-                                                      cfg.dx, result, spec.C_target)
-                      .dump(2)
-               << '\n';
-        stream.close();
-        if (!stream)
-          throw std::runtime_error("cannot write material report: " + path.string());
-      };
-      write_report("h_final_material.json", "h_final.bin", final);
-      write_report("h_thresh_material.json", "h_thresh.bin", bin);
+      const auto out = std::filesystem::path(cfg.fields.dir);
+      pfc::io::write_scalar_brick(h, MPI_COMM_WORLD, out / "h_final.bin");
+      pfc::io::write_scalar_brick(hbin, MPI_COMM_WORLD, out / "h_thresh.bin");
+      const auto n = pfc::domain::get_size(h.domain());
+      const auto spacing = pfc::domain::get_spacing(h.domain());
+      const auto origin = pfc::domain::get_origin(h.domain());
+      const pfc::io::BinarySeriesGeometry geometry{.nx = n[0],
+                                                   .ny = n[1],
+                                                   .nz = n[2],
+                                                   .x0 = origin[0],
+                                                   .y0 = origin[1],
+                                                   .z0 = origin[2],
+                                                   .dx = spacing[0],
+                                                   .dy = spacing[1],
+                                                   .dz =
+                                                       n[2] > 1 ? spacing[2] : 1.0};
+      pfc::io::write_scalar_xdmf(MPI_COMM_WORLD, out / "h_final.xdmf", geometry, "h",
+                                 "h_final.bin");
+      pfc::io::write_scalar_xdmf(MPI_COMM_WORLD, out / "h_thresh.xdmf", geometry,
+                                 "h", "h_thresh.bin");
     }
-    const auto &C = final.stiffness;
-    const double nu = nu_of(C(0, 0), C(0, 1));
-    const auto &Cb = bin.stiffness;
-    const double nub = nu_of(Cb(0, 0), Cb(0, 1));
-    std::cout << std::setprecision(16) << "INVERSE_CHECKSUM " << last.J << '\n';
-    std::cout << std::setprecision(8) << "C11 " << C(0, 0) << " C12 " << C(0, 1)
-              << " nu_eff " << nu << " grey " << last.grey_fraction << '\n';
-    std::cout << "C11_bin " << Cb(0, 0) << " C12_bin " << Cb(0, 1) << " nu_bin "
-              << nub << '\n';
-    std::cout << "ranks " << nproc << " grid " << cfg.nx << 'x' << cfg.ny << 'x'
-              << cfg.nz << " steps_done " << n_done << " certified_step "
-              << certified_step << " termination "
-              << pfc::apps::inverse::termination_name(reason) << '\n';
-    std::ifstream status("/proc/self/status");
-    std::string line;
-    while (std::getline(status, line)) {
-      if (line.rfind("VmHWM:", 0) == 0 || line.rfind("VmRSS:", 0) == 0)
-        std::cout << line << '\n';
+    snapshots.close();
+    if (rank == 0) {
+      if (!cfg.fields.dir.empty()) {
+        const auto write_report =
+            [&](const char *name, const char *field,
+                const pfc::apps::HomogenizationResult &result) {
+              const auto path = std::filesystem::path(cfg.fields.dir) / name;
+              std::ofstream stream(path);
+              stream << pfc::apps::inverse::material_report(
+                            field, certified_step, reason, {cfg.nx, cfg.ny, cfg.nz},
+                            cfg.dx, result, spec.C_target)
+                            .dump(2)
+                     << '\n';
+              stream.close();
+              if (!stream)
+                throw std::runtime_error("cannot write material report: " +
+                                         path.string());
+            };
+        write_report("h_final_material.json", "h_final.bin", final);
+        write_report("h_thresh_material.json", "h_thresh.bin", bin);
+      }
+      const auto &C = final.stiffness;
+      const double nu = driver::effective_poisson_ratio(C(0, 0), C(0, 1));
+      const auto &Cb = bin.stiffness;
+      const double nub = driver::effective_poisson_ratio(Cb(0, 0), Cb(0, 1));
+      std::cout << std::setprecision(16) << "INVERSE_CHECKSUM " << last.J << '\n';
+      std::cout << std::setprecision(8) << "C11 " << C(0, 0) << " C12 " << C(0, 1)
+                << " nu_eff " << nu << " grey " << last.grey_fraction << '\n';
+      std::cout << "C11_bin " << Cb(0, 0) << " C12_bin " << Cb(0, 1) << " nu_bin "
+                << nub << '\n';
+      std::cout << "ranks " << nproc << " grid " << cfg.nx << 'x' << cfg.ny << 'x'
+                << cfg.nz << " steps_done " << n_done << " certified_step "
+                << certified_step << " termination "
+                << pfc::apps::inverse::termination_name(reason) << '\n';
+      driver::report_process_memory(std::cout);
     }
-  }
+  };
+  finalize_output();
   return rc;
 }
 

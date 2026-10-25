@@ -11,6 +11,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 - App compiler-runtime discovery and site paths are removed. Mixed toolchains
   can explicitly set `OpenPFC_APP_CXX_RUNTIME` in their preset or cache (#654).
+- Share inverse-driver checkpoint/restart, CSV and memory reporting between
+  CPU and HIP backends. Name initialization, evolution and output stages (#652).
 
 - `openpfc bundle` can build a scratch image when `--base` is omitted. The image
   copies the host dynamic loader, the glibc libraries required by the model and
