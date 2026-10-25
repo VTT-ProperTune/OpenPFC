@@ -198,6 +198,29 @@ def check_boundaries(binary, directory):
             assert abs(float(nodes[-1]["u"])) < 1e-12
 
 
+def check_nonlinear(binary, directory):
+    run(binary, directory)
+    lo, hi = 0, 1
+    for _ in range(60):
+        a = (lo + hi) / 2
+        if math.cos(a) - math.sqrt(2) * a > 0:
+            lo = a
+        else:
+            hi = a
+    a = (lo + hi) / 2
+    data = rows(directory / "results/nonlinear.csv")
+    assert len(data) == 17 + 401
+    for row in data:
+        x = float(row["x"])
+        exact = 2 * math.log(math.cos(a) / math.cos(a * x))
+        assert abs(float(row["exact"]) - exact) < 1e-13
+        assert abs(float(row["u"]) - exact) < 2e-9
+    history = rows(directory / "results/newton.csv")
+    residuals = [float(r["residual"]) for r in history]
+    assert len(residuals) >= 2 and residuals[-1] < 1e-10
+    assert all(new < old for old, new in zip(residuals, residuals[1:]))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -214,6 +237,7 @@ def main():
             "polynomial_regularity",
             "polynomial_integration",
             "polynomial_boundary_values",
+            "polynomial_nonlinear_boundary",
         ],
     )
     args = parser.parse_args()
@@ -281,6 +305,16 @@ def main():
             check_boundaries(bin_dir / "polynomial_boundary_values", root / "valid")
             run(
                 bin_dir / "polynomial_boundary_values",
+                root / "invalid",
+                parameters={"n": 0, "sizes": [0]},
+                success=False,
+            )
+        if args.case in (None, "polynomial_nonlinear_boundary"):
+            root = base / "polynomial_nonlinear_boundary"
+            root.mkdir()
+            check_nonlinear(bin_dir / "polynomial_nonlinear_boundary", root / "valid")
+            run(
+                bin_dir / "polynomial_nonlinear_boundary",
                 root / "invalid",
                 parameters={"n": 0, "sizes": [0]},
                 success=False,

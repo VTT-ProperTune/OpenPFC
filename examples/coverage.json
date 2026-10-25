@@ -349,6 +349,17 @@
       ]
     },
     {
+      "target": "polynomial_nonlinear_boundary",
+      "source": "polynomials/nonlinear-boundary/model.cpp",
+      "chapter": "polynomials/nonlinear-boundary/index.qmd",
+      "capabilities": [
+        "newton",
+        "gmres",
+        "scalar-root",
+        "boundary-conditions"
+      ]
+    },
+    {
       "target": "polynomial_regularity",
       "source": "polynomials/regularity/model.cpp",
       "chapter": "polynomials/regularity/index.qmd",
@@ -548,7 +559,7 @@
       "program": 14,
       "title": "solve nonlinear BVP u_xx = exp(u), u(-1)=u(1)=0",
       "source": "https://people.maths.ox.ac.uk/trefethen/p14.m",
-      "chapter": null,
+      "chapter": "polynomials/nonlinear-boundary/index.qmd",
       "scope": "Original nonlinear collocation problem, using native Newton–GMRES instead of fixed-point iteration and an analytic reference."
     },
     {
@@ -866,7 +877,8 @@
       ],
       "chapters": [
         "polynomials/integration/index.qmd",
-        "polynomials/boundary-values/index.qmd"
+        "polynomials/boundary-values/index.qmd",
+        "polynomials/nonlinear-boundary/index.qmd"
       ]
     },
     {

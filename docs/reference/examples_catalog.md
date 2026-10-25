@@ -117,6 +117,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `polynomial_regularity` | `polynomials/regularity/model.cpp` | Program 12: four regularity classes on Chebyshev grids |
 | `polynomial_integration` | `polynomials/integration/model.cpp` | Program 30: antiderivative boundary problem with native GMRES |
 | `polynomial_boundary_values` | `polynomials/boundary-values/model.cpp` | Programs 13, 32 and 33: homogeneous, lifted and mixed boundary conditions with GMRES |
+| `polynomial_nonlinear_boundary` | `polynomials/nonlinear-boundary/model.cpp` | Program 14 adapted to native Newton–GMRES, checked by an analytic solution and scalar root |
 
 ## Research prototypes
 

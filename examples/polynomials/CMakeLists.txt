@@ -24,3 +24,7 @@ set_target_properties(polynomial_integration PROPERTIES RUNTIME_OUTPUT_DIRECTORY
 add_executable(polynomial_boundary_values boundary-values/model.cpp)
 target_link_libraries(polynomial_boundary_values PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(polynomial_boundary_values PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(polynomial_nonlinear_boundary nonlinear-boundary/model.cpp)
+target_link_libraries(polynomial_nonlinear_boundary PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(polynomial_nonlinear_boundary PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
