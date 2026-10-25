@@ -85,6 +85,7 @@ struct Build {
   Json manifest;
 };
 Build compile_source(const Arguments &args);
+int compile_model(const Arguments &args);
 int doctor(const Arguments &args);
 int run_source(const Arguments &args);
 int export_record(const Arguments &args);

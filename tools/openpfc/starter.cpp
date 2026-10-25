@@ -25,8 +25,8 @@ int init_model(const Arguments &args) {
       << "Created diffusion model: " << destination
       << "\nFrom that directory, with the matching compiler/MPI environment:\n"
          "  openpfc doctor\n"
-         "  openpfc compile model.cpp\n"
-         "  openpfc run model.cpp input.json --launcher=none\n"
+         "  openpfc compile model.cpp -o model\n"
+         "  ./model input.json\n"
          "Add --sdk PREFIX when needed; see README.md and openpfc help compile.\n";
   return 0;
 }

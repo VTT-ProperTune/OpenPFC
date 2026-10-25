@@ -3,12 +3,12 @@ SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-# Compile and run with the native CLI
+# Compile a model with the native CLI
 
 `openpfc` is a native C++20 executable. It can compile a user-owned C++ model
-against an installed OpenPFC SDK, preserve its inputs and run records, or manage
-the existing catalogued app cases. The installed CLI and its generated model
-projects require no Python interpreter. The CLI links the C++ and OpenSSL Crypto
+against an installed OpenPFC SDK, optionally preserve inputs and run records,
+or manage the existing catalogued app cases. The installed CLI and its
+generated model projects require no Python interpreter. The CLI links the C++ and OpenSSL Crypto
 runtimes; it does not load OpenPFC, MPI or CUDA merely to print help or scaffold a
 case. Install OpenSSL development files (Crypto 1.1 or newer) when building it.
 
@@ -41,7 +41,7 @@ Run `doctor` once outside an MPI launch. On LUMI use an allocation or permitted
 build environment, since the probe invokes a compiler. A successful check
 verifies the host build contract; it does not launch MPI ranks or certify GPU
 execution. An SDK's recorded CUDA/HIP capabilities do not qualify those source
-profiles. Use `--launcher=none` for a one-rank run when no MPI launcher is present.
+profiles. The compiled executable can run directly on one rank.
 
 ## Create an editable starter model
 
@@ -49,11 +49,11 @@ profiles. Use `--launcher=none` for a one-rank run when no MPI launcher is prese
 openpfc init my-model --model=diffusion
 cd my-model
 openpfc doctor
-openpfc compile model.cpp
-openpfc run model.cpp input.json --launcher=none
+openpfc compile model.cpp -o model
+./model input.json
 ```
 
-Add `--sdk /path/to/openpfc-sdk` to doctor, compile and run when needed. The
+Add `--sdk /path/to/openpfc-sdk` to doctor and compile when needed. The
 starter can be initialized before installing an SDK; compilation and execution
 require a compatible provisioned environment. The destination must be new, so
 initialization never replaces edits. `--model` cannot be mixed with the
@@ -65,17 +65,17 @@ finite differences and an owned-cell Euler stepper for the heat equation.
 validates its input and explicit stability bound. Edit `Diffusion::rhs` to change
 the physics. The starter is a numerical example, not a calibrated material model.
 
-The CLI prints the attempt directory containing `stdout.log`, `stderr.log`,
-`status.json` and `results/`. Inspect `results/diagnostics.csv` and
-`results/summary.json`: with the default input the mean stays near 1 and the L2
-norm decreases. `results/field_rank_0.csv` holds rank zero's final field.
-The generated README explains these files, input limits and durable export.
-
-Changing only `input.json` reuses the compiled model. Repeating a run preserves a
-new attempt. To use two MPI ranks, invoke the CLI once with
-`--ranks=2 --launcher=mpirun` in place of `--launcher=none`; each rank writes a
-separate field CSV, and the diagnostics remain global. GPU source profiles are
-not part of this starter. For further library examples see
+The compiled `model` is an ordinary executable. It writes directly to
+`results/` in the current working directory. Inspect `results/diagnostics.csv`
+and `results/summary.json`: with the default input the mean stays near 1 and
+the L2 norm decreases. Each MPI rank writes `results/field_rank_N.csv`.
+Changing only `input.json` needs no compilation; repeat `./model input.json`.
+After editing the source, compile again. Direct execution uses the model's
+normal output paths, so retain distinct runs in separate working directories.
+Use your own launcher for multiple ranks: `mpirun -n 2 ./model input.json`,
+or `srun -n 2 ./model input.json` in a compatible Slurm allocation.
+The generated README explains input limits and optional recorded execution.
+For further library examples see
 [`examples/heat/finite-differences/model.cpp`](../../examples/heat/finite-differences/model.cpp)
 and the [extension guide](../extending_openpfc/README.md).
 
@@ -84,15 +84,29 @@ and the [extension guide](../extending_openpfc/README.md).
 Load the pre-provisioned compiler/MPI environment and installed SDK, then run:
 
 ```bash
-openpfc compile my_model.cpp --sdk /path/to/openpfc-sdk
-openpfc run my_model.cpp my_input.json --sdk /path/to/openpfc-sdk --launcher=none
+openpfc compile my_model.cpp -o model --sdk /path/to/openpfc-sdk
+./model my_input.json
+# Or use your MPI/scheduler launcher:
+mpirun -n 2 ./model my_input.json
+srun -n 2 ./model my_input.json
 ```
 
-A model is a complete C++20 translation unit with `main(argc, argv)`. It owns its
-JSON interpretation. The CLI passes the frozen input's pathname as `argv[1]`;
-it does not generate a scientific model or assume that arbitrary C++ understands
-JSON. See the [installed consumer test](../../tests/cli/check_models.cmake) for a
-small model that uses public OpenPFC headers and writes to `results/`.
+`-o FILE` and `--output FILE` select a regular executable pathname. Without
+an output option, the default is the source filename without its extension,
+in the current working directory. Its parent directory must already exist.
+Compilation publishes a separate copy of the cached executable; moving or
+removing your output does not alter the cache. Successful recompilation
+atomically replaces an existing regular output file. A failed build leaves
+it unchanged. Source dependencies, cache paths, symlinks and directories are
+rejected as output destinations. `compile` never launches the model.
+
+A model is a complete C++20 translation unit with `main(argc, argv)`. It owns
+its command-line arguments, JSON interpretation, output paths and exit status.
+The generated starter accepts the input pathname as `argv[1]`. Direct
+execution uses your working directory, terminal and launcher; no OpenPFC run
+record or automatic output redirection is involved. Keep the matching SDK
+compiler/MPI runtime environment loaded. This executable is not a bundle of
+its runtime dependencies; see packaging below for that use case.
 
 `--sdk` accepts an install prefix or the directory containing
 `OpenPFCConfig.cmake`. Without it, the CLI uses `OpenPFC_DIR`, an SDK next to the
@@ -113,6 +127,15 @@ interpret source portability as compatibility between GPU vendors or MPI stacks.
 On LUMI, run model builds in a permitted build environment or allocation rather
 than on a login node.
 
+## Optional recorded execution
+
+Use `openpfc run my_model.cpp my_input.json --launcher=none` when you want the
+CLI to compile if needed, freeze declared inputs, launch the model in a fresh
+attempt directory, and capture logs, exit status and output checksums. This
+is an optional workflow; the compiled executable runs independently. Recorded
+execution passes the frozen input pathname as `argv[1]` and expects output
+under `results/`. The sections below describe its input and record contracts.
+
 ## Source and input dependencies
 
 Local quoted includes within the source directory are snapshotted recursively.
@@ -123,25 +146,26 @@ using a layout such as `src/model.cpp` and `include/material.hpp`; declared
 paths are then relative to that root. For example:
 
 ```bash
-openpfc compile model.cpp --file include/material.hpp --file material.cpp
+openpfc compile model.cpp -o model --file include/material.hpp --file material.cpp
 openpfc run model.cpp input.json --input-file initial/field.bin --launcher=none
 ```
 
-`--input-file` paths are relative to the input JSON's directory. Input bytes are
-preserved without rewriting JSON. Each attempt receives its own copies of the
+For optional recorded execution, `--input-file` paths are relative to the
+input JSON's directory. Input bytes are preserved without rewriting JSON. Each attempt receives its own copies of the
 input and declared data; relative references resolve from the attempt directory.
 Output paths must be under `results/`. Path-like JSON strings that name inputs
 must be declared; absolute paths, parent-directory escapes and source/input
 symlinks are rejected. These rules bound the initial workflow: declare all
 consumed data rather than reading unrelated mutable files from the model.
-This is a provenance contract for user-owned code, not a sandbox for arbitrary
-C++ programs.
+This recorded-execution contract preserves declared inputs; it is not a
+sandbox for arbitrary C++ programs. Direct execution uses the model's own
+input and output handling without these CLI path restrictions.
 
 Build options include `--build-type=Release|Debug|RelWithDebInfo|MinSizeRel`,
 `--generator`, `--toolchain`, `--cc`, `--cxx`, `--jobs` (default 2), and repeatable
 `--define=NAME=VALUE`. The active compiler environment is retained. Use
 `--arg=VALUE` to pass additional model arguments after the input pathname;
-these arguments participate in the run identity.
+these arguments participate in the recorded run identity.
 
 ## Cache, runs and durable export
 

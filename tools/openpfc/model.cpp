@@ -453,6 +453,46 @@ Build compile_source(const Arguments &args) {
   std::cout << "Built: " << root << '\n';
   return {root, manifest};
 }
+int compile_model(const Arguments &args) {
+  const auto requested = absolute_path(
+      args.get("output", fs::path(args.positional.front()).stem().string()));
+  // Resolve the parent, but never follow an existing output symlink. A missing
+  // parent is an error, as with a compiler's ordinary -o option.
+  const auto output = fs::canonical(requested.parent_path()) / requested.filename();
+  const auto status = fs::symlink_status(output);
+  if (fs::is_symlink(status) || (fs::exists(status) && !fs::is_regular_file(status)))
+    throw Error("output must be a regular file, not a symlink or directory: " +
+                output.string());
+  const auto cache_relative = output.lexically_relative(fs::canonical(cache_root()));
+  if (!cache_relative.empty() && *cache_relative.begin() != "..")
+    throw Error("output must be outside the OpenPFC cache: " + output.string());
+  const auto source = source_root(args);
+  for (const auto &[name, bytes] : source_files(args)) {
+    (void)bytes;
+    const auto input = source / name;
+    if (output == input || (fs::exists(output) && fs::equivalent(output, input)))
+      throw Error("output would overwrite a model source file: " + output.string());
+  }
+
+  const auto build = compile_source(args);
+  const auto temporary = output.parent_path() /
+                         ("." + output.filename().string() + ".tmp-" + unique_id());
+  try {
+    // A separate copy lets users move/edit/delete their executable without
+    // changing the verified cache. Rename also permits recompilation while the
+    // previous executable is running, without exposing a partially copied file.
+    fs::copy_file(build.root / "model", temporary);
+    fs::permissions(temporary, fs::perms::owner_write, fs::perm_options::add);
+    fs::rename(temporary, output);
+  } catch (...) {
+    std::error_code ignored;
+    fs::remove(temporary, ignored);
+    throw;
+  }
+  std::cout << "Executable: " << output << '\n';
+  return 0;
+}
+
 int run_source(const Arguments &args) {
   if (args.positional.size() != 2)
     throw Error("run source.cpp expects one input JSON pathname");

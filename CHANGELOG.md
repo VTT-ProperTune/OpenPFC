@@ -7,6 +7,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- `openpfc compile MODEL.cpp` now writes a regular executable in the current
+  directory. Select its path with `-o`/`--output`, then launch it directly or
+  with MPI/Slurm. Starter instructions teach direct execution; recorded
+  execution through `openpfc run` remains optional (#696).
+
 - Replace the large coordinate wrapper demonstration with a small native Cartesian-field callable. Preserve its executable, explain the smooth origin limit and verify complete fields against independent Cartesian polynomials on one and two MPI ranks.
 
 - Compare a time-driven boundary with the fixed-endpoint treatment using the same nonlinear model. Verify complete evolving fields and the prescribed endpoint independently.

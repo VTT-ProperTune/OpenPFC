@@ -54,12 +54,13 @@ int main(int argc, char **argv) {
     if (args.command == "run")
       options.insert(options.end(),
                      {"input-file", "ranks", "launcher", "arg", "record-env"});
+    else
+      options.push_back("output");
     args.allow(options);
     if (args.command == "compile") {
       if (args.positional.size() != 1)
         throw Error("compile source.cpp takes one source pathname");
-      (void)compile_source(args);
-      return 0;
+      return compile_model(args);
     }
     return run_source(args);
   } catch (const Error &error) {

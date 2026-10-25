@@ -15,42 +15,53 @@ From this directory, after loading the matching compiler and MPI environment:
 
 ```bash
 openpfc doctor
-openpfc compile model.cpp
-openpfc run model.cpp input.json --launcher=none
+openpfc compile model.cpp -o model
+./model input.json
 ```
 
-Add `--sdk /path/to/openpfc-sdk` to doctor, compile and run if the SDK is not
-discovered automatically. Compiler and generator options passed to doctor
-must also be passed to compile/run. No OpenPFC checkout or handwritten CMake
-is required. Use `openpfc help compile` for all build options.
+Add `--sdk /path/to/openpfc-sdk` to doctor and compile if the SDK is not
+found automatically. Compiler and generator options passed to doctor must
+also be passed to compile. No OpenPFC checkout or handwritten CMake is
+required. Use `openpfc help compile` for all build options.
 
-The CLI prints the run and attempt directories. Inside the attempt, inspect:
+`model` is a regular executable in this directory. Without `-o`, compilation
+uses the source filename without its extension in the current directory.
+Run it directly, or choose your own MPI or scheduler launcher:
 
-- `stdout.log` and `stderr.log` for the model's messages;
-- `results/diagnostics.csv` for time, mean and L2 norm at each step;
-- `results/field_rank_0.csv` for the final field on rank zero;
-- `results/summary.json` for the final global diagnostics;
-- `status.json` for the exit status and output checksums.
+```bash
+mpirun -n 2 ./model input.json
+# Inside a suitable Slurm allocation with matching MPI:
+srun -n 2 ./model input.json
+```
+
+The model writes into `results/` under the current working directory:
+
+- `results/diagnostics.csv`: time, mean and L2 norm at each step;
+- `results/field_rank_N.csv`: the final field on each MPI rank;
+- `results/summary.json`: final global diagnostics, written once.
 
 The default input runs ten steps on a 16-cubed grid. The mean stays near 1
 and the L2 norm decreases. Edit `diffusivity`, `dt`, `steps` or `cells` in
-`input.json`, then rerun the same command. Input-only changes reuse the build;
-every run request preserves a new attempt. Edit `Diffusion::rhs` in `model.cpp`
-to change the physics; source changes trigger compilation.
+`input.json`, then repeat `./model input.json`; no compilation is needed.
+Edit `Diffusion::rhs` in `model.cpp` to change the physics, then compile again.
+Direct runs use ordinary terminal output and reuse the model's result paths;
+choose separate working directories when retaining multiple runs.
 
 The starter accepts integer `cells` from 4 to 256, integer `steps` from 1 to
 1000000, finite positive `diffusivity` and `dt`, and the explicit stability
 bound `dt <= 1/(6*diffusivity)`. Change the timestep rule when changing the
 equation or discretization. The model owns its input format and validation.
 
-For two local MPI ranks, invoke the CLI once outside an MPI launch:
+## Optional recorded execution
+
+For frozen inputs, separate attempts, captured logs and output checksums, use:
 
 ```bash
-openpfc run model.cpp input.json --ranks=2 --launcher=mpirun
+openpfc run model.cpp input.json --launcher=none
 ```
 
-Each rank writes its own `results/field_rank_N.csv`; global diagnostics are
-written once. Keep results beyond cache cleanup with:
+This prints its run/attempt directory and keeps its results there. Preserve
+that record beyond cache cleanup with:
 
 ```bash
 openpfc export /path/to/cache/runs/openpfc-run-SHA256 /durable/new-record

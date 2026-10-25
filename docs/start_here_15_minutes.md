@@ -35,7 +35,7 @@ openpfc doctor
 fails, follow its recovery instructions and inspect the printed diagnostics
 directory before continuing. It does not install dependencies. If discovery
 cannot find your SDK, use `openpfc doctor --sdk /path/to/openpfc-sdk` and pass
-the same `--sdk` option to `compile` and `run` below.
+the same `--sdk` option to `compile` below.
 
 On a cluster, use an allocation or another environment where compilation and
 execution are permitted. For LUMI, follow the [operator guide](hpc/operator_guide.md).
@@ -45,18 +45,19 @@ execution are permitted. For LUMI, follow the [operator guide](hpc/operator_guid
 ```bash
 openpfc init my-model --model=diffusion
 cd my-model
-openpfc compile model.cpp
-openpfc run model.cpp input.json --launcher=none
+openpfc compile model.cpp -o model
+./model input.json
 ```
 
 `my-model` must be a new directory. The starter contains `model.cpp`,
 `input.json` and a README. The model solves the periodic heat equation on CPU
-with finite differences. `--launcher=none` runs one rank directly. The CLI
-prints the attempt directory containing logs and `results/`.
+with finite differences. Compilation writes a regular executable named `model`
+in the current directory. `./model input.json` runs one rank directly and
+writes to `results/` in that directory.
 
 ### Inspect the result
 
-Open the files under `results/` in that printed attempt directory:
+Open the files under `results/`:
 
 | File | What to check with the default input |
 |------|--------------------------------------|
@@ -66,14 +67,21 @@ Open the files under `results/` in that printed attempt directory:
 
 These checks show diffusion smoothing the initial field while conserving its
 mean. The starter is a numerical example, not a calibrated material model.
-The attempt's `stdout.log` and `stderr.log` help diagnose an unsuccessful run.
+The model writes messages to the terminal; ordinary shell redirection can
+save them.
 
-Edit `input.json` and repeat the `run` command. Input-only changes reuse the
-compiled model and save a new attempt. Edit `Diffusion::rhs` in `model.cpp`
-when you are ready to change the physics. For two ranks, use
-`--ranks=2 --launcher=mpirun` instead of `--launcher=none` when your environment
-provides the slots. Continue with the [native CLI guide](user_guide/cli.md)
-for input constraints, MPI, durable export and packaging.
+Edit `input.json` and repeat `./model input.json`. Edit `Diffusion::rhs` in
+`model.cpp` to change the physics, then compile again. For two ranks, use
+`mpirun -n 2 ./model input.json`, or `srun -n 2 ./model input.json` inside a
+suitable Slurm allocation with matching MPI. Keep the same compiler/MPI
+runtime environment used by the SDK loaded when launching the executable.
+Direct runs reuse the model's result paths; use separate working directories
+when preserving multiple runs.
+
+The [native CLI guide](user_guide/cli.md) describes compiler options and
+optional recorded execution through `openpfc run`, which preserves inputs,
+separate attempts, logs and checksums. That wrapper is not needed to execute
+the compiled model.
 
 ## Verify a source build
 
