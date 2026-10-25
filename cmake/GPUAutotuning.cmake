@@ -6,10 +6,10 @@
 option(OpenPFC_ENABLE_GPU_AUTOTUNING "Enable GPU kernel auto-tuning infrastructure" OFF)
 
 if(OpenPFC_ENABLE_GPU_AUTOTUNING)
-    # GPU autotuning requires CUDA or HIP to be available
+    # Host callbacks exercise tuning/cache behavior without a device. GPU
+    # builds additionally synchronize their backend around each timed batch.
     if(NOT OpenPFC_ENABLE_CUDA AND NOT OpenPFC_ENABLE_HIP)
-        message(WARNING "⚠️  OpenPFC_ENABLE_GPU_AUTOTUNING=ON but neither CUDA nor HIP is enabled. GPU autotuning disabled.")
-        set(OpenPFC_ENABLE_GPU_AUTOTUNING OFF)
+        message(STATUS "GPU autotuning enabled for host callbacks (no device backend)")
     else()
         # OpenPFC_ENABLE_GPU_AUTOTUNING is a PUBLIC usage requirement on
         # openpfc (and kernel libs) in LibraryConfiguration.cmake.

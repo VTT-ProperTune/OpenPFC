@@ -9,7 +9,8 @@ target_sources(openpfc-tests PRIVATE
 )
 
 if((OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE) OR
-   (OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE))
+   (OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE) OR
+   OpenPFC_ENABLE_GPU_AUTOTUNING)
     add_subdirectory(gpu)
 endif()
 

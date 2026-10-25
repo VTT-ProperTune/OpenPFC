@@ -36,6 +36,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   reject communicator/layout-size or explicit-rank mismatches before planning.
 - Project warning options are private to project targets, including HIP and
   CUDA host compilation. Third-party headers are system includes (#656).
+### Fixed
+
+- GPU autotuning now saves its cache without re-locking its mutex and waits
+  for device work before stopping the timer. Opt-in host callbacks can test
+  tuning and cache persistence without a GPU backend.
 
 - `openpfc bundle` can build a scratch image when `--base` is omitted. The image
   copies the host dynamic loader, the glibc libraries required by the model and

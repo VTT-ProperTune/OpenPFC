@@ -170,6 +170,7 @@ if(OpenPFC_ENABLE_GPU_AUTOTUNING)
         target_link_libraries(test_gpu_autotune PRIVATE hip::host)
     endif()
     add_test(NAME GPU_Autotune COMMAND test_gpu_autotune)
+    set_tests_properties(GPU_Autotune PROPERTIES TIMEOUT 60)
     message(STATUS "✅ GPU autotuning tests enabled")
 endif()
 

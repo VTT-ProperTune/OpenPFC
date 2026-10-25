@@ -39,6 +39,40 @@ struct EnvVarGuard {
   EnvVarGuard &operator=(const EnvVarGuard &) = delete;
 };
 
+TEST_CASE("tuning completes and persists a registered kernel", "[autotune]") {
+#if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
+  if (get_device_architecture() == "unknown") SKIP("No usable GPU for timing");
+#endif
+  const std::string cache_dir = "test_cache_dir_tuning";
+  std::filesystem::create_directories(cache_dir);
+  EnvVarGuard cache_guard("OPENPFC_GPU_AUTOTUNE_CACHE_DIR", cache_dir);
+  EnvVarGuard mode_guard("OPENPFC_GPU_AUTOTUNE_MODE", "auto");
+  EnvVarGuard enabled_guard("OPENPFC_GPU_AUTOTUNE_DISABLE", "0");
+  AutoTuner &tuner = AutoTuner::instance();
+  tuner.reset();
+  REQUIRE(tuner.get_config("gather", 4096).block_size_x == 256);
+
+  unsigned calls = 0;
+  tuner.tune_kernel(
+      "gather",
+      [&](const KernelConfig &config) {
+        REQUIRE(config.kernel_name == "gather");
+        ++calls;
+      },
+      4096);
+  REQUIRE(calls > 0);
+  const auto tuned = tuner.get_config("gather", 4096);
+  REQUIRE(tuned.problem_size_range == std::pair<size_t, size_t>{4096, 4096});
+  const auto cache_file = cache_dir + "/" + get_device_id() + "_autotune_cache.json";
+  tuner.reset();
+  tuner.load_cache(cache_file);
+  const auto loaded = tuner.get_config("gather", 4096);
+  REQUIRE(loaded.block_size_x == tuned.block_size_x);
+  REQUIRE(loaded.problem_size_range == tuned.problem_size_range);
+  std::filesystem::remove_all(cache_dir);
+  tuner.reset();
+}
+
 TEST_CASE("test_cache_save_load") {
   // Create temporary directory for cache
   std::string cache_dir = "test_cache_dir";

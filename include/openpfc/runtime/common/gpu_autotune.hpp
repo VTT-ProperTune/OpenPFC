@@ -14,7 +14,9 @@
 
 #ifdef OpenPFC_ENABLE_GPU_AUTOTUNING
 
+#include <array>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <mutex>
@@ -59,10 +61,15 @@ struct KernelConfig {
 struct KernelTuneParams {
   std::vector<int> candidate_block_sizes{64, 128, 256, 512,
                                          1024}; ///< List of 1D block sizes to test
+#if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
   std::vector<dim3> candidate_block_dims{
       {32, 4, 1}, {16, 16, 1}, {8, 8, 4}}; ///< List of 3D block dimensions to test
-  size_t min_problem_size{1000};           ///< Minimum problem size for tuning
-  size_t max_problem_size{10000000};       ///< Maximum problem size for tuning
+#else
+  std::vector<std::array<unsigned, 3>> candidate_block_dims{
+      {32, 4, 1}, {16, 16, 1}, {8, 8, 4}};
+#endif
+  size_t min_problem_size{1000};     ///< Minimum problem size for tuning
+  size_t max_problem_size{10000000}; ///< Maximum problem size for tuning
 };
 
 /**
@@ -96,7 +103,7 @@ public:
   AutoTuner &operator=(AutoTuner &&) = delete;
 
   /**
-   * @brief Returns optimal configuration for the given kernel and problem size.
+   * @brief Return a cached configuration or fallback defaults; never tune here.
    *
    * This method retrieves the optimal configuration from cache or returns
    * fallback defaults if cache is unavailable. The problem_size parameter
@@ -104,7 +111,9 @@ public:
    *
    * @param kernel_name Identifier for the kernel.
    * @param problem_size Size of the problem (used for cache lookup).
-   * @return KernelConfig containing optimal parameters.
+   * In auto mode, defaults are returned until tune_kernel() supplies a valid
+   * cache entry. Disabled tuning always returns defaults.
+   * @return Cached parameters when valid, otherwise fallback defaults.
    * @throws std::runtime_error if mode is "cache_only" and no cache exists.
    */
   KernelConfig get_config(const std::string &kernel_name, size_t problem_size);
@@ -209,6 +218,10 @@ public:
    * @return true if problem_size is within config's valid range.
    */
   bool is_valid_config(const KernelConfig &config, size_t problem_size) const;
+
+private:
+  /// Serialize while mutex_ is already held; called by tuning and save_cache.
+  void save_cache_locked_(const std::string &filepath);
 };
 
 /**
@@ -248,6 +261,25 @@ std::string get_device_architecture();
 #endif
 
 namespace pfc::gpu {
+namespace detail {
+// A launch may be asynchronous. Drain warmups before the clock and wait for
+// measured work before stopping it; failed kernels must not enter the cache.
+inline void synchronize_tuning_device() {
+#ifdef OpenPFC_ENABLE_CUDA
+  const auto cuda_error = cudaDeviceSynchronize();
+  if (cuda_error != cudaSuccess)
+    throw std::runtime_error(std::string("AutoTuner: ") +
+                             cudaGetErrorString(cuda_error));
+#endif
+#ifdef OpenPFC_ENABLE_HIP
+  const auto hip_error = hipDeviceSynchronize();
+  if (hip_error != hipSuccess)
+    throw std::runtime_error(std::string("AutoTuner: ") +
+                             hipGetErrorString(hip_error));
+#endif
+}
+} // namespace detail
+
 inline AutoTuner::AutoTuner() {
   disabled_ = get_env_var("OPENPFC_GPU_AUTOTUNE_DISABLE", "0") == "1";
   mode_ = get_env_var("OPENPFC_GPU_AUTOTUNE_MODE", "auto");
@@ -320,9 +352,11 @@ inline void AutoTuner::tune_kernel(const std::string &kernel_name,
     for (int i = 0; i < 3; ++i) kernel(config);
 
     // Timed runs
-    auto start = std::chrono::high_resolution_clock::now();
+    detail::synchronize_tuning_device();
+    auto start = std::chrono::steady_clock::now();
     for (int i = 0; i < 10; ++i) kernel(config);
-    auto end = std::chrono::high_resolution_clock::now();
+    detail::synchronize_tuning_device();
+    auto end = std::chrono::steady_clock::now();
 
     double time = std::chrono::duration<double>(end - start).count();
     if (time < best_time) {
@@ -335,11 +369,15 @@ inline void AutoTuner::tune_kernel(const std::string &kernel_name,
 
   std::string cache_file =
       get_cache_dir() + "/" + device_id_ + "_autotune_cache.json";
-  save_cache(cache_file);
+  save_cache_locked_(cache_file);
 }
 
 inline void AutoTuner::save_cache(const std::string &filepath) {
   std::lock_guard<std::mutex> lock(mutex_);
+  save_cache_locked_(filepath);
+}
+
+inline void AutoTuner::save_cache_locked_(const std::string &filepath) {
 
   nlohmann::json j;
   j["device_id"] = device_id_;
@@ -513,6 +551,11 @@ inline std::string get_device_architecture() {
   }
   return std::string(prop.gcnArchName);
 }
+#endif
+
+#if !defined(OpenPFC_ENABLE_CUDA) && !defined(OpenPFC_ENABLE_HIP)
+inline std::string get_device_id() { return "host"; }
+inline std::string get_device_architecture() { return "host"; }
 #endif
 
 } // namespace pfc::gpu
