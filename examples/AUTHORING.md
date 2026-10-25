@@ -112,6 +112,36 @@ it does not run an independent Python numerical solver to supply the curves.
 Draw the native CSV outputs with `python3 examples/render_workflows.py --runs results/example-book/workflows`. Use the default RK, ETD and coupled-field runs described in the chapters.
 
 
+## Reproduce the everyday figures
+
+## Recreate the everyday workflow figures
+
+The three everyday-workflow figures use the chapter inputs, including the
+implicit heat lesson's larger demonstration timestep:
+
+```sh
+example_binaries="$(pwd)/builds/release/examples"
+examples_source="$(pwd)/examples"
+for entry in patterns:14_custom_field_initializer:initialization/patterns implicit:04_diffusion_model:heat/implicit-euler phase:12_cahn_hilliard:phase-fields/cahn-hilliard; do
+  IFS=: read -r lesson_case lesson_target lesson_chapter <<< "$entry"
+  run_directory="results/example-book/everyday/$lesson_case"
+  mkdir -p "$run_directory"
+  (cd "$run_directory" && "$example_binaries/$lesson_target" "$examples_source/$lesson_chapter/input.json")
+done
+uv run --with matplotlib==3.11.2 python examples/render_everyday.py \
+  --runs results/example-book/everyday
+```
+
+Run the binaries in an allocated compiler/MPI environment. The renderer
+only plots native CSV values. The JSON/TOML lesson's `.toml` companion is
+staged as a downloadable input; source-based `openpfc run` currently
+validates JSON, while its built executable can load either file format.
+The phase-field chapter also supplies `refine-grid.json` and
+`refine-time.json`. Both end at time 1; compare the finer grid at every
+second node and compare both timesteps on their common grid. The default
+box length 4 and gamma .04 keep the interfaces resolved on the small grid.
+
+
 ## Render within the scientific website
 
 Use a disposable copy of `openpfc-pages`:
