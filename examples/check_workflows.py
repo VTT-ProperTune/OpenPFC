@@ -235,6 +235,21 @@ def check_checkpoint(binary, directory, launch):
     assert metadata["result_counter"] == 7 and metadata["fields"] == ["u"]
 
 
+def check_parallel(bin_dir, root, launch, ranks):
+    for name in ("mpi_worker", "mpi_worker_inside_class", "mpi_timers"):
+        output = run(bin_dir / name, root / name, launch)
+        row = list(csv.DictReader(io.StringIO(output)))[0]
+        assert int(row["ranks"]) == ranks
+        if name == "mpi_timers":
+            finite(row, ("checksum", "max_seconds", "mean_seconds"))
+            assert int(row["laps"]) == 3 and float(row["checksum"]) < 1e-9
+            assert float(row["max_seconds"]) >= float(row["mean_seconds"]) >= 0
+        else:
+            assert int(row["rank_sum"]) == ranks * (ranks - 1) // 2
+            if name == "mpi_worker_inside_class":
+                assert int(row["finalized"]) == 1
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -251,6 +266,7 @@ def main():
             "22_external_coupling",
             "runtime_coupled_fields",
             "checkpoint_restart",
+            "mpi_worker",
         ],
     )
     args = parser.parse_args()
@@ -288,6 +304,10 @@ def main():
             check_checkpoint(
                 bin_dir / "checkpoint_restart", root / "checkpoint", launch
             )
+        if args.case in (None, "mpi_worker"):
+            root = base / "mpi_worker"
+            root.mkdir()
+            check_parallel(bin_dir, root, launch, ranks)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

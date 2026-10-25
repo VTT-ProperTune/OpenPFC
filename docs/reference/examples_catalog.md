@@ -81,9 +81,9 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `11_write_results` | `11_write_results.cpp` | Writing simulation results |
 | `12_cahn_hilliard` | `12_cahn_hilliard.cpp` | Cahn–Hilliard-style spectral workflow |
 | `fft_kspace_helpers_example` | `fft_kspace_helpers_example.cpp` | k-space helper functions |
-| `mpi_worker` | `mpi_worker.cpp` | MPI worker pattern |
-| `mpi_worker_inside_class` | `mpi_worker_inside_class.cpp` | MPI worker encapsulated in a class |
-| `mpi_timers` | `mpi_timers.cpp` | MPI timing |
+| `mpi_worker` | `parallel/hello/model.cpp` | MPI worker pattern |
+| `mpi_worker_inside_class` | `parallel/session/model.cpp` | MPI worker encapsulated in a class |
+| `mpi_timers` | `diagnostics/mpi-timing/model.cpp` | MPI timing |
 | `profiling_timer_report` | `profiling_timer_report.cpp` | Profiling and timer reporting |
 | `time` | `integration/output-clock/model.cpp` | Time-stepping utilities |
 | `write_results` | `write_results.cpp` | Results I/O variant |

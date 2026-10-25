@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Turn the related MPI worker, class-owned session and collective timer programs into short teaching chapters. Preserve their targets and verify rank ownership, barriers and timing structure together.
+
 - Save and resume a native field evolution with explicit state and time. Verify complete resumed fields and output equivalence on one and two MPI ranks.
 
 - Teach coupled field registration through a harmonic oscillator whose components share stage values. Check complete fields and fourth-order refinement against the exact solution.

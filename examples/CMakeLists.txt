@@ -42,14 +42,8 @@ target_link_libraries(12_cahn_hilliard PRIVATE OpenPFC::openpfc nlohmann_json::n
 add_executable(fft_kspace_helpers_example fft_kspace_helpers_example.cpp)
 target_link_libraries(fft_kspace_helpers_example PRIVATE OpenPFC::openpfc )
 
-add_executable(mpi_worker mpi_worker.cpp)
-target_link_libraries(mpi_worker PRIVATE OpenPFC::openpfc )
 
-add_executable(mpi_worker_inside_class mpi_worker_inside_class.cpp)
-target_link_libraries(mpi_worker_inside_class PRIVATE OpenPFC::openpfc )
 
-add_executable(mpi_timers mpi_timers.cpp)
-target_link_libraries(mpi_timers PRIVATE OpenPFC::openpfc )
 
 add_executable(profiling_timer_report profiling_timer_report.cpp)
 target_link_libraries(profiling_timer_report PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json )
@@ -86,6 +80,7 @@ target_link_libraries(18_sobel_edge_detection PRIVATE OpenPFC::openpfc )
 
 # Teaching chapters own their implementations; binary names remain stable.
 add_subdirectory(coupling)
+add_subdirectory(diagnostics)
 add_subdirectory(differentiation)
 add_subdirectory(fourier)
 add_subdirectory(geometry)
@@ -93,6 +88,7 @@ add_subdirectory(heat)
 add_subdirectory(integration)
 add_subdirectory(interpolation)
 add_subdirectory(output)
+add_subdirectory(parallel)
 add_subdirectory(polynomials)
 add_subdirectory(waves)
 
@@ -314,6 +310,16 @@ if(OpenPFC_BUILD_TESTS)
              COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_workflows.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case checkpoint_restart
                      --launcher "${MPIEXEC_EXECUTABLE}" "--rank-flag=${MPIEXEC_NUMPROC_FLAG}" --ranks 2)
     set_tests_properties(example-checkpoint-restart-mpi PROPERTIES PROCESSORS 2 TIMEOUT 360
+                         ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+  endif()
+  add_test(NAME example-mpi-worker
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_workflows.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case mpi_worker)
+  set_tests_properties(example-mpi-worker PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
+    add_test(NAME example-mpi-worker-mpi
+             COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_workflows.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case mpi_worker
+                     --launcher "${MPIEXEC_EXECUTABLE}" "--rank-flag=${MPIEXEC_NUMPROC_FLAG}" --ranks 2)
+    set_tests_properties(example-mpi-worker-mpi PROPERTIES PROCESSORS 2 TIMEOUT 360
                          ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
   endif()
 endif()

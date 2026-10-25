@@ -17,7 +17,7 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 :::
 
 There are 59 declared runnable example targets and
-33 Quarto teaching chapters. The table includes older programs
+36 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -108,9 +108,9 @@ remain in the inventory while applicability and implementation are assessed.
 | `heat_exponential` | [Read the lesson](heat/exponential/index.qmd) |
 | `json_read` | Pending conversion. |
 | `mhd2d` | Pending conversion. |
-| `mpi_timers` | Pending conversion. |
-| `mpi_worker` | Pending conversion. |
-| `mpi_worker_inside_class` | Pending conversion. |
+| `mpi_timers` | [Read the lesson](diagnostics/mpi-timing/index.qmd) |
+| `mpi_worker` | [Read the lesson](parallel/hello/index.qmd) |
+| `mpi_worker_inside_class` | [Read the lesson](parallel/session/index.qmd) |
 | `nonlinear_spectral_course` | Pending conversion. |
 | `ns2d_flux_balance` | Pending conversion. |
 | `ns2d_spatial_refine` | Pending conversion. |
@@ -167,7 +167,7 @@ fixed-step restart does not establish an adaptive restart contract.
 | geometric multigrid | Pending a teaching chapter. |
 | microelasticity and homogenization | Pending a teaching chapter. |
 | coupling and transactional attempts | [host-orchestrator](coupling/host-orchestrator/index.qmd), [adaptive-rk](integration/adaptive-rk/index.qmd), [adaptive-etd](integration/adaptive-etd/index.qmd) |
-| profiling and communication diagnostics | Pending a teaching chapter. |
+| profiling and communication diagnostics | [mpi-timing](diagnostics/mpi-timing/index.qmd) |
 | CUDA and HIP execution | Pending a teaching chapter. |
 | nonlinear models and incompressible flow | Pending a teaching chapter. |
 

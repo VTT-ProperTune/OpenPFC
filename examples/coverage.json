@@ -263,21 +263,33 @@
     },
     {
       "target": "mpi_timers",
-      "source": "mpi_timers.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "diagnostics/mpi-timing/model.cpp",
+      "chapter": "diagnostics/mpi-timing/index.qmd",
+      "capabilities": [
+        "mpi-timer",
+        "reductions",
+        "diagnostics"
+      ]
     },
     {
       "target": "mpi_worker",
-      "source": "mpi_worker.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "parallel/hello/model.cpp",
+      "chapter": "parallel/hello/index.qmd",
+      "capabilities": [
+        "mpi-environment",
+        "communicator",
+        "reductions"
+      ]
     },
     {
       "target": "mpi_worker_inside_class",
-      "source": "mpi_worker_inside_class.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "parallel/session/model.cpp",
+      "chapter": "parallel/session/index.qmd",
+      "capabilities": [
+        "mpi-environment",
+        "communicator-isolation",
+        "raii"
+      ]
     },
     {
       "target": "nonlinear_spectral_course",
@@ -963,7 +975,9 @@
         "kernel/profiling/session.hpp",
         "mpi/timer.hpp"
       ],
-      "chapters": []
+      "chapters": [
+        "diagnostics/mpi-timing/index.qmd"
+      ]
     },
     {
       "name": "CUDA and HIP execution",

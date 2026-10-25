@@ -1,0 +1,60 @@
+---
+title: "A process has a rank and a lifetime"
+description: "Start MPI once, query its communicator and turn rank-local values into a global answer."
+order: 33
+categories: [Parallel, Simulation workflows]
+capabilities: ["mpi-environment", "communicator", "reductions"]
+targets: [mpi_worker]
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[OpenPFC / Build a simulation]{.lesson-kicker}
+
+# A process has a rank and a lifetime
+
+[Start MPI once, query its communicator and turn rank-local values into a global answer.]{.lesson-deck}
+:::
+
+Parallel C++ begins with a small lifetime question: who starts MPI, and who
+finishes it? OpenPFC's environment wrapper owns those calls for a standalone
+program. A communicator then supplies the rank and group size.
+
+```{.cpp include="model.cpp" snippet="ownership" dedent=2}
+```
+
+The local value is the rank $r$. The collective sums all ranks, so the
+independent answer is
+
+$$\sum_{r=0}^{P-1}r=P(P-1)/2.$$
+
+Every rank participates in the collective; only rank zero prints the result.
+Root-only output does not make the collective a root-only operation.
+
+## Run the same program with a different process count
+
+```sh
+openpfc run model.cpp input.json --launcher=none
+openpfc run model.cpp input.json --ranks=2 --launcher=mpirun
+```
+
+The empty input is unused. The printed CSV reports `ranks` and `rank_sum`.
+The tests check $P=1$ and $P=2$. Changing the rank count changes the sum,
+not the source code or an assumed constant inside it.
+
+The environment must be constructed before communicator operations and
+outlive them. Its constructor calls `MPI_Init` and its destructor calls
+`MPI_Finalize`; do not add a second owner in a host application that already
+initialised MPI. Use the host's lifetime and pass its communicator in that
+case. A duplicated communicator manages a communication context, not a
+second MPI runtime. Continue with a
+[class-owned session](../session/index.qmd), or inspect the public
+[environment wrapper](https://github.com/VTT-ProperTune/OpenPFC/blob/master/include/openpfc/kernel/mpi/environment.hpp).
+
+The complete [C++ model](model.cpp) and [starting input](input.json)
+are available with this lesson.
+
+:::

@@ -1,0 +1,65 @@
+---
+title: "A simulation owns its session"
+description: "Use C++ member declaration order to release private communication before MPI finalizes."
+order: 34
+categories: [Parallel, Simulation workflows]
+capabilities: ["mpi-environment", "communicator-isolation", "raii"]
+targets: [mpi_worker_inside_class]
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[OpenPFC / Build a simulation]{.lesson-kicker}
+
+# A simulation owns its session
+
+[Use C++ member declaration order to release private communication before MPI finalizes.]{.lesson-deck}
+:::
+
+A simulation object can own MPI for a standalone executable. Its members
+must express the dependency order. This refactors the class-owned MPI
+example into a session whose teardown is also observable.
+
+## Declare owners before their dependants
+
+```{.cpp include="model.cpp" snippet="session"}
+```
+
+C++ constructs members in declaration order and destroys them in reverse
+order. The environment is created first, the WORLD wrapper second, and the
+duplicated communicator last. Teardown frees the private communicator
+before the environment finalizes MPI. Reordering an initializer list would
+not change this rule; declaration order is what matters.
+
+```{.cpp include="model.cpp" snippet="lifetime" dedent=2}
+```
+
+[`MPI_Finalized`](https://www.open-mpi.org/doc/v3.1/man3/MPI_Finalized.3.php)
+is one of the MPI queries permitted after finalization. We
+use it to verify the end of the session, not to perform more communication.
+The rank and rank sum were captured while the communicator was valid.
+
+## Make ownership visible at the call site
+
+```sh
+openpfc run model.cpp input.json --launcher=none
+openpfc run model.cpp input.json --ranks=2 --launcher=mpirun
+```
+
+The empty input is unused. The root CSV includes `finalized=1` after the
+session block ends, alongside the independently checkable rank sum. Tests
+exercise both one and two ranks. This small object is a standalone runtime
+owner; an application embedding OpenPFC after its own `MPI_Init` must borrow
+the host runtime instead. See the
+[communicator implementation](https://github.com/VTT-ProperTune/OpenPFC/blob/master/include/openpfc/kernel/mpi/communicator.hpp)
+for owned duplicate cleanup and the
+[host orchestrator](../../coupling/host-orchestrator/index.qmd) for the
+corresponding field exchange seam.
+
+The complete [C++ model](model.cpp) and [starting input](input.json)
+are available with this lesson.
+
+:::
