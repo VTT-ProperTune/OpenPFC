@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Recast ETD adaptation as a readable experiment separating linear decay and nonlinear reaction. Preserve the target and independently check fields and accepted-step ledgers on one and two MPI ranks.
+
 - Explain acceptance, rejection and error control with an adaptive native stepper. Preserve the executable and check complete fields, tolerance refinement and transactional ledgers on one and two ranks.
 
 - Use native Newton and Krylov solvers for a nonlinear interval problem. Compare the converged field with an independently determined exact branch and reject invalid controls.

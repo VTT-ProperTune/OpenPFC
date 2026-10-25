@@ -180,9 +180,14 @@
     },
     {
       "target": "24_adaptive_etd",
-      "source": "24_adaptive_etd.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "integration/adaptive-etd/model.cpp",
+      "chapter": "integration/adaptive-etd/index.qmd",
+      "capabilities": [
+        "etd1",
+        "step-doubling",
+        "adaptive-controller",
+        "distributed-fft"
+      ]
     },
     {
       "target": "cardinal_interpolation",
@@ -834,7 +839,8 @@
         "etd_step_doubling.hpp"
       ],
       "chapters": [
-        "heat/exponential/index.qmd"
+        "heat/exponential/index.qmd",
+        "integration/adaptive-etd/index.qmd"
       ]
     },
     {
@@ -911,7 +917,8 @@
         "simulation_lifecycle.hpp"
       ],
       "chapters": [
-        "integration/adaptive-rk/index.qmd"
+        "integration/adaptive-rk/index.qmd",
+        "integration/adaptive-etd/index.qmd"
       ]
     },
     {

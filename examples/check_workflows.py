@@ -21,6 +21,14 @@ def rows(path):
         return list(csv.DictReader(file))
 
 
+def rank_rows(directory, prefix):
+    return [
+        row
+        for path in sorted((directory / "results").glob(prefix + "_rank_*.csv"))
+        for row in rows(path)
+    ]
+
+
 def finite(row, keys):
     assert all(math.isfinite(float(row[key])) for key in keys), row
 
@@ -62,6 +70,86 @@ def check_rk(binary, root, launch, ranks):
     run(binary, root / "bad-rk", launch, {"tolerance": -1}, success=False)
 
 
+def reaction_reference(n=16, end=0.2):
+    """Direct complex DFT Laplacian plus small-step RK4, independent of ETD."""
+    phase = [[cmath.exp(2j * math.pi * k * j / n) for j in range(n)] for k in range(n)]
+    wave = [k if k <= n // 2 else k - n for k in range(n)]
+
+    def rhs(u):
+        coefficients = [
+            sum(u[j] * phase[k][j].conjugate() for j in range(n)) / n for k in range(n)
+        ]
+        return [
+            sum(-wave[k] ** 2 * coefficients[k] * phase[k][j] for k in range(n)).real
+            - u[j] ** 3
+            for j in range(n)
+        ]
+
+    u = [0.4 * math.cos(2 * math.pi * j / n) for j in range(n)]
+    h = end / 1000
+    for _ in range(1000):
+        k1 = rhs(u)
+        k2 = rhs([v + h * a / 2 for v, a in zip(u, k1)])
+        k3 = rhs([v + h * a / 2 for v, a in zip(u, k2)])
+        k4 = rhs([v + h * a for v, a in zip(u, k3)])
+        u = [
+            v + h * (a + 2 * b + 2 * c + d) / 6
+            for v, a, b, c, d in zip(u, k1, k2, k3, k4)
+        ]
+    return u
+
+
+def check_etd(binary, directory, launch, ranks):
+    run(binary, directory, launch)
+    ledgers = [
+        rows(p) for p in sorted((directory / "results").glob("attempts_rank_*.csv"))
+    ]
+    assert len(ledgers) == ranks
+    first = ledgers[0]
+    uniform = 0.4
+    rejections = 0
+    for name in ("heat", "uniform", "reaction"):
+        t = 0.0
+        for row in (r for r in first if r["case"] == name):
+            finite(row, ("t0", "dt", "metric", "time", "rollback_error"))
+            assert abs(float(row["t0"]) - t) < 1e-14
+            assert int(row["transforms"]) == 9 and int(row["nonlinear"]) == 3
+            assert float(row["rollback_error"]) == 0
+            if int(row["accepted"]):
+                h = float(row["dt"])
+                t += h
+                assert float(row["metric"]) <= 1
+                if name == "uniform":
+                    uniform -= 0.5 * h * uniform**3
+                    uniform -= 0.5 * h * uniform**3
+            else:
+                rejections += 1
+                assert float(row["metric"]) > 1
+            assert abs(float(row["time"]) - t) < 1e-14
+        assert abs(t - 0.2) < 1e-13
+    assert rejections > 0
+    reference = reaction_reference()
+    fields = rank_rows(directory, "fields")
+    assert len(fields) == 3 * 16 * 4 * 4
+    assert len({(r["case"], r["i"], r["j"], r["k"]) for r in fields}) == len(fields)
+    for row in fields:
+        x, value = float(row["x"]), float(row["u"])
+        finite(row, ("x", "u"))
+        if row["case"] == "heat":
+            assert abs(value - 0.4 * math.exp(-0.2) * math.cos(x)) < 2e-13
+        elif row["case"] == "uniform":
+            assert abs(value - uniform) < 3e-13
+            assert abs(value - 0.4 / math.sqrt(1 + 2 * 0.4**2 * 0.2)) < 1e-4
+        else:
+            assert abs(value - reference[int(row["i"])]) < 1e-4
+    # Decisions must be rank-consistent; reduction roundoff can change only metric digits.
+    for ledger in ledgers[1:]:
+        assert [(r["case"], r["accepted"], r["time"], r["dt"]) for r in ledger] == [
+            (r["case"], r["accepted"], r["time"], r["dt"]) for r in first
+        ]
+    run(binary, directory.parent / "bad-etd", launch, {"n": 7}, success=False)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -69,7 +157,7 @@ def main():
     parser.add_argument("--launcher")
     parser.add_argument("--rank-flag", default="-n")
     parser.add_argument("--ranks", default=1, type=int)
-    parser.add_argument("--case", choices=["21_adaptive_stepping"])
+    parser.add_argument("--case", choices=["21_adaptive_stepping", "24_adaptive_etd"])
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     bin_dir = args.bin_dir.resolve()
@@ -83,6 +171,10 @@ def main():
             root = base / "21_adaptive_stepping"
             root.mkdir()
             check_rk(bin_dir / "21_adaptive_stepping", root, launch, ranks)
+        if args.case in (None, "24_adaptive_etd"):
+            root = base / "24_adaptive_etd"
+            root.mkdir()
+            check_etd(bin_dir / "24_adaptive_etd", root / "etd", launch, ranks)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

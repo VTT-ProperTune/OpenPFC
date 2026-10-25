@@ -410,7 +410,7 @@ both restore the macro-step cache. A rejection restores `psi` and
 stays put. Every rank is given the same `dt`. The difference is scaled
 with `decide_from_embedded_error` (`max(|y_start|, |y_half|)`). A plain
 attempt costs 3 nonlinear evaluations and 9 transforms. Example:
-`examples/24_adaptive_etd.cpp`. Coverage:
+`examples/integration/adaptive-etd/model.cpp`. Coverage:
 `tests/unit/kernel/simulation/test_etd_step_doubling.cpp`.
 
 Prefer this transaction API over rewriting history with `set_dt` +
