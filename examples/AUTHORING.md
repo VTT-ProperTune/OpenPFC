@@ -142,6 +142,25 @@ second node and compare both timesteps on their common grid. The default
 box length 4 and gamma .04 keep the interfaces resolved on the small grid.
 
 
+## Reproduce the operators figures
+
+The operator and contour figures read the following default native runs:
+
+```sh
+example_binaries="$(pwd)/builds/release/examples"
+for case in oscillator:harmonic_oscillator mathieu:mathieu_spectrum eigenmodes:chebyshev_eigenmodes airy:airy_eigenproblem membrane:membrane_eigenmodes poisson:square_poisson helmholtz:square_helmholtz laplace:square_laplace gamma:gamma_contour multigrid:multigrid_poisson; do
+  run_directory="results/example-book/spectra/${case%%:*}"
+  mkdir -p "$run_directory"
+  (cd "$run_directory" && "$example_binaries/${case#*:}")
+done
+stiffness_input="$(pwd)/examples/polynomials/eigenmodes/trefethen-p26.json"
+mkdir -p results/example-book/spectra/stiffness
+(cd results/example-book/spectra/stiffness && "$example_binaries/chebyshev_eigenmodes" "$stiffness_input")
+uv run --with matplotlib==3.11.2 python examples/render_spectra.py \
+  --runs results/example-book/spectra
+```
+
+
 ## Render within the scientific website
 
 Use a disposable copy of `openpfc-pages`:
