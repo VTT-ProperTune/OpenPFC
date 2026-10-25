@@ -42,6 +42,8 @@ jobs:
         with:
           clang-format-version: '20'
           check-path: '.'
+          # Include GPU headers/sources and inline/template implementations.
+          include-regex: '^.*\.((((c|C)(c|pp|xx|\+\+)?$)|((h|H)h?(pp|xx|\+\+)?$))|(ino|pde|proto|cu|cuh|hip|inc|ipp|inl|tpp))$'
           exclude-regex: '(build|\.cache|extern|third[-_]party|doxygen-awesome-css)'
 
       - name: Clean up clang-format artifacts
