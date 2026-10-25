@@ -27,6 +27,7 @@ extensions = [
     "sphinxcontrib.mermaid",
     "sphinx.ext.githubpages",
     "repo_links",
+    "public_search",
 ]
 
 source_suffix = {".md": "markdown"}

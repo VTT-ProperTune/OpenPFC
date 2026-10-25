@@ -174,3 +174,17 @@ bash scripts/build_handbook.sh
 - [`documentation_versioning.md`](documentation_versioning.md) — development
   docs versus release tags
 - [`testing.md`](testing.md) — code and MPI test workflows
+
+## Mathematics and shared search
+
+Use `$...$` for inline mathematics and a separate `$$` block for display
+mathematics. MyST's `dollarmath` extension renders those in both handbook
+pages and guides published from beside the code. In Markdown table cells,
+write `\vert` or `\Vert` rather than a literal pipe inside mathematics so
+the table parser does not split the formula into extra columns.
+
+The HTML build exports visible article text to `search-index.json` through
+`docs/_ext/public_search.py`. The website joins this public index with its
+lessons, showing handbook and C++ API results in the same search. This index
+contains rendered content only; it does not publish source files or build
+logs. The native Sphinx search remains available at `search/`.
