@@ -1,0 +1,48 @@
+/* SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+ * SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* Lesson-specific additions. Production uses the website's design tokens;
+   fallback values keep the standalone preview readable. */
+/* The article supplies its own title and deck. */
+.openpfc-lessons #title-block-header { display: none; }
+.openpfc-lessons .article-title h1 {
+  font-family: var(--openpfc-font-serif, Georgia, serif);
+  font-weight: 500;
+  font-size: clamp(2.6rem, 5.4vw, 4.6rem);
+  line-height: 1.08;
+  letter-spacing: -.045em;
+}
+.openpfc-lessons .lesson-kicker {
+  font-family: var(--openpfc-font-mono, monospace);
+  font-size: .8rem;
+  letter-spacing: .08em;
+  color: var(--openpfc-copper-ink, #8a3b22);
+}
+.openpfc-lessons .lesson-deck {
+  font-size: clamp(1.15rem, 2vw, 1.45rem);
+  line-height: 1.5;
+  max-width: 42rem;
+  color: var(--openpfc-muted, #52605d);
+}
+.openpfc-lessons pre.sourceCode {
+  padding: 1rem;
+  border: 1px solid var(--openpfc-line, #dfe3e2);
+  border-radius: .2rem;
+  overflow-x: auto;
+}
+.openpfc-lessons .d-none { display: none !important; }
+.openpfc-lessons figure { margin: 2rem 0; }
+.openpfc-lessons table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* Keep long equations readable within a narrow viewport. */
+.openpfc-lessons .math.display {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: .2rem;
+}

@@ -1,0 +1,28 @@
+---
+title: "OpenPFC by example"
+description: "Runnable C++ experiments with mathematical explanations and answers you can check."
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[OpenPFC / Learn by doing]{.lesson-kicker}
+
+# A few lines. A mathematical idea. An answer you can check.
+
+[Read the source, change a parameter, and predict the answer.]{.lesson-deck}
+:::
+
+The teaching collection is being built from small runnable C++ programs.
+Each chapter develops a mathematical argument, includes actual source,
+and explains how to decide whether the answer is right.
+
+The [coverage inventory](coverage.qmd) records every existing executable
+and all forty programs from *Spectral Methods in MATLAB*. Pending entries
+stay visible while the corresponding teaching chapters are developed.
+
+The [existing examples catalogue](https://vtt-propertune.github.io/OpenPFC/docs/reference/examples_catalog/)
+provides runnable entry points in the meantime.
+:::

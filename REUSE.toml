@@ -111,3 +111,15 @@ SPDX-License-Identifier = "MIT"
 path = ["examples/_extensions/include-code-files/UPSTREAM.md"]
 SPDX-FileCopyrightText = "2026 VTT Technical Research Centre of Finland Ltd"
 SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+# Runnable lesson inputs and generated teaching figures carry no inline headers.
+[[annotations]]
+path = [
+    "examples/coverage.json",
+    "examples/*/*/*.json",
+    "examples/*/*/*.toml",
+    "examples/*/*/figures/*.svg",
+    "examples/*/figures/*.svg",
+]
+SPDX-FileCopyrightText = "2026 VTT Technical Research Centre of Finland Ltd"
+SPDX-License-Identifier = "AGPL-3.0-or-later"

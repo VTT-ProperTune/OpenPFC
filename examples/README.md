@@ -5,6 +5,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Examples
 
+The [Quarto teaching collection](index.qmd) keeps runnable source and
+mathematical explanations together. See [AUTHORING.md](AUTHORING.md) for
+preview and publication, and [coverage.qmd](coverage.qmd) for progress.
+
+
 Small programs that demonstrate the OpenPFC library. They are built when `OpenPFC_BUILD_EXAMPLES=ON` (CMake default).
 
 ## Build

@@ -1,0 +1,28 @@
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+metadata-files:
+  - _metadata.yml
+
+project:
+  type: website
+  output-dir: _build/site
+  render:
+    - index.qmd
+    - coverage.qmd
+    - "*/*/index.qmd"
+website:
+  title: OpenPFC by example
+  navbar:
+    left:
+      - text: Lessons
+        href: index.qmd
+      - text: Handbook
+        href: https://vtt-propertune.github.io/OpenPFC/docs/
+format:
+  html:
+    theme: cosmo
+    toc: true
+    code-copy: true
+execute:
+  enabled: false

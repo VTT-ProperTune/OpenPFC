@@ -1,0 +1,718 @@
+{
+  "schema": 1,
+  "examples": [
+    {
+      "target": "02_domain_decomposition",
+      "source": "02_domain_decomposition.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "03_parallel_fft",
+      "source": "03_parallel_fft.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "04_diffusion_model",
+      "source": "04_diffusion_model.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "05_simulator",
+      "source": "05_simulator.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "06_multi_index",
+      "source": "06_multi_index.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "07_array",
+      "source": "07_array.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "08_discrete_fields",
+      "source": "08_discrete_fields.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "09_parallel_fft_high_level",
+      "source": "09_parallel_fft_high_level.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "10_ui_register_ic",
+      "source": "10_ui_register_ic.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "11_write_results",
+      "source": "11_write_results.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "12_cahn_hilliard",
+      "source": "12_cahn_hilliard.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "14_custom_field_initializer",
+      "source": "14_custom_field_initializer.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "15_finite_difference_heat",
+      "source": "15_finite_difference_heat.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "16_strong_types_demo",
+      "source": "16_strong_types_demo.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "17_custom_coordinate_system",
+      "source": "17_custom_coordinate_system.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "18_sobel_edge_detection",
+      "source": "18_sobel_edge_detection.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "19_explicit_stepper_fd",
+      "source": "19_explicit_stepper_fd.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "20_explicit_stepper_spectral",
+      "source": "20_explicit_stepper_spectral.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "21_adaptive_stepping",
+      "source": "21_adaptive_stepping.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "22_external_coupling",
+      "source": "22_external_coupling.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "23_halo_microtiming",
+      "source": "23_halo_microtiming.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "24_adaptive_etd",
+      "source": "24_adaptive_etd.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "coupled_fields_example",
+      "source": "coupled_fields/main.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "diffusion_model_with_custom_initial_condition",
+      "source": "diffusion_model_with_custom_initial_condition.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "fft_backend_benchmark",
+      "source": "fft_backend_benchmark.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "fft_kspace_helpers_example",
+      "source": "fft_kspace_helpers_example.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "json_read",
+      "source": "json_read.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "mhd2d",
+      "source": "ns2d_vorticity/src/mhd.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "mpi_timers",
+      "source": "mpi_timers.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "mpi_worker",
+      "source": "mpi_worker.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "mpi_worker_inside_class",
+      "source": "mpi_worker_inside_class.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "nonlinear_spectral_course",
+      "source": "nonlinear_spectral/allen_cahn.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "ns2d_flux_balance",
+      "source": "ns2d_vorticity/src/flux_balance.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "ns2d_spatial_refine",
+      "source": "ns2d_vorticity/src/spatial_refine.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "ns2d_temporal_refine",
+      "source": "ns2d_vorticity/src/temporal_refine.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "ns2d_vorticity",
+      "source": "ns2d_vorticity/src/ns2d.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "profiling_timer_report",
+      "source": "profiling_timer_report.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "taylor_green3d",
+      "source": "taylor_green3d/src/taylor_green.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "time",
+      "source": "time.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "world_helpers_example",
+      "source": "world_helpers_example.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "world_query_helpers_example",
+      "source": "world_query_helpers_example.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "world_strong_types_example",
+      "source": "world_strong_types_example.cpp",
+      "chapter": null,
+      "capabilities": []
+    },
+    {
+      "target": "write_results",
+      "source": "write_results.cpp",
+      "chapter": null,
+      "capabilities": []
+    }
+  ],
+  "additional_sources": [
+    {
+      "source": "01_hello_world/world.cpp",
+      "chapter": null
+    },
+    {
+      "source": "symbolic_rhs/generate.py",
+      "chapter": null
+    }
+  ],
+  "book": [
+    {
+      "program": 1,
+      "title": "convergence of fourth-order finite differences",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p1.m",
+      "chapter": null,
+      "scope": "Original fourth-order finite-difference resolution family, with additional FD2 and FFT comparisons."
+    },
+    {
+      "program": 2,
+      "title": "convergence of periodic spectral method (compare p1.m)",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p2.m",
+      "chapter": null,
+      "scope": "Original even 2..100 collocation matrix sweep; FFT comparison added."
+    },
+    {
+      "program": 3,
+      "title": "band-limited interpolation",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p3.m",
+      "chapter": null,
+      "scope": "All three original sampled profiles and sinc reconstructions; exact nodal limits handled."
+    },
+    {
+      "program": 4,
+      "title": "periodic spectral differentiation",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p4.m",
+      "chapter": null,
+      "scope": "Original periodic cotangent differentiation of hat and analytic profiles."
+    },
+    {
+      "program": 5,
+      "title": "repetition of p4.m via FFT",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p5.m",
+      "chapter": null,
+      "scope": "FFT version of both program 4 profiles, compared against the matrix action."
+    },
+    {
+      "program": 6,
+      "title": "variable coefficient wave equation",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p6.m",
+      "chapter": null,
+      "scope": "Original variable-speed Gaussian experiment and book startup preset, with a consistent Taylor startup and characteristic reference added."
+    },
+    {
+      "program": 7,
+      "title": "accuracy of periodic spectral differentiation",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p7.m",
+      "chapter": null,
+      "scope": "All four original regularity profiles on even 6..50 grids, with matrix and FFT errors."
+    },
+    {
+      "program": 8,
+      "title": "eigenvalues of harmonic oscillator -u\"+x^2 u on R",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p8.m",
+      "chapter": null,
+      "scope": "Original L=8 and N=6:6:36 harmonic oscillator, with kinetic matrix built using native LocalFFT."
+    },
+    {
+      "program": 9,
+      "title": "polynomial interpolation in equispaced and Chebyshev pts",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p9.m",
+      "chapter": null,
+      "scope": "Original degree-16 node comparison, using barycentric evaluation instead of monomial fitting."
+    },
+    {
+      "program": 10,
+      "title": "polynomials and corresponding equipotential curves",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p10.m",
+      "chapter": null,
+      "scope": "Original signed nodal products and complex-plane magnitude contours, evaluated directly from their roots."
+    },
+    {
+      "program": 11,
+      "title": "Chebyshev differentation of a smooth function",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p11.m",
+      "chapter": null,
+      "scope": "Original smooth profile at degrees 10 and 20, differentiated with the Chebyshev collocation matrix."
+    },
+    {
+      "program": 12,
+      "title": "accuracy of Chebyshev spectral differentiation",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p12.m",
+      "chapter": null,
+      "scope": "All four original profiles and degrees 1..50, with limiting bump values handled explicitly."
+    },
+    {
+      "program": 13,
+      "title": "solve linear BVP u_xx = exp(4x), u(-1)=u(1)=0",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p13.m",
+      "chapter": null,
+      "scope": "Original degree-16 homogeneous Dirichlet collocation problem, solved with native GMRES."
+    },
+    {
+      "program": 14,
+      "title": "solve nonlinear BVP u_xx = exp(u), u(-1)=u(1)=0",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p14.m",
+      "chapter": null,
+      "scope": "Original nonlinear collocation problem, using native Newton–GMRES instead of fixed-point iteration and an analytic reference."
+    },
+    {
+      "program": 15,
+      "title": "solve eigenvalue BVP u_xx = lambda*u, u(-1)=u(1)=0",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p15.m",
+      "chapter": null,
+      "scope": "Original degree-36 Dirichlet spectrum and six selected modes, using an example-owned complex QR eigensolver."
+    },
+    {
+      "program": 16,
+      "title": "Poisson eq. on [-1,1]x[-1,1] with u=0 on boundary",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p16.m",
+      "chapter": null,
+      "scope": "Original degree-24 Chebyshev Poisson problem; native GMRES applies the tensor operator without forming a Kronecker matrix."
+    },
+    {
+      "program": 17,
+      "title": "Helmholtz eq. u_xx + u_yy + (k^2)u = f",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p17.m",
+      "chapter": null,
+      "scope": "Original k=9 degree-24 Helmholtz problem with a native tensor-action GMRES solve."
+    },
+    {
+      "program": 18,
+      "title": "Chebyshev differentiation via FFT (compare p11.m)",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p18.m",
+      "chapter": null,
+      "scope": "Same polynomial derivative via native LocalFFT cosine coefficients, with explicit O(N²) coefficient-sum evaluation and endpoint limits."
+    },
+    {
+      "program": 19,
+      "title": "2nd-order wave eq. on Chebyshev grid (compare p6.m)",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p19.m",
+      "chapter": null,
+      "scope": "FFT-based Chebyshev wave with the original N=80 Gaussian, leapfrog startup and rounded save schedule; direct chain-rule second derivatives replace two successive chebfft calls. Taylor startup and an exact standing mode are additional checks."
+    },
+    {
+      "program": 20,
+      "title": "2nd-order wave eq. in 2D via FFT (compare p19.m)",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p20.m",
+      "chapter": null,
+      "scope": "Original N=24 Chebyshev square, Gaussian and leapfrog startup. Native LocalFFT evaluates both tensor derivatives; initial Gaussian boundary tails are retained. Nodal plots replace cubic display interpolation; Taylor startup exposes the initial-velocity error."
+    },
+    {
+      "program": 21,
+      "title": "eigenvalues of Mathieu operator -u_xx + 2qcos(2x)u",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p21.m",
+      "chapter": null,
+      "scope": "Original N=42 and q=0:.2:15 Mathieu sweep; native LocalFFT plus example-owned symmetric Jacobi diagonalization."
+    },
+    {
+      "program": 22,
+      "title": "5th eigenvector of Airy equation u_xx = lambda*x*u",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p22.m",
+      "chapter": null,
+      "scope": "Original four-degree Airy experiment; explicitly eliminate the zero-weight constraint before a finite eigenproblem."
+    },
+    {
+      "program": 23,
+      "title": "eigenvalues of perturbed Laplacian on [-1,1]x[-1,1]",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p23.m",
+      "chapter": null,
+      "scope": "Original degree-16 perturbed-square Laplacian and four low modes with example-owned dense QR."
+    },
+    {
+      "program": 24,
+      "title": "pseudospectra of Davies's complex harmonic oscillator",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p24.m",
+      "chapter": null,
+      "scope": "Original degree 70, half-length 6, all 69 eigenvalues and 26 by 21 complex grid with increments of two. Native Chebyshev derivatives; one-sided complex Jacobi singular values avoid normal equations. Complete original grid independently qualified."
+    },
+    {
+      "program": 25,
+      "title": "stability regions for ODE formulas",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p25.m",
+      "chapter": null,
+      "scope": "Original AB/AM/BDF root-locus families and RK stability boundaries; native RK tableaus plus example-owned multistep references."
+    },
+    {
+      "program": 26,
+      "title": "eigenvalues of 2nd-order Chebyshev diff. matrix",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p26.m",
+      "chapter": null,
+      "scope": "Original degree-60 spectrum and grid-scale mode; physical mode labelled and selected consistently as N/4."
+    },
+    {
+      "program": 27,
+      "title": "Solve KdV eq. u_t + uu_x + u_xxx = 0 on [-pi,pi] by",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p27.m",
+      "chapter": null,
+      "scope": "Original N=256 periodic two-pulse KdV experiment, timestep, unfiltered nonlinear product and zero odd Nyquist multipliers. Native complex-state RK4 integrates a global integrating factor, algebraically equivalent to the book's per-step stage formula; complete fields and integral diagnostics are saved."
+    },
+    {
+      "program": 28,
+      "title": "eigenmodes of Laplacian on the disk (compare p22.m)",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p28.m",
+      "chapter": null,
+      "scope": "Original N25,M20 disk Laplacian, complete 240-mode spectrum with angular multiplicity, selected modes 1,3,6,10 and frequency ratios. Native Chebyshev derivatives and equivalent Fourier radial blocks; Bessel references and full-matrix qualification. Polar fields with nodal lines replace wireframe projection."
+    },
+    {
+      "program": 29,
+      "title": "solve Poisson equation on the unit disk",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p29.m",
+      "chapter": null,
+      "scope": "Original N31,M40 forcing and zero-boundary disk solution. Native FFT separation and GMRES solve the equivalent original polar matrix; exact separated and smooth manufactured references, N63 radial refinement and independent full-matrix qualification. Non-smooth pole forcing is explicit."
+    },
+    {
+      "program": 30,
+      "title": "spectral integration, ODE style (compare p12.m)",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p30.m",
+      "chapter": null,
+      "scope": "Original antiderivative collocation experiment for four profiles and degrees 1..50; native GMRES replaces the explicit inverse."
+    },
+    {
+      "program": 31,
+      "title": "gamma function via complex integral, trapezoid rule",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p31.m",
+      "chapter": null,
+      "scope": "Original 70-point circular gamma contour and complex rectangle; retain reciprocal estimates and explicitly mark poles."
+    },
+    {
+      "program": 32,
+      "title": "solve u_xx = exp(4x), u(-1)=0, u(1)=1 (compare p13.m)",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p32.m",
+      "chapter": null,
+      "scope": "Original nonzero Dirichlet problem with an affine lift and native GMRES."
+    },
+    {
+      "program": 33,
+      "title": "solve linear BVP u_xx = exp(4x), u'(-1)=u(1)=0",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p33.m",
+      "chapter": null,
+      "scope": "Original mixed Neumann/Dirichlet problem with a derivative row and native GMRES."
+    },
+    {
+      "program": 34,
+      "title": "Allen-Cahn eq. u_t = eps*u_xx+u-u^3, u(-1)=-1, u(1)=1",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p34.m",
+      "chapter": null,
+      "scope": "Original degree-20 Allen–Cahn equation, epsilon=.01, fixed endpoints, lifted full Chebyshev D2 and explicit Euler through t=100. Native EulerStepper advances the vector; barycentric interpolation replaces monomial display fitting. An operator-based timestep cap applies to refinements and preserves the original degree-20 default."
+    },
+    {
+      "program": 35,
+      "title": "Allen-Cahn eq. as in p34.m, but with boundary condition",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p35.m",
+      "chapter": null,
+      "scope": "Original degree-20 Allen–Cahn equation with u(1,t)=1+sin(t/5)^2, full Chebyshev D2, and explicit endpoint replacement after every Euler step through t=100. Native EulerStepper and barycentric display evaluation preserve the discrete evolution. An operator-based timestep cap applies to refinements and preserves the original degree-20 default."
+    },
+    {
+      "program": 36,
+      "title": "Laplace eq. on [-1,1]x[-1,1] with nonzero BCs",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p36.m",
+      "chapter": null,
+      "scope": "Original degree-24 nonzero-boundary Laplace problem; equivalent boundary elimination replaces identity boundary rows."
+    },
+    {
+      "program": 37,
+      "title": "2D \"wave tank\" with Neumann BCs for |y|=1",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p37.m",
+      "chapter": null,
+      "scope": "Original A=3, Nx=50, Ny=15 wave tank, Gaussian, nominal-step startup and Neumann reconstruction after each leapfrog update. FFT actions replace equivalent dense Fourier/Chebyshev matrices. Exact standing-mode and Taylor-start presets are additional checks."
+    },
+    {
+      "program": 38,
+      "title": "solve u_xxxx = exp(x), u(-1)=u(1)=u'(-1)=u'(1)=0",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p38.m",
+      "chapter": null,
+      "scope": "Original degree-15 clamped fourth-order problem. Native Chebyshev nodes/derivatives construct the weighted operator; native GMRES replaces backslash, and barycentric reconstruction of the auxiliary polynomial preserves zero values and slopes. Complete values and slopes are checked against an independently determined analytic solution."
+    },
+    {
+      "program": 39,
+      "title": "eigenmodes of biharmonic on a square with clamped BCs",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p39.m",
+      "chapter": null,
+      "scope": "All 25 degree-17 clamped square-plate modes and relative frequencies; native Chebyshev D4 and the original interior D2 tensor operator. Symmetry blocks preserve repeated modes; constrained barycentric display replaces cubic image interpolation."
+    },
+    {
+      "program": 40,
+      "title": "eigenvalues of Orr-Sommerfeld operator (compare p38.m)",
+      "source": "https://people.maths.ox.ac.uk/trefethen/p40.m",
+      "chapter": null,
+      "scope": "Original R=5772 and degrees 40,60,80,100; native Chebyshev D4/D2 construction and complete complex generalized spectra. Pivoted mass solves plus example-owned shifted QR replace a generalized eigensolver; original-pencil residuals and independent qualification are explicit."
+    }
+  ],
+  "capability_families": [
+    {
+      "name": "geometry",
+      "header_search_terms": [
+        "domain.hpp",
+        "strong_types.hpp"
+      ],
+      "chapters": []
+    },
+    {
+      "name": "distributed fields and MPI",
+      "header_search_terms": [
+        "grid_field.hpp",
+        "decomposition.hpp",
+        "comm_halo_exchange.hpp"
+      ],
+      "chapters": []
+    },
+    {
+      "name": "local and distributed FFT",
+      "header_search_terms": [
+        "local_fft.hpp",
+        "fft_interface.hpp"
+      ],
+      "chapters": []
+    },
+    {
+      "name": "finite differences and spectral gradients",
+      "header_search_terms": [
+        "fd_gradient.hpp",
+        "spectral_gradient.hpp"
+      ],
+      "chapters": []
+    },
+    {
+      "name": "conservative fluxes and nonperiodic boundaries",
+      "header_search_terms": [
+        "face_flux.hpp",
+        "sbp_diffusion.hpp",
+        "reaction_flux.hpp"
+      ],
+      "chapters": []
+    },
+    {
+      "name": "fixed and adaptive integration",
+      "header_search_terms": [
+        "explicit_rk.hpp",
+        "embedded_rk.hpp",
+        "adaptive_controller.hpp"
+      ],
+      "chapters": []
+    },
+    {
+      "name": "multi-field runtime integration",
+      "header_search_terms": [
+        "runtime_field_rk.hpp",
+        "composite_gradient.hpp",
+        "coupled_spectral_etd2.hpp"
+      ],
+      "chapters": []
+    },
+    {
+      "name": "exponential and adaptive ETD",
+      "header_search_terms": [
+        "spectral_etd_system.hpp",
+        "etd_step_doubling.hpp"
+      ],
+      "chapters": []
+    },
+    {
+      "name": "initial conditions and modifiers",
+      "header_search_terms": [
+        "initial_conditions/fourier_modes.hpp",
+        "indexed_noise.hpp",
+        "field_modifier.hpp"
+      ],
+      "chapters": []
+    },
+    {
+      "name": "JSON/TOML validation and application sessions",
+      "header_search_terms": [
+        "json_session_main.hpp",
+        "parameter_schema.hpp"
+      ],
+      "chapters": []
+    },
+    {
+      "name": "field output and visualization",
+      "header_search_terms": [
+        "results_writer.hpp",
+        "vtk_writer.hpp",
+        "png_writer.hpp"
+      ],
+      "chapters": []
+    },
+    {
+      "name": "checkpoints and restart",
+      "header_search_terms": [
+        "checkpoint_service.hpp",
+        "binary_reader.hpp"
+      ],
+      "chapters": []
+    },
+    {
+      "name": "Krylov and nonlinear solves",
+      "header_search_terms": [
+        "krylov.hpp",
+        "newton.hpp",
+        "scalar_root.hpp"
+      ],
+      "chapters": []
+    },
+    {
+      "name": "geometric multigrid",
+      "header_search_terms": [
+        "multigrid.hpp",
+        "nodal_multigrid.hpp",
+        "nodal_dirichlet_multigrid.hpp"
+      ],
+      "chapters": []
+    },
+    {
+      "name": "microelasticity and homogenization",
+      "header_search_terms": [
+        "microelasticity.hpp",
+        "homogenization.hpp"
+      ],
+      "chapters": []
+    },
+    {
+      "name": "coupling and transactional attempts",
+      "header_search_terms": [
+        "coupling.hpp",
+        "step_attempt.hpp",
+        "simulation_lifecycle.hpp"
+      ],
+      "chapters": []
+    },
+    {
+      "name": "profiling and communication diagnostics",
+      "header_search_terms": [
+        "kernel/profiling/session.hpp",
+        "mpi/timer.hpp"
+      ],
+      "chapters": []
+    },
+    {
+      "name": "CUDA and HIP execution",
+      "header_search_terms": [
+        "gpu_spectral_stack.hpp",
+        "gpu_field.hpp"
+      ],
+      "chapters": []
+    },
+    {
+      "name": "nonlinear models and incompressible flow",
+      "header_search_terms": [
+        "spectral_flux.hpp",
+        "fourier_vector.hpp"
+      ],
+      "chapters": []
+    }
+  ]
+}

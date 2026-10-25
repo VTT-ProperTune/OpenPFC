@@ -18,3 +18,5 @@ Cluster and GPU work should come after a successful CPU run. [`hpc_slurm_day_one
 There are a few tutorials that are closer to reference material. [`add_catch2_test.md`](add_catch2_test.md) is the shortest route to adding a unit test and running it through `ctest`. The science pages [`../science/tungsten_quicklook.md`](../science/tungsten_quicklook.md) and [`../science/cahn_hilliard_vs_allen_cahn.md`](../science/cahn_hilliard_vs_allen_cahn.md) help you choose the right model or example before you spend time on a run.
 
 For a slower conceptual introduction, [`../getting_started/01-basics/README.md`](../getting_started/01-basics/README.md) tells the “world to FFT to CMake” story. For a lookup-oriented catalog, use [`../reference/examples_catalog.md`](../reference/examples_catalog.md) and [`../reference/api_examples_walkthrough.md`](../reference/api_examples_walkthrough.md).
+
+Learn through [runnable Quarto experiments](../../examples/index.qmd).

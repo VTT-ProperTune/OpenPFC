@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+filters:
+  - include-code-files
+title-block-style: none
+link-citations: true
+code-line-numbers: false
+body-classes: openpfc-lessons
+css: styles.css
