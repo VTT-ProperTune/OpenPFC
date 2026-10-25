@@ -16,8 +16,8 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 [Follow what is taught, what is adapted, and what still needs a chapter.]{.lesson-deck}
 :::
 
-There are 44 declared runnable example targets and
-3 Quarto teaching chapters. The table includes older programs
+There are 45 declared runnable example targets and
+4 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -103,6 +103,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `diffusion_model_with_custom_initial_condition` | Pending conversion. |
 | `fft_backend_benchmark` | Pending conversion. |
 | `fft_kspace_helpers_example` | Pending conversion. |
+| `heat_exponential` | [Read the lesson](heat/exponential/index.qmd) |
 | `json_read` | Pending conversion. |
 | `mhd2d` | Pending conversion. |
 | `mpi_timers` | Pending conversion. |
@@ -143,7 +144,7 @@ fixed-step restart does not establish an adaptive restart contract.
 | conservative fluxes and nonperiodic boundaries | Pending a teaching chapter. |
 | fixed and adaptive integration | [finite-differences](heat/finite-differences/index.qmd) |
 | multi-field runtime integration | Pending a teaching chapter. |
-| exponential and adaptive ETD | Pending a teaching chapter. |
+| exponential and adaptive ETD | [exponential](heat/exponential/index.qmd) |
 | initial conditions and modifiers | Pending a teaching chapter. |
 | JSON/TOML validation and application sessions | Pending a teaching chapter. |
 | field output and visualization | Pending a teaching chapter. |

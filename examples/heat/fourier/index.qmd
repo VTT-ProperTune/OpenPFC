@@ -133,7 +133,7 @@ RMS decay, continuum error, invalid inputs, and one versus two MPI ranks.
 This chapter covers a periodic linear equation on the CPU. It introduces
 neither nonlinear dealiasing nor nonperiodic boundary conditions.
 
-The next lesson removes Euler's approximation
+The [next lesson](../exponential/index.qmd) removes Euler's approximation
 by solving each linear Fourier-mode equation analytically.
 
 The complete [C++ model](model.cpp) and [starting input](input.json)

@@ -56,7 +56,7 @@ is $0.2e^{-3Dt}/\sqrt8$. Both identities follow directly from the mode;
 they are stronger checks than a decreasing maximum alone.
 
 The [Fourier](../fourier/index.qmd) and
-exponential lessons use precisely this problem.
+[exponential](../exponential/index.qmd) lessons use precisely this problem.
 The shared `lesson.hpp` owns input validation and diagnostics; each
 `model.cpp` owns its numerical method.
 

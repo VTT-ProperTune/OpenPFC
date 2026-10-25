@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Apply the exact linear Fourier propagator to separate spatial approximation from timestep error. Include the mathematical derivation and independent full-field checks alongside the runnable model.
+
 - Recast the spectral Euler example as the same heat experiment in Fourier space. Preserve its executable name and verify every output value against an independent discrete modal solution.
 
 - Move the explicit finite-difference heat example into a focused chapter while retaining its binary name. Explain the stencil and stability bound, share only input and observation helpers, and check complete periodic fields on one and two ranks.

@@ -168,6 +168,16 @@
       "capabilities": []
     },
     {
+      "target": "heat_exponential",
+      "source": "heat/exponential/model.cpp",
+      "chapter": "heat/exponential/index.qmd",
+      "capabilities": [
+        "fft",
+        "fourier-symbols",
+        "exponential-propagation"
+      ]
+    },
+    {
       "target": "json_read",
       "source": "json_read.cpp",
       "chapter": null,
@@ -645,7 +655,9 @@
         "spectral_etd_system.hpp",
         "etd_step_doubling.hpp"
       ],
-      "chapters": []
+      "chapters": [
+        "heat/exponential/index.qmd"
+      ]
     },
     {
       "name": "initial conditions and modifiers",

@@ -8,3 +8,7 @@ set_target_properties(19_explicit_stepper_fd PROPERTIES RUNTIME_OUTPUT_DIRECTORY
 add_executable(20_explicit_stepper_spectral fourier/model.cpp)
 target_link_libraries(20_explicit_stepper_spectral PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(20_explicit_stepper_spectral PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(heat_exponential exponential/model.cpp)
+target_link_libraries(heat_exponential PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(heat_exponential PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
