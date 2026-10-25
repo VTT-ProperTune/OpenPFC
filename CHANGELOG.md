@@ -16,6 +16,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 - Move polycrystal MP4 encoding to `openpfc_render_polycrystal`, which reads
   existing slices. The solver no longer accepts rendering flags (#652).
+- Share generic application flag parsing and rank timing reports through
+  frontend/app_support; existing app headers retain their names (#653).
 
 - `openpfc bundle` can build a scratch image when `--base` is omitted. The image
   copies the host dynamic loader, the glibc libraries required by the model and
