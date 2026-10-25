@@ -90,8 +90,7 @@ public:
    * Implicit so a `std::vector<T>` can be handed to a `FieldView<T>` parameter
    * (writers, I/O). The vector must outlive the view.
    */
-  FieldView(
-      const std::vector<T> &data) noexcept // NOLINT(google-explicit-constructor)
+  FieldView(const std::vector<T> &data) noexcept
       : m_data(data.data()), m_size(data.size()), m_extents{}, m_spacing{},
         m_origin{} {}
 
@@ -183,7 +182,7 @@ public:
    * parameter (`FieldModifier::apply`, `BinaryReader::read`). The vector must
    * outlive the output view and must not be resized while viewed.
    */
-  FieldOutput(std::vector<T> &data) noexcept // NOLINT(google-explicit-constructor)
+  FieldOutput(std::vector<T> &data) noexcept
       : m_data(data.data()), m_size(data.size()) {}
 
   /**
