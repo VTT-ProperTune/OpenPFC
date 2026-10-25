@@ -47,8 +47,7 @@ public:
         m_outbox(fft.get_outbox_bounds()), m_gsize(layout.global_size()),
         m_spacing(layout.spacing()) {
     if (m_gsize[2] != 1) {
-      throw std::invalid_argument(
-          "ns2d: expected a one-cell z slab (Nx x Ny x 1)");
+      throw std::invalid_argument("ns2d: expected a one-cell z slab (Nx x Ny x 1)");
     }
     const std::size_t out_n = fft.size_outbox();
     m_tmp_hat.assign(out_n, Complex{});
@@ -109,7 +108,8 @@ public:
         });
   }
 
-  /// \f$\hat\phi=\hat\omega/|k|^2\f$ with \f$\hat\phi(0)=0\f$ (\f$\omega=-\nabla^2\phi\f$).
+  /// \f$\hat\phi=\hat\omega/|k|^2\f$ with \f$\hat\phi(0)=0\f$
+  /// (\f$\omega=-\nabla^2\phi\f$).
   void poisson(const std::vector<Complex> &omega_hat,
                std::vector<Complex> &phi_hat) const {
     for (std::size_t i = 0; i < omega_hat.size(); ++i) {
@@ -133,7 +133,8 @@ public:
     m_fft->backward(m_tmp_hat, out);
   }
 
-  /// Velocity or magnetic field from a stream/flux function: \f$( \partial_y, -\partial_x )\f$.
+  /// Velocity or magnetic field from a stream/flux function: \f$( \partial_y,
+  /// -\partial_x )\f$.
   void curl_from_hat(const std::vector<Complex> &psi_hat, std::vector<double> &cx,
                      std::vector<double> &cy) {
     invert_ik(psi_hat, m_ky_odd, +1.0, cx);
@@ -211,9 +212,9 @@ void ifrk4_one(SpectralPlane &sp, std::vector<SpectralPlane::Complex> &u_hat,
   N(stage, n4);
   const double dt6 = dt / 6.0;
   for (std::size_t i = 0; i < u_hat.size(); ++i) {
-    u_hat[i] = exp_dt[i] * u_hat[i] +
-               dt6 * (exp_dt[i] * n1[i] + 2.0 * exp_half[i] * (n2[i] + n3[i]) +
-                      n4[i]);
+    u_hat[i] =
+        exp_dt[i] * u_hat[i] +
+        dt6 * (exp_dt[i] * n1[i] + 2.0 * exp_half[i] * (n2[i] + n3[i]) + n4[i]);
   }
   sp.project_hat(u_hat);
 }
@@ -222,11 +223,9 @@ void ifrk4_one(SpectralPlane &sp, std::vector<SpectralPlane::Complex> &u_hat,
 template <class Nonlinear>
 void ifrk4_pair(SpectralPlane &sp, std::vector<SpectralPlane::Complex> &w_hat,
                 std::vector<SpectralPlane::Complex> &a_hat,
-                const std::vector<double> &ew_dt,
-                const std::vector<double> &ew_half,
-                const std::vector<double> &ea_dt,
-                const std::vector<double> &ea_half, double dt, Nonlinear &&N,
-                std::vector<SpectralPlane::Complex> &nw1,
+                const std::vector<double> &ew_dt, const std::vector<double> &ew_half,
+                const std::vector<double> &ea_dt, const std::vector<double> &ea_half,
+                double dt, Nonlinear &&N, std::vector<SpectralPlane::Complex> &nw1,
                 std::vector<SpectralPlane::Complex> &na1,
                 std::vector<SpectralPlane::Complex> &nw2,
                 std::vector<SpectralPlane::Complex> &na2,
@@ -262,12 +261,12 @@ void ifrk4_pair(SpectralPlane &sp, std::vector<SpectralPlane::Complex> &w_hat,
   N(sw, sa, nw4, na4);
   const double dt6 = dt / 6.0;
   for (std::size_t i = 0; i < w_hat.size(); ++i) {
-    w_hat[i] = ew_dt[i] * w_hat[i] +
-               dt6 * (ew_dt[i] * nw1[i] + 2.0 * ew_half[i] * (nw2[i] + nw3[i]) +
-                      nw4[i]);
-    a_hat[i] = ea_dt[i] * a_hat[i] +
-               dt6 * (ea_dt[i] * na1[i] + 2.0 * ea_half[i] * (na2[i] + na3[i]) +
-                      na4[i]);
+    w_hat[i] =
+        ew_dt[i] * w_hat[i] +
+        dt6 * (ew_dt[i] * nw1[i] + 2.0 * ew_half[i] * (nw2[i] + nw3[i]) + nw4[i]);
+    a_hat[i] =
+        ea_dt[i] * a_hat[i] +
+        dt6 * (ea_dt[i] * na1[i] + 2.0 * ea_half[i] * (na2[i] + na3[i]) + na4[i]);
   }
   sp.project_hat(w_hat);
   sp.project_hat(a_hat);
@@ -314,9 +313,7 @@ elsasser_speeds(const std::vector<double> &u, const std::vector<double> &v,
 }
 
 /// Signed FFT wave-number index (Nyquist folding), matching `k_component`.
-[[nodiscard]] inline int signed_wave_index(int idx, int n) noexcept {
-  return (idx <= n / 2) ? idx : idx - n;
-}
+using pfc::fft::kspace::signed_wave_index;
 
 /**
  * Copy matching integer wave numbers from a finer r2c hat into a coarser hat.
@@ -351,8 +348,8 @@ inline void restrict_hat_by_k(const SpectralPlane &fine,
   pfc::fft::kspace::for_each_kpoint(
       coarse.outbox(), coarse.gsize(), coarse.spacing(),
       [&](std::size_t ci, double, double, double, int i, int j, int) {
-        const auto it = fmap.find(
-            key(signed_wave_index(i, cn[0]), signed_wave_index(j, cn[1])));
+        const auto it =
+            fmap.find(key(signed_wave_index(i, cn[0]), signed_wave_index(j, cn[1])));
         if (it != fmap.end()) chat[ci] = fhat[it->second] * scale;
       });
 }

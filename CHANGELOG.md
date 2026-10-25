@@ -16,6 +16,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 - Move polycrystal MP4 encoding to `openpfc_render_polycrystal`, which reads
   existing slices. The solver no longer accepts rendering flags (#652).
+- Use canonical signed Fourier indices, k-space iteration and Hermitian
+  multiplicities in apps/examples. Odd-grid weights follow r2c_multiplicity
+  instead of treating the last positive mode as Nyquist (#653).
+
 - Application GPU setup uses runtime device binding and checked vendor-call
   helpers; the transport verifier keeps its documented abort policy (#653).
 

@@ -102,6 +102,12 @@ inline std::array<double, 3> k_frequency_scaling(const Domain &domain) noexcept 
           two_pi / (spacing[2] * size[2])};
 }
 
+/// Signed integer FFT index; the even-grid Nyquist index stays positive.
+/// Requires size > 0 and 0 <= index < size.
+OPENPFC_INLINE_HD int signed_wave_index(int index, int size) noexcept {
+  return index <= size / 2 ? index : index - size;
+}
+
 /**
  * @brief Compute k-space wave vector component with Nyquist folding.
  *
@@ -136,7 +142,7 @@ inline std::array<double, 3> k_frequency_scaling(const Domain &domain) noexcept 
  */
 OPENPFC_INLINE_HD double k_component(int index, int size,
                                      double freq_scale) noexcept {
-  return (index <= size / 2) ? index * freq_scale : (index - size) * freq_scale;
+  return signed_wave_index(index, size) * freq_scale;
 }
 
 /// True when `index` is the even-grid Nyquist mode (`size/2`).

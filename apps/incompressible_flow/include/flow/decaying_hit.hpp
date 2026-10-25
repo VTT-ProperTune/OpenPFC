@@ -38,6 +38,7 @@
 #include <cmath>
 #include <complex>
 #include <cstdint>
+#include <openpfc/kernel/fft/power_spectrum.hpp>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -74,7 +75,7 @@ inline constexpr std::array<double, 4> protocol_temporal_dt{
 }
 
 [[nodiscard]] inline int signed_index(int idx, int n) noexcept {
-  return (idx <= n / 2) ? idx : idx - n;
+  return pfc::fft::kspace::signed_wave_index(idx, n);
 }
 
 [[nodiscard]] inline int retained_k_max(int n) noexcept {
@@ -194,7 +195,7 @@ inline void initialize_decaying_hit(State &state, std::uint64_t seed) {
             std::sqrt(static_cast<double>(si * si + sj * sj + sk * sk));
         const int shell = static_cast<int>(std::floor(kmag + 0.5));
         if (shell <= 0 || shell >= static_cast<int>(bins.size())) return;
-        const double herm = (i == 0 || i == n / 2) ? 1.0 : 2.0;
+        const double herm = pfc::fft::r2c_multiplicity(i, n);
         const double mag = std::norm(state.u[idx]) + std::norm(state.v[idx]) +
                            std::norm(state.w[idx]);
         bins[static_cast<std::size_t>(shell)] += herm * mag * scale;
@@ -250,7 +251,7 @@ inline void initialize_decaying_hit(State &state, std::uint64_t seed) {
         const int sj = std::abs(signed_index(j, n));
         const int sk = std::abs(signed_index(k, n));
         if (std::max(si, std::max(sj, sk)) <= cut) return;
-        const double herm = (i == 0 || i == n / 2) ? 1.0 : 2.0;
+        const double herm = pfc::fft::r2c_multiplicity(i, n);
         const double mag = std::norm(state.u[idx]) + std::norm(state.v[idx]) +
                            std::norm(state.w[idx]);
         outer += herm * mag * weight;

@@ -27,6 +27,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <openpfc/kernel/fft/power_spectrum.hpp>
 #include <stdexcept>
 #include <unordered_map>
 #include <utility>
@@ -53,9 +54,7 @@ inline constexpr double enstrophy_0 = 0.75;
   return kinetic_energy_0 * std::exp(-6.0 * nu * time);
 }
 
-[[nodiscard]] inline int signed_wave_index(int idx, int n) noexcept {
-  return (idx <= n / 2) ? idx : idx - n;
-}
+using pfc::fft::kspace::signed_wave_index;
 
 struct ShellEnergy {
   int k2{0};
@@ -150,8 +149,9 @@ struct Flow {
   flow.u.assign(nhat, Complex{});
   flow.v.assign(nhat, Complex{});
   flow.w.assign(nhat, Complex{});
-  pfc::incompressible::viscous_exponentials(fft.get_outbox_bounds(), flow.n, flow.spacing, nu,
-                                   dt, flow.exp_dt, flow.exp_half);
+  pfc::incompressible::viscous_exponentials(fft.get_outbox_bounds(), flow.n,
+                                            flow.spacing, nu, dt, flow.exp_dt,
+                                            flow.exp_half);
   return flow;
 }
 
@@ -193,8 +193,8 @@ inline void step(Flow &flow) {
       [&](const std::vector<Complex> &u, const std::vector<Complex> &v,
           const std::vector<Complex> &w, std::vector<Complex> &tu,
           std::vector<Complex> &tv, std::vector<Complex> &tw) {
-        pfc::incompressible::rotational_tendency(fft, flow.n, flow.spacing, u, v, w, tu, tv,
-                                        tw, true);
+        pfc::incompressible::rotational_tendency(fft, flow.n, flow.spacing, u, v, w,
+                                                 tu, tv, tw, true);
       },
       true);
 }
@@ -256,7 +256,7 @@ inline void inverse_velocity(Flow &flow, const std::vector<Complex> &u,
         const int kj = signed_wave_index(j, flow.n[1]);
         const int kk = signed_wave_index(k, flow.n[2]);
         const int k2 = ki * ki + kj * kj + kk * kk;
-        const double herm = (i == 0 || i == flow.n[0] / 2) ? 1.0 : 2.0;
+        const double herm = pfc::fft::r2c_multiplicity(i, flow.n[0]);
         const double mag =
             std::norm(flow.u[idx]) + std::norm(flow.v[idx]) + std::norm(flow.w[idx]);
         bins[k2] += herm * mag * scale;

@@ -31,6 +31,7 @@
 
 #include <complex>
 #include <cstddef>
+#include <openpfc/kernel/fft/kspace_iterator.hpp>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -78,28 +79,12 @@ inline void fill_implicit_euler_symbol(std::span<double> opL,
                                 std::to_string(opL.size()) + " != outbox volume " +
                                 std::to_string(expected));
   }
-  const double fx =
-      2.0 * pfc::constants::pi / (spacing[0] * static_cast<double>(size[0]));
-  const double fy =
-      2.0 * pfc::constants::pi / (spacing[1] * static_cast<double>(size[1]));
-  const double fz =
-      2.0 * pfc::constants::pi / (spacing[2] * static_cast<double>(size[2]));
-  const auto signed_k = [](int i, int n, double f) {
-    return (i <= n / 2) ? static_cast<double>(i) * f
-                        : static_cast<double>(i - n) * f;
-  };
-  std::size_t idx = 0;
-  for (int k = outbox.low[2]; k <= outbox.high[2]; ++k) {
-    for (int j = outbox.low[1]; j <= outbox.high[1]; ++j) {
-      for (int i = outbox.low[0]; i <= outbox.high[0]; ++i) {
-        const double ki = signed_k(i, size[0], fx);
-        const double kj = signed_k(j, size[1], fy);
-        const double kk = signed_k(k, size[2], fz);
-        const double k_lap = -(ki * ki + kj * kj + kk * kk);
-        opL[idx++] = 1.0 / (1.0 - dt * D * k_lap);
-      }
-    }
-  }
+  pfc::fft::kspace::for_each_kpoint(
+      outbox, size, spacing,
+      [&](std::size_t idx, double kx, double ky, double kz, int, int, int) {
+        const double k_lap = pfc::fft::kspace::k_laplacian_value(kx, ky, kz);
+        opL[idx] = 1.0 / (1.0 - dt * D * k_lap);
+      });
 }
 
 /**
