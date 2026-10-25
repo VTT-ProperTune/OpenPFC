@@ -107,6 +107,11 @@ book's degrees and profiles. The plotting script reads the C++ CSV files;
 it does not run an independent Python numerical solver to supply the curves.
 
 
+## Reproduce the workflows figures
+
+Draw the native CSV outputs with `python3 examples/render_workflows.py --runs results/example-book/workflows`. Use the default RK, ETD and coupled-field runs described in the chapters.
+
+
 ## Render within the scientific website
 
 Use a disposable copy of `openpfc-pages`:
