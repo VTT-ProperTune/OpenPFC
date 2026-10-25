@@ -16,6 +16,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 - Move polycrystal MP4 encoding to `openpfc_render_polycrystal`, which reads
   existing slices. The solver no longer accepts rendering flags (#652).
+- Share collective XY gathering through frontend/io with documented layout
+  and rank participation preconditions (#653).
+
 - Share generic application flag parsing and rank timing reports through
   frontend/app_support; existing app headers retain their names (#653).
 
