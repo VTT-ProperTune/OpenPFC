@@ -72,7 +72,7 @@ it does not implement @eq-offset for global indices.
 This example concerns a compact box. A halo-padded `Field` has extra
 storage around the owned box. Use that field's own `idx` for its buffer,
 and `Box3i::to_linear` for the compact box it describes. The
-next lesson makes the difference concrete.
+[next lesson](../field-storage/index.qmd) makes the difference concrete.
 See the [Box3i header](https://github.com/ahojukka5/OpenPFC/blob/master/include/openpfc/kernel/data/box3i.hpp)
 for the exact indexing contract.
 The complete [C++ model](model.cpp) and [starting input](input.json)

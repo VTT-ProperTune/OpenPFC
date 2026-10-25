@@ -74,7 +74,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `04_diffusion_model` | `04_diffusion_model.cpp` | Simple spectral diffusion `Model` |
 | `05_simulator` | `05_simulator.cpp` | `Simulator`, `Time`, `FieldModifier` |
 | `06_multi_index` | `geometry/index-boxes/model.cpp` | `Box3i` iteration and `to_linear` |
-| `07_array` | `07_array.cpp` | Array helpers |
+| `07_array` | `geometry/field-storage/model.cpp` | Array helpers |
 | `08_discrete_fields` | `08_discrete_fields.cpp` | `pfc::data::Field` with domain geometry |
 | `09_parallel_fft_high_level` | `09_parallel_fft_high_level.cpp` | Higher-level FFT usage |
 | `10_ui_register_ic` | `10_ui_register_ic.cpp` | UI and field-modifier registration patterns |

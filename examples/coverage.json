@@ -41,9 +41,14 @@
     },
     {
       "target": "07_array",
-      "source": "07_array.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "geometry/field-storage/model.cpp",
+      "chapter": "geometry/field-storage/index.qmd",
+      "capabilities": [
+        "fields",
+        "coordinates",
+        "padding",
+        "component-fields"
+      ]
     },
     {
       "target": "08_discrete_fields",
@@ -605,7 +610,8 @@
       ],
       "chapters": [
         "geometry/decomposition/index.qmd",
-        "geometry/index-boxes/index.qmd"
+        "geometry/index-boxes/index.qmd",
+        "geometry/field-storage/index.qmd"
       ]
     },
     {

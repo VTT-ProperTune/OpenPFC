@@ -29,8 +29,6 @@ add_executable(05_simulator 05_simulator.cpp)
 target_link_libraries(05_simulator PRIVATE OpenPFC::openpfc )
 
 
-add_executable(07_array 07_array.cpp)
-target_link_libraries(07_array PRIVATE OpenPFC::openpfc )
 
 add_executable(08_discrete_fields 08_discrete_fields.cpp)
 target_link_libraries(08_discrete_fields PRIVATE OpenPFC::openpfc )
@@ -178,6 +176,9 @@ if(OpenPFC_BUILD_TESTS)
   add_test(NAME example-06-multi-index
            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_foundations.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 06_multi_index)
   set_tests_properties(example-06-multi-index PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  add_test(NAME example-07-array
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_foundations.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 07_array)
+  set_tests_properties(example-07-array PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
 endif()
 
 add_executable(23_halo_microtiming 23_halo_microtiming.cpp)

@@ -8,3 +8,7 @@ set_target_properties(02_domain_decomposition PROPERTIES RUNTIME_OUTPUT_DIRECTOR
 add_executable(06_multi_index index-boxes/model.cpp)
 target_link_libraries(06_multi_index PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(06_multi_index PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(07_array field-storage/model.cpp)
+target_link_libraries(07_array PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(07_array PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")

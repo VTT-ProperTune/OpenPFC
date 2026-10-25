@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Explain padding, component storage and coordinate-aware fields in a focused chapter. Retain the legacy array target and check storage sizes and owned offsets.
+
 - Make index-box iteration a small readable example with an explicit offset calculation. Preserve the executable and verify the complete offset sequence.
 
 - Replace the domain-decomposition printout with a runnable ownership chapter. Check that rank boxes tile the complete global grid exactly once.

@@ -59,6 +59,13 @@ def verify_06_multi_index(bin_dir, root, launch, ranks):
     assert [int(line.split(",")[3]) for line in offsets] == list(range(8))
 
 
+def verify_07_array(bin_dir, root, launch, ranks):
+    binary = lambda name: bin_dir / name
+    assert "owned=96 padded=288 first_owned_offset=55 first_x=0 mismatch=0" in run(
+        binary("07_array"), root / "storage"
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -66,7 +73,9 @@ def main():
     parser.add_argument("--launcher")
     parser.add_argument("--rank-flag", default="-n")
     parser.add_argument("--ranks", default=1, type=int)
-    parser.add_argument("--case", choices=["02_domain_decomposition", "06_multi_index"])
+    parser.add_argument(
+        "--case", choices=["02_domain_decomposition", "06_multi_index", "07_array"]
+    )
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     bin_dir = args.bin_dir.resolve()
@@ -84,6 +93,10 @@ def main():
             root = base / "06_multi_index"
             root.mkdir()
             verify_06_multi_index(bin_dir, root, launch, ranks)
+        if args.case in (None, "07_array"):
+            root = base / "07_array"
+            root.mkdir()
+            verify_07_array(bin_dir, root, launch, ranks)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 
