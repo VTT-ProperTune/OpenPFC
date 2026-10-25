@@ -3,9 +3,13 @@
   "examples": [
     {
       "target": "02_domain_decomposition",
-      "source": "02_domain_decomposition.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "geometry/decomposition/model.cpp",
+      "chapter": "geometry/decomposition/index.qmd",
+      "capabilities": [
+        "domain",
+        "decomposition",
+        "mpi-reductions"
+      ]
     },
     {
       "target": "03_parallel_fft",
@@ -595,7 +599,9 @@
         "domain.hpp",
         "strong_types.hpp"
       ],
-      "chapters": []
+      "chapters": [
+        "geometry/decomposition/index.qmd"
+      ]
     },
     {
       "name": "distributed fields and MPI",

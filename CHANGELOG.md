@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Replace the domain-decomposition printout with a runnable ownership chapter. Check that rank boxes tile the complete global grid exactly once.
+
 - Refactor the separated-halo heat demonstration into the same periodic-mode comparison. Retain the established executable and verify owned values, conservation and invalid controls on one and two MPI ranks.
 
 - Apply the exact linear Fourier propagator to separate spatial approximation from timestep error. Include the mathematical derivation and independent full-field checks alongside the runnable model.

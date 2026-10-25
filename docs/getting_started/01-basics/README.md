@@ -109,7 +109,7 @@ split across ranks for distributed transforms and communication.
 The maintained example is:
 
 ```text
-examples/02_domain_decomposition.cpp
+examples/geometry/decomposition/model.cpp
 ```
 
 It constructs the objects with the current factories:

@@ -41,8 +41,8 @@ The shortest useful mental model is:
 
 | Type or concept | Responsibility | Primary header | Start with |
 |-----------------|----------------|----------------|------------|
-| `Domain` | Global grid size, spacing, origin, and periodicity | `openpfc/kernel/data/domain.hpp` | `examples/02_domain_decomposition.cpp` |
-| `Box3i` | Inclusive integer bounds for local or transformed regions | `openpfc/kernel/data/box.hpp` | `examples/02_domain_decomposition.cpp` |
+| `Domain` | Global grid size, spacing, origin, and periodicity | `openpfc/kernel/data/domain.hpp` | `examples/geometry/decomposition/model.cpp` |
+| `Box3i` | Inclusive integer bounds for local or transformed regions | `openpfc/kernel/data/box.hpp` | `examples/geometry/decomposition/model.cpp` |
 | `Decomposition` | MPI partition and per-rank inbox/outbox geometry | `openpfc/kernel/decomposition/decomposition.hpp` | `examples/03_parallel_fft.cpp` |
 | `IHostFFT` / `CPUFFT` | Distributed host forward/backward transforms through HeFFTe | `openpfc/kernel/fft/fft.hpp` | `examples/03_parallel_fft.cpp` |
 | Physics / `SpectralETDSystem` | Fields, k-space symbols, and a device-capable `pointwise()` nonlinearity; the system owns the ETD update on host or device | `tungsten_physics.hpp`, `aluminum_physics.hpp`, `openpfc/kernel/simulation/spectral_etd_system.hpp` | `tests/fixtures/swift_hohenberg.hpp`, `examples/04_diffusion_model.cpp` |

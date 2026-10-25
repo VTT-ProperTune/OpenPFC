@@ -18,8 +18,6 @@ endif()
 # add_executable(01_hello_world 01_hello_world.cpp)
 # target_link_libraries(01_hello_world PRIVATE OpenPFC::openpfc)
 
-add_executable(02_domain_decomposition 02_domain_decomposition.cpp)
-target_link_libraries(02_domain_decomposition PRIVATE OpenPFC::openpfc )
 
 add_executable(03_parallel_fft 03_parallel_fft.cpp)
 target_link_libraries(03_parallel_fft PRIVATE OpenPFC::openpfc )
@@ -114,6 +112,7 @@ target_link_libraries(22_external_coupling PRIVATE OpenPFC::openpfc )
 
 # Teaching chapters own their implementations; binary names remain stable.
 add_subdirectory(differentiation)
+add_subdirectory(geometry)
 add_subdirectory(heat)
 
 if(OpenPFC_BUILD_TESTS)
@@ -166,6 +165,16 @@ if(OpenPFC_BUILD_TESTS)
              COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_lessons.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 15_finite_difference_heat
                      --launcher "${MPIEXEC_EXECUTABLE}" "--rank-flag=${MPIEXEC_NUMPROC_FLAG}" --ranks 2)
     set_tests_properties(example-15-finite-difference-heat-mpi PROPERTIES PROCESSORS 2 TIMEOUT 360
+                         ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+  endif()
+  add_test(NAME example-02-domain-decomposition
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_foundations.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 02_domain_decomposition)
+  set_tests_properties(example-02-domain-decomposition PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
+    add_test(NAME example-02-domain-decomposition-mpi
+             COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_foundations.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 02_domain_decomposition
+                     --launcher "${MPIEXEC_EXECUTABLE}" "--rank-flag=${MPIEXEC_NUMPROC_FLAG}" --ranks 2)
+    set_tests_properties(example-02-domain-decomposition-mpi PROPERTIES PROCESSORS 2 TIMEOUT 360
                          ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
   endif()
 endif()

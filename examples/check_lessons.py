@@ -14,9 +14,10 @@ import subprocess
 import tempfile
 
 
-
 def run(command: list[str], cwd: Path, success: bool = True) -> None:
-    result = subprocess.run(command, cwd=cwd, capture_output=True, text=True, timeout=90)
+    result = subprocess.run(
+        command, cwd=cwd, capture_output=True, text=True, timeout=90
+    )
     if (result.returncode == 0) != success:
         raise AssertionError(f"{command}\n{result.stdout}\n{result.stderr}")
 
@@ -30,31 +31,44 @@ def check_heat(executable: str, method: str, root: Path, launch: list[str]) -> N
     run([*launch, executable, str(source)], directory)
 
     # Analytic eigenvalue of the discrete stencil; no OpenPFC routines are used.
-    n, dt, diffusion, steps = (parameters[key] for key in ("n", "dt", "diffusivity", "steps"))
+    n, dt, diffusion, steps = (
+        parameters[key] for key in ("n", "dt", "diffusivity", "steps")
+    )
     h = 2.0 * math.pi / n
-    eigenvalue = -12.0 * math.sin(h / 2.0) ** 2 / h**2 if method in ("fd", "separated") else -3.0
-    amplitude = 0.2 * (math.exp(eigenvalue * diffusion * dt * steps) if method == "exponential"
-                       else (1.0 + dt * diffusion * eigenvalue) ** steps)
+    eigenvalue = (
+        -12.0 * math.sin(h / 2.0) ** 2 / h**2 if method in ("fd", "separated") else -3.0
+    )
+    amplitude = 0.2 * (
+        math.exp(eigenvalue * diffusion * dt * steps)
+        if method == "exponential"
+        else (1.0 + dt * diffusion * eigenvalue) ** steps
+    )
     fields = list((directory / "results").glob("field_rank_*.csv"))
     count = 0
     owned = set()
     for field in fields:
         for row in csv.DictReader(field.open()):
             x, y, z, value = (float(row[key]) for key in ("x", "y", "z", "u"))
-            index = tuple(round(point/h) for point in (x, y, z))
+            index = tuple(round(point / h) for point in (x, y, z))
             assert index not in owned, (method, index)
             owned.add(index)
             expected = 1.0 + amplitude * math.cos(x) * math.cos(y) * math.cos(z)
-            assert math.isfinite(value) and abs(value - expected) < 2e-11, (method, row, expected)
+            assert math.isfinite(value) and abs(value - expected) < 2e-11, (
+                method,
+                row,
+                expected,
+            )
             count += 1
     assert count == n**3, (method, count)
-    assert owned == {(i,j,k) for k in range(n) for j in range(n) for i in range(n)}
+    assert owned == {(i, j, k) for k in range(n) for j in range(n) for i in range(n)}
 
     rows = list(csv.DictReader((directory / "results/diagnostics.csv").open()))
     assert len(rows) == steps + 1
     previous = math.inf
     for row in rows:
-        mean, fluctuation, error = (float(row[key]) for key in ("mean", "rms_fluctuation", "rms_error"))
+        mean, fluctuation, error = (
+            float(row[key]) for key in ("mean", "rms_fluctuation", "rms_error")
+        )
         assert math.isfinite(error) and abs(mean - 1.0) < 2e-12
         assert 0.0 <= fluctuation <= previous + 2e-13
         previous = fluctuation
@@ -85,7 +99,6 @@ def check_differentiation(binary, root, launch):
     assert max(float(row["fourier"]) for row in rows[2:]) < 2e-11
 
 
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -93,13 +106,24 @@ def main():
     parser.add_argument("--launcher")
     parser.add_argument("--rank-flag", default="-n")
     parser.add_argument("--ranks", default=1, type=int)
-    parser.add_argument("--case", choices=['periodic_differentiation', '19_explicit_stepper_fd', '20_explicit_stepper_spectral', 'heat_exponential', '15_finite_difference_heat'])
+    parser.add_argument(
+        "--case",
+        choices=[
+            "periodic_differentiation",
+            "19_explicit_stepper_fd",
+            "20_explicit_stepper_spectral",
+            "heat_exponential",
+            "15_finite_difference_heat",
+        ],
+    )
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     bin_dir = args.bin_dir.resolve()
     ranks = args.ranks
     launch = [args.launcher, args.rank_flag, str(ranks)] if args.launcher else []
-    with tempfile.TemporaryDirectory(prefix="example-check-", dir=args.output) as temporary:
+    with tempfile.TemporaryDirectory(
+        prefix="example-check-", dir=args.output
+    ) as temporary:
         base = Path(temporary).resolve()
         if args.case in (None, "periodic_differentiation"):
             root = base / "periodic_differentiation"
@@ -112,7 +136,9 @@ def main():
         if args.case in (None, "20_explicit_stepper_spectral"):
             root = base / "20_explicit_stepper_spectral"
             root.mkdir()
-            check_heat(str(bin_dir / "20_explicit_stepper_spectral"), "fourier", root, launch)
+            check_heat(
+                str(bin_dir / "20_explicit_stepper_spectral"), "fourier", root, launch
+            )
         if args.case in (None, "heat_exponential"):
             root = base / "heat_exponential"
             root.mkdir()
@@ -120,7 +146,9 @@ def main():
         if args.case in (None, "15_finite_difference_heat"):
             root = base / "15_finite_difference_heat"
             root.mkdir()
-            check_heat(str(bin_dir / "15_finite_difference_heat"), "separated", root, launch)
+            check_heat(
+                str(bin_dir / "15_finite_difference_heat"), "separated", root, launch
+            )
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

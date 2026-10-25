@@ -1,0 +1,99 @@
+---
+title: "One box, many owners"
+description: "Divide a global domain among the actual MPI ranks and check that no cell is lost or counted twice."
+order: 5
+categories: [Geometry, MPI, Decomposition]
+capabilities: [domain, decomposition, mpi-reductions]
+targets: [02_domain_decomposition]
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[Geometry / Ownership]{.lesson-kicker}
+
+# One box, many owners
+
+[A distributed array begins with an agreement about who owns each value.]{.lesson-deck}
+:::
+
+A temperature field may contain millions of values, but a rank needs to
+store only its own part. The decomposition describes that ownership.
+It does not itself move field values, calculate a derivative, or fill a
+halo. Keeping those responsibilities distinct makes parallel code easier
+to reason about.
+
+This refactors example 02. Its original two-subdomain demonstration is now
+driven by the actual communicator size, so changing the launch changes
+the decomposition being demonstrated.
+
+## What must a partition preserve?
+
+The global index set is
+
+$$
+I=\{0,\ldots,15\}\times\{0,\ldots,7\}\times\{0,\ldots,3\}.
+$$ {#eq-global}
+
+Let $I_r$ be the owned box of rank $r$. A correct partition satisfies
+$\bigcup_r I_r=I$ and $I_r\cap I_s=\varnothing$ for $r\ne s$.
+In particular,
+
+$$
+\sum_r |I_r|=16\cdot8\cdot4=512.
+$$ {#eq-count}
+
+The count is necessary but insufficient: an overlap could conceal a
+missing region. The numerical check therefore enumerates all the small
+boxes and verifies the union and pairwise uniqueness as well.
+
+## Describe ownership in C++
+
+```{.cpp include="model.cpp" snippet="partition" dedent=4}
+```
+
+Every rank knows the same global domain and constructs the same partition.
+`local_box` selects its own index box. The reduction checks @eq-count
+without collecting a global field.
+
+The rest of [model.cpp](model.cpp) gathers only six integers per rank to
+write `results/decomposition.csv`. Each row contains a rank, the three
+global lower indices, and the three local sizes. An upper index is
+`lower + size - 1`: OpenPFC index boxes have inclusive bounds.
+
+## Change the number of owners
+
+From this directory with a provisioned SDK:
+
+```sh
+openpfc run model.cpp input.json --ranks=2 --launcher=mpirun
+```
+
+The input is an empty JSON object; the small domain is deliberately stated
+in the source. Compare one, two, and four ranks. The shapes and number of
+rows change, while the union remains the same 512 cells. Do not hard-code
+the assumption that a particular rank always owns the left half.
+
+Next, change the global shape from `{16,8,4}` to `{8,16,4}` and update the
+source's independent count. Predict which local shapes will change. The
+partitioning policy is a numerical/runtime choice; the physical problem
+should not depend on it.
+
+## Where this agreement ends
+
+The example check launches one and two ranks and validates every owned
+global index. It does not claim optimal communication volume, load balance
+for arbitrary physics, or support for more ranks than meaningful cells.
+FFT algorithms may redistribute values between a real-space inbox and a
+Fourier-space outbox; the FFT layout lesson
+explains why those are separate ownership descriptions.
+
+For exact API contracts see the
+[decomposition header](https://github.com/ahojukka5/OpenPFC/blob/master/include/openpfc/kernel/decomposition/decomposition.hpp).
+Continue with indices and memory offsets.
+The complete [C++ model](model.cpp) and [starting input](input.json)
+are available with this lesson.
+
+:::
