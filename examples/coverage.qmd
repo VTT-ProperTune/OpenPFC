@@ -17,7 +17,7 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 :::
 
 There are 48 declared runnable example targets and
-15 Quarto teaching chapters. The table includes older programs
+16 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -122,7 +122,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `taylor_green3d` | Pending conversion. |
 | `time` | Pending conversion. |
 | `world_helpers_example` | [Read the lesson](geometry/grid-spacing/index.qmd) |
-| `world_query_helpers_example` | Pending conversion. |
+| `world_query_helpers_example` | [Read the lesson](geometry/domain-queries/index.qmd) |
 | `world_strong_types_example` | Pending conversion. |
 | `write_results` | Pending conversion. |
 

@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Teach domain length, volume, dimension and grid size through a compact query program. Preserve the target and compare all reported geometric quantities with independent values.
+
 - Replace the geometry-helper printout with a chapter explaining the endpoint convention. Check every physical sample, spacing and upper extent for periodic and closed grids.
 
 - Compare four regularity classes over the original book resolution presets. Check complete error tables against an independent direct discrete Fourier transform.

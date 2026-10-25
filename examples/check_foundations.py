@@ -169,6 +169,21 @@ def verify_world_helpers_example(bin_dir, root, launch, ranks):
         assert abs(float(row["upper"]) - 2 * math.pi) < 1e-14
 
 
+def verify_world_query_helpers_example(bin_dir, root, launch, ranks):
+    binary = lambda name: bin_dir / name
+    queries = list(
+        csv.DictReader(
+            io.StringIO(run(binary("world_query_helpers_example"), root / "queries"))
+        )
+    )
+    assert len(queries) == 2
+    for row in queries:
+        assert int(row["points"]) == 30 and int(row["dimension"]) == 3
+        assert float(row["lx"]) == (2.5 if int(row["periodic"]) else 2)
+        assert float(row["ly"]) == 6 and float(row["lz"]) == 6
+        assert float(row["volume"]) == 90
+
+
 def verify_06_multi_index(bin_dir, root, launch, ranks):
     binary = lambda name: bin_dir / name
     offsets = run(binary("06_multi_index"), root / "boxes").splitlines()
@@ -241,6 +256,7 @@ def main():
             "periodic_collocation",
             "spectral_smoothness",
             "world_helpers_example",
+            "world_query_helpers_example",
         ],
     )
     args = parser.parse_args()
@@ -292,6 +308,10 @@ def main():
             root = base / "world_helpers_example"
             root.mkdir()
             verify_world_helpers_example(bin_dir, root, launch, ranks)
+        if args.case in (None, "world_query_helpers_example"):
+            root = base / "world_query_helpers_example"
+            root.mkdir()
+            verify_world_query_helpers_example(bin_dir, root, launch, ranks)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

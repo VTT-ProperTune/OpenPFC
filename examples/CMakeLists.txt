@@ -83,8 +83,6 @@ target_link_libraries(18_sobel_edge_detection PRIVATE OpenPFC::openpfc )
 add_executable(world_strong_types_example world_strong_types_example.cpp)
 target_link_libraries(world_strong_types_example PRIVATE OpenPFC::openpfc )
 
-add_executable(world_query_helpers_example world_query_helpers_example.cpp)
-target_link_libraries(world_query_helpers_example PRIVATE OpenPFC::openpfc )
 
 # Explicit Euler stepper examples (FD and spectral backends)
 
@@ -229,6 +227,9 @@ if(OpenPFC_BUILD_TESTS)
   add_test(NAME example-world-helpers-example
            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_foundations.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case world_helpers_example)
   set_tests_properties(example-world-helpers-example PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  add_test(NAME example-world-query-helpers-example
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_foundations.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case world_query_helpers_example)
+  set_tests_properties(example-world-query-helpers-example PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
 endif()
 
 add_executable(23_halo_microtiming 23_halo_microtiming.cpp)

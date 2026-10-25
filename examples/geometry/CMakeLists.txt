@@ -20,3 +20,7 @@ set_target_properties(08_discrete_fields PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${
 add_executable(world_helpers_example grid-spacing/model.cpp)
 target_link_libraries(world_helpers_example PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(world_helpers_example PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(world_query_helpers_example domain-queries/model.cpp)
+target_link_libraries(world_query_helpers_example PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(world_query_helpers_example PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")

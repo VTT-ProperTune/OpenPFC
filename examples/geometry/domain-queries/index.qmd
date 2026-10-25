@@ -1,0 +1,68 @@
+---
+title: "What does a domain query measure?"
+description: "A helper name is not a substitute for its mathematical definition. OpenPFC can report a domain's point count, dimensionality, bounds, extent and `physical_volume`. These quantities answer related but different questions."
+order: 24
+categories: [Geometry, C++ API]
+capabilities: [domain, strong-types, coordinates]
+targets: [world_query_helpers_example]
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[Geometry / Read the grid]{.lesson-kicker}
+
+# What does a domain query measure?
+
+[Predict the coordinates before you run the code.]{.lesson-deck}
+:::
+
+A helper name is not a substitute for its mathematical definition. OpenPFC
+can report a domain's point count, dimensionality, bounds, extent and
+`physical_volume`. These quantities answer related but different questions.
+
+## Read the definitions
+
+For size $(N_x,N_y,N_z)$, `get_total_size` counts $N_xN_yN_z$ samples.
+`extent` subtracts `lower` from `upper`, respecting each axis's endpoint
+convention. `physical_volume` uses the historical grid measure
+
+$$V_h=N_xN_yN_z h_xh_yh_z.$$
+
+On a fully periodic grid it equals the product of the extents. On a
+nonperiodic axis, the stored coordinate span is $(N_x-1)h_x$, so those
+products differ. This function does not introduce endpoint quadrature
+weights or compute a physical integral of a field.
+
+```{.cpp include="model.cpp" snippet="queries" dedent=2}
+```
+
+Here both grids have 30 points and `physical_volume=90`. Making x
+nonperiodic changes its span from 2.5 to 2, and the product of the three
+coordinate spans from 90 to 72. Nothing has changed the stored sample count.
+
+## Ask for the quantity you need
+
+```sh
+openpfc run model.cpp input.json --launcher=none
+```
+
+The empty input is unused: edit the source constants. The program prints
+CSV. The regression checks both counts, dimensions, all extents and the
+historical volume convention. To describe a bounding box, use `extent`;
+to integrate a nonperiodic sampled function, choose an appropriate
+quadrature rule explicitly.
+
+Try a grid with one sample in z and observe `dimensionality`. A singleton
+axis removes variation along that axis, but its spacing can still represent
+a chosen thickness. Dimensionality alone does not decide the physical
+units of an integral. Consult the
+[domain query definitions](https://github.com/VTT-ProperTune/OpenPFC/blob/master/include/openpfc/kernel/data/domain.hpp)
+when adapting a model.
+
+The complete [C++ model](model.cpp) and [starting input](input.json)
+are available with this lesson.
+
+:::

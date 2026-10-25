@@ -340,9 +340,13 @@
     },
     {
       "target": "world_query_helpers_example",
-      "source": "world_query_helpers_example.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "geometry/domain-queries/model.cpp",
+      "chapter": "geometry/domain-queries/index.qmd",
+      "capabilities": [
+        "domain",
+        "strong-types",
+        "coordinates"
+      ]
     },
     {
       "target": "world_strong_types_example",
