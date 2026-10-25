@@ -25,8 +25,7 @@ constexpr const char *kFillGpuKind = "CUDA";
 constexpr const char *kFillGpuKind = "HIP";
 #endif
 
-template <typename T>
-__global__ void fill_kernel(T *ptr, std::size_t n, T value) {
+template <typename T> __global__ void fill_kernel(T *ptr, std::size_t n, T value) {
   const std::size_t i =
       static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
   if (i < n) {
@@ -50,9 +49,9 @@ template <typename T> void launch_fill(T *ptr, std::size_t n, T value) {
   }
   err = ::pfc::gpuDeviceSynchronize();
   if (err != ::pfc::gpuSuccess) {
-    throw std::runtime_error(std::string(kFillGpuKind) +
-                             " fill kernel sync failed: " +
-                             ::pfc::gpuGetErrorString(err));
+    throw std::runtime_error(
+        std::string(kFillGpuKind) +
+        " fill kernel sync failed: " + ::pfc::gpuGetErrorString(err));
   }
 }
 

@@ -65,9 +65,8 @@ void check_indices(size_t n, const size_t *indices, size_t length, size_t index_
     return;
   }
   std::vector<size_t> host_idx(n);
-  ::pfc::gpuError_t err = ::pfc::gpuMemcpy(host_idx.data(), indices,
-                                           n * sizeof(size_t),
-                                           ::pfc::gpuMemcpyDeviceToHost);
+  ::pfc::gpuError_t err = ::pfc::gpuMemcpy(
+      host_idx.data(), indices, n * sizeof(size_t), ::pfc::gpuMemcpyDeviceToHost);
   if (err != ::pfc::gpuSuccess) {
     throw std::runtime_error(std::string(::pfc::gpuGetErrorString(err)));
   }
@@ -109,8 +108,7 @@ void launch_gather(size_t n, const size_t *indices, T *data, const T *source,
   }
   err = ::pfc::gpuDeviceSynchronize();
   if (err != ::pfc::gpuSuccess) {
-    throw std::runtime_error(std::string(kGpuKind) +
-                             " gather kernel sync failed: " +
+    throw std::runtime_error(std::string(kGpuKind) + " gather kernel sync failed: " +
                              ::pfc::gpuGetErrorString(err));
   }
 }
@@ -132,9 +130,9 @@ void launch_scatter(size_t n, const size_t *indices, const double *data,
   }
   err = ::pfc::gpuDeviceSynchronize();
   if (err != ::pfc::gpuSuccess) {
-    throw std::runtime_error(std::string(kGpuKind) +
-                             " scatter kernel sync failed: " +
-                             ::pfc::gpuGetErrorString(err));
+    throw std::runtime_error(
+        std::string(kGpuKind) +
+        " scatter kernel sync failed: " + ::pfc::gpuGetErrorString(err));
   }
 }
 

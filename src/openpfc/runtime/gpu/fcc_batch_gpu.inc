@@ -15,10 +15,9 @@ __global__ void fcc_batch_kernel(FccSlipParameters parameters, FccBatchView view
   FccSlipState state;
   if (view.use_quaternion_fields) {
     const std::size_t source = view.quaternions.at(p);
-    const double q[4] = {view.quaternions.q[0][source],
-                         view.quaternions.q[1][source],
-                         view.quaternions.q[2][source],
-                         view.quaternions.q[3][source]};
+    const double q[4] = {
+        view.quaternions.q[0][source], view.quaternions.q[1][source],
+        view.quaternions.q[2][source], view.quaternions.q[3][source]};
     if (!quaternion_sample_to_crystal(q, orientation)) {
       view.status[p] = FccStatus::Orientation;
       return;
@@ -60,12 +59,14 @@ void evaluate_fcc_batch_cuda(FccSlipParameters parameters, FccBatchView view) {
 void evaluate_fcc_batch_hip(FccSlipParameters parameters, FccBatchView view) {
 #endif
   if (!view.count) return;
-  if (!view.deformation || !view.committed || !view.trial ||
-      !view.piola || !view.tangent || !view.status || view.committed == view.trial)
-    throw std::invalid_argument("FCC batch requires distinct committed/trial storage");
+  if (!view.deformation || !view.committed || !view.trial || !view.piola ||
+      !view.tangent || !view.status || view.committed == view.trial)
+    throw std::invalid_argument(
+        "FCC batch requires distinct committed/trial storage");
   if (view.use_quaternion_fields) {
     if (view.orientation || !view.quaternions.valid_for(view.count))
-      throw std::invalid_argument("FCC quaternion view has invalid layout or matrix fallback");
+      throw std::invalid_argument(
+          "FCC quaternion view has invalid layout or matrix fallback");
   } else if (!view.orientation) {
     throw std::invalid_argument("FCC matrix orientation field is absent");
   }

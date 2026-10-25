@@ -24,7 +24,7 @@ constexpr const char *kReflectionGpuKind = "hip";
 
 template <typename T>
 __global__ void reflection_ghosts_kernel(T *pad, ReflectionGeometry<T> geom,
-                                        ReflectionVisitPlan plan) {
+                                         ReflectionVisitPlan plan) {
   const int tid = static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x);
   if (tid >= plan.total) {
     return;
@@ -60,8 +60,8 @@ __global__ void reflection_ghosts_kernel(T *pad, ReflectionGeometry<T> geom,
   const int sj = sample.sj + geom.halo;
   const int sk = sample.sk + geom.halo;
   const int src = si + sj * nxp + sk * nxp * npy;
-  const int dst = (i + geom.halo) + (j + geom.halo) * nxp +
-                  (k + geom.halo) * nxp * npy;
+  const int dst =
+      (i + geom.halo) + (j + geom.halo) * nxp + (k + geom.halo) * nxp * npy;
   pad[dst] = sample.scale * pad[src] + sample.offset;
 }
 

@@ -32,8 +32,8 @@ inline void check(const char *what) {
                              ::pfc::gpuGetErrorString(e));
 }
 
-#define OPENPFC_FMG_LOOP(n)                                                            \
-  for (std::size_t t = std::size_t(blockIdx.x) * blockDim.x + threadIdx.x; t < (n);  \
+#define OPENPFC_FMG_LOOP(n)                                                         \
+  for (std::size_t t = std::size_t(blockIdx.x) * blockDim.x + threadIdx.x; t < (n); \
        t += std::size_t(gridDim.x) * blockDim.x)
 
 __global__ void fill_kernel(double *p, std::size_t n, double v) {
@@ -68,17 +68,17 @@ __global__ void smooth_kernel(Level L, Coefficients C, const double *f, double *
     k::smooth(L, C, f, u, i, j, kk, colour);
   }
 }
-__global__ void residual_kernel(Level L, Coefficients C, const double *f, const double *u,
-                                double *r) {
+__global__ void residual_kernel(Level L, Coefficients C, const double *f,
+                                const double *u, double *r) {
   OPENPFC_FMG_LOOP(k::owned_count(L)) {
     int i, j, kk;
     k::owned_ijk(L, t, i, j, kk);
     k::residual(L, C, f, u, r, i, j, kk);
   }
 }
-__global__ void restrict_coefficients_kernel(Level F, Coefficients Cf, Level G, double *c,
-                                             double *dx, double *dy, double *dz,
-                                             double *m) {
+__global__ void restrict_coefficients_kernel(Level F, Coefficients Cf, Level G,
+                                             double *c, double *dx, double *dy,
+                                             double *dz, double *m) {
   OPENPFC_FMG_LOOP(k::owned_count(G)) {
     int i, j, kk;
     k::owned_ijk(G, t, i, j, kk);
@@ -133,8 +133,8 @@ void OPENPFC_FMG_NAME(smooth)(const Level &L, const Coefficients &C, const doubl
   smooth_kernel<<<blocks_for(k::owned_count(L)), kThreads>>>(L, C, f, u, colour);
   check("smooth");
 }
-void OPENPFC_FMG_NAME(residual)(const Level &L, const Coefficients &C, const double *f,
-                                const double *u, double *r) {
+void OPENPFC_FMG_NAME(residual)(const Level &L, const Coefficients &C,
+                                const double *f, const double *u, double *r) {
   residual_kernel<<<blocks_for(k::owned_count(L)), kThreads>>>(L, C, f, u, r);
   check("residual");
 }
@@ -148,8 +148,8 @@ void OPENPFC_FMG_NAME(restrict_coefficients)(const Level &F, const Coefficients 
 void OPENPFC_FMG_NAME(restrict_residual)(const Level &F, const double *rf,
                                          const double *mf, const Level &G,
                                          const double *mg, double *fg) {
-  restrict_residual_kernel<<<blocks_for(k::owned_count(G)), kThreads>>>(F, rf, mf, G, mg,
-                                                                         fg);
+  restrict_residual_kernel<<<blocks_for(k::owned_count(G)), kThreads>>>(F, rf, mf, G,
+                                                                        mg, fg);
   check("restrict_residual");
 }
 void OPENPFC_FMG_NAME(prolong_add)(const Level &F, const double *mf, double *uf,

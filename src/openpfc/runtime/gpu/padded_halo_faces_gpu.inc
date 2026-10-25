@@ -3,7 +3,8 @@
 
 /**
  * @file padded_halo_faces_gpu.inc
- * @brief Single-source padded face pack/unpack kernels (included from vendor .cu/.hip).
+ * @brief Single-source padded face pack/unpack kernels (included from vendor
+ * .cu/.hip).
  *
  * Do not include this from a host TU. Error strings keep the vendor kind
  * (`"cuda padded_pack_face kernel launch failed: …"` /
@@ -11,7 +12,8 @@
  *
  * Symbols stay `pfc::cuda::detail::launch_padded_pack_face` /
  * `pfc::hip::detail::launch_padded_pack_face` (and unpack twins), plus
- * `launch_padded_self_copy_faces` (fused self-neighbor copy, both faces of one axis).
+ * `launch_padded_self_copy_faces` (fused self-neighbor copy, both faces of one
+ * axis).
  *
  * @see runtime/gpu/padded_device_halo_exchange_gpu.hpp
  */
@@ -94,9 +96,9 @@ void launch_padded_pack_face(double *d_dst_contig, const double *d_pad, int ox,
       d_dst_contig, d_pad, ox, oy, oz, sx, sy, sz, nxp, nyp, nzp);
   ::pfc::gpuError_t err = ::pfc::gpuGetLastError();
   if (err != ::pfc::gpuSuccess) {
-    throw std::runtime_error(std::string(kGpuKind) +
-                             " padded_pack_face kernel launch failed: " +
-                             ::pfc::gpuGetErrorString(err));
+    throw std::runtime_error(
+        std::string(kGpuKind) +
+        " padded_pack_face kernel launch failed: " + ::pfc::gpuGetErrorString(err));
   }
 }
 
@@ -123,9 +125,11 @@ void launch_padded_unpack_face(double *d_pad, const double *d_src_contig, int ox
 /// slab pairs (one axis, both faces) in one launch: pad[dst] = pad[src].
 /// Source (interior strip) and destination (opposite halo strip) never overlap.
 __global__ void padded_self_copy_faces_kernel(PaddedSelfCopy c) {
-  const long long v0 = static_cast<long long>(c.ext[0][0]) * c.ext[0][1] * c.ext[0][2];
+  const long long v0 =
+      static_cast<long long>(c.ext[0][0]) * c.ext[0][1] * c.ext[0][2];
   const long long v1 =
-      c.nslab > 1 ? static_cast<long long>(c.ext[1][0]) * c.ext[1][1] * c.ext[1][2] : 0;
+      c.nslab > 1 ? static_cast<long long>(c.ext[1][0]) * c.ext[1][1] * c.ext[1][2]
+                  : 0;
   const long long per_field = v0 + v1;
   const long long n = per_field * c.nfields;
   for (long long tid = static_cast<long long>(blockIdx.x) * blockDim.x + threadIdx.x;
@@ -151,7 +155,8 @@ __global__ void padded_self_copy_faces_kernel(PaddedSelfCopy c) {
   }
 }
 
-void launch_padded_self_copy_faces(const PaddedSelfCopy &c, ::pfc::gpuStream_t stream) {
+void launch_padded_self_copy_faces(const PaddedSelfCopy &c,
+                                   ::pfc::gpuStream_t stream) {
   long long n = 0;
   for (int s = 0; s < c.nslab; ++s) {
     n += static_cast<long long>(c.ext[s][0]) * c.ext[s][1] * c.ext[s][2];

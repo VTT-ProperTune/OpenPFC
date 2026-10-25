@@ -20,11 +20,11 @@ void validate_split_box_ordering(const std::vector<Box3i> &subs, const Int3 &gri
   const long long expected = static_cast<long long>(gx) * gy * gz;
 
   if (static_cast<long long>(subs.size()) != expected) {
-    throw std::runtime_error(
-        "Decomposition: in-repo splitter produced " + std::to_string(subs.size()) +
-        " subdomains for a " + std::to_string(gx) + "x" + std::to_string(gy) + "x" +
-        std::to_string(gz) + " process grid (expected " + std::to_string(expected) +
-        ")");
+    throw std::runtime_error("Decomposition: in-repo splitter produced " +
+                             std::to_string(subs.size()) + " subdomains for a " +
+                             std::to_string(gx) + "x" + std::to_string(gy) + "x" +
+                             std::to_string(gz) + " process grid (expected " +
+                             std::to_string(expected) + ")");
   }
 
   std::array<std::vector<int>, 3> bnd;
