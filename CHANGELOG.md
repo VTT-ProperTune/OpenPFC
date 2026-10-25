@@ -86,6 +86,16 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - LUMI easyconfigs install OpenPFC 0.5.0 (CPU and ROCm) without the CMake 4
   policy override, which 0.5.0 no longer needs (#620).
 
+### Removed
+
+- Remove the grain module: `pfc::grain` identity, labelling, contacts,
+  colouring, slot transfer, distributed remapping and overlap energy, its
+  CPU/CUDA/HIP runtime headers and kernels, `grain_remapping_example`, the
+  grain tests and the grain documentation pages. OpenPFC keeps only
+  physics-agnostic functionality; grain identity and remapping now live in
+  GrainFront (`grainfront::grain`). Consumers that need the old module pin an
+  OpenPFC revision before this change (#657).
+
 ## [0.5.0] - 2026-10-22
 
 Source-level break from 0.4.0 for inputs and some public APIs. ABI

@@ -88,5 +88,4 @@ its existing bounds-check loop can partially write before an error.
 
 This operation does not compute front locations, aggregate fields, or
 identity-dependent reductions: those are consumer policy. Scatter remains
-`double` only, and the grain remapping overloads still require `double`
-values. Typed selections do not establish a Float32 remapping capability.
+`double` only; typed selections do not establish a Float32 scatter capability.

@@ -82,9 +82,6 @@ API examples, or troubleshooting sections.
 [Runtime coupled field stepping](concepts/runtime_field_rk.md) describes
 owned-cell CPU RK stages, collective rejection and accepted-state integrity.
 
-[Grain identity and topology](concepts/grain_topology.md) describes persistent
-identities, recyclable slots and the local 2D contact contract.
-
 [Implicit interfaces](concepts/implicit_interface.md) evaluate a static
 plane, sphere, or rotated ellipsoid on the Cartesian grid and integrate
 the two sides of a cut cell without replacing that grid.

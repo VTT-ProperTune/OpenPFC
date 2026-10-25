@@ -329,7 +329,6 @@ endif()
 if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     openpfc_add_gpu_kernel_library(openpfc_gpu_kernels cu CUDA::cudart
         src/openpfc/runtime/gpu/padded_halo_faces.cu
-        src/openpfc/runtime/gpu/grain_tracking.cu
         src/openpfc/runtime/gpu/implicit_geometry.cu)
     if(OpenPFC_ENABLE_CUDA_SPECTRAL AND OpenPFC_HAS_FFTW3)
       # Keep these objects in openpfc with the shared axis-contract definitions:
@@ -361,7 +360,6 @@ endif()
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
     openpfc_add_gpu_kernel_library(openpfc_hip_kernels hip hip::host
         src/openpfc/runtime/gpu/padded_halo_faces.hip
-        src/openpfc/runtime/gpu/grain_tracking.hip
         src/openpfc/runtime/gpu/implicit_geometry.hip)
     if(OpenPFC_ENABLE_HIP_SPECTRAL AND OpenPFC_HAS_FFTW3)
       find_package(rocfft REQUIRED CONFIG)

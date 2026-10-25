@@ -2,11 +2,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 # FFT Backend Benchmark (requires MPI)
-if(NOT TARGET grain_remapping_example)
-  add_executable(grain_remapping_example grain_remapping.cpp)
-  target_link_libraries(grain_remapping_example PRIVATE OpenPFC::openpfc)
-endif()
-
 add_executable(fft_backend_benchmark fft_backend_benchmark.cpp)
 
 target_link_libraries(fft_backend_benchmark PRIVATE OpenPFC::openpfc )

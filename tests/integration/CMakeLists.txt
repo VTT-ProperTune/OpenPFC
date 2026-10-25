@@ -3,7 +3,6 @@
 
 # Integration tests
 target_sources(openpfc-tests PRIVATE
-  test_grain_remapping.cpp
   test_multifield_stepper.cpp
   scenarios/parallel_scaling/test_global_coverage.cpp
   scenarios/parallel_scaling/test_halo_patterns.cpp
@@ -33,33 +32,12 @@ target_sources(openpfc-tests PRIVATE
   scenarios/time_integration/test_loop_policy.cpp
 )
 
-# Small downstream-style consumer, with no HeFFTe/frontend dependency.
-add_executable(grain_remapping_example ${CMAKE_SOURCE_DIR}/examples/grain_remapping.cpp)
-target_link_libraries(grain_remapping_example PRIVATE OpenPFC)
-add_test(NAME GrainRemappingExample COMMAND grain_remapping_example)
-
 if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
   add_executable(test_central_derivatives_cuda central_derivatives.cu)
   target_include_directories(test_central_derivatives_cuda PRIVATE ${CMAKE_SOURCE_DIR}/tests)
   target_link_libraries(test_central_derivatives_cuda PRIVATE OpenPFC Catch2::Catch2WithMain CUDA::cudart)
   set_target_properties(test_central_derivatives_cuda PROPERTIES CUDA_STANDARD 20 CUDA_STANDARD_REQUIRED ON)
   add_test(NAME CUDA_CentralDerivatives COMMAND test_central_derivatives_cuda)
-  add_executable(test_grain_3d_cuda grain_3d.cu)
-  target_include_directories(test_grain_3d_cuda PRIVATE ${CMAKE_SOURCE_DIR}/tests)
-  target_link_libraries(test_grain_3d_cuda PRIVATE OpenPFC Catch2::Catch2WithMain openpfc_gpu_kernels CUDA::cudart)
-  set_target_properties(test_grain_3d_cuda PROPERTIES CUDA_STANDARD 20 CUDA_STANDARD_REQUIRED ON)
-  add_test(NAME CUDA_Grain3D COMMAND test_grain_3d_cuda)
-  add_executable(test_grain_diagnostics_cuda grain_diagnostics.cu)
-  target_link_libraries(test_grain_diagnostics_cuda PRIVATE OpenPFC Catch2::Catch2WithMain
-    openpfc_gpu_kernels CUDA::cudart)
-  set_target_properties(test_grain_diagnostics_cuda PROPERTIES CUDA_STANDARD 20 CUDA_STANDARD_REQUIRED ON)
-  add_test(NAME CUDA_GrainDiagnostics COMMAND test_grain_diagnostics_cuda)
-  add_executable(test_grain_remapping_cuda grain_remapping.cu)
-  target_include_directories(test_grain_remapping_cuda PRIVATE ${CMAKE_SOURCE_DIR}/examples)
-  target_link_libraries(test_grain_remapping_cuda PRIVATE OpenPFC Catch2::Catch2WithMain
-    openpfc_gpu_kernels CUDA::cudart)
-  set_target_properties(test_grain_remapping_cuda PROPERTIES CUDA_STANDARD 20 CUDA_STANDARD_REQUIRED ON)
-  add_test(NAME CUDA_GrainRemapping COMMAND test_grain_remapping_cuda)
 endif()
 
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
@@ -68,22 +46,6 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
   target_link_libraries(test_central_derivatives_hip PRIVATE OpenPFC Catch2::Catch2WithMain hip::host)
   set_target_properties(test_central_derivatives_hip PROPERTIES HIP_STANDARD 20 HIP_STANDARD_REQUIRED ON)
   add_test(NAME HIP_CentralDerivatives COMMAND test_central_derivatives_hip)
-  add_executable(test_grain_3d_hip grain_3d.hip)
-  target_include_directories(test_grain_3d_hip PRIVATE ${CMAKE_SOURCE_DIR}/tests)
-  target_link_libraries(test_grain_3d_hip PRIVATE OpenPFC Catch2::Catch2WithMain openpfc_hip_kernels hip::host)
-  set_target_properties(test_grain_3d_hip PROPERTIES HIP_STANDARD 20 HIP_STANDARD_REQUIRED ON)
-  add_test(NAME HIP_Grain3D COMMAND test_grain_3d_hip)
-  add_executable(test_grain_diagnostics_hip grain_diagnostics.hip)
-  target_link_libraries(test_grain_diagnostics_hip PRIVATE OpenPFC Catch2::Catch2WithMain
-    openpfc_hip_kernels hip::host)
-  set_target_properties(test_grain_diagnostics_hip PROPERTIES HIP_STANDARD 20 HIP_STANDARD_REQUIRED ON)
-  add_test(NAME HIP_GrainDiagnostics COMMAND test_grain_diagnostics_hip)
-  add_executable(test_grain_remapping_hip grain_remapping.hip)
-  target_include_directories(test_grain_remapping_hip PRIVATE ${CMAKE_SOURCE_DIR}/examples)
-  target_link_libraries(test_grain_remapping_hip PRIVATE OpenPFC Catch2::Catch2WithMain
-    openpfc_hip_kernels hip::host)
-  set_target_properties(test_grain_remapping_hip PROPERTIES HIP_STANDARD 20 HIP_STANDARD_REQUIRED ON)
-  add_test(NAME HIP_GrainRemapping COMMAND test_grain_remapping_hip)
 endif()
 # Includes the HeFFTe backend from a .hip TU, so the HIP compiler (Clang)
 # compiles FFT_Impl; regression for issue #373.
@@ -163,6 +125,3 @@ endif()
 
 add_subdirectory(rk_coupled)
 add_subdirectory(rk_nfield)
-
-add_subdirectory(distributed_grain)
-add_subdirectory(label_contacts)
