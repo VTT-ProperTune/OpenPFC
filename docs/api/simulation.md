@@ -22,7 +22,6 @@ Thin time loop over `Time` plus a physics `step`. See
 :project: OpenPFC
 :members:
 :protected-members:
-:no-link:
 ```
 
 ## `pfc::FieldModifier`
@@ -31,7 +30,6 @@ Thin time loop over `Time` plus a physics `step`. See
 :project: OpenPFC
 :members:
 :protected-members:
-:no-link:
 ```
 
 ## `pfc::ResultsWriter`
@@ -40,5 +38,4 @@ Thin time loop over `Time` plus a physics `step`. See
 :project: OpenPFC
 :members:
 :protected-members:
-:no-link:
 ```

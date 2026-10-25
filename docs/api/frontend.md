@@ -21,5 +21,4 @@ session, then `pfc::sim::run`.
 :project: OpenPFC
 :members:
 :protected-members:
-:no-link:
 ```

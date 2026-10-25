@@ -53,7 +53,6 @@ per bounded line; factorization/plan caching is not provided.
 ```{doxygenstruct} pfc::decomposition::Decomposition
 :project: OpenPFC
 :members:
-:no-link:
 ```
 
 ## `pfc::fft::IHostFFT`
@@ -62,7 +61,6 @@ per bounded line; factorization/plan caching is not provided.
 :project: OpenPFC
 :members:
 :protected-members:
-:no-link:
 ```
 
 ## `pfc::fft::CPUFFT`
@@ -71,5 +69,4 @@ per bounded line; factorization/plan caching is not provided.
 :project: OpenPFC
 :members:
 :protected-members:
-:no-link:
 ```

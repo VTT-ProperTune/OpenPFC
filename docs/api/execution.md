@@ -16,6 +16,5 @@ explained in [Halo exchange](../concepts/halo_exchange.md).
 :project: OpenPFC
 :members:
 :protected-members:
-:no-link:
 ```
 

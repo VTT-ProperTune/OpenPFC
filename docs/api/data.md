@@ -15,7 +15,6 @@ for a runnable introduction.
 :project: OpenPFC
 :members:
 :protected-members:
-:no-link:
 ```
 
 ## `pfc::Box3i`
@@ -23,7 +22,6 @@ for a runnable introduction.
 ```{doxygenstruct} pfc::Box3i
 :project: OpenPFC
 :members:
-:no-link:
 ```
 
 ## Strong geometry values
@@ -31,18 +29,15 @@ for a runnable introduction.
 ```{doxygenstruct} pfc::GridSize
 :project: OpenPFC
 :members:
-:no-link:
 ```
 
 ```{doxygenstruct} pfc::GridSpacing
 :project: OpenPFC
 :members:
-:no-link:
 ```
 
 ```{doxygenstruct} pfc::PhysicalOrigin
 :project: OpenPFC
 :members:
-:no-link:
 ```
 
