@@ -31,6 +31,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - Read-only field reductions, snapshots and app diagnostics preserve device
   validity and avoid uploading a host mirror over device halos.
   `Field::with_host_read` and scalar reductions accept const fields.
+- Document distributed FFT/decomposition and halo participation, ownership,
+  normalization and timing contracts. All host FFT factory overloads now
+  reject communicator/layout-size or explicit-rank mismatches before planning.
 
 - `openpfc bundle` can build a scratch image when `--base` is omitted. The image
   copies the host dynamic loader, the glibc libraries required by the model and

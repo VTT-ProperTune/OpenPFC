@@ -115,3 +115,31 @@ TEST_CASE("FFT create honors r2c_direction on a non-cubic grid", "[fft][unit]") 
   REQUIRE(fft_x.size_outbox() == static_cast<std::size_t>(5 * 16 * 32));
   REQUIRE(fft_z.size_outbox() == static_cast<std::size_t>(8 * 16 * 17));
 }
+
+TEST_CASE("FFT factories reject communicator/layout mismatch before planning",
+          "[fft][unit][contract]") {
+  const auto domain = pfc::domain::create(pfc::Int3{8, 8, 8});
+  const auto decomposition = pfc::decomposition::create(domain, pfc::Int3{2, 1, 1});
+  const auto options = heffte::default_options<heffte::backend::fftw>();
+  const auto layout = pfc::fft::layout::create(decomposition, 0, options);
+  // MPI_Comm is an int in MPICH, so select the communicator overload explicitly.
+  const auto create_in_comm =
+      static_cast<pfc::fft::CPUFFT (*)(const pfc::Decomposition &, MPI_Comm)>(
+          &pfc::fft::create);
+  REQUIRE_THROWS_AS(create_in_comm(decomposition, MPI_COMM_SELF), std::logic_error);
+  REQUIRE_THROWS_AS(pfc::fft::create(decomposition, 0, MPI_COMM_SELF),
+                    std::logic_error);
+  REQUIRE_THROWS_AS(pfc::fft::create(decomposition, 0, MPI_COMM_SELF, 0, options),
+                    std::logic_error);
+  REQUIRE_THROWS_AS(pfc::fft::create(layout, 0, options, MPI_COMM_SELF),
+                    std::logic_error);
+  REQUIRE_THROWS_AS(pfc::fft::create_with_backend(
+                        layout, 0, options, pfc::fft::Backend::FFTW, MPI_COMM_SELF),
+                    std::logic_error);
+  REQUIRE_THROWS_AS(pfc::fft::create_with_backend(
+                        decomposition, 0, pfc::fft::Backend::FFTW, MPI_COMM_SELF),
+                    std::logic_error);
+  const auto single = pfc::decomposition::create(domain, 1);
+  REQUIRE_THROWS_AS(pfc::fft::create(single, 1, MPI_COMM_SELF),
+                    std::invalid_argument);
+}

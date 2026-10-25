@@ -72,8 +72,7 @@ auto get_complex_indices(const Decomposition &decomposition, int r2c_direction) 
   throw std::logic_error("Invalid r2c_direction: " + std::to_string(r2c_direction));
 }
 
-[[nodiscard]] FFTLayout create(const Decomposition &decomposition,
-                               int r2c_direction,
+[[nodiscard]] FFTLayout create(const Decomposition &decomposition, int r2c_direction,
                                const heffte::plan_options &options) {
   auto real_indices = get_real_indices(decomposition);
   auto complex_indices = get_complex_indices(decomposition, r2c_direction);
@@ -82,8 +81,9 @@ auto get_complex_indices(const Decomposition &decomposition, int r2c_direction) 
   const pfc::Int3 cgrid = complex_proc_grid_for_r2c(
       grid, real_indices, complex_indices, r2c_direction, options);
   auto complex_boxes = boxes_from_heffte(split_world(complex_indices, cgrid));
-  return FFTLayout{decomposition, r2c_direction, std::move(real_boxes),
-                   std::move(complex_boxes), grid, cgrid};
+  return FFTLayout{
+      decomposition, r2c_direction, std::move(real_boxes), std::move(complex_boxes),
+      grid,          cgrid};
 }
 
 [[nodiscard]] FFTLayout create(const Decomposition &decomposition,
@@ -125,20 +125,31 @@ using fft_r2c = heffte::fft3d_r2c<heffte::backend::fftw>;
 
 namespace {
 
+// Validate before entering HeFFTe's collective plan creation. All overloads
+// share this admission rule, including the explicit-rank interfaces.
+void validate_plan_participation(const FFTLayout &layout, int rank, MPI_Comm comm) {
+  if (get_mpi_size(comm) != get_num_domains(layout.m_decomposition)) {
+    throw std::logic_error("FFT plan: communicator size differs from decomposition");
+  }
+  if (rank != get_mpi_rank(comm)) {
+    throw std::invalid_argument("FFT plan: rank_id must be the communicator rank");
+  }
+}
+
 void log_r2c_layout(int rank_id, const pfc::Int3 &real_grid,
                     const pfc::Int3 &complex_grid) {
   if (rank_id != 0 || std::getenv("OPENPFC_FFT_LOG_LAYOUT") == nullptr) {
     return;
   }
   std::cerr << "FFT_R2C_LAYOUT real_grid=" << layout::format_proc_grid(real_grid)
-            << " complex_grid=" << layout::format_proc_grid(complex_grid)
-            << '\n';
+            << " complex_grid=" << layout::format_proc_grid(complex_grid) << '\n';
 }
 
 } // namespace
 
 [[nodiscard]] CPUFFT create(const FFTLayout &fft_layout, int rank_id,
                             const heffte::plan_options &options, MPI_Comm comm) {
+  validate_plan_participation(fft_layout, rank_id, comm);
   const auto &inbox = get_real_box(fft_layout, rank_id);
   const auto &outbox = get_complex_box(fft_layout, rank_id);
   auto r2c_dir = get_r2c_direction(fft_layout);
@@ -167,6 +178,7 @@ void log_r2c_layout(int rank_id, const pfc::Int3 &real_grid,
 create_with_backend(const FFTLayout &fft_layout, int rank_id,
                     const heffte::plan_options &options, Backend backend,
                     MPI_Comm comm) {
+  validate_plan_participation(fft_layout, rank_id, comm);
   auto inbox = get_real_box(fft_layout, rank_id);
   auto outbox = get_complex_box(fft_layout, rank_id);
   auto r2c_dir = get_r2c_direction(fft_layout);
@@ -221,10 +233,7 @@ create_with_backend(const Decomposition &decomposition, int rank_id, Backend bac
     throw std::logic_error(
         "Mismatch between MPI communicator size and domain decomposition size: " +
         std::to_string(mpi_comm_size) + " != " + std::to_string(decomposition_size) +
-        ". This indicates that the number of MPI ranks does not match the number of "
-        "domains in the decomposition. To resolve this issue, you can manually "
-        "specify the rank by calling fft::create(decomposition, rank_id, comm) "
-        "instead.");
+        ". Build the decomposition for this communicator before creating the plan.");
   }
   return create(decomposition, rank_id, comm);
 }
