@@ -105,6 +105,7 @@ add_subdirectory(differentiation)
 add_subdirectory(fourier)
 add_subdirectory(geometry)
 add_subdirectory(heat)
+add_subdirectory(interpolation)
 
 if(OpenPFC_BUILD_TESTS)
   find_package(Python3 COMPONENTS Interpreter REQUIRED)
@@ -204,6 +205,9 @@ if(OpenPFC_BUILD_TESTS)
     set_tests_properties(example-09-parallel-fft-high-level-mpi PROPERTIES PROCESSORS 2 TIMEOUT 360
                          ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
   endif()
+  add_test(NAME example-cardinal-interpolation
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_foundations.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case cardinal_interpolation)
+  set_tests_properties(example-cardinal-interpolation PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
 endif()
 
 add_executable(23_halo_microtiming 23_halo_microtiming.cpp)

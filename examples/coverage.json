@@ -177,6 +177,16 @@
       "capabilities": []
     },
     {
+      "target": "cardinal_interpolation",
+      "source": "interpolation/cardinal/model.cpp",
+      "chapter": "interpolation/cardinal/index.qmd",
+      "capabilities": [
+        "fields",
+        "nonperiodic-domain",
+        "coordinate-iteration"
+      ]
+    },
+    {
       "target": "coupled_fields_example",
       "source": "coupled_fields/main.cpp",
       "chapter": null,
@@ -352,7 +362,7 @@
       "program": 3,
       "title": "band-limited interpolation",
       "source": "https://people.maths.ox.ac.uk/trefethen/p3.m",
-      "chapter": null,
+      "chapter": "interpolation/cardinal/index.qmd",
       "scope": "All three original sampled profiles and sinc reconstructions; exact nodal limits handled."
     },
     {

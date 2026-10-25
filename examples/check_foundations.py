@@ -93,6 +93,30 @@ def verify_07_array(bin_dir, root, launch, ranks):
     )
 
 
+def verify_cardinal_interpolation(bin_dir, root, launch, ranks):
+    binary = lambda name: bin_dir / name
+    directory = root / "interpolation"
+    run(binary("cardinal_interpolation"), directory)
+    rows = table(directory / "results/interpolation.csv")
+    assert len(rows) == 1203
+    overshoot = 0
+    for row in rows:
+        kind, x, value = int(row["profile"]), float(row["x"]), float(row["value"])
+        if abs(x - round(x)) < 1e-12:
+            expected = (
+                float(x == 0)
+                if kind == 0
+                else float(abs(x) <= 3) if kind == 1 else max(0, 1 - abs(x) / 3)
+            )
+            assert abs(value - expected) < 1e-13
+        if kind == 0:
+            expected = 1 if abs(x) < 1e-14 else math.sin(math.pi * x) / (math.pi * x)
+            assert abs(value - expected) < 1e-13
+        if kind == 1:
+            overshoot = max(overshoot, value - 1)
+    assert overshoot > 0.1
+
+
 def verify_layout(bin_dir, root, launch, ranks):
     binary = bin_dir / "09_parallel_fft_high_level"
     run(binary, root / "layout", launch)
@@ -124,6 +148,7 @@ def main():
             "08_discrete_fields",
             "03_parallel_fft",
             "09_parallel_fft_high_level",
+            "cardinal_interpolation",
         ],
     )
     args = parser.parse_args()
@@ -159,6 +184,10 @@ def main():
             root = base / "09_parallel_fft_high_level"
             root.mkdir()
             verify_layout(bin_dir, root, launch, ranks)
+        if args.case in (None, "cardinal_interpolation"):
+            root = base / "cardinal_interpolation"
+            root.mkdir()
+            verify_cardinal_interpolation(bin_dir, root, launch, ranks)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

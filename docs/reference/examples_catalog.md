@@ -106,6 +106,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `nonlinear_spectral_course` | `nonlinear_spectral/allen_cahn.cpp` | Periodic Allen–Cahn: cubic Galerkin projection with `4K < N`, ETD2, independent convolution/RK4 checks and MPI ownership output |
 | `periodic_differentiation` | `differentiation/periodic/model.cpp` | Analytic derivative, second/fourth-order FD, and Fourier convergence |
 | `heat_exponential` | `heat/exponential/model.cpp` | Exact linear Fourier propagator; compare spatial and temporal error |
+| `cardinal_interpolation` | `interpolation/cardinal/model.cpp` | Trefethen program 3: cardinal sinc reconstruction of three sampled signals |
 
 ## Research prototypes
 

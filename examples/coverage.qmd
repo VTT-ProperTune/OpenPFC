@@ -16,15 +16,15 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 [Follow what is taught, what is adapted, and what still needs a chapter.]{.lesson-deck}
 :::
 
-There are 45 declared runnable example targets and
-11 Quarto teaching chapters. The table includes older programs
+There are 46 declared runnable example targets and
+12 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
 ## Spectral Methods in MATLAB
 
 The [author's collection](https://people.maths.ox.ac.uk/trefethen/spectral.html)
-contains forty programs. Currently 1 have a corresponding lesson.
+contains forty programs. Currently 2 have a corresponding lesson.
 A link means that the lesson declares coverage of that experiment; the
 scope column states changes in method or presentation. It does not mean
 an unmodified MATLAB program was translated line for line. Pending rows
@@ -34,7 +34,7 @@ remain in the inventory while applicability and implementation are assessed.
 |---:|---|---|
 | [1](https://people.maths.ox.ac.uk/trefethen/p1.m) | convergence of fourth-order finite differences | [Read the lesson](differentiation/periodic/index.qmd). Original fourth-order finite-difference resolution family, with additional FD2 and FFT comparisons. |
 | [2](https://people.maths.ox.ac.uk/trefethen/p2.m) | convergence of periodic spectral method (compare p1.m) | Pending assessment and implementation. |
-| [3](https://people.maths.ox.ac.uk/trefethen/p3.m) | band-limited interpolation | Pending assessment and implementation. |
+| [3](https://people.maths.ox.ac.uk/trefethen/p3.m) | band-limited interpolation | [Read the lesson](interpolation/cardinal/index.qmd). All three original sampled profiles and sinc reconstructions; exact nodal limits handled. |
 | [4](https://people.maths.ox.ac.uk/trefethen/p4.m) | periodic spectral differentiation | Pending assessment and implementation. |
 | [5](https://people.maths.ox.ac.uk/trefethen/p5.m) | repetition of p4.m via FFT | Pending assessment and implementation. |
 | [6](https://people.maths.ox.ac.uk/trefethen/p6.m) | variable coefficient wave equation | Pending assessment and implementation. |
@@ -99,6 +99,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `22_external_coupling` | Pending conversion. |
 | `23_halo_microtiming` | Pending conversion. |
 | `24_adaptive_etd` | Pending conversion. |
+| `cardinal_interpolation` | [Read the lesson](interpolation/cardinal/index.qmd) |
 | `coupled_fields_example` | Pending conversion. |
 | `diffusion_model_with_custom_initial_condition` | Pending conversion. |
 | `fft_backend_benchmark` | Pending conversion. |
