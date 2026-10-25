@@ -346,7 +346,7 @@ jobs:
         run: |
           apt-get update && apt-get install -y --no-install-recommends \
             git ca-certificates cmake ninja-build gcc-13 g++-13 catch2 \
-            libopenmpi-dev openmpi-bin nlohmann-json3-dev
+            libopenmpi-dev openmpi-bin nlohmann-json3-dev libssl-dev
       - uses: actions/checkout@v5
         with: { submodules: true }
       - name: Configure + compile FD CUDA (no HeFFTe, no run)
@@ -391,7 +391,7 @@ jobs:
         run: |
           apt-get update && apt-get install -y --no-install-recommends \
             git ca-certificates cmake ninja-build catch2 \
-            libopenmpi-dev openmpi-bin nlohmann-json3-dev
+            libopenmpi-dev openmpi-bin nlohmann-json3-dev libssl-dev
       - uses: actions/checkout@v5
         with: { submodules: true }
       - name: Configure + compile FD HIP (no HeFFTe, no run)
