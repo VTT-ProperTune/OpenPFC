@@ -8,3 +8,7 @@ set_target_properties(03_parallel_fft PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMA
 add_executable(09_parallel_fft_high_level field-layout/model.cpp)
 target_link_libraries(09_parallel_fft_high_level PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(09_parallel_fft_high_level PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(harmonic_oscillator harmonic-oscillator/model.cpp)
+target_link_libraries(harmonic_oscillator PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(harmonic_oscillator PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")

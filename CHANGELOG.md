@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Teach a Fourier discretization of the harmonic oscillator and distinguish spatial truncation from grid resolution. Check eigenpairs with independent inverse iteration and analytic low-energy values.
+
 - Express Cahn-Hilliard through native ETD symbols and a visible local cubic law. Preserve its executable, update the spectral reading path and check complete nonlinear fields against independent Fourier sums.
 
 - Write a small time-dependent field through native snapshot-series services. Preserve the executable and check actual binary and VTK payloads, geometry, time and rank metadata.

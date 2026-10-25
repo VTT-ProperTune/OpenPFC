@@ -121,6 +121,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `runtime_coupled_fields` | `coupling/runtime-fields/model.cpp` | Runtime field RK4 staging, two-field oscillator and exact recurrence |
 | `checkpoint_restart` | `output/checkpoint-restart/model.cpp` | Collective checkpoint publication, fresh-state restart and discrete trajectory equivalence |
 | `first_domain` | `geometry/first-domain/model.cpp` | Give the grid a physical meaning |
+| `harmonic_oscillator` | `fourier/harmonic-oscillator/model.cpp` | Find the energies of a harmonic trap |
 
 ## Research prototypes
 

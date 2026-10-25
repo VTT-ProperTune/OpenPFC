@@ -282,6 +282,16 @@
       ]
     },
     {
+      "target": "harmonic_oscillator",
+      "source": "fourier/harmonic-oscillator/model.cpp",
+      "chapter": "fourier/harmonic-oscillator/index.qmd",
+      "capabilities": [
+        "local-fft",
+        "fields",
+        "fourier-symbols"
+      ]
+    },
+    {
       "target": "heat_exponential",
       "source": "heat/exponential/model.cpp",
       "chapter": "heat/exponential/index.qmd",
@@ -626,7 +636,7 @@
       "program": 8,
       "title": "eigenvalues of harmonic oscillator -u\"+x^2 u on R",
       "source": "https://people.maths.ox.ac.uk/trefethen/p8.m",
-      "chapter": null,
+      "chapter": "fourier/harmonic-oscillator/index.qmd",
       "scope": "Original L=8 and N=6:6:36 harmonic oscillator, with kinetic matrix built using native LocalFFT."
     },
     {
