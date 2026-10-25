@@ -11,10 +11,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # FetchContent dependencies keep their own policy, and installed consumers do
 # not inherit a PRIVATE development policy. Apply after all subdirectories exist.
 # Retain the established Wall/Wextra, format-security and null/logic checks.
-# Debug adds unused/shadow. Wconversion/Wsign-conversion remain disabled because
+# Debug adds unused/shadow/pedantic. Wconversion/Wsign-conversion remain disabled because
 # index/size conversions need a separate reviewed migration; Wfloat-equal would
-# flag intentional exact comparisons. Wpedantic remains unselected pending the
-# explicit owner decision recorded in #656. No CI gate is changed here.
+# flag intentional exact comparisons. Pedantic warnings stay local to project
+# Debug code; dependencies retain their own policy. No CI gate is changed here.
 function(openpfc_project_warnings directory)
   get_property(targets DIRECTORY "${directory}" PROPERTY BUILDSYSTEM_TARGETS)
   foreach(target IN LISTS targets)
@@ -30,9 +30,9 @@ function(openpfc_project_warnings directory)
       target_compile_options(${target} PRIVATE
         "$<$<COMPILE_LANGUAGE:CXX,HIP>:-Wall;-Wextra;-Wfatal-errors;-Werror=format-security;-Wnull-dereference>"
         "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:GNU>>:-Wduplicated-cond;-Wduplicated-branches;-Wlogical-op>"
-        "$<$<AND:$<COMPILE_LANGUAGE:CXX,HIP>,$<CONFIG:Debug>>:-Wunused;-Wshadow>"
+        "$<$<AND:$<COMPILE_LANGUAGE:CXX,HIP>,$<CONFIG:Debug>>:-Wunused;-Wshadow;-Wpedantic>"
         "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Wextra,-Wfatal-errors,-Werror=format-security,-Wnull-dereference>"
-        "$<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<CONFIG:Debug>>:-Xcompiler=-Wunused,-Wshadow>")
+        "$<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<CONFIG:Debug>>:-Xcompiler=-Wunused,-Wshadow,-Wpedantic>")
     endif()
   endforeach()
   get_property(children DIRECTORY "${directory}" PROPERTY SUBDIRECTORIES)
