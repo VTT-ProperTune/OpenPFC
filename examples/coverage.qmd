@@ -16,15 +16,15 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 [Follow what is taught, what is adapted, and what still needs a chapter.]{.lesson-deck}
 :::
 
-There are 71 declared runnable example targets and
-57 Quarto teaching chapters. The table includes older programs
+There are 72 declared runnable example targets and
+58 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
 ## Spectral Methods in MATLAB
 
 The [author's collection](https://people.maths.ox.ac.uk/trefethen/spectral.html)
-contains forty programs. Currently 29 have a corresponding lesson.
+contains forty programs. Currently 30 have a corresponding lesson.
 A link means that the lesson declares coverage of that experiment; the
 scope column states changes in method or presentation. It does not mean
 an unmodified MATLAB program was translated line for line. Pending rows
@@ -70,7 +70,7 @@ remain in the inventory while applicability and implementation are assessed.
 | [36](https://people.maths.ox.ac.uk/trefethen/p36.m) | Laplace eq. on [-1,1]x[-1,1] with nonzero BCs | [Read the lesson](polynomials/laplace-square/index.qmd). Original degree-24 nonzero-boundary Laplace problem; equivalent boundary elimination replaces identity boundary rows. |
 | [37](https://people.maths.ox.ac.uk/trefethen/p37.m) | 2D "wave tank" with Neumann BCs for \|y\|=1 | Pending assessment and implementation. |
 | [38](https://people.maths.ox.ac.uk/trefethen/p38.m) | solve u_xxxx = exp(x), u(-1)=u(1)=u'(-1)=u'(1)=0 | [Read the lesson](polynomials/clamped-beam/index.qmd). Original degree-15 clamped fourth-order problem. Native Chebyshev nodes/derivatives construct the weighted operator; native GMRES replaces backslash, and barycentric reconstruction of the auxiliary polynomial preserves zero values and slopes. Complete values and slopes are checked against an independently determined analytic solution. |
-| [39](https://people.maths.ox.ac.uk/trefethen/p39.m) | eigenmodes of biharmonic on a square with clamped BCs | Pending assessment and implementation. |
+| [39](https://people.maths.ox.ac.uk/trefethen/p39.m) | eigenmodes of biharmonic on a square with clamped BCs | [Read the lesson](polynomials/clamped-plate/index.qmd). All 25 degree-17 clamped square-plate modes and relative frequencies; native Chebyshev D4 and the original interior D2 tensor operator. Symmetry blocks preserve repeated modes; constrained barycentric display replaces cubic image interpolation. |
 | [40](https://people.maths.ox.ac.uk/trefethen/p40.m) | eigenvalues of Orr-Sommerfeld operator (compare p38.m) | Pending assessment and implementation. |
 
 ## Existing runnable examples
@@ -104,6 +104,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `chebyshev_eigenmodes` | [Read the lesson](polynomials/eigenmodes/index.qmd) |
 | `checkpoint_restart` | [Read the lesson](output/checkpoint-restart/index.qmd) |
 | `clamped_beam` | [Read the lesson](polynomials/clamped-beam/index.qmd) |
+| `clamped_plate` | [Read the lesson](polynomials/clamped-plate/index.qmd) |
 | `coupled_fields_example` | Pending conversion. |
 | `diffusion_model_with_custom_initial_condition` | Pending conversion. |
 | `fft_backend_benchmark` | Pending conversion. |

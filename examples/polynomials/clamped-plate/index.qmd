@@ -1,0 +1,137 @@
+---
+title: "A square can sing the same note in two shapes"
+description: "Build a clamped plate from one-dimensional Chebyshev operators and use symmetry to distinguish repeated vibration modes."
+order: 63
+categories: [Polynomials, Eigenproblems]
+targets: [clamped_plate]
+capabilities: [native-chebyshev, tensor-operators, eigenproblem-reference, boundary-conditions]
+book-programs: [39]
+bibliography: ../../references.bib
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[OpenPFC / Symmetry and vibration]{.lesson-kicker}
+
+# A square can sing the same note in two shapes
+
+[Twenty-five shapes come from one operator. Repeated frequencies tell us something about the square.]{.lesson-deck}
+:::
+
+The [beam lesson](../clamped-beam/index.qmd) fixed both displacement and
+slope at each end. Program 39 of @trefethen2000 asks the corresponding
+question on the square $(-1,1)^2$:
+
+$$
+\begin{gathered}
+\Delta^2 u=\lambda u, \\
+u=\partial_n u=0\quad\text{on all four edges}.
+\end{gathered}
+$$ {#eq-plate}
+
+For a uniform thin plate, the dimensional material and length factors
+multiply every frequency in the same way. The dimensionless ratios
+$\omega_j/\omega_1=\sqrt{\lambda_j/\lambda_1}$ therefore describe the
+relative notes without choosing a particular material.
+
+## Assemble a two-dimensional action from one-dimensional operators
+
+The identity $\Delta^2=\partial_x^4+2\partial_x^2\partial_y^2+\partial_y^4$
+gives the book's discrete operator
+
+$$
+L=I\otimes D_4+D_4\otimes I+2D_2\otimes D_2.
+$$ {#eq-tensor}
+
+Here $D_4$ is the weighted clamped operator from the beam chapter, built
+from native OpenPFC Chebyshev differentiation. $D_2$ is the ordinary
+second-derivative matrix restricted to interior values with zero endpoint
+values, as in the book. The complete matrices are formed before restricting
+their rows and columns. Simply squaring the interior $D_2$ would impose
+a different fourth-order boundary problem.
+
+Keep $x$ as the fastest index. Apply each factor along its own axis:
+
+```{.cpp include="../plate.hpp" snippet="tensor" dedent=2}
+```
+
+This action avoids storing a full tensor matrix. The small matrices used
+for the eigenproblem below are projections of this same action.
+
+## Let symmetry separate the repeated modes
+
+Reflection in either coordinate leaves the plate unchanged. Choose a
+basis whose vectors are even or odd under each reflection. Within the
+even/even and odd/odd sectors, also split into shapes that are symmetric
+or antisymmetric under $x\leftrightarrow y$.
+
+For an orthonormal nodal basis $Q$, form $Q^T LQ$:
+
+```{.cpp include="../plate.hpp" snippet="symmetry" dedent=4}
+```
+
+The example-owned shifted-QR reference solves each small dense block.
+It is the same numerical eigenproblem as the book's full matrix; the
+symmetry split chooses interpretable shapes inside repeated eigenspaces.
+An even/odd mode has an odd/even partner obtained by transposing its
+nodal array. Those partners have the same eigenvalue and independent
+shapes. Other linear combinations of a repeated pair are equally valid.
+
+```{.cpp include="model.cpp" snippet="plate" dedent=4}
+```
+
+## Draw a shape that respects the clamp
+
+The display uses a tensor product of the beam's weighted cardinal basis.
+Each one-dimensional basis function vanishes with its first derivative
+at both endpoints. Values and normal slopes consequently vanish along
+every edge of the reconstructed surface:
+
+```{.cpp include="model.cpp" snippet="reconstruction" dedent=12}
+```
+
+This display uses the constrained polynomial rather than the book's
+cubic image interpolation. The mixed derivative in the collocation
+operator still uses the book's ordinary $D_2$; it is not redefined by
+the display interpolation.
+
+![The first 25 clamped-plate modes at degree 17. Blue and red distinguish the two signs of each normalized shape; black curves mark zero displacement. Each panel gives the mode number and its frequency relative to the fundamental. The sign and orientation of a mode are arbitrary.](figures/plate.svg){#fig-plate .lightbox}
+
+[Open the full-size mode gallery](figures/plate.svg) to inspect individual
+nodal lines on a small screen.
+
+## Check the operator, the edges and the eigenspace
+
+The model records all 25 eigenvalues, relative frequencies, symmetry
+labels and complete nodal and display fields. It checks the full
+operator residual after lifting each reduced eigenvector. The numerical
+regression differentiates Lagrange products independently, checks those
+residuals, verifies the clamped edges and checks that equal-frequency
+partners are independent.
+
+```sh
+openpfc run model.cpp input.json --source-root .. --launcher=none
+```
+
+Try degree 10 and then 17. Compare the low frequencies before inspecting
+the more demanding high modes. Against degree 20, the fundamental
+eigenvalue changes by about $6\times10^{-7}$ at degree 10, but the largest
+relative change among the first 25 eigenvalues is about $0.29$. At degree
+17 those differences fall to about $1.5\times10^{-9}$ and $5.3\times10^{-6}$.
+These are comparisons between resolutions, rather than errors against an
+exact continuum spectrum. Refinement tests convergence of the
+collocation approximation; a small matrix residual alone does not show
+that a continuum mode is resolved. This complete-domain teaching
+reference runs on one process and accepts degrees 6 through 20.
+
+Keep the [source](model.cpp), [input](input.json), [plate helper](../plate.hpp),
+[clamped helper](../clamped.hpp), [eigensolver](../eigensystem.hpp) and
+[collocation helper](../collocation.hpp) together.
+
+## References
+::: {#refs}
+:::
+:::

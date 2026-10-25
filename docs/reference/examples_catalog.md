@@ -132,6 +132,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `gamma_contour` | `quadrature/complex-contour/model.cpp` | A contour turns an integral into a sum |
 | `multigrid_poisson` | `elliptic/multigrid/model.cpp` | Use a hierarchy to correct different scales |
 | `clamped_beam` | `polynomials/clamped-beam/model.cpp` | Build the clamped ends into the trial function |
+| `clamped_plate` | `polynomials/clamped-plate/model.cpp` | Twenty-five clamped square-plate modes and repeated frequencies |
 
 ## Research prototypes
 

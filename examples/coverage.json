@@ -276,6 +276,17 @@
       ]
     },
     {
+      "target": "clamped_plate",
+      "source": "polynomials/clamped-plate/model.cpp",
+      "chapter": "polynomials/clamped-plate/index.qmd",
+      "capabilities": [
+        "native-chebyshev",
+        "tensor-operators",
+        "eigenproblem-reference",
+        "boundary-conditions"
+      ]
+    },
+    {
       "target": "coupled_fields_example",
       "source": "coupled_fields/main.cpp",
       "chapter": null,
@@ -950,7 +961,7 @@
       "program": 39,
       "title": "eigenmodes of biharmonic on a square with clamped BCs",
       "source": "https://people.maths.ox.ac.uk/trefethen/p39.m",
-      "chapter": null,
+      "chapter": "polynomials/clamped-plate/index.qmd",
       "scope": "All 25 degree-17 clamped square-plate modes and relative frequencies; native Chebyshev D4 and the original interior D2 tensor operator. Symmetry blocks preserve repeated modes; constrained barycentric display replaces cubic image interpolation."
     },
     {
