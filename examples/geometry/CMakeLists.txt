@@ -16,3 +16,7 @@ set_target_properties(07_array PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINA
 add_executable(08_discrete_fields coordinate-fields/model.cpp)
 target_link_libraries(08_discrete_fields PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(08_discrete_fields PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(world_helpers_example grid-spacing/model.cpp)
+target_link_libraries(world_helpers_example PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(world_helpers_example PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")

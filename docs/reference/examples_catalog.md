@@ -89,7 +89,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `write_results` | `write_results.cpp` | Results I/O variant |
 | `diffusion_model_with_custom_initial_condition` | `diffusion_model_with_custom_initial_condition.cpp` | Diffusion with a custom initial condition |
 | `json_read` | `json_read.cpp` | Standalone nlohmann JSON read; does not link OpenPFC |
-| `world_helpers_example` | `world_helpers_example.cpp` | `Domain` compatibility helpers |
+| `world_helpers_example` | `geometry/grid-spacing/model.cpp` | `Domain` compatibility helpers |
 | `world_query_helpers_example` | `world_query_helpers_example.cpp` | `Domain` query helpers (volume, dimensionality, bounds) |
 | `14_custom_field_initializer` | `14_custom_field_initializer.cpp` | Custom field initializer |
 | `15_finite_difference_heat` | `heat/separated-halos/model.cpp` | Finite-difference heat with separated halos; see [`halo_exchange.md`](../concepts/halo_exchange.md) |

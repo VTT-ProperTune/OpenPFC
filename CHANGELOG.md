@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Replace the geometry-helper printout with a chapter explaining the endpoint convention. Check every physical sample, spacing and upper extent for periodic and closed grids.
+
 - Compare four regularity classes over the original book resolution presets. Check complete error tables against an independent direct discrete Fourier transform.
 
 - Express the same periodic derivative through a dense cotangent matrix and native Fourier transforms. Check complete fields and retain the hat-function regularity caveat.

@@ -1,0 +1,63 @@
+---
+title: "Does the endpoint occupy a sample?"
+description: "Before choosing a stencil or an FFT, decide what the endpoints mean. Five samples on a periodic interval and five samples including both endpoints are different grids, even when their physical bounds are identical."
+order: 23
+categories: [Geometry, C++ API]
+capabilities: [domain, strong-types, coordinates]
+targets: [world_helpers_example]
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[Geometry / Read the grid]{.lesson-kicker}
+
+# Does the endpoint occupy a sample?
+
+[Predict the coordinates before you run the code.]{.lesson-deck}
+:::
+
+Before choosing a stencil or an FFT, decide what the endpoints mean. Five
+samples on a periodic interval and five samples including both endpoints
+are different grids, even when their physical bounds are identical.
+
+## Count intervals before dividing
+
+For $N$ periodic samples on $[a,b)$, there are $N$ intervals around the
+periodic cycle: $h=(b-a)/N$. For $N$ samples including both ends of a closed
+interval, there are $N-1$ intervals: $h=(b-a)/(N-1)$. OpenPFC's
+`domain::from_bounds` makes this choice independently for each axis.
+
+```{.cpp include="model.cpp" snippet="spacing" dedent=2}
+```
+
+With $N=5$ and $[a,b]=[0,2\pi]$, the periodic x coordinates stop at
+$8\pi/5$. The closed-grid coordinates include $2\pi$. In both cases
+`domain::upper` returns the requested bound. On the periodic grid that
+bound is an image of the first sample, rather than a sixth stored sample.
+
+## Make the convention explicit
+
+```sh
+openpfc run model.cpp input.json --launcher=none
+```
+
+This source-driven lesson ignores the empty input file; edit its constants
+to experiment. Its CSV is printed to standard output. Change the sample
+count in both the domain and loop, then predict the last coordinate.
+Keep every nonperiodic axis at least two samples wide in this experiment.
+
+Periodicity is geometric metadata here. It does not choose a derivative,
+exchange a halo, or impose a boundary equation by itself. Compare the
+[periodic heat stencil](../../heat/finite-differences/index.qmd) with
+explicit boundary equations.
+The regression checks all ten coordinates against independent interval
+counts. The exact contract is in the public
+[domain header](https://github.com/VTT-ProperTune/OpenPFC/blob/master/include/openpfc/kernel/data/domain.hpp).
+
+The complete [C++ model](model.cpp) and [starting input](input.json)
+are available with this lesson.
+
+:::

@@ -154,6 +154,21 @@ def verify_spectral_smoothness(bin_dir, root, launch, ranks):
     )
 
 
+def verify_world_helpers_example(bin_dir, root, launch, ranks):
+    binary = lambda name: bin_dir / name
+    spacing = list(
+        csv.DictReader(
+            io.StringIO(run(binary("world_helpers_example"), root / "spacing"))
+        )
+    )
+    assert len(spacing) == 10
+    for row in spacing:
+        h = 2 * math.pi / (5 if row["grid"] == "periodic" else 4)
+        assert abs(float(row["x"]) - int(row["index"]) * h) < 1e-13
+        assert abs(float(row["spacing"]) - h) < 1e-14
+        assert abs(float(row["upper"]) - 2 * math.pi) < 1e-14
+
+
 def verify_06_multi_index(bin_dir, root, launch, ranks):
     binary = lambda name: bin_dir / name
     offsets = run(binary("06_multi_index"), root / "boxes").splitlines()
@@ -225,6 +240,7 @@ def main():
             "cardinal_interpolation",
             "periodic_collocation",
             "spectral_smoothness",
+            "world_helpers_example",
         ],
     )
     args = parser.parse_args()
@@ -272,6 +288,10 @@ def main():
             root = base / "spectral_smoothness"
             root.mkdir()
             verify_spectral_smoothness(bin_dir, root, launch, ranks)
+        if args.case in (None, "world_helpers_example"):
+            root = base / "world_helpers_example"
+            root.mkdir()
+            verify_world_helpers_example(bin_dir, root, launch, ranks)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

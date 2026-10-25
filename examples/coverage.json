@@ -330,9 +330,13 @@
     },
     {
       "target": "world_helpers_example",
-      "source": "world_helpers_example.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "geometry/grid-spacing/model.cpp",
+      "chapter": "geometry/grid-spacing/index.qmd",
+      "capabilities": [
+        "domain",
+        "strong-types",
+        "coordinates"
+      ]
     },
     {
       "target": "world_query_helpers_example",

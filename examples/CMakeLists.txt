@@ -66,8 +66,6 @@ target_link_libraries(diffusion_model_with_custom_initial_condition PRIVATE Open
 add_executable(json_read json_read.cpp)
 target_link_libraries(json_read PRIVATE nlohmann_json::nlohmann_json)
 
-add_executable(world_helpers_example world_helpers_example.cpp)
-target_link_libraries(world_helpers_example PRIVATE OpenPFC::openpfc )
 
 add_executable(14_custom_field_initializer 14_custom_field_initializer.cpp)
 target_link_libraries(14_custom_field_initializer PRIVATE OpenPFC::openpfc )
@@ -228,6 +226,9 @@ if(OpenPFC_BUILD_TESTS)
     set_tests_properties(example-spectral-smoothness-mpi PROPERTIES PROCESSORS 2 TIMEOUT 360
                          ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
   endif()
+  add_test(NAME example-world-helpers-example
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_foundations.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case world_helpers_example)
+  set_tests_properties(example-world-helpers-example PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
 endif()
 
 add_executable(23_halo_microtiming 23_halo_microtiming.cpp)
