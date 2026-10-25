@@ -51,7 +51,7 @@ The shortest useful mental model is:
 | `FieldModifier` + `apply_field_modifier` | Initial and boundary conditions on a host or device `Field` (JSON catalog or programmatic) | `openpfc/kernel/simulation/field_modifier.hpp`, `apply_field_modifier.hpp` | `examples/10_ui_register_ic.cpp` |
 | `ResultsWriter` | Stable interface for persisted simulation fields | `openpfc/kernel/simulation/results_writer.hpp` | `examples/11_write_results.cpp` |
 | `FileResultsWriter` | File sink with `$ENV` expansion and increment path templating | `openpfc/frontend/io/file_results_writer.hpp` | `BinaryWriter`, `VTKWriter` |
-| `World` | Deprecated A0 adapter around `Domain` | `openpfc/kernel/data/world.hpp` | `examples/world_strong_types_example.cpp` uses `Domain` |
+| `World` | Deprecated A0 adapter around `Domain` | `openpfc/kernel/data/world.hpp` | `examples/geometry/anisotropic-grid/model.cpp` uses `Domain` |
 | `SpectralCPUStack` | Owns the CPU domain, decomposition, FFT, and field stack | `openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp` | `user_guide/app_pipeline.md` |
 | `GPUSpectralStack` | Device FFT stack; JSON `plan_options` overlay like CPU | `openpfc/runtime/gpu/gpu_spectral_stack.hpp` | `tungsten_cuda`, session-matrix-cuda |
 | `SingleDeviceFFT` | One-rank device FFT: one cuFFT/rocFFT 3D plan, heFFTe boxes and scaling; `GPUSpectralStack(..., DeviceFFTChoice::single_device)` | `openpfc/runtime/gpu/fft_single_device.hpp` | `test_fft_single_device_{cuda,hip}` |

@@ -195,6 +195,24 @@ def verify_16_strong_types_demo(bin_dir, root, launch, ranks):
     assert [float(strong[0][key]) for key in ("cx", "cy", "cz")] == [0, 0, 2]
 
 
+def verify_world_strong_types_example(bin_dir, root, launch, ranks):
+    binary = lambda name: bin_dir / name
+    anisotropic = list(
+        csv.DictReader(
+            io.StringIO(run(binary("world_strong_types_example"), root / "anisotropic"))
+        )
+    )
+    assert len(anisotropic) == 3
+    for row in anisotropic:
+        index = [int(row[key]) for key in ("i", "j", "k")]
+        assert [int(row[key]) for key in ("ri", "rj", "rk")] == index
+        assert [float(row[key]) for key in ("x", "y", "z")] == [
+            -1 + 0.25 * index[0],
+            2 + 0.5 * index[1],
+            10 + 3 * index[2],
+        ]
+
+
 def verify_06_multi_index(bin_dir, root, launch, ranks):
     binary = lambda name: bin_dir / name
     offsets = run(binary("06_multi_index"), root / "boxes").splitlines()
@@ -269,6 +287,7 @@ def main():
             "world_helpers_example",
             "world_query_helpers_example",
             "16_strong_types_demo",
+            "world_strong_types_example",
         ],
     )
     args = parser.parse_args()
@@ -328,6 +347,10 @@ def main():
             root = base / "16_strong_types_demo"
             root.mkdir()
             verify_16_strong_types_demo(bin_dir, root, launch, ranks)
+        if args.case in (None, "world_strong_types_example"):
+            root = base / "world_strong_types_example"
+            root.mkdir()
+            verify_world_strong_types_example(bin_dir, root, launch, ranks)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

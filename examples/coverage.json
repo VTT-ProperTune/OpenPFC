@@ -354,9 +354,13 @@
     },
     {
       "target": "world_strong_types_example",
-      "source": "world_strong_types_example.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "geometry/anisotropic-grid/model.cpp",
+      "chapter": "geometry/anisotropic-grid/index.qmd",
+      "capabilities": [
+        "domain",
+        "strong-types",
+        "coordinates"
+      ]
     },
     {
       "target": "write_results",

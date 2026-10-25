@@ -96,7 +96,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `16_strong_types_demo` | `geometry/strong-arguments/model.cpp` | Strongly typed domain inputs |
 | `17_custom_coordinate_system` | `17_custom_coordinate_system.cpp` | Custom coordinate setup |
 | `18_sobel_edge_detection` | `18_sobel_edge_detection.cpp` | Sobel-style field operations and edge detection |
-| `world_strong_types_example` | `world_strong_types_example.cpp` | Strong types with `Domain` compatibility helpers |
+| `world_strong_types_example` | `geometry/anisotropic-grid/model.cpp` | Strong types with `Domain` compatibility helpers |
 | `19_explicit_stepper_fd` | `heat/finite-differences/model.cpp` | Explicit stepping with finite-difference operators |
 | `20_explicit_stepper_spectral` | `heat/fourier/model.cpp` | Explicit stepping with spectral operators |
 | `21_adaptive_stepping` | `21_adaptive_stepping.cpp` | Adaptive Bogacki–Shampine 3(2) with `Time` attempt transactions |

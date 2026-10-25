@@ -56,7 +56,7 @@ not know whether a number is in metres or micrometres, and a correctly typed
 value can still describe the wrong experiment. Use consistent units in the
 model equations and inputs. See the
 [strong type definitions](https://github.com/VTT-ProperTune/OpenPFC/blob/master/include/openpfc/kernel/data/strong_types.hpp)
-and continue with anisotropic coordinates.
+and continue with [anisotropic coordinates](../anisotropic-grid/index.qmd).
 
 The complete [C++ model](model.cpp) and [starting input](input.json)
 are available with this lesson.

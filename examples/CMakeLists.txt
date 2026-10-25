@@ -78,8 +78,6 @@ target_link_libraries(17_custom_coordinate_system PRIVATE OpenPFC::openpfc )
 add_executable(18_sobel_edge_detection 18_sobel_edge_detection.cpp)
 target_link_libraries(18_sobel_edge_detection PRIVATE OpenPFC::openpfc )
 
-add_executable(world_strong_types_example world_strong_types_example.cpp)
-target_link_libraries(world_strong_types_example PRIVATE OpenPFC::openpfc )
 
 
 # Explicit Euler stepper examples (FD and spectral backends)
@@ -231,6 +229,9 @@ if(OpenPFC_BUILD_TESTS)
   add_test(NAME example-16-strong-types-demo
            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_foundations.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 16_strong_types_demo)
   set_tests_properties(example-16-strong-types-demo PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  add_test(NAME example-world-strong-types-example
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_foundations.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case world_strong_types_example)
+  set_tests_properties(example-world-strong-types-example PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
 endif()
 
 add_executable(23_halo_microtiming 23_halo_microtiming.cpp)

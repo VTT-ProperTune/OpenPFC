@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Demonstrate anisotropic spacing and nonzero origin through a short coordinate map. Check forward and reverse indices against explicit Cartesian formulas.
+
 - Use strong grid, origin and spacing arguments in a small geometry lesson. Preserve the executable name and verify the resulting physical center and point count.
 
 - Teach domain length, volume, dimension and grid size through a compact query program. Preserve the target and compare all reported geometric quantities with independent values.
