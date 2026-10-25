@@ -516,6 +516,14 @@ if(OpenPFC_BUILD_TESTS AND MPIEXEC_EXECUTABLE)
   set_tests_properties(halo-microtiming-host-2rank PROPERTIES
                        ENVIRONMENT
                        "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+  add_test(NAME halo-bandwidth-host-2rank
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_halo_bandwidth.py"
+                   --binary $<TARGET_FILE:25_halo_bandwidth> --launcher "${MPIEXEC_EXECUTABLE}"
+                   "--rank-flag=${MPIEXEC_NUMPROC_FLAG}" --ranks 2
+                   --output "${PROJECT_SOURCE_DIR}/results/example-checks/halo-bandwidth")
+  set_tests_properties(halo-bandwidth-host-2rank PROPERTIES
+                       ENVIRONMENT
+                       "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
 endif()
 
 # Issue #21 research prototype under examples/, not an apps/ executable.

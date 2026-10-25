@@ -12,6 +12,15 @@ args = [
   "--output", "results/profile.json",
 ]
 
+[cli."diagnostics/halo-bandwidth"]
+ranks = 2
+args = [
+  "--axis", "z",
+  "--sizes", "16,32",
+  "--iters", "4",
+  "--warmup", "1",
+]
+
 [cli."flow/vorticity"]
 args = [
   "--verify",

@@ -60,7 +60,7 @@ flowchart LR
 | **1 — Core stack** | `02_domain_decomposition`, `03_parallel_fft`, `05_simulator`, `12_cahn_hilliard` | `Domain`, distributed FFT, simulation driver, conserved nonlinear model |
 | **2 — Wiring** | `10_ui_register_ic`, `11_write_results`, `14_custom_field_initializer`, `diffusion_model_with_custom_initial_condition` | Registration, writers, custom initial conditions |
 | **3 — Fields and space** | `15_finite_difference_heat`, `17_custom_coordinate_system`, `18_sobel_edge_detection` | Halos, coordinate interpretation, stencil-like field operations |
-| **4 — Stepping and tools** | `19_explicit_stepper_fd`, `20_explicit_stepper_spectral`, `21_adaptive_stepping`, `22_external_coupling`, `23_halo_microtiming`, `24_adaptive_etd`, `fft_backend_benchmark`, `profiling_timer_report` | Explicit/adaptive steppers, external coupling, halo microtiming, ETD step doubling, backend comparison, profiling |
+| **4 — Stepping and tools** | `19_explicit_stepper_fd`, `20_explicit_stepper_spectral`, `21_adaptive_stepping`, `22_external_coupling`, `23_halo_microtiming`, `24_adaptive_etd`, `25_halo_bandwidth`, `fft_backend_benchmark`, `profiling_timer_report` | Explicit/adaptive steppers, external coupling, halo microtiming, ETD step doubling, halo throughput, backend comparison, profiling |
 
 Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/01-basics/README.md). Ordered source examples: [`api_examples_walkthrough.md`](api_examples_walkthrough.md).
 
@@ -103,6 +103,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `22_external_coupling` | `coupling/host-orchestrator/model.cpp` | Mock FEM loop: `FieldHandle` export, `clip_attempt_dt`, FieldModifier-shaped source |
 | `23_halo_microtiming` | `diagnostics/halo-frames/model.cpp` | Timed `HaloExchange` loop; schema-v2 JSON (`--cuda` / `--hip` / `--full`) |
 | `24_adaptive_etd` | `integration/adaptive-etd/model.cpp` | ETD1 step doubling: a heat mode against `exp(-k²t)`, then `∂t ψ = ∇²ψ − ψ³` with the memoryless controller |
+| `25_halo_bandwidth` | `diagnostics/halo-bandwidth/model.cpp` | Halo-only `HaloExchange` throughput table (`--cuda` / `--hip` / `--faces` / `--axis`); no field update |
 | `nonlinear_spectral_course` | `phase-fields/alias-free-cubic/model.cpp` | Periodic Allen–Cahn: cubic Galerkin projection with `4K < N`, ETD2, independent convolution/RK4 checks and MPI ownership output |
 | `ns2d_vorticity` | `flow/vorticity/model.cpp` | Issue #21 2-D vorticity–streamfunction Navier–Stokes (CPU). See [`../../examples/ns2d_vorticity/README.md`](../../examples/ns2d_vorticity/README.md). |
 | `ns2d_spatial_refine` | `flow/spatial-refinement/model.cpp` | Fixed-timestep grid refinement, common-grid Fourier restriction and a time-step control |

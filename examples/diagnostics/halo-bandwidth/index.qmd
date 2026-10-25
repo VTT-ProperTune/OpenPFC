@@ -1,0 +1,167 @@
+---
+title: "Turn a halo exchange into a byte rate"
+description: "Count the face bytes that leave each rank, time the exchange alone and state what the resulting GB/s does and does not measure."
+order: 38
+categories: [Diagnostics, MPI, Tough challenges]
+capabilities: ["halo-throughput", "face-byte-counting", "process-grids", "mpi-aggregation", "warmup"]
+targets: [25_halo_bandwidth]
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[Diagnostics / Know what the rate counts]{.lesson-kicker}
+
+# Turn a halo exchange into a byte rate
+
+[Count the bytes before timing them, and keep the denominator honest.]{.lesson-deck}
+:::
+
+The [halo-frames lesson](../halo-frames/index.qmd) records every exchange as
+a profiling frame. This chapter asks a narrower question with the
+`25_halo_bandwidth` program: for a cubic grid of side $N$, how many bytes
+does each exchange send to other ranks, and at what rate? The program
+allocates a padded field and exchanges its halo repeatedly. It steps no
+model, and the field values play no part in the result.
+
+The default exchange uses only the $\pm x$ faces. `--axis y` or `--axis z`
+selects another pair, and `--faces` uses all six. The host facade is the
+default; a CUDA or HIP build also accepts `--cuda` or `--hip`.
+
+## Count the bytes before timing them
+
+Each rank owns a brick of $n_x\times n_y\times n_z$ cells. With a process
+grid $g_x\times g_y\times g_z$ that divides the grid, $n_a=N/g_a$. A face
+normal to axis $a$ with halo width $h$ holds $h$ layers of the other two
+owned dimensions, in double precision:
+
+```{.cpp include="model.cpp" snippet="bytes"}
+```
+
+$$
+B_x=8h\,n_y n_z,\qquad B_y=8h\,n_x n_z,\qquad B_z=8h\,n_x n_y .
+$$
+
+Not every face crosses a rank boundary. The domain is periodic in every
+axis, so on an undivided axis ($g_a=1$) both faces wrap around to the same
+rank. The program classifies each selected face by its neighbor:
+
+```{.cpp include="model.cpp" snippet="peers" dedent=4}
+```
+
+A self face is still exchanged; the host exchanger posts it as an MPI
+message from the rank to itself. It crosses no rank boundary, so it does not
+count in `Send_B`.
+
+Two ranks on a cube get the automatic grid $1\times1\times2$: the split is
+along $z$. For $N=64$ each rank owns a $64\times64\times32$ brick. Its
+$\pm z$ faces both go to the other rank. With two ranks on a periodic axis,
+the neighbor in $+z$ is also the neighbor in $-z$:
+
+$$
+\mathtt{Send\_B}=2B_z=2\cdot 8\cdot 64\cdot 64=65\,536 \text{ bytes}.
+$$
+
+On the same grid the default $\pm x$ pair and `--axis y` select self faces
+only. `Send_B` is zero, so the rate is zero, yet the exchange still takes
+time. `--faces` sends the two $z$ faces and adds four self faces. The table
+reports these counts in `RemoteFaces`, `SelfFaces` and `OffNodeFaces`, the
+last being remote faces whose peer runs on another host. Read the `grid`
+in the header before reading any rate. `OPENPFC_FD_PROC_GRID=gx,gy,gz`
+selects another split when it divides the grid.
+
+## Time the exchange alone
+
+```{.cpp include="model.cpp" snippet="timing" dedent=2}
+```
+
+Warmup exchanges run before the clock starts. A barrier then aligns the
+ranks, and the program averages $K$ exchanges between two barriers:
+
+$$
+t_r=\frac{t^{\mathrm{end}}_r-t^{\mathrm{start}}_r}{K}.
+$$
+
+The interval includes the wait at the trailing barrier. It excludes field
+allocation, decomposition and the construction of the exchanger.
+
+## Divide by the slowest rank
+
+```{.cpp include="model.cpp" snippet="rate" dedent=2}
+```
+
+The table combines the busiest sender with the slowest rank:
+
+$$
+\mathtt{Uni\_GBps}=\frac{\max_r \mathtt{Send\_B}_r}{10^9\,\max_r t_r},
+\qquad
+\mathtt{Duplex\_GBps}=2\,\mathtt{Uni\_GBps}.
+$$
+
+One GB here is $10^9$ bytes. The duplex column assumes that every rank
+receives as much as it sends, which holds for the divisible, periodic
+splits used in this chapter. If ranks send different amounts, the row
+adds `send_min`.
+
+This rate is not a link bandwidth. Its time also contains packing and
+unpacking, the self-face messages, the trailing barrier and, on a
+device, any staging through host memory. The header records whether the
+exchanger uses GPU-aware MPI. Compare rows from the same machine,
+placement and build, and read small sizes as latency rather than
+throughput.
+
+## Run a small host experiment
+
+With a matching installed CPU SDK, compile the [complete model](model.cpp)
+and run it on two ranks:
+
+```sh
+openpfc compile model.cpp -o halo-bandwidth
+mkdir -p results/halo-bandwidth
+cd results/halo-bandwidth
+mpirun -n 2 ../../halo-bandwidth --axis z --sizes 64,128,256
+```
+
+One run on a single Tohtori CPU node printed:
+
+```text
+# OpenPFC halo bandwidth
+# backend host device host
+# ranks 2 nodes 1 grid 1x1x2 directions z halo 1 iters 50 warmup 5
+# gpu_aware n/a
+# rank_device 0:-1 1:-1
+# Uni_GBps = remote send bytes / time / 1e9; Duplex_GBps = 2 * Uni_GBps
+# N Send_B Time_us Uni_GBps Duplex_GBps RemoteFaces SelfFaces OffNodeFaces
+64 65536 31.1 2.104 4.209 2 0 0
+128 262144 37.5 6.996 13.992 2 0 0
+256 1048576 154.8 6.775 13.551 2 0 0
+```
+
+The `Send_B` column follows from the grid alone: $2\cdot8N^2$ bytes. The
+times and rates belong to this machine, placement and moment, and another
+run will differ. At $N=64$ the time hardly changes from $N=128$ although the
+bytes quadruple; such small messages measure latency more than throughput.
+
+The built checkout target keeps the name `25_halo_bandwidth`. Build it
+through `scripts/build.sh` and find it under the build's `examples/`
+directory. GPU variants need the corresponding build and a scheduler
+allocation with one device per rank.
+
+Before running more cases, predict `Send_B` and the face counts for each:
+
+- the default $\pm x$ pair and `--axis y` on the automatic two-rank grid;
+- `OPENPFC_FD_PROC_GRID=2,1,1` with the default $\pm x$ pair, where each
+  exchanged face is a $y$–$z$ plane, strided in the $x$-fastest field rather
+  than contiguous like the $x$–$y$ planes of a $z$ split;
+- `--faces --halo 2`.
+
+The checker runs the automatic $z$ split and four cases with a selected
+grid: $\pm x$ and $\pm y$ on $2\times1\times1$, $\pm z$ on $1\times1\times2$,
+and all faces with $h=2$ on $2\times1\times1$, each at $N=16$ and $32$. It
+recomputes every byte count and face class from the printed grid. It also
+checks that the two rate columns agree with `Send_B` and the time to their
+printed precision. It imposes no speed threshold.
+
+:::

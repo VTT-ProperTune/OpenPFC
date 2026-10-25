@@ -242,6 +242,18 @@
       ]
     },
     {
+      "target": "25_halo_bandwidth",
+      "source": "diagnostics/halo-bandwidth/model.cpp",
+      "chapter": "diagnostics/halo-bandwidth/index.qmd",
+      "capabilities": [
+        "halo-throughput",
+        "face-byte-counting",
+        "process-grids",
+        "mpi-aggregation",
+        "warmup"
+      ]
+    },
+    {
       "target": "airy_eigenproblem",
       "source": "polynomials/airy/model.cpp",
       "chapter": "polynomials/airy/index.qmd",
@@ -1410,7 +1422,8 @@
       ],
       "chapters": [
         "diagnostics/mpi-timing/index.qmd",
-        "diagnostics/profiling/index.qmd"
+        "diagnostics/profiling/index.qmd",
+        "diagnostics/halo-bandwidth/index.qmd"
       ]
     },
     {

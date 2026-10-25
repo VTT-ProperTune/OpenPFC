@@ -7,6 +7,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Add the `25_halo_bandwidth` diagnostics chapter (#786), a halo-only
+  throughput table for `HaloExchange` on the host and, in a CUDA or HIP
+  build, on the device. `--axis` selects one face pair and `--faces` all
+  six. It prints remote face bytes, time, GB/s and whether GPU-aware MPI is
+  on, and steps no model. A check recomputes the byte counts and rates.
+
 ## [0.6.0] - 2026-10-29
 
 Source-level break from 0.5.0: the grain module leaves OpenPFC and some
