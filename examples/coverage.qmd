@@ -17,7 +17,7 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 :::
 
 There are 45 declared runnable example targets and
-8 Quarto teaching chapters. The table includes older programs
+9 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -83,7 +83,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `05_simulator` | Pending conversion. |
 | `06_multi_index` | [Read the lesson](geometry/index-boxes/index.qmd) |
 | `07_array` | [Read the lesson](geometry/field-storage/index.qmd) |
-| `08_discrete_fields` | Pending conversion. |
+| `08_discrete_fields` | [Read the lesson](geometry/coordinate-fields/index.qmd) |
 | `09_parallel_fft_high_level` | Pending conversion. |
 | `10_ui_register_ic` | Pending conversion. |
 | `11_write_results` | Pending conversion. |
@@ -138,14 +138,14 @@ fixed-step restart does not establish an adaptive restart contract.
 | Capability family | Current teaching chapters |
 |---|---|
 | geometry | [decomposition](geometry/decomposition/index.qmd), [index-boxes](geometry/index-boxes/index.qmd), [field-storage](geometry/field-storage/index.qmd) |
-| distributed fields and MPI | [finite-differences](heat/finite-differences/index.qmd) |
+| distributed fields and MPI | [coordinate-fields](geometry/coordinate-fields/index.qmd), [finite-differences](heat/finite-differences/index.qmd) |
 | local and distributed FFT | Pending a teaching chapter. |
 | finite differences and spectral gradients | [periodic](differentiation/periodic/index.qmd) |
 | conservative fluxes and nonperiodic boundaries | Pending a teaching chapter. |
 | fixed and adaptive integration | [finite-differences](heat/finite-differences/index.qmd) |
 | multi-field runtime integration | Pending a teaching chapter. |
 | exponential and adaptive ETD | [exponential](heat/exponential/index.qmd) |
-| initial conditions and modifiers | Pending a teaching chapter. |
+| initial conditions and modifiers | [coordinate-fields](geometry/coordinate-fields/index.qmd) |
 | JSON/TOML validation and application sessions | Pending a teaching chapter. |
 | field output and visualization | Pending a teaching chapter. |
 | checkpoints and restart | Pending a teaching chapter. |

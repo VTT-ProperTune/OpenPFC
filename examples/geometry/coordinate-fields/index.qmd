@@ -1,0 +1,87 @@
+---
+title: "Write the physics in physical coordinates"
+description: "Initialise a decomposed field with a lambda and locate two values without guessing their owner."
+order: 8
+categories: [Fields, MPI, Initial conditions]
+capabilities: [field-initialization, coordinates, mpi-reductions]
+targets: [08_discrete_fields]
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[Fields / Physical meaning]{.lesson-kicker}
+
+# Write the physics in physical coordinates
+
+[A formula should describe the same field whether one rank or several store it.]{.lesson-deck}
+:::
+
+Suppose the initial condition is $u(x,y,z)=1+x+y^2$. It contains no MPI
+rank and no local memory offset. An initialization routine should preserve
+that fact. The previous example 08 simulated four owners within one
+process; this refactor constructs one actual owned field per MPI rank.
+
+## The formula stays small
+
+```{.cpp include="model.cpp" snippet="initialize" dedent=4}
+```
+
+`domain` describes the complete $16\times8\times2$ grid with unit spacing.
+`partition` describes ownership. `u` stores only this rank's values.
+`apply` bridges those descriptions by supplying physical coordinates to
+the lambda.
+
+At global points $(4,2,0)$ and $(12,6,0)$ the answers must be
+
+$$
+\begin{gathered}
+u(4,2,0)=9, \\
+u(12,6,0)=49.
+\end{gathered}
+$$ {#eq-probes}
+
+Those values do not depend on the process grid.
+
+## Who owns the point?
+
+For this tiny demonstration, each rank checks its owned cells and a
+collective combines the answer:
+
+```{.cpp include="model.cpp" snippet="probe" dedent=4}
+```
+
+The value reduction alone is not enough. A missing point could yield zero,
+and two owners could add values together. Reducing the number of owners
+as well requires that each requested point is represented exactly once.
+
+This is an inspectable teaching probe, not an efficient general point-query
+service: scanning every cell is unnecessary for large repeated query sets.
+The example deliberately exposes the ownership decision and its invariant.
+
+## Repeat the experiment with another decomposition
+
+```sh
+openpfc run model.cpp input.json --ranks=2 --launcher=mpirun
+```
+
+Compare this output with `--launcher=none` and four ranks. The source's
+domain and formula stay fixed. Each run should report @eq-probes with
+`owners=1`. Those assertions are also part of the ordinary numerical checks.
+
+Next, change the x spacing to one half while retaining the same global
+probe indices. The physical x coordinates halve. Predict why the first
+value becomes seven rather than nine, and update the reference using
+physical coordinates rather than copying the previous expected output.
+
+This lesson initializes a field; it does not evolve a PDE or fill halos.
+For those operations continue with [finite-difference heat flow](../../heat/finite-differences/index.qmd).
+See the [field factory](https://github.com/ahojukka5/OpenPFC/blob/master/include/openpfc/kernel/field/field_factory.hpp)
+and [Field API](https://github.com/ahojukka5/OpenPFC/blob/master/include/openpfc/kernel/data/grid_field.hpp)
+for the underlying public operations.
+The complete [C++ model](model.cpp) and [starting input](input.json)
+are available with this lesson.
+
+:::

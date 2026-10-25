@@ -53,6 +53,13 @@ def verify_02_domain_decomposition(bin_dir, root, launch, ranks):
     assert owned == {(x, y, z) for z in range(4) for y in range(8) for x in range(16)}
 
 
+def verify_08_discrete_fields(bin_dir, root, launch, ranks):
+    binary = lambda name: bin_dir / name
+    assert "u(12,6,0)=49 owners=1" in run(
+        binary("08_discrete_fields"), root / "coordinates", launch
+    )
+
+
 def verify_06_multi_index(bin_dir, root, launch, ranks):
     binary = lambda name: bin_dir / name
     offsets = run(binary("06_multi_index"), root / "boxes").splitlines()
@@ -74,7 +81,13 @@ def main():
     parser.add_argument("--rank-flag", default="-n")
     parser.add_argument("--ranks", default=1, type=int)
     parser.add_argument(
-        "--case", choices=["02_domain_decomposition", "06_multi_index", "07_array"]
+        "--case",
+        choices=[
+            "02_domain_decomposition",
+            "06_multi_index",
+            "07_array",
+            "08_discrete_fields",
+        ],
     )
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
@@ -97,6 +110,10 @@ def main():
             root = base / "07_array"
             root.mkdir()
             verify_07_array(bin_dir, root, launch, ranks)
+        if args.case in (None, "08_discrete_fields"):
+            root = base / "08_discrete_fields"
+            root.mkdir()
+            verify_08_discrete_fields(bin_dir, root, launch, ranks)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

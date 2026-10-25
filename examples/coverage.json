@@ -52,9 +52,13 @@
     },
     {
       "target": "08_discrete_fields",
-      "source": "08_discrete_fields.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "geometry/coordinate-fields/model.cpp",
+      "chapter": "geometry/coordinate-fields/index.qmd",
+      "capabilities": [
+        "field-initialization",
+        "coordinates",
+        "mpi-reductions"
+      ]
     },
     {
       "target": "09_parallel_fft_high_level",
@@ -622,6 +626,7 @@
         "comm_halo_exchange.hpp"
       ],
       "chapters": [
+        "geometry/coordinate-fields/index.qmd",
         "heat/finite-differences/index.qmd"
       ]
     },
@@ -689,7 +694,9 @@
         "indexed_noise.hpp",
         "field_modifier.hpp"
       ],
-      "chapters": []
+      "chapters": [
+        "geometry/coordinate-fields/index.qmd"
+      ]
     },
     {
       "name": "JSON/TOML validation and application sessions",

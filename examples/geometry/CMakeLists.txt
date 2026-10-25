@@ -12,3 +12,7 @@ set_target_properties(06_multi_index PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAK
 add_executable(07_array field-storage/model.cpp)
 target_link_libraries(07_array PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(07_array PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(08_discrete_fields coordinate-fields/model.cpp)
+target_link_libraries(08_discrete_fields PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(08_discrete_fields PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
