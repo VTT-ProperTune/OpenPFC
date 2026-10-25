@@ -12,29 +12,22 @@ set(INVERSE_HOMOGENIZATION_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 function(inverse_homogenization_cpu_executable target)
   add_executable(${target} ${ARGN})
   target_include_directories(${target} PRIVATE ${INVERSE_HOMOGENIZATION_INCLUDE_DIR})
-  target_link_libraries(${target} PRIVATE OpenPFC::openpfc
-)
+  target_link_libraries(${target} PRIVATE OpenPFC::openpfc)
 endfunction()
 
 inverse_homogenization_cpu_executable(openpfc_homogenize src/homogenize.cpp)
 inverse_homogenization_cpu_executable(openpfc_inverse_homogenize
                                       src/inverse_homogenize.cpp)
-add_executable(openpfc_finite_strain_forward src/finite_strain_forward.cpp)
-target_include_directories(openpfc_finite_strain_forward PRIVATE
-                           ${INVERSE_HOMOGENIZATION_INCLUDE_DIR})
-set_target_properties(openpfc_finite_strain_forward PROPERTIES
-  CXX_STANDARD 20
-  CXX_STANDARD_REQUIRED ON)
-add_executable(openpfc_finite_strain_inverse src/finite_strain_inverse.cpp)
-target_include_directories(openpfc_finite_strain_inverse PRIVATE
-                           ${INVERSE_HOMOGENIZATION_INCLUDE_DIR})
-set_target_properties(openpfc_finite_strain_inverse PROPERTIES
-  CXX_STANDARD 20
-  CXX_STANDARD_REQUIRED ON)
+# Finite-strain models share the SDK usage requirements and compiler standard.
+inverse_homogenization_cpu_executable(openpfc_finite_strain_forward
+                                      src/finite_strain_forward.cpp)
+inverse_homogenization_cpu_executable(openpfc_finite_strain_inverse
+                                      src/finite_strain_inverse.cpp)
 install(TARGETS openpfc_homogenize openpfc_inverse_homogenize
                 openpfc_finite_strain_forward openpfc_finite_strain_inverse
         DESTINATION bin)
 
+# HIP drivers add their backend provider and device kernels.
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
   function(inverse_homogenization_hip_executable target)
     add_executable(${target} ${ARGN})
@@ -71,6 +64,7 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
   endif()
 endif()
 
+# CPU entrypoint smoke tests and independent model checks.
 if(INVERSE_HOMOGENIZATION_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
   include(CTest)
   add_test(NAME inverse-homogenization-homogeneous-smoke
