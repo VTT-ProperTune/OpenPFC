@@ -65,7 +65,7 @@ inside a nearly degenerate eigenspace can change. Compare eigenvalues and
 subspaces rather than demanding one exact contour orientation. Independent
 checks reconstruct the operator and compare the low spectrum and residuals;
 they also verify all prescribed endpoint values. Continue with a forced
-Poisson problem using the same tensor idea.
+[Poisson problem](../poisson-square/index.qmd) using the same tensor idea.
 
 The complete [C++ model](model.cpp) and [starting input](input.json)
 are available with this lesson.

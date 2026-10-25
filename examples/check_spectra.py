@@ -258,6 +258,71 @@ def check_membrane(binary, directory):
     run(binary, directory.parent / "bad-membrane", parameters={"n": 21}, success=False)
 
 
+def boundary(x, y, manufactured):
+    if manufactured:
+        return x * x - y * y
+    return (math.sin(math.pi * x) ** 4 if y == 1 and x < 0 else 0) + (
+        0.2 * math.sin(3 * math.pi * y) if x == 1 else 0
+    )
+
+
+def check_square(binary, directory, kind):
+    run(binary, directory, parameters={"n": 8})
+    data = rows(directory / "results/solution.csv")
+    x, a = lagrange_second(8)
+    m = 7
+    full = [[0.0] * 9 for _ in x]
+    matrix = [[0.0] * (m * m) for _ in range(m * m)]
+    b = [0.0] * (m * m)
+    if kind == "laplace":
+        for j in range(9):
+            for i in range(9):
+                if i in (0, 8) or j in (0, 8):
+                    full[j][i] = boundary(x[i], x[j], False)
+    wave = 9 if kind == "helmholtz" else 0
+    for j in range(1, 8):
+        for i in range(1, 8):
+            row = i - 1 + m * (j - 1)
+            b[row] = (
+                10 * math.sin(8 * x[i] * (x[j] - 1))
+                if kind == "poisson"
+                else (
+                    math.exp(-10 * ((x[j] - 1) ** 2 + (x[i] - 0.5) ** 2))
+                    if kind == "helmholtz"
+                    else 0
+                )
+            )
+            b[row] -= (
+                a[i][0] * full[j][0]
+                + a[i][8] * full[j][8]
+                + a[j][0] * full[0][i]
+                + a[j][8] * full[8][i]
+            )
+            matrix[row][row] += wave * wave
+            for k in range(1, 8):
+                matrix[row][k - 1 + m * (j - 1)] += a[i][k]
+                matrix[row][i - 1 + m * (k - 1)] += a[j][k]
+    solution = substitute(factor(matrix), b)
+    for j in range(1, 8):
+        for i in range(1, 8):
+            full[j][i] = solution[i - 1 + m * (j - 1)]
+    assert len(data) == 81
+    for row in data:
+        assert abs(float(row["u"]) - full[int(row["j"])][int(row["i"])]) < 1e-9
+    manufactured = directory.parent / (kind + "-manufactured")
+    run(binary, manufactured, parameters={"n": 24, "manufactured": True})
+    for row in rows(manufactured / "results/solution.csv"):
+        x, y = float(row["x"]), float(row["y"])
+        expected = x * x - y * y if kind == "laplace" else (1 - x * x) * (1 - y * y)
+        assert abs(float(row["u"]) - expected) < 1e-7
+    run(
+        binary,
+        directory.parent / (kind + "-invalid"),
+        parameters={"n": 33},
+        success=False,
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -273,6 +338,7 @@ def main():
             "chebyshev_eigenmodes",
             "airy_eigenproblem",
             "membrane_eigenmodes",
+            "square_poisson",
         ],
     )
     args = parser.parse_args()
@@ -304,6 +370,10 @@ def main():
             root = base / "membrane_eigenmodes"
             root.mkdir()
             check_membrane(bin_dir / "membrane_eigenmodes", root)
+        if args.case in (None, "square_poisson"):
+            root = base / "square_poisson"
+            root.mkdir()
+            check_square(bin_dir / "square_poisson", root / "poisson", "poisson")
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

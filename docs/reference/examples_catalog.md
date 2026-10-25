@@ -126,6 +126,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `chebyshev_eigenmodes` | `polynomials/eigenmodes/model.cpp` | A grid has its own spectrum |
 | `airy_eigenproblem` | `polynomials/airy/model.cpp` | A zero weight is a constraint |
 | `membrane_eigenmodes` | `polynomials/membrane/model.cpp` | An asymmetric potential reshapes a membrane mode |
+| `square_poisson` | `polynomials/poisson-square/model.cpp` | Solve a square without a giant Kronecker matrix |
 
 ## Research prototypes
 

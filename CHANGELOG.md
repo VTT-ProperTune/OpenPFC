@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Explain tensor actions and native GMRES through a square Poisson problem. Check complete fields with an independent dense solve and a smooth manufactured solution.
+
 - Build a tensor collocation membrane operator with a visible spatial potential. Check mode values, fields and residuals through independently differentiated nodal products.
 
 - Use a Chebyshev collocation pencil to explain an Airy constraint. Check eigenvectors, original-equation residuals and independent Airy reference values.

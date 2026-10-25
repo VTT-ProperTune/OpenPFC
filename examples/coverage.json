@@ -531,6 +531,16 @@
       ]
     },
     {
+      "target": "square_poisson",
+      "source": "polynomials/poisson-square/model.cpp",
+      "chapter": "polynomials/poisson-square/index.qmd",
+      "capabilities": [
+        "gmres",
+        "tensor-operators",
+        "boundary-conditions"
+      ]
+    },
+    {
       "target": "stability_regions",
       "source": "integration/stability/model.cpp",
       "chapter": "integration/stability/index.qmd",
@@ -728,7 +738,7 @@
       "program": 16,
       "title": "Poisson eq. on [-1,1]x[-1,1] with u=0 on boundary",
       "source": "https://people.maths.ox.ac.uk/trefethen/p16.m",
-      "chapter": null,
+      "chapter": "polynomials/poisson-square/index.qmd",
       "scope": "Original degree-24 Chebyshev Poisson problem; native GMRES applies the tensor operator without forming a Kronecker matrix."
     },
     {

@@ -40,3 +40,7 @@ set_target_properties(airy_eigenproblem PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${C
 add_executable(membrane_eigenmodes membrane/model.cpp)
 target_link_libraries(membrane_eigenmodes PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(membrane_eigenmodes PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(square_poisson poisson-square/model.cpp)
+target_link_libraries(square_poisson PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(square_poisson PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
