@@ -185,7 +185,7 @@ final check.
 
 ## Complete working examples
 
-See [`../../examples/19_explicit_stepper_fd.cpp`](../../examples/19_explicit_stepper_fd.cpp) for the FD backend and [`../../examples/20_explicit_stepper_spectral.cpp`](../../examples/20_explicit_stepper_spectral.cpp) for the spectral backend. Both solve the same heat equation with identical physics (`HeatModel::rhs`) but different gradient evaluators.
+See [`../../examples/heat/finite-differences/model.cpp`](../../examples/heat/finite-differences/model.cpp) for the FD backend and [`../../examples/20_explicit_stepper_spectral.cpp`](../../examples/20_explicit_stepper_spectral.cpp) for the spectral backend. Both solve the same heat equation with identical physics (`HeatModel::rhs`) but different gradient evaluators.
 
 ## Stability considerations
 

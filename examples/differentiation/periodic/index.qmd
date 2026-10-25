@@ -156,7 +156,7 @@ They do not validate nonperiodic data, nonsmooth derivatives, or arbitrary
 MPI process counts. The Nyquist first-derivative multiplier is zero in
 OpenPFC's real-valued Fourier convention.
 
-Continue with heat flow from neighbouring values.
+Continue with [heat flow from neighbouring values](../../heat/finite-differences/index.qmd).
 
 The complete [C++ model](model.cpp) and [starting input](input.json)
 are available with this lesson.

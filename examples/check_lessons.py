@@ -21,6 +21,56 @@ def run(command: list[str], cwd: Path, success: bool = True) -> None:
         raise AssertionError(f"{command}\n{result.stdout}\n{result.stderr}")
 
 
+def check_heat(executable: str, method: str, root: Path, launch: list[str]) -> None:
+    directory = root / method
+    directory.mkdir()
+    parameters = {"n": 16, "steps": 20, "dt": 0.002, "diffusivity": 0.7}
+    source = directory / "input.json"
+    source.write_text(json.dumps(parameters))
+    run([*launch, executable, str(source)], directory)
+
+    # Analytic eigenvalue of the discrete stencil; no OpenPFC routines are used.
+    n, dt, diffusion, steps = (parameters[key] for key in ("n", "dt", "diffusivity", "steps"))
+    h = 2.0 * math.pi / n
+    eigenvalue = -12.0 * math.sin(h / 2.0) ** 2 / h**2 if method in ("fd", "separated") else -3.0
+    amplitude = 0.2 * (math.exp(eigenvalue * diffusion * dt * steps) if method == "exponential"
+                       else (1.0 + dt * diffusion * eigenvalue) ** steps)
+    fields = list((directory / "results").glob("field_rank_*.csv"))
+    count = 0
+    owned = set()
+    for field in fields:
+        for row in csv.DictReader(field.open()):
+            x, y, z, value = (float(row[key]) for key in ("x", "y", "z", "u"))
+            index = tuple(round(point/h) for point in (x, y, z))
+            assert index not in owned, (method, index)
+            owned.add(index)
+            expected = 1.0 + amplitude * math.cos(x) * math.cos(y) * math.cos(z)
+            assert math.isfinite(value) and abs(value - expected) < 2e-11, (method, row, expected)
+            count += 1
+    assert count == n**3, (method, count)
+    assert owned == {(i,j,k) for k in range(n) for j in range(n) for i in range(n)}
+
+    rows = list(csv.DictReader((directory / "results/diagnostics.csv").open()))
+    assert len(rows) == steps + 1
+    previous = math.inf
+    for row in rows:
+        mean, fluctuation, error = (float(row[key]) for key in ("mean", "rms_fluctuation", "rms_error"))
+        assert math.isfinite(error) and abs(mean - 1.0) < 2e-12
+        assert 0.0 <= fluctuation <= previous + 2e-13
+        previous = fluctuation
+    continuum_amplitude = 0.2 * math.exp(-3.0 * diffusion * dt * steps)
+    expected_error = abs(amplitude - continuum_amplitude) / math.sqrt(8.0)
+    assert abs(float(rows[-1]["rms_error"]) - expected_error) < 2e-12
+
+    parameters["n"] = 7
+    source.write_text(json.dumps(parameters))
+    run([*launch, executable, str(source)], directory, success=False)
+    if method != "exponential":
+        parameters.update(n=16, dt=1.0)
+        source.write_text(json.dumps(parameters))
+        run([*launch, executable, str(source)], directory, success=False)
+
+
 def check_differentiation(binary, root, launch):
     directory = root / "differentiation"
     directory.mkdir()
@@ -43,7 +93,7 @@ def main():
     parser.add_argument("--launcher")
     parser.add_argument("--rank-flag", default="-n")
     parser.add_argument("--ranks", default=1, type=int)
-    parser.add_argument("--case", choices=['periodic_differentiation'])
+    parser.add_argument("--case", choices=['periodic_differentiation', '19_explicit_stepper_fd'])
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     bin_dir = args.bin_dir.resolve()
@@ -55,6 +105,10 @@ def main():
             root = base / "periodic_differentiation"
             root.mkdir()
             check_differentiation(bin_dir / "periodic_differentiation", root, launch)
+        if args.case in (None, "19_explicit_stepper_fd"):
+            root = base / "19_explicit_stepper_fd"
+            root.mkdir()
+            check_heat(str(bin_dir / "19_explicit_stepper_fd"), "fd", root, launch)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

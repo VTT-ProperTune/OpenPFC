@@ -76,7 +76,7 @@ new attempt. To use two MPI ranks, invoke the CLI once with
 `--ranks=2 --launcher=mpirun` in place of `--launcher=none`; each rank writes a
 separate field CSV, and the diagnostics remain global. GPU source profiles are
 not part of this starter. For further library examples see
-[`examples/19_explicit_stepper_fd.cpp`](../../examples/19_explicit_stepper_fd.cpp)
+[`examples/heat/finite-differences/model.cpp`](../../examples/heat/finite-differences/model.cpp)
 and the [extension guide](../extending_openpfc/README.md).
 
 ## Compile a user model

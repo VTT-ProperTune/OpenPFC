@@ -99,9 +99,14 @@
     },
     {
       "target": "19_explicit_stepper_fd",
-      "source": "19_explicit_stepper_fd.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "heat/finite-differences/model.cpp",
+      "chapter": "heat/finite-differences/index.qmd",
+      "capabilities": [
+        "fields",
+        "finite-differences",
+        "halo-exchange",
+        "explicit-euler"
+      ]
     },
     {
       "target": "20_explicit_stepper_spectral",
@@ -578,7 +583,9 @@
         "decomposition.hpp",
         "comm_halo_exchange.hpp"
       ],
-      "chapters": []
+      "chapters": [
+        "heat/finite-differences/index.qmd"
+      ]
     },
     {
       "name": "local and distributed FFT",
@@ -614,7 +621,9 @@
         "embedded_rk.hpp",
         "adaptive_controller.hpp"
       ],
-      "chapters": []
+      "chapters": [
+        "heat/finite-differences/index.qmd"
+      ]
     },
     {
       "name": "multi-field runtime integration",
