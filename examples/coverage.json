@@ -235,6 +235,17 @@
       ]
     },
     {
+      "target": "allen_cahn_fixed",
+      "source": "polynomials/allen-cahn-fixed/model.cpp",
+      "chapter": "polynomials/allen-cahn-fixed/index.qmd",
+      "capabilities": [
+        "chebyshev-reference",
+        "explicit-euler",
+        "nonlinear-models",
+        "boundary-conditions"
+      ]
+    },
+    {
       "target": "cardinal_interpolation",
       "source": "interpolation/cardinal/model.cpp",
       "chapter": "interpolation/cardinal/index.qmd",
@@ -1016,7 +1027,7 @@
       "program": 34,
       "title": "Allen-Cahn eq. u_t = eps*u_xx+u-u^3, u(-1)=-1, u(1)=1",
       "source": "https://people.maths.ox.ac.uk/trefethen/p34.m",
-      "chapter": null,
+      "chapter": "polynomials/allen-cahn-fixed/index.qmd",
       "scope": "Original degree-20 Allen–Cahn equation, epsilon=.01, fixed endpoints, lifted full Chebyshev D2 and explicit Euler through t=100. Native EulerStepper advances the vector; barycentric interpolation replaces monomial display fitting. An operator-based timestep cap applies to refinements and preserves the original degree-20 default."
     },
     {
@@ -1272,6 +1283,7 @@
       ],
       "chapters": [
         "waves/kdv/index.qmd",
+        "polynomials/allen-cahn-fixed/index.qmd",
         "phase-fields/cahn-hilliard/index.qmd"
       ]
     }

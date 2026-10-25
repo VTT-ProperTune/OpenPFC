@@ -33,7 +33,7 @@ c_t&=M\Delta\mu.
 \end{aligned}
 $$ {#eq-physics}
 
-Unlike Allen–Cahn, this
+Unlike [Allen–Cahn](../../polynomials/allen-cahn-fixed/index.qmd), this
 kinetic law conserves the mean composition. For a smooth periodic
 continuum solution, integration by parts gives
 $dF/dt=-M\int|\nabla\mu|^2\,d\mathbf x\le0$.

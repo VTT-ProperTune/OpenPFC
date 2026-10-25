@@ -324,6 +324,57 @@ def check_kdv(binary, root):
     run(binary, root / "bad-kdv", parameters={"dt": 1}, success=False)
 
 
+def check_allen(binary, root, driven):
+    folder = root / ("allen-driven" if driven else "allen-fixed")
+    n, dt = 8, 0.01
+    run(binary, folder, parameters={"n": n, "dt": dt, "end": 0.2, "saveat": 0.05})
+    saved = snapshots(folder / "results/allen_cahn.csv", "node")
+    x, d2 = lagrange_second(n)
+    u = [0.53 * p + 0.47 * math.sin(-1.5 * math.pi * p) for p in x]
+    u[0], u[-1] = 1, -1
+    for step in range(1, 21):
+        homogeneous = u if driven else [a - b for a, b in zip(u, x)]
+        curvature = apply(d2, homogeneous)
+        if not driven:
+            curvature[0] = curvature[-1] = 0
+        u = [p + dt * (0.01 * c + p - p**3) for p, c in zip(u, curvature)]
+        if driven:
+            u[0], u[-1] = 1 + math.sin(step * dt / 5) ** 2, -1
+        if step in saved:
+            close(saved[step], u)
+    fields = []
+    for dt in (0.01, 0.005, 0.0025):
+        folder = root / f"allen-order-{driven}-{dt}"
+        run(binary, folder, parameters={"n": 12, "dt": dt, "end": 0.2, "saveat": 0.2})
+        fields.append(
+            list(snapshots(folder / "results/allen_cahn.csv", "node").values())[-1]
+        )
+    differences = [
+        max(abs(a - b) for a, b in zip(fields[i], fields[i + 1])) for i in range(2)
+    ]
+    assert 1.9 < differences[0] / differences[1] < 2.1, differences
+    # At degree 40 the book's large-N step factor is outside Euler's region.
+    # The default must tighten the step rather than produce a divergent field.
+    folder = root / f"allen-refinement-{driven}"
+    run(binary, folder, parameters={"n": 40, "end": 2, "saveat": 2})
+    data = table(folder / "results/allen_cahn.csv")
+    assert all(
+        math.isfinite(float(row["u"])) and abs(float(row["u"])) < 2.01 for row in data
+    )
+    final = [row for row in data if abs(float(row["time"]) - 2) < 1e-12]
+    actual_dt = 2 / int(final[0]["step"])
+    _, d2 = lagrange_second(40)
+    bound = max(sum(abs(v) for v in row[1:40]) for row in d2[1:40])
+    assert actual_dt * (0.01 * bound + 11) <= 1.8 * (1 + 1e-12)
+    run(
+        binary,
+        root / f"bad-allen-step-{driven}",
+        parameters={"n": 40, "dt": 50 / (40**4 * 0.01)},
+        success=False,
+    )
+    run(binary, root / f"bad-allen-{driven}", parameters={"epsilon": 0}, success=False)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -338,6 +389,7 @@ def main():
             "chebyshev_wave_square",
             "mixed_wave_tank",
             "kdv_integrating_factor",
+            "allen_cahn_fixed",
         ],
     )
     args = parser.parse_args()
@@ -365,6 +417,10 @@ def main():
             root = base / "kdv_integrating_factor"
             root.mkdir()
             check_kdv(bin_dir / "kdv_integrating_factor", root)
+        if args.case in (None, "allen_cahn_fixed"):
+            root = base / "allen_cahn_fixed"
+            root.mkdir()
+            check_allen(bin_dir / "allen_cahn_fixed", root, False)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 
