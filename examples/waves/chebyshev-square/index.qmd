@@ -101,7 +101,7 @@ openpfc run model.cpp input.json --source-root .. --launcher=none
 The model checks `dt*n*n <= 6` after output-time adjustment and runs
 on one process. Keep the [source](model.cpp), [input](input.json) and
 [shared FFT helper](../lesson.hpp) together.
-Next combine periodic and reflecting directions.
+Next combine [periodic and reflecting directions](../mixed-tank/index.qmd).
 
 ## References
 ::: {#refs}

@@ -139,6 +139,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `disk_poisson` | `polynomials/poisson-disk/model.cpp` | Polar Poisson, manufactured fields and regularity-limited convergence |
 | `chebyshev_wave_line` | `waves/chebyshev-line/model.cpp` | A pulse meets the end of an interval |
 | `chebyshev_wave_square` | `waves/chebyshev-square/model.cpp` | Let a wave spread across a square |
+| `mixed_wave_tank` | `waves/mixed-tank/model.cpp` | A wave tank has two kinds of edge |
 
 ## Research prototypes
 

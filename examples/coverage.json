@@ -443,6 +443,17 @@
       "capabilities": []
     },
     {
+      "target": "mixed_wave_tank",
+      "source": "waves/mixed-tank/model.cpp",
+      "chapter": "waves/mixed-tank/index.qmd",
+      "capabilities": [
+        "local-fft",
+        "chebyshev-reference",
+        "mixed-discretization",
+        "neumann-boundaries"
+      ]
+    },
+    {
       "target": "mpi_timers",
       "source": "diagnostics/mpi-timing/model.cpp",
       "chapter": "diagnostics/mpi-timing/index.qmd",
@@ -1014,7 +1025,7 @@
       "program": 37,
       "title": "2D \"wave tank\" with Neumann BCs for |y|=1",
       "source": "https://people.maths.ox.ac.uk/trefethen/p37.m",
-      "chapter": null,
+      "chapter": "waves/mixed-tank/index.qmd",
       "scope": "Original A=3, Nx=50, Ny=15 wave tank, Gaussian, nominal-step startup and Neumann reconstruction after each leapfrog update. FFT actions replace equivalent dense Fourier/Chebyshev matrices. Exact standing-mode and Taylor-start presets are additional checks."
     },
     {

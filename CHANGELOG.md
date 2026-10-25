@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Teach periodic propagation with nonperiodic Neumann walls through a mixed transform tank. Check complete fields, boundary elimination and timestep convergence independently.
+
 - Build a tensor wave action from native one-dimensional derivatives. Explain startup error and verify complete evolving fields through independent nodal differentiation.
 
 - Follow a reflecting pulse with native Chebyshev differentiation. Distinguish the original first-order startup from a Taylor startup and check complete fields and timestep refinement.
