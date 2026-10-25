@@ -98,6 +98,7 @@ add_subdirectory(fourier)
 add_subdirectory(geometry)
 add_subdirectory(heat)
 add_subdirectory(interpolation)
+add_subdirectory(waves)
 
 if(OpenPFC_BUILD_TESTS)
   find_package(Python3 COMPONENTS Interpreter REQUIRED)
@@ -232,6 +233,16 @@ if(OpenPFC_BUILD_TESTS)
   add_test(NAME example-world-strong-types-example
            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_foundations.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case world_strong_types_example)
   set_tests_properties(example-world-strong-types-example PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  add_test(NAME example-variable-transport
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_dynamics.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case variable_transport)
+  set_tests_properties(example-variable-transport PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
+    add_test(NAME example-variable-transport-mpi
+             COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_dynamics.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case variable_transport
+                     --launcher "${MPIEXEC_EXECUTABLE}" "--rank-flag=${MPIEXEC_NUMPROC_FLAG}" --ranks 2)
+    set_tests_properties(example-variable-transport-mpi PROPERTIES PROCESSORS 2 TIMEOUT 360
+                         ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+  endif()
 endif()
 
 add_executable(23_halo_microtiming 23_halo_microtiming.cpp)

@@ -333,6 +333,17 @@
       "capabilities": []
     },
     {
+      "target": "variable_transport",
+      "source": "waves/variable-transport/model.cpp",
+      "chapter": "waves/variable-transport/index.qmd",
+      "capabilities": [
+        "spectral-gradients",
+        "fields",
+        "mpi",
+        "variable-coefficients"
+      ]
+    },
+    {
       "target": "world_helpers_example",
       "source": "geometry/grid-spacing/model.cpp",
       "chapter": "geometry/grid-spacing/index.qmd",
@@ -419,7 +430,7 @@
       "program": 6,
       "title": "variable coefficient wave equation",
       "source": "https://people.maths.ox.ac.uk/trefethen/p6.m",
-      "chapter": null,
+      "chapter": "waves/variable-transport/index.qmd",
       "scope": "Original variable-speed Gaussian experiment and book startup preset, with a consistent Taylor startup and characteristic reference added."
     },
     {

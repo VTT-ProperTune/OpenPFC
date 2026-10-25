@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Teach a wave equation with characteristic motion and leapfrog startup. Check complete transported profiles, timestep order and invalid controls against independent characteristic integration.
+
 - Demonstrate anisotropic spacing and nonzero origin through a short coordinate map. Check forward and reverse indices against explicit Cartesian formulas.
 
 - Use strong grid, origin and spacing arguments in a small geometry lesson. Preserve the executable name and verify the resulting physical center and point count.
