@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
+include(${PROJECT_SOURCE_DIR}/cmake/OpenPFCAppRuntime.cmake)
+
 if(OpenPFC_ENABLE_HEFFTE)
   add_subdirectory(tungsten)
   add_subdirectory(aluminumNew)

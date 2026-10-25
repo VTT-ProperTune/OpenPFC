@@ -167,3 +167,11 @@ The relocatable consumer regression in
 [`tests/packaging/sdk_consumer`](../../tests/packaging/sdk_consumer) exercises the
 public contract, manifest queries and mismatch diagnostics. It is registered as
 `SDK_InstalledCompatibility` and runs through `scripts/build.sh` with tests enabled.
+
+## Application compiler runtime override
+
+Applications normally use the C++ runtime selected by the configured compiler.
+For a mixed compiler/vendor toolchain, set `OpenPFC_APP_CXX_RUNTIME` to an
+existing runtime library in a local CMake preset or with `--cmake-arg`.
+The Allen–Cahn, Wave2D and Kobayashi application links add that library and its
+RPATH only when explicitly configured. No site-specific paths are searched.

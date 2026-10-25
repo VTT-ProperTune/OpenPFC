@@ -3,43 +3,13 @@
 
 set(WAVE2D_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# Resolve the C++ runtime from the configured compiler so CUDA/HIP targets do
-# not accidentally link a stale module tree after a site compiler upgrade.
-set(_wave2d_libstdcxx_so "")
-if(DEFINED ENV{OPENPFC_LIBSTDCXX_SO} AND EXISTS "$ENV{OPENPFC_LIBSTDCXX_SO}")
-  set(_wave2d_libstdcxx_so "$ENV{OPENPFC_LIBSTDCXX_SO}")
-else()
-  execute_process(
-    COMMAND "${CMAKE_CXX_COMPILER}" -print-file-name=libstdc++.so
-    OUTPUT_VARIABLE _wave2d_libstdcxx_from_compiler
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    ERROR_QUIET)
-  if(_wave2d_libstdcxx_from_compiler MATCHES "^/" AND
-     EXISTS "${_wave2d_libstdcxx_from_compiler}")
-    set(_wave2d_libstdcxx_so "${_wave2d_libstdcxx_from_compiler}")
-  endif()
-endif()
-
-function(wave2d_link_libstdcxx target_name)
-  if(_wave2d_libstdcxx_so)
-    target_link_libraries(${target_name} PRIVATE "${_wave2d_libstdcxx_so}")
-    get_filename_component(_rpath "${_wave2d_libstdcxx_so}" DIRECTORY)
-    set_target_properties(${target_name} PROPERTIES
-      BUILD_RPATH "${_rpath}"
-      INSTALL_RPATH "${_rpath}")
-  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    target_link_libraries(${target_name} PRIVATE -lstdc++)
-  endif()
-endfunction()
-
 find_package(OpenMP COMPONENTS CXX)
 
 set(_wave2d_binaries wave2d_fd_manual wave2d_fd)
 foreach(_target IN LISTS _wave2d_binaries)
   add_executable(${_target} src/cpu/${_target}.cpp)
   target_include_directories(${_target} PRIVATE ${WAVE2D_INCLUDE_DIR})
-  target_link_libraries(${_target} PRIVATE OpenPFC::openpfc
-)
+  target_link_libraries(${_target} PRIVATE OpenPFC::openpfc)
   if(OpenMP_CXX_FOUND)
     target_link_libraries(${_target} PRIVATE OpenMP::OpenMP_CXX)
   endif()
@@ -78,7 +48,7 @@ if(WAVE2D_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     target_include_directories(test_wave2d_rk_convergence PRIVATE ${WAVE2D_INCLUDE_DIR})
     target_link_libraries(test_wave2d_rk_convergence PRIVATE OpenPFC::openpfc
                                               Catch2::Catch2)
-    wave2d_link_libstdcxx(test_wave2d_rk_convergence)
+    openpfc_app_link_cxx_runtime(test_wave2d_rk_convergence)
     add_test(NAME wave2d-rk-convergence COMMAND test_wave2d_rk_convergence)
   else()
     message(STATUS "wave2d: Catch2 not found, not building tests")
@@ -90,12 +60,12 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
   target_include_directories(wave2d_cuda PRIVATE ${WAVE2D_INCLUDE_DIR})
   target_link_libraries(wave2d_cuda PRIVATE OpenPFC::openpfc CUDA::cudart
                         openpfc_gpu_kernels)
-  wave2d_link_libstdcxx(wave2d_cuda)
+  openpfc_app_link_cxx_runtime(wave2d_cuda)
   set_target_properties(wave2d_cuda PROPERTIES
     CUDA_SEPARABLE_COMPILATION ON
     CUDA_STANDARD 20
     CUDA_STANDARD_REQUIRED ON
-)
+  )
   install(TARGETS wave2d_cuda DESTINATION bin)
 
   if(WAVE2D_ENABLE_TESTS AND OpenPFC_BUILD_TESTS AND TARGET Catch2::Catch2)
@@ -104,14 +74,13 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     target_include_directories(test_wave2d_cpu_vs_cuda PRIVATE ${WAVE2D_INCLUDE_DIR})
     target_link_libraries(test_wave2d_cpu_vs_cuda PRIVATE OpenPFC::openpfc
                                                             Catch2::Catch2
-                                                            CUDA::cudart openpfc_gpu_kernels
-)
-    wave2d_link_libstdcxx(test_wave2d_cpu_vs_cuda)
+                                                            CUDA::cudart openpfc_gpu_kernels)
+    openpfc_app_link_cxx_runtime(test_wave2d_cpu_vs_cuda)
     set_target_properties(test_wave2d_cpu_vs_cuda PROPERTIES
       CUDA_SEPARABLE_COMPILATION ON
       CUDA_STANDARD 20
       CUDA_STANDARD_REQUIRED ON
-)
+    )
     add_test(NAME wave2d-cpu-vs-cuda COMMAND test_wave2d_cpu_vs_cuda)
   endif()
 endif()
@@ -121,7 +90,7 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
   target_include_directories(wave2d_hip PRIVATE ${WAVE2D_INCLUDE_DIR})
   target_link_libraries(wave2d_hip PRIVATE OpenPFC::openpfc hip::host
                         openpfc_hip_kernels)
-  wave2d_link_libstdcxx(wave2d_hip)
+  openpfc_app_link_cxx_runtime(wave2d_hip)
   set_target_properties(wave2d_hip PROPERTIES LINKER_LANGUAGE CXX)
   install(TARGETS wave2d_hip DESTINATION bin)
 
@@ -131,9 +100,8 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
     target_include_directories(test_wave2d_cpu_vs_hip PRIVATE ${WAVE2D_INCLUDE_DIR})
     target_link_libraries(test_wave2d_cpu_vs_hip PRIVATE OpenPFC::openpfc
                                                          Catch2::Catch2 hip::host
-                                                         openpfc_hip_kernels
-)
-    wave2d_link_libstdcxx(test_wave2d_cpu_vs_hip)
+                                                         openpfc_hip_kernels)
+    openpfc_app_link_cxx_runtime(test_wave2d_cpu_vs_hip)
     set_target_properties(test_wave2d_cpu_vs_hip PROPERTIES LINKER_LANGUAGE CXX)
     add_test(NAME wave2d-cpu-vs-hip COMMAND test_wave2d_cpu_vs_hip)
   endif()

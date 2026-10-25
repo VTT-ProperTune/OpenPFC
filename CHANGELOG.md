@@ -9,6 +9,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 - App and example targets inherit HeFFTe from `OpenPFC::openpfc` (#654).
 
+- App compiler-runtime discovery and site paths are removed. Mixed toolchains
+  can explicitly set `OpenPFC_APP_CXX_RUNTIME` in their preset or cache (#654).
+
 - `openpfc bundle` can build a scratch image when `--base` is omitted. The image
   copies the host dynamic loader, the glibc libraries required by the model and
   by `/bin/sh`, and `/bin/sh` itself. Host MPI and fabric libraries stay outside.
