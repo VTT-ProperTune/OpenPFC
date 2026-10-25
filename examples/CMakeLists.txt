@@ -83,8 +83,6 @@ target_link_libraries(18_sobel_edge_detection PRIVATE OpenPFC::openpfc )
 # Explicit Euler stepper examples (FD and spectral backends)
 
 
-add_executable(21_adaptive_stepping 21_adaptive_stepping.cpp)
-target_link_libraries(21_adaptive_stepping PRIVATE OpenPFC::openpfc )
 
 add_executable(24_adaptive_etd 24_adaptive_etd.cpp)
 target_link_libraries(24_adaptive_etd PRIVATE OpenPFC::openpfc )
@@ -269,6 +267,16 @@ if(OpenPFC_BUILD_TESTS)
   add_test(NAME example-polynomial-nonlinear-boundary
            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_polynomials.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case polynomial_nonlinear_boundary)
   set_tests_properties(example-polynomial-nonlinear-boundary PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  add_test(NAME example-21-adaptive-stepping
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_workflows.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 21_adaptive_stepping)
+  set_tests_properties(example-21-adaptive-stepping PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
+    add_test(NAME example-21-adaptive-stepping-mpi
+             COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_workflows.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 21_adaptive_stepping
+                     --launcher "${MPIEXEC_EXECUTABLE}" "--rank-flag=${MPIEXEC_NUMPROC_FLAG}" --ranks 2)
+    set_tests_properties(example-21-adaptive-stepping-mpi PROPERTIES PROCESSORS 2 TIMEOUT 360
+                         ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+  endif()
 endif()
 
 add_executable(23_halo_microtiming 23_halo_microtiming.cpp)

@@ -158,9 +158,13 @@
     },
     {
       "target": "21_adaptive_stepping",
-      "source": "21_adaptive_stepping.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "integration/adaptive-rk/model.cpp",
+      "chapter": "integration/adaptive-rk/index.qmd",
+      "capabilities": [
+        "embedded-rk",
+        "adaptive-controller",
+        "attempt-transactions"
+      ]
     },
     {
       "target": "22_external_coupling",
@@ -810,7 +814,8 @@
       ],
       "chapters": [
         "heat/finite-differences/index.qmd",
-        "integration/stability/index.qmd"
+        "integration/stability/index.qmd",
+        "integration/adaptive-rk/index.qmd"
       ]
     },
     {
@@ -905,7 +910,9 @@
         "step_attempt.hpp",
         "simulation_lifecycle.hpp"
       ],
-      "chapters": []
+      "chapters": [
+        "integration/adaptive-rk/index.qmd"
+      ]
     },
     {
       "name": "profiling and communication diagnostics",

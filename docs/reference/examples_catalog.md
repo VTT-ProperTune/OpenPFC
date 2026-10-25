@@ -99,7 +99,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `world_strong_types_example` | `geometry/anisotropic-grid/model.cpp` | Strong types with `Domain` compatibility helpers |
 | `19_explicit_stepper_fd` | `heat/finite-differences/model.cpp` | Explicit stepping with finite-difference operators |
 | `20_explicit_stepper_spectral` | `heat/fourier/model.cpp` | Explicit stepping with spectral operators |
-| `21_adaptive_stepping` | `21_adaptive_stepping.cpp` | Adaptive Bogacki–Shampine 3(2) with `Time` attempt transactions |
+| `21_adaptive_stepping` | `integration/adaptive-rk/model.cpp` | Adaptive Bogacki–Shampine 3(2) with `Time` attempt transactions |
 | `22_external_coupling` | `22_external_coupling.cpp` | Mock FEM loop: `FieldHandle` export, `clip_attempt_dt`, FieldModifier-shaped source |
 | `23_halo_microtiming` | `23_halo_microtiming.cpp` | Timed `HaloExchange` loop; schema-v2 JSON (`--cuda` / `--hip` / `--full`) |
 | `24_adaptive_etd` | `24_adaptive_etd.cpp` | ETD1 step doubling: a heat mode against `exp(-k²t)`, then `∂t ψ = ∇²ψ − ψ³` with the memoryless controller |

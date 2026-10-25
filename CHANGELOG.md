@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Explain acceptance, rejection and error control with an adaptive native stepper. Preserve the executable and check complete fields, tolerance refinement and transactional ledgers on one and two ranks.
+
 - Use native Newton and Krylov solvers for a nonlinear interval problem. Compare the converged field with an independently determined exact branch and reject invalid controls.
 
 - Explain homogeneous, lifted and mixed boundary equations with the same collocation operator. Check entire fields and exact boundary constraints through independent formulas.

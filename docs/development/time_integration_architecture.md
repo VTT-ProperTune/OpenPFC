@@ -392,7 +392,7 @@ memoryless factor. `safety_factor` is applied once, outside the powers.
 `apply` stores the metric only after an accepted PI step; a zero metric
 clears it; a rejection leaves it. `capture_state` / `restore_state` keep
 that metric and the rejection streak. Fixed mode does not read or write the
-metric. Example: `examples/21_adaptive_stepping.cpp`. Coverage:
+metric. Example: `examples/integration/adaptive-rk/model.cpp`. Coverage:
 `tests/unit/kernel/simulation/test_adaptive_controller.cpp`.
 
 `ETD1StepDoubling` (`etd_step_doubling.hpp`) is the spectral estimator.
