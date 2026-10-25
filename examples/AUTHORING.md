@@ -57,6 +57,23 @@ python3 scripts/audit_example_book.py --sync
 python3 scripts/audit_example_book.py
 ```
 
+## Reproduce the comparison figures
+
+Run each model from the repository root so runtime artifacts stay under
+`results/`. Use separate result directories for differentiation and each
+heat method. With Matplotlib 3.11.2, draw the committed figures from their
+actual CSV outputs:
+
+```sh
+python3 examples/render_figures.py \
+  --differentiation results/derivative/convergence.csv \
+  --fd results/heat-fd/diagnostics.csv \
+  --fourier results/heat-fourier/diagnostics.csv \
+  --exponential results/heat-exponential/diagnostics.csv
+```
+
+The scripts use no numerical simulation during Quarto rendering.
+
 ## Render within the scientific website
 
 Use a disposable copy of `openpfc-pages`:
