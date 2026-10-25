@@ -42,17 +42,17 @@
 #include <omp.h>
 #endif
 
+#include <heat3d/reporting.hpp>
+#include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/domain/create.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/field/scaled_field.hpp>
 #include <openpfc/runtime/common/cpu_affinity.hpp>
-#include <heat3d/reporting.hpp>
 
 using pfc::field::operator*;
 using pfc::field::operator+=;
@@ -112,64 +112,23 @@ std::optional<RunConfig> parse_cli(int argc, char **argv) {
 // =============================================================================
 
 /**
- * @brief Heat equation solver using explicit finite-difference forward Euler integration
+ * @brief Evolve ∂u/∂t = D ∇²u with forward Euler on a periodic 3D box.
  *
- * @details This implementation solves the three-dimensional heat equation
- * ∂T/∂t = α * ∇²T on a fully periodic 3D box using explicit forward Euler
- * time integration with a 7-point finite-difference Laplacian stencil.
+ * D is fixed to one. The CLI selects the central finite-difference order
+ * (2, 4, ..., 20). Each step exchanges the padded field's face halos,
+ * evaluates the Laplacian with FDGradient, then updates u += dt * du.
+ * Storage padding and halo reach are fd_order / 2.
  *
- * @par Integrator method
- * Concrete integrator: explicit forward Euler (first-order, conditionally stable).
- * Each time step computes: T_next = T + dt * α * ∇²T, where the Laplacian is
- * evaluated using central finite differences with configurable order (2, 4, ..., 20).
- * This is a self-contained implementation that does not inherit from the Simulator
- * base class but demonstrates the same time-integration concepts.
+ * Forward Euler requires dt <= 2 / (D * spectral_radius(-Laplacian)).
+ * For the order-2 stencil on an isotropic grid this is dx² / (6D);
+ * higher orders have a different stability bound. The caller chooses dt.
+ * Uneven rank-owned boxes are handled by the decomposition and halo layer.
  *
- * @par Lifecycle stage ownership
- * This implementation owns the following lifecycle stages:
- * - Pre-step preparation: performs MPI halo exchange to synchronize ghost cell
- *   values across domain decomposition boundaries
- * - RHS evaluation (compute_rhs): computes the Laplacian using central finite
- *   differences via FDGradient evaluator
- * - Post-step updates: applies explicit Euler update: u += dt * α * ∇²u
- * - Output generation: computes L2 error against analytical solution (no VTK output)
- * - No checkpointing: this is a benchmark/educational solver without restart capability
+ * The driver reports the L2 error against the analytic heat solution.
+ * It does not write field files or checkpoints. This explicit educational
+ * driver has a fixed time step; the spectral propagator is a separate path.
  *
- * @par Boundary/halo synchronization
- * Boundary conditions and halo exchanges occur at:
- * - Pre-stage: MPI halo exchange via HaloExchange before each RHS evaluation
- * - The solver assumes periodic boundary conditions in all directions
- * - Halo width is automatically configured as fd_order/2 to accommodate the stencil
- * - HaloExchange handles six-face MPI communication for the halo ring
- *
- * @par Application-specific constraints
- * - Stability: the explicit forward Euler scheme requires dt ≤ dx²/(6α) in 3D for
- *   numerical stability (von Neumann analysis). Violating this constraint leads to
- *   exponential growth of numerical errors.
- * - Memory: uses two padded bricks (u and du) with halo regions for computation
- * - Spatial accuracy: finite-difference order is configurable (2, 4, ..., 20) via
- *   command line parameter; higher orders require wider halos and more computation
- * - Parallel: domain decomposition with MPI; must ensure global grid size is
- *   divisible by number of processes
- * - No adaptive time stepping: dt is fixed for the entire simulation
- *
- * @par Contract for substituting alternative integrators
- * To implement a different time-integration scheme in this code structure:
- * - Replace the explicit Euler update "u += cfg.dt * du" with the desired scheme
- * - For explicit multi-stage methods (e.g., Runge-Kutta), implement multiple RHS
- *   evaluations per time step with appropriate stage combinations
- * - For implicit methods, would need to solve linear systems and modify the
- *   halo exchange pattern accordingly
- * - Maintain the same pre-step halo exchange pattern for explicit schemes
- * - Preserve the L2 error calculation for verification purposes
- *
- * @note This is an educational implementation designed for clarity rather than
- *   production use. It demonstrates explicit connection between halo exchange,
- *   gradient evaluation, and time integration. For production thermal simulations,
- *   consider the SpectralHeatPropagator (implicit Euler) for unconditional stability.
- *
- * @see SpectralHeatPropagator for an implicit Euler implementation in Fourier space
- * @see Simulator for the base class contract on time-integration assumptions
+ * @see pfc::gradient::FDGradient for the configured derivative stencil
  */
 void run_fd(const RunConfig &cfg, int rank, int nproc) {
   // 1. Physics. This driver fixes D = 1 (same as `heat3d::kD` elsewhere) so the
@@ -232,9 +191,8 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
   heat3d::RunConfig heat_cfg =
       heat3d::make_cubic_config(cfg.N, cfg.n_steps, cfg.dt, cfg.fd_order);
   heat3d::print_median_wall_step_ms(rank, step_s);
-  heat3d::report(rank, nproc, heat_cfg, "fd",
-                 heat3d::fd_extra_metadata(heat_cfg), max_elapsed,
-                 "(periodic; interior L2)", [&u, hw](auto &&cb) {
+  heat3d::report(rank, nproc, heat_cfg, "fd", heat3d::fd_extra_metadata(heat_cfg),
+                 max_elapsed, "(periodic; interior L2)", [&u, hw](auto &&cb) {
                    const auto sz = u.local_size();
                    for (int k = hw; k < sz[2] - hw; ++k) {
                      for (int j = hw; j < sz[1] - hw; ++j) {
