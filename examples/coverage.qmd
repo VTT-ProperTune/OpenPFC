@@ -16,8 +16,8 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 [Follow what is taught, what is adapted, and what still needs a chapter.]{.lesson-deck}
 :::
 
-There are 58 declared runnable example targets and
-32 Quarto teaching chapters. The table includes older programs
+There are 59 declared runnable example targets and
+33 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -100,6 +100,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `23_halo_microtiming` | Pending conversion. |
 | `24_adaptive_etd` | [Read the lesson](integration/adaptive-etd/index.qmd) |
 | `cardinal_interpolation` | [Read the lesson](interpolation/cardinal/index.qmd) |
+| `checkpoint_restart` | [Read the lesson](output/checkpoint-restart/index.qmd) |
 | `coupled_fields_example` | Pending conversion. |
 | `diffusion_model_with_custom_initial_condition` | Pending conversion. |
 | `fft_backend_benchmark` | Pending conversion. |
@@ -161,7 +162,7 @@ fixed-step restart does not establish an adaptive restart contract.
 | initial conditions and modifiers | [coordinate-fields](geometry/coordinate-fields/index.qmd) |
 | JSON/TOML validation and application sessions | Pending a teaching chapter. |
 | field output and visualization | Pending a teaching chapter. |
-| checkpoints and restart | Pending a teaching chapter. |
+| checkpoints and restart | [checkpoint-restart](output/checkpoint-restart/index.qmd) |
 | Krylov and nonlinear solves | [integration](polynomials/integration/index.qmd), [boundary-values](polynomials/boundary-values/index.qmd), [nonlinear-boundary](polynomials/nonlinear-boundary/index.qmd) |
 | geometric multigrid | Pending a teaching chapter. |
 | microelasticity and homogenization | Pending a teaching chapter. |

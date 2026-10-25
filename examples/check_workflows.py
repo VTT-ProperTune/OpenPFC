@@ -215,6 +215,26 @@ def check_runtime(binary, root, launch):
     run(binary, root / "bad-runtime", launch, {"steps": 0}, success=False)
 
 
+def check_checkpoint(binary, directory, launch):
+    output = run(binary, directory, launch)
+    assert "checkpoint_step=3 final_step=8 result_counter=7" in output
+    data = rank_rows(directory, "restart")
+    assert len(data) == 256 and len({(r["i"], r["j"], r["k"]) for r in data}) == 256
+    for row in data:
+        finite(row, ("x", "uninterrupted", "restarted"))
+        expected = 0.95**8 * (1 + 0.2 * math.cos(float(row["x"])))
+        assert abs(float(row["restarted"]) - expected) < 2e-14
+        assert row["uninterrupted"] == row["restarted"]
+    metadata = json.loads(
+        (directory / "results/checkpoints/step_3/metadata.json").read_text()
+    )
+    assert (
+        metadata["accepted_increment"] == 3
+        and abs(metadata["accepted_time"] - 0.15) < 1e-13
+    )
+    assert metadata["result_counter"] == 7 and metadata["fields"] == ["u"]
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -230,6 +250,7 @@ def main():
             "time",
             "22_external_coupling",
             "runtime_coupled_fields",
+            "checkpoint_restart",
         ],
     )
     args = parser.parse_args()
@@ -261,6 +282,12 @@ def main():
             root = base / "runtime_coupled_fields"
             root.mkdir()
             check_runtime(bin_dir / "runtime_coupled_fields", root, launch)
+        if args.case in (None, "checkpoint_restart"):
+            root = base / "checkpoint_restart"
+            root.mkdir()
+            check_checkpoint(
+                bin_dir / "checkpoint_restart", root / "checkpoint", launch
+            )
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

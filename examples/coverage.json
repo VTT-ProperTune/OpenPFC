@@ -205,6 +205,17 @@
       ]
     },
     {
+      "target": "checkpoint_restart",
+      "source": "output/checkpoint-restart/model.cpp",
+      "chapter": "output/checkpoint-restart/index.qmd",
+      "capabilities": [
+        "checkpoint-service",
+        "binary-field-io",
+        "simulation-state",
+        "restart"
+      ]
+    },
+    {
       "target": "coupled_fields_example",
       "source": "coupled_fields/main.cpp",
       "chapter": null,
@@ -899,7 +910,9 @@
         "checkpoint_service.hpp",
         "binary_reader.hpp"
       ],
-      "chapters": []
+      "chapters": [
+        "output/checkpoint-restart/index.qmd"
+      ]
     },
     {
       "name": "Krylov and nonlinear solves",
