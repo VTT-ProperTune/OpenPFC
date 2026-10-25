@@ -1,0 +1,79 @@
+---
+title: "Many local bricks, one binary field"
+description: "Write and read a distributed field collectively, then verify the global x-fastest file layout."
+order: 59
+categories: [Output, MPI]
+targets: [write_results]
+capabilities: [binary-writer, binary-reader, mpi-io, field-layout]
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[OpenPFC / Make the result portable between ranks]{.lesson-kicker}
+
+# Many local bricks, one binary field
+
+[Each process owns a piece of the field. The file describes the global array.]{.lesson-deck}
+:::
+
+The old `write_results` demonstration assigned four hard-coded values to
+each of exactly two ranks. Here the decomposition supplies every rank's
+brick, so the same program works on one or multiple processes. An affine
+field makes the expected file values unambiguous:
+
+$$
+u(x,y,z)=1+x+2y+3z.
+$$ {#eq-field}
+
+The default grid has size $8\times4\times2$, origin $(-1,2,3)$ and
+spacing $(.25,.5,.75)$. Nonzero geometry catches a common mistake:
+writing local array indices as though they were physical coordinates.
+
+## Tell MPI-IO where the local brick belongs
+
+```{.cpp include="model.cpp" snippet="binary" dedent=4}
+```
+
+All processes in the communicator call `write` and `read`. The global
+dimensions, local dimensions and global offsets define the MPI file
+view. The owned buffer is compact, so its length is exactly the local
+brick product. Ghost padding is not part of this raw file.
+
+The filename's increment is 5, hence `results/field_0005.bin`. Writing
+a file does not store the field's geometry or a complete simulation
+checkpoint. Keep that metadata separately, or use
+the snapshot series or
+[checkpoint service](../checkpoint-restart/index.qmd) as appropriate.
+
+## Inspect the global layout independently
+
+The example additionally reads the complete file on rank zero using an
+ordinary C++ binary stream:
+
+```{.cpp include="model.cpp" snippet="read" dedent=6}
+```
+
+The flat offset is $i+N_x(j+N_yk)$: x varies fastest. This independent
+read checks both values and ordering. The file contains exactly
+$N_xN_yN_z$ native `double` values. It has no header, endianness tag or
+geometry block; do not infer cross-platform portability from exact
+round trips on the same platform.
+
+## Run on a different partition
+
+```sh
+openpfc run model.cpp input.json --source-root .. --launcher=none
+openpfc run model.cpp input.json --source-root .. --ranks=2 --launcher=mpirun
+```
+
+Both runs should print that all values were restored exactly. The tests
+also decode the raw file independently in Python and compare every global
+sample with @eq-field. Change `n` and predict the file size before running.
+The writer and reader are destroyed before the MPI environment is finalized.
+
+Keep the [model](model.cpp), [input](input.json) and
+[geometry helper](../lesson.hpp) together.
+:::

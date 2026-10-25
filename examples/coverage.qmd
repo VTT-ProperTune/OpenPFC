@@ -17,7 +17,7 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 :::
 
 There are 60 declared runnable example targets and
-43 Quarto teaching chapters. The table includes older programs
+44 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -136,7 +136,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `world_helpers_example` | [Read the lesson](geometry/grid-spacing/index.qmd) |
 | `world_query_helpers_example` | [Read the lesson](geometry/domain-queries/index.qmd) |
 | `world_strong_types_example` | [Read the lesson](geometry/anisotropic-grid/index.qmd) |
-| `write_results` | Pending conversion. |
+| `write_results` | [Read the lesson](output/binary-field/index.qmd) |
 
 ## Additional sources
 
@@ -162,7 +162,7 @@ fixed-step restart does not establish an adaptive restart contract.
 | exponential and adaptive ETD | [exponential](heat/exponential/index.qmd), [adaptive-etd](integration/adaptive-etd/index.qmd) |
 | initial conditions and modifiers | [coordinate-fields](geometry/coordinate-fields/index.qmd), [patterns](initialization/patterns/index.qmd), [catalog](initialization/catalog/index.qmd) |
 | JSON/TOML validation and application sessions | [session](configuration/session/index.qmd), [catalog](initialization/catalog/index.qmd) |
-| field output and visualization | Pending a teaching chapter. |
+| field output and visualization | [binary-field](output/binary-field/index.qmd) |
 | checkpoints and restart | [checkpoint-restart](output/checkpoint-restart/index.qmd) |
 | Krylov and nonlinear solves | [integration](polynomials/integration/index.qmd), [boundary-values](polynomials/boundary-values/index.qmd), [nonlinear-boundary](polynomials/nonlinear-boundary/index.qmd) |
 | geometric multigrid | Pending a teaching chapter. |

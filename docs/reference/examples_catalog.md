@@ -86,7 +86,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `mpi_timers` | `diagnostics/mpi-timing/model.cpp` | MPI timing |
 | `profiling_timer_report` | `diagnostics/profiling/model.cpp` | Profiling and timer reporting |
 | `time` | `integration/output-clock/model.cpp` | Time-stepping utilities |
-| `write_results` | `write_results.cpp` | Results I/O variant |
+| `write_results` | `output/binary-field/model.cpp` | Results I/O variant |
 | `diffusion_model_with_custom_initial_condition` | `diffusion_model_with_custom_initial_condition.cpp` | Diffusion with a custom initial condition |
 | `json_read` | `configuration/session/model.cpp` | Native JSON/TOML settings loader and spectral session factory |
 | `world_helpers_example` | `geometry/grid-spacing/model.cpp` | `Domain` compatibility helpers |

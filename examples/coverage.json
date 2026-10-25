@@ -540,9 +540,14 @@
     },
     {
       "target": "write_results",
-      "source": "write_results.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "output/binary-field/model.cpp",
+      "chapter": "output/binary-field/index.qmd",
+      "capabilities": [
+        "binary-writer",
+        "binary-reader",
+        "mpi-io",
+        "field-layout"
+      ]
     }
   ],
   "additional_sources": [
@@ -960,7 +965,9 @@
         "vtk_writer.hpp",
         "png_writer.hpp"
       ],
-      "chapters": []
+      "chapters": [
+        "output/binary-field/index.qmd"
+      ]
     },
     {
       "name": "checkpoints and restart",

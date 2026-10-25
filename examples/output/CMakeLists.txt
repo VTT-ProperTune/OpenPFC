@@ -4,3 +4,7 @@
 add_executable(checkpoint_restart checkpoint-restart/model.cpp)
 target_link_libraries(checkpoint_restart PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(checkpoint_restart PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(write_results binary-field/model.cpp)
+target_link_libraries(write_results PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(write_results PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")

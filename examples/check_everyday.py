@@ -186,6 +186,25 @@ def check_driver(binary, root, launch):
     run(binary, root / "bad-driver", launch, {"dt": 0}, success=False)
 
 
+def binary_values(path):
+    data = path.read_bytes()
+    assert len(data) % 8 == 0
+    return struct.unpack("=" + "d" * (len(data) // 8), data)
+
+
+def affine(i, j, k, t=0):
+    return 1 + (-1 + 0.25 * i) + 2 * (2 + 0.5 * j) + 3 * (3 + 0.75 * k) + t
+
+
+def check_binary(binary, root, launch):
+    folder = root / "binary"
+    run(binary, folder, launch, {"n": 8})
+    values = binary_values(folder / "results/field_0005.bin")
+    assert values == tuple(
+        affine(i, j, k) for k in range(2) for j in range(4) for i in range(8)
+    )
+
+
 def verify_first_domain(bin_dir, root, launch, ranks):
     assert "(-0.625,0.5,0)" in run(bin_dir / "first_domain", root)
     axes = table(root / "results/domain.csv")
@@ -208,6 +227,7 @@ def main():
             "json_read",
             "04_diffusion_model",
             "05_simulator",
+            "write_results",
         ],
     )
     args = parser.parse_args()
@@ -243,6 +263,10 @@ def main():
             root = base / "05_simulator"
             root.mkdir()
             check_driver(bin_dir / "05_simulator", root, launch)
+        if args.case in (None, "write_results"):
+            root = base / "write_results"
+            root.mkdir()
+            check_binary(bin_dir / "write_results", root, launch)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

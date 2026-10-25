@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Replace the output printout with a collective binary write and readback story. Preserve its target and check every stored value and owned coordinate independently.
+
 - Teach initialization, apply, step and save hooks through a partial-final-step heat run. Preserve its executable, update the output guide and check actual ledgers and fields on one and two ranks.
 
 - Turn the diffusion example into a backward-Euler Fourier lesson with visible multipliers. Preserve its target and independently check complete final fields and invalid grid controls.
