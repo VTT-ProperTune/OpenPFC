@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Make nodal products visible on uniform and Chebyshev grids. Check complete tables and connect the product magnitude with the interpolation remainder.
+
 - Explain why node placement matters by interpolating the Runge function on uniform and cosine grids. Check all sampled interpolation values with independent Lagrange products.
 
 - Draw and explain multistep and Runge-Kutta stability regions. Check the sampled amplification polynomials and negative-real-axis boundaries independently of the numerical model.

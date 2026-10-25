@@ -112,6 +112,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `variable_transport` | `waves/variable-transport/model.cpp` | Trefethen program 6, Fourier/leapfrog transport, startup and exact characteristics |
 | `stability_regions` | `integration/stability/model.cpp` | Trefethen program 25, public RK tableaus and multistep root-locus references |
 | `polynomial_interpolation` | `polynomials/interpolation/model.cpp` | Program 9: Runge interpolation on equally spaced and Chebyshev nodes |
+| `polynomial_nodal_polynomials` | `polynomials/nodal-polynomials/model.cpp` | Program 10: nodal products and complex-plane magnitude contours |
 
 ## Research prototypes
 

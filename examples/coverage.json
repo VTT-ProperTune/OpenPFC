@@ -313,6 +313,14 @@
       ]
     },
     {
+      "target": "polynomial_nodal_polynomials",
+      "source": "polynomials/nodal-polynomials/model.cpp",
+      "chapter": "polynomials/nodal-polynomials/index.qmd",
+      "capabilities": [
+        "complex-arithmetic"
+      ]
+    },
+    {
       "target": "profiling_timer_report",
       "source": "profiling_timer_report.cpp",
       "chapter": null,
@@ -475,7 +483,7 @@
       "program": 10,
       "title": "polynomials and corresponding equipotential curves",
       "source": "https://people.maths.ox.ac.uk/trefethen/p10.m",
-      "chapter": null,
+      "chapter": "polynomials/nodal-polynomials/index.qmd",
       "scope": "Original signed nodal products and complex-plane magnitude contours, evaluated directly from their roots."
     },
     {

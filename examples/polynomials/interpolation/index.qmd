@@ -85,7 +85,7 @@ evaluation cannot repair an ill-conditioned approximation problem.
 
 The regression check compares the complete default curve with an independent
 Lagrange-basis evaluation and checks every node. Continue with the
-nodal polynomial to see the node geometry
+[nodal polynomial](../nodal-polynomials/index.qmd) to see the node geometry
 in the complex plane.
 
 The complete [C++ model](model.cpp) and [starting input](input.json)

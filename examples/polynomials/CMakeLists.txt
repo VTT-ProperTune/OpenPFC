@@ -4,3 +4,7 @@
 add_executable(polynomial_interpolation interpolation/model.cpp)
 target_link_libraries(polynomial_interpolation PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(polynomial_interpolation PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(polynomial_nodal_polynomials nodal-polynomials/model.cpp)
+target_link_libraries(polynomial_nodal_polynomials PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(polynomial_nodal_polynomials PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")

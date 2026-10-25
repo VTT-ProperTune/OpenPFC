@@ -58,6 +58,25 @@ def check_interpolation(binary, directory):
     assert errors[0] > 1 and errors[1] < 0.03, errors
 
 
+def check_nodal(binary, directory):
+    run(binary, directory)
+    data = rows(directory / "results/potential.csv")
+    assert len(data) == 2 * 141 * 113
+    for row in data:
+        if row["grid"] != "chebyshev":
+            continue
+        z = complex(float(row["real"]), float(row["imag"]))
+        # U_15 from its three-term recurrence, not a product over the nodes.
+        previous, current = 1, 2 * z
+        for _ in range(2, 16):
+            previous, current = current, 2 * z * current - previous
+        exact = abs(2**-15 * (z * z - 1) * current)
+        assert abs(float(row["magnitude"]) - exact) < 2e-12 * max(1, exact)
+    line = rows(directory / "results/nodal.csv")
+    assert len(line) == 802
+    assert all(abs(float(r["value"])) < 1e-14 for r in line if abs(float(r["x"])) == 1)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -65,7 +84,9 @@ def main():
     parser.add_argument("--launcher")
     parser.add_argument("--rank-flag", default="-n")
     parser.add_argument("--ranks", default=1, type=int)
-    parser.add_argument("--case", choices=["polynomial_interpolation"])
+    parser.add_argument(
+        "--case", choices=["polynomial_interpolation", "polynomial_nodal_polynomials"]
+    )
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     bin_dir = args.bin_dir.resolve()
@@ -81,6 +102,16 @@ def main():
             check_interpolation(bin_dir / "polynomial_interpolation", root / "valid")
             run(
                 bin_dir / "polynomial_interpolation",
+                root / "invalid",
+                parameters={"n": 0, "sizes": [0]},
+                success=False,
+            )
+        if args.case in (None, "polynomial_nodal_polynomials"):
+            root = base / "polynomial_nodal_polynomials"
+            root.mkdir()
+            check_nodal(bin_dir / "polynomial_nodal_polynomials", root / "valid")
+            run(
+                bin_dir / "polynomial_nodal_polynomials",
                 root / "invalid",
                 parameters={"n": 0, "sizes": [0]},
                 success=False,
