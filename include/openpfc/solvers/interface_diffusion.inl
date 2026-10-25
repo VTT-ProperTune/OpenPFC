@@ -77,7 +77,8 @@ inline void project_orthogonal(double *coeff, int width, double modes[4][7],
 inline void TransmissionOperator::apply(const std::vector<double> &u,
                                         std::vector<double> &y) const {
   if (u.size() != static_cast<std::size_t>(node_count) || &u == &y)
-    throw std::invalid_argument("transmission apply needs a matching, distinct output");
+    throw std::invalid_argument(
+        "transmission apply needs a matching, distinct output");
   y.assign(u.size(), 0.0);
   std::vector<char> done(static_cast<std::size_t>(node_count), 0);
   for (const TransmissionRow &row : interface_row) {
@@ -128,11 +129,11 @@ inline double TransmissionOperator::diagonal(int node) const {
 inline TransmissionOperator build_transmission(const geometry::Implicit &shape,
                                                const TransmissionRequest &request) {
   using geometry::Vec3;
-  if (request.cells < 1 || !(request.kappa_minus > 0) ||
-      !(request.kappa_plus > 0) || !std::isfinite(request.kappa_minus) ||
-      !std::isfinite(request.kappa_plus) || !std::isfinite(request.theta_floor) ||
-      request.theta_floor < 0)
-    throw std::invalid_argument("transmission needs positive finite diffusivities and grid size");
+  if (request.cells < 1 || !(request.kappa_minus > 0) || !(request.kappa_plus > 0) ||
+      !std::isfinite(request.kappa_minus) || !std::isfinite(request.kappa_plus) ||
+      !std::isfinite(request.theta_floor) || request.theta_floor < 0)
+    throw std::invalid_argument(
+        "transmission needs positive finite diffusivities and grid size");
   const auto nodes = static_cast<long long>(request.cells) + 1;
   if (nodes > 1290 || nodes * nodes * nodes > std::numeric_limits<int>::max())
     throw std::overflow_error("transmission node indices overflow");
