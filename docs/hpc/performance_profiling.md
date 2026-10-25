@@ -92,7 +92,7 @@ Include the umbrella header:
 #include <openpfc/kernel/profiling/profiling.hpp>
 ```
 
-Example: `examples/profiling_timer_report.cpp` builds a session with an empty catalog, auto-registers paths via `OPENPFC_PROFILE` and `ProfilingManualScope`, and prints `print_profiling_timer`.
+Example: `examples/diagnostics/profiling/model.cpp` builds a session with an empty catalog, auto-registers paths via `OPENPFC_PROFILE` and `ProfilingManualScope`, and prints `print_profiling_timer`.
 
 ## Export format (schema versions 2 and 3)
 

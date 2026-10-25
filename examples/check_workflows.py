@@ -250,6 +250,36 @@ def check_parallel(bin_dir, root, launch, ranks):
                 assert int(row["finalized"]) == 1
 
 
+def check_profiling(binary, directory, launch, ranks):
+    output = run(binary, directory, launch)
+    assert "frames=4 recurrence_error=" in output
+    profile = json.loads((directory / "results/profile.json").read_text())
+    assert profile["schema_version"] == 3 and profile["run_id"] == "teaching"
+    assert profile["n_mpi_ranks"] == ranks and profile["total_frames"] == 4 * ranks
+    assert set(profile["region_paths"]) == {
+        "step",
+        "step/rhs",
+        "step/update",
+        "diagnostics",
+        "diagnostics/norm",
+    }
+    rms = profile["frame_metric_names"].index("rms")
+
+    def times(regions):
+        for key, value in regions.items():
+            if isinstance(value, dict):
+                yield from times(value)
+            elif key in ("inclusive", "exclusive"):
+                assert math.isfinite(value) and value >= 0
+                yield value
+
+    for rank in profile["ranks"]:
+        assert rank["n_frames"] == 4
+        for step, frame in enumerate(rank["frames"], 1):
+            assert abs(frame["scalars"][rms] - 0.99**step) < 1e-13
+            assert list(times(frame["regions"]))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -267,6 +297,7 @@ def main():
             "runtime_coupled_fields",
             "checkpoint_restart",
             "mpi_worker",
+            "profiling_timer_report",
         ],
     )
     args = parser.parse_args()
@@ -308,6 +339,12 @@ def main():
             root = base / "mpi_worker"
             root.mkdir()
             check_parallel(bin_dir, root, launch, ranks)
+        if args.case in (None, "profiling_timer_report"):
+            root = base / "profiling_timer_report"
+            root.mkdir()
+            check_profiling(
+                bin_dir / "profiling_timer_report", root / "profiling", launch, ranks
+            )
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

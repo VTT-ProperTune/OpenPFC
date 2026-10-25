@@ -407,9 +407,14 @@
     },
     {
       "target": "profiling_timer_report",
-      "source": "profiling_timer_report.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "diagnostics/profiling/model.cpp",
+      "chapter": "diagnostics/profiling/index.qmd",
+      "capabilities": [
+        "profiling-session",
+        "nested-timers",
+        "profiling-export",
+        "mpi-aggregation"
+      ]
     },
     {
       "target": "runtime_coupled_fields",
@@ -976,7 +981,8 @@
         "mpi/timer.hpp"
       ],
       "chapters": [
-        "diagnostics/mpi-timing/index.qmd"
+        "diagnostics/mpi-timing/index.qmd",
+        "diagnostics/profiling/index.qmd"
       ]
     },
     {

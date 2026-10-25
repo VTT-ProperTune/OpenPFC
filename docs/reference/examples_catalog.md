@@ -84,7 +84,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `mpi_worker` | `parallel/hello/model.cpp` | MPI worker pattern |
 | `mpi_worker_inside_class` | `parallel/session/model.cpp` | MPI worker encapsulated in a class |
 | `mpi_timers` | `diagnostics/mpi-timing/model.cpp` | MPI timing |
-| `profiling_timer_report` | `profiling_timer_report.cpp` | Profiling and timer reporting |
+| `profiling_timer_report` | `diagnostics/profiling/model.cpp` | Profiling and timer reporting |
 | `time` | `integration/output-clock/model.cpp` | Time-stepping utilities |
 | `write_results` | `write_results.cpp` | Results I/O variant |
 | `diffusion_model_with_custom_initial_condition` | `diffusion_model_with_custom_initial_condition.cpp` | Diffusion with a custom initial condition |

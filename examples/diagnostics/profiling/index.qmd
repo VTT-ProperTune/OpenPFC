@@ -1,0 +1,79 @@
+---
+title: "Give measured work a name"
+description: "Record real Euler updates with nested scopes, a custom scalar metric and a collective JSON export."
+order: 36
+categories: [Diagnostics, Simulation workflows]
+capabilities: ["profiling-session", "nested-timers", "profiling-export", "mpi-aggregation"]
+targets: [profiling_timer_report]
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[OpenPFC / Build a simulation]{.lesson-kicker}
+
+# Give measured work a name
+
+[Record real Euler updates with nested scopes, a custom scalar metric and a collective JSON export.]{.lesson-deck}
+:::
+
+A useful profiling report connects measured time with identifiable work.
+This refactors the synthetic spin demonstration into four Euler updates
+of $u_t=-u$ on a small vector. Each rank computes its own identical vector;
+this is a profiling-contract example, not a distributed speedup experiment.
+
+## Nest regions around actual operations
+
+```{.cpp include="model.cpp" snippet="scopes" dedent=4}
+```
+
+`step` encloses `step/rhs` and `step/update`. Inclusive time contains child
+regions; exclusive time removes their contribution. A manual scope records
+the norm calculation separately. The session explicitly registers the
+custom `rms` frame metric before setting it. Unknown scalar metric names
+would otherwise be ignored.
+The three memory counters passed to the frame helper are zero because this
+example does not measure memory usage; they are not evidence of zero allocations.
+
+Four frames mean four recorded outer iterations. The report's call count
+reflects frames in which a path recorded time, not a general-purpose count
+of every invocation of an arbitrarily repeated inner scope. Repeated work
+within a frame contributes to its accumulated path time.
+The implicit `diagnostics` parent groups the measured `norm` child; it has
+no enclosing timed scope of its own. Its zero time and placeholder count
+must not be interpreted as a measured outer-region invocation.
+
+## Export and print collectively
+
+```{.cpp include="model.cpp" snippet="export" dedent=4}
+```
+
+Every rank participates in the export and aggregate report. The JSON is
+`results/profile.json`, with schema version 3, a `teaching` run identifier
+and equation metadata. Each rank's frames remain separately identifiable.
+The default console statistic combines per-rank totals as documented by
+the profiling interface; it is not an additional elapsed wall-clock timer.
+
+## Keep numerical and timing checks separate
+
+```sh
+openpfc run model.cpp input.json --launcher=none
+openpfc run model.cpp input.json --ranks=2 --launcher=mpirun
+```
+
+The empty input is unused. The numerical oracle after $m$ updates is
+$u=(1-.01)^m$. Tests check the final recurrence, all four RMS metrics on
+every rank, the exported frame counts and region hierarchy, and finite
+nonnegative recorded durations. No duration is promoted to a benchmark
+claim. Timing instrumentation also has overhead, especially for such tiny
+regions; use larger representative work when investigating performance.
+See the
+[profiling session contract](https://github.com/VTT-ProperTune/OpenPFC/blob/master/include/openpfc/kernel/profiling/session.hpp)
+and the handbook's profiling guide for larger applications.
+
+The complete [C++ model](model.cpp) and [starting input](input.json)
+are available with this lesson.
+
+:::

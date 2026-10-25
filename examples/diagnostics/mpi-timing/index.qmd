@@ -54,7 +54,7 @@ assert that a particular machine finishes in a fixed number of microseconds.
 Change `n`, then move the reduction inside the timing boundary and explain
 what the new quantity includes. Call `reset()` before a fresh measurement
 series; every `toc()` must have a matching `tic()`. Continue with
-structured profiling, which gives names and
+[structured profiling](../profiling/index.qmd), which gives names and
 nesting to regions across accepted frames. The
 [timer header](https://github.com/VTT-ProperTune/OpenPFC/blob/master/include/openpfc/kernel/mpi/timer.hpp)
 defines lap accumulation.
