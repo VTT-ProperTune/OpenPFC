@@ -68,3 +68,11 @@ set_target_properties(davies_pseudospectra PROPERTIES RUNTIME_OUTPUT_DIRECTORY "
 add_executable(orr_sommerfeld orr-sommerfeld/model.cpp)
 target_link_libraries(orr_sommerfeld PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(orr_sommerfeld PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(disk_eigenmodes disk-modes/model.cpp)
+target_link_libraries(disk_eigenmodes PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(disk_eigenmodes PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(disk_poisson poisson-disk/model.cpp)
+target_link_libraries(disk_poisson PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(disk_poisson PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")

@@ -135,6 +135,8 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `clamped_plate` | `polynomials/clamped-plate/model.cpp` | Twenty-five clamped square-plate modes and repeated frequencies |
 | `davies_pseudospectra` | `polynomials/pseudospectra/model.cpp` | Small singular values reveal spectral sensitivity |
 | `orr_sommerfeld` | `polynomials/orr-sommerfeld/model.cpp` | Complex generalized Orr–Sommerfeld spectra and near-neutral growth |
+| `disk_eigenmodes` | `polynomials/disk-modes/model.cpp` | Fourier/Chebyshev disk modes and Bessel frequency checks |
+| `disk_poisson` | `polynomials/poisson-disk/model.cpp` | Polar Poisson, manufactured fields and regularity-limited convergence |
 
 ## Research prototypes
 

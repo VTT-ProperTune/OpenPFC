@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Complete the disk eigenmode and Poisson pair with native Chebyshev differentiation, FFTs and GMRES. Explain signed-radius parity and check Bessel spectra, exact forcing, manufactured fields and radial refinement.
+
 - Teach a complex generalized eigenproblem at all four original resolutions. Check every original-pencil residual, leading-mode refinement and a second Reynolds number, with native helper regression coverage.
 
 - Reproduce the degree-70 complex oscillator experiment without forming normal equations. Check small singular values with independent shifted solves and show the original complex-plane grid.

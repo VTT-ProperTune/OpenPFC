@@ -310,6 +310,29 @@
       "capabilities": []
     },
     {
+      "target": "disk_eigenmodes",
+      "source": "polynomials/disk-modes/model.cpp",
+      "chapter": "polynomials/disk-modes/index.qmd",
+      "capabilities": [
+        "native-chebyshev",
+        "local-fft",
+        "polar-operators-reference",
+        "eigenproblem-reference"
+      ]
+    },
+    {
+      "target": "disk_poisson",
+      "source": "polynomials/poisson-disk/model.cpp",
+      "chapter": "polynomials/poisson-disk/index.qmd",
+      "capabilities": [
+        "native-chebyshev",
+        "local-fft",
+        "gmres",
+        "polar-operators-reference",
+        "manufactured-solutions"
+      ]
+    },
+    {
       "target": "fft_backend_benchmark",
       "source": "fft_backend_benchmark.cpp",
       "chapter": null,
@@ -906,14 +929,14 @@
       "program": 28,
       "title": "eigenmodes of Laplacian on the disk (compare p22.m)",
       "source": "https://people.maths.ox.ac.uk/trefethen/p28.m",
-      "chapter": null,
+      "chapter": "polynomials/disk-modes/index.qmd",
       "scope": "Original N25,M20 disk Laplacian, complete 240-mode spectrum with angular multiplicity, selected modes 1,3,6,10 and frequency ratios. Native Chebyshev derivatives and equivalent Fourier radial blocks; Bessel references and full-matrix qualification. Polar fields with nodal lines replace wireframe projection."
     },
     {
       "program": 29,
       "title": "solve Poisson equation on the unit disk",
       "source": "https://people.maths.ox.ac.uk/trefethen/p29.m",
-      "chapter": null,
+      "chapter": "polynomials/poisson-disk/index.qmd",
       "scope": "Original N31,M40 forcing and zero-boundary disk solution. Native FFT separation and GMRES solve the equivalent original polar matrix; exact separated and smooth manufactured references, N63 radial refinement and independent full-matrix qualification. Non-smooth pole forcing is explicit."
     },
     {
