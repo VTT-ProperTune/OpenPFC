@@ -54,7 +54,7 @@ export HEAT3D_HIP_BIN=/path/to/heat3d_fd_hip
 ```
 
 OpenPFC `#124` 1-node GPU cost matrix
-(\(N=512,1024\), spectral + FD-2/8/12, three repeats):
+($N=512,1024$, spectral + FD-2/8/12, three repeats):
 [Heat3D N^3 cost](../hpc/heat3d_n3_cost.md).
 
 ```bash

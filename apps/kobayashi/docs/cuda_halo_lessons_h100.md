@@ -48,7 +48,7 @@ On **B**, **`cudaStreamSynchronize`** also dominates **CUDA API time** in this r
 
 **Lessons:**
 
-1. **Huge `Num Calls` on GPU-aware does not mean we exchange the full volume each step** — total halo **bytes** are still \(O(\text{face area})\); the problem is **how** the stack implements **`MPI_Type_subarray` on GPU memory**.
+1. **Huge `Num Calls` on GPU-aware does not mean we exchange the full volume each step** — total halo **bytes** are still $O(\text{face area})$; the problem is **how** the stack implements **`MPI_Type_subarray` on GPU memory**.
 2. **Packed mode collapses the memcpy storm** at the price of **explicit staging** and **many stream synchronizations** (**33,600** `cudaStreamSynchronize` calls vs **39.3M** driver-level **`cuStreamSynchronize`** pairs on **A**) — still a vastly smaller **memcpy** count (**28,800** vs **39.3M**).
 
 ---

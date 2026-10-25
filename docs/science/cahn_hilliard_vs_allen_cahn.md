@@ -11,11 +11,11 @@ Both names describe **interface-driven** continuum models, but the **shipped Ope
 
 | | |
 |---|---|
-| **What** | Conserved Cahn–Hilliard with a Fe–Cr-like regular-solution free energy; spectral ETD, \(L(k)\propto k^4\). |
+| **What** | Conserved Cahn–Hilliard with a Fe–Cr-like regular-solution free energy; spectral ETD, $L(k)\propto k^4$. |
 | **Dimension** | 2D periodic slab in the shipped input (`Lz = 1`); 3D works if you set `Lz`. |
 | **Driver** | JSON/TOML `SpectralETDSession` (same path as tungsten). |
 | **Output** | VTK of composition `c` (`results/cahn_hilliard/c_%04d.vti`). |
-| **Use** | Materials-science spinodal (475 °C embrittlement story); Catch2 checks mass, \(\lambda(k)\), and growth in the spinodal band. See [`apps/cahn_hilliard/README.md`](../../apps/cahn_hilliard/README.md). |
+| **Use** | Materials-science spinodal (475 °C embrittlement story); Catch2 checks mass, $\lambda(k)$, and growth in the spinodal band. See [`apps/cahn_hilliard/README.md`](../../apps/cahn_hilliard/README.md). |
 
 ## `12_cahn_hilliard` (example)
 

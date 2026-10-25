@@ -26,7 +26,7 @@ The foundation of custom stepper integration is a physics model that provides a 
 
 ### Minimal heat equation model
 
-Following the pattern from [`apps/heat3d/include/heat3d/heat_model.hpp`](../../apps/heat3d/include/heat3d/heat_model.hpp), here's a minimal model for the 3D heat equation \(\partial_t u = D \nabla^2 u\):
+Following the pattern from [`apps/heat3d/include/heat3d/heat_model.hpp`](../../apps/heat3d/include/heat3d/heat_model.hpp), here's a minimal model for the 3D heat equation $\partial_t u = D \nabla^2 u$:
 
 ```cpp
 #include <cmath>

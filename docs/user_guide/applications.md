@@ -28,7 +28,7 @@ homogeneous isotropic turbulence, and constant-power low-mode
 forcing. The 2-D vorticity–streamfunction prototype stays under
 `examples/ns2d_vorticity/`.
 
-Start with tungsten if you want the production-style PFC path. It reads JSON or TOML, uses the `App` pipeline, writes configured fields, and has CPU, CUDA and HIP variants when the build enables them. Start with Allen–Cahn if you want a small visual sanity check with optional PNG output and fewer moving pieces. Use Heat3D when your question is about finite-difference orders, the spectral heat-equation path, timings or scaling comparisons. Use **cahn_hilliard** for conserved fourth-order spinodal decomposition (Fe–Cr-like regular solution) on the same JSON spectral-ETD path as tungsten. Use **thin_film** for lubrication dewetting / coating (\(k^4\) capillary plus disjoining pressure, including an \(A=0\) leveling case). Use **surface_diffusion** for Mullins thermal smoothing of nanoscale roughness (exact \(k^4\) decay). Use **kawahara** for odd-order capillary–gravity dispersive waves (\(ik^3\) vs \(ik^5\), not a smoother). Use **ehd_film** for a sixth-order elastohydrodynamic gap under a bending plate (\(\lambda\sim-k^6\)). Use **gradient_elasticity** for size-dependent isotropic elasticity (Helmholtz–Navier, periodic eigenstrain, one-shot spectral \(2\times 2\)). Use **higher_order_pfc** for a deliberately very high-order PFC kernel (two-mode \(k^8\) free energy, \(k^{10}\) conserved dynamics) where the second correlation peak opens a band the classical \(k^4\) kernel cannot. Use **inverse_homogenization** when the question is a *target effective elasticity tensor* on a periodic unit cell (issue #161). Shipped binaries are `openpfc_homogenize` (forward \(C_H\)) and `openpfc_inverse_homogenize` (Allen–Cahn inverse loop); HIP builds add device Green twins. New applications follow the [admission criteria](../../apps/README.md#what-belongs-here). Use **wave2d** for a minimal **coupled first-order** wave-equation demo (displacement + velocity) with mixed periodic / physical y-boundaries. Use **kobayashi** for a **coupled phase-field + temperature** dendritic-growth-style demo (periodic torus, manual FD, PNG of \(\phi\)). Use **alloy_dendrite_elastic** when the question is *quantitative* solidification with optional eigenstrain elasticity: it is the Echebarria–Karma dilute-alloy phase field with the anti-trapping current, coupled to solute, to temperature, and to a spectral microelasticity solve on the same decomposition. Use **vlasov_maxwell** for 1D2V electromagnetic Vlasov–Maxwell kinetics (Landau damping, two-stream, Weibel). AluminumNew is mostly useful as a compact example of an `App<Model>` program wired through JSON.
+Start with tungsten if you want the production-style PFC path. It reads JSON or TOML, uses the `App` pipeline, writes configured fields, and has CPU, CUDA and HIP variants when the build enables them. Start with Allen–Cahn if you want a small visual sanity check with optional PNG output and fewer moving pieces. Use Heat3D when your question is about finite-difference orders, the spectral heat-equation path, timings or scaling comparisons. Use **cahn_hilliard** for conserved fourth-order spinodal decomposition (Fe–Cr-like regular solution) on the same JSON spectral-ETD path as tungsten. Use **thin_film** for lubrication dewetting / coating ($k^4$ capillary plus disjoining pressure, including an $A=0$ leveling case). Use **surface_diffusion** for Mullins thermal smoothing of nanoscale roughness (exact $k^4$ decay). Use **kawahara** for odd-order capillary–gravity dispersive waves ($ik^3$ vs $ik^5$, not a smoother). Use **ehd_film** for a sixth-order elastohydrodynamic gap under a bending plate ($\lambda\sim-k^6$). Use **gradient_elasticity** for size-dependent isotropic elasticity (Helmholtz–Navier, periodic eigenstrain, one-shot spectral $2\times 2$). Use **higher_order_pfc** for a deliberately very high-order PFC kernel (two-mode $k^8$ free energy, $k^{10}$ conserved dynamics) where the second correlation peak opens a band the classical $k^4$ kernel cannot. Use **inverse_homogenization** when the question is a *target effective elasticity tensor* on a periodic unit cell (issue #161). Shipped binaries are `openpfc_homogenize` (forward $C_H$) and `openpfc_inverse_homogenize` (Allen–Cahn inverse loop); HIP builds add device Green twins. New applications follow the [admission criteria](../../apps/README.md#what-belongs-here). Use **wave2d** for a minimal **coupled first-order** wave-equation demo (displacement + velocity) with mixed periodic / physical y-boundaries. Use **kobayashi** for a **coupled phase-field + temperature** dendritic-growth-style demo (periodic torus, manual FD, PNG of $\phi$). Use **alloy_dendrite_elastic** when the question is *quantitative* solidification with optional eigenstrain elasticity: it is the Echebarria–Karma dilute-alloy phase field with the anti-trapping current, coupled to solute, to temperature, and to a spectral microelasticity solve on the same decomposition. Use **vlasov_maxwell** for 1D2V electromagnetic Vlasov–Maxwell kinetics (Landau damping, two-stream, Weibel). AluminumNew is mostly useful as a compact example of an `App<Model>` program wired through JSON.
 
 If you want declarative configuration, read [`app_pipeline.md`](app_pipeline.md) before writing your own input files. If your immediate question is “what file did this run write?”, read [`io_results.md`](io_results.md).
 
@@ -53,7 +53,7 @@ The JSON inputs live under [`apps/tungsten/inputs_json/`](../../apps/tungsten/in
 `cahn_hilliard` is a 0.2 spectral-ETD application for conserved Cahn–Hilliard
 dynamics on a periodic grid. The field is Cr mole fraction `c`. The default
 regular-solution free energy at 475 °C puts Fe–32Cr inside the chemical
-spinodal; \(\nabla^4\) is a \(k^4\) multiplier. JSON/TOML CLI matches tungsten.
+spinodal; $\nabla^4$ is a $k^4$ multiplier. JSON/TOML CLI matches tungsten.
 HIP builds add `cahn_hilliard_hip` with the same input. See
 [`apps/cahn_hilliard/README.md`](../../apps/cahn_hilliard/README.md).
 
@@ -69,8 +69,8 @@ let the writer create it). This is the materials-science Cahn–Hilliard app;
 ## Thin film (dewetting / coating)
 
 `thin_film` is a 0.2 spectral-ETD lubrication model for a periodic liquid
-film. The field is thickness `h`. Capillary \(\nabla^4\) damps short waves;
-van der Waals plus repulsion \(\Pi(h)\) can make a finite unstable band
+film. The field is thickness `h`. Capillary $\nabla^4$ damps short waves;
+van der Waals plus repulsion $\Pi(h)$ can make a finite unstable band
 (dewetting) or, with `A = 0`, level roughness. HIP builds add `thin_film_hip`.
 See [`apps/thin_film/README.md`](../../apps/thin_film/README.md).
 
@@ -83,8 +83,8 @@ mpirun -n 1 ./apps/thin_film/thin_film \
 
 ## Surface diffusion (Mullins)
 
-`surface_diffusion` is a 0.2 spectral-ETD Mullins model: \(\partial_t h=-B\nabla^4 h\).
-Every Fourier mode decays as \(\exp(-B|k|^4 t)\), so short-wavelength roughness
+`surface_diffusion` is a 0.2 spectral-ETD Mullins model: $\partial_t h=-B\nabla^4 h$.
+Every Fourier mode decays as $\exp(-B|k|^4 t)$, so short-wavelength roughness
 vanishes first. HIP builds add `surface_diffusion_hip`. See
 [`apps/surface_diffusion/README.md`](../../apps/surface_diffusion/README.md).
 
@@ -96,9 +96,9 @@ mpirun -n 1 ./apps/surface_diffusion/surface_diffusion \
 ## Kawahara (capillary–gravity waves)
 
 `kawahara` is a 0.2 spectral-ETD Kawahara model:
-\(\partial_t u+\alpha u\partial_x u+\beta\partial_x^3 u+\gamma\partial_x^5 u=0\).
-The high-order term is **dispersive**, not dissipative: \(L(k)=-i\omega(k)\)
-with \(\omega=\beta k^3+\gamma k^5\). HIP builds add `kawahara_hip`. See
+$\partial_t u+\alpha u\partial_x u+\beta\partial_x^3 u+\gamma\partial_x^5 u=0$.
+The high-order term is **dispersive**, not dissipative: $L(k)=-i\omega(k)$
+with $\omega=\beta k^3+\gamma k^5$. HIP builds add `kawahara_hip`. See
 [`apps/kawahara/README.md`](../../apps/kawahara/README.md).
 
 ```bash
@@ -109,8 +109,8 @@ mpirun -n 1 ./apps/kawahara/kawahara \
 ## EHD film (flexible plate)
 
 `ehd_film` is a 0.2 spectral-ETD lubrication model under a Kirchhoff plate:
-\(p=B\nabla^4 h\), \(\partial_t h=\nabla\cdot[M_0\nabla p]\), so
-\(\lambda=-M_0 B k^6\). HIP builds add `ehd_film_hip`. See
+$p=B\nabla^4 h$, $\partial_t h=\nabla\cdot[M_0\nabla p]$, so
+$\lambda=-M_0 B k^6$. HIP builds add `ehd_film_hip`. See
 [`apps/ehd_film/README.md`](../../apps/ehd_film/README.md).
 
 ```bash
@@ -121,9 +121,9 @@ mpirun -n 1 ./apps/ehd_film/ehd_film \
 ## Gradient elasticity (Helmholtz–Navier)
 
 `gradient_elasticity` is a 0.2 one-shot spectral solve, not ETD:
-\((1-\ell^2\nabla^2)L_{\mathrm{navier}}\mathbf{u}=\mathbf{f}\) on a 2-D
-periodic dilatational eigenstrain. Finite \(\ell\) regularizes high-\(k\)
-content; \(\ell\to 0\) recovers classical elasticity. HIP builds add
+$(1-\ell^2\nabla^2)L_{\mathrm{navier}}\mathbf{u}=\mathbf{f}$ on a 2-D
+periodic dilatational eigenstrain. Finite $\ell$ regularizes high-$k$
+content; $\ell\to 0$ recovers classical elasticity. HIP builds add
 `gradient_elasticity_hip`. See
 [`apps/gradient_elasticity/README.md`](../../apps/gradient_elasticity/README.md).
 
@@ -134,7 +134,7 @@ mpirun -n 1 ./apps/gradient_elasticity/gradient_elasticity \
 
 ## Heat3D
 
-`heat3d` solves the 3D heat equation either with finite differences or with a spectral FFT step. The finite-difference path supports even orders from 2 to 20, and the app can use OpenMP over interior \((i_y,i_z)\) lines when the build enables it (the Laplacian along \(i_x\) stays serial in `finite_difference.hpp`). On **Linux**, a **single MPI rank** resets CPU affinity after `MPI_Init` (via `pfc::runtime::reset_cpu_affinity_if_single_mpi_rank` in [`runtime/common/cpu_affinity.hpp`](../../include/openpfc/runtime/common/cpu_affinity.hpp)) so OpenMP is not stuck on one core under default `mpirun` pinning (set `OPENPFC_NO_RESET_AFFINITY` to opt out). For several ranks per node, tune `mpirun` binding and `OMP_NUM_THREADS` as in [`apps/heat3d/README.md`](../../apps/heat3d/README.md).
+`heat3d` solves the 3D heat equation either with finite differences or with a spectral FFT step. The finite-difference path supports even orders from 2 to 20, and the app can use OpenMP over interior $(i_y,i_z)$ lines when the build enables it (the Laplacian along $i_x$ stays serial in `finite_difference.hpp`). On **Linux**, a **single MPI rank** resets CPU affinity after `MPI_Init` (via `pfc::runtime::reset_cpu_affinity_if_single_mpi_rank` in [`runtime/common/cpu_affinity.hpp`](../../include/openpfc/runtime/common/cpu_affinity.hpp)) so OpenMP is not stuck on one core under default `mpirun` pinning (set `OPENPFC_NO_RESET_AFFINITY` to opt out). For several ranks per node, tune `mpirun` binding and `OMP_NUM_THREADS` as in [`apps/heat3d/README.md`](../../apps/heat3d/README.md).
 
 ## Allen–Cahn
 
@@ -148,7 +148,7 @@ For visible motion on the grid, use moderate ε and large M; shrinking ε alone 
 
 ## wave2d
 
-`wave2d` integrates the 2D acoustic wave equation \(u_{tt} = c^2 \Delta u\) as \(\partial_t u = v\), \(\partial_t v = c^2 \Delta u\) with explicit Euler in time. **x** is periodic (MPI halos); **y** supports homogeneous **Dirichlet** or **Neumann** physical boundaries via ghost correction after the periodic exchange. CPU binaries: `wave2d_fd_manual` (fixed second-order stencil on `PaddedBrick`) and `wave2d_fd` (even orders 2–20). Optional **VTK** output (`--vtk` / `--vtk-every`) uses `pfc::VTKWriter` for ParaView time series on CPU and GPU binaries alike. CUDA/HIP builds may add `wave2d_cuda` / `wave2d_hip` (`wave2d_hip` uses `SparseExchange<HIPSpace>` on device Fields). See [`apps/wave2d/README.md`](../../apps/wave2d/README.md) for CLI, CFL guidance, and tests.
+`wave2d` integrates the 2D acoustic wave equation $u_{tt} = c^2 \Delta u$ as $\partial_t u = v$, $\partial_t v = c^2 \Delta u$ with explicit Euler in time. **x** is periodic (MPI halos); **y** supports homogeneous **Dirichlet** or **Neumann** physical boundaries via ghost correction after the periodic exchange. CPU binaries: `wave2d_fd_manual` (fixed second-order stencil on `PaddedBrick`) and `wave2d_fd` (even orders 2–20). Optional **VTK** output (`--vtk` / `--vtk-every`) uses `pfc::VTKWriter` for ParaView time series on CPU and GPU binaries alike. CUDA/HIP builds may add `wave2d_cuda` / `wave2d_hip` (`wave2d_hip` uses `SparseExchange<HIPSpace>` on device Fields). See [`apps/wave2d/README.md`](../../apps/wave2d/README.md) for CLI, CFL guidance, and tests.
 
 ## alloy_dendrite_elastic
 
@@ -162,14 +162,14 @@ coupling, `--lambda-el=0` runs the solve and discards the feedback.
 
 Two binaries. **`alloy_dendrite_planar`** runs the Stage-1 verification — an isothermal planar front in a periodic
 two-front box — and reports the steady velocity against the thin-interface prediction, the kinetic coefficient, the
-solute boundary layer against \(D_l/V\), the **effective partition coefficient** against the input \(k\), and the
+solute boundary layer against $D_l/V$, the **effective partition coefficient** against the input $k$, and the
 drift of the two conservation invariants. **`alloy_dendrite_growth`** runs a deterministic dendrite (2-D, or 3-D with
 `--nz`) and writes tip position, tip velocity and tip radius to CSV. `--gradient` / `--pulling` /
 `--seed2-*` is leftover Stage 4 of issue #85 (FTA directional solidification and a two-seed bicrystal) on
 this binary, not a separate application. HIP builds may add a parity driver for the FD step.
 
-What makes it worth running rather than reading: at \(dx = 0.6\,W_0\) the measured \(k_\text{eff}\) is within 0.2 %
-of \(k\) and flat in velocity, while switching the anti-trapping current off moves it by 17 % and makes it climb with
+What makes it worth running rather than reading: at $dx = 0.6\,W_0$ the measured $k_\text{eff}$ is within 0.2 %
+of $k$ and flat in velocity, while switching the anti-trapping current off moves it by 17 % and makes it climb with
 velocity. Total solute and the latent-heat balance are exact discrete identities and hold to round-off. See
 [`apps/alloy_dendrite_elastic/README.md`](../../apps/alloy_dendrite_elastic/README.md) for the resolution study, the
 measurement definitions, and the caveats.
@@ -177,7 +177,7 @@ measurement definitions, and the caveats.
 ## vlasov_maxwell
 
 `vlasov_run` is the **kinetic capstone** (issue #84): a 1D2V electromagnetic Vlasov–Maxwell distribution
-\(f_s(x, v_x, v_y, t)\) on one OpenPFC 3-D `Domain`, coupled to \(E_x, E_y, B_z\). One stepper; `--case` selects the
+$f_s(x, v_x, v_y, t)$ on one OpenPFC 3-D `Domain`, coupled to $E_x, E_y, B_z$. One stepper; `--case` selects the
 validation rung (`wave`, `landau`, `twostream`, `gyro`, `weibel`, `filament`). The electrostatic reduction is a runtime
 flag, not a second code path. Linear rates are checked against a dispersion relation solved at run time
 (`vlasov_maxwell/plasma_dispersion.hpp`). HIP builds add `--device=hip` on the science driver plus `vlasov_hip_parity`
@@ -190,14 +190,14 @@ mpirun -n 1 ./apps/vlasov_maxwell/vlasov_run --case=landau --summary=results/lan
 
 ## kobayashi
 
-`kobayashi_fd_manual` evolves the Kobayashi phase-field / temperature pair on a periodic **x–y** slab (`nz = 1`) with explicit Euler and the same finite-difference splitting as the historical Julia `kobayashi_v1` script (anisotropic \(\epsilon(\theta)\), Biner-style cross-flux terms, latent heat coupling). It writes grayscale PNG snapshots of \(\phi\). **`kobayashi_fd_openmp`** is the **single-node, OpenMP-only** variant (periodic torus via index wrapping — no MPI halos); verification lines match the **`nproc=1`** MPI reference for the same grid and step count. **`kobayashi_fd_cuda`** is the **MPI + CUDA** variant (host-staged halos, one GPU per MPI rank via shared-memory local rank). **`kobayashi_fd_hip`** is the **MPI + HIP** variant (`HaloExchange<HIPSpace>` on device Fields). See [`apps/kobayashi/README.md`](../../apps/kobayashi/README.md).
+`kobayashi_fd_manual` evolves the Kobayashi phase-field / temperature pair on a periodic **x–y** slab (`nz = 1`) with explicit Euler and the same finite-difference splitting as the historical Julia `kobayashi_v1` script (anisotropic $\epsilon(\theta)$, Biner-style cross-flux terms, latent heat coupling). It writes grayscale PNG snapshots of $\phi$. **`kobayashi_fd_openmp`** is the **single-node, OpenMP-only** variant (periodic torus via index wrapping — no MPI halos); verification lines match the **`nproc=1`** MPI reference for the same grid and step count. **`kobayashi_fd_cuda`** is the **MPI + CUDA** variant (host-staged halos, one GPU per MPI rank via shared-memory local rank). **`kobayashi_fd_hip`** is the **MPI + HIP** variant (`HaloExchange<HIPSpace>` on device Fields). See [`apps/kobayashi/README.md`](../../apps/kobayashi/README.md).
 
 ## incompressible_flow
 
 `incompressible_flow` advances a periodic 3-D velocity with the
 installed Leray projector and a 2/3-dealiased rotational term. The
 shipped cases are Taylor–Green, decaying homogeneous isotropic
-turbulence, and constant-power low-mode forcing on \([0,2\pi]^3\).
+turbulence, and constant-power low-mode forcing on $[0,2\pi]^3$.
 CPU and HeFFTe. Ranks share the pencil. The locked ladders stay
 one rank. A HIP or CUDA build also compiles the same step as a
 device library. The command-line application remains the CPU path,

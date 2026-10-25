@@ -162,18 +162,18 @@ fall on the same step.
 ## Dealiasing and resolution
 
 This app runs its cubic nonlinearity **undealiased**, and the shipped grid is
-6.1% too coarse to change that safely. The crystal sits at \(k_0=1\) and
-carries real content at \(2k_0\) and \(3k_0\); with \(\Delta x=1.1107\),
-\(k_{\mathrm{Ny}}=2.828\), so the third harmonic at 3.0 folds back onto
-\(k=2.657\) — and the 2/3 cut at 1.886 sits *below* the second harmonic at
+6.1% too coarse to change that safely. The crystal sits at $k_0=1$ and
+carries real content at $2k_0$ and $3k_0$; with $\Delta x=1.1107$,
+$k_{\mathrm{Ny}}=2.828$, so the third harmonic at 3.0 folds back onto
+$k=2.657$ — and the 2/3 cut at 1.886 sits *below* the second harmonic at
 2.0, so switching the mask on would delete part of the crystal instead of
-fixing anything. Both conditions clear at \(\Delta x\le\pi/3\), six points
+fixing anything. Both conditions clear at $\Delta x\le\pi/3$, six points
 per lattice period.
 
 Measured with `tungsten_dealias_study` (same seeded solidification, same IC,
 same 1000 steps, mask off then on):
 
-| points / period | \(\Delta x\) | \(\Delta\) power | \(\Delta\max\psi\) | \(\Delta k_1\) |
+| points / period | $\Delta x$ | $\Delta$ power | $\Delta\max\psi$ | $\Delta k_1$ |
 |---|---|---|---|---|
 | 5.66 (**shipped**) | 1.1107 | 1.70 % | 1.07 % | 9e-06 |
 | 6.00 | 1.0472 | 1.27 % | 1.04 % | 1.4e-04 |
@@ -181,8 +181,8 @@ same 1000 steps, mask off then on):
 | 8.00 | 0.7854 | **0.009 %** | 0.018 % | 2.5e-06 |
 
 So results here carry a ~2% uncertainty on amplitudes and spectral power, and
-essentially none on the selected wavenumber \(k_1\) — the lattice constant,
-which is what these runs are normally read for. The \(k_1\) column is scatter
+essentially none on the selected wavenumber $k_1$ — the lattice constant,
+which is what these runs are normally read for. The $k_1$ column is scatter
 between two nearly identical runs, not a trend.
 
 Regenerate the data (minutes, single rank):

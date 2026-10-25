@@ -9,7 +9,7 @@ Reproducible figure and animation package for the **accepted** 2-D
 incompressible resistive-MHD line:
 
 * #23 / PR #24 — verified Orszag–Tang prototype
-* #26 / PR #27 — persistent-X reconnection for \(t\le 0.80\)
+* #26 / PR #27 — persistent-X reconnection for $t\le 0.80$
 * #38 / PR #39 — frozen-window scaling, outcome (2)
 
 This is a presentation/evidence package. It does **not** change the
@@ -20,15 +20,15 @@ solver, reopen scaling, or add physics. Scientific claims live in
 
 | Class | Window | Use |
 | --- | --- | --- |
-| **Evidence** | reconnection \(t\in[0,0.80]\); scaling \(t\in[0.314,0.70]\) | talks **and** the paper-style argument |
-| **Showcase** | \(t>0.80\) on the #24 \(\eta=0.005\), \(N=512\) peak-current dumps | qualitative dynamics only |
+| **Evidence** | reconnection $t\in[0,0.80]$; scaling $t\in[0.314,0.70]$ | talks **and** the paper-style argument |
+| **Showcase** | $t>0.80$ on the #24 $\eta=0.005$, $N=512$ peak-current dumps | qualitative dynamics only |
 
 Do not mix those windows in one evidence asset. Peak-current /
 plasmoid-looking frames are **not** support for the accepted scaling
 claim.
 
-Every finished figure or movie is labelled with case, \(\eta\),
-\(\nu\), \(N\), \(t\), and the window class.
+Every finished figure or movie is labelled with case, $\eta$,
+$\nu$, $N$, $t$, and the window class.
 
 ## Datasets
 
@@ -39,19 +39,19 @@ Default:
 /scratch/project_462001519/juaho/mhd2d-23
 ```
 
-| Asset | Run directory | \(\eta=\nu\) | \(N\) | CFL | Convergence in the claim |
+| Asset | Run directory | $\eta=\nu$ | $N$ | CFL | Convergence in the claim |
 | --- | --- | ---: | ---: | ---: | --- |
 | Hero / flux | `ot512_nu0005_peak` | 0.005 | 512 | 0.4 | 256 vs 512; 256 CFL 0.4 vs 0.2 |
 | Comparison left | `ot256_nu001_cfl04` | 0.01 | 256 | 0.4 | 128 vs 256; 256 CFL 0.4 vs 0.2 |
-| Comparison right | `ot1024_nu00025_cfl02_t080` | 0.0025 | 1024 | 0.2 | 512 vs 1024; geometry/\(F\) vs historical 512 CFL 0.4 |
+| Comparison right | `ot1024_nu00025_cfl02_t080` | 0.0025 | 1024 | 0.2 | 512 vs 1024; geometry/$F$ vs historical 512 CFL 0.4 |
 
-The \(\eta=0.005\) directory also contains \(t>0.80\) dumps used
-**only** for `figures/showcase/`. Evidence drivers stop at \(t\le 0.80\).
+The $\eta=0.005$ directory also contains $t>0.80$ dumps used
+**only** for `figures/showcase/`. Evidence drivers stop at $t\le 0.80$.
 
-Tracked X/O, \(E_z\), and sheet geometry are read from
+Tracked X/O, $E_z$, and sheet geometry are read from
 `sheet_scaling.json` / `island_flux.json` in those run directories.
 Field frames are the native `a_*.bin` / `j_*.bin` dumps (`interpolation=
-nearest`). Colour limits are frozen at \(\lvert j\rvert\le 6.5\) for
+nearest`). Colour limits are frozen at $\lvert j\rvert\le 6.5$ for
 all evidence field figures.
 
 ## Commands
@@ -92,7 +92,7 @@ $PY $NS/scripts/render_mhd_conference_frames.py --asset comparison \
   --out $FIG/evidence/stills/comparison_three_eta.png
 ```
 
-### Hero animation (evidence, \(t\le 0.80\))
+### Hero animation (evidence, $t\le 0.80$)
 
 ```bash
 $PY $NS/scripts/render_mhd_conference_frames.py --asset hero \
@@ -153,7 +153,7 @@ not committed. Finished MP4s, paper figures, and slide stills under
 **Scientific evidence**
 
 * flux-budget figure
-* scaling \(R(S_{\mathrm{local}})\)
+* scaling $R(S_{\mathrm{local}})$
 * geometry summary
 * the two evidence movies (accepted window only)
 
@@ -163,4 +163,4 @@ not committed. Finished MP4s, paper figures, and slide stills under
 
 The OLS slope printed on the scaling figure is a **formal standard
 error** on three points. It is not a physical uncertainty interval.
-Sweet–Parker \(S^{-1/2}\) is drawn as a reference guide, not a fit.
+Sweet–Parker $S^{-1/2}$ is drawn as a reference guide, not a fit.

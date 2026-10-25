@@ -6,8 +6,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 # wave2d — 2D acoustic wave (coupled first-order system)
 
 This application integrates the 2D wave equation
-\(u_{tt} = c^2 (u_{xx}+u_{yy})\) on an `nz=1` slab as the coupled first-order system
-\(\partial_t u = v\), \(\partial_t v = c^2 (u_{xx}+u_{yy})\) with explicit Euler in time.
+$u_{tt} = c^2 (u_{xx}+u_{yy})$ on an `nz=1` slab as the coupled first-order system
+$\partial_t u = v$, $\partial_t v = c^2 (u_{xx}+u_{yy})$ with explicit Euler in time.
 
 - **Periodic in x** (and z slab) via MPI halo exchange.
 - **Physical y boundaries**: homogeneous Dirichlet (`u=u_\mathrm{wall}`, `v=0` on the wall)
@@ -78,7 +78,7 @@ Supported on **CPU** (`wave2d_fd`, `wave2d_fd_manual`) and **GPU** (`wave2d_cuda
 
 ## Stability (CFL)
 
-Explicit Euler requires a sufficiently small \(\Delta t\) (roughly \(\Delta t \lesssim C \,\Delta x / c\) with constant \(C\) of order unity for second-order waves). Reduce `dt` if the run blows up.
+Explicit Euler requires a sufficiently small $\Delta t$ (roughly $\Delta t \lesssim C \,\Delta x / c$ with constant $C$ of order unity for second-order waves). Reduce `dt` if the run blows up.
 
 ## Field vocabulary
 

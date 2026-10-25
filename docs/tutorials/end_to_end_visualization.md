@@ -43,7 +43,7 @@ Goal: two PNG files (initial and final field) without writing JSON.
 
 Goal: run the **Tungsten** `App` with JSON and produce **MPI-IO binary** time slices under a directory you control.
 
-The stock file [`apps/tungsten/inputs_json/tungsten_single_seed.json`](../../apps/tungsten/inputs_json/tungsten_single_seed.json) uses a **small** \(32^3\) domain but ships with **absolute** `fields[].data` paths. For a self-contained tutorial, copy it and point output at `./data/`.
+The stock file [`apps/tungsten/inputs_json/tungsten_single_seed.json`](../../apps/tungsten/inputs_json/tungsten_single_seed.json) uses a **small** $32^3$ domain but ships with **absolute** `fields[].data` paths. For a self-contained tutorial, copy it and point output at `./data/`.
 
 1. From `build/`, create a writable config (example edits):
 

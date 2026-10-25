@@ -53,6 +53,7 @@ suppress_warnings = ["toc.not_included"]
 myst_enable_extensions = [
     "colon_fence",
     "deflist",
+    "dollarmath",
     "fieldlist",
     "html_admonition",
     "html_image",

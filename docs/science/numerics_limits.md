@@ -25,17 +25,17 @@ This page collects **honest** expectations: OpenPFC is a serious HPC framework, 
   is enabled automatically for arbitrary models.
 - **Incompressible velocity:** `pfc::field::leray_project` removes the
   longitudinal part of a periodic Fourier velocity,
-  \(P = I - kk^{\mathsf T}/|k|^2\). The wavevector is the odd multiplier, so
+  $P = I - kk^{\mathsf T}/|k|^2$. The wavevector is the odd multiplier, so
   the mean and the even-grid Nyquist mode stay unchanged. The quadratic term
-  is \(P(u\times\omega)\) after a state-level 2/3 truncation
+  is $P(u\times\omega)$ after a state-level 2/3 truncation
   (`solvers/incompressible/rotational.hpp`). That mask is on for this term only.
   A 3/2 padded product is not used.
 - **Nyquist (odd derivatives):** `SpectralGradient` zeros `i k` at the even-grid Nyquist mode. The real-to-complex Nyquist coefficient is real; a nonzero `i k_N` is not uniquely defined.
 - **2-D vorticity NS (issue #21) and incompressible MHD (issue #23):**
-  `examples/ns2d_vorticity` reuses the 2/3 mask and odd-\(k\) rule, and
+  `examples/ns2d_vorticity` reuses the 2/3 mask and odd-$k$ rule, and
   **projects the state** onto the retained band before products. The
-  nonlinear term is IFRK4. MHD adds a magnetic potential \(a\) with
-  Lorentz \(+B\cdot\nabla j\); it is 2-D incompressible MHD, not Strauss
+  nonlinear term is IFRK4. MHD adds a magnetic potential $a$ with
+  Lorentz $+B\cdot\nabla j$; it is 2-D incompressible MHD, not Strauss
   reduced MHD. A current-sheet movie is not reconnection.
 
 ## Finite differences (kernel helpers and examples)

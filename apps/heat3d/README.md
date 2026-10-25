@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Heat3D — single-purpose drivers
 
-MPI drivers for the **3D heat equation** \(\partial u/\partial t = D \nabla^2 u\) on a uniform periodic brick \([0,N)^3\) with spacing 1 (CPU, plus HIP twins for compact FD and implicit-Euler spectral). Each method ships as its **own executable**, and the binaries are arranged as a **model hierarchy** from "raw pointers in `main`" to "compose three production stacks":
+MPI drivers for the **3D heat equation** $\partial u/\partial t = D \nabla^2 u$ on a uniform periodic brick $[0,N)^3$ with spacing 1 (CPU, plus HIP twins for compact FD and implicit-Euler spectral). Each method ships as its **own executable**, and the binaries are arranged as a **model hierarchy** from "raw pointers in `main`" to "compose three production stacks":
 
 | Binary | Layer | What it shows |
 |---|---|---|
@@ -15,13 +15,13 @@ MPI drivers for the **3D heat equation** \(\partial u/\partial t = D \nabla^2 u\
 | **`heat3d_fd_hip`** | Compact FD on HIP | Same physics and CLI as `heat3d_fd`, on `FDGPUStack<HIPSpace>`: device `HaloExchange`, `for_each_interior_device` Laplacian, Euler axpy on the GCD. One MPI rank per GPU. Optional `HEAT3D_PROFILE_JSON` writes schema-v4 `wall_step` frames for LUMI-G scaling. |
 | **`heat3d_spectral_pointwise`** | Point-wise spectral RHS + explicit Euler | The **spectral twin** of `heat3d_fd`: identical user-facing time loop, but the residual is built by `pfc::field::SpectralGradient<HeatGrads>` (1 fwd + 3 inv FFTs/step) instead of FD stencils. The same `HeatModel::rhs` is applied cell-by-cell through `pfc::sim::DuField`. |
 | **`heat3d_spectral`** | Implicit Euler in Fourier space | HeFFTe-backed forward + backward FFT per step (`heat3d::SpectralHeatPropagator`). |
-| **`heat3d_spectral_hip`** | Implicit Euler on HIP | HIP twin of `heat3d_spectral`: `HIPSpectralStack` + device multiply of \(1/(1-\Delta t D k_\mathrm{lap})\), 2 FFTs/step. Same CLI as the CPU spectral driver. `HEAT3D_PROFILE_JSON` / `HEAT3D_WARMUP` match `heat3d_fd_hip`. Built when HIP spectral (rocFFT HeFFTe) is on. |
+| **`heat3d_spectral_hip`** | Implicit Euler on HIP | HIP twin of `heat3d_spectral`: `HIPSpectralStack` + device multiply of $1/(1-\Delta t D k_\mathrm{lap})$, 2 FFTs/step. Same CLI as the CPU spectral driver. `HEAT3D_PROFILE_JSON` / `HEAT3D_WARMUP` match `heat3d_fd_hip`. Built when HIP spectral (rocFFT HeFFTe) is on. |
 | **`heat3d_fd_convergence_study`** | Verification, not a physics demo | Not part of the model hierarchy above: sweeps `fd_order` x `N` on a single-Fourier-mode problem and reports the *observed* order of accuracy of `heat3d_fd`'s own `FDGradient` stencil against its *design* order — see [Order of accuracy (FD)](#order-of-accuracy-fd) below. |
 | **`heat3d_spectral_content_study`** | Verification + a method recommendation | Also not part of the hierarchy: answers *which* spatial operator is the cheaper route to a given accuracy, as a function of how much of Nyquist the field's content reaches — see [Spectral against finite difference: where each wins](#spectral-against-finite-difference-where-each-wins) below. |
 
 All three CPU FD drivers (`scratch`, `manual`, `fd`) compute the **same thing** with the same 7-point central stencil. Tests assert `l2_scratch == l2_manual == l2_compact` to within 1e-7. The higher binaries share `HeatModel` for physics and `heat3d::report` for the `method / timing / l2_error` summary line; `heat3d_fd_scratch` only uses `heat3d::report` and inlines its own physics.
 
-Initial condition matches the diffusion examples: \(u(\mathbf{x},0)=\exp(-|\mathbf{x}|^2/(4D))\) with origin at \((0,0,0)\). The diffusion coefficient \(D\) is **hard-pinned** to `1.0` via `heat3d::kD` in [`include/heat3d/heat_model.hpp`](include/heat3d/heat_model.hpp) so all heat3d binaries share one fixed value (and their L2 outputs stay directly comparable). To experiment with a different coefficient, change the literal there and rebuild.
+Initial condition matches the diffusion examples: $u(\mathbf{x},0)=\exp(-|\mathbf{x}|^2/(4D))$ with origin at $(0,0,0)$. The diffusion coefficient $D$ is **hard-pinned** to `1.0` via `heat3d::kD` in [`include/heat3d/heat_model.hpp`](include/heat3d/heat_model.hpp) so all heat3d binaries share one fixed value (and their L2 outputs stay directly comparable). To experiment with a different coefficient, change the literal there and rebuild.
 
 ## Problem setup
 
@@ -72,7 +72,7 @@ Shared physics, IC, propagator, parser, and reporting headers (live in `include/
 - **[`include/heat3d/spectral_heat_propagator.hpp`](include/heat3d/spectral_heat_propagator.hpp)** — heat-specific **implicit-Euler-in-Fourier-space** propagator. `fill_implicit_euler_symbol` builds the `1 / (1 - dt·D·k²)` table (Catch2-tested without a GPU). The CPU class exposes `step(pfc::data::Field<double, pfc::HostSpace>&)` on `pfc::fft::IHostFFT`.
 - **[`include/heat3d/spectral_heat_propagator_hip.hpp`](include/heat3d/spectral_heat_propagator_hip.hpp)** — HIP twin: uploads that table once, then each step is a device forward FFT, `multiply_complex_real_hip_impl`, and inverse FFT.
 - **[`include/heat3d/cli.hpp`](include/heat3d/cli.hpp)** — `RunConfig` plus the slim per-binary parsers `parse_fd` / `parse_spectral` and their `_or_print_usage` wrappers. `D` is *not* a CLI knob (it lives in `heat_model.hpp`). Each binary already knows its own discretisation, so the parsers do **not** consume an `argv[1]` discriminator. Header-only, MPI-free, OpenPFC-free; trivially unit-testable.
-- **[`include/heat3d/reporting.hpp`](include/heat3d/reporting.hpp)** — `analytic_gaussian` (closed-form reference solution on \(\mathbb{R}^3\)), `fd_extra_metadata` (FD/OpenMP info string), and the rank-0 `report` template that prints the canonical `method` / `timing` / `l2_error` triplet, shared by all heat3d binaries.
+- **[`include/heat3d/reporting.hpp`](include/heat3d/reporting.hpp)** — `analytic_gaussian` (closed-form reference solution on $\mathbb{R}^3$), `fd_extra_metadata` (FD/OpenMP info string), and the rank-0 `report` template that prints the canonical `method` / `timing` / `l2_error` triplet, shared by all heat3d binaries.
 - **[`include/heat3d/convergence_study.hpp`](include/heat3d/convergence_study.hpp)** — the [Order of accuracy (FD)](#order-of-accuracy-fd) study's shared `run_case(fd_order, N)`: single-Fourier-mode IC, `pfc::gradient::FDGradient<HeatGrads>` bound the same way `heat3d_fd.cpp` binds it, and an *exact* (not time-marched) closed-form evolution to isolate spatial from temporal error. Used by both `heat3d_fd_convergence_study` and `tests/test_heat3d_fd_convergence.cpp`.
 - **[`include/heat3d/spectral_content_study.hpp`](include/heat3d/spectral_content_study.hpp)** — Heat3D driver around [`periodic_spectra.hpp`](../../include/openpfc/kernel/field/periodic_spectra.hpp) and [`fd_symbols.hpp`](../../include/openpfc/kernel/field/fd_symbols.hpp): Gaussian RK4 validation of the shipped FD stack, plus occupancy-matched family maps. Used by `heat3d_spectral_content_study` and `tests/test_heat3d_spectral_content.cpp`.
 
@@ -116,7 +116,7 @@ Per-binary drivers (live in `src/cpu/`):
 
 Tests:
 
-- **[`tests/test_heat3d.cpp`](tests/test_heat3d.cpp)** — Catch2 unit tests covering: `heat3d::kD` is pinned to 1.0; `HeatModel` (default IC at the origin, IC override, the `rhs = kD * (xx + yy + zz)` formula); the slim per-binary CLI parsers (happy paths + every rejection case); `fill_implicit_euler_symbol` (DC = 1, first-mode formula, wrapped \(k_y\), size mismatch) and a constant-field fixed point of `SpectralHeatPropagator`; the analytic reference solution; two single-rank integration tests against a padded field / explicit Euler stepper; **two** single-rank cases for the manual driver (smoke + L2-vs-analytic, and parity vs the compact `FDCPUStack` path); and **two** single-rank cases for the from-scratch driver (smoke + L2-vs-analytic, and parity vs the compact path to within 1e-7). Built into the `test_heat3d` executable and registered with CTest as `heat3d-all-tests` whenever `OpenPFC_BUILD_TESTS=ON` and Catch2 is available (set `HEAT3D_ENABLE_TESTS=OFF` to skip). HIP smokes: `heat3d-fd-hip-smoke` (production overlap), `heat3d-fd-hip-blocking-smoke`, `heat3d-spectral-hip-smoke`.
+- **[`tests/test_heat3d.cpp`](tests/test_heat3d.cpp)** — Catch2 unit tests covering: `heat3d::kD` is pinned to 1.0; `HeatModel` (default IC at the origin, IC override, the `rhs = kD * (xx + yy + zz)` formula); the slim per-binary CLI parsers (happy paths + every rejection case); `fill_implicit_euler_symbol` (DC = 1, first-mode formula, wrapped $k_y$, size mismatch) and a constant-field fixed point of `SpectralHeatPropagator`; the analytic reference solution; two single-rank integration tests against a padded field / explicit Euler stepper; **two** single-rank cases for the manual driver (smoke + L2-vs-analytic, and parity vs the compact `FDCPUStack` path); and **two** single-rank cases for the from-scratch driver (smoke + L2-vs-analytic, and parity vs the compact path to within 1e-7). Built into the `test_heat3d` executable and registered with CTest as `heat3d-all-tests` whenever `OpenPFC_BUILD_TESTS=ON` and Catch2 is available (set `HEAT3D_ENABLE_TESTS=OFF` to skip). HIP smokes: `heat3d-fd-hip-smoke` (production overlap), `heat3d-fd-hip-blocking-smoke`, `heat3d-spectral-hip-smoke`.
 - **[`tests/test_heat3d_fd_convergence.cpp`](tests/test_heat3d_fd_convergence.cpp)** — regression guard for [Order of accuracy (FD)](#order-of-accuracy-fd): asserts the observed order of accuracy at `fd_order` 4 and 8 matches the design order within a stated tolerance. Registered as `heat3d-fd-convergence`; pure FD (no HeFFTe needed).
 
 ### Where OpenMP runs (FD)
@@ -129,7 +129,7 @@ So `htop`/`top` can look **single-threaded** when wall time is dominated by **MP
 
 **Single MPI rank on Linux:** `heat3d` calls `pfc::runtime::reset_cpu_affinity_if_single_mpi_rank` (which uses `sched_setaffinity`) after `MPI_Init` to allow **all online logical CPUs** for that process, so OpenMP can use the machine without extra `mpirun` flags. Set **`OPENPFC_NO_RESET_AFFINITY`** (any value) to keep the launcher’s mask unchanged (e.g. if your site policy forbids overriding binding).
 
-**Several MPI ranks on one node:** the reset is **not** applied (`MPI_COMM_WORLD` size \(>1\)); use launcher options so each rank gets a disjoint CPU set and set `OMP_NUM_THREADS` per rank accordingly, for example:
+**Several MPI ranks on one node:** the reset is **not** applied (`MPI_COMM_WORLD` size $>1$); use launcher options so each rank gets a disjoint CPU set and set `OMP_NUM_THREADS` per rank accordingly, for example:
 
 ```bash
 export OMP_NUM_THREADS=4
@@ -157,7 +157,7 @@ heat3d_spectral_content_study [--data-dir DIR] [--no-validate|--held-out-only|--
 - `fd_order` (compact FD only): even integers **2 through 20**. Halo width is `fd_order/2` per face. Each local subdomain must be **wider** than `fd_order` in every dimension (the driver aborts with `MPI_Abort` if the interior slab is empty).
 - The **scratch** and **manual** drivers hard-code 2nd-order central (halo width 1) — extend the inline stencil / `stencil_step` lambda if you want a different order; the goal is to keep the showcase code uncluttered.
 - **Stability (FD)**: explicit Euler requires a sufficiently small `dt` (CFL); higher spatial order does not remove this limit.
-- **Spectral**: each step applies \(\hat u \leftarrow \hat u / (1 + \Delta t\,D|\mathbf{k}|^2)\) in complex Fourier space (implicit Euler for the linear diffusion operator).
+- **Spectral**: each step applies $\hat u \leftarrow \hat u / (1 + \Delta t\,D|\mathbf{k}|^2)$ in complex Fourier space (implicit Euler for the linear diffusion operator).
 
 ## Example
 
@@ -178,9 +178,9 @@ All three FD binaries report identical `l2_error_vs_R3_analytic_rms` (the manual
 
 Rank 0 prints `timing_s`, `avg_step_time_s` (MPI max across ranks), `omp_max_threads` when OpenMP is enabled, and an RMS L2 error against the **infinite-domain** Gaussian reference
 
-\[
+$$
 u(\mathbf{x},t)=(1+t)^{-3/2}\exp\!\left(-\frac{|\mathbf{x}|^2}{4D(1+t)}\right)
-\]
+$$
 
 The domain is **periodic**; for a localized Gaussian the mismatch at boundaries contributes to the reported error even when the numerics are consistent.
 
@@ -226,7 +226,7 @@ Same grid **`256³`**, **`n_steps=25`**, **`dt=1e-6`**, **`mpirun -n 1`** (D = `
 
 **Correctness:** For this case, **`l2_error_vs_R3_analytic_rms` is identical** for `OMP_NUM_THREADS` in `{1,2,4,8}` (bit-for-bit in repeated runs), so the OpenMP region is **not** changing the numerics—only scheduling.
 
-**Scaling (2026-04-29, shared login node):** Real FD run, **`mpirun -n 1`**, after the in-process **single-rank CPU mask reset** on Linux so `omp_get_num_procs()` matches the node (here **32**). **`l2_error_vs_R3_analytic_rms=9.91404e-21`** was **identical** for \(\{1,2,4,8\}\) threads. Speedup is **sub-linear** (memory traffic per step + fork/join each step), but **8 threads \(\approx\) 5.3\(\times\)** faster than 1 thread on this capture—consistent with a healthy OpenMP Laplacian loop rather than a pinned single-core mask.
+**Scaling (2026-04-29, shared login node):** Real FD run, **`mpirun -n 1`**, after the in-process **single-rank CPU mask reset** on Linux so `omp_get_num_procs()` matches the node (here **32**). **`l2_error_vs_R3_analytic_rms=9.91404e-21`** was **identical** for $\{1,2,4,8\}$ threads. Speedup is **sub-linear** (memory traffic per step + fork/join each step), but **8 threads $\approx$ 5.3$\times$** faster than 1 thread on this capture—consistent with a healthy OpenMP Laplacian loop rather than a pinned single-core mask.
 
 | OMP_NUM_THREADS | avg_step_time_s |
 |-----------------|-----------------|
@@ -244,7 +244,7 @@ done
 
 ## Hybrid MPI + OpenMP (FD)
 
-Use **fewer MPI ranks** and **`OMP_NUM_THREADS`** matching usable cores so halo exchange stays smaller while threads parallelize over interior \((i_y,i_z)\) lines (the `omp parallel for collapse(2)` lives in `pfc::field::for_each_interior` for the compact driver and in `pfc::field::for_each_inner_omp` / `for_each_owned_omp` for the manual driver).
+Use **fewer MPI ranks** and **`OMP_NUM_THREADS`** matching usable cores so halo exchange stays smaller while threads parallelize over interior $(i_y,i_z)$ lines (the `omp parallel for collapse(2)` lives in `pfc::field::for_each_interior` for the compact driver and in `pfc::field::for_each_inner_omp` / `for_each_owned_omp` for the manual driver).
 
 ```bash
 export OMP_NUM_THREADS=8
@@ -260,9 +260,9 @@ The **spectral** binaries are unchanged (MPI over ranks only).
 now nothing measured whether raising the order actually buys accuracy.
 `heat3d_fd_convergence_study` does: for each even `fd_order` in {2, 4, 6,
 8, 10, 12} it sweeps `N` in {16, 24, 32, 48, 64} on a periodic domain of
-length \(2\pi\) with the single-Fourier-mode initial condition
-\(u_0(x,y,z) = \cos(3x)\), whose exact PDE solution is
-\(u(x,t) = e^{-9Dt}\cos(3x)\) — chosen (instead of the Gaussian IC the
+length $2\pi$ with the single-Fourier-mode initial condition
+$u_0(x,y,z) = \cos(3x)$, whose exact PDE solution is
+$u(x,t) = e^{-9Dt}\cos(3x)$ — chosen (instead of the Gaussian IC the
 other heat3d binaries use) because it is periodic to machine precision at
 *every* grid resolution, so there is no domain-truncation error competing
 with the stencil error being measured.

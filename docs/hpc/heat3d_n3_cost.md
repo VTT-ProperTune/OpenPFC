@@ -14,7 +14,7 @@ measured campaign.
 
 The matrix is fixed in `apps/heat3d/scripts/n3_cost_matrix.py`:
 
-- resolutions \(N = 512\) and \(N = 1024\);
+- resolutions $N = 512$ and $N = 1024$;
 - spectral slabs, FD-2, FD-8, and FD-12;
 - three independent repeats of each cell.
 
@@ -84,7 +84,7 @@ is the coefficient of variation of the admitted repeats.
 
 ## What this recipe does not establish
 
-Two sizes on one node do not decide an \(N^3\) or \(N^3 \log N\) law,
+Two sizes on one node do not decide an $N^3$ or $N^3 \log N$ law,
 and they do not rank the operators for another machine, precision,
 layout, or binary. Publish a result from a study that keeps the
 profiles, the revision, and the job provenance. This page is only how

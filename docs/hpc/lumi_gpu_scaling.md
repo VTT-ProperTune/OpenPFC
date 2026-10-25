@@ -197,7 +197,7 @@ Two-stream overlap A/B on the same 512³ protocol (issue #48, binary
 1 GCD has no MPI halo: forcing the inner/border split is 8% slower, so
 production default overlap falls back to blocking on a single rank.
 8–32 GCD overlap is faster. Strong efficiency vs blocking
-\(T_1=5.955\) ms:
+$T_1=5.955$ ms:
 
 | GCDs | ov=0 | ov=1 |
 | ---: | ---: | ---: |

@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Kobayashi dendritic growth (manual FD)
 
-Coupled **phase field** \(\phi\) and **temperature** \(T\) after Kobayashi (Physica D, 1993), using the same explicit finite-difference layout as the historical Julia script `kobayashi_v1` (Biner-style terms, periodic torus in **x** and **y**).
+Coupled **phase field** $\phi$ and **temperature** $T$ after Kobayashi (Physica D, 1993), using the same explicit finite-difference layout as the historical Julia script `kobayashi_v1` (Biner-style terms, periodic torus in **x** and **y**).
 
 ## Problem setup
 
@@ -59,8 +59,8 @@ against anything outside it.
 
 ## Equations (discrete layout matches Julia)
 
-- \(\tau \partial_t \phi = \partial_y(\epsilon\epsilon'\partial_x\phi) - \partial_x(\epsilon\epsilon'\partial_y\phi) + \epsilon^2 \nabla^2\phi + \phi(1-\phi)(\phi-\tfrac12+M(T))\)
-- \(\partial_t T = \nabla^2 T + \kappa \partial_t \phi\) — latent heat term implemented as \(\kappa(\phi^{n+1}-\phi^n)\) after updating \(\phi\), matching the Julia script.
+- $\tau \partial_t \phi = \partial_y(\epsilon\epsilon'\partial_x\phi) - \partial_x(\epsilon\epsilon'\partial_y\phi) + \epsilon^2 \nabla^2\phi + \phi(1-\phi)(\phi-\tfrac12+M(T))$
+- $\partial_t T = \nabla^2 T + \kappa \partial_t \phi$ — latent heat term implemented as $\kappa(\phi^{n+1}-\phi^n)$ after updating $\phi$, matching the Julia script.
 
 Material constants and output cadence (`nprint`, `nsave`) live in [`include/kobayashi/defaults.hpp`](include/kobayashi/defaults.hpp).
 
@@ -78,7 +78,7 @@ Field phi = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 Field tempr = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 ```
 
-**GPU fields:** The HIP and CUDA drivers keep working arrays as `Field<double, HIPSpace>` / `Field<double, CUDASpace>` and only stage \(\phi\) / \(T\) to a host Field for PNG and `KOBAYASHI_VERIFY`.
+**GPU fields:** The HIP and CUDA drivers keep working arrays as `Field<double, HIPSpace>` / `Field<double, CUDASpace>` and only stage $\phi$ / $T$ to a host Field for PNG and `KOBAYASHI_VERIFY`.
 
 ## Usage (`kobayashi_fd_manual`)
 
@@ -90,7 +90,7 @@ mpirun -n 4 ./kobayashi_fd_manual
 mpirun -n 4 ./kobayashi_fd_manual 128 128 500 1.0e-4 0.03 results/my_run
 ```
 
-Writes grayscale PNGs of \(\phi\) on rank 0 (`phi_0000.png`, then every `nsave` steps, plus **`phi_final.png`** after the last time step). Directory is created under `output_dir`.
+Writes grayscale PNGs of $\phi$ on rank 0 (`phi_0000.png`, then every `nsave` steps, plus **`phi_final.png`** after the last time step). Directory is created under `output_dir`.
 
 ## Usage (`kobayashi_fd_openmp`)
 
@@ -115,7 +115,7 @@ OpenMP thread equality is the unit test `test_kobayashi_fd_openmp` (1 against 4 
 
 ### Verification / timing lines (stdout)
 
-After the time-step loop, rank 0 prints **`KOBAYASHI_VERIFY`** (decimal scalars + **`wall_loop_max_s`**, the MPI_MAX of per-rank loop timers) and **`KOBAYASHI_VERIFY_HEX`** (`sum_phi`, `sumsq_phi`, `sum_T`, `sumsq_T` in `%a` form). Global sums use a **gather + fixed \((g_x,g_y)\) accumulation order** so results match across MPI rank counts when the physics is bitwise deterministic.
+After the time-step loop, rank 0 prints **`KOBAYASHI_VERIFY`** (decimal scalars + **`wall_loop_max_s`**, the MPI_MAX of per-rank loop timers) and **`KOBAYASHI_VERIFY_HEX`** (`sum_phi`, `sumsq_phi`, `sum_T`, `sumsq_T` in `%a` form). Global sums use a **gather + fixed $(g_x,g_y)$ accumulation order** so results match across MPI rank counts when the physics is bitwise deterministic.
 
 Environment toggles:
 
@@ -134,7 +134,7 @@ mpirun -np 2 ./kobayashi_fd_cuda 512 512 5000 1e-4 0.03 results/kobayashi_cuda_2
 
 **H100 scaling / halo regression notes** (GPU-aware MPI vs packed faces, nsys interpretation): [`docs/scalability_cuda_h100.md`](docs/scalability_cuda_h100.md). **Measured A/B (8192×4096, job 1236819):** [`docs/cuda_halo_lessons_h100.md`](docs/cuda_halo_lessons_h100.md). Override **`CMAKE_CUDA_ARCHITECTURES`** when the GPU is not compute capability 90.
 
-**Performance (CUDA):** Halos use **`HaloExchange<CUDASpace>`** (pack-to-contiguous + device-pointer MPI when GPU-aware, otherwise packed faces). Two field groups per step (state then aux) unless **`KOBAYASHI_HALO_EXTENDED=1`**. PNG paths still stage \(\phi\) on the host. GPU-aware MPI is **`OpenPFC_MPI_CUDA_AWARE`** (see [`INSTALL.md`](../../INSTALL.md)). Thread blocks: **`OPENPFC_KOBAYASHI_CUDA_BLOCK`** (default **32×32**).
+**Performance (CUDA):** Halos use **`HaloExchange<CUDASpace>`** (pack-to-contiguous + device-pointer MPI when GPU-aware, otherwise packed faces). Two field groups per step (state then aux) unless **`KOBAYASHI_HALO_EXTENDED=1`**. PNG paths still stage $\phi$ on the host. GPU-aware MPI is **`OpenPFC_MPI_CUDA_AWARE`** (see [`INSTALL.md`](../../INSTALL.md)). Thread blocks: **`OPENPFC_KOBAYASHI_CUDA_BLOCK`** (default **32×32**).
 
 ## Usage (`kobayashi_fd_hip`)
 

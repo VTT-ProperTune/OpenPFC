@@ -31,7 +31,7 @@ application to carry, for the `ehd_film_nonlinear` **science preset**
 | **Initial condition** | `h(x,y,0) = h0` (uniform gap); the disturbance comes entirely from the applied load, not the IC |
 | **Key parameters** | `h0=1`, `M0=1`, `gamma=10`, `A=0` (adhesion off in the science preset — see "Deferred" below); load `p0=0.5`, `a=8`, `t_load=60`; two bending stiffnesses `B=640` (stiff) and `B=100` (compliant) |
 | **Observable** | Central gap `h_center(t)` / deflection, pressure extrema, RMS spreading radius, displaced volume, total volume (conservation check) — all in the diagnostics CSV |
-| **Model maturity** | numerical verification: **analytical** (unforced \(k^6\) decay, and the `#610` forced/switch-off linear oracle on the same sampled load; both are reproduced by the constant-mobility flux path, see Tests) · physical completeness: **reduced** (2-D lubrication + Kirchhoff bending + tension + optional adhesion; no plate inertia, no cavitation, no contact) · calibration: **none** — `B`, `gamma`, `M0`, the load shape and its amplitude are illustrative nondimensional grid-unit parameters, not fit to a material |
+| **Model maturity** | numerical verification: **analytical** (unforced $k^6$ decay, and the `#610` forced/switch-off linear oracle on the same sampled load; both are reproduced by the constant-mobility flux path, see Tests) · physical completeness: **reduced** (2-D lubrication + Kirchhoff bending + tension + optional adhesion; no plate inertia, no cavitation, no contact) · calibration: **none** — `B`, `gamma`, `M0`, the load shape and its amplitude are illustrative nondimensional grid-unit parameters, not fit to a material |
 
 ### Why periodic
 
@@ -53,27 +53,27 @@ the half-width in both cases.
 
 ## Nonlinear model (`#116`)
 
-\[
+$$
 p = B\nabla^4h - \gamma\nabla^2h - \Pi(h) + p_{\mathrm{ext}}(x,y,t),
 \qquad
 \partial_t h = \nabla\cdot\bigl[M(h)\nabla p\bigr],
 \qquad
 M(h) = M_0\left(\frac{h}{h_0}\right)^{3}.
-\]
+$$
 
 `M(h)` is the cubic no-slip lubrication mobility (same law and
 normalisation as `thin_film`'s `#114` upgrade): exact at `h=h0`, so setting
 `A=gamma=0` and starting from a small perturbation must reproduce the exact
-\(k^6\) bending-relaxation verifier below — asserted in `test_ehd_film.cpp`,
+$k^6$ bending-relaxation verifier below — asserted in `test_ehd_film.cpp`,
 not assumed. `p_ext` is a localized applied load,
 
-\[
+$$
 p_{\mathrm{ext}}(x,y,t) =
   \begin{cases}
     p_0\exp(-r^2/2a^2) & 0\le t<t_{\mathrm{load}}\\
     0 & t\ge t_{\mathrm{load}}
   \end{cases}
-\]
+$$
 
 applied and then removed, so a run shows loading followed by
 recovery/redistribution. `Pi(h)` is the same disjoining pressure as
@@ -84,12 +84,12 @@ stable thin gap instead of the pressure diverging as `h -> 0`.
 ### Sign conventions
 
 * `p` follows the existing linear model: flux down the pressure gradient,
-  so with OpenPFC's \(k_{\mathrm{lap}}=-|k|^2\) pure bending decays,
-  \(\lambda(k)=-M_0Bk^6<0\) (the verifier).
+  so with OpenPFC's $k_{\mathrm{lap}}=-|k|^2$ pure bending decays,
+  $\lambda(k)=-M_0Bk^6<0$ (the verifier).
 * `p_ext > 0` is **a load pressing the plate down onto the film** (increased
   applied pressure). A localized positive `p_ext` has
-  \(\nabla^2p_{\mathrm{ext}}<0\) at its centre, so
-  \(\partial_th=\nabla\cdot[M\nabla p]\approx M\nabla^2p_{\mathrm{ext}}<0\)
+  $\nabla^2p_{\mathrm{ext}}<0$ at its centre, so
+  $\partial_th=\nabla\cdot[M\nabla p]\approx M\nabla^2p_{\mathrm{ext}}<0$
   there: the gap thins under the load and thickens in the surrounding
   annulus where the fluid is displaced to (squeeze flow). Asserted directly
   in `test_ehd_film.cpp` ("localized load thins the gap...").
@@ -98,7 +98,7 @@ stable thin gap instead of the pressure diverging as `h -> 0`.
 
 ### Numerics
 
-The nonlinear flux \(\nabla\cdot[M(h)\nabla p]\) is evaluated with the
+The nonlinear flux $\nabla\cdot[M(h)\nabla p]$ is evaluated with the
 shared `pfc::sim::FluxETD` stepper
 (`include/openpfc/kernel/simulation/spectral_flux.hpp`): a state-dependent
 mobility cannot be written as a reciprocal-space symbol, so it is applied
@@ -122,19 +122,19 @@ run to `t1=600` on 4 ranks (LUMI CPU, shared allocation):
 | Spreading radius at `t=600` | `27.41` | `23.08` |
 | Volume relative drift, whole run (max over all reported steps) | `7.0e-15` | `8.0e-15` |
 
-The bending–tension crossover length \(\ell^*=\sqrt{B/\gamma}\) is `8.0`
+The bending–tension crossover length $\ell^*=\sqrt{B/\gamma}$ is `8.0`
 for the stiff case (equal to the load width `a`) and `3.16` for the
-compliant case (well below it). At the load scale \(k\sim 1/a\) the stiff
+compliant case (well below it). At the load scale $k\sim 1/a$ the stiff
 plate sits at the bending–tension crossover, so both terms contribute;
 the compliant plate is tension-dominated. The two nonlinear cases show
 similar *normalized endpoint* recovery (about 84% and 82% of the
-load-release deflection by \(t=600\)). That is an empirical observation
+load-release deflection by $t=600$). That is an empirical observation
 for these two runs, not a demonstration that recovery is set only by
 `gamma`. Compare the full trajectories with the exact linear forced
 oracle (`scripts/forced_linear_oracle.py`, research `#610`) before making
 a mechanism claim.
 
-The nonlinear \(h^3\) mobility reduces the load-release deflection
+The nonlinear $h^3$ mobility reduces the load-release deflection
 relative to that linear oracle (deeper thinning lowers mobility). **The
 physically interpretable stiffness trend requested by `#116` remains:**
 the stiffer plate deflects less and spreads the same load over a wider
@@ -179,10 +179,10 @@ diagnostics only, as it did before.
 ## Tests
 
 `ctest -R ehd-film` (single binary `test_ehd_film`) checks, for the linear
-model: \(L(k)=M_0 B k_{\mathrm{lap}}^3\), exact \(\exp(-M_0 B k^6 t)\),
-two-mode rate ratio 64, mean-gap conservation, and that \(A>0\) grows at
-low \(k\); and for the nonlinear model (`#116`): the cubic mobility reduces
-to `M0` at `h0`; the flux stepper reproduces the exact \(k^6\) decay at
+model: $L(k)=M_0 B k_{\mathrm{lap}}^3$, exact $\exp(-M_0 B k^6 t)$,
+two-mode rate ratio 64, mean-gap conservation, and that $A>0$ grows at
+low $k$; and for the nonlinear model (`#116`): the cubic mobility reduces
+to `M0` at `h0`; the flux stepper reproduces the exact $k^6$ decay at
 constant mobility (the point of keeping the linear verifier); volume
 conservation under bending + tension + adhesion together; the load's sign
 convention (thins the gap centre, conserves volume); and the load's
@@ -192,7 +192,7 @@ constant-mobility flux path reproduces it for a cosine load, including
 mean-gap conservation and field-level agreement at load release and
 during recovery. HIP builds add `HIP_EhdFilmETD` and
 `ehd-film-hip-smoke` (linear model only). LUMI-G smoke: job 21799835
-(`small-g`, 16², mean \(h=1\)).
+(`small-g`, 16², mean $h=1$).
 
 The paper comparator is the same closed form on the sampled Gaussian
 load:
@@ -229,8 +229,8 @@ PR does not attempt:
 
 | Path | Role |
 |------|------|
-| `include/ehd_film/ehd_film_physics.hpp` | Linear model: `L(k)` with \(k_{\mathrm{lap}}^3\), `h_star` schema |
-| `include/ehd_film/ehd_film_pointwise.hpp` | \(\Pi\) remainder, device-capable, now with the `h_star` precursor form |
+| `include/ehd_film/ehd_film_physics.hpp` | Linear model: `L(k)` with $k_{\mathrm{lap}}^3$, `h_star` schema |
+| `include/ehd_film/ehd_film_pointwise.hpp` | $\Pi$ remainder, device-capable, now with the `h_star` precursor form |
 | `include/ehd_film/ehd_film_session.hpp` | JSON session, field `h`, 2/3 dealias (linear model) |
 | `include/ehd_film/nonlinear.hpp` | `#116`: cubic mobility, Gaussian load, `EhdFilmSample` diagnostics |
 | `include/ehd_film/linear_oracle.hpp` | `#610`: exact forced/switch-off Fourier solution |

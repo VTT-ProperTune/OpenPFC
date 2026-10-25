@@ -209,7 +209,7 @@ The residual norm is @f$ \|r\|_2 = \sqrt{\sum |r_i|^2} @f$.
 | Policy | Behavior |
 |--------|----------|
 | `fail` | Any singular mode → `ill_conditioned`, `target_out` unchanged |
-| `project` | Singular → @f$ s_i = @f$ `null_mode_value` (real) or `std::complex<double>(null_mode_value, 0.0)` (complex); else @f$ s_i = b_i / d_i @f$. For @f$ d_i=0 @f$, @f$ s_i=0 @f$, residual @f$ r_i = -b_i @f$ — keep @f$ \|b_i\| @f$ small on null modes when compatibility is required |
+| `project` | Singular → @f$ s_i = @f$ `null_mode_value` (real) or `std::complex<double>(null_mode_value, 0.0)` (complex); else @f$ s_i = b_i / d_i @f$. For @f$ d_i=0 @f$, @f$ s_i=0 @f$, residual @f$ r_i = -b_i @f$ — keep @f$ \Vert b_i\Vert  @f$ small on null modes when compatibility is required |
 | `regularize` | Require @f$ \lambda = @f$ `regularization` @f$ > 0 @f$; @f$ s_i = b_i / (d_i + \lambda) @f$ for every @f$ i @f$ (real @f$ \lambda @f$ added to real or complex @f$ d_i @f$; not a silent epsilon) |
 
 `operator_identifier` must be empty or `"spectral_diagonal"`. Absolute

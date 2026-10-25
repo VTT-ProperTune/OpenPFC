@@ -949,12 +949,12 @@ for `dV/V`. This box is smaller and earlier than the CPU `600^2`
 Stage-4 table; quote it as a GPU vehicle, not a replacement for those
 numbers. Heat and solute conservation stay on the CPU driver.
 
-The stored energy in the table is \(F=\int f_{\mathrm{el}}\,\mathrm{d}V\).
+The stored energy in the table is $F=\int f_{\mathrm{el}}\,\mathrm{d}V$.
 Because the displacement is periodic and the Green solve is at
-equilibrium, \(\int\sigma:\varepsilon\,\mathrm{d}V=0\), so
-\(F=W_{*}=-\tfrac12\int\sigma:\varepsilon^{*}\,\mathrm{d}V\). The
+equilibrium, $\int\sigma:\varepsilon\,\mathrm{d}V=0$, so
+$F=W_{*}=-\tfrac12\int\sigma:\varepsilon^{*}\,\mathrm{d}V$. The
 science CSV writes both integrals and the relative residual
-`el_balance_rel` \(=|F-W_{*}|/\max(|F|,|W_{*}|,10^{-30})\). The
+`el_balance_rel` $=|F-W_{*}|/\max(|F|,|W_{*}|,10^{-30})$. The
 floor keeps the zero-energy arms (`off`, modulus-only) at 0 rather
 than NaN. Heterogeneous-modulus solves stop at `tol_el`, so the
 residual is then O(`tol_el`) rather than round-off. This is the same
@@ -963,9 +963,9 @@ identity as `openpfc/solvers/microelasticity/microelasticity.hpp` and
 Job **22045158** (`dev-g`, one GCD) repeats the frozen five-arm
 campaign and writes `el_wstar` and `el_balance_rel`. Kinetics match
 22043824 to the printed digits. Last-sample relative residuals are
-0 (`off`, `on`), \(4.4\times10^{-7}\) (solutal),
-\(5.4\times10^{-6}\) (thermal), \(7.0\times10^{-7}\) (`both`);
-the worst sample in any arm is \(6.1\times10^{-6}\) (thermal),
+0 (`off`, `on`), $4.4\times10^{-7}$ (solutal),
+$5.4\times10^{-6}$ (thermal), $7.0\times10^{-7}$ (`both`);
+the worst sample in any arm is $6.1\times10^{-6}$ (thermal),
 O(`tol_el`). CSV:
 `out/report/data/alloy_dendrite_hip_science_22045158.csv`. The
 22043824 table below is the original kinetics snapshot.

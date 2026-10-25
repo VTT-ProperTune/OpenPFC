@@ -107,38 +107,38 @@ near the selected wavelength, then grows as a power law.
 
 ## Physics
 
-One field `c` (Cr mole fraction) with constant mobility \(M\):
+One field `c` (Cr mole fraction) with constant mobility $M$:
 
-\[
+$$
 \partial_t c = M\nabla^2\bigl(f'(c)-\kappa\nabla^2 c\bigr).
-\]
+$$
 
-The bulk density is a regular-solution model in units of \(RT\):
+The bulk density is a regular-solution model in units of $RT$:
 
-\[
+$$
 f(c)=\omega\,c(1-c)+c\ln c+(1-c)\ln(1-c),\qquad \omega=\Omega/(RT).
-\]
+$$
 
-Defaults \(T=748.15\,\mathrm{K}\) (475 °C) and
-\(\Omega=20.1\,\mathrm{kJ\,mol^{-1}}\) put Fe–32Cr (\(c_0=0.32\)) inside the
+Defaults $T=748.15\,\mathrm{K}$ (475 °C) and
+$\Omega=20.1\,\mathrm{kJ\,mol^{-1}}$ put Fe–32Cr ($c_0=0.32$) inside the
 chemical spinodal. They are a **representative miscibility-gap model**, not a
-CALPHAD assessment. \(\kappa\) and \(M\) are in grid units.
+CALPHAD assessment. $\kappa$ and $M$ are in grid units.
 
-In Fourier space, with OpenPFC's \(k_{\mathrm{lap}}=-|k|^2\),
+In Fourier space, with OpenPFC's $k_{\mathrm{lap}}=-|k|^2$,
 
-\[
+$$
 L(k)=M\bigl(f''(c_0)\,k_{\mathrm{lap}}-\kappa\,k_{\mathrm{lap}}^2\bigr),
 \qquad
 M_{\mathrm{nl}}(k)=M\,k_{\mathrm{lap}}.
-\]
+$$
 
-The real-space remainder \(n(c)=f'(c)-f'(c_0)-f''(c_0)(c-c_0)\) is the
+The real-space remainder $n(c)=f'(c)-f'(c_0)-f''(c_0)(c-c_0)$ is the
 pointwise nonlinearity. High-order stiffness is a multiply; that is the
 spectral point of this app.
 
-Linear growth of a small mode \(e^{ikx}\) is \(\lambda(k)=L(-k^2)\). Modes
-with \(\lambda>0\) sit in the spinodal band
-\(0<k^2<-f''(c_0)/\kappa\).
+Linear growth of a small mode $e^{ikx}$ is $\lambda(k)=L(-k^2)$. Modes
+with $\lambda>0$ sit in the spinodal band
+$0<k^2<-f''(c_0)/\kappa$.
 
 ## Run
 
@@ -157,7 +157,7 @@ in the unstable band.
 
 JSON `model.params`: `c0`, `T` (K), `Omega` (J/mol), `R`, `kappa`, `M`.
 All have defaults. Initial condition `"type": "cosine_mode"` sets
-\(c=c_0+A\cos(2\pi n_x x/L_x+\cdots)\).
+$c=c_0+A\cos(2\pi n_x x/L_x+\cdots)$.
 
 ## Coarsening preset and diagnostics
 
@@ -189,10 +189,10 @@ At `saveat`, rank zero writes
 Sampling includes the initial scheduled save and works without VTK writers.
 The energy is evaluated from the current accepted field:
 
-\[
+$$
 F=\int [f(c)+(\kappa/2)|\nabla c|^2]\,dV
  =\int [f(c)-(\kappa/2)c\nabla^2c]\,dV.
-\]
+$$
 
 The Laplacian uses the solver's spectral wavenumbers and backend; periodicity
 makes the two integral expressions equivalent. Integrals include `dx*dy*dz`,
@@ -216,20 +216,20 @@ not a guarantee of monotonicity at arbitrary steps or resolutions.
 ## Tests
 
 `ctest -R cahn-hilliard` (or `test_cahn_hilliard`) checks the spinodal
-interval, the \(L(k)\) formula, mean-\(c\) conservation, linear-mode growth
-against \(\exp(\lambda t)\), and that composition variance grows while total
+interval, the $L(k)$ formula, mean-$c$ conservation, linear-mode growth
+against $\exp(\lambda t)$, and that composition variance grows while total
 free energy falls for a resolved small-step case. One- and two-rank tests check
 analytical gradient energy and bit-identical initial noise across decompositions.
 HIP builds add `HIP_CahnHilliardETD` (CPU vs device field
-to \(10^{-10}\)) and `cahn-hilliard-hip-smoke` (`SPECTRAL_CHECKSUM`).
-LUMI-G smoke: job 21780712 (`small-g`, 16², mean \(c=0.32\)).
+to $10^{-10}$) and `cahn-hilliard-hip-smoke` (`SPECTRAL_CHECKSUM`).
+LUMI-G smoke: job 21780712 (`small-g`, 16², mean $c=0.32$).
 
 ## Layout
 
 | Path | Role |
 |------|------|
 | `include/cahn_hilliard/cahn_hilliard_physics.hpp` | `SpectralETDPhysics` + schema |
-| `include/cahn_hilliard/cahn_hilliard_pointwise.hpp` | Device-capable \(n(c)\) and bulk \(f\) |
+| `include/cahn_hilliard/cahn_hilliard_pointwise.hpp` | Device-capable $n(c)$ and bulk $f$ |
 | `include/cahn_hilliard/cahn_hilliard_session.hpp` | JSON session, field name `c`, 2/3 dealias |
 | `include/cahn_hilliard/concentration_seed.hpp` | Mole-fraction bound on noise |
 | `src/cahn_hilliard.cpp` | CPU `main` |

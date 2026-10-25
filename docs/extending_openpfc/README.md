@@ -50,11 +50,11 @@ type provides:
 | Member | Required | Meaning |
 |--------|----------|---------|
 | `declare_fields(SimulationState&)` | yes | Allocate the primary field `psi` (see `pfc::sim::add_declared_field`). |
-| `linear_symbol(double k_laplacian)` | yes | Real diagonal symbol \(L(k)\) from OpenPFC's spectral Laplacian \(-|k|^2\). |
+| `linear_symbol(double k_laplacian)` | yes | Real diagonal symbol $L(k)$ from OpenPFC's spectral Laplacian $-\vert k\vert ^2$. |
 | `pointwise()` | yes | Returns a trivially copyable functor with `OPENPFC_HD double nonlinearity(const pfc::sim::SpectralCell&) const`. |
-| `nonlinear_symbol(double k_laplacian)` | optional | Multiplier \(M(k)\) on \(\hat N\) (default 1; PFC models return `k_laplacian`). |
-| `filter_mf(double k_laplacian)` | optional | Mean-field filter \(\chi(k)\); the driver then fills `cell.psi_mf`. |
-| `correlation_kernel(double k_laplacian)` | optional | Kernel \(P(k)\); the driver then fills `cell.p_star`. |
+| `nonlinear_symbol(double k_laplacian)` | optional | Multiplier $M(k)$ on $\hat N$ (default 1; PFC models return `k_laplacian`). |
+| `filter_mf(double k_laplacian)` | optional | Mean-field filter $\chi(k)$; the driver then fills `cell.psi_mf`. |
+| `correlation_kernel(double k_laplacian)` | optional | Kernel $P(k)$; the driver then fills `cell.p_star`. |
 | functor `free_energy_density(const SpectralCell&)` | optional | Per-cell observable reduced into `last_free_energy()`. |
 
 The `SpectralCell` (`kernel/simulation/spectral_pointwise.hpp`) carries

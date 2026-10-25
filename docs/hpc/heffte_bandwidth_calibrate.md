@@ -19,7 +19,7 @@ Issue: [#119](https://github.com/ahojukka5/OpenPFC/issues/119). Research
 ## Question
 
 Measure MPI-only payload rate
-\(B_{\mathrm{mpi}} =\) `bytes_per_timestep` / `T_mpi` from HeFFTe-trace
+$B_{\mathrm{mpi}} =$ `bytes_per_timestep` / `T_mpi` from HeFFTe-trace
 `all2all` / `all2allv` / `waitany`, and compare it to GPU-buffer OSU
 `alltoall` / `alltoallv` at the same rank map and `bytes_per_peer`,
 against the documented 12.5 GB/s unidirectional GCD NIC share.
@@ -30,7 +30,7 @@ not the NIC. Either way do not restart 512-node Heat3D tournaments.
 
 ## Frozen factors
 
-- Constant local inbox \(768^3\) / GCD, grow only \(N_z\).
+- Constant local inbox $768^3$ / GCD, grow only $N_z$.
 - Diagnostic `heffte-rocm-trace/2.4.1` (device-sync tracing, no
   production `p2p-plined-packall` patch). Walls are **not** production
   numbers. Label `p2p_plined` rows as diagnostic.
@@ -100,10 +100,10 @@ Admitted compact table:
 Reject rows (missing traces from leaked production binaries) stay in
 the scratch harvest and are not in this file.
 
-HeFFTe-trace \(B_{\mathrm{mpi}}\) versus GPU OSU at the same
+HeFFTe-trace $B_{\mathrm{mpi}}$ versus GPU OSU at the same
 `bytes_per_peer`:
 
-| nodes | Heat3D protocol | \(B_{\mathrm{mpi}}\) GB/s | OSU GB/s | HeFFTe/OSU |
+| nodes | Heat3D protocol | $B_{\mathrm{mpi}}$ GB/s | OSU GB/s | HeFFTe/OSU |
 |------:|-----------------|--------------------------:|---------:|-----------:|
 | 1 | `p2p_plined` | 62.5 | 31.9 | on-node |
 | 2 | `p2p_plined` | 15.8 | 12.8 | 1.23 |
@@ -130,7 +130,7 @@ admitted #119 slab job 22207838 (`use_pencils=0`, `gpu_aware=1`,
 
 Admit requires banner `use_pencils=1` and `gpu_aware=1`. Harvest records
 grids and `n_mpi_coll_per_step`; it does not reuse slab
-`bytes_per_timestep` for \(B_{\mathrm{mpi}}\). Compare wall, `T_mpi`,
+`bytes_per_timestep` for $B_{\mathrm{mpi}}$. Compare wall, `T_mpi`,
 and pack to the slab. Do not grow the campaign if pencils are not
 clearly better.
 
@@ -142,9 +142,9 @@ Job **22208300** admits `use_pencils=1`, `gpu_aware=1`, tracing.
 | | slab 22207838 | pencils 22208300 |
 |---|---:|---:|
 | wall/step (s) | 1.416 | 1.408 |
-| \(T_{\mathrm{mpi}}\) (s) | 0.877 | 0.875 |
-| \(T_{\mathrm{pack}}\) (s) | 0.245 | 0.246 |
-| \(T_{\mathrm{fft}}\) (s) | 0.104 | 0.104 |
+| $T_{\mathrm{mpi}}$ (s) | 0.877 | 0.875 |
+| $T_{\mathrm{pack}}$ (s) | 0.245 | 0.246 |
+| $T_{\mathrm{fft}}$ (s) | 0.104 | 0.104 |
 | `n_mpi_coll` / step | 2 | 2 |
 | real / complex grid | `1x1x256` / `1x256x1` | `1x1x256` / `1x256x1` |
 

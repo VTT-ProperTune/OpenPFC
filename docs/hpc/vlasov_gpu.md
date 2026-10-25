@@ -28,7 +28,7 @@ own headers; start at
 The CPU application is untouched. `advect.hpp`, `moments.hpp`, `maxwell.hpp`
 and `step.hpp` remain the definition of what the application computes.
 `vlasov_run` reaches the same kernels behind `--device=hip` (optional
-`--device-x=0` leaves the spectral \(x\)-shift on the host). The two extra
+`--device-x=0` leaves the spectral $x$-shift on the host). The two extra
 binaries answer different questions: `vlasov_hip_parity` whether the device
 computes the same thing as the host, and `vlasov_hip_cost` where the time
 goes.
@@ -50,12 +50,12 @@ srun -n 1 --gpus-per-node=8 vlasov_hip_cost  --sizes=64,128,192,256 --reps=5
 `vlasov_hip_parity` exits non-zero if any check fails, so it can be wired to
 `ctest` as it stands. HIP builds register two tests: `vlasov-hip-parity`
 (the 20-step operator/integrated comparison, kept short) and
-`vlasov-hip-science-rate` (`--science=landau`, \(32^3\), \(t=12\), host vs
+`vlasov-hip-science-rate` (`--science=landau`, $32^3$, $t=12$, host vs
 device `fit_envelope_rate` on `mode_ex`, timeout 900 s, `RUN_SERIAL`).
-Job **21943612** (`dev-g`, 1 rank, \(32^3\), \(t=12\), 240 steps,
-\(\Delta t=0.05\)): \(\gamma_\mathrm{cpu}=\gamma_\mathrm{hip}=-0.1514064581\),
-relative difference \(6.040\times10^{-13}\) against a \(10^{-6}\) tolerance.
-That is the same 1-rank Landau \(\gamma\) as job 21942462 (CPU 1-vs-N).
+Job **21943612** (`dev-g`, 1 rank, $32^3$, $t=12$, 240 steps,
+$\Delta t=0.05$): $\gamma_\mathrm{cpu}=\gamma_\mathrm{hip}=-0.1514064581$,
+relative difference $6.040\times10^{-13}$ against a $10^{-6}$ tolerance.
+That is the same 1-rank Landau $\gamma$ as job 21942462 (CPU 1-vs-N).
 Both binaries need hipFFT
 (`find_package(hipfft)` in the application's `CMakeLists.txt`); the CPU
 build never looks for it.

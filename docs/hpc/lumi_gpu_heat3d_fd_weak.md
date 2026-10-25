@@ -196,11 +196,11 @@ Blocking matches the #25 pins through 16 nodes. Overlap-1 is nearly
 flat from 1 to 32 nodes (0.859–0.886 ms) while off-node faces/rank
 stay at three. At 64 nodes every rank has **four** off-node faces:
 the `8x8x8` x-line fills a node, so y and z faces all leave the node.
-Overlap-1 is 0.944 ms (91% vs \(T_1=0.859\) ms); blocking is 1.146 ms.
+Overlap-1 is 0.944 ms (91% vs $T_1=0.859$ ms); blocking is 1.146 ms.
 128-node `8x8x16` keeps four faces on all 1024 ranks: overlap-1 is
 0.960 ms (89%); blocking is 1.155 ms. That 64→128 step is +16 µs at
 fixed face count, so the remaining limit is off-node topology, not a
-node-count drip. Weak efficiency vs overlap-1 \(T_1\): 1.00 / 1.00 /
+node-count drip. Weak efficiency vs overlap-1 $T_1$: 1.00 / 1.00 /
 0.99 / 0.99 / 0.98 / 0.97 / 0.91 / 0.89. HEX checksum unchanged
 (`sum_u=0x1.7785970621d7cp+3`). Diagnostic `HEAT3D_OVERLAP` on the
 same production binary (not headline): 8-node three-face exposed wait

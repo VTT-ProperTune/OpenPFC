@@ -39,7 +39,7 @@ This page ties **figures** you may see in the repository or publications to **ru
 | **Materials app** | [`apps/cahn_hilliard`](../../apps/cahn_hilliard/README.md) — Fe–Cr-like spinodal, JSON, VTK of `c` |
 | **Teaching example** | `examples/12_cahn_hilliard` (see [`examples_catalog.md`](../reference/examples_catalog.md)) |
 | **VTK / ParaView** | Walkthrough: [`tutorials/vtk_paraview_workflow.md`](../tutorials/vtk_paraview_workflow.md) |
-| **Concepts** | Fourth-order spectral ETD; \(k^4\) is a multiply |
+| **Concepts** | Fourth-order spectral ETD; $k^4$ is a multiply |
 
 ## Surface diffusion (nanoscale smoothing)
 
@@ -47,7 +47,7 @@ This page ties **figures** you may see in the repository or publications to **ru
 |---|---|
 | **Runnable** | [`apps/surface_diffusion`](../../apps/surface_diffusion/README.md) — `smoothing.json` |
 | **VTK** | height `h` under `results/surface_diffusion/`; mode-amplitude recipe in the app README |
-| **Concepts** | Linear Mullins \(k^4\); \(h_k(t)=h_k(0)\exp(-B|k|^4 t)\) |
+| **Concepts** | Linear Mullins $k^4$; $h_k(t)=h_k(0)\exp(-B\vert k\vert ^4 t)$ |
 
 ## Kawahara (capillary–gravity waves)
 
@@ -55,7 +55,7 @@ This page ties **figures** you may see in the repository or publications to **ru
 |---|---|
 | **Runnable** | [`apps/kawahara`](../../apps/kawahara/README.md) — `pulse.json` |
 | **VTK** | height `u` under `results/kawahara/` |
-| **Concepts** | Odd-order dispersion \(\omega=\beta k^3+\gamma k^5\); \(k^4\) here rotates, it does not damp |
+| **Concepts** | Odd-order dispersion $\omega=\beta k^3+\gamma k^5$; $k^4$ here rotates, it does not damp |
 
 ## EHD film (flexible plate)
 
@@ -63,7 +63,7 @@ This page ties **figures** you may see in the repository or publications to **ru
 |---|---|
 | **Runnable** | [`apps/ehd_film`](../../apps/ehd_film/README.md) — `relaxation.json` |
 | **VTK** | gap `h` under `results/ehd_film/` |
-| **Concepts** | Sixth-order bending lubrication; \(\lambda=-M_0 B k^6\) |
+| **Concepts** | Sixth-order bending lubrication; $\lambda=-M_0 B k^6$ |
 
 ## Gradient elasticity (size-dependent defects)
 
@@ -71,7 +71,7 @@ This page ties **figures** you may see in the repository or publications to **ru
 |---|---|
 | **Runnable** | [`apps/gradient_elasticity`](../../apps/gradient_elasticity/README.md) — `inclusion.json` / `gaussian.json` |
 | **VTK** | inclusion `g` and displacement `ux`,`uy` under `results/gradient_elasticity/` |
-| **Concepts** | Helmholtz–Navier \((1-\ell^2\nabla^2)L_{\mathrm{navier}}\mathbf{u}=\mathbf{f}\); \(\ell\) regularizes high \(k\) |
+| **Concepts** | Helmholtz–Navier $(1-\ell^2\nabla^2)L_{\mathrm{navier}}\mathbf{u}=\mathbf{f}$; $\ell$ regularizes high $k$ |
 
 ## Thin-film dewetting / coating
 
@@ -79,7 +79,7 @@ This page ties **figures** you may see in the repository or publications to **ru
 |---|---|
 | **Runnable** | [`apps/thin_film`](../../apps/thin_film/README.md) — `dewetting.json` / `leveling.json` |
 | **VTK** | film height `h` under `results/thin_film/` |
-| **Concepts** | Fourth-order capillary ETD; \(\lambda(k)=M_0 k^2(\Pi'(h_0)-\gamma k^2)\) |
+| **Concepts** | Fourth-order capillary ETD; $\lambda(k)=M_0 k^2(\Pi'(h_0)-\gamma k^2)$ |
 
 ## Weibel / Vlasov–Maxwell (LUMI-G)
 
@@ -88,7 +88,7 @@ This page ties **figures** you may see in the repository or publications to **ru
 | **Runnable** | `vlasov_run --case=weibel --device=hip --reduced-dir=DIR` — [`apps/vlasov_maxwell`](../../apps/vlasov_maxwell/README.md) |
 | **Recipe** | [`showcase_weibel.sbatch`](../../apps/vlasov_maxwell/slurm/showcase_weibel.sbatch) (8 GCDs) |
 | **ParaView** | File → Open `reduced/weibel_f_xvx.xdmf` (and `Bz` / `Ey` / `Jy`) |
-| **Concepts** | 1D2V Weibel; paired linear \(\gamma\) arm; reduced movie frames |
+| **Concepts** | 1D2V Weibel; paired linear $\gamma$ arm; reduced movie frames |
 
 Heavy frames live on `/scratch/project_462001519/juaho/openpfc-showcase/`.
 
@@ -99,7 +99,7 @@ Heavy frames live on `/scratch/project_462001519/juaho/openpfc-showcase/`.
 | **Runnable** | `alloy_dendrite_hip_growth` — [`apps/alloy_dendrite_elastic`](../../apps/alloy_dendrite_elastic/README.md) |
 | **Recipe** | [`showcase_dendrite2d.sbatch`](../../apps/alloy_dendrite_elastic/slurm/showcase_dendrite2d.sbatch) (8 GCDs) |
 | **ParaView** | File → Open `fields_off/off.xdmf` and `fields_on/on.xdmf` |
-| **Concepts** | isothermal free growth; device Green; Al-4.5wt%Cu; \(\lambda_{\mathrm{el}}=0\) vs \(\lambda\) |
+| **Concepts** | isothermal free growth; device Green; Al-4.5wt%Cu; $\lambda_{\mathrm{el}}=0$ vs $\lambda$ |
 
 Frames live on `/scratch/project_462001519/juaho/openpfc-showcase/`.
 
@@ -107,7 +107,7 @@ Frames live on `/scratch/project_462001519/juaho/openpfc-showcase/`.
 
 | | |
 |---|---|
-| **Runnable** | `alloy_dendrite_hip_growth --nz=N` with \(N>1\) |
+| **Runnable** | `alloy_dendrite_hip_growth --nz=N` with $N>1$ |
 | **Recipe** | [`showcase_dendrite3d.sbatch`](../../apps/alloy_dendrite_elastic/slurm/showcase_dendrite3d.sbatch) (8 GCDs) |
 | **ParaView** | File → Open `fields/dendrite3d.xdmf` |
 | **Concepts** | spherical seed; isothermal; elasticity off until `HIP_MEM` bytes/cell; voxels + slices; 2048³ later |
