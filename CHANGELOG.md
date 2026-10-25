@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Turn the diffusion example into a backward-Euler Fourier lesson with visible multipliers. Preserve its target and independently check complete final fields and invalid grid controls.
+
 - Use the public settings loader and spectral session factory in one small configurable model. Preserve the executable name and verify equivalent JSON and TOML evolution on one and two ranks.
 
 - Teach native modifier registration and validated configuration through a short runnable chapter. Preserve the executable and check complete selected fields plus invalid catalog controls.

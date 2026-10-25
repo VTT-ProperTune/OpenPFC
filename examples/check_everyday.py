@@ -138,6 +138,22 @@ def check_session(binary, root, launch):
     run(binary, root / "bad-session", launch, bad, success=False)
 
 
+def check_implicit(binary, root, launch):
+    folder = root / "implicit"
+    run(binary, folder, launch, {"n": 16, "dt": 0.05, "steps": 20, "diffusivity": 0.7})
+    data = fields(folder)
+    h = 2 * math.pi / 16
+    unique_grid(data, 16, 16, 16, (0, 0, 0), (h, h, h))
+    amplitude = 0.2 / (1 + 3 * 0.7 * 0.05) ** 20
+    for row in data:
+        shape = math.prod(math.cos(float(row[key])) for key in ("x", "y", "z"))
+        assert abs(float(row["u"]) - (1 + amplitude * shape)) < 2e-13
+    diagnostics = table(folder / "results/diagnostics.csv")
+    assert len(diagnostics) == 21
+    assert max(abs(float(row["mean"]) - 1) for row in diagnostics) < 2e-13
+    run(binary, root / "bad-implicit", launch, {"n": 7}, success=False)
+
+
 def verify_first_domain(bin_dir, root, launch, ranks):
     assert "(-0.625,0.5,0)" in run(bin_dir / "first_domain", root)
     axes = table(root / "results/domain.csv")
@@ -158,6 +174,7 @@ def main():
             "14_custom_field_initializer",
             "10_ui_register_ic",
             "json_read",
+            "04_diffusion_model",
         ],
     )
     args = parser.parse_args()
@@ -185,6 +202,10 @@ def main():
             root = base / "json_read"
             root.mkdir()
             check_session(bin_dir / "json_read", root, launch)
+        if args.case in (None, "04_diffusion_model"):
+            root = base / "04_diffusion_model"
+            root.mkdir()
+            check_implicit(bin_dir / "04_diffusion_model", root, launch)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

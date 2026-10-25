@@ -16,3 +16,7 @@ set_target_properties(heat_exponential PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CM
 add_executable(15_finite_difference_heat separated-halos/model.cpp)
 target_link_libraries(15_finite_difference_heat PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(15_finite_difference_heat PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(04_diffusion_model implicit-euler/model.cpp)
+target_link_libraries(04_diffusion_model PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(04_diffusion_model PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")

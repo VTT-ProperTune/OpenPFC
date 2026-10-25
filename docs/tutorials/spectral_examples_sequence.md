@@ -44,7 +44,7 @@ The programs do not share one mandatory success message; see
 
 | File | Look for |
 |------|----------|
-| [`examples/04_diffusion_model.cpp`](../../examples/04_diffusion_model.cpp) | Field allocation, Fourier-space operator construction, and forward/backward transforms |
+| [`examples/heat/implicit-euler/model.cpp`](../../examples/heat/implicit-euler/model.cpp) | Field allocation, Fourier-space operator construction, and forward/backward transforms |
 | [`examples/05_simulator.cpp`](../../examples/05_simulator.cpp) | `pfc::sim::run`, host IC callable, time control |
 | [`examples/12_cahn_hilliard.cpp`](../../examples/12_cahn_hilliard.cpp) | Nonlinear split, initial state, and VTK write cadence |
 

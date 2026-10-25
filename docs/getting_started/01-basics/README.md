@@ -181,7 +181,7 @@ contains:
 Do not build that logic from this page alone. Continue with the maintained
 example sequence:
 
-1. `examples/04_diffusion_model.cpp`;
+1. `examples/heat/implicit-euler/model.cpp`;
 2. `examples/05_simulator.cpp`;
 3. `examples/12_cahn_hilliard.cpp`.
 

@@ -149,7 +149,7 @@ no Gen-1 `restore_gen1_from_checkpoint`.
 | JSON ICs / writers | `include/openpfc/frontend/ui/simulation_wiring_conditions.hpp`, `simulation_wiring_writers.hpp` |
 | Spectral-ETD JSON session | `include/openpfc/frontend/ui/json_spectral_etd_session.hpp` |
 | Tungsten production | `apps/tungsten/include/tungsten/tungsten_session.hpp`, `tungsten_physics.hpp` |
-| Spectral example | `examples/04_diffusion_model.cpp`, `examples/05_simulator.cpp` |
+| Spectral example | `examples/heat/implicit-euler/model.cpp`, `examples/05_simulator.cpp` |
 | Custom JSON IC | `examples/initialization/catalog/model.cpp` |
 | API catalog | `docs/api/examples/` |
 

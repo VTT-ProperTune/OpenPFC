@@ -24,9 +24,13 @@
     },
     {
       "target": "04_diffusion_model",
-      "source": "04_diffusion_model.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "heat/implicit-euler/model.cpp",
+      "chapter": "heat/implicit-euler/index.qmd",
+      "capabilities": [
+        "distributed-fft",
+        "kspace-iteration",
+        "implicit-euler"
+      ]
     },
     {
       "target": "05_simulator",
