@@ -95,6 +95,39 @@ def check_derivative(binary, directory):
     assert errors[1] < 1e-8 and errors[1] < errors[0] / 1000, errors
 
 
+def sample(kind, x):
+    if kind == 0:
+        return abs(x) ** 3, 3 * x * abs(x)
+    if kind == 1:
+        if abs(x) < 1e-14:
+            return 0, 0
+        value = math.exp(-1 / x**2)
+        return value, 2 * value / x**3
+    if kind == 2:
+        return 1 / (1 + x * x), -2 * x / (1 + x * x) ** 2
+    return x**10, 10 * x**9
+
+
+def check_regularity(binary, directory):
+    run(binary, directory)
+    data = rows(directory / "results/regularity.csv")
+    assert len(data) == 200
+    for row in data:
+        n, kind, error = int(row["n"]), int(row["profile"]), float(row["error"])
+        if n <= 12:
+            x = [math.cos(math.pi * j / n) for j in range(n + 1)]
+            values = [sample(kind, p)[0] for p in x]
+            expected = max(
+                abs(lagrange(x, values, p, derivative=True) - sample(kind, p)[1])
+                for p in x
+            )
+            assert abs(error - expected) < 2e-10
+        if kind == 3 and n >= 10:
+            assert error < 1e-9
+        if kind == 2 and n == 50:
+            assert error < 1e-10
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -108,6 +141,7 @@ def main():
             "polynomial_interpolation",
             "polynomial_nodal_polynomials",
             "polynomial_differentiation",
+            "polynomial_regularity",
         ],
     )
     args = parser.parse_args()
@@ -145,6 +179,16 @@ def main():
             check_derivative(bin_dir / "polynomial_differentiation", root / "valid")
             run(
                 bin_dir / "polynomial_differentiation",
+                root / "invalid",
+                parameters={"n": 0, "sizes": [0]},
+                success=False,
+            )
+        if args.case in (None, "polynomial_regularity"):
+            root = base / "polynomial_regularity"
+            root.mkdir()
+            check_regularity(bin_dir / "polynomial_regularity", root / "valid")
+            run(
+                bin_dir / "polynomial_regularity",
                 root / "invalid",
                 parameters={"n": 0, "sizes": [0]},
                 success=False,

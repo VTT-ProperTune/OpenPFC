@@ -114,6 +114,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `polynomial_interpolation` | `polynomials/interpolation/model.cpp` | Program 9: Runge interpolation on equally spaced and Chebyshev nodes |
 | `polynomial_nodal_polynomials` | `polynomials/nodal-polynomials/model.cpp` | Program 10: nodal products and complex-plane magnitude contours |
 | `polynomial_differentiation` | `polynomials/differentiation/model.cpp` | Programs 11 and 18: Chebyshev matrix versus public LocalFFT coefficients |
+| `polynomial_regularity` | `polynomials/regularity/model.cpp` | Program 12: four regularity classes on Chebyshev grids |
 
 ## Research prototypes
 

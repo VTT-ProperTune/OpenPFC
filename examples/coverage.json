@@ -330,6 +330,15 @@
       ]
     },
     {
+      "target": "polynomial_regularity",
+      "source": "polynomials/regularity/model.cpp",
+      "chapter": "polynomials/regularity/index.qmd",
+      "capabilities": [
+        "chebyshev-reference",
+        "convergence"
+      ]
+    },
+    {
       "target": "profiling_timer_report",
       "source": "profiling_timer_report.cpp",
       "chapter": null,
@@ -506,7 +515,7 @@
       "program": 12,
       "title": "accuracy of Chebyshev spectral differentiation",
       "source": "https://people.maths.ox.ac.uk/trefethen/p12.m",
-      "chapter": null,
+      "chapter": "polynomials/regularity/index.qmd",
       "scope": "All four original profiles and degrees 1..50, with limiting bump values handled explicitly."
     },
     {

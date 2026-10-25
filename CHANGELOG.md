@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Connect finite smoothness, analyticity and approximation error on a finite interval. Validate complete error tables against independent nodal differentiation.
+
 - Compose cosine-mapped collocation through native local FFT building blocks. Explain endpoint conventions and check full derivative tables against independent product derivatives.
 
 - Make nodal products visible on uniform and Chebyshev grids. Check complete tables and connect the product magnitude with the interpolation remainder.
