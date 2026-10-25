@@ -56,115 +56,101 @@ namespace pfc::field {
  *
  * @tparam T Field value type (e.g., double, std::complex<double>)
  */
-template<typename T>
-class FieldView {
+template <typename T> class FieldView {
 public:
-    /**
-     * @brief Default constructor: creates a view with null data and zero geometry
-     *
-     * This enables FieldView to serve as an aggregate member in ScaledField
-     * without requiring immediate initialization from actual field data.
-     * A default-constructed FieldView provides null data() and zero size().
-     */
-    FieldView() noexcept
-        : m_data(nullptr)
-        , m_size(0)
-        , m_extents{}
-        , m_spacing{}
-        , m_origin{}
-    {}
+  /**
+   * @brief Default constructor: creates a view with null data and zero geometry
+   *
+   * This enables FieldView to serve as an aggregate member in ScaledField
+   * without requiring immediate initialization from actual field data.
+   * A default-constructed FieldView provides null data() and zero size().
+   */
+  FieldView() noexcept
+      : m_data(nullptr), m_size(0), m_extents{}, m_spacing{}, m_origin{} {}
 
-    /**
-     * @brief Construct a field view from data pointer and geometry
-     *
-     * @param data Pointer to field data (must remain valid for view lifetime)
-     * @param size Number of elements in the field data
-     * @param extents Grid dimensions (nx, ny, nz)
-     * @param spacing Physical spacing per axis (dx, dy, dz)
-     * @param origin Physical origin of the grid (x0, y0, z0)
-     */
-    FieldView(const T* data, std::size_t size,
-              const pfc::types::Int3& extents,
-              const pfc::types::Real3& spacing,
-              const pfc::types::Real3& origin) noexcept
-        : m_data(data)
-        , m_size(size)
-        , m_extents(extents)
-        , m_spacing(spacing)
-        , m_origin(origin)
-    {}
+  /**
+   * @brief Construct a field view from data pointer and geometry
+   *
+   * @param data Pointer to field data (must remain valid for view lifetime)
+   * @param size Number of elements in the field data
+   * @param extents Grid dimensions (nx, ny, nz)
+   * @param spacing Physical spacing per axis (dx, dy, dz)
+   * @param origin Physical origin of the grid (x0, y0, z0)
+   */
+  FieldView(const T *data, std::size_t size, const pfc::types::Int3 &extents,
+            const pfc::types::Real3 &spacing,
+            const pfc::types::Real3 &origin) noexcept
+      : m_data(data), m_size(size), m_extents(extents), m_spacing(spacing),
+        m_origin(origin) {}
 
-    /**
-     * @brief View a contiguous host buffer with no geometry (extents/spacing/origin zero)
-     *
-     * Implicit so a `std::vector<T>` can be handed to a `FieldView<T>` parameter
-     * (writers, I/O). The vector must outlive the view.
-     */
-    FieldView(const std::vector<T>& data) noexcept  // NOLINT(google-explicit-constructor)
-        : m_data(data.data())
-        , m_size(data.size())
-        , m_extents{}
-        , m_spacing{}
-        , m_origin{}
-    {}
+  /**
+   * @brief View a contiguous host buffer with no geometry (extents/spacing/origin
+   * zero)
+   *
+   * Implicit so a `std::vector<T>` can be handed to a `FieldView<T>` parameter
+   * (writers, I/O). The vector must outlive the view.
+   */
+  FieldView(
+      const std::vector<T> &data) noexcept // NOLINT(google-explicit-constructor)
+      : m_data(data.data()), m_size(data.size()), m_extents{}, m_spacing{},
+        m_origin{} {}
 
-    /**
-     * @brief Get const pointer to field data
-     *
-     * @return const T* Pointer to field data
-     */
-    const T* data() const noexcept { return m_data; }
+  /**
+   * @brief Get const pointer to field data
+   *
+   * @return const T* Pointer to field data
+   */
+  const T *data() const noexcept { return m_data; }
 
-    /**
-     * @brief Get number of elements in the field data
-     *
-     * @return std::size_t Number of elements
-     */
-    std::size_t size() const noexcept { return m_size; }
+  /**
+   * @brief Get number of elements in the field data
+   *
+   * @return std::size_t Number of elements
+   */
+  std::size_t size() const noexcept { return m_size; }
 
-    /**
-     * @brief Get grid extents
-     *
-     * @return pfc::types::Int3 Grid dimensions (nx, ny, nz)
-     */
-    pfc::types::Int3 extents() const noexcept { return m_extents; }
+  /**
+   * @brief Get grid extents
+   *
+   * @return pfc::types::Int3 Grid dimensions (nx, ny, nz)
+   */
+  pfc::types::Int3 extents() const noexcept { return m_extents; }
 
-    /**
-     * @brief Get physical spacing per axis
-     *
-     * @return pfc::types::Real3 Spacing (dx, dy, dz)
-     */
-    pfc::types::Real3 spacing() const noexcept { return m_spacing; }
+  /**
+   * @brief Get physical spacing per axis
+   *
+   * @return pfc::types::Real3 Spacing (dx, dy, dz)
+   */
+  pfc::types::Real3 spacing() const noexcept { return m_spacing; }
 
-    /**
-     * @brief Get physical origin of the grid
-     *
-     * @return pfc::types::Real3 Origin (x0, y0, z0)
-     */
-    pfc::types::Real3 origin() const noexcept { return m_origin; }
+  /**
+   * @brief Get physical origin of the grid
+   *
+   * @return pfc::types::Real3 Origin (x0, y0, z0)
+   */
+  pfc::types::Real3 origin() const noexcept { return m_origin; }
 
-    /**
-     * @brief Check if this field is compatible with another field
-     *
-     * Two fields are compatible if they have matching extents, spacing, and origin.
-     * This is a structural check that ensures fields can be used together in
-     * spatial operators without layout mismatches.
-     *
-     * @param other Other field view to compare with
-     * @return true if fields are compatible, false otherwise
-     */
-    bool is_compatible_with(const FieldView& other) const noexcept {
-        return m_extents == other.m_extents &&
-               m_spacing == other.m_spacing &&
-               m_origin == other.m_origin;
-    }
+  /**
+   * @brief Check if this field is compatible with another field
+   *
+   * Two fields are compatible if they have matching extents, spacing, and origin.
+   * This is a structural check that ensures fields can be used together in
+   * spatial operators without layout mismatches.
+   *
+   * @param other Other field view to compare with
+   * @return true if fields are compatible, false otherwise
+   */
+  bool is_compatible_with(const FieldView &other) const noexcept {
+    return m_extents == other.m_extents && m_spacing == other.m_spacing &&
+           m_origin == other.m_origin;
+  }
 
 private:
-    const T* m_data;
-    std::size_t m_size;
-    pfc::types::Int3 m_extents;
-    pfc::types::Real3 m_spacing;
-    pfc::types::Real3 m_origin;
+  const T *m_data;
+  std::size_t m_size;
+  pfc::types::Int3 m_extents;
+  pfc::types::Real3 m_spacing;
+  pfc::types::Real3 m_origin;
 };
 
 /**
@@ -180,93 +166,88 @@ private:
  *
  * @tparam T Field value type (e.g., double, std::complex<double>)
  */
-template<typename T>
-class FieldOutput {
+template <typename T> class FieldOutput {
 public:
-    /**
-     * @brief Construct field output from mutable data pointer
-     *
-     * @param data Pointer to output storage (must remain valid for output lifetime)
-     * @param size Number of elements in the output storage
-     */
-    FieldOutput(T* data, std::size_t size) noexcept
-        : m_data(data)
-        , m_size(size)
-    {}
+  /**
+   * @brief Construct field output from mutable data pointer
+   *
+   * @param data Pointer to output storage (must remain valid for output lifetime)
+   * @param size Number of elements in the output storage
+   */
+  FieldOutput(T *data, std::size_t size) noexcept : m_data(data), m_size(size) {}
 
-    /**
-     * @brief Mutable view over a contiguous host buffer
-     *
-     * Implicit so a `std::vector<T>` lvalue can be handed to a `FieldOutput<T>`
-     * parameter (`FieldModifier::apply`, `BinaryReader::read`). The vector must
-     * outlive the output view and must not be resized while viewed.
-     */
-    FieldOutput(std::vector<T>& data) noexcept  // NOLINT(google-explicit-constructor)
-        : m_data(data.data())
-        , m_size(data.size())
-    {}
+  /**
+   * @brief Mutable view over a contiguous host buffer
+   *
+   * Implicit so a `std::vector<T>` lvalue can be handed to a `FieldOutput<T>`
+   * parameter (`FieldModifier::apply`, `BinaryReader::read`). The vector must
+   * outlive the output view and must not be resized while viewed.
+   */
+  FieldOutput(std::vector<T> &data) noexcept // NOLINT(google-explicit-constructor)
+      : m_data(data.data()), m_size(data.size()) {}
 
-    /**
-     * @brief Get mutable pointer to output storage
-     *
-     * @return T* Pointer to output storage
-     */
-    T* data() noexcept { return m_data; }
-    const T* data() const noexcept { return m_data; }
+  /**
+   * @brief Get mutable pointer to output storage
+   *
+   * @return T* Pointer to output storage
+   */
+  T *data() noexcept { return m_data; }
+  const T *data() const noexcept { return m_data; }
 
-    /**
-     * @brief Get number of elements in the output storage
-     *
-     * @return std::size_t Number of elements
-     */
-    std::size_t size() const noexcept { return m_size; }
+  /**
+   * @brief Get number of elements in the output storage
+   *
+   * @return std::size_t Number of elements
+   */
+  std::size_t size() const noexcept { return m_size; }
 
-    /// Element access (no bounds check).
-    T& operator[](std::size_t i) noexcept { return m_data[i]; }
-    const T& operator[](std::size_t i) const noexcept { return m_data[i]; }
-    T* begin() noexcept { return m_data; }
-    T* end() noexcept { return m_data + m_size; }
+  /// Element access (no bounds check).
+  T &operator[](std::size_t i) noexcept { return m_data[i]; }
+  const T &operator[](std::size_t i) const noexcept { return m_data[i]; }
+  T *begin() noexcept { return m_data; }
+  T *end() noexcept { return m_data + m_size; }
 
-    /**
-     * @brief Validate that output storage does not alias input view
-     *
-     * Performs pointer comparison to ensure output and input refer to distinct
-     * memory regions. Throws std::invalid_argument if aliasing is detected.
-     *
-     * This check prevents subtle bugs where in-place mutation would produce
-     * incorrect results. Documented in-place patterns (e.g., u += dt*du via
-     * ScaledField) are explicitly supported and should not use this validation.
-     *
-     * @tparam InputView Type of input field view
-     * @param input Input field view to check for aliasing
-     * @throws std::invalid_argument if output storage aliases input storage
-     */
-    template<typename InputView>
-    void validate_no_alias(const InputView& input) const {
-        // Perform pointer comparison to detect aliasing
-        // Cast to void* to avoid strict aliasing warnings
-        const void* output_ptr = static_cast<const void*>(m_data);
-        const void* input_ptr = static_cast<const void*>(input.data());
+  /**
+   * @brief Validate that output storage does not alias input view
+   *
+   * Performs pointer comparison to ensure output and input refer to distinct
+   * memory regions. Throws std::invalid_argument if aliasing is detected.
+   *
+   * This check prevents subtle bugs where in-place mutation would produce
+   * incorrect results. Documented in-place patterns (e.g., u += dt*du via
+   * ScaledField) are explicitly supported and should not use this validation.
+   *
+   * @tparam InputView Type of input field view
+   * @param input Input field view to check for aliasing
+   * @throws std::invalid_argument if output storage aliases input storage
+   */
+  template <typename InputView>
+  void validate_no_alias(const InputView &input) const {
+    // Perform pointer comparison to detect aliasing
+    // Cast to void* to avoid strict aliasing warnings
+    const void *output_ptr = static_cast<const void *>(m_data);
+    const void *input_ptr = static_cast<const void *>(input.data());
 
-        // Check if pointers overlap by comparing ranges
-        const std::size_t output_size = m_size * sizeof(T);
-        const std::size_t input_size = input.size() * sizeof(T);
+    // Check if pointers overlap by comparing ranges
+    const std::size_t output_size = m_size * sizeof(T);
+    const std::size_t input_size = input.size() * sizeof(T);
 
-        const unsigned char* output_start = static_cast<const unsigned char*>(output_ptr);
-        const unsigned char* output_end = output_start + output_size;
-        const unsigned char* input_start = static_cast<const unsigned char*>(input_ptr);
-        const unsigned char* input_end = input_start + input_size;
+    const unsigned char *output_start =
+        static_cast<const unsigned char *>(output_ptr);
+    const unsigned char *output_end = output_start + output_size;
+    const unsigned char *input_start = static_cast<const unsigned char *>(input_ptr);
+    const unsigned char *input_end = input_start + input_size;
 
-        // Check for overlap
-        if (!(output_end <= input_start || input_end <= output_start)) {
-            throw std::invalid_argument(
-                "FieldOutput::validate_no_alias: output storage aliases input storage");
-        }
+    // Check for overlap
+    if (!(output_end <= input_start || input_end <= output_start)) {
+      throw std::invalid_argument(
+          "FieldOutput::validate_no_alias: output storage aliases input storage");
     }
+  }
 
 private:
-    T* m_data;
-    std::size_t m_size;
+  T *m_data;
+  std::size_t m_size;
 };
 
 /**
@@ -281,78 +262,71 @@ private:
  * All fields in the bundle must have compatible shapes for the system to be
  * well-posed.
  *
- * @tparam Fields Types of fields in the bundle (e.g., FieldView<double>, FieldView<double>)
+ * @tparam Fields Types of fields in the bundle (e.g., FieldView<double>,
+ * FieldView<double>)
  */
-template<typename... Fields>
-class FieldBundle {
+template <typename... Fields> class FieldBundle {
 public:
-    /**
-     * @brief Construct a field bundle from multiple fields
-     *
-     * @param fields Fields to include in the bundle
-     */
-    explicit FieldBundle(Fields... fields) noexcept
-        : m_fields(std::move(fields)...)
-    {}
+  /**
+   * @brief Construct a field bundle from multiple fields
+   *
+   * @param fields Fields to include in the bundle
+   */
+  explicit FieldBundle(Fields... fields) noexcept : m_fields(std::move(fields)...) {}
 
-    /**
-     * @brief Access field by index
-     *
-     * @tparam I Index of the field to access
-     * @return Reference to the field at index I
-     */
-    template<std::size_t I>
-    auto& get() noexcept {
-        return std::get<I>(m_fields);
-    }
+  /**
+   * @brief Access field by index
+   *
+   * @tparam I Index of the field to access
+   * @return Reference to the field at index I
+   */
+  template <std::size_t I> auto &get() noexcept { return std::get<I>(m_fields); }
 
-    /**
-     * @brief Access field by index (const overload)
-     *
-     * @tparam I Index of the field to access
-     * @return Const reference to the field at index I
-     */
-    template<std::size_t I>
-    const auto& get() const noexcept {
-        return std::get<I>(m_fields);
-    }
+  /**
+   * @brief Access field by index (const overload)
+   *
+   * @tparam I Index of the field to access
+   * @return Const reference to the field at index I
+   */
+  template <std::size_t I> const auto &get() const noexcept {
+    return std::get<I>(m_fields);
+  }
 
-    /**
-     * @brief Validate that all fields in the bundle have compatible shapes
-     *
-     * Checks that all fields have matching extents, spacing, and origin.
-     * Returns false if the bundle is empty or if any field is incompatible.
-     *
-     * @return true if all fields are compatible, false otherwise
-     */
-    bool validate_shapes() const noexcept {
-        if constexpr (sizeof...(Fields) == 0) {
-            return true;  // Empty bundle is trivially valid
-        } else if constexpr (sizeof...(Fields) == 1) {
-            return true;  // Single field is trivially valid
-        } else {
-            // Check that all fields are compatible with the first field
-            return validate_shapes_impl<1>();
-        }
+  /**
+   * @brief Validate that all fields in the bundle have compatible shapes
+   *
+   * Checks that all fields have matching extents, spacing, and origin.
+   * Returns false if the bundle is empty or if any field is incompatible.
+   *
+   * @return true if all fields are compatible, false otherwise
+   */
+  bool validate_shapes() const noexcept {
+    if constexpr (sizeof...(Fields) == 0) {
+      return true; // Empty bundle is trivially valid
+    } else if constexpr (sizeof...(Fields) == 1) {
+      return true; // Single field is trivially valid
+    } else {
+      // Check that all fields are compatible with the first field
+      return validate_shapes_impl<1>();
     }
+  }
 
 private:
-    std::tuple<Fields...> m_fields;
+  std::tuple<Fields...> m_fields;
 
-    // Recursive implementation for shape validation
-    template<std::size_t I>
-    bool validate_shapes_impl() const noexcept {
-        if constexpr (I < sizeof...(Fields)) {
-            const auto& first = std::get<0>(m_fields);
-            const auto& current = std::get<I>(m_fields);
-            if (!first.is_compatible_with(current)) {
-                return false;
-            }
-            return validate_shapes_impl<I + 1>();
-        } else {
-            return true;
-        }
+  // Recursive implementation for shape validation
+  template <std::size_t I> bool validate_shapes_impl() const noexcept {
+    if constexpr (I < sizeof...(Fields)) {
+      const auto &first = std::get<0>(m_fields);
+      const auto &current = std::get<I>(m_fields);
+      if (!first.is_compatible_with(current)) {
+        return false;
+      }
+      return validate_shapes_impl<I + 1>();
+    } else {
+      return true;
     }
+  }
 };
 
 } // namespace pfc::field

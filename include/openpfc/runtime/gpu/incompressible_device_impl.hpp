@@ -30,9 +30,9 @@
 
 #include <openpfc/kernel/data/constants.hpp>
 #include <openpfc/kernel/fft/kspace.hpp>
-#include <openpfc/solvers/incompressible/rotational.hpp>
-#include <openpfc/runtime/gpu/incompressible_device.hpp>
 #include <openpfc/runtime/gpu/gpu_api.hpp>
+#include <openpfc/runtime/gpu/incompressible_device.hpp>
+#include <openpfc/solvers/incompressible/rotational.hpp>
 
 namespace pfc::incompressible {
 namespace {
@@ -207,15 +207,15 @@ __global__ void stage4_kernel(Z *u, Z *v, Z *w, const Z *n1u, const Z *n1v,
   const double eh = ehalf[idx];
   u[idx] = zadd(zmul(ed, u[idx]),
                 zmul(dt6, zadd(zadd(zmul(ed, n1u[idx]),
-                                     zmul(2.0 * eh, zadd(n2u[idx], n3u[idx]))),
+                                    zmul(2.0 * eh, zadd(n2u[idx], n3u[idx]))),
                                n4u[idx])));
   v[idx] = zadd(zmul(ed, v[idx]),
                 zmul(dt6, zadd(zadd(zmul(ed, n1v[idx]),
-                                     zmul(2.0 * eh, zadd(n2v[idx], n3v[idx]))),
+                                    zmul(2.0 * eh, zadd(n2v[idx], n3v[idx]))),
                                n4v[idx])));
   w[idx] = zadd(zmul(ed, w[idx]),
                 zmul(dt6, zadd(zadd(zmul(ed, n1w[idx]),
-                                     zmul(2.0 * eh, zadd(n2w[idx], n3w[idx]))),
+                                    zmul(2.0 * eh, zadd(n2w[idx], n3w[idx]))),
                                n4w[idx])));
 }
 
@@ -239,7 +239,8 @@ void require_size(const Buf &buf, std::size_t n, const char *what) {
 }
 
 template <class Space>
-void copy_velocity(DeviceVelocity<Space> &vel, const typename DeviceVelocity<Space>::Cplx &a,
+void copy_velocity(DeviceVelocity<Space> &vel,
+                   const typename DeviceVelocity<Space>::Cplx &a,
                    const typename DeviceVelocity<Space>::Cplx &b,
                    const typename DeviceVelocity<Space>::Cplx &c,
                    typename DeviceVelocity<Space>::Cplx &ao,
@@ -287,7 +288,8 @@ void timed(StepProfile *profile, double StepProfile::*slot, F &&body) {
 }
 
 template <class Space>
-void project_mask(DeviceVelocity<Space> &vel, typename DeviceVelocity<Space>::Cplx &u,
+void project_mask(DeviceVelocity<Space> &vel,
+                  typename DeviceVelocity<Space>::Cplx &u,
                   typename DeviceVelocity<Space>::Cplx &v,
                   typename DeviceVelocity<Space>::Cplx &w, bool dealias,
                   StepProfile *profile) {
@@ -298,8 +300,8 @@ void project_mask(DeviceVelocity<Space> &vel, typename DeviceVelocity<Space>::Cp
 }
 
 template <class Space>
-void rotational(DeviceVelocity<Space> &vel, fft::IDeviceFFT<Space> &fft, bool dealias,
-                typename DeviceVelocity<Space>::Cplx &u,
+void rotational(DeviceVelocity<Space> &vel, fft::IDeviceFFT<Space> &fft,
+                bool dealias, typename DeviceVelocity<Space>::Cplx &u,
                 typename DeviceVelocity<Space>::Cplx &v,
                 typename DeviceVelocity<Space>::Cplx &w,
                 typename DeviceVelocity<Space>::Cplx &tu,
@@ -338,8 +340,7 @@ void rotational(DeviceVelocity<Space> &vel, fft::IDeviceFFT<Space> &fft, bool de
   });
 }
 
-template <class Space>
-typename DeviceVelocity<Space>::Cplx make_hat(std::size_t n) {
+template <class Space> typename DeviceVelocity<Space>::Cplx make_hat(std::size_t n) {
   return typename DeviceVelocity<Space>::Cplx(n);
 }
 
@@ -501,14 +502,13 @@ std::size_t device_velocity_bytes(const DeviceVelocity<Space> &vel) {
   // 24 complex hats: state, stage field, four tendencies, curl inputs, vorticity.
   // 2 real hats: integrating-factor exponentials. 9 real fields: velocity,
   // vorticity, and the cross product.
-  const std::size_t hats = vel.u.size() + vel.v.size() + vel.w.size() + vel.su.size() +
-                           vel.sv.size() + vel.sw.size() + vel.n1u.size() +
-                           vel.n1v.size() + vel.n1w.size() + vel.n2u.size() +
-                           vel.n2v.size() + vel.n2w.size() + vel.n3u.size() +
-                           vel.n3v.size() + vel.n3w.size() + vel.n4u.size() +
-                           vel.n4v.size() + vel.n4w.size() + vel.uh.size() +
-                           vel.vh.size() + vel.wh.size() + vel.ox.size() +
-                           vel.oy.size() + vel.oz.size();
+  const std::size_t hats =
+      vel.u.size() + vel.v.size() + vel.w.size() + vel.su.size() + vel.sv.size() +
+      vel.sw.size() + vel.n1u.size() + vel.n1v.size() + vel.n1w.size() +
+      vel.n2u.size() + vel.n2v.size() + vel.n2w.size() + vel.n3u.size() +
+      vel.n3v.size() + vel.n3w.size() + vel.n4u.size() + vel.n4v.size() +
+      vel.n4w.size() + vel.uh.size() + vel.vh.size() + vel.wh.size() +
+      vel.ox.size() + vel.oy.size() + vel.oz.size();
   const std::size_t reals = vel.exp_dt.size() + vel.exp_half.size() + vel.ur.size() +
                             vel.vr.size() + vel.wr.size() + vel.oxr.size() +
                             vel.oyr.size() + vel.ozr.size() + vel.tx.size() +
@@ -517,15 +517,14 @@ std::size_t device_velocity_bytes(const DeviceVelocity<Space> &vel) {
 }
 
 #if defined(__HIPCC__)
-template void prepare_device_velocity<pfc::HIPSpace>(DeviceVelocity<pfc::HIPSpace> &,
-                                                     const fft::IDeviceFFT<pfc::HIPSpace> &,
-                                                     std::array<int, 3>,
-                                                     std::array<double, 3>, double,
-                                                     double);
-template void upload_device_velocity<pfc::HIPSpace>(
-    DeviceVelocity<pfc::HIPSpace> &, const std::vector<std::complex<double>> &,
-    const std::vector<std::complex<double>> &,
-    const std::vector<std::complex<double>> &);
+template void prepare_device_velocity<pfc::HIPSpace>(
+    DeviceVelocity<pfc::HIPSpace> &, const fft::IDeviceFFT<pfc::HIPSpace> &,
+    std::array<int, 3>, std::array<double, 3>, double, double);
+template void
+upload_device_velocity<pfc::HIPSpace>(DeviceVelocity<pfc::HIPSpace> &,
+                                      const std::vector<std::complex<double>> &,
+                                      const std::vector<std::complex<double>> &,
+                                      const std::vector<std::complex<double>> &);
 template void download_device_velocity<pfc::HIPSpace>(
     const DeviceVelocity<pfc::HIPSpace> &, std::vector<std::complex<double>> &,
     std::vector<std::complex<double>> &, std::vector<std::complex<double>> &);
@@ -538,10 +537,11 @@ device_velocity_bytes<pfc::HIPSpace>(const DeviceVelocity<pfc::HIPSpace> &);
 template void prepare_device_velocity<pfc::CUDASpace>(
     DeviceVelocity<pfc::CUDASpace> &, const fft::IDeviceFFT<pfc::CUDASpace> &,
     std::array<int, 3>, std::array<double, 3>, double, double);
-template void upload_device_velocity<pfc::CUDASpace>(
-    DeviceVelocity<pfc::CUDASpace> &, const std::vector<std::complex<double>> &,
-    const std::vector<std::complex<double>> &,
-    const std::vector<std::complex<double>> &);
+template void
+upload_device_velocity<pfc::CUDASpace>(DeviceVelocity<pfc::CUDASpace> &,
+                                       const std::vector<std::complex<double>> &,
+                                       const std::vector<std::complex<double>> &,
+                                       const std::vector<std::complex<double>> &);
 template void download_device_velocity<pfc::CUDASpace>(
     const DeviceVelocity<pfc::CUDASpace> &, std::vector<std::complex<double>> &,
     std::vector<std::complex<double>> &, std::vector<std::complex<double>> &);

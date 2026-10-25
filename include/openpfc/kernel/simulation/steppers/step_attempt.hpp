@@ -87,11 +87,10 @@ template <std::size_t N, class Scalar = double> struct MultiStepAttemptResult {
   std::optional<double> error_norm{};
   std::optional<double> min_next_dt{};
 
-  MultiStepAttemptResult(
-      double t0_in, double dt_in, double t1_in, bool success_in,
-      std::array<const std::vector<Scalar> *, N> candidates_in,
-      std::optional<double> error_norm_in = std::nullopt,
-      std::optional<double> min_next_dt_in = std::nullopt)
+  MultiStepAttemptResult(double t0_in, double dt_in, double t1_in, bool success_in,
+                         std::array<const std::vector<Scalar> *, N> candidates_in,
+                         std::optional<double> error_norm_in = std::nullopt,
+                         std::optional<double> min_next_dt_in = std::nullopt)
       : t0(t0_in), dt(dt_in), t1(t1_in), success(success_in),
         candidates(candidates_in), error_norm(std::move(error_norm_in)),
         min_next_dt(std::move(min_next_dt_in)) {}
@@ -113,11 +112,11 @@ template <std::size_t N, class Scalar = double> struct MultiStepAttemptResult {
  * sites; do not change legacy `EulerStepper` / `create` factories.
  */
 template <class E>
-concept OperatorEvaluator = requires(
-    E eval, const pfc::integrator::StageContext &ctx,
-    const std::vector<double> &u, std::vector<double> &du) {
-  { eval(ctx, u, du) } -> std::convertible_to<bool>;
-};
+concept OperatorEvaluator =
+    requires(E eval, const pfc::integrator::StageContext &ctx,
+             const std::vector<double> &u, std::vector<double> &du) {
+      { eval(ctx, u, du) } -> std::convertible_to<bool>;
+    };
 
 /**
  * @brief Preparation / stage-context service hook for the step-attempt path.
@@ -138,12 +137,12 @@ concept PreparationService =
  * Invocable as `eval(ctx, u0, u1, du0, du1) -> bool`.
  */
 template <class E>
-concept MultiOperatorEvaluator2 = requires(
-    E eval, const pfc::integrator::StageContext &ctx,
-    const std::vector<double> &u0, const std::vector<double> &u1,
-    std::vector<double> &du0, std::vector<double> &du1) {
-  { eval(ctx, u0, u1, du0, du1) } -> std::convertible_to<bool>;
-};
+concept MultiOperatorEvaluator2 =
+    requires(E eval, const pfc::integrator::StageContext &ctx,
+             const std::vector<double> &u0, const std::vector<double> &u1,
+             std::vector<double> &du0, std::vector<double> &du1) {
+      { eval(ctx, u0, u1, du0, du1) } -> std::convertible_to<bool>;
+    };
 
 /**
  * @brief Copy a successful candidate into the accepted buffer.
@@ -167,10 +166,9 @@ inline void commit_step_attempt(std::vector<Scalar> &accepted,
  * @throws std::invalid_argument if `!result.success`.
  */
 template <class Scalar>
-inline void
-commit_step_attempt(std::vector<Scalar> &accepted0,
-                    std::vector<Scalar> &accepted1,
-                    const MultiStepAttemptResult<2, Scalar> &result) {
+inline void commit_step_attempt(std::vector<Scalar> &accepted0,
+                                std::vector<Scalar> &accepted1,
+                                const MultiStepAttemptResult<2, Scalar> &result) {
   if (!result.success) {
     throw std::invalid_argument(
         "commit_step_attempt: cannot commit a failed MultiStepAttemptResult "
@@ -205,13 +203,11 @@ template <class... Scalars> struct PackedStepAttempt {
                     std::optional<double> error_norm_in = std::nullopt,
                     std::optional<double> min_next_dt_in = std::nullopt)
       : t0(t0_in), dt(dt_in), t1(t1_in), success(success_in),
-        candidates(std::move(candidates_in)),
-        error_norm(std::move(error_norm_in)),
+        candidates(std::move(candidates_in)), error_norm(std::move(error_norm_in)),
         min_next_dt(std::move(min_next_dt_in)) {}
 
   template <std::size_t I>
-  [[nodiscard]] const std::vector<
-      std::tuple_element_t<I, std::tuple<Scalars...>>> &
+  [[nodiscard]] const std::vector<std::tuple_element_t<I, std::tuple<Scalars...>>> &
   candidate() const {
     return *std::get<I>(candidates);
   }
@@ -234,9 +230,8 @@ void commit_packed_step_attempt(std::index_sequence<I...>,
  * @throws std::invalid_argument if `!result.success`.
  */
 template <class... Scalars>
-inline void
-commit_step_attempt(const PackedStepAttempt<Scalars...> &result,
-                    std::vector<Scalars> &...accepted) {
+inline void commit_step_attempt(const PackedStepAttempt<Scalars...> &result,
+                                std::vector<Scalars> &...accepted) {
   if (!result.success) {
     throw std::invalid_argument(
         "commit_step_attempt: cannot commit a failed PackedStepAttempt "
@@ -253,9 +248,9 @@ commit_step_attempt(const PackedStepAttempt<Scalars...> &result,
  * @throws std::invalid_argument if `!result.success`.
  */
 template <class S0, class S1>
-inline void
-commit_step_attempt(std::vector<S0> &accepted0, std::vector<S1> &accepted1,
-                    const PackedStepAttempt<S0, S1> &result) {
+inline void commit_step_attempt(std::vector<S0> &accepted0,
+                                std::vector<S1> &accepted1,
+                                const PackedStepAttempt<S0, S1> &result) {
   commit_step_attempt(result, accepted0, accepted1);
 }
 
@@ -266,9 +261,9 @@ commit_step_attempt(std::vector<S0> &accepted0, std::vector<S1> &accepted1,
  * `commit_step_attempt`.
  */
 template <class T>
-concept AttemptStepper = requires(T stepper, double t,
-                                  const std::vector<double> &u) {
-  { stepper.attempt(t, u) } -> std::same_as<StepAttemptResult>;
-};
+concept AttemptStepper =
+    requires(T stepper, double t, const std::vector<double> &u) {
+      { stepper.attempt(t, u) } -> std::same_as<StepAttemptResult>;
+    };
 
 } // namespace pfc::sim::steppers

@@ -55,16 +55,13 @@ struct PublishOutcome {
 
 [[nodiscard]] inline PublishOutcome
 make_publish_ok(std::filesystem::path final_path) {
-  return PublishOutcome{.ok = true,
-                        .message = {},
-                        .final_path = std::move(final_path)};
+  return PublishOutcome{
+      .ok = true, .message = {}, .final_path = std::move(final_path)};
 }
 
-[[nodiscard]] inline PublishOutcome
-make_publish_failed(std::string message) {
-  return PublishOutcome{.ok = false,
-                        .message = std::move(message),
-                        .final_path = {}};
+[[nodiscard]] inline PublishOutcome make_publish_failed(std::string message) {
+  return PublishOutcome{
+      .ok = false, .message = std::move(message), .final_path = {}};
 }
 
 /**
@@ -187,8 +184,8 @@ publish_checkpoint_directory(const std::filesystem::path &final_dir,
       detail::best_effort_remove_all(final_dir);
     }
     barrier();
-    return make_publish_failed(
-        message.empty() ? "publish failed on another rank" : message);
+    return make_publish_failed(message.empty() ? "publish failed on another rank"
+                                               : message);
   }
 
   // 4. Atomic rename on rank 0, then everyone sees the final bundle.

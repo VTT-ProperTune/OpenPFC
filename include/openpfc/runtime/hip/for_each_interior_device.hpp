@@ -16,23 +16,23 @@
 
 namespace pfc::sim::hip {
 
-using ::pfc::sim::gpu::DevicePtrPack2;
-using ::pfc::sim::gpu::DevicePtrPack3;
-using ::pfc::sim::gpu::DevicePtrPack4;
 using ::pfc::sim::gpu::DeviceInc2;
 using ::pfc::sim::gpu::DeviceInc3;
 using ::pfc::sim::gpu::DeviceInc4;
-using ::pfc::sim::gpu::make_device_ptr_pack;
-using ::pfc::sim::gpu::is_device_ptr_pack;
+using ::pfc::sim::gpu::DevicePtrPack2;
+using ::pfc::sim::gpu::DevicePtrPack3;
+using ::pfc::sim::gpu::DevicePtrPack4;
 using ::pfc::sim::gpu::for_each_interior_device;
+using ::pfc::sim::gpu::is_device_ptr_pack;
+using ::pfc::sim::gpu::make_device_ptr_pack;
 
 namespace detail {
 
-using ::pfc::sim::gpu::detail::scatter_device;
+using ::pfc::sim::gpu::detail::for_each_interior_block;
 using ::pfc::sim::gpu::detail::for_each_interior_device_kernel;
 using ::pfc::sim::gpu::detail::for_each_interior_device_kernel_multi;
 using ::pfc::sim::gpu::detail::for_each_interior_grid;
-using ::pfc::sim::gpu::detail::for_each_interior_block;
+using ::pfc::sim::gpu::detail::scatter_device;
 
 } // namespace detail
 

@@ -55,9 +55,8 @@ make_default_r2c_boxes(const pfc::decomposition::Decomposition &decomposition,
   auto fft_layout = create(decomposition, r2c_direction, options);
   const auto &inbox = get_real_box(fft_layout, rank_id);
   const auto &outbox = get_complex_box(fft_layout, rank_id);
-  return {to_heffte_box(inbox), to_heffte_box(outbox),
-          get_r2c_direction(fft_layout), get_real_proc_grid(fft_layout),
-          get_complex_proc_grid(fft_layout)};
+  return {to_heffte_box(inbox), to_heffte_box(outbox), get_r2c_direction(fft_layout),
+          get_real_proc_grid(fft_layout), get_complex_proc_grid(fft_layout)};
 }
 
 [[gnu::cold]] inline void throw_if_mpi_decomposition_mismatch(

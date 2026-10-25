@@ -62,8 +62,8 @@ enum class EvidenceKind {
  * @brief Whether field norms are local to this rank or already reduced
  */
 enum class AggregationScope {
-  RankLocal,      ///< Norms may differ across ranks; need reduce
-  AlreadyReduced  ///< Rank-consistent; must not be reduced again
+  RankLocal,     ///< Norms may differ across ranks; need reduce
+  AlreadyReduced ///< Rank-consistent; must not be reduced again
 };
 
 /**
@@ -73,11 +73,7 @@ enum class AggregationScope {
  * and normalization fails closed. `Unit` is the explicit choice that
  * `rtol` is relative to 1. `Supplied` reads `weights`.
  */
-enum class SolutionScale {
-  Unspecified,
-  Unit,
-  Supplied
-};
+enum class SolutionScale { Unspecified, Unit, Supplied };
 
 /**
  * @brief Method-independent error evidence for one step attempt
@@ -134,7 +130,8 @@ struct NormalizedError {
 
 namespace detail {
 
-[[nodiscard]] inline bool norms_are_finite_nonnegative(std::span<const double> norms) {
+[[nodiscard]] inline bool
+norms_are_finite_nonnegative(std::span<const double> norms) {
   for (double v : norms) {
     if (!std::isfinite(v) || v < 0.0) {
       return false;
@@ -143,8 +140,9 @@ namespace detail {
   return true;
 }
 
-[[nodiscard]] inline bool weights_match(std::span<const double> norms,
-                                        std::optional<std::span<const double>> weights) {
+[[nodiscard]] inline bool
+weights_match(std::span<const double> norms,
+              std::optional<std::span<const double>> weights) {
   if (!weights.has_value()) {
     return true;
   }
@@ -157,8 +155,7 @@ namespace detail {
 [[nodiscard]] inline ErrorEvidence
 make_evidence(EvidenceKind kind, std::span<const double> field_error_norms,
               AggregationScope scope, std::optional<int> order_tag,
-              std::optional<std::span<const double>> weights,
-              SolutionScale scale) {
+              std::optional<std::span<const double>> weights, SolutionScale scale) {
   // Weights are the solution scale. They override a Unit/Unspecified request.
   if (weights.has_value()) {
     scale = SolutionScale::Supplied;
@@ -172,7 +169,8 @@ make_evidence(EvidenceKind kind, std::span<const double> field_error_norms,
     invalid.solution_scale = SolutionScale::Supplied;
     return invalid;
   }
-  if (field_error_norms.empty() || !norms_are_finite_nonnegative(field_error_norms) ||
+  if (field_error_norms.empty() ||
+      !norms_are_finite_nonnegative(field_error_norms) ||
       !weights_match(field_error_norms, weights)) {
     ErrorEvidence invalid;
     invalid.kind = kind;
@@ -215,11 +213,12 @@ make_evidence(EvidenceKind kind, std::span<const double> field_error_norms,
  * @param weights Optional per-field scales (must match norms size)
  * @return Valid evidence, or `valid=false` if inputs are empty / invalid
  */
-[[nodiscard]] inline ErrorEvidence make_embedded_pair_evidence(
-    std::span<const double> field_error_norms, AggregationScope scope,
-    std::optional<int> order_tag = {},
-    std::optional<std::span<const double>> weights = {},
-    SolutionScale scale = SolutionScale::Unspecified) {
+[[nodiscard]] inline ErrorEvidence
+make_embedded_pair_evidence(std::span<const double> field_error_norms,
+                            AggregationScope scope,
+                            std::optional<int> order_tag = {},
+                            std::optional<std::span<const double>> weights = {},
+                            SolutionScale scale = SolutionScale::Unspecified) {
   return detail::make_evidence(EvidenceKind::EmbeddedPair, field_error_norms, scope,
                                order_tag, weights, scale);
 }
@@ -230,11 +229,11 @@ make_evidence(EvidenceKind kind, std::span<const double> field_error_norms,
  * Same shape as `make_embedded_pair_evidence` with
  * `EvidenceKind::ResidualAPosteriori`.
  */
-[[nodiscard]] inline ErrorEvidence make_residual_evidence(
-    std::span<const double> field_error_norms, AggregationScope scope,
-    std::optional<int> order_tag = {},
-    std::optional<std::span<const double>> weights = {},
-    SolutionScale scale = SolutionScale::Unspecified) {
+[[nodiscard]] inline ErrorEvidence
+make_residual_evidence(std::span<const double> field_error_norms,
+                       AggregationScope scope, std::optional<int> order_tag = {},
+                       std::optional<std::span<const double>> weights = {},
+                       SolutionScale scale = SolutionScale::Unspecified) {
   return detail::make_evidence(EvidenceKind::ResidualAPosteriori, field_error_norms,
                                scope, order_tag, weights, scale);
 }
@@ -246,13 +245,14 @@ make_evidence(EvidenceKind kind, std::span<const double> field_error_norms,
  * factory only labels the producer path (e.g. synthetic step-doubling
  * fixtures in tests).
  */
-[[nodiscard]] inline ErrorEvidence make_method_specific_evidence(
-    std::span<const double> field_error_norms, AggregationScope scope,
-    std::optional<int> order_tag = {},
-    std::optional<std::span<const double>> weights = {},
-    SolutionScale scale = SolutionScale::Unspecified) {
-  return detail::make_evidence(EvidenceKind::MethodSpecific, field_error_norms, scope,
-                               order_tag, weights, scale);
+[[nodiscard]] inline ErrorEvidence
+make_method_specific_evidence(std::span<const double> field_error_norms,
+                              AggregationScope scope,
+                              std::optional<int> order_tag = {},
+                              std::optional<std::span<const double>> weights = {},
+                              SolutionScale scale = SolutionScale::Unspecified) {
+  return detail::make_evidence(EvidenceKind::MethodSpecific, field_error_norms,
+                               scope, order_tag, weights, scale);
 }
 
 /**
@@ -341,8 +341,8 @@ reduce_error_evidence(ErrorEvidence ev, MPI_Comm comm = MPI_COMM_WORLD) {
     err = MPI_Allreduce(MPI_IN_PLACE, ev.field_norms.data(),
                         static_cast<int>(ev.field_norms.size()), MPI_DOUBLE, MPI_MAX,
                         comm);
-    pfc::mpi::throw_on_mpi_error(err,
-                                 "MPI_Allreduce for field_norms in reduce_error_evidence");
+    pfc::mpi::throw_on_mpi_error(
+        err, "MPI_Allreduce for field_norms in reduce_error_evidence");
   }
 
   if (!ev.field_valid.empty()) {
@@ -352,8 +352,8 @@ reduce_error_evidence(ErrorEvidence ev, MPI_Comm comm = MPI_COMM_WORLD) {
     }
     err = MPI_Allreduce(MPI_IN_PLACE, packed.data(), static_cast<int>(packed.size()),
                         MPI_INT, MPI_LAND, comm);
-    pfc::mpi::throw_on_mpi_error(err,
-                                 "MPI_Allreduce for field_valid in reduce_error_evidence");
+    pfc::mpi::throw_on_mpi_error(
+        err, "MPI_Allreduce for field_valid in reduce_error_evidence");
     for (std::size_t i = 0; i < packed.size(); ++i) {
       ev.field_valid[i] = (packed[i] != 0);
     }
@@ -372,7 +372,8 @@ reduce_error_evidence(ErrorEvidence ev, MPI_Comm comm = MPI_COMM_WORLD) {
   // ||e||_inf / (atol + rtol * ||y||_inf).
   if (ev.weights.has_value()) {
     err = MPI_Allreduce(MPI_IN_PLACE, ev.weights->data(),
-                        static_cast<int>(ev.weights->size()), MPI_DOUBLE, MPI_MAX, comm);
+                        static_cast<int>(ev.weights->size()), MPI_DOUBLE, MPI_MAX,
+                        comm);
     pfc::mpi::throw_on_mpi_error(err, "MPI_Allreduce for solution scales");
   }
 
@@ -449,11 +450,8 @@ struct Denominator {
 
   double scale = 0.0;
   switch (ev.solution_scale) {
-  case SolutionScale::Unspecified:
-    return Denominator{DenomKind::NoDecision, 0.0};
-  case SolutionScale::Unit:
-    scale = 1.0;
-    break;
+  case SolutionScale::Unspecified: return Denominator{DenomKind::NoDecision, 0.0};
+  case SolutionScale::Unit: scale = 1.0; break;
   case SolutionScale::Supplied:
     if (!ev.weights.has_value() || ev.weights->size() != count) {
       return Denominator{DenomKind::NoDecision, 0.0};
@@ -482,7 +480,8 @@ struct Denominator {
   }
   const auto verdict =
       (ratio <= 1.0) ? StepAttemptVerdict::Accept : StepAttemptVerdict::Reject;
-  return NormalizedError{.metric = ratio, .verdict = verdict, .decision_available = true};
+  return NormalizedError{
+      .metric = ratio, .verdict = verdict, .decision_available = true};
 }
 
 } // namespace detail
@@ -507,8 +506,7 @@ normalize_error_evidence(const ErrorEvidence &ev, const ErrorTolerances &tol) {
     }
     double metric = 0.0;
     for (std::size_t i = 0; i < ev.field_norms.size(); ++i) {
-      const auto den =
-          detail::field_denominator(ev, tol, i, ev.field_norms.size());
+      const auto den = detail::field_denominator(ev, tol, i, ev.field_norms.size());
       if (den.kind != detail::DenomKind::Ok) {
         return detail::from_denominator(den.kind, 0.0);
       }

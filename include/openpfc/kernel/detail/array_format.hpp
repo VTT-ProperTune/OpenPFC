@@ -58,8 +58,7 @@ void show(const std::vector<T> &data, const std::array<int, 3> &size,
 template <typename T>
 void show(const std::vector<T> &data, const std::array<int, 2> &size,
           [[maybe_unused]] const std::array<int, 2> &offsets) {
-  std::cout << size[0] << "×" << size[1] << " " << pfc::TypeName<T>::get()
-            << ":\n";
+  std::cout << size[0] << "×" << size[1] << " " << pfc::TypeName<T>::get() << ":\n";
   for (int i = 0; i < size[0]; ++i) {
     for (int j = 0; j < size[1]; ++j) {
       size_t idx = j * size[0] + i;

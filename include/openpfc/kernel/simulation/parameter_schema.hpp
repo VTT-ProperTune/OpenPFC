@@ -80,8 +80,7 @@ struct SchemaValidationResult {
  * @brief Error text matching `pfc::ui::format_config_error`.
  */
 [[nodiscard]] inline std::string
-schema_config_error(const std::string &field_name,
-                    const std::string &description,
+schema_config_error(const std::string &field_name, const std::string &description,
                     const std::string &expected_type,
                     const std::string &actual_value,
                     const std::string &example = {}) {
@@ -101,8 +100,8 @@ schema_config_error(const std::string &field_name,
   return oss.str();
 }
 
-[[nodiscard]] inline std::string
-schema_json_value_string(const nlohmann::json &j, const std::string &field) {
+[[nodiscard]] inline std::string schema_json_value_string(const nlohmann::json &j,
+                                                          const std::string &field) {
   if (!j.contains(field)) {
     return "missing";
   }
@@ -139,8 +138,7 @@ public:
     return *this;
   }
 
-  [[nodiscard]] SchemaValidationResult
-  validate(const nlohmann::json &config) const {
+  [[nodiscard]] SchemaValidationResult validate(const nlohmann::json &config) const {
     SchemaValidationResult result;
     Params scratch{};
     apply(config, scratch, result);
@@ -242,8 +240,7 @@ private:
       }
       if (f.spec.required) {
         result.errors.push_back(schema_config_error(
-            name, f.spec.description, f.expected_type, "missing",
-            f.spec.example));
+            name, f.spec.description, f.expected_type, "missing", f.spec.example));
       }
       return;
     }
@@ -293,25 +290,23 @@ private:
     }
   }
 
-  [[nodiscard]] static std::optional<std::string>
-  bounds_error(const Field &f, double value) {
+  [[nodiscard]] static std::optional<std::string> bounds_error(const Field &f,
+                                                               double value) {
     if (f.spec.min && value < *f.spec.min) {
       std::ostringstream msg;
-      msg << "Parameter '" << f.spec.name << "' = " << value
-          << " is below minimum " << *f.spec.min;
+      msg << "Parameter '" << f.spec.name << "' = " << value << " is below minimum "
+          << *f.spec.min;
       if (f.spec.min && f.spec.max) {
-        msg << " (valid range: [" << *f.spec.min << ", " << *f.spec.max
-            << "])";
+        msg << " (valid range: [" << *f.spec.min << ", " << *f.spec.max << "])";
       }
       return msg.str();
     }
     if (f.spec.max && value > *f.spec.max) {
       std::ostringstream msg;
-      msg << "Parameter '" << f.spec.name << "' = " << value
-          << " exceeds maximum " << *f.spec.max;
+      msg << "Parameter '" << f.spec.name << "' = " << value << " exceeds maximum "
+          << *f.spec.max;
       if (f.spec.min && f.spec.max) {
-        msg << " (valid range: [" << *f.spec.min << ", " << *f.spec.max
-            << "])";
+        msg << " (valid range: [" << *f.spec.min << ", " << *f.spec.max << "])";
       }
       return msg.str();
     }
@@ -326,12 +321,10 @@ private:
  * @brief Physics that exposes `schema()` for its `parameters_type`.
  */
 template <class Physics>
-concept HasParameterSchema =
-    HasParameters<Physics> && requires {
-      {
-        Physics::schema()
-      } -> std::convertible_to<
-          ParameterSchema<typename Physics::parameters_type>>;
-    };
+concept HasParameterSchema = HasParameters<Physics> && requires {
+  {
+    Physics::schema()
+  } -> std::convertible_to<ParameterSchema<typename Physics::parameters_type>>;
+};
 
 } // namespace pfc::sim

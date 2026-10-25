@@ -42,8 +42,7 @@ namespace pfc::halo {
 namespace detail {
 
 /// Inverse of `direction_to_canonical_tag` for tags in `[0, 33)`.
-[[nodiscard]] inline HaloDirectionSet::Int3
-canonical_tag_to_direction(int tag) {
+[[nodiscard]] inline HaloDirectionSet::Int3 canonical_tag_to_direction(int tag) {
   if (tag >= 0 && tag < 6) {
     return face_slot_to_direction(tag);
   }
@@ -61,8 +60,8 @@ canonical_tag_to_direction(int tag) {
       }
     }
   }
-  throw std::runtime_error(
-      "canonical_tag_to_direction: no direction for tag " + std::to_string(tag));
+  throw std::runtime_error("canonical_tag_to_direction: no direction for tag " +
+                           std::to_string(tag));
 }
 
 [[nodiscard]] inline std::uint64_t
@@ -108,17 +107,17 @@ encode_direction_set_mask(const HaloDirectionSet &dirs) {
  *         neighbour `n` is not matched by `-d` in `n`'s set. Every rank
  *         validates the full gathered table so all ranks throw together.
  */
-inline void validate_neighbour_direction_agreement(
-    MPI_Comm comm, const decomposition::Decomposition &decomp, int rank,
-    const HaloDirectionSet &dirs) {
+inline void
+validate_neighbour_direction_agreement(MPI_Comm comm,
+                                       const decomposition::Decomposition &decomp,
+                                       int rank, const HaloDirectionSet &dirs) {
   int size = 0;
   pfc::mpi::throw_on_mpi_error(MPI_Comm_size(comm, &size), "MPI_Comm_size");
 
   const std::uint64_t local_mask = detail::encode_direction_set_mask(dirs);
   std::vector<std::uint64_t> all(static_cast<std::size_t>(size), 0);
   pfc::mpi::throw_on_mpi_error(
-      MPI_Allgather(&local_mask, 1, MPI_UINT64_T, all.data(), 1, MPI_UINT64_T,
-                    comm),
+      MPI_Allgather(&local_mask, 1, MPI_UINT64_T, all.data(), 1, MPI_UINT64_T, comm),
       "MPI_Allgather");
 
   // Every rank walks the full table so a mismatch throws on all ranks.
@@ -142,8 +141,8 @@ inline void validate_neighbour_direction_agreement(
       const std::uint64_t mask_n = all[static_cast<std::size_t>(n)];
       if ((mask_n & (std::uint64_t{1} << opp_tag)) == 0) {
         throw std::runtime_error(
-            "HaloDirectionSet neighbour disagreement: rank " +
-            std::to_string(r) + " has direction " + detail::format_direction(d) +
+            "HaloDirectionSet neighbour disagreement: rank " + std::to_string(r) +
+            " has direction " + detail::format_direction(d) +
             " toward neighbour rank " + std::to_string(n) +
             ", but neighbour lacks opposite " + detail::format_direction(opp) +
             " (detected by rank " + std::to_string(rank) + ")");

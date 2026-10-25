@@ -40,8 +40,7 @@ struct FFTLayout {
 [[nodiscard]] FFTLayout create(const Decomposition &decomposition,
                                int r2c_direction);
 
-[[nodiscard]] FFTLayout create(const Decomposition &decomposition,
-                               int r2c_direction,
+[[nodiscard]] FFTLayout create(const Decomposition &decomposition, int r2c_direction,
                                const heffte::plan_options &options);
 
 inline const Box3i &get_real_box(const FFTLayout &layout, int i) {

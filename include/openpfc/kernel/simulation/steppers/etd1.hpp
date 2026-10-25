@@ -141,8 +141,8 @@ public:
    *
    * The cache may be rebuilt afterward; this overload owns independent copies.
    */
-  void set_coefficients(
-      const pfc::integrator::SpectralExpCoefficientCache<> &cache) {
+  void
+  set_coefficients(const pfc::integrator::SpectralExpCoefficientCache<> &cache) {
     set_coefficients_owned(cache.exp_Ldt(), cache.phi1_L());
   }
 
@@ -152,8 +152,7 @@ public:
    * Algorithm: size-check → copy accepted into scratch → evaluate @c N on
    * scratch → @c candidate = exp_Ldt * u_accepted + phi1_L * N.
    */
-  [[nodiscard]] Attempt attempt(double t,
-                                const std::vector<Scalar> &u_accepted) {
+  [[nodiscard]] Attempt attempt(double t, const std::vector<Scalar> &u_accepted) {
     m_last_reason.clear();
     if (u_accepted.size() != m_local_size) {
       m_last_reason = "u_accepted.size() != local_size";
@@ -324,15 +323,14 @@ public:
       }
     }
     return MultiStepAttemptResult<N, Scalar>(t, m_dt, t + m_dt,
-                                             /*success=*/true,
-                                             candidate_ptrs());
+                                             /*success=*/true, candidate_ptrs());
   }
 
   /** Isolate per-field candidates from host fields (via `vec()`). */
   template <pfc::field::HostFieldState<Scalar>... Fs>
     requires(sizeof...(Fs) == N)
-  [[nodiscard]] MultiStepAttemptResult<N, Scalar>
-  attempt(double t, const Fs &...u_accepted) {
+  [[nodiscard]] MultiStepAttemptResult<N, Scalar> attempt(double t,
+                                                          const Fs &...u_accepted) {
     return attempt(t, u_accepted.vec()...);
   }
 
@@ -366,8 +364,7 @@ private:
     ((m_u_scratch[I] = u_accepted), ...);
   }
 
-  template <std::size_t... I>
-  auto make_scratch_tuple(std::index_sequence<I...>) {
+  template <std::size_t... I> auto make_scratch_tuple(std::index_sequence<I...>) {
     return std::tie(m_u_scratch[I]...);
   }
 
@@ -375,8 +372,7 @@ private:
     return std::tie(m_du[I]...);
   }
 
-  [[nodiscard]] std::array<const std::vector<Scalar> *, N>
-  candidate_ptrs() const {
+  [[nodiscard]] std::array<const std::vector<Scalar> *, N> candidate_ptrs() const {
     return candidate_ptrs_impl(std::make_index_sequence<N>{});
   }
 

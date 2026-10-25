@@ -27,8 +27,7 @@ quaternion_sample_to_crystal(const double (&q)[4], Tensor2 &Q) noexcept {
       !std::isfinite(z))
     return false;
   const double norm2 = w * w + x * x + y * y + z * z;
-  if (!(norm2 > 0.0) || !std::isfinite(norm2) ||
-      !(std::abs(norm2 - 1.0) <= 1e-5))
+  if (!(norm2 > 0.0) || !std::isfinite(norm2) || !(std::abs(norm2 - 1.0) <= 1e-5))
     return false;
   const double inv = 1.0 / std::sqrt(norm2);
   const double a = w * inv, b = x * inv, c = y * inv, d = z * inv;

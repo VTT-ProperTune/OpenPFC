@@ -31,7 +31,8 @@ namespace pfc::fft::kspace {
  * @param global_size Global real-space grid `{Nx, Ny, Nz}`.
  * @param spacing     Grid spacing `{dx, dy, dz}`.
  * @param fn          Callable
- *        `void(std::size_t idx, double kx, double ky, double kz, int i, int j, int k)`.
+ *        `void(std::size_t idx, double kx, double ky, double kz, int i, int j, int
+ * k)`.
  */
 template <typename Fn>
 void for_each_kpoint(const Box3i &outbox, std::array<int, 3> global_size,

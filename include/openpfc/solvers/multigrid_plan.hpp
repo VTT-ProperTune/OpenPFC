@@ -56,9 +56,9 @@ struct MultigridPlanOptions {
 class MultigridPlan {
 public:
   struct Rank {
-    int world_rank = -1;          ///< Rank in original fine communicator.
-    int level_rank = -1;          ///< Compact rank in this level's communicator.
-    Box3i owned;                 ///< OpenPFC's unique owned free-node box.
+    int world_rank = -1; ///< Rank in original fine communicator.
+    int level_rank = -1; ///< Compact rank in this level's communicator.
+    Box3i owned;         ///< OpenPFC's unique owned free-node box.
     std::uint64_t owned_nodes = 0;
     std::uint64_t padded_nodes = 0;
     std::uint64_t estimated_device_bytes = 0;
@@ -74,8 +74,7 @@ public:
     std::uint64_t global_nodes = 0;
     std::uint64_t total_estimated_device_bytes = 0;
 
-    Level(int i, const decomposition::Decomposition &dec,
-          std::vector<int> active)
+    Level(int i, const decomposition::Decomposition &dec, std::vector<int> active)
         : index(i), domain(decomposition::domain(dec)),
           process_grid(decomposition::get_grid(dec)), partition(dec),
           active_world_ranks(std::move(active)) {}
@@ -86,7 +85,7 @@ public:
   };
 
   struct Group {
-    int coarse_world_rank = -1;  ///< Leader, an active world rank on coarse.
+    int coarse_world_rank = -1;        ///< Leader, an active world rank on coarse.
     std::vector<int> fine_world_ranks; ///< Members in fine-level rank order.
   };
 
@@ -117,9 +116,8 @@ public:
     std::uint64_t routed_bytes_per_direction = 0;
   };
 
-  [[nodiscard]] static MultigridPlan
-  build(const decomposition::Decomposition &fine,
-        MultigridPlanOptions opt = {}) {
+  [[nodiscard]] static MultigridPlan build(const decomposition::Decomposition &fine,
+                                           MultigridPlanOptions opt = {}) {
     validate_options(opt);
     const auto &d = decomposition::domain(fine);
     const auto n = domain::get_size(d);
@@ -127,25 +125,21 @@ public:
     const auto is_power_two = [](std::int64_t a) {
       return a > 0 && (a & (a - 1)) == 0;
     };
-    if (n[0] < 2 * opt.terminal_short_extent + 1 ||
-        n[1] != n[0] ||
-        !(n[2] == n[0] ||
-          static_cast<std::int64_t>(n[2]) ==
-              2LL * static_cast<std::int64_t>(n[0]) + 1) ||
+    if (n[0] < 2 * opt.terminal_short_extent + 1 || n[1] != n[0] ||
+        !(n[2] == n[0] || static_cast<std::int64_t>(n[2]) ==
+                              2LL * static_cast<std::int64_t>(n[0]) + 1) ||
         !is_power_two(static_cast<std::int64_t>(n[0]) + 1) ||
-        !is_power_two(static_cast<std::int64_t>(n[2]) + 1) ||
-        per[0] || per[1] || per[2])
+        !is_power_two(static_cast<std::int64_t>(n[2]) + 1) || per[0] || per[1] ||
+        per[2])
       throw std::invalid_argument(
           "MultigridPlan: expected nonperiodic cubic/2:1 2^k-1 Q1 free nodes");
     for (int a = 0; a < 3; ++a)
       if (!(d.spacing[a] > 0.0) || !std::isfinite(d.spacing[a]) ||
           !std::isfinite(d.origin[a]))
-        throw std::invalid_argument(
-            "MultigridPlan: nonfinite spacing or origin");
+        throw std::invalid_argument("MultigridPlan: nonfinite spacing or origin");
 
     const int nranks = decomposition::get_num_domains(fine);
-    if (nranks < 1)
-      throw std::invalid_argument("MultigridPlan: no fine-level rank");
+    if (nranks < 1) throw std::invalid_argument("MultigridPlan: no fine-level rank");
     std::vector<int> world_ranks;
     world_ranks.reserve(static_cast<std::size_t>(nranks));
     for (int r = 0; r < nranks; ++r) world_ranks.push_back(r);
@@ -154,8 +148,7 @@ public:
     out.append_level(fine, std::move(world_ranks));
     validate_owned_width(out.m_levels.back(), opt);
 
-    while (out.m_levels.back().domain.size[0] >
-           opt.terminal_short_extent) {
+    while (out.m_levels.back().domain.size[0] > opt.terminal_short_extent) {
       const Level &previous = out.m_levels.back();
       const auto prev_grid = previous.process_grid;
       const auto prev_domain = previous.domain;
@@ -164,22 +157,17 @@ public:
       for (int axis = 0; axis < 3; ++axis) {
         next_size[axis] = (prev_domain.size[axis] - 1) / 2;
         next_spacing[axis] = 2.0 * prev_domain.spacing[axis];
-        next_origin[axis] = prev_domain.origin[axis] +
-                            prev_domain.spacing[axis];
-        if (!std::isfinite(next_spacing[axis]) ||
-            !std::isfinite(next_origin[axis]))
+        next_origin[axis] = prev_domain.origin[axis] + prev_domain.spacing[axis];
+        if (!std::isfinite(next_spacing[axis]) || !std::isfinite(next_origin[axis]))
           throw std::overflow_error(
               "MultigridPlan: coarse physical coordinates overflow");
       }
-      const Int3 next_grid = choose_grid(
-          prev_grid, next_size, opt);
-      auto next_domain = domain::create(
-          GridSize(next_size), PhysicalOrigin(next_origin),
-          GridSpacing(next_spacing), Bool3{false, false, false});
-      const auto next_decomp =
-          decomposition::create(next_domain, next_grid);
-      std::vector<int> next_world =
-          leaders(previous, next_grid);
+      const Int3 next_grid = choose_grid(prev_grid, next_size, opt);
+      auto next_domain =
+          domain::create(GridSize(next_size), PhysicalOrigin(next_origin),
+                         GridSpacing(next_spacing), Bool3{false, false, false});
+      const auto next_decomp = decomposition::create(next_domain, next_grid);
+      std::vector<int> next_world = leaders(previous, next_grid);
       out.append_level(next_decomp, std::move(next_world));
       const auto &finer = out.m_levels[out.m_levels.size() - 2];
       const auto &coarser = out.m_levels.back();
@@ -187,8 +175,7 @@ public:
     }
 
     const auto &leaf = out.m_levels.back();
-    if (leaf.active_count() != 1 ||
-        leaf.active_world_ranks.front() != 0 ||
+    if (leaf.active_count() != 1 || leaf.active_world_ranks.front() != 0 ||
         leaf.domain.size[0] != opt.terminal_short_extent ||
         !(leaf.domain.size[2] == opt.terminal_short_extent ||
           leaf.domain.size[2] == 2 * opt.terminal_short_extent + 1))
@@ -227,18 +214,15 @@ private:
         o.maximum_route_elements == 0 ||
         o.maximum_route_elements >
             static_cast<std::uint64_t>(std::numeric_limits<int>::max()))
-      throw std::invalid_argument(
-          "MultigridPlan: unsupported Q1 planning policy");
+      throw std::invalid_argument("MultigridPlan: unsupported Q1 planning policy");
   }
 
-  static std::uint64_t multiply(std::uint64_t a, std::uint64_t b,
-                                const char *what) {
+  static std::uint64_t multiply(std::uint64_t a, std::uint64_t b, const char *what) {
     if (b && a > std::numeric_limits<std::uint64_t>::max() / b)
       throw std::overflow_error(std::string("MultigridPlan: ") + what);
     return a * b;
   }
-  static std::uint64_t add(std::uint64_t a, std::uint64_t b,
-                           const char *what) {
+  static std::uint64_t add(std::uint64_t a, std::uint64_t b, const char *what) {
     if (a > std::numeric_limits<std::uint64_t>::max() - b)
       throw std::overflow_error(std::string("MultigridPlan: ") + what);
     return a + b;
@@ -253,19 +237,14 @@ private:
     }
     return out;
   }
-  static std::uint64_t volume(const Box3i &b) {
-    return volume(b.size);
-  }
+  static std::uint64_t volume(const Box3i &b) { return volume(b.size); }
   static Int3 coords(int rank, const Int3 &g) {
-    return {rank % g[0], (rank / g[0]) % g[1],
-            rank / (g[0] * g[1])};
+    return {rank % g[0], (rank / g[0]) % g[1], rank / (g[0] * g[1])};
   }
   static int rank_of(const Int3 &c, const Int3 &g) {
     return (c[2] * g[1] + c[1]) * g[0] + c[0];
   }
-  static std::uint64_t grid_count(const Int3 &g) {
-    return volume(g);
-  }
+  static std::uint64_t grid_count(const Int3 &g) { return volume(g); }
 
   void append_level(const decomposition::Decomposition &dec,
                     std::vector<int> active) {
@@ -294,12 +273,12 @@ private:
                    static_cast<std::uint64_t>(m_options.estimated_padded_fields),
                    "field-budget multiplication overflow"),
           sizeof(double), "estimated FP64 memory overflow");
-      level.total_estimated_device_bytes = add(
-          level.total_estimated_device_bytes, r.estimated_device_bytes,
-          "per-level byte budget overflow");
-      m_device_bytes[static_cast<std::size_t>(world)] = add(
-          m_device_bytes[static_cast<std::size_t>(world)],
-          r.estimated_device_bytes, "per-world-rank byte budget overflow");
+      level.total_estimated_device_bytes =
+          add(level.total_estimated_device_bytes, r.estimated_device_bytes,
+              "per-level byte budget overflow");
+      m_device_bytes[static_cast<std::size_t>(world)] =
+          add(m_device_bytes[static_cast<std::size_t>(world)],
+              r.estimated_device_bytes, "per-world-rank byte budget overflow");
       level.ranks.push_back(r);
     }
     m_levels.push_back(std::move(level));
@@ -310,8 +289,7 @@ private:
     for (const Rank &r : level.ranks)
       for (int a = 0; a < 3; ++a)
         if (r.owned.size[a] <
-            (level.active_count() == 1 ? opt.halo_width :
-             opt.minimum_owned_extent))
+            (level.active_count() == 1 ? opt.halo_width : opt.minimum_owned_extent))
           throw std::invalid_argument(
               "MultigridPlan: active MPI brick below minimum owned extent");
   }
@@ -321,8 +299,7 @@ private:
     std::array<std::vector<int>, 3> choices;
     for (int a = 0; a < 3; ++a) {
       choices[a].push_back(old[a]);
-      if (old[a] % 2 == 0)
-        choices[a].push_back(old[a] / 2);
+      if (old[a] % 2 == 0) choices[a].push_back(old[a] / 2);
       if (opt.permit_factor_three && old[a] % 3 == 0)
         choices[a].push_back(old[a] / 3);
       std::sort(choices[a].begin(), choices[a].end());
@@ -343,8 +320,7 @@ private:
           for (int a = 0; a < 3; ++a)
             if (g[a] > size[a] ||
                 size[a] / g[a] <
-                    (active == 1 ? opt.halo_width :
-                     opt.minimum_owned_extent))
+                    (active == 1 ? opt.halo_width : opt.minimum_owned_extent))
               valid = false;
           if (!valid) continue;
           const long double x = static_cast<long double>(size[0]) / gx,
@@ -381,11 +357,9 @@ private:
     active.reserve(static_cast<std::size_t>(n));
     for (int cr = 0; cr < n; ++cr) {
       const auto c = coords(cr, coarse_grid);
-      const Int3 first{c[0] * factor[0], c[1] * factor[1],
-                       c[2] * factor[2]};
+      const Int3 first{c[0] * factor[0], c[1] * factor[1], c[2] * factor[2]};
       active.push_back(
-          fine.active_world_ranks[static_cast<std::size_t>(
-              rank_of(first, parent))]);
+          fine.active_world_ranks[static_cast<std::size_t>(rank_of(first, parent))]);
     }
     return active;
   }
@@ -396,8 +370,7 @@ private:
     t.fine_level = fine.index;
     t.coarse_level = coarse.index;
     for (int a = 0; a < 3; ++a)
-      t.rank_contraction[a] =
-          fine.process_grid[a] / coarse.process_grid[a];
+      t.rank_contraction[a] = fine.process_grid[a] / coarse.process_grid[a];
 
     // Nested Cartesian rank groups: future MPI_Comm_split participants.
     t.groups.resize(coarse.ranks.size());
@@ -406,13 +379,11 @@ private:
     std::vector<int> grouped_owner(fine.ranks.size(), -1);
     for (const Rank &f : fine.ranks) {
       const auto fc = coords(f.level_rank, fine.process_grid);
-      const Int3 cc{fc[0] / t.rank_contraction[0],
-                    fc[1] / t.rank_contraction[1],
+      const Int3 cc{fc[0] / t.rank_contraction[0], fc[1] / t.rank_contraction[1],
                     fc[2] / t.rank_contraction[2]};
       const int c = rank_of(cc, coarse.process_grid);
       const int owner = coarse.active_world_ranks[static_cast<std::size_t>(c)];
-      t.groups[static_cast<std::size_t>(c)].fine_world_ranks.push_back(
-          f.world_rank);
+      t.groups[static_cast<std::size_t>(c)].fine_world_ranks.push_back(f.world_rank);
       grouped_owner[static_cast<std::size_t>(f.level_rank)] = owner;
     }
 
@@ -424,8 +395,7 @@ private:
         // For physical free Q1 nodes: fine i couples to coarse j iff
         // 2*j <= i <= 2*j+2. These are the exact support extrema.
         support_lo[axis] = std::max(0, (f.owned.low[axis] + 1) / 2 - 1);
-        support_hi[axis] = std::min(
-            coarse_size[axis] - 1, f.owned.high[axis] / 2);
+        support_hi[axis] = std::min(coarse_size[axis] - 1, f.owned.high[axis] / 2);
       }
       Int3 first{}, last{};
       for (int axis = 0; axis < 3; ++axis) {
@@ -436,8 +406,7 @@ private:
           c[axis] = i;
           const int rank = rank_of(c, cgrid);
           const auto &box = coarse.ranks[static_cast<std::size_t>(rank)].owned;
-          if (box.high[axis] < support_lo[axis] ||
-              box.low[axis] > support_hi[axis])
+          if (box.high[axis] < support_lo[axis] || box.low[axis] > support_hi[axis])
             continue;
           if (first[axis] < 0) first[axis] = i;
           last[axis] = i;
@@ -473,17 +442,17 @@ private:
               throw std::overflow_error(
                   "MultigridPlan: route exceeds MPI int-count capacity");
             route.crosses_group =
-                route.coarse_world_rank != grouped_owner[
-                    static_cast<std::size_t>(f.level_rank)];
-            t.routed_values_per_direction = add(
-                t.routed_values_per_direction, route.values_per_direction,
-                "aggregate transfer count overflow");
+                route.coarse_world_rank !=
+                grouped_owner[static_cast<std::size_t>(f.level_rank)];
+            t.routed_values_per_direction =
+                add(t.routed_values_per_direction, route.values_per_direction,
+                    "aggregate transfer count overflow");
             t.routes.push_back(std::move(route));
           }
     }
-    t.routed_bytes_per_direction = multiply(
-        t.routed_values_per_direction, sizeof(double),
-        "aggregate route bytes overflow");
+    t.routed_bytes_per_direction =
+        multiply(t.routed_values_per_direction, sizeof(double),
+                 "aggregate route bytes overflow");
     return t;
   }
 

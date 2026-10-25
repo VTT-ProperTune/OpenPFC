@@ -98,9 +98,11 @@ struct CUDAXchg {
     pfc::cuda::detail::cuda_check(
         cudaMemcpy(dst, src, bytes, cudaMemcpyHostToDevice), what);
   }
-  static constexpr const char *indices_d2h = "cudaMemcpy indices D2H (exchange::send)";
+  static constexpr const char *indices_d2h =
+      "cudaMemcpy indices D2H (exchange::send)";
   static constexpr const char *data_d2h = "cudaMemcpy data D2H (exchange::send)";
-  static constexpr const char *send_data_d2h = "cudaMemcpy D2H (exchange::send_data)";
+  static constexpr const char *send_data_d2h =
+      "cudaMemcpy D2H (exchange::send_data)";
   static constexpr const char *recv_data_h2d =
       "cudaMemcpy H2D (exchange::receive_data)";
 };
@@ -131,15 +133,16 @@ struct HIPXchg {
   static void throw_nb(const char *op) { throw_hip_nb_requires_aware(op); }
   static void memcpy_d2h(void *dst, const void *src, std::size_t bytes,
                          const char *what) {
-    pfc::hip::detail::hip_check(
-        hipMemcpy(dst, src, bytes, hipMemcpyDeviceToHost), what);
+    pfc::hip::detail::hip_check(hipMemcpy(dst, src, bytes, hipMemcpyDeviceToHost),
+                                what);
   }
   static void memcpy_h2d(void *dst, const void *src, std::size_t bytes,
                          const char *what) {
-    pfc::hip::detail::hip_check(
-        hipMemcpy(dst, src, bytes, hipMemcpyHostToDevice), what);
+    pfc::hip::detail::hip_check(hipMemcpy(dst, src, bytes, hipMemcpyHostToDevice),
+                                what);
   }
-  static constexpr const char *indices_d2h = "hipMemcpy indices D2H (exchange::send)";
+  static constexpr const char *indices_d2h =
+      "hipMemcpy indices D2H (exchange::send)";
   static constexpr const char *data_d2h = "hipMemcpy data D2H (exchange::send)";
   static constexpr const char *send_data_d2h = "hipMemcpy D2H (exchange::send_data)";
   static constexpr const char *recv_data_h2d =
@@ -176,10 +179,10 @@ void gpu_send(core::SparseVector<typename Ops::tag, T> &sparse_vector,
   pfc::mpi::throw_on_mpi_error(
       MPI_Send(&size, 1, MPI_UNSIGNED_LONG_LONG, receiver_rank, tag, comm),
       "MPI_Send");
-  pfc::mpi::throw_on_mpi_error(
-      MPI_Send(indices.data(), count, MPI_UNSIGNED_LONG_LONG, receiver_rank, tag + 1,
-               comm),
-      "MPI_Send");
+  pfc::mpi::throw_on_mpi_error(MPI_Send(indices.data(), count,
+                                        MPI_UNSIGNED_LONG_LONG, receiver_rank,
+                                        tag + 1, comm),
+                               "MPI_Send");
   MPI_Datatype mpi_type = get_mpi_type<T>();
   pfc::mpi::throw_on_mpi_error(
       MPI_Send(data.data(), count, mpi_type, receiver_rank, tag + 2, comm),
@@ -205,10 +208,9 @@ void gpu_send_data(const core::SparseVector<typename Ops::tag, T> &sparse_vector
   const int count = pfc::mpi::ensure_mpi_int_count(size, "exchange::send_data");
 
   if (Ops::mpi_aware()) {
-    pfc::mpi::throw_on_mpi_error(
-        MPI_Send(sparse_vector.data().data(), count, mpi_type, receiver_rank, tag,
-                 comm),
-        "MPI_Send");
+    pfc::mpi::throw_on_mpi_error(MPI_Send(sparse_vector.data().data(), count,
+                                          mpi_type, receiver_rank, tag, comm),
+                                 "MPI_Send");
   } else {
     std::vector<T> data(size);
     Ops::memcpy_d2h(data.data(), sparse_vector.data().data(), size * sizeof(T),
@@ -238,16 +240,15 @@ void gpu_receive_data(core::SparseVector<typename Ops::tag, T> &sparse_vector,
   const int count = pfc::mpi::ensure_mpi_int_count(size, "exchange::receive_data");
 
   if (Ops::mpi_aware()) {
-    pfc::mpi::throw_on_mpi_error(
-        MPI_Recv(sparse_vector.data().data(), count, mpi_type, sender_rank, tag,
-                 comm, MPI_STATUS_IGNORE),
-        "MPI_Recv");
+    pfc::mpi::throw_on_mpi_error(MPI_Recv(sparse_vector.data().data(), count,
+                                          mpi_type, sender_rank, tag, comm,
+                                          MPI_STATUS_IGNORE),
+                                 "MPI_Recv");
   } else {
     std::vector<T> data(size);
-    pfc::mpi::throw_on_mpi_error(
-        MPI_Recv(data.data(), count, mpi_type, sender_rank, tag, comm,
-                 MPI_STATUS_IGNORE),
-        "MPI_Recv");
+    pfc::mpi::throw_on_mpi_error(MPI_Recv(data.data(), count, mpi_type, sender_rank,
+                                          tag, comm, MPI_STATUS_IGNORE),
+                                 "MPI_Recv");
     Ops::memcpy_h2d(sparse_vector.data().data(), data.data(), size * sizeof(T),
                     Ops::recv_data_h2d);
   }
@@ -278,10 +279,10 @@ void gpu_isend_data(const core::SparseVector<typename Ops::tag, T> &sparse_vecto
 
   MPI_Datatype mpi_type = get_mpi_type<T>();
   const int count = pfc::mpi::ensure_mpi_int_count(size, "exchange::isend_data");
-  pfc::mpi::throw_on_mpi_error(
-      MPI_Isend(sparse_vector.data().data(), count, mpi_type, receiver_rank, tag,
-                comm, request),
-      "MPI_Isend");
+  pfc::mpi::throw_on_mpi_error(MPI_Isend(sparse_vector.data().data(), count,
+                                         mpi_type, receiver_rank, tag, comm,
+                                         request),
+                               "MPI_Isend");
 }
 
 template <typename T, typename Ops>
@@ -309,10 +310,9 @@ void gpu_irecv_data(core::SparseVector<typename Ops::tag, T> &sparse_vector,
 
   MPI_Datatype mpi_type = get_mpi_type<T>();
   const int count = pfc::mpi::ensure_mpi_int_count(size, "exchange::irecv_data");
-  pfc::mpi::throw_on_mpi_error(
-      MPI_Irecv(sparse_vector.data().data(), count, mpi_type, sender_rank, tag, comm,
-                request),
-      "MPI_Irecv");
+  pfc::mpi::throw_on_mpi_error(MPI_Irecv(sparse_vector.data().data(), count,
+                                         mpi_type, sender_rank, tag, comm, request),
+                               "MPI_Irecv");
 }
 
 } // namespace detail

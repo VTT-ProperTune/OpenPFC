@@ -91,7 +91,8 @@ struct MPITimer {
  * records `MPI_Wtime()` into `timer.t_start`. Pair with `toc`.
  */
 inline void tic(MPITimer &timer) {
-  pfc::mpi::throw_on_mpi_error(MPI_Barrier(timer.comm), "MPI_Barrier in pfc::runtime::tic failed");
+  pfc::mpi::throw_on_mpi_error(MPI_Barrier(timer.comm),
+                               "MPI_Barrier in pfc::runtime::tic failed");
   timer.t_start = MPI_Wtime();
 }
 
@@ -163,7 +164,8 @@ print_timing_summary(const MPITimer &timer, int print_rank = 0,
     const double local = kv.second.second;
     double global = 0.0;
     int err = MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_MAX, timer.comm);
-    pfc::mpi::throw_on_mpi_error(err, "MPI_Allreduce in pfc::runtime::print_timing_summary failed");
+    pfc::mpi::throw_on_mpi_error(
+        err, "MPI_Allreduce in pfc::runtime::print_timing_summary failed");
     out.emplace_back(kv.first, global);
   }
 
@@ -171,7 +173,9 @@ print_timing_summary(const MPITimer &timer, int print_rank = 0,
             [](const auto &a, const auto &b) { return a.second > b.second; });
 
   int rank = 0;
-  pfc::mpi::throw_on_mpi_error(MPI_Comm_rank(timer.comm, &rank), "MPI_Comm_rank in pfc::runtime::print_timing_summary failed");
+  pfc::mpi::throw_on_mpi_error(
+      MPI_Comm_rank(timer.comm, &rank),
+      "MPI_Comm_rank in pfc::runtime::print_timing_summary failed");
   if (rank == print_rank && !out.empty()) {
     std::size_t width = 0;
     for (const auto &kv : out) width = std::max(width, kv.first.size());

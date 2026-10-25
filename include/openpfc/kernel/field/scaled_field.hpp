@@ -42,11 +42,11 @@ namespace pfc::field {
  * support scaled field addition.
  */
 struct ScaledField {
-    double alpha{0.0};
-    FieldView<double> field_;
+  double alpha{0.0};
+  FieldView<double> field_;
 
-    const double* data() const noexcept { return field_.data(); }
-    std::size_t size() const noexcept { return field_.size(); }
+  const double *data() const noexcept { return field_.data(); }
+  std::size_t size() const noexcept { return field_.size(); }
 };
 
 /**
@@ -58,14 +58,10 @@ struct ScaledField {
  *
  * The proxy is intended for use as a transient on a single statement.
  */
-inline ScaledField operator*(double alpha, const pfc::data::Field<double> &f) noexcept {
-  FieldView<double> view(
-      f.data(),
-      f.size(),
-      f.local_size(),
-      f.spacing(),
-      f.origin()
-  );
+inline ScaledField operator*(double alpha,
+                             const pfc::data::Field<double> &f) noexcept {
+  FieldView<double> view(f.data(), f.size(), f.local_size(), f.spacing(),
+                         f.origin());
   return ScaledField{alpha, std::move(view)};
 }
 
@@ -74,13 +70,13 @@ inline ScaledField operator*(double alpha, const pfc::data::Field<double> &f) no
  *
  * Enables `u += dt * du;` when `u` is a `pfc::data::Field<double>`.
  */
-inline pfc::data::Field<double> &
-operator+=(pfc::data::Field<double> &lhs, const ScaledField &s) {
+inline pfc::data::Field<double> &operator+=(pfc::data::Field<double> &lhs,
+                                            const ScaledField &s) {
   if (s.size() != lhs.size()) {
-    throw std::invalid_argument(
-        "pfc::data::Field::operator+=: ScaledField size " +
-        std::to_string(s.size()) + " does not match field size " +
-        std::to_string(lhs.size()));
+    throw std::invalid_argument("pfc::data::Field::operator+=: ScaledField size " +
+                                std::to_string(s.size()) +
+                                " does not match field size " +
+                                std::to_string(lhs.size()));
   }
   const std::ptrdiff_t n = static_cast<std::ptrdiff_t>(lhs.size());
   const double alpha = s.alpha;

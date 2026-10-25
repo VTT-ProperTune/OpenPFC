@@ -63,8 +63,7 @@ namespace pfc::field::detail {
 namespace sfinae {
 
 /** True iff `T` opts in to the protocol via a `t.as_tuple()` member. */
-template <class T, class = void>
-struct has_as_tuple : std::false_type {};
+template <class T, class = void> struct has_as_tuple : std::false_type {};
 
 template <class T>
 struct has_as_tuple<T, std::void_t<decltype(std::declval<T &>().as_tuple())>>
@@ -88,8 +87,7 @@ struct is_tuple : is_std_tuple<std::remove_cv_t<std::remove_reference_t<T>>> {};
 template <class T>
 inline constexpr bool has_as_tuple = sfinae::has_as_tuple<T>::value;
 
-template <class T>
-inline constexpr bool is_tuple = sfinae::is_tuple<T>::value;
+template <class T> inline constexpr bool is_tuple = sfinae::is_tuple<T>::value;
 
 /**
  * @brief Normalize `t` into a tuple-like view for fan-out.

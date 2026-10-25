@@ -168,7 +168,8 @@ namespace detail {
 [[nodiscard]] inline bool is_finite(double v) noexcept { return std::isfinite(v); }
 
 inline void push_issue(AdaptiveConfigValidationResult &result, std::string parameter,
-                       std::string value, std::string rule, std::string allowed_range) {
+                       std::string value, std::string rule,
+                       std::string allowed_range) {
   result.issues.push_back(AdaptiveConfigIssue{
       .parameter = std::move(parameter),
       .value = std::move(value),
@@ -180,7 +181,8 @@ inline void push_issue(AdaptiveConfigValidationResult &result, std::string param
 inline void require_finite(AdaptiveConfigValidationResult &result, const char *name,
                            double value) {
   if (!is_finite(value)) {
-    push_issue(result, name, format_double(value), "must be finite", "finite double");
+    push_issue(result, name, format_double(value), "must be finite",
+               "finite double");
   }
 }
 
@@ -239,22 +241,22 @@ validate(const AdaptiveControlConfig &cfg) {
   for (std::size_t i = 0; i < cfg.atol_per_field.size(); ++i) {
     if (!detail::is_finite(cfg.atol_per_field[i])) {
       detail::push_issue(result, "atol_per_field[" + detail::format_size(i) + "]",
-                         detail::format_double(cfg.atol_per_field[i]), "must be finite",
-                         "finite double");
+                         detail::format_double(cfg.atol_per_field[i]),
+                         "must be finite", "finite double");
     }
   }
   for (std::size_t i = 0; i < cfg.rtol_per_field.size(); ++i) {
     if (!detail::is_finite(cfg.rtol_per_field[i])) {
       detail::push_issue(result, "rtol_per_field[" + detail::format_size(i) + "]",
-                         detail::format_double(cfg.rtol_per_field[i]), "must be finite",
-                         "finite double");
+                         detail::format_double(cfg.rtol_per_field[i]),
+                         "must be finite", "finite double");
     }
   }
   for (std::size_t i = 0; i < cfg.error_weights.size(); ++i) {
     if (!detail::is_finite(cfg.error_weights[i])) {
       detail::push_issue(result, "error_weights[" + detail::format_size(i) + "]",
-                         detail::format_double(cfg.error_weights[i]), "must be finite",
-                         "finite double");
+                         detail::format_double(cfg.error_weights[i]),
+                         "must be finite", "finite double");
     }
   }
 
@@ -278,25 +280,22 @@ validate(const AdaptiveControlConfig &cfg) {
 
   if (cfg.field_count > 0) {
     if (have_atol_vec && cfg.atol_per_field.size() != cfg.field_count) {
-      detail::push_issue(result, "atol_per_field",
-                         detail::format_size(cfg.atol_per_field.size()),
-                         "length must equal field_count",
-                         "size == field_count (" + detail::format_size(cfg.field_count) +
-                             ")");
+      detail::push_issue(
+          result, "atol_per_field", detail::format_size(cfg.atol_per_field.size()),
+          "length must equal field_count",
+          "size == field_count (" + detail::format_size(cfg.field_count) + ")");
     }
     if (have_rtol_vec && cfg.rtol_per_field.size() != cfg.field_count) {
-      detail::push_issue(result, "rtol_per_field",
-                         detail::format_size(cfg.rtol_per_field.size()),
-                         "length must equal field_count",
-                         "size == field_count (" + detail::format_size(cfg.field_count) +
-                             ")");
+      detail::push_issue(
+          result, "rtol_per_field", detail::format_size(cfg.rtol_per_field.size()),
+          "length must equal field_count",
+          "size == field_count (" + detail::format_size(cfg.field_count) + ")");
     }
     if (!cfg.error_weights.empty() && cfg.error_weights.size() != cfg.field_count) {
-      detail::push_issue(result, "error_weights",
-                         detail::format_size(cfg.error_weights.size()),
-                         "length must equal field_count",
-                         "size == field_count (" + detail::format_size(cfg.field_count) +
-                             ")");
+      detail::push_issue(
+          result, "error_weights", detail::format_size(cfg.error_weights.size()),
+          "length must equal field_count",
+          "size == field_count (" + detail::format_size(cfg.field_count) + ")");
     }
   }
 
@@ -320,9 +319,11 @@ validate(const AdaptiveControlConfig &cfg) {
       const double a = detail::effective_atol(cfg, i);
       const double r = detail::effective_rtol(cfg, i);
       const std::string a_name =
-          have_atol_vec ? ("atol_per_field[" + detail::format_size(i) + "]") : "atol";
+          have_atol_vec ? ("atol_per_field[" + detail::format_size(i) + "]")
+                        : "atol";
       const std::string r_name =
-          have_rtol_vec ? ("rtol_per_field[" + detail::format_size(i) + "]") : "rtol";
+          have_rtol_vec ? ("rtol_per_field[" + detail::format_size(i) + "]")
+                        : "rtol";
 
       if (a < 0.0) {
         detail::push_issue(result, a_name, detail::format_double(a),
@@ -348,10 +349,11 @@ validate(const AdaptiveControlConfig &cfg) {
   }
 
   if (!(cfg.shrink_max > 0.0 && cfg.shrink_max < 1.0)) {
-    detail::push_issue(result, "shrink_max", detail::format_double(cfg.shrink_max),
-                       "shrink_max must lie in the open unit interval (v1: no alternate "
-                       "recovery mode)",
-                       "(0, 1)");
+    detail::push_issue(
+        result, "shrink_max", detail::format_double(cfg.shrink_max),
+        "shrink_max must lie in the open unit interval (v1: no alternate "
+        "recovery mode)",
+        "(0, 1)");
   }
 
   if (!(cfg.min_dt > 0.0)) {
@@ -377,7 +379,8 @@ validate(const AdaptiveControlConfig &cfg) {
   }
 
   if (!(cfg.safety_factor > 0.0 && cfg.safety_factor <= 1.0)) {
-    detail::push_issue(result, "safety_factor", detail::format_double(cfg.safety_factor),
+    detail::push_issue(result, "safety_factor",
+                       detail::format_double(cfg.safety_factor),
                        "safety_factor must lie in (0, 1]", "(0, 1]");
   }
 
@@ -436,7 +439,8 @@ make_identity(const AdaptiveControlConfig &cfg) {
   oss << ";max_sequential_rejections=" << cfg.max_sequential_rejections;
   detail::append_vector_signature(oss, ";error_weights", cfg.error_weights);
   oss << ";error_norm="
-      << (cfg.error_norm == AdaptiveErrorNorm::max_norm ? "max_norm" : "weighted_l2");
+      << (cfg.error_norm == AdaptiveErrorNorm::max_norm ? "max_norm"
+                                                        : "weighted_l2");
   oss << ";controller="
       << (cfg.controller == StepController::pi ? "pi" : "memoryless");
   oss << ";pi_k_i=" << detail::format_double(cfg.pi_k_i);

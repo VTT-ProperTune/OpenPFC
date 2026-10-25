@@ -17,7 +17,6 @@
 
 namespace pfc::sim::steppers {
 
-template <typename T>
-using StageWorkspace = pfc::integrator::Workspace<T>;
+template <typename T> using StageWorkspace = pfc::integrator::Workspace<T>;
 
 } // namespace pfc::sim::steppers

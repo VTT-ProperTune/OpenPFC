@@ -142,8 +142,8 @@ struct SpectrumFamily {
   return f * nyquist_wavenumber(N);
 }
 
-[[nodiscard]] inline double mode_amplitude(const SpectrumFamily &fam, int nx,
-                                           int ny, int nz, double k_c, int dim) {
+[[nodiscard]] inline double mode_amplitude(const SpectrumFamily &fam, int nx, int ny,
+                                           int nz, double k_c, int dim) {
   if (!(k_c > 0.0)) throw std::invalid_argument("mode_amplitude: k_c > 0");
   if (dim < 1 || dim > 3)
     throw std::invalid_argument("mode_amplitude: dim must be 1, 2, or 3");
@@ -244,10 +244,11 @@ inline double radial_mode(int nx, int ny, int nz, int dim) {
  * \f$\tau=D t k_c^2\f$. The reported value is RMS error over RMS of the
  * initial spectrum. The spectral operator itself has error 0.
  */
-[[nodiscard]] inline ParsevalError
-predict_heat_error(const SpectrumFamily &fam, int fd_order, double f, int N,
-                   double tau = kDiffusionTime, int dim = 3,
-                   bool include_nyquist = false) {
+[[nodiscard]] inline ParsevalError predict_heat_error(const SpectrumFamily &fam,
+                                                      int fd_order, double f, int N,
+                                                      double tau = kDiffusionTime,
+                                                      int dim = 3,
+                                                      bool include_nyquist = false) {
   detail::check_grid(N, dim);
   if (!(f > 0.0) || f > 1.0)
     throw std::invalid_argument("predict_heat_error: need 0 < f <= 1");
@@ -422,8 +423,7 @@ struct EqualAccuracyPick {
 [[nodiscard]] inline EqualAccuracyPick
 pick_equal_accuracy(const SpectrumFamily &fam, double eps,
                     const std::vector<std::pair<int, double>> &cost_by_order,
-                    double cost_spectral, double tau = kDiffusionTime,
-                    int dim = 3) {
+                    double cost_spectral, double tau = kDiffusionTime, int dim = 3) {
   if (!(cost_spectral > 0.0))
     throw std::invalid_argument("pick_equal_accuracy: spectral cost > 0");
   EqualAccuracyPick best;
@@ -435,8 +435,7 @@ pick_equal_accuracy(const SpectrumFamily &fam, double eps,
     if (!(cost > 0.0)) continue;
     const auto match = content_fraction_at(fam, order, eps, tau, dim);
     if (!match.attainable) continue;
-    const double rel =
-        equal_accuracy_cost_ratio(match.f, cost, cost_spectral);
+    const double rel = equal_accuracy_cost_ratio(match.f, cost, cost_spectral);
     if (rel < best.relative_cost) {
       best.fd_order = order;
       best.relative_cost = rel;
@@ -468,11 +467,10 @@ pick_equal_accuracy(const SpectrumFamily &fam, double eps,
   detail::for_each_mode(N, dim, include_nyquist, n_box, [&](int nx, int ny, int nz) {
     const double amp = mode_amplitude(fam, nx, ny, nz, k_c, dim);
     if (amp == 0.0) return;
-    const double r2 = static_cast<double>(nx) * static_cast<double>(nx) +
-                      (dim > 1 ? static_cast<double>(ny) * static_cast<double>(ny)
-                               : 0.0) +
-                      (dim > 2 ? static_cast<double>(nz) * static_cast<double>(nz)
-                               : 0.0);
+    const double r2 =
+        static_cast<double>(nx) * static_cast<double>(nx) +
+        (dim > 1 ? static_cast<double>(ny) * static_cast<double>(ny) : 0.0) +
+        (dim > 2 ? static_cast<double>(nz) * static_cast<double>(nz) : 0.0);
     const double phase = static_cast<double>(nx) * x +
                          (dim > 1 ? static_cast<double>(ny) * y : 0.0) +
                          (dim > 2 ? static_cast<double>(nz) * z : 0.0);

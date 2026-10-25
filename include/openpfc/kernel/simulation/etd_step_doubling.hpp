@@ -53,8 +53,7 @@ namespace pfc::sim {
 /**
  * @brief One ETD1 step-doubling attempt on a host `SpectralETDSystem`.
  */
-template <class Physics>
-class ETD1StepDoubling {
+template <class Physics> class ETD1StepDoubling {
 public:
   using System = SpectralETDSystem<Physics, pfc::HostSpace>;
   using Complex = std::complex<double>;
@@ -69,10 +68,12 @@ public:
    */
   void attempt(double t, double dt) {
     if (m_open) {
-      throw std::logic_error("ETD1StepDoubling::attempt: an attempt is already open");
+      throw std::logic_error(
+          "ETD1StepDoubling::attempt: an attempt is already open");
     }
     if (!(dt > 0.0) || !std::isfinite(dt)) {
-      throw std::invalid_argument("ETD1StepDoubling::attempt: dt must be finite and > 0");
+      throw std::invalid_argument(
+          "ETD1StepDoubling::attempt: dt must be finite and > 0");
     }
     m_open = true;
     m_dt = dt;
@@ -99,7 +100,8 @@ public:
 
     m_half = m_sys.psi().vec();
     if (m_half.size() != m_full.size()) {
-      throw std::logic_error("ETD1StepDoubling: full and half fields differ in length");
+      throw std::logic_error(
+          "ETD1StepDoubling: full and half fields differ in length");
     }
     m_raw.resize(m_half.size());
     for (std::size_t i = 0; i < m_half.size(); ++i) {
@@ -145,18 +147,26 @@ public:
   [[nodiscard]] double dt() const noexcept { return m_dt; }
 
   /// `y_half - y_full` in real space. Valid until the next `attempt`.
-  [[nodiscard]] std::span<const double> raw_difference() const noexcept { return m_raw; }
+  [[nodiscard]] std::span<const double> raw_difference() const noexcept {
+    return m_raw;
+  }
   /// One ETD1 step of `dt`, in real space.
   [[nodiscard]] std::span<const double> full_step() const noexcept { return m_full; }
   /// Two ETD1 steps of `dt/2`, in real space.
-  [[nodiscard]] std::span<const double> half_steps() const noexcept { return m_half; }
+  [[nodiscard]] std::span<const double> half_steps() const noexcept {
+    return m_half;
+  }
   /// Accepted field at the start of the open attempt.
-  [[nodiscard]] std::span<const double> saved_state() const noexcept { return m_saved_psi; }
+  [[nodiscard]] std::span<const double> saved_state() const noexcept {
+    return m_saved_psi;
+  }
 
   [[nodiscard]] int forward_count() const noexcept { return m_forwards; }
   [[nodiscard]] int backward_count() const noexcept { return m_backwards; }
   [[nodiscard]] int nonlinear_count() const noexcept { return m_nonlinear; }
-  [[nodiscard]] int transform_count() const noexcept { return m_forwards + m_backwards; }
+  [[nodiscard]] int transform_count() const noexcept {
+    return m_forwards + m_backwards;
+  }
 
 private:
   void require_open(const char *what) const {

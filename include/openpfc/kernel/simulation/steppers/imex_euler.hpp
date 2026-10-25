@@ -101,8 +101,8 @@ void ingest_multi_field_solution_impl(std::array<std::vector<Scalar>, N> &dest,
 template <class Scalar, class Solution, std::size_t N>
 void ingest_multi_field_solution(std::array<std::vector<Scalar>, N> &dest,
                                  Solution &&solution) {
-  ingest_multi_field_solution_impl(
-      dest, std::forward<Solution>(solution), std::make_index_sequence<N>{});
+  ingest_multi_field_solution_impl(dest, std::forward<Solution>(solution),
+                                   std::make_index_sequence<N>{});
 }
 
 } // namespace detail
@@ -128,8 +128,7 @@ void ingest_multi_field_solution(std::array<std::vector<Scalar>, N> &dest,
     if (!std::holds_alternative<std::vector<double>>(op_desc.operator_context)) {
       return pfc::sim::SolveOutcome<TargetType>{
           target_bundle, pfc::sim::ConvergenceStatus::ill_conditioned, 0, 0.0,
-          std::string(
-              "make_diagonal_imex_solver requires vector operator_context")};
+          std::string("make_diagonal_imex_solver requires vector operator_context")};
     }
     const auto &diag = std::get<std::vector<double>>(op_desc.operator_context);
     const auto &rhs_vec = std::get<0>(rhs_bundle);
@@ -148,8 +147,7 @@ void ingest_multi_field_solution(std::array<std::vector<Scalar>, N> &dest,
       target_vec[i] = rhs_vec[i] / diag[i];
     }
     return pfc::sim::SolveOutcome<TargetType>{
-        target_bundle, pfc::sim::ConvergenceStatus::converged, 1, 0.0,
-        std::nullopt};
+        target_bundle, pfc::sim::ConvergenceStatus::converged, 1, 0.0, std::nullopt};
   };
 }
 
@@ -170,8 +168,8 @@ public:
   using scalar_type = Scalar;
   using Attempt = StepAttempt<Scalar>;
 
-  ImexEulerStepper(double dt, std::size_t local_size, ExplicitRhs E,
-                   Solver solver, pfc::sim::LinearOperatorDesc op_desc,
+  ImexEulerStepper(double dt, std::size_t local_size, ExplicitRhs E, Solver solver,
+                   pfc::sim::LinearOperatorDesc op_desc,
                    pfc::sim::SolveOptions opts = {})
       : m_dt(dt), m_E(std::move(E)), m_solver(std::move(solver)),
         m_op_desc(std::move(op_desc)), m_opts(std::move(opts)),
@@ -198,8 +196,7 @@ public:
     ctx.time = t + m_dt;
     auto rhs_bundle = std::tie(m_rhs_vec);
     auto candidate_bundle = std::tie(m_candidate);
-    auto outcome =
-        m_solver(m_op_desc, rhs_bundle, candidate_bundle, m_opts, ctx);
+    auto outcome = m_solver(m_op_desc, rhs_bundle, candidate_bundle, m_opts, ctx);
     record_solve_outcome(outcome);
     if (outcome.status == pfc::sim::ConvergenceStatus::converged) {
       detail::ingest_single_field_solution(m_candidate, outcome.solution);
@@ -211,8 +208,7 @@ public:
 
   /** Isolate a candidate from host field state (via `vec()`). */
   template <pfc::field::HostFieldState<Scalar> F>
-  [[nodiscard]] Attempt attempt(double t, const F &u,
-                                pfc::sim::StageContext &ctx) {
+  [[nodiscard]] Attempt attempt(double t, const F &u, pfc::sim::StageContext &ctx) {
     return attempt(t, u.vec(), ctx);
   }
 
@@ -307,8 +303,7 @@ private:
  * @tparam N           Number of fields (`static_assert(N >= 1)`).
  * @tparam Scalar      Field element type (`double` or `std::complex<double>`).
  */
-template <class ExplicitRhs, class Solver, std::size_t N,
-          class Scalar = double>
+template <class ExplicitRhs, class Solver, std::size_t N, class Scalar = double>
 class MultiImexEulerStepper {
 public:
   using ExplicitRhsType = ExplicitRhs;
@@ -355,17 +350,14 @@ public:
     form_rhs(std::index_sequence_for<U...>{}, u_accepted...);
     ctx.time = t + m_dt;
     auto rhs_bundle = make_rhs_bundle(std::index_sequence_for<U...>{});
-    auto candidate_bundle =
-        make_candidate_bundle(std::index_sequence_for<U...>{});
-    auto outcome =
-        m_solver(m_op_desc, rhs_bundle, candidate_bundle, m_opts, ctx);
+    auto candidate_bundle = make_candidate_bundle(std::index_sequence_for<U...>{});
+    auto outcome = m_solver(m_op_desc, rhs_bundle, candidate_bundle, m_opts, ctx);
     record_solve_outcome(outcome);
     if (outcome.status == pfc::sim::ConvergenceStatus::converged) {
       detail::ingest_multi_field_solution(m_candidate, outcome.solution);
       m_last_success = true;
       return MultiStepAttemptResult<N, Scalar>(t, m_dt, t + m_dt,
-                                               /*success=*/true,
-                                               candidate_ptrs());
+                                               /*success=*/true, candidate_ptrs());
     }
     return MultiStepAttemptResult<N, Scalar>(t, m_dt, t, /*success=*/false,
                                              candidate_ptrs());
@@ -456,8 +448,7 @@ private:
   }
 
   template <std::size_t... I, class... U>
-  void form_rhs(std::index_sequence<I...>,
-                const std::vector<U> &...u_accepted) {
+  void form_rhs(std::index_sequence<I...>, const std::vector<U> &...u_accepted) {
     auto one = [this](std::vector<Scalar> &rhs, const std::vector<Scalar> &u,
                       const std::vector<Scalar> &e) {
       for (std::size_t i = 0; i < u.size(); ++i) {
@@ -471,8 +462,7 @@ private:
     return std::make_tuple(std::ref(m_rhs_vec[I])...);
   }
 
-  template <std::size_t... I>
-  auto make_candidate_bundle(std::index_sequence<I...>) {
+  template <std::size_t... I> auto make_candidate_bundle(std::index_sequence<I...>) {
     return std::make_tuple(std::ref(m_candidate[I])...);
   }
 
@@ -489,8 +479,7 @@ private:
     m_last_solve_failure_cause = outcome.failure_cause;
   }
 
-  [[nodiscard]] std::array<const std::vector<Scalar> *, N>
-  candidate_ptrs() const {
+  [[nodiscard]] std::array<const std::vector<Scalar> *, N> candidate_ptrs() const {
     return candidate_ptrs_impl(std::make_index_sequence<N>{});
   }
 

@@ -39,10 +39,10 @@
 #include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/execution/memory_space.hpp>
-#include <openpfc/solvers/nodal_multigrid_kernels.hpp>
-#include <openpfc/solvers/nodal_dirichlet_kernels.hpp>
 #include <openpfc/solvers/nodal_dirichlet_coarse.hpp>
+#include <openpfc/solvers/nodal_dirichlet_kernels.hpp>
 #include <openpfc/solvers/nodal_dirichlet_nested_geometry.hpp>
+#include <openpfc/solvers/nodal_multigrid_kernels.hpp>
 
 namespace pfc::solvers {
 
@@ -51,13 +51,13 @@ public:
   using FieldT = data::Field<double, HostSpace>;
 
   struct Controls {
-    double diffusion = 1.0;          ///< Positive, spatially constant Q1 diffusion.
-    double reaction = 0.0;           ///< Nonnegative consistent Q1 mass term.
-    double jacobi_weight = 0.65;     ///< Capped by a Gershgorin spectral bound.
+    double diffusion = 1.0;      ///< Positive, spatially constant Q1 diffusion.
+    double reaction = 0.0;       ///< Nonnegative consistent Q1 mass term.
+    double jacobi_weight = 0.65; ///< Capped by a Gershgorin spectral bound.
     int pre = 2;
     int post = 2;
-    int coarsest_free_extent = 7;    ///< Current nested Q1 qualification gate.
-    int max_coarse_unknowns = 1024;  ///< Guard against unbounded dense replication.
+    int coarsest_free_extent = 7;   ///< Current nested Q1 qualification gate.
+    int max_coarse_unknowns = 1024; ///< Guard against unbounded dense replication.
   };
 
   NodalDirichletMultigrid(const decomposition::Decomposition &fine, int rank,
@@ -74,7 +74,8 @@ public:
     if (rank != m_rank)
       throw std::invalid_argument("NodalDirichletMultigrid: MPI rank mismatch");
     if (decomposition::get_num_domains(fine) != m_size)
-      throw std::invalid_argument("NodalDirichletMultigrid: decomposition size mismatch");
+      throw std::invalid_argument(
+          "NodalDirichletMultigrid: decomposition size mismatch");
     if (!(controls.diffusion > 0.0) || !std::isfinite(controls.diffusion) ||
         !(controls.reaction >= 0.0) || !std::isfinite(controls.reaction) ||
         !(controls.jacobi_weight > 0.0 && controls.jacobi_weight < 1.0) ||
@@ -88,7 +89,8 @@ public:
     const auto size = domain::get_size(domain0);
     for (int d = 0; d < 3; ++d) {
       if (periodic[d])
-        throw std::invalid_argument("NodalDirichletMultigrid: every axis must be nonperiodic");
+        throw std::invalid_argument(
+            "NodalDirichletMultigrid: every axis must be nonperiodic");
       if (size[d] < 2 * controls.coarsest_free_extent + 1 ||
           !power_of_two(static_cast<long long>(size[d]) + 1))
         throw std::invalid_argument(
@@ -108,9 +110,9 @@ public:
       for (int d = 0; d < 3; ++d)
         coarsen = coarsen && global[d] > controls.coarsest_free_extent;
       if (!coarsen) break;
-      m_levels.push_back(
-          std::make_unique<Level>(current, *current_dec, m_rank, m_comm,
-                                  make_stencil(current, controls), controls.jacobi_weight));
+      m_levels.push_back(std::make_unique<Level>(
+          current, *current_dec, m_rank, m_comm, make_stencil(current, controls),
+          controls.jacobi_weight));
       Int3 next_size{};
       Real3 next_spacing = domain::get_spacing(current);
       for (int d = 0; d < 3; ++d) {
@@ -120,8 +122,8 @@ public:
           throw std::invalid_argument(
               "NodalDirichletMultigrid: process grid exceeds coarse free extent");
       }
-      Domain next = domain::with_spacing(next_size, next_spacing,
-                                         {false, false, false});
+      Domain next =
+          domain::with_spacing(next_size, next_spacing, {false, false, false});
       auto next_dec = std::make_unique<decomposition::Decomposition>(
           decomposition::create(next, proc_grid));
       nmg::dirichlet::validate_nested_transfer_reach(*current_dec, *next_dec);
@@ -129,12 +131,14 @@ public:
       current_dec = std::move(next_dec);
     }
     if (m_levels.empty())
-      throw std::invalid_argument("NodalDirichletMultigrid: at least one V-cycle level required");
+      throw std::invalid_argument(
+          "NodalDirichletMultigrid: at least one V-cycle level required");
     m_coarse_domain = current;
     const auto n = product(domain::get_size(current));
     if (n > static_cast<std::size_t>(controls.max_coarse_unknowns) ||
         n > static_cast<std::size_t>(std::numeric_limits<int>::max()))
-      throw std::invalid_argument("NodalDirichletMultigrid: coarse dense capacity exceeded");
+      throw std::invalid_argument(
+          "NodalDirichletMultigrid: coarse dense capacity exceeded");
     m_coarse_rhs.assign(n, 0.0);
     m_coarse_x.assign(n, 0.0);
     m_coarse_factor = nmg::dirichlet::DenseCoarseCholesky(
@@ -169,23 +173,20 @@ public:
       fine.x(i, j, k) = 0.0;
     });
     cycle(0);
-    each_owned(fine.box, [&](int i, int j, int k) {
-      out(i, j, k) = fine.x(i, j, k);
-    });
+    each_owned(fine.box,
+               [&](int i, int j, int k) { out(i, j, k) = fine.x(i, j, k); });
   }
 
   void operator()(const FieldT &r, FieldT &z, int = 0) { apply(r, z); }
 
 private:
-  static bool power_of_two(long long n) {
-    return n > 0 && (n & (n - 1)) == 0;
-  }
+  static bool power_of_two(long long n) { return n > 0 && (n & (n - 1)) == 0; }
 
   static std::size_t product(const Int3 &n) {
     std::size_t value = 1;
     for (int d = 0; d < 3; ++d) {
       if (n[d] < 1 || value > std::numeric_limits<std::size_t>::max() /
-                                    static_cast<std::size_t>(n[d]))
+                                  static_cast<std::size_t>(n[d]))
         throw std::invalid_argument("NodalDirichletMultigrid: invalid product");
       value *= static_cast<std::size_t>(n[d]);
     }
@@ -195,23 +196,22 @@ private:
   static std::size_t owned_count(const Box3i &b) { return product(b.size); }
 
   static std::size_t linear(const Int3 &n, int i, int j, int k) {
-    return static_cast<std::size_t>(i) + static_cast<std::size_t>(n[0]) *
-           (static_cast<std::size_t>(j) + static_cast<std::size_t>(n[1]) * k);
+    return static_cast<std::size_t>(i) +
+           static_cast<std::size_t>(n[0]) *
+               (static_cast<std::size_t>(j) + static_cast<std::size_t>(n[1]) * k);
   }
 
-  template <typename Fn>
-  static void each_owned(const Box3i &b, Fn fn) {
+  template <typename Fn> static void each_owned(const Box3i &b, Fn fn) {
     for (int k = 0; k < b.size[2]; ++k)
       for (int j = 0; j < b.size[1]; ++j)
         for (int i = 0; i < b.size[0]; ++i) fn(i, j, k);
   }
 
   static nmg::dirichlet::Weights make_stencil(const Domain &d,
-                                                const Controls &controls) {
+                                              const Controls &controls) {
     const auto &sp = domain::get_spacing(d);
     const double h[3] = {sp[0], sp[1], sp[2]};
-    return nmg::dirichlet::make_weights(h, controls.diffusion,
-                                         controls.reaction);
+    return nmg::dirichlet::make_weights(h, controls.diffusion, controls.reaction);
   }
 
   static comm::HaloExchangeOptions full_halo() {
@@ -232,10 +232,8 @@ private:
     double jacobi = 0.0;
 
     Level(const Domain &d, const decomposition::Decomposition &dc, int rank,
-          MPI_Comm comm, const nmg::dirichlet::Weights &w,
-          double damping)
-        : domain(d), decomp(dc),
-          box(decomposition::local_box(decomp, rank)),
+          MPI_Comm comm, const nmg::dirichlet::Weights &w, double damping)
+        : domain(d), decomp(dc), box(decomposition::local_box(decomp, rank)),
           x(d, box, 0), rhs(d, box, 0), residual(d, box, 0), ax(d, box, 0),
           scratch(d, box, 2), halo(scratch, decomp, rank, comm, full_halo()),
           weights(w) {
@@ -256,25 +254,23 @@ private:
 
   void check_field(const FieldT &field) const {
     const auto &fine = *m_levels.front();
-    if (field.domain() != fine.domain ||
-        field.box().low != fine.box.low ||
+    if (field.domain() != fine.domain || field.box().low != fine.box.low ||
         field.box().size != fine.box.size)
       throw std::invalid_argument("NodalDirichletMultigrid: field box mismatch");
   }
 
   static void load_halo(Level &level, const FieldT &src) {
     std::fill(level.scratch.vec().begin(), level.scratch.vec().end(), 0.0);
-    each_owned(level.box, [&](int i, int j, int k) {
-      level.scratch(i, j, k) = src(i, j, k);
-    });
+    each_owned(level.box,
+               [&](int i, int j, int k) { level.scratch(i, j, k) = src(i, j, k); });
     level.halo.exchange();
   }
 
   static void action(Level &L, const FieldT &input, FieldT &output) {
     load_halo(L, input);
     each_owned(L.box, [&](int i, int j, int k) {
-      output(i, j, k) = nmg::dirichlet::action(
-          L.shape, L.weights, L.scratch.data(), i, j, k);
+      output(i, j, k) =
+          nmg::dirichlet::action(L.shape, L.weights, L.scratch.data(), i, j, k);
     });
   }
 
@@ -282,9 +278,9 @@ private:
     for (int sweep = 0; sweep < count; ++sweep) {
       load_halo(L, L.x);
       each_owned(L.box, [&](int i, int j, int k) {
-        L.x(i, j, k) = nmg::dirichlet::jacobi(
-            L.shape, L.weights, L.scratch.data(), L.x(i, j, k),
-            L.rhs(i, j, k), L.jacobi, i, j, k);
+        L.x(i, j, k) =
+            nmg::dirichlet::jacobi(L.shape, L.weights, L.scratch.data(),
+                                   L.x(i, j, k), L.rhs(i, j, k), L.jacobi, i, j, k);
       });
     }
   }
@@ -293,10 +289,8 @@ private:
   static double interpolate(int fi, int fj, int fk, Sample get) {
     const int f[3] = {fi + 1, fj + 1, fk + 1};
     const int base[3] = {f[0] / 2 - 1, f[1] / 2 - 1, f[2] / 2 - 1};
-    const int cnt[3] = {(f[0] & 1) ? 2 : 1, (f[1] & 1) ? 2 : 1,
-                        (f[2] & 1) ? 2 : 1};
-    const double w = ((f[0] & 1) ? 0.5 : 1.0) *
-                     ((f[1] & 1) ? 0.5 : 1.0) *
+    const int cnt[3] = {(f[0] & 1) ? 2 : 1, (f[1] & 1) ? 2 : 1, (f[2] & 1) ? 2 : 1};
+    const double w = ((f[0] & 1) ? 0.5 : 1.0) * ((f[1] & 1) ? 0.5 : 1.0) *
                      ((f[2] & 1) ? 0.5 : 1.0);
     double value = 0.0;
     for (int dz = 0; dz < cnt[2]; ++dz)
@@ -312,8 +306,8 @@ private:
       const int ci = coarse.box.low[0] + i;
       const int cj = coarse.box.low[1] + j;
       const int ck = coarse.box.low[2] + k;
-      coarse.rhs(i, j, k) = nmg::dirichlet::restrict_pt(
-          fine.shape, fine.scratch.data(), ci, cj, ck);
+      coarse.rhs(i, j, k) =
+          nmg::dirichlet::restrict_pt(fine.shape, fine.scratch.data(), ci, cj, ck);
     });
   }
 
@@ -322,8 +316,8 @@ private:
     each_owned(fine.box, [&](int i, int j, int k) {
       const int fi = fine.box.low[0] + i, fj = fine.box.low[1] + j,
                 fk = fine.box.low[2] + k;
-      fine.x(i, j, k) += nmg::dirichlet::prolong_p(
-          coarse.shape, coarse.scratch.data(), fi, fj, fk);
+      fine.x(i, j, k) +=
+          nmg::dirichlet::prolong_p(coarse.shape, coarse.scratch.data(), fi, fj, fk);
     });
   }
 
@@ -331,23 +325,20 @@ private:
     std::vector<double> local(m_coarse_rhs.size(), 0.0);
     const auto csize = domain::get_size(m_coarse_domain);
     each_owned(fine.box, [&](int i, int j, int k) {
-      const int f[3] = {fine.box.low[0] + i + 1,
-                        fine.box.low[1] + j + 1,
+      const int f[3] = {fine.box.low[0] + i + 1, fine.box.low[1] + j + 1,
                         fine.box.low[2] + k + 1};
       const int base[3] = {f[0] / 2 - 1, f[1] / 2 - 1, f[2] / 2 - 1};
       const int cnt[3] = {(f[0] & 1) ? 2 : 1, (f[1] & 1) ? 2 : 1,
                           (f[2] & 1) ? 2 : 1};
-      const double weight = ((f[0] & 1) ? 0.5 : 1.0) *
-                            ((f[1] & 1) ? 0.5 : 1.0) *
+      const double weight = ((f[0] & 1) ? 0.5 : 1.0) * ((f[1] & 1) ? 0.5 : 1.0) *
                             ((f[2] & 1) ? 0.5 : 1.0);
       const double residual = fine.residual(i, j, k);
       for (int dz = 0; dz < cnt[2]; ++dz)
         for (int dy = 0; dy < cnt[1]; ++dy)
           for (int dx = 0; dx < cnt[0]; ++dx) {
-            const int ci = base[0] + dx, cj = base[1] + dy,
-                      ck = base[2] + dz;
-            if (ci >= 0 && cj >= 0 && ck >= 0 &&
-                ci < csize[0] && cj < csize[1] && ck < csize[2])
+            const int ci = base[0] + dx, cj = base[1] + dy, ck = base[2] + dz;
+            if (ci >= 0 && cj >= 0 && ck >= 0 && ci < csize[0] && cj < csize[1] &&
+                ck < csize[2])
               local[linear(csize, ci, cj, ck)] += weight * residual;
           }
     });
@@ -362,16 +353,15 @@ private:
       const int fi = fine.box.low[0] + i, fj = fine.box.low[1] + j,
                 fk = fine.box.low[2] + k;
       fine.x(i, j, k) += interpolate(fi, fj, fk, [&](int ci, int cj, int ck) {
-        if (ci < 0 || cj < 0 || ck < 0 ||
-            ci >= csize[0] || cj >= csize[1] || ck >= csize[2]) return 0.0;
+        if (ci < 0 || cj < 0 || ck < 0 || ci >= csize[0] || cj >= csize[1] ||
+            ck >= csize[2])
+          return 0.0;
         return m_coarse_x[linear(csize, ci, cj, ck)];
       });
     });
   }
 
-  void solve_coarse() {
-    m_coarse_factor.solve(m_coarse_rhs, m_coarse_x);
-  }
+  void solve_coarse() { m_coarse_factor.solve(m_coarse_rhs, m_coarse_x); }
 
   void cycle(std::size_t l) {
     Level &fine = *m_levels[l];

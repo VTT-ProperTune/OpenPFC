@@ -57,7 +57,10 @@ inline void reset_cpu_affinity_if_single_mpi_rank(int nproc) noexcept {
   int ret = sched_setaffinity(0, sizeof(set), &set);
   if (ret != 0) {
     int saved_errno = errno;
-    std::cerr << "[OpenPFC] reset_cpu_affinity_if_single_mpi_rank: sched_setaffinity failed with errno " << saved_errno << " - affinity reset skipped as best-effort rescue" << std::endl;
+    std::cerr << "[OpenPFC] reset_cpu_affinity_if_single_mpi_rank: "
+                 "sched_setaffinity failed with errno "
+              << saved_errno << " - affinity reset skipped as best-effort rescue"
+              << std::endl;
   }
   (void)ret;
 #else

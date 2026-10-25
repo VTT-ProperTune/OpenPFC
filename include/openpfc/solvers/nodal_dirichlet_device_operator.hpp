@@ -51,10 +51,9 @@ template <> struct DirichletDevicePointLaunch<CUDASpace> {
                      const double *src, double *dst) {
     gpu::nmg::dirichlet_apply_cuda(g, w, src, dst);
   }
-  static void jacobi(const nmg::Level &g,
-                     const nmg::dirichlet::Weights &w,
-                     const double *old_u, const double *rhs,
-                     double *new_u, double scale) {
+  static void jacobi(const nmg::Level &g, const nmg::dirichlet::Weights &w,
+                     const double *old_u, const double *rhs, double *new_u,
+                     double scale) {
     gpu::nmg::dirichlet_jacobi_cuda(g, w, old_u, rhs, new_u, scale);
   }
   static void restrict_pt(const nmg::Level &fine, const double *src,
@@ -78,10 +77,9 @@ template <> struct DirichletDevicePointLaunch<HIPSpace> {
                      const double *src, double *dst) {
     gpu::nmg::dirichlet_apply_hip(g, w, src, dst);
   }
-  static void jacobi(const nmg::Level &g,
-                     const nmg::dirichlet::Weights &w,
-                     const double *old_u, const double *rhs,
-                     double *new_u, double scale) {
+  static void jacobi(const nmg::Level &g, const nmg::dirichlet::Weights &w,
+                     const double *old_u, const double *rhs, double *new_u,
+                     double scale) {
     gpu::nmg::dirichlet_jacobi_hip(g, w, old_u, rhs, new_u, scale);
   }
   static void restrict_pt(const nmg::Level &fine, const double *src,
@@ -118,11 +116,10 @@ public:
   using Ops = FieldOperations<MemorySpace>;
   using Halo = FieldHalo<MemorySpace>;
 
-  NodalDirichletDeviceOperator(const decomposition::Decomposition &decomp,
-                               int rank, MPI_Comm comm,
-                               double diffusion = 1.0, double reaction = 0.0)
-      : m_domain(decomposition::domain(decomp)),
-        m_decomp(decomp),
+  NodalDirichletDeviceOperator(const decomposition::Decomposition &decomp, int rank,
+                               MPI_Comm comm, double diffusion = 1.0,
+                               double reaction = 0.0)
+      : m_domain(decomposition::domain(decomp)), m_decomp(decomp),
         m_box(validate_box(decomp, rank, comm)),
         m_ops(m_domain, m_box, 1, nmg::dirichlet::kHalo, comm),
         m_halo(m_ops, m_decomp, rank, comm, halo_options()),
@@ -130,16 +127,16 @@ public:
     const auto periodic = domain::get_periodic(m_domain);
     const auto global = domain::get_size(m_domain);
     const auto spacing = domain::get_spacing(m_domain);
-    if (!(diffusion > 0.0) || !std::isfinite(diffusion) ||
-        !(reaction >= 0.0) || !std::isfinite(reaction))
+    if (!(diffusion > 0.0) || !std::isfinite(diffusion) || !(reaction >= 0.0) ||
+        !std::isfinite(reaction))
       throw std::invalid_argument(
           "NodalDirichletDeviceOperator: invalid material constants");
     double h[3];
     for (int axis = 0; axis < 3; ++axis) {
-      if (periodic[axis] || global[axis] < 3 ||
-          !(spacing[axis] > 0.0) || !std::isfinite(spacing[axis]))
-        throw std::invalid_argument(
-            "NodalDirichletDeviceOperator: expected nonperiodic free-node Q1 domain");
+      if (periodic[axis] || global[axis] < 3 || !(spacing[axis] > 0.0) ||
+          !std::isfinite(spacing[axis]))
+        throw std::invalid_argument("NodalDirichletDeviceOperator: expected "
+                                    "nonperiodic free-node Q1 domain");
       m_shape.n[axis] = m_box.size[axis];
       m_shape.low[axis] = m_box.low[axis];
       m_shape.gn[axis] = global[axis];
@@ -149,7 +146,8 @@ public:
   }
 
   NodalDirichletDeviceOperator(const NodalDirichletDeviceOperator &) = delete;
-  NodalDirichletDeviceOperator &operator=(const NodalDirichletDeviceOperator &) = delete;
+  NodalDirichletDeviceOperator &
+  operator=(const NodalDirichletDeviceOperator &) = delete;
 
   /// Input/output Field storage halos may be 0, 1, 2, or another nonnegative
   /// width. Their owned boxes must agree with the supplied Decomposition.
@@ -165,8 +163,8 @@ public:
 
     auto &staged = m_halo.scratch()[0];
     detail::DirichletDevicePointLaunch<MemorySpace>::owned_copy(
-        m_shape, input.data(), input.storage_halo(),
-        staged.data(), nmg::dirichlet::kHalo);
+        m_shape, input.data(), input.storage_halo(), staged.data(),
+        nmg::dirichlet::kHalo);
     staged.note_device_write();
     m_halo.exchange();
 
@@ -174,15 +172,14 @@ public:
         m_shape, m_weights, staged.data(), m_output.data());
     m_output.note_device_write();
     detail::DirichletDevicePointLaunch<MemorySpace>::owned_copy(
-        m_shape, m_output.data(), nmg::dirichlet::kHalo,
-        output.data(), output.storage_halo());
+        m_shape, m_output.data(), nmg::dirichlet::kHalo, output.data(),
+        output.storage_halo());
     output.note_device_write();
   }
 
   [[nodiscard]] const Box3i &owned_box() const noexcept { return m_box; }
   [[nodiscard]] std::size_t local_unknowns() const noexcept {
-    return static_cast<std::size_t>(m_box.size[0]) *
-           m_box.size[1] * m_box.size[2];
+    return static_cast<std::size_t>(m_box.size[0]) * m_box.size[1] * m_box.size[2];
   }
 
 private:
@@ -193,16 +190,15 @@ private:
     return opts;
   }
 
-  static Box3i validate_box(const decomposition::Decomposition &decomp,
-                             int rank, MPI_Comm comm) {
+  static Box3i validate_box(const decomposition::Decomposition &decomp, int rank,
+                            MPI_Comm comm) {
     if (comm == MPI_COMM_NULL)
       throw std::invalid_argument(
           "NodalDirichletDeviceOperator: null MPI communicator");
     int world_rank = -1, ranks = 0;
     MPI_Comm_rank(comm, &world_rank);
     MPI_Comm_size(comm, &ranks);
-    if (rank != world_rank ||
-        decomposition::get_num_domains(decomp) != ranks)
+    if (rank != world_rank || decomposition::get_num_domains(decomp) != ranks)
       throw std::invalid_argument(
           "NodalDirichletDeviceOperator: rank/decomposition mismatch");
     // Every MPI rank must reject an unsupported partition before any rank
@@ -220,13 +216,10 @@ private:
   }
 
   void validate_field(const FieldT &field, const char *role) const {
-    if (field.domain() != m_domain ||
-        field.box().low != m_box.low ||
-        field.box().size != m_box.size ||
-        field.storage_halo() < 0)
-      throw std::invalid_argument(
-          std::string("NodalDirichletDeviceOperator: ") +
-          role + " field domain/box mismatch");
+    if (field.domain() != m_domain || field.box().low != m_box.low ||
+        field.box().size != m_box.size || field.storage_halo() < 0)
+      throw std::invalid_argument(std::string("NodalDirichletDeviceOperator: ") +
+                                  role + " field domain/box mismatch");
   }
 
   Domain m_domain;

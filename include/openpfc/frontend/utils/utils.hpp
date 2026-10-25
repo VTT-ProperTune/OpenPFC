@@ -68,13 +68,14 @@ inline std::string string_format(const std::string &format, Args... args) {
  * @brief Validate a filename pattern string for safe formatting
  *
  * @details
- * Validates that a filename pattern string is safe to use with printf-style formatting.
- * The pattern must contain at most one `%%` conversion specifier, and if present,
- * it must be an integer-only specifier (`%%d` with optional flags/width).
+ * Validates that a filename pattern string is safe to use with printf-style
+ * formatting. The pattern must contain at most one `%%` conversion specifier, and if
+ * present, it must be an integer-only specifier (`%%d` with optional flags/width).
  *
  * Valid patterns may contain:
  * - No `%%` specifier at all (returns unchanged)
- * - A single `%%d` integer specifier with optional flags (`-+ 0`) and width (`*` or digits)
+ * - A single `%%d` integer specifier with optional flags (`-+ 0`) and width (`*` or
+ * digits)
  *
  * Invalid and dangerous patterns that are rejected:
  * - `%%s` (string dereference - arbitrary pointer read)
@@ -84,7 +85,8 @@ inline std::string string_format(const std::string &format, Args... args) {
  * - Multiple `%%` specifiers of any kind
  *
  * This validation prevents format-string vulnerabilities where user-supplied
- * filename patterns from CLI arguments or JSON configs could cause undefined behavior.
+ * filename patterns from CLI arguments or JSON configs could cause undefined
+ * behavior.
  *
  * @param pattern Filename pattern string to validate
  *
@@ -98,7 +100,8 @@ inline void validate_filename_pattern(const std::string &pattern) {
   if (!std::regex_match(pattern, valid_pattern)) {
     throw std::invalid_argument(
         std::string("format_with_number: invalid filename pattern '") + pattern +
-        "'. Must contain at most one %% integer specifier (%%d with optional flags/width). "
+        "'. Must contain at most one %% integer specifier (%%d with optional "
+        "flags/width). "
         "Dangerous specifiers like %%s, %%n, %%f are not allowed.");
   }
 }
@@ -120,13 +123,14 @@ inline void validate_filename_pattern(const std::string &pattern) {
  * - `frame_%%04d.vti` → `frame_0000.vti`, `frame_0001.vti`, ...
  * - `result_%%-5d.bin` → `result_0    .bin`, `result_1    .bin`, ...
  *
- * @param filename Filename pattern string, optionally containing a single `%%d` specifier
+ * @param filename Filename pattern string, optionally containing a single `%%d`
+ * specifier
  * @param increment Integer value to substitute for the `%%d` specifier
  *
  * @return Formatted filename string with the increment value substituted
  *
- * @throws std::invalid_argument if the filename pattern contains dangerous conversion
- *         specifiers or multiple `%%` sequences
+ * @throws std::invalid_argument if the filename pattern contains dangerous
+ * conversion specifiers or multiple `%%` sequences
  *
  * @see validate_filename_pattern
  */

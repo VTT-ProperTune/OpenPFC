@@ -39,8 +39,7 @@ namespace pfc::integrator {
  *
  * @tparam T Field value type (e.g., double, std::complex<double>)
  */
-template <typename T>
-class Workspace {
+template <typename T> class Workspace {
 public:
   /**
    * @brief Construct `num_stages` buffers plus one scratch, each `local_size`.
@@ -60,8 +59,7 @@ public:
 
   Workspace(Workspace &&other) noexcept
       : m_num_stages(other.m_num_stages), m_local_size(other.m_local_size),
-        m_stages(std::move(other.m_stages)),
-        m_scratch(std::move(other.m_scratch)) {
+        m_stages(std::move(other.m_stages)), m_scratch(std::move(other.m_scratch)) {
     other.m_num_stages = 0;
     other.m_local_size = 0;
   }

@@ -50,8 +50,8 @@ public:
   void set_density(double density) { rho_seed = density; }
   double get_density() const { return rho_seed; }
 
-  void apply(pfc::field::FieldOutput<double> field, const Domain &domain, const Box3i &box,
-             double time = 0.0) override {
+  void apply(pfc::field::FieldOutput<double> field, const Domain &domain,
+             const Box3i &box, double time = 0.0) override {
     (void)time;
     const double s = 1.0 / sqrt(2.0);
     const std::array<double, 3> q1 = {s, s, 0};
@@ -81,8 +81,6 @@ public:
       return u;
     });
   }
-
-
 };
 
 } // namespace pfc

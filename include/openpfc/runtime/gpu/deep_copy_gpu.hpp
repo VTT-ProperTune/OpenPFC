@@ -23,7 +23,8 @@
 namespace pfc {
 
 #if defined(OpenPFC_ENABLE_CUDA)
-inline void deep_copy(core::DataBuffer<backend::CUDATag, double> &dst, double value) {
+inline void deep_copy(core::DataBuffer<backend::CUDATag, double> &dst,
+                      double value) {
   fill_cuda_impl(dst.data(), dst.size(), value);
 }
 inline void deep_copy(core::DataBuffer<backend::CUDATag, float> &dst, float value) {

@@ -29,16 +29,14 @@ namespace pfc::integrator {
 inline void apply_etd1_update_cuda(const std::complex<double> *u,
                                    const std::complex<double> *n_of_u,
                                    const double *exp_Ldt, const double *phi1_L,
-                                   std::complex<double> *candidate,
-                                   std::size_t n) {
+                                   std::complex<double> *candidate, std::size_t n) {
   pfc::combine_two_term_cuda_impl(u, n_of_u, exp_Ldt, phi1_L, candidate, n);
 }
 
 inline void apply_etd1_update_cuda(const std::complex<float> *u,
                                    const std::complex<float> *n_of_u,
                                    const float *exp_Ldt, const float *phi1_L,
-                                   std::complex<float> *candidate,
-                                   std::size_t n) {
+                                   std::complex<float> *candidate, std::size_t n) {
   pfc::combine_two_term_cuda_impl(u, n_of_u, exp_Ldt, phi1_L, candidate, n);
 }
 
@@ -59,16 +57,14 @@ inline void apply_etd1_update_cuda(const float *u, const float *n_of_u,
 inline void apply_etd1_update_hip(const std::complex<double> *u,
                                   const std::complex<double> *n_of_u,
                                   const double *exp_Ldt, const double *phi1_L,
-                                  std::complex<double> *candidate,
-                                  std::size_t n) {
+                                  std::complex<double> *candidate, std::size_t n) {
   pfc::combine_two_term_hip_impl(u, n_of_u, exp_Ldt, phi1_L, candidate, n);
 }
 
 inline void apply_etd1_update_hip(const std::complex<float> *u,
                                   const std::complex<float> *n_of_u,
                                   const float *exp_Ldt, const float *phi1_L,
-                                  std::complex<float> *candidate,
-                                  std::size_t n) {
+                                  std::complex<float> *candidate, std::size_t n) {
   pfc::combine_two_term_hip_impl(u, n_of_u, exp_Ldt, phi1_L, candidate, n);
 }
 

@@ -80,7 +80,8 @@ struct PointwiseGeometry {
   /// Physical coordinates of the x-fastest linear index @p idx.
   OPENPFC_HD void coords(std::size_t idx, double &x, double &y,
                          double &z) const noexcept {
-    const std::size_t nxy = static_cast<std::size_t>(nx) * static_cast<std::size_t>(ny);
+    const std::size_t nxy =
+        static_cast<std::size_t>(nx) * static_cast<std::size_t>(ny);
     const std::size_t k = idx / nxy;
     const std::size_t rem = idx - k * nxy;
     const std::size_t j = rem / static_cast<std::size_t>(nx);
@@ -98,8 +99,7 @@ struct PointwiseGeometry {
  */
 template <class F>
 concept SpectralPointwise =
-    std::is_trivially_copyable_v<F> &&
-    requires(const F &f, const SpectralCell &c) {
+    std::is_trivially_copyable_v<F> && requires(const F &f, const SpectralCell &c) {
       { f.nonlinearity(c) } -> std::convertible_to<double>;
     };
 

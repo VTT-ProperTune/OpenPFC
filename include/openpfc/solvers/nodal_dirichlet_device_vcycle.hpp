@@ -13,8 +13,8 @@
  */
 
 #include <openpfc/solvers/nodal_dirichlet_coarse.hpp>
-#include <openpfc/solvers/nodal_dirichlet_device_transfers.hpp>
 #include <openpfc/solvers/nodal_dirichlet_device_operator.hpp>
+#include <openpfc/solvers/nodal_dirichlet_device_transfers.hpp>
 
 #if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
 
@@ -24,7 +24,6 @@
 #include <limits>
 #include <memory>
 #include <stdexcept>
-#include <vector>
 #include <string>
 #include <utility>
 #include <vector>
@@ -67,34 +66,31 @@ public:
   using Hierarchy = std::vector<decomposition::Decomposition>;
 
   /// Backwards-compatible two-level Q1 constructor.
-  NodalDirichletDeviceVcycle(
-      const decomposition::Decomposition &fine,
-      const decomposition::Decomposition &coarse, int rank, MPI_Comm comm)
-      : NodalDirichletDeviceVcycle(
-            Hierarchy{fine, coarse}, rank, comm, Controls{}) {}
+  NodalDirichletDeviceVcycle(const decomposition::Decomposition &fine,
+                             const decomposition::Decomposition &coarse, int rank,
+                             MPI_Comm comm)
+      : NodalDirichletDeviceVcycle(Hierarchy{fine, coarse}, rank, comm, Controls{}) {
+  }
 
-  NodalDirichletDeviceVcycle(
-      const decomposition::Decomposition &fine,
-      const decomposition::Decomposition &coarse, int rank, MPI_Comm comm,
-      Controls controls)
-      : NodalDirichletDeviceVcycle(
-            Hierarchy{fine, coarse}, rank, comm, controls) {}
+  NodalDirichletDeviceVcycle(const decomposition::Decomposition &fine,
+                             const decomposition::Decomposition &coarse, int rank,
+                             MPI_Comm comm, Controls controls)
+      : NodalDirichletDeviceVcycle(Hierarchy{fine, coarse}, rank, comm, controls) {}
 
   /// Backwards-compatible three-level constructor.
-  NodalDirichletDeviceVcycle(
-      const decomposition::Decomposition &fine,
-      const decomposition::Decomposition &middle,
-      const decomposition::Decomposition &coarse, int rank, MPI_Comm comm)
-      : NodalDirichletDeviceVcycle(
-            Hierarchy{fine, middle, coarse}, rank, comm, Controls{}) {}
+  NodalDirichletDeviceVcycle(const decomposition::Decomposition &fine,
+                             const decomposition::Decomposition &middle,
+                             const decomposition::Decomposition &coarse, int rank,
+                             MPI_Comm comm)
+      : NodalDirichletDeviceVcycle(Hierarchy{fine, middle, coarse}, rank, comm,
+                                   Controls{}) {}
 
-  NodalDirichletDeviceVcycle(
-      const decomposition::Decomposition &fine,
-      const decomposition::Decomposition &middle,
-      const decomposition::Decomposition &coarse, int rank, MPI_Comm comm,
-      Controls controls)
-      : NodalDirichletDeviceVcycle(
-            Hierarchy{fine, middle, coarse}, rank, comm, controls) {}
+  NodalDirichletDeviceVcycle(const decomposition::Decomposition &fine,
+                             const decomposition::Decomposition &middle,
+                             const decomposition::Decomposition &coarse, int rank,
+                             MPI_Comm comm, Controls controls)
+      : NodalDirichletDeviceVcycle(Hierarchy{fine, middle, coarse}, rank, comm,
+                                   controls) {}
 
   /// Any nested level count >=2. Levels are OpenPFC Decompositions ordered
   /// finest to coarsest; callers may supply nontrivial MPI brick grids.
@@ -114,38 +110,32 @@ public:
 
 private:
   static const decomposition::Decomposition &at(const Hierarchy &levels,
-                                                 std::size_t index) {
+                                                std::size_t index) {
     if (index >= levels.size())
-      throw std::invalid_argument("DirichletDeviceVcycle: missing nested grid level");
+      throw std::invalid_argument(
+          "DirichletDeviceVcycle: missing nested grid level");
     return levels[index];
   }
 
-  NodalDirichletDeviceVcycle(
-      const Hierarchy &levels, std::size_t index, int rank, MPI_Comm comm,
-      Controls controls)
+  NodalDirichletDeviceVcycle(const Hierarchy &levels, std::size_t index, int rank,
+                             MPI_Comm comm, Controls controls)
       : m_fd(decomposition::domain(at(levels, index))),
         m_cd(decomposition::domain(at(levels, index + 1))),
         m_fdec(at(levels, index)), m_cdec(at(levels, index + 1)),
         m_fb(validated_box(levels, index, rank, comm, controls)),
-        m_cb(decomposition::local_box(m_cdec, rank)),
-        m_comm(comm), m_controls(controls),
-        m_fops(m_fd, m_fb, 1, nmg::dirichlet::kHalo, comm),
+        m_cb(decomposition::local_box(m_cdec, rank)), m_comm(comm),
+        m_controls(controls), m_fops(m_fd, m_fb, 1, nmg::dirichlet::kHalo, comm),
         m_cops(m_cd, m_cb, 1, nmg::dirichlet::kHalo, comm),
         m_halo(m_fops, m_fdec, rank, comm, full_halo(9200)),
-        m_operator(m_fdec, rank, comm,
-                   controls.diffusion, controls.reaction),
-        m_transfers(m_fdec, m_cdec, rank, comm),
-        m_rhs(m_fops.make(m_fops.size())),
-        m_x(m_fops.make(m_fops.size())),
-        m_next(m_fops.make(m_fops.size())),
-        m_ax(m_fops.make(m_fops.size())),
-        m_residual(m_fops.make(m_fops.size())),
-        m_crhs(m_cops.make(m_cops.size())),
-        m_cx(m_cops.make(m_cops.size())) {
+        m_operator(m_fdec, rank, comm, controls.diffusion, controls.reaction),
+        m_transfers(m_fdec, m_cdec, rank, comm), m_rhs(m_fops.make(m_fops.size())),
+        m_x(m_fops.make(m_fops.size())), m_next(m_fops.make(m_fops.size())),
+        m_ax(m_fops.make(m_fops.size())), m_residual(m_fops.make(m_fops.size())),
+        m_crhs(m_cops.make(m_cops.size())), m_cx(m_cops.make(m_cops.size())) {
     const auto spacing = domain::get_spacing(m_fd);
     const double h[3] = {spacing[0], spacing[1], spacing[2]};
-    m_weights = nmg::dirichlet::make_weights(
-        h, controls.diffusion, controls.reaction);
+    m_weights =
+        nmg::dirichlet::make_weights(h, controls.diffusion, controls.reaction);
 
     const auto n = domain::get_size(m_fd);
     for (int d = 0; d < 3; ++d) {
@@ -159,21 +149,21 @@ private:
     for (double a : m_weights.v) row_bound += std::abs(a);
     if (!(diag > 0.0) || !(row_bound >= diag))
       throw std::logic_error("DirichletDeviceVcycle: invalid Q1 Jacobi row");
-    m_jacobi = std::min(controls.jacobi_weight,
-                         1.5 * diag / row_bound) / diag;
+    m_jacobi = std::min(controls.jacobi_weight, 1.5 * diag / row_bound) / diag;
 
     if (index + 2 < levels.size()) {
       // The same GPU hierarchy on the next level. All fine/intermediate
       // Fields remain resident; only the leaf reduces a bounded coarse RHS.
-      m_child.reset(new NodalDirichletDeviceVcycle(
-          levels, index + 1, rank, comm, controls));
+      m_child.reset(
+          new NodalDirichletDeviceVcycle(levels, index + 1, rank, comm, controls));
     } else {
       const auto nc = domain::get_size(m_cd);
       const auto hc = domain::get_spacing(m_cd);
       const double coarse_spacing[3] = {hc[0], hc[1], hc[2]};
       m_factor = nmg::dirichlet::DenseCoarseCholesky(
-          nc, nmg::dirichlet::make_weights(
-                  coarse_spacing, controls.diffusion, controls.reaction),
+          nc,
+          nmg::dirichlet::make_weights(coarse_spacing, controls.diffusion,
+                                       controls.reaction),
           controls.max_coarse_unknowns);
       m_local_coarse.assign(m_factor.unknowns(), 0.0);
       m_global_coarse.assign(m_factor.unknowns(), 0.0);
@@ -182,10 +172,8 @@ private:
   }
 
 public:
-  NodalDirichletDeviceVcycle(
-      const NodalDirichletDeviceVcycle &) = delete;
-  NodalDirichletDeviceVcycle &operator=(
-      const NodalDirichletDeviceVcycle &) = delete;
+  NodalDirichletDeviceVcycle(const NodalDirichletDeviceVcycle &) = delete;
+  NodalDirichletDeviceVcycle &operator=(const NodalDirichletDeviceVcycle &) = delete;
 
   [[nodiscard]] std::size_t coarse_unknowns() const noexcept {
     return m_child ? m_child->coarse_unknowns() : m_factor.unknowns();
@@ -202,8 +190,8 @@ public:
     validate_field(rhs, m_fd, m_fb, "RHS");
     validate_field(out, m_fd, m_fb, "output");
     const_cast<FieldT &>(rhs).sync_to_device();
-    Launch::owned_copy(m_shape, rhs.data(), rhs.storage_halo(),
-                       m_rhs[0].data(), nmg::dirichlet::kHalo);
+    Launch::owned_copy(m_shape, rhs.data(), rhs.storage_halo(), m_rhs[0].data(),
+                       nmg::dirichlet::kHalo);
     m_rhs[0].note_device_write();
 
     // Fresh zero initial guess on every call: required for a fixed linear
@@ -221,15 +209,12 @@ public:
 
     smooth(m_controls.post);
     out.sync_to_device();
-    Launch::owned_copy(m_shape, m_x[0].data(),
-                       nmg::dirichlet::kHalo, out.data(),
+    Launch::owned_copy(m_shape, m_x[0].data(), nmg::dirichlet::kHalo, out.data(),
                        out.storage_halo());
     out.note_device_write();
   }
 
-  void operator()(const FieldT &rhs, FieldT &out, int = 0) {
-    apply(rhs, out);
-  }
+  void operator()(const FieldT &rhs, FieldT &out, int = 0) { apply(rhs, out); }
 
 private:
   static comm::HaloExchangeOptions full_halo(int tag) {
@@ -239,8 +224,8 @@ private:
     return opts;
   }
 
-  static Box3i validated_box(const Hierarchy &levels, std::size_t index,
-                             int rank, MPI_Comm comm, const Controls &c) {
+  static Box3i validated_box(const Hierarchy &levels, std::size_t index, int rank,
+                             MPI_Comm comm, const Controls &c) {
     if (comm == MPI_COMM_NULL)
       throw std::invalid_argument("DirichletDeviceVcycle: null MPI communicator");
     int actual = -1, size = 0;
@@ -251,9 +236,8 @@ private:
     if (!(c.diffusion > 0.0) || !std::isfinite(c.diffusion) ||
         !(c.reaction >= 0.0) || !std::isfinite(c.reaction) ||
         !(c.jacobi_weight > 0.0 && c.jacobi_weight < 1.0) ||
-        !std::isfinite(c.jacobi_weight) || c.pre < 1 ||
-        c.post != c.pre || c.max_coarse_unknowns < 1 ||
-        c.max_coarse_unknowns > 1024)
+        !std::isfinite(c.jacobi_weight) || c.pre < 1 || c.post != c.pre ||
+        c.max_coarse_unknowns < 1 || c.max_coarse_unknowns > 1024)
       throw std::invalid_argument("DirichletDeviceVcycle: unsupported controls");
 
     // All ranks inspect the SAME hierarchy BEFORE any rank creates a
@@ -264,8 +248,7 @@ private:
           decomposition::get_num_domains(levels[k + 1]) != size)
         throw std::invalid_argument(
             "DirichletDeviceVcycle: MPI rank count differs among levels");
-      nmg::dirichlet::validate_nested_transfer_reach(
-          levels[k], levels[k + 1]);
+      nmg::dirichlet::validate_nested_transfer_reach(levels[k], levels[k + 1]);
     }
     const auto leaf = domain::get_size(decomposition::domain(levels.back()));
     if (!(leaf == Int3{7, 7, 7} || leaf == Int3{7, 7, 15}))
@@ -278,19 +261,19 @@ private:
     return decomposition::local_box(levels[index], rank);
   }
 
-  static void validate_field(const FieldT &v, const Domain &d,
-                             const Box3i &box, const char *name) {
-    if (v.domain() != d || v.box().low != box.low ||
-        v.box().size != box.size || v.storage_halo() < 0)
-      throw std::invalid_argument(
-          std::string("DirichletDeviceVcycle: bad ") + name + " field");
+  static void validate_field(const FieldT &v, const Domain &d, const Box3i &box,
+                             const char *name) {
+    if (v.domain() != d || v.box().low != box.low || v.box().size != box.size ||
+        v.storage_halo() < 0)
+      throw std::invalid_argument(std::string("DirichletDeviceVcycle: bad ") + name +
+                                  " field");
   }
 
   void smooth(int sweeps) {
     for (int pass = 0; pass < sweeps; ++pass) {
       const auto &exchanged = m_halo(m_x);
-      Launch::jacobi(m_shape, m_weights, exchanged[0].data(),
-                     m_rhs[0].data(), m_next[0].data(), m_jacobi);
+      Launch::jacobi(m_shape, m_weights, exchanged[0].data(), m_rhs[0].data(),
+                     m_next[0].data(), m_jacobi);
       m_next[0].note_device_write();
       std::swap(m_x, m_next);
     }
@@ -299,8 +282,7 @@ private:
   static std::size_t linear(const Int3 &n, int i, int j, int k) {
     return static_cast<std::size_t>(i) +
            static_cast<std::size_t>(n[0]) *
-               (static_cast<std::size_t>(j) +
-                static_cast<std::size_t>(n[1]) * k);
+               (static_cast<std::size_t>(j) + static_cast<std::size_t>(n[1]) * k);
   }
 
   void solve_coarse() {
@@ -318,13 +300,12 @@ private:
       for (int k = 0; k < m_cb.size[2]; ++k)
         for (int j = 0; j < m_cb.size[1]; ++j)
           for (int i = 0; i < m_cb.size[0]; ++i)
-            m_local_coarse[linear(global, m_cb.low[0] + i,
-                                 m_cb.low[1] + j, m_cb.low[2] + k)] =
-                p[m_crhs[0].idx(i, j, k)];
+            m_local_coarse[linear(global, m_cb.low[0] + i, m_cb.low[1] + j,
+                                  m_cb.low[2] + k)] = p[m_crhs[0].idx(i, j, k)];
     });
     if (MPI_Allreduce(m_local_coarse.data(), m_global_coarse.data(),
-                      static_cast<int>(m_factor.unknowns()), MPI_DOUBLE,
-                      MPI_SUM, m_comm) != MPI_SUCCESS)
+                      static_cast<int>(m_factor.unknowns()), MPI_DOUBLE, MPI_SUM,
+                      m_comm) != MPI_SUCCESS)
       throw std::runtime_error("DirichletDeviceVcycle: coarse MPI reduction failed");
     m_factor.solve(m_global_coarse, m_coarse_solution);
 
@@ -332,9 +313,8 @@ private:
       for (int k = 0; k < m_cb.size[2]; ++k)
         for (int j = 0; j < m_cb.size[1]; ++j)
           for (int i = 0; i < m_cb.size[0]; ++i)
-            p[m_cx[0].idx(i, j, k)] =
-                m_coarse_solution[linear(global, m_cb.low[0] + i,
-                                         m_cb.low[1] + j, m_cb.low[2] + k)];
+            p[m_cx[0].idx(i, j, k)] = m_coarse_solution[linear(
+                global, m_cb.low[0] + i, m_cb.low[1] + j, m_cb.low[2] + k)];
     });
     m_cx[0].sync_to_device();
   }

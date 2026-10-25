@@ -16,17 +16,17 @@
 
 namespace pfc::cuda {
 
-using ::pfc::gpu::kFDDeviceMaxHw1;
-using ::pfc::gpu::kFDDeviceMaxHw2;
-using ::pfc::gpu::kMaxCompositeFields;
-using ::pfc::gpu::FDGradientDevicePOD;
+using ::pfc::gpu::CompositeGradientDevice;
 using ::pfc::gpu::CompositeGradientDevicePOD;
+using ::pfc::gpu::create;
+using ::pfc::gpu::create_composite_device;
 using ::pfc::gpu::evaluate_fd_grad;
 using ::pfc::gpu::evaluate_fd_grad_composite;
 using ::pfc::gpu::FDGradientDevice;
-using ::pfc::gpu::CompositeGradientDevice;
-using ::pfc::gpu::create_composite_device;
-using ::pfc::gpu::create;
+using ::pfc::gpu::FDGradientDevicePOD;
+using ::pfc::gpu::kFDDeviceMaxHw1;
+using ::pfc::gpu::kFDDeviceMaxHw2;
+using ::pfc::gpu::kMaxCompositeFields;
 
 } // namespace pfc::cuda
 

@@ -219,8 +219,7 @@ public:
       Ops::combine(p_hat, p_hat, m_ik[d], m_zero_c, m_grad_hat_scratch);
       Ops::backward(m_fft, m_grad_hat_scratch, m_grad);
 
-      Ops::pointwise(m_geometry, 0.0, u, &m_grad, nullptr, m_grad, nullptr,
-                     functor);
+      Ops::pointwise(m_geometry, 0.0, u, &m_grad, nullptr, m_grad, nullptr, functor);
 
       Ops::forward(m_fft, m_grad, m_flux_hat);
       Ops::multiply(m_flux_hat, m_mask, m_flux_hat_masked);
@@ -327,8 +326,8 @@ public:
           negL[i] = -l;
           const double a = l * dt;
           expL[i] = std::exp(a);
-          phi1[i] = (std::abs(a) < 1.0e-8) ? dt * (1.0 + 0.5 * a)
-                                          : (expL[i] - 1.0) / l;
+          phi1[i] =
+              (std::abs(a) < 1.0e-8) ? dt * (1.0 + 0.5 * a) : (expL[i] - 1.0) / l;
         });
 
     m_expL = Ops::make_real(n);

@@ -42,9 +42,9 @@
 
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/field/state_access.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_interface.hpp>
+#include <openpfc/kernel/field/state_access.hpp>
 // Local iteration implemented inline to work with HeFFTe inbox type
 
 namespace pfc::field {
@@ -109,8 +109,8 @@ inline void apply_with_time(FieldOutput<double> field, const Domain &domain,
  * @tparam Fn Callable: double(const Real3&, double current)
  */
 template <typename Fn>
-inline void apply_inplace(FieldOutput<double> field, const Domain &domain, const Box3i &box,
-                          Fn &&fn) {
+inline void apply_inplace(FieldOutput<double> field, const Domain &domain,
+                          const Box3i &box, Fn &&fn) {
   detail::for_each_box_voxel(field, domain, box, [&](size_t i, const Real3 &x) {
     field.data()[i] = static_cast<double>(fn(x, field.data()[i]));
   });
@@ -159,8 +159,8 @@ using PointFnT = std::function<double(double, double, double, double)>;
  * @param fn    Coordinate-space function returning new value
  */
 template <typename Fn>
-inline void apply(FieldOutput<double> field, const Domain &domain, const fft::IHostFFT &fft,
-                  Fn &&fn) {
+inline void apply(FieldOutput<double> field, const Domain &domain,
+                  const fft::IHostFFT &fft, Fn &&fn) {
   apply(field, domain, pfc::fft::get_inbox(fft), std::forward<Fn>(fn));
 }
 

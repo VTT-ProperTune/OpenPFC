@@ -83,9 +83,8 @@ template <class Space> struct DeviceVelocity {
 
 template <class Space>
 void prepare_device_velocity(DeviceVelocity<Space> &vel,
-                             const fft::IDeviceFFT<Space> &fft,
-                             std::array<int, 3> n, std::array<double, 3> spacing,
-                             double nu, double dt);
+                             const fft::IDeviceFFT<Space> &fft, std::array<int, 3> n,
+                             std::array<double, 3> spacing, double nu, double dt);
 
 template <class Space>
 void upload_device_velocity(DeviceVelocity<Space> &vel,

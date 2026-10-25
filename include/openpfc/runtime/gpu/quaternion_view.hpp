@@ -20,19 +20,21 @@
 namespace pfc::finite_strain {
 
 struct FccQuaternionFieldView {
-  const double *q[4]{};               // component-major pointers, one padded field each
-  std::size_t owned[3]{};             // local real-space box size (x, y, z)
-  std::size_t padded[3]{};            // allocated strides incl. halo (x-fastest)
-  std::size_t storage_halo = 0;       // same width on every axis
+  const double *q[4]{};         // component-major pointers, one padded field each
+  std::size_t owned[3]{};       // local real-space box size (x, y, z)
+  std::size_t padded[3]{};      // allocated strides incl. halo (x-fastest)
+  std::size_t storage_halo = 0; // same width on every axis
 
   /// Host-side structural validation. This cannot check device pointer lifetime
   /// or physical origin: the owner-level adapter verifies Domain and Box3i.
   [[nodiscard]] bool valid_for(std::size_t count) const noexcept {
     if (count == 0) return false;
-    for (const auto *component : q) if (!component) return false;
+    for (const auto *component : q)
+      if (!component) return false;
     std::size_t product = 1;
     for (int d = 0; d < 3; ++d) {
-      if (owned[d] == 0 || storage_halo > (std::numeric_limits<std::size_t>::max() - owned[d]) / 2)
+      if (owned[d] == 0 ||
+          storage_halo > (std::numeric_limits<std::size_t>::max() - owned[d]) / 2)
         return false;
       if (padded[d] != owned[d] + 2 * storage_halo) return false;
       if (product > std::numeric_limits<std::size_t>::max() / owned[d]) return false;
@@ -54,8 +56,8 @@ struct FccQuaternionFieldView {
     const std::size_t x = p % owned[0];
     const std::size_t y = (p / owned[0]) % owned[1];
     const std::size_t z = p / (owned[0] * owned[1]);
-    return (x + storage_halo) + padded[0] *
-             ((y + storage_halo) + padded[1] * (z + storage_halo));
+    return (x + storage_halo) +
+           padded[0] * ((y + storage_halo) + padded[1] * (z + storage_halo));
   }
 };
 

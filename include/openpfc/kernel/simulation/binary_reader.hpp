@@ -46,9 +46,9 @@
 #ifndef PFC_BINARY_READER_HPP
 #define PFC_BINARY_READER_HPP
 
-#include <mpi.h>
 #include <array>
 #include <complex>
+#include <mpi.h>
 #include <openpfc/kernel/field/state_access.hpp>
 #include <openpfc/kernel/mpi/domain_geometry.hpp>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
@@ -191,7 +191,8 @@ public:
     }
   }
 
-  void set_domain(const std::array<int, 3> &arr_global, const std::array<int, 3> &arr_local,
+  void set_domain(const std::array<int, 3> &arr_global,
+                  const std::array<int, 3> &arr_local,
                   const std::array<int, 3> &arr_offset) {
     pfc::mpi::validate_subarray_domain(arr_global, arr_local, arr_offset,
                                        "BinaryReader::set_domain");
@@ -208,7 +209,8 @@ public:
 
   /// Collective read into a mutable host view (`Field::output()` or a
   /// `std::vector<double>` lvalue).
-  MPI_Status read(const std::string &filename, pfc::field::FieldOutput<double> data) {
+  MPI_Status read(const std::string &filename,
+                  pfc::field::FieldOutput<double> data) {
     return read_mpi_binary(filename, data, MPI_DOUBLE, "doubles");
   }
 

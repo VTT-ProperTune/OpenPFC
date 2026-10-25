@@ -40,30 +40,26 @@ public:
   using Halo = FieldHalo<MemorySpace>;
   using Point = detail::DirichletDevicePointLaunch<MemorySpace>;
 
-  NodalDirichletDeviceTransfers(
-      const decomposition::Decomposition &fine,
-      const decomposition::Decomposition &coarse, int rank, MPI_Comm comm)
+  NodalDirichletDeviceTransfers(const decomposition::Decomposition &fine,
+                                const decomposition::Decomposition &coarse, int rank,
+                                MPI_Comm comm)
       : m_fine_domain(decomposition::domain(fine)),
-        m_coarse_domain(decomposition::domain(coarse)),
-        m_fine_decomp(fine), m_coarse_decomp(coarse),
-        m_fine_box(validated_box(fine, coarse, rank, comm)),
+        m_coarse_domain(decomposition::domain(coarse)), m_fine_decomp(fine),
+        m_coarse_decomp(coarse), m_fine_box(validated_box(fine, coarse, rank, comm)),
         m_coarse_box(decomposition::local_box(coarse, rank)),
         m_fine_ops(m_fine_domain, m_fine_box, 1, nmg::dirichlet::kHalo, comm),
-        m_coarse_ops(m_coarse_domain, m_coarse_box, 1,
-                     nmg::dirichlet::kHalo, comm),
+        m_coarse_ops(m_coarse_domain, m_coarse_box, 1, nmg::dirichlet::kHalo, comm),
         m_fine_halo(m_fine_ops, m_fine_decomp, rank, comm, full_halo(8100)),
-        m_coarse_halo(m_coarse_ops, m_coarse_decomp, rank, comm,
-                      full_halo(8300)),
+        m_coarse_halo(m_coarse_ops, m_coarse_decomp, rank, comm, full_halo(8300)),
         m_fine_accumulator(m_fine_domain, m_fine_box, nmg::dirichlet::kHalo),
-        m_coarse_restricted(m_coarse_domain, m_coarse_box,
-                            nmg::dirichlet::kHalo) {
+        m_coarse_restricted(m_coarse_domain, m_coarse_box, nmg::dirichlet::kHalo) {
     init_shape(m_F, m_fine_domain, m_fine_box);
     init_shape(m_C, m_coarse_domain, m_coarse_box);
   }
 
   NodalDirichletDeviceTransfers(const NodalDirichletDeviceTransfers &) = delete;
-  NodalDirichletDeviceTransfers &operator=(
-      const NodalDirichletDeviceTransfers &) = delete;
+  NodalDirichletDeviceTransfers &
+  operator=(const NodalDirichletDeviceTransfers &) = delete;
 
   /// Unscaled R=P^T. The fine residual is halo-exchanged on GPU by OpenPFC;
   /// only coarse owned coefficients are written to caller-owned coarse_out.
@@ -90,20 +86,18 @@ public:
   void prolong_add(const FieldT &coarse_correction, FieldT &fine_accumulator) {
     validate_field(coarse_correction, m_coarse_domain, m_coarse_box,
                    "coarse correction");
-    validate_field(fine_accumulator, m_fine_domain, m_fine_box,
-                   "fine accumulator");
+    validate_field(fine_accumulator, m_fine_domain, m_fine_box, "fine accumulator");
 
     const_cast<FieldT &>(coarse_correction).sync_to_device();
     auto &c = m_coarse_halo.scratch()[0];
     Point::owned_copy(m_C, coarse_correction.data(),
-                      coarse_correction.storage_halo(),
-                      c.data(), nmg::dirichlet::kHalo);
+                      coarse_correction.storage_halo(), c.data(),
+                      nmg::dirichlet::kHalo);
     c.note_device_write();
     m_coarse_halo.exchange();
 
     fine_accumulator.sync_to_device();
-    Point::owned_copy(m_F, fine_accumulator.data(),
-                      fine_accumulator.storage_halo(),
+    Point::owned_copy(m_F, fine_accumulator.data(), fine_accumulator.storage_halo(),
                       m_fine_accumulator.data(), nmg::dirichlet::kHalo);
     m_fine_accumulator.note_device_write();
     Point::prolong_add(m_F, m_fine_accumulator.data(), m_C, c.data());
@@ -113,9 +107,7 @@ public:
     fine_accumulator.note_device_write();
   }
 
-  [[nodiscard]] const Box3i &fine_owned_box() const noexcept {
-    return m_fine_box;
-  }
+  [[nodiscard]] const Box3i &fine_owned_box() const noexcept { return m_fine_box; }
   [[nodiscard]] const Box3i &coarse_owned_box() const noexcept {
     return m_coarse_box;
   }
@@ -129,16 +121,15 @@ private:
   }
 
   static Box3i validated_box(const decomposition::Decomposition &fine,
-                              const decomposition::Decomposition &coarse,
-                              int rank, MPI_Comm comm) {
+                             const decomposition::Decomposition &coarse, int rank,
+                             MPI_Comm comm) {
     if (comm == MPI_COMM_NULL)
       throw std::invalid_argument(
           "NodalDirichletDeviceTransfers: null MPI communicator");
     int actual_rank = -1, nranks = 0;
     MPI_Comm_rank(comm, &actual_rank);
     MPI_Comm_size(comm, &nranks);
-    if (rank != actual_rank ||
-        decomposition::get_num_domains(fine) != nranks ||
+    if (rank != actual_rank || decomposition::get_num_domains(fine) != nranks ||
         decomposition::get_num_domains(coarse) != nranks)
       throw std::invalid_argument(
           "NodalDirichletDeviceTransfers: decomposition/communicator mismatch");
@@ -155,10 +146,10 @@ private:
     }
   }
 
-  static void validate_field(const FieldT &f, const Domain &d,
-                             const Box3i &b, const char *role) {
-    if (f.domain() != d || f.box().low != b.low ||
-        f.box().size != b.size || f.storage_halo() < 0)
+  static void validate_field(const FieldT &f, const Domain &d, const Box3i &b,
+                             const char *role) {
+    if (f.domain() != d || f.box().low != b.low || f.box().size != b.size ||
+        f.storage_halo() < 0)
       throw std::invalid_argument(
           std::string("NodalDirichletDeviceTransfers: invalid ") + role +
           " field layout");

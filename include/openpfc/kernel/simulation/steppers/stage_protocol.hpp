@@ -45,8 +45,7 @@ namespace pfc::sim::steppers {
 
 namespace detail {
 
-template <std::size_t N, typename T,
-          typename Seq = std::make_index_sequence<N>>
+template <std::size_t N, typename T, typename Seq = std::make_index_sequence<N>>
 struct n_ref_tuple;
 
 template <std::size_t N, typename T, std::size_t... I>
@@ -62,9 +61,7 @@ struct n_ref_tuple<N, T, std::index_sequence<I...>> {
  */
 template <class Rhs, class Scalar>
 concept StageFunctionFor = requires(Rhs rhs, double t, std::vector<Scalar> &u,
-                                    std::vector<Scalar> &du) {
-  rhs(t, u, du);
-};
+                                    std::vector<Scalar> &du) { rhs(t, u, du); };
 
 /**
  * @brief Real (`double`) stage-evaluation callable. Existing steppers use this.
@@ -80,12 +77,12 @@ concept StageFunction = StageFunctionFor<Rhs, double>;
  * `MultiStageFunction<Rhs>` call sites.
  */
 template <class Rhs, std::size_t N = 2, class Scalar = double>
-concept MultiStageFunction = requires(
-    Rhs rhs, double t,
-    typename detail::n_ref_tuple<N, std::vector<Scalar>>::type u_pack,
-    typename detail::n_ref_tuple<N, std::vector<Scalar>>::type du_pack) {
-  rhs(t, u_pack, du_pack);
-};
+concept MultiStageFunction =
+    requires(Rhs rhs, double t,
+             typename detail::n_ref_tuple<N, std::vector<Scalar>>::type u_pack,
+             typename detail::n_ref_tuple<N, std::vector<Scalar>>::type du_pack) {
+      rhs(t, u_pack, du_pack);
+    };
 
 /**
  * @brief Mixed-scalar multi-field RHS: `rhs(t, u_pack, du_pack)` with one
@@ -94,8 +91,6 @@ concept MultiStageFunction = requires(
 template <class Rhs, class... Scalars>
 concept PackedStageFunction = requires(
     Rhs rhs, double t, std::tuple<std::vector<Scalars> &...> u_pack,
-    std::tuple<std::vector<Scalars> &...> du_pack) {
-  rhs(t, u_pack, du_pack);
-};
+    std::tuple<std::vector<Scalars> &...> du_pack) { rhs(t, u_pack, du_pack); };
 
 } // namespace pfc::sim::steppers

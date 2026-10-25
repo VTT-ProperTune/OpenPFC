@@ -120,11 +120,14 @@ public:
       throw std::invalid_argument(result.format());
     }
     if (m_error_order < 1) {
-      throw std::invalid_argument("AdaptiveTimeController: error_order must be >= 1");
+      throw std::invalid_argument(
+          "AdaptiveTimeController: error_order must be >= 1");
     }
   }
 
-  [[nodiscard]] const AdaptiveControlConfig &config() const noexcept { return m_cfg; }
+  [[nodiscard]] const AdaptiveControlConfig &config() const noexcept {
+    return m_cfg;
+  }
 
   [[nodiscard]] int error_order() const noexcept { return m_error_order; }
 
@@ -270,10 +273,10 @@ public:
     // leave the per-field vectors for `decide` on one norm per field.
     const bool lengths_ok =
         error.size() == accepted.size() && error.size() == candidate.size();
-    const bool atol_ok = m_cfg.atol_per_field.empty() ||
-                         m_cfg.atol_per_field.size() == error.size();
-    const bool rtol_ok = m_cfg.rtol_per_field.empty() ||
-                         m_cfg.rtol_per_field.size() == error.size();
+    const bool atol_ok =
+        m_cfg.atol_per_field.empty() || m_cfg.atol_per_field.size() == error.size();
+    const bool rtol_ok =
+        m_cfg.rtol_per_field.empty() || m_cfg.rtol_per_field.size() == error.size();
     if (!lengths_ok || !atol_ok || !rtol_ok) {
       local_ok = 0;
     } else {
@@ -289,7 +292,8 @@ public:
             m_cfg.atol_per_field.empty() ? m_cfg.atol : m_cfg.atol_per_field[i];
         const double rtol =
             m_cfg.rtol_per_field.empty() ? m_cfg.rtol : m_cfg.rtol_per_field[i];
-        if (!std::isfinite(atol) || atol < 0.0 || !std::isfinite(rtol) || rtol < 0.0) {
+        if (!std::isfinite(atol) || atol < 0.0 || !std::isfinite(rtol) ||
+            rtol < 0.0) {
           local_ok = 0;
           break;
         }
@@ -305,7 +309,8 @@ public:
 
     int size = 1;
     int mpi_err = MPI_Comm_size(comm, &size);
-    pfc::mpi::throw_on_mpi_error(mpi_err, "MPI_Comm_size in decide_from_embedded_error");
+    pfc::mpi::throw_on_mpi_error(mpi_err,
+                                 "MPI_Comm_size in decide_from_embedded_error");
     if (size > 1) {
       int ok_all = 0;
       int inf_any = 0;
@@ -313,7 +318,8 @@ public:
       mpi_err = MPI_Allreduce(&local_ok, &ok_all, 1, MPI_INT, MPI_LAND, comm);
       pfc::mpi::throw_on_mpi_error(mpi_err, "MPI_Allreduce for embedded validity");
       mpi_err = MPI_Allreduce(&local_inf, &inf_any, 1, MPI_INT, MPI_LOR, comm);
-      pfc::mpi::throw_on_mpi_error(mpi_err, "MPI_Allreduce for embedded infinite error");
+      pfc::mpi::throw_on_mpi_error(mpi_err,
+                                   "MPI_Allreduce for embedded infinite error");
       mpi_err =
           MPI_Allreduce(&local_metric, &metric_all, 1, MPI_DOUBLE, MPI_MAX, comm);
       pfc::mpi::throw_on_mpi_error(mpi_err, "MPI_Allreduce for embedded metric");
@@ -342,7 +348,8 @@ public:
    */
   void apply(Time &time, const AdaptiveDecision &d) {
     if (!time.attempt_active()) {
-      throw std::logic_error("AdaptiveTimeController::apply: Time has no active attempt");
+      throw std::logic_error(
+          "AdaptiveTimeController::apply: Time has no active attempt");
     }
     if (d.accepted && d.decision_available) {
       time.commit_attempt();
@@ -359,8 +366,9 @@ public:
     ++m_rejected;
     ++m_sequential_rejections;
     if (m_sequential_rejections >= m_cfg.max_sequential_rejections) {
-      throw std::runtime_error("AdaptiveTimeController: sequential rejections reached " +
-                               std::to_string(m_cfg.max_sequential_rejections));
+      throw std::runtime_error(
+          "AdaptiveTimeController: sequential rejections reached " +
+          std::to_string(m_cfg.max_sequential_rejections));
     }
   }
 

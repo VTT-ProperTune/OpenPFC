@@ -34,21 +34,19 @@ namespace pfc::integrator {
  * @throws std::invalid_argument if any span length differs from `u.size()`.
  */
 template <class Scalar, class Real = double>
-inline void apply_etd1_update(std::span<const Real> exp_Ldt,
-                              std::span<const Real> phi1_L,
-                              std::span<const Scalar> u,
-                              std::span<const Scalar> n_of_u,
-                              std::span<Scalar> candidate) {
+inline void
+apply_etd1_update(std::span<const Real> exp_Ldt, std::span<const Real> phi1_L,
+                  std::span<const Scalar> u, std::span<const Scalar> n_of_u,
+                  std::span<Scalar> candidate) {
   const std::size_t n = u.size();
   if (exp_Ldt.size() != n || phi1_L.size() != n || n_of_u.size() != n ||
       candidate.size() != n) {
     throw std::invalid_argument(
-        "apply_etd1_update: span sizes must match u.size() (" +
-        std::to_string(n) + ")");
+        "apply_etd1_update: span sizes must match u.size() (" + std::to_string(n) +
+        ")");
   }
   for (std::size_t i = 0; i < n; ++i) {
-    candidate[i] =
-        Scalar(exp_Ldt[i]) * u[i] + Scalar(phi1_L[i]) * n_of_u[i];
+    candidate[i] = Scalar(exp_Ldt[i]) * u[i] + Scalar(phi1_L[i]) * n_of_u[i];
   }
 }
 

@@ -12,8 +12,8 @@
  * ensuring that stepper and model types are compatible. It addresses three
  * key validation scenarios:
  *
- * 1. **RHS signature compatibility**: Ensures that a model's `rhs(double t, const G&)`
- *    method is callable with the grad type `G` returned by the evaluator's
+ * 1. **RHS signature compatibility**: Ensures that a model's `rhs(double t, const
+ * G&)` method is callable with the grad type `G` returned by the evaluator's
  *    `operator()(int, int, int)`, and that the return type is either scalar
  *    or tuple-protocol compatible.
  *
@@ -35,9 +35,9 @@
 #include <string>
 #include <type_traits>
 
+#include <openpfc/kernel/field/composite_gradient.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/field/spectral_gradient.hpp>
-#include <openpfc/kernel/field/composite_gradient.hpp>
 #include <openpfc/kernel/field/tuple_protocol.hpp>
 
 namespace pfc::sim::steppers {
@@ -65,7 +65,7 @@ public:
    * @param type The specific error type.
    * @param message Human-readable error description.
    */
-  StepperValidationError(ErrorType type, const std::string& message);
+  StepperValidationError(ErrorType type, const std::string &message);
 
   /**
    * @brief Get the error type.
@@ -108,9 +108,9 @@ struct is_composite_gradient<pfc::field::CompositeGradient<Composite, PerField..
  * @brief Concept for known evaluator types.
  */
 template <class T>
-concept is_known_evaluator = is_fd_gradient<T>::value ||
-                           is_spectral_gradient<T>::value ||
-                           is_composite_gradient<T>::value;
+concept is_known_evaluator =
+    is_fd_gradient<T>::value || is_spectral_gradient<T>::value ||
+    is_composite_gradient<T>::value;
 
 } // namespace detail
 
@@ -128,30 +128,27 @@ concept is_known_evaluator = is_fd_gradient<T>::value ||
  *
  * @pre `Eval::operator()(int, int, int)` must be valid and return the grad type.
  */
-template <class Model, class Eval>
-constexpr void validate_rhs_signature() {
+template <class Model, class Eval> constexpr void validate_rhs_signature() {
   using namespace pfc::field::detail;
 
   // Extract the actual grad type G from Eval::operator()
-  using G = decltype(std::declval<const Eval&>()(0, 0, 0));
+  using G = decltype(std::declval<const Eval &>()(0, 0, 0));
 
   // Check that Model::rhs is callable with (double, const G&)
   static_assert(
-    requires(double t, const G& g) {
-      { std::declval<const Model>().rhs(t, g) };
-    },
-    "Model::rhs(double t, const G&) must be callable with the grad type returned by Eval::operator()"
-  );
+      requires(double t, const G &g) {
+        { std::declval<const Model>().rhs(t, g) };
+      }, "Model::rhs(double t, const G&) must be callable with the grad type "
+         "returned by Eval::operator()");
 
   // Check that the return type is either scalar or tuple-protocol compatible
-  using RhsReturn = decltype(std::declval<const Model>().rhs(0.0, std::declval<const G&>()));
+  using RhsReturn =
+      decltype(std::declval<const Model>().rhs(0.0, std::declval<const G &>()));
 
-  static_assert(
-    std::is_convertible_v<RhsReturn, double> ||
-    has_as_tuple<RhsReturn> ||
-    is_tuple<RhsReturn>,
-    "Model::rhs must return double or a tuple-protocol compatible type (has as_tuple() or is std::tuple)"
-  );
+  static_assert(std::is_convertible_v<RhsReturn, double> ||
+                    has_as_tuple<RhsReturn> || is_tuple<RhsReturn>,
+                "Model::rhs must return double or a tuple-protocol compatible type "
+                "(has as_tuple() or is std::tuple)");
 }
 
 /**
@@ -166,15 +163,14 @@ constexpr void validate_rhs_signature() {
  *
  * @throws StepperValidationError if the evaluator is not a known type.
  */
-template <class Eval>
-void validate_spatial_compatibility() {
+template <class Eval> void validate_spatial_compatibility() {
   using namespace pfc::sim::steppers::detail;
 
   if constexpr (!is_known_evaluator<Eval>) {
     throw StepperValidationError(
-      StepperValidationError::ErrorType::IncompatibleBackend,
-      "Evaluator type is not a recognized gradient backend (FDGradient, SpectralGradient, or CompositeGradient)"
-    );
+        StepperValidationError::ErrorType::IncompatibleBackend,
+        "Evaluator type is not a recognized gradient backend (FDGradient, "
+        "SpectralGradient, or CompositeGradient)");
   }
 }
 
@@ -197,35 +193,35 @@ template <class Stepper, class Model, class Eval>
 constexpr void validate_field_count() {
   if constexpr (requires { Stepper::field_count; }) {
     // Extract the actual grad type G from Eval::operator()
-    using G = decltype(std::declval<const Eval&>()(0, 0, 0));
+    using G = decltype(std::declval<const Eval &>()(0, 0, 0));
 
     // Extract the actual return type of Model::rhs
-    using RhsReturn = decltype(std::declval<const Model>().rhs(0.0, std::declval<const G&>()));
+    using RhsReturn =
+        decltype(std::declval<const Model>().rhs(0.0, std::declval<const G &>()));
 
     // Verify that Stepper::RhsType matches the model's return type
-    static_assert(
-      std::is_same_v<typename Stepper::RhsType, RhsReturn>,
-      "Stepper::RhsType must match the return type of Model::rhs(double t, const G&)"
-    );
+    static_assert(std::is_same_v<typename Stepper::RhsType, RhsReturn>,
+                  "Stepper::RhsType must match the return type of Model::rhs(double "
+                  "t, const G&)");
 
     // Check field count
     using namespace pfc::field::detail;
-    using RhsTuple = decltype(to_tuple(std::declval<RhsReturn&>()));
-    constexpr std::size_t model_fields = std::tuple_size_v<std::remove_cvref_t<RhsTuple>>;
+    using RhsTuple = decltype(to_tuple(std::declval<RhsReturn &>()));
+    constexpr std::size_t model_fields =
+        std::tuple_size_v<std::remove_cvref_t<RhsTuple>>;
 
     static_assert(
-      Stepper::field_count == model_fields,
-      "Multi-field stepper expects N fields, but model.rhs returns M fields"
-    );
+        Stepper::field_count == model_fields,
+        "Multi-field stepper expects N fields, but model.rhs returns M fields");
   }
 }
 
-inline StepperValidationError::StepperValidationError(ErrorType type, const std::string& message)
-  : std::runtime_error(message), type_(type)
-{}
+inline StepperValidationError::StepperValidationError(ErrorType type,
+                                                      const std::string &message)
+    : std::runtime_error(message), type_(type) {}
 
-inline StepperValidationError::ErrorType StepperValidationError::error_type() const noexcept
-{
+inline StepperValidationError::ErrorType
+StepperValidationError::error_type() const noexcept {
   return type_;
 }
 

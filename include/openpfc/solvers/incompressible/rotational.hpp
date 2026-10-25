@@ -35,8 +35,8 @@
 
 namespace pfc::incompressible {
 
-using pfc::field::Complex;
 using pfc::field::apply_two_thirds;
+using pfc::field::Complex;
 using pfc::field::curl_hat;
 using pfc::field::leray_project;
 using pfc::field::odd_wave;

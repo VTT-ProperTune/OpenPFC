@@ -42,23 +42,21 @@ namespace pfc::fft::kspace {
  *
  * @throws std::invalid_argument if `n` does not match the outbox volume.
  */
-inline void fill_two_thirds_mask(const Box3i &outbox,
-                                 std::array<int, 3> global_size,
+inline void fill_two_thirds_mask(const Box3i &outbox, std::array<int, 3> global_size,
                                  std::array<double, 3> spacing, double *mask,
                                  std::size_t n) {
-  const std::size_t expected =
-      static_cast<std::size_t>(outbox.size[0]) *
-      static_cast<std::size_t>(outbox.size[1]) *
-      static_cast<std::size_t>(outbox.size[2]);
+  const std::size_t expected = static_cast<std::size_t>(outbox.size[0]) *
+                               static_cast<std::size_t>(outbox.size[1]) *
+                               static_cast<std::size_t>(outbox.size[2]);
   if (mask == nullptr || n != expected) {
     throw std::invalid_argument(
         "fill_two_thirds_mask: mask length must equal outbox volume");
   }
-  for_each_kpoint(outbox, global_size, spacing,
-                  [&](std::size_t idx, double kx, double ky, double kz, int, int,
-                      int) {
-                    mask[idx] = two_thirds_keep(kx, ky, kz, spacing) ? 1.0 : 0.0;
-                  });
+  for_each_kpoint(
+      outbox, global_size, spacing,
+      [&](std::size_t idx, double kx, double ky, double kz, int, int, int) {
+        mask[idx] = two_thirds_keep(kx, ky, kz, spacing) ? 1.0 : 0.0;
+      });
 }
 
 } // namespace pfc::fft::kspace

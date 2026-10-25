@@ -29,8 +29,8 @@ inline std::atomic<int> &from_json_log_rank_storage() noexcept {
  * prefix).
  *
  * Call `set_from_json_log_rank` (or `configure_json_driver_hooks`) from the
- * application entry once the MPI rank is known so FFT / plan-option messages are attributed to the
- * correct rank. Tests may set this for deterministic diagnostics.
+ * application entry once the MPI rank is known so FFT / plan-option messages are
+ * attributed to the correct rank. Tests may set this for deterministic diagnostics.
  */
 [[nodiscard]] inline int get_from_json_log_rank() noexcept {
   return detail::from_json_log_rank_storage().load(std::memory_order_relaxed);

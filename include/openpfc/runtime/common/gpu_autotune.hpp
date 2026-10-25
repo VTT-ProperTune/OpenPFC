@@ -14,13 +14,13 @@
 
 #ifdef OpenPFC_ENABLE_GPU_AUTOTUNING
 
-#include <string>
-#include <vector>
-#include <functional>
-#include <utility>
 #include <cstddef>
+#include <functional>
 #include <map>
 #include <mutex>
+#include <string>
+#include <utility>
+#include <vector>
 
 #ifdef OpenPFC_ENABLE_CUDA
 #include <cuda_runtime.h>
@@ -39,14 +39,15 @@ namespace pfc::gpu {
  * size ranges.
  */
 struct KernelConfig {
-  std::string kernel_name;                      ///< Name identifier for the kernel
-  int block_size_x{256};                        ///< Block dimension in X
-  int block_size_y{1};                          ///< Block dimension in Y
-  int block_size_z{1};                          ///< Block dimension in Z
-  size_t shared_memory_bytes{0};                ///< Shared memory allocation
-  int min_grid_size{0};                         ///< Minimum grid size
-  int max_grid_size{0};                         ///< Maximum grid size
-  std::pair<size_t, size_t> problem_size_range{0, SIZE_MAX}; ///< Valid problem size range [min, max]
+  std::string kernel_name;       ///< Name identifier for the kernel
+  int block_size_x{256};         ///< Block dimension in X
+  int block_size_y{1};           ///< Block dimension in Y
+  int block_size_z{1};           ///< Block dimension in Z
+  size_t shared_memory_bytes{0}; ///< Shared memory allocation
+  int min_grid_size{0};          ///< Minimum grid size
+  int max_grid_size{0};          ///< Maximum grid size
+  std::pair<size_t, size_t> problem_size_range{
+      0, SIZE_MAX}; ///< Valid problem size range [min, max]
 };
 
 /**
@@ -56,10 +57,12 @@ struct KernelConfig {
  * during the auto-tuning process for a specific kernel.
  */
 struct KernelTuneParams {
-  std::vector<int> candidate_block_sizes{64, 128, 256, 512, 1024}; ///< List of 1D block sizes to test
-  std::vector<dim3> candidate_block_dims{{32,4,1}, {16,16,1}, {8,8,4}}; ///< List of 3D block dimensions to test
-  size_t min_problem_size{1000};                 ///< Minimum problem size for tuning
-  size_t max_problem_size{10000000};             ///< Maximum problem size for tuning
+  std::vector<int> candidate_block_sizes{64, 128, 256, 512,
+                                         1024}; ///< List of 1D block sizes to test
+  std::vector<dim3> candidate_block_dims{
+      {32, 4, 1}, {16, 16, 1}, {8, 8, 4}}; ///< List of 3D block dimensions to test
+  size_t min_problem_size{1000};           ///< Minimum problem size for tuning
+  size_t max_problem_size{10000000};       ///< Maximum problem size for tuning
 };
 
 /**
@@ -81,16 +84,16 @@ public:
    * @return Reference to the singleton AutoTuner instance.
    * @note Thread-safe initialization.
    */
-  static AutoTuner& instance() {
+  static AutoTuner &instance() {
     static AutoTuner inst;
     return inst;
   }
 
   // Delete copy and move operations
-  AutoTuner(const AutoTuner&) = delete;
-  AutoTuner& operator=(const AutoTuner&) = delete;
-  AutoTuner(AutoTuner&&) = delete;
-  AutoTuner& operator=(AutoTuner&&) = delete;
+  AutoTuner(const AutoTuner &) = delete;
+  AutoTuner &operator=(const AutoTuner &) = delete;
+  AutoTuner(AutoTuner &&) = delete;
+  AutoTuner &operator=(AutoTuner &&) = delete;
 
   /**
    * @brief Returns optimal configuration for the given kernel and problem size.
@@ -104,7 +107,7 @@ public:
    * @return KernelConfig containing optimal parameters.
    * @throws std::runtime_error if mode is "cache_only" and no cache exists.
    */
-  KernelConfig get_config(const std::string& kernel_name, size_t problem_size);
+  KernelConfig get_config(const std::string &kernel_name, size_t problem_size);
 
   /**
    * @brief Benchmarks and stores optimal configuration for the kernel.
@@ -118,8 +121,8 @@ public:
    * @param problem_size Size of the problem for benchmarking.
    * @throws std::invalid_argument if kernel_name is not in registry.
    */
-  void tune_kernel(const std::string& kernel_name,
-                   std::function<void(const KernelConfig&)> kernel,
+  void tune_kernel(const std::string &kernel_name,
+                   std::function<void(const KernelConfig &)> kernel,
                    size_t problem_size);
 
   /**
@@ -127,7 +130,7 @@ public:
    *
    * @param filepath Path to output cache file.
    */
-  void save_cache(const std::string& filepath);
+  void save_cache(const std::string &filepath);
 
   /**
    * @brief Loads cache from JSON file.
@@ -135,7 +138,7 @@ public:
    * @param filepath Path to input cache file.
    * @throws std::runtime_error if file cannot be opened or parsed.
    */
-  void load_cache(const std::string& filepath);
+  void load_cache(const std::string &filepath);
 
   /**
    * @brief Test helper to directly add configuration to cache.
@@ -143,7 +146,7 @@ public:
    * @param kernel_name Identifier for the kernel.
    * @param config Configuration to store.
    */
-  void set_cache_config(const std::string& kernel_name, const KernelConfig& config);
+  void set_cache_config(const std::string &kernel_name, const KernelConfig &config);
 
   /**
    * @brief Test helper to reset tuner to initial state.
@@ -154,12 +157,12 @@ public:
   void reset();
   /// Fallback default configurations.
   static inline const KernelConfig kDefaultConfigs[] = {
-    {"for_each_interior_3d", 32, 4, 1, 0, 0, 0, {0, SIZE_MAX}},
-    {"gather", 256, 1, 1, 0, 0, 0, {0, SIZE_MAX}},
-    {"scatter", 256, 1, 1, 0, 0, 0, {0, SIZE_MAX}}
-  };
+      {"for_each_interior_3d", 32, 4, 1, 0, 0, 0, {0, SIZE_MAX}},
+      {"gather", 256, 1, 1, 0, 0, 0, {0, SIZE_MAX}},
+      {"scatter", 256, 1, 1, 0, 0, 0, {0, SIZE_MAX}}};
   /// Number of default configurations.
-  static inline const size_t kNumDefaultConfigs = sizeof(kDefaultConfigs) / sizeof(KernelConfig);
+  static inline const size_t kNumDefaultConfigs =
+      sizeof(kDefaultConfigs) / sizeof(KernelConfig);
   /// Private constructor for singleton pattern.
   AutoTuner();
 
@@ -171,13 +174,13 @@ public:
    */
   std::string get_cache_dir() const;
 
-  std::string mode_;                              ///< Current tuning mode ("auto", "cache_only", "fallback_only")
-  bool disabled_;                                 ///< Whether auto-tuning is disabled
-  std::string device_id_;                         ///< Unique GPU identifier
-  std::string device_arch_;                       ///< GPU compute capability
-  std::map<std::string, KernelConfig> cache_;     ///< Cached kernel configurations
+  std::string mode_; ///< Current tuning mode ("auto", "cache_only", "fallback_only")
+  bool disabled_;    ///< Whether auto-tuning is disabled
+  std::string device_id_;                     ///< Unique GPU identifier
+  std::string device_arch_;                   ///< GPU compute capability
+  std::map<std::string, KernelConfig> cache_; ///< Cached kernel configurations
   std::map<std::string, KernelTuneParams> registry_; ///< Kernel parameter registries
-  mutable std::mutex mutex_;                      ///< Thread safety mutex
+  mutable std::mutex mutex_;                         ///< Thread safety mutex
 
   /// Initialize device information (ID and architecture).
   void initialize_device_info();
@@ -190,14 +193,14 @@ public:
    * @param default_val Default value if variable is not set.
    * @return Environment variable value or default.
    */
-  std::string get_env_var(const char* name, const std::string& default_val) const;
+  std::string get_env_var(const char *name, const std::string &default_val) const;
   /**
    * @brief Find default configuration for a kernel.
    *
    * @param kernel_name Kernel identifier.
    * @return Default configuration or generic default if not found.
    */
-  KernelConfig find_default_config(const std::string& kernel_name);
+  KernelConfig find_default_config(const std::string &kernel_name);
   /**
    * @brief Check if configuration is valid for given problem size.
    *
@@ -205,7 +208,7 @@ public:
    * @param problem_size Problem size to check against.
    * @return true if problem_size is within config's valid range.
    */
-  bool is_valid_config(const KernelConfig& config, size_t problem_size) const;
+  bool is_valid_config(const KernelConfig &config, size_t problem_size) const;
 };
 
 /**
@@ -228,14 +231,14 @@ std::string get_device_architecture();
 } // namespace pfc::gpu
 
 // Include implementation
-#include <fstream>
-#include <sstream>
-#include <chrono>
 #include <algorithm>
-#include <stdexcept>
-#include <limits>
+#include <chrono>
 #include <cstdlib>
+#include <fstream>
+#include <limits>
 #include <nlohmann/json.hpp>
+#include <sstream>
+#include <stdexcept>
 
 #ifdef OpenPFC_ENABLE_CUDA
 #include <cuda_runtime.h>
@@ -252,7 +255,8 @@ inline AutoTuner::AutoTuner() {
   initialize_registry();
 
   if (!disabled_ && mode_ != "fallback_only") {
-    std::string cache_file = get_cache_dir() + "/" + device_id_ + "_autotune_cache.json";
+    std::string cache_file =
+        get_cache_dir() + "/" + device_id_ + "_autotune_cache.json";
     try {
       load_cache(cache_file);
     } catch (...) {
@@ -265,7 +269,8 @@ inline std::string AutoTuner::get_cache_dir() const {
   return get_env_var("OPENPFC_GPU_AUTOTUNE_CACHE_DIR", ".");
 }
 
-inline KernelConfig AutoTuner::get_config(const std::string& kernel_name, size_t problem_size) {
+inline KernelConfig AutoTuner::get_config(const std::string &kernel_name,
+                                          size_t problem_size) {
   std::lock_guard<std::mutex> lock(mutex_);
 
   if (disabled_) {
@@ -274,7 +279,7 @@ inline KernelConfig AutoTuner::get_config(const std::string& kernel_name, size_t
 
   auto it = cache_.find(kernel_name);
   if (it != cache_.end()) {
-    const auto& config = it->second;
+    const auto &config = it->second;
     if (is_valid_config(config, problem_size)) {
       return config;
     }
@@ -292,9 +297,9 @@ inline KernelConfig AutoTuner::get_config(const std::string& kernel_name, size_t
   return find_default_config(kernel_name);
 }
 
-inline void AutoTuner::tune_kernel(const std::string& kernel_name,
-                             std::function<void(const KernelConfig&)> kernel,
-                             size_t problem_size) {
+inline void AutoTuner::tune_kernel(const std::string &kernel_name,
+                                   std::function<void(const KernelConfig &)> kernel,
+                                   size_t problem_size) {
   std::lock_guard<std::mutex> lock(mutex_);
 
   auto reg_it = registry_.find(kernel_name);
@@ -302,14 +307,14 @@ inline void AutoTuner::tune_kernel(const std::string& kernel_name,
     throw std::invalid_argument("Unknown kernel name: " + kernel_name);
   }
 
-  const auto& params = reg_it->second;
+  const auto &params = reg_it->second;
   KernelConfig best_config;
   double best_time = std::numeric_limits<double>::max();
 
   // Benchmark 1D block sizes
   for (int block_size : params.candidate_block_sizes) {
-    KernelConfig config{kernel_name, block_size, 1, 1, 0, 0, 0,
-                        {problem_size, problem_size}};
+    KernelConfig config{kernel_name, block_size, 1, 1,
+                        0,           0,          0, {problem_size, problem_size}};
 
     // Warmup runs
     for (int i = 0; i < 3; ++i) kernel(config);
@@ -328,11 +333,12 @@ inline void AutoTuner::tune_kernel(const std::string& kernel_name,
 
   cache_[kernel_name] = best_config;
 
-  std::string cache_file = get_cache_dir() + "/" + device_id_ + "_autotune_cache.json";
+  std::string cache_file =
+      get_cache_dir() + "/" + device_id_ + "_autotune_cache.json";
   save_cache(cache_file);
 }
 
-inline void AutoTuner::save_cache(const std::string& filepath) {
+inline void AutoTuner::save_cache(const std::string &filepath) {
   std::lock_guard<std::mutex> lock(mutex_);
 
   nlohmann::json j;
@@ -340,7 +346,7 @@ inline void AutoTuner::save_cache(const std::string& filepath) {
   j["device_architecture"] = device_arch_;
 
   nlohmann::json kernels_json;
-  for (const auto& [name, config] : cache_) {
+  for (const auto &[name, config] : cache_) {
     nlohmann::json config_json;
     config_json["block_size_x"] = config.block_size_x;
     config_json["block_size_y"] = config.block_size_y;
@@ -349,7 +355,7 @@ inline void AutoTuner::save_cache(const std::string& filepath) {
     config_json["min_grid_size"] = config.min_grid_size;
     config_json["max_grid_size"] = config.max_grid_size;
     config_json["problem_size_range"] = {config.problem_size_range.first,
-                                          config.problem_size_range.second};
+                                         config.problem_size_range.second};
     kernels_json[name] = config_json;
   }
   j["kernels"] = kernels_json;
@@ -361,7 +367,7 @@ inline void AutoTuner::save_cache(const std::string& filepath) {
   file << j.dump(2);
 }
 
-inline void AutoTuner::load_cache(const std::string& filepath) {
+inline void AutoTuner::load_cache(const std::string &filepath) {
   std::lock_guard<std::mutex> lock(mutex_);
 
   std::ifstream file(filepath);
@@ -372,7 +378,7 @@ inline void AutoTuner::load_cache(const std::string& filepath) {
   nlohmann::json j;
   try {
     file >> j;
-  } catch (const nlohmann::json::parse_error& e) {
+  } catch (const nlohmann::json::parse_error &e) {
     throw std::runtime_error("Invalid JSON in cache file: " + std::string(e.what()));
   }
 
@@ -382,7 +388,7 @@ inline void AutoTuner::load_cache(const std::string& filepath) {
   }
 
   if (j.contains("kernels")) {
-    for (auto& [name, config_json] : j["kernels"].items()) {
+    for (auto &[name, config_json] : j["kernels"].items()) {
       KernelConfig config;
       config.kernel_name = name;
       config.block_size_x = config_json.value("block_size_x", 256);
@@ -395,14 +401,15 @@ inline void AutoTuner::load_cache(const std::string& filepath) {
           config_json["problem_size_range"].is_array() &&
           config_json["problem_size_range"].size() == 2) {
         config.problem_size_range = {config_json["problem_size_range"][0],
-                                      config_json["problem_size_range"][1]};
+                                     config_json["problem_size_range"][1]};
       }
       cache_[name] = config;
     }
   }
 }
 
-inline void AutoTuner::set_cache_config(const std::string& kernel_name, const KernelConfig& config) {
+inline void AutoTuner::set_cache_config(const std::string &kernel_name,
+                                        const KernelConfig &config) {
   std::lock_guard<std::mutex> lock(mutex_);
   cache_[kernel_name] = config;
 }
@@ -426,12 +433,13 @@ inline void AutoTuner::initialize_registry() {
   registry_["kobayashi_fd_3d"] = KernelTuneParams{};
 }
 
-inline std::string AutoTuner::get_env_var(const char* name, const std::string& default_val) const {
-  const char* val = std::getenv(name);
+inline std::string AutoTuner::get_env_var(const char *name,
+                                          const std::string &default_val) const {
+  const char *val = std::getenv(name);
   return val ? val : default_val;
 }
 
-inline KernelConfig AutoTuner::find_default_config(const std::string& kernel_name) {
+inline KernelConfig AutoTuner::find_default_config(const std::string &kernel_name) {
   for (size_t i = 0; i < kNumDefaultConfigs; ++i) {
     if (kDefaultConfigs[i].kernel_name == kernel_name) {
       return kDefaultConfigs[i];
@@ -441,7 +449,8 @@ inline KernelConfig AutoTuner::find_default_config(const std::string& kernel_nam
   return {kernel_name, 256, 1, 1, 0, 0, 0, {0, SIZE_MAX}};
 }
 
-inline bool AutoTuner::is_valid_config(const KernelConfig& config, size_t problem_size) const {
+inline bool AutoTuner::is_valid_config(const KernelConfig &config,
+                                       size_t problem_size) const {
   return problem_size >= config.problem_size_range.first &&
          problem_size <= config.problem_size_range.second;
 }

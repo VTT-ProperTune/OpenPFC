@@ -3,10 +3,10 @@
 #pragma once
 #include <array>
 #include <memory>
-#include <type_traits>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/runtime/gpu/fcc_batch.hpp>
 #include <openpfc/runtime/gpu/vector_operations.hpp>
+#include <type_traits>
 namespace pfc::finite_strain::gpu {
 /// Persistent point data. Newton iterate acceptance is separate from committing
 /// a physical load step. Rejection never writes the committed buffer.
@@ -29,9 +29,9 @@ public:
   std::size_t count, integrations = 0, scalar_transfer_bytes = 0;
   FccBatchFailure failure;
   explicit FccPoints(std::size_t n, FccSlipParameters p)
-      : parameters(p), committed(42 * n), trial(42 * n),
-        piola(9 * n), tangent(81 * n), tau(12 * n), rate(12 * n), status(n),
-        workspace(1), count(n) {
+      : parameters(p), committed(42 * n), trial(42 * n), piola(9 * n),
+        tangent(81 * n), tau(12 * n), rate(12 * n), status(n), workspace(1),
+        count(n) {
     crystal::require_parameters(p);
     auto initial = fcc_identity_state(p);
     std::vector<double> history(42 * n);
@@ -66,16 +66,17 @@ public:
   /// exactly; otherwise the caller must explicitly redistribute beforehand.
   /// The non-null strong owner token keeps the producing fields alive, but
   /// their values must not be mutated during an FCC solve. No host transfer.
-  template<class MemorySpace>
+  template <class MemorySpace>
   void borrow_quaternion_fields(
-      const std::array<const pfc::data::Field<double, MemorySpace>*, 4> &fields,
+      const std::array<const pfc::data::Field<double, MemorySpace> *, 4> &fields,
       const pfc::Domain &fcc_domain, const pfc::Box3i &fcc_inbox,
       std::shared_ptr<const void> producer_owner) {
     using Field = pfc::data::Field<double, MemorySpace>;
     static_assert(std::is_same_v<Tag, typename Field::backend_tag>,
                   "FCC quaternion source and consumer must use the same backend");
     if (!producer_owner)
-      throw std::invalid_argument("FCC quaternion source needs a strong lifetime token");
+      throw std::invalid_argument(
+          "FCC quaternion source needs a strong lifetime token");
     if (!fcc_inbox.is_consistent() ||
         static_cast<std::size_t>(fcc_inbox.count()) != count)
       throw std::invalid_argument("FCC real-inbox box does not match point count");
@@ -101,7 +102,7 @@ public:
     }
     if (!view.valid_for(count))
       throw std::invalid_argument("invalid padded quaternion view");
-    orientation.resize(0);  // free the unneeded 9-double-per-voxel matrix
+    orientation.resize(0); // free the unneeded 9-double-per-voxel matrix
     quaternion_view_ = view;
     quaternion_owner_ = std::move(producer_owner);
     use_quaternions_ = true;
@@ -114,11 +115,18 @@ public:
       throw std::invalid_argument("deformation count mismatch");
     if (!orientation_ready_)
       throw std::logic_error("FCC orientations have not been set");
-    FccBatchView view{
-        count,        use_quaternions_ ? nullptr : orientation.data(),
-        f.data(),    committed.data(), trial.data(), piola.data(),
-        tangent.data(), status.data(), tau.data(), rate.data(),
-        quaternion_view_, use_quaternions_};
+    FccBatchView view{count,
+                      use_quaternions_ ? nullptr : orientation.data(),
+                      f.data(),
+                      committed.data(),
+                      trial.data(),
+                      piola.data(),
+                      tangent.data(),
+                      status.data(),
+                      tau.data(),
+                      rate.data(),
+                      quaternion_view_,
+                      use_quaternions_};
 #if defined(OpenPFC_ENABLE_CUDA)
     if constexpr (std::is_same_v<Tag, pfc::backend::CUDATag>) {
       evaluate_fcc_batch_cuda(parameters, view);
@@ -144,7 +152,8 @@ public:
   void reject_increment() { valid_ = false; }
   std::size_t storage_bytes() const {
     return (orientation.size() + committed.size() + trial.size() + piola.size() +
-            tangent.size() + tau.size() + rate.size()) * sizeof(double) +
+            tangent.size() + tau.size() + rate.size()) *
+               sizeof(double) +
            status.size() * sizeof(FccStatus) +
            workspace.size() * sizeof(unsigned long long);
   }

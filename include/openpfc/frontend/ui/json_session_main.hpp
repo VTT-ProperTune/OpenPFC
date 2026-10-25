@@ -31,8 +31,7 @@ struct NoSessionSetup {
 
 template <class Session, class Setup = NoSessionSetup>
 [[nodiscard]] int run_json_session_main(int argc, char *argv[],
-                                        const char *done_label,
-                                        Setup &&setup = {}) {
+                                        const char *done_label, Setup &&setup = {}) {
   return pfc::runtime::mpi_main(
       argc, argv, [&](int app_argc, char **app_argv, int rank, int nproc) {
         if (app_argc <= 1) {

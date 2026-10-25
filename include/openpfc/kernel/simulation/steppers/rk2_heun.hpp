@@ -170,8 +170,7 @@ public:
     }
     m_rhs(t + m_dt, m_predictor, m_rhs_predictor);
     for (std::size_t i = 0; i < n; ++i) {
-      m_predictor[i] =
-          u[i] + Scalar(0.5 * m_dt) * (m_du[i] + m_rhs_predictor[i]);
+      m_predictor[i] = u[i] + Scalar(0.5 * m_dt) * (m_du[i] + m_rhs_predictor[i]);
     }
     return Attempt(t, m_dt, t + m_dt, /*success=*/true, m_predictor);
   }
@@ -190,8 +189,7 @@ public:
   }
 
   /** Advance host field state by one RK2 Heun step. */
-  template <pfc::field::HostFieldState<Scalar> F>
-  double step(double t, F &u) {
+  template <pfc::field::HostFieldState<Scalar> F> double step(double t, F &u) {
     return step(t, u.vec());
   }
 

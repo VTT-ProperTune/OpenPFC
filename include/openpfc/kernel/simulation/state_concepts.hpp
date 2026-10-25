@@ -62,10 +62,13 @@ namespace pfc::field {
  * @tparam F Field type to check for readable access
  */
 template <class F>
-concept FieldReadable = requires(const F& f) {
-    { f.size() } -> std::convertible_to<std::size_t>;
-    { f.data() } -> std::convertible_to<const void*>;
-    { f.operator()(int{}, int{}, int{}) } -> std::same_as<const std::remove_reference_t<decltype(f.operator()(int{}, int{}, int{}))>&>;
+concept FieldReadable = requires(const F &f) {
+  { f.size() } -> std::convertible_to<std::size_t>;
+  { f.data() } -> std::convertible_to<const void *>;
+  {
+    f.operator()(int{}, int{}, int{})
+  } -> std::same_as<
+      const std::remove_reference_t<decltype(f.operator()(int{}, int{}, int{}))> &>;
 };
 
 /**
@@ -81,11 +84,12 @@ concept FieldReadable = requires(const F& f) {
  * @tparam F Field type to check for writable access
  */
 template <class F>
-concept FieldWritable = requires(F& f) {
-    { f.size() } -> std::convertible_to<std::size_t>;
-    { f.data() } -> std::convertible_to<void*>;
-    requires !std::is_const_v<std::remove_reference_t<decltype(f.operator()(int{}, int{}, int{}))>>;
-    requires std::is_lvalue_reference_v<decltype(f.operator()(int{}, int{}, int{}))>;
+concept FieldWritable = requires(F &f) {
+  { f.size() } -> std::convertible_to<std::size_t>;
+  { f.data() } -> std::convertible_to<void *>;
+  requires !std::is_const_v<
+      std::remove_reference_t<decltype(f.operator()(int{}, int{}, int{}))>>;
+  requires std::is_lvalue_reference_v<decltype(f.operator()(int{}, int{}, int{}))>;
 };
 
 /**
@@ -125,12 +129,12 @@ concept ConstField = FieldReadable<F>;
  * @tparam B Second field type
  */
 template <class A, class B>
-concept ShapeCompatible = requires(const A& a, const B& b) {
-    { a.size() } -> std::convertible_to<std::size_t>;
-    { b.size() } -> std::convertible_to<std::size_t>;
-    a.size() == b.size();
-    typename A::value_type;
-    typename B::value_type;
+concept ShapeCompatible = requires(const A &a, const B &b) {
+  { a.size() } -> std::convertible_to<std::size_t>;
+  { b.size() } -> std::convertible_to<std::size_t>;
+  a.size() == b.size();
+  typename A::value_type;
+  typename B::value_type;
 } && std::is_same_v<typename A::value_type, typename B::value_type>;
 
 /**
@@ -149,7 +153,7 @@ concept ShapeCompatible = requires(const A& a, const B& b) {
  */
 template <class Input, class Output>
 concept AliasingSafe = requires {
-    requires !std::is_same_v<std::remove_cvref_t<Input>, std::remove_cvref_t<Output>>;
+  requires !std::is_same_v<std::remove_cvref_t<Input>, std::remove_cvref_t<Output>>;
 };
 
 /**
@@ -174,7 +178,6 @@ concept HostFieldState =
  * @brief Homogeneous host field pack (`N >= 1` fields of the same `Scalar`).
  */
 template <class Scalar, class... Fs>
-concept HostFieldPack =
-    (sizeof...(Fs) >= 1) && (HostFieldState<Fs, Scalar> && ...);
+concept HostFieldPack = (sizeof...(Fs) >= 1) && (HostFieldState<Fs, Scalar> && ...);
 
 } // namespace pfc::field

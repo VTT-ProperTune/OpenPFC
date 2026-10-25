@@ -77,9 +77,9 @@ template <typename> constexpr bool spectral_diag_always_false_v = false;
  * @brief Singular / near-singular handling for spectral diagonal modes
  */
 enum class DiagonalNullspacePolicy {
-  fail,       ///< Singular mode → do not mutate target; `ill_conditioned`
-  project,    ///< @f$ |d_i| < \tau @f$ → @f$ s_i = @f$ `null_mode_value`
-  regularize  ///< @f$ s_i = b_i / (d_i + \lambda) @f$ with @f$ \lambda > 0 @f$
+  fail,      ///< Singular mode → do not mutate target; `ill_conditioned`
+  project,   ///< @f$ |d_i| < \tau @f$ → @f$ s_i = @f$ `null_mode_value`
+  regularize ///< @f$ s_i = b_i / (d_i + \lambda) @f$ with @f$ \lambda > 0 @f$
 };
 
 /**
@@ -91,7 +91,8 @@ struct SpectralDiagonalConfig {
   double singular_threshold = 1e-14;
   /// Value written for projected null modes (imag part 0 for complex path)
   double null_mode_value = 0.0;
-  /// @f$ \lambda @f$ for `regularize`; must be @f$ > 0 @f$ when that policy is selected
+  /// @f$ \lambda @f$ for `regularize`; must be @f$ > 0 @f$ when that policy is
+  /// selected
   double regularization = 0.0;
 };
 
@@ -121,8 +122,8 @@ public:
                   TargetFields &target_out, const SolveOptions &options,
                   const StageContext &ctx) const {
     decltype(auto) rhs_tuple = pfc::field::detail::to_tuple(rhs);
-    using Primary = std::remove_cvref_t<
-        decltype(unwrap_vector_field(std::get<0>(rhs_tuple)))>;
+    using Primary =
+        std::remove_cvref_t<decltype(unwrap_vector_field(std::get<0>(rhs_tuple)))>;
 
     if constexpr (std::is_same_v<Primary, std::vector<double>>) {
       return solve_real_(op_desc, rhs, target_out, options, ctx);
@@ -196,10 +197,10 @@ private:
       for (std::size_t i = 0; i < n; ++i) {
         if (std::abs(diag[i]) < config_.singular_threshold) {
           residual_scratch_.clear();
-          return fail_outcome(
-              ConvergenceStatus::ill_conditioned, 0.0,
-              "SpectralDiagonalSolver: singular mode at index " +
-                  std::to_string(i) + " (DiagonalNullspacePolicy::fail)");
+          return fail_outcome(ConvergenceStatus::ill_conditioned, 0.0,
+                              "SpectralDiagonalSolver: singular mode at index " +
+                                  std::to_string(i) +
+                                  " (DiagonalNullspacePolicy::fail)");
         }
       }
     }
@@ -209,9 +210,7 @@ private:
       const double d = diag[i];
       const double b = rhs_vec[i];
       switch (config_.nullspace_policy) {
-      case DiagonalNullspacePolicy::fail:
-        residual_scratch_[i] = b / d;
-        break;
+      case DiagonalNullspacePolicy::fail: residual_scratch_[i] = b / d; break;
       case DiagonalNullspacePolicy::project:
         if (std::abs(d) < config_.singular_threshold) {
           residual_scratch_[i] = config_.null_mode_value;
@@ -233,15 +232,13 @@ private:
     std::vector<double> reduced = ctx.service().global_reduce({sum_sq}, MPI_SUM);
     const double residual_norm = std::sqrt(reduced[0]);
 
-    const double abs_tol =
-        options.absolute_tolerance.value_or(options.tolerance);
+    const double abs_tol = options.absolute_tolerance.value_or(options.tolerance);
     if (!(residual_norm <= abs_tol)) {
-      return Outcome{residual_scratch_, ConvergenceStatus::max_iterations_reached,
-                     1, residual_norm,
+      return Outcome{residual_scratch_, ConvergenceStatus::max_iterations_reached, 1,
+                     residual_norm,
                      std::string("SpectralDiagonalSolver: residual norm ") +
                          std::to_string(residual_norm) +
-                         " exceeds absolute tolerance " +
-                         std::to_string(abs_tol)};
+                         " exceeds absolute tolerance " + std::to_string(abs_tol)};
     }
 
     target_vec = residual_scratch_;
@@ -285,10 +282,9 @@ private:
         std::get_if<std::vector<Complex>>(&op_desc.operator_context);
     if (diag_ptr == nullptr) {
       complex_residual_scratch_.clear();
-      return fail_outcome(
-          ConvergenceStatus::ill_conditioned, 0.0,
-          "SpectralDiagonalSolver: operator_context must hold "
-          "std::vector<std::complex<double>> diagonal coefficients");
+      return fail_outcome(ConvergenceStatus::ill_conditioned, 0.0,
+                          "SpectralDiagonalSolver: operator_context must hold "
+                          "std::vector<std::complex<double>> diagonal coefficients");
     }
     const std::vector<Complex> &diag = *diag_ptr;
 
@@ -311,10 +307,10 @@ private:
       for (std::size_t i = 0; i < n; ++i) {
         if (std::abs(diag[i]) < config_.singular_threshold) {
           complex_residual_scratch_.clear();
-          return fail_outcome(
-              ConvergenceStatus::ill_conditioned, 0.0,
-              "SpectralDiagonalSolver: singular mode at index " +
-                  std::to_string(i) + " (DiagonalNullspacePolicy::fail)");
+          return fail_outcome(ConvergenceStatus::ill_conditioned, 0.0,
+                              "SpectralDiagonalSolver: singular mode at index " +
+                                  std::to_string(i) +
+                                  " (DiagonalNullspacePolicy::fail)");
         }
       }
     }
@@ -343,22 +339,19 @@ private:
 
     double sum_sq = 0.0;
     for (std::size_t i = 0; i < n; ++i) {
-      const Complex r =
-          diag[i] * complex_residual_scratch_[i] - rhs_vec[i];
+      const Complex r = diag[i] * complex_residual_scratch_[i] - rhs_vec[i];
       sum_sq += std::norm(r);
     }
     std::vector<double> reduced = ctx.service().global_reduce({sum_sq}, MPI_SUM);
     const double residual_norm = std::sqrt(reduced[0]);
 
-    const double abs_tol =
-        options.absolute_tolerance.value_or(options.tolerance);
+    const double abs_tol = options.absolute_tolerance.value_or(options.tolerance);
     if (!(residual_norm <= abs_tol)) {
-      return Outcome{
-          complex_residual_scratch_, ConvergenceStatus::max_iterations_reached,
-          1, residual_norm,
-          std::string("SpectralDiagonalSolver: residual norm ") +
-              std::to_string(residual_norm) +
-              " exceeds absolute tolerance " + std::to_string(abs_tol)};
+      return Outcome{complex_residual_scratch_,
+                     ConvergenceStatus::max_iterations_reached, 1, residual_norm,
+                     std::string("SpectralDiagonalSolver: residual norm ") +
+                         std::to_string(residual_norm) +
+                         " exceeds absolute tolerance " + std::to_string(abs_tol)};
     }
 
     target_vec = complex_residual_scratch_;
@@ -372,9 +365,8 @@ private:
     if constexpr (std::is_same_v<U, std::reference_wrapper<std::vector<double>>> ||
                   std::is_same_v<
                       U, std::reference_wrapper<const std::vector<double>>> ||
-                  std::is_same_v<
-                      U,
-                      std::reference_wrapper<std::vector<std::complex<double>>>> ||
+                  std::is_same_v<U, std::reference_wrapper<
+                                        std::vector<std::complex<double>>>> ||
                   std::is_same_v<U, std::reference_wrapper<
                                         const std::vector<std::complex<double>>>>) {
       return field.get();

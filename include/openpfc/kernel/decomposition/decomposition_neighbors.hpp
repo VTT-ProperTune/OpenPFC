@@ -63,8 +63,8 @@ namespace pfc::decomposition {
  * // With non-periodic X, crossing boundary returns -1 (no neighbor)
  * ```
  */
-inline int get_neighbor_rank(const Decomposition &decomp, const Domain &domain, int rank,
-                             const Int3 &direction) {
+inline int get_neighbor_rank(const Decomposition &decomp, const Domain &domain,
+                             int rank, const Int3 &direction) {
   const auto &grid = get_grid(decomp);
   int num_domains = get_num_domains(decomp);
 

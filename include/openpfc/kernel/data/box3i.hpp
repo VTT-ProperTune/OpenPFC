@@ -63,8 +63,7 @@ struct Box3i {
   }
 
   /// Row-major x-fastest linear index of `idx` relative to `low`.
-  [[nodiscard]] constexpr long long
-  to_linear(const std::array<int, 3> &idx) const {
+  [[nodiscard]] constexpr long long to_linear(const std::array<int, 3> &idx) const {
     return static_cast<long long>(idx[0] - low[0]) +
            static_cast<long long>(size[0]) *
                ((idx[1] - low[1]) + size[1] * (idx[2] - low[2]));
@@ -89,12 +88,10 @@ inline std::ostream &operator<<(std::ostream &os, const Box3i &b) {
 /// Visit each index point in the box in row-major, x-fastest order.
 /// @param b The box to iterate over.
 /// @param fn Callable taking `std::array<int, 3>` for each index point.
-template <typename Fn>
-constexpr void for_each_index(const Box3i &b, Fn &&fn) {
+template <typename Fn> constexpr void for_each_index(const Box3i &b, Fn &&fn) {
   for (int k = b.low[2]; k <= b.high[2]; ++k)
     for (int j = b.low[1]; j <= b.high[1]; ++j)
-      for (int i = b.low[0]; i <= b.high[0]; ++i)
-        fn(std::array<int, 3>{i, j, k});
+      for (int i = b.low[0]; i <= b.high[0]; ++i) fn(std::array<int, 3>{i, j, k});
 }
 
 } // namespace pfc

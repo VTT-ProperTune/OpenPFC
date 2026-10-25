@@ -90,9 +90,8 @@ inline constexpr std::array<Int3, kFaceSlotCount> kFaceDirections = {{
  */
 [[nodiscard]] inline Int3 face_slot_to_direction(int slot) {
   if (slot < 0 || slot >= kFaceSlotCount) {
-    throw std::out_of_range(
-        "face_slot_to_direction: slot must be in [0,6), got " +
-        std::to_string(slot));
+    throw std::out_of_range("face_slot_to_direction: slot must be in [0,6), got " +
+                            std::to_string(slot));
   }
   return kFaceDirections[static_cast<std::size_t>(slot)];
 }
@@ -123,8 +122,7 @@ inline constexpr std::array<Int3, kFaceSlotCount> kFaceDirections = {{
 /// Send tag for field `field_index` in direction `d`.
 [[nodiscard]] inline int send_tag(int exchange_base, int field_index,
                                   const Int3 &d) noexcept {
-  return field_tag_base(exchange_base, field_index) +
-         direction_to_canonical_tag(d);
+  return field_tag_base(exchange_base, field_index) + direction_to_canonical_tag(d);
 }
 
 /// Recv tag for the same field/direction (peer's send of `-d`).
@@ -144,17 +142,15 @@ struct HaloSlab {
   Int3 count{};
 
   [[nodiscard]] constexpr std::size_t volume() const noexcept {
-    return static_cast<std::size_t>(count[0]) *
-           static_cast<std::size_t>(count[1]) *
+    return static_cast<std::size_t>(count[0]) * static_cast<std::size_t>(count[1]) *
            static_cast<std::size_t>(count[2]);
   }
 };
 
 inline void validate_padded_slab_args(const Int3 &owned, int hw, const Int3 &d) {
   if (hw < 0) {
-    throw std::invalid_argument(
-        "halo slab: halo width must be non-negative (got " +
-        std::to_string(hw) + ")");
+    throw std::invalid_argument("halo slab: halo width must be non-negative (got " +
+                                std::to_string(hw) + ")");
   }
   if (d[0] == 0 && d[1] == 0 && d[2] == 0) {
     throw std::invalid_argument("halo slab: zero direction is not a neighbour");

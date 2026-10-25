@@ -66,11 +66,13 @@ public:
       const auto it = std::find(level.active_world_ranks.begin(),
                                 level.active_world_ranks.end(), m_rank);
       const bool active = it != level.active_world_ranks.end();
-      const int key = active ? static_cast<int>(
-          std::distance(level.active_world_ranks.begin(), it)) : 0;
+      const int key =
+          active
+              ? static_cast<int>(std::distance(level.active_world_ranks.begin(), it))
+              : 0;
       MPI_Comm level_comm = MPI_COMM_NULL;
-      check(MPI_Comm_split(world, active ? 0 : MPI_UNDEFINED, key,
-                           &level_comm), "MPI_Comm_split");
+      check(MPI_Comm_split(world, active ? 0 : MPI_UNDEFINED, key, &level_comm),
+            "MPI_Comm_split");
       m_comms.push_back(level_comm);
     }
   }
@@ -102,8 +104,7 @@ public:
    * nodes. Each coarse owner accumulates all partial blocks from the planned
    * source ranks. Inactive coarse ranks return an empty output.
    */
-  void restrict_pt(std::size_t transition,
-                   const std::vector<double> &fine_owned,
+  void restrict_pt(std::size_t transition, const std::vector<double> &fine_owned,
                    std::vector<double> &coarse_owned) const {
     const auto &step = get_step(transition);
     const auto &fine = m_plan.levels()[transition];
@@ -125,13 +126,13 @@ public:
     // Post receives before sends. Each route is a distinct owner pair.
     for (std::size_t i = 0; i < step.routes.size(); ++i) {
       const auto &route = step.routes[i];
-      if (route.coarse_world_rank != m_rank ||
-          route.fine_world_rank == m_rank) continue;
+      if (route.coarse_world_rank != m_rank || route.fine_world_rank == m_rank)
+        continue;
       payload[i].resize(checked_size(route.values_per_direction));
       MPI_Request req = MPI_REQUEST_NULL;
-      check(MPI_Irecv(payload[i].data(), checked_count(route),
-                      MPI_DOUBLE, level_rank(fine, route.fine_world_rank),
-                      kRestrictTag, m_comms[transition], &req),
+      check(MPI_Irecv(payload[i].data(), checked_count(route), MPI_DOUBLE,
+                      level_rank(fine, route.fine_world_rank), kRestrictTag,
+                      m_comms[transition], &req),
             "MPI_Irecv restriction");
       requests.push_back(req);
     }
@@ -148,9 +149,9 @@ public:
         add_block(route.coarse_overlap, payload[i], cr->owned, coarse_owned);
       } else {
         MPI_Request req = MPI_REQUEST_NULL;
-        check(MPI_Isend(payload[i].data(), checked_count(route),
-                        MPI_DOUBLE, level_rank(fine, route.coarse_world_rank),
-                        kRestrictTag, m_comms[transition], &req),
+        check(MPI_Isend(payload[i].data(), checked_count(route), MPI_DOUBLE,
+                        level_rank(fine, route.coarse_world_rank), kRestrictTag,
+                        m_comms[transition], &req),
               "MPI_Isend restriction");
         requests.push_back(req);
       }
@@ -159,8 +160,7 @@ public:
     wait(requests);
     for (std::size_t i = 0; i < step.routes.size(); ++i) {
       const auto &route = step.routes[i];
-      if (route.coarse_world_rank == m_rank &&
-          route.fine_world_rank != m_rank)
+      if (route.coarse_world_rank == m_rank && route.fine_world_rank != m_rank)
         add_block(route.coarse_overlap, payload[i], cr->owned, coarse_owned);
     }
   }
@@ -170,8 +170,7 @@ public:
    * Reverse the exact same planned Q1 routes. A fine owner adds each coarse
    * coefficient's trilinear support exactly once, including cross-group data.
    */
-  void prolong(std::size_t transition,
-               const std::vector<double> &coarse_owned,
+  void prolong(std::size_t transition, const std::vector<double> &coarse_owned,
                std::vector<double> &fine_owned) const {
     const auto &step = get_step(transition);
     const auto &fine = m_plan.levels()[transition];
@@ -182,8 +181,7 @@ public:
       fine_owned.clear();
       return;
     }
-    validate_sizes(transition, coarse_owned.size(),
-                   cr ? cr->owned_nodes : 0,
+    validate_sizes(transition, coarse_owned.size(), cr ? cr->owned_nodes : 0,
                    &coarse_owned == &fine_owned, "prolongation coarse input");
 
     fine_owned.assign(checked_size(fr->owned_nodes), 0.0);
@@ -193,13 +191,13 @@ public:
 
     for (std::size_t i = 0; i < step.routes.size(); ++i) {
       const auto &route = step.routes[i];
-      if (route.fine_world_rank != m_rank ||
-          route.coarse_world_rank == m_rank) continue;
+      if (route.fine_world_rank != m_rank || route.coarse_world_rank == m_rank)
+        continue;
       payload[i].resize(checked_size(route.values_per_direction));
       MPI_Request req = MPI_REQUEST_NULL;
-      check(MPI_Irecv(payload[i].data(), checked_count(route),
-                      MPI_DOUBLE, level_rank(fine, route.coarse_world_rank),
-                      kProlongTag, m_comms[transition], &req),
+      check(MPI_Irecv(payload[i].data(), checked_count(route), MPI_DOUBLE,
+                      level_rank(fine, route.coarse_world_rank), kProlongTag,
+                      m_comms[transition], &req),
             "MPI_Irecv prolongation");
       requests.push_back(req);
     }
@@ -214,9 +212,9 @@ public:
       });
       if (route.fine_world_rank != m_rank) {
         MPI_Request req = MPI_REQUEST_NULL;
-        check(MPI_Isend(payload[i].data(), checked_count(route),
-                        MPI_DOUBLE, level_rank(fine, route.fine_world_rank),
-                        kProlongTag, m_comms[transition], &req),
+        check(MPI_Isend(payload[i].data(), checked_count(route), MPI_DOUBLE,
+                        level_rank(fine, route.fine_world_rank), kProlongTag,
+                        m_comms[transition], &req),
               "MPI_Isend prolongation");
         requests.push_back(req);
       }
@@ -226,8 +224,7 @@ public:
     for (std::size_t i = 0; i < step.routes.size(); ++i) {
       const auto &route = step.routes[i];
       if (route.fine_world_rank == m_rank)
-        add_prolong_block(route.coarse_overlap, payload[i],
-                          fr->owned, fine_owned);
+        add_prolong_block(route.coarse_overlap, payload[i], fr->owned, fine_owned);
     }
   }
 
@@ -237,8 +234,8 @@ private:
 
   static void check(int status, const char *operation) {
     if (status != MPI_SUCCESS)
-      throw std::runtime_error(std::string("MultigridMPITransfers: ") +
-                               operation + " failed");
+      throw std::runtime_error(std::string("MultigridMPITransfers: ") + operation +
+                               " failed");
   }
 
   static std::size_t checked_size(std::uint64_t value) {
@@ -258,8 +255,8 @@ private:
     return static_cast<std::size_t>(box.to_linear(point));
   }
 
-  static const MultigridPlan::Rank *
-  rank_record(const MultigridPlan::Level &level, int world_rank) {
+  static const MultigridPlan::Rank *rank_record(const MultigridPlan::Level &level,
+                                                int world_rank) {
     const auto it = std::find(level.active_world_ranks.begin(),
                               level.active_world_ranks.end(), world_rank);
     if (it == level.active_world_ranks.end()) return nullptr;
@@ -269,8 +266,7 @@ private:
 
   static int level_rank(const MultigridPlan::Level &level, int world_rank) {
     const auto *r = rank_record(level, world_rank);
-    if (!r)
-      throw std::logic_error("MultigridMPITransfers: inactive route endpoint");
+    if (!r) throw std::logic_error("MultigridMPITransfers: inactive route endpoint");
     return r->level_rank;
   }
 
@@ -282,37 +278,34 @@ private:
 
   // All active ranks agree on input validity before posting point-to-point
   // operations. Otherwise a local validation exception could strand peers.
-  void validate_sizes(std::size_t level, std::size_t actual,
-                      std::uint64_t expected, bool aliased,
-                      const char *what) const {
-    const int invalid =
-        (aliased || actual != checked_size(expected)) ? 1 : 0;
+  void validate_sizes(std::size_t level, std::size_t actual, std::uint64_t expected,
+                      bool aliased, const char *what) const {
+    const int invalid = (aliased || actual != checked_size(expected)) ? 1 : 0;
     int any_invalid = 0;
-    check(MPI_Allreduce(&invalid, &any_invalid, 1, MPI_INT, MPI_MAX,
-                        m_comms[level]), "MPI_Allreduce input validation");
+    check(MPI_Allreduce(&invalid, &any_invalid, 1, MPI_INT, MPI_MAX, m_comms[level]),
+          "MPI_Allreduce input validation");
     if (any_invalid)
-      throw std::invalid_argument(
-          std::string("MultigridMPITransfers: invalid ") + what);
+      throw std::invalid_argument(std::string("MultigridMPITransfers: invalid ") +
+                                  what);
   }
 
   static double weight(int i, int j) {
-    const auto displacement = static_cast<std::int64_t>(i) -
-                              (2LL * static_cast<std::int64_t>(j) + 1);
+    const auto displacement =
+        static_cast<std::int64_t>(i) - (2LL * static_cast<std::int64_t>(j) + 1);
     if (displacement == 0) return 1.0;
     if (displacement == -1 || displacement == 1) return 0.5;
     return 0.0;
   }
 
   static double partial_restrict(const Box3i &owned,
-                                 const std::vector<double> &values,
-                                 const Int3 &j) {
+                                 const std::vector<double> &values, const Int3 &j) {
     Int3 lo{}, hi{};
     for (int axis = 0; axis < 3; ++axis) {
       const auto centre = 2LL * static_cast<std::int64_t>(j[axis]) + 1;
-      lo[axis] = static_cast<int>(std::max<std::int64_t>(
-          owned.low[axis], centre - 1));
-      hi[axis] = static_cast<int>(std::min<std::int64_t>(
-          owned.high[axis], centre + 1));
+      lo[axis] =
+          static_cast<int>(std::max<std::int64_t>(owned.low[axis], centre - 1));
+      hi[axis] =
+          static_cast<int>(std::min<std::int64_t>(owned.high[axis], centre + 1));
     }
     double sum = 0.0;
     if (lo[0] > hi[0] || lo[1] > hi[1] || lo[2] > hi[2]) return sum;
@@ -320,19 +313,16 @@ private:
       for (int y = lo[1]; y <= hi[1]; ++y)
         for (int x = lo[0]; x <= hi[0]; ++x) {
           const Int3 i{x, y, z};
-          sum += weight(x, j[0]) * weight(y, j[1]) *
-                 weight(z, j[2]) * values[checked_index(owned, i)];
+          sum += weight(x, j[0]) * weight(y, j[1]) * weight(z, j[2]) *
+                 values[checked_index(owned, i)];
         }
     return sum;
   }
 
-  static void add_block(const Box3i &block,
-                        const std::vector<double> &source,
-                        const Box3i &owned,
-                        std::vector<double> &destination) {
+  static void add_block(const Box3i &block, const std::vector<double> &source,
+                        const Box3i &owned, std::vector<double> &destination) {
     for_each_index(block, [&](const Int3 &at) {
-      destination[checked_index(owned, at)] +=
-          source[checked_index(block, at)];
+      destination[checked_index(owned, at)] += source[checked_index(block, at)];
     });
   }
 
@@ -345,29 +335,29 @@ private:
       Int3 lo{}, hi{};
       for (int a = 0; a < 3; ++a) {
         const auto centre = 2LL * static_cast<std::int64_t>(j[a]) + 1;
-        lo[a] = static_cast<int>(std::max<std::int64_t>(
-            fine_owned.low[a], centre - 1));
-        hi[a] = static_cast<int>(std::min<std::int64_t>(
-            fine_owned.high[a], centre + 1));
+        lo[a] =
+            static_cast<int>(std::max<std::int64_t>(fine_owned.low[a], centre - 1));
+        hi[a] =
+            static_cast<int>(std::min<std::int64_t>(fine_owned.high[a], centre + 1));
       }
       if (lo[0] > hi[0] || lo[1] > hi[1] || lo[2] > hi[2]) return;
       for (int z = lo[2]; z <= hi[2]; ++z)
         for (int y = lo[1]; y <= hi[1]; ++y)
           for (int x = lo[0]; x <= hi[0]; ++x) {
             const Int3 i{x, y, z};
-            result[checked_index(fine_owned, i)] += c *
-                weight(x, j[0]) * weight(y, j[1]) * weight(z, j[2]);
+            result[checked_index(fine_owned, i)] +=
+                c * weight(x, j[0]) * weight(y, j[1]) * weight(z, j[2]);
           }
     });
   }
 
   static void wait(std::vector<MPI_Request> &requests) {
     if (requests.empty()) return;
-    if (requests.size() >
-        static_cast<std::size_t>(std::numeric_limits<int>::max()))
+    if (requests.size() > static_cast<std::size_t>(std::numeric_limits<int>::max()))
       throw std::overflow_error("MultigridMPITransfers: too many requests");
     check(MPI_Waitall(static_cast<int>(requests.size()), requests.data(),
-                      MPI_STATUSES_IGNORE), "MPI_Waitall");
+                      MPI_STATUSES_IGNORE),
+          "MPI_Waitall");
   }
 
   const MultigridPlan &m_plan;

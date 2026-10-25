@@ -19,9 +19,8 @@ struct ReactionRate {
 
 namespace detail {
 template <class Params, class Law, class Admissible>
-double evaluate_reaction(const ReactionPoint &point, const Params &params,
-                         Law law, Admissible admissible, FluxLedger &ledger,
-                         bool cartesian) {
+double evaluate_reaction(const ReactionPoint &point, const Params &params, Law law,
+                         Admissible admissible, FluxLedger &ledger, bool cartesian) {
   if (!ledger.active()) throw std::logic_error("reaction needs active flux trial");
   try {
     if (!std::isfinite(point.state) || !std::isfinite(point.stage_time))
@@ -36,12 +35,13 @@ double evaluate_reaction(const ReactionPoint &point, const Params &params,
       const double n = point.outward_normal[axis];
       if (!std::isfinite(n)) throw std::domain_error("nonfinite normal");
       norm_squared += n * n;
-      if (n == 1 || n == -1) ++normal_axes;
+      if (n == 1 || n == -1)
+        ++normal_axes;
       else if (cartesian && n != 0)
         throw std::domain_error("non-Cartesian face normal");
     }
-    if ((cartesian && normal_axes != 1) ||
-        std::abs(norm_squared - 1) > 1e-12 || !admissible(point, params))
+    if ((cartesian && normal_axes != 1) || std::abs(norm_squared - 1) > 1e-12 ||
+        !admissible(point, params))
       throw std::domain_error("inadmissible reaction point");
     const ReactionRate result = law(point, params);
     if (!result.converged || !std::isfinite(result.outward_flux))
@@ -60,10 +60,9 @@ double evaluate_reaction(const ReactionPoint &point, const Params &params,
 template <class Params, class Law, class Admissible>
 FaceCondition reaction_face(const ReactionPoint &point, const Params &params,
                             Law law, Admissible admissible, FluxLedger &ledger) {
-  const double flux = detail::evaluate_reaction(point, params, law, admissible,
-                                                ledger, true);
-  return {BoundaryQuantity::ConstitutiveFlux,
-          [flux](double) { return flux; }};
+  const double flux =
+      detail::evaluate_reaction(point, params, law, admissible, ledger, true);
+  return {BoundaryQuantity::ConstitutiveFlux, [flux](double) { return flux; }};
 }
 
 /// Local volumetric source from an application-supplied surface density.
@@ -83,8 +82,8 @@ double reaction_source(const ReactionPoint &point, double surface_density,
         !std::isfinite(volume_weight) || volume_weight <= 0 ||
         !std::isfinite(time_weight))
       throw std::domain_error("invalid surface source quadrature");
-    const double flux = detail::evaluate_reaction(point, params, law, admissible,
-                                                  ledger, false);
+    const double flux =
+        detail::evaluate_reaction(point, params, law, admissible, ledger, false);
     const double source = -surface_density * flux;
     if (!std::isfinite(source)) throw std::overflow_error("source overflow");
     ledger.stage(flux, surface_density * volume_weight, time_weight);

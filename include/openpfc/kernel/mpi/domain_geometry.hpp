@@ -38,7 +38,8 @@ inline void validate_subarray_domain(const std::array<int, 3> &global_size,
                                      const std::array<int, 3> &offset,
                                      const char *context_label) {
   const std::string prefix =
-      std::string(context_label != nullptr ? context_label : "validate_subarray_domain") +
+      std::string(context_label != nullptr ? context_label
+                                           : "validate_subarray_domain") +
       ": ";
   for (int i = 0; i < 3; ++i) {
     if (global_size[i] <= 0 || local_size[i] <= 0) {
@@ -48,13 +49,12 @@ inline void validate_subarray_domain(const std::array<int, 3> &global_size,
     if (offset[i] < 0) {
       throw std::invalid_argument(prefix + "offsets must be non-negative");
     }
-    const auto end = static_cast<long long>(offset[i]) +
-                     static_cast<long long>(local_size[i]);
+    const auto end =
+        static_cast<long long>(offset[i]) + static_cast<long long>(local_size[i]);
     if (end > static_cast<long long>(global_size[i])) {
       throw std::invalid_argument(
-          prefix +
-          "piece does not lie inside global domain (check offset + "
-          "local_size vs global)");
+          prefix + "piece does not lie inside global domain (check offset + "
+                   "local_size vs global)");
     }
   }
 }

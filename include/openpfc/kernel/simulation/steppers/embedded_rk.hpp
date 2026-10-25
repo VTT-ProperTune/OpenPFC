@@ -68,8 +68,7 @@ public:
    *
    * @throws std::invalid_argument if `!tableau.has_embedded()`.
    */
-  EmbeddedRKStepper(std::size_t local_size, ButcherTableau<double> tableau,
-                    Rhs rhs)
+  EmbeddedRKStepper(std::size_t local_size, ButcherTableau<double> tableau, Rhs rhs)
       : m_local_size(local_size), m_du(local_size, Scalar{}),
         m_u_temp(local_size, Scalar{}), m_u_high(local_size, Scalar{}),
         m_u_low(local_size, Scalar{}), m_error(local_size, Scalar{}),
@@ -100,13 +99,11 @@ public:
    *
    * @throws std::invalid_argument if `u.size() != local_size`.
    */
-  [[nodiscard]] Attempt attempt(double t, double dt,
-                                const std::vector<Scalar> &u) {
+  [[nodiscard]] Attempt attempt(double t, double dt, const std::vector<Scalar> &u) {
     if (u.size() != m_local_size) {
-      throw std::invalid_argument(
-          "EmbeddedRKStepper::attempt: u.size() (" +
-          std::to_string(u.size()) + ") != local_size (" +
-          std::to_string(m_local_size) + ")");
+      throw std::invalid_argument("EmbeddedRKStepper::attempt: u.size() (" +
+                                  std::to_string(u.size()) + ") != local_size (" +
+                                  std::to_string(m_local_size) + ")");
     }
 
     const unsigned int s = m_tableau.stage_count();
@@ -171,13 +168,9 @@ public:
     return m_u_high;
   }
 
-  [[nodiscard]] const std::vector<Scalar> &u_low() const noexcept {
-    return m_u_low;
-  }
+  [[nodiscard]] const std::vector<Scalar> &u_low() const noexcept { return m_u_low; }
 
-  [[nodiscard]] const std::vector<Scalar> &error() const noexcept {
-    return m_error;
-  }
+  [[nodiscard]] const std::vector<Scalar> &error() const noexcept { return m_error; }
 
   /** Number of RHS evaluations in the last successful `attempt`. */
   [[nodiscard]] unsigned int last_rhs_evals() const noexcept {

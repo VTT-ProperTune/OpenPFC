@@ -43,11 +43,12 @@ public:
    * satisfied for a valid explicit Runge-Kutta tableau.
    */
   enum class ErrorType {
-    StageCountMismatch,        ///< Coefficient array dimensions do not match stage count
-    ExplicitStructureViolation, ///< Non-zero a_ij found on or above diagonal (must be zero for explicit methods)
-    RowSumInconsistency,       ///< Row sum of a_ij does not match c_i values
-    NonFiniteCoefficient,      ///< NaN or Inf detected in coefficient arrays
-    InvalidStageCount          ///< Stage count s is less than 1
+    StageCountMismatch, ///< Coefficient array dimensions do not match stage count
+    ExplicitStructureViolation, ///< Non-zero a_ij found on or above diagonal (must
+                                ///< be zero for explicit methods)
+    RowSumInconsistency,        ///< Row sum of a_ij does not match c_i values
+    NonFiniteCoefficient,       ///< NaN or Inf detected in coefficient arrays
+    InvalidStageCount           ///< Stage count s is less than 1
   };
 
   /**
@@ -56,7 +57,7 @@ public:
    * @param type Category of validation failure
    * @param message Descriptive error message with component details
    */
-  TableauValidationError(ErrorType type, const std::string& message);
+  TableauValidationError(ErrorType type, const std::string &message);
 
   /**
    * @brief Get error type
@@ -78,8 +79,10 @@ private:
  *
  *   - a_ij: explicit lower-triangular weight matrix (s×s, a_ij = 0 for i ≤ j)
  *   - b_i: output weights for final solution (s-vector)
- *   - c_i: stage times (s-vector, satisfying ∑_{j=0}^{s-1} a_ij = c_i for each row i)
- *   - b_hat_i: optional embedded error-control weights (s-vector for adaptive step-size methods)
+ *   - c_i: stage times (s-vector, satisfying ∑_{j=0}^{s-1} a_ij = c_i for each row
+ * i)
+ *   - b_hat_i: optional embedded error-control weights (s-vector for adaptive
+ * step-size methods)
  *
  * Type parameter T must be a real floating-point type (float or double).
  * Complex state types can use real-valued tableaus; coefficients are applied
@@ -88,14 +91,15 @@ private:
  * @tparam T Real floating-point coefficient type (float or double)
  *
  * @note Coefficients are immutable after construction; accessors return
- *       values, not references, guaranteeing tableau stability during integrator use.
+ *       values, not references, guaranteeing tableau stability during integrator
+ * use.
  *
  * @note Row-sum validation uses type-aware tolerances scaled by machine epsilon
  *       for the coefficient type. For float, tolerances are ~10× larger than double.
  */
-template <typename T>
-class ButcherTableau {
-  static_assert(std::is_floating_point_v<T>, "ButcherTableau<T> requires T to be a real floating-point type");
+template <typename T> class ButcherTableau {
+  static_assert(std::is_floating_point_v<T>,
+                "ButcherTableau<T> requires T to be a real floating-point type");
 
 public:
   /**
@@ -112,16 +116,13 @@ public:
    *
    * @throws TableauValidationError if any validation condition fails
    *
-   * @post All coefficient arrays are stored as const and cannot be modified after construction
+   * @post All coefficient arrays are stored as const and cannot be modified after
+   * construction
    * @post Tableau object represents a valid explicit RK method configuration
    */
-  ButcherTableau(unsigned int s,
-                 std::vector<T> a_ij,
-                 std::vector<T> b_i,
-                 std::vector<T> c_i,
-                 std::vector<T> b_hat_i = {},
-                 std::string_view name = "",
-                 unsigned int order = 0,
+  ButcherTableau(unsigned int s, std::vector<T> a_ij, std::vector<T> b_i,
+                 std::vector<T> c_i, std::vector<T> b_hat_i = {},
+                 std::string_view name = "", unsigned int order = 0,
                  unsigned int embedded_order = 0);
 
   /**
@@ -199,7 +200,7 @@ public:
 
 private:
   void validate() const;
-  void check_finite(const T& value, const char* component, std::size_t index) const;
+  void check_finite(const T &value, const char *component, std::size_t index) const;
   T tolerance() const noexcept;
 
   const unsigned int s_;
@@ -216,12 +217,12 @@ private:
 // TableauValidationError implementation
 // ============================================================================
 
-inline TableauValidationError::TableauValidationError(ErrorType type, const std::string& message)
-  : std::runtime_error(message), type_(type)
-{}
+inline TableauValidationError::TableauValidationError(ErrorType type,
+                                                      const std::string &message)
+    : std::runtime_error(message), type_(type) {}
 
-inline TableauValidationError::ErrorType TableauValidationError::error_type() const noexcept
-{
+inline TableauValidationError::ErrorType
+TableauValidationError::error_type() const noexcept {
   return type_;
 }
 
@@ -230,63 +231,47 @@ inline TableauValidationError::ErrorType TableauValidationError::error_type() co
 // ============================================================================
 
 template <typename T>
-inline ButcherTableau<T>::ButcherTableau(unsigned int s,
-                                         std::vector<T> a_ij,
-                                         std::vector<T> b_i,
-                                         std::vector<T> c_i,
+inline ButcherTableau<T>::ButcherTableau(unsigned int s, std::vector<T> a_ij,
+                                         std::vector<T> b_i, std::vector<T> c_i,
                                          std::vector<T> b_hat_i,
-                                         std::string_view name,
-                                         unsigned int order,
+                                         std::string_view name, unsigned int order,
                                          unsigned int embedded_order)
-  : s_(s),
-    a_ij_(std::move(a_ij)),
-    b_i_(std::move(b_i)),
-    c_i_(std::move(c_i)),
-    b_hat_(std::move(b_hat_i)),
-    name_(name),
-    order_(order),
-    embedded_order_(embedded_order)
-{
+    : s_(s), a_ij_(std::move(a_ij)), b_i_(std::move(b_i)), c_i_(std::move(c_i)),
+      b_hat_(std::move(b_hat_i)), name_(name), order_(order),
+      embedded_order_(embedded_order) {
   validate();
 }
 
-template <typename T>
-inline void ButcherTableau<T>::validate() const
-{
+template <typename T> inline void ButcherTableau<T>::validate() const {
   if (s_ < 1) {
     throw TableauValidationError(
-      TableauValidationError::ErrorType::InvalidStageCount,
-      "stage_count " + std::to_string(s_) + " must be >= 1"
-    );
+        TableauValidationError::ErrorType::InvalidStageCount,
+        "stage_count " + std::to_string(s_) + " must be >= 1");
   }
 
   if (a_ij_.size() != s_ * s_) {
     throw TableauValidationError(
-      TableauValidationError::ErrorType::StageCountMismatch,
-      "a_ij size " + std::to_string(a_ij_.size()) + " != stage_count^2 (" +
-      std::to_string(s_) + ")"
-    );
+        TableauValidationError::ErrorType::StageCountMismatch,
+        "a_ij size " + std::to_string(a_ij_.size()) + " != stage_count^2 (" +
+            std::to_string(s_) + ")");
   }
   if (b_i_.size() != s_) {
     throw TableauValidationError(
-      TableauValidationError::ErrorType::StageCountMismatch,
-      "b_i size " + std::to_string(b_i_.size()) + " != stage_count (" +
-      std::to_string(s_) + ")"
-    );
+        TableauValidationError::ErrorType::StageCountMismatch,
+        "b_i size " + std::to_string(b_i_.size()) + " != stage_count (" +
+            std::to_string(s_) + ")");
   }
   if (c_i_.size() != s_) {
     throw TableauValidationError(
-      TableauValidationError::ErrorType::StageCountMismatch,
-      "c_i size " + std::to_string(c_i_.size()) + " != stage_count (" +
-      std::to_string(s_) + ")"
-    );
+        TableauValidationError::ErrorType::StageCountMismatch,
+        "c_i size " + std::to_string(c_i_.size()) + " != stage_count (" +
+            std::to_string(s_) + ")");
   }
   if (!b_hat_.empty() && b_hat_.size() != s_) {
     throw TableauValidationError(
-      TableauValidationError::ErrorType::StageCountMismatch,
-      "b_hat_i size " + std::to_string(b_hat_.size()) + " != stage_count (" +
-      std::to_string(s_) + ")"
-    );
+        TableauValidationError::ErrorType::StageCountMismatch,
+        "b_hat_i size " + std::to_string(b_hat_.size()) + " != stage_count (" +
+            std::to_string(s_) + ")");
   }
 
   for (std::size_t i = 0; i < a_ij_.size(); ++i) {
@@ -307,10 +292,10 @@ inline void ButcherTableau<T>::validate() const
     for (unsigned int j = i; j < s_; ++j) {
       if (std::fabs(a(i, j)) > tol) {
         throw TableauValidationError(
-          TableauValidationError::ErrorType::ExplicitStructureViolation,
-          "a_ij[" + std::to_string(i) + "][" + std::to_string(j) + "] = " +
-          std::to_string(a(i, j)) + " != 0 for explicit method (must be zero for i <= j)"
-        );
+            TableauValidationError::ErrorType::ExplicitStructureViolation,
+            "a_ij[" + std::to_string(i) + "][" + std::to_string(j) +
+                "] = " + std::to_string(a(i, j)) +
+                " != 0 for explicit method (must be zero for i <= j)");
       }
     }
   }
@@ -323,79 +308,60 @@ inline void ButcherTableau<T>::validate() const
     }
     if (std::fabs(row_sum - c(i)) > row_sum_tol * (T(1) + std::fabs(c(i)))) {
       throw TableauValidationError(
-        TableauValidationError::ErrorType::RowSumInconsistency,
-        "sum_j a_ij[" + std::to_string(i) + "][j] = " + std::to_string(row_sum) +
-        " != c_i[" + std::to_string(i) + "] = " + std::to_string(c(i))
-      );
+          TableauValidationError::ErrorType::RowSumInconsistency,
+          "sum_j a_ij[" + std::to_string(i) + "][j] = " + std::to_string(row_sum) +
+              " != c_i[" + std::to_string(i) + "] = " + std::to_string(c(i)));
     }
   }
 }
 
 template <typename T>
-inline void ButcherTableau<T>::check_finite(const T& value, const char* component, std::size_t index) const
-{
+inline void ButcherTableau<T>::check_finite(const T &value, const char *component,
+                                            std::size_t index) const {
   if (!std::isfinite(value)) {
     throw TableauValidationError(
-      TableauValidationError::ErrorType::NonFiniteCoefficient,
-      std::string(component) + "[" + std::to_string(index) + "] = " +
-      std::to_string(value) + " is not finite"
-    );
+        TableauValidationError::ErrorType::NonFiniteCoefficient,
+        std::string(component) + "[" + std::to_string(index) +
+            "] = " + std::to_string(value) + " is not finite");
   }
 }
 
-template <typename T>
-inline T ButcherTableau<T>::tolerance() const noexcept
-{
+template <typename T> inline T ButcherTableau<T>::tolerance() const noexcept {
   return std::numeric_limits<T>::epsilon();
 }
 
 template <typename T>
-inline T ButcherTableau<T>::a(unsigned int i, unsigned int j) const
-{
+inline T ButcherTableau<T>::a(unsigned int i, unsigned int j) const {
   if (i >= s_ || j >= s_) {
-    throw std::out_of_range(
-      "a(" + std::to_string(i) + "," + std::to_string(j) + ") out of range [0," +
-      std::to_string(s_) + ")"
-    );
+    throw std::out_of_range("a(" + std::to_string(i) + "," + std::to_string(j) +
+                            ") out of range [0," + std::to_string(s_) + ")");
   }
   return a_ij_[i * s_ + j];
 }
 
-template <typename T>
-inline T ButcherTableau<T>::b(unsigned int i) const
-{
+template <typename T> inline T ButcherTableau<T>::b(unsigned int i) const {
   if (i >= s_) {
-    throw std::out_of_range(
-      "b(" + std::to_string(i) + ") out of range [0," +
-      std::to_string(s_) + ")"
-    );
+    throw std::out_of_range("b(" + std::to_string(i) + ") out of range [0," +
+                            std::to_string(s_) + ")");
   }
   return b_i_[i];
 }
 
-template <typename T>
-inline T ButcherTableau<T>::c(unsigned int i) const
-{
+template <typename T> inline T ButcherTableau<T>::c(unsigned int i) const {
   if (i >= s_) {
-    throw std::out_of_range(
-      "c(" + std::to_string(i) + ") out of range [0," +
-      std::to_string(s_) + ")"
-    );
+    throw std::out_of_range("c(" + std::to_string(i) + ") out of range [0," +
+                            std::to_string(s_) + ")");
   }
   return c_i_[i];
 }
 
-template <typename T>
-inline T ButcherTableau<T>::b_hat(unsigned int i) const
-{
+template <typename T> inline T ButcherTableau<T>::b_hat(unsigned int i) const {
   if (b_hat_.empty()) {
     throw std::runtime_error("b_hat not available for this tableau");
   }
   if (i >= s_) {
-    throw std::out_of_range(
-      "b_hat(" + std::to_string(i) + ") out of range [0," +
-      std::to_string(s_) + ")"
-    );
+    throw std::out_of_range("b_hat(" + std::to_string(i) + ") out of range [0," +
+                            std::to_string(s_) + ")");
   }
   return b_hat_[i];
 }
@@ -416,18 +382,9 @@ inline T ButcherTableau<T>::b_hat(unsigned int i) const
  * @tparam T Real floating-point type (float or double)
  * @return ButcherTableau<T> configured for RK2 midpoint
  */
-template <typename T>
-inline ButcherTableau<T> make_rk2_midpoint()
-{
-  return ButcherTableau<T>(
-    2,
-    {T(0), T(0), T(0.5), T(0)},
-    {T(0), T(1)},
-    {T(0), T(0.5)},
-    {},
-    "RK2 midpoint",
-    2
-  );
+template <typename T> inline ButcherTableau<T> make_rk2_midpoint() {
+  return ButcherTableau<T>(2, {T(0), T(0), T(0.5), T(0)}, {T(0), T(1)},
+                           {T(0), T(0.5)}, {}, "RK2 midpoint", 2);
 }
 
 /**
@@ -442,18 +399,9 @@ inline ButcherTableau<T> make_rk2_midpoint()
  * @tparam T Real floating-point type (float or double)
  * @return ButcherTableau<T> configured for RK2 Heun
  */
-template <typename T>
-inline ButcherTableau<T> make_rk2_heun()
-{
-  return ButcherTableau<T>(
-    2,
-    {T(0), T(0), T(1), T(0)},
-    {T(0.5), T(0.5)},
-    {T(0), T(1)},
-    {},
-    "RK2 Heun",
-    2
-  );
+template <typename T> inline ButcherTableau<T> make_rk2_heun() {
+  return ButcherTableau<T>(2, {T(0), T(0), T(1), T(0)}, {T(0.5), T(0.5)},
+                           {T(0), T(1)}, {}, "RK2 Heun", 2);
 }
 
 /**
@@ -468,21 +416,12 @@ inline ButcherTableau<T> make_rk2_heun()
  * @tparam T Real floating-point type (float or double)
  * @return ButcherTableau<T> configured for classical RK4
  */
-template <typename T>
-inline ButcherTableau<T> make_rk4_classical()
-{
-  return ButcherTableau<T>(
-    4,
-    {T(0), T(0), T(0), T(0),
-     T(0.5), T(0), T(0), T(0),
-     T(0), T(0.5), T(0), T(0),
-     T(0), T(0), T(1), T(0)},
-    {T(1.0/6.0), T(1.0/3.0), T(1.0/3.0), T(1.0/6.0)},
-    {T(0), T(0.5), T(0.5), T(1)},
-    {},
-    "RK4 classical",
-    4
-  );
+template <typename T> inline ButcherTableau<T> make_rk4_classical() {
+  return ButcherTableau<T>(4,
+                           {T(0), T(0), T(0), T(0), T(0.5), T(0), T(0), T(0), T(0),
+                            T(0.5), T(0), T(0), T(0), T(0), T(1), T(0)},
+                           {T(1.0 / 6.0), T(1.0 / 3.0), T(1.0 / 3.0), T(1.0 / 6.0)},
+                           {T(0), T(0.5), T(0.5), T(1)}, {}, "RK4 classical", 4);
 }
 
 /**
@@ -502,22 +441,15 @@ inline ButcherTableau<T> make_rk4_classical()
  * @tparam T Real floating-point type (float or double)
  * @return ButcherTableau<T> configured for Bogacki-Shampine 3(2)
  */
-template <typename T>
-inline ButcherTableau<T> make_embedded_rk23()
-{
-  return ButcherTableau<T>(
-    4,
-    {T(0), T(0), T(0), T(0),
-     T(0.5), T(0), T(0), T(0),
-     T(0), T(0.75), T(0), T(0),
-     T(2.0/9.0), T(1.0/3.0), T(4.0/9.0), T(0)},
-    {T(2.0/9.0), T(1.0/3.0), T(4.0/9.0), T(0)},
-    {T(0), T(0.5), T(0.75), T(1)},
-    {T(7.0/24.0), T(1.0/4.0), T(1.0/3.0), T(1.0/8.0)},
-    "Bogacki-Shampine 3(2)",
-    3,
-    2
-  );
+template <typename T> inline ButcherTableau<T> make_embedded_rk23() {
+  return ButcherTableau<T>(4,
+                           {T(0), T(0), T(0), T(0), T(0.5), T(0), T(0), T(0), T(0),
+                            T(0.75), T(0), T(0), T(2.0 / 9.0), T(1.0 / 3.0),
+                            T(4.0 / 9.0), T(0)},
+                           {T(2.0 / 9.0), T(1.0 / 3.0), T(4.0 / 9.0), T(0)},
+                           {T(0), T(0.5), T(0.75), T(1)},
+                           {T(7.0 / 24.0), T(1.0 / 4.0), T(1.0 / 3.0), T(1.0 / 8.0)},
+                           "Bogacki-Shampine 3(2)", 3, 2);
 }
 
 /**
@@ -531,42 +463,38 @@ inline ButcherTableau<T> make_embedded_rk23()
  * Coefficients (row-major `a_ij`, length 49; zeros on/above the diagonal):
  *   - c: [0, 1/5, 3/10, 4/5, 8/9, 1, 1]
  *   - b (5th): [35/384, 0, 500/1113, 125/192, -2187/6784, 11/84, 0]
- *   - b_hat (4th): [5179/57600, 0, 7571/16695, 393/640, -92097/339200, 187/2100, 1/40]
+ *   - b_hat (4th): [5179/57600, 0, 7571/16695, 393/640, -92097/339200, 187/2100,
+ * 1/40]
  *
  * @tparam T Real floating-point type (float or double)
  * @return ButcherTableau<T> configured for Dormand-Prince 5(4)
  */
-template <typename T>
-inline ButcherTableau<T> make_embedded_rk45()
-{
+template <typename T> inline ButcherTableau<T> make_embedded_rk45() {
   return ButcherTableau<T>(
-    7,
-    {// row 0
-     T(0), T(0), T(0), T(0), T(0), T(0), T(0),
-     // row 1
-     T(1) / T(5), T(0), T(0), T(0), T(0), T(0), T(0),
-     // row 2
-     T(3) / T(40), T(9) / T(40), T(0), T(0), T(0), T(0), T(0),
-     // row 3
-     T(44) / T(45), T(-56) / T(15), T(32) / T(9), T(0), T(0), T(0), T(0),
-     // row 4
-     T(19372) / T(6561), T(-25360) / T(2187), T(64448) / T(6561),
-     T(-212) / T(729), T(0), T(0), T(0),
-     // row 5
-     T(9017) / T(3168), T(-355) / T(33), T(46732) / T(5247), T(49) / T(176),
-     T(-5103) / T(18656), T(0), T(0),
-     // row 6
-     T(35) / T(384), T(0), T(500) / T(1113), T(125) / T(192),
-     T(-2187) / T(6784), T(11) / T(84), T(0)},
-    {T(35) / T(384), T(0), T(500) / T(1113), T(125) / T(192),
-     T(-2187) / T(6784), T(11) / T(84), T(0)},
-    {T(0), T(1) / T(5), T(3) / T(10), T(4) / T(5), T(8) / T(9), T(1), T(1)},
-    {T(5179) / T(57600), T(0), T(7571) / T(16695), T(393) / T(640),
-     T(-92097) / T(339200), T(187) / T(2100), T(1) / T(40)},
-    "Dormand-Prince 5(4)",
-    5,
-    4
-  );
+      7,
+      {// row 0
+       T(0), T(0), T(0), T(0), T(0), T(0), T(0),
+       // row 1
+       T(1) / T(5), T(0), T(0), T(0), T(0), T(0), T(0),
+       // row 2
+       T(3) / T(40), T(9) / T(40), T(0), T(0), T(0), T(0), T(0),
+       // row 3
+       T(44) / T(45), T(-56) / T(15), T(32) / T(9), T(0), T(0), T(0), T(0),
+       // row 4
+       T(19372) / T(6561), T(-25360) / T(2187), T(64448) / T(6561), T(-212) / T(729),
+       T(0), T(0), T(0),
+       // row 5
+       T(9017) / T(3168), T(-355) / T(33), T(46732) / T(5247), T(49) / T(176),
+       T(-5103) / T(18656), T(0), T(0),
+       // row 6
+       T(35) / T(384), T(0), T(500) / T(1113), T(125) / T(192), T(-2187) / T(6784),
+       T(11) / T(84), T(0)},
+      {T(35) / T(384), T(0), T(500) / T(1113), T(125) / T(192), T(-2187) / T(6784),
+       T(11) / T(84), T(0)},
+      {T(0), T(1) / T(5), T(3) / T(10), T(4) / T(5), T(8) / T(9), T(1), T(1)},
+      {T(5179) / T(57600), T(0), T(7571) / T(16695), T(393) / T(640),
+       T(-92097) / T(339200), T(187) / T(2100), T(1) / T(40)},
+      "Dormand-Prince 5(4)", 5, 4);
 }
 
 } // namespace pfc::sim::steppers

@@ -50,8 +50,7 @@ namespace pfc::fft::layout {
 
 using pfc::types::Int3;
 
-inline constexpr const char *kComplexProcGridEnv =
-    "OPENPFC_FFT_COMPLEX_PROC_GRID";
+inline constexpr const char *kComplexProcGridEnv = "OPENPFC_FFT_COMPLEX_PROC_GRID";
 inline constexpr const char *kComplexOutboxEnv = "OPENPFC_FFT_COMPLEX_OUTBOX";
 
 enum class ReshapeKind { Identity, Local, Mpi };
@@ -84,8 +83,8 @@ effective_r2c_plan_options(heffte::plan_options options) {
   return heffte::box3d<int>({0, 0, 0}, {size[0] - 1, size[1] - 1, size[2] - 1});
 }
 
-[[nodiscard]] inline heffte::box3d<int>
-r2c_complex_world_box(const Int3 &size, int r2c_direction) {
+[[nodiscard]] inline heffte::box3d<int> r2c_complex_world_box(const Int3 &size,
+                                                              int r2c_direction) {
   if (r2c_direction == 0) {
     return heffte::box3d<int>({0, 0, 0}, {size[0] / 2, size[1] - 1, size[2] - 1});
   }
@@ -128,8 +127,8 @@ split_boxes_are_legal(const std::vector<heffte::box3d<int>> &boxes,
 }
 
 [[nodiscard]] inline bool
-complex_proc_grid_is_legal(const heffte::box3d<int> &complex_world,
-                           const Int3 &grid, int nproc) {
+complex_proc_grid_is_legal(const heffte::box3d<int> &complex_world, const Int3 &grid,
+                           int nproc) {
   if (nproc < 1 || proc_grid_nproc(grid) != nproc) {
     return false;
   }
@@ -201,8 +200,7 @@ plan_r2c_outbox_cost(const heffte::box3d<int> &real_world, const Int3 &real_grid
   boxes.in = heffte::split_world(real_world, real_grid);
   boxes.out = heffte::split_world(complex_world, complex_grid);
   if (!split_boxes_are_legal(boxes.in, real_world)) {
-    throw std::invalid_argument(
-        "plan_r2c_outbox_cost: illegal real process grid");
+    throw std::invalid_argument("plan_r2c_outbox_cost: illegal real process grid");
   }
   const auto plan = [&]() {
     try {
@@ -234,16 +232,15 @@ plan_r2c_outbox_cost(const heffte::box3d<int> &real_world, const Int3 &real_grid
     cost.volume_imbalance = static_cast<double>(cost.max_box_count) /
                             static_cast<double>(cost.min_box_count);
   }
-  const int a = std::max({cost.local_box_max[0], cost.local_box_max[1],
-                          cost.local_box_max[2]});
-  const int bmin = std::min({cost.local_box_min[0], cost.local_box_min[1],
-                             cost.local_box_min[2]});
+  const int a = std::max(
+      {cost.local_box_max[0], cost.local_box_max[1], cost.local_box_max[2]});
+  const int bmin = std::min(
+      {cost.local_box_min[0], cost.local_box_min[1], cost.local_box_min[2]});
   if (bmin > 0) {
     cost.box_aspect = static_cast<double>(a) / static_cast<double>(bmin);
   }
   for (int i = 0; i < 4; ++i) {
-    const ReshapeKind kind =
-        classify_reshape(plan.in_shape[i], plan.out_shape[i]);
+    const ReshapeKind kind = classify_reshape(plan.in_shape[i], plan.out_shape[i]);
     if (kind == ReshapeKind::Identity) {
       ++cost.n_identity;
     } else if (kind == ReshapeKind::Local) {
@@ -258,9 +255,8 @@ plan_r2c_outbox_cost(const heffte::box3d<int> &real_world, const Int3 &real_grid
   return cost;
 }
 
-[[nodiscard]] inline bool
-complex_outbox_cost_better(const ComplexOutboxCost &a,
-                           const ComplexOutboxCost &b) {
+[[nodiscard]] inline bool complex_outbox_cost_better(const ComplexOutboxCost &a,
+                                                     const ComplexOutboxCost &b) {
   if (a.n_mpi_reshapes != b.n_mpi_reshapes) {
     return a.n_mpi_reshapes < b.n_mpi_reshapes;
   }
@@ -332,8 +328,8 @@ complex_outbox_cost_better(const ComplexOutboxCost &a,
     if (i < 2) {
       if (*end != ',' && *end != 'x' && *end != 'X') {
         throw std::invalid_argument(std::string(kComplexProcGridEnv) +
-                                    " must be gx,gy,gz or gx x gy x gz, got \"" +
-                                    e + "\"");
+                                    " must be gx,gy,gz or gx x gy x gz, got \"" + e +
+                                    "\"");
       }
       p = end + 1;
     } else if (*end != '\0') {
@@ -358,9 +354,10 @@ complex_outbox_cost_better(const ComplexOutboxCost &a,
 }
 
 /// Even-divisibility y-slab when r2c is x and the real inbox is a z-slab.
-[[nodiscard]] inline Int3 legacy_complex_proc_grid_for_r2c(
-    const Int3 &real_grid, const heffte::box3d<int> &complex_world,
-    int r2c_direction) {
+[[nodiscard]] inline Int3
+legacy_complex_proc_grid_for_r2c(const Int3 &real_grid,
+                                 const heffte::box3d<int> &complex_world,
+                                 int r2c_direction) {
   if (r2c_direction == 0 && real_grid[0] == 1 && real_grid[1] == 1 &&
       real_grid[2] > 1) {
     const int n = real_grid[2];
@@ -375,8 +372,7 @@ complex_outbox_cost_better(const ComplexOutboxCost &a,
 [[nodiscard]] inline Int3
 complex_proc_grid_for_r2c(const Int3 &real_grid,
                           const heffte::box3d<int> &real_world,
-                          const heffte::box3d<int> &complex_world,
-                          int r2c_direction,
+                          const heffte::box3d<int> &complex_world, int r2c_direction,
                           const heffte::plan_options &options) {
   const int nproc = proc_grid_nproc(real_grid);
   const Int3 forced = parse_complex_proc_grid_override();
@@ -390,8 +386,7 @@ complex_proc_grid_for_r2c(const Int3 &real_grid,
     return forced;
   }
   if (complex_outbox_mode() == ComplexOutboxMode::Legacy) {
-    return legacy_complex_proc_grid_for_r2c(real_grid, complex_world,
-                                            r2c_direction);
+    return legacy_complex_proc_grid_for_r2c(real_grid, complex_world, r2c_direction);
   }
   return select_min_distributed_reshape_complex_grid(
       real_world, real_grid, complex_world, r2c_direction, options);

@@ -22,7 +22,8 @@
  * used directly (Audit §13.3; the previous attempt was rejected for inventing a
  * colliding duplicate `pfc::data::Field`).
  *
- * Owns named fields for 0.2 sessions (`pfc::ui::SpectralETDSession`, `SpectralETDSystem`).
+ * Owns named fields for 0.2 sessions (`pfc::ui::SpectralETDSession`,
+ * `SpectralETDSystem`).
  */
 
 #include <algorithm>

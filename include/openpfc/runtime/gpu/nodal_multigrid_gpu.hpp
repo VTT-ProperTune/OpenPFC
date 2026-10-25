@@ -14,8 +14,8 @@
 
 #include <cstddef>
 
-#include <openpfc/solvers/nodal_multigrid_kernels.hpp>
 #include <openpfc/solvers/nodal_dirichlet_kernels.hpp>
+#include <openpfc/solvers/nodal_multigrid_kernels.hpp>
 
 namespace pfc::solvers::gpu::nmg {
 
@@ -36,17 +36,18 @@ using Operator = ::pfc::solvers::nmg::Operator;
                           double *out);                                             \
   /* Input and output have halo-2 padding. Physical exterior coefficients   */      \
   /* are zero; caller arranges device halos through OpenPFC.                */      \
-  void dirichlet_apply_##sfx(const Level &L,                                    \
-     const ::pfc::solvers::nmg::dirichlet::Weights &w, const double *u, double *out); \
+  void dirichlet_apply_##sfx(const Level &L,                                        \
+                             const ::pfc::solvers::nmg::dirichlet::Weights &w,      \
+                             const double *u, double *out);                         \
   /* Distinct old and new buffers, both with halo width 2.                  */      \
-  void dirichlet_jacobi_##sfx(                                                    \
-      const Level &L, const ::pfc::solvers::nmg::dirichlet::Weights &w,              \
+  void dirichlet_jacobi_##sfx(                                                      \
+      const Level &L, const ::pfc::solvers::nmg::dirichlet::Weights &w,             \
       const double *old_u, const double *rhs, double *new_u, double scale);         \
-  /* Caller has already exchanged fine residual and coarse correction.     */      \
-  void dirichlet_restrict_##sfx(const Level &F, const double *rf,                  \
-                                const Level &C, double *rc);                       \
-  void dirichlet_prolong_##sfx(const Level &F, double *uf,                          \
-                               const Level &C, const double *uc);                  \
+  /* Caller has already exchanged fine residual and coarse correction.     */       \
+  void dirichlet_restrict_##sfx(const Level &F, const double *rf, const Level &C,   \
+                                double *rc);                                        \
+  void dirichlet_prolong_##sfx(const Level &F, double *uf, const Level &C,          \
+                               const double *uc);                                   \
   void residual_##sfx(const Level &L, const Operator &A, const double *f,           \
                       const double *u, double *r, int zero_u);                      \
   void chebyshev_##sfx(const Level &L, const Operator &A, const double *f,          \

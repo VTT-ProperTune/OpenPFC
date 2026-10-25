@@ -60,13 +60,13 @@ public:
 
   void set_mpi_comm(MPI_Comm comm) noexcept override { m_io_comm = comm; }
 
-  void apply(pfc::field::FieldOutput<double> field, const Domain &domain, const Box3i &box,
-             double time = 0.0) override {
+  void apply(pfc::field::FieldOutput<double> field, const Domain &domain,
+             const Box3i &box, double time = 0.0) override {
     apply(SimulationContext{m_io_comm}, field, domain, box, time);
   }
 
-  void apply(const SimulationContext &ctx, pfc::field::FieldOutput<double> field, const Domain &domain,
-             const Box3i &inbox, double time = 0.0) override {
+  void apply(const SimulationContext &ctx, pfc::field::FieldOutput<double> field,
+             const Domain &domain, const Box3i &inbox, double time = 0.0) override {
     (void)time;
     if (ctx.is_rank0()) {
       const pfc::Logger lg{pfc::LogLevel::Info, 0};
@@ -84,8 +84,6 @@ public:
       throw std::runtime_error(oss.str());
     }
   }
-
-
 };
 
 } // namespace pfc

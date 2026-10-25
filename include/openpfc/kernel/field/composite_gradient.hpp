@@ -126,31 +126,31 @@ namespace pfc::gradient {
 // the PerField types automatically.
 
 template <class Composite, class... PerField>
-[[nodiscard]] inline auto
-make_composite_gradient(const pfc::Box3i& region, PerField... evals) {
+[[nodiscard]] inline auto make_composite_gradient(const pfc::Box3i &region,
+                                                  PerField... evals) {
   // CompositeGradient doesn't directly use Box3i/Domain in its constructor
   // - it relies on the component evaluators for bounds and domain info
   return pfc::field::CompositeGradient<Composite, PerField...>(std::move(evals)...);
 }
 
 template <class Composite, class... PerField>
-[[nodiscard]] inline auto
-make_composite_gradient(const pfc::Box3i& region, const pfc::Domain& domain,
-                        PerField... evals) {
+[[nodiscard]] inline auto make_composite_gradient(const pfc::Box3i &region,
+                                                  const pfc::Domain &domain,
+                                                  PerField... evals) {
   // Domain parameter provided for API consistency; bounds from components
-  (void)region;  // Suppress unused warning - bounds come from components
-  (void)domain;  // Suppress unused warning - domain info from components
+  (void)region; // Suppress unused warning - bounds come from components
+  (void)domain; // Suppress unused warning - domain info from components
   return pfc::field::CompositeGradient<Composite, PerField...>(std::move(evals)...);
 }
 
 template <class Composite, class... PerField>
 [[nodiscard]] inline auto
-make_composite_gradient(const pfc::Box3i& region, const pfc::Domain& domain,
-                        const std::array<double, 3>& spacing, PerField... evals) {
+make_composite_gradient(const pfc::Box3i &region, const pfc::Domain &domain,
+                        const std::array<double, 3> &spacing, PerField... evals) {
   // Spacing parameter provided for API consistency; configuration from components
-  (void)region;   // Suppress unused warning
-  (void)domain;   // Suppress unused warning
-  (void)spacing;  // Suppress unused warning - config from components
+  (void)region;  // Suppress unused warning
+  (void)domain;  // Suppress unused warning
+  (void)spacing; // Suppress unused warning - config from components
   return pfc::field::CompositeGradient<Composite, PerField...>(std::move(evals)...);
 }
 

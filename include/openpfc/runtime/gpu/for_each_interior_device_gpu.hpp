@@ -123,11 +123,11 @@ struct DeviceInc4 {
   return DevicePtrPack2{a, b};
 }
 [[nodiscard]] inline DevicePtrPack3 make_device_ptr_pack(double *a, double *b,
-                                                        double *c) {
+                                                         double *c) {
   return DevicePtrPack3{a, b, c};
 }
 [[nodiscard]] inline DevicePtrPack4 make_device_ptr_pack(double *a, double *b,
-                                                        double *c, double *d) {
+                                                         double *c, double *d) {
   return DevicePtrPack4{a, b, c, d};
 }
 
@@ -142,18 +142,18 @@ namespace detail {
  * @brief Device scatter via named members (no `std::get` / `std::apply`).
  */
 __device__ inline void scatter_device(DevicePtrPack2 du, DeviceInc2 inc,
-                                     std::ptrdiff_t c) {
+                                      std::ptrdiff_t c) {
   du.p0[c] = inc.v0;
   du.p1[c] = inc.v1;
 }
 __device__ inline void scatter_device(DevicePtrPack3 du, DeviceInc3 inc,
-                                     std::ptrdiff_t c) {
+                                      std::ptrdiff_t c) {
   du.p0[c] = inc.v0;
   du.p1[c] = inc.v1;
   du.p2[c] = inc.v2;
 }
 __device__ inline void scatter_device(DevicePtrPack4 du, DeviceInc4 inc,
-                                     std::ptrdiff_t c) {
+                                      std::ptrdiff_t c) {
   du.p0[c] = inc.v0;
   du.p1[c] = inc.v1;
   du.p2[c] = inc.v2;
@@ -174,10 +174,10 @@ __device__ inline void scatter_device(DevicePtrPack4 du, DeviceInc4 inc,
  * device-specific machinery beyond `rhs(t, g)` annotated `OPENPFC_HD`.
  */
 template <class Model, class G>
-__global__ void
-for_each_interior_device_kernel(Model model, ::pfc::gpu::FDGradientDevicePOD eval,
-                                double *du_padded, double t, int nx, int ny,
-                                int nz) {
+__global__ void for_each_interior_device_kernel(Model model,
+                                                ::pfc::gpu::FDGradientDevicePOD eval,
+                                                double *du_padded, double t, int nx,
+                                                int ny, int nz) {
   const int ix = static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x);
   const int iy = static_cast<int>(blockIdx.y * blockDim.y + threadIdx.y);
   const int iz = static_cast<int>(blockIdx.z * blockDim.z + threadIdx.z);
@@ -200,9 +200,10 @@ for_each_interior_device_kernel(Model model, ::pfc::gpu::FDGradientDevicePOD eva
  * `evaluate_fd_grad_composite<Composite, PerFieldGrads...>`.
  */
 template <class Model, class Composite, class DuPack, class... PerFieldGrads>
-__global__ void for_each_interior_device_kernel_multi(
-    Model model, ::pfc::gpu::CompositeGradientDevicePOD eval, DuPack du,
-    double t, int nx, int ny, int nz) {
+__global__ void
+for_each_interior_device_kernel_multi(Model model,
+                                      ::pfc::gpu::CompositeGradientDevicePOD eval,
+                                      DuPack du, double t, int nx, int ny, int nz) {
   const int ix = static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x);
   const int iy = static_cast<int>(blockIdx.y * blockDim.y + threadIdx.y);
   const int iz = static_cast<int>(blockIdx.z * blockDim.z + threadIdx.z);
@@ -210,8 +211,8 @@ __global__ void for_each_interior_device_kernel_multi(
     return;
   }
   const Composite grad =
-      ::pfc::gpu::evaluate_fd_grad_composite<Composite, PerFieldGrads...>(
-          eval, ix, iy, iz);
+      ::pfc::gpu::evaluate_fd_grad_composite<Composite, PerFieldGrads...>(eval, ix,
+                                                                          iy, iz);
   const auto inc = model.rhs(t, grad);
   const auto &f0 = eval.fields[0];
   const std::ptrdiff_t c = static_cast<std::ptrdiff_t>(ix + f0.hw) +
@@ -231,8 +232,8 @@ inline dim3 for_each_interior_block(int nx, int ny, int nz) {
   (void)ny;
   (void)nz;
 #ifdef OpenPFC_ENABLE_GPU_AUTOTUNING
-  size_t total_elements = static_cast<size_t>(nx) * static_cast<size_t>(ny) *
-                          static_cast<size_t>(nz);
+  size_t total_elements =
+      static_cast<size_t>(nx) * static_cast<size_t>(ny) * static_cast<size_t>(nz);
   auto config = pfc::gpu::AutoTuner::instance().get_config("for_each_interior_3d",
                                                            total_elements);
   return dim3(config.block_size_x, config.block_size_y, config.block_size_z);
@@ -262,8 +263,8 @@ inline void check_for_each_interior_device_launch(gpuStream_t stream,
 template <class Model, class G>
 __global__ void
 for_each_owned_box_device_kernel(Model model, ::pfc::gpu::FDGradientDevicePOD eval,
-                                 double *du_padded, double t, int i0, int j0,
-                                 int k0, int ni, int nj, int nk) {
+                                 double *du_padded, double t, int i0, int j0, int k0,
+                                 int ni, int nj, int nk) {
   const int ix = i0 + static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x);
   const int iy = j0 + static_cast<int>(blockIdx.y * blockDim.y + threadIdx.y);
   const int iz = k0 + static_cast<int>(blockIdx.z * blockDim.z + threadIdx.z);
@@ -347,8 +348,7 @@ __device__ inline void owned_shell_ijk(int tid, int nx, int ny, int nz, int hw,
 /// launch-bound on LUMI-G (six kernels ~0.13 ms vs ~0.38 ms full RHS).
 template <class Model, class G>
 __global__ void
-for_each_owned_shell_device_kernel(Model model,
-                                   ::pfc::gpu::FDGradientDevicePOD eval,
+for_each_owned_shell_device_kernel(Model model, ::pfc::gpu::FDGradientDevicePOD eval,
                                    double *du_padded, double t, int nx, int ny,
                                    int nz, int hw, int n_shell) {
   const int tid = static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x);
@@ -437,7 +437,7 @@ for_each_interior_device(const Model &model,
   const dim3 block = detail::for_each_interior_block(nx, ny, nz);
   const dim3 grid = detail::for_each_interior_grid(nx, ny, nz, block);
   detail::for_each_interior_device_kernel_multi<Model, Composite, DevicePtrPack2,
-                                               PerFieldGrads...>
+                                                PerFieldGrads...>
       <<<grid, block, 0, stream>>>(model, eval, du, t, nx, ny, nz);
   detail::check_for_each_interior_device_launch(stream);
 }
@@ -454,7 +454,7 @@ for_each_interior_device(const Model &model,
   const dim3 block = detail::for_each_interior_block(nx, ny, nz);
   const dim3 grid = detail::for_each_interior_grid(nx, ny, nz, block);
   detail::for_each_interior_device_kernel_multi<Model, Composite, DevicePtrPack3,
-                                               PerFieldGrads...>
+                                                PerFieldGrads...>
       <<<grid, block, 0, stream>>>(model, eval, du, t, nx, ny, nz);
   detail::check_for_each_interior_device_launch(stream);
 }
@@ -471,7 +471,7 @@ for_each_interior_device(const Model &model,
   const dim3 block = detail::for_each_interior_block(nx, ny, nz);
   const dim3 grid = detail::for_each_interior_grid(nx, ny, nz, block);
   detail::for_each_interior_device_kernel_multi<Model, Composite, DevicePtrPack4,
-                                               PerFieldGrads...>
+                                                PerFieldGrads...>
       <<<grid, block, 0, stream>>>(model, eval, du, t, nx, ny, nz);
   detail::check_for_each_interior_device_launch(stream);
 }
@@ -571,9 +571,8 @@ inline void for_each_border_device(const Model &model,
   }
   constexpr int block = 256;
   const int grid = (n_shell + block - 1) / block;
-  detail::for_each_owned_shell_device_kernel<Model, G>
-      <<<grid, block, 0, stream>>>(model, eval.pod(), du_padded, t, nx, ny, nz,
-                                   hw, n_shell);
+  detail::for_each_owned_shell_device_kernel<Model, G><<<grid, block, 0, stream>>>(
+      model, eval.pod(), du_padded, t, nx, ny, nz, hw, n_shell);
   detail::check_for_each_interior_device_launch(stream, sync);
 }
 

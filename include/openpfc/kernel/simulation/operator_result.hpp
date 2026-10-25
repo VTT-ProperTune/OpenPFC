@@ -40,7 +40,8 @@ enum class Status {
   nan_detected,
   /** Numerical overflow detected. */
   overflow,
-  /** Preparation phase failed (e.g., workspace allocation, factor precomputation). */
+  /** Preparation phase failed (e.g., workspace allocation, factor precomputation).
+   */
   preparation_failed,
   /** Execution phase failed (e.g., kernel launch, numerical error). */
   execution_failed,

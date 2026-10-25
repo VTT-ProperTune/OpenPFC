@@ -55,15 +55,14 @@ namespace pfc::data {
  * ```
  */
 template <typename T>
-Field<T, HostSpace> field_from_subdomain(const decomposition::Decomposition& decomp,
-                                          int rank, int halo) {
+Field<T, HostSpace> field_from_subdomain(const decomposition::Decomposition &decomp,
+                                         int rank, int halo) {
   if (halo < 0) {
     throw std::invalid_argument("halo must be non-negative");
   }
   // Padded layout: storage padding == iteration halo.
   return Field<T, HostSpace>(decomposition::domain(decomp),
-                              decomposition::local_box(decomp, rank),
-                              halo);
+                             decomposition::local_box(decomp, rank), halo);
 }
 
 /**
@@ -74,14 +73,14 @@ Field<T, HostSpace> field_from_subdomain(const decomposition::Decomposition& dec
  */
 template <typename T>
 Field<T, HostSpace>
-field_from_subdomain_unpadded(const decomposition::Decomposition &decomp,
-                              int rank, int iteration_halo = 0) {
+field_from_subdomain_unpadded(const decomposition::Decomposition &decomp, int rank,
+                              int iteration_halo = 0) {
   if (iteration_halo < 0) {
     throw std::invalid_argument("iteration_halo must be non-negative");
   }
   return Field<T, HostSpace>(decomposition::domain(decomp),
-                              decomposition::local_box(decomp, rank),
-                              /*storage_halo=*/0, iteration_halo);
+                             decomposition::local_box(decomp, rank),
+                             /*storage_halo=*/0, iteration_halo);
 }
 
 /**
@@ -93,7 +92,7 @@ template <typename T>
 Field<T, HostSpace> field_from_inbox(const pfc::Domain &domain,
                                      const pfc::Box3i &inbox) {
   return Field<T, HostSpace>(domain, inbox, /*storage_halo=*/0,
-                              /*iteration_halo=*/0);
+                             /*iteration_halo=*/0);
 }
 
 } // namespace pfc::data

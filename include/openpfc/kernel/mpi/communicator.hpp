@@ -43,9 +43,8 @@ namespace pfc::mpi {
 class communicator {
 
 private:
-  static constexpr auto comm_deleter = [](MPI_Comm* comm) {
-    if (comm && *comm != MPI_COMM_WORLD &&
-        *comm != MPI_COMM_SELF &&
+  static constexpr auto comm_deleter = [](MPI_Comm *comm) {
+    if (comm && *comm != MPI_COMM_WORLD && *comm != MPI_COMM_SELF &&
         *comm != MPI_COMM_NULL) {
       MPI_Comm_free(comm);
     }
@@ -54,7 +53,8 @@ private:
 
 public:
   communicator()
-      : comm_ptr(std::shared_ptr<MPI_Comm>(new MPI_Comm(MPI_COMM_WORLD), comm_deleter)) {}
+      : comm_ptr(
+            std::shared_ptr<MPI_Comm>(new MPI_Comm(MPI_COMM_WORLD), comm_deleter)) {}
 
   /** @brief Wrap an existing communicator (e.g. application or sub-communicator). */
   explicit communicator(MPI_Comm c)

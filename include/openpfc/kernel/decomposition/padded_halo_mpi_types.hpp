@@ -117,11 +117,9 @@ inline int checked_padded_extent(int n, int hw) {
  *         non-positive, or (when `halo_width > 0`) an owned axis with an
  *         active face is `< halo_width`
  */
-inline std::array<FaceTypes, 6>
-create_padded_face_types_6(int nx, int ny, int nz, int halo_width,
-                           MPI_Datatype element_type,
-                           const std::array<bool, 6> &active = {true, true, true,
-                                                                true, true, true}) {
+inline std::array<FaceTypes, 6> create_padded_face_types_6(
+    int nx, int ny, int nz, int halo_width, MPI_Datatype element_type,
+    const std::array<bool, 6> &active = {true, true, true, true, true, true}) {
   if (halo_width < 0) {
     throw std::invalid_argument(
         "pfc::halo::create_padded_face_types_6: halo_width must be "

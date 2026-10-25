@@ -186,8 +186,8 @@ public:
 
     // Combination into method-owned storage: k2 does not appear here.
     for (std::size_t i = 0; i < n; ++i) {
-      m_u_temp[i] = u[i] + Scalar(m_dt / 4.0) * m_k1[i] +
-                    Scalar(3.0 * m_dt / 4.0) * m_k2[i];
+      m_u_temp[i] =
+          u[i] + Scalar(m_dt / 4.0) * m_k1[i] + Scalar(3.0 * m_dt / 4.0) * m_k2[i];
     }
     return Attempt(t, m_dt, t + m_dt, /*success=*/true, m_u_temp);
   }
@@ -206,8 +206,7 @@ public:
   }
 
   /** Advance host field state by one Heun RK3 step. */
-  template <pfc::field::HostFieldState<Scalar> F>
-  double step(double t, F &u) {
+  template <pfc::field::HostFieldState<Scalar> F> double step(double t, F &u) {
     return step(t, u.vec());
   }
 

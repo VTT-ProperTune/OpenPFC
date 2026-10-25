@@ -43,7 +43,8 @@ public:
     for (int d = 0; d < 3; ++d) {
       if (free_nodes[d] < 1 ||
           static_cast<std::size_t>(free_nodes[d]) > max_unknowns / N)
-        throw std::invalid_argument("DenseCoarseCholesky: coarse grid exceeds capacity");
+        throw std::invalid_argument(
+            "DenseCoarseCholesky: coarse grid exceeds capacity");
       N *= static_cast<std::size_t>(free_nodes[d]);
     }
     if (N > max_unknowns || N > std::numeric_limits<std::size_t>::max() / N)
@@ -60,9 +61,8 @@ public:
             for (int dy = -1; dy <= 1; ++dy)
               for (int dx = -1; dx <= 1; ++dx) {
                 const int ci = i + dx, cj = j + dy, ck = k + dz;
-                if (ci >= 0 && cj >= 0 && ck >= 0 &&
-                    ci < free_nodes[0] && cj < free_nodes[1] &&
-                    ck < free_nodes[2]) {
+                if (ci >= 0 && cj >= 0 && ck >= 0 && ci < free_nodes[0] &&
+                    cj < free_nodes[1] && ck < free_nodes[2]) {
                   const double a = weights.v[offset_index(dx, dy, dz)];
                   if (!std::isfinite(a))
                     throw std::invalid_argument(
@@ -78,9 +78,8 @@ public:
     for (std::size_t i = 0; i < N; ++i)
       for (std::size_t j = 0; j < i; ++j) {
         const double a = L[i * N + j], b = L[j * N + i];
-        if (std::abs(a - b) >
-            128.0 * std::numeric_limits<double>::epsilon() *
-                (1.0 + std::abs(a) + std::abs(b)))
+        if (std::abs(a - b) > 128.0 * std::numeric_limits<double>::epsilon() *
+                                  (1.0 + std::abs(a) + std::abs(b)))
           throw std::invalid_argument(
               "DenseCoarseCholesky: asymmetric Q1 coarse operator");
       }
@@ -88,8 +87,7 @@ public:
     for (std::size_t i = 0; i < N; ++i)
       for (std::size_t j = 0; j <= i; ++j) {
         double entry = L[i * N + j];
-        for (std::size_t k = 0; k < j; ++k)
-          entry -= L[i * N + k] * L[j * N + k];
+        for (std::size_t k = 0; k < j; ++k) entry -= L[i * N + k] * L[j * N + k];
         if (i == j) {
           if (!(entry > 0.0) || !std::isfinite(entry))
             throw std::runtime_error(
@@ -121,14 +119,12 @@ public:
       double value = rhs[i];
       if (!std::isfinite(value))
         throw std::invalid_argument("DenseCoarseCholesky: nonfinite coarse RHS");
-      for (std::size_t j = 0; j < i; ++j)
-        value -= m_lower[i * m_N + j] * x[j];
+      for (std::size_t j = 0; j < i; ++j) value -= m_lower[i * m_N + j] * x[j];
       x[i] = value / m_lower[i * m_N + i];
     }
     for (std::size_t i = m_N; i-- > 0;) {
       double value = x[i];
-      for (std::size_t j = i + 1; j < m_N; ++j)
-        value -= m_lower[j * m_N + i] * x[j];
+      for (std::size_t j = i + 1; j < m_N; ++j) value -= m_lower[j * m_N + i] * x[j];
       x[i] = value / m_lower[i * m_N + i];
     }
   }
@@ -138,8 +134,7 @@ private:
     return static_cast<std::size_t>(i) +
            static_cast<std::size_t>(n[0]) *
                (static_cast<std::size_t>(j) +
-                static_cast<std::size_t>(n[1]) *
-                    static_cast<std::size_t>(k));
+                static_cast<std::size_t>(n[1]) * static_cast<std::size_t>(k));
   }
 
   Int3 m_nodes{};
