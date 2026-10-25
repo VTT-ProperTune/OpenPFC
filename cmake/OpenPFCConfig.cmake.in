@@ -3,6 +3,9 @@
 
 @PACKAGE_INIT@
 
+# Preserve our prefix before dependency configs set PACKAGE_PREFIX_DIR.
+set(_OpenPFC_PACKAGE_PREFIX "${PACKAGE_PREFIX_DIR}")
+
 # Configure-time source identity shared by installed and build-tree consumers.
 # A revision with SOURCE_STATE=dirty is not a reproducible clean source tree.
 set(OpenPFC_SOURCE_REVISION "@OpenPFC_SOURCE_REVISION@")
@@ -39,6 +42,9 @@ endif()
 # nlohmann_json is required by public headers (frontend JSON, profiling).
 # Always find it: FetchContent copies used to build OpenPFC are not installed.
 find_dependency(nlohmann_json)
+find_dependency(tomlplusplus CONFIG
+    HINTS "${CMAKE_CURRENT_LIST_DIR}" "${_OpenPFC_PACKAGE_PREFIX}")
+unset(_OpenPFC_PACKAGE_PREFIX)
 
 if(@OpenPFC_ENABLE_HEFFTE@)
 if (NOT TARGET Heffte::Heffte)

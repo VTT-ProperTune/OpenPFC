@@ -155,6 +155,13 @@ compiler module and defaults to `gcc/11.2.0`. The script sets
 - toml++ and Catch2 — if not found on the system, CMake may download them (e.g. when building tests). Ensure network access on first configure, or install/provide packages your site supports.
 - Doxygen — optional; if present, documentation generation is enabled by default (disable with `-DOpenPFC_BUILD_DOCUMENTATION=OFF` if you do not need it)
 
+Installed consumers of the public settings loader also need toml++.
+OpenPFC exports that dependency through its CMake target. When the build
+fetches toml++ 3.4, installation delivers its headers, license and a separate
+relocatable `tomlplusplus` CMake package beside OpenPFC. A system-provided
+toml++ remains an external package discoverable through the consumer's
+normal CMake search paths.
+
 ## 3. HeFFTe (required)
 
 Build and install [HeFFTe](https://github.com/icl-utk-edu/heffte) yourself, then point OpenPFC at it with `CMAKE_PREFIX_PATH` or `Heffte_DIR`.

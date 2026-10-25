@@ -468,32 +468,11 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE AND OpenPFC_ENABLE_CUDA_SPECTR
   message(STATUS "openpfc_incompressible_cuda (periodic rotational step) enabled")
 endif()
 
-# Add tomlplusplus include directory (header-only library)
-# Since it's header-only (often from FetchContent), we just need the include path
-# Use $<BUILD_INTERFACE:...> to avoid export issues with build directory paths
-if(DEFINED TOMLPLUSPLUS_SOURCE_DIR)
-  target_include_directories(openpfc PUBLIC $<BUILD_INTERFACE:${TOMLPLUSPLUS_SOURCE_DIR}/include>)
-  target_include_directories(openpfc_kernel_obj PUBLIC $<BUILD_INTERFACE:${TOMLPLUSPLUS_SOURCE_DIR}/include>)
-  target_include_directories(openpfc_frontend_obj PUBLIC $<BUILD_INTERFACE:${TOMLPLUSPLUS_SOURCE_DIR}/include>)
-elseif(DEFINED tomlplusplus_SOURCE_DIR)
-  target_include_directories(openpfc PUBLIC $<BUILD_INTERFACE:${tomlplusplus_SOURCE_DIR}/include>)
-  target_include_directories(openpfc_kernel_obj PUBLIC $<BUILD_INTERFACE:${tomlplusplus_SOURCE_DIR}/include>)
-  target_include_directories(openpfc_frontend_obj PUBLIC $<BUILD_INTERFACE:${tomlplusplus_SOURCE_DIR}/include>)
-elseif(TARGET tomlplusplus::tomlplusplus)
-  get_target_property(TOML_INCLUDE_DIR tomlplusplus::tomlplusplus INTERFACE_INCLUDE_DIRECTORIES)
-  if(TOML_INCLUDE_DIR)
-    target_include_directories(openpfc PUBLIC $<BUILD_INTERFACE:${TOML_INCLUDE_DIR}>)
-    target_include_directories(openpfc_kernel_obj PUBLIC $<BUILD_INTERFACE:${TOML_INCLUDE_DIR}>)
-    target_include_directories(openpfc_frontend_obj PUBLIC $<BUILD_INTERFACE:${TOML_INCLUDE_DIR}>)
-  endif()
-elseif(TARGET tomlplusplus_tomlplusplus)
-  get_target_property(TOML_INCLUDE_DIR tomlplusplus_tomlplusplus INTERFACE_INCLUDE_DIRECTORIES)
-  if(TOML_INCLUDE_DIR)
-    target_include_directories(openpfc PUBLIC $<BUILD_INTERFACE:${TOML_INCLUDE_DIR}>)
-    target_include_directories(openpfc_kernel_obj PUBLIC $<BUILD_INTERFACE:${TOML_INCLUDE_DIR}>)
-    target_include_directories(openpfc_frontend_obj PUBLIC $<BUILD_INTERFACE:${TOML_INCLUDE_DIR}>)
-  endif()
-endif()
+# Public settings headers include toml++, so consumers need its usage
+# requirements too. Build-only include paths omit this SDK dependency.
+foreach(_openpfc_target IN ITEMS openpfc openpfc_kernel_obj openpfc_frontend_obj)
+  target_link_libraries(${_openpfc_target} PUBLIC tomlplusplus::tomlplusplus)
+endforeach()
 
 # Require C++20
 target_compile_features(openpfc PUBLIC cxx_std_20)

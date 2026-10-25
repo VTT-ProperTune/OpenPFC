@@ -58,7 +58,7 @@ This directory contains modular CMake configuration files that organize the buil
    - Include directories
    - Dependency linking (MPI, HeFFTe)
    - GPU kernel library when **CUDA** and/or **HIP** (ROCm) GPU support is enabled
-   - toml++ include directory setup
+   - Public toml++ target usage requirements, including installed consumers
 
 8. **BuildOptions.cmake**
    - Options **`OpenPFC_BUILD_APPS`**, **`OpenPFC_BUILD_EXAMPLES`**, **`OpenPFC_BUILD_TESTS`** (and related); **`add_subdirectory`** for **apps**, **examples**, and **tests** when enabled

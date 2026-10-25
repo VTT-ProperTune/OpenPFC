@@ -45,6 +45,14 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindFFTW3.cmake
 
 # Avoid export errors in local/dev builds where HeFFTe is fetched via
 # FetchContent and not part of any install/export set.
+if(OpenPFC_TOML_FETCHED)
+  # The build-tree OpenPFC export also refers to the public toml++ target.
+  export(EXPORT OpenPFCTomlPlusPlusTargets
+    FILE "${CMAKE_CURRENT_BINARY_DIR}/tomlplusplusTargets.cmake"
+    NAMESPACE tomlplusplus::)
+  configure_file("${tomlplusplus_SOURCE_DIR}/cmake/tomlplusplusConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/tomlplusplusConfig.cmake" COPYONLY)
+endif()
 if(DEFINED Heffte_DIR AND NOT Heffte_DIR STREQUAL "Heffte_DIR-NOTFOUND")
   export(EXPORT OpenPFCTargets
     FILE "${CMAKE_CURRENT_BINARY_DIR}/OpenPFCTargets.cmake"

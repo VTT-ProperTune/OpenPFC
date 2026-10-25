@@ -1,7 +1,8 @@
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Try to find tomlplusplus via find_package first
+set(OpenPFC_TOML_FETCHED FALSE)
 find_package(tomlplusplus QUIET)
 
 if(NOT tomlplusplus_FOUND)
@@ -18,23 +19,16 @@ if(NOT tomlplusplus_FOUND)
     GIT_TAG v${tomlplusplus_FIND_VERSION}
   )
   FetchContent_MakeAvailable(tomlplusplus)
+  set(OpenPFC_TOML_FETCHED TRUE)
   
   # Store source directory for include path
   set(tomlplusplus_SOURCE_DIR ${tomlplusplus_SOURCE_DIR} CACHE INTERNAL "")
   
-  # tomlplusplus via FetchContent creates target "tomlplusplus_tomlplusplus"
-  # Create alias for consistency
-  if(NOT TARGET tomlplusplus::tomlplusplus AND TARGET tomlplusplus_tomlplusplus)
-    add_library(tomlplusplus::tomlplusplus INTERFACE IMPORTED)
-    get_target_property(TOML_INC_DIR tomlplusplus_tomlplusplus INTERFACE_INCLUDE_DIRECTORIES)
-    if(TOML_INC_DIR)
-      set_target_properties(tomlplusplus::tomlplusplus PROPERTIES
-        INTERFACE_INCLUDE_DIRECTORIES "${TOML_INC_DIR}")
-    else()
-      set_target_properties(tomlplusplus::tomlplusplus PROPERTIES
-        INTERFACE_INCLUDE_DIRECTORIES "${tomlplusplus_SOURCE_DIR}/include")
-    endif()
-  endif()
+endif()
+
+# Preserve all usage requirements if a package exposes only the plain target.
+if(NOT TARGET tomlplusplus::tomlplusplus AND TARGET tomlplusplus_tomlplusplus)
+  add_library(tomlplusplus::tomlplusplus ALIAS tomlplusplus_tomlplusplus)
 endif()
 
 if(tomlplusplus_FOUND OR TARGET tomlplusplus::tomlplusplus OR TARGET tomlplusplus_tomlplusplus)

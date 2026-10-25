@@ -7,6 +7,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Export toml++ as a public settings-loader dependency. Fetched toml++ headers,
+  license and CMake target are installed as a relocatable dependency package;
+  system-provided toml++ remains external. Exercise the loader and TOML parsing
+  in the installed-SDK source-model regression.
+
 - Add a nonlinear Fourier teaching example with cubic dealiasing, ETD2,
   inspectable FFT layouts and an independent coefficient-space verifier.
 

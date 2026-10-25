@@ -72,6 +72,28 @@ endif()
 install(DIRECTORY include/openpfc DESTINATION include
         FILES_MATCHING PATTERN "*.hpp" PATTERN "*.ipp" PATTERN "*.inl")
 
+# Upstream toml++ installs itself only as a top-level project. When fetched
+# as our subproject, deliver its header-only target as a separate relocatable
+# dependency package. System packages remain external find_dependency inputs.
+if(OpenPFC_TOML_FETCHED)
+    include(CMakePackageConfigHelpers)
+    install(DIRECTORY "${tomlplusplus_SOURCE_DIR}/include/" DESTINATION include)
+    install(FILES "${tomlplusplus_SOURCE_DIR}/LICENSE"
+            DESTINATION share/licenses/tomlplusplus)
+    install(TARGETS tomlplusplus_tomlplusplus
+            EXPORT OpenPFCTomlPlusPlusTargets INCLUDES DESTINATION include)
+    install(EXPORT OpenPFCTomlPlusPlusTargets
+            NAMESPACE tomlplusplus:: FILE tomlplusplusTargets.cmake
+            DESTINATION lib/cmake/tomlplusplus)
+    write_basic_package_version_file(
+        "${CMAKE_CURRENT_BINARY_DIR}/tomlplusplusConfigVersion.cmake"
+        VERSION "${tomlplusplus_FIND_VERSION}" COMPATIBILITY SameMajorVersion
+        ARCH_INDEPENDENT)
+    install(FILES "${tomlplusplus_SOURCE_DIR}/cmake/tomlplusplusConfig.cmake"
+                  "${CMAKE_CURRENT_BINARY_DIR}/tomlplusplusConfigVersion.cmake"
+            DESTINATION lib/cmake/tomlplusplus)
+endif()
+
 # Install library binary
 install(TARGETS openpfc
     EXPORT OpenPFCTargets

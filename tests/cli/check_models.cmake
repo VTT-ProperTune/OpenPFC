@@ -65,11 +65,16 @@ file(WRITE "${project}/model.cpp" [=[
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
+#include <openpfc/frontend/ui/settings_loader.hpp>
 #include <iostream>
 int main(int argc, char **argv) {
   if (argc < 2) return 41;
   pfc::log(pfc::k_null_logger, pfc::LogLevel::Debug, "native SDK model");
-  nlohmann::json input; std::ifstream(argv[1]) >> input;
+  const auto input = pfc::ui::load_settings_file(argv[1]);
+  // Public settings headers and their toml++ dependency must work from an
+  // installed, relocated SDK with no checkout include paths.
+  const auto parsed_toml = pfc::utils::toml_to_json(toml::parse("value = 7"));
+  if (parsed_toml.at("value").get<int>() != 7) return 42;
   std::filesystem::create_directories("results");
   std::ofstream("results/answer.txt") << input.at("value").get<int>() * factor;
   std::cout << "native model stdout\n";
