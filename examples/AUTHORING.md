@@ -74,6 +74,18 @@ python3 examples/render_figures.py \
 
 The scripts use no numerical simulation during Quarto rendering.
 
+## Reproduce the foundations figures
+
+For the foundation and dynamics chapters, collect native outputs under
+`results/example-book/foundations/<case>/results/` and use
+`render_foundations.py --runs results/example-book/foundations`. Its case
+names are `collocation`, `smoothness`, `cardinal`, `transform`, `transport`
+and `stability`. The matching executables are `periodic_collocation`,
+`spectral_smoothness`, `cardinal_interpolation`, `03_parallel_fft`,
+`variable_transport`, and `stability_regions`. The displayed transport plot
+uses `waves/variable-transport/trefethen-p6.json`.
+
+
 ## Render within the scientific website
 
 Use a disposable copy of `openpfc-pages`:
