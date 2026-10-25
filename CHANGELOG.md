@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Teach initialization, apply, step and save hooks through a partial-final-step heat run. Preserve its executable, update the output guide and check actual ledgers and fields on one and two ranks.
+
 - Turn the diffusion example into a backward-Euler Fourier lesson with visible multipliers. Preserve its target and independently check complete final fields and invalid grid controls.
 
 - Use the public settings loader and spectral session factory in one small configurable model. Preserve the executable name and verify equivalent JSON and TOML evolution on one and two ranks.

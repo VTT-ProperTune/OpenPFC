@@ -154,6 +154,38 @@ def check_implicit(binary, root, launch):
     run(binary, root / "bad-implicit", launch, {"n": 7}, success=False)
 
 
+def check_driver(binary, root, launch):
+    for end, intervals in ((0.2, [0.07, 0.07, 0.06]), (0.03, [0.03])):
+        folder = root / f"driver-{end}"
+        run(
+            binary,
+            folder,
+            launch,
+            {"n": 16, "dt": 0.07, "end": end, "saveat": min(0.1, end)},
+        )
+        ledgers = sorted((folder / "results").glob("events_rank_*.csv"))
+        first = table(ledgers[0])
+        assert all(table(path) == first for path in ledgers)
+        steps = [row for row in first if row["hook"] == "step"]
+        assert len(steps) == len(intervals)
+        assert all(
+            abs(float(row["interval"]) - expected) < 1e-14
+            for row, expected in zip(steps, intervals)
+        )
+        assert [row["hook"] for row in first] == ["start", "save"] + [
+            hook for _ in intervals for hook in ("apply", "step")
+        ] + ["save"]
+        amplitude = 0.2 / math.prod(1 + interval for interval in intervals)
+        data = fields(folder)
+        unique_grid(data, 16, 4, 4, (0, 0, 0), (2 * math.pi / 16, 1, 1))
+        for row in data:
+            assert (
+                abs(float(row["u"]) - (1 + amplitude * math.cos(float(row["x"]))))
+                < 2e-13
+            )
+    run(binary, root / "bad-driver", launch, {"dt": 0}, success=False)
+
+
 def verify_first_domain(bin_dir, root, launch, ranks):
     assert "(-0.625,0.5,0)" in run(bin_dir / "first_domain", root)
     axes = table(root / "results/domain.csv")
@@ -175,6 +207,7 @@ def main():
             "10_ui_register_ic",
             "json_read",
             "04_diffusion_model",
+            "05_simulator",
         ],
     )
     args = parser.parse_args()
@@ -206,6 +239,10 @@ def main():
             root = base / "04_diffusion_model"
             root.mkdir()
             check_implicit(bin_dir / "04_diffusion_model", root, launch)
+        if args.case in (None, "05_simulator"):
+            root = base / "05_simulator"
+            root.mkdir()
+            check_driver(bin_dir / "05_simulator", root, launch)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

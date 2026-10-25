@@ -34,9 +34,14 @@
     },
     {
       "target": "05_simulator",
-      "source": "05_simulator.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "heat/driver-hooks/model.cpp",
+      "chapter": "heat/driver-hooks/index.qmd",
+      "capabilities": [
+        "simulation-driver",
+        "time-hooks",
+        "partial-final-step",
+        "distributed-fft"
+      ]
     },
     {
       "target": "06_multi_index",

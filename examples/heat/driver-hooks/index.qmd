@@ -1,0 +1,75 @@
+---
+title: "Let the driver tell the step how far to go"
+description: "Observe the native time-loop hooks and use the actual final interval in an implicit spectral heat update."
+order: 58
+categories: [Time integration, Workflows]
+targets: [05_simulator]
+capabilities: [simulation-driver, time-hooks, partial-final-step, distributed-fft]
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[OpenPFC / A visible simulation loop]{.lesson-kicker}
+
+# Let the driver tell the step how far to go
+
+[The final clock interval can be shorter than the requested timestep. The numerical update has to know that.]{.lesson-deck}
+:::
+
+This refactoring of `05_simulator` separates the time loop from a small
+spectral heat update. The problem is one cosine mode,
+$u(x,0)=1+.2\cos x$, repeated in the two transverse directions.
+Its amplitude makes the effect of every accepted interval visible.
+
+## Give the driver a step and three hooks
+
+```{.cpp include="model.cpp" snippet="driver" dedent=4}
+```
+
+The native driver calls `start` once, performs an initial `save` when
+due, then advances the clock before `apply`, `step` and any due `save`.
+The two-argument step receives the current time and the actual clock
+advance. `apply` is a place for time-dependent conditions; this example
+records the hook without changing the field.
+
+The default `dt: .07` and `end: .2` produce intervals .07,.07,.06.
+For backward Euler, the mode's final amplitude is
+
+$$
+A=.2\prod_m(1+\Delta t_m)^{-1}.
+$$ {#eq-amplitude}
+
+Reusing a multiplier prepared for .07 on the last interval would be a
+stable computation of the wrong elapsed time.
+
+## A save request is not automatically a step boundary
+
+`saveat: .1` supplies output opportunities to the fixed-step `Time`
+driver; it does not split .07 steps at time .1. Read the actual
+`save` rows in `results/events_rank_*.csv`. For explicit output-time
+clipping and rejected attempts, compare
+[the transactional clock lesson](../../integration/output-clock/index.qmd).
+
+The historical one-argument step callback is also supported, but it
+cannot see a clipped final interval. A fixed-dt method used through that
+interface needs a run whose every interval really equals its private dt.
+
+## Read the ledger and the field together
+
+```sh
+openpfc run model.cpp input.json --launcher=none
+```
+
+Each event records its hook, step, accepted time, interval and expected
+discrete mode amplitude. `results/field_rank_*.csv` contains the actual
+final owned field. The tests check the hook ordering, the clipped final
+interval and every field sample on one and two ranks.
+
+Try an end time shorter than `dt`, keeping `saveat` no greater than
+that end time, then one that is an exact multiple.
+Predict the multiplier product before running. Keep the
+[source](model.cpp) and [input](input.json) together.
+:::

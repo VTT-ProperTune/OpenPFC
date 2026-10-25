@@ -21,8 +21,6 @@ endif()
 
 
 
-add_executable(05_simulator 05_simulator.cpp)
-target_link_libraries(05_simulator PRIVATE OpenPFC::openpfc )
 
 
 
@@ -365,6 +363,16 @@ if(OpenPFC_BUILD_TESTS)
              COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_everyday.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 04_diffusion_model
                      --launcher "${MPIEXEC_EXECUTABLE}" "--rank-flag=${MPIEXEC_NUMPROC_FLAG}" --ranks 2)
     set_tests_properties(example-04-diffusion-model-mpi PROPERTIES PROCESSORS 2 TIMEOUT 360
+                         ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+  endif()
+  add_test(NAME example-05-simulator
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_everyday.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 05_simulator)
+  set_tests_properties(example-05-simulator PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
+    add_test(NAME example-05-simulator-mpi
+             COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_everyday.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 05_simulator
+                     --launcher "${MPIEXEC_EXECUTABLE}" "--rank-flag=${MPIEXEC_NUMPROC_FLAG}" --ranks 2)
+    set_tests_properties(example-05-simulator-mpi PROPERTIES PROCESSORS 2 TIMEOUT 360
                          ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
   endif()
 endif()

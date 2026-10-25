@@ -72,7 +72,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `02_domain_decomposition` | `geometry/decomposition/model.cpp` | `Domain`, `Decomposition`, MPI |
 | `03_parallel_fft` | `fourier/round-trip/model.cpp` | Distributed FFT (HeFFTe) |
 | `04_diffusion_model` | `heat/implicit-euler/model.cpp` | Backward-Euler spectral heat with a complete-field oracle |
-| `05_simulator` | `05_simulator.cpp` | `Simulator`, `Time`, `FieldModifier` |
+| `05_simulator` | `heat/driver-hooks/model.cpp` | Native time-loop hooks and the actual final clock interval |
 | `06_multi_index` | `geometry/index-boxes/model.cpp` | `Box3i` iteration and `to_linear` |
 | `07_array` | `geometry/field-storage/model.cpp` | Array helpers |
 | `08_discrete_fields` | `geometry/coordinate-fields/model.cpp` | `pfc::data::Field` with domain geometry |

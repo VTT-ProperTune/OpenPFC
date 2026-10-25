@@ -9,24 +9,20 @@ This page shows representative stdout/stderr for common entry points so you can 
 
 ## `examples/05_simulator`
 
-Source: `examples/05_simulator.cpp`. Rank 0 prints:
-
-1. `Create initial condition` — once, when the Gaussian IC is applied.
-2. `n = …, t = …, min = …, max = …` — one line after initialization and one per timestep until the run finishes (the `Time` range is fixed in code: `t1` and 42 steps).
-3. `Test pass!` — if the final `psi` maximum is within tolerance of 0.5; otherwise `Test failed!` on stderr.
-
-Example shape (middle lines omitted):
+Source: [the driver-hooks model](../../examples/heat/driver-hooks/model.cpp).
+With its starting input, rank zero prints:
 
 ```text
-Create initial condition
-n = 0, t = 0.000000000000, min = ..., max = ...
-n = 1, t = ..., min = ..., max = ...
-...
-n = 42, t = ..., min = ..., max = ...
-Test pass!
+Final time 0.2
 ```
 
-Run from the build tree, e.g. `mpirun -n 4 ./examples/05_simulator`. Other ranks stay quiet for the `std::cout` paths above.
+The detailed evidence is in `results/events_rank_*.csv` and
+`results/field_rank_*.csv`. The ledger records the start/apply/step/save
+hooks and the actual intervals .07,.07,.06. The field can be checked
+against the product of its backward-Euler mode multipliers.
+See [the Quarto lesson](../../examples/heat/driver-hooks/index.qmd) for
+commands and the mathematical check. A printed completion message alone
+does not establish numerical accuracy.
 
 ## `apps/tungsten/tungsten` (CPU)
 

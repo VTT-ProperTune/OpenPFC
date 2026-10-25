@@ -17,7 +17,7 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 :::
 
 There are 60 declared runnable example targets and
-42 Quarto teaching chapters. The table includes older programs
+43 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -80,7 +80,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `02_domain_decomposition` | [Read the lesson](geometry/decomposition/index.qmd) |
 | `03_parallel_fft` | [Read the lesson](fourier/round-trip/index.qmd) |
 | `04_diffusion_model` | [Read the lesson](heat/implicit-euler/index.qmd) |
-| `05_simulator` | Pending conversion. |
+| `05_simulator` | [Read the lesson](heat/driver-hooks/index.qmd) |
 | `06_multi_index` | [Read the lesson](geometry/index-boxes/index.qmd) |
 | `07_array` | [Read the lesson](geometry/field-storage/index.qmd) |
 | `08_discrete_fields` | [Read the lesson](geometry/coordinate-fields/index.qmd) |

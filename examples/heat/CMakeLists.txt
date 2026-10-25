@@ -20,3 +20,7 @@ set_target_properties(15_finite_difference_heat PROPERTIES RUNTIME_OUTPUT_DIRECT
 add_executable(04_diffusion_model implicit-euler/model.cpp)
 target_link_libraries(04_diffusion_model PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(04_diffusion_model PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(05_simulator driver-hooks/model.cpp)
+target_link_libraries(05_simulator PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(05_simulator PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
