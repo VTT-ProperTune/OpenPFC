@@ -23,13 +23,13 @@
 
 #include <cstddef>
 #include <limits>
-#include <openpfc/kernel/grain/diagnostics.hpp>
 #include <optional>
 #include <span>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
+#include <openpfc/kernel/diagnostics/memory_traffic.hpp>
 #include <openpfc/kernel/execution/databuffer.hpp>
 #include <openpfc/runtime/gpu/backend_tags_gpu.hpp>
 
@@ -92,7 +92,7 @@ template <typename T, typename Alloc> struct GPUDataBuffer {
 private:
   T *m_device_ptr = nullptr;
   std::size_t m_size = 0;
-  std::optional<pfc::grain::diagnostics::AllocationToken> m_allocation;
+  std::optional<pfc::diagnostics::AllocationToken> m_allocation;
 
   static void throw_on_error(typename Alloc::error_t err, const char *op) {
     [[maybe_unused]] const auto cleared = Alloc::get_last_error();
@@ -110,8 +110,8 @@ public:
       if (err != Alloc::success) {
         throw_on_error(err, "allocation failed");
       }
-      m_allocation.emplace(pfc::grain::diagnostics::successful_allocation(
-          pfc::grain::diagnostics::Space::Device, size * sizeof(T)));
+      m_allocation.emplace(pfc::diagnostics::successful_allocation(
+          pfc::diagnostics::Space::Device, size * sizeof(T)));
     }
   }
 
@@ -175,15 +175,11 @@ public:
     }
   }
 
-  void copy_from_host(
-      const std::vector<T> &src,
-      pfc::grain::diagnostics::Field field = pfc::grain::diagnostics::Field::Other) {
-    copy_from_host(src.data(), src.size(), field);
+  void copy_from_host(const std::vector<T> &src) {
+    copy_from_host(src.data(), src.size());
   }
 
-  void copy_from_host(
-      const T *ptr, std::size_t n,
-      pfc::grain::diagnostics::Field field = pfc::grain::diagnostics::Field::Other) {
+  void copy_from_host(const T *ptr, std::size_t n) {
     if (n != m_size) {
       throw std::runtime_error("Size mismatch in copy_from_host: expected " +
                                std::to_string(m_size) + ", got " +
@@ -194,20 +190,16 @@ public:
       if (err != Alloc::success) {
         throw_on_error(err, "copy failed");
       }
-      pfc::grain::diagnostics::copy(pfc::grain::diagnostics::Direction::HostToDevice,
-                                    field, m_size * sizeof(T));
+      pfc::diagnostics::copy(pfc::diagnostics::Direction::HostToDevice,
+                             m_size * sizeof(T));
     }
   }
 
-  void copy_from_host(
-      std::span<const T> src,
-      pfc::grain::diagnostics::Field field = pfc::grain::diagnostics::Field::Other) {
-    copy_from_host(src.data(), src.size(), field);
+  void copy_from_host(std::span<const T> src) {
+    copy_from_host(src.data(), src.size());
   }
 
-  void copy_to_host(T *ptr, std::size_t n,
-                    pfc::grain::diagnostics::Field field =
-                        pfc::grain::diagnostics::Field::Other) const {
+  void copy_to_host(T *ptr, std::size_t n) const {
     if (n != m_size) {
       throw std::runtime_error("Size mismatch in copy_to_host: expected " +
                                std::to_string(m_size) + ", got " +
@@ -218,21 +210,20 @@ public:
       if (err != Alloc::success) {
         throw_on_error(err, "copy failed");
       }
-      pfc::grain::diagnostics::copy(pfc::grain::diagnostics::Direction::DeviceToHost,
-                                    field, m_size * sizeof(T));
+      pfc::diagnostics::copy(pfc::diagnostics::Direction::DeviceToHost,
+                             m_size * sizeof(T));
     }
   }
 
-  std::vector<T> to_host(pfc::grain::diagnostics::Field field =
-                             pfc::grain::diagnostics::Field::Other) const {
+  std::vector<T> to_host() const {
     std::vector<T> result(m_size);
     if (m_size > 0) {
       auto err = Alloc::memcpy_d2h(result.data(), m_device_ptr, m_size * sizeof(T));
       if (err != Alloc::success) {
         throw_on_error(err, "copy failed");
       }
-      pfc::grain::diagnostics::copy(pfc::grain::diagnostics::Direction::DeviceToHost,
-                                    field, m_size * sizeof(T));
+      pfc::diagnostics::copy(pfc::diagnostics::Direction::DeviceToHost,
+                             m_size * sizeof(T));
     }
     return result;
   }
@@ -262,8 +253,8 @@ public:
       throw_on_error(err, "allocation failed");
     }
 
-    auto allocation = pfc::grain::diagnostics::successful_allocation(
-        pfc::grain::diagnostics::Space::Device, new_size * sizeof(T));
+    auto allocation = pfc::diagnostics::successful_allocation(
+        pfc::diagnostics::Space::Device, new_size * sizeof(T));
     if (m_device_ptr != nullptr) {
       const auto freed = Alloc::free(m_device_ptr);
       if (m_allocation) {

@@ -26,6 +26,7 @@ first when you are learning a workflow.
 | [Spectral App configuration](spectral_app_config_reference.md) | Exact JSON/TOML keys and values |
 | [Binary field file layout](binary_field_io_spec.md) | Raw field storage contract |
 | [Central 3D derivatives](central_derivatives.md) | Accessor and boundary contracts for FD2/4/6 gradient and Hessian |
+| [Allocation and copy accounting](memory_traffic.md) | Scoped `pfc::diagnostics` allocation ledger and host/device copy counters |
 | [Profiling operator playbooks](operator_playbooks.md) | Symptom-oriented operational checks |
 | [Example run output](example_run_output.md) | Typical log structure and success indicators |
 

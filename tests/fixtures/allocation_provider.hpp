@@ -8,11 +8,11 @@
 #include <cstdlib>
 #include <limits>
 #include <new>
-#include <openpfc/kernel/grain/diagnostics.hpp>
+#include <openpfc/kernel/diagnostics/memory_traffic.hpp>
 namespace allocation_observer {
 struct Header {
   void *raw;
-  pfc::grain::diagnostics::AllocationToken token;
+  pfc::diagnostics::AllocationToken token;
 };
 void *allocate(std::size_t bytes, std::size_t alignment) {
   alignment = std::max(alignment, alignof(std::max_align_t));
@@ -25,8 +25,8 @@ void *allocate(std::size_t bytes, std::size_t alignment) {
       (reinterpret_cast<std::uintptr_t>(raw) + sizeof(Header) + alignment - 1) &
       ~(alignment - 1);
   auto *header = reinterpret_cast<Header *>(address - sizeof(Header));
-  new (header) Header{raw, pfc::grain::diagnostics::successful_allocation(
-                               pfc::grain::diagnostics::Space::Host, bytes)};
+  new (header) Header{raw, pfc::diagnostics::successful_allocation(
+                               pfc::diagnostics::Space::Host, bytes)};
   return reinterpret_cast<void *>(address);
 }
 void release(void *pointer) noexcept {

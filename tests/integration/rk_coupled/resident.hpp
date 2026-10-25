@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <cstring>
 #include <limits>
-#include <openpfc/kernel/grain/diagnostics.hpp>
+#include <openpfc/kernel/diagnostics/memory_traffic.hpp>
 #include <openpfc/runtime/gpu/comm_halo_exchange_gpu.hpp>
 #if defined(__HIPCC__) || defined(__HIP__)
 #include <openpfc/runtime/hip/explicit_rk.hpp>
@@ -97,10 +97,10 @@ inline double verify_resident(bool fourth, bool uniform = false, double dt = .01
   stage = 0;
   maximum = 0;
   gold = &first_gold;
-  pfc::grain::Diagnostics ordinary_traffic;
+  pfc::diagnostics::Traffic ordinary_traffic;
   double next = 0;
   {
-    pfc::grain::diagnostics::Scope observing(&ordinary_traffic);
+    pfc::diagnostics::Scope observing(&ordinary_traffic);
     next = rk.step(t, u, v);
   }
   require(std::abs(next - (t + dt)) < 1e-15, "wrong accepted time");
@@ -138,11 +138,11 @@ inline double verify_resident(bool fourth, bool uniform = false, double dt = .01
     snapshot(u, 0);
     snapshot(v, 1);
     const auto *address_u = u.data(), *address_v = v.data();
-    pfc::grain::Diagnostics rejected_traffic, accepted_traffic;
+    pfc::diagnostics::Traffic rejected_traffic, accepted_traffic;
     int final_calls = 0;
     bool rejected = false;
     try {
-      pfc::grain::diagnostics::Scope observing(&rejected_traffic);
+      pfc::diagnostics::Scope observing(&rejected_traffic);
       rk.step_checked(
           t,
           [&](double proposed) {
@@ -180,7 +180,7 @@ inline double verify_resident(bool fourth, bool uniform = false, double dt = .01
             "final rejection replaced field storage");
     stage = 0;
     {
-      pfc::grain::diagnostics::Scope observing(&accepted_traffic);
+      pfc::diagnostics::Scope observing(&accepted_traffic);
       const auto accepted_time = rk.step_checked(
           t,
           [&](double proposed) {
@@ -195,15 +195,13 @@ inline double verify_resident(bool fourth, bool uniform = false, double dt = .01
     }
     require(final_calls == 2, "successful final check not called once");
     for (const auto *traffic : {&rejected_traffic, &accepted_traffic}) {
-      require(
-          traffic->allocations(pfc::grain::diagnostics::Space::Device).requests == 0,
-          "final check allocated additional device buffers");
+      require(traffic->allocations(pfc::diagnostics::Space::Device).requests == 0,
+              "final check allocated additional device buffers");
       const auto direction =
-          static_cast<std::size_t>(pfc::grain::diagnostics::Direction::HostToDevice);
-      for (std::size_t f = 0; f < pfc::grain::diagnostics::field_count; ++f)
-        require(traffic->copies.bytes[direction][f] ==
-                    ordinary_traffic.copies.bytes[direction][f],
-                "final check added a host-to-device upload");
+          static_cast<std::size_t>(pfc::diagnostics::Direction::HostToDevice);
+      require(traffic->copies.bytes[direction] ==
+                  ordinary_traffic.copies.bytes[direction],
+              "final check added a host-to-device upload");
     }
     require(maximum < 2e-11,
             "checked resident state differs from independent oracle");

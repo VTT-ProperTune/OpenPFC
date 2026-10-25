@@ -11,11 +11,11 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/unit/operators/test_sparsevector_typed.cpp)
 
 # Isolated consumer owns the complete new/delete provider for this executable.
-add_executable(test_grain_diagnostics
-  unit/kernel/grain/test_grain_diagnostics.cpp)
-target_include_directories(test_grain_diagnostics PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(test_grain_diagnostics PRIVATE OpenPFC Catch2::Catch2WithMain)
-add_test(NAME GrainDiagnostics COMMAND test_grain_diagnostics)
+add_executable(test_memory_traffic
+  unit/kernel/diagnostics/test_memory_traffic.cpp)
+target_include_directories(test_memory_traffic PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(test_memory_traffic PRIVATE OpenPFC Catch2::Catch2WithMain)
+add_test(NAME MemoryTraffic COMMAND test_memory_traffic)
 
 # Add tests/ directory to include path so fixtures/ can be found
 target_include_directories(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

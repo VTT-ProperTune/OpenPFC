@@ -86,6 +86,18 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - LUMI easyconfigs install OpenPFC 0.5.0 (CPU and ROCm) without the CMake 4
   policy override, which 0.5.0 no longer needs (#620).
 
+### Changed
+
+- Move the allocation and copy accounting from `kernel/grain/diagnostics.hpp`
+  to `kernel/diagnostics/memory_traffic.hpp`. `pfc::grain::Diagnostics` becomes
+  `pfc::diagnostics::Traffic`; `Scope`, `PauseObservation`, `AllocationToken`
+  and `successful_allocation()` move to `pfc::diagnostics`. Copies are counted
+  per `Direction` only (`copies.bytes[direction]`), and GPU
+  `DataBuffer::copy_from_host`/`copy_to_host`/`to_host` no longer take a
+  `Field` tag. Grain access counters and device event intervals are removed.
+  See [`docs/reference/memory_traffic.md`](docs/reference/memory_traffic.md)
+  (#657).
+
 ### Removed
 
 - Remove the grain module: `pfc::grain` identity, labelling, contacts,

@@ -52,15 +52,13 @@ TEST_CASE("Warmed canonical scalar and multi RK4 steps allocate no host scratch"
       pfc::sim::steppers::create(std::tie(u, v), pair_eval, pair, 0.001, tableau);
   scalar.step(0.0, u);
   multi.step(0.0, u, v);
-  pfc::grain::Diagnostics diagnostics;
-  diagnostics.host_observer_connected = true;
+  pfc::diagnostics::Traffic traffic;
   {
-    pfc::grain::diagnostics::Scope scope(&diagnostics);
+    pfc::diagnostics::Scope scope(&traffic);
     for (int n = 0; n < 8; ++n) {
       scalar.step(0.001 * n, u);
       multi.step(0.001 * n, u, v);
     }
   }
-  REQUIRE(diagnostics.allocations(pfc::grain::diagnostics::Space::Host).requests ==
-          0);
+  REQUIRE(traffic.allocations(pfc::diagnostics::Space::Host).requests == 0);
 }

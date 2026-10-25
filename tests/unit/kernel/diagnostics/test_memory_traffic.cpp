@@ -2,15 +2,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #include "fixtures/allocation_provider.hpp"
 #include <catch2/catch_test_macros.hpp>
+#include <limits>
 #include <optional>
 #include <type_traits>
-using namespace pfc::grain;
-namespace dg = pfc::grain::diagnostics;
+namespace dg = pfc::diagnostics;
 static_assert(!std::is_move_assignable_v<dg::AllocationToken>);
+static_assert(std::is_move_constructible_v<dg::AllocationToken>);
 
 TEST_CASE("allocation intervals retain exact live ownership and overlap",
-          "[grain][diagnostics]") {
-  Diagnostics d;
+          "[diagnostics][memory_traffic]") {
+  dg::Traffic d;
   auto first = d.allocation(dg::Space::Device, 5);
   auto second = d.allocation(dg::Space::Device, 7);
   auto totals = d.allocations(dg::Space::Device);
@@ -31,18 +32,18 @@ TEST_CASE("allocation intervals retain exact live ownership and overlap",
   REQUIRE(totals.frees == 2);
   REQUIRE(totals.peak_live_bytes == 18);
   REQUIRE(totals.live_bytes == 0);
+  REQUIRE(d.allocations(dg::Space::Host).requests == 0);
   std::optional<dg::AllocationToken> survivor;
   {
-    Diagnostics temporary;
+    dg::Traffic temporary;
     survivor.emplace(temporary.allocation(dg::Space::Host, 13));
   }
-  survivor->release(); // Stable ledger remains owned after Diagnostics dies.
+  survivor->release(); // Stable ledger remains owned after Traffic dies.
 }
 
 TEST_CASE("consumer ordinary aligned sized and failed new payload is exact",
-          "[grain][diagnostics]") {
-  Diagnostics d;
-  d.host_observer_connected = true;
+          "[diagnostics][memory_traffic]") {
+  dg::Traffic d;
   dg::AllocationTotals allocated, released;
   void *first = nullptr, *second = nullptr;
   {
@@ -69,20 +70,6 @@ TEST_CASE("consumer ordinary aligned sized and failed new payload is exact",
   }
   REQUIRE(failed == nullptr);
   REQUIRE(d.allocations(dg::Space::Host).requests == 0);
-  {
-    dg::Scope outer(&d);
-    {
-      dg::Scope off(nullptr);
-      REQUIRE(dg::current == nullptr);
-    }
-    REQUIRE(dg::current == &d);
-    {
-      dg::PauseObservation paused;
-      REQUIRE(dg::current == nullptr);
-    }
-    REQUIRE(dg::current == &d);
-  }
-  REQUIRE(dg::current == nullptr);
   d.reset_interval();
   void *persistent = nullptr;
   {
@@ -96,9 +83,71 @@ TEST_CASE("consumer ordinary aligned sized and failed new payload is exact",
   REQUIRE(d.allocations(dg::Space::Host).live_bytes == 0);
 }
 
+TEST_CASE("scopes nest and pause restores the enclosing observation",
+          "[diagnostics][memory_traffic]") {
+  dg::Traffic outer_traffic, inner_traffic;
+  REQUIRE(dg::current == nullptr);
+  {
+    dg::Scope outer(&outer_traffic);
+    REQUIRE(dg::current == &outer_traffic);
+    {
+      dg::Scope inner(&inner_traffic);
+      REQUIRE(dg::current == &inner_traffic);
+      dg::copy(dg::Direction::HostToDevice, 3);
+    }
+    REQUIRE(dg::current == &outer_traffic);
+    {
+      dg::Scope off(nullptr);
+      REQUIRE(dg::current == nullptr);
+      dg::copy(dg::Direction::HostToDevice, 5);
+      auto unobserved = dg::successful_allocation(dg::Space::Device, 5);
+      unobserved.release(); // A null token has no ledger to update.
+    }
+    REQUIRE(dg::current == &outer_traffic);
+    {
+      dg::PauseObservation paused;
+      REQUIRE(dg::current == nullptr);
+    }
+    REQUIRE(dg::current == &outer_traffic);
+  }
+  REQUIRE(dg::current == nullptr);
+  const auto h2d = static_cast<std::size_t>(dg::Direction::HostToDevice);
+  REQUIRE(inner_traffic.copies.calls[h2d] == 1);
+  REQUIRE(inner_traffic.copies.bytes[h2d] == 3);
+  REQUIRE(outer_traffic.copies.calls[h2d] == 0);
+  REQUIRE(outer_traffic.allocations(dg::Space::Device).requests == 0);
+}
+
+TEST_CASE("copies are counted per direction and reset with the interval",
+          "[diagnostics][memory_traffic]") {
+  dg::Traffic d;
+  const auto index = [](dg::Direction direction) {
+    return static_cast<std::size_t>(direction);
+  };
+  dg::copy(dg::Direction::HostToDevice, 8); // No current observation.
+  {
+    dg::Scope scope(&d);
+    dg::copy(dg::Direction::HostToDevice, 8);
+    dg::copy(dg::Direction::HostToDevice, 16);
+    dg::copy(dg::Direction::DeviceToHost, 4);
+    dg::copy(dg::Direction::DeviceToDevice, 0); // Zero length: no call.
+  }
+  REQUIRE(d.copies.calls[index(dg::Direction::HostToDevice)] == 2);
+  REQUIRE(d.copies.bytes[index(dg::Direction::HostToDevice)] == 24);
+  REQUIRE(d.copies.calls[index(dg::Direction::DeviceToHost)] == 1);
+  REQUIRE(d.copies.bytes[index(dg::Direction::DeviceToHost)] == 4);
+  REQUIRE(d.copies.calls[index(dg::Direction::DeviceToDevice)] == 0);
+  REQUIRE(d.copies.calls[index(dg::Direction::HostToHost)] == 0);
+  d.reset_interval();
+  for (std::size_t i = 0; i < dg::direction_count; ++i) {
+    REQUIRE(d.copies.calls[i] == 0);
+    REQUIRE(d.copies.bytes[i] == 0);
+  }
+}
+
 TEST_CASE("failed free keeps live ownership and completeness sticky",
-          "[grain][diagnostics]") {
-  Diagnostics d;
+          "[diagnostics][memory_traffic]") {
+  dg::Traffic d;
   auto token = d.allocation(dg::Space::Device, 19);
   token.failed_release();
   REQUIRE_FALSE(d.allocations(dg::Space::Device).complete);
@@ -109,4 +158,5 @@ TEST_CASE("failed free keeps live ownership and completeness sticky",
   token.release();
   REQUIRE(d.allocations(dg::Space::Device).live_bytes == 0);
   REQUIRE_FALSE(d.allocations(dg::Space::Device).complete);
+  REQUIRE(d.allocations(dg::Space::Host).complete);
 }
