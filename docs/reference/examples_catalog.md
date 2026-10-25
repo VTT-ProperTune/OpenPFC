@@ -13,7 +13,7 @@ This page is for lookup and for choosing the next small executable to read. If y
 
 ## Curriculum (suggested order)
 
-Use the first tier on your first day, then branch by topic. The names are numbered because the source files are intended to be read in roughly that order, not because every user must run every target.
+Use the first tier on your first day, then branch by topic. The original numbered examples remain available. The [Quarto lessons](https://vtt-propertune.github.io/OpenPFC/learn/) now provide a thematic mathematical sequence; the heat implementations for targets 19 and 20 live under `examples/heat/`.
 
 ```mermaid
 flowchart LR
@@ -57,7 +57,7 @@ flowchart LR
 
 | Tier | Executables | Focus |
 |------|-------------|-------|
-| **1 — Core stack** | `02_domain_decomposition`, `03_parallel_fft`, `05_simulator`, `12_cahn_hilliard` | `Domain`, HeFFTe FFT, `Simulator`, spectral model |
+| **1 — Core stack** | `02_domain_decomposition`, `03_parallel_fft`, `05_simulator`, `12_cahn_hilliard` | `Domain`, distributed FFT, simulation driver, conserved nonlinear model |
 | **2 — Wiring** | `10_ui_register_ic`, `11_write_results`, `14_custom_field_initializer`, `diffusion_model_with_custom_initial_condition` | Registration, writers, custom initial conditions |
 | **3 — Fields and space** | `15_finite_difference_heat`, `17_custom_coordinate_system`, `18_sobel_edge_detection` | Halos, coordinate interpretation, stencil-like field operations |
 | **4 — Stepping and tools** | `19_explicit_stepper_fd`, `20_explicit_stepper_spectral`, `21_adaptive_stepping`, `22_external_coupling`, `23_halo_microtiming`, `24_adaptive_etd`, `fft_backend_benchmark`, `profiling_timer_report` | Explicit/adaptive steppers, external coupling, halo microtiming, ETD step doubling, backend comparison, profiling |

@@ -5,6 +5,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Tutorials
 
+For mathematical experiments with editable C++ models, start with
+[OpenPFC by example](https://vtt-propertune.github.io/OpenPFC/learn/).
+The Quarto sequence develops geometry, differentiation, evolution and
+boundary problems with runnable source and independent checks. The
+[teaching source tree](https://github.com/ahojukka5/OpenPFC/tree/master/examples)
+keeps articles, models and inputs together.
+
 The tutorials are for moments when you want to do one concrete thing with OpenPFC and understand what just happened. They are not meant to be read alphabetically. If you have not yet built the project, start with [`../start_here_15_minutes.md`](../start_here_15_minutes.md); if you are still deciding which route fits you, use [`../learning_paths.md`](../learning_paths.md).
 
 The most practical first tutorial is [`end_to_end_visualization.md`](end_to_end_visualization.md). It takes you from a built project to files on disk, using either Allen–Cahn for a quick visual run or tungsten for the more realistic application path. If your goal is ParaView, continue with [`vtk_paraview_workflow.md`](vtk_paraview_workflow.md), which uses built-in examples that already write VTK. If your output is raw binary instead, [`../user_guide/postprocess_binary_fields.md`](../user_guide/postprocess_binary_fields.md) explains how to reason about metadata, Fortran order and NumPy-side analysis; the exact binary contract lives in [`../reference/binary_field_io_spec.md`](../reference/binary_field_io_spec.md).
@@ -18,5 +25,3 @@ Cluster and GPU work should come after a successful CPU run. [`hpc_slurm_day_one
 There are a few tutorials that are closer to reference material. [`add_catch2_test.md`](add_catch2_test.md) is the shortest route to adding a unit test and running it through `ctest`. The science pages [`../science/tungsten_quicklook.md`](../science/tungsten_quicklook.md) and [`../science/cahn_hilliard_vs_allen_cahn.md`](../science/cahn_hilliard_vs_allen_cahn.md) help you choose the right model or example before you spend time on a run.
 
 For a slower conceptual introduction, [`../getting_started/01-basics/README.md`](../getting_started/01-basics/README.md) tells the “world to FFT to CMake” story. For a lookup-oriented catalog, use [`../reference/examples_catalog.md`](../reference/examples_catalog.md) and [`../reference/api_examples_walkthrough.md`](../reference/api_examples_walkthrough.md).
-
-Learn through [runnable Quarto experiments](../../examples/index.qmd).

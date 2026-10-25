@@ -33,6 +33,9 @@ change a parameter, and try to predict the result before running it.
 
 ## Start with a question
 
+For a first C++ program, start by [giving a grid physical meaning](geometry/first-domain/index.qmd).
+Then let that grid carry a field and a numerical question.
+
 Begin with [How accurately can we differentiate?](differentiation/periodic/index.qmd).
 Second-order differences, fourth-order differences, and Fourier derivatives
 act on the same smooth function. A refinement plot makes their different
@@ -75,6 +78,107 @@ the CLI once with `--ranks=2 --launcher=mpirun` instead of `--launcher=none`.
 The complete-domain polynomial references and geometry-only programs use
 the documented single-process command.
 
-The [coverage inventory](coverage.qmd) records all existing programs and remaining teaching work.
+## Build a model you can configure and inspect
+
+Write [initial patterns as callables](initialization/patterns/index.qmd),
+then [select one through a native catalog](initialization/catalog/index.qmd).
+A [JSON/TOML session](configuration/session/index.qmd) assembles the clock
+and stack while keeping the physics callback visible. Compare
+[implicit heat](heat/implicit-euler/index.qmd) with the other heat methods,
+then follow [driver hook ordering](heat/driver-hooks/index.qmd).
+
+Give the computed array a durable form with
+[collective binary I/O](output/binary-field/index.qmd) and
+[a geometry-aware result series](output/vtk-series/index.qmd).
+The [Cahn–Hilliard lesson](phase-fields/cahn-hilliard/index.qmd) brings
+state declaration, spectral symbols and a nonlinear local law together.
+
+## Where next?
+
+The [geometry sequence](geometry/decomposition/index.qmd) explains owned
+boxes, [memory offsets](geometry/index-boxes/index.qmd),
+[padded fields](geometry/field-storage/index.qmd), and
+[physical-coordinate initialization](geometry/coordinate-fields/index.qmd).
+Then use [a polar-defined pattern](geometry/polar-patterns/index.qmd) to
+give those Cartesian points a different mathematical interpretation.
+For the transform itself, compare [complex coefficients](fourier/round-trip/index.qmd)
+and [local versus distributed layouts](fourier/field-layout/index.qmd).
+
+The book-inspired sequence continues with
+[cardinal interpolation](interpolation/cardinal/index.qmd),
+[matrix and FFT differentiation](differentiation/collocation/index.qmd),
+and [four regularity classes](differentiation/smoothness/index.qmd).
+The latter includes the complete resolution presets for Trefethen's
+programs 1, 2, and 7, alongside the hat and smooth-profile comparison of
+programs 4 and 5.
+
+Follow [a variable-speed wave](waves/variable-transport/index.qmd), then ask
+[which timesteps are stable](integration/stability/index.qmd). On a finite
+interval, begin with [where to place polynomial samples](polynomials/interpolation/index.qmd)
+and work through [cosine-mapped differentiation](polynomials/differentiation/index.qmd),
+[integration as an ODE](polynomials/integration/index.qmd),
+[boundary equations](polynomials/boundary-values/index.qmd), and
+[a nonlinear solve](polynomials/nonlinear-boundary/index.qmd).
+
+Watch a pulse [reflect on an interval](waves/chebyshev-line/index.qmd),
+[spread across a square](waves/chebyshev-square/index.qmd), and travel
+through [a mixed Fourier–Chebyshev tank](waves/mixed-tank/index.qmd).
+Then separate linear dispersion from nonlinear interaction in
+[KdV](waves/kdv/index.qmd). The Allen–Cahn pair compares
+[fixed lifted boundaries](polynomials/allen-cahn-fixed/index.qmd) with
+[an explicitly driven endpoint](polynomials/allen-cahn-driven/index.qmd).
+For another MPI storage choice, return to the heat equation with
+[a compact core and separate halos](heat/separated-halos/index.qmd).
+
+The [coverage inventory](coverage.qmd) lists every existing executable and
+all forty book programs, including those still awaiting a teaching chapter.
+
+To build a complete simulation workflow, investigate
+[adaptive step rejection](integration/adaptive-rk/index.qmd),
+[exponential step doubling](integration/adaptive-etd/index.qmd),
+[output-time alignment](integration/output-clock/index.qmd),
+[two fields at one RK stage](coupling/runtime-fields/index.qmd), and
+[checkpoint restart](output/checkpoint-restart/index.qmd).
+The [host orchestrator](coupling/host-orchestrator/index.qmd) shows how another
+solver can own the loop. Start parallel work with
+[MPI ownership](parallel/hello/index.qmd) and finish with
+[structured diagnostics](diagnostics/profiling/index.qmd).
+
+For operator and boundary problems, begin with
+[harmonic-trap energies](fourier/harmonic-oscillator/index.qmd) and
+[a periodic Mathieu potential](fourier/mathieu/index.qmd).
+Then distinguish [physical and grid-scale eigenmodes](polynomials/eigenmodes/index.qmd)
+before examining [the Airy constraint](polynomials/airy/index.qmd) and
+[a perturbed membrane](polynomials/membrane/index.qmd).
+The [square Poisson](polynomials/poisson-square/index.qmd),
+[Helmholtz](polynomials/helmholtz-square/index.qmd), and
+[boundary-driven Laplace](polynomials/laplace-square/index.qmd) sequence
+shares one native tensor-action GMRES solve.
+[Geometric multigrid](elliptic/multigrid/index.qmd) introduces a native
+hierarchy on uniform grids. For a different use of complex arithmetic,
+try [a contour integral](quadrature/complex-contour/index.qmd).
+Continue to fourth-order problems with
+[a clamped beam](polynomials/clamped-beam/index.qmd) and
+[twenty-five square-plate modes](polynomials/clamped-plate/index.qmd).
+Both build on native Chebyshev differentiation; the plate uses symmetry
+to explain repeated vibration frequencies.
+The [Orr–Sommerfeld problem](polynomials/orr-sommerfeld/index.qmd) reuses
+the clamped operators to ask whether a small flow disturbance grows.
+Its complex generalized eigenproblem separates matrix residuals from
+resolution and stability.
+For the sensitivity behind that distinction, examine
+[pseudospectra of a complex oscillator](polynomials/pseudospectra/index.qmd).
+Small singular values show where a small perturbation can move an eigenvalue.
+The final book pair moves to a disk:
+[vibration modes](polynomials/disk-modes/index.qmd) explain signed radii
+and angular multiplicity, and [Poisson's equation](polynomials/poisson-disk/index.qmd)
+uses an exact reference to distinguish a tiny residual from radial
+approximation error.
+
+The [existing examples catalogue](https://vtt-propertune.github.io/OpenPFC/docs/reference/examples_catalog/)
+also includes adaptive integration, Cahn–Hilliard evolution, custom initial
+conditions, coupled fields, and output. Those remain useful next steps after
+these lessons. GPU execution has its own application/build path;
+the source-model CLI used here currently qualifies CPU execution.
 
 :::

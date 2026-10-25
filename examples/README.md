@@ -5,10 +5,16 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Examples
 
-The [Quarto teaching collection](index.qmd) keeps runnable source and
-mathematical explanations together. See [AUTHORING.md](AUTHORING.md) for
-preview and publication, and [coverage.qmd](coverage.qmd) for progress.
-
+Start with [OpenPFC by example](https://vtt-propertune.github.io/OpenPFC/learn/),
+a sequence of Quarto lessons with runnable C++ models under thematic
+directories: `geometry/`, `fourier/`, `differentiation/`, `heat/`,
+`interpolation/`, `waves/`, `integration/`, `polynomials/`, `parallel/`,
+`coupling/`, `output/`, `diagnostics/`, `elliptic/`, `quadrature/`,
+`initialization/`, `configuration/`, and `phase-fields/`.
+See [index.qmd](index.qmd) for the story and [AUTHORING.md](AUTHORING.md) for
+local preview, numerical checks, and figure reproduction.
+The [coverage inventory](coverage.qmd) keeps the existing targets and all
+forty Trefethen programs visible, including work still pending.
 
 Small programs that demonstrate the OpenPFC library. They are built when `OpenPFC_BUILD_EXAMPLES=ON` (CMake default).
 
@@ -17,26 +23,28 @@ Small programs that demonstrate the OpenPFC library. They are built when `OpenPF
 From the repository root (after satisfying [`INSTALL.md`](../INSTALL.md)):
 
 ```bash
-cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
-cmake --build build -j"$(nproc)"
+./scripts/build.sh
 ```
 
-Executables appear under `build/examples/` (or `build/Release/examples/` with some multi-config generators).
+The default Tohtori CPU executables appear under `builds/release/examples/`.
 
 ## Suggested first runs
 
-Run with MPI from the build directory (adjust rank count):
+With an installed SDK and CLI, start from the repository root:
 
 ```bash
-cd build
-mpirun -n 4 ./examples/02_domain_decomposition
-mpirun -n 4 ./examples/03_parallel_fft
-mpirun -n 4 ./examples/05_simulator
-mpirun -n 4 ./examples/12_cahn_hilliard
-mpirun -n 2 ./examples/23_halo_microtiming --nx 16 --iters 4 --output /tmp/halo.json
+(cd examples/geometry/first-domain && openpfc run model.cpp input.json --launcher=none)
+(cd examples/initialization/patterns && openpfc run model.cpp input.json --source-root .. --launcher=none)
+(cd examples/heat/implicit-euler && openpfc run model.cpp input.json --source-root .. --ranks=2 --launcher=mpirun)
+(cd examples/phase-fields/cahn-hilliard && openpfc run model.cpp input.json --launcher=none)
 ```
 
-These cover decomposition, distributed FFT, the simulator stack, and a richer spectral model.
+The CLI prints each isolated attempt directory. Its `results/` contains
+that run's fields and diagnostics. The chapters explain the input parameters,
+expected behaviour and checks. Native executables built by `scripts/build.sh`
+can also be run from the repository root under `builds/release/examples/`;
+their relative `results/` output then stays under the repository's ignored
+output directory.
 
 A **research prototype** (not part of the numbered teaching ladder) is
 `ns2d_vorticity`: 2-D vorticity–streamfunction Navier–Stokes

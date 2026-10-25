@@ -121,4 +121,4 @@ line search, trial rollback and the residual-based FFT adapter.
 [Structured multigrid](reference/multigrid.md) describes volume-weighted
 transfers, coarse operators, nullspaces and the replicated MPI limitation.
 
-Runnable Quarto chapters: [OpenPFC by example](../examples/index.qmd).
+Runnable Quarto chapters: [OpenPFC by example](https://vtt-propertune.github.io/OpenPFC/learn/).
