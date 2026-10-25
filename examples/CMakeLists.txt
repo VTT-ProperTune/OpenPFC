@@ -65,6 +65,7 @@ add_subdirectory(configuration)
 add_subdirectory(coupling)
 add_subdirectory(diagnostics)
 add_subdirectory(differentiation)
+add_subdirectory(elliptic)
 add_subdirectory(fourier)
 add_subdirectory(geometry)
 add_subdirectory(heat)
@@ -428,6 +429,9 @@ if(OpenPFC_BUILD_TESTS)
   add_test(NAME example-gamma-contour
            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_spectra.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case gamma_contour)
   set_tests_properties(example-gamma-contour PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  add_test(NAME example-multigrid-poisson
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_spectra.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case multigrid_poisson)
+  set_tests_properties(example-multigrid-poisson PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
 endif()
 
 add_executable(23_halo_microtiming 23_halo_microtiming.cpp)

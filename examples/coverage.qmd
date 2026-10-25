@@ -16,8 +16,8 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 [Follow what is taught, what is adapted, and what still needs a chapter.]{.lesson-deck}
 :::
 
-There are 69 declared runnable example targets and
-55 Quarto teaching chapters. The table includes older programs
+There are 70 declared runnable example targets and
+56 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -118,6 +118,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `mpi_timers` | [Read the lesson](diagnostics/mpi-timing/index.qmd) |
 | `mpi_worker` | [Read the lesson](parallel/hello/index.qmd) |
 | `mpi_worker_inside_class` | [Read the lesson](parallel/session/index.qmd) |
+| `multigrid_poisson` | [Read the lesson](elliptic/multigrid/index.qmd) |
 | `nonlinear_spectral_course` | Pending conversion. |
 | `ns2d_flux_balance` | Pending conversion. |
 | `ns2d_spatial_refine` | Pending conversion. |
@@ -174,7 +175,7 @@ fixed-step restart does not establish an adaptive restart contract.
 | field output and visualization | [binary-field](output/binary-field/index.qmd), [vtk-series](output/vtk-series/index.qmd) |
 | checkpoints and restart | [checkpoint-restart](output/checkpoint-restart/index.qmd) |
 | Krylov and nonlinear solves | [integration](polynomials/integration/index.qmd), [boundary-values](polynomials/boundary-values/index.qmd), [nonlinear-boundary](polynomials/nonlinear-boundary/index.qmd) |
-| geometric multigrid | Pending a teaching chapter. |
+| geometric multigrid | [multigrid](elliptic/multigrid/index.qmd) |
 | microelasticity and homogenization | Pending a teaching chapter. |
 | coupling and transactional attempts | [host-orchestrator](coupling/host-orchestrator/index.qmd), [adaptive-rk](integration/adaptive-rk/index.qmd), [adaptive-etd](integration/adaptive-etd/index.qmd) |
 | profiling and communication diagnostics | [mpi-timing](diagnostics/mpi-timing/index.qmd), [profiling](diagnostics/profiling/index.qmd) |

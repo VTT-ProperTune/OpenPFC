@@ -374,6 +374,46 @@ def check_gamma(binary, directory):
     )
 
 
+def check_multigrid(binary, directory):
+    run(binary, directory)
+    convergence = rows(directory / "results/convergence.csv")
+    previous = None
+    for row in convergence:
+        n = int(row["n"])
+        h = 1 / (n - 1)
+        data = rows(directory / f"results/field_{n}.csv")
+        assert len(data) == n**3
+        for sample in data:
+            i, j, k = (int(sample[key]) for key in ("i", "j", "k"))
+            if 0 in (i, j, k) or n - 1 in (i, j, k):
+                expected = 0
+            else:
+                low = (
+                    math.sin(math.pi * i * h)
+                    * math.sin(math.pi * j * h)
+                    * math.sin(math.pi * k * h)
+                )
+                high = (
+                    0.2
+                    * math.sin(2 * math.pi * i * h)
+                    * math.sin(3 * math.pi * j * h)
+                    * math.sin(math.pi * k * h)
+                )
+                mu1 = 12 / h**2 * math.sin(math.pi * h / 2) ** 2
+                mu2 = (
+                    4
+                    / h**2
+                    * sum(math.sin(m * math.pi * h / 2) ** 2 for m in (2, 3, 1))
+                )
+                expected = 3 * math.pi**2 / mu1 * low + 14 * math.pi**2 / mu2 * high
+            assert abs(float(sample["u"]) - expected) < 1e-8
+        error = float(row["relative_error"])
+        if previous is not None:
+            assert 3.8 < previous / error < 4.5
+        previous = error
+    run(binary, directory.parent / "bad-mg", parameters={"sizes": [8]}, success=False)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -393,6 +433,7 @@ def main():
             "square_helmholtz",
             "square_laplace",
             "gamma_contour",
+            "multigrid_poisson",
         ],
     )
     args = parser.parse_args()
@@ -440,6 +481,10 @@ def main():
             root = base / "gamma_contour"
             root.mkdir()
             check_gamma(bin_dir / "gamma_contour", root)
+        if args.case in (None, "multigrid_poisson"):
+            root = base / "multigrid_poisson"
+            root.mkdir()
+            check_multigrid(bin_dir / "multigrid_poisson", root)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

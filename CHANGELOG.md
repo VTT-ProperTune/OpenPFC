@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Compare multigrid-preconditioned native Krylov solves across uniform grids. Explain hierarchy and boundary choices and check the exact discrete manufactured field.
+
 - Teach contour quadrature and complex arithmetic through reciprocal Gamma. Verify identities, zeros and convergence against independent special-function formulas.
 
 - Show how boundary values enter interior equations through explicit lifting. Check full fields, boundary values and an exact harmonic manufactured solution.

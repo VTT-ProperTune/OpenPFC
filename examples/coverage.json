@@ -395,6 +395,17 @@
       ]
     },
     {
+      "target": "multigrid_poisson",
+      "source": "elliptic/multigrid/model.cpp",
+      "chapter": "elliptic/multigrid/index.qmd",
+      "capabilities": [
+        "multigrid",
+        "gmres",
+        "finite-differences",
+        "dirichlet"
+      ]
+    },
+    {
       "target": "nonlinear_spectral_course",
       "source": "nonlinear_spectral/allen_cahn.cpp",
       "chapter": null,
@@ -1097,7 +1108,9 @@
         "nodal_multigrid.hpp",
         "nodal_dirichlet_multigrid.hpp"
       ],
-      "chapters": []
+      "chapters": [
+        "elliptic/multigrid/index.qmd"
+      ]
     },
     {
       "name": "microelasticity and homogenization",

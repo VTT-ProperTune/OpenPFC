@@ -130,6 +130,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `square_helmholtz` | `polynomials/helmholtz-square/model.cpp` | A wave number can make a solve delicate |
 | `square_laplace` | `polynomials/laplace-square/model.cpp` | Let the boundary drive the interior |
 | `gamma_contour` | `quadrature/complex-contour/model.cpp` | A contour turns an integral into a sum |
+| `multigrid_poisson` | `elliptic/multigrid/model.cpp` | Use a hierarchy to correct different scales |
 
 ## Research prototypes
 
