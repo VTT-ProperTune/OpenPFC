@@ -419,6 +419,18 @@
       ]
     },
     {
+      "target": "kdv_integrating_factor",
+      "source": "waves/kdv/model.cpp",
+      "chapter": "waves/kdv/index.qmd",
+      "capabilities": [
+        "local-fft",
+        "explicit-rk4",
+        "complex-state",
+        "integrating-factor",
+        "nonlinear-models"
+      ]
+    },
+    {
       "target": "mathieu_spectrum",
       "source": "fourier/mathieu/model.cpp",
       "chapter": "fourier/mathieu/index.qmd",
@@ -955,7 +967,7 @@
       "program": 27,
       "title": "Solve KdV eq. u_t + uu_x + u_xxx = 0 on [-pi,pi] by",
       "source": "https://people.maths.ox.ac.uk/trefethen/p27.m",
-      "chapter": null,
+      "chapter": "waves/kdv/index.qmd",
       "scope": "Original N=256 periodic two-pulse KdV experiment, timestep, unfiltered nonlinear product and zero odd Nyquist multipliers. Native complex-state RK4 integrates a global integrating factor, algebraically equivalent to the book's per-step stage formula; complete fields and integral diagnostics are saved."
     },
     {
@@ -1259,6 +1271,7 @@
         "fourier_vector.hpp"
       ],
       "chapters": [
+        "waves/kdv/index.qmd",
         "phase-fields/cahn-hilliard/index.qmd"
       ]
     }

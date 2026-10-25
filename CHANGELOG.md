@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Use native complex-state RK4 with an integrating factor for KdV. Explain the unfiltered collocation choice and check complete fields with direct Fourier sums and cyclic convolutions.
+
 - Teach periodic propagation with nonperiodic Neumann walls through a mixed transform tank. Check complete fields, boundary elimination and timestep convergence independently.
 
 - Build a tensor wave action from native one-dimensional derivatives. Explain startup error and verify complete evolving fields through independent nodal differentiation.

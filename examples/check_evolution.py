@@ -248,6 +248,82 @@ def check_tank(binary, root):
     run(binary, root / "bad-tank", parameters={"nx": 13}, success=False)
 
 
+def dft(values, inverse=False):
+    n = len(values)
+    return [
+        sum(
+            value * cmath.exp((2j if inverse else -2j) * math.pi * j * k / n)
+            for j, value in enumerate(values)
+        )
+        / (n if inverse else 1)
+        for k in range(n)
+    ]
+
+
+def check_kdv(binary, root):
+    folder = root / "kdv-convolution"
+    n, dt, steps = 32, 1e-6, 10
+    run(
+        binary,
+        folder,
+        parameters={"n": n, "dt": dt, "end": steps * dt, "save_every": 1},
+    )
+    saved = snapshots(folder / "results/kdv.csv")
+    x = [2 * math.pi * (j - n // 2) / n for j in range(n)]
+    u = [
+        3 * 25**2 / math.cosh(0.5 * 25 * (p + 2)) ** 2
+        + 3 * 16**2 / math.cosh(0.5 * 16 * (p + 1)) ** 2
+        for p in x
+    ]
+    v = dft(u)
+    k = [j if j < n // 2 else (0 if j == n // 2 else j - n) for j in range(n)]
+    e = [cmath.exp(0.5j * dt * mode**3) for mode in k]
+
+    def nonlinear(spectrum):
+        # Direct cyclic convolution, rather than FFT -> pointwise square -> FFT.
+        return [
+            -0.5j
+            * dt
+            * k[j]
+            * sum(spectrum[m] * spectrum[(j - m) % n] for m in range(n))
+            / n
+            for j in range(n)
+        ]
+
+    for step in range(1, steps + 1):
+        a = nonlinear(v)
+        b = nonlinear([f * (p + q / 2) for f, p, q in zip(e, v, a)])
+        c = nonlinear([f * p + q / 2 for f, p, q in zip(e, v, b)])
+        d = nonlinear([f * f * p + f * q for f, p, q in zip(e, v, c)])
+        v = [
+            f * f * p + (f * f * aa + 2 * f * (bb + cc) + dd) / 6
+            for f, p, aa, bb, cc, dd in zip(e, v, a, b, c, d)
+        ]
+        close(saved[step], [value.real for value in dft(v, inverse=True)], 2e-9)
+    for profile in ("constant", "cosine"):
+        folder = root / f"kdv-{profile}"
+        run(
+            binary,
+            folder,
+            parameters={
+                "n": n,
+                "dt": 0.0001,
+                "end": 0.01,
+                "initial": profile,
+                "nonlinearity": 0 if profile == "cosine" else 1,
+            },
+        )
+        data = table(folder / "results/kdv.csv")
+        for row in data:
+            exact = (
+                2
+                if profile == "constant"
+                else math.cos(2 * float(row["x"]) + 8 * float(row["time"]))
+            )
+            assert abs(float(row["u"]) - exact) < 2e-13, row
+    run(binary, root / "bad-kdv", parameters={"dt": 1}, success=False)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -257,7 +333,12 @@ def main():
     parser.add_argument("--ranks", default=1, type=int)
     parser.add_argument(
         "--case",
-        choices=["chebyshev_wave_line", "chebyshev_wave_square", "mixed_wave_tank"],
+        choices=[
+            "chebyshev_wave_line",
+            "chebyshev_wave_square",
+            "mixed_wave_tank",
+            "kdv_integrating_factor",
+        ],
     )
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
@@ -280,6 +361,10 @@ def main():
             root = base / "mixed_wave_tank"
             root.mkdir()
             check_tank(bin_dir / "mixed_wave_tank", root)
+        if args.case in (None, "kdv_integrating_factor"):
+            root = base / "kdv_integrating_factor"
+            root.mkdir()
+            check_kdv(bin_dir / "kdv_integrating_factor", root)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

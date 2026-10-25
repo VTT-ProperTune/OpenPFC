@@ -117,7 +117,7 @@ $\Delta t\sqrt\lambda<2$. It is a serial teaching implementation.
 
 Download the [source](model.cpp), [input](input.json) and
 [theme helper](../lesson.hpp). For a nonlinear periodic wave, continue
-with KdV.
+with [KdV](../kdv/index.qmd).
 
 ## References
 ::: {#refs}

@@ -16,3 +16,7 @@ set_target_properties(chebyshev_wave_square PROPERTIES RUNTIME_OUTPUT_DIRECTORY 
 add_executable(mixed_wave_tank mixed-tank/model.cpp)
 target_link_libraries(mixed_wave_tank PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(mixed_wave_tank PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(kdv_integrating_factor kdv/model.cpp)
+target_link_libraries(kdv_integrating_factor PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(kdv_integrating_factor PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")

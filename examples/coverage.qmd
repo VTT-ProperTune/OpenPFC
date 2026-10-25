@@ -16,15 +16,15 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 [Follow what is taught, what is adapted, and what still needs a chapter.]{.lesson-deck}
 :::
 
-There are 79 declared runnable example targets and
-65 Quarto teaching chapters. The table includes older programs
+There are 80 declared runnable example targets and
+66 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
 ## Spectral Methods in MATLAB
 
 The [author's collection](https://people.maths.ox.ac.uk/trefethen/spectral.html)
-contains forty programs. Currently 37 have a corresponding lesson.
+contains forty programs. Currently 38 have a corresponding lesson.
 A link means that the lesson declares coverage of that experiment; the
 scope column states changes in method or presentation. It does not mean
 an unmodified MATLAB program was translated line for line. Pending rows
@@ -58,7 +58,7 @@ remain in the inventory while applicability and implementation are assessed.
 | [24](https://people.maths.ox.ac.uk/trefethen/p24.m) | pseudospectra of Davies's complex harmonic oscillator | [Read the lesson](polynomials/pseudospectra/index.qmd). Original degree 70, half-length 6, all 69 eigenvalues and 26 by 21 complex grid with increments of two. Native Chebyshev derivatives; one-sided complex Jacobi singular values avoid normal equations. Complete original grid independently qualified. |
 | [25](https://people.maths.ox.ac.uk/trefethen/p25.m) | stability regions for ODE formulas | [Read the lesson](integration/stability/index.qmd). Original AB/AM/BDF root-locus families and RK stability boundaries; native RK tableaus plus example-owned multistep references. |
 | [26](https://people.maths.ox.ac.uk/trefethen/p26.m) | eigenvalues of 2nd-order Chebyshev diff. matrix | [Read the lesson](polynomials/eigenmodes/index.qmd). Original degree-60 spectrum and grid-scale mode; physical mode labelled and selected consistently as N/4. |
-| [27](https://people.maths.ox.ac.uk/trefethen/p27.m) | Solve KdV eq. u_t + uu_x + u_xxx = 0 on [-pi,pi] by | Pending assessment and implementation. |
+| [27](https://people.maths.ox.ac.uk/trefethen/p27.m) | Solve KdV eq. u_t + uu_x + u_xxx = 0 on [-pi,pi] by | [Read the lesson](waves/kdv/index.qmd). Original N=256 periodic two-pulse KdV experiment, timestep, unfiltered nonlinear product and zero odd Nyquist multipliers. Native complex-state RK4 integrates a global integrating factor, algebraically equivalent to the book's per-step stage formula; complete fields and integral diagnostics are saved. |
 | [28](https://people.maths.ox.ac.uk/trefethen/p28.m) | eigenmodes of Laplacian on the disk (compare p22.m) | [Read the lesson](polynomials/disk-modes/index.qmd). Original N25,M20 disk Laplacian, complete 240-mode spectrum with angular multiplicity, selected modes 1,3,6,10 and frequency ratios. Native Chebyshev derivatives and equivalent Fourier radial blocks; Bessel references and full-matrix qualification. Polar fields with nodal lines replace wireframe projection. |
 | [29](https://people.maths.ox.ac.uk/trefethen/p29.m) | solve Poisson equation on the unit disk | [Read the lesson](polynomials/poisson-disk/index.qmd). Original N31,M40 forcing and zero-boundary disk solution. Native FFT separation and GMRES solve the equivalent original polar matrix; exact separated and smooth manufactured references, N63 radial refinement and independent full-matrix qualification. Non-smooth pole forcing is explicit. |
 | [30](https://people.maths.ox.ac.uk/trefethen/p30.m) | spectral integration, ODE style (compare p12.m) | [Read the lesson](polynomials/integration/index.qmd). Original antiderivative collocation experiment for four profiles and degrees 1..50; native GMRES replaces the explicit inverse. |
@@ -119,6 +119,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `harmonic_oscillator` | [Read the lesson](fourier/harmonic-oscillator/index.qmd) |
 | `heat_exponential` | [Read the lesson](heat/exponential/index.qmd) |
 | `json_read` | [Read the lesson](configuration/session/index.qmd) |
+| `kdv_integrating_factor` | [Read the lesson](waves/kdv/index.qmd) |
 | `mathieu_spectrum` | [Read the lesson](fourier/mathieu/index.qmd) |
 | `membrane_eigenmodes` | [Read the lesson](polynomials/membrane/index.qmd) |
 | `mhd2d` | Pending conversion. |
@@ -189,7 +190,7 @@ fixed-step restart does not establish an adaptive restart contract.
 | coupling and transactional attempts | [host-orchestrator](coupling/host-orchestrator/index.qmd), [adaptive-rk](integration/adaptive-rk/index.qmd), [adaptive-etd](integration/adaptive-etd/index.qmd) |
 | profiling and communication diagnostics | [mpi-timing](diagnostics/mpi-timing/index.qmd), [profiling](diagnostics/profiling/index.qmd) |
 | CUDA and HIP execution | Pending a teaching chapter. |
-| nonlinear models and incompressible flow | [cahn-hilliard](phase-fields/cahn-hilliard/index.qmd) |
+| nonlinear models and incompressible flow | [kdv](waves/kdv/index.qmd), [cahn-hilliard](phase-fields/cahn-hilliard/index.qmd) |
 
 Every family needs an actual model, a useful mathematical story and appropriate runtime evidence.
 
