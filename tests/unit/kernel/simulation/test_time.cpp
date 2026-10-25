@@ -457,8 +457,7 @@ TEST_CASE("test_time_step_counters_initialization", "[time][unit]") {
   }
 
   SECTION("three-arg constructor with method") {
-    Time t({0.0, 10.0, 1.0}, 2.0,
-           pfc::sim::steppers::RKIntegratorMethod::RK2_Heun);
+    Time t({0.0, 10.0, 1.0}, 2.0, pfc::sim::steppers::RKIntegratorMethod::RK2_Heun);
     REQUIRE(t.get_accepted_steps() == 0);
     REQUIRE(t.get_rejected_steps() == 0);
   }
@@ -639,8 +638,9 @@ TEST_CASE("Time - set_dt does not rewrite accepted time", "[time][unit]") {
   REQUIRE_THAT(t.get_accepted_time(), WithinAbs(1.0, TOLERANCE));
 }
 
-TEST_CASE("TimeStateGuard - restores accepted time and attempt flags after begin_attempt",
-          "[time][unit]") {
+TEST_CASE(
+    "TimeStateGuard - restores accepted time and attempt flags after begin_attempt",
+    "[time][unit]") {
   Time time({0.0, 10.0, 0.5}, 0.0);
   time.next();
   REQUIRE_THAT(time.get_accepted_time(), WithinAbs(0.5, TOLERANCE));
@@ -657,8 +657,9 @@ TEST_CASE("TimeStateGuard - restores accepted time and attempt flags after begin
   REQUIRE(time.get_increment() == 1);
 }
 
-TEST_CASE("TimeStateGuard - restores accepted time after commit with attempted_dt != dt",
-          "[time][unit]") {
+TEST_CASE(
+    "TimeStateGuard - restores accepted time after commit with attempted_dt != dt",
+    "[time][unit]") {
   Time time({0.0, 1.0, 0.5}, 0.0);
   // Pre-guard accepted at 0.0; commit a clipped terminal step with attempted != dt.
   {
@@ -714,4 +715,11 @@ TEST_CASE("Time - non-member attempt helpers mirror members", "[time][unit]") {
   REQUIRE_THAT(pfc::time::attempted_dt(t), WithinAbs(1.0, TOLERANCE));
   pfc::time::commit_attempt(t);
   REQUIRE_THAT(pfc::time::accepted_time(t), WithinAbs(1.0, TOLERANCE));
+}
+
+TEST_CASE("Time accepts a save interval equal to the end time", "[time][unit]") {
+  const pfc::Time time({0.0, 1.0, 0.1}, 1.0);
+  REQUIRE(time.get_saveat() == 1.0);
+  REQUIRE_THROWS_AS(pfc::Time({0.0, 1.0, 0.1}, 1.01), std::invalid_argument);
+  REQUIRE_THROWS_AS(pfc::Time({0.0, 1e-10, 1e-9}, 0.0), std::invalid_argument);
 }

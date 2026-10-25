@@ -283,7 +283,7 @@ public:
    * - `t0 >= 0` (non-negative start time)
    * - `t1 > t0` (end time must exceed start time)
    * - `dt > 0` and `dt >= 1e-9` (positive and non-negligible time step)
-   * - `saveat < t1` if `saveat > 0` (save interval must fit within simulation)
+   * - `saveat <= t1` if `saveat > 0` (save interval must fit within simulation)
    *
    * @param[in] time Array containing [t0, t1, dt]:
    *                 - `time[0]` = t0: Start time of simulation
@@ -297,7 +297,8 @@ public:
    * @throws std::invalid_argument If dt <= 0
    * @throws std::invalid_argument If dt < 1e-9 (too small for numerical stability)
    * @throws std::invalid_argument If t1 <= t0
-   * @throws std::invalid_argument If saveat >= t1 (when saveat > 0)
+   * @throws std::invalid_argument If saveat > t1
+   * @throws std::invalid_argument If t1 - t0 < 1e-9
    *
    * @post get_current() returns t0
    * @post get_increment() returns 0
@@ -358,8 +359,8 @@ public:
    *
    * @note The initial increment is always 0, so `get_current()` returns `t0`
    *       immediately after construction.
-   * @note Setting `saveat` larger than the simulation time span effectively
-   *       disables periodic saving (only first and last steps will save).
+   * @note A save interval equal to t1 is accepted. The upper bound is the
+   *       absolute end time, not the duration t1 - t0.
    *
    * @see get_current() - compute current time from increment
    * @see done() - check if simulation is complete
@@ -412,9 +413,10 @@ public:
 
   /**
    * @brief Construct a new Time object with the specified time interval and
-   * default save interval (euler integrator).
+   * explicit save interval (Euler integrator).
    *
-   * The save interval is set to the same value as the time step.
+   * Uses the same validation as the three-argument constructor.
+   * @param saveat Save interval; zero disables periodic saving.
    *
    * @param time An array containing the start time, end time, and time step in
    * that order
