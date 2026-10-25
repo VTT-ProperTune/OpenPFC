@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Teach Dirichlet Chebyshev eigenmodes and stiffness at the original book resolutions. Check full mode fields and compare resolved modes with continuum values and independent nodal matrices.
+
 - Track a parameter-dependent periodic spectrum with native Fourier differentiation. Explain parity and check complete eigenvalue branches through independent matrix solves.
 
 - Teach a Fourier discretization of the harmonic oscillator and distinguish spatial truncation from grid resolution. Check eigenpairs with independent inverse iteration and analytic low-energy values.

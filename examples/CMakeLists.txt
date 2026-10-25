@@ -406,6 +406,9 @@ if(OpenPFC_BUILD_TESTS)
   add_test(NAME example-mathieu-spectrum
            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_spectra.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case mathieu_spectrum)
   set_tests_properties(example-mathieu-spectrum PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  add_test(NAME example-chebyshev-eigenmodes
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_spectra.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case chebyshev_eigenmodes)
+  set_tests_properties(example-chebyshev-eigenmodes PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
 endif()
 
 add_executable(23_halo_microtiming 23_halo_microtiming.cpp)

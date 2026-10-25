@@ -75,6 +75,30 @@ def lowest(matrix, count=1, shift=0):
     return values
 
 
+def lagrange_second(n):
+    """Differentiate Lagrange products directly; do not square a D matrix."""
+    x = [math.cos(math.pi * j / n) for j in range(n + 1)]
+    a = [[0.0] * (n + 1) for _ in x]
+    denominator = [
+        math.prod(p - other for k, other in enumerate(x) if k != j)
+        for j, p in enumerate(x)
+    ]
+    for i, point in enumerate(x):
+        for j in range(n + 1):
+            if i == j:
+                inverses = [1 / (point - other) for k, other in enumerate(x) if k != i]
+                a[i][j] = sum(inverses) ** 2 - sum(v * v for v in inverses)
+            else:
+                others = [other for k, other in enumerate(x) if k not in (i, j)]
+                a[i][j] = (
+                    2
+                    * math.prod(point - other for other in others)
+                    * sum(1 / (point - other) for other in others)
+                    / denominator[j]
+                )
+    return x, a
+
+
 def check_harmonic(binary, directory):
     run(binary, directory)
     data = rows(directory / "results/energies.csv")
@@ -143,6 +167,44 @@ def check_mathieu(binary, directory):
     run(binary, directory.parent / "bad-mathieu", parameters={"n": 11}, success=False)
 
 
+def check_eigenmodes(binary, root):
+    maxima = []
+    for n, modes in ((36, [5, 10, 15, 20, 25, 30]), (60, [15, 59])):
+        directory = root / f"eigen-{n}"
+        run(binary, directory, parameters={"n": n, "modes": modes})
+        data = rows(directory / "results/spectrum.csv")
+        vectors = rows(directory / "results/vectors.csv")
+        assert len(data) == n - 1 and len(vectors) == (n - 1) * (n + 1)
+        x, a = lagrange_second(n)
+        norm_a = math.sqrt(sum(a[i][j] ** 2 for i in range(1, n) for j in range(1, n)))
+        for row in data:
+            mode = int(row["mode"])
+            eigenvalue = complex(float(row["eigenvalue"]), float(row["imag"]))
+            v = [
+                complex(float(r["real"]), float(r["imag"]))
+                for r in vectors
+                if int(r["mode"]) == mode
+            ]
+            assert v[0] == v[-1] == 0 and all(math.isfinite(abs(value)) for value in v)
+            residual = [
+                -sum(a[i][j] * v[j] for j in range(1, n)) - eigenvalue * v[i]
+                for i in range(1, n)
+            ]
+            relative = math.sqrt(
+                sum(abs(r) ** 2 for r in residual) / sum(abs(z) ** 2 for z in v)
+            ) / (norm_a + abs(eigenvalue))
+            assert relative < 1e-10, (n, mode, relative)
+            if mode <= 5:
+                assert abs(eigenvalue - (mode * math.pi / 2) ** 2) < 1e-7
+        trace = -sum(a[i][i] for i in range(1, n))
+        assert abs(sum(float(r["eigenvalue"]) for r in data) - trace) < 2e-10 * abs(
+            trace
+        )
+        maxima.append(float(data[-1]["eigenvalue"]))
+    assert 0.9 < maxima[1] / maxima[0] / (60 / 36) ** 4 < 1.1
+    run(binary, root / "bad-eigen", parameters={"n": 8, "modes": [9]}, success=False)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -150,7 +212,10 @@ def main():
     parser.add_argument("--launcher")
     parser.add_argument("--rank-flag", default="-n")
     parser.add_argument("--ranks", default=1, type=int)
-    parser.add_argument("--case", choices=["harmonic_oscillator", "mathieu_spectrum"])
+    parser.add_argument(
+        "--case",
+        choices=["harmonic_oscillator", "mathieu_spectrum", "chebyshev_eigenmodes"],
+    )
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     bin_dir = args.bin_dir.resolve()
@@ -168,6 +233,10 @@ def main():
             root = base / "mathieu_spectrum"
             root.mkdir()
             check_mathieu(bin_dir / "mathieu_spectrum", root)
+        if args.case in (None, "chebyshev_eigenmodes"):
+            root = base / "chebyshev_eigenmodes"
+            root.mkdir()
+            check_eigenmodes(bin_dir / "chebyshev_eigenmodes", root)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

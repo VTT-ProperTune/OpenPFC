@@ -123,6 +123,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `first_domain` | `geometry/first-domain/model.cpp` | Give the grid a physical meaning |
 | `harmonic_oscillator` | `fourier/harmonic-oscillator/model.cpp` | Find the energies of a harmonic trap |
 | `mathieu_spectrum` | `fourier/mathieu/model.cpp` | A periodic potential splits eigenvalues |
+| `chebyshev_eigenmodes` | `polynomials/eigenmodes/model.cpp` | A grid has its own spectrum |
 
 ## Research prototypes
 

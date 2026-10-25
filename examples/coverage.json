@@ -236,6 +236,15 @@
       ]
     },
     {
+      "target": "chebyshev_eigenmodes",
+      "source": "polynomials/eigenmodes/model.cpp",
+      "chapter": "polynomials/eigenmodes/index.qmd",
+      "capabilities": [
+        "chebyshev-reference",
+        "boundary-conditions"
+      ]
+    },
+    {
       "target": "checkpoint_restart",
       "source": "output/checkpoint-restart/model.cpp",
       "chapter": "output/checkpoint-restart/index.qmd",
@@ -694,7 +703,7 @@
       "program": 15,
       "title": "solve eigenvalue BVP u_xx = lambda*u, u(-1)=u(1)=0",
       "source": "https://people.maths.ox.ac.uk/trefethen/p15.m",
-      "chapter": null,
+      "chapter": "polynomials/eigenmodes/index.qmd",
       "scope": "Original degree-36 Dirichlet spectrum and six selected modes, using an example-owned complex QR eigensolver."
     },
     {
@@ -771,7 +780,7 @@
       "program": 26,
       "title": "eigenvalues of 2nd-order Chebyshev diff. matrix",
       "source": "https://people.maths.ox.ac.uk/trefethen/p26.m",
-      "chapter": null,
+      "chapter": "polynomials/eigenmodes/index.qmd",
       "scope": "Original degree-60 spectrum and grid-scale mode; physical mode labelled and selected consistently as N/4."
     },
     {

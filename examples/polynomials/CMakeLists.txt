@@ -28,3 +28,7 @@ set_target_properties(polynomial_boundary_values PROPERTIES RUNTIME_OUTPUT_DIREC
 add_executable(polynomial_nonlinear_boundary nonlinear-boundary/model.cpp)
 target_link_libraries(polynomial_nonlinear_boundary PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(polynomial_nonlinear_boundary PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(chebyshev_eigenmodes eigenmodes/model.cpp)
+target_link_libraries(chebyshev_eigenmodes PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(chebyshev_eigenmodes PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
