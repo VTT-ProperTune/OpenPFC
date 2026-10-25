@@ -73,7 +73,7 @@ eigensolver API is implied. The check compares the FFT-built operator with
 an independent direct DFT and verifies convergence toward the odd integers.
 Increasing $N$ cannot remove an error caused by choosing an insufficiently
 large physical interval. Compare next with a
-periodic potential, whose spectrum changes for a
+[periodic potential](../mathieu/index.qmd), whose spectrum changes for a
 different physical reason.
 
 The complete [C++ model](model.cpp) and [starting input](input.json)

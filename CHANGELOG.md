@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Track a parameter-dependent periodic spectrum with native Fourier differentiation. Explain parity and check complete eigenvalue branches through independent matrix solves.
+
 - Teach a Fourier discretization of the harmonic oscillator and distinguish spatial truncation from grid resolution. Check eigenpairs with independent inverse iteration and analytic low-energy values.
 
 - Express Cahn-Hilliard through native ETD symbols and a visible local cubic law. Preserve its executable, update the spectral reading path and check complete nonlinear fields against independent Fourier sums.

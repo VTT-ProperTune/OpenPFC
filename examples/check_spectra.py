@@ -109,6 +109,40 @@ def check_harmonic(binary, directory):
     )
 
 
+def check_mathieu(binary, directory):
+    run(binary, directory)
+    data = rows(directory / "results/mathieu.csv")
+    assert len(data) == 76 * 11
+    free = [0, 1, 1, 4, 4, 9, 9, 16, 16, 25, 25]
+    for step in range(76):
+        subset = [r for r in data if abs(float(r["q"]) - 0.2 * step) < 1e-12]
+        values = [float(r["eigenvalue"]) for r in subset]
+        assert len(values) == 11 and values == sorted(values)
+        assert all(math.isfinite(v) for v in values)
+        assert all(abs(v - base) <= 0.4 * step + 1e-10 for v, base in zip(values, free))
+        if step == 0:
+            assert max(abs(v - base) for v, base in zip(values, free)) < 1e-10
+    # Fourier-mode potential couples k to k+-2; solve each parity sector.
+    ground = []
+    for parity in (0, 1):
+        indices = list(range(parity, 42, 2))
+        m = len(indices)
+        a = [[0.0] * m for _ in indices]
+        for i, index in enumerate(indices):
+            k = index if index <= 21 else index - 42
+            a[i][i] = k * k
+            a[i][(i - 1) % m] += 15
+            a[i][(i + 1) % m] += 15
+        ground.extend(lowest(a, shift=31))
+    native = next(
+        float(r["eigenvalue"])
+        for r in data
+        if float(r["q"]) == 15 and int(r["mode"]) == 1
+    )
+    assert abs(native - min(ground)) < 1e-10
+    run(binary, directory.parent / "bad-mathieu", parameters={"n": 11}, success=False)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -116,7 +150,7 @@ def main():
     parser.add_argument("--launcher")
     parser.add_argument("--rank-flag", default="-n")
     parser.add_argument("--ranks", default=1, type=int)
-    parser.add_argument("--case", choices=["harmonic_oscillator"])
+    parser.add_argument("--case", choices=["harmonic_oscillator", "mathieu_spectrum"])
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     bin_dir = args.bin_dir.resolve()
@@ -130,6 +164,10 @@ def main():
             root = base / "harmonic_oscillator"
             root.mkdir()
             check_harmonic(bin_dir / "harmonic_oscillator", root)
+        if args.case in (None, "mathieu_spectrum"):
+            root = base / "mathieu_spectrum"
+            root.mkdir()
+            check_mathieu(bin_dir / "mathieu_spectrum", root)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

@@ -314,6 +314,15 @@
       ]
     },
     {
+      "target": "mathieu_spectrum",
+      "source": "fourier/mathieu/model.cpp",
+      "chapter": "fourier/mathieu/index.qmd",
+      "capabilities": [
+        "local-fft",
+        "fourier-symbols"
+      ]
+    },
+    {
       "target": "mhd2d",
       "source": "ns2d_vorticity/src/mhd.cpp",
       "chapter": null,
@@ -727,7 +736,7 @@
       "program": 21,
       "title": "eigenvalues of Mathieu operator -u_xx + 2qcos(2x)u",
       "source": "https://people.maths.ox.ac.uk/trefethen/p21.m",
-      "chapter": null,
+      "chapter": "fourier/mathieu/index.qmd",
       "scope": "Original N=42 and q=0:.2:15 Mathieu sweep; native LocalFFT plus example-owned symmetric Jacobi diagonalization."
     },
     {

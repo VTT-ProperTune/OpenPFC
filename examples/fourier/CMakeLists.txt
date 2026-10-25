@@ -12,3 +12,7 @@ set_target_properties(09_parallel_fft_high_level PROPERTIES RUNTIME_OUTPUT_DIREC
 add_executable(harmonic_oscillator harmonic-oscillator/model.cpp)
 target_link_libraries(harmonic_oscillator PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(harmonic_oscillator PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(mathieu_spectrum mathieu/model.cpp)
+target_link_libraries(mathieu_spectrum PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(mathieu_spectrum PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
