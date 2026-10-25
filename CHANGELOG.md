@@ -14,6 +14,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - Share inverse-driver checkpoint/restart, CSV and memory reporting between
   CPU and HIP backends. Name initialization, evolution and output stages (#652).
 
+- Move polycrystal MP4 encoding to `openpfc_render_polycrystal`, which reads
+  existing slices. The solver no longer accepts rendering flags (#652).
+
 - `openpfc bundle` can build a scratch image when `--base` is omitted. The image
   copies the host dynamic loader, the glibc libraries required by the model and
   by `/bin/sh`, and `/bin/sh` itself. Host MPI and fabric libraries stay outside.

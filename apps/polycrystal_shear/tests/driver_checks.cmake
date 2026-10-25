@@ -102,9 +102,20 @@ endif()
 function(run_render label ffmpeg_value outdir)
   file(REMOVE_RECURSE "${outdir}")
   file(MAKE_DIRECTORY "${outdir}")
-  set(cmd ${CMAKE_COMMAND} -E env "FFMPEG=${ffmpeg_value}" "${EXE}"
-      --size 4 --steps 2 --shear 0.002 --render 1 --fps 4
-      --outdir "${outdir}" --commit test)
+  if(NOT RENDERER)
+    message(FATAL_ERROR "RENDERER is required")
+  endif()
+  execute_process(
+    COMMAND "${EXE}" --size 4 --steps 2 --shear 0.002
+            --outdir "${outdir}" --commit test
+    RESULT_VARIABLE solve_rc OUTPUT_VARIABLE solve_out ERROR_VARIABLE solve_err
+    TIMEOUT ${TIMEOUT})
+  if(NOT solve_rc EQUAL 0)
+    message(FATAL_ERROR "slice producer failed: ${solve_out}\n${solve_err}")
+  endif()
+  require_text("${solve_out}" "status=ok")
+  set(cmd ${CMAKE_COMMAND} -E env "FFMPEG=${ffmpeg_value}" "${RENDERER}"
+      --size 4 --steps 2 --fps 4 --outdir "${outdir}")
   execute_process(
     COMMAND ${cmd}
     RESULT_VARIABLE rc

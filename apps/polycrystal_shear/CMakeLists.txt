@@ -2,8 +2,10 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 add_executable(polycrystal_shear src/polycrystal_shear.cpp)
-target_link_libraries(polycrystal_shear PRIVATE OpenPFC::openpfc )
-install(TARGETS polycrystal_shear DESTINATION bin)
+target_link_libraries(polycrystal_shear PRIVATE OpenPFC::openpfc)
+# Rendering consumes written slices and has no numerical/MPI dependency.
+add_executable(openpfc_render_polycrystal src/render_slices.cpp)
+install(TARGETS polycrystal_shear openpfc_render_polycrystal DESTINATION bin)
 
 if(OpenPFC_BUILD_TESTS)
   # The driver calls MPI_Init itself. Do not wrap it with srun.
@@ -44,6 +46,7 @@ if(OpenPFC_BUILD_TESTS)
                      -DPREFLAGS=${MPIEXEC_PREFLAGS}
                      -DPOSTFLAGS=${MPIEXEC_POSTFLAGS}
                      -DEXE=$<TARGET_FILE:polycrystal_shear>
+                   -DRENDERER=$<TARGET_FILE:openpfc_render_polycrystal>
                      -DTIMEOUT=30
                      -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/driver_checks.cmake)
     set_tests_properties(polycrystal-shear-bad-outdir-mpi PROPERTIES
@@ -56,6 +59,7 @@ if(OpenPFC_BUILD_TESTS)
                      -DPREFLAGS=${MPIEXEC_PREFLAGS}
                      -DPOSTFLAGS=${MPIEXEC_POSTFLAGS}
                      -DEXE=$<TARGET_FILE:polycrystal_shear>
+                   -DRENDERER=$<TARGET_FILE:openpfc_render_polycrystal>
                      -DROOT=${CMAKE_CURRENT_BINARY_DIR}/parity
                      -DTIMEOUT=180
                      -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/driver_checks.cmake)
@@ -67,6 +71,7 @@ if(OpenPFC_BUILD_TESTS)
            COMMAND ${CMAKE_COMMAND}
                    -DMODE=render-missing
                    -DEXE=$<TARGET_FILE:polycrystal_shear>
+                   -DRENDERER=$<TARGET_FILE:openpfc_render_polycrystal>
                    -DROOT=${CMAKE_CURRENT_BINARY_DIR}/render-missing
                    -DTIMEOUT=180
                    -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/driver_checks.cmake)
@@ -76,6 +81,7 @@ if(OpenPFC_BUILD_TESTS)
            COMMAND ${CMAKE_COMMAND}
                    -DMODE=render-injection
                    -DEXE=$<TARGET_FILE:polycrystal_shear>
+                   -DRENDERER=$<TARGET_FILE:openpfc_render_polycrystal>
                    -DROOT=${CMAKE_CURRENT_BINARY_DIR}/render-injection
                    -DTIMEOUT=180
                    -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/driver_checks.cmake)
@@ -87,6 +93,7 @@ if(OpenPFC_BUILD_TESTS)
              COMMAND ${CMAKE_COMMAND}
                      -DMODE=render
                      -DEXE=$<TARGET_FILE:polycrystal_shear>
+                   -DRENDERER=$<TARGET_FILE:openpfc_render_polycrystal>
                      -DFFMPEG=${FFMPEG_EXECUTABLE}
                      -DROOT=${CMAKE_CURRENT_BINARY_DIR}/render
                      -DTIMEOUT=180

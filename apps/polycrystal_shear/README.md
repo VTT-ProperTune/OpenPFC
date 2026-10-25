@@ -17,9 +17,10 @@ mpirun -n 1 ./polycrystal_shear --size 4 --steps 2 --shear 0.002 \
   --outdir results/polycrystal-smoke --commit test
 ```
 
-`--render 1` encodes `microstructure.mp4` from those slices at `--fps`
-(60 by default). The encoder is `ffmpeg` on `PATH`, or the executable
+`openpfc_render_polycrystal --size N --steps K --outdir DIR --fps 60`
+encodes `microstructure.mp4` from those slices at the chosen frame rate.
+Run it after the solver; the solver writes data only. The encoder is `ffmpeg` on `PATH`, or the executable
 named by `FFMPEG`. That path is one argument, not a shell command. A
-missing encoder fails the run after the increments. An output directory
+missing encoder fails rendering while leaving solver output available. An output directory
 that cannot be created stops every rank before the solve. The launch
 script and the bulky frames stay outside this repository.
