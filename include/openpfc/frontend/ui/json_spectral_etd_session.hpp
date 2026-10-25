@@ -425,7 +425,7 @@ private:
       if constexpr (is_host) {
         write_view(f.data(), f.size());
       } else {
-        f.with_host_view([&](double *d, std::size_t n) { write_view(d, n); });
+        f.with_host_read(write_view);
       }
     }
     ++m_result_counter;
