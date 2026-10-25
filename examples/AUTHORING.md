@@ -373,3 +373,19 @@ Review the combined website at its `/OpenPFC/` deployment prefix, checking
 source excerpts, equation numbers, citations, downloads, plots, and mobile
 width. Local preview does not establish that a future hosted build has
 passed, and does not authorize a merge or publication.
+
+## Physical Fourier symbols
+
+Generate native output in a separate run directory, then render it:
+
+```sh
+example_binaries="$(pwd)/builds/release/examples"
+mkdir -p results/example-book/symbols
+(cd results/example-book/symbols && "$example_binaries/fft_kspace_helpers_example")
+uv run --with matplotlib==3.11.2 python examples/render_utilities.py \
+  --symbols results/example-book/symbols
+```
+
+The default parameters are in `fourier/symbols/input.json`. The checker
+compares every spectral symbol with physical Fourier basis functions.
+The derived figure makes no timing or performance claim.

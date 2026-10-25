@@ -17,7 +17,7 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 :::
 
 There are 82 declared runnable example targets and
-69 Quarto teaching chapters. The table includes older programs
+70 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -115,7 +115,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `disk_eigenmodes` | [Read the lesson](polynomials/disk-modes/index.qmd) |
 | `disk_poisson` | [Read the lesson](polynomials/poisson-disk/index.qmd) |
 | `fft_backend_benchmark` | Pending conversion. |
-| `fft_kspace_helpers_example` | Pending conversion. |
+| `fft_kspace_helpers_example` | [Read the lesson](fourier/symbols/index.qmd) |
 | `first_domain` | [Read the lesson](geometry/first-domain/index.qmd) |
 | `gamma_contour` | [Read the lesson](quadrature/complex-contour/index.qmd) |
 | `harmonic_oscillator` | [Read the lesson](fourier/harmonic-oscillator/index.qmd) |

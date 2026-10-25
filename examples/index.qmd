@@ -51,6 +51,9 @@ has a numerical explanation.
 ::: {#listing}
 :::
 
+Read [An FFT index is not a wave number](fourier/symbols/index.qmd) to connect
+array indices, physical units and the Nyquist derivative convention.
+
 ## Make your first change
 
 Install a compatible OpenPFC SDK and CLI using the

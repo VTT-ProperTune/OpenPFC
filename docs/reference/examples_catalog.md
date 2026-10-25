@@ -80,7 +80,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `10_ui_register_ic` | `initialization/catalog/model.cpp` | UI and field-modifier registration patterns |
 | `11_write_results` | `output/vtk-series/model.cpp` | Native VTK/binary snapshot series and metadata |
 | `12_cahn_hilliard` | `phase-fields/cahn-hilliard/model.cpp` | Conserved Cahn–Hilliard physics through native ETD1 |
-| `fft_kspace_helpers_example` | `fft_kspace_helpers_example.cpp` | k-space helper functions |
+| `fft_kspace_helpers_example` | `fourier/symbols/model.cpp` | physical wave numbers, Nyquist conventions and heat symbols |
 | `mpi_worker` | `parallel/hello/model.cpp` | MPI worker pattern |
 | `mpi_worker_inside_class` | `parallel/session/model.cpp` | MPI worker encapsulated in a class |
 | `mpi_timers` | `diagnostics/mpi-timing/model.cpp` | MPI timing |

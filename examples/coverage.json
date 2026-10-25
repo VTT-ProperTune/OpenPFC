@@ -390,9 +390,14 @@
     },
     {
       "target": "fft_kspace_helpers_example",
-      "source": "fft_kspace_helpers_example.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "fourier/symbols/model.cpp",
+      "chapter": "fourier/symbols/index.qmd",
+      "capabilities": [
+        "fft",
+        "fourier-symbols",
+        "physical-coordinates",
+        "nyquist-convention"
+      ]
     },
     {
       "target": "first_domain",

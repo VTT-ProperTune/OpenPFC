@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Replace the printed k-space helper comparison with a runnable lesson on physical wave numbers, Nyquist derivative conventions and heat multipliers. Preserve its executable and check every symbol against an independent Fourier basis.
+
 - `openpfc compile MODEL.cpp` now writes a regular executable in the current
   directory. Select its path with `-o`/`--output`, then launch it directly or
   with MPI/Slurm. Starter instructions teach direct execution; recorded
