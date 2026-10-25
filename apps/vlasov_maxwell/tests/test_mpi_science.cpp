@@ -79,8 +79,8 @@ double landau_gamma(const vlasov::SimParams &p, MPI_Comm comm, int halo) {
 
   std::vector<double> ts, mex;
   auto sample = [&](double t) {
-    const auto L = vlasov::make_ledger(p, st.line, st.moments, st.sources,
-                                       st.fields, st.gauss, t, 0, 1);
+    const auto L = vlasov::make_ledger(p, st.line, st.moments, st.sources, st.fields,
+                                       st.gauss, t, 0, 1);
     ts.push_back(t);
     mex.push_back(L.mode_ex);
   };

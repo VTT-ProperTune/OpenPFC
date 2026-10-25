@@ -65,8 +65,8 @@
 
 #include <cmath>
 
-#include <openpfc/kernel/field/fd_stencils.hpp>
 #include <cstdio>
+#include <openpfc/kernel/field/fd_stencils.hpp>
 #include <string>
 
 namespace alloy_dendrite {
@@ -214,9 +214,8 @@ struct ModelParams {
  * unmerged PR #103 (`T = T_l + G(x − x_s − V_p t)`), non-dimensionalised
  * on this application's `theta`. Positive `gradient` is hotter downstream.
  */
-[[nodiscard]] inline double fta_undercooling(double gradient, double x,
-                                             double x0, double pulling,
-                                             double t) noexcept {
+[[nodiscard]] inline double fta_undercooling(double gradient, double x, double x0,
+                                             double pulling, double t) noexcept {
   return gradient * (x - x0 - pulling * t);
 }
 

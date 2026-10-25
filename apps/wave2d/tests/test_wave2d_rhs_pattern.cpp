@@ -57,7 +57,8 @@ TEST_CASE("Wave2D: Operator evaluation contract exists", "[wave2d][legacy]") {
   REQUIRE(result.increments.dv == wave2d::kC * wave2d::kC * 2.0);
 }
 
-TEST_CASE("Wave2D: WaveModel uses rhs() pattern, not step() pattern", "[wave2d][legacy]") {
+TEST_CASE("Wave2D: WaveModel uses rhs() pattern, not step() pattern",
+          "[wave2d][legacy]") {
   // This test explicitly documents the architectural decision that Wave2D
   // uses the rhs() pattern (operator evaluation) rather than the step()
   // pattern (state mutation), which is why the migration to the formal
@@ -80,7 +81,8 @@ TEST_CASE("Wave2D: WaveModel uses rhs() pattern, not step() pattern", "[wave2d][
   REQUIRE(std::is_member_function_pointer_v<decltype(&wave2d::WaveModel::rhs)>);
 }
 
-TEST_CASE("Wave2D: Tuple protocol is supported for multi-field scattering", "[wave2d][legacy]") {
+TEST_CASE("Wave2D: Tuple protocol is supported for multi-field scattering",
+          "[wave2d][legacy]") {
   // This test documents the tuple protocol used for scattering coupled field
   // increments into separate storage, which is critical for multi-field systems.
 
@@ -96,12 +98,10 @@ TEST_CASE("Wave2D: Tuple protocol is supported for multi-field scattering", "[wa
   REQUIRE(increments.du == 3.0);
 
   // Verify const overload works for read-only access
-  const auto& const_increments = WaveIncrements{.du = 0.5, .dv = 0.5};
+  const auto &const_increments = WaveIncrements{.du = 0.5, .dv = 0.5};
   const auto [c_du, c_dv] = const_increments.as_tuple();
-  static_assert(std::is_same_v<const double&, decltype(c_du)>);
-  static_assert(std::is_same_v<const double&, decltype(c_dv)>);
+  static_assert(std::is_same_v<const double &, decltype(c_du)>);
+  static_assert(std::is_same_v<const double &, decltype(c_dv)>);
 }
 
-int main(int argc, char* argv[]) {
-  return Catch::Session().run(argc, argv);
-}
+int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }

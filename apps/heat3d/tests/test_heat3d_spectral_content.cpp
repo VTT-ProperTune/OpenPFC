@@ -233,9 +233,9 @@ TEST_CASE("heat3d spectral content: FD-12 ties the spectral path near 1e-6",
 TEST_CASE("heat3d wrappers match the kernel Gaussian family",
           "[heat3d][spectral-content][unit]") {
   namespace sp = pfc::field::spectra;
-  REQUIRE_THAT(sc::predict_l2_error(4, 0.3, 64),
-               WithinRel(sp::predict_heat_l2_error(sp::gaussian(), 4, 0.3, 64),
-                         1e-14));
+  REQUIRE_THAT(
+      sc::predict_l2_error(4, 0.3, 64),
+      WithinRel(sp::predict_heat_l2_error(sp::gaussian(), 4, 0.3, 64), 1e-14));
 }
 
 TEST_CASE("heat3d spectral content: family held-out gate fails closed",

@@ -129,8 +129,8 @@ template <class G> std::vector<double> sample_x(const SimParams &p, G &&g) {
  * `StridedDistribution::contiguous` assumes and the one that makes the `v_y`
  * halo contiguous.
  */
-std::vector<double> maxwellian(const SimParams &p, double n0, double dn,
-                               double ux, double uy, double vth) {
+std::vector<double> maxwellian(const SimParams &p, double n0, double dn, double ux,
+                               double uy, double vth) {
   const std::size_t n = static_cast<std::size_t>(p.nx) *
                         static_cast<std::size_t>(p.nvx) *
                         static_cast<std::size_t>(p.nvy);
@@ -221,7 +221,8 @@ TEST_CASE("Poisson reproduces a single-mode analytic field to round-off",
     const double k = p.k_skin(m);
     const double A = 0.7;
     const auto rho = sample_x(p, [&](double x) { return A * std::cos(k * x); });
-    const auto exact = sample_x(p, [&](double x) { return (A / k) * std::sin(k * x); });
+    const auto exact =
+        sample_x(p, [&](double x) { return (A / k) * std::sin(k * x); });
 
     const auto r = vlasov::solve_gauss(line, rho);
     INFO("mode m = " << m << " err = " << max_diff(r.Ex, exact));
@@ -280,7 +281,8 @@ TEST_CASE("Poisson is linear over a multi-mode charge density", "[unit][poisson]
   const auto exact = sample_x(p, exact_fn);
   const auto r = vlasov::solve_gauss(line, rho);
   const double gres = vlasov::gauss_residual(line, r.Ex, rho).residual;
-  INFO("multi-mode err = " << max_diff(r.Ex, exact) << ", Gauss residual = " << gres);
+  INFO("multi-mode err = " << max_diff(r.Ex, exact)
+                           << ", Gauss residual = " << gres);
   REQUIRE(max_diff(r.Ex, exact) < 1e-14);
   REQUIRE(gres < 1e-12);
 }
@@ -311,7 +313,8 @@ TEST_CASE("a non-neutral charge density is reported, not silently absorbed",
   REQUIRE(r.net_charge == Approx(C).epsilon(1e-13));
 
   // The field solves the neutralised problem exactly...
-  const auto neutral_rho = sample_x(p, [&](double x) { return A * std::cos(k * x); });
+  const auto neutral_rho =
+      sample_x(p, [&](double x) { return A * std::cos(k * x); });
   REQUIRE(vlasov::gauss_residual(line, r.Ex, neutral_rho).residual < 1e-12);
   // ...and therefore misses the real rho by exactly the net charge.
   const auto g = vlasov::gauss_residual(line, r.Ex, rho);
@@ -394,7 +397,8 @@ TEST_CASE("the vacuum light wave propagates at c = 1 exactly, at any dt",
  * (1/2) int (E_y^2 + B_z^2) dx. Round-off only, for arbitrary multi-mode data
  * and for as many steps as one cares to take.
  */
-TEST_CASE("vacuum field energy is conserved to round-off", "[unit][maxwell][stage1]") {
+TEST_CASE("vacuum field energy is conserved to round-off",
+          "[unit][maxwell][stage1]") {
   SimParams p;
   p.nx = 128;
   p.Lx = 4.0;
@@ -424,7 +428,8 @@ TEST_CASE("vacuum field energy is conserved to round-off", "[unit][maxwell][stag
   const double dt = 0.137;
   for (int n = 0; n < 500; ++n) {
     vlasov::advance_transverse_vacuum(line, Ey, Bz, dt);
-    worst = std::max(worst, std::fabs(vlasov::transverse_energy(line, Ey, Bz) / e0 - 1.0));
+    worst = std::max(worst,
+                     std::fabs(vlasov::transverse_energy(line, Ey, Bz) / e0 - 1.0));
   }
   INFO("500 steps, worst relative energy drift = " << worst);
   REQUIRE(worst < 1e-13);
@@ -470,7 +475,8 @@ TEST_CASE("a standing wave holds its analytic node positions",
         sample_x(p, [&](double x) { return A * std::cos(k * x) * std::cos(k * t); });
     const auto bz_exact =
         sample_x(p, [&](double x) { return A * std::sin(k * x) * std::sin(k * t); });
-    form_worst = std::max({form_worst, max_diff(Ey, ey_exact), max_diff(Bz, bz_exact)});
+    form_worst =
+        std::max({form_worst, max_diff(Ey, ey_exact), max_diff(Bz, bz_exact)});
     for (int i : {2, 7, 12, 17}) {
       node_worst = std::max(node_worst, std::fabs(Ey[static_cast<std::size_t>(i)]));
     }
@@ -516,7 +522,8 @@ TEST_CASE("numerical dispersion is omega = k to 1e-12 for every resolved mode",
     vlasov::advance_transverse_vacuum(line, Ey, Bz, t);
     const auto h1 = line.forward(Ey);
 
-    const Complex ratio = h1[static_cast<std::size_t>(m)] / h0[static_cast<std::size_t>(m)];
+    const Complex ratio =
+        h1[static_cast<std::size_t>(m)] / h0[static_cast<std::size_t>(m)];
     const double omega = -std::arg(ratio) / t;
     const double rel = std::fabs(omega - k) / k;
     if (rel > worst) {
@@ -620,7 +627,8 @@ TEST_CASE("ETD2 is exact for a current linear in time, and ETD1 is not",
   const double J0 = 0.25;
   const double rate = 0.6; // Jy(x,t) = J0 cos(kx) (1 + rate t)
   auto jy_at = [&](double t) {
-    return sample_x(p, [&](double x) { return J0 * std::cos(k * x) * (1.0 + rate * t); });
+    return sample_x(
+        p, [&](double x) { return J0 * std::cos(k * x) * (1.0 + rate * t); });
   };
 
   const double t_end = 3.0;
@@ -652,8 +660,8 @@ TEST_CASE("ETD2 is exact for a current linear in time, and ETD1 is not",
   for (int q = 0; q < p.nx; ++q) {
     const std::size_t qq = static_cast<std::size_t>(q);
     const double kq = line.k_deriv(q);
-    const Complex J0h = j0h[qq];          // b0 = (-J0h, 0)
-    const Complex J1h = rate * j0h[qq];   // b1 = (-J1h, 0)
+    const Complex J0h = j0h[qq];        // b0 = (-J0h, 0)
+    const Complex J1h = rate * j0h[qq]; // b1 = (-J1h, 0)
     Complex qe{0.0, 0.0}, qb{0.0, 0.0}, pe{0.0, 0.0}, pb{0.0, 0.0};
     if (kq != 0.0) {
       // -i S (a, 0) / k = -i (0, a) / k; with a = -J this is (0, +i J / k).
@@ -698,7 +706,8 @@ TEST_CASE("the Duhamel terms achieve their stated orders", "[unit][maxwell][etd]
   const double k = p.k_skin(2);
   const double omega = 1.7;
   auto jy_at = [&](double t) {
-    return sample_x(p, [&](double x) { return 0.4 * std::cos(k * x) * std::cos(omega * t); });
+    return sample_x(
+        p, [&](double x) { return 0.4 * std::cos(k * x) * std::cos(omega * t); });
   };
   const double t_end = 1.0;
 
@@ -724,9 +733,9 @@ TEST_CASE("the Duhamel terms achieve their stated orders", "[unit][maxwell][etd]
     const double s1 = std::log2(errs[0] / errs[1]);
     const double s2 = std::log2(errs[1] / errs[2]);
     const double s3 = std::log2(errs[2] / errs[3]);
-    INFO((second ? "ETD2" : "ETD1") << " errors " << errs[0] << " " << errs[1] << " "
-                                    << errs[2] << " " << errs[3] << " slopes " << s1
-                                    << " " << s2 << " " << s3);
+    INFO((second ? "ETD2" : "ETD1")
+         << " errors " << errs[0] << " " << errs[1] << " " << errs[2] << " "
+         << errs[3] << " slopes " << s1 << " " << s2 << " " << s3);
     const double want = second ? 2.0 : 1.0;
     REQUIRE(s3 == Approx(want).margin(0.15));
   }
@@ -749,10 +758,10 @@ TEST_CASE("the Duhamel terms achieve their stated orders", "[unit][maxwell][etd]
  * for which the discrete continuity relation
  *     (rho_{n+1} - rho_n)/dt + d_x Jbar_n = 0
  * holds to round-off. Then
- *     E_x^{n+1} = E_x^n - dt Jbar_n = E_x^n + (A/k)[sin(kx - w t_{n+1}) - sin(kx - w t_n)]
- * telescopes to E_x^n = (A/k) sin(k x - w t_n) from E_x^0 = (A/k) sin(k x), and
- * d_x E_x^n = rho_n exactly. **Gauss is preserved by charge conservation, not
- * by the field solver**, which is why the residual is the diagnostic it is.
+ *     E_x^{n+1} = E_x^n - dt Jbar_n = E_x^n + (A/k)[sin(kx - w t_{n+1}) - sin(kx - w
+ * t_n)] telescopes to E_x^n = (A/k) sin(k x - w t_n) from E_x^0 = (A/k) sin(k x),
+ * and d_x E_x^n = rho_n exactly. **Gauss is preserved by charge conservation, not by
+ * the field solver**, which is why the residual is the diagnostic it is.
  *
  * The contrast half of the test replaces Jbar with the midpoint-in-time
  * current, which is second-order accurate and *not* charge-conserving; the
@@ -828,8 +837,8 @@ TEST_CASE("Gauss stays at round-off exactly when the current conserves charge",
     worst_mid = std::max(worst_mid,
                          vlasov::gauss_residual(line, Ex2, rho_at(t + dt)).residual);
   }
-  INFO("midpoint current: worst Gauss residual " << worst_mid
-                                                 << " (dt = " << dt << ")");
+  INFO("midpoint current: worst Gauss residual " << worst_mid << " (dt = " << dt
+                                                 << ")");
   REQUIRE(worst_mid > 1e-6);
   REQUIRE(worst_mid / worst_cons > 1e5);
 }
@@ -850,9 +859,8 @@ TEST_CASE("the divergence correction reports the residual it removes",
   const auto rho = sample_x(p, [&](double x) { return 0.5 * std::cos(k * x); });
   const double offset = 0.42;
   // A field that is wrong by a visible amount plus a constant offset.
-  auto Ex = sample_x(p, [&](double x) {
-    return (0.5 / k) * std::sin(k * x) * 0.8 + offset;
-  });
+  auto Ex = sample_x(
+      p, [&](double x) { return (0.5 / k) * std::sin(k * x) * 0.8 + offset; });
 
   const double before = vlasov::gauss_residual(line, Ex, rho).residual;
   REQUIRE(before == Approx(0.2).epsilon(1e-10)); // 20% of rho is unmatched
@@ -902,7 +910,8 @@ TEST_CASE("a drifting Maxwellian deposits the analytic rho and J",
   const double n0 = 1.0;
   const double dn = 0.3;
   const auto f = maxwellian(p, n0, dn, ux, uy, vth);
-  const auto view = vlasov::StridedDistribution::contiguous(f.data(), p.nx, p.nvx, 0, p.nvy);
+  const auto view =
+      vlasov::StridedDistribution::contiguous(f.data(), p.nx, p.nvx, 0, p.nvy);
 
   vlasov::ReductionOptions opt;
   opt.v_thermal = vth;
@@ -917,15 +926,18 @@ TEST_CASE("a drifting Maxwellian deposits the analytic rho and J",
   const auto src = vlasov::deposit(p, s, view, mom, opt);
 
   const double k0 = p.k0();
-  const auto n_exact = sample_x(p, [&](double x) { return n0 + dn * std::cos(k0 * x); });
-  const auto rho_exact = sample_x(p, [&](double x) { return -dn * std::cos(k0 * x); });
+  const auto n_exact =
+      sample_x(p, [&](double x) { return n0 + dn * std::cos(k0 * x); });
+  const auto rho_exact =
+      sample_x(p, [&](double x) { return -dn * std::cos(k0 * x); });
   const auto jx_exact =
       sample_x(p, [&](double x) { return -(n0 + dn * std::cos(k0 * x)) * ux; });
   const auto jy_exact =
       sample_x(p, [&](double x) { return -(n0 + dn * std::cos(k0 * x)) * uy; });
 
-  INFO("n err " << max_diff(mom.n, n_exact) << ", rho err " << max_diff(src.rho, rho_exact)
-                << ", Jx err " << max_diff(src.Jx, jx_exact) << ", Jy err "
+  INFO("n err " << max_diff(mom.n, n_exact) << ", rho err "
+                << max_diff(src.rho, rho_exact) << ", Jx err "
+                << max_diff(src.Jx, jx_exact) << ", Jy err "
                 << max_diff(src.Jy, jy_exact));
   REQUIRE(max_diff(mom.n, n_exact) < 1e-13);
   REQUIRE(max_diff(src.rho, rho_exact) < 1e-13);
@@ -939,7 +951,8 @@ TEST_CASE("a drifting Maxwellian deposits the analytic rho and J",
   // Scalars. int n dx = n0 Lx (the cosine integrates to zero over the period).
   REQUIRE(mom.number == Approx(n0 * p.Lx).epsilon(1e-12));
   // Kinetic energy = (mu/2) int n dx (|u|^2 + 2 v_th^2).
-  const double w_exact = 0.5 * s.mu * n0 * p.Lx * (ux * ux + uy * uy + 2.0 * vth * vth);
+  const double w_exact =
+      0.5 * s.mu * n0 * p.Lx * (ux * ux + uy * uy + 2.0 * vth * vth);
   REQUIRE(vlasov::kinetic_energy(p, s, mom) == Approx(w_exact).epsilon(1e-12));
   // Momentum = mu int n dx u.
   const auto pm = vlasov::momentum(p, s, mom);
@@ -1003,7 +1016,8 @@ TEST_CASE("the velocity quadrature error is the predicted truncation error",
     const auto mom = vlasov::reduce_velocity(p, view, opt);
 
     const double k0 = p.k0();
-    const auto n_exact = sample_x(p, [&](double x) { return n0 + dn * std::cos(k0 * x); });
+    const auto n_exact =
+        sample_x(p, [&](double x) { return n0 + dn * std::cos(k0 * x); });
     const double err = max_diff(mom.n, n_exact) / max_abs(n_exact);
 
     const double eps = std::erfc(static_cast<double>(mult) / std::sqrt(2.0));
@@ -1111,7 +1125,8 @@ TEST_CASE("the moment reduction is correct under a v_y decomposition",
   const auto mom = vlasov::reduce_velocity(p, view);
 
   const double k0 = p.k0();
-  const auto n_exact = sample_x(p, [&](double x) { return n0 + dn * std::cos(k0 * x); });
+  const auto n_exact =
+      sample_x(p, [&](double x) { return n0 + dn * std::cos(k0 * x); });
   const auto jx_exact =
       sample_x(p, [&](double x) { return (n0 + dn * std::cos(k0 * x)) * ux; });
   INFO("nproc = " << nproc << " n err " << max_diff(mom.n, n_exact) << " flux err "
@@ -1148,8 +1163,10 @@ TEST_CASE("multi-species deposition superposes", "[unit][moments]") {
 
   const auto fp = maxwellian(p, 1.0, 0.0, +u, 0.0, vth);
   const auto fm = maxwellian(p, 1.0, 0.0, -u, 0.0, vth);
-  const auto vp = vlasov::StridedDistribution::contiguous(fp.data(), p.nx, p.nvx, 0, p.nvy);
-  const auto vm = vlasov::StridedDistribution::contiguous(fm.data(), p.nx, p.nvx, 0, p.nvy);
+  const auto vp =
+      vlasov::StridedDistribution::contiguous(fp.data(), p.nx, p.nvx, 0, p.nvy);
+  const auto vm =
+      vlasov::StridedDistribution::contiguous(fm.data(), p.nx, p.nvx, 0, p.nvy);
 
   const vlasov::Species electron{"electron", -1.0, 1.0};
   const vlasov::Species ion{"ion", +1.0, vlasov::kProtonElectronMassRatio};
@@ -1175,7 +1192,8 @@ TEST_CASE("multi-species deposition superposes", "[unit][moments]") {
   const auto pe = vlasov::momentum(p, electron, me);
   const auto pi = vlasov::momentum(p, ion, mi);
   REQUIRE(pe[0] == Approx(p.Lx * u).epsilon(1e-12));
-  REQUIRE(pi[0] == Approx(-vlasov::kProtonElectronMassRatio * p.Lx * u).epsilon(1e-12));
+  REQUIRE(pi[0] ==
+          Approx(-vlasov::kProtonElectronMassRatio * p.Lx * u).epsilon(1e-12));
 }
 
 // ===========================================================================
@@ -1211,7 +1229,8 @@ TEST_CASE("field energy and momentum match their Parseval values",
   REQUIRE(std::fabs(vlasov::field_momentum_x(line, f)) < 1e-14);
 
   f.Bz = sample_x(p, [&](double x) { return c * std::sin(k * x); });
-  REQUIRE(vlasov::field_momentum_x(line, f) == Approx(0.5 * p.Lx * b * c).epsilon(1e-12));
+  REQUIRE(vlasov::field_momentum_x(line, f) ==
+          Approx(0.5 * p.Lx * b * c).epsilon(1e-12));
 }
 
 /*
@@ -1325,8 +1344,7 @@ TEST_CASE("Strang splitting of the Lorentz pair is second order in dt",
     std::snprintf(buf, sizeof(buf), "  n=%2d  dt=%.5f  err=%.3e", n, dt, err);
     table += buf;
     if (hs.size() > 1) {
-      const double rate =
-          std::log(errs[hs.size() - 2] / err) / std::log(2.0);
+      const double rate = std::log(errs[hs.size() - 2] / err) / std::log(2.0);
       std::snprintf(buf, sizeof(buf), "  pairwise=%.2f", rate);
       table += buf;
     }

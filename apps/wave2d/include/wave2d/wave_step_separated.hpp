@@ -15,9 +15,9 @@
 #include <vector>
 
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
-#include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
 #include <openpfc/kernel/field/finite_difference.hpp>
 
 #include <wave2d/wave_boundary.hpp>
@@ -99,8 +99,7 @@ inline void step_wave_separated_order2_cpu(
     std::vector<double> &u, std::vector<double> &v, std::vector<double> &lap,
     std::array<std::vector<double>, 6> &face_halos,
     pfc::comm::SparseExchange<pfc::HostSpace, double> &exchanger, int nx, int ny,
-    int nz,
-    const pfc::decomposition::Decomposition &decomp, int rank, double dt,
+    int nz, const pfc::decomposition::Decomposition &decomp, int rank, double dt,
     YBoundaryKind y_bc, int Ny_global, double u_wall) {
   exchanger.exchange(u);
   pfc::halo::copy_to_face_layout(exchanger.halos(), face_halos);

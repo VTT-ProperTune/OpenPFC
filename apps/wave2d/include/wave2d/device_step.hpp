@@ -43,9 +43,8 @@ void wave2d_patch_y_faces_hip(const double *u_dev, double *hpy_dev, double *hny_
                               bool dirichlet, double u_wall);
 
 /// Set owned y-wall cells: u = u_wall, v = 0.
-void wave2d_enforce_dirichlet_walls_hip(double *u_dev, double *v_dev, int nx,
-                                        int ny, int lower_y, int Ny_global,
-                                        double u_wall);
+void wave2d_enforce_dirichlet_walls_hip(double *u_dev, double *v_dev, int nx, int ny,
+                                        int lower_y, int Ny_global, double u_wall);
 
 } // namespace wave2d
 

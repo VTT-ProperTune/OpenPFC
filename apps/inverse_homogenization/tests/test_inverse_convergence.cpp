@@ -38,12 +38,6 @@ using pfc::apps::inverse::checkpoint_is_restartable;
 using pfc::apps::inverse::checkpoint_matches_problem;
 using pfc::apps::inverse::checkpoint_staging_dir;
 using pfc::apps::inverse::continuation_fraction;
-using pfc::apps::inverse::prepare_checkpoint_staging;
-using pfc::apps::inverse::publish_checkpoint_generation;
-using pfc::apps::inverse::read_current_pointer;
-using pfc::apps::inverse::read_dump_steps;
-using pfc::apps::inverse::resolve_checkpoint_bundle;
-using pfc::apps::inverse::write_dump_steps;
 using pfc::apps::inverse::ConvergenceConfig;
 using pfc::apps::inverse::ConvergenceMetrics;
 using pfc::apps::inverse::ConvergenceTracker;
@@ -54,12 +48,18 @@ using pfc::apps::inverse::InverseCheckpoint;
 using pfc::apps::inverse::is_terminal;
 using pfc::apps::inverse::make_metrics;
 using pfc::apps::inverse::params_frozen;
+using pfc::apps::inverse::prepare_checkpoint_staging;
+using pfc::apps::inverse::publish_checkpoint_generation;
 using pfc::apps::inverse::read_checkpoint_text;
+using pfc::apps::inverse::read_current_pointer;
+using pfc::apps::inverse::read_dump_steps;
 using pfc::apps::inverse::relative_norm_change;
 using pfc::apps::inverse::relative_objective_change;
+using pfc::apps::inverse::resolve_checkpoint_bundle;
 using pfc::apps::inverse::store_voigt6;
 using pfc::apps::inverse::termination_name;
 using pfc::apps::inverse::TerminationReason;
+using pfc::apps::inverse::write_dump_steps;
 
 TEST_CASE("continuation fraction freezes at the last continuation step",
           "[inverse-conv][59]") {
@@ -450,10 +450,8 @@ TEST_CASE("restart requires an iteration remaining in the requested budget",
   ck.next_step = 4;
   ck.max_steps = 9;
   ck.termination = static_cast<int>(TerminationReason::Running);
-  for (int budget : {0, 3, 4})
-    REQUIRE_FALSE(checkpoint_is_restartable(ck, budget));
-  for (int budget : {5, 9, 100})
-    REQUIRE(checkpoint_is_restartable(ck, budget));
+  for (int budget : {0, 3, 4}) REQUIRE_FALSE(checkpoint_is_restartable(ck, budget));
+  for (int budget : {5, 9, 100}) REQUIRE(checkpoint_is_restartable(ck, budget));
   for (auto reason : {TerminationReason::Converged, TerminationReason::MaxSteps,
                       TerminationReason::ElasticityFailure}) {
     ck.termination = static_cast<int>(reason);
@@ -491,9 +489,8 @@ struct ScratchDir {
   ScratchDir() {
     path = std::filesystem::temp_directory_path() /
            ("openpfc_inv_ckpt_" +
-            std::to_string(std::chrono::steady_clock::now()
-                               .time_since_epoch()
-                               .count()));
+            std::to_string(
+                std::chrono::steady_clock::now().time_since_epoch().count()));
     std::filesystem::create_directories(path);
   }
   ~ScratchDir() {
@@ -579,58 +576,59 @@ TEST_CASE("explicit generation directory loads without a CURRENT pointer",
   REQUIRE(resolve_checkpoint_bundle(tmp.path).empty());
 }
 
-
-
 TEST_CASE("checkpoint accepts reachable tracker histories and resumes holds",
           "[inverse-conv][91]") {
   using namespace pfc::apps::inverse;
   // Enumerate all quiet/nonquiet histories through a small finite horizon,
   // including no-hold convergence, interrupted holds and continuation freeze.
-  for (int continuation : {0, 2}) for (int window : {1, 3})
-    for (int hold : {0, 2, 3}) for (unsigned mask = 0; mask < 256; ++mask) {
-      ConvergenceTracker tr;
-      tr.cfg = {continuation, 8, window, hold};
-      for (int step = 0; step < 8; ++step) {
-        auto failed = tr;
-        ConvergenceMetrics m;
-        m.quiet = step > 0 && ((mask >> step) & 1);
-        const auto failure = failed.after_step(step, false, m);
-        const auto reason = tr.after_step(step, true, m);
-        auto roundtrip = [&](const ConvergenceTracker &state, TerminationReason why) {
-          InverseCheckpoint ck;
-          Tiny6 tensor;
-          capture_problem(ck, DummyInvCfg{}, tensor, tensor);
-          capture_tracker(ck, state, step + 1);
-          ck.have_prev = 1;
-          ck.termination = static_cast<int>(why);
-          REQUIRE(checkpoint_state_valid(ck));
-          std::istringstream input(format_checkpoint_text(ck));
-          InverseCheckpoint restored;
-          REQUIRE(read_checkpoint_text(input, restored));
-          ConvergenceTracker resumed;
-          apply_tracker(restored, resumed);
-          REQUIRE(resumed.quiet_count == state.quiet_count);
-          REQUIRE(resumed.verify_left == state.verify_left);
-          if (why == TerminationReason::Running) {
-            auto reference = state;
-            for (int next = step + 1; next < 8; ++next) {
-              ConvergenceMetrics subsequent;
-              subsequent.quiet = ((mask >> next) & 1) != 0;
-              const auto a = reference.after_step(next, true, subsequent);
-              const auto b = resumed.after_step(next, true, subsequent);
-              REQUIRE(a == b);
-              REQUIRE(reference.quiet_count == resumed.quiet_count);
-              REQUIRE(reference.verify_left == resumed.verify_left);
-              REQUIRE(reference.verified == resumed.verified);
-              if (is_terminal(a)) break;
-            }
+  for (int continuation : {0, 2})
+    for (int window : {1, 3})
+      for (int hold : {0, 2, 3})
+        for (unsigned mask = 0; mask < 256; ++mask) {
+          ConvergenceTracker tr;
+          tr.cfg = {continuation, 8, window, hold};
+          for (int step = 0; step < 8; ++step) {
+            auto failed = tr;
+            ConvergenceMetrics m;
+            m.quiet = step > 0 && ((mask >> step) & 1);
+            const auto failure = failed.after_step(step, false, m);
+            const auto reason = tr.after_step(step, true, m);
+            auto roundtrip = [&](const ConvergenceTracker &state,
+                                 TerminationReason why) {
+              InverseCheckpoint ck;
+              Tiny6 tensor;
+              capture_problem(ck, DummyInvCfg{}, tensor, tensor);
+              capture_tracker(ck, state, step + 1);
+              ck.have_prev = 1;
+              ck.termination = static_cast<int>(why);
+              REQUIRE(checkpoint_state_valid(ck));
+              std::istringstream input(format_checkpoint_text(ck));
+              InverseCheckpoint restored;
+              REQUIRE(read_checkpoint_text(input, restored));
+              ConvergenceTracker resumed;
+              apply_tracker(restored, resumed);
+              REQUIRE(resumed.quiet_count == state.quiet_count);
+              REQUIRE(resumed.verify_left == state.verify_left);
+              if (why == TerminationReason::Running) {
+                auto reference = state;
+                for (int next = step + 1; next < 8; ++next) {
+                  ConvergenceMetrics subsequent;
+                  subsequent.quiet = ((mask >> next) & 1) != 0;
+                  const auto a = reference.after_step(next, true, subsequent);
+                  const auto b = resumed.after_step(next, true, subsequent);
+                  REQUIRE(a == b);
+                  REQUIRE(reference.quiet_count == resumed.quiet_count);
+                  REQUIRE(reference.verify_left == resumed.verify_left);
+                  REQUIRE(reference.verified == resumed.verified);
+                  if (is_terminal(a)) break;
+                }
+              }
+            };
+            roundtrip(failed, failure);
+            roundtrip(tr, reason);
+            if (is_terminal(reason)) break;
           }
-        };
-        roundtrip(failed, failure);
-        roundtrip(tr, reason);
-        if (is_terminal(reason)) break;
-      }
-    }
+        }
 }
 
 TEST_CASE("checkpoint rejects impossible counters and accepted state",

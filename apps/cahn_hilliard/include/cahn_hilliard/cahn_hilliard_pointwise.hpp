@@ -51,14 +51,14 @@ struct CahnHilliardPointwise {
 
   [[nodiscard]] OPENPFC_HD double f_bulk(double c) const {
     const double u = clamp_c(c);
-    return u * (1.0 - u) * (omega_nd + l1_nd * (1.0 - 2.0 * u)) +
-           u * std::log(u) + (1.0 - u) * std::log(1.0 - u);
+    return u * (1.0 - u) * (omega_nd + l1_nd * (1.0 - 2.0 * u)) + u * std::log(u) +
+           (1.0 - u) * std::log(1.0 - u);
   }
 
   [[nodiscard]] OPENPFC_HD double f_prime(double c) const {
     const double u = clamp_c(c);
-    return omega_nd * (1.0 - 2.0 * u) +
-           l1_nd * (1.0 - 6.0 * u + 6.0 * u * u) + std::log(u / (1.0 - u));
+    return omega_nd * (1.0 - 2.0 * u) + l1_nd * (1.0 - 6.0 * u + 6.0 * u * u) +
+           std::log(u / (1.0 - u));
   }
 
   [[nodiscard]] OPENPFC_HD double f_double_prime(double c) const {

@@ -173,7 +173,7 @@ inline std::optional<RunConfig> parse_fd_or_print_usage(int argc, char **argv,
 inline std::optional<RunConfig> parse_spectral_or_print_usage(int argc, char **argv,
                                                               int rank) {
   return heat3d::parse_or_print_usage(argc, argv, rank, parse_spectral,
-                                         print_usage_spectral);
+                                      print_usage_spectral);
 }
 
 } // namespace heat3d

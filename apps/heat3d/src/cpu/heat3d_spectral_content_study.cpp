@@ -128,7 +128,8 @@ const std::vector<double> kFractions = {0.10, 0.15, 0.20, 0.25, 0.30, 0.35,
 
 const std::vector<int> kOrders = {2, 4, 6, 8, 12};
 
-const std::vector<double> kTargets = {1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8, 1e-10};
+const std::vector<double> kTargets = {1e-2, 1e-3, 1e-4, 1e-5,
+                                      1e-6, 1e-7, 1e-8, 1e-10};
 
 /// Family comparison uses the manuscript loose/tight pair plus the interior
 /// ladder, omitting 1e-7 and 1e-10 which do not change the declared rankings.
@@ -146,9 +147,15 @@ struct ValidationPoint {
   int n_steps;
 };
 const std::vector<ValidationPoint> kValidationPoints = {
-    {2, 64, 0.30, 200},  {2, 64, 0.60, 200},  {4, 64, 0.30, 200},
-    {4, 64, 0.60, 200},  {6, 64, 0.40, 400},  {8, 64, 0.30, 400},
-    {8, 64, 0.60, 400},  {12, 64, 0.40, 800}, {12, 64, 0.60, 800},
+    {2, 64, 0.30, 200},
+    {2, 64, 0.60, 200},
+    {4, 64, 0.30, 200},
+    {4, 64, 0.60, 200},
+    {6, 64, 0.40, 400},
+    {8, 64, 0.30, 400},
+    {8, 64, 0.60, 400},
+    {12, 64, 0.40, 800},
+    {12, 64, 0.60, 800},
     // One off-grid point: a different N at a fraction already covered, to
     // show the map's N-independence is a property of the runs too.
     {4, 96, 0.30, 200},
@@ -183,8 +190,7 @@ void write_family_study(const std::string &data_dir,
   if (!def) throw std::runtime_error("cannot write family definitions CSV");
   def << "# Occupancy-matched periodic families. f is the fraction of Nyquist "
          "at which the amplitude prescription reaches "
-      << sp::kContentThreshold
-      << " of peak (top-hat: support cutoff).\n"
+      << sp::kContentThreshold << " of peak (top-hat: support cutoff).\n"
       << "family_id,name,geometry,amplitude_at_nu_eq_1,occupancy_threshold\n";
   for (const sp::SpectrumFamily &fam : sp::builtin_families()) {
     def << fam.id << ",\"" << fam.name << "\","
@@ -208,13 +214,13 @@ void write_family_study(const std::string &data_dir,
        << "family_id,content_fraction,N,dim,fd_order,energy_high_k,"
           "energy_near_cutoff,moment2_over_nyquist2,moment4_over_nyquist4,"
           "weighted_d2_defect\n";
-      sel << "# Equal-accuracy ranking using admitted Heat3D per-step costs "
-             "(N^3, fixed step count). row_kind=order is one stencil; "
-             "row_kind=cheapest is the winner (fd_order 0 = spectral). "
-             "attainable=no means the FD target is not met on the admitted "
-             "interval; those rows are not ranked.\n"
-          << "row_kind,family_id,hardware,target_l2,fd_order,content_fraction,"
-             "relative_cost,beats_spectral,attainable\n";
+  sel << "# Equal-accuracy ranking using admitted Heat3D per-step costs "
+         "(N^3, fixed step count). row_kind=order is one stencil; "
+         "row_kind=cheapest is the winner (fd_order 0 = spectral). "
+         "attainable=no means the FD target is not met on the admitted "
+         "interval; those rows are not ranked.\n"
+      << "row_kind,family_id,hardware,target_l2,fd_order,content_fraction,"
+         "relative_cost,beats_spectral,attainable\n";
   map << std::scientific << std::setprecision(10);
   diag << std::scientific << std::setprecision(10);
   sel << std::scientific << std::setprecision(10);
@@ -250,17 +256,15 @@ void write_family_study(const std::string &data_dir,
         pairs.emplace_back(order, it->second);
       }
       for (double eps : kFamilyTargets) {
-        const auto best =
-            sp::pick_equal_accuracy(fam, eps, pairs, cost_spec, sp::kDiffusionTime,
-                                    kDim);
+        const auto best = sp::pick_equal_accuracy(fam, eps, pairs, cost_spec,
+                                                  sp::kDiffusionTime, kDim);
         for (const auto &[order, c] : pairs) {
-          const auto match = sp::content_fraction_at(fam, order, eps,
-                                                     sp::kDiffusionTime, kDim);
+          const auto match =
+              sp::content_fraction_at(fam, order, eps, sp::kDiffusionTime, kDim);
           sel << "order," << fam.id << "," << hw << "," << eps << "," << order
               << ",";
           if (match.attainable) {
-            const double rel =
-                sp::equal_accuracy_cost_ratio(match.f, c, cost_spec);
+            const double rel = sp::equal_accuracy_cost_ratio(match.f, c, cost_spec);
             sel << match.f << "," << rel << ","
                 << (sp::fd_cheaper_than_spectral(match.f, c, cost_spec) ? "yes"
                                                                         : "no")
@@ -305,9 +309,8 @@ void write_family_heldout(const std::string &data_dir) {
       const double r1 = std::abs(c.ratio - 1.0);
       const double r2 = std::abs(c2.ratio - 1.0);
       max_abs_rel = std::max(max_abs_rel, std::max(r1, r2));
-      std::cout << "    order=" << c.fd_order << " f=" << c.f
-                << " ratio=" << c.ratio << " half-dt ratio=" << c2.ratio
-                << "\n";
+      std::cout << "    order=" << c.fd_order << " f=" << c.f << " ratio=" << c.ratio
+                << " half-dt ratio=" << c2.ratio << "\n";
     }
   }
   const std::string path = data_dir + "/heat3d_spectral_family_heldout.csv";
@@ -457,8 +460,10 @@ int main(int argc, char **argv) {
     const auto cpu_rows =
         read_method_cost(data_dir + "/heat3d_method_cost_lumi_c.csv");
     for (const MethodCost &c : cpu_rows) {
-      if (c.fd_order == 0) cost_cpu_spectral = c.wall_step_ms;
-      else cost_cpu[c.fd_order] = c.wall_step_ms;
+      if (c.fd_order == 0)
+        cost_cpu_spectral = c.wall_step_ms;
+      else
+        cost_cpu[c.fd_order] = c.wall_step_ms;
     }
   } catch (const std::exception &e) {
     std::cerr << "heat3d_spectral_content_study: CPU cost table skipped ("
@@ -489,7 +494,8 @@ int main(int argc, char **argv) {
 
   // ---- 1. the error map -------------------------------------------------
   std::cout << std::left << std::setw(8) << "f";
-  for (int order : kOrders) std::cout << std::setw(15) << ("FD-" + std::to_string(order));
+  for (int order : kOrders)
+    std::cout << std::setw(15) << ("FD-" + std::to_string(order));
   std::cout << "\n";
   std::vector<std::vector<double>> map_rows;
   map_rows.reserve(kFractions.size());
@@ -521,8 +527,8 @@ int main(int argc, char **argv) {
         << "# spectrum is down to " << sc::kContentThreshold
         << " of its peak at a fraction f of Nyquist.\n"
         << "# From heat3d_spectral_content_study; L=2*pi, D=" << heat3d::kD
-        << ", tau = D*t*k_c^2 = " << sc::kDiffusionTime << ", mode cube N="
-        << sc::kMapGrid << ".\n"
+        << ", tau = D*t*k_c^2 = " << sc::kDiffusionTime
+        << ", mode cube N=" << sc::kMapGrid << ".\n"
         << "# The spectral operator's spatial error is identically zero, so it "
            "has no rows here.\n"
         << "fd_order,content_fraction,N,tau,l2_error\n";
@@ -543,9 +549,9 @@ int main(int argc, char **argv) {
   for (int order : kOrders) {
     if (!cost_fd.count(order)) continue;
     std::cout << "  FD-" << order << ": " << std::fixed << std::setprecision(4)
-              << sc::crossover_fraction(cost_fd[order], cost_spectral)
-              << "  (cost " << std::setprecision(2) << cost_fd[order] << " ms vs "
-              << cost_spectral << " ms)\n";
+              << sc::crossover_fraction(cost_fd[order], cost_spectral) << "  (cost "
+              << std::setprecision(2) << cost_fd[order] << " ms vs " << cost_spectral
+              << " ms)\n";
   }
   std::cout << std::scientific << std::setprecision(4) << "\n"
             << std::left << std::setw(12) << "target L2";
@@ -576,8 +582,8 @@ int main(int argc, char **argv) {
         std::cout << std::setw(22) << cell.str();
         continue;
       }
-      const double rel = sc::equal_accuracy_cost_ratio(match.f, cost_fd[order],
-                                                       cost_spectral);
+      const double rel =
+          sc::equal_accuracy_cost_ratio(match.f, cost_fd[order], cost_spectral);
       crossover_rows.push_back(
           {eps, order, match.f, rel,
            sc::fd_cheaper_than_spectral(match.f, cost_fd[order], cost_spectral),
@@ -719,24 +725,22 @@ int main(int argc, char **argv) {
           sc::run_validation(2, 16, 0.50, sc::kDiffusionTime, 80, fam);
       const sc::ValidationCase c2 =
           sc::run_validation(2, 16, 0.50, sc::kDiffusionTime, 160, fam);
-      std::cout << fam.id << " ratio=" << c.ratio
-                << " half-dt ratio=" << c2.ratio << "\n";
+      std::cout << fam.id << " ratio=" << c.ratio << " half-dt ratio=" << c2.ratio
+                << "\n";
       csv << c.family_id << "," << c.fd_order << "," << c.N << "," << c.f << ","
           << c.tau << "," << c.n_steps << "," << c.predicted_l2 << ","
           << c.measured_l2 << "," << c.ratio << "\n";
-      csv << c2.family_id << "," << c2.fd_order << "," << c2.N << "," << c2.f
-          << "," << c2.tau << "," << c2.n_steps << "," << c2.predicted_l2 << ","
+      csv << c2.family_id << "," << c2.fd_order << "," << c2.N << "," << c2.f << ","
+          << c2.tau << "," << c2.n_steps << "," << c2.predicted_l2 << ","
           << c2.measured_l2 << "," << c2.ratio << "\n";
     }
-    std::cout << "wrote " << data_dir
-              << "/heat3d_spectral_family_validation.csv\n";
+    std::cout << "wrote " << data_dir << "/heat3d_spectral_family_validation.csv\n";
   }
 
   std::cout << "\nwrote " << data_dir << "/heat3d_spectral_content_map.csv\n"
             << "wrote " << data_dir << "/heat3d_spectral_content_crossover.csv\n";
   if (validate) {
-    std::cout << "wrote " << data_dir
-              << "/heat3d_spectral_content_validation.csv\n";
+    std::cout << "wrote " << data_dir << "/heat3d_spectral_content_validation.csv\n";
   }
 
   MPI_Finalize();

@@ -63,8 +63,8 @@ TEST_CASE("Allen–Cahn CPU golden matches CPU-vs-CUDA config",
 
   constexpr int halo_width = allen_cahn::RunConfig::kHaloWidth;
   auto face = pfc::halo::allocate_face_halos<double>(decomp, rank, halo_width);
-  pfc::comm::SparseExchange<pfc::HostSpace, double> exch(
-      u, decomp, rank, MPI_COMM_WORLD, halo_width);
+  pfc::comm::SparseExchange<pfc::HostSpace, double> exch(u, decomp, rank,
+                                                         MPI_COMM_WORLD, halo_width);
 
   for (int step = 0; step < cfg.n_steps; ++step) {
     allen_cahn::step_explicit_euler_cpu(&u, &lap, &face, &exch, nx, ny, nz, inv_dx2,

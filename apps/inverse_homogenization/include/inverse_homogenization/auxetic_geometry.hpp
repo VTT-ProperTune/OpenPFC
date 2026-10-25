@@ -111,10 +111,8 @@ inline bool in_rotated_cube(double px, double py, double pz, double cx, double c
 inline void fill_rotating_squares(RealField &h, int nx, int ny, double half,
                                   double angle) {
   const auto n = h.local_size();
-  const std::array<std::array<double, 2>, 4> c{{{{0.25, 0.25}},
-                                                {{0.75, 0.25}},
-                                                {{0.75, 0.75}},
-                                                {{0.25, 0.75}}}};
+  const std::array<std::array<double, 2>, 4> c{
+      {{{0.25, 0.25}}, {{0.75, 0.25}}, {{0.75, 0.75}}, {{0.25, 0.75}}}};
   const std::array<double, 4> ang{{angle, -angle, angle, -angle}};
   for (int k = 0; k < n[2]; ++k) {
     for (int j = 0; j < n[1]; ++j) {
@@ -156,16 +154,11 @@ inline void fill_reentrant_honeycomb(RealField &h, int nx, int ny, double t,
   const double xSeamR = 1.0;
   (void)inset;
   const std::vector<Seg> segs = {
-      {{xL, 0.00, xR, 0.00}},
-      {{xL, 0.50, xR, 0.50}},
-      {{xL, 0.00, xSeam, 0.25}},
-      {{xSeam, 0.25, xL, 0.50}},
-      {{xL, 0.50, xSeam, 0.75}},
-      {{xSeam, 0.75, xL, 1.00}},
-      {{xR, 0.00, xSeamR, 0.25}},
-      {{xSeamR, 0.25, xR, 0.50}},
-      {{xR, 0.50, xSeamR, 0.75}},
-      {{xSeamR, 0.75, xR, 1.00}},
+      {{xL, 0.00, xR, 0.00}},     {{xL, 0.50, xR, 0.50}},
+      {{xL, 0.00, xSeam, 0.25}},  {{xSeam, 0.25, xL, 0.50}},
+      {{xL, 0.50, xSeam, 0.75}},  {{xSeam, 0.75, xL, 1.00}},
+      {{xR, 0.00, xSeamR, 0.25}}, {{xSeamR, 0.25, xR, 0.50}},
+      {{xR, 0.50, xSeamR, 0.75}}, {{xSeamR, 0.75, xR, 1.00}},
   };
   const auto n = h.local_size();
   for (int k = 0; k < n[2]; ++k) {
@@ -273,14 +266,13 @@ struct Seg3 {
 /// pointing inward. 3-D re-entrant honeycomb of Evans / Yang 2015, using
 /// Gibson–Robert four-fold patterning about vertical struts.
 inline void append_reentrant_square(std::vector<Seg3> &segs, double x0, double y0,
-                                    double inset, double zb, double zw0,
-                                    double zw1, double zt) {
+                                    double inset, double zb, double zw0, double zw1,
+                                    double zt) {
   const double x1 = x0 + 0.5;
   const double y1 = y0 + 0.5;
   const double xm = x0 + 0.25;
   const double ym = y0 + 0.25;
-  auto add = [&](double ax, double ay, double az, double bx, double by,
-                 double bz) {
+  auto add = [&](double ax, double ay, double az, double bx, double by, double bz) {
     segs.push_back(Seg3{ax, ay, az, bx, by, bz});
   };
   // x-edges at y=y0 (inward +y) and y=y1 (inward -y)
@@ -323,8 +315,7 @@ inline void fill_reentrant_3d(RealField &h, int nx, int ny, int nz, double t,
                               double zt) {
   std::vector<Seg3> segs;
   for (double x : {0.0, 0.5})
-    for (double y : {0.0, 0.5})
-      segs.push_back(Seg3{x, y, 0.0, x, y, 1.0});
+    for (double y : {0.0, 0.5}) segs.push_back(Seg3{x, y, 0.0, x, y, 1.0});
   append_reentrant_square(segs, 0.0, 0.0, inset, zb, zw0, zw1, zt);
   append_reentrant_square(segs, 0.5, 0.0, inset, zb, zw0, zw1, zt);
   append_reentrant_square(segs, 0.0, 0.5, inset, zb, zw0, zw1, zt);
@@ -334,16 +325,13 @@ inline void fill_reentrant_3d(RealField &h, int nx, int ny, int nz, double t,
     for (int j = 0; j < n[1]; ++j) {
       for (int i = 0; i < n[0]; ++i) {
         const auto g = h.global(i, j, k);
-        const double x =
-            (static_cast<double>(g[0]) + 0.5) / static_cast<double>(nx);
-        const double y =
-            (static_cast<double>(g[1]) + 0.5) / static_cast<double>(ny);
-        const double z =
-            (static_cast<double>(g[2]) + 0.5) / static_cast<double>(nz);
+        const double x = (static_cast<double>(g[0]) + 0.5) / static_cast<double>(nx);
+        const double y = (static_cast<double>(g[1]) + 0.5) / static_cast<double>(ny);
+        const double z = (static_cast<double>(g[2]) + 0.5) / static_cast<double>(nz);
         double dmin = 1.0e300;
         for (const auto &s : segs)
-          dmin = std::min(dmin, dist_segment_periodic_3d(x, y, z, s.ax, s.ay,
-                                                         s.az, s.bx, s.by, s.bz));
+          dmin = std::min(dmin, dist_segment_periodic_3d(x, y, z, s.ax, s.ay, s.az,
+                                                         s.bx, s.by, s.bz));
         h(i, j, k) = (dmin <= t) ? 1.0 : 0.0;
       }
     }

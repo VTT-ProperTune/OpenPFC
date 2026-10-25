@@ -157,7 +157,8 @@ inline void fft_radix2(std::vector<Complex> &a, bool inverse) {
     int bit = n >> 1;
     for (; (j & bit) != 0; bit >>= 1) j ^= bit;
     j ^= bit;
-    if (i < j) std::swap(a[static_cast<std::size_t>(i)], a[static_cast<std::size_t>(j)]);
+    if (i < j)
+      std::swap(a[static_cast<std::size_t>(i)], a[static_cast<std::size_t>(j)]);
   }
   const double sign = inverse ? 1.0 : -1.0;
   for (int len = 2; len <= n; len <<= 1) {
@@ -186,9 +187,9 @@ inline void dft_direct(std::vector<Complex> &a, bool inverse) {
     Complex acc{0.0, 0.0};
     for (int i = 0; i < n; ++i) {
       const double ang =
-          sign * 2.0 * kPi * static_cast<double>((static_cast<long long>(m) *
-                                                  static_cast<long long>(i)) %
-                                                 n) /
+          sign * 2.0 * kPi *
+          static_cast<double>(
+              (static_cast<long long>(m) * static_cast<long long>(i)) % n) /
           static_cast<double>(n);
       acc += a[static_cast<std::size_t>(i)] * std::polar(1.0, ang);
     }
@@ -288,9 +289,7 @@ public:
 
   [[nodiscard]] int size() const noexcept { return nx_; }
   [[nodiscard]] double length() const noexcept { return Lx_; }
-  [[nodiscard]] double dx() const noexcept {
-    return Lx_ / static_cast<double>(nx_);
-  }
+  [[nodiscard]] double dx() const noexcept { return Lx_ / static_cast<double>(nx_); }
 
   /// Signed wavenumber of spectral index `m`, as it labels the mode. The
   /// Nyquist index reports `+k_Nyq`; use @ref k_deriv in any operator.
@@ -426,11 +425,10 @@ struct PoissonResult {
 /// rather than to carry on reporting a growing net charge.
 inline void require_neutral(const PoissonResult &r) {
   if (!r.neutral) {
-    throw std::runtime_error("solve_gauss: net charge " +
-                             std::to_string(r.net_charge) +
-                             " exceeds the neutrality tolerance " +
-                             std::to_string(r.tolerance) +
-                             "; Gauss has no periodic solution");
+    throw std::runtime_error(
+        "solve_gauss: net charge " + std::to_string(r.net_charge) +
+        " exceeds the neutrality tolerance " + std::to_string(r.tolerance) +
+        "; Gauss has no periodic solution");
   }
 }
 
@@ -470,11 +468,9 @@ namespace detail {
  * @param Jy_prev current at the previous step, or `nullptr` for ETD1
  */
 inline void advance_transverse_impl(const SpectralLine1D &line,
-                                    std::vector<double> &Ey,
-                                    std::vector<double> &Bz,
+                                    std::vector<double> &Ey, std::vector<double> &Bz,
                                     const std::vector<double> *Jy,
-                                    const std::vector<double> *Jy_prev,
-                                    double dt) {
+                                    const std::vector<double> *Jy_prev, double dt) {
   const int nx = line.size();
   if (static_cast<int>(Ey.size()) != nx || static_cast<int>(Bz.size()) != nx) {
     throw std::invalid_argument("advance_transverse: Ey/Bz length mismatch");
@@ -552,8 +548,7 @@ inline void advance_transverse_vacuum(const SpectralLine1D &line,
 /// Transverse update with the current held constant across the step (ETD1).
 /// Exact for a constant `J_y`; first order otherwise.
 inline void advance_transverse_etd1(const SpectralLine1D &line,
-                                    std::vector<double> &Ey,
-                                    std::vector<double> &Bz,
+                                    std::vector<double> &Ey, std::vector<double> &Bz,
                                     const std::vector<double> &Jy, double dt) {
   detail::advance_transverse_impl(line, Ey, Bz, &Jy, nullptr, dt);
 }
@@ -562,11 +557,9 @@ inline void advance_transverse_etd1(const SpectralLine1D &line,
 /// step (ETD2). Exact for a `J_y` linear in time; second order otherwise,
 /// which matches the Strang splitting around it.
 inline void advance_transverse_etd2(const SpectralLine1D &line,
-                                    std::vector<double> &Ey,
-                                    std::vector<double> &Bz,
+                                    std::vector<double> &Ey, std::vector<double> &Bz,
                                     const std::vector<double> &Jy,
-                                    const std::vector<double> &Jy_prev,
-                                    double dt) {
+                                    const std::vector<double> &Jy_prev, double dt) {
   detail::advance_transverse_impl(line, Ey, Bz, &Jy, &Jy_prev, dt);
 }
 

@@ -65,13 +65,15 @@ int main(int argc, char **argv) {
   cases.reserve(orders.size() * grid_sizes.size());
 
   std::cout << std::scientific << std::setprecision(6);
-  std::cout << "heat3d FD order-convergence study: mode=" << heat3d::convergence::kMode
-            << " L=" << heat3d::convergence::kDomainLength
-            << " D=" << heat3d::kD << " t_final=" << heat3d::convergence::kFinalTime
+  std::cout << "heat3d FD order-convergence study: mode="
+            << heat3d::convergence::kMode
+            << " L=" << heat3d::convergence::kDomainLength << " D=" << heat3d::kD
+            << " t_final=" << heat3d::convergence::kFinalTime
             << " (exact time evolution -- no dt)\n";
   std::cout << std::left << std::setw(10) << "order" << std::setw(6) << "N"
-            << std::setw(14) << "dx" << std::setw(16) << "eigenvalue" << std::setw(14)
-            << "eig_resid" << std::setw(16) << "l2_error" << "observed_order\n";
+            << std::setw(14) << "dx" << std::setw(16) << "eigenvalue"
+            << std::setw(14) << "eig_resid" << std::setw(16) << "l2_error"
+            << "observed_order\n";
 
   for (int order : orders) {
     ConvergenceCase prev;
@@ -82,7 +84,8 @@ int main(int argc, char **argv) {
 
       std::cout << std::left << std::setw(10) << c.fd_order << std::setw(6) << c.N
                 << std::setw(14) << c.dx << std::setw(16) << c.eigenvalue
-                << std::setw(14) << c.eigenvalue_residual << std::setw(16) << c.l2_error;
+                << std::setw(14) << c.eigenvalue_residual << std::setw(16)
+                << c.l2_error;
       if (have_prev) {
         std::cout << heat3d::convergence::observed_order(prev, c);
       } else {
@@ -98,7 +101,7 @@ int main(int argc, char **argv) {
   std::ofstream csv(out_path);
   if (!csv) {
     std::cerr << "heat3d_fd_convergence_study: could not open '" << out_path
-               << "' for writing\n";
+              << "' for writing\n";
     MPI_Finalize();
     return 1;
   }
@@ -109,7 +112,8 @@ int main(int argc, char **argv) {
   // source file.
   csv << "# Finite-difference order convergence for the 3D Laplacian, from "
          "heat3d_fd_convergence_study.\n";
-  csv << "fd_order,design_order,N,dx,eigenvalue,eigenvalue_residual,l2_error,observed_order\n";
+  csv << "fd_order,design_order,N,dx,eigenvalue,eigenvalue_residual,l2_error,"
+         "observed_order\n";
   csv << std::scientific << std::setprecision(10);
 
   for (int order : orders) {
@@ -118,7 +122,8 @@ int main(int argc, char **argv) {
     for (const ConvergenceCase &c : cases) {
       if (c.fd_order != order) continue;
       csv << c.fd_order << "," << c.fd_order << "," << c.N << "," << c.dx << ","
-          << c.eigenvalue << "," << c.eigenvalue_residual << "," << c.l2_error << ",";
+          << c.eigenvalue << "," << c.eigenvalue_residual << "," << c.l2_error
+          << ",";
       if (have_prev) {
         csv << heat3d::convergence::observed_order(prev, c);
       }

@@ -33,8 +33,7 @@ namespace {
 constexpr double kPi = 3.14159265358979323846;
 } // namespace
 
-TEST_CASE("mode_amplitude returns the amplitude, not N times it",
-          "[diagnostics]") {
+TEST_CASE("mode_amplitude returns the amplitude, not N times it", "[diagnostics]") {
   // A cos(k_m x) sampled at cell centres. The DFT here is unnormalised and
   // a real signal splits between +m and -m, so recovering A needs both a
   // 1/N and a factor 2. An earlier revision had only the 2, which made
@@ -117,16 +116,14 @@ TEST_CASE("auto_growth_window excludes the saturation it is shown",
   REQUIRE(std::isfinite(w[0]));
   REQUIRE(std::isfinite(w[1]));
   REQUIRE(w[1] < 40.0); // strictly inside the exponential phase
-  REQUIRE(vlasov::fit_exponential_rate(t, y, w[0], w[1]) ==
-          Approx(g).epsilon(1e-6));
+  REQUIRE(vlasov::fit_exponential_rate(t, y, w[0], w[1]) == Approx(g).epsilon(1e-6));
   // A series that never grows must yield no window rather than a rate.
   std::vector<double> flat(t.size(), 1.0e-5);
   const auto none = vlasov::auto_growth_window(t, flat);
   REQUIRE(!std::isfinite(none[0]));
 }
 
-TEST_CASE("fit_rotation_rate gets the sign and flags aliasing",
-          "[diagnostics]") {
+TEST_CASE("fit_rotation_rate gets the sign and flags aliasing", "[diagnostics]") {
   // The gyro oracle. d/dt (v_x + i v_y) = -i w (v_x + i v_y) makes the
   // phase advance at -w, and an earlier revision compared the measurement
   // against +w and reported 200% error on a magnitude that was right to
@@ -159,8 +156,7 @@ TEST_CASE("fit_rotation_rate gets the sign and flags aliasing",
   REQUIRE(aliased);
 }
 
-TEST_CASE("the envelope estimator refuses a monotone exponential",
-          "[diagnostics]") {
+TEST_CASE("the envelope estimator refuses a monotone exponential", "[diagnostics]") {
   // Weibel magnetic energy is a growing exponential, not a damped
   // oscillation. Fitting its peaks is the Landau estimator applied to the
   // wrong signal: a strictly increasing series has no interior maxima, so
@@ -277,8 +273,7 @@ TEST_CASE("fitting total energy of a two-mode field picks the wrong mode",
   REQUIRE(std::fabs(g_energy_late / 2.0 - g1) > 0.2);
 }
 
-TEST_CASE("relative Gauss is a 0/0 for a Weibel-neutral plasma",
-          "[diagnostics]") {
+TEST_CASE("relative Gauss is a 0/0 for a Weibel-neutral plasma", "[diagnostics]") {
   // A Weibel plasma stays charge-neutral to ~1e-5 while the field is ~8e-2.
   // gauss_residual divides by max|rho|, so the relative form reads O(1)
   // while the unmatched charge is 1e-4 of the field. The campaign number
@@ -313,8 +308,7 @@ TEST_CASE("relative Gauss is a 0/0 for a Weibel-neutral plasma",
 
   auto src = vlasov::Sources::zeros(p.nx);
   src.rho = rho;
-  const vlasov::Ledger L =
-      vlasov::make_ledger(p, line, {}, src, f, g, 0.0, 0, 1);
+  const vlasov::Ledger L = vlasov::make_ledger(p, line, {}, src, f, g, 0.0, 0, 1);
   REQUIRE(L.field_scale == Approx(B * std::cos(kPi / p.nx)).epsilon(1e-12));
   REQUIRE(L.gauss_residual == Approx(1.0).epsilon(1e-9));
   REQUIRE(L.gauss_abs_residual == Approx(rho_max).epsilon(1e-12));
@@ -325,8 +319,7 @@ TEST_CASE("relative Gauss is a 0/0 for a Weibel-neutral plasma",
   REQUIRE(L.energy_bz == Approx(0.25 * p.Lx * B * B).epsilon(1e-12));
 }
 
-TEST_CASE("drift of a vanishing baseline is absolute, not a 0/0",
-          "[diagnostics]") {
+TEST_CASE("drift of a vanishing baseline is absolute, not a 0/0", "[diagnostics]") {
   // Total momentum starts at zero in every benchmark. A relative drift
   // would be (now - 0)/0. The convention is the absolute change, and
   // set_drifts has to honour it or a healthy run reports inf.
@@ -360,8 +353,7 @@ TEST_CASE("recurrence_time is 2 pi / (k dv) and refuses garbage",
   REQUIRE_THROWS_AS(vlasov::recurrence_time(0.0, dv), std::invalid_argument);
   REQUIRE_THROWS_AS(vlasov::recurrence_time(k, 0.0), std::invalid_argument);
   REQUIRE_THROWS_AS(vlasov::recurrence_time(-k, dv), std::invalid_argument);
-  REQUIRE_THROWS_AS(vlasov::recurrence_time(k, std::nan("")),
-                    std::invalid_argument);
+  REQUIRE_THROWS_AS(vlasov::recurrence_time(k, std::nan("")), std::invalid_argument);
 }
 
 TEST_CASE("a science fit that includes t > 0.8 T_R throws",
@@ -375,8 +367,7 @@ TEST_CASE("a science fit that includes t > 0.8 T_R throws",
   REQUIRE_THROWS_AS(vlasov::require_fit_before_recurrence(tr, k, dv),
                     std::runtime_error);
   // A missing window is a different failure; this guard must not invent one.
-  REQUIRE_NOTHROW(
-      vlasov::require_fit_before_recurrence(std::nan(""), k, dv));
+  REQUIRE_NOTHROW(vlasov::require_fit_before_recurrence(std::nan(""), k, dv));
 }
 
 TEST_CASE("recurrence peak finding distinguishes empty from no revival",

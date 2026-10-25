@@ -18,8 +18,8 @@
  *
  *  | phase                         | work                  | where it runs |
  *  |-------------------------------|-----------------------|---------------|
- *  | A  `advect_x`, spectral shift | `N_x log N_x` per line, `N_vx N_vy` lines | **host** |
- *  | B  `advect_vx`, gather        | `p` FMA per cell      | **device**    |
+ *  | A  `advect_x`, spectral shift | `N_x log N_x` per line, `N_vx N_vy` lines |
+ * **host** | | B  `advect_vx`, gather        | `p` FMA per cell      | **device** |
  *  | C  `advect_vy`, gather        | `p` FMA per cell      | **device**    |
  *  | D  moments, `rho`/`J`         | one pass over the brick | **device**  |
  *  | E  the 1-D Maxwell solve      | `N_x` (kilobytes)     | **host**     |
@@ -107,7 +107,8 @@
  */
 
 #if !defined(OpenPFC_ENABLE_HIP)
-#error "vlasov_maxwell/device_step_hip.hpp requires HIP (configure with -DOpenPFC_ENABLE_HIP=ON)"
+#error                                                                              \
+    "vlasov_maxwell/device_step_hip.hpp requires HIP (configure with -DOpenPFC_ENABLE_HIP=ON)"
 #endif
 
 #include <cstddef>
@@ -123,10 +124,10 @@ namespace vlasov::hip {
  * `v_y` indices to know which cells sit on a velocity boundary face.
  */
 struct DeviceGeometry {
-  int nx{0};    ///< owned `x` cells (never split, so also global)
-  int nvx{0};   ///< owned `v_x` cells (never split, so also global)
-  int nvy{0};   ///< owned `v_y` cells on this rank
-  int halo{0};  ///< ghost width on every axis, as allocated
+  int nx{0};   ///< owned `x` cells (never split, so also global)
+  int nvx{0};  ///< owned `v_x` cells (never split, so also global)
+  int nvy{0};  ///< owned `v_y` cells on this rank
+  int halo{0}; ///< ghost width on every axis, as allocated
 
   [[nodiscard]] constexpr int npx() const noexcept { return nx + 2 * halo; }
   [[nodiscard]] constexpr int npy() const noexcept { return nvx + 2 * halo; }
@@ -329,8 +330,8 @@ void advect_x_hip(XShiftDevicePlan *plan, double *brick_dev, double v_max,
  *                          `|v| > edge`, empty when `v_thermal` is zero
  */
 void moments_hip(const double *f_dev, const DeviceGeometry &g, double v_max,
-                 double dvx, double dvy, int vy_offset, int nvy_global,
-                 double edge, double *scratch_dev, double *out_dev);
+                 double dvx, double dvy, int vy_offset, int nvy_global, double edge,
+                 double *scratch_dev, double *out_dev);
 
 } // namespace vlasov::hip
 
@@ -376,21 +377,21 @@ namespace vlasov::hip {
  * that has not run yet is not a measurement of anything.
  */
 struct PhaseTimings {
-  double advect_x{0.0};   ///< spectral shift along x (both halves), wherever
-                          ///< it ran -- @ref DeviceStepper::device_x says
-  double advect_vx{0.0};  ///< device gather, step B (both halves)
-  double advect_vy{0.0};  ///< device gather, step C
-  double moments{0.0};    ///< device reduction + host completion
-  double fields{0.0};     ///< host, the 1-D Maxwell solve
-  double coeffs{0.0};     ///< host weight setup + its upload
-  double h2d{0.0};        ///< host-to-device brick copies
-  double d2h{0.0};        ///< device-to-host brick copies
-  double halo{0.0};       ///< v_y ghost exchange (device zero fill or MPI)
+  double advect_x{0.0};  ///< spectral shift along x (both halves), wherever
+                         ///< it ran -- @ref DeviceStepper::device_x says
+  double advect_vx{0.0}; ///< device gather, step B (both halves)
+  double advect_vy{0.0}; ///< device gather, step C
+  double moments{0.0};   ///< device reduction + host completion
+  double fields{0.0};    ///< host, the 1-D Maxwell solve
+  double coeffs{0.0};    ///< host weight setup + its upload
+  double h2d{0.0};       ///< host-to-device brick copies
+  double d2h{0.0};       ///< device-to-host brick copies
+  double halo{0.0};      ///< v_y ghost exchange (device zero fill or MPI)
   int steps{0};
 
   [[nodiscard]] double total() const noexcept {
-    return advect_x + advect_vx + advect_vy + moments + fields + coeffs + h2d +
-           d2h + halo;
+    return advect_x + advect_vx + advect_vy + moments + fields + coeffs + h2d + d2h +
+           halo;
   }
   /// Round-trip share of the step: the number the port stands or falls on.
   [[nodiscard]] double transfer_fraction() const noexcept {
@@ -403,7 +404,7 @@ struct PhaseTimings {
 /// Seconds since an arbitrary epoch, monotonic. One place, so every phase is
 /// timed with the same clock.
 [[nodiscard]] inline double wall_seconds() {
-  struct timespec ts {};
+  struct timespec ts{};
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return static_cast<double>(ts.tv_sec) + 1.0e-9 * static_cast<double>(ts.tv_nsec);
 }
@@ -862,8 +863,8 @@ public:
       throw std::runtime_error(
           "device_advect_vy: a shift of " + std::to_string(global_max) +
           " v_y cells with a " + std::to_string(p) +
-          "-point stencil needs a halo of " + std::to_string(need) +
-          " but only " + std::to_string(m_ps->halo_width()) +
+          "-point stencil needs a halo of " + std::to_string(need) + " but only " +
+          std::to_string(m_ps->halo_width()) +
           " is allocated. Same condition, same reason and same refusal to "
           "clamp as the host advect_vy.");
     }
@@ -923,9 +924,12 @@ public:
       sc[2] += m_host_out[static_cast<std::size_t>(kMomL1) * nxs + i];
       sc[3] += m_host_out[static_cast<std::size_t>(kMomL2Sq) * nxs + i];
       sc[4] += m_host_out[static_cast<std::size_t>(kMomEntropy) * nxs + i];
-      fmin = std::min(fmin, m_host_out[static_cast<std::size_t>(kMomFMin) * nxs + i]);
-      fmax = std::max(fmax, m_host_out[static_cast<std::size_t>(kMomFMax) * nxs + i]);
-      fface = std::max(fface, m_host_out[static_cast<std::size_t>(kMomFFace) * nxs + i]);
+      fmin =
+          std::min(fmin, m_host_out[static_cast<std::size_t>(kMomFMin) * nxs + i]);
+      fmax =
+          std::max(fmax, m_host_out[static_cast<std::size_t>(kMomFMax) * nxs + i]);
+      fface =
+          std::max(fface, m_host_out[static_cast<std::size_t>(kMomFFace) * nxs + i]);
     }
 
     int inited = 0;
@@ -982,8 +986,8 @@ private:
     for (std::size_t s = 0; s < m_bricks.size(); ++s) {
       if (m_device_x) {
         const double t0 = wall_seconds();
-        advect_x_hip(m_xplan, m_bricks[s]->current(), m_p->v_max, m_ps->dvx(),
-                     h, m_ps->dx());
+        advect_x_hip(m_xplan, m_bricks[s]->current(), m_p->v_max, m_ps->dvx(), h,
+                     m_ps->dx());
         device_synchronize();
         m_t.advect_x += wall_seconds() - t0;
         continue;
@@ -1013,13 +1017,11 @@ public:
           "device_advect_x: this DeviceStepper was built with device_x = "
           "false, so there is no device plan to call");
     }
-    advect_x_hip(m_xplan, brick.current(), m_p->v_max, m_ps->dvx(), h,
-                 m_ps->dx());
+    advect_x_hip(m_xplan, brick.current(), m_p->v_max, m_ps->dvx(), h, m_ps->dx());
     device_synchronize();
   }
 
 private:
-
   Stepper *m_st{nullptr};
   PhaseSpace *m_ps{nullptr};
   const SimParams *m_p{nullptr};

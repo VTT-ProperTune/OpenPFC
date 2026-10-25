@@ -48,9 +48,8 @@ TEST_CASE("Tungsten resolution: the shipped presets sit on the wrong side",
   CHECK_FALSE(res::third_harmonic_resolved(shipped));
   CHECK_FALSE(res::mask_spares_second_harmonic(shipped));
   CHECK(shipped > res::dealias_safe_dx());
-  INFO("shipped dx is "
-       << 100.0 * (shipped / res::dealias_safe_dx() - 1.0)
-       << "% coarser than the threshold");
+  INFO("shipped dx is " << 100.0 * (shipped / res::dealias_safe_dx() - 1.0)
+                        << "% coarser than the threshold");
   CHECK(shipped / res::dealias_safe_dx() < 1.10); // 6.1%, not a wild miss
 
   // Where the third harmonic lands when it folds back.

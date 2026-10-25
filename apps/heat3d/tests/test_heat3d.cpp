@@ -902,9 +902,12 @@ TEST_CASE("heat3d::parse_fd: rejects out-of-range values", "[heat3d][cli]") {
 }
 
 TEST_CASE("heat3d::parse_spectral: rectangular happy path", "[heat3d][cli]") {
-  char *argv[] = {const_cast<char *>("heat3d_spectral"), const_cast<char *>("32"),
-                  const_cast<char *>("32"), const_cast<char *>("64"),
-                  const_cast<char *>("10"), const_cast<char *>("0.01")};
+  char *argv[] = {const_cast<char *>("heat3d_spectral"),
+                  const_cast<char *>("32"),
+                  const_cast<char *>("32"),
+                  const_cast<char *>("64"),
+                  const_cast<char *>("10"),
+                  const_cast<char *>("0.01")};
   const auto cfg = heat3d::parse_spectral(6, argv);
   REQUIRE(cfg.has_value());
   REQUIRE(cfg->Nx == 32);

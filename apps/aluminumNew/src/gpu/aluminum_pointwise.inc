@@ -12,8 +12,8 @@
 
 OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE(aluminum::AluminumPointwise)
 
-#include <openpfc/runtime/gpu/modifier_rule_gpu.hpp>
 #include <aluminum/solidification_bc_rules.hpp>
+#include <openpfc/runtime/gpu/modifier_rule_gpu.hpp>
 
 OPENPFC_INSTANTIATE_MODIFIER_RULE(aluminum::FixedBandRule)
 OPENPFC_INSTANTIATE_MODIFIER_RULE(aluminum::MovingBandRule)

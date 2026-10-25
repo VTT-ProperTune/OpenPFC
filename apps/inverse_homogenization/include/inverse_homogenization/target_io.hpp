@@ -20,8 +20,8 @@
 
 #include <mpi.h>
 
-#include <openpfc/kernel/data/grid_field.hpp>
 #include <inverse_homogenization/homogenization.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 
 namespace pfc::apps::inverse {
 
@@ -56,9 +56,8 @@ inline bool write_voigt6_file(const std::string &path, const Voigt6 &C) {
   return static_cast<bool>(out);
 }
 
-[[nodiscard]] inline bool load_fortran_bin(const std::string &path, int nx,
-                                           int ny, int nz,
-                                           pfc::data::Field<double> &h) {
+[[nodiscard]] inline bool load_fortran_bin(const std::string &path, int nx, int ny,
+                                           int nz, pfc::data::Field<double> &h) {
   const std::size_t ntot = static_cast<std::size_t>(nx) *
                            static_cast<std::size_t>(ny) *
                            static_cast<std::size_t>(nz);
@@ -70,8 +69,7 @@ inline bool write_voigt6_file(const std::string &path, const Voigt6 &C) {
     std::ifstream f(path, std::ios::binary);
     f.read(reinterpret_cast<char *>(a.data()),
            static_cast<std::streamsize>(ntot * sizeof(double)));
-    if (!f || static_cast<std::size_t>(f.gcount()) != ntot * sizeof(double))
-      ok = 0;
+    if (!f || static_cast<std::size_t>(f.gcount()) != ntot * sizeof(double)) ok = 0;
   }
   MPI_Bcast(&ok, 1, MPI_INT, 0, MPI_COMM_WORLD);
   if (!ok) return false;

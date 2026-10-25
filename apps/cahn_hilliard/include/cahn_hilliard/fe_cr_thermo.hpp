@@ -174,10 +174,10 @@ struct SpinodalRange {
  * arbitrary units.
  */
 struct PhysicalScales {
-  double Vm{7.09e-6};     ///< molar volume of bcc Fe (m³/mol)
-  double kappa{1.0e-9};   ///< gradient-energy coefficient (J/m)
-  double D0{2.0e-5};      ///< Arrhenius prefactor for Cr interdiffusion (m²/s)
-  double Q{2.41e5};       ///< activation energy (J/mol)
+  double Vm{7.09e-6};   ///< molar volume of bcc Fe (m³/mol)
+  double kappa{1.0e-9}; ///< gradient-energy coefficient (J/m)
+  double D0{2.0e-5};    ///< Arrhenius prefactor for Cr interdiffusion (m²/s)
+  double Q{2.41e5};     ///< activation energy (J/mol)
 
   /// Energy density scale \f$f_0 = RT/V_m\f$ (J/m³).
   [[nodiscard]] double f0(double T) const { return kGasConstant * T / Vm; }
@@ -188,9 +188,7 @@ struct PhysicalScales {
   }
 
   /// Code length unit in metres.
-  [[nodiscard]] double length_m(double T) const {
-    return std::sqrt(kappa / f0(T));
-  }
+  [[nodiscard]] double length_m(double T) const { return std::sqrt(kappa / f0(T)); }
   [[nodiscard]] double length_nm(double T) const { return 1.0e9 * length_m(T); }
 
   /**

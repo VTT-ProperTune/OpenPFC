@@ -183,9 +183,8 @@ inline void capture_problem(InverseCheckpoint &ck, const Cfg &cfg,
   store_voigt6(ck.W, W);
 }
 
-[[nodiscard]] inline bool
-checkpoint_matches_problem(const InverseCheckpoint &ck,
-                           const InverseCheckpoint &want) {
+[[nodiscard]] inline bool checkpoint_matches_problem(const InverseCheckpoint &ck,
+                                                     const InverseCheckpoint &want) {
   return ck.nx == want.nx && ck.ny == want.ny && ck.nz == want.nz &&
          ck.continuation_steps == want.continuation_steps &&
          ck.normalize == want.normalize &&
@@ -194,8 +193,7 @@ checkpoint_matches_problem(const InverseCheckpoint &ck,
          ck.verify_steps == want.verify_steps && same_real(ck.dx, want.dx) &&
          same_real(ck.E_solid, want.E_solid) &&
          same_real(ck.nu_solid, want.nu_solid) &&
-         same_real(ck.E_void, want.E_void) &&
-         same_real(ck.nu_void, want.nu_void) &&
+         same_real(ck.E_void, want.E_void) && same_real(ck.nu_void, want.nu_void) &&
          same_real(ck.volume, want.volume) &&
          same_real(ck.lambda_volume, want.lambda_volume) &&
          same_real(ck.lambda_reg, want.lambda_reg) &&
@@ -210,10 +208,9 @@ checkpoint_matches_problem(const InverseCheckpoint &ck,
 }
 
 template <typename Cfg, typename Tensor>
-[[nodiscard]] inline bool checkpoint_matches_problem(const InverseCheckpoint &ck,
-                                                     const Cfg &cfg,
-                                                     const Tensor &C_target,
-                                                     const Tensor &W) {
+[[nodiscard]] inline bool
+checkpoint_matches_problem(const InverseCheckpoint &ck, const Cfg &cfg,
+                           const Tensor &C_target, const Tensor &W) {
   InverseCheckpoint want{};
   capture_problem(want, cfg, C_target, W);
   return checkpoint_matches_problem(ck, want);
@@ -277,21 +274,22 @@ inline bool read_voigt36(std::istream &in, double *out) {
 [[nodiscard]] inline bool checkpoint_state_valid(const InverseCheckpoint &ck) {
   const auto boolean = [](int v) { return v == 0 || v == 1; };
   if (!boolean(ck.candidate) || !boolean(ck.verified) || !boolean(ck.have_prev) ||
-      !boolean(ck.normalize) || !boolean(ck.project_volume) ||
-      ck.nx <= 0 || ck.ny <= 0 || ck.nz <= 0 || ck.max_steps <= 0 ||
-      ck.next_step < 0 || ck.next_step > ck.max_steps ||
-      ck.continuation_steps < 0 || ck.conv_window <= 0 || ck.verify_steps < 0 ||
-      ck.quiet_count < 0 || ck.verify_left < 0 || ck.n_snap < 0 ||
-      ck.last_dumped < -1 || ck.termination < 0 || ck.termination > 3)
+      !boolean(ck.normalize) || !boolean(ck.project_volume) || ck.nx <= 0 ||
+      ck.ny <= 0 || ck.nz <= 0 || ck.max_steps <= 0 || ck.next_step < 0 ||
+      ck.next_step > ck.max_steps || ck.continuation_steps < 0 ||
+      ck.conv_window <= 0 || ck.verify_steps < 0 || ck.quiet_count < 0 ||
+      ck.verify_left < 0 || ck.n_snap < 0 || ck.last_dumped < -1 ||
+      ck.termination < 0 || ck.termination > 3)
     return false;
-  for (double v : {ck.dx, ck.E_solid, ck.nu_solid, ck.E_void, ck.nu_void,
-                   ck.volume, ck.lambda_volume, ck.lambda_reg, ck.lambda_reg_end,
-                   ck.simp, ck.simp_end, ck.epsilon, ck.dt, ck.max_delta,
-                   ck.tol_design, ck.tol_objective, ck.tol_tensor, ck.J_prev})
+  for (double v : {ck.dx, ck.E_solid, ck.nu_solid, ck.E_void, ck.nu_void, ck.volume,
+                   ck.lambda_volume, ck.lambda_reg, ck.lambda_reg_end, ck.simp,
+                   ck.simp_end, ck.epsilon, ck.dt, ck.max_delta, ck.tol_design,
+                   ck.tol_objective, ck.tol_tensor, ck.J_prev})
     if (!std::isfinite(v)) return false;
   for (int i = 0; i < 36; ++i)
     if (!std::isfinite(ck.C_prev[i]) || !std::isfinite(ck.C_target[i]) ||
-        !std::isfinite(ck.W[i])) return false;
+        !std::isfinite(ck.W[i]))
+      return false;
   if (ck.dx <= 0 || ck.tol_design < 0 || ck.tol_objective < 0 || ck.tol_tensor < 0)
     return false;
   if (ck.have_prev != (ck.next_step > 0 ? 1 : 0)) return false;
@@ -306,7 +304,8 @@ inline bool read_voigt36(std::istream &in, double *out) {
     const auto elapsed = std::int64_t(ck.quiet_count) - ck.conv_window;
     if (elapsed < 0 || elapsed > ck.verify_steps ||
         ck.verify_left != std::int64_t(ck.verify_steps) - elapsed ||
-        ck.verified != (ck.verify_left == 0 ? 1 : 0)) return false;
+        ck.verified != (ck.verify_left == 0 ? 1 : 0))
+      return false;
   }
   const auto reason = static_cast<TerminationReason>(ck.termination);
   if ((reason == TerminationReason::Converged) != (ck.verified != 0)) return false;
@@ -451,8 +450,7 @@ checkpoint_bundle_complete(const std::filesystem::path &dir) {
          std::filesystem::is_regular_file(dir / "h_prev.bin");
 }
 
-[[nodiscard]] inline bool
-checkpoint_generation_name_ok(std::string_view gen) {
+[[nodiscard]] inline bool checkpoint_generation_name_ok(std::string_view gen) {
   if (gen.size() < 5 || gen.rfind("gen_", 0) != 0) return false;
   if (gen.find('/') != std::string_view::npos ||
       gen.find('\\') != std::string_view::npos ||

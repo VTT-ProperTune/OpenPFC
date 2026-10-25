@@ -14,8 +14,8 @@
  *
  * Equations (1)-(4). Equations (5)-(7) -- the eigenstrain microelasticity
  * and its Fourier Green-operator solve -- live in `elasticity.hpp`, which
- * wraps `openpfc/solvers/microelasticity/microelasticity.hpp`; this file knows about them only
- * through one line, marked `ELASTIC HOOK` in @ref Stepper::stage_b_. A
+ * wraps `openpfc/solvers/microelasticity/microelasticity.hpp`; this file knows about
+ * them only through one line, marked `ELASTIC HOOK` in @ref Stepper::stage_b_. A
  * caller sets @ref Stepper::set_elastic_driving_force to a field holding
  * `dF_el/dphi` and @ref ModelParams::lambda_el to a nonzero value, and the
  * term `- lambda_el (1-phi^2)^2 dF_el/dphi` joins the phase-field right-hand

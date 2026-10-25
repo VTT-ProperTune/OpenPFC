@@ -72,8 +72,7 @@ inline void check(hipError_t e, const char *what) {
 
 /// Linear index of owned cell `(i, j, k)` in the padded brick.
 __device__ inline long long lin(const DeviceGeom &g, int i, int j, int k) noexcept {
-  return static_cast<long long>(i + g.hw) +
-         static_cast<long long>(j + g.hw) * g.sy +
+  return static_cast<long long>(i + g.hw) + static_cast<long long>(j + g.hw) * g.sy +
          static_cast<long long>(k + g.hw) * g.sz;
 }
 

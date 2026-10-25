@@ -297,8 +297,8 @@ public:
     const auto global = pfc::domain::get_size(domain_);
     const std::array<bool, 3> active{global[0] > 1, global[1] > 1, global[2] > 1};
     pfc::field::fd::divergence_separated(coeff_, p_, coeff_faces, potential_faces,
-                                         dhdt_out, nx_, ny_,
-                                         1, active, dx_, dy_, 1.0, kind);
+                                         dhdt_out, nx_, ny_, 1, active, dx_, dy_,
+                                         1.0, kind);
   }
 
   /// One explicit-Euler step of size `dt`.

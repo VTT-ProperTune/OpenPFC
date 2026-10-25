@@ -180,8 +180,7 @@ struct Ledger {
  *    so the one-sided value is half.
  */
 [[nodiscard]] inline double mode_amplitude(const SpectralLine1D &line,
-                                           const std::vector<double> &g,
-                                           int m) {
+                                           const std::vector<double> &g, int m) {
   const auto h = line.forward(g);
   if (m < 0 || static_cast<std::size_t>(m) >= h.size()) return 0.0;
   const double n = static_cast<double>(h.size());
@@ -198,11 +197,12 @@ struct Ledger {
  * @param fields   the current field state
  * @param gauss    the measured Gauss residual
  */
-[[nodiscard]] inline Ledger
-make_ledger(const SimParams &p, const SpectralLine1D &line,
-            const std::vector<VelocityMoments> &mom, const Sources &src,
-            const FieldState &fields, const GaussDiagnostic &gauss, double t,
-            int step, int mode = 1) {
+[[nodiscard]] inline Ledger make_ledger(const SimParams &p,
+                                        const SpectralLine1D &line,
+                                        const std::vector<VelocityMoments> &mom,
+                                        const Sources &src, const FieldState &fields,
+                                        const GaussDiagnostic &gauss, double t,
+                                        int step, int mode = 1) {
   Ledger L;
   L.t = t;
   L.step = step;
@@ -270,23 +270,22 @@ inline void set_drifts(Ledger &now, const Ledger &ref) noexcept {
 [[nodiscard]] inline std::string ledger_row(const std::string &run_id,
                                             const Ledger &L) {
   char buf[2048];
-  std::snprintf(
-      buf, sizeof(buf),
-      "%s,%d,%.10g,"
-      "%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,"
-      "%.10g,%.10g,"
-      "%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.10g,"
-      "%.17g,%.17g,"
-      "%.6e,%.6e,%.6e,"
-      "%.6e,%.6e,"
-      "%.6e,%.6e,%.6e,%.6e,%.6e,%.6e",
-      run_id.c_str(), L.step, L.t, L.number, L.kinetic_energy, L.momentum_x,
-      L.momentum_y, L.l1, L.l2, L.entropy, L.f_min, L.f_max, L.energy_ex,
-      L.energy_em, L.energy_bz, L.field_momentum_x, L.mode_ex, L.mode_bz,
-      L.field_scale, L.total_energy,
-      L.total_momentum_x, L.gauss_residual, L.gauss_abs_residual, L.net_charge,
-      L.boundary_ratio, L.boundary_fraction, L.d_number, L.d_energy, L.d_l1,
-      L.d_l2, L.d_entropy, L.d_momentum_x);
+  std::snprintf(buf, sizeof(buf),
+                "%s,%d,%.10g,"
+                "%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,"
+                "%.10g,%.10g,"
+                "%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.10g,"
+                "%.17g,%.17g,"
+                "%.6e,%.6e,%.6e,"
+                "%.6e,%.6e,"
+                "%.6e,%.6e,%.6e,%.6e,%.6e,%.6e",
+                run_id.c_str(), L.step, L.t, L.number, L.kinetic_energy,
+                L.momentum_x, L.momentum_y, L.l1, L.l2, L.entropy, L.f_min, L.f_max,
+                L.energy_ex, L.energy_em, L.energy_bz, L.field_momentum_x, L.mode_ex,
+                L.mode_bz, L.field_scale, L.total_energy, L.total_momentum_x,
+                L.gauss_residual, L.gauss_abs_residual, L.net_charge,
+                L.boundary_ratio, L.boundary_fraction, L.d_number, L.d_energy,
+                L.d_l1, L.d_l2, L.d_entropy, L.d_momentum_x);
   return std::string(buf);
 }
 
@@ -465,9 +464,8 @@ auto_growth_window(const std::vector<double> &t, const std::vector<double> &y,
  */
 [[nodiscard]] inline double recurrence_time(double k, double dv) {
   if (!(k > 0.0) || !(dv > 0.0) || !std::isfinite(k) || !std::isfinite(dv)) {
-    throw std::invalid_argument(
-        "recurrence_time: need k > 0 and dv > 0, got k = " +
-        std::to_string(k) + ", dv = " + std::to_string(dv));
+    throw std::invalid_argument("recurrence_time: need k > 0 and dv > 0, got k = " +
+                                std::to_string(k) + ", dv = " + std::to_string(dv));
   }
   return 2.0 * std::acos(-1.0) / (k * dv);
 }
@@ -488,8 +486,8 @@ inline void require_fit_before_recurrence(double t1, double k, double dv,
   const double tr = recurrence_time(k, dv);
   if (t1 > frac * tr) {
     throw std::runtime_error(
-        "science fit window ends at t = " + std::to_string(t1) +
-        " which is past " + std::to_string(frac) +
+        "science fit window ends at t = " + std::to_string(t1) + " which is past " +
+        std::to_string(frac) +
         " of the recurrence time T_R = " + std::to_string(tr) +
         " (k = " + std::to_string(k) + ", dv = " + std::to_string(dv) +
         "). Shorten t_end or refine the velocity grid; the driver will not "
@@ -522,9 +520,10 @@ struct Revival {
  * treating "the reduction was zero" as "recurrence was late" would pass
  * a broken deposition.
  */
-[[nodiscard]] inline Revival
-find_recurrence_peak(const std::vector<double> &t, const std::vector<double> &y,
-                     double t_pred, double floor_frac = 0.3) {
+[[nodiscard]] inline Revival find_recurrence_peak(const std::vector<double> &t,
+                                                  const std::vector<double> &y,
+                                                  double t_pred,
+                                                  double floor_frac = 0.3) {
   Revival r;
   if (t.size() < 3 || y.size() < 3 || !(t_pred > 0.0) || !std::isfinite(t_pred)) {
     r.kind = RevivalKind::empty;

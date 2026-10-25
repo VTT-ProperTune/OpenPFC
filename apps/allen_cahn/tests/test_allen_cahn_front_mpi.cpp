@@ -49,8 +49,7 @@ FrontOracle measure(const std::array<double, kNx> &column) {
       positive += value > 0.0 ? 1 : 0;
     }
   }
-  const auto fronts =
-      allen_cahn::planar_fronts(field.data(), kNx, kNy);
+  const auto fronts = allen_cahn::planar_fronts(field.data(), kNx, kNy);
   return FrontOracle{
       fronts.rising.position,
       fronts.falling.position,
@@ -113,8 +112,7 @@ TEST_CASE("sub-cell fronts agree across an x-rank boundary",
     REQUIRE_THAT(oracle.rising, WithinAbs(rising_at[case_index], 1e-12));
     REQUIRE_THAT(oracle.falling, WithinAbs(falling_at[case_index], 1e-12));
 
-    std::vector<double> local(
-        static_cast<std::size_t>(mine.size[0] * mine.size[1]));
+    std::vector<double> local(static_cast<std::size_t>(mine.size[0] * mine.size[1]));
     for (int iy = 0; iy < mine.size[1]; ++iy) {
       for (int ix = 0; ix < mine.size[0]; ++ix) {
         const int gx = mine.low[0] + ix;

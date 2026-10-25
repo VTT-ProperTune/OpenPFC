@@ -59,16 +59,16 @@ struct CahnHilliardSchemaValues {
   // Redlich-Kister excess free energy, J/mol, linear in T. Leaving L0_a at 0
   // keeps the regular-solution behaviour driven by Omega; setting it selects
   // the assessed binary instead. L1 = 0 makes the two forms identical.
-  double L0_a{0.0};      ///< \f$L_0\f$ constant term (J/mol); 0 disables RK
-  double L0_b{0.0};      ///< \f$L_0\f$ temperature slope (J/(mol K))
-  double L1_a{0.0};      ///< \f$L_1\f$ constant term (J/mol)
-  double L1_b{0.0};      ///< \f$L_1\f$ temperature slope (J/(mol K))
+  double L0_a{0.0}; ///< \f$L_0\f$ constant term (J/mol); 0 disables RK
+  double L0_b{0.0}; ///< \f$L_0\f$ temperature slope (J/(mol K))
+  double L1_a{0.0}; ///< \f$L_1\f$ constant term (J/mol)
+  double L1_b{0.0}; ///< \f$L_1\f$ temperature slope (J/(mol K))
   // Physical scales. These label the run in nm and seconds; they do not
   // change the trajectory, which is integrated in code units throughout.
-  double Vm{7.09e-6};    ///< molar volume (m^3/mol)
+  double Vm{7.09e-6};        ///< molar volume (m^3/mol)
   double kappa_phys{1.0e-9}; ///< gradient-energy coefficient (J/m)
-  double D0{2.0e-5};     ///< interdiffusion Arrhenius prefactor (m^2/s)
-  double Q{2.41e5};      ///< interdiffusion activation energy (J/mol)
+  double D0{2.0e-5};         ///< interdiffusion Arrhenius prefactor (m^2/s)
+  double Q{2.41e5};          ///< interdiffusion activation energy (J/mol)
 };
 
 struct CahnHilliardParams : CahnHilliardSchemaValues {

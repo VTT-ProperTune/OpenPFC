@@ -47,12 +47,12 @@
 namespace ehd_film {
 
 struct EhdFilmSchemaValues {
-  double h0{1.0};    ///< mean gap
-  double B{1.0};     ///< plate bending stiffness
-  double M0{1.0};    ///< mobility at h0
-  double gamma{0.0}; ///< tension (0 = bending only)
-  double A{0.0};     ///< disjoining strength (0 = no van der Waals)
-  double h_star{0.0};///< precursor thickness; >0 selects the adhesion-safe form
+  double h0{1.0};     ///< mean gap
+  double B{1.0};      ///< plate bending stiffness
+  double M0{1.0};     ///< mobility at h0
+  double gamma{0.0};  ///< tension (0 = bending only)
+  double A{0.0};      ///< disjoining strength (0 = no van der Waals)
+  double h_star{0.0}; ///< precursor thickness; >0 selects the adhesion-safe form
 };
 
 struct EhdFilmParams : EhdFilmSchemaValues {
@@ -160,8 +160,11 @@ struct EhdFilmPhysics {
   }
 
   [[nodiscard]] EhdFilmPointwise pointwise() const {
-    return {.A = params.A, .h0 = params.h0, .h_star = params.h_star,
-            .Pi0 = params.Pi0, .Pip0 = params.Pip0};
+    return {.A = params.A,
+            .h0 = params.h0,
+            .h_star = params.h_star,
+            .Pi0 = params.Pi0,
+            .Pip0 = params.Pip0};
   }
 
   /// Fastest-growing \(k^2\), or 0 when every mode decays.

@@ -87,8 +87,7 @@ using EvolutionSymbol = PolynomialInKLap<5>;
   const double A = r1 + a * a;
   const double B = 2.0 * a;
   const double C = 1.0;
-  return QuadraticKernel{
-      {A - eps, B + 2.0 * A, C + 2.0 * B + A, 2.0 * C + B, C}};
+  return QuadraticKernel{{A - eps, B + 2.0 * A, C + 2.0 * B + A, 2.0 * C + B, C}};
 }
 
 /**

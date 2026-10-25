@@ -24,7 +24,8 @@
  * neighbours,
  *
  * \f[
- *   \psi_n(j) = \frac{1}{N_b(j)}\sum_{k \in \text{neighbours}(j)} e^{in\theta_{jk}} .
+ *   \psi_n(j) = \frac{1}{N_b(j)}\sum_{k \in \text{neighbours}(j)} e^{in\theta_{jk}}
+ * .
  * \f]
  *
  * A perfect square lattice with its 4 nearest neighbours gives
@@ -86,8 +87,8 @@ struct Peak {
 
 /// Bond-orientational order for one harmonic \f$n\f$, both averages.
 struct BondOrder {
-  double global{0.0};  ///< |mean_j psi_n(j)|      -- single-crystal check
-  double local{0.0};   ///< mean_j |psi_n(j)|       -- local-order check
+  double global{0.0}; ///< |mean_j psi_n(j)|      -- single-crystal check
+  double local{0.0};  ///< mean_j |psi_n(j)|       -- local-order check
 };
 
 /// \f$\psi_4\f$ and \f$\psi_6\f$ together, plus how many peaks/bonds went in.
@@ -229,7 +230,7 @@ bond_orientational_order(const std::vector<Peak> &points, double Lx, double Ly,
  */
 [[nodiscard]] inline std::vector<Peak>
 detect_peaks(const pfc::data::Field<double> &psi, int nx, int ny, double dx,
-            double dy) {
+             double dy) {
   double mean = 0.0;
   for (int j = 0; j < ny; ++j)
     for (int i = 0; i < nx; ++i) mean += psi(i, j, 0);

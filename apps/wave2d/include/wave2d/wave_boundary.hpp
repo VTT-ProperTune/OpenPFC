@@ -51,16 +51,16 @@ inline void fill_y_physical_ghosts_padded(pfc::data::Field<T, pfc::HostSpace> &u
 
       // Bounds check: mirrored local index must be within valid padded range
       if (jm < -hw || jm >= sz[1] + hw) {
-        const std::string kind_str = (ybc == YBoundaryKind::Dirichlet) ? "Dirichlet" : "Neumann";
+        const std::string kind_str =
+            (ybc == YBoundaryKind::Dirichlet) ? "Dirichlet" : "Neumann";
         throw std::out_of_range(
             "fill_y_physical_ghosts_padded: mirrored ghost index out of bounds. "
-            "halo_width=" + std::to_string(hw) +
-            ", local_ny=" + std::to_string(sz[1]) +
-            ", valid_range=[" + std::to_string(-hw) + "," + std::to_string(sz[1] + hw) +
-            "), mirrored_global_yp=" + std::to_string(yp) +
-            ", computed_local_jm=" + std::to_string(jm) +
-            ", boundary_kind=" + kind_str
-        );
+            "halo_width=" +
+            std::to_string(hw) + ", local_ny=" + std::to_string(sz[1]) +
+            ", valid_range=[" + std::to_string(-hw) + "," +
+            std::to_string(sz[1] + hw) + "), mirrored_global_yp=" +
+            std::to_string(yp) + ", computed_local_jm=" + std::to_string(jm) +
+            ", boundary_kind=" + kind_str);
       }
 
       for (int i = -hw; i < sz[0] + hw; ++i) {

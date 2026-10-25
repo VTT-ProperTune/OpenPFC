@@ -147,9 +147,9 @@ struct ConvergenceCase {
 
   // Geometry + decomposition, single rank -- same calls as heat3d_fd.cpp
   // step 2, just with dx = kDomainLength/N instead of a fixed unit spacing.
-  const auto domain =
-      pfc::domain::create(pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                          pfc::GridSpacing({dx, dx, dx}));
+  const auto domain = pfc::domain::create(pfc::GridSize({N, N, N}),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing({dx, dx, dx}));
   const auto decomp = pfc::decomposition::create(domain, /*nproc=*/1);
 
   // Storage + halo exchanger + gradient evaluator: heat3d_fd.cpp steps 3-4.
@@ -174,7 +174,7 @@ struct ConvergenceCase {
     return std::cos(kMode * x);
   };
   u.apply(model.initial_condition); // u = u0, never mutated below.
-  halo.exchange();                 // fill the periodic ghost ring once.
+  halo.exchange();                  // fill the periodic ghost ring once.
 
   lap.for_each_owned([&](int i, int j, int k) {
     const auto g = pfc::gradient::evaluate(grad, pfc::Int3{i, j, k});

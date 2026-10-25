@@ -176,9 +176,8 @@ TEST_CASE("discrete-velocity recurrence time matches 2 pi / (k dv) at three N_v"
     const auto row = run_streaming(nvx, nvy, 1.3);
     rows.push_back(row);
     char buf[192];
-    std::snprintf(buf, sizeof(buf),
-                  "  %3d  %.6f  %.6f  %.6f  %.4f  %.4e  %.4e\n", row.nvx,
-                  row.dv, row.t_pred, row.t_meas, row.ratio, row.a0,
+    std::snprintf(buf, sizeof(buf), "  %3d  %.6f  %.6f  %.6f  %.4f  %.4e  %.4e\n",
+                  row.nvx, row.dv, row.t_pred, row.t_meas, row.ratio, row.a0,
                   row.a_rev);
     table += buf;
   }

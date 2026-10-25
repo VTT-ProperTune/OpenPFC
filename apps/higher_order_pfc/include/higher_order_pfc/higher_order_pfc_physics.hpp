@@ -61,17 +61,17 @@ namespace higher_order_pfc {
 
 /// JSON-shaped values. Everything is in reduced PFC units.
 struct HigherOrderPFCSchemaValues {
-  double eps{0.25};   ///< quench depth \f$\varepsilon\f$
+  double eps{0.25};              ///< quench depth \f$\varepsilon\f$
   double q1{1.4142135623730951}; ///< second peak \f$q_1\f$; \f$\sqrt2\f$ = 2D square
-  double r1{0.0};     ///< second-peak offset; 0 makes both minima degenerate
-  double M{1.0};      ///< mobility
-  double g{0.0};      ///< cubic coefficient in the local free energy
-  int n_modes{2};     ///< 1 = classical \f$k^4\f$ kernel, 2 = \f$k^8\f$ kernel
+  double r1{0.0}; ///< second-peak offset; 0 makes both minima degenerate
+  double M{1.0};  ///< mobility
+  double g{0.0};  ///< cubic coefficient in the local free energy
+  int n_modes{2}; ///< 1 = classical \f$k^4\f$ kernel, 2 = \f$k^8\f$ kernel
 };
 
 struct HigherOrderPFCParams : HigherOrderPFCSchemaValues {
-  QuadraticKernel kernel{};  ///< \f$\Lambda(u)\f$, quartic in \f$u\f$
-  EvolutionSymbol symbol{};  ///< \f$L(u)=Mu\Lambda(u)\f$, quintic in \f$u\f$
+  QuadraticKernel kernel{}; ///< \f$\Lambda(u)\f$, quartic in \f$u\f$
+  EvolutionSymbol symbol{}; ///< \f$L(u)=Mu\Lambda(u)\f$, quintic in \f$u\f$
 
   HigherOrderPFCParams() { recompute_derived(); }
 
@@ -176,7 +176,8 @@ struct HigherOrderPFCPhysics {
   }
 
   void declare_fields(pfc::SimulationState &state) const {
-    pfc::sim::add_declared_field<RealType, MemorySpace>(state, "psi", domain, box, 0);
+    pfc::sim::add_declared_field<RealType, MemorySpace>(state, "psi", domain, box,
+                                                        0);
   }
 
   /// \f$L(u)=M\,u\,\Lambda(u)\f$ — tenth order in \f$k\f$, zero at \f$k=0\f$.
@@ -194,9 +195,7 @@ struct HigherOrderPFCPhysics {
     return params.kernel(k_laplacian);
   }
 
-  [[nodiscard]] HigherOrderPFCPointwise pointwise() const {
-    return {.g = params.g};
-  }
+  [[nodiscard]] HigherOrderPFCPointwise pointwise() const { return {.g = params.g}; }
 };
 
 static_assert(pfc::sim::SpectralETDPhysics<HigherOrderPFCPhysics<>>);

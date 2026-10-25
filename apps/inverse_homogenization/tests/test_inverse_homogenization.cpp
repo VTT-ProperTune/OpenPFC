@@ -21,36 +21,36 @@
 #include <numbers>
 #include <vector>
 
-#include <mpi.h>
 #include <inverse_homogenization/material_report.hpp>
 #include <limits>
+#include <mpi.h>
 
-#include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/data/strong_types.hpp>
-#include <openpfc/kernel/fft/kspace.hpp>
-#include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 #include <inverse_homogenization/auxetic_geometry.hpp>
+#include <inverse_homogenization/homogenization.hpp>
 #include <inverse_homogenization/inverse_convergence.hpp>
 #include <inverse_homogenization/manufacturability.hpp>
 #include <inverse_homogenization/phase_field_inverse.hpp>
 #include <inverse_homogenization/spinodal_generator.hpp>
 #include <inverse_homogenization/target_io.hpp>
 #include <inverse_homogenization/yang_reentrant.hpp>
-#include <inverse_homogenization/homogenization.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/data/strong_types.hpp>
+#include <openpfc/kernel/fft/kspace.hpp>
+#include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 
 using Catch::Matchers::WithinAbs;
 using Catch::Matchers::WithinRel;
-using pfc::solvers::MicroelasticityParams;
 using pfc::apps::PeriodicHomogenizer;
-using pfc::solvers::Stiffness;
-using pfc::apps::voigt_from_stiffness;
 using pfc::apps::Voigt6;
+using pfc::apps::voigt_from_stiffness;
 using pfc::apps::inverse::double_well_prime;
 using pfc::apps::inverse::elastic_gradient_scale;
 using pfc::apps::inverse::InverseSpec;
 using pfc::apps::inverse::PhaseFieldInverse;
 using pfc::apps::inverse::spectral_laplacian;
+using pfc::solvers::MicroelasticityParams;
+using pfc::solvers::Stiffness;
 using RealField = pfc::data::Field<double>;
 using ComplexField = pfc::data::Field<std::complex<double>>;
 
@@ -111,8 +111,7 @@ struct Case {
   RealField h;
 
   explicit Case(int n)
-      : domain(cube(n)),
-        stack(domain, world_rank(), world_size(), MPI_COMM_WORLD),
+      : domain(cube(n)), stack(domain, world_rank(), world_size(), MPI_COMM_WORLD),
         h(pfc::data::field_from_inbox<double>(domain,
                                               stack.fft().get_inbox_bounds())) {}
   Case(int nx, int ny, int nz)
@@ -234,8 +233,7 @@ TEST_CASE("Volume projection holds the target mean after a step",
   REQUIRE_THAT(r.volume_fraction, WithinAbs(0.5, 1.0e-6));
 }
 
-TEST_CASE("Noisy initialization: a few AC steps decrease J",
-          "[inverse][descent]") {
+TEST_CASE("Noisy initialization: a few AC steps decrease J", "[inverse][descent]") {
   constexpr int N = 8;
   Case cs(N);
   const auto n = cs.h.local_size();
@@ -243,9 +241,8 @@ TEST_CASE("Noisy initialization: a few AC steps decrease J",
     for (int j = 0; j < n[1]; ++j)
       for (int i = 0; i < n[0]; ++i) {
         const auto g = cs.h.global(i, j, k);
-        const double noise =
-            0.05 * std::sin(2.0 * std::numbers::pi * (g[0] + 2.0 * g[1] + 3.0 * g[2]) /
-                            N);
+        const double noise = 0.05 * std::sin(2.0 * std::numbers::pi *
+                                             (g[0] + 2.0 * g[1] + 3.0 * g[2]) / N);
         cs.h(i, j, k) = 0.55 + noise;
       }
   cs.h.note_host_write();
@@ -449,8 +446,8 @@ TEST_CASE("3-D re-entrant honeycomb is 3-D, connected, and percolating",
   }
   constexpr int N = 32;
   Case cs(N);
-  pfc::apps::inverse::fill_reentrant_3d(cs.h, N, N, N, 0.06, 0.14, 0.10, 0.30,
-                                        0.70, 0.90);
+  pfc::apps::inverse::fill_reentrant_3d(cs.h, N, N, N, 0.06, 0.14, 0.10, 0.30, 0.70,
+                                        0.90);
   const auto loc = cs.h.local_size();
   double zvar = 0.0, yvar = 0.0, xvar = 0.0;
   for (int k = 0; k < loc[2]; ++k)
@@ -494,8 +491,7 @@ TEST_CASE("Yang A3 graph matches Table 1, cell box, shift, and ledger",
   bool shifted_layer = false;
   bool story0 = false;
   for (const auto &e : s) {
-    if (e.layer == 1 && e.kind == 'H' &&
-        std::abs(e.ay - 0.5 * Y::Ly()) < 1.0e-9 &&
+    if (e.layer == 1 && e.kind == 'H' && std::abs(e.ay - 0.5 * Y::Ly()) < 1.0e-9 &&
         std::abs(e.ax - 0.5 * Y::Lx()) < 1.0e-9)
       shifted_layer = true;
     if (e.layer == 0 && e.kind == 'H' && std::abs(e.ax) < 1.0e-9 &&
@@ -521,12 +517,11 @@ TEST_CASE("Yang A3 members are square prisms, not cylinders",
   const double half = 0.5 * Y::t_mm;
   pfc::apps::inverse::YangSeg zseg{0, 0, 0, 0, 0, Y::H_mm, 0, 'H', 'x'};
   const double c = 0.8 * half;
-  REQUIRE(pfc::apps::inverse::yang_in_square_prism(c, c, 0.5 * Y::H_mm, zseg,
-                                                   half));
+  REQUIRE(pfc::apps::inverse::yang_in_square_prism(c, c, 0.5 * Y::H_mm, zseg, half));
   REQUIRE_FALSE(
       pfc::apps::inverse::yang_in_cylinder(c, c, 0.5 * Y::H_mm, zseg, half));
-  REQUIRE_FALSE(pfc::apps::inverse::yang_in_square_prism(
-      1.1 * half, 0.0, 0.5 * Y::H_mm, zseg, half));
+  REQUIRE_FALSE(pfc::apps::inverse::yang_in_square_prism(1.1 * half, 0.0,
+                                                         0.5 * Y::H_mm, zseg, half));
 }
 
 TEST_CASE("Yang A3 voxel density sits in the predeclared gate",
@@ -557,13 +552,11 @@ TEST_CASE("Yang A3 voxel density sits in the predeclared gate",
             << " wang=" << Y::wang_rel_density()
             << " published=" << Y::published_rel_density << " nz=" << nz
             << " perc=" << m.percolate_solid_x << m.percolate_solid_y
-            << m.percolate_solid_z << " ncomp=" << m.n_solid_components
-            << '\n';
+            << m.percolate_solid_z << " ncomp=" << m.n_solid_components << '\n';
   INFO("solid_frac=" << m.solid_frac << " wang=" << Y::wang_rel_density()
-                     << " published=" << Y::published_rel_density
-                     << " nz=" << nz << " perc=" << m.percolate_solid_x
-                     << m.percolate_solid_y << m.percolate_solid_z
-                     << " ncomp=" << m.n_solid_components);
+                     << " published=" << Y::published_rel_density << " nz=" << nz
+                     << " perc=" << m.percolate_solid_x << m.percolate_solid_y
+                     << m.percolate_solid_z << " ncomp=" << m.n_solid_components);
   REQUIRE(m.solid_frac > Y::density_gate_lo);
   REQUIRE(m.solid_frac < Y::density_gate_hi);
   REQUIRE(m.n_solid_components == 1);
@@ -675,8 +668,7 @@ TEST_CASE("restoring the pre-update copy recovers the certified design",
   for (std::size_t i = 0; i < cs.h.size(); ++i)
     dh += std::abs(cs.h.data()[i] - certified[i]);
   REQUIRE(dh > 1.0e-12);
-  pfc::apps::inverse::copy_design_buffer(certified.data(), cs.h.data(),
-                                         cs.h.size());
+  pfc::apps::inverse::copy_design_buffer(certified.data(), cs.h.data(), cs.h.size());
   cs.h.note_host_write();
   REQUIRE_THAT(inv.mean_value(cs.h), WithinAbs(0.80, 1.0e-12));
   const auto again = inv.homogenizer().compute(cs.h);

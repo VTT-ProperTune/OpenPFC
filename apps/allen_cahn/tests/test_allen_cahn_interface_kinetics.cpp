@@ -77,12 +77,12 @@ allen_cahn::AreaSamples run_and_sample(const allen_cahn::RunConfig &cfg) {
 
   constexpr int halo_width = allen_cahn::RunConfig::kHaloWidth;
   auto face = pfc::halo::allocate_face_halos<double>(decomp, 0, halo_width);
-  pfc::comm::SparseExchange<pfc::HostSpace, double> exch(
-      u, decomp, 0, MPI_COMM_WORLD, halo_width);
+  pfc::comm::SparseExchange<pfc::HostSpace, double> exch(u, decomp, 0,
+                                                         MPI_COMM_WORLD, halo_width);
 
   allen_cahn::AreaSamples areas;
-  areas.initial = allen_cahn::count_cells_above(
-      u, allen_cahn::RunConfig::kLevelSetThreshold);
+  areas.initial =
+      allen_cahn::count_cells_above(u, allen_cahn::RunConfig::kLevelSetThreshold);
   const int step_half = cfg.n_steps / 2;
   const int step_three_quarter = (3 * cfg.n_steps) / 4;
 
@@ -100,8 +100,8 @@ allen_cahn::AreaSamples run_and_sample(const allen_cahn::RunConfig &cfg) {
           u, allen_cahn::RunConfig::kLevelSetThreshold);
     }
   }
-  areas.final_ = allen_cahn::count_cells_above(
-      u, allen_cahn::RunConfig::kLevelSetThreshold);
+  areas.final_ =
+      allen_cahn::count_cells_above(u, allen_cahn::RunConfig::kLevelSetThreshold);
   return areas;
 }
 
@@ -236,11 +236,11 @@ TEST_CASE("a seed that does not grow fails the check",
   a.final_ = 144;        // R = 6.770, so dR = 1.13 cells over the last half
   const auto slow = allen_cahn::analyse_interface_kinetics(a, cfg, kDx);
   REQUIRE(slow.steady);
-  REQUIRE(slow.r_final - slow.r_half > allen_cahn::RunConfig::kMinMeasurableAdvanceCells);
+  REQUIRE(slow.r_final - slow.r_half >
+          allen_cahn::RunConfig::kMinMeasurableAdvanceCells);
   REQUIRE(slow.v_late < allen_cahn::RunConfig::kVelocityBandLo * slow.v_predicted);
   REQUIRE(slow.verdict == allen_cahn::CheckVerdict::Fail);
-  REQUIRE(slow.reason.find("outside the sharp-interface band") !=
-          std::string::npos);
+  REQUIRE(slow.reason.find("outside the sharp-interface band") != std::string::npos);
 }
 
 TEST_CASE("a subcritical seed is reported as dissolved, not as a slow front",
@@ -346,8 +346,8 @@ TEST_CASE("a sub-grid interface needs a near-critical driving force",
   REQUIRE(nproc == 1);
 
   const allen_cahn::RunConfig shipped;
-  const double fraction = allen_cahn::driving_force_fraction(
-      shipped.epsilon, shipped.driving_force);
+  const double fraction =
+      allen_cahn::driving_force_fraction(shipped.epsilon, shipped.driving_force);
 
   allen_cahn::RunConfig subgrid; // the pre-0.2 geometry
   subgrid.nx_glob = 64;
@@ -477,8 +477,8 @@ TEST_CASE("two-front initial condition matches the heteroclinic",
     n_rising += (a <= 0.0 && b > 0.0) ? 1 : 0;
     n_falling += (a > 0.0 && b <= 0.0) ? 1 : 0;
     const double x = static_cast<double>(i);
-    const double profile = std::tanh((x - x_left) / delta) -
-                           std::tanh((x - x_right) / delta) - 1.0;
+    const double profile =
+        std::tanh((x - x_left) / delta) - std::tanh((x - x_right) / delta) - 1.0;
     REQUIRE_THAT(a, WithinAbs(profile, 1e-12));
     if (std::abs(x - x_left) <= delta) {
       REQUIRE_THAT(a, WithinAbs(std::tanh((x - x_left) / delta), 1e-3));
@@ -495,8 +495,8 @@ TEST_CASE("two-front initial condition matches the heteroclinic",
   REQUIRE(fronts.falling.position - fronts.rising.position > 10.0);
   // Every row carries the same pair: the average does not move the front.
   REQUIRE_THAT(fronts.rising.position,
-               WithinAbs(allen_cahn::periodic_zero_crossing(u.data(), nx,
-                                                            allen_cahn::Crossing::Rising)
+               WithinAbs(allen_cahn::periodic_zero_crossing(
+                             u.data(), nx, allen_cahn::Crossing::Rising)
                              .position,
                          1e-12));
 }
@@ -546,7 +546,8 @@ TEST_CASE("sub-cell numbers print beside the cell count and stay out of the verd
   flat.fronts_three_quarter.falling = allen_cahn::FrontHit{49.5, true};
   flat.fronts_final.falling = allen_cahn::FrontHit{50.0, true};
   std::ostringstream flat_out;
-  allen_cahn::report_interface_kinetics(0, areas, cfg, kinetics, &flat, kDx, flat_out);
+  allen_cahn::report_interface_kinetics(0, areas, cfg, kinetics, &flat, kDx,
+                                        flat_out);
   const std::string flat_text = flat_out.str();
   REQUIRE(flat_text.find("N0=10") != std::string::npos);
   REQUIRE(flat_text.find("R0=") != std::string::npos);

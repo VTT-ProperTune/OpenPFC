@@ -62,7 +62,8 @@
  */
 
 #if !defined(OpenPFC_ENABLE_HIP)
-#error "vlasov_device_kernels.hip requires HIP (configure with -DOpenPFC_ENABLE_HIP=ON)"
+#error                                                                              \
+    "vlasov_device_kernels.hip requires HIP (configure with -DOpenPFC_ENABLE_HIP=ON)"
 #endif
 
 // Ask device_step_hip.hpp for the declarations only: the host glue below the
@@ -110,11 +111,10 @@ __device__ __host__ inline std::size_t brick_lin(int i, int j, int k, int hw,
 // and the reason no halo appears here.
 // ---------------------------------------------------------------------------
 __global__ void advect_vx_kernel(const double *__restrict__ f,
-                                 double *__restrict__ out, int nx, int nvx,
-                                 int nvy, int hw, int npx, int npy,
+                                 double *__restrict__ out, int nx, int nvx, int nvy,
+                                 int hw, int npx, int npy,
                                  const int *__restrict__ base,
-                                 const double *__restrict__ wts, int p,
-                                 int first) {
+                                 const double *__restrict__ wts, int p, int first) {
 #pragma clang fp contract(off)
   const int i = static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x);
   const int jo = static_cast<int>(blockIdx.y * blockDim.y + threadIdx.y);
@@ -143,11 +143,10 @@ __global__ void advect_vx_kernel(const double *__restrict__ f,
 // host has already exchanged them and already proved the stencil fits.
 // ---------------------------------------------------------------------------
 __global__ void advect_vy_kernel(const double *__restrict__ f,
-                                 double *__restrict__ out, int nx, int nvx,
-                                 int nvy, int hw, int npx, int npy,
+                                 double *__restrict__ out, int nx, int nvx, int nvy,
+                                 int hw, int npx, int npy,
                                  const int *__restrict__ base,
-                                 const double *__restrict__ wts, int p,
-                                 int first) {
+                                 const double *__restrict__ wts, int p, int first) {
 #pragma clang fp contract(off)
   const int i = static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x);
   const int j = static_cast<int>(blockIdx.y * blockDim.y + threadIdx.y);
@@ -195,7 +194,8 @@ constexpr unsigned kMomentGroup = 8;
       static_cast<long long>(g.nvx) * static_cast<long long>(g.nvy);
   if (plane <= 0 || g.nx <= 0) return 1;
   long long s = kMomentThreads / static_cast<long long>(g.nx);
-  s = std::min<long long>(s, std::max<long long>(1, plane / kMomentMinCellsPerThread));
+  s = std::min<long long>(s,
+                          std::max<long long>(1, plane / kMomentMinCellsPerThread));
   s = std::max<long long>(1, std::min<long long>(s, plane));
   return static_cast<int>(s);
 }
@@ -206,8 +206,8 @@ constexpr unsigned kMomentGroup = 8;
   return static_cast<int>((n + kMomentGroup - 1) / kMomentGroup);
 }
 
-__global__ void moments_stage1_kernel(const double *__restrict__ f, int nx,
-                                      int nvx, int nvy, int hw, int npx, int npy,
+__global__ void moments_stage1_kernel(const double *__restrict__ f, int nx, int nvx,
+                                      int nvy, int hw, int npx, int npy,
                                       double v_max, double dvx, double dvy,
                                       int vy_offset, int nvy_global, double edge,
                                       int nsplit, int ngroups,
@@ -231,8 +231,8 @@ __global__ void moments_stage1_kernel(const double *__restrict__ f, int nx,
         static_cast<long long>(nvx) * static_cast<long long>(nvy);
     const long long begin =
         plane_cells * static_cast<long long>(s) / static_cast<long long>(nsplit);
-    const long long end = plane_cells * static_cast<long long>(s + 1) /
-                          static_cast<long long>(nsplit);
+    const long long end =
+        plane_cells * static_cast<long long>(s + 1) / static_cast<long long>(nsplit);
     // v_x innermost, not v_y: at fixed x, consecutive v_x are npx doubles
     // apart and consecutive v_y are npx*npy apart, so walking v_x keeps a
     // thread's successive reads inside a few kilobytes instead of half a
@@ -316,9 +316,8 @@ __global__ void moments_stage2_kernel(const double *__restrict__ partial,
   if (q == kMomFMin) acc = __builtin_huge_val();
   if (q == kMomFMax) acc = -__builtin_huge_val();
   for (int g = 0; g < ngroups; ++g) {
-    const double v =
-        src[static_cast<std::size_t>(g) * static_cast<std::size_t>(nx) +
-            static_cast<std::size_t>(i)];
+    const double v = src[static_cast<std::size_t>(g) * static_cast<std::size_t>(nx) +
+                         static_cast<std::size_t>(i)];
     if (q == kMomFMin) {
       acc = fmin(acc, v);
     } else if (q == kMomFMax || q == kMomFFace) {
@@ -350,8 +349,8 @@ __global__ void moments_stage2_kernel(const double *__restrict__ partial,
 // either compiler. So the weights are bitwise the host's.
 // ---------------------------------------------------------------------------
 __global__ void lagrange_weights_kernel(const double *__restrict__ frac,
-                                        double *__restrict__ wts,
-                                        long long n_lines, int p, int first) {
+                                        double *__restrict__ wts, long long n_lines,
+                                        int p, int first) {
 #pragma clang fp contract(off)
   const long long line =
       static_cast<long long>(blockIdx.x) * blockDim.x + threadIdx.x;
@@ -395,9 +394,8 @@ __global__ void lagrange_weights_kernel(const double *__restrict__ frac,
 // ---------------------------------------------------------------------------
 
 /// `out[(k nvx + j) nx + i] = brick(i, j, k)`.
-__global__ void pack_x_kernel(const double *__restrict__ f,
-                              double *__restrict__ out, int nx, int nvx,
-                              int nvy, int hw, int npx, int npy) {
+__global__ void pack_x_kernel(const double *__restrict__ f, double *__restrict__ out,
+                              int nx, int nvx, int nvy, int hw, int npx, int npy) {
   const int i = static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x);
   const int j = static_cast<int>(blockIdx.y * blockDim.y + threadIdx.y);
   const int k = static_cast<int>(blockIdx.z);
@@ -412,8 +410,8 @@ __global__ void pack_x_kernel(const double *__restrict__ f,
 
 /// The inverse of @ref pack_x_kernel.
 __global__ void unpack_x_kernel(const double *__restrict__ in,
-                                double *__restrict__ f, int nx, int nvx,
-                                int nvy, int hw, int npx, int npy) {
+                                double *__restrict__ f, int nx, int nvx, int nvy,
+                                int hw, int npx, int npy) {
   const int i = static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x);
   const int j = static_cast<int>(blockIdx.y * blockDim.y + threadIdx.y);
   const int k = static_cast<int>(blockIdx.z);
@@ -436,9 +434,8 @@ __global__ void unpack_x_kernel(const double *__restrict__ in,
  * even-length real transform keeps only its real part, or the result stops
  * being real.
  */
-__global__ void x_phase_kernel(double *__restrict__ phase, int nx, int nk,
-                               int nvx, double v_max, double dvx, double dt,
-                               double dx) {
+__global__ void x_phase_kernel(double *__restrict__ phase, int nx, int nk, int nvx,
+                               double v_max, double dvx, double dt, double dx) {
   const int m = static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x);
   const int j = static_cast<int>(blockIdx.y * blockDim.y + threadIdx.y);
   if (m >= nk || j >= nvx) return;
@@ -466,12 +463,11 @@ __global__ void x_phase_kernel(double *__restrict__ phase, int nx, int nk,
 /// Multiply every transformed line by its phasor. `b = k nvx + j`, so the
 /// phase row is `b % nvx`.
 __global__ void x_multiply_kernel(double *__restrict__ spec,
-                                  const double *__restrict__ phase, int nx,
-                                  int nk, int nvx, long long batch) {
+                                  const double *__restrict__ phase, int nx, int nk,
+                                  int nvx, long long batch) {
 #pragma clang fp contract(off)
   const int m = static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x);
-  const long long b =
-      static_cast<long long>(blockIdx.y) * blockDim.y + threadIdx.y;
+  const long long b = static_cast<long long>(blockIdx.y) * blockDim.y + threadIdx.y;
   if (m >= nk || b >= batch) return;
   const int j = static_cast<int>(b % static_cast<long long>(nvx));
   const std::size_t at =
@@ -538,8 +534,7 @@ const char *device_name() {
   if (hipGetDevice(&dev) != hipSuccess) return "unknown";
   hipDeviceProp_t prop{};
   if (hipGetDeviceProperties(&prop, dev) != hipSuccess) return "unknown";
-  std::snprintf(name, sizeof(name), "%s (gcnArch %s)", prop.name,
-                prop.gcnArchName);
+  std::snprintf(name, sizeof(name), "%s (gcnArch %s)", prop.name, prop.gcnArchName);
   return name;
 }
 
@@ -560,8 +555,7 @@ void device_free(void *p) noexcept {
 }
 
 void device_upload(double *dst_dev, const double *src_host, std::size_t n) {
-  hip_check(hipMemcpy(dst_dev, src_host, n * sizeof(double),
-                      hipMemcpyHostToDevice),
+  hip_check(hipMemcpy(dst_dev, src_host, n * sizeof(double), hipMemcpyHostToDevice),
             "hipMemcpy H2D");
 }
 
@@ -571,8 +565,7 @@ void device_upload_int(int *dst_dev, const int *src_host, std::size_t n) {
 }
 
 void device_download(double *dst_host, const double *src_dev, std::size_t n) {
-  hip_check(hipMemcpy(dst_host, src_dev, n * sizeof(double),
-                      hipMemcpyDeviceToHost),
+  hip_check(hipMemcpy(dst_host, src_dev, n * sizeof(double), hipMemcpyDeviceToHost),
             "hipMemcpy D2H");
 }
 
@@ -613,14 +606,13 @@ void advect_vy_gather_hip(const double *f_dev, double *out_dev,
 }
 
 std::size_t moments_scratch_doubles(const DeviceGeometry &g) {
-  return static_cast<std::size_t>(kMomQuantities) *
-         static_cast<std::size_t>(g.nx) *
+  return static_cast<std::size_t>(kMomQuantities) * static_cast<std::size_t>(g.nx) *
          static_cast<std::size_t>(moment_groups(g));
 }
 
 void moments_hip(const double *f_dev, const DeviceGeometry &g, double v_max,
-                 double dvx, double dvy, int vy_offset, int nvy_global,
-                 double edge, double *scratch_dev, double *out_dev) {
+                 double dvx, double dvy, int vy_offset, int nvy_global, double edge,
+                 double *scratch_dev, double *out_dev) {
   const int nsplit = moment_splits(g);
   const int ngroups = moment_groups(g);
 
@@ -629,10 +621,9 @@ void moments_hip(const double *f_dev, const DeviceGeometry &g, double v_max,
              static_cast<unsigned>(ngroups), 1};
   const std::size_t shbytes =
       static_cast<std::size_t>(block1.x) * block1.y * sizeof(double);
-  hipLaunchKernelGGL(moments_stage1_kernel, grid1, block1, shbytes, 0, f_dev,
-                     g.nx, g.nvx, g.nvy, g.halo, g.npx(), g.npy(), v_max, dvx,
-                     dvy, vy_offset, nvy_global, edge, nsplit, ngroups,
-                     scratch_dev);
+  hipLaunchKernelGGL(moments_stage1_kernel, grid1, block1, shbytes, 0, f_dev, g.nx,
+                     g.nvx, g.nvy, g.halo, g.npx(), g.npy(), v_max, dvx, dvy,
+                     vy_offset, nvy_global, edge, nsplit, ngroups, scratch_dev);
   hip_check(hipGetLastError(), "moments_stage1 launch");
 
   dim3 block2{64, 1, 1};
@@ -643,7 +634,6 @@ void moments_hip(const double *f_dev, const DeviceGeometry &g, double v_max,
   hip_check(hipGetLastError(), "moments_stage2 launch");
 }
 
-
 void lagrange_weights_hip(const double *frac_dev, double *wts_dev,
                           std::size_t n_lines, int interp_order, int first) {
   if (n_lines == 0) return;
@@ -652,9 +642,8 @@ void lagrange_weights_hip(const double *frac_dev, double *wts_dev,
   // separators.
   dim3 block{256, 1, 1};
   dim3 grid{static_cast<unsigned>((n_lines + 255) / 256), 1, 1};
-  hipLaunchKernelGGL(lagrange_weights_kernel, grid, block, 0, 0, frac_dev,
-                     wts_dev, static_cast<long long>(n_lines), interp_order,
-                     first);
+  hipLaunchKernelGGL(lagrange_weights_kernel, grid, block, 0, 0, frac_dev, wts_dev,
+                     static_cast<long long>(n_lines), interp_order, first);
   hip_check(hipGetLastError(), "lagrange_weights_hip launch");
 }
 
@@ -708,12 +697,11 @@ XShiftDevicePlan *x_shift_plan_create(const DeviceGeometry &g) {
     int n = g.nx;
     int inembed[1] = {g.nx};
     int onembed[1] = {p->nk};
-    fft_check(hipfftPlanMany(&p->fwd, 1, &n, inembed, 1, g.nx, onembed, 1,
-                             p->nk, HIPFFT_D2Z,
-                             static_cast<int>(p->batch)),
+    fft_check(hipfftPlanMany(&p->fwd, 1, &n, inembed, 1, g.nx, onembed, 1, p->nk,
+                             HIPFFT_D2Z, static_cast<int>(p->batch)),
               "hipfftPlanMany D2Z");
-    fft_check(hipfftPlanMany(&p->bwd, 1, &n, onembed, 1, p->nk, inembed, 1,
-                             g.nx, HIPFFT_Z2D, static_cast<int>(p->batch)),
+    fft_check(hipfftPlanMany(&p->bwd, 1, &n, onembed, 1, p->nk, inembed, 1, g.nx,
+                             HIPFFT_Z2D, static_cast<int>(p->batch)),
               "hipfftPlanMany Z2D");
     p->planned = true;
   } catch (...) {
@@ -735,8 +723,8 @@ void x_shift_plan_destroy(XShiftDevicePlan *p) {
   delete p;
 }
 
-void advect_x_hip(XShiftDevicePlan *p, double *brick_dev, double v_max,
-                  double dvx, double dt, double dx) {
+void advect_x_hip(XShiftDevicePlan *p, double *brick_dev, double v_max, double dvx,
+                  double dt, double dx) {
   if (p == nullptr) throw std::runtime_error("advect_x_hip: null plan");
   const DeviceGeometry &g = p->g;
 
@@ -749,15 +737,15 @@ void advect_x_hip(XShiftDevicePlan *p, double *brick_dev, double v_max,
     dim3 pb{64, 4, 1};
     dim3 pg{(static_cast<unsigned>(p->nk) + pb.x - 1) / pb.x,
             (static_cast<unsigned>(g.nvx) + pb.y - 1) / pb.y, 1};
-    hipLaunchKernelGGL(x_phase_kernel, pg, pb, 0, 0, p->phase, g.nx, p->nk,
-                       g.nvx, v_max, dvx, dt, dx);
+    hipLaunchKernelGGL(x_phase_kernel, pg, pb, 0, 0, p->phase, g.nx, p->nk, g.nvx,
+                       v_max, dvx, dt, dx);
     hip_check(hipGetLastError(), "x_phase_kernel launch");
     p->last_dt = dt;
     p->have_phase = true;
   }
 
-  hipLaunchKernelGGL(pack_x_kernel, grid, block, 0, 0, brick_dev, p->xbuf,
-                     g.nx, g.nvx, g.nvy, g.halo, g.npx(), g.npy());
+  hipLaunchKernelGGL(pack_x_kernel, grid, block, 0, 0, brick_dev, p->xbuf, g.nx,
+                     g.nvx, g.nvy, g.halo, g.npx(), g.npy());
   hip_check(hipGetLastError(), "pack_x_kernel launch");
 
   fft_check(hipfftExecD2Z(p->fwd, p->xbuf,
@@ -767,17 +755,16 @@ void advect_x_hip(XShiftDevicePlan *p, double *brick_dev, double v_max,
   dim3 mb{64, 4, 1};
   dim3 mg{(static_cast<unsigned>(p->nk) + mb.x - 1) / mb.x,
           static_cast<unsigned>((p->batch + mb.y - 1) / mb.y), 1};
-  hipLaunchKernelGGL(x_multiply_kernel, mg, mb, 0, 0, p->spec, p->phase, g.nx,
-                     p->nk, g.nvx, p->batch);
+  hipLaunchKernelGGL(x_multiply_kernel, mg, mb, 0, 0, p->spec, p->phase, g.nx, p->nk,
+                     g.nvx, p->batch);
   hip_check(hipGetLastError(), "x_multiply_kernel launch");
 
-  fft_check(hipfftExecZ2D(p->bwd,
-                          reinterpret_cast<hipfftDoubleComplex *>(p->spec),
+  fft_check(hipfftExecZ2D(p->bwd, reinterpret_cast<hipfftDoubleComplex *>(p->spec),
                           p->xbuf),
             "hipfftExecZ2D");
 
-  hipLaunchKernelGGL(unpack_x_kernel, grid, block, 0, 0, p->xbuf, brick_dev,
-                     g.nx, g.nvx, g.nvy, g.halo, g.npx(), g.npy());
+  hipLaunchKernelGGL(unpack_x_kernel, grid, block, 0, 0, p->xbuf, brick_dev, g.nx,
+                     g.nvx, g.nvy, g.halo, g.npx(), g.npy());
   hip_check(hipGetLastError(), "unpack_x_kernel launch");
 }
 

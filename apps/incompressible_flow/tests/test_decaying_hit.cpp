@@ -207,12 +207,12 @@ TEST_CASE("modal divergence is normalized by N^3", "[flow][hit]") {
   const auto nhat = state.u.size();
   pfc::field::leray_project(outbox, state.n, state.spacing, state.u.data(),
                             state.v.data(), state.w.data(), nhat);
-  const double raw = pfc::field::max_modal_divergence(
-      outbox, state.n, state.spacing, state.u.data(), state.v.data(),
-      state.w.data(), nhat);
+  const double raw = pfc::field::max_modal_divergence(outbox, state.n, state.spacing,
+                                                      state.u.data(), state.v.data(),
+                                                      state.w.data(), nhat);
   const auto diag = flow::diagnose(state);
-  const double ncells = static_cast<double>(n) * static_cast<double>(n) *
-                        static_cast<double>(n);
+  const double ncells =
+      static_cast<double>(n) * static_cast<double>(n) * static_cast<double>(n);
   REQUIRE(raw > 1.0e-8);
   REQUIRE(diag.finite);
   REQUIRE(diag.modal_div_max < 1.0e-8);

@@ -27,13 +27,14 @@
 
 #include <iostream>
 
-#include <wave2d/wave_model.hpp>
 #include <wave2d/operator_evaluation.hpp>
+#include <wave2d/wave_model.hpp>
 
 using Catch::Matchers::WithinAbs;
 using namespace wave2d;
 
-TEST_CASE("WaveOperator::evaluate returns correct increments", "[wave2d][operator]") {
+TEST_CASE("WaveOperator::evaluate returns correct increments",
+          "[wave2d][operator]") {
   const double inv_dx2 = 1.0 / 0.01;
   const double inv_dy2 = 1.0 / 0.02;
   WaveOperator op(inv_dx2, inv_dy2);
@@ -82,13 +83,14 @@ TEST_CASE("WaveOperatorResult supports tuple protocol", "[wave2d][operator]") {
   REQUIRE_THAT(du, WithinAbs(1.5, 1e-12));
   REQUIRE_THAT(dv, WithinAbs(-2.3, 1e-12));
 
-  const auto& const_result = result;
+  const auto &const_result = result;
   auto [c_du, c_dv] = const_result.as_tuple();
   REQUIRE_THAT(c_du, WithinAbs(1.5, 1e-12));
   REQUIRE_THAT(c_dv, WithinAbs(-2.3, 1e-12));
 }
 
-TEST_CASE("WaveOperator::evaluate does not modify input state", "[wave2d][operator]") {
+TEST_CASE("WaveOperator::evaluate does not modify input state",
+          "[wave2d][operator]") {
   const double inv_dx2 = 1.0;
   const double inv_dy2 = 1.0;
   WaveOperator op(inv_dx2, inv_dy2);
@@ -113,7 +115,8 @@ TEST_CASE("WaveOperator applies metric scaling correctly", "[wave2d][operator]")
 
   // dv = c² * (inv_dx²*lxx + inv_dy²*lyy)
   const double expected_lap_scaled = inv_dx2 + inv_dy2;
-  REQUIRE_THAT(result.increments.dv, WithinAbs(kC * kC * expected_lap_scaled, 1e-12));
+  REQUIRE_THAT(result.increments.dv,
+               WithinAbs(kC * kC * expected_lap_scaled, 1e-12));
   REQUIRE_THAT(result.increments.du, WithinAbs(0.0, 1e-12));
 }
 
@@ -156,6 +159,4 @@ TEST_CASE("WaveOperator is constructible and callable", "[wave2d][operator]") {
   REQUIRE_THAT(result.increments.du, WithinAbs(0.0, 1e-12));
 }
 
-int main(int argc, char* argv[]) {
-  return Catch::Session().run(argc, argv);
-}
+int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }

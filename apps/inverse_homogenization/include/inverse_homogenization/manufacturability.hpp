@@ -229,8 +229,10 @@ inline Manufacturability measure_manufacturability(const std::vector<double> &h,
   int grey = 0;
   for (std::size_t p = 0; p < N; ++p) {
     if (h[p] > 0.1 && h[p] < 0.9) ++grey;
-    if (h[p] > thresh) solid[p] = 1;
-    else voids[p] = 1;
+    if (h[p] > thresh)
+      solid[p] = 1;
+    else
+      voids[p] = 1;
   }
   m.grey_fraction = static_cast<double>(grey) / static_cast<double>(N);
   m.solid_frac = count_ones(solid) / static_cast<double>(N);

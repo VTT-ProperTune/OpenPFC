@@ -53,7 +53,8 @@ TEST_CASE("Heat3D: Operator evaluation contract exists", "[heat3d][legacy]") {
   REQUIRE(result.d_u == 3.0 * heat3d::kD);
 }
 
-TEST_CASE("Heat3D: HeatModel uses rhs() pattern, not step() pattern", "[heat3d][legacy]") {
+TEST_CASE("Heat3D: HeatModel uses rhs() pattern, not step() pattern",
+          "[heat3d][legacy]") {
   // This test explicitly documents the architectural decision that Heat3D
   // uses the rhs() pattern (operator evaluation) rather than the step()
   // pattern (state mutation), which is why the migration to the formal
@@ -74,6 +75,4 @@ TEST_CASE("Heat3D: HeatModel uses rhs() pattern, not step() pattern", "[heat3d][
   REQUIRE(std::is_member_function_pointer_v<decltype(&heat3d::HeatModel::rhs)>);
 }
 
-int main(int argc, char* argv[]) {
-  return Catch::Session().run(argc, argv);
-}
+int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }

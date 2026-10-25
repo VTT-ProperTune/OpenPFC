@@ -14,10 +14,10 @@
 
 #include <mpi.h>
 
+#include <kobayashi/xy_gather.hpp>
 #include <openpfc/frontend/io/png_writer.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <kobayashi/xy_gather.hpp>
 
 namespace {
 

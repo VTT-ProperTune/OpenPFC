@@ -85,8 +85,7 @@ inline const double kInvSqrt2Pi = 1.0 / std::sqrt(2.0 * std::acos(-1.0));
  * mismatch that produces a confident wrong number, so the ratio is now the
  * only thing called `A` and the excess has its own name.
  */
-[[nodiscard]] inline double temperature_ratio(double vthx,
-                                              double vthy) noexcept {
+[[nodiscard]] inline double temperature_ratio(double vthx, double vthy) noexcept {
   const double r = vthy / vthx;
   return r * r;
 }
@@ -94,8 +93,7 @@ inline const double kInvSqrt2Pi = 1.0 / std::sqrt(2.0 * std::acos(-1.0));
 /// `A - 1`, the quantity the Weibel cutoff `k^2 c^2 = omega_pe^2 (A - 1)` is
 /// linear in. Positive means unstable: hotter across the wave vector than
 /// along it.
-[[nodiscard]] inline double anisotropy_excess(double vthx,
-                                              double vthy) noexcept {
+[[nodiscard]] inline double anisotropy_excess(double vthx, double vthy) noexcept {
   return temperature_ratio(vthx, vthy) - 1.0;
 }
 
@@ -106,8 +104,7 @@ inline const double kInvSqrt2Pi = 1.0 / std::sqrt(2.0 * std::acos(-1.0));
  * Equal halves at `+u` and `-u`. The instability is electrostatic and lives
  * in `E_x`, so this is the benchmark for the Vlasov-Poisson reduction.
  */
-[[nodiscard]] inline double two_stream_x(double vx, double vy, double vth,
-                                         double u,
+[[nodiscard]] inline double two_stream_x(double vx, double vy, double vth, double u,
                                          double density = 1.0) noexcept {
   return 0.5 * maxwellian(vx, vy, vth, density, +u, 0.0) +
          0.5 * maxwellian(vx, vy, vth, density, -u, 0.0);
@@ -123,8 +120,7 @@ inline const double kInvSqrt2Pi = 1.0 / std::sqrt(2.0 * std::acos(-1.0));
  * point of stage 4, and it is why the two look almost identical here and
  * behave completely differently.
  */
-[[nodiscard]] inline double two_stream_y(double vx, double vy, double vth,
-                                         double u,
+[[nodiscard]] inline double two_stream_y(double vx, double vy, double vth, double u,
                                          double density = 1.0) noexcept {
   return 0.5 * maxwellian(vx, vy, vth, density, 0.0, +u) +
          0.5 * maxwellian(vx, vy, vth, density, 0.0, -u);
@@ -182,16 +178,15 @@ inline const double kInvSqrt2Pi = 1.0 / std::sqrt(2.0 * std::acos(-1.0));
 /// Refuse a velocity grid too coarse to integrate the distribution.
 /// See @ref maxwellian_quadrature_error for why this is not implied by
 /// @ref require_resolved_tail.
-inline void require_resolved_spacing(double dv, double vth,
-                                     double tol = 1.0e-12) {
+inline void require_resolved_spacing(double dv, double vth, double tol = 1.0e-12) {
   const double e = maxwellian_quadrature_error(dv, vth);
   if (e > tol) {
     throw std::invalid_argument(
         "velocity spacing dv = " + std::to_string(dv) + " resolves v_th = " +
         std::to_string(vth) + " with only " + std::to_string(vth / dv) +
         " cells per thermal width, so the midpoint quadrature of the "
-        "distribution is wrong by " + std::to_string(e) +
-        " (tolerance " + std::to_string(tol) +
+        "distribution is wrong by " +
+        std::to_string(e) + " (tolerance " + std::to_string(tol) +
         "). This is not the same condition as the tail check: increase the "
         "cell count on this axis, not v_max.");
   }
@@ -207,15 +202,14 @@ inline void require_resolved_spacing(double dv, double vth,
  * thermal widths costs nothing and removes the failure mode entirely, so
  * the default threshold is strict.
  */
-inline void require_resolved_tail(double v_max, double vth,
-                                  double tol = 1.0e-12) {
+inline void require_resolved_tail(double v_max, double vth, double tol = 1.0e-12) {
   const double e = maxwellian_truncation_error(v_max, vth);
   if (e > tol) {
-    throw std::invalid_argument(
-        "velocity box truncates " + std::to_string(e) +
-        " of the distribution (tolerance " + std::to_string(tol) +
-        "): increase v_max or reduce v_th. v_max/v_th = " +
-        std::to_string(v_max / vth));
+    throw std::invalid_argument("velocity box truncates " + std::to_string(e) +
+                                " of the distribution (tolerance " +
+                                std::to_string(tol) +
+                                "): increase v_max or reduce v_th. v_max/v_th = " +
+                                std::to_string(v_max / vth));
   }
 }
 

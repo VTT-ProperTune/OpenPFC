@@ -125,8 +125,7 @@ inline void check_adapter(const PhaseSpace &ps, PhaseField &f) {
   const int j1 = ps.nvx() - 1;
   const int k0 = ps.vy_offset();
   const int k1 = ps.vy_offset() + ps.nvy_local() - 1;
-  const int probes[4][3] = {
-      {0, 0, k0}, {i1, 0, k0}, {0, j1, k0}, {i1, j1, k1}};
+  const int probes[4][3] = {{0, 0, k0}, {i1, 0, k0}, {0, j1, k0}, {i1, j1, k1}};
   double saved[4];
   for (int t = 0; t < 4; ++t) {
     saved[t] = f(probes[t][0], probes[t][1], probes[t][2] - ps.vy_offset());
@@ -140,10 +139,10 @@ inline void check_adapter(const PhaseSpace &ps, PhaseField &f) {
     const double got = v(probes[t][0], probes[t][1], probes[t][2]);
     const double want = 1.0 + static_cast<double>(t);
     if (got != want) {
-      bad += " probe" + std::to_string(t) + "(" +
-             std::to_string(probes[t][0]) + "," + std::to_string(probes[t][1]) +
-             "," + std::to_string(probes[t][2]) + ") got " +
-             std::to_string(got) + " want " + std::to_string(want);
+      bad += " probe" + std::to_string(t) + "(" + std::to_string(probes[t][0]) +
+             "," + std::to_string(probes[t][1]) + "," +
+             std::to_string(probes[t][2]) + ") got " + std::to_string(got) +
+             " want " + std::to_string(want);
     }
   }
   for (int t = 0; t < 4; ++t) {
@@ -153,7 +152,8 @@ inline void check_adapter(const PhaseSpace &ps, PhaseField &f) {
   if (!bad.empty()) {
     throw std::runtime_error(
         "view_of does not agree with PhaseField indexing --"
-        " the padded/flat adapter is transposed or mis-offset:" + bad);
+        " the padded/flat adapter is transposed or mis-offset:" +
+        bad);
   }
 }
 
@@ -230,8 +230,7 @@ struct Stepper {
         Jy_prev = sources.Jy;
         have_prev = true;
       }
-      advance_transverse_etd2(line, fields.Ey, fields.Bz, sources.Jy, Jy_prev,
-                              dt);
+      advance_transverse_etd2(line, fields.Ey, fields.Bz, sources.Jy, Jy_prev, dt);
       Jy_prev = sources.Jy;
     }
     gauss = p->gauss_correction
@@ -304,8 +303,8 @@ private:
   // Keep the velocity shift inside the halo along the distributed axis.
   const double a_max = std::fabs(qm_max) * (e_max + p.v_max * b_max);
   if (a_max > 0.0) {
-    const double usable = static_cast<double>(
-        std::max(1, halo - (p.interp_order - 1) / 2 - 1));
+    const double usable =
+        static_cast<double>(std::max(1, halo - (p.interp_order - 1) / 2 - 1));
     lim = std::fmin(lim, usable * p.dvy() / a_max);
   }
   return lim;

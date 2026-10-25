@@ -73,7 +73,8 @@ TEST_CASE("HeatOperator declares overwrite write mode", "[heat3d][operator]") {
   REQUIRE(HeatOperator::write_mode == WriteMode::overwrite);
 }
 
-TEST_CASE("HeatOperator::evaluate does not modify input state", "[heat3d][operator]") {
+TEST_CASE("HeatOperator::evaluate does not modify input state",
+          "[heat3d][operator]") {
   HeatOperator op;
   HeatGrads g{.xx = 1.0, .yy = 2.0, .zz = 3.0};
   const HeatGrads g_copy = g;
@@ -108,6 +109,4 @@ TEST_CASE("HeatOperator is constructible and callable", "[heat3d][operator]") {
   REQUIRE_THAT(result.d_u, WithinAbs(1.5 * kD, 1e-12));
 }
 
-int main(int argc, char* argv[]) {
-  return Catch::Session().run(argc, argv);
-}
+int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }

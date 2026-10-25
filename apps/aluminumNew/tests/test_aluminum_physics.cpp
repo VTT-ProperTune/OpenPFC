@@ -99,9 +99,8 @@ TEST_CASE("AluminumPhysics::from_json enforces its own schema",
         std::invalid_argument);
   }
   SECTION("a missing params block is rejected too") {
-    REQUIRE_THROWS_AS(
-        aluminum::AluminumPhysics<>::from_json(json(), domain, box),
-        std::invalid_argument);
+    REQUIRE_THROWS_AS(aluminum::AluminumPhysics<>::from_json(json(), domain, box),
+                      std::invalid_argument);
   }
   SECTION("one missing field is enough") {
     json j = aluminum_params_json();
@@ -127,8 +126,8 @@ TEST_CASE("AluminumPhysics::from_json enforces its own schema",
  */
 TEST_CASE("AluminumPhysics clamps the temperature into [T_min, T_max]",
           "[aluminum][physics][temperature]") {
-  const double t_hot = 1280.0 - 980.0;  //  T_max - T_const =  300
-  const double t_cold = 780.0 - 980.0;  //  T_min - T_const = -200
+  const double t_hot = 1280.0 - 980.0; //  T_max - T_const =  300
+  const double t_cold = 780.0 - 980.0; //  T_min - T_const = -200
 
   aluminum::AluminumPhysics<> phys;
   json j = aluminum_params_json();
@@ -157,8 +156,7 @@ TEST_CASE("AluminumPhysics clamps the temperature into [T_min, T_max]",
 
   // The clamp is on the *absolute* temperature, so it is the nonlinearity
   // that sees the bounded value, not just the reported one.
-  REQUIRE(phys.nonlinearity(0.1, 0.05, 0.2,
-                            phys.temperature_variation(10.0, 0.0)) ==
+  REQUIRE(phys.nonlinearity(0.1, 0.05, 0.2, phys.temperature_variation(10.0, 0.0)) ==
           Approx(phys.nonlinearity(0.1, 0.05, 0.2, t_cold)));
 }
 
@@ -188,8 +186,7 @@ TEST_CASE("AluminumPhysics operators match Gen-1 prepare_operators formula",
   gen1_operators(k_lap, phys.params, filter_mf, p_f, op_ck);
   REQUIRE(phys.filter_mf(k_lap) == Approx(filter_mf).epsilon(1e-14));
   REQUIRE(phys.correlation_kernel(k_lap) == Approx(p_f).epsilon(1e-14));
-  REQUIRE(phys.linear_symbol(k_lap) ==
-          Approx(k_lap * op_ck).epsilon(1e-14));
+  REQUIRE(phys.linear_symbol(k_lap) == Approx(k_lap * op_ck).epsilon(1e-14));
 }
 
 TEST_CASE("AluminumPhysics N and free-energy match Gen-1 step formula",
@@ -202,9 +199,8 @@ TEST_CASE("AluminumPhysics N and free-energy match Gen-1 step formula",
 
   SECTION("isothermal G_grid=0") {
     const double T_var = 0.0;
-    const double q3 =
-        phys.params.q31_bar * phys.params.T_const / phys.params.T0 +
-        phys.params.q30_bar;
+    const double q3 = phys.params.q31_bar * phys.params.T_const / phys.params.T0 +
+                      phys.params.q30_bar;
     const double expected_n = phys.params.p3_bar * u * u +
                               phys.params.p4_bar * u * u * u + q3 * v * v +
                               phys.params.q4_bar * v * v * v;
@@ -212,10 +208,9 @@ TEST_CASE("AluminumPhysics N and free-energy match Gen-1 step formula",
             Approx(expected_n).epsilon(1e-14));
     REQUIRE(phys.free_energy_density(u, v, p_star, T_var) ==
             Approx(phys.params.p3_bar * u * u * u / 3.0 +
-                   phys.params.p4_bar * u * u * u * u / 4.0 +
-                   q3 * u * v * v / 3.0 +
-                   phys.params.q4_bar * u * v * v * v / 4.0 -
-                   u * p_star / 2.0 + phys.params.p2_bar * u * u / 2.0 +
+                   phys.params.p4_bar * u * u * u * u / 4.0 + q3 * u * v * v / 3.0 +
+                   phys.params.q4_bar * u * v * v * v / 4.0 - u * p_star / 2.0 +
+                   phys.params.p2_bar * u * u / 2.0 +
                    phys.params.q2_bar * u * v / 2.0)
                 .epsilon(1e-14));
   }
@@ -229,8 +224,7 @@ TEST_CASE("AluminumPhysics N and free-energy match Gen-1 step formula",
     const double kernel = -(1.0 - std::exp(-T_var / phys.params.T0)) * p_star;
     const double expected_n = phys.params.p3_bar * u * u +
                               phys.params.p4_bar * u * u * u + q2n * v +
-                              q3n * v * v + phys.params.q4_bar * v * v * v -
-                              kernel;
+                              q3n * v * v + phys.params.q4_bar * v * v * v - kernel;
     REQUIRE(phys.nonlinearity(u, v, p_star, T_var) ==
             Approx(expected_n).epsilon(1e-14));
   }

@@ -26,8 +26,8 @@
 namespace thin_film {
 
 struct ThinFilmPointwise {
-  double A{0.05};   ///< disjoining strength
-  double h0{1.0};   ///< linearization thickness
+  double A{0.05}; ///< disjoining strength
+  double h0{1.0}; ///< linearization thickness
   /**
    * Precursor thickness. Zero keeps the original two-term potential, which is
    * unstable at \f$h_0\f$ but has **no stable state at small \f$h\f$**: once

@@ -49,13 +49,13 @@
 #include <cstdlib>
 #include <mpi.h>
 
-#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
-#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
 #include <openpfc/runtime/common/mpi_timer.hpp>
 
@@ -78,9 +78,9 @@ void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
   // 2. Hidden plumbing: domain geometry + decomposition. The single
   //    `decomposition::create(domain, nproc)` call auto-picks the
   //    rank grid; the manual driver does not need to spell it out.
-  const auto domain =
-      pfc::domain::create(GridSize({cfg.N, cfg.N, cfg.N}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                          GridSpacing({1.0, 1.0, 1.0}));
+  const auto domain = pfc::domain::create(GridSize({cfg.N, cfg.N, cfg.N}),
+                                          PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          GridSpacing({1.0, 1.0, 1.0}));
   const auto decomp = decomposition::create(domain, nproc);
 
   // 3. Two halo-padded buffers: `u` (state) and `du` (RHS). Both
@@ -203,7 +203,8 @@ void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
 
     // Explicit Euler over the full owned region: u <- u + dt * du.
     runtime::tic(timer, "euler");
-    u.for_each_owned([&](int i, int j, int k) { u(i, j, k) += cfg.dt * du(i, j, k); });
+    u.for_each_owned(
+        [&](int i, int j, int k) { u(i, j, k) += cfg.dt * du(i, j, k); });
     runtime::toc(timer, "euler");
   }
   const double max_elapsed = runtime::toc(timer);
@@ -216,15 +217,14 @@ void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
   // report over the *interior* (skipping the outermost owned layer)
   // so the L2 number is computed over the interior domain
   // matching the design documented in reporting.hpp.
-  heat3d::report(rank, nproc, cfg, "fd_manual",
-                 "manual stencil, field, non-blocking halos", max_elapsed,
-                 "(periodic; manual loop, interior L2)", [&](auto &&cb) {
-                   // Field's for_each_interior directly provides (x, y, z, value) signatures.
-                   u.for_each_interior(
-                       [&](double x, double y, double z, const double &u_val) {
-                         cb(x, y, z, u_val);
-                       });
-                 });
+  heat3d::report(
+      rank, nproc, cfg, "fd_manual", "manual stencil, field, non-blocking halos",
+      max_elapsed, "(periodic; manual loop, interior L2)", [&](auto &&cb) {
+        // Field's for_each_interior directly provides (x, y, z, value) signatures.
+        u.for_each_interior([&](double x, double y, double z, const double &u_val) {
+          cb(x, y, z, u_val);
+        });
+      });
 }
 
 } // namespace

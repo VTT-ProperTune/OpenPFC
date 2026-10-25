@@ -5,7 +5,8 @@
 
 /**
  * @file capillary_gravity_mapping.hpp
- * @brief Physical/nondimensional capillary-gravity mapping to (alpha, beta, gamma) (`#119`).
+ * @brief Physical/nondimensional capillary-gravity mapping to (alpha, beta, gamma)
+ * (`#119`).
  *
  * @details
  * The Kawahara equation is the standard long-wave reduction of the free-surface

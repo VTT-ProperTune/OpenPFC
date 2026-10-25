@@ -50,18 +50,14 @@ struct YangA3 {
   [[nodiscard]] static double Lx() noexcept { return 2.0 * dx(); }
   [[nodiscard]] static double Ly() noexcept { return Lx(); }
   /// Yang 2015 bounding box in z, not H + 2 L cos θ.
-  [[nodiscard]] static double Lz() noexcept {
-    return 2.0 * (H_mm - dz());
-  }
+  [[nodiscard]] static double Lz() noexcept { return 2.0 * (H_mm - dz()); }
   [[nodiscard]] static double H_over_L() noexcept { return H_mm / L_mm; }
   [[nodiscard]] static double t_over_L() noexcept { return t_mm / L_mm; }
   /// Next 2-D story on the same layer family (overlap H − Lz = 2 L cos θ − H).
-  [[nodiscard]] static double story_shift() noexcept {
-    return H_mm - 2.0 * dz();
-  }
+  [[nodiscard]] static double story_shift() noexcept { return H_mm - 2.0 * dz(); }
   [[nodiscard]] static int nz_for_nx(int nx) noexcept {
-    return std::max(1, static_cast<int>(std::lround(
-                           static_cast<double>(nx) * Lz() / Lx())));
+    return std::max(
+        1, static_cast<int>(std::lround(static_cast<double>(nx) * Lz() / Lx())));
   }
   /// Wang 2016 eq. (4) overlap-corrected density for this topology.
   [[nodiscard]] static double wang_rel_density() noexcept {
@@ -78,7 +74,7 @@ struct YangA3 {
 struct YangSeg {
   double ax, ay, az, bx, by, bz;
   int layer;
-  char kind; // 'H' vertical, 'L' re-entrant
+  char kind;  // 'H' vertical, 'L' re-entrant
   char plane; // 'x' xz-layer, 'y' yz-layer
 };
 

@@ -162,8 +162,8 @@ inline void step_forced(State &state, double power) {
       [&](const std::vector<Complex> &u, const std::vector<Complex> &v,
           const std::vector<Complex> &w, std::vector<Complex> &tu,
           std::vector<Complex> &tv, std::vector<Complex> &tw) {
-        pfc::incompressible::rotational_tendency(fft, state.n, state.spacing, u, v, w, tu, tv,
-                                        tw, true);
+        pfc::incompressible::rotational_tendency(fft, state.n, state.spacing, u, v,
+                                                 w, tu, tv, tw, true);
         std::vector<Complex> fu, fv, fw;
         write_band_force(outbox, state.n, state.spacing, u, v, w, fu, fv, fw, power);
         for (std::size_t i = 0; i < tu.size(); ++i) {

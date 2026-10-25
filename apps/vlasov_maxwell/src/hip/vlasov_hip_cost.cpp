@@ -170,9 +170,7 @@ struct Shape {
 struct Stat {
   double mean{0.0};
   double sd{0.0};
-  [[nodiscard]] double rel_sd() const {
-    return mean > 0.0 ? sd / mean : 0.0;
-  }
+  [[nodiscard]] double rel_sd() const { return mean > 0.0 ? sd / mean : 0.0; }
 };
 
 [[nodiscard]] Stat summarise(const std::vector<double> &v) {
@@ -230,8 +228,8 @@ struct Bench {
              vlasov::ics::bi_maxwellian(vx, vy, vth, vthy);
     });
     st->deposit_all();
-    const auto sol = vlasov::solve_gauss(st->line, st->sources.rho,
-                                         p.neutrality_tol);
+    const auto sol =
+        vlasov::solve_gauss(st->line, st->sources.rho, p.neutrality_tol);
     st->fields.Ex = sol.Ex;
     for (int i = 0; i < p.nx; ++i) {
       // A finite B_z is what makes the two velocity shifts depend on the
@@ -256,10 +254,9 @@ struct Row {
 void print_table(const Shape &shape, double dt, const std::vector<Row> &rows,
                  double cpu_step, double hybrid_step, double dev_step) {
   std::printf("\n  shape %s = %.0f cells, %.3f GB/brick, dt = %.4g\n",
-              shape.label().c_str(), shape.cells(), shape.cells() * 8.0 / 1e9,
-              dt);
-  std::printf("  %-22s %-7s %12s %8s %12s\n", "phase", "where", "s/call",
-              "rel sd", "GB/s");
+              shape.label().c_str(), shape.cells(), shape.cells() * 8.0 / 1e9, dt);
+  std::printf("  %-22s %-7s %12s %8s %12s\n", "phase", "where", "s/call", "rel sd",
+              "GB/s");
   std::printf("  %s\n", std::string(66, '-').c_str());
   for (const auto &r : rows) {
     const double bw =
@@ -274,9 +271,8 @@ void print_table(const Shape &shape, double dt, const std::vector<Row> &rows,
   }
   std::printf("  %s\n", std::string(66, '-').c_str());
   std::printf("  %-22s %-7s %12.6f\n", "full Strang step", "host", cpu_step);
-  std::printf("  %-22s %-7s %12.6f   speedup %.2fx\n", "full step, A host",
-              "hybrid", hybrid_step,
-              hybrid_step > 0.0 ? cpu_step / hybrid_step : 0.0);
+  std::printf("  %-22s %-7s %12.6f   speedup %.2fx\n", "full step, A host", "hybrid",
+              hybrid_step, hybrid_step > 0.0 ? cpu_step / hybrid_step : 0.0);
   std::printf("  %-22s %-7s %12.6f   speedup %.2fx\n", "full step, A device",
               "device", dev_step, dev_step > 0.0 ? cpu_step / dev_step : 0.0);
 }
@@ -331,9 +327,9 @@ int run(int argc, char **argv, int rank, int nproc) {
     const auto Bz = st.effective_bz();
     const double h = 0.5 * b.dt;
     const double qm = b.p.species[0].qm();
-    const double brick_bytes =
-        static_cast<double>(ps.nx()) * static_cast<double>(ps.nvx()) *
-        static_cast<double>(ps.nvy_local()) * 8.0;
+    const double brick_bytes = static_cast<double>(ps.nx()) *
+                               static_cast<double>(ps.nvx()) *
+                               static_cast<double>(ps.nvy_local()) * 8.0;
 
     // The operator's own cost, not the operator plus a diagnostic.
     st.work.measure_mass = false;
@@ -357,16 +353,15 @@ int run(int argc, char **argv, int rank, int nproc) {
     // memory. A gather reads p cells and writes one; the reduction reads
     // every cell once; the spectral shift reads and writes once.
     const double p_d = static_cast<double>(b.p.interp_order);
-    time_it("A advect_x (dt/2)", "host", 2.0 * brick_bytes, [&] {
-      vlasov::advect_x(ps, ps.f(0), h, st.xplan, st.work);
-    });
+    time_it("A advect_x (dt/2)", "host", 2.0 * brick_bytes,
+            [&] { vlasov::advect_x(ps, ps.f(0), h, st.xplan, st.work); });
     time_it("B advect_vx (dt/2)", "host", (p_d + 1.0) * brick_bytes, [&] {
       vlasov::advect_vx(ps, ps.f(0), qm, h, st.fields.Ex, Bz, b.p.interp_order,
                         st.work);
     });
     time_it("C advect_vy (dt)", "host", (p_d + 1.0) * brick_bytes, [&] {
-      vlasov::advect_vy(ps, ps.f(0), qm, b.dt, st.fields.Ey, Bz,
-                        b.p.interp_order, st.work);
+      vlasov::advect_vy(ps, ps.f(0), qm, b.dt, st.fields.Ey, Bz, b.p.interp_order,
+                        st.work);
     });
     {
       vlasov::ReductionOptions ropt;
@@ -375,8 +370,7 @@ int run(int argc, char **argv, int rank, int nproc) {
       // As the application does it: StridedDistribution's own traversal.
       time_it("D moments", "host", brick_bytes, [&] {
         volatile double sink =
-            vlasov::reduce_velocity(b.p, vlasov::view_of(ps, ps.f(0)), ropt)
-                .number;
+            vlasov::reduce_velocity(b.p, vlasov::view_of(ps, ps.f(0)), ropt).number;
         (void)sink;
       });
       // The same reduction, same cells, memory order. See OrderedView.
@@ -394,10 +388,14 @@ int run(int argc, char **argv, int rank, int nproc) {
       ds.upload_all();
       auto &brick = ds.brick(0);
 
-      time_it("  H2D whole brick", "bus", brick_bytes,
-              [&] { brick.upload(ps.f(0)); vlasov::hip::device_synchronize(); });
-      time_it("  D2H whole brick", "bus", brick_bytes,
-              [&] { brick.download(ps.f(0)); vlasov::hip::device_synchronize(); });
+      time_it("  H2D whole brick", "bus", brick_bytes, [&] {
+        brick.upload(ps.f(0));
+        vlasov::hip::device_synchronize();
+      });
+      time_it("  D2H whole brick", "bus", brick_bytes, [&] {
+        brick.download(ps.f(0));
+        vlasov::hip::device_synchronize();
+      });
 
       // Phase A on the device: pack, batched r2c, phase multiply, batched
       // c2r, unpack. The payload column counts the brick five times, which
@@ -405,12 +403,10 @@ int run(int argc, char **argv, int rank, int nproc) {
       time_it("A advect_x (dt/2)", "device", 10.0 * brick_bytes,
               [&] { ds.device_advect_x(brick, h); });
 
-      time_it("B advect_vx (dt/2)", "device", (p_d + 1.0) * brick_bytes, [&] {
-        ds.device_advect_vx(brick, qm, h, st.fields.Ex, Bz);
-      });
-      time_it("C advect_vy (dt)", "device", (p_d + 1.0) * brick_bytes, [&] {
-        ds.device_advect_vy(brick, qm, b.dt, st.fields.Ey, Bz);
-      });
+      time_it("B advect_vx (dt/2)", "device", (p_d + 1.0) * brick_bytes,
+              [&] { ds.device_advect_vx(brick, qm, h, st.fields.Ex, Bz); });
+      time_it("C advect_vy (dt)", "device", (p_d + 1.0) * brick_bytes,
+              [&] { ds.device_advect_vy(brick, qm, b.dt, st.fields.Ey, Bz); });
       {
         vlasov::ReductionOptions ropt;
         ropt.v_thermal = b.p.v_thermal;
@@ -470,17 +466,16 @@ int run(int argc, char **argv, int rank, int nproc) {
       print_table(shape, b.dt, rows, cpu_step, hybrid_step, dev_step);
       auto dump = [&](const char *tag, const vlasov::hip::PhaseTimings &t) {
         const double n = std::max(1, t.steps);
-        std::printf("  %s split (s/step): A %.6f  B %.6f  C %.6f  D %.6f\n",
-                    tag, t.advect_x / n, t.advect_vx / n, t.advect_vy / n,
-                    t.moments / n);
+        std::printf("  %s split (s/step): A %.6f  B %.6f  C %.6f  D %.6f\n", tag,
+                    t.advect_x / n, t.advect_vx / n, t.advect_vy / n, t.moments / n);
         std::printf("  %*s                 fields %.6f  coeffs %.6f  halo "
                     "%.6f\n",
                     static_cast<int>(std::strlen(tag)), "", t.fields / n,
                     t.coeffs / n, t.halo / n);
         std::printf("  %*s                 H2D %.6f  D2H %.6f  -> transfers "
                     "%.1f%% of the step\n",
-                    static_cast<int>(std::strlen(tag)), "", t.h2d / n,
-                    t.d2h / n, 100.0 * t.transfer_fraction());
+                    static_cast<int>(std::strlen(tag)), "", t.h2d / n, t.d2h / n,
+                    100.0 * t.transfer_fraction());
       };
       dump("A on host  ", hybrid_split);
       dump("A on device", split);
@@ -501,8 +496,7 @@ int run(int argc, char **argv, int rank, int nproc) {
       emit("full step", "host", Stat{cpu_step, 0.0}, 0.0);
       emit("full step", "hybrid", Stat{hybrid_step, 0.0}, 0.0);
       emit("full step", "device", Stat{dev_step, 0.0}, 0.0);
-      auto emit_split = [&](const char *where,
-                            const vlasov::hip::PhaseTimings &t) {
+      auto emit_split = [&](const char *where, const vlasov::hip::PhaseTimings &t) {
         const double n = std::max(1, t.steps);
         emit("split A", where, Stat{t.advect_x / n, 0.0}, 0.0);
         emit("split B", where, Stat{t.advect_vx / n, 0.0}, 0.0);

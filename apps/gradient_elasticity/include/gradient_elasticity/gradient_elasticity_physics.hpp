@@ -101,8 +101,8 @@ struct LocalStressState {
   double sxx{};
   double syy{};
   double sxy{};
-  double hydrostatic{};   ///< \((\sigma_{xx}+\sigma_{yy})/2\), 2-D mean normal stress.
-  double von_mises{};     ///< in-plane reduced von Mises, see `stress_state`.
+  double hydrostatic{}; ///< \((\sigma_{xx}+\sigma_{yy})/2\), 2-D mean normal stress.
+  double von_mises{};   ///< in-plane reduced von Mises, see `stress_state`.
   double energy_density{}; ///< \(\tfrac12\sigma_{ij}\varepsilon^e_{ij}\).
 };
 
@@ -229,7 +229,7 @@ struct GradientElasticityPhysics {
     for (const char *name : {"g", "ux", "uy", "exx", "eyy", "exy", "sxx", "syy",
                              "sxy", "stress_hydro", "stress_vm", "energy_density"}) {
       pfc::sim::add_declared_field<RealType, MemorySpace>(state, name, domain, box,
-                                                           0);
+                                                          0);
     }
   }
 
@@ -285,10 +285,9 @@ struct GradientElasticityPhysics {
   /// Spectral strain \(\hat\varepsilon=\tfrac12(i\mathbf{k}\otimes\hat{\mathbf{u}}
   /// +\hat{\mathbf{u}}\otimes i\mathbf{k})\) from the mode displacement.
   [[nodiscard]] ModeStrain strain_from_displacement(double kx, double ky,
-                                                     ModeDisplacement u) const {
+                                                    ModeDisplacement u) const {
     const std::complex<double> ik{0.0, 1.0};
-    return {ik * kx * u.ux, ik * ky * u.uy,
-            0.5 * (ik * ky * u.ux + ik * kx * u.uy)};
+    return {ik * kx * u.ux, ik * ky * u.uy, 0.5 * (ik * ky * u.ux + ik * kx * u.uy)};
   }
 
   /**

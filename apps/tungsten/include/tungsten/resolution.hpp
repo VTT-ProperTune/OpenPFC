@@ -55,9 +55,7 @@ namespace tungsten::resolution {
 inline constexpr double kLatticeWavenumber = 1.0;
 
 /// \f$k_{\mathrm{Ny}}=\pi/\Delta x\f$.
-[[nodiscard]] constexpr double nyquist_k(double dx) {
-  return std::numbers::pi / dx;
-}
+[[nodiscard]] constexpr double nyquist_k(double dx) { return std::numbers::pi / dx; }
 
 /// Orszag 2/3 cutoff for this spacing.
 [[nodiscard]] constexpr double two_thirds_cut(double dx) {
@@ -65,20 +63,20 @@ inline constexpr double kLatticeWavenumber = 1.0;
 }
 
 /// Grid points per lattice period.
-[[nodiscard]] constexpr double
-points_per_lattice(double dx, double k0 = kLatticeWavenumber) {
+[[nodiscard]] constexpr double points_per_lattice(double dx,
+                                                  double k0 = kLatticeWavenumber) {
   return 2.0 * std::numbers::pi / (k0 * dx);
 }
 
 /// Is the crystal's third harmonic representable, i.e. does nothing fold back?
-[[nodiscard]] constexpr bool third_harmonic_resolved(double dx,
-                                                     double k0 = kLatticeWavenumber) {
+[[nodiscard]] constexpr bool
+third_harmonic_resolved(double dx, double k0 = kLatticeWavenumber) {
   return 3.0 * k0 <= nyquist_k(dx);
 }
 
 /// Would the 2/3 mask spare the crystal's own second harmonic?
-[[nodiscard]] constexpr bool mask_spares_second_harmonic(
-    double dx, double k0 = kLatticeWavenumber) {
+[[nodiscard]] constexpr bool
+mask_spares_second_harmonic(double dx, double k0 = kLatticeWavenumber) {
   return 2.0 * k0 <= two_thirds_cut(dx);
 }
 

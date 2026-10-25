@@ -43,6 +43,7 @@
 
 #include <mpi.h>
 
+#include <inverse_homogenization/homogenization.hpp>
 #include <inverse_homogenization/simp_penalty.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
@@ -50,7 +51,6 @@
 #include <openpfc/kernel/fft/kspace.hpp>
 #include <openpfc/kernel/fft/kspace_iterator.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
-#include <inverse_homogenization/homogenization.hpp>
 
 namespace pfc::apps::inverse {
 
@@ -262,8 +262,7 @@ public:
     // Normalise elasticity only. Job 21950094 stayed fully grey because
     // RMS-normalising the *total* g crushed λ_r W'(h) to a few percent of
     // each step. Volume and the double well keep physical units.
-    const double el_scale =
-        elastic_gradient_scale(el_rms, spec.normalize_grad);
+    const double el_scale = elastic_gradient_scale(el_rms, spec.normalize_grad);
     double local_g2 = 0.0;
     for (std::size_t i = 0; i < m_n_local; ++i) {
       const double g_el = el_scale * gp[i];

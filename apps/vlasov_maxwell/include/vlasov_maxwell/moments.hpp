@@ -137,18 +137,17 @@ concept DistributionView = requires(const V &f) {
  */
 struct StridedDistribution {
   const double *data{nullptr};
-  int nvx{0};                ///< global `v_x` extent (all of it is local)
-  int kbegin{0};             ///< first owned global `v_y` index
-  int kend{0};               ///< one past the last owned global `v_y` index
-  int nx{0};                 ///< global `x` extent (all of it is local)
+  int nvx{0};    ///< global `v_x` extent (all of it is local)
+  int kbegin{0}; ///< first owned global `v_y` index
+  int kend{0};   ///< one past the last owned global `v_y` index
+  int nx{0};     ///< global `x` extent (all of it is local)
   std::ptrdiff_t stride_x{0};
   std::ptrdiff_t stride_vx{0};
   std::ptrdiff_t stride_vy{1};
 
   /// Contiguous `(x, v_x, v_y_local)` slab, `v_y` fastest.
-  [[nodiscard]] static StridedDistribution contiguous(const double *data, int nx,
-                                                      int nvx, int kbegin,
-                                                      int kend) {
+  [[nodiscard]] static StridedDistribution
+  contiguous(const double *data, int nx, int nvx, int kbegin, int kend) {
     const std::ptrdiff_t nk = static_cast<std::ptrdiff_t>(kend - kbegin);
     StridedDistribution v;
     v.data = data;
@@ -312,8 +311,8 @@ reduce_velocity(const SimParams &p, const V &f, const ReductionOptions &opt = {}
   int inited = 0;
   MPI_Initialized(&inited);
   if (inited != 0 && opt.comm != MPI_COMM_NULL) {
-    MPI_Allreduce(MPI_IN_PLACE, acc.data(), static_cast<int>(acc.size()),
-                  MPI_DOUBLE, MPI_SUM, opt.comm);
+    MPI_Allreduce(MPI_IN_PLACE, acc.data(), static_cast<int>(acc.size()), MPI_DOUBLE,
+                  MPI_SUM, opt.comm);
     MPI_Allreduce(MPI_IN_PLACE, &fmin, 1, MPI_DOUBLE, MPI_MIN, opt.comm);
     std::array<double, 2> hi{fmax, fface};
     MPI_Allreduce(MPI_IN_PLACE, hi.data(), 2, MPI_DOUBLE, MPI_MAX, opt.comm);
@@ -408,7 +407,8 @@ struct Sources {
  */
 inline void add_species(const Species &s, const VelocityMoments &m, Sources &out) {
   if (out.rho.size() != m.n.size()) {
-    throw std::invalid_argument("add_species: size mismatch between sources and moments");
+    throw std::invalid_argument(
+        "add_species: size mismatch between sources and moments");
   }
   for (std::size_t i = 0; i < m.n.size(); ++i) {
     out.rho[i] += s.sigma * m.n[i];

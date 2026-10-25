@@ -25,13 +25,13 @@
 #include <stdexcept>
 #include <vector>
 
+#include <inverse_homogenization/phase_field_inverse.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/fft/kspace.hpp>
 #include <openpfc/kernel/fft/kspace_iterator.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
-#include <inverse_homogenization/phase_field_inverse.hpp>
 
 namespace pfc::apps::inverse {
 
@@ -61,9 +61,8 @@ inline void seed_spinodal_noise(RealField &h, int nx, int ny, int nz,
         const double n1 = std::sin(twopi * (g[0] + s) / std::max(nx, 1));
         const double n2 = std::sin(twopi * (2.0 * g[1] + 2.0 * s) / std::max(ny, 1));
         const double n3 = std::sin(twopi * (g[2] + 3.0 * s) / std::max(nz, 1));
-        const double n4 =
-            std::sin(2.0 * twopi * g[0] / std::max(nx, 1)) *
-            std::sin(twopi * g[1] / std::max(ny, 1));
+        const double n4 = std::sin(2.0 * twopi * g[0] / std::max(nx, 1)) *
+                          std::sin(twopi * g[1] / std::max(ny, 1));
         const double fl = spec.noise * (0.5 * n1 * n2 + 0.3 * n3 + 0.4 * n4);
         h(i, j, k) = std::min(1.0, std::max(0.0, spec.c0 + fl));
       }
@@ -84,16 +83,14 @@ inline void generate_spinodal(const pfc::Domain &domain, pfc::fft::IHostFFT &fft
   }
   ComplexField hat(domain, fft.get_outbox_bounds(), 0);
   ComplexField hat_nl(domain, fft.get_outbox_bounds(), 0);
-  RealField nl =
-      pfc::data::field_from_inbox<double>(domain, fft.get_inbox_bounds());
+  RealField nl = pfc::data::field_from_inbox<double>(domain, fft.get_inbox_bounds());
   const double M = spec.mobility;
   const double kap = spec.kappa;
   const double dt = spec.dt;
   for (int s = 0; s < spec.steps; ++s) {
     double *nld = nl.data();
     const double *hd = h.data();
-    for (std::size_t i = 0; i < h.size(); ++i)
-      nld[i] = double_well_prime(hd[i]);
+    for (std::size_t i = 0; i < h.size(); ++i) nld[i] = double_well_prime(hd[i]);
     nl.note_host_write();
     std::vector<double> tmp_h(h.vec());
     std::vector<double> tmp_nl(nl.vec());

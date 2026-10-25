@@ -49,11 +49,11 @@
 namespace thin_film {
 
 struct ThinFilmSchemaValues {
-  double h0{1.0};    ///< mean film thickness
-  double gamma{1.0}; ///< surface tension (grid units)
-  double M0{1.0};    ///< mobility at h0
-  double A{0.05};    ///< disjoining strength (0 = leveling)
-  double h_star{0.0};///< precursor thickness; >0 selects the rupture-safe form
+  double h0{1.0};     ///< mean film thickness
+  double gamma{1.0};  ///< surface tension (grid units)
+  double M0{1.0};     ///< mobility at h0
+  double A{0.05};     ///< disjoining strength (0 = leveling)
+  double h_star{0.0}; ///< precursor thickness; >0 selects the rupture-safe form
 };
 
 struct ThinFilmParams : ThinFilmSchemaValues {

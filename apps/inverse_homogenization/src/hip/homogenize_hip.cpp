@@ -14,12 +14,12 @@
 
 #include <mpi.h>
 
+#include <inverse_homogenization/auxetic_geometry.hpp>
+#include <inverse_homogenization/homogenization_hip.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/runtime/gpu/gpu_spectral_stack.hpp>
-#include <inverse_homogenization/homogenization_hip.hpp>
-#include <inverse_homogenization/auxetic_geometry.hpp>
 
 int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
@@ -37,22 +37,32 @@ int main(int argc, char **argv) {
       if (!tok.starts_with("--") || eq == std::string_view::npos) continue;
       const auto key = tok.substr(2, eq - 2);
       const auto val = std::string(tok.substr(eq + 1));
-      if (key == "nx") nx = std::stoi(val);
-      else if (key == "ny") ny = std::stoi(val);
-      else if (key == "nz") nz = std::stoi(val);
-      else if (key == "E-solid") E_s = std::stod(val);
-      else if (key == "nu-solid") nu_s = std::stod(val);
-      else if (key == "E-void") E_v = std::stod(val);
-      else if (key == "nu-void") nu_v = std::stod(val);
-      else if (key == "volume") vol = std::stod(val);
-      else if (key == "shape") shape = val;
+      if (key == "nx")
+        nx = std::stoi(val);
+      else if (key == "ny")
+        ny = std::stoi(val);
+      else if (key == "nz")
+        nz = std::stoi(val);
+      else if (key == "E-solid")
+        E_s = std::stod(val);
+      else if (key == "nu-solid")
+        nu_s = std::stod(val);
+      else if (key == "E-void")
+        E_v = std::stod(val);
+      else if (key == "nu-void")
+        nu_v = std::stod(val);
+      else if (key == "volume")
+        vol = std::stod(val);
+      else if (key == "shape")
+        shape = val;
     }
     const pfc::Domain domain = pfc::domain::create(
         pfc::GridSize({nx, ny, nz}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
         pfc::GridSpacing({1.0, 1.0, 1.0}));
     pfc::sim::stacks::GPUSpectralStack<pfc::HIPSpace> stack(domain, rank, nproc,
                                                             MPI_COMM_WORLD);
-    auto h = pfc::data::field_from_inbox<double>(domain, stack.fft().get_inbox_bounds());
+    auto h =
+        pfc::data::field_from_inbox<double>(domain, stack.fft().get_inbox_bounds());
     const auto n = h.local_size();
     const double Lz = nz * 1.0;
     for (int k = 0; k < n[2]; ++k)
@@ -60,8 +70,10 @@ int main(int argc, char **argv) {
         for (int i = 0; i < n[0]; ++i) {
           const auto x = h.coords(i, j, k);
           double hv = vol;
-          if (shape == "laminate-z") hv = (x[2] < 0.5 * Lz) ? 1.0 : 0.0;
-          else if (shape == "rotating-squares") hv = 0.0;
+          if (shape == "laminate-z")
+            hv = (x[2] < 0.5 * Lz) ? 1.0 : 0.0;
+          else if (shape == "rotating-squares")
+            hv = 0.0;
           h(i, j, k) = hv;
         }
     if (shape == "rotating-squares")
@@ -89,9 +101,8 @@ int main(int argc, char **argv) {
         }
         std::cout << '\n';
       }
-      std::cout << std::setprecision(16)
-                << "HOMOGENIZATION_CHECKSUM " << r.stiffness.frobenius_norm()
-                << '\n';
+      std::cout << std::setprecision(16) << "HOMOGENIZATION_CHECKSUM "
+                << r.stiffness.frobenius_norm() << '\n';
       const double den = r.stiffness(0, 0) + r.stiffness(0, 1);
       const double nu = (std::abs(den) > 1e-30) ? r.stiffness(0, 1) / den : 0.0;
       std::cout << "C11 " << r.stiffness(0, 0) << " C12 " << r.stiffness(0, 1)

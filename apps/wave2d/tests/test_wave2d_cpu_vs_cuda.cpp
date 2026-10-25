@@ -111,8 +111,10 @@ TEST_CASE("wave2d CPU vs CUDA (Neumann y, single rank)", "[wave2d][CUDA]") {
                                            wave2d::YBoundaryKind::Neumann, Ny, 0.0);
   }
 
-  DevField u_gpu(domain, local_box, /*storage_halo=*/0, /*iteration_halo=*/halo_width);
-  DevField v_gpu(domain, local_box, /*storage_halo=*/0, /*iteration_halo=*/halo_width);
+  DevField u_gpu(domain, local_box, /*storage_halo=*/0,
+                 /*iteration_halo=*/halo_width);
+  DevField v_gpu(domain, local_box, /*storage_halo=*/0,
+                 /*iteration_halo=*/halo_width);
   u_gpu.with_host_view([&](double *data, std::size_t n) {
     REQUIRE(n == u0.size());
     std::copy(u0.begin(), u0.end(), data);
@@ -124,8 +126,8 @@ TEST_CASE("wave2d CPU vs CUDA (Neumann y, single rank)", "[wave2d][CUDA]") {
   u_gpu.sync_to_device();
   v_gpu.sync_to_device();
 
-  pfc::comm::SparseExchange<pfc::CUDASpace, double> exchanger(
-      u_gpu, decomp, rank, MPI_COMM_WORLD);
+  pfc::comm::SparseExchange<pfc::CUDASpace, double> exchanger(u_gpu, decomp, rank,
+                                                              MPI_COMM_WORLD);
 
   for (int step = 0; step < n_steps; ++step) {
     (void)step;
@@ -142,12 +144,10 @@ TEST_CASE("wave2d CPU vs CUDA (Neumann y, single rank)", "[wave2d][CUDA]") {
 
   std::vector<double> u_gpu_host;
   std::vector<double> v_gpu_host;
-  u_gpu.with_host_view([&](double *data, std::size_t n) {
-    u_gpu_host.assign(data, data + n);
-  });
-  v_gpu.with_host_view([&](double *data, std::size_t n) {
-    v_gpu_host.assign(data, data + n);
-  });
+  u_gpu.with_host_view(
+      [&](double *data, std::size_t n) { u_gpu_host.assign(data, data + n); });
+  v_gpu.with_host_view(
+      [&](double *data, std::size_t n) { v_gpu_host.assign(data, data + n); });
 
   double max_diff = 0.0;
   for (std::size_t i = 0; i < nlocal; ++i) {

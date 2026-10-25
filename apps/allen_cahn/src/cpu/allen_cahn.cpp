@@ -12,9 +12,9 @@
 #include <openpfc/runtime/common/mpi_main.hpp>
 
 #include <allen_cahn/common.hpp>
+#include <openpfc/domain/create.hpp>
 #include <openpfc/frontend/io/png_writer.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
-#include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
 
@@ -29,9 +29,9 @@ int main(int argc, char *argv[]) {
           return EXIT_FAILURE;
         }
 
-        auto domain = pfc::domain::create(pfc::GridSize({cfg.nx_glob, cfg.ny_glob, 1}),
-                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                          pfc::GridSpacing({1.0, 1.0, 1.0}));
+        auto domain = pfc::domain::create(
+            pfc::GridSize({cfg.nx_glob, cfg.ny_glob, 1}),
+            pfc::PhysicalOrigin({0.0, 0.0, 0.0}), pfc::GridSpacing({1.0, 1.0, 1.0}));
         auto decomp = pfc::decomposition::create(domain, nproc);
 
         const auto &local_box = pfc::decomposition::local_box(decomp, rank);
@@ -57,8 +57,8 @@ int main(int argc, char *argv[]) {
           allen_cahn::fill_initial_condition(&u, decomp, rank);
         }
 
-        const std::int64_t n_local_initial =
-            allen_cahn::count_cells_above(u, allen_cahn::RunConfig::kLevelSetThreshold);
+        const std::int64_t n_local_initial = allen_cahn::count_cells_above(
+            u, allen_cahn::RunConfig::kLevelSetThreshold);
 
         if (rank == 0) {
           if (cfg.two_front) {
@@ -82,7 +82,8 @@ int main(int argc, char *argv[]) {
           MPI_Allreduce(&lo, &g_lo, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
           MPI_Allreduce(&hi, &g_hi, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
           if (rank == 0) {
-            std::cout << "phi global min/max at t=0: " << g_lo << " " << g_hi << "\n";
+            std::cout << "phi global min/max at t=0: " << g_lo << " " << g_hi
+                      << "\n";
           }
         }
 
@@ -90,12 +91,14 @@ int main(int argc, char *argv[]) {
           pfc::io::write_mpi_scalar_field_png_xy(MPI_COMM_WORLD, decomp, rank, u,
                                                  cfg.png_output_initial, -1.0, 1.0);
           if (rank == 0) {
-            std::cout << "Wrote initial-state PNG: " << cfg.png_output_initial << "\n";
+            std::cout << "Wrote initial-state PNG: " << cfg.png_output_initial
+                      << "\n";
           }
         }
 
         constexpr int halo_width = allen_cahn::RunConfig::kHaloWidth;
-        auto face_halos = pfc::halo::allocate_face_halos<double>(decomp, rank, halo_width);
+        auto face_halos =
+            pfc::halo::allocate_face_halos<double>(decomp, rank, halo_width);
         pfc::comm::SparseExchange<pfc::HostSpace, double> exchanger(
             u, decomp, rank, MPI_COMM_WORLD, halo_width);
 
@@ -105,35 +108,36 @@ int main(int argc, char *argv[]) {
         // half of the run and needs the quarter marks to tell whether the
         // front had actually settled by then.
         allen_cahn::AreaSamples areas;
-        areas.initial = allen_cahn::global_area_cells(MPI_COMM_WORLD, n_local_initial);
+        areas.initial =
+            allen_cahn::global_area_cells(MPI_COMM_WORLD, n_local_initial);
         allen_cahn::SubcellSamples sub;
         sub.planar = cfg.two_front;
-        allen_cahn::sample_subcell(MPI_COMM_WORLD, decomp, rank, u.data(), nx, ny, &sub,
-                                   allen_cahn::SampleWhen::Initial);
+        allen_cahn::sample_subcell(MPI_COMM_WORLD, decomp, rank, u.data(), nx, ny,
+                                   &sub, allen_cahn::SampleWhen::Initial);
         const int step_half = cfg.n_steps / 2;
         const int step_three_quarter = (3 * cfg.n_steps) / 4;
 
         MPI_Barrier(MPI_COMM_WORLD);
         const double step_t0 = MPI_Wtime();
         for (int step = 0; step < cfg.n_steps; ++step) {
-          allen_cahn::step_explicit_euler_cpu(&u, &lap, &face_halos, &exchanger, nx, ny,
-                                              nz, inv_dx2, inv_dy2, cfg.dt, cfg.M,
-                                              inv_eps2, cfg.driving_force);
+          allen_cahn::step_explicit_euler_cpu(&u, &lap, &face_halos, &exchanger, nx,
+                                              ny, nz, inv_dx2, inv_dy2, cfg.dt,
+                                              cfg.M, inv_eps2, cfg.driving_force);
           const int done = step + 1;
           if (done == step_half || done == step_three_quarter) {
             const std::int64_t n = allen_cahn::global_area_cells(
-                MPI_COMM_WORLD,
-                allen_cahn::count_cells_above(
-                    u, allen_cahn::RunConfig::kLevelSetThreshold));
+                MPI_COMM_WORLD, allen_cahn::count_cells_above(
+                                    u, allen_cahn::RunConfig::kLevelSetThreshold));
             if (done == step_half) {
               areas.half = n;
-              allen_cahn::sample_subcell(MPI_COMM_WORLD, decomp, rank, u.data(), nx, ny,
-                                         &sub, allen_cahn::SampleWhen::Half);
+              allen_cahn::sample_subcell(MPI_COMM_WORLD, decomp, rank, u.data(), nx,
+                                         ny, &sub, allen_cahn::SampleWhen::Half);
             }
             if (done == step_three_quarter) {
               areas.three_quarter = n;
-              allen_cahn::sample_subcell(MPI_COMM_WORLD, decomp, rank, u.data(), nx, ny,
-                                         &sub, allen_cahn::SampleWhen::ThreeQuarter);
+              allen_cahn::sample_subcell(MPI_COMM_WORLD, decomp, rank, u.data(), nx,
+                                         ny, &sub,
+                                         allen_cahn::SampleWhen::ThreeQuarter);
             }
           }
         }
@@ -167,24 +171,26 @@ int main(int argc, char *argv[]) {
           MPI_Allreduce(&lo, &g_lo, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
           MPI_Allreduce(&hi, &g_hi, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
           if (rank == 0) {
-            std::cout << "phi global min/max at end: " << g_lo << " " << g_hi << "\n";
+            std::cout << "phi global min/max at end: " << g_lo << " " << g_hi
+                      << "\n";
           }
         }
 
         if (rank == 0) {
-          std::cout << "Allen–Cahn FD (CPU): grid " << cfg.nx_glob << "x" << cfg.ny_glob
-                    << "x1, ranks=" << nproc << ", steps=" << cfg.n_steps << "\n";
+          std::cout << "Allen–Cahn FD (CPU): grid " << cfg.nx_glob << "x"
+                    << cfg.ny_glob << "x1, ranks=" << nproc
+                    << ", steps=" << cfg.n_steps << "\n";
           std::cout << "Bulk driving force: " << cfg.driving_force << "\n";
           std::cout << "Global sum(phi) after stepping: " << sum_global << "\n";
         }
-        allen_cahn::report_step_timing(MPI_COMM_WORLD, rank, cfg.n_steps, step_elapsed_s);
+        allen_cahn::report_step_timing(MPI_COMM_WORLD, rank, cfg.n_steps,
+                                       step_elapsed_s);
 
         areas.final_ = allen_cahn::global_area_cells(
-            MPI_COMM_WORLD,
-            allen_cahn::count_cells_above(u,
-                                          allen_cahn::RunConfig::kLevelSetThreshold));
-        allen_cahn::sample_subcell(MPI_COMM_WORLD, decomp, rank, u.data(), nx, ny, &sub,
-                                   allen_cahn::SampleWhen::Final);
+            MPI_COMM_WORLD, allen_cahn::count_cells_above(
+                                u, allen_cahn::RunConfig::kLevelSetThreshold));
+        allen_cahn::sample_subcell(MPI_COMM_WORLD, decomp, rank, u.data(), nx, ny,
+                                   &sub, allen_cahn::SampleWhen::Final);
         auto kinetics = allen_cahn::analyse_interface_kinetics(areas, cfg, dx);
         if (cfg.two_front) {
           allen_cahn::skip_disc_check_for_flat_fronts(&kinetics);

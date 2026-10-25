@@ -48,12 +48,12 @@
 
 #include <mpi.h>
 
-#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/domain/create.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
 #include <openpfc/runtime/common/mpi_timer.hpp>
 

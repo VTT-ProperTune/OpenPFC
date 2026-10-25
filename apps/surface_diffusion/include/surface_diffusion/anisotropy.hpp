@@ -71,8 +71,7 @@ inline void apply_schema_values(const AnisotropySchemaValues &v,
   static_cast<AnisotropySchemaValues &>(p) = v;
 }
 
-inline pfc::sim::ParameterSchema<AnisotropySchemaValues>
-make_anisotropy_schema() {
+inline pfc::sim::ParameterSchema<AnisotropySchemaValues> make_anisotropy_schema() {
   pfc::sim::ParameterSchema<AnisotropySchemaValues> s;
   s.model_name("SurfaceDiffusionAnisotropic")
       .real(&AnisotropySchemaValues::B0,

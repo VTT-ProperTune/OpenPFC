@@ -14,8 +14,8 @@
  *    \f$M(h)\cdot\nabla p\f$ kernel behind `pfc::sim::SpectralFlux`.
  */
 
-#include <openpfc/runtime/gpu/spectral_pointwise_gpu.hpp>
 #include <openpfc/kernel/simulation/spectral_flux.hpp>
+#include <openpfc/runtime/gpu/spectral_pointwise_gpu.hpp>
 #include <thin_film/nonlinear.hpp>
 #include <thin_film/thin_film_pointwise.hpp>
 

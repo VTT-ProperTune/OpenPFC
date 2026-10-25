@@ -25,13 +25,13 @@
 #include <mpi.h>
 
 #include <inverse_homogenization/auxetic_geometry.hpp>
+#include <inverse_homogenization/homogenization.hpp>
 #include <inverse_homogenization/manufacturability.hpp>
 #include <inverse_homogenization/yang_reentrant.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
-#include <inverse_homogenization/homogenization.hpp>
 
 namespace {
 
@@ -64,7 +64,8 @@ void usage(std::ostream &os, const char *exe) {
      << "  --dx               spacing (default 1)\n"
      << "  --E-solid --nu-solid --E-void --nu-void\n"
      << "  --shape            homogeneous | laminate-z | sphere |\n"
-     << "                    rotating-cubes | rotating-squares | reentrant-3d | yang-a3\n"
+     << "                    rotating-cubes | rotating-squares | reentrant-3d | "
+        "yang-a3\n"
      << "  --volume           h for homogeneous; ignored otherwise\n"
      << "  --half --angle     rotating-square/cube half-side and rotation (rad)\n"
      << "  --thickness --inset  reentrant-3d strut half-thickness and inset\n"
@@ -149,9 +150,9 @@ bool parse(int argc, char **argv, Config &cfg) {
 
 bool load_fortran_bin(const std::string &path, int nx, int ny, int nz,
                       pfc::data::Field<double> &h) {
-  const std::size_t ntot =
-      static_cast<std::size_t>(nx) * static_cast<std::size_t>(ny) *
-      static_cast<std::size_t>(nz);
+  const std::size_t ntot = static_cast<std::size_t>(nx) *
+                           static_cast<std::size_t>(ny) *
+                           static_cast<std::size_t>(nz);
   std::vector<double> a(ntot, 0.0);
   int rank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -272,126 +273,130 @@ int main(int argc, char **argv) {
 
   int rc = 2;
   {
-  const pfc::Domain domain = pfc::domain::create(
-      pfc::GridSize({cfg.nx, cfg.ny, cfg.nz}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-      pfc::GridSpacing({cfg.dx, cfg.dx, cfg.dx}));
-  pfc::sim::stacks::SpectralCPUStack stack(domain, rank, nproc, MPI_COMM_WORLD);
-  auto h =
-      pfc::data::field_from_inbox<double>(domain, stack.fft().get_inbox_bounds());
+    const pfc::Domain domain =
+        pfc::domain::create(pfc::GridSize({cfg.nx, cfg.ny, cfg.nz}),
+                            pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                            pfc::GridSpacing({cfg.dx, cfg.dx, cfg.dx}));
+    pfc::sim::stacks::SpectralCPUStack stack(domain, rank, nproc, MPI_COMM_WORLD);
+    auto h =
+        pfc::data::field_from_inbox<double>(domain, stack.fft().get_inbox_bounds());
 
-  const double Lx = cfg.nx * cfg.dx;
-  const double Ly = cfg.ny * cfg.dx;
-  const double Lz = cfg.nz * cfg.dx;
-  bool proceed = true;
-  if (!cfg.load_bin.empty()) {
-    if (!load_fortran_bin(cfg.load_bin, cfg.nx, cfg.ny, cfg.nz, h)) {
-      if (rank == 0)
-        std::cerr << "load-bin: unreadable or wrong size " << cfg.load_bin << '\n';
-      rc = 2;
-      proceed = false;
-    } else if (cfg.binarize >= 0.0) {
-      const auto n = h.local_size();
-      for (int k = 0; k < n[2]; ++k)
-        for (int j = 0; j < n[1]; ++j)
-          for (int i = 0; i < n[0]; ++i)
-            h(i, j, k) = (h(i, j, k) > cfg.binarize) ? 1.0 : 0.0;
-      h.note_host_write();
-    }
-  } else if (cfg.shape == "rotating-cubes") {
-    pfc::apps::inverse::fill_rotating_cubes(h, cfg.nx, cfg.ny, cfg.nz, cfg.half,
-                                            cfg.angle);
-  } else if (cfg.shape == "rotating-squares") {
-    pfc::apps::inverse::fill_rotating_squares(h, cfg.nx, cfg.ny, cfg.half,
+    const double Lx = cfg.nx * cfg.dx;
+    const double Ly = cfg.ny * cfg.dx;
+    const double Lz = cfg.nz * cfg.dx;
+    bool proceed = true;
+    if (!cfg.load_bin.empty()) {
+      if (!load_fortran_bin(cfg.load_bin, cfg.nx, cfg.ny, cfg.nz, h)) {
+        if (rank == 0)
+          std::cerr << "load-bin: unreadable or wrong size " << cfg.load_bin << '\n';
+        rc = 2;
+        proceed = false;
+      } else if (cfg.binarize >= 0.0) {
+        const auto n = h.local_size();
+        for (int k = 0; k < n[2]; ++k)
+          for (int j = 0; j < n[1]; ++j)
+            for (int i = 0; i < n[0]; ++i)
+              h(i, j, k) = (h(i, j, k) > cfg.binarize) ? 1.0 : 0.0;
+        h.note_host_write();
+      }
+    } else if (cfg.shape == "rotating-cubes") {
+      pfc::apps::inverse::fill_rotating_cubes(h, cfg.nx, cfg.ny, cfg.nz, cfg.half,
                                               cfg.angle);
-  } else if (cfg.shape == "reentrant-3d") {
-    pfc::apps::inverse::fill_reentrant_3d(h, cfg.nx, cfg.ny, cfg.nz, cfg.thickness,
-                                          cfg.inset, 0.10, 0.30, 0.70, 0.90);
-  } else if (cfg.shape == "yang-a3") {
-    pfc::apps::inverse::fill_yang_a3(h, cfg.nx, cfg.ny, cfg.nz);
-  } else {
-    const auto n = h.local_size();
-    for (int k = 0; k < n[2]; ++k) {
-      for (int j = 0; j < n[1]; ++j) {
-        for (int i = 0; i < n[0]; ++i) {
-          const auto x = h.coords(i, j, k);
-          double hv = cfg.volume;
-          if (cfg.shape == "laminate-z") {
-            hv = (x[2] < 0.5 * Lz) ? 1.0 : 0.0;
-          } else if (cfg.shape == "sphere") {
-            const double cx = 0.5 * Lx, cy = 0.5 * Ly, cz = 0.5 * Lz;
-            const double R = 0.25 * std::min({Lx, Ly, Lz});
-            const double w = 1.5 * cfg.dx;
-            const double r =
-                std::sqrt((x[0] - cx) * (x[0] - cx) + (x[1] - cy) * (x[1] - cy) +
-                          (x[2] - cz) * (x[2] - cz));
-            hv = 0.5 * (1.0 - std::tanh((r - R) / w));
+    } else if (cfg.shape == "rotating-squares") {
+      pfc::apps::inverse::fill_rotating_squares(h, cfg.nx, cfg.ny, cfg.half,
+                                                cfg.angle);
+    } else if (cfg.shape == "reentrant-3d") {
+      pfc::apps::inverse::fill_reentrant_3d(h, cfg.nx, cfg.ny, cfg.nz, cfg.thickness,
+                                            cfg.inset, 0.10, 0.30, 0.70, 0.90);
+    } else if (cfg.shape == "yang-a3") {
+      pfc::apps::inverse::fill_yang_a3(h, cfg.nx, cfg.ny, cfg.nz);
+    } else {
+      const auto n = h.local_size();
+      for (int k = 0; k < n[2]; ++k) {
+        for (int j = 0; j < n[1]; ++j) {
+          for (int i = 0; i < n[0]; ++i) {
+            const auto x = h.coords(i, j, k);
+            double hv = cfg.volume;
+            if (cfg.shape == "laminate-z") {
+              hv = (x[2] < 0.5 * Lz) ? 1.0 : 0.0;
+            } else if (cfg.shape == "sphere") {
+              const double cx = 0.5 * Lx, cy = 0.5 * Ly, cz = 0.5 * Lz;
+              const double R = 0.25 * std::min({Lx, Ly, Lz});
+              const double w = 1.5 * cfg.dx;
+              const double r =
+                  std::sqrt((x[0] - cx) * (x[0] - cx) + (x[1] - cy) * (x[1] - cy) +
+                            (x[2] - cz) * (x[2] - cz));
+              hv = 0.5 * (1.0 - std::tanh((r - R) / w));
+            }
+            h(i, j, k) = hv;
           }
-          h(i, j, k) = hv;
         }
       }
+      h.note_host_write();
     }
-    h.note_host_write();
-  }
 
-  if (!proceed) {
-  } else {
-  pfc::solvers::MicroelasticityParams p;
-  p.stiffness_at_one = pfc::solvers::Stiffness::isotropic(cfg.E_solid, cfg.nu_solid);
-  p.stiffness_at_zero = pfc::solvers::Stiffness::isotropic(cfg.E_void, cfg.nu_void);
-  p.relative_tolerance = 1.0e-8;
-  p.max_iterations = cfg.n_el_iter;
-  p.warm_start = false;
-  p.comm = MPI_COMM_WORLD;
+    if (!proceed) {
+    } else {
+      pfc::solvers::MicroelasticityParams p;
+      p.stiffness_at_one =
+          pfc::solvers::Stiffness::isotropic(cfg.E_solid, cfg.nu_solid);
+      p.stiffness_at_zero =
+          pfc::solvers::Stiffness::isotropic(cfg.E_void, cfg.nu_void);
+      p.relative_tolerance = 1.0e-8;
+      p.max_iterations = cfg.n_el_iter;
+      p.warm_start = false;
+      p.comm = MPI_COMM_WORLD;
 
-  pfc::apps::PeriodicHomogenizer hom(domain, stack.fft(), p);
-  const auto r = hom.compute(h);
-  const auto dense = gather_dense(h, cfg.nx, cfg.ny, cfg.nz);
-  const auto man = pfc::apps::inverse::measure_manufacturability(
-      dense, cfg.nx, cfg.ny, cfg.nz, 0.5);
+      pfc::apps::PeriodicHomogenizer hom(domain, stack.fft(), p);
+      const auto r = hom.compute(h);
+      const auto dense = gather_dense(h, cfg.nx, cfg.ny, cfg.nz);
+      const auto man = pfc::apps::inverse::measure_manufacturability(
+          dense, cfg.nx, cfg.ny, cfg.nz, 0.5);
 
-  if (rank == 0) {
-    std::cout << "shape " << (cfg.load_bin.empty() ? cfg.shape : std::string("load-bin"))
-              << " grid " << cfg.nx << 'x' << cfg.ny << 'x' << cfg.nz << " ranks "
-              << nproc;
-    if (!cfg.load_bin.empty())
-      std::cout << " load-bin " << cfg.load_bin << " binarize " << cfg.binarize;
-    if (cfg.shape == "rotating-cubes" || cfg.shape == "rotating-squares") {
-      std::cout << std::setprecision(8) << " half " << cfg.half << " angle "
-                << cfg.angle;
-    }
-    if (cfg.shape == "reentrant-3d") {
-      std::cout << std::setprecision(8) << " thickness " << cfg.thickness
-                << " inset " << cfg.inset;
-    }
-    if (cfg.shape == "yang-a3") {
-      using Y = pfc::apps::inverse::YangA3;
-      std::cout << std::setprecision(8) << " H " << Y::H_mm << " L " << Y::L_mm
-                << " t " << Y::t_mm << " theta_deg " << Y::theta_deg << " Lx "
-                << Y::Lx() << " Ly " << Y::Ly() << " Lz " << Y::Lz()
-                << " wang_rho " << Y::wang_rel_density() << " published_rho "
-                << Y::published_rel_density;
-    }
-    std::cout << '\n';
-    std::cout << std::setprecision(10) << "volume_fraction " << r.volume_fraction
-              << " spd " << (pfc::apps::is_spd(r.stiffness) ? "yes" : "no")
-              << " converged " << (r.all_converged() ? "yes" : "no") << '\n';
-    print_qualification(std::cout, r, man);
-    std::cout << std::setprecision(10) << "opening_loss_r1 " << man.opening_loss_r1
-              << " opening_loss_r2 " << man.opening_loss_r2 << " grey "
-              << man.grey_fraction << '\n';
-    std::cout << std::setprecision(16) << "HOMOGENIZATION_CHECKSUM "
-              << r.stiffness.frobenius_norm() << '\n';
-    if (!cfg.dump_dir.empty()) {
-      std::filesystem::create_directories(cfg.dump_dir);
-      const std::string bin = cfg.dump_dir + "/h.bin";
-      write_raw_bin(bin, dense);
-      write_xdmf_brick(cfg.dump_dir + "/h.xdmf", "h.bin", cfg.nx, cfg.ny, cfg.nz,
-                       cfg.dx);
-    }
-  }
+      if (rank == 0) {
+        std::cout << "shape "
+                  << (cfg.load_bin.empty() ? cfg.shape : std::string("load-bin"))
+                  << " grid " << cfg.nx << 'x' << cfg.ny << 'x' << cfg.nz
+                  << " ranks " << nproc;
+        if (!cfg.load_bin.empty())
+          std::cout << " load-bin " << cfg.load_bin << " binarize " << cfg.binarize;
+        if (cfg.shape == "rotating-cubes" || cfg.shape == "rotating-squares") {
+          std::cout << std::setprecision(8) << " half " << cfg.half << " angle "
+                    << cfg.angle;
+        }
+        if (cfg.shape == "reentrant-3d") {
+          std::cout << std::setprecision(8) << " thickness " << cfg.thickness
+                    << " inset " << cfg.inset;
+        }
+        if (cfg.shape == "yang-a3") {
+          using Y = pfc::apps::inverse::YangA3;
+          std::cout << std::setprecision(8) << " H " << Y::H_mm << " L " << Y::L_mm
+                    << " t " << Y::t_mm << " theta_deg " << Y::theta_deg << " Lx "
+                    << Y::Lx() << " Ly " << Y::Ly() << " Lz " << Y::Lz()
+                    << " wang_rho " << Y::wang_rel_density() << " published_rho "
+                    << Y::published_rel_density;
+        }
+        std::cout << '\n';
+        std::cout << std::setprecision(10) << "volume_fraction " << r.volume_fraction
+                  << " spd " << (pfc::apps::is_spd(r.stiffness) ? "yes" : "no")
+                  << " converged " << (r.all_converged() ? "yes" : "no") << '\n';
+        print_qualification(std::cout, r, man);
+        std::cout << std::setprecision(10) << "opening_loss_r1 "
+                  << man.opening_loss_r1 << " opening_loss_r2 "
+                  << man.opening_loss_r2 << " grey " << man.grey_fraction << '\n';
+        std::cout << std::setprecision(16) << "HOMOGENIZATION_CHECKSUM "
+                  << r.stiffness.frobenius_norm() << '\n';
+        if (!cfg.dump_dir.empty()) {
+          std::filesystem::create_directories(cfg.dump_dir);
+          const std::string bin = cfg.dump_dir + "/h.bin";
+          write_raw_bin(bin, dense);
+          write_xdmf_brick(cfg.dump_dir + "/h.xdmf", "h.bin", cfg.nx, cfg.ny, cfg.nz,
+                           cfg.dx);
+        }
+      }
 
-  rc = r.all_converged() ? 0 : 1;
-  }
+      rc = r.all_converged() ? 0 : 1;
+    }
   }
   MPI_Finalize();
   return rc;

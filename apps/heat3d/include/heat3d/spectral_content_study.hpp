@@ -218,8 +218,8 @@ inline void require_family_heldout_ok(double max_abs_rel) {
   }
   throw std::runtime_error(
       "held-out family RK4 residual exceeds frozen |ratio-1| bound " +
-      std::to_string(kFamilyHeldOutRatioTol) + " (max |ratio-1| = " +
-      std::to_string(max_abs_rel) + ")");
+      std::to_string(kFamilyHeldOutRatioTol) +
+      " (max |ratio-1| = " + std::to_string(max_abs_rel) + ")");
 }
 
 /// Grid used for the reported semi-analytic sweep. The map is
@@ -257,17 +257,18 @@ inline constexpr int kMapGrid = pfc::field::spectra::kMapGrid;
   return pfc::field::spectra::auto_map_grid(f);
 }
 
-[[nodiscard]] inline double predict_l2_error(int fd_order, double f, int N = kMapGrid,
+[[nodiscard]] inline double predict_l2_error(int fd_order, double f,
+                                             int N = kMapGrid,
                                              double tau = kDiffusionTime) {
-  return pfc::field::spectra::predict_heat_l2_error(
-      pfc::field::spectra::gaussian(), fd_order, f, N, tau, 3);
+  return pfc::field::spectra::predict_heat_l2_error(pfc::field::spectra::gaussian(),
+                                                    fd_order, f, N, tau, 3);
 }
 
 [[nodiscard]] inline pfc::field::spectra::ContentFractionMatch
 content_fraction_at(int fd_order, double eps, double tau = kDiffusionTime,
                     double f_min = 1.0e-3) {
-  return pfc::field::spectra::content_fraction_at(
-      pfc::field::spectra::gaussian(), fd_order, eps, tau, 3, f_min);
+  return pfc::field::spectra::content_fraction_at(pfc::field::spectra::gaussian(),
+                                                  fd_order, eps, tau, 3, f_min);
 }
 
 [[nodiscard]] inline double crossover_fraction(double cost_fd,
@@ -344,11 +345,9 @@ struct ValidationCase {
  * The Gaussian family uses the separable cosine product (fast). Other
  * families use `evaluate_periodic_field` and should be run on modest `N`.
  */
-[[nodiscard]] inline ValidationCase
-run_validation(int fd_order, int N, double f, double tau = kDiffusionTime,
-               int n_steps = 400,
-               pfc::field::spectra::SpectrumFamily fam =
-                   pfc::field::spectra::gaussian()) {
+[[nodiscard]] inline ValidationCase run_validation(
+    int fd_order, int N, double f, double tau = kDiffusionTime, int n_steps = 400,
+    pfc::field::spectra::SpectrumFamily fam = pfc::field::spectra::gaussian()) {
   ValidationCase result;
   result.family_id = fam.id;
   result.fd_order = fd_order;
@@ -367,9 +366,9 @@ run_validation(int fd_order, int N, double f, double tau = kDiffusionTime,
   result.t_final = t_final;
   const bool gaussian_fast = std::string_view(fam.id) == "gaussian";
 
-  const auto domain =
-      pfc::domain::create(pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                          pfc::GridSpacing({dx, dx, dx}));
+  const auto domain = pfc::domain::create(pfc::GridSize({N, N, N}),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing({dx, dx, dx}));
   const auto decomp = pfc::decomposition::create(domain, /*nproc=*/1);
 
   const int hw = fd_order / 2;
@@ -393,8 +392,8 @@ run_validation(int fd_order, int N, double f, double tau = kDiffusionTime,
              gaussian_axis_factor(y, 0.0, sigma, m_max) *
              gaussian_axis_factor(z, 0.0, sigma, m_max);
     }
-    return pfc::field::spectra::evaluate_periodic_field(fam, x, y, z, 0.0, f, N,
-                                                        3, kD);
+    return pfc::field::spectra::evaluate_periodic_field(fam, x, y, z, 0.0, f, N, 3,
+                                                        kD);
   };
   u.apply(ic);
 
@@ -446,8 +445,7 @@ run_validation(int fd_order, int N, double f, double tau = kDiffusionTime,
   u.for_each_owned([&](int i, int j, int k) {
     double exact = 0.0;
     if (gaussian_fast) {
-      exact = axis[static_cast<std::size_t>(i)] *
-              axis[static_cast<std::size_t>(j)] *
+      exact = axis[static_cast<std::size_t>(i)] * axis[static_cast<std::size_t>(j)] *
               axis[static_cast<std::size_t>(k)];
     } else {
       exact = pfc::field::spectra::evaluate_periodic_field(

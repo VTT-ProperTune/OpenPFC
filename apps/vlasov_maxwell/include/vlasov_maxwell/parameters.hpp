@@ -123,7 +123,7 @@ struct SimParams {
   double v_max{1.0};
 
   // ---- time -------------------------------------------------------------
-  double dt{0.0};        ///< 0 selects `dt_safety` times the limit.
+  double dt{0.0}; ///< 0 selects `dt_safety` times the limit.
   double dt_safety{0.2};
   double t_end{10.0};
   int n_sample{100};
@@ -198,9 +198,7 @@ struct SimParams {
   bool gauss_correction{false};
 
   // ---- derived ----------------------------------------------------------
-  [[nodiscard]] double dx() const noexcept {
-    return Lx / static_cast<double>(nx);
-  }
+  [[nodiscard]] double dx() const noexcept { return Lx / static_cast<double>(nx); }
   [[nodiscard]] double dvx() const noexcept {
     return 2.0 * v_max / static_cast<double>(nvx);
   }
@@ -220,9 +218,7 @@ struct SimParams {
     return -v_max + (static_cast<double>(k) + 0.5) * dvy();
   }
   /// Fundamental wave number `2 pi / Lx`, in inverse skin depths.
-  [[nodiscard]] double k0() const noexcept {
-    return 2.0 * std::acos(-1.0) / Lx;
-  }
+  [[nodiscard]] double k0() const noexcept { return 2.0 * std::acos(-1.0) / Lx; }
   /// `k` of mode `m` expressed in inverse Debye lengths, given `v_th / c`.
   [[nodiscard]] double k_debye(int m, double vth_over_c) const noexcept {
     return static_cast<double>(m) * k0() * vth_over_c;

@@ -69,12 +69,12 @@ inline constexpr int kMaxHalfWidth2 = 10;
 
 /// Owned extents and padded strides of one rank's brick.
 struct DeviceGeom {
-  int nx{0};             ///< Owned cells along x.
-  int ny{0};             ///< Owned cells along y.
-  int nz{0};             ///< Owned cells along z.
-  int hw{0};             ///< Storage halo on every side (`fd_order / 2`).
-  long long sy{0};       ///< Linear stride along y in the padded buffer.
-  long long sz{0};       ///< Linear stride along z in the padded buffer.
+  int nx{0};       ///< Owned cells along x.
+  int ny{0};       ///< Owned cells along y.
+  int nz{0};       ///< Owned cells along z.
+  int hw{0};       ///< Storage halo on every side (`fd_order / 2`).
+  long long sy{0}; ///< Linear stride along y in the padded buffer.
+  long long sz{0}; ///< Linear stride along z in the padded buffer.
 };
 
 /**
@@ -119,9 +119,9 @@ struct DeviceParams {
   double D_th{0.0};
   double M_c{0.0};
   double eps4{0.0};
-  double at{0.0};          ///< `at_scale * 1/(2 sqrt 2) * W0`.
+  double at{0.0}; ///< `at_scale * 1/(2 sqrt 2) * W0`.
   double lambda_el{0.0};
-  double crystal_angle{0.0}; ///< Lab-to-crystal rotation, radians. 0 is a no-op.
+  double crystal_angle{0.0};   ///< Lab-to-crystal rotation, radians. 0 is a no-op.
   double grad_floor2{1.0e-24}; ///< `kGradNormFloor2`.
   int spec_source{0};
   int evolve_theta{1};

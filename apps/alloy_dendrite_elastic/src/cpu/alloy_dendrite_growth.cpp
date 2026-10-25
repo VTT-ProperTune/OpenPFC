@@ -135,9 +135,9 @@ void print_usage(std::ostream &os, const char *exe) {
      << "                      parabola fit, in cells  (" << d.tip_fit_halfwidth
      << ")\n"
      << "  --tip-windows=A:B:C:D  the four fit half-widths reported side by\n"
-     << "                      side, in cells          ("
-     << d.tip_windows[0] << ":" << d.tip_windows[1] << ":" << d.tip_windows[2]
-     << ":" << d.tip_windows[3] << ")\n\n"
+     << "                      side, in cells          (" << d.tip_windows[0] << ":"
+     << d.tip_windows[1] << ":" << d.tip_windows[2] << ":" << d.tip_windows[3]
+     << ")\n\n"
      << "Model\n"
      << "  --lambda=X --k=X --Dl=X --Dth=X --Mc=X --eps4=X --W0=X --tau0=X\n"
      << "  --at-scale=X        anti-trapping multiplier (" << d.model.at_scale
@@ -148,20 +148,17 @@ void print_usage(std::ostream &os, const char *exe) {
      << "                      has no steady tip; see the file comment.\n\n"
      << "Case\n"
      << "  --omega=X           initial supersaturation (" << d.omega << ")\n"
-     << "  --seed-radius=X     seed radius in W0       (" << d.seed_radius
-     << ")\n"
+     << "  --seed-radius=X     seed radius in W0       (" << d.seed_radius << ")\n"
      << "  --seed-x=X --seed-y=X   seed centre in W0; default is the box centre\n"
-     << "  --crystal-angle=X   <100> rotation, radians  ("
-     << d.model.crystal_angle << ")\n\n"
+     << "  --crystal-angle=X   <100> rotation, radians  (" << d.model.crystal_angle
+     << ")\n\n"
      << "Frozen-temperature (FTA) directional solidification\n"
      << "  theta(x,t) = (G/dT_h)(x - x0 - V_p t). evolve_theta stays off;\n"
      << "  M_c theta in equation (2) stays live. Infinite-Le Bridgman, not a\n"
      << "  metallic evolving-theta Lewis-number run. Mc=0 with --gradient or\n"
      << "  --pulling is a no-op and is rejected. Catalog stays at fifteen.\n"
-     << "  --gradient=X        G/dT_h in 1/W0          (" << d.fta_gradient
-     << ")\n"
-     << "  --pulling=X         V_p in W0/tau0          (" << d.fta_pulling
-     << ")\n"
+     << "  --gradient=X        G/dT_h in 1/W0          (" << d.fta_gradient << ")\n"
+     << "  --pulling=X         V_p in W0/tau0          (" << d.fta_pulling << ")\n"
      << "  --fta-x0=X          isotherm x0; default is the first seed x\n"
      << "  --Mc=X              required >0 when FTA is on (campaign: 0.5)\n\n"
      << "  Issue #155 campaign (elevated-G directional geometry, not an Al-Cu\n"
@@ -183,11 +180,10 @@ void print_usage(std::ostream &os, const char *exe) {
      << "  40 W0. theta is scaled by the hypercooling L/c_p ~ 336 K, not\n"
      << "  Delta T_0. Do not pass --elastic.\n\n"
      << "Bicrystal (two tanh seeds, one phi -- not a two-order-parameter GB)\n"
-     << "  --seed2-radius=X    second seed; 0 disables (" << d.seed2_radius
-     << ")\n"
+     << "  --seed2-radius=X    second seed; 0 disables (" << d.seed2_radius << ")\n"
      << "  --seed2-x=X --seed2-y=X  default (seed_x, seed_y + Ly/4)\n"
-     << "  --crystal-angle2=X  second-grain rotation, radians ("
-     << d.crystal_angle2 << ")\n\n"
+     << "  --crystal-angle2=X  second-grain rotation, radians (" << d.crystal_angle2
+     << ")\n\n"
 #if ALLOY_DENDRITE_HAVE_ELASTICITY
      << "Elasticity, equations (5)-(7) (defaults: Al-4.5wt%Cu, see "
         "material.hpp)\n"
@@ -195,10 +191,10 @@ void print_usage(std::ostream &os, const char *exe) {
      << "  --lambda-el=X       coupling in equation (2); default is lambda\n"
      << "                      itself, which is the calibrated value when the\n"
      << "                      stiffnesses are in units of f_ref = L dT0/T_M\n"
-     << "  --eps-c=X           d eps*/dU               (" << alloy_dendrite::material::kEpsC
-     << ")\n"
-     << "  --eps-T=X           d eps*/dtheta           (" << alloy_dendrite::material::kEpsT
-     << ")\n"
+     << "  --eps-c=X           d eps*/dU               ("
+     << alloy_dendrite::material::kEpsC << ")\n"
+     << "  --eps-T=X           d eps*/dtheta           ("
+     << alloy_dendrite::material::kEpsT << ")\n"
      << "  --u-ref=X           unstrained U; default -omega\n"
      << "  --theta-ref=X       unstrained theta        (0)\n"
      << "  --el-c11=X --el-c12=X --el-c44=X   solid stiffness in units of\n"
@@ -315,11 +311,10 @@ int run(int argc, char **argv, int rank, int nproc) {
     // this driver refuses elsewhere -- but "unknown option(s): lambda-el"
     // does not say *why*, and the honest elastic-off reference run is
     // `--elastic=1 --lambda-el=0`, which is not obvious. Say so.
-    for (const char *k : {"lambda-el", "eps-c", "eps-T", "u-ref", "theta-ref",
-                          "el-c11", "el-c12", "el-c44", "el-soften",
-                          "el-mu-liquid", "el-bulk-liquid", "el-macro",
-                          "el-scheme", "el-tol", "el-iter", "n-el-substep",
-                          "el-warm-start"}) {
+    for (const char *k :
+         {"lambda-el", "eps-c", "eps-T", "u-ref", "theta-ref", "el-c11", "el-c12",
+          "el-c44", "el-soften", "el-mu-liquid", "el-bulk-liquid", "el-macro",
+          "el-scheme", "el-tol", "el-iter", "n-el-substep", "el-warm-start"}) {
       if (opt.has(k)) {
         throw std::invalid_argument(
             std::string("--") + k +
@@ -377,8 +372,7 @@ int run(int argc, char **argv, int rank, int nproc) {
   // units of f_ref that is the calibrated coupling, and a value that differs
   // from lambda is then an explicit statement that the coupling is being
   // scaled, not an accident of a default.
-  cfg.model.lambda_el =
-      want_elastic ? opt.real("lambda-el", cfg.model.lambda) : 0.0;
+  cfg.model.lambda_el = want_elastic ? opt.real("lambda-el", cfg.model.lambda) : 0.0;
 #else
   if (want_elastic) {
     throw std::runtime_error(
@@ -418,34 +412,32 @@ int run(int argc, char **argv, int rank, int nproc) {
             << "  D_th=" << cfg.model.D_th << " M_c=" << cfg.model.M_c << "\n"
             << "  dt            " << res.dt << " over " << res.n_steps
             << " steps to t=" << cfg.t_end << "\n"
-            << "  Omega         " << cfg.omega << " (initial), "
-            << res.omega_eff << " (effective, -min U at t_end)\n"
+            << "  Omega         " << cfg.omega << " (initial), " << res.omega_eff
+            << " (effective, -min U at t_end)\n"
             << "  ------------------------------------------------------------\n"
             << "  tip position  " << res.x_tip << "  y=" << res.y_tip << "\n"
             << "  tip velocity  " << res.v_tip << "  (W0/tau0)\n"
             << "  tip radius    " << res.rho_tip << "  (W0), fit half-width "
             << cfg.tip_fit_halfwidth << " cells\n"
-            << "    windows     " << res.rho_window[0] << ", "
-            << res.rho_window[1] << ", " << res.rho_window[2] << ", "
-            << res.rho_window[3] << "  spread " << 100.0 * res.rho_window_spread
-            << " %\n"
+            << "    windows     " << res.rho_window[0] << ", " << res.rho_window[1]
+            << ", " << res.rho_window[2] << ", " << res.rho_window[3] << "  spread "
+            << 100.0 * res.rho_window_spread << " %\n"
             << "  steadiness    dV/V = " << 100.0 * res.v_drift
             << " %, drho/rho = " << 100.0 * res.rho_drift
             << " % across the fit window\n"
-            << "    rho/rho     " << res.rho_rel[0] << ", " << res.rho_rel[1]
-            << ", " << res.rho_rel[2] << ", " << res.rho_rel[3]
-            << "  at 0.5, 1, 1.5, 2 tip radii, spread "
-            << 100.0 * res.rho_rel_spread << " %\n"
+            << "    rho/rho     " << res.rho_rel[0] << ", " << res.rho_rel[1] << ", "
+            << res.rho_rel[2] << ", " << res.rho_rel[3]
+            << "  at 0.5, 1, 1.5, 2 tip radii, spread " << 100.0 * res.rho_rel_spread
+            << " %\n"
             << "  selection     sigma* = 2 d0 D / (V rho^2) = " << res.sigma_star
             << "  (cell window)\n"
             << "                sigma* = " << res.sigma_star_rel
             << "  (one-radius window; this is the quotable one)\n"
-            << "  Ivantsov      V rho = " << res.v_rho << " vs 2 D P(Omega_eff) = "
-            << res.v_rho_ivantsov << "\n";
+            << "  Ivantsov      V rho = " << res.v_rho
+            << " vs 2 D P(Omega_eff) = " << res.v_rho_ivantsov << "\n";
   if (alloy_dendrite::fta_active(cfg)) {
     std::cout << "  FTA           G/dT_h=" << cfg.fta_gradient
-              << "  V_p=" << cfg.fta_pulling << "  V_tip-V_p=" << res.v_rel
-              << "\n";
+              << "  V_p=" << cfg.fta_pulling << "  V_tip-V_p=" << res.v_rel << "\n";
   }
   if (std::isfinite(res.x_tip2) || std::isfinite(res.x_groove)) {
     std::cout << "  tip 2         x=" << res.x_tip2 << " y=" << res.y_tip2
@@ -456,8 +448,8 @@ int run(int argc, char **argv, int rank, int nproc) {
   if (res.el_solves > 0) {
     std::cout << "  ------------------------------------------------------------\n"
               << "  elastic       " << res.el_solves << " solves, mean "
-              << res.el_iter_mean << " iterations (max " << res.el_iter_max
-              << "), " << res.el_nonconverged << " unconverged\n"
+              << res.el_iter_mean << " iterations (max " << res.el_iter_max << "), "
+              << res.el_nonconverged << " unconverged\n"
               << "                int f_el dV = " << res.el_energy
               << ", max |df_el/dphi| = " << res.el_max_dfel << "\n"
               << "                mean pressure " << res.el_mean_stress

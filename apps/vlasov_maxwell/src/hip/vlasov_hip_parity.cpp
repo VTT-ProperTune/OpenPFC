@@ -140,8 +140,8 @@ constexpr double kUnitRoundoff = 1.1102230246251565e-16;
 /// A difference measured between the two paths.
 struct Diff {
   double max_abs{0.0};
-  double scale{0.0};     ///< the magnitude it should be judged against
-  std::size_t n{0};      ///< values compared
+  double scale{0.0};      ///< the magnitude it should be judged against
+  std::size_t n{0};       ///< values compared
   std::size_t bitwise{0}; ///< of those, how many agreed exactly
 
   [[nodiscard]] double relative() const {
@@ -168,8 +168,7 @@ struct Diff {
 }
 
 /// Compare the owned cells of two distributions living on the same geometry.
-[[nodiscard]] Diff compare_fields(const PhaseSpace &ps,
-                                  const vlasov::PhaseField &a,
+[[nodiscard]] Diff compare_fields(const PhaseSpace &ps, const vlasov::PhaseField &a,
                                   const vlasov::PhaseField &b) {
   Diff d;
   for (int k = 0; k < ps.nvy_local(); ++k) {
@@ -221,8 +220,8 @@ struct Verdict {
     const bool ok = std::isfinite(measured) && measured <= tol;
     if (!ok) ++failures;
     if (rank == 0) {
-      std::printf("    %-34s %12.4e  tol %10.3e  %-4s %s\n", what, measured,
-                  tol, ok ? "ok" : "FAIL", note);
+      std::printf("    %-34s %12.4e  tol %10.3e  %-4s %s\n", what, measured, tol,
+                  ok ? "ok" : "FAIL", note);
     }
   }
   void report(const char *what, double value, const char *unit = "") {
@@ -281,9 +280,8 @@ struct Bench {
       st->fields.Bz[i] = 1.0e-2 * std::cos(k * p.x_of(i));
       st->fields.Ey[i] = 1.0e-3 * std::sin(k * p.x_of(i));
     }
-    dt = dt_in > 0.0
-             ? dt_in
-             : 0.2 * vlasov::step_limit(p, 1.0, 1.0e-2, 1.0e-2, halo);
+    dt =
+        dt_in > 0.0 ? dt_in : 0.2 * vlasov::step_limit(p, 1.0, 1.0e-2, 1.0e-2, halo);
   }
 };
 
@@ -372,11 +370,10 @@ int run_science_landau(int nx, int nvx, int nvy, int interp, double dt_in,
     r.st->fields.Ex = sol.Ex;
     double emax = 0.0;
     for (double v : r.st->fields.Ex) emax = std::fmax(emax, std::fabs(v));
-    r.dt = dt_in > 0.0
-               ? dt_in
-               : r.ps->params().dt_safety *
-                     vlasov::step_limit(r.ps->params(), 1.0,
-                                        std::fmax(emax, 1.0e-3), 0.1, halo);
+    r.dt = dt_in > 0.0 ? dt_in
+                       : r.ps->params().dt_safety *
+                             vlasov::step_limit(r.ps->params(), 1.0,
+                                                std::fmax(emax, 1.0e-3), 0.1, halo);
     return r;
   };
 
@@ -399,12 +396,12 @@ int run_science_landau(int nx, int nvx, int nvy, int interp, double dt_in,
   std::vector<double> ts, mex_cpu, mex_gpu;
   auto sample = [&](int step, double t) {
     ds.download_all();
-    const Ledger lc = vlasov::make_ledger(p, st_cpu.line, st_cpu.moments,
-                                          st_cpu.sources, st_cpu.fields,
-                                          st_cpu.gauss, t, step, 1);
-    const Ledger lg = vlasov::make_ledger(p, st_gpu.line, st_gpu.moments,
-                                          st_gpu.sources, st_gpu.fields,
-                                          st_gpu.gauss, t, step, 1);
+    const Ledger lc =
+        vlasov::make_ledger(p, st_cpu.line, st_cpu.moments, st_cpu.sources,
+                            st_cpu.fields, st_cpu.gauss, t, step, 1);
+    const Ledger lg =
+        vlasov::make_ledger(p, st_gpu.line, st_gpu.moments, st_gpu.sources,
+                            st_gpu.fields, st_gpu.gauss, t, step, 1);
     ts.push_back(t);
     mex_cpu.push_back(lc.mode_ex);
     mex_gpu.push_back(lg.mode_ex);
@@ -458,12 +455,11 @@ int run(int argc, char **argv, int rank, int nproc) {
 
   if (science == "landau") {
     vlasov::hip::bind_local_device(rank);
-    return run_science_landau(nx, nvx, nvy, interp, dt_in, device_x, rank,
-                              nproc);
+    return run_science_landau(nx, nvx, nvy, interp, dt_in, device_x, rank, nproc);
   }
   if (!science.empty()) {
-    throw std::invalid_argument(
-        "--science must be omitted or 'landau', got '" + science + "'");
+    throw std::invalid_argument("--science must be omitted or 'landau', got '" +
+                                science + "'");
   }
 
   vlasov::hip::bind_local_device(rank);
@@ -506,7 +502,8 @@ int run(int argc, char **argv, int rank, int nproc) {
   // =====================================================================
   // 1. Operator parity
   // =====================================================================
-  if (rank == 0) std::printf("\n  [1] operator parity, one call on identical input\n");
+  if (rank == 0)
+    std::printf("\n  [1] operator parity, one call on identical input\n");
   {
     auto &ps = *ref.ps;
     auto &st = *ref.st;
@@ -629,8 +626,8 @@ int run(int argc, char **argv, int rank, int nproc) {
       v.check("D f_max (must be exact)", std::fabs(mh.f_max - md.f_max), 0.0);
       v.check("D f_face_max (must be exact)",
               std::fabs(mh.f_face_max - md.f_face_max), 0.0);
-      v.check("D boundary_fraction", std::fabs(mh.boundary_fraction -
-                                               md.boundary_fraction),
+      v.check("D boundary_fraction",
+              std::fabs(mh.boundary_fraction - md.boundary_fraction),
               eta * std::max(1.0, std::fabs(mh.boundary_fraction)));
       v.report("D measured/bound, rho profile",
                dn.max_abs / std::max(eta * dn.scale, vlasov::kTiny));
@@ -646,8 +643,8 @@ int run(int argc, char **argv, int rank, int nproc) {
                 steps);
   }
   {
-    Bench a(nx, nvx, nvy, interp, dt_in);   // host reference
-    Bench b(nx, nvx, nvy, interp, dt_in);   // device path
+    Bench a(nx, nvx, nvy, interp, dt_in); // host reference
+    Bench b(nx, nvx, nvy, interp, dt_in); // device path
     a.st->work.measure_mass = false;
     b.st->work.measure_mass = false;
     DeviceStepper ds(*b.st, *b.ps, device_x);
@@ -659,10 +656,9 @@ int run(int argc, char **argv, int rank, int nproc) {
     for (int s = 1; s <= steps; ++s) {
       a.st->advance(a.dt);
       ds.advance(b.dt);
-      alpha_max = std::max(
-          alpha_max,
-          vlasov::max_vy_shift_cells(b.p, b.p.species[0].qm(), b.dt,
-                                     b.st->fields.Ey, b.st->effective_bz()));
+      alpha_max = std::max(alpha_max, vlasov::max_vy_shift_cells(
+                                          b.p, b.p.species[0].qm(), b.dt,
+                                          b.st->fields.Ey, b.st->effective_bz()));
       if (s % every == 0 || s == steps) {
         ds.download_all();
         const Diff df = compare_fields(*a.ps, a.ps->f(0), b.ps->f(0));
@@ -708,12 +704,12 @@ int run(int argc, char **argv, int rank, int nproc) {
     v.check("B_z      max|dev-host| / max|B_z|", dbz.relative(), tol_field_rel);
 
     // ---- the ledger ----------------------------------------------------
-    const Ledger la = vlasov::make_ledger(a.p, a.st->line, a.st->moments,
-                                          a.st->sources, a.st->fields,
-                                          a.st->gauss, 0.0, steps, 1);
-    const Ledger lb = vlasov::make_ledger(b.p, b.st->line, b.st->moments,
-                                          b.st->sources, b.st->fields,
-                                          b.st->gauss, 0.0, steps, 1);
+    const Ledger la =
+        vlasov::make_ledger(a.p, a.st->line, a.st->moments, a.st->sources,
+                            a.st->fields, a.st->gauss, 0.0, steps, 1);
+    const Ledger lb =
+        vlasov::make_ledger(b.p, b.st->line, b.st->moments, b.st->sources,
+                            b.st->fields, b.st->gauss, 0.0, steps, 1);
     auto ledger_check = [&](const char *what, double x, double y) {
       v.check(what, std::fabs(x - y),
               tol_field_rel * std::max(std::fabs(x), vlasov::kTiny));
@@ -723,8 +719,7 @@ int run(int argc, char **argv, int rank, int nproc) {
     // Same cancellation as the flux profiles: total momentum is zero in
     // every benchmark here by construction, so it is judged against
     // `mu v_max N`, the sum of the magnitudes its terms could have had.
-    const double mom_scale =
-        a.p.species[0].mu * a.p.v_max * std::fabs(la.number);
+    const double mom_scale = a.p.species[0].mu * a.p.v_max * std::fabs(la.number);
     v.check("ledger momentum_x", std::fabs(la.momentum_x - lb.momentum_x),
             tol_field_rel * mom_scale, "(scale mu*v_max*N)");
     v.check("ledger momentum_y", std::fabs(la.momentum_y - lb.momentum_y),
@@ -743,10 +738,9 @@ int run(int argc, char **argv, int rank, int nproc) {
             std::max(tol_field_rel, 1.0e-12));
     v.report("ledger gauss_residual host", la.gauss_residual);
     v.report("ledger gauss_residual device", lb.gauss_residual);
-    v.report("f divergence / tolerance", df.relative() /
-                                             std::max(tol_f_rel, vlasov::kTiny));
-    v.report("peak v_y halo used (host)",
-             static_cast<double>(a.st->peak_halo_used));
+    v.report("f divergence / tolerance",
+             df.relative() / std::max(tol_f_rel, vlasov::kTiny));
+    v.report("peak v_y halo used (host)", static_cast<double>(a.st->peak_halo_used));
     v.report("peak v_y halo used (device)",
              static_cast<double>(ds.peak_halo_used()));
   }
@@ -755,8 +749,7 @@ int run(int argc, char **argv, int rank, int nproc) {
   MPI_Allreduce(MPI_IN_PLACE, &failures, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
   if (rank == 0) {
     std::printf("\n  VLASOV_HIP_PARITY %s (%d failing check%s)\n",
-                failures == 0 ? "PASS" : "FAIL", failures,
-                failures == 1 ? "" : "s");
+                failures == 0 ? "PASS" : "FAIL", failures, failures == 1 ? "" : "s");
   }
   return failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }

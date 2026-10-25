@@ -108,8 +108,7 @@ inline OperatorParams make_operator_params(const TungstenParams &params) {
  *
  * @return @c k_laplacian * opCk (the true Fourier multiplier on @c ψ̂).
  */
-[[nodiscard]] inline double linear_symbol(double k_laplacian,
-                                          double opCk) noexcept {
+[[nodiscard]] inline double linear_symbol(double k_laplacian, double opCk) noexcept {
   return k_laplacian * opCk;
 }
 
@@ -123,8 +122,7 @@ inline OperatorParams make_operator_params(const TungstenParams &params) {
  * @param p Precomputed parameter scalars from make_operator_params().
  */
 [[nodiscard]] inline ModeOperators
-legacy_etd_weights_for_mode(double k_laplacian, double dt,
-                            const OperatorParams &p) {
+legacy_etd_weights_for_mode(double k_laplacian, double dt, const OperatorParams &p) {
   const PhysicsMode phys = physics_for_mode(k_laplacian, p);
 
   ModeOperators out{};
@@ -138,8 +136,8 @@ legacy_etd_weights_for_mode(double k_laplacian, double dt,
     // arg = k_laplacian * opCk * dt, so arg² = k_laplacian² * opCk² * dt²
     // Dividing (arg + arg²/2) by opCk gives:
     //   k_laplacian * dt + 0.5 * k_laplacian² * dt² * opCk
-    out.opN = k_laplacian * dt +
-              0.5 * k_laplacian * k_laplacian * dt * dt * phys.opCk;
+    out.opN =
+        k_laplacian * dt + 0.5 * k_laplacian * k_laplacian * dt * dt * phys.opCk;
   } else {
     out.opN = std::expm1(arg) / phys.opCk;
   }

@@ -39,8 +39,8 @@
 
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
-#include <wave2d/rank_report.hpp>
 #include <wave2d/cli.hpp>
+#include <wave2d/rank_report.hpp>
 #include <wave2d/wave_model.hpp>
 
 namespace wave2d {
@@ -131,9 +131,8 @@ interior_stats(const pfc::data::Field<T, pfc::HostSpace> &u, int margin) {
                 << " cfl_c_dt_dx=" << cfl << " " << note << "\n";
     } else {
       const double rms_u = std::sqrt(g_sum / static_cast<double>(g_count));
-      std::cout << "global_rms_u_interior=" << rms_u
-                << " interior_cells=" << g_count << " cfl_c_dt_dx=" << cfl << " "
-                << note << "\n";
+      std::cout << "global_rms_u_interior=" << rms_u << " interior_cells=" << g_count
+                << " cfl_c_dt_dx=" << cfl << " " << note << "\n";
     }
   }
   return g_count > 0;

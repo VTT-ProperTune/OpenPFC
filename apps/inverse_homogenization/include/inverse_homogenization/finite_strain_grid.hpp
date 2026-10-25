@@ -191,8 +191,7 @@ inline void unpack_unknowns(PixelCell &c, const std::vector<double> &x,
   const int N = c.nx * c.ny;
   int k = 0;
   for (auto *u : {&c.ux, &c.uy})
-    for (int p = 0; p < N; ++p)
-      (*u)[p] = p == gauge_anchor(c, p) ? 0.0 : x[k++];
+    for (int p = 0; p < N; ++p) (*u)[p] = p == gauge_anchor(c, p) ? 0.0 : x[k++];
   F22 = x[k];
 }
 

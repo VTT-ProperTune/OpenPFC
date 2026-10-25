@@ -27,11 +27,11 @@
 
 #include <mpi.h>
 
+#include <inverse_homogenization/homogenization.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
-#include <inverse_homogenization/homogenization.hpp>
 
 using Catch::Matchers::WithinAbs;
 using Catch::Matchers::WithinRel;
@@ -42,14 +42,14 @@ using pfc::apps::frobenius_inner;
 using pfc::apps::HomogenizationResult;
 using pfc::apps::is_spd;
 using pfc::apps::kVoigtDim;
-using pfc::solvers::MicroelasticityParams;
 using pfc::apps::PeriodicHomogenizer;
 using pfc::apps::reuss_bound;
-using pfc::solvers::Stiffness;
 using pfc::apps::tensor_mismatch;
+using pfc::apps::Voigt6;
 using pfc::apps::voigt_bound;
 using pfc::apps::voigt_from_stiffness;
-using pfc::apps::Voigt6;
+using pfc::solvers::MicroelasticityParams;
+using pfc::solvers::Stiffness;
 
 using RealField = pfc::data::Field<double>;
 
@@ -107,8 +107,7 @@ void fill_value(RealField &f, double v) {
 double max_abs_diff(const Voigt6 &a, const Voigt6 &b) {
   double m = 0.0;
   for (int i = 0; i < kVoigtDim; ++i)
-    for (int j = 0; j < kVoigtDim; ++j)
-      m = std::max(m, std::abs(a(i, j) - b(i, j)));
+    for (int j = 0; j < kVoigtDim; ++j) m = std::max(m, std::abs(a(i, j) - b(i, j)));
   return m;
 }
 
@@ -376,8 +375,7 @@ TEST_CASE("Homogeneous sensitivity matches the closed-form dC/dh",
   hom.objective_sensitivity(cs.h, Cstar, W, cs.dJdh);
   const double DJ = hom.directional_derivative(cs.dJdh, cs.hdir);
 
-  const Voigt6 dC = voigt_from_stiffness(
-      Stiffness::blend(cs_, 1.0, cl_, -1.0));
+  const Voigt6 dC = voigt_from_stiffness(Stiffness::blend(cs_, 1.0, cl_, -1.0));
   const double want = frobenius_inner(r.stiffness, dC);
   INFO(precise("DJ = ", DJ, " want ", want));
   REQUIRE_THAT(DJ, WithinRel(want, 1.0e-8));
@@ -422,8 +420,7 @@ TEST_CASE("Adjoint sensitivity matches central finite differences",
     double gmean = 0.0;
     MPI_Allreduce(&local_mean, &gmean, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     gmean /= static_cast<double>(N) * N * N;
-    for (std::size_t i = 0; i < cs.hdir.size(); ++i)
-      cs.hdir.data()[i] -= gmean;
+    for (std::size_t i = 0; i < cs.hdir.size(); ++i) cs.hdir.data()[i] -= gmean;
     cs.hdir.note_host_write();
 
     const double analytic = hom.directional_derivative(cs.dJdh, cs.hdir);

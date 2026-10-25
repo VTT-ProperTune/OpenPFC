@@ -8,19 +8,19 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
-#include <limits>
 #include <iostream>
+#include <limits>
 #include <mpi.h>
 #include <span>
 #include <string>
 #include <vector>
 
+#include <allen_cahn/rank_report.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
 #include <openpfc/kernel/field/finite_difference.hpp>
-#include <allen_cahn/rank_report.hpp>
 
 namespace allen_cahn {
 
@@ -386,8 +386,7 @@ struct PlanarFronts {
  * Each row is unwrapped against the first row that has that front, so a front
  * that sits on the periodic seam is not averaged with its image `nx` away.
  */
-[[nodiscard]] inline PlanarFronts planar_fronts(const double *u, int nx,
-                                                int ny) {
+[[nodiscard]] inline PlanarFronts planar_fronts(const double *u, int nx, int ny) {
   PlanarFronts out;
   double sum_rising = 0.0;
   double sum_falling = 0.0;
@@ -403,10 +402,10 @@ struct PlanarFronts {
     const FrontHit falling = periodic_zero_crossing(row, nx, Crossing::Falling);
     if (rising.found) {
       const double position =
-          (n_rising == 0) ? rising.position
-                          : ref_rising + signed_displacement(ref_rising,
-                                                             rising.position,
-                                                             period);
+          (n_rising == 0)
+              ? rising.position
+              : ref_rising +
+                    signed_displacement(ref_rising, rising.position, period);
       if (n_rising == 0) {
         ref_rising = position;
       }
@@ -417,8 +416,8 @@ struct PlanarFronts {
       const double position =
           (n_falling == 0)
               ? falling.position
-              : ref_falling + signed_displacement(ref_falling, falling.position,
-                                                  period);
+              : ref_falling +
+                    signed_displacement(ref_falling, falling.position, period);
       if (n_falling == 0) {
         ref_falling = position;
       }
@@ -539,9 +538,10 @@ struct PlanarFronts {
  * grid the fronts are many interface widths apart and one of them can be
  * timed before they meet. The profile does not depend on y.
  */
-inline void fill_two_front_initial_condition(
-    std::vector<double> *u, const pfc::decomposition::Decomposition &decomp,
-    int rank, double M, double epsilon) {
+inline void
+fill_two_front_initial_condition(std::vector<double> *u,
+                                 const pfc::decomposition::Decomposition &decomp,
+                                 int rank, double M, double epsilon) {
   const auto &gw = pfc::decomposition::domain(decomp);
   auto gsz = pfc::domain::get_size(gw);
   const auto &local = pfc::decomposition::local_box(decomp, rank);
@@ -563,8 +563,8 @@ inline void fill_two_front_initial_condition(
             static_cast<std::size_t>(ix) +
             static_cast<std::size_t>(iy) * static_cast<std::size_t>(nx) +
             static_cast<std::size_t>(iz) * static_cast<std::size_t>(sxy);
-        (*u)[idx] = std::tanh((x - x_left) / delta) -
-                    std::tanh((x - x_right) / delta) - 1.0;
+        (*u)[idx] =
+            std::tanh((x - x_left) / delta) - std::tanh((x - x_right) / delta) - 1.0;
       }
     }
   }
@@ -622,8 +622,8 @@ inline void fill_two_front_initial_condition(
  * bistability margin by lowering `F` makes the critical nucleus bigger, and
  * the seed — which scales with the box — has to keep up.
  */
-[[nodiscard]] inline double critical_radius_cells(double M, double epsilon,
-                                                  double F, double dx) noexcept {
+[[nodiscard]] inline double critical_radius_cells(double M, double epsilon, double F,
+                                                  double dx) noexcept {
   const double v = sharp_interface_velocity(M, epsilon, F);
   if (v == 0.0) {
     return std::numeric_limits<double>::infinity();
@@ -740,21 +740,19 @@ gather_xy_samples(MPI_Comm comm, const pfc::decomposition::Decomposition &decomp
 
 /** Record one sub-cell sample. Every rank must call this together. */
 inline void sample_subcell(MPI_Comm comm,
-                           const pfc::decomposition::Decomposition &decomp,
-                           int rank, const double *local, int nx, int ny,
+                           const pfc::decomposition::Decomposition &decomp, int rank,
+                           const double *local, int nx, int ny,
                            SubcellSamples *samples, SampleWhen when) {
   const std::vector<double> field =
       gather_xy_samples(comm, decomp, rank, local, nx, ny);
   const auto gsz = pfc::domain::get_size(pfc::decomposition::domain(decomp));
   const double area = periodic_positive_area(field.data(), gsz[0], gsz[1]);
   const PlanarFronts fronts =
-      samples->planar ? planar_fronts(field.data(), gsz[0], gsz[1])
-                      : PlanarFronts{};
+      samples->planar ? planar_fronts(field.data(), gsz[0], gsz[1]) : PlanarFronts{};
   double *slot = &samples->area_initial;
   PlanarFronts *dest = &samples->fronts_initial;
   switch (when) {
-  case SampleWhen::Initial:
-    break;
+  case SampleWhen::Initial: break;
   case SampleWhen::Half:
     slot = &samples->area_half;
     dest = &samples->fronts_half;
@@ -853,8 +851,8 @@ analyse_interface_kinetics(const AreaSamples &a, const RunConfig &cfg, double dx
   // The prediction is evaluated at the mean radius over the interval the
   // measurement covers, which is the last half of the run. Using R_final
   // instead would compare a mean velocity with an instantaneous one.
-  k.v_predicted = curvature_corrected_velocity(k.v_theory, cfg.M,
-                                               0.5 * (k.r_half + k.r_final));
+  k.v_predicted =
+      curvature_corrected_velocity(k.v_theory, cfg.M, 0.5 * (k.r_half + k.r_final));
 
   const double dt_half = 0.5 * static_cast<double>(cfg.n_steps) * cfg.dt;
   const double dt_quarter = 0.5 * dt_half;
@@ -865,11 +863,10 @@ analyse_interface_kinetics(const AreaSamples &a, const RunConfig &cfg, double dx
     k.v_third_quarter = (k.r_three_quarter - k.r_half) / dt_quarter;
     k.v_fourth_quarter = (k.r_final - k.r_three_quarter) / dt_quarter;
   }
-  const double v_scale = std::max(std::abs(k.v_third_quarter),
-                                  std::abs(k.v_fourth_quarter));
-  k.steady = (v_scale <= 0.0) ||
-             (std::abs(k.v_fourth_quarter - k.v_third_quarter) <=
-              RunConfig::kSteadyTolerance * v_scale);
+  const double v_scale =
+      std::max(std::abs(k.v_third_quarter), std::abs(k.v_fourth_quarter));
+  k.steady = (v_scale <= 0.0) || (std::abs(k.v_fourth_quarter - k.v_third_quarter) <=
+                                  RunConfig::kSteadyTolerance * v_scale);
 
   if (a.initial <= 0) {
     k.verdict = CheckVerdict::Fail;
@@ -985,8 +982,7 @@ inline void report_interface_kinetics(int rank, const AreaSamples &a,
   os << ", R_half=";
   with_subcell(k.r_half, sub == nullptr ? 0.0 : sub->area_half);
   os << ", R_3q=";
-  with_subcell(k.r_three_quarter,
-               sub == nullptr ? 0.0 : sub->area_three_quarter);
+  with_subcell(k.r_three_quarter, sub == nullptr ? 0.0 : sub->area_three_quarter);
   os << ", R1=";
   with_subcell(k.r_final, sub == nullptr ? 0.0 : sub->area_final);
   os << "\n";
@@ -1013,10 +1009,10 @@ inline void report_interface_kinetics(int rank, const AreaSamples &a,
   os << "Interface velocity dR/dt (last half): v_late=" << k.v_late
      << ", per quarter " << k.v_third_quarter << " / " << k.v_fourth_quarter
      << " (steady=" << (k.steady ? "yes" : "no") << ")\n";
-  os << "Sharp-interface prediction (3/2) F eps sqrt(2M): v_theory="
-     << k.v_theory << "\n";
-  os << "Critical radius M/v_theory = " << k.r_critical
-     << " (R0=" << k.r_initial << ")";
+  os << "Sharp-interface prediction (3/2) F eps sqrt(2M): v_theory=" << k.v_theory
+     << "\n";
+  os << "Critical radius M/v_theory = " << k.r_critical << " (R0=" << k.r_initial
+     << ")";
   if (k.r_initial < k.r_critical) {
     os << "  [WARNING: the seed is subcritical — curvature beats the "
           "driving force and it will dissolve]";

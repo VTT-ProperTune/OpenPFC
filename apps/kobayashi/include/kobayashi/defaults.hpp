@@ -5,7 +5,8 @@
 
 /**
  * @file defaults.hpp
- * @brief Material and output defaults matching the historical Julia `kobayashi_v1` script.
+ * @brief Material and output defaults matching the historical Julia `kobayashi_v1`
+ * script.
  */
 
 namespace kobayashi {

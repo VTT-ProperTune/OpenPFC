@@ -120,7 +120,8 @@ public:
         m_box(pfc::decomposition::local_box(decomp, rank)),
         m_phi(domain, m_box, fd_order / 2), m_U(make_field_(domain, fd_order)),
         m_theta(make_field_(domain, fd_order)), m_psi(make_field_(domain, fd_order)),
-        m_dphidt(make_field_(domain, fd_order)), m_tau(make_field_(domain, fd_order)),
+        m_dphidt(make_field_(domain, fd_order)),
+        m_tau(make_field_(domain, fd_order)),
         m_lap_theta(make_field_(domain, fd_order)),
         m_gx(make_field_(domain, fd_order)), m_gy(make_field_(domain, fd_order)),
         m_gz(make_field_(domain, fd_order)), m_Fx(make_field_(domain, fd_order)),
@@ -136,7 +137,8 @@ public:
           "alloy_dendrite::DeviceStepper: fd_order must be even and in [2, 14]");
     }
     if (m_p.k <= 0.0 || m_p.k >= 1.0) {
-      throw std::invalid_argument("alloy_dendrite::DeviceStepper: k must be in (0,1)");
+      throw std::invalid_argument(
+          "alloy_dendrite::DeviceStepper: k must be in (0,1)");
     }
     // Same floor as the host stepper: a non-positive interface width is not a
     // model. Refuse rather than produce plausible-looking nonsense.

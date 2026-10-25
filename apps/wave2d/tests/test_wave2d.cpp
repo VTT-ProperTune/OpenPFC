@@ -241,8 +241,8 @@ TEST_CASE("step_wave_separated_order2_cpu short vs padded manual single rank",
     }
   }
   auto face_halos = pfc::halo::allocate_face_halos<double>(decomp, rank, 1);
-  comm::SparseExchange<HostSpace, double> exch(u_sep, decomp,
-                                               rank, MPI_COMM_WORLD, 1);
+  comm::SparseExchange<HostSpace, double> exch(u_sep, decomp, rank, MPI_COMM_WORLD,
+                                               1);
   for (int s = 0; s < n_steps; ++s) {
     wave2d::step_wave_separated_order2_cpu(u_sep, v_sep, lap_sep, face_halos, exch,
                                            nx, ny, nz, decomp, rank, dt,
@@ -439,8 +439,8 @@ TEST_CASE("wave2d CPU golden matches CPU-vs-CUDA config",
   std::vector<double> lap(nlocal);
   constexpr int halo_width = 1;
   auto face = pfc::halo::allocate_face_halos<double>(decomp, rank, halo_width);
-  pfc::comm::SparseExchange<pfc::HostSpace, double> exch(
-      u, decomp, rank, MPI_COMM_WORLD, halo_width);
+  pfc::comm::SparseExchange<pfc::HostSpace, double> exch(u, decomp, rank,
+                                                         MPI_COMM_WORLD, halo_width);
   for (int s = 0; s < n_steps; ++s) {
     (void)s;
     wave2d::step_wave_separated_order2_cpu(u, v, lap, face, exch, nx, ny, nz, decomp,
@@ -586,18 +586,17 @@ TEST_CASE("fd_order > 2 halo exchange constructs on an nz==1 slab",
     pfc::field::fd::EvenCentralD2View stencil{};
     INFO("fd_order = " << fd_order);
     REQUIRE(pfc::field::fd::lookup_even_central_d2(fd_order, &stencil));
-    auto u = pfc::data::field_from_subdomain<double>(decomp, rank,
-                                                     stencil.half_width);
+    auto u =
+        pfc::data::field_from_subdomain<double>(decomp, rank, stencil.half_width);
     REQUIRE_NOTHROW(comm::HaloExchange<HostSpace, double>(u, decomp, rank,
-                                                           MPI_COMM_WORLD,
-                                                           in_plane));
+                                                          MPI_COMM_WORLD, in_plane));
   }
 
   // Asking for +/-Z on a 1-thick z is still an error, and still says why.
   auto u4 = pfc::data::field_from_subdomain<double>(decomp, rank, 2);
-  REQUIRE_THROWS_AS((comm::HaloExchange<HostSpace, double>(u4, decomp, rank,
-                                                            MPI_COMM_WORLD)),
-                    std::invalid_argument);
+  REQUIRE_THROWS_AS(
+      (comm::HaloExchange<HostSpace, double>(u4, decomp, rank, MPI_COMM_WORLD)),
+      std::invalid_argument);
 }
 
 TEST_CASE("fd_order 4 steps the 2-D slab and reports a finite interior RMS",
@@ -654,9 +653,9 @@ TEST_CASE("fd_order 4 steps the 2-D slab and reports a finite interior RMS",
       const double *core = u.data();
       const auto c = static_cast<std::ptrdiff_t>(u.idx(i, j, k));
       const double dxx = pfc::field::fd::apply_d2_along<0>(stencil, core, c, 1,
-                                                            sy_stride, sz_stride);
+                                                           sy_stride, sz_stride);
       const double dyy = pfc::field::fd::apply_d2_along<1>(stencil, core, c, 1,
-                                                            sy_stride, sz_stride);
+                                                           sy_stride, sz_stride);
       lap(i, j, k) = inv_den * (dxx + dyy);
     });
     u.for_each_owned([&](int i, int j, int k) {
