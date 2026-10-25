@@ -74,7 +74,7 @@ public:
     const double count = double(n[0]) * n[1] * n[2];
 
     double local_mean = 0.0, local_local_terms = 0.0;
-    psi.with_host_view([&](double *v, std::size_t m) {
+    psi.with_host_read([&](const double *v, std::size_t m) {
       for (std::size_t i = 0; i < m; ++i) {
         local_mean += v[i];
         const double v2 = v[i] * v[i];
@@ -99,13 +99,13 @@ public:
     Ops::backward(m_fft, work, m_quad);
 
     double local_quad = 0.0;
-    psi.with_host_view([&](double *v, std::size_t m) {
-      m_quad.with_host_view([&](double *lv, std::size_t) {
+    psi.with_host_read([&](const double *v, std::size_t m) {
+      m_quad.with_host_read([&](const double *lv, std::size_t) {
         for (std::size_t i = 0; i < m; ++i) local_quad += 0.5 * v[i] * lv[i];
       });
     });
 
-    m_hat.with_host_view([&](std::complex<double> *hat, std::size_t) {
+    m_hat.with_host_read([&](const std::complex<double> *hat, std::size_t) {
       out.sf = pfc::fft::radial_average(m_fft.get_outbox_bounds(), m_domain, hat,
                                         m_comm, sf_bins);
     });

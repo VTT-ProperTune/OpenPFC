@@ -70,9 +70,9 @@ void copy_device_to_host(DevField &dev, HostField &host) {
   if (host.size() != dev.size()) {
     throw std::runtime_error("heat3d_spectral_hip: host/device size mismatch");
   }
-  dev.with_host_view(
-      [&](double *data, std::size_t n) { std::copy(data, data + n, host.data()); });
-  dev.note_device_write();
+  dev.with_host_read([&](const double *data, std::size_t n) {
+    std::copy(data, data + n, host.data());
+  });
 }
 
 int env_int(const char *name, int fallback) {

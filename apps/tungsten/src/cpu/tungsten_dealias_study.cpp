@@ -149,7 +149,7 @@ Outcome run_case(int n, double dx, int n_steps, bool dealias, int rank, int npro
   });
 
   double lo = 1e300, hi = -1e300, sum = 0.0, cnt = 0.0;
-  psi.with_host_view([&](const double *p, std::size_t m) {
+  psi.with_host_read([&](const double *p, std::size_t m) {
     for (std::size_t i = 0; i < m; ++i) {
       lo = std::min(lo, p[i]);
       hi = std::max(hi, p[i]);
@@ -163,7 +163,7 @@ Outcome run_case(int n, double dx, int n_steps, bool dealias, int rank, int npro
   MPI_Allreduce(&hi, &ghi, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
   double l2_local = 0.0, n_local = 0.0;
-  psi.with_host_view([&](const double *p, std::size_t m) {
+  psi.with_host_read([&](const double *p, std::size_t m) {
     for (std::size_t i = 0; i < m; ++i) {
       l2_local += p[i] * p[i];
       n_local += 1.0;

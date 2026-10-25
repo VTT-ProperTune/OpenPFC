@@ -135,8 +135,8 @@ public:
     // theta(x) = atan2(h_y, h_x), gradient evaluated spectrally.
     spectral_derivative(m_kx, m_h_hat, m_hx);
     spectral_derivative(m_ky, m_h_hat, m_hy);
-    m_hx.with_host_view([&](const double *hx, std::size_t n) {
-      m_hy.with_host_view([&](const double *hy, std::size_t) {
+    m_hx.with_host_read([&](const double *hx, std::size_t n) {
+      m_hy.with_host_read([&](const double *hy, std::size_t) {
         m_theta.with_host_view([&](double *th, std::size_t) {
           m_Btheta.with_host_view([&](double *b, std::size_t) {
             for (std::size_t i = 0; i < n; ++i) {
@@ -150,7 +150,7 @@ public:
 
     // p_hat = -k_lap * h_hat = FFT(-lap h)
     const std::size_t n_out = m_fft.size_outbox();
-    m_h_hat.with_host_view([&](const Complex *hh, std::size_t) {
+    m_h_hat.with_host_read([&](const Complex *hh, std::size_t) {
       m_p_hat.with_host_view([&](Complex *p, std::size_t) {
         for (std::size_t i = 0; i < n_out; ++i) p[i] = -m_k_lap[i] * hh[i];
       });
@@ -161,7 +161,7 @@ public:
 
     // ETD1: h_hat_new = expL*h_hat + phi1*(div_hat - L0*h_hat).
     m_h_hat.with_host_view([&](Complex *hh, std::size_t) {
-      m_div_hat.with_host_view([&](const Complex *d, std::size_t) {
+      m_div_hat.with_host_read([&](const Complex *d, std::size_t) {
         for (std::size_t i = 0; i < n_out; ++i) {
           const Complex nl = d[i] - m_L0[i] * hh[i];
           hh[i] = m_expL[i] * hh[i] + m_phi1[i] * nl;
@@ -183,12 +183,11 @@ public:
 
   /// Local |grad h| from the most recent `step`, for the max-slope observable.
   ///
-  /// Not `const`: `Field::with_host_view` is a non-const accessor even for a
-  /// read-only pass (it brackets host/device coherence), so this method
-  /// cannot be `const` while it reads `m_hx`/`m_hy` through it.
-  void grad_magnitude(RealField &out) {
-    m_hx.with_host_view([&](const double *hx, std::size_t n) {
-      m_hy.with_host_view([&](const double *hy, std::size_t) {
+  /// with_host_read keeps the input mirrors current without invalidating
+  /// device data. Only the output field is modified.
+  void grad_magnitude(RealField &out) const {
+    m_hx.with_host_read([&](const double *hx, std::size_t n) {
+      m_hy.with_host_read([&](const double *hy, std::size_t) {
         out.with_host_view([&](double *g, std::size_t) {
           for (std::size_t i = 0; i < n; ++i)
             g[i] = std::sqrt(hx[i] * hx[i] + hy[i] * hy[i]);
@@ -201,7 +200,7 @@ private:
   void spectral_derivative(const std::vector<double> &k, ComplexField &f_hat,
                            RealField &out) {
     const std::size_t n_out = m_fft.size_outbox();
-    f_hat.with_host_view([&](const Complex *f, std::size_t) {
+    f_hat.with_host_read([&](const Complex *f, std::size_t) {
       m_grad_hat.with_host_view([&](Complex *g, std::size_t) {
         for (std::size_t i = 0; i < n_out; ++i) g[i] = Complex{0.0, k[i]} * f[i];
       });

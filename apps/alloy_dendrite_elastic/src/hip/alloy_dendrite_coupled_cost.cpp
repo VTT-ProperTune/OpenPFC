@@ -201,7 +201,7 @@ void pull_three(DevField &phi_d, DevField &u_d, DevField &th_d, RealField &phi_h
     const std::size_t npx = static_cast<std::size_t>(n[0] + 2 * hw);
     const std::size_t npy = static_cast<std::size_t>(n[1] + 2 * hw);
     RealField &out = *dst[f];
-    src[f]->with_host_view([&](const double *data, std::size_t) {
+    src[f]->with_host_read([&](const double *data, std::size_t) {
       for (int k = 0; k < n[2]; ++k) {
         for (int j = 0; j < n[1]; ++j) {
           for (int i = 0; i < n[0]; ++i) {

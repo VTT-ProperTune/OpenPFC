@@ -28,7 +28,7 @@ void invert_hats(const Physics &phys, const pfc::fft::IFFTQueries &fft,
                  const pfc::Domain &domain, ComplexField &g_hat,
                  ComplexField &ux_hat, ComplexField &uy_hat) {
   const auto outbox = fft.get_outbox_bounds();
-  g_hat.with_host_view([&](auto *gh, std::size_t) {
+  g_hat.with_host_read([&](const auto *gh, std::size_t) {
     ux_hat.with_host_view([&](auto *uxh, std::size_t) {
       uy_hat.with_host_view([&](auto *uyh, std::size_t) {
         pfc::fft::kspace::for_each_kpoint(
@@ -81,7 +81,7 @@ void invert_hats_with_strain(const Physics &phys, const pfc::fft::IFFTQueries &f
                              ComplexField &exx_hat, ComplexField &eyy_hat,
                              ComplexField &exy_hat) {
   const auto outbox = fft.get_outbox_bounds();
-  g_hat.with_host_view([&](auto *gh, std::size_t) {
+  g_hat.with_host_read([&](const auto *gh, std::size_t) {
     ux_hat.with_host_view([&](auto *uxh, std::size_t) {
       uy_hat.with_host_view([&](auto *uyh, std::size_t) {
         exx_hat.with_host_view([&](auto *exxh, std::size_t) {

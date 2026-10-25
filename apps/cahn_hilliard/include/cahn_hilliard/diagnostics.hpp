@@ -112,7 +112,7 @@ public:
     Ops::forward(m_fft, field, m_hat);
     // The same transform serves the gradient energy and the spectrum.
     // radial_average drops k=0, so the mean does not have to be removed first.
-    m_hat.with_host_view([&](typename Ops::Complex *hat, std::size_t) {
+    m_hat.with_host_read([&](const typename Ops::Complex *hat, std::size_t) {
       const auto spectrum = pfc::fft::radial_average(
           m_fft.get_outbox_bounds(), m_domain, hat, m_comm, m_sf_bins);
       result.k1 = spectrum.first_moment;
@@ -123,8 +123,8 @@ public:
     Ops::multiply(m_hat, m_weights, m_work);
     Ops::backward(m_fft, m_work, m_lap);
     double gradient = 0;
-    field.with_host_view([&](double *c, std::size_t count) {
-      m_lap.with_host_view([&](double *lap, std::size_t) {
+    field.with_host_read([&](const double *c, std::size_t count) {
+      m_lap.with_host_read([&](const double *lap, std::size_t) {
         for (std::size_t i = 0; i < count; ++i) gradient -= c[i] * lap[i];
       });
     });

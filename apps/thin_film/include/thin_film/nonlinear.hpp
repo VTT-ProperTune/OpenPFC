@@ -109,7 +109,7 @@ template <class MemorySpace = pfc::HostSpace>
                                             double rupture_frac, MPI_Comm comm) {
   double lo = std::numeric_limits<double>::infinity(), hi = -lo;
   double local_sum = 0.0, local_holes = 0.0, local_cells = 0.0;
-  h.with_host_view([&](const double *d, std::size_t n) {
+  h.with_host_read([&](const double *d, std::size_t n) {
     for (std::size_t i = 0; i < n; ++i) {
       lo = std::min(lo, d[i]);
       hi = std::max(hi, d[i]);

@@ -109,10 +109,10 @@ void copy_device_to_host(DevField &dev, HostField &host) {
   if (host.size() != dev.size()) {
     throw std::runtime_error("copy_device_to_host: size mismatch");
   }
-  dev.with_host_view(
-      [&](double *data, std::size_t n) { std::copy(data, data + n, host.data()); });
+  dev.with_host_read([&](const double *data, std::size_t n) {
+    std::copy(data, data + n, host.data());
+  });
   // Read-only pull: keep the device buffer as the source of truth.
-  dev.note_device_write();
 }
 
 void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {

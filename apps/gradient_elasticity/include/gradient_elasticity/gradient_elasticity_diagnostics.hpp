@@ -57,7 +57,7 @@ struct StressSummary {
 /// Fill `sxx`/`syy`/`sxy`/`stress_hydro`/`stress_vm`/`energy_density` from
 /// the strain fields `exx`/`eyy`/`exy` and the eigenstrain field `g`, using
 /// `phys.stress_state` pointwise. Works uniformly for a host or a
-/// device-backed field via `with_host_view` (identity for `HostSpace`).
+/// device-backed field via `with_host_read` (identity for `HostSpace`).
 template <class Physics, class MemorySpace>
 void compute_stress_fields(const Physics &phys,
                            pfc::data::Field<double, MemorySpace> &g,
@@ -70,10 +70,10 @@ void compute_stress_fields(const Physics &phys,
                            pfc::data::Field<double, MemorySpace> &stress_hydro,
                            pfc::data::Field<double, MemorySpace> &stress_vm,
                            pfc::data::Field<double, MemorySpace> &energy_density) {
-  g.with_host_view([&](double *gp, std::size_t n) {
-    exx.with_host_view([&](double *exxp, std::size_t) {
-      eyy.with_host_view([&](double *eyyp, std::size_t) {
-        exy.with_host_view([&](double *exyp, std::size_t) {
+  g.with_host_read([&](const double *gp, std::size_t n) {
+    exx.with_host_read([&](const double *exxp, std::size_t) {
+      eyy.with_host_read([&](const double *eyyp, std::size_t) {
+        exy.with_host_read([&](const double *exyp, std::size_t) {
           sxx.with_host_view([&](double *sxxp, std::size_t) {
             syy.with_host_view([&](double *syyp, std::size_t) {
               sxy.with_host_view([&](double *sxyp, std::size_t) {
@@ -156,12 +156,12 @@ void write_line_profile(const std::filesystem::path &path,
   const int j0 = std::clamp(
       static_cast<int>(std::lround((y0 - g.origin()[1]) / g.spacing()[1])), 0,
       size[1] - 1);
-  g.with_host_view([&](double *gp, std::size_t) {
-    ux.with_host_view([&](double *uxp, std::size_t) {
-      uy.with_host_view([&](double *uyp, std::size_t) {
-        stress_hydro.with_host_view([&](double *pp, std::size_t) {
-          stress_vm.with_host_view([&](double *vmp, std::size_t) {
-            energy_density.with_host_view([&](double *wp, std::size_t) {
+  g.with_host_read([&](const double *gp, std::size_t) {
+    ux.with_host_read([&](const double *uxp, std::size_t) {
+      uy.with_host_read([&](const double *uyp, std::size_t) {
+        stress_hydro.with_host_read([&](const double *pp, std::size_t) {
+          stress_vm.with_host_read([&](const double *vmp, std::size_t) {
+            energy_density.with_host_read([&](const double *wp, std::size_t) {
               for (int i = 0; i < size[0]; ++i) {
                 const auto c = g.coords(i, j0, 0);
                 const std::size_t idx = g.idx(i, j0, 0);

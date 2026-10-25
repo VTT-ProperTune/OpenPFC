@@ -51,9 +51,8 @@ void copy_host_to_device(const std::vector<double> &host, DevField &dev) {
 }
 
 void copy_device_to_host(DevField &dev, std::vector<double> &host) {
-  dev.with_host_view(
-      [&](double *data, std::size_t n) { host.assign(data, data + n); });
-  dev.note_device_write();
+  dev.with_host_read(
+      [&](const double *data, std::size_t n) { host.assign(data, data + n); });
 }
 
 } // namespace

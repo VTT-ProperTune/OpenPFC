@@ -107,7 +107,7 @@ Sample sample_surface(pfc::data::Field<double> &h, const pfc::Domain &domain,
 
   pfc::fft::RadialSpectrum spectrum;
   pfc::fft::DirectionalPower axes;
-  h_hat.with_host_view([&](const std::complex<double> *hv, std::size_t) {
+  h_hat.with_host_read([&](const std::complex<double> *hv, std::size_t) {
     spectrum =
         pfc::fft::radial_average(fft.get_outbox_bounds(), domain, hv, comm, 64);
     axes = pfc::fft::directional_power(fft.get_outbox_bounds(), domain, hv, comm);
@@ -133,7 +133,7 @@ Sample sample_surface(pfc::data::Field<double> &h, const pfc::Domain &domain,
       });
   pfc::data::Field<std::complex<double>> gx_hat(domain, fft.get_outbox_bounds(), 0);
   pfc::data::Field<std::complex<double>> gy_hat(domain, fft.get_outbox_bounds(), 0);
-  h_hat.with_host_view([&](const std::complex<double> *hv, std::size_t n) {
+  h_hat.with_host_read([&](const std::complex<double> *hv, std::size_t n) {
     gx_hat.with_host_view([&](std::complex<double> *gx, std::size_t) {
       gy_hat.with_host_view([&](std::complex<double> *gy, std::size_t) {
         for (std::size_t i = 0; i < n; ++i) {
@@ -148,8 +148,8 @@ Sample sample_surface(pfc::data::Field<double> &h, const pfc::Domain &domain,
   pfc::sim::SpectralETDOps<pfc::HostSpace>::backward(fft, gx_hat, hx);
   pfc::sim::SpectralETDOps<pfc::HostSpace>::backward(fft, gy_hat, hy);
   double local_max = 0.0;
-  hx.with_host_view([&](const double *gx, std::size_t n) {
-    hy.with_host_view([&](const double *gy, std::size_t) {
+  hx.with_host_read([&](const double *gx, std::size_t n) {
+    hy.with_host_read([&](const double *gy, std::size_t) {
       for (std::size_t i = 0; i < n; ++i)
         local_max = std::max(local_max, std::sqrt(gx[i] * gx[i] + gy[i] * gy[i]));
     });

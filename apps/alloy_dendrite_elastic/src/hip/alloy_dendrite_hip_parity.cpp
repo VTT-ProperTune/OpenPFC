@@ -87,11 +87,11 @@
 #include <openpfc/runtime/common/mpi_main.hpp>
 #include <openpfc/runtime/gpu/bind_local_device.hpp>
 
-#include <openpfc/frontend/utils/cli_options.hpp>
 #include <alloy_dendrite/device_stepper_hip.hpp>
 #include <alloy_dendrite/diagnostics.hpp>
 #include <alloy_dendrite/parameters.hpp>
 #include <alloy_dendrite/step.hpp>
+#include <openpfc/frontend/utils/cli_options.hpp>
 
 namespace {
 
@@ -157,7 +157,7 @@ void pull_owned(DevField &dev, std::vector<double> &out) {
   const std::size_t npy = static_cast<std::size_t>(n[1] + 2 * hw);
   out.resize(static_cast<std::size_t>(n[0]) * static_cast<std::size_t>(n[1]) *
              static_cast<std::size_t>(n[2]));
-  dev.with_host_view([&](const double *data, std::size_t) {
+  dev.with_host_read([&](const double *data, std::size_t) {
     std::size_t q = 0;
     for (int k = 0; k < n[2]; ++k) {
       for (int j = 0; j < n[1]; ++j) {
@@ -218,9 +218,8 @@ void gather_global(const pfc::decomposition::Decomposition &decomp, int rank,
   if (rank == 0) {
     flat.resize(static_cast<std::size_t>(total));
   }
-  MPI_Gatherv(local.data(), my_count, MPI_DOUBLE,
-              rank == 0 ? flat.data() : nullptr, counts.data(), displs.data(),
-              MPI_DOUBLE, 0, comm);
+  MPI_Gatherv(local.data(), my_count, MPI_DOUBLE, rank == 0 ? flat.data() : nullptr,
+              counts.data(), displs.data(), MPI_DOUBLE, 0, comm);
 
   if (rank != 0) {
     global_out.clear();
@@ -298,9 +297,8 @@ void write_dump(const std::string &path, const std::vector<double> &phi,
            static_cast<std::streamsize>(n * sizeof(double)));
 }
 
-void read_dump(const std::string &path, std::size_t expect,
-               std::vector<double> &phi, std::vector<double> &u,
-               std::vector<double> &th) {
+void read_dump(const std::string &path, std::size_t expect, std::vector<double> &phi,
+               std::vector<double> &u, std::vector<double> &th) {
   std::ifstream is(path, std::ios::binary);
   if (!is) {
     throw std::runtime_error("cannot open reference file " + path);
@@ -366,8 +364,7 @@ int run_parity(const ParityConfig &cfg, int rank, int nproc, MPI_Comm comm) {
   });
   host.seed_conserved_solute();
 
-  DeviceStepper<Dim> dev(domain, stack.decomposition(), rank, comm, p,
-                         cfg.fd_order);
+  DeviceStepper<Dim> dev(domain, stack.decomposition(), rank, comm, p, cfg.fd_order);
   push_padded(host.phi(), dev.phi());
   push_padded(host.solute(), dev.solute());
   push_padded(host.temperature(), dev.temperature());
@@ -480,10 +477,11 @@ int run_parity(const ParityConfig &cfg, int rank, int nproc, MPI_Comm comm) {
                 << " linf_phi=" << d_phi.linf << " linf_U=" << d_u.linf
                 << " linf_theta=" << d_th.linf << " scale_phi=" << d_phi.scale
                 << " scale_U=" << d_u.scale << " scale_theta=" << d_th.scale
-                << " rel_phi=" << (d_phi.scale > 0.0 ? d_phi.linf / d_phi.scale : 0.0)
+                << " rel_phi="
+                << (d_phi.scale > 0.0 ? d_phi.linf / d_phi.scale : 0.0)
                 << " rel_U=" << (d_u.scale > 0.0 ? d_u.linf / d_u.scale : 0.0)
-                << " rel_theta="
-                << (d_th.scale > 0.0 ? d_th.linf / d_th.scale : 0.0) << "\n";
+                << " rel_theta=" << (d_th.scale > 0.0 ? d_th.linf / d_th.scale : 0.0)
+                << "\n";
     }
     if (cfg.with_cpu && !C_phi.empty()) {
       const double sp_c = ordered_sum(C_phi);
@@ -515,13 +513,12 @@ int run_parity(const ParityConfig &cfg, int rank, int nproc, MPI_Comm comm) {
   }
 
   if (cfg.tol > 0.0) {
-    const double worst_local =
-        std::max({d_phi.linf, d_u.linf, d_th.linf, rank_linf[0], rank_linf[1],
-                  rank_linf[2]});
+    const double worst_local = std::max(
+        {d_phi.linf, d_u.linf, d_th.linf, rank_linf[0], rank_linf[1], rank_linf[2]});
     if (!(worst_local <= cfg.tol)) {
       if (rank == 0) {
-        std::cerr << "ALLOY_PARITY_FAIL worst=" << worst_local
-                  << " tol=" << cfg.tol << "\n";
+        std::cerr << "ALLOY_PARITY_FAIL worst=" << worst_local << " tol=" << cfg.tol
+                  << "\n";
       }
       rc = EXIT_FAILURE;
     } else if (rank == 0 && !cfg.quiet) {
@@ -555,8 +552,7 @@ void print_usage(std::ostream &os, const char *exe) {
      << "Comparison\n"
      << "  --tol=X                fail above this L-inf    (" << d.tol
      << "; 0 = report only)\n"
-     << "  --with-cpu=0|1         also run the host stepper (" << d.with_cpu
-     << ")\n"
+     << "  --with-cpu=0|1         also run the host stepper (" << d.with_cpu << ")\n"
      << "  --dump=PATH            write the gathered global fields\n"
      << "  --compare=PATH         compare against a dump from another run\n"
      << "  --run-id=NAME          label in the output       (" << d.run_id << ")\n"

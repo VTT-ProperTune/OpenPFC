@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
           const int done = step + 1;
           if (done == step_half || done == step_three_quarter) {
             std::int64_t n_local = 0;
-            u.with_host_view([&](double *data, std::size_t n) {
+            u.with_host_read([&](const double *data, std::size_t n) {
               n_local = allen_cahn::count_cells_above(
                   data, n, allen_cahn::RunConfig::kLevelSetThreshold);
               if (done == step_half) {
@@ -145,9 +145,6 @@ int main(int argc, char *argv[]) {
                                            allen_cahn::SampleWhen::ThreeQuarter);
               }
             });
-            // Read-only peek: the device buffer is still authoritative, and
-            // saying so avoids a pointless host->device push next step.
-            u.note_device_write();
             const std::int64_t n =
                 allen_cahn::global_area_cells(MPI_COMM_WORLD, n_local);
             if (done == step_half) areas.half = n;
@@ -156,8 +153,9 @@ int main(int argc, char *argv[]) {
         }
         MPI_Barrier(MPI_COMM_WORLD);
         const double step_elapsed_s = MPI_Wtime() - step_t0;
-        u.with_host_view(
-            [&](double *data, std::size_t n) { u_host.assign(data, data + n); });
+        u.with_host_read([&](const double *data, std::size_t n) {
+          u_host.assign(data, data + n);
+        });
         if (!cfg.png_output.empty()) {
           pfc::io::write_mpi_scalar_field_png_xy(MPI_COMM_WORLD, decomp, rank,
                                                  u_host, cfg.png_output, -1.0, 1.0);
