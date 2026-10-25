@@ -89,6 +89,43 @@ inline double seconds(Clock::time_point start) {
   return std::chrono::duration<double>(Clock::now() - start).count();
 }
 
+// Shared dispatch bookkeeping; timing observes the same semantic stages on
+// both backends and includes private scratch destruction in total_seconds.
+struct StageTiming {
+  Statistics &statistics;
+  Clock::time_point start = Clock::now();
+  Clock::time_point stage_start = start;
+  double *stage = nullptr;
+  void begin(double &duration, Clock::time_point now) {
+    stage_start = now;
+    stage = &duration;
+  }
+  void end() { stage = nullptr; }
+  Status finish(Status status) {
+    if (stage) *stage = seconds(stage_start);
+    statistics.total_seconds = seconds(start);
+    return status;
+  }
+};
+
+template <class Operation>
+auto observe_operation(const Options &options, Operation &&operation) {
+  diagnostics::Scope scope(options.diagnostics);
+  if (options.diagnostics) options.diagnostics->covered();
+  const auto start = Clock::now();
+  auto completed = [&] {
+    try {
+      return options.diagnostics ? operation.template operator()<true>()
+                                 : operation.template operator()<false>();
+    } catch (...) {
+      if (options.diagnostics) options.diagnostics->fail();
+      throw;
+    }
+  }(); // All per-operation scratch has been destroyed here.
+  completed.statistics.total_seconds = seconds(start);
+  return completed;
+}
+
 template <class Grid>
 OPENPFC_INLINE_HD bool neighbor(Grid grid, std::size_t cell, int dx, int dy, int dz,
                                 std::size_t &result) {

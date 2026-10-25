@@ -119,20 +119,13 @@ remap_dispatch(Grid grid, Slot slots,
                const pfc::core::DataBuffer<Backend, Id> &seeds,
                std::span<const Grain> grains, const Options &options = {},
                pfc::gpuStream_t stream = nullptr) {
-  diagnostics::Scope scope(options.diagnostics);
-  if (options.diagnostics) options.diagnostics->covered();
-  const auto operation_start = detail::Clock::now();
   const auto operation = [&]<bool Observe> {
     using Values = pfc::core::DataBuffer<Backend, double>;
     using Labels = pfc::core::DataBuffer<Backend, Id>;
     Result<Values, Labels> result;
-    const auto start = detail::Clock::now();
-    auto stage_start = start;
-    double *stage = nullptr;
+    detail::StageTiming timing{result.statistics};
     const auto finish = [&](Status status) {
-      if (stage) *stage = detail::seconds(stage_start);
-      result.status = status;
-      result.statistics.total_seconds = detail::seconds(start);
+      result.status = timing.finish(status);
       return std::move(result);
     };
     if (!options.check_now) return finish(Status::Deferred);
@@ -147,8 +140,7 @@ remap_dispatch(Grid grid, Slot slots,
     GPU_CHECK(pfc::gpuStreamSynchronize(stream));
     result.statistics.synchronization_seconds = detail::seconds(synchronize);
     const auto detection = detail::Clock::now();
-    stage_start = detection;
-    stage = &result.statistics.detection_seconds;
+    timing.begin(result.statistics.detection_seconds, detection);
     const auto cells = cell_count(grid), n = values.size();
     diagnostics::Observation<Backend> observation;
     diagnostics::Interval preflight_interval(diagnostics::Phase::Preflight);
@@ -213,8 +205,7 @@ remap_dispatch(Grid grid, Slot slots,
     result.statistics.detection_seconds = detail::seconds(detection);
     inspection_interval.finish();
     const auto adjacency = detail::Clock::now();
-    stage_start = adjacency;
-    stage = &result.statistics.adjacency_seconds;
+    timing.begin(result.statistics.adjacency_seconds, adjacency);
     pfc::core::DataBuffer<Backend, Contact> device_edges(options.contact_capacity);
     auto topology = tracking::adjacency(
         Backend{}, grid, slots, std::span<const Id>(propagated.data(), n), ids,
@@ -245,8 +236,7 @@ remap_dispatch(Grid grid, Slot slots,
     graph_publication_interval.finish();
     const auto solving = detail::Clock::now();
     diagnostics::Interval decision_interval(diagnostics::Phase::Decision);
-    stage_start = solving;
-    stage = &result.statistics.decision_seconds;
+    timing.begin(result.statistics.decision_seconds, solving);
     auto decision = detail::decide(graph, grains, slots, weights, options);
     result.statistics.attempts = decision.attempts;
     result.statistics.conflict = decision.conflict;
@@ -255,14 +245,13 @@ remap_dispatch(Grid grid, Slot slots,
     if (decision.status != Status::Success) return finish(decision.status);
     detail::payload(result.statistics, ids, counts, decision.moves);
     const auto moving = detail::Clock::now();
-    stage_start = moving;
-    stage = &result.statistics.transfer_seconds;
+    timing.begin(result.statistics.transfer_seconds, moving);
     result.statistics.staged_storage_bytes = n * (sizeof(double) + sizeof(Id));
     auto transaction = pfc::grain::transfer(grid, slots, values, propagated, grains,
                                             decision.moves);
     result.transfer_status = transaction.status;
     result.statistics.transfer_seconds = detail::seconds(moving);
-    stage = nullptr;
+    timing.end();
     if (transaction.status != TransferStatus::Success)
       return finish(Status::TransferFailure);
     result.values = std::move(transaction.values);
@@ -281,17 +270,7 @@ remap_dispatch(Grid grid, Slot slots,
     result.statistics.synchronization_seconds += detail::seconds(completed);
     return finish(Status::Success);
   };
-  auto completed = [&] {
-    try {
-      return options.diagnostics ? operation.template operator()<true>()
-                                 : operation.template operator()<false>();
-    } catch (...) {
-      if (options.diagnostics) options.diagnostics->fail();
-      throw;
-    }
-  }(); // Includes destruction of all private scratch.
-  completed.statistics.total_seconds = detail::seconds(operation_start);
-  return completed;
+  return detail::observe_operation(options, operation);
 }
 template <typename Backend>
 Result<pfc::core::DataBuffer<Backend, double>, pfc::core::DataBuffer<Backend, Id>>

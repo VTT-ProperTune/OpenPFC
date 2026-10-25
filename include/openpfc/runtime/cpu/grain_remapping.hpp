@@ -21,19 +21,12 @@ inline Result<> remap_dispatch(Grid grid, Slot slots, std::span<const double> va
                                std::span<const Id> seeds,
                                std::span<const Grain> grains,
                                const Options &options = {}) {
-  diagnostics::Scope scope(options.diagnostics);
-  if (options.diagnostics) options.diagnostics->covered();
-  const auto operation_start = detail::Clock::now();
   const auto operation = [&]<bool Observe> {
     auto *counters = diagnostics::host_accesses();
     Result<> result;
-    const auto start = detail::Clock::now();
-    auto stage_start = start;
-    double *stage = nullptr;
+    detail::StageTiming timing{result.statistics};
     const auto finish = [&](Status status) {
-      if (stage) *stage = detail::seconds(stage_start);
-      result.status = status;
-      result.statistics.total_seconds = detail::seconds(start);
+      result.status = timing.finish(status);
       return std::move(result);
     };
     if (!options.check_now) return finish(Status::Deferred);
@@ -46,8 +39,7 @@ inline Result<> remap_dispatch(Grid grid, Slot slots, std::span<const double> va
       return finish(Status::InvalidInput);
     }
     const auto detection = detail::Clock::now();
-    stage_start = detection;
-    stage = &result.statistics.detection_seconds;
+    timing.begin(result.statistics.detection_seconds, detection);
     const auto cells = cell_count(grid);
     std::vector<std::uint8_t> occupied(values.size());
     if constexpr (Observe) {
@@ -118,8 +110,7 @@ inline Result<> remap_dispatch(Grid grid, Slot slots, std::span<const double> va
     result.statistics.detection_seconds = detail::seconds(detection);
     const std::vector<double> weights(counts.begin(), counts.end());
     const auto adjacency = detail::Clock::now();
-    stage_start = adjacency;
-    stage = &result.statistics.adjacency_seconds;
+    timing.begin(result.statistics.adjacency_seconds, adjacency);
     auto graph = tracking::reference::contact_graph(grid, slots, propagated.labels,
                                                     options.contact_radius);
     result.statistics.edges = graph.edges.size();
@@ -127,8 +118,7 @@ inline Result<> remap_dispatch(Grid grid, Slot slots, std::span<const double> va
     if (graph.edges.size() > options.contact_capacity)
       return finish(Status::CapacityOverflow);
     const auto solving = detail::Clock::now();
-    stage_start = solving;
-    stage = &result.statistics.decision_seconds;
+    timing.begin(result.statistics.decision_seconds, solving);
     auto decision = detail::decide(graph, grains, slots, weights, options);
     result.statistics.attempts = decision.attempts;
     result.statistics.conflict = decision.conflict;
@@ -136,15 +126,14 @@ inline Result<> remap_dispatch(Grid grid, Slot slots, std::span<const double> va
     if (decision.status != Status::Success) return finish(decision.status);
     detail::payload(result.statistics, ids, counts, decision.moves);
     const auto moving = detail::Clock::now();
-    stage_start = moving;
-    stage = &result.statistics.transfer_seconds;
+    timing.begin(result.statistics.transfer_seconds, moving);
     result.statistics.staged_storage_bytes =
         values.size() * (sizeof(double) + sizeof(Id));
     auto transaction = pfc::grain::transfer(grid, slots, values, propagated.labels,
                                             grains, decision.moves);
     result.transfer_status = transaction.status;
     result.statistics.transfer_seconds = detail::seconds(moving);
-    stage = nullptr;
+    timing.end();
     if (transaction.status != TransferStatus::Success)
       return finish(Status::TransferFailure);
     result.values = std::move(transaction.values);
@@ -158,17 +147,7 @@ inline Result<> remap_dispatch(Grid grid, Slot slots, std::span<const double> va
         occupied.size() + propagated.labels.size() * sizeof(Id);
     return finish(Status::Success);
   };
-  auto completed = [&] {
-    try {
-      return options.diagnostics ? operation.template operator()<true>()
-                                 : operation.template operator()<false>();
-    } catch (...) {
-      if (options.diagnostics) options.diagnostics->fail();
-      throw;
-    }
-  }(); // Includes destruction of all private scratch.
-  completed.statistics.total_seconds = detail::seconds(operation_start);
-  return completed;
+  return detail::observe_operation(options, operation);
 }
 inline Result<> remap(Grid2D grid, Slot slots, std::span<const double> values,
                       std::span<const Id> seeds, std::span<const Grain> grains,
