@@ -252,6 +252,68 @@ From a source checkout, build through `scripts/build.sh` first.
 `builds/release/bin/openpfc`; set `OPENPFC_CLI` for another build directory.
 Only the native executable is installed as `bin/openpfc`.
 
-For existing baked tungsten cases, the [legacy CPU runtime baker](../../containers/runtime/README.md)
-continues to package the native CLI and its runtime dependencies. Native
-model-specific SIF bundling is the separate follow-up in issue #636.
+## Package a CPU model
+
+`openpfc bundle` packages the model produced by `compile` or `run`. The image
+contains that executable, the shared libraries that are not part of the host
+MPI stack or the base glibc, and a provenance file. It does not contain a
+compiler, the OpenPFC sources, SDK headers or Python. The model is not rebuilt
+inside the image.
+
+```bash
+openpfc bundle model.cpp -o model.sif --base /path/to/base.sif \
+  --host-prefix /path/to/openmpi --host-prefix /path/to/ucx
+```
+
+Use the same `--sdk`, compiler and `--build-type` options as the compile that
+should be packaged. `--profile=local-cpu` is the qualified profile (`local` is
+accepted). `--profile=tohtori-cuda` and `--profile=lumi-g` are rejected; those
+GPU profiles are not qualified. `--site=openmpi` is the default host stack.
+`--site=cray` classifies Cray MPICH, libfabric and Slingshot libraries as host
+libraries. That is not a ROCm qualification.
+
+Open MPI, UCX and PMIx installations are selected with `--host-prefix`. A
+fabric library that shares a directory with the C library, such as `libfabric`
+or `libibverbs` in `/usr/lib64`, is not selected that way: binding the whole
+directory would hide the base image's libraries. Pass each such file with
+`--host-lib`. The command prints the missing file. A provider directory beside
+that file (`libfabric`, `libibverbs` or `hwloc`) is bind-mounted when it exists
+and is not itself a system library directory. Other plugins opened only with
+`dlopen` are not copied. Ordinary libraries from the same directory, such as
+`libstdc++`, `libevent` and `libnuma`, are copied into the image.
+`--host-prefix` must not be `/`, `/usr/lib64` or another system library
+directory.
+
+`--base` is a pinned local Apptainer/Singularity image that supplies glibc and
+`/bin/sh`. Its glibc must be at least as new as the GLIBC symbol versions
+required by the model and the host libraries. The CLI checks that version when
+it builds the image. Scratch images are not qualified.
+
+`--prepare-only` writes the recipe under the cache and does not run a container
+runtime. The printed directory contains `bundle.def`, `payload/` and
+`run-host.sh`. Building an image needs `apptainer` or `singularity` on a host
+that is allowed to build images. A LUMI login node is not assumed to be able to
+build one. Pass `--runtime=singularity` where the site provides SingularityCE.
+
+The command refuses to overwrite `model.sif`, `model.sif.sha256` or
+`model.sif.run`. The sidecar is the image digest. That digest is not written
+into the image, because the image bytes would then depend on themselves.
+`/opt/openpfc/provenance.json` inside the image records the content-addressed
+`build_id`, SDK manifest digest, library closure and host/bundled
+classification. The closure is the ELF `NEEDED` graph. A library that the model
+opens only with `dlopen` is not copied.
+
+`model.sif.run` is a POSIX `sh` helper. It bind-mounts the declared host MPI
+prefixes read-only and executes the image. When `TMPDIR` or
+`PMIX_SERVER_TMPDIR` is set, as it is under `mpirun`, the helper also
+bind-mounts that directory so the process manager's session is visible.
+`./model.sif input.json` passes
+arguments through the runscript, and it works when the required libraries are
+already visible to the container. Host MPI is not visible that way unless the
+helper, or an equivalent bind, is used. An optional `--input FILE` stores one
+frozen input in the image and records its digest. Calling the image with
+arguments still passes those arguments to the model.
+
+Catalogued app cases are a different packaging path. The
+[legacy CPU runtime baker](../../containers/runtime/README.md) still packages a
+compiled tungsten case with `scripts/bake_case.py`.

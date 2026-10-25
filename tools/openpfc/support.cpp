@@ -357,7 +357,7 @@ fs::path cache_root() {
     fs::permissions(root, fs::perms::owner_all);
   else if ((status.st_mode & (S_IWGRP | S_IWOTH)) != 0)
     throw Error("cache must not be writable by other users: " + root.string());
-  for (const auto *directory : {"builds", "runs", "locks", "staging"})
+  for (const auto *directory : {"builds", "runs", "bundles", "locks", "staging"})
     safe_directory(root / directory);
   return root;
 }

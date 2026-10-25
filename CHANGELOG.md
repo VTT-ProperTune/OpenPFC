@@ -7,6 +7,17 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Add `openpfc bundle` to package a compiled CPU model, its non-MPI runtime
+  libraries and its build fingerprint into an Apptainer/Singularity recipe.
+  Host MPI stays outside the image. Fabric libraries that share a system
+  directory stay on the host through `--host-lib` and are not copied. The
+  launch helper bind-mounts `TMPDIR` when an outer process manager has set
+  it.
+  `--prepare-only` stages the recipe without a container runtime.
+  `tohtori-cuda` and `lumi-g` are rejected until those profiles are qualified.
+  The image does not contain Python, and catalogued app cases still use
+  `scripts/bake_case.py` (#636).
+
 - Add `openpfc init DIR --model=diffusion` to create an editable C++20
   finite-difference model, input and usage guide. The starter runs with an
   installed CPU SDK on one or multiple MPI ranks and writes field CSVs and

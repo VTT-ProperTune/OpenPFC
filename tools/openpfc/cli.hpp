@@ -88,4 +88,19 @@ Build compile_source(const Arguments &args);
 int doctor(const Arguments &args);
 int run_source(const Arguments &args);
 int export_record(const Arguments &args);
+struct RuntimeLibrary {
+  std::string soname;
+  fs::path path;
+  int glibc_major = 0;
+  int glibc_minor = 0;
+};
+struct RuntimeClosure {
+  fs::path executable;
+  std::string interpreter;
+  int glibc_major = 0;
+  int glibc_minor = 0;
+  std::vector<RuntimeLibrary> libraries;
+};
+RuntimeClosure dynamic_closure(const fs::path &executable);
+int bundle_model(const Arguments &args);
 } // namespace openpfc_cli

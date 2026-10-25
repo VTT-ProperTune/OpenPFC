@@ -11,6 +11,9 @@ non-MPI runtime dependencies. MPI, PMIx, and UCX remain on the host and are
 mounted read-only by the generated `run-host.sh`. The application is not
 recompiled inside the image.
 
+A compiled user model takes a different path. `openpfc bundle` packages that
+model without Python. This baker remains the catalogued-app flow.
+
 Two host MPI stacks are supported, selected with `--site`:
 
 | `--site` | stack | tested on |

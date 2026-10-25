@@ -38,6 +38,7 @@ int main(int argc, char **argv) {
     if (args.command == "init" || args.command == "apps")
       return catalog_command(args);
     if (args.command == "export") return export_record(args);
+    if (args.command == "bundle") return bundle_model(args);
     if (args.command != "compile" && args.command != "run")
       throw Error("unknown command: " + args.command + "; use --help");
     if (args.positional.empty())
