@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file ui/ui.hpp
+ * @file ui_components.hpp
  * @brief Main UI header - includes all UI components
  *
  * @details
@@ -23,12 +23,12 @@
  * @date 2025
  */
 
-#ifndef PFC_UI_UI_HPP
-#define PFC_UI_UI_HPP
+#ifndef PFC_FRONTEND_UI_UI_COMPONENTS_HPP
+#define PFC_FRONTEND_UI_UI_COMPONENTS_HPP
 
 #include <openpfc/frontend/ui/errors.hpp>
 #include <openpfc/frontend/ui/field_modifier_registry.hpp>
 #include <openpfc/frontend/ui/from_json.hpp>
 #include <openpfc/frontend/ui/json_helpers.hpp>
 
-#endif // PFC_UI_UI_HPP
+#endif // PFC_FRONTEND_UI_UI_COMPONENTS_HPP
