@@ -57,8 +57,6 @@ add_executable(json_read json_read.cpp)
 target_link_libraries(json_read PRIVATE nlohmann_json::nlohmann_json)
 
 
-add_executable(14_custom_field_initializer 14_custom_field_initializer.cpp)
-target_link_libraries(14_custom_field_initializer PRIVATE OpenPFC::openpfc )
 
 
 
@@ -83,6 +81,7 @@ add_subdirectory(differentiation)
 add_subdirectory(fourier)
 add_subdirectory(geometry)
 add_subdirectory(heat)
+add_subdirectory(initialization)
 add_subdirectory(integration)
 add_subdirectory(interpolation)
 add_subdirectory(output)
@@ -333,6 +332,16 @@ if(OpenPFC_BUILD_TESTS)
   add_test(NAME example-first-domain
            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_everyday.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case first_domain)
   set_tests_properties(example-first-domain PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  add_test(NAME example-14-custom-field-initializer
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_everyday.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 14_custom_field_initializer)
+  set_tests_properties(example-14-custom-field-initializer PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
+    add_test(NAME example-14-custom-field-initializer-mpi
+             COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_everyday.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 14_custom_field_initializer
+                     --launcher "${MPIEXEC_EXECUTABLE}" "--rank-flag=${MPIEXEC_NUMPROC_FLAG}" --ranks 2)
+    set_tests_properties(example-14-custom-field-initializer-mpi PROPERTIES PROCESSORS 2 TIMEOUT 360
+                         ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+  endif()
 endif()
 
 add_executable(23_halo_microtiming 23_halo_microtiming.cpp)

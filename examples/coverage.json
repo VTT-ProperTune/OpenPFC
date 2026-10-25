@@ -96,9 +96,14 @@
     },
     {
       "target": "14_custom_field_initializer",
-      "source": "14_custom_field_initializer.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "initialization/patterns/model.cpp",
+      "chapter": "initialization/patterns/index.qmd",
+      "capabilities": [
+        "fields",
+        "field-initialization",
+        "coordinates",
+        "callable-patterns"
+      ]
     },
     {
       "target": "15_finite_difference_heat",
@@ -912,7 +917,8 @@
         "field_modifier.hpp"
       ],
       "chapters": [
-        "geometry/coordinate-fields/index.qmd"
+        "geometry/coordinate-fields/index.qmd",
+        "initialization/patterns/index.qmd"
       ]
     },
     {

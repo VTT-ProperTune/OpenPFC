@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Replace the large initializer demonstration with small Gaussian, vortex and checkerboard callables. Preserve its target and check every native field value on one and two ranks.
+
 - Turn the former introductory source into a built first-domain lesson with explicit physical samples. Check the coordinate map and domain extents through the actual entry point.
 
 - Replace the profiling printout with a chapter that explains rank-aware spans and reports. Check the emitted structured diagnostics on one and two ranks without freezing performance measurements.

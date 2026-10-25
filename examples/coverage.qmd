@@ -17,7 +17,7 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 :::
 
 There are 60 declared runnable example targets and
-38 Quarto teaching chapters. The table includes older programs
+39 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -88,7 +88,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `10_ui_register_ic` | Pending conversion. |
 | `11_write_results` | Pending conversion. |
 | `12_cahn_hilliard` | Pending conversion. |
-| `14_custom_field_initializer` | Pending conversion. |
+| `14_custom_field_initializer` | [Read the lesson](initialization/patterns/index.qmd) |
 | `15_finite_difference_heat` | [Read the lesson](heat/separated-halos/index.qmd) |
 | `16_strong_types_demo` | [Read the lesson](geometry/strong-arguments/index.qmd) |
 | `17_custom_coordinate_system` | Pending conversion. |
@@ -160,7 +160,7 @@ fixed-step restart does not establish an adaptive restart contract.
 | fixed and adaptive integration | [finite-differences](heat/finite-differences/index.qmd), [stability](integration/stability/index.qmd), [adaptive-rk](integration/adaptive-rk/index.qmd), [output-clock](integration/output-clock/index.qmd) |
 | multi-field runtime integration | [runtime-fields](coupling/runtime-fields/index.qmd) |
 | exponential and adaptive ETD | [exponential](heat/exponential/index.qmd), [adaptive-etd](integration/adaptive-etd/index.qmd) |
-| initial conditions and modifiers | [coordinate-fields](geometry/coordinate-fields/index.qmd) |
+| initial conditions and modifiers | [coordinate-fields](geometry/coordinate-fields/index.qmd), [patterns](initialization/patterns/index.qmd) |
 | JSON/TOML validation and application sessions | Pending a teaching chapter. |
 | field output and visualization | Pending a teaching chapter. |
 | checkpoints and restart | [checkpoint-restart](output/checkpoint-restart/index.qmd) |
