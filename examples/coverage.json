@@ -307,6 +307,16 @@
       "capabilities": []
     },
     {
+      "target": "spectral_smoothness",
+      "source": "differentiation/smoothness/model.cpp",
+      "chapter": "differentiation/smoothness/index.qmd",
+      "capabilities": [
+        "spectral-gradients",
+        "fft",
+        "mpi-reductions"
+      ]
+    },
+    {
       "target": "taylor_green3d",
       "source": "taylor_green3d/src/taylor_green.cpp",
       "chapter": null,
@@ -365,7 +375,7 @@
       "program": 2,
       "title": "convergence of periodic spectral method (compare p1.m)",
       "source": "https://people.maths.ox.ac.uk/trefethen/p2.m",
-      "chapter": null,
+      "chapter": "differentiation/smoothness/index.qmd",
       "scope": "Original even 2..100 collocation matrix sweep; FFT comparison added."
     },
     {
@@ -400,7 +410,7 @@
       "program": 7,
       "title": "accuracy of periodic spectral differentiation",
       "source": "https://people.maths.ox.ac.uk/trefethen/p7.m",
-      "chapter": null,
+      "chapter": "differentiation/smoothness/index.qmd",
       "scope": "All four original regularity profiles on even 6..50 grids, with matrix and FFT errors."
     },
     {
@@ -678,7 +688,8 @@
         "spectral_gradient.hpp"
       ],
       "chapters": [
-        "differentiation/periodic/index.qmd"
+        "differentiation/periodic/index.qmd",
+        "differentiation/smoothness/index.qmd"
       ]
     },
     {

@@ -92,7 +92,7 @@ same global samples rather than assuming every rank owns the x-axis slice.
 The ordinary checks compare matrix and FFT values, require the analytic
 derivative to agree within $10^{-10}$, and validate the complete set of
 recorded samples. They do not claim uniform convergence at nondifferentiable
-points. Continue with what smoothness buys you.
+points. Continue with [what smoothness buys you](../smoothness/index.qmd).
 
 The complete [C++ model](model.cpp) and [starting input](input.json)
 are available with this lesson. It also uses the shared [profiles.hpp](../profiles.hpp);

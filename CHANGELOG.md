@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Compare four regularity classes over the original book resolution presets. Check complete error tables against an independent direct discrete Fourier transform.
+
 - Express the same periodic derivative through a dense cotangent matrix and native Fourier transforms. Check complete fields and retain the hat-function regularity caveat.
 
 - Show how shifted cardinal functions reconstruct sampled profiles. Check interpolation at every node, the analytic sinc field and overshoot of the discontinuous profile.

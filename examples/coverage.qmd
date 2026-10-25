@@ -16,15 +16,15 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 [Follow what is taught, what is adapted, and what still needs a chapter.]{.lesson-deck}
 :::
 
-There are 47 declared runnable example targets and
-13 Quarto teaching chapters. The table includes older programs
+There are 48 declared runnable example targets and
+14 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
 ## Spectral Methods in MATLAB
 
 The [author's collection](https://people.maths.ox.ac.uk/trefethen/spectral.html)
-contains forty programs. Currently 4 have a corresponding lesson.
+contains forty programs. Currently 6 have a corresponding lesson.
 A link means that the lesson declares coverage of that experiment; the
 scope column states changes in method or presentation. It does not mean
 an unmodified MATLAB program was translated line for line. Pending rows
@@ -33,12 +33,12 @@ remain in the inventory while applicability and implementation are assessed.
 | Program | Experiment | Lesson and scope |
 |---:|---|---|
 | [1](https://people.maths.ox.ac.uk/trefethen/p1.m) | convergence of fourth-order finite differences | [Read the lesson](differentiation/periodic/index.qmd). Original fourth-order finite-difference resolution family, with additional FD2 and FFT comparisons. |
-| [2](https://people.maths.ox.ac.uk/trefethen/p2.m) | convergence of periodic spectral method (compare p1.m) | Pending assessment and implementation. |
+| [2](https://people.maths.ox.ac.uk/trefethen/p2.m) | convergence of periodic spectral method (compare p1.m) | [Read the lesson](differentiation/smoothness/index.qmd). Original even 2..100 collocation matrix sweep; FFT comparison added. |
 | [3](https://people.maths.ox.ac.uk/trefethen/p3.m) | band-limited interpolation | [Read the lesson](interpolation/cardinal/index.qmd). All three original sampled profiles and sinc reconstructions; exact nodal limits handled. |
 | [4](https://people.maths.ox.ac.uk/trefethen/p4.m) | periodic spectral differentiation | [Read the lesson](differentiation/collocation/index.qmd). Original periodic cotangent differentiation of hat and analytic profiles. |
 | [5](https://people.maths.ox.ac.uk/trefethen/p5.m) | repetition of p4.m via FFT | [Read the lesson](differentiation/collocation/index.qmd). FFT version of both program 4 profiles, compared against the matrix action. |
 | [6](https://people.maths.ox.ac.uk/trefethen/p6.m) | variable coefficient wave equation | Pending assessment and implementation. |
-| [7](https://people.maths.ox.ac.uk/trefethen/p7.m) | accuracy of periodic spectral differentiation | Pending assessment and implementation. |
+| [7](https://people.maths.ox.ac.uk/trefethen/p7.m) | accuracy of periodic spectral differentiation | [Read the lesson](differentiation/smoothness/index.qmd). All four original regularity profiles on even 6..50 grids, with matrix and FFT errors. |
 | [8](https://people.maths.ox.ac.uk/trefethen/p8.m) | eigenvalues of harmonic oscillator -u"+x^2 u on R | Pending assessment and implementation. |
 | [9](https://people.maths.ox.ac.uk/trefethen/p9.m) | polynomial interpolation in equispaced and Chebyshev pts | Pending assessment and implementation. |
 | [10](https://people.maths.ox.ac.uk/trefethen/p10.m) | polynomials and corresponding equipotential curves | Pending assessment and implementation. |
@@ -118,6 +118,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `periodic_collocation` | [Read the lesson](differentiation/collocation/index.qmd) |
 | `periodic_differentiation` | [Read the lesson](differentiation/periodic/index.qmd) |
 | `profiling_timer_report` | Pending conversion. |
+| `spectral_smoothness` | [Read the lesson](differentiation/smoothness/index.qmd) |
 | `taylor_green3d` | Pending conversion. |
 | `time` | Pending conversion. |
 | `world_helpers_example` | Pending conversion. |
@@ -142,7 +143,7 @@ fixed-step restart does not establish an adaptive restart contract.
 | geometry | [decomposition](geometry/decomposition/index.qmd), [index-boxes](geometry/index-boxes/index.qmd), [field-storage](geometry/field-storage/index.qmd) |
 | distributed fields and MPI | [coordinate-fields](geometry/coordinate-fields/index.qmd), [finite-differences](heat/finite-differences/index.qmd) |
 | local and distributed FFT | [round-trip](fourier/round-trip/index.qmd), [field-layout](fourier/field-layout/index.qmd) |
-| finite differences and spectral gradients | [periodic](differentiation/periodic/index.qmd) |
+| finite differences and spectral gradients | [periodic](differentiation/periodic/index.qmd), [smoothness](differentiation/smoothness/index.qmd) |
 | conservative fluxes and nonperiodic boundaries | Pending a teaching chapter. |
 | fixed and adaptive integration | [finite-differences](heat/finite-differences/index.qmd) |
 | multi-field runtime integration | Pending a teaching chapter. |

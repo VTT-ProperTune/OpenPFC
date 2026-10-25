@@ -35,6 +35,44 @@ def run(binary, directory, launch=(), parameters=None, success=True):
     return result.stdout
 
 
+def profile(name, x):
+    sine, cosine = math.sin(x), math.cos(x)
+    if name == "finite-smoothness":
+        return abs(sine) ** 3, 3 * sine * cosine * abs(sine)
+    if name == "smooth-bump":
+        q = math.sin(x / 2) ** 2
+        if q < 1e-14:
+            return 0.0, 0.0
+        value = math.exp(-1 / q)
+        return value, 0.5 * value * sine / q**2
+    if name == "analytic-strip":
+        value = 1 / (1 + math.sin(x / 2) ** 2)
+        return value, -math.sin(x / 2) * math.cos(x / 2) * value**2
+    if name == "analytic":
+        return math.exp(sine), cosine * math.exp(sine)
+    return math.sin(10 * x), 10 * math.cos(10 * x)
+
+
+def dft_derivative_error(name, n):
+    """Direct complex DFT of the full global signal; no FFT or cotangent matrix."""
+    nodes = [2 * math.pi * j / n for j in range(n)]
+    samples = [profile(name, x)[0] for x in nodes]
+    coefficients = [
+        sum(value * cmath.exp(-1j * k * x) for x, value in zip(nodes, samples)) / n
+        for k in range(n)
+    ]
+    errors = []
+    for x in nodes:
+        value = 0j
+        for index, coefficient in enumerate(coefficients):
+            k = index if index < n // 2 else index - n
+            if index == n // 2:
+                continue
+            value += 1j * k * coefficient * cmath.exp(1j * k * x)
+        errors.append(abs(value.real - profile(name, x)[1]))
+    return max(errors)
+
+
 def verify_02_domain_decomposition(bin_dir, root, launch, ranks):
     binary = lambda name: bin_dir / name
     decomposition = root / "decomposition"
@@ -94,6 +132,26 @@ def verify_periodic_collocation(bin_dir, root, launch, ranks):
         assert abs(float(row["matrix"]) - float(row["fourier"])) < 1e-11
         if row["profile"] == "analytic":
             assert abs(float(row["fourier"]) - float(row["exact"])) < 1e-10
+
+
+def verify_spectral_smoothness(bin_dir, root, launch, ranks):
+    binary = lambda name: bin_dir / name
+    smoothness = root / "smoothness"
+    sizes = [6, 20, 22, 50]
+    run(binary("spectral_smoothness"), smoothness, launch, {"sizes": sizes})
+    rows = table(smoothness / "results/smoothness.csv")
+    assert len(rows) == len(sizes) * 4
+    for row in rows:
+        expected = dft_derivative_error(row["profile"], int(row["n"]))
+        assert abs(float(row["fourier_error"]) - expected) < 2e-11, row
+        assert abs(float(row["matrix_error"]) - expected) < 2e-11, row
+    run(
+        binary("spectral_smoothness"),
+        root / "bad-profile",
+        launch,
+        {"profiles": ["unknown"]},
+        success=False,
+    )
 
 
 def verify_06_multi_index(bin_dir, root, launch, ranks):
@@ -166,6 +224,7 @@ def main():
             "09_parallel_fft_high_level",
             "cardinal_interpolation",
             "periodic_collocation",
+            "spectral_smoothness",
         ],
     )
     args = parser.parse_args()
@@ -209,6 +268,10 @@ def main():
             root = base / "periodic_collocation"
             root.mkdir()
             verify_periodic_collocation(bin_dir, root, launch, ranks)
+        if args.case in (None, "spectral_smoothness"):
+            root = base / "spectral_smoothness"
+            root.mkdir()
+            verify_spectral_smoothness(bin_dir, root, launch, ranks)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 
