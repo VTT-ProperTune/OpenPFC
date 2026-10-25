@@ -53,6 +53,12 @@ def verify_02_domain_decomposition(bin_dir, root, launch, ranks):
     assert owned == {(x, y, z) for z in range(4) for y in range(8) for x in range(16)}
 
 
+def verify_06_multi_index(bin_dir, root, launch, ranks):
+    binary = lambda name: bin_dir / name
+    offsets = run(binary("06_multi_index"), root / "boxes").splitlines()
+    assert [int(line.split(",")[3]) for line in offsets] == list(range(8))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -60,7 +66,7 @@ def main():
     parser.add_argument("--launcher")
     parser.add_argument("--rank-flag", default="-n")
     parser.add_argument("--ranks", default=1, type=int)
-    parser.add_argument("--case", choices=["02_domain_decomposition"])
+    parser.add_argument("--case", choices=["02_domain_decomposition", "06_multi_index"])
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     bin_dir = args.bin_dir.resolve()
@@ -74,6 +80,10 @@ def main():
             root = base / "02_domain_decomposition"
             root.mkdir()
             verify_02_domain_decomposition(bin_dir, root, launch, ranks)
+        if args.case in (None, "06_multi_index"):
+            root = base / "06_multi_index"
+            root.mkdir()
+            verify_06_multi_index(bin_dir, root, launch, ranks)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

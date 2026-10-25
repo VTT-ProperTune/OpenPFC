@@ -17,7 +17,7 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 :::
 
 There are 45 declared runnable example targets and
-6 Quarto teaching chapters. The table includes older programs
+7 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -81,7 +81,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `03_parallel_fft` | Pending conversion. |
 | `04_diffusion_model` | Pending conversion. |
 | `05_simulator` | Pending conversion. |
-| `06_multi_index` | Pending conversion. |
+| `06_multi_index` | [Read the lesson](geometry/index-boxes/index.qmd) |
 | `07_array` | Pending conversion. |
 | `08_discrete_fields` | Pending conversion. |
 | `09_parallel_fft_high_level` | Pending conversion. |
@@ -137,7 +137,7 @@ fixed-step restart does not establish an adaptive restart contract.
 
 | Capability family | Current teaching chapters |
 |---|---|
-| geometry | [decomposition](geometry/decomposition/index.qmd) |
+| geometry | [decomposition](geometry/decomposition/index.qmd), [index-boxes](geometry/index-boxes/index.qmd) |
 | distributed fields and MPI | [finite-differences](heat/finite-differences/index.qmd) |
 | local and distributed FFT | Pending a teaching chapter. |
 | finite differences and spectral gradients | [periodic](differentiation/periodic/index.qmd) |

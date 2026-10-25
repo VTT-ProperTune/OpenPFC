@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Make index-box iteration a small readable example with an explicit offset calculation. Preserve the executable and verify the complete offset sequence.
+
 - Replace the domain-decomposition printout with a runnable ownership chapter. Check that rank boxes tile the complete global grid exactly once.
 
 - Refactor the separated-halo heat demonstration into the same periodic-mode comparison. Retain the established executable and verify owned values, conservation and invalid controls on one and two MPI ranks.

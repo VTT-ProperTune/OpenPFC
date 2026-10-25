@@ -31,9 +31,13 @@
     },
     {
       "target": "06_multi_index",
-      "source": "06_multi_index.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "geometry/index-boxes/model.cpp",
+      "chapter": "geometry/index-boxes/index.qmd",
+      "capabilities": [
+        "index-boxes",
+        "iteration",
+        "memory-layout"
+      ]
     },
     {
       "target": "07_array",
@@ -600,7 +604,8 @@
         "strong_types.hpp"
       ],
       "chapters": [
-        "geometry/decomposition/index.qmd"
+        "geometry/decomposition/index.qmd",
+        "geometry/index-boxes/index.qmd"
       ]
     },
     {

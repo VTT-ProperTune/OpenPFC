@@ -1,0 +1,81 @@
+---
+title: "From an index to a memory offset"
+description: "Understand inclusive boxes, local origins and x-fastest array storage before writing a stencil."
+order: 6
+categories: [Geometry, Fields, C++]
+capabilities: [index-boxes, iteration, memory-layout]
+targets: [06_multi_index]
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[Geometry / Indexing]{.lesson-kicker}
+
+# From an index to a memory offset
+
+[The point (1,1,1) can be the first element of an array. Its coordinates need not be its offset.]{.lesson-deck}
+:::
+
+A mathematical field has several indices; a contiguous C++ buffer has one.
+Before writing an FFT, stencil or file, we need a precise map between
+those descriptions. This refactors example 06 around a nonzero lower
+corner, where an accidental assumption about the origin becomes visible.
+
+## Subtract the lower corner first
+
+For an inclusive box with lower corner $(\ell_x,\ell_y,\ell_z)$ and
+sizes $(n_x,n_y,n_z)$, OpenPFC uses the x-fastest offset
+
+$$
+p(i,j,k)=(i-\ell_x)+n_x(j-\ell_y)+n_xn_y(k-\ell_z).
+$$ {#eq-offset}
+
+Our box runs from $(1,1,1)$ through $(2,2,2)$. It contains eight points,
+not one: the size of an inclusive interval is $h-\ell+1$.
+Equation @eq-offset sends $(1,1,1)$ to zero and $(2,1,2)$ to five.
+
+## Let the box own the map
+
+```{.cpp include="model.cpp" snippet="indexing" dedent=2}
+```
+
+The output is a small table of `i,j,k,offset,value`. The stored value is
+the affine function $2i+j+3k$. This separates two concerns: `to_linear`
+decides where the value belongs, and the lambda decides what it is.
+
+The test reads the actual table and requires offsets `0,1,...,7` in
+iteration order. The executable also checks the endpoint values and an
+interior stride. We do not infer correct indexing merely because the
+program stayed within the allocated buffer.
+
+## A one-line experiment
+
+```sh
+openpfc run model.cpp input.json --launcher=none
+```
+
+This lesson has no numerical input parameters; change the box in
+[model.cpp](model.cpp). First shift both corners by ten without changing
+the box size. The offsets should remain zero through seven, while the
+function values change. Then change only the upper x index to three,
+resize the buffer and predict the new y and z strides.
+
+The tempting mistake is to use `i + nx*j + nx*ny*k` for a box whose lower
+corner is nonzero. That expression belongs to a zero-origin local array;
+it does not implement @eq-offset for global indices.
+
+## Padding changes the question
+
+This example concerns a compact box. A halo-padded `Field` has extra
+storage around the owned box. Use that field's own `idx` for its buffer,
+and `Box3i::to_linear` for the compact box it describes. The
+next lesson makes the difference concrete.
+See the [Box3i header](https://github.com/ahojukka5/OpenPFC/blob/master/include/openpfc/kernel/data/box3i.hpp)
+for the exact indexing contract.
+The complete [C++ model](model.cpp) and [starting input](input.json)
+are available with this lesson.
+
+:::

@@ -28,8 +28,6 @@ target_link_libraries(04_diffusion_model PRIVATE OpenPFC::openpfc )
 add_executable(05_simulator 05_simulator.cpp)
 target_link_libraries(05_simulator PRIVATE OpenPFC::openpfc )
 
-add_executable(06_multi_index 06_multi_index.cpp)
-target_link_libraries(06_multi_index PRIVATE OpenPFC::openpfc )
 
 add_executable(07_array 07_array.cpp)
 target_link_libraries(07_array PRIVATE OpenPFC::openpfc )
@@ -177,6 +175,9 @@ if(OpenPFC_BUILD_TESTS)
     set_tests_properties(example-02-domain-decomposition-mpi PROPERTIES PROCESSORS 2 TIMEOUT 360
                          ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
   endif()
+  add_test(NAME example-06-multi-index
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_foundations.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 06_multi_index)
+  set_tests_properties(example-06-multi-index PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
 endif()
 
 add_executable(23_halo_microtiming 23_halo_microtiming.cpp)
