@@ -13,9 +13,14 @@
     },
     {
       "target": "03_parallel_fft",
-      "source": "03_parallel_fft.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "fourier/round-trip/model.cpp",
+      "chapter": "fourier/round-trip/index.qmd",
+      "capabilities": [
+        "fft",
+        "fft-normalization",
+        "fourier-outbox",
+        "mpi-reductions"
+      ]
     },
     {
       "target": "04_diffusion_model",
@@ -636,7 +641,9 @@
         "local_fft.hpp",
         "fft_interface.hpp"
       ],
-      "chapters": []
+      "chapters": [
+        "fourier/round-trip/index.qmd"
+      ]
     },
     {
       "name": "finite differences and spectral gradients",

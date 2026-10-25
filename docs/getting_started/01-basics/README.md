@@ -135,7 +135,7 @@ objects and finalize it only after those objects are no longer used.
 The next maintained example is:
 
 ```text
-examples/03_parallel_fft.cpp
+examples/fourier/round-trip/model.cpp
 ```
 
 Its essential construction sequence is:

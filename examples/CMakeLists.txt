@@ -19,8 +19,6 @@ endif()
 # target_link_libraries(01_hello_world PRIVATE OpenPFC::openpfc)
 
 
-add_executable(03_parallel_fft 03_parallel_fft.cpp)
-target_link_libraries(03_parallel_fft PRIVATE OpenPFC::openpfc )
 
 add_executable(04_diffusion_model 04_diffusion_model.cpp)
 target_link_libraries(04_diffusion_model PRIVATE OpenPFC::openpfc )
@@ -106,6 +104,7 @@ target_link_libraries(22_external_coupling PRIVATE OpenPFC::openpfc )
 
 # Teaching chapters own their implementations; binary names remain stable.
 add_subdirectory(differentiation)
+add_subdirectory(fourier)
 add_subdirectory(geometry)
 add_subdirectory(heat)
 
@@ -185,6 +184,16 @@ if(OpenPFC_BUILD_TESTS)
              COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_foundations.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 08_discrete_fields
                      --launcher "${MPIEXEC_EXECUTABLE}" "--rank-flag=${MPIEXEC_NUMPROC_FLAG}" --ranks 2)
     set_tests_properties(example-08-discrete-fields-mpi PROPERTIES PROCESSORS 2 TIMEOUT 360
+                         ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+  endif()
+  add_test(NAME example-03-parallel-fft
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_foundations.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 03_parallel_fft)
+  set_tests_properties(example-03-parallel-fft PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
+    add_test(NAME example-03-parallel-fft-mpi
+             COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_foundations.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case 03_parallel_fft
+                     --launcher "${MPIEXEC_EXECUTABLE}" "--rank-flag=${MPIEXEC_NUMPROC_FLAG}" --ranks 2)
+    set_tests_properties(example-03-parallel-fft-mpi PROPERTIES PROCESSORS 2 TIMEOUT 360
                          ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
   endif()
 endif()

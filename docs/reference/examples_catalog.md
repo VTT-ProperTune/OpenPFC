@@ -70,7 +70,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 |------------|--------|----------------------|
 | `fft_backend_benchmark` | `fft_backend_benchmark.cpp` | FFT backend benchmarking (FFTW vs CUDA / HIP) |
 | `02_domain_decomposition` | `geometry/decomposition/model.cpp` | `Domain`, `Decomposition`, MPI |
-| `03_parallel_fft` | `03_parallel_fft.cpp` | Distributed FFT (HeFFTe) |
+| `03_parallel_fft` | `fourier/round-trip/model.cpp` | Distributed FFT (HeFFTe) |
 | `04_diffusion_model` | `04_diffusion_model.cpp` | Simple spectral diffusion `Model` |
 | `05_simulator` | `05_simulator.cpp` | `Simulator`, `Time`, `FieldModifier` |
 | `06_multi_index` | `geometry/index-boxes/model.cpp` | `Box3i` iteration and `to_linear` |

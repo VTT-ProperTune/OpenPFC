@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Explain transform normalization, Hermitian storage and rank-owned Fourier boxes through a complete spectrum. Check every coefficient against an independent analytic signal.
+
 - Refactor the discrete-field demonstration into coordinate-aware initialization with an ownership reduction. Verify that the queried physical value has exactly one owner on one and two ranks.
 
 - Explain padding, component storage and coordinate-aware fields in a focused chapter. Retain the legacy array target and check storage sizes and owned offsets.

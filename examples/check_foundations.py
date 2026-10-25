@@ -60,6 +60,26 @@ def verify_08_discrete_fields(bin_dir, root, launch, ranks):
     )
 
 
+def verify_03_parallel_fft(bin_dir, root, launch, ranks):
+    binary = lambda name: bin_dir / name
+    transform = root / "transform"
+    run(binary("03_parallel_fft"), transform, launch)
+    rows = [
+        row
+        for path in (transform / "results").glob("spectrum_rank_*.csv")
+        for row in table(path)
+    ]
+    assert len(rows) == 5 * 4 * 2
+    assert len(
+        {tuple(int(row[key]) for key in ("i", "j", "k")) for row in rows}
+    ) == len(rows)
+    for row in rows:
+        i, j, k = (int(row[key]) for key in ("i", "j", "k"))
+        expected = ({0: 64, 1: 8j, 2: 16}.get(i, 0)) if j == k == 0 else 0
+        value = complex(float(row["real"]), float(row["imag"]))
+        assert abs(value - expected) < 1e-11, row
+
+
 def verify_06_multi_index(bin_dir, root, launch, ranks):
     binary = lambda name: bin_dir / name
     offsets = run(binary("06_multi_index"), root / "boxes").splitlines()
@@ -87,6 +107,7 @@ def main():
             "06_multi_index",
             "07_array",
             "08_discrete_fields",
+            "03_parallel_fft",
         ],
     )
     args = parser.parse_args()
@@ -114,6 +135,10 @@ def main():
             root = base / "08_discrete_fields"
             root.mkdir()
             verify_08_discrete_fields(bin_dir, root, launch, ranks)
+        if args.case in (None, "03_parallel_fft"):
+            root = base / "03_parallel_fft"
+            root.mkdir()
+            verify_03_parallel_fft(bin_dir, root, launch, ranks)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

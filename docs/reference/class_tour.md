@@ -43,8 +43,8 @@ The shortest useful mental model is:
 |-----------------|----------------|----------------|------------|
 | `Domain` | Global grid size, spacing, origin, and periodicity | `openpfc/kernel/data/domain.hpp` | `examples/geometry/decomposition/model.cpp` |
 | `Box3i` | Inclusive integer bounds for local or transformed regions | `openpfc/kernel/data/box.hpp` | `examples/geometry/decomposition/model.cpp` |
-| `Decomposition` | MPI partition and per-rank inbox/outbox geometry | `openpfc/kernel/decomposition/decomposition.hpp` | `examples/03_parallel_fft.cpp` |
-| `IHostFFT` / `CPUFFT` | Distributed host forward/backward transforms through HeFFTe | `openpfc/kernel/fft/fft.hpp` | `examples/03_parallel_fft.cpp` |
+| `Decomposition` | MPI partition and per-rank inbox/outbox geometry | `openpfc/kernel/decomposition/decomposition.hpp` | `examples/fourier/round-trip/model.cpp` |
+| `IHostFFT` / `CPUFFT` | Distributed host forward/backward transforms through HeFFTe | `openpfc/kernel/fft/fft.hpp` | `examples/fourier/round-trip/model.cpp` |
 | Physics / `SpectralETDSystem` | Fields, k-space symbols, and a device-capable `pointwise()` nonlinearity; the system owns the ETD update on host or device | `tungsten_physics.hpp`, `aluminum_physics.hpp`, `openpfc/kernel/simulation/spectral_etd_system.hpp` | `tests/fixtures/swift_hohenberg.hpp`, `examples/04_diffusion_model.cpp` |
 | `Time` | Start, stop, step size, current time, and save cadence | `openpfc/kernel/simulation/time.hpp` | `examples/time.cpp` |
 | `pfc::sim::run` / `SimulationDriver` | Time loop over physics `step` plus optional IC/BC/save hooks | `openpfc/kernel/simulation/simulation_driver.hpp` | `examples/05_simulator.cpp` |
