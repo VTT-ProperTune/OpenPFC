@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Teach coupled field registration through a harmonic oscillator whose components share stage values. Check complete fields and fourth-order refinement against the exact solution.
+
 - Show how a host orchestrator advances OpenPFC through a small visible protocol. Keep the existing executable and validate complete coupled fields and ordering on one and two ranks.
 
 - Replace the clock printout with an output-scheduling story that exposes partial final steps. Preserve the target and verify exact accepted times and output alignment.

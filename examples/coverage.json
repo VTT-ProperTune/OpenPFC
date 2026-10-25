@@ -389,6 +389,16 @@
       "capabilities": []
     },
     {
+      "target": "runtime_coupled_fields",
+      "source": "coupling/runtime-fields/model.cpp",
+      "chapter": "coupling/runtime-fields/index.qmd",
+      "capabilities": [
+        "runtime-field-rk",
+        "multi-field",
+        "rk4"
+      ]
+    },
+    {
       "target": "spectral_smoothness",
       "source": "differentiation/smoothness/model.cpp",
       "chapter": "differentiation/smoothness/index.qmd",
@@ -840,7 +850,9 @@
         "composite_gradient.hpp",
         "coupled_spectral_etd2.hpp"
       ],
-      "chapters": []
+      "chapters": [
+        "coupling/runtime-fields/index.qmd"
+      ]
     },
     {
       "name": "exponential and adaptive ETD",

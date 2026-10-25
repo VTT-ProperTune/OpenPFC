@@ -195,6 +195,26 @@ def check_host(binary, directory, launch):
         assert abs(value - (math.sin(x) * math.cos(y) + 0.04)) < 1e-14
 
 
+def check_runtime(binary, root, launch):
+    errors = []
+    for dt, steps in ((0.1, 10), (0.05, 20)):
+        directory = root / f"runtime-{steps}"
+        run(binary, directory, launch, {"dt": dt, "steps": steps})
+        data = rank_rows(directory, "oscillator")
+        assert len(data) == 256 and len({(r["i"], r["j"], r["k"]) for r in data}) == 256
+        multiplier = sum((-1j * dt) ** j / math.factorial(j) for j in range(5)) ** steps
+        error = 0
+        for row in data:
+            finite(row, ("u", "v", "time", "x"))
+            x = float(row["x"])
+            z = complex(float(row["u"]), float(row["v"]))
+            assert abs(z - multiplier * math.cos(x)) < 2e-13
+            error = max(error, abs(z - cmath.exp(-1j) * math.cos(x)))
+        errors.append(error)
+    assert 12 < errors[0] / errors[1] < 20, errors
+    run(binary, root / "bad-runtime", launch, {"steps": 0}, success=False)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -209,6 +229,7 @@ def main():
             "24_adaptive_etd",
             "time",
             "22_external_coupling",
+            "runtime_coupled_fields",
         ],
     )
     args = parser.parse_args()
@@ -236,6 +257,10 @@ def main():
             root = base / "22_external_coupling"
             root.mkdir()
             check_host(bin_dir / "22_external_coupling", root / "host", launch)
+        if args.case in (None, "runtime_coupled_fields"):
+            root = base / "runtime_coupled_fields"
+            root.mkdir()
+            check_runtime(bin_dir / "runtime_coupled_fields", root, launch)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 
