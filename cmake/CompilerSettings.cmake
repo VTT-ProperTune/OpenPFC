@@ -7,26 +7,66 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Base compiler flags for all build types. Append so command-line
-# CMAKE_CXX_FLAGS (e.g. --coverage from CI) are not discarded.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wfatal-errors -Werror=format-security")
+# Warnings belong to project targets, never CMAKE_CXX_FLAGS or directory scope:
+# FetchContent dependencies keep their own policy, and installed consumers do
+# not inherit a PRIVATE development policy. Apply after all subdirectories exist.
+# Retain the established Wall/Wextra, format-security and null/logic checks.
+# Debug adds unused/shadow. Wconversion/Wsign-conversion remain disabled because
+# index/size conversions need a separate reviewed migration; Wfloat-equal would
+# flag intentional exact comparisons. Wpedantic remains unselected pending the
+# explicit owner decision recorded in #656. No CI gate is changed here.
+function(openpfc_project_warnings directory)
+  get_property(targets DIRECTORY "${directory}" PROPERTY BUILDSYSTEM_TARGETS)
+  foreach(target IN LISTS targets)
+    get_target_property(kind ${target} TYPE)
+    get_target_property(source_dir ${target} SOURCE_DIR)
+    file(RELATIVE_PATH relative "${PROJECT_SOURCE_DIR}" "${source_dir}")
+    if(kind MATCHES "^(INTERFACE_LIBRARY|UTILITY)$" OR
+       relative MATCHES "^[.][.]/" OR
+       relative MATCHES "(^|/)(external|third_party|_deps)(/|$)")
+      continue()
+    endif()
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+      target_compile_options(${target} PRIVATE
+        "$<$<COMPILE_LANGUAGE:CXX,HIP>:-Wall;-Wextra;-Wfatal-errors;-Werror=format-security;-Wnull-dereference>"
+        "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:GNU>>:-Wduplicated-cond;-Wduplicated-branches;-Wlogical-op>"
+        "$<$<AND:$<COMPILE_LANGUAGE:CXX,HIP>,$<CONFIG:Debug>>:-Wunused;-Wshadow>"
+        "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Wextra,-Wfatal-errors,-Werror=format-security,-Wnull-dereference>"
+        "$<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<CONFIG:Debug>>:-Xcompiler=-Wunused,-Wshadow>")
+    endif()
+  endforeach()
+  get_property(children DIRECTORY "${directory}" PROPERTY SUBDIRECTORIES)
+  foreach(child IN LISTS children)
+    openpfc_project_warnings("${child}")
+  endforeach()
+endfunction()
 
-# Additional warnings for better code quality
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-  add_compile_options(
-    -Wnull-dereference    # Warn about potential null pointer dereferences
-  )
-endif()
+# Preserve build/install interface expressions while marking dependency headers
+# as system includes. Resolve aliases before changing the underlying target.
+function(openpfc_system_dependency target)
+  if(NOT TARGET ${target})
+    return()
+  endif()
+  get_target_property(real_target ${target} ALIASED_TARGET)
+  if(NOT real_target)
+    set(real_target ${target})
+  endif()
+  get_target_property(includes ${real_target} INTERFACE_INCLUDE_DIRECTORIES)
+  if(includes)
+    set_property(TARGET ${real_target} APPEND PROPERTY
+      INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${includes}")
+  endif()
+endfunction()
 
-# GCC-specific warnings (not supported by Clang / ROCm HIP device compilation)
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  # Apply only to CXX sources — HIP language uses AMDGPU Clang and rejects these flags.
-  add_compile_options(
-    "$<$<COMPILE_LANGUAGE:CXX>:-Wduplicated-cond>"
-    "$<$<COMPILE_LANGUAGE:CXX>:-Wduplicated-branches>"
-    "$<$<COMPILE_LANGUAGE:CXX>:-Wlogical-op>"
-  )
-endif()
+function(openpfc_apply_warning_policy)
+  foreach(dependency IN ITEMS Catch2::Catch2 Catch2::Catch2WithMain
+      nlohmann_json::nlohmann_json tomlplusplus::tomlplusplus
+      tomlplusplus_tomlplusplus argparse::argparse argparse
+      Heffte::Heffte Heffte heffte)
+    openpfc_system_dependency(${dependency})
+  endforeach()
+  openpfc_project_warnings("${PROJECT_SOURCE_DIR}")
+endfunction()
 
 # Build-type specific flags
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
@@ -47,24 +87,6 @@ endif()
 # NAN_CHECK_ENABLED is applied as a PUBLIC usage requirement on openpfc in
 # LibraryConfiguration.cmake (directory-scope add_compile_definitions is not
 # part of the installed INTERFACE).
-
-# Enable debug macros and stricter warnings for Debug builds
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    # Additional warning flags for Debug mode to catch more issues
-    # Note: We enable useful warnings but avoid overly pedantic ones
-    add_compile_options(
-        -Wunused                # Warn on unused entities (variables, functions, etc.)
-        -Wshadow                # Warn on variable shadowing
-        # Disabled overly pedantic warnings:
-        # -Wconversion          # Too many false positives with int/size_t conversions
-        # -Wsign-conversion     # Too pedantic for array indexing with int
-        # -Wmissing-braces      # C++ aggregate initialization is fine without double braces
-        # -Wpedantic            # Enforces strict ISO C++, sometimes too restrictive
-        # -Wfloat-equal         # Sometimes we do need exact floating point comparisons
-        # Future consideration:
-        # -Werror               # Treat all warnings as errors (good for CI/CD)
-    )
-endif()
 
 # Enable clang-tidy if USE_CLANG_TIDY is ON
 option(USE_CLANG_TIDY "Enable clang-tidy static code analysis" OFF)

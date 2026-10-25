@@ -96,7 +96,13 @@ include(cmake/Installation.cmake)
 include(cmake/PackageConfig.cmake)
 
 # ----------------------------------------------------------------------------
-# 11. Build Summary
+# 11. Project warning policy
+# ----------------------------------------------------------------------------
+# All project and FetchContent targets now exist; warnings stay PRIVATE.
+openpfc_apply_warning_policy()
+
+# ----------------------------------------------------------------------------
+# 12. Build Summary
 # ----------------------------------------------------------------------------
 # Print final build configuration summary
 include(cmake/BuildSummary.cmake)

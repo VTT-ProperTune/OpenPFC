@@ -34,6 +34,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - Document distributed FFT/decomposition and halo participation, ownership,
   normalization and timing contracts. All host FFT factory overloads now
   reject communicator/layout-size or explicit-rank mismatches before planning.
+- Project warning options are private to project targets, including HIP and
+  CUDA host compilation. Third-party headers are system includes (#656).
 
 - `openpfc bundle` can build a scratch image when `--base` is omitted. The image
   copies the host dynamic loader, the glibc libraries required by the model and

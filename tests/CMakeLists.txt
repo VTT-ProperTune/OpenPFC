@@ -72,28 +72,6 @@ if(OpenPFC_ENABLE_HDF5)
   target_compile_definitions(openpfc-tests PRIVATE OPENPFC_HAS_HDF5=1)
 endif()
 
-# Attach Catch2 include dirs manually for compile_commands.json
-get_target_property(_catch2_include_dirs Catch2::Catch2 INTERFACE_INCLUDE_DIRECTORIES)
-message(STATUS "Catch2 includes: ${_catch2_include_dirs}")
-target_include_directories(openpfc-tests PRIVATE ${_catch2_include_dirs})
-# Suppress Catch2 warnings via `-isystem` for the host compiler. Gate on
-# CXX so that CUDA sources added to `openpfc-tests` (e.g. gpu_validation `.cu`
-# kernels) are not handed unrecognised flags by nvcc
-# — without this, nvcc fails with "A single input file is required for a
-# non-link phase when an outputfile is specified".
-# `if(dir)` tests the unevaluated string, so an `$<INSTALL_INTERFACE:...>`
-# entry passes the guard but expands to nothing in a build tree. That emits a
-# bare `-isystem`, which swallows whatever flag follows it on the command line
-# (`-MD`, and then cc1plus rejects `-MT`/`-MF` without `-M`). Install-interface
-# paths are meaningless here, so drop them.
-foreach(dir IN LISTS _catch2_include_dirs)
-  if(NOT dir OR dir MATCHES "^\\$<INSTALL_INTERFACE:")
-    continue()
-  endif()
-  target_compile_options(openpfc-tests PRIVATE
-    "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-isystem ${dir}>")
-endforeach()
-
 if(OpenPFC_ENABLE_CODE_COVERAGE)
   # Enable code coverage if OpenPFC_ENABLE_CODE_COVERAGE is set
   message(STATUS "Enabling code coverage for tests")

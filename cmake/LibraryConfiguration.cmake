@@ -97,8 +97,9 @@ target_include_directories(openpfc_frontend_obj
     $<INSTALL_INTERFACE:include>
     PRIVATE
     $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/generated>
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/external/stb>
 )
+target_include_directories(openpfc_frontend_obj SYSTEM PRIVATE
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/external/stb>)
 target_compile_features(openpfc_kernel_obj PUBLIC cxx_std_20)
 target_compile_features(openpfc_frontend_obj PUBLIC cxx_std_20)
 target_compile_definitions(openpfc_kernel_obj PUBLIC
@@ -177,7 +178,7 @@ function(openpfc_add_gpu_kernel_library tgt ext runtime_lib)
   target_link_libraries(openpfc PRIVATE ${tgt})
   openpfc_gpu_public_definitions(${tgt})
   if(DEFINED nlohmann_json_SOURCE_DIR)
-    target_include_directories(${tgt} PRIVATE
+    target_include_directories(${tgt} SYSTEM PRIVATE
         $<BUILD_INTERFACE:${nlohmann_json_SOURCE_DIR}/include>
         $<BUILD_INTERFACE:${nlohmann_json_SOURCE_DIR}/single_include>)
   endif()
@@ -211,8 +212,10 @@ target_include_directories(openpfc
     $<INSTALL_INTERFACE:include>
     PRIVATE
     $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/generated>
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/external/stb>
 )
+
+target_include_directories(openpfc SYSTEM PRIVATE
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/external/stb>)
 
 # Options (MPI / HeFFTe options are declared in ProjectSetup.cmake).
 
