@@ -254,6 +254,9 @@ if(OpenPFC_BUILD_TESTS)
   add_test(NAME example-polynomial-nodal-polynomials
            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_polynomials.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case polynomial_nodal_polynomials)
   set_tests_properties(example-polynomial-nodal-polynomials PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  add_test(NAME example-polynomial-differentiation
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_polynomials.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case polynomial_differentiation)
+  set_tests_properties(example-polynomial-differentiation PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
 endif()
 
 add_executable(23_halo_microtiming 23_halo_microtiming.cpp)

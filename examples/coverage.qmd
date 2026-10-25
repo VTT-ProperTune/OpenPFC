@@ -16,15 +16,15 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 [Follow what is taught, what is adapted, and what still needs a chapter.]{.lesson-deck}
 :::
 
-There are 52 declared runnable example targets and
-22 Quarto teaching chapters. The table includes older programs
+There are 53 declared runnable example targets and
+23 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
 ## Spectral Methods in MATLAB
 
 The [author's collection](https://people.maths.ox.ac.uk/trefethen/spectral.html)
-contains forty programs. Currently 10 have a corresponding lesson.
+contains forty programs. Currently 12 have a corresponding lesson.
 A link means that the lesson declares coverage of that experiment; the
 scope column states changes in method or presentation. It does not mean
 an unmodified MATLAB program was translated line for line. Pending rows
@@ -42,14 +42,14 @@ remain in the inventory while applicability and implementation are assessed.
 | [8](https://people.maths.ox.ac.uk/trefethen/p8.m) | eigenvalues of harmonic oscillator -u"+x^2 u on R | Pending assessment and implementation. |
 | [9](https://people.maths.ox.ac.uk/trefethen/p9.m) | polynomial interpolation in equispaced and Chebyshev pts | [Read the lesson](polynomials/interpolation/index.qmd). Original degree-16 node comparison, using barycentric evaluation instead of monomial fitting. |
 | [10](https://people.maths.ox.ac.uk/trefethen/p10.m) | polynomials and corresponding equipotential curves | [Read the lesson](polynomials/nodal-polynomials/index.qmd). Original signed nodal products and complex-plane magnitude contours, evaluated directly from their roots. |
-| [11](https://people.maths.ox.ac.uk/trefethen/p11.m) | Chebyshev differentation of a smooth function | Pending assessment and implementation. |
+| [11](https://people.maths.ox.ac.uk/trefethen/p11.m) | Chebyshev differentation of a smooth function | [Read the lesson](polynomials/differentiation/index.qmd). Original smooth profile at degrees 10 and 20, differentiated with the Chebyshev collocation matrix. |
 | [12](https://people.maths.ox.ac.uk/trefethen/p12.m) | accuracy of Chebyshev spectral differentiation | Pending assessment and implementation. |
 | [13](https://people.maths.ox.ac.uk/trefethen/p13.m) | solve linear BVP u_xx = exp(4x), u(-1)=u(1)=0 | Pending assessment and implementation. |
 | [14](https://people.maths.ox.ac.uk/trefethen/p14.m) | solve nonlinear BVP u_xx = exp(u), u(-1)=u(1)=0 | Pending assessment and implementation. |
 | [15](https://people.maths.ox.ac.uk/trefethen/p15.m) | solve eigenvalue BVP u_xx = lambda*u, u(-1)=u(1)=0 | Pending assessment and implementation. |
 | [16](https://people.maths.ox.ac.uk/trefethen/p16.m) | Poisson eq. on [-1,1]x[-1,1] with u=0 on boundary | Pending assessment and implementation. |
 | [17](https://people.maths.ox.ac.uk/trefethen/p17.m) | Helmholtz eq. u_xx + u_yy + (k^2)u = f | Pending assessment and implementation. |
-| [18](https://people.maths.ox.ac.uk/trefethen/p18.m) | Chebyshev differentiation via FFT (compare p11.m) | Pending assessment and implementation. |
+| [18](https://people.maths.ox.ac.uk/trefethen/p18.m) | Chebyshev differentiation via FFT (compare p11.m) | [Read the lesson](polynomials/differentiation/index.qmd). Same polynomial derivative via native LocalFFT cosine coefficients, with explicit O(N²) coefficient-sum evaluation and endpoint limits. |
 | [19](https://people.maths.ox.ac.uk/trefethen/p19.m) | 2nd-order wave eq. on Chebyshev grid (compare p6.m) | Pending assessment and implementation. |
 | [20](https://people.maths.ox.ac.uk/trefethen/p20.m) | 2nd-order wave eq. in 2D via FFT (compare p19.m) | Pending assessment and implementation. |
 | [21](https://people.maths.ox.ac.uk/trefethen/p21.m) | eigenvalues of Mathieu operator -u_xx + 2qcos(2x)u | Pending assessment and implementation. |
@@ -117,6 +117,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `ns2d_vorticity` | Pending conversion. |
 | `periodic_collocation` | [Read the lesson](differentiation/collocation/index.qmd) |
 | `periodic_differentiation` | [Read the lesson](differentiation/periodic/index.qmd) |
+| `polynomial_differentiation` | [Read the lesson](polynomials/differentiation/index.qmd) |
 | `polynomial_interpolation` | [Read the lesson](polynomials/interpolation/index.qmd) |
 | `polynomial_nodal_polynomials` | [Read the lesson](polynomials/nodal-polynomials/index.qmd) |
 | `profiling_timer_report` | Pending conversion. |

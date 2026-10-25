@@ -305,6 +305,15 @@
       ]
     },
     {
+      "target": "polynomial_differentiation",
+      "source": "polynomials/differentiation/model.cpp",
+      "chapter": "polynomials/differentiation/index.qmd",
+      "capabilities": [
+        "local-fft",
+        "chebyshev-reference"
+      ]
+    },
+    {
       "target": "polynomial_interpolation",
       "source": "polynomials/interpolation/model.cpp",
       "chapter": "polynomials/interpolation/index.qmd",
@@ -490,7 +499,7 @@
       "program": 11,
       "title": "Chebyshev differentation of a smooth function",
       "source": "https://people.maths.ox.ac.uk/trefethen/p11.m",
-      "chapter": null,
+      "chapter": "polynomials/differentiation/index.qmd",
       "scope": "Original smooth profile at degrees 10 and 20, differentiated with the Chebyshev collocation matrix."
     },
     {
@@ -539,7 +548,7 @@
       "program": 18,
       "title": "Chebyshev differentiation via FFT (compare p11.m)",
       "source": "https://people.maths.ox.ac.uk/trefethen/p18.m",
-      "chapter": null,
+      "chapter": "polynomials/differentiation/index.qmd",
       "scope": "Same polynomial derivative via native LocalFFT cosine coefficients, with explicit O(N²) coefficient-sum evaluation and endpoint limits."
     },
     {

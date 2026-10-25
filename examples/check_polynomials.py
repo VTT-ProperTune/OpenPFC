@@ -77,6 +77,24 @@ def check_nodal(binary, directory):
     assert all(abs(float(r["value"])) < 1e-14 for r in line if abs(float(r["x"])) == 1)
 
 
+def check_derivative(binary, directory):
+    run(binary, directory)
+    data = rows(directory / "results/derivatives.csv")
+    assert len(data) == 32
+    errors = []
+    for n in (10, 20):
+        error = 0
+        for row in (r for r in data if int(r["n"]) == n):
+            x = float(row["x"])
+            exact = math.exp(x) * (math.sin(5 * x) + 5 * math.cos(5 * x))
+            dense, fourier = float(row["matrix"]), float(row["fourier"])
+            assert abs(float(row["exact"]) - exact) < 1e-13
+            assert abs(dense - fourier) < 2e-11
+            error = max(error, abs(dense - exact), abs(fourier - exact))
+        errors.append(error)
+    assert errors[1] < 1e-8 and errors[1] < errors[0] / 1000, errors
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -85,7 +103,12 @@ def main():
     parser.add_argument("--rank-flag", default="-n")
     parser.add_argument("--ranks", default=1, type=int)
     parser.add_argument(
-        "--case", choices=["polynomial_interpolation", "polynomial_nodal_polynomials"]
+        "--case",
+        choices=[
+            "polynomial_interpolation",
+            "polynomial_nodal_polynomials",
+            "polynomial_differentiation",
+        ],
     )
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
@@ -112,6 +135,16 @@ def main():
             check_nodal(bin_dir / "polynomial_nodal_polynomials", root / "valid")
             run(
                 bin_dir / "polynomial_nodal_polynomials",
+                root / "invalid",
+                parameters={"n": 0, "sizes": [0]},
+                success=False,
+            )
+        if args.case in (None, "polynomial_differentiation"):
+            root = base / "polynomial_differentiation"
+            root.mkdir()
+            check_derivative(bin_dir / "polynomial_differentiation", root / "valid")
+            run(
+                bin_dir / "polynomial_differentiation",
                 root / "invalid",
                 parameters={"n": 0, "sizes": [0]},
                 success=False,
