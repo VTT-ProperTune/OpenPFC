@@ -71,7 +71,12 @@ class CPUFFT;
 [[nodiscard]] CPUFFT create(const Decomposition &decomposition, int rank_id,
                             MPI_Comm comm = MPI_COMM_WORLD, int r2c_direction = 0);
 
-/** @brief Query the communicator rank and create an x-reduced default plan. */
+/**
+ * @brief Query the communicator rank and create an x-reduced default plan.
+ * @note When MPI_Comm is an integer (for example MPICH), a two-argument call
+ * also matches the explicit-rank overload. Pass rank_id and comm explicitly,
+ * or omit comm to use this overload with MPI_COMM_WORLD.
+ */
 [[nodiscard]] CPUFFT create(const Decomposition &decomposition,
                             MPI_Comm comm = MPI_COMM_WORLD);
 
