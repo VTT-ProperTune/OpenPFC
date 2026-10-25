@@ -226,6 +226,15 @@
       ]
     },
     {
+      "target": "airy_eigenproblem",
+      "source": "polynomials/airy/model.cpp",
+      "chapter": "polynomials/airy/index.qmd",
+      "capabilities": [
+        "chebyshev-reference",
+        "generalized-eigenproblem"
+      ]
+    },
+    {
       "target": "cardinal_interpolation",
       "source": "interpolation/cardinal/model.cpp",
       "chapter": "interpolation/cardinal/index.qmd",
@@ -752,7 +761,7 @@
       "program": 22,
       "title": "5th eigenvector of Airy equation u_xx = lambda*x*u",
       "source": "https://people.maths.ox.ac.uk/trefethen/p22.m",
-      "chapter": null,
+      "chapter": "polynomials/airy/index.qmd",
       "scope": "Original four-degree Airy experiment; explicitly eliminate the zero-weight constraint before a finite eigenproblem."
     },
     {

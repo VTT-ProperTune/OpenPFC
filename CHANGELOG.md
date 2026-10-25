@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Use a Chebyshev collocation pencil to explain an Airy constraint. Check eigenvectors, original-equation residuals and independent Airy reference values.
+
 - Teach Dirichlet Chebyshev eigenmodes and stiffness at the original book resolutions. Check full mode fields and compare resolved modes with continuum values and independent nodal matrices.
 
 - Track a parameter-dependent periodic spectrum with native Fourier differentiation. Explain parity and check complete eigenvalue branches through independent matrix solves.

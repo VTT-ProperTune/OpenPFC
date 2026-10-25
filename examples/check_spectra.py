@@ -205,6 +205,34 @@ def check_eigenmodes(binary, root):
     run(binary, root / "bad-eigen", parameters={"n": 8, "modes": [9]}, success=False)
 
 
+def check_airy(binary, directory):
+    run(binary, directory)
+    data = rows(directory / "results/eigenvalues.csv")
+    fields = rows(directory / "results/airy.csv")
+    assert len(data) == 4
+    for row in data:
+        n = int(row["n"])
+        lam = float(row["eigenvalue"])
+        x, a = lagrange_second(n)
+        u = [float(r["u"]) for r in fields if int(r["n"]) == n and r["kind"] == "node"]
+        assert len(u) == n + 1 and u[0] == u[-1] == 0
+        assert abs(u[n // 2] - 0.35502805388781723926) < 1e-13
+        residual = [
+            sum(a[i][j] * u[j] for j in range(n + 1)) - lam * x[i] * u[i]
+            for i in range(1, n)
+        ]
+        scale = max(abs(a[i][j]) for i in range(1, n) for j in range(n + 1)) * max(
+            abs(v) for v in u
+        )
+        assert max(abs(r) for r in residual) < 1e-9 * scale
+    # Independent Airy boundary determinant, verified by the reference job.
+    assert abs(float(data[-1]["eigenvalue"]) - 501.3483797111) < 1e-7
+    assert abs(float(data[0]["eigenvalue"]) - 501.3483797111) > 1
+    run(
+        binary, directory.parent / "bad-airy", parameters={"sizes": [13]}, success=False
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -214,7 +242,12 @@ def main():
     parser.add_argument("--ranks", default=1, type=int)
     parser.add_argument(
         "--case",
-        choices=["harmonic_oscillator", "mathieu_spectrum", "chebyshev_eigenmodes"],
+        choices=[
+            "harmonic_oscillator",
+            "mathieu_spectrum",
+            "chebyshev_eigenmodes",
+            "airy_eigenproblem",
+        ],
     )
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
@@ -237,6 +270,10 @@ def main():
             root = base / "chebyshev_eigenmodes"
             root.mkdir()
             check_eigenmodes(bin_dir / "chebyshev_eigenmodes", root)
+        if args.case in (None, "airy_eigenproblem"):
+            root = base / "airy_eigenproblem"
+            root.mkdir()
+            check_airy(bin_dir / "airy_eigenproblem", root)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 
