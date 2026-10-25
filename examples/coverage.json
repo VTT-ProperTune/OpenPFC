@@ -305,6 +305,14 @@
       ]
     },
     {
+      "target": "polynomial_interpolation",
+      "source": "polynomials/interpolation/model.cpp",
+      "chapter": "polynomials/interpolation/index.qmd",
+      "capabilities": [
+        "polynomial-interpolation"
+      ]
+    },
+    {
       "target": "profiling_timer_report",
       "source": "profiling_timer_report.cpp",
       "chapter": null,
@@ -460,7 +468,7 @@
       "program": 9,
       "title": "polynomial interpolation in equispaced and Chebyshev pts",
       "source": "https://people.maths.ox.ac.uk/trefethen/p9.m",
-      "chapter": null,
+      "chapter": "polynomials/interpolation/index.qmd",
       "scope": "Original degree-16 node comparison, using barycentric evaluation instead of monomial fitting."
     },
     {

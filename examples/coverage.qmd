@@ -16,15 +16,15 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 [Follow what is taught, what is adapted, and what still needs a chapter.]{.lesson-deck}
 :::
 
-There are 50 declared runnable example targets and
-20 Quarto teaching chapters. The table includes older programs
+There are 51 declared runnable example targets and
+21 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
 ## Spectral Methods in MATLAB
 
 The [author's collection](https://people.maths.ox.ac.uk/trefethen/spectral.html)
-contains forty programs. Currently 8 have a corresponding lesson.
+contains forty programs. Currently 9 have a corresponding lesson.
 A link means that the lesson declares coverage of that experiment; the
 scope column states changes in method or presentation. It does not mean
 an unmodified MATLAB program was translated line for line. Pending rows
@@ -40,7 +40,7 @@ remain in the inventory while applicability and implementation are assessed.
 | [6](https://people.maths.ox.ac.uk/trefethen/p6.m) | variable coefficient wave equation | [Read the lesson](waves/variable-transport/index.qmd). Original variable-speed Gaussian experiment and book startup preset, with a consistent Taylor startup and characteristic reference added. |
 | [7](https://people.maths.ox.ac.uk/trefethen/p7.m) | accuracy of periodic spectral differentiation | [Read the lesson](differentiation/smoothness/index.qmd). All four original regularity profiles on even 6..50 grids, with matrix and FFT errors. |
 | [8](https://people.maths.ox.ac.uk/trefethen/p8.m) | eigenvalues of harmonic oscillator -u"+x^2 u on R | Pending assessment and implementation. |
-| [9](https://people.maths.ox.ac.uk/trefethen/p9.m) | polynomial interpolation in equispaced and Chebyshev pts | Pending assessment and implementation. |
+| [9](https://people.maths.ox.ac.uk/trefethen/p9.m) | polynomial interpolation in equispaced and Chebyshev pts | [Read the lesson](polynomials/interpolation/index.qmd). Original degree-16 node comparison, using barycentric evaluation instead of monomial fitting. |
 | [10](https://people.maths.ox.ac.uk/trefethen/p10.m) | polynomials and corresponding equipotential curves | Pending assessment and implementation. |
 | [11](https://people.maths.ox.ac.uk/trefethen/p11.m) | Chebyshev differentation of a smooth function | Pending assessment and implementation. |
 | [12](https://people.maths.ox.ac.uk/trefethen/p12.m) | accuracy of Chebyshev spectral differentiation | Pending assessment and implementation. |
@@ -117,6 +117,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `ns2d_vorticity` | Pending conversion. |
 | `periodic_collocation` | [Read the lesson](differentiation/collocation/index.qmd) |
 | `periodic_differentiation` | [Read the lesson](differentiation/periodic/index.qmd) |
+| `polynomial_interpolation` | [Read the lesson](polynomials/interpolation/index.qmd) |
 | `profiling_timer_report` | Pending conversion. |
 | `spectral_smoothness` | [Read the lesson](differentiation/smoothness/index.qmd) |
 | `stability_regions` | [Read the lesson](integration/stability/index.qmd) |

@@ -99,6 +99,7 @@ add_subdirectory(geometry)
 add_subdirectory(heat)
 add_subdirectory(integration)
 add_subdirectory(interpolation)
+add_subdirectory(polynomials)
 add_subdirectory(waves)
 
 if(OpenPFC_BUILD_TESTS)
@@ -247,6 +248,9 @@ if(OpenPFC_BUILD_TESTS)
   add_test(NAME example-stability-regions
            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_dynamics.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case stability_regions)
   set_tests_properties(example-stability-regions PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  add_test(NAME example-polynomial-interpolation
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_polynomials.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case polynomial_interpolation)
+  set_tests_properties(example-polynomial-interpolation PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
 endif()
 
 add_executable(23_halo_microtiming 23_halo_microtiming.cpp)
