@@ -414,6 +414,40 @@ def check_multigrid(binary, directory):
     run(binary, directory.parent / "bad-mg", parameters={"sizes": [8]}, success=False)
 
 
+def check_clamped(binary, root):
+    # Determine the cubic from four endpoint equations, independently of the
+    # model's closed-form hyperbolic-function coefficients.
+    equations = [[1, -1, 1, -1], [0, 1, -2, 3], [1, 1, 1, 1], [0, 1, 2, 3]]
+    coefficients = substitute(
+        factor(equations), [math.exp(-1), math.exp(-1), math.e, math.e]
+    )
+    errors = []
+    for n in (6, 15):
+        directory = root / f"clamped-{n}"
+        run(binary, directory, parameters={"n": n})
+        data = rows(directory / "results/beam.csv")
+        assert len([r for r in data if r["kind"] == "node"]) == n + 1
+        assert len([r for r in data if r["kind"] == "curve"]) == 401
+        error = slope_error = 0
+        for row in data:
+            x = float(row["x"])
+            exact = math.exp(x) - sum(c * x**j for j, c in enumerate(coefficients))
+            slope = math.exp(x) - sum(
+                j * coefficients[j] * x ** (j - 1) for j in range(1, 4)
+            )
+            assert abs(float(row["exact"]) - exact) < 2e-15
+            assert abs(float(row["exact_du"]) - slope) < 2e-15
+            error = max(error, abs(float(row["u"]) - exact))
+            slope_error = max(slope_error, abs(float(row["du"]) - slope))
+            if abs(x) == 1:
+                assert float(row["u"]) == 0 and float(row["du"]) == 0
+        if n == 15:
+            assert error < 5e-11 and slope_error < 5e-10, (error, slope_error)
+        errors.append(error)
+    assert errors[0] > 1e-9 and errors[1] < errors[0] * 1e-4, errors
+    run(binary, root / "bad-clamped", parameters={"n": 2}, success=False)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -434,6 +468,7 @@ def main():
             "square_laplace",
             "gamma_contour",
             "multigrid_poisson",
+            "clamped_beam",
         ],
     )
     args = parser.parse_args()
@@ -485,6 +520,10 @@ def main():
             root = base / "multigrid_poisson"
             root.mkdir()
             check_multigrid(bin_dir / "multigrid_poisson", root)
+        if args.case in (None, "clamped_beam"):
+            root = base / "clamped_beam"
+            root.mkdir()
+            check_clamped(bin_dir / "clamped_beam", root)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

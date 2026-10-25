@@ -265,6 +265,17 @@
       ]
     },
     {
+      "target": "clamped_beam",
+      "source": "polynomials/clamped-beam/model.cpp",
+      "chapter": "polynomials/clamped-beam/index.qmd",
+      "capabilities": [
+        "native-chebyshev",
+        "boundary-conditions",
+        "gmres",
+        "biharmonic-reference"
+      ]
+    },
+    {
       "target": "coupled_fields_example",
       "source": "coupled_fields/main.cpp",
       "chapter": null,
@@ -932,7 +943,7 @@
       "program": 38,
       "title": "solve u_xxxx = exp(x), u(-1)=u(1)=u'(-1)=u'(1)=0",
       "source": "https://people.maths.ox.ac.uk/trefethen/p38.m",
-      "chapter": null,
+      "chapter": "polynomials/clamped-beam/index.qmd",
       "scope": "Original degree-15 clamped fourth-order problem. Native Chebyshev nodes/derivatives construct the weighted operator; native GMRES replaces backslash, and barycentric reconstruction of the auxiliary polynomial preserves zero values and slopes. Complete values and slopes are checked against an independently determined analytic solution."
     },
     {

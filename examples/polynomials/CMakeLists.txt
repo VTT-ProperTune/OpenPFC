@@ -52,3 +52,7 @@ set_target_properties(square_helmholtz PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CM
 add_executable(square_laplace laplace-square/model.cpp)
 target_link_libraries(square_laplace PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(square_laplace PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(clamped_beam clamped-beam/model.cpp)
+target_link_libraries(clamped_beam PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(clamped_beam PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
