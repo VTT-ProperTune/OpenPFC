@@ -35,8 +35,9 @@ The CLI prints the attempt directory; `results/summary.json` and
 Edit `input.json` and rerun to reuse the build with a new saved attempt.
 See the [native CLI guide](user_guide/cli.md) for diagnostics, MPI, output files,
 input limits, export and CPU image packaging. `openpfc COMMAND --help` lists
-command-specific options. `openpfc bundle` packages a compiled CPU model;
-`tohtori-cuda` and `lumi-g` bundles are not qualified yet.
+command-specific options. `openpfc bundle` packages a compiled CPU model as a
+scratch image, or into a pinned base with `--base`. `tohtori-cuda` and `lumi-g`
+bundles are not qualified yet.
 
 ## What you are building toward
 

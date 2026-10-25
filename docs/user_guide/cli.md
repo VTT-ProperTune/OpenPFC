@@ -256,14 +256,24 @@ Only the native executable is installed as `bin/openpfc`.
 
 `openpfc bundle` packages the model produced by `compile` or `run`. The image
 contains that executable, the shared libraries that are not part of the host
-MPI stack or the base glibc, and a provenance file. It does not contain a
+MPI stack, and a provenance file. Glibc and `/bin/sh` are copied from the host
+into a scratch image, or supplied by `--base`. It does not contain a
 compiler, the OpenPFC sources, SDK headers or Python. The model is not rebuilt
 inside the image.
 
 ```bash
-openpfc bundle model.cpp -o model.sif --base /path/to/base.sif \
+openpfc bundle model.cpp -o model.sif \
   --host-prefix /path/to/openmpi --host-prefix /path/to/ucx
 ```
+
+Omit `--base` to build a scratch image. The image then copies the host dynamic
+loader, the glibc libraries required by the model and by `/bin/sh`, and
+`/bin/sh` itself. Apptainer and Singularity open `/bin/sh` to start the
+runscript, so a scratch image without that shell does not run. Host MPI and
+fabric libraries stay outside the image. The copied glibc is the build
+machine's C library, so this image is for that same CPU host. The scratch
+image does not include a passwd database, a locale archive, or the Open MPI
+help text, and the runtime may warn about those.
 
 Use the same `--sdk`, compiler and `--build-type` options as the compile that
 should be packaged. `--profile=local-cpu` is the qualified profile (`local` is
@@ -275,7 +285,7 @@ libraries. That is not a ROCm qualification.
 Open MPI, UCX and PMIx installations are selected with `--host-prefix`. A
 fabric library that shares a directory with the C library, such as `libfabric`
 or `libibverbs` in `/usr/lib64`, is not selected that way: binding the whole
-directory would hide the base image's libraries. Pass each such file with
+directory would hide the C library in the image. Pass each such file with
 `--host-lib`. The command prints the missing file. A provider directory beside
 that file (`libfabric`, `libibverbs` or `hwloc`) is bind-mounted when it exists
 and is not itself a system library directory. Other plugins opened only with
@@ -284,15 +294,17 @@ and is not itself a system library directory. Other plugins opened only with
 `--host-prefix` must not be `/`, `/usr/lib64` or another system library
 directory.
 
-`--base` is a pinned local Apptainer/Singularity image that supplies glibc and
-`/bin/sh`. Its glibc must be at least as new as the GLIBC symbol versions
-required by the model and the host libraries. The CLI checks that version when
-it builds the image. Scratch images are not qualified.
+`--base` is optional. When it is set, it is a pinned local
+Apptainer/Singularity image that supplies glibc and `/bin/sh` instead of
+copying them from the host. Its glibc must be at least as new as the GLIBC
+symbol versions required by the model and the host libraries. The CLI checks
+that version when it builds the image.
 
 `--prepare-only` writes the recipe under the cache and does not run a container
 runtime. The printed directory contains `bundle.def`, `payload/` and
-`run-host.sh`. Building an image needs `apptainer` or `singularity` on a host
-that is allowed to build images. A LUMI login node is not assumed to be able to
+`run-host.sh`. A scratch recipe also contains `rootfs/`. Building an image
+needs `apptainer` or `singularity` on a host that is allowed to build images.
+A LUMI login node is not assumed to be able to
 build one. Pass `--runtime=singularity` where the site provides SingularityCE.
 
 The command refuses to overwrite `model.sif`, `model.sif.sha256` or

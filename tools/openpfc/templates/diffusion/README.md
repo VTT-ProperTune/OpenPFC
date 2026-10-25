@@ -57,7 +57,9 @@ openpfc export /path/to/cache/runs/openpfc-run-SHA256 /durable/new-record
 ```
 
 To package this CPU build as an image, use `openpfc bundle model.cpp -o model.sif`
-with a pinned base image, the host MPI prefix, and `--host-lib` for each fabric
-library that shares a system directory with the C library. The image runs `model`, not a
-compiler or Python. CUDA and ROCm profiles are not qualified for bundling.
-Details are in the native CLI guide.
+with the host MPI prefix and `--host-lib` for each fabric library that shares a
+system directory with the C library. Omitting `--base` builds a scratch image
+that copies the host loader, glibc and `/bin/sh`. Pass `--base` to use a pinned
+image for those files instead. The image runs `model`, not a compiler or Python.
+CUDA and ROCm profiles are not qualified for bundling. Details are in the native
+CLI guide.

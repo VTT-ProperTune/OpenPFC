@@ -7,6 +7,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- `openpfc bundle` can build a scratch image when `--base` is omitted. The image
+  copies the host dynamic loader, the glibc libraries required by the model and
+  by `/bin/sh`, and `/bin/sh` itself. Host MPI and fabric libraries stay outside.
+  `--base` still selects a pinned image that supplies glibc and the shell (#636).
+
 - Add `openpfc bundle` to package a compiled CPU model, its non-MPI runtime
   libraries and its build fingerprint into an Apptainer/Singularity recipe.
   Host MPI stays outside the image. Fabric libraries that share a system

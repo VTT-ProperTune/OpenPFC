@@ -37,7 +37,8 @@ if(NOT output MATCHES "--input-file" OR NOT output MATCHES "--launcher")
 endif()
 call(0 bundle --help)
 if(NOT output MATCHES "--prepare-only" OR NOT output MATCHES "--base" OR
-   NOT output MATCHES "not qualified" OR NOT output MATCHES "bake_case.py")
+   NOT output MATCHES "scratch" OR NOT output MATCHES "not qualified" OR
+   NOT output MATCHES "bake_case.py")
   message(FATAL_ERROR "Bundle help is incomplete: ${output}")
 endif()
 call(2 help unknown-command)

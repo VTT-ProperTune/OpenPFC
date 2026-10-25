@@ -236,6 +236,59 @@ void raise_glibc(int &major, int &minor, int candidate_major, int candidate_mino
          << shell_quote(filename) << " \"$@\"\n";
   return script.str();
 }
+// The dynamic loader searches these directories when the image has no
+// ld.so.cache. Prefer the host symlink the loader would open, so the copied
+// file keeps that absolute path inside the scratch image.
+[[nodiscard]] std::string loader_destination(const std::string &soname,
+                                             const fs::path &canonical) {
+  static constexpr std::string_view directories[] = {
+      "/lib64",
+      "/usr/lib64",
+      "/lib",
+      "/usr/lib",
+      "/lib/x86_64-linux-gnu",
+      "/usr/lib/x86_64-linux-gnu",
+      "/lib/aarch64-linux-gnu",
+      "/usr/lib/aarch64-linux-gnu",
+  };
+  for (const auto directory : directories) {
+    const fs::path candidate = fs::path(std::string(directory)) / soname;
+    std::error_code error;
+    if (!fs::exists(candidate, error)) continue;
+    const auto resolved = fs::weakly_canonical(candidate, error);
+    if (!error && resolved == canonical)
+      return candidate.lexically_normal().string();
+  }
+  return (canonical.parent_path() / soname).lexically_normal().string();
+}
+void add_scratch_file(std::map<std::string, fs::path> &files,
+                      const std::string &container, const fs::path &host) {
+  const auto path = fs::path(container).lexically_normal().string();
+  if (!path.starts_with('/') || path.find("..") != std::string::npos ||
+      path.find(' ') != std::string::npos)
+    throw Error("scratch file path must be absolute and must not contain spaces: " +
+                container);
+  reject_separators(path, "scratch file");
+  std::error_code error;
+  auto stored = fs::weakly_canonical(host, error);
+  if (error) stored = host;
+  const auto [existing, inserted] = files.emplace(path, stored);
+  if (!inserted && existing->second != host && existing->second != stored)
+    throw Error("scratch path " + path + " comes from two host files");
+}
+void add_interpreter(std::map<std::string, fs::path> &files,
+                     const std::string &interpreter, const std::string &label) {
+  if (interpreter.empty()) throw Error(label + " has no ELF interpreter");
+  add_scratch_file(files, fs::path(interpreter).lexically_normal().string(),
+                   canonical_file(interpreter, label));
+}
+[[nodiscard]] bool host_executable(const fs::path &path) {
+  std::error_code error;
+  const auto permissions = fs::status(path, error).permissions();
+  if (error) return false;
+  using enum fs::perms;
+  return (permissions & (owner_exec | group_exec | others_exec)) != none;
+}
 } // namespace
 
 int bundle_model(const Arguments &args) {
@@ -271,10 +324,12 @@ int bundle_model(const Arguments &args) {
   if (fs::exists(output) || fs::exists(sidecar) || fs::exists(launched))
     throw Error("refusing to overwrite " + output.string() +
                 "; remove the image, its .sha256 sidecar and its .run helper first");
-  if (!args.has("base"))
-    throw Error("CPU bundles need --base BASE.sif, a pinned image that provides "
-                "glibc and /bin/sh; scratch images are not qualified yet");
-  const auto base = canonical_file(args.get("base"), "--base");
+  // A scratch image has no C library and no shell. Apptainer still opens
+  // /bin/sh to start a runscript, so those files are copied from the host.
+  // --base keeps the previous path: a pinned image supplies them instead.
+  const bool scratch = !args.has("base");
+  std::optional<fs::path> base;
+  if (!scratch) base = canonical_file(args.get("base"), "--base");
   safe_directory(output.parent_path());
   std::vector<fs::path> prefixes;
   std::set<std::string> bind_prefixes;
@@ -377,6 +432,33 @@ int bundle_model(const Arguments &args) {
       throw Error("--host-lib is not a runtime dependency of the model: " +
                   item.filename + " (" + item.canonical.string() + ")");
   }
+  std::map<std::string, fs::path> scratch_files;
+  if (scratch) {
+    add_interpreter(scratch_files, closure.interpreter, "model interpreter");
+    for (const auto &[soname, path] : system)
+      add_scratch_file(scratch_files, loader_destination(soname, path), path);
+    const auto shell_bytes = read("/bin/sh");
+    if (shell_bytes.size() < 4 || shell_bytes.compare(0, 4,
+                                                      "\x7f"
+                                                      "ELF") != 0)
+      throw Error("scratch images need an ELF /bin/sh; the host shell is not an "
+                  "ELF binary");
+    add_scratch_file(scratch_files, "/bin/sh",
+                     canonical_file("/bin/sh", "host /bin/sh"));
+    const auto shell = dynamic_closure("/bin/sh");
+    add_interpreter(scratch_files, shell.interpreter, "shell interpreter");
+    for (const auto &library : shell.libraries) {
+      if (matches(k_gpu, library.soname) || library.soname.starts_with("libpython"))
+        throw Error("host /bin/sh links " + library.soname +
+                    "; a scratch image cannot include that runtime");
+      if (matches(mpi_pattern, library.soname) || matches(k_fabric, library.soname))
+        throw Error("host /bin/sh links " + library.soname +
+                    "; scratch images copy the shell, not the host MPI stack");
+      add_scratch_file(scratch_files,
+                       loader_destination(library.soname, library.path),
+                       library.path);
+    }
+  }
   const auto floor = glibc_text(glibc_major, glibc_minor);
   const auto &consumer = build.manifest.at("identity").at("consumer");
   Json sdk_manifest = nullptr;
@@ -386,6 +468,11 @@ int bundle_model(const Arguments &args) {
   for (const auto &[name, path] : host_from_file)
     host_records[name] =
         Json{{"path", path.string()}, {"sha256", file_sha256(path)}};
+  Json scratch_records = Json::object();
+  for (const auto &[container, host] : scratch_files)
+    scratch_records[container] =
+        Json{{"host_path", host.string()}, {"sha256", file_sha256(host)}};
+  const std::map<std::string, fs::path> no_libraries;
   Json provenance{
       {"format_version", 1},
       {"kind", "openpfc.model-bundle"},
@@ -397,7 +484,15 @@ int bundle_model(const Arguments &args) {
       {"runtime", runtime_name},
       {"build_id", build.manifest.at("build_id")},
       {"binary_sha256", build.manifest.at("binary_sha256")},
-      {"base_sha256", file_sha256(base)},
+      {"bootstrap", scratch ? "scratch" : "localimage"},
+      {"bootstrap_note",
+       scratch ? "The image copies the host dynamic loader, the glibc libraries "
+                 "required by the model and by /bin/sh, and host /bin/sh itself. "
+                 "Host MPI and fabric libraries stay outside the image."
+               : "The pinned base image supplies glibc and /bin/sh. Host MPI and "
+                 "fabric libraries stay outside the image."},
+      {"base_sha256", scratch ? Json(nullptr) : Json(file_sha256(*base))},
+      {"launch_shell", scratch ? Json("/bin/sh") : Json(nullptr)},
       {"input_sha256",
        input_name.empty() ? Json(nullptr) : Json(sha256(input_bytes))},
       {"sdk_manifest_sha256", sdk_manifest},
@@ -413,7 +508,8 @@ int bundle_model(const Arguments &args) {
       {"host_glibc_requirement", floor.empty() ? Json(nullptr) : Json(floor)},
       {"bundled_libraries", library_records(bundled)},
       {"host_libraries", host_records},
-      {"base_provided_glibc", library_records(system)},
+      {"base_provided_glibc", library_records(scratch ? no_libraries : system)},
+      {"scratch_files", scratch_records},
       {"host_prefixes",
        std::vector<std::string>(bind_prefixes.begin(), bind_prefixes.end())},
       {"host_provider_directories",
@@ -444,6 +540,12 @@ int bundle_model(const Arguments &args) {
       if (file_sha256(file) != library.value().at("sha256").get<std::string>())
         throw Error("cached bundled library changed: " + file.string());
     }
+    for (auto file = provenance.at("scratch_files").begin();
+         file != provenance.at("scratch_files").end(); ++file) {
+      const auto path = root / "rootfs" / fs::path(file.key()).relative_path();
+      if (file_sha256(path) != file.value().at("sha256").get<std::string>())
+        throw Error("cached scratch file changed: " + path.string());
+    }
     for (const auto *name :
          {"bundle.def", "run-host.sh", "payload/provenance.json"}) {
       if (file_sha256(root / name) != manifest.at(name).get<std::string>())
@@ -467,10 +569,6 @@ int bundle_model(const Arguments &args) {
     publish(stage / "payload/build-manifest.json",
             read(build.root / "build-manifest.json"), false);
     publish(stage / "payload/provenance.json", provenance.dump(2) + "\n", false);
-    std::error_code error;
-    fs::create_symlink(base, stage / "base.sif", error);
-    if (error)
-      throw Error("cannot record the base image symlink: " + error.message());
     std::string runscript = "    exec /opt/openpfc/bin/model \"$@\"\n";
     if (!input_name.empty()) {
       runscript =
@@ -478,13 +576,39 @@ int bundle_model(const Arguments &args) {
           "/opt/openpfc/inputs/" +
           input_name + "\n    fi\n    exec /opt/openpfc/bin/model \"$@\"\n";
     }
-    const std::string definition =
-        "Bootstrap: localimage\nFrom: base.sif\n\n"
-        "%files\n    payload /opt/openpfc\n\n"
-        "%environment\n    export PATH=/opt/openpfc/bin:$PATH\n"
-        "    export LD_LIBRARY_PATH=/opt/openpfc/lib:${LD_LIBRARY_PATH:-}\n\n"
-        "%runscript\n" +
-        runscript;
+    std::string definition;
+    if (scratch) {
+      for (const auto &[container, host] : scratch_files) {
+        const auto destination =
+            stage / "rootfs" / fs::path(container).relative_path();
+        safe_directory(destination.parent_path());
+        publish(destination, read(host), host_executable(host));
+      }
+      std::ostringstream recipe;
+      recipe << "Bootstrap: scratch\n\n%files\n    payload /opt/openpfc\n";
+      for (const auto &[container, host] : scratch_files) {
+        (void)host;
+        recipe << "    rootfs" << container << ' ' << container << '\n';
+      }
+      recipe
+          << "\n%environment\n    export PATH=/opt/openpfc/bin:$PATH\n"
+             "    export LD_LIBRARY_PATH=/opt/openpfc/lib:${LD_LIBRARY_PATH:-}\n\n"
+             "%runscript\n"
+          << runscript;
+      definition = recipe.str();
+    } else {
+      std::error_code error;
+      fs::create_symlink(*base, stage / "base.sif", error);
+      if (error)
+        throw Error("cannot record the base image symlink: " + error.message());
+      definition =
+          "Bootstrap: localimage\nFrom: base.sif\n\n"
+          "%files\n    payload /opt/openpfc\n\n"
+          "%environment\n    export PATH=/opt/openpfc/bin:$PATH\n"
+          "    export LD_LIBRARY_PATH=/opt/openpfc/lib:${LD_LIBRARY_PATH:-}\n\n"
+          "%runscript\n" +
+          runscript;
+    }
     publish(stage / "bundle.def", definition, false);
     std::vector<std::string> binds;
     for (const auto &prefix : bind_prefixes)
@@ -521,7 +645,8 @@ int bundle_model(const Arguments &args) {
                                  .at("payload_bytes")
                                  .get<std::uintmax_t>();
   std::cout << "Bundle: " << root.string() << "\nProfile: local-cpu (" << site
-            << " host MPI)\nPayload bytes: " << payload_bytes << '\n';
+            << " host MPI)\nBootstrap: " << (scratch ? "scratch" : "localimage")
+            << "\nPayload bytes: " << payload_bytes << '\n';
   if (!floor.empty()) std::cout << "GLIBC requirement: " << floor << '\n';
   std::cout << "Unverified profiles: tohtori-cuda lumi-g\n";
   if (args.has("prepare-only")) {
@@ -529,8 +654,8 @@ int bundle_model(const Arguments &args) {
     return 0;
   }
   const auto runtime = find_program(runtime_name);
-  if (!floor.empty()) {
-    const auto [major, minor] = base_glibc(runtime, base, root);
+  if (!scratch && !floor.empty()) {
+    const auto [major, minor] = base_glibc(runtime, *base, root);
     if (major < glibc_major || (major == glibc_major && minor < glibc_minor))
       throw Error("base image GLIBC " + glibc_text(major, minor) +
                   " is older than the host libraries require (" + floor + ")");
