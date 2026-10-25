@@ -104,6 +104,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `23_halo_microtiming` | `23_halo_microtiming.cpp` | Timed `HaloExchange` loop; schema-v2 JSON (`--cuda` / `--hip` / `--full`) |
 | `24_adaptive_etd` | `24_adaptive_etd.cpp` | ETD1 step doubling: a heat mode against `exp(-k²t)`, then `∂t ψ = ∇²ψ − ψ³` with the memoryless controller |
 | `nonlinear_spectral_course` | `nonlinear_spectral/allen_cahn.cpp` | Periodic Allen–Cahn: cubic Galerkin projection with `4K < N`, ETD2, independent convolution/RK4 checks and MPI ownership output |
+| `periodic_differentiation` | `differentiation/periodic/model.cpp` | Analytic derivative, second/fourth-order FD, and Fourier convergence |
 
 ## Research prototypes
 

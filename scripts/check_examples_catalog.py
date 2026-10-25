@@ -17,14 +17,18 @@ ADD_EXE_RE = re.compile(r"^\s*add_executable\(\s*([^\s\)]+)")
 
 
 def targets_from_cmake() -> set[str]:
-    text = CMAKE.read_text(encoding="utf-8", errors="replace")
+    # Themed teaching examples own their targets below examples/<theme>/.
+    themed = [path for path in CMAKE.parent.glob("*/CMakeLists.txt")
+              if any(path.parent.glob("*/index.qmd"))]
+    text = "\n".join(path.read_text(encoding="utf-8", errors="replace")
+                     for path in [CMAKE, *themed])
     out: set[str] = set()
     for line in text.splitlines():
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
             continue
         match = ADD_EXE_RE.match(line)
-        if match:
+        if match and not match.group(1).startswith("test_"):
             out.add(match.group(1))
     return out
 

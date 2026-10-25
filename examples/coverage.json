@@ -218,6 +218,16 @@
       "capabilities": []
     },
     {
+      "target": "periodic_differentiation",
+      "source": "differentiation/periodic/model.cpp",
+      "chapter": "differentiation/periodic/index.qmd",
+      "capabilities": [
+        "finite-differences",
+        "spectral-gradients",
+        "convergence"
+      ]
+    },
+    {
       "target": "profiling_timer_report",
       "source": "profiling_timer_report.cpp",
       "chapter": null,
@@ -275,7 +285,7 @@
       "program": 1,
       "title": "convergence of fourth-order finite differences",
       "source": "https://people.maths.ox.ac.uk/trefethen/p1.m",
-      "chapter": null,
+      "chapter": "differentiation/periodic/index.qmd",
       "scope": "Original fourth-order finite-difference resolution family, with additional FD2 and FFT comparisons."
     },
     {
@@ -584,7 +594,9 @@
         "fd_gradient.hpp",
         "spectral_gradient.hpp"
       ],
-      "chapters": []
+      "chapters": [
+        "differentiation/periodic/index.qmd"
+      ]
     },
     {
       "name": "conservative fluxes and nonperiodic boundaries",

@@ -1,28 +1,80 @@
 ---
 title: "OpenPFC by example"
-description: "Runnable C++ experiments with mathematical explanations and answers you can check."
+description: "Small C++ experiments in geometry, differentiation, interpolation, evolution and boundary-value problems."
+listing:
+  contents:
+    - "*/*/index.qmd"
+  type: table
+  fields: [title, description]
+  sort: "order"
+  sort-ui: false
+  filter-ui: false
 ---
 
 <!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
 ::: {.article-body}
+
 ::: {.article-title}
+
 [OpenPFC / Learn by doing]{.lesson-kicker}
 
 # A few lines. A mathematical idea. An answer you can check.
 
-[Read the source, change a parameter, and predict the answer.]{.lesson-deck}
+[Start with a derivative. Follow it into a heat equation. Change the numerical method and discover what changes in the answer.]{.lesson-deck}
+
 :::
 
-The teaching collection is being built from small runnable C++ programs.
-Each chapter develops a mathematical argument, includes actual source,
-and explains how to decide whether the answer is right.
+These lessons are invitations to experiment with C++ and OpenPFC. Each one
+develops a small mathematical argument, shows the actual implementation,
+and gives you a way to decide whether the answer is right. Read the source,
+change a parameter, and try to predict the result before running it.
 
-The [coverage inventory](coverage.qmd) records every existing executable
-and all forty programs from *Spectral Methods in MATLAB*. Pending entries
-stay visible while the corresponding teaching chapters are developed.
+## Start with a question
 
-The [existing examples catalogue](https://vtt-propertune.github.io/OpenPFC/docs/reference/examples_catalog/)
-provides runnable entry points in the meantime.
+Begin with [How accurately can we differentiate?](differentiation/periodic/index.qmd).
+Second-order differences, fourth-order differences, and Fourier derivatives
+act on the same smooth function. A refinement plot makes their different
+behaviour visible.
+
+Then follow one heat equation through three implementations:
+[neighbouring values](heat/finite-differences/index.qmd),
+[Fourier modes](heat/fourier/index.qmd), and
+[an exact exponential propagator](heat/exponential/index.qmd).
+The geometry and initial condition stay fixed, so each change in the answer
+has a numerical explanation.
+
+::: {#listing}
+:::
+
+## Make your first change
+
+Install a compatible OpenPFC SDK and CLI using the
+[installation guide](https://vtt-propertune.github.io/OpenPFC/docs/project/install/).
+Run `openpfc doctor` once in your compiler/MPI environment. The
+[CLI guide](https://vtt-propertune.github.io/OpenPFC/docs/user_guide/cli/)
+explains SDK selection when it is not discovered automatically.
+
+From the OpenPFC checkout:
+
+```sh
+cd examples/differentiation/periodic
+openpfc run model.cpp input.json --launcher=none
+```
+
+Edit `input.json` to change the grid. Edit `model.cpp` to change the
+function. The CLI compiles the model, preserves an attempt directory,
+and prints its location. CSV files are in that attempt's `results/`.
+Changing the input alone reuses the compiled executable.
+
+The heat lessons share a small header for inputs and diagnostics. Their
+commands add `--source-root ..` so that the CLI also preserves that header.
+Each chapter gives the complete command. For MPI-capable chapters, invoke
+the CLI once with `--ranks=2 --launcher=mpirun` instead of `--launcher=none`.
+The complete-domain polynomial references and geometry-only programs use
+the documented single-process command.
+
+The [coverage inventory](coverage.qmd) records all existing programs and remaining teaching work.
+
 :::

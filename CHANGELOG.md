@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Compare second- and fourth-order differences with native Fourier differentiation on one smooth periodic function. Include a refinement story, actual source and an independent convergence check on one and two ranks.
+
 - Introduce a native Quarto teaching collection with actual source excerpts,
   scientific references, source downloads and an explicit coverage inventory.
   Import chapters into the existing website through an owned staging profile.
