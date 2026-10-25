@@ -150,3 +150,8 @@ add_subdirectory(taylor_green3d)
 if(NOT TARGET coupled_fields_example)
   add_subdirectory(coupled_fields)
 endif()
+
+# Checked nonlinear Fourier/ETD2 teaching model and independent verifier.
+add_executable(nonlinear_spectral_course nonlinear_spectral/allen_cahn.cpp)
+target_link_libraries(nonlinear_spectral_course PRIVATE OpenPFC::openpfc)
+add_subdirectory(nonlinear_spectral)

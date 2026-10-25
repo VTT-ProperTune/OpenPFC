@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Add a nonlinear Fourier teaching example with cubic dealiasing, ETD2,
+  inspectable FFT layouts and an independent coefficient-space verifier.
+
 - App and example targets inherit HeFFTe from `OpenPFC::openpfc` (#654).
 
 - App compiler-runtime discovery and site paths are removed. Mixed toolchains
