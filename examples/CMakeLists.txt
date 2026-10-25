@@ -36,8 +36,6 @@ endif()
 
 
 
-add_executable(diffusion_model_with_custom_initial_condition diffusion_model_with_custom_initial_condition.cpp)
-target_link_libraries(diffusion_model_with_custom_initial_condition PRIVATE OpenPFC::openpfc )
 
 
 
@@ -474,6 +472,16 @@ if(OpenPFC_BUILD_TESTS)
   add_test(NAME example-fourier-symbols
            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_utilities.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case symbols)
   set_tests_properties(example-fourier-symbols PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 90)
+  add_test(NAME example-gaussian-pulse
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_utilities.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case gaussian)
+  set_tests_properties(example-gaussian-pulse PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 180)
+  if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
+    add_test(NAME example-gaussian-pulse-mpi
+             COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_utilities.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case gaussian
+                     --launcher "${MPIEXEC_EXECUTABLE}" "--rank-flag=${MPIEXEC_NUMPROC_FLAG}" --ranks 2)
+    set_tests_properties(example-gaussian-pulse-mpi PROPERTIES PROCESSORS 2 TIMEOUT 180
+                         ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+  endif()
   add_executable(test_example_eigensystem tests/eigensystem.cpp)
   target_link_libraries(test_example_eigensystem PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
   add_test(NAME example-eigensystem-reference COMMAND test_example_eigensystem)

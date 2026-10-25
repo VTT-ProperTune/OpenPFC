@@ -65,6 +65,47 @@ def wave_numbers(run, output):
     save_svg(figure, destination)
 
 
+def gaussian(run, output):
+    import json
+
+    rows = []
+    for path in sorted((run / "results").glob("field_rank_*.csv")):
+        with path.open() as file:
+            rows.extend(csv.DictReader(file))
+    assert rows
+    y = min({float(row["y"]) for row in rows}, key=abs)
+    z = min({float(row["z"]) for row in rows}, key=abs)
+    line = sorted(
+        (row for row in rows if float(row["y"]) == y and float(row["z"]) == z),
+        key=lambda row: float(row["x"]),
+    )
+    x = [float(row["x"]) for row in line]
+    initial = [float(row["initial"]) for row in line]
+    values = [float(row["u"]) for row in line]
+    exact = [float(row["exact"]) for row in line]
+    summary = json.loads((run / "results/summary.json").read_text())
+    figure, axes = plt.subplots(1, 2, figsize=(9, 3.5), layout="constrained")
+    axes[0].plot(x, initial, color="0.6", label="Initial samples")
+    axes[0].plot(x, exact, "--", color="#202020", label="Periodic continuum")
+    axes[0].plot(x, values, "o-", markersize=3, color="#286b83", label="Backward Euler")
+    axes[0].set(title=f"Pulse at t = {summary['time']:g}", ylabel="u")
+    axes[0].legend(fontsize=8)
+    axes[1].plot(
+        x,
+        [value - reference for value, reference in zip(values, exact)],
+        "o-",
+        markersize=3,
+        color="#ab5137",
+    )
+    axes[1].axhline(0, color="0.6", linewidth=0.7)
+    axes[1].set(title="Error on the same grid line", ylabel="Numerical − continuum")
+    for plot in axes:
+        plot.set_xlabel(f"x   (y = {y:g}, z = {z:g})")
+        plot.grid(alpha=0.15)
+    destination = output / "heat/gaussian-pulse/figures/pulse.svg"
+    save_svg(figure, destination)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--symbols", type=Path)

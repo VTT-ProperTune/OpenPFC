@@ -355,9 +355,15 @@
     },
     {
       "target": "diffusion_model_with_custom_initial_condition",
-      "source": "diffusion_model_with_custom_initial_condition.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "heat/gaussian-pulse/model.cpp",
+      "chapter": "heat/gaussian-pulse/index.qmd",
+      "capabilities": [
+        "fft",
+        "implicit-euler",
+        "field-callables",
+        "mpi-reductions",
+        "analytic-reference"
+      ]
     },
     {
       "target": "disk_eigenmodes",

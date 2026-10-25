@@ -24,3 +24,7 @@ set_target_properties(04_diffusion_model PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${
 add_executable(05_simulator driver-hooks/model.cpp)
 target_link_libraries(05_simulator PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(05_simulator PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(diffusion_model_with_custom_initial_condition gaussian-pulse/model.cpp)
+target_link_libraries(diffusion_model_with_custom_initial_condition PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(diffusion_model_with_custom_initial_condition PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")

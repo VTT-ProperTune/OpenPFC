@@ -389,3 +389,21 @@ uv run --with matplotlib==3.11.2 python examples/render_utilities.py \
 The default parameters are in `fourier/symbols/input.json`. The checker
 compares every spectral symbol with physical Fourier basis functions.
 The derived figure makes no timing or performance claim.
+
+## A periodic Gaussian pulse
+
+Run the complete native heat model and plot its actual owned fields:
+
+```sh
+example_binaries="$(pwd)/builds/release/examples"
+mkdir -p results/example-book/gaussian
+(cd results/example-book/gaussian && "$example_binaries/diffusion_model_with_custom_initial_condition")
+uv run --with matplotlib==3.11.2 python examples/render_utilities.py \
+  --gaussian results/example-book/gaussian
+```
+
+The defaults are in `heat/gaussian-pulse/input.json`. Each renderer argument
+is a run directory containing `results/`. Give `--output results/plots` for
+exploratory figures. The checker compares complete Gaussian fields with
+direct Fourier sums, including one/two-rank ownership and time refinement.
+A continuous Fourier series checks the model's image-sum reference.

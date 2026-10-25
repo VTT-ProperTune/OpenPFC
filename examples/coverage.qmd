@@ -17,7 +17,7 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 :::
 
 There are 82 declared runnable example targets and
-70 Quarto teaching chapters. The table includes older programs
+71 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -111,7 +111,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `clamped_plate` | [Read the lesson](polynomials/clamped-plate/index.qmd) |
 | `coupled_fields_example` | Pending conversion. |
 | `davies_pseudospectra` | [Read the lesson](polynomials/pseudospectra/index.qmd) |
-| `diffusion_model_with_custom_initial_condition` | Pending conversion. |
+| `diffusion_model_with_custom_initial_condition` | [Read the lesson](heat/gaussian-pulse/index.qmd) |
 | `disk_eigenmodes` | [Read the lesson](polynomials/disk-modes/index.qmd) |
 | `disk_poisson` | [Read the lesson](polynomials/poisson-disk/index.qmd) |
 | `fft_backend_benchmark` | Pending conversion. |
