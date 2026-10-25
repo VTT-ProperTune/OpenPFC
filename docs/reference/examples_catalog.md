@@ -110,6 +110,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `periodic_collocation` | `differentiation/collocation/model.cpp` | Cotangent collocation matrix versus FFT derivatives of a hat and analytic profile |
 | `spectral_smoothness` | `differentiation/smoothness/model.cpp` | Trefethen programs 2 and 7: regularity, aliasing and matrix/FFT convergence |
 | `variable_transport` | `waves/variable-transport/model.cpp` | Trefethen program 6, Fourier/leapfrog transport, startup and exact characteristics |
+| `stability_regions` | `integration/stability/model.cpp` | Trefethen program 25, public RK tableaus and multistep root-locus references |
 
 ## Research prototypes
 

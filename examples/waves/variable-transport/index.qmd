@@ -136,7 +136,7 @@ steps as well as a distant final frame: a two-step oscillation can hide
 in an attractive space-time plot. For the continuous equation the weighted
 integral $\int u/c\,dx$ is conserved, whereas $\int u\,dx$ generally is not.
 
-Continue with stability regions.
+Continue with [stability regions](../../integration/stability/index.qmd).
 
 The complete [C++ model](model.cpp) and [starting input](input.json)
 are available with this lesson.

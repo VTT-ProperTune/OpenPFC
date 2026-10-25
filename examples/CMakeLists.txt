@@ -97,6 +97,7 @@ add_subdirectory(differentiation)
 add_subdirectory(fourier)
 add_subdirectory(geometry)
 add_subdirectory(heat)
+add_subdirectory(integration)
 add_subdirectory(interpolation)
 add_subdirectory(waves)
 
@@ -243,6 +244,9 @@ if(OpenPFC_BUILD_TESTS)
     set_tests_properties(example-variable-transport-mpi PROPERTIES PROCESSORS 2 TIMEOUT 360
                          ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
   endif()
+  add_test(NAME example-stability-regions
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_dynamics.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case stability_regions)
+  set_tests_properties(example-stability-regions PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
 endif()
 
 add_executable(23_halo_microtiming 23_halo_microtiming.cpp)

@@ -80,6 +80,37 @@ def check_transport(binary, root, launch):
     )
 
 
+def check_stability(binary, directory):
+    run(binary, directory)
+    grid = rows(directory / "results/rk.csv")
+    assert len(grid) == 141**2
+    for row in grid[::37]:
+        z = complex(float(row["real"]), float(row["imag"]))
+        for order in range(1, 5):
+            expected = abs(sum(z**k / math.factorial(k) for k in range(order + 1)))
+            assert abs(float(row[f"rk{order}"]) - expected) < 3e-13
+    boundary = rows(directory / "results/multistep.csv")
+    for family, order, expected in (
+        ("AB", 1, -2),
+        ("AB", 2, -1),
+        ("AB", 3, -6 / 11),
+        ("AM", 3, -6),
+        ("AM", 4, -3),
+        ("BDF", 1, 2),
+        ("BDF", 6, sum(2**k / k for k in range(1, 7))),
+    ):
+        sample = next(
+            row
+            for row in boundary
+            if row["family"] == family
+            and int(row["order"]) == order
+            and abs(float(row["theta"]) - math.pi) < 1e-12
+        )
+        assert abs(float(sample["real"]) - expected) < 1e-11
+        assert abs(float(sample["imag"])) < 1e-11
+    assert len({(row["family"], row["order"]) for row in boundary}) == 13
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -87,7 +118,7 @@ def main():
     parser.add_argument("--launcher")
     parser.add_argument("--rank-flag", default="-n")
     parser.add_argument("--ranks", default=1, type=int)
-    parser.add_argument("--case", choices=["variable_transport"])
+    parser.add_argument("--case", choices=["variable_transport", "stability_regions"])
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     bin_dir = args.bin_dir.resolve()
@@ -101,6 +132,10 @@ def main():
             root = base / "variable_transport"
             root.mkdir()
             check_transport(bin_dir / "variable_transport", root, launch)
+        if args.case in (None, "stability_regions"):
+            root = base / "stability_regions"
+            root.mkdir()
+            check_stability(bin_dir / "stability_regions", root)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

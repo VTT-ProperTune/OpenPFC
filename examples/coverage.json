@@ -321,6 +321,15 @@
       ]
     },
     {
+      "target": "stability_regions",
+      "source": "integration/stability/model.cpp",
+      "chapter": "integration/stability/index.qmd",
+      "capabilities": [
+        "butcher-tableaux",
+        "explicit-runge-kutta"
+      ]
+    },
+    {
       "target": "taylor_green3d",
       "source": "taylor_green3d/src/taylor_green.cpp",
       "chapter": null,
@@ -563,7 +572,7 @@
       "program": 25,
       "title": "stability regions for ODE formulas",
       "source": "https://people.maths.ox.ac.uk/trefethen/p25.m",
-      "chapter": null,
+      "chapter": "integration/stability/index.qmd",
       "scope": "Original AB/AM/BDF root-locus families and RK stability boundaries; native RK tableaus plus example-owned multistep references."
     },
     {
@@ -736,7 +745,8 @@
         "adaptive_controller.hpp"
       ],
       "chapters": [
-        "heat/finite-differences/index.qmd"
+        "heat/finite-differences/index.qmd",
+        "integration/stability/index.qmd"
       ]
     },
     {
