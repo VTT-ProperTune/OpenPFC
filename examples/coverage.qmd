@@ -16,15 +16,15 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 [Follow what is taught, what is adapted, and what still needs a chapter.]{.lesson-deck}
 :::
 
-There are 67 declared runnable example targets and
-53 Quarto teaching chapters. The table includes older programs
+There are 68 declared runnable example targets and
+54 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
 ## Spectral Methods in MATLAB
 
 The [author's collection](https://people.maths.ox.ac.uk/trefethen/spectral.html)
-contains forty programs. Currently 26 have a corresponding lesson.
+contains forty programs. Currently 27 have a corresponding lesson.
 A link means that the lesson declares coverage of that experiment; the
 scope column states changes in method or presentation. It does not mean
 an unmodified MATLAB program was translated line for line. Pending rows
@@ -67,7 +67,7 @@ remain in the inventory while applicability and implementation are assessed.
 | [33](https://people.maths.ox.ac.uk/trefethen/p33.m) | solve linear BVP u_xx = exp(4x), u'(-1)=u(1)=0 | [Read the lesson](polynomials/boundary-values/index.qmd). Original mixed Neumann/Dirichlet problem with a derivative row and native GMRES. |
 | [34](https://people.maths.ox.ac.uk/trefethen/p34.m) | Allen-Cahn eq. u_t = eps*u_xx+u-u^3, u(-1)=-1, u(1)=1 | Pending assessment and implementation. |
 | [35](https://people.maths.ox.ac.uk/trefethen/p35.m) | Allen-Cahn eq. as in p34.m, but with boundary condition | Pending assessment and implementation. |
-| [36](https://people.maths.ox.ac.uk/trefethen/p36.m) | Laplace eq. on [-1,1]x[-1,1] with nonzero BCs | Pending assessment and implementation. |
+| [36](https://people.maths.ox.ac.uk/trefethen/p36.m) | Laplace eq. on [-1,1]x[-1,1] with nonzero BCs | [Read the lesson](polynomials/laplace-square/index.qmd). Original degree-24 nonzero-boundary Laplace problem; equivalent boundary elimination replaces identity boundary rows. |
 | [37](https://people.maths.ox.ac.uk/trefethen/p37.m) | 2D "wave tank" with Neumann BCs for \|y\|=1 | Pending assessment and implementation. |
 | [38](https://people.maths.ox.ac.uk/trefethen/p38.m) | solve u_xxxx = exp(x), u(-1)=u(1)=u'(-1)=u'(1)=0 | Pending assessment and implementation. |
 | [39](https://people.maths.ox.ac.uk/trefethen/p39.m) | eigenmodes of biharmonic on a square with clamped BCs | Pending assessment and implementation. |
@@ -135,6 +135,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `runtime_coupled_fields` | [Read the lesson](coupling/runtime-fields/index.qmd) |
 | `spectral_smoothness` | [Read the lesson](differentiation/smoothness/index.qmd) |
 | `square_helmholtz` | [Read the lesson](polynomials/helmholtz-square/index.qmd) |
+| `square_laplace` | [Read the lesson](polynomials/laplace-square/index.qmd) |
 | `square_poisson` | [Read the lesson](polynomials/poisson-square/index.qmd) |
 | `stability_regions` | [Read the lesson](integration/stability/index.qmd) |
 | `taylor_green3d` | Pending conversion. |

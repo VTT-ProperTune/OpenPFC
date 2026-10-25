@@ -340,6 +340,7 @@ def main():
             "membrane_eigenmodes",
             "square_poisson",
             "square_helmholtz",
+            "square_laplace",
         ],
     )
     args = parser.parse_args()
@@ -379,6 +380,10 @@ def main():
             root = base / "square_helmholtz"
             root.mkdir()
             check_square(bin_dir / "square_helmholtz", root / "helmholtz", "helmholtz")
+        if args.case in (None, "square_laplace"):
+            root = base / "square_laplace"
+            root.mkdir()
+            check_square(bin_dir / "square_laplace", root / "laplace", "laplace")
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

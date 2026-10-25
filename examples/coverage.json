@@ -541,6 +541,16 @@
       ]
     },
     {
+      "target": "square_laplace",
+      "source": "polynomials/laplace-square/model.cpp",
+      "chapter": "polynomials/laplace-square/index.qmd",
+      "capabilities": [
+        "gmres",
+        "boundary-lifting",
+        "tensor-operators"
+      ]
+    },
+    {
       "target": "square_poisson",
       "source": "polynomials/poisson-square/model.cpp",
       "chapter": "polynomials/poisson-square/index.qmd",
@@ -888,7 +898,7 @@
       "program": 36,
       "title": "Laplace eq. on [-1,1]x[-1,1] with nonzero BCs",
       "source": "https://people.maths.ox.ac.uk/trefethen/p36.m",
-      "chapter": null,
+      "chapter": "polynomials/laplace-square/index.qmd",
       "scope": "Original degree-24 nonzero-boundary Laplace problem; equivalent boundary elimination replaces identity boundary rows."
     },
     {

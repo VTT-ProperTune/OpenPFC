@@ -48,3 +48,7 @@ set_target_properties(square_poisson PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAK
 add_executable(square_helmholtz helmholtz-square/model.cpp)
 target_link_libraries(square_helmholtz PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(square_helmholtz PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(square_laplace laplace-square/model.cpp)
+target_link_libraries(square_laplace PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(square_laplace PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")

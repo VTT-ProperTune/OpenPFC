@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Show how boundary values enter interior equations through explicit lifting. Check full fields, boundary values and an exact harmonic manufactured solution.
+
 - Extend the square tensor action with a reaction shift and homogeneous boundaries. Verify the entire computed field and a manufactured reference with independent matrices.
 
 - Explain tensor actions and native GMRES through a square Poisson problem. Check complete fields with an independent dense solve and a smooth manufactured solution.

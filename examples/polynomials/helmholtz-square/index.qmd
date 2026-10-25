@@ -66,7 +66,7 @@ Try changing `wave` before changing `n`. Distinguish a genuine near-resonant
 amplitude from a failure to resolve the spatial solution. More GMRES
 iterations cannot fix either an inappropriate boundary condition or the
 absence of a unique continuum solution. Compare next with
-nonzero boundary data.
+[nonzero boundary data](../laplace-square/index.qmd).
 
 The complete [C++ model](model.cpp) and [starting input](input.json)
 are available with this lesson.
