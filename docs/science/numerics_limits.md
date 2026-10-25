@@ -12,7 +12,17 @@ This page collects **honest** expectations: OpenPFC is a serious HPC framework, 
 - **Linear** operators are often treated **implicitly** in Fourier space; **nonlinear** terms are evaluated in **real space** and coupled through FFTs.  
 - **Timestep** `dt` must respect the **explicit** pieces of your splitting; blowing up often means `dt` is too large for the nonlinear or stabilized explicit stages—not “MPI is broken.”  
 - **Resolution** changes physics: interface widths, defect cores, and nucleation depend on grid spacing; do not compare runs at different resolutions without a convergence mindset.
-- **Aliasing:** a cubic nonlinearity evaluated in real space and transformed back aliases the highest third of the spectrum onto retained modes. OpenPFC does **not** apply a 2/3-rule mask by default. Call `pfc::fft::kspace::fill_two_thirds_mask` and multiply the nonlinear spectrum when you need Orszag dealiasing (`kernel/fft/dealias.hpp`).
+- Aliasing: a degree-p polynomial of a field restricted to integer modes
+  `|m_i| <= K_i` produces frequencies up to `p*K_i`. To obtain the exact
+  retained Galerkin product by sampling and transforming, require
+  `(p+1)*K_i < N_i` on each axis. Thus quadratic products need `3*K_i < N_i`,
+  while cubic products need `4*K_i < N_i`. The input state and every
+  nonlinear stage must respect the intended retained band. Filtering only
+  the product's high modes cannot remove aliases already folded into low
+  modes. `pfc::fft::kspace::fill_two_thirds_mask` supplies a two-thirds
+  Nyquist-band cutoff; it does not by itself fully dealias a cubic. A
+  sufficiently padded product grid is another option. No general filter
+  is enabled automatically for arbitrary models.
 - **Incompressible velocity:** `pfc::field::leray_project` removes the
   longitudinal part of a periodic Fourier velocity,
   \(P = I - kk^{\mathsf T}/|k|^2\). The wavevector is the odd multiplier, so

@@ -5,16 +5,20 @@
 
 /**
  * @file dealias.hpp
- * @brief Optional 2/3-rule dealiasing mask for cubic nonlinearities (M5).
+ * @brief Optional two-thirds spectral cutoff mask.
  *
  * @details
  * Orszag's 2/3 rule zeros Fourier modes with `|k_i| >= (2/3) k_{Nyquist,i}`
  * on any axis (`k_Nyquist,i = π / Δx_i`). Off by default — callers fill a
  * diagonal mask and multiply the nonlinear spectrum when they want it.
  *
- * A cubic term `u³` aliases the highest third of the spectrum onto
- * retained modes if those modes are left live. See
- * `docs/science/numerics_limits.md`.
+ * A quadratic product is alias-free in a retained band |m_i| <= K_i when
+ * the INPUT state is also restricted to that band and 3*K_i < N_i on each
+ * axis. Masking the output alone cannot remove aliases already folded into
+ * retained modes. For a cubic product the corresponding condition is
+ * 4*K_i < N_i; this two-thirds mask alone does not enforce that narrower
+ * state band. Padding is an alternative if its grid satisfies the same
+ * product-degree bound. See `docs/science/numerics_limits.md`.
  */
 
 #include <array>
