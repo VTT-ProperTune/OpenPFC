@@ -161,6 +161,33 @@ uv run --with matplotlib==3.11.2 python examples/render_spectra.py \
 ```
 
 
+## Reproduce the evolution figures
+
+The wave and reaction figures likewise use native defaults, including the
+book's original startup choices and output schedules:
+
+```sh
+for case in line:chebyshev_wave_line square:chebyshev_wave_square tank:mixed_wave_tank kdv:kdv_integrating_factor fixed:allen_cahn_fixed driven:allen_cahn_driven; do
+  run_directory="results/example-book/evolution/${case%%:*}"
+  mkdir -p "$run_directory"
+  (cd "$run_directory" && "$example_binaries/${case#*:}")
+done
+uv run --with matplotlib==3.11.2 python examples/render_evolution.py \
+  --runs results/example-book/evolution
+```
+
+Both loops run in an allocated environment after defining `example_binaries`.
+The polynomial, mixed-coordinate and local-FFT models use one process.
+The fixed Allen–Cahn figure includes a symmetry diagnostic because late
+evolution amplifies floating-point asymmetries. Its tiny centre displacement
+and the final digits of spectral or contour errors can vary by platform.
+The Allen–Cahn operator-based timestep cap keeps the original degree-20
+default intact while stabilizing tested finer grids; the numerical
+regression includes degree 40 and rejection of its original oversized step.
+The chapters distinguish finite-grid checks from continuum comparisons;
+the routine Python numerical checks need only the standard library.
+
+
 ## Render within the scientific website
 
 Use a disposable copy of `openpfc-pages`:
