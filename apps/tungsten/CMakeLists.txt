@@ -9,24 +9,19 @@
 
 set(TUNGSTEN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-set(_tungsten_heffte_tgt $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>)
-if(NOT TARGET Heffte::Heffte AND NOT TARGET heffte)
-  find_package(Heffte REQUIRED)
-endif()
-
 function(tungsten_cpu_executable target)
   add_executable(${target} ${ARGN})
   target_include_directories(${target} PRIVATE ${TUNGSTEN_INCLUDE_DIR})
-  target_link_libraries(${target} PRIVATE OpenPFC
-                        nlohmann_json::nlohmann_json ${_tungsten_heffte_tgt})
+  target_link_libraries(${target} PRIVATE OpenPFC::openpfc
+                        nlohmann_json::nlohmann_json )
 endfunction()
 
 function(tungsten_cuda_executable target)
   add_executable(${target} ${ARGN} src/gpu/tungsten_pointwise.cu
                  src/gpu/tungsten_device_bcs.cpp)
   target_include_directories(${target} PRIVATE ${TUNGSTEN_INCLUDE_DIR})
-  target_link_libraries(${target} PRIVATE OpenPFC
-                        nlohmann_json::nlohmann_json ${_tungsten_heffte_tgt}
+  target_link_libraries(${target} PRIVATE OpenPFC::openpfc
+                        nlohmann_json::nlohmann_json
                         CUDA::cudart openpfc_gpu_kernels)
   set_target_properties(${target} PROPERTIES
     CUDA_STANDARD 20
@@ -37,8 +32,8 @@ function(tungsten_hip_executable target)
   add_executable(${target} ${ARGN} src/gpu/tungsten_pointwise.hip
                  src/gpu/tungsten_device_bcs.cpp)
   target_include_directories(${target} PRIVATE ${TUNGSTEN_INCLUDE_DIR})
-  target_link_libraries(${target} PRIVATE OpenPFC
-                        nlohmann_json::nlohmann_json ${_tungsten_heffte_tgt}
+  target_link_libraries(${target} PRIVATE OpenPFC::openpfc
+                        nlohmann_json::nlohmann_json
                         hip::host openpfc_hip_kernels)
   set_target_properties(${target} PROPERTIES
     HIP_STANDARD 20

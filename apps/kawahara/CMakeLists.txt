@@ -7,27 +7,18 @@ option(KAWAHARA_ENABLE_TESTS "Enable building kawahara tests" ON)
 
 set(KAWAHARA_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-set(_kawahara_heffte_tgt "")
-if(TARGET Heffte::Heffte)
-  set(_kawahara_heffte_tgt Heffte::Heffte)
-elseif(TARGET Heffte)
-  set(_kawahara_heffte_tgt Heffte)
-elseif(TARGET heffte)
-  set(_kawahara_heffte_tgt heffte)
-endif()
-
 function(kawahara_cpu_executable target)
   add_executable(${target} ${ARGN})
   target_include_directories(${target} PRIVATE ${KAWAHARA_INCLUDE_DIR})
-  target_link_libraries(${target} PRIVATE OpenPFC
-                        nlohmann_json::nlohmann_json ${_kawahara_heffte_tgt})
+  target_link_libraries(${target} PRIVATE OpenPFC::openpfc
+                        nlohmann_json::nlohmann_json )
 endfunction()
 
 function(kawahara_hip_executable target)
   add_executable(${target} ${ARGN} src/gpu/kawahara_pointwise.hip)
   target_include_directories(${target} PRIVATE ${KAWAHARA_INCLUDE_DIR})
-  target_link_libraries(${target} PRIVATE OpenPFC
-                        nlohmann_json::nlohmann_json ${_kawahara_heffte_tgt}
+  target_link_libraries(${target} PRIVATE OpenPFC::openpfc
+                        nlohmann_json::nlohmann_json
                         hip::host openpfc_hip_kernels)
   set_target_properties(${target} PROPERTIES
     HIP_STANDARD 20

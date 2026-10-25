@@ -50,15 +50,6 @@ if(_kobayashi_libstdcxx_so)
   message(STATUS "kobayashi: linking libstdc++.so from ${_kobayashi_libstdcxx_so}")
 endif()
 
-set(_kobayashi_heffte_tgt "")
-if(TARGET Heffte::Heffte)
-  set(_kobayashi_heffte_tgt Heffte::Heffte)
-elseif(TARGET Heffte)
-  set(_kobayashi_heffte_tgt Heffte)
-elseif(TARGET heffte)
-  set(_kobayashi_heffte_tgt heffte)
-endif()
-
 function(kobayashi_link_libstdcxx target_name)
   if(_kobayashi_libstdcxx_so)
     target_link_libraries(${target_name} PRIVATE "${_kobayashi_libstdcxx_so}")
@@ -73,8 +64,8 @@ endfunction()
 
 add_executable(kobayashi_fd_manual src/cpu/kobayashi_fd_manual.cpp)
 target_include_directories(kobayashi_fd_manual PRIVATE ${KOBAYASHI_INCLUDE_DIR})
-target_link_libraries(kobayashi_fd_manual PRIVATE OpenPFC
-                      ${_kobayashi_heffte_tgt})
+target_link_libraries(kobayashi_fd_manual PRIVATE OpenPFC::openpfc
+)
 install(TARGETS kobayashi_fd_manual DESTINATION bin)
 
 find_package(OpenMP COMPONENTS CXX)
@@ -84,8 +75,8 @@ if(OpenMP_CXX_FOUND)
     src/cpu/kobayashi_fd_openmp.cpp
     src/cpu/kobayashi_fd_openmp_engine.cpp)
   target_include_directories(kobayashi_fd_openmp PRIVATE ${KOBAYASHI_INCLUDE_DIR})
-  target_link_libraries(kobayashi_fd_openmp PRIVATE OpenPFC
-                                                          ${_kobayashi_heffte_tgt}
+  target_link_libraries(kobayashi_fd_openmp PRIVATE OpenPFC::openpfc
+                                                          
                                                           OpenMP::OpenMP_CXX)
   install(TARGETS kobayashi_fd_openmp DESTINATION bin)
 
@@ -94,8 +85,8 @@ if(OpenMP_CXX_FOUND)
     add_executable(test_kobayashi_fd_openmp tests/test_kobayashi_fd_openmp.cpp
                                             src/cpu/kobayashi_fd_openmp_engine.cpp)
     target_include_directories(test_kobayashi_fd_openmp PRIVATE ${KOBAYASHI_INCLUDE_DIR})
-    target_link_libraries(test_kobayashi_fd_openmp PRIVATE OpenPFC
-                                                                ${_kobayashi_heffte_tgt}
+    target_link_libraries(test_kobayashi_fd_openmp PRIVATE OpenPFC::openpfc
+                                                                
                                                                 Catch2::Catch2WithMain
                                                                 OpenMP::OpenMP_CXX)
     include(CTest)
@@ -109,16 +100,16 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
   add_executable(kobayashi_fd_cuda
     src/cuda/kobayashi_fd_cuda.cpp
     src/cuda/kobayashi_fd_cuda_kernels.cu
-  )
+)
   target_include_directories(kobayashi_fd_cuda PRIVATE ${KOBAYASHI_INCLUDE_DIR})
-  target_link_libraries(kobayashi_fd_cuda PRIVATE OpenPFC CUDA::cudart
-                        openpfc_gpu_kernels ${_kobayashi_heffte_tgt})
+  target_link_libraries(kobayashi_fd_cuda PRIVATE OpenPFC::openpfc CUDA::cudart
+                        openpfc_gpu_kernels)
   set_target_properties(kobayashi_fd_cuda PROPERTIES
     CUDA_STANDARD 17
     CUDA_STANDARD_REQUIRED ON
     CUDA_SEPARABLE_COMPILATION ON
     CUDA_RESOLVE_DEVICE_SYMBOLS ON
-  )
+)
   kobayashi_link_libstdcxx(kobayashi_fd_cuda)
   install(TARGETS kobayashi_fd_cuda DESTINATION bin)
   message(STATUS "kobayashi_fd_cuda (MPI + CUDA) enabled")
@@ -157,14 +148,14 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
   add_executable(kobayashi_fd_hip
     src/hip/kobayashi_fd_hip.cpp
     src/hip/kobayashi_fd_hip_kernels.hip
-  )
+)
   target_include_directories(kobayashi_fd_hip PRIVATE ${KOBAYASHI_INCLUDE_DIR})
-  target_link_libraries(kobayashi_fd_hip PRIVATE OpenPFC hip::host
-                        openpfc_hip_kernels ${_kobayashi_heffte_tgt})
+  target_link_libraries(kobayashi_fd_hip PRIVATE OpenPFC::openpfc hip::host
+                        openpfc_hip_kernels)
   set_target_properties(kobayashi_fd_hip PROPERTIES
     HIP_STANDARD 17
     HIP_STANDARD_REQUIRED ON
-  )
+)
   kobayashi_link_libstdcxx(kobayashi_fd_hip)
   install(TARGETS kobayashi_fd_hip DESTINATION bin)
   message(STATUS "kobayashi_fd_hip (MPI + HIP) enabled")

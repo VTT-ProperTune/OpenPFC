@@ -20,29 +20,19 @@ endif()
 
 set(ALUMINUM_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-if(TARGET Heffte::Heffte)
-  set(_aluminum_heffte_tgt Heffte::Heffte)
-elseif(TARGET Heffte)
-  set(_aluminum_heffte_tgt Heffte)
-elseif(TARGET heffte)
-  set(_aluminum_heffte_tgt heffte)
-else()
-  set(_aluminum_heffte_tgt "")
-endif()
-
 function(aluminum_cpu_executable target)
   add_executable(${target} ${ARGN})
   target_include_directories(${target} PRIVATE ${ALUMINUM_INCLUDE_DIRS})
-  target_link_libraries(${target} PRIVATE OpenPFC
-                        nlohmann_json::nlohmann_json ${_aluminum_heffte_tgt})
+  target_link_libraries(${target} PRIVATE OpenPFC::openpfc
+                        nlohmann_json::nlohmann_json )
 endfunction()
 
 function(aluminum_cuda_executable target)
   add_executable(${target} ${ARGN} src/gpu/aluminum_pointwise.cu
                  src/gpu/aluminum_device_bcs.cpp)
   target_include_directories(${target} PRIVATE ${ALUMINUM_INCLUDE_DIRS})
-  target_link_libraries(${target} PRIVATE OpenPFC
-                        nlohmann_json::nlohmann_json ${_aluminum_heffte_tgt}
+  target_link_libraries(${target} PRIVATE OpenPFC::openpfc
+                        nlohmann_json::nlohmann_json
                         CUDA::cudart openpfc_gpu_kernels)
   set_target_properties(${target} PROPERTIES
     CUDA_STANDARD 20
@@ -53,8 +43,8 @@ function(aluminum_hip_executable target)
   add_executable(${target} ${ARGN} src/gpu/aluminum_pointwise.hip
                  src/gpu/aluminum_device_bcs.cpp)
   target_include_directories(${target} PRIVATE ${ALUMINUM_INCLUDE_DIRS})
-  target_link_libraries(${target} PRIVATE OpenPFC
-                        nlohmann_json::nlohmann_json ${_aluminum_heffte_tgt}
+  target_link_libraries(${target} PRIVATE OpenPFC::openpfc
+                        nlohmann_json::nlohmann_json
                         hip::host openpfc_hip_kernels)
   set_target_properties(${target} PROPERTIES
     HIP_STANDARD 20

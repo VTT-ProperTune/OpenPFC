@@ -20,15 +20,6 @@ else()
   endif()
 endif()
 
-set(_allen_cahn_heffte_tgt "")
-if(TARGET Heffte::Heffte)
-  set(_allen_cahn_heffte_tgt Heffte::Heffte)
-elseif(TARGET Heffte)
-  set(_allen_cahn_heffte_tgt Heffte)
-elseif(TARGET heffte)
-  set(_allen_cahn_heffte_tgt heffte)
-endif()
-
 function(allen_cahn_link_libstdcxx target_name)
   if(_allen_libstdcxx_so)
     target_link_libraries(${target_name} PRIVATE "${_allen_libstdcxx_so}")
@@ -43,8 +34,8 @@ endfunction()
 
 add_executable(allen_cahn src/cpu/allen_cahn.cpp)
 target_include_directories(allen_cahn PRIVATE ${ALLEN_CAHN_INCLUDE_DIR})
-target_link_libraries(allen_cahn PRIVATE OpenPFC
-                      ${_allen_cahn_heffte_tgt})
+target_link_libraries(allen_cahn PRIVATE OpenPFC::openpfc
+)
 allen_cahn_link_libstdcxx(allen_cahn)
 install(TARGETS allen_cahn DESTINATION bin)
 
@@ -52,15 +43,15 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
   add_executable(allen_cahn_cuda
     src/cuda/allen_cahn.cpp
     src/cuda/allen_cahn_kernels.cu
-  )
+)
   target_include_directories(allen_cahn_cuda PRIVATE ${ALLEN_CAHN_INCLUDE_DIR})
-  target_link_libraries(allen_cahn_cuda PRIVATE OpenPFC CUDA::cudart
-                        openpfc_gpu_kernels ${_allen_cahn_heffte_tgt})
+  target_link_libraries(allen_cahn_cuda PRIVATE OpenPFC::openpfc CUDA::cudart
+                        openpfc_gpu_kernels)
   set_target_properties(allen_cahn_cuda PROPERTIES
     CUDA_STANDARD 17
     CUDA_STANDARD_REQUIRED ON
     CUDA_SEPARABLE_COMPILATION ON
-  )
+)
   allen_cahn_link_libstdcxx(allen_cahn_cuda)
   install(TARGETS allen_cahn_cuda DESTINATION bin)
   message(STATUS "Allen–Cahn: CUDA executable enabled")
@@ -70,14 +61,14 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
   add_executable(allen_cahn_hip
     src/hip/allen_cahn.cpp
     src/hip/allen_cahn_kernels.hip
-  )
+)
   target_include_directories(allen_cahn_hip PRIVATE ${ALLEN_CAHN_INCLUDE_DIR})
-  target_link_libraries(allen_cahn_hip PRIVATE OpenPFC hip::host
-                        openpfc_hip_kernels ${_allen_cahn_heffte_tgt})
+  target_link_libraries(allen_cahn_hip PRIVATE OpenPFC::openpfc hip::host
+                        openpfc_hip_kernels)
   set_target_properties(allen_cahn_hip PROPERTIES
     HIP_STANDARD 17
     HIP_STANDARD_REQUIRED ON
-  )
+)
   allen_cahn_link_libstdcxx(allen_cahn_hip)
   install(TARGETS allen_cahn_hip DESTINATION bin)
   message(STATUS "Allen–Cahn: HIP executable enabled")
@@ -92,7 +83,7 @@ if(ALLEN_CAHN_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     target_include_directories(test_allen_cahn_cpu_golden PRIVATE
       ${ALLEN_CAHN_INCLUDE_DIR})
     target_link_libraries(test_allen_cahn_cpu_golden PRIVATE
-      OpenPFC Catch2::Catch2 ${_allen_cahn_heffte_tgt})
+      OpenPFC::openpfc Catch2::Catch2)
     allen_cahn_link_libstdcxx(test_allen_cahn_cpu_golden)
     include(CTest)
     add_test(NAME allen-cahn-cpu-golden COMMAND test_allen_cahn_cpu_golden)
@@ -107,7 +98,7 @@ if(ALLEN_CAHN_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     target_include_directories(test_allen_cahn_interface_kinetics PRIVATE
       ${ALLEN_CAHN_INCLUDE_DIR})
     target_link_libraries(test_allen_cahn_interface_kinetics PRIVATE
-      OpenPFC Catch2::Catch2 ${_allen_cahn_heffte_tgt})
+      OpenPFC::openpfc Catch2::Catch2)
     allen_cahn_link_libstdcxx(test_allen_cahn_interface_kinetics)
     add_test(NAME allen-cahn-interface-kinetics
              COMMAND test_allen_cahn_interface_kinetics)
@@ -122,7 +113,7 @@ if(ALLEN_CAHN_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     target_include_directories(test_allen_cahn_front_mpi PRIVATE
       ${ALLEN_CAHN_INCLUDE_DIR})
     target_link_libraries(test_allen_cahn_front_mpi PRIVATE
-      OpenPFC Catch2::Catch2 ${_allen_cahn_heffte_tgt})
+      OpenPFC::openpfc Catch2::Catch2)
     allen_cahn_link_libstdcxx(test_allen_cahn_front_mpi)
     if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
        (OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR
@@ -142,16 +133,16 @@ if(ALLEN_CAHN_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
       add_executable(test_allen_cahn_cpu_vs_cuda
         tests/test_allen_cahn_cpu_vs_cuda.cpp
         src/cuda/allen_cahn_kernels.cu
-      )
+)
       target_include_directories(test_allen_cahn_cpu_vs_cuda PRIVATE ${ALLEN_CAHN_INCLUDE_DIR})
       target_link_libraries(test_allen_cahn_cpu_vs_cuda PRIVATE
-        OpenPFC Catch2::Catch2 CUDA::cudart openpfc_gpu_kernels
-        ${_allen_cahn_heffte_tgt})
+        OpenPFC::openpfc Catch2::Catch2 CUDA::cudart openpfc_gpu_kernels
+)
       set_target_properties(test_allen_cahn_cpu_vs_cuda PROPERTIES
         CUDA_STANDARD 17
         CUDA_STANDARD_REQUIRED ON
         CUDA_SEPARABLE_COMPILATION ON
-      )
+)
       allen_cahn_link_libstdcxx(test_allen_cahn_cpu_vs_cuda)
       include(CTest)
       add_test(NAME allen-cahn-cpu-vs-cuda COMMAND test_allen_cahn_cpu_vs_cuda)
@@ -161,15 +152,15 @@ if(ALLEN_CAHN_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
       add_executable(test_allen_cahn_cpu_vs_hip
         tests/test_allen_cahn_cpu_vs_hip.cpp
         src/hip/allen_cahn_kernels.hip
-      )
+)
       target_include_directories(test_allen_cahn_cpu_vs_hip PRIVATE ${ALLEN_CAHN_INCLUDE_DIR})
       target_link_libraries(test_allen_cahn_cpu_vs_hip PRIVATE
-        OpenPFC Catch2::Catch2 hip::host openpfc_hip_kernels
-        ${_allen_cahn_heffte_tgt})
+        OpenPFC::openpfc Catch2::Catch2 hip::host openpfc_hip_kernels
+)
       set_target_properties(test_allen_cahn_cpu_vs_hip PROPERTIES
         HIP_STANDARD 17
         HIP_STANDARD_REQUIRED ON
-      )
+)
       allen_cahn_link_libstdcxx(test_allen_cahn_cpu_vs_hip)
       include(CTest)
       add_test(NAME allen-cahn-cpu-vs-hip COMMAND test_allen_cahn_cpu_vs_hip)

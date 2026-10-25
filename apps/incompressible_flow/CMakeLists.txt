@@ -3,15 +3,6 @@
 
 # Issue #233. Periodic Fourier velocity. Not a copy of examples/ns2d_vorticity.
 
-set(_flow_heffte_tgt "")
-if(TARGET Heffte::Heffte)
-  set(_flow_heffte_tgt Heffte::Heffte)
-elseif(TARGET Heffte)
-  set(_flow_heffte_tgt Heffte)
-elseif(TARGET heffte)
-  set(_flow_heffte_tgt heffte)
-endif()
-
 add_executable(incompressible_flow
   src/main.cpp
   src/hit_series.cpp
@@ -19,7 +10,7 @@ add_executable(incompressible_flow
   src/wall.cpp)
 target_include_directories(incompressible_flow PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(incompressible_flow PRIVATE OpenPFC ${_flow_heffte_tgt})
+target_link_libraries(incompressible_flow PRIVATE OpenPFC::openpfc )
 install(TARGETS incompressible_flow DESTINATION bin)
 
 if(OpenPFC_BUILD_TESTS)
@@ -71,8 +62,7 @@ if(OpenPFC_BUILD_TESTS AND TARGET Catch2::Catch2)
     src/wall.cpp)
   target_include_directories(test_incompressible_flow PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include)
-  target_link_libraries(test_incompressible_flow PRIVATE OpenPFC Catch2::Catch2
-                        ${_flow_heffte_tgt})
+  target_link_libraries(test_incompressible_flow PRIVATE OpenPFC::openpfc Catch2::Catch2)
   add_test(NAME incompressible-flow-cpu COMMAND test_incompressible_flow)
   set_tests_properties(incompressible-flow-cpu PROPERTIES TIMEOUT 180)
   if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
@@ -117,7 +107,7 @@ if(TARGET openpfc_incompressible_hip OR TARGET openpfc_incompressible_cuda)
     target_compile_definitions(${_flow_device_app} PRIVATE
       OPENPFC_FLOW_DEVICE=1)
     target_link_libraries(${_flow_device_app} PRIVATE
-      OpenPFC ${_flow_device_lib} ${_flow_heffte_tgt})
+      OpenPFC::openpfc ${_flow_device_lib} )
     install(TARGETS ${_flow_device_app} DESTINATION bin)
     if(OpenPFC_BUILD_TESTS)
       add_test(NAME incompressible-flow-${_flow_backend}-smoke
@@ -157,7 +147,7 @@ if(TARGET openpfc_incompressible_hip OR TARGET openpfc_incompressible_cuda)
   target_include_directories(incompressible_device_parity PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include)
   target_link_libraries(incompressible_device_parity PRIVATE
-    OpenPFC ${_flow_device_lib} ${_flow_heffte_tgt})
+    OpenPFC::openpfc ${_flow_device_lib} )
   if(OpenPFC_BUILD_TESTS)
     add_test(NAME incompressible-flow-${_flow_backend}-local-smoke
       COMMAND $<TARGET_FILE:${_flow_device_app}>

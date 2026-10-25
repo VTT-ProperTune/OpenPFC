@@ -7,27 +7,18 @@ option(SURFACE_DIFFUSION_ENABLE_TESTS "Enable building surface-diffusion tests" 
 
 set(SURFACE_DIFFUSION_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-set(_surface_diffusion_heffte_tgt "")
-if(TARGET Heffte::Heffte)
-  set(_surface_diffusion_heffte_tgt Heffte::Heffte)
-elseif(TARGET Heffte)
-  set(_surface_diffusion_heffte_tgt Heffte)
-elseif(TARGET heffte)
-  set(_surface_diffusion_heffte_tgt heffte)
-endif()
-
 function(surface_diffusion_cpu_executable target)
   add_executable(${target} ${ARGN})
   target_include_directories(${target} PRIVATE ${SURFACE_DIFFUSION_INCLUDE_DIR})
-  target_link_libraries(${target} PRIVATE OpenPFC
-                        nlohmann_json::nlohmann_json ${_surface_diffusion_heffte_tgt})
+  target_link_libraries(${target} PRIVATE OpenPFC::openpfc
+                        nlohmann_json::nlohmann_json )
 endfunction()
 
 function(surface_diffusion_hip_executable target)
   add_executable(${target} ${ARGN} src/gpu/surface_diffusion_pointwise.hip)
   target_include_directories(${target} PRIVATE ${SURFACE_DIFFUSION_INCLUDE_DIR})
-  target_link_libraries(${target} PRIVATE OpenPFC
-                        nlohmann_json::nlohmann_json ${_surface_diffusion_heffte_tgt}
+  target_link_libraries(${target} PRIVATE OpenPFC::openpfc
+                        nlohmann_json::nlohmann_json
                         hip::host openpfc_hip_kernels)
   set_target_properties(${target} PROPERTIES
     HIP_STANDARD 20

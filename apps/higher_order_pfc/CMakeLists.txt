@@ -7,27 +7,18 @@ option(HIGHER_ORDER_PFC_ENABLE_TESTS "Enable building higher-order PFC tests" ON
 
 set(HIGHER_ORDER_PFC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-set(_higher_order_pfc_heffte_tgt "")
-if(TARGET Heffte::Heffte)
-  set(_higher_order_pfc_heffte_tgt Heffte::Heffte)
-elseif(TARGET Heffte)
-  set(_higher_order_pfc_heffte_tgt Heffte)
-elseif(TARGET heffte)
-  set(_higher_order_pfc_heffte_tgt heffte)
-endif()
-
 function(higher_order_pfc_cpu_executable target)
   add_executable(${target} ${ARGN})
   target_include_directories(${target} PRIVATE ${HIGHER_ORDER_PFC_INCLUDE_DIR})
-  target_link_libraries(${target} PRIVATE OpenPFC
-                        nlohmann_json::nlohmann_json ${_higher_order_pfc_heffte_tgt})
+  target_link_libraries(${target} PRIVATE OpenPFC::openpfc
+                        nlohmann_json::nlohmann_json )
 endfunction()
 
 function(higher_order_pfc_hip_executable target)
   add_executable(${target} ${ARGN} src/gpu/higher_order_pfc_pointwise.hip)
   target_include_directories(${target} PRIVATE ${HIGHER_ORDER_PFC_INCLUDE_DIR})
-  target_link_libraries(${target} PRIVATE OpenPFC
-                        nlohmann_json::nlohmann_json ${_higher_order_pfc_heffte_tgt}
+  target_link_libraries(${target} PRIVATE OpenPFC::openpfc
+                        nlohmann_json::nlohmann_json
                         hip::host openpfc_hip_kernels)
   set_target_properties(${target} PROPERTIES
     HIP_STANDARD 20

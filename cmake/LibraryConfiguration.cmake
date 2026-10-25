@@ -74,6 +74,7 @@ add_library(openpfc
 )
 
 add_library(OpenPFC ALIAS openpfc)
+add_library(OpenPFC::openpfc ALIAS openpfc)
 if(OpenPFC_HAS_FFTW3)
   # Private: the static archive records the FFTW dependency for its
   # consumers without exporting the absolute library path.

@@ -7,27 +7,18 @@ option(GRADIENT_ELASTICITY_ENABLE_TESTS "Enable building gradient-elasticity tes
 
 set(GRADIENT_ELASTICITY_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-set(_gradient_elasticity_heffte_tgt "")
-if(TARGET Heffte::Heffte)
-  set(_gradient_elasticity_heffte_tgt Heffte::Heffte)
-elseif(TARGET Heffte)
-  set(_gradient_elasticity_heffte_tgt Heffte)
-elseif(TARGET heffte)
-  set(_gradient_elasticity_heffte_tgt heffte)
-endif()
-
 function(gradient_elasticity_cpu_executable target)
   add_executable(${target} ${ARGN})
   target_include_directories(${target} PRIVATE ${GRADIENT_ELASTICITY_INCLUDE_DIR})
-  target_link_libraries(${target} PRIVATE OpenPFC
-                        nlohmann_json::nlohmann_json ${_gradient_elasticity_heffte_tgt})
+  target_link_libraries(${target} PRIVATE OpenPFC::openpfc
+                        nlohmann_json::nlohmann_json )
 endfunction()
 
 function(gradient_elasticity_hip_executable target)
   add_executable(${target} ${ARGN})
   target_include_directories(${target} PRIVATE ${GRADIENT_ELASTICITY_INCLUDE_DIR})
-  target_link_libraries(${target} PRIVATE OpenPFC
-                        nlohmann_json::nlohmann_json ${_gradient_elasticity_heffte_tgt}
+  target_link_libraries(${target} PRIVATE OpenPFC::openpfc
+                        nlohmann_json::nlohmann_json
                         hip::host openpfc_hip_kernels)
   set_target_properties(${target} PROPERTIES
     HIP_STANDARD 20

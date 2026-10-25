@@ -9,20 +9,11 @@ option(INVERSE_HOMOGENIZATION_ENABLE_TESTS
 
 set(INVERSE_HOMOGENIZATION_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-set(_invhom_heffte_tgt "")
-if(TARGET Heffte::Heffte)
-  set(_invhom_heffte_tgt Heffte::Heffte)
-elseif(TARGET Heffte)
-  set(_invhom_heffte_tgt Heffte)
-elseif(TARGET heffte)
-  set(_invhom_heffte_tgt heffte)
-endif()
-
 function(inverse_homogenization_cpu_executable target)
   add_executable(${target} ${ARGN})
   target_include_directories(${target} PRIVATE ${INVERSE_HOMOGENIZATION_INCLUDE_DIR})
-  target_link_libraries(${target} PRIVATE OpenPFC
-                        ${_invhom_heffte_tgt})
+  target_link_libraries(${target} PRIVATE OpenPFC::openpfc
+)
 endfunction()
 
 inverse_homogenization_cpu_executable(openpfc_homogenize src/homogenize.cpp)
@@ -48,9 +39,9 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
   function(inverse_homogenization_hip_executable target)
     add_executable(${target} ${ARGN})
     target_include_directories(${target} PRIVATE ${INVERSE_HOMOGENIZATION_INCLUDE_DIR})
-    target_link_libraries(${target} PRIVATE OpenPFC
+    target_link_libraries(${target} PRIVATE OpenPFC::openpfc
                           openpfc_microelasticity_hip
-                          ${_invhom_heffte_tgt} hip::host openpfc_hip_kernels)
+                           hip::host openpfc_hip_kernels)
     set_target_properties(${target} PROPERTIES
       HIP_STANDARD 20
       HIP_STANDARD_REQUIRED ON)

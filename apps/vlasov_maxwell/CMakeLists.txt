@@ -6,20 +6,11 @@ set(VLASOV_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 # The x-advection is a 1-D FFT along a rank-local axis and the transverse
 # Maxwell pair is advanced exactly in Fourier space, so this application
 # needs an FFT even though nothing about it is a global spectral solve.
-set(_vlasov_heffte_tgt "")
-if(TARGET Heffte::Heffte)
-  set(_vlasov_heffte_tgt Heffte::Heffte)
-elseif(TARGET HEFFTE::HEFFTE)
-  set(_vlasov_heffte_tgt HEFFTE::HEFFTE)
-elseif(TARGET heffte)
-  set(_vlasov_heffte_tgt heffte)
-endif()
 
 function(vlasov_add_driver name source)
   add_executable(${name} ${source})
   target_include_directories(${name} PRIVATE ${VLASOV_INCLUDE_DIR})
-  target_link_libraries(${name} PRIVATE OpenPFC
-                        ${_vlasov_heffte_tgt})
+  target_link_libraries(${name} PRIVATE OpenPFC::openpfc)
   install(TARGETS ${name} DESTINATION bin)
 endfunction()
 
@@ -43,8 +34,8 @@ if(VLASOV_ENABLE_TESTS AND OpenPFC_BUILD_TESTS AND TARGET Catch2::Catch2)
     get_filename_component(_name ${_src} NAME_WE)
     add_executable(${_name} ${_src})
     target_include_directories(${_name} PRIVATE ${VLASOV_INCLUDE_DIR})
-    target_link_libraries(${_name} PRIVATE OpenPFC
-                          Catch2::Catch2 ${_vlasov_heffte_tgt})
+    target_link_libraries(${_name} PRIVATE OpenPFC::openpfc
+                          Catch2::Catch2 )
     include(CTest)
     add_test(NAME ${_name} COMMAND ${_name})
     set_tests_properties(${_name} PROPERTIES
@@ -86,8 +77,8 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
   foreach(_drv IN ITEMS vlasov_hip_parity vlasov_hip_cost)
     add_executable(${_drv} src/hip/${_drv}.cpp ${_vlasov_hip_kernels})
     target_include_directories(${_drv} PRIVATE ${VLASOV_INCLUDE_DIR})
-    target_link_libraries(${_drv} PRIVATE OpenPFC hip::host
-                          hip::hipfft ${_vlasov_heffte_tgt})
+    target_link_libraries(${_drv} PRIVATE OpenPFC::openpfc hip::host
+                          hip::hipfft )
     set_target_properties(${_drv} PROPERTIES
       HIP_STANDARD 20
       HIP_STANDARD_REQUIRED ON)

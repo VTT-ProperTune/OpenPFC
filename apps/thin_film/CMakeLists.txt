@@ -7,27 +7,18 @@ option(THIN_FILM_ENABLE_TESTS "Enable building thin-film tests" ON)
 
 set(THIN_FILM_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-set(_thin_film_heffte_tgt "")
-if(TARGET Heffte::Heffte)
-  set(_thin_film_heffte_tgt Heffte::Heffte)
-elseif(TARGET Heffte)
-  set(_thin_film_heffte_tgt Heffte)
-elseif(TARGET heffte)
-  set(_thin_film_heffte_tgt heffte)
-endif()
-
 function(thin_film_cpu_executable target)
   add_executable(${target} ${ARGN})
   target_include_directories(${target} PRIVATE ${THIN_FILM_INCLUDE_DIR})
-  target_link_libraries(${target} PRIVATE OpenPFC
-                        nlohmann_json::nlohmann_json ${_thin_film_heffte_tgt})
+  target_link_libraries(${target} PRIVATE OpenPFC::openpfc
+                        nlohmann_json::nlohmann_json )
 endfunction()
 
 function(thin_film_hip_executable target)
   add_executable(${target} ${ARGN} src/gpu/thin_film_pointwise.hip)
   target_include_directories(${target} PRIVATE ${THIN_FILM_INCLUDE_DIR})
-  target_link_libraries(${target} PRIVATE OpenPFC
-                        nlohmann_json::nlohmann_json ${_thin_film_heffte_tgt}
+  target_link_libraries(${target} PRIVATE OpenPFC::openpfc
+                        nlohmann_json::nlohmann_json
                         hip::host openpfc_hip_kernels)
   set_target_properties(${target} PROPERTIES
     HIP_STANDARD 20

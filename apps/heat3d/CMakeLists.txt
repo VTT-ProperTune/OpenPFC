@@ -3,15 +3,6 @@
 
 set(HEAT3D_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-set(_heat3d_heffte_tgt "")
-if(TARGET Heffte::Heffte)
-  set(_heat3d_heffte_tgt Heffte::Heffte)
-elseif(TARGET Heffte)
-  set(_heat3d_heffte_tgt Heffte)
-elseif(TARGET heffte)
-  set(_heat3d_heffte_tgt heffte)
-endif()
-
 find_package(OpenMP COMPONENTS CXX)
 
 # Per-method binaries (model hierarchy, primitive -> compact):
@@ -45,8 +36,7 @@ option(HEAT3D_ENABLE_TESTS "Enable building heat3d tests" ON)
 foreach(_target IN LISTS _heat3d_binaries)
   add_executable(${_target} src/cpu/${_target}.cpp)
   target_include_directories(${_target} PRIVATE ${HEAT3D_INCLUDE_DIR})
-  target_link_libraries(${_target} PRIVATE OpenPFC
-                                           ${_heat3d_heffte_tgt})
+  target_link_libraries(${_target} PRIVATE OpenPFC::openpfc)
   if(OpenMP_CXX_FOUND)
     target_link_libraries(${_target} PRIVATE OpenMP::OpenMP_CXX)
   endif()
@@ -59,8 +49,8 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
     src/hip/heat3d_fd_hip_kernels.hip
   )
   target_include_directories(heat3d_fd_hip PRIVATE ${HEAT3D_INCLUDE_DIR})
-  target_link_libraries(heat3d_fd_hip PRIVATE OpenPFC
-                        hip::host openpfc_hip_kernels ${_heat3d_heffte_tgt})
+  target_link_libraries(heat3d_fd_hip PRIVATE OpenPFC::openpfc
+                        hip::host openpfc_hip_kernels)
   set_target_properties(heat3d_fd_hip PROPERTIES
     HIP_STANDARD 20
     HIP_STANDARD_REQUIRED ON
@@ -98,8 +88,8 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
   if(OpenPFC_ENABLE_HIP_SPECTRAL)
     add_executable(heat3d_spectral_hip src/hip/heat3d_spectral_hip.cpp)
     target_include_directories(heat3d_spectral_hip PRIVATE ${HEAT3D_INCLUDE_DIR})
-    target_link_libraries(heat3d_spectral_hip PRIVATE OpenPFC
-                          hip::host openpfc_hip_kernels ${_heat3d_heffte_tgt})
+    target_link_libraries(heat3d_spectral_hip PRIVATE OpenPFC::openpfc
+                          hip::host openpfc_hip_kernels)
     set_target_properties(heat3d_spectral_hip PROPERTIES
       HIP_STANDARD 20
       HIP_STANDARD_REQUIRED ON
@@ -133,9 +123,8 @@ if(HEAT3D_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
       add_executable(test_heat3d tests/test_heat3d.cpp)
       target_include_directories(test_heat3d PRIVATE ${HEAT3D_INCLUDE_DIR})
       target_link_libraries(test_heat3d PRIVATE
-        OpenPFC
-       
-        ${_heat3d_heffte_tgt}
+        OpenPFC::openpfc
+
         Catch2::Catch2
       )
       # Run the whole heat3d suite in a single invocation to avoid per-test MPI
@@ -150,9 +139,8 @@ if(HEAT3D_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     add_executable(test_heat3d_operator_evaluation tests/test_heat3d_operator_evaluation.cpp)
     target_include_directories(test_heat3d_operator_evaluation PRIVATE ${HEAT3D_INCLUDE_DIR})
     target_link_libraries(test_heat3d_operator_evaluation PRIVATE
-      OpenPFC
-     
-      ${_heat3d_heffte_tgt}
+      OpenPFC::openpfc
+
       Catch2::Catch2
     )
     add_test(NAME heat3d-operator-evaluation COMMAND test_heat3d_operator_evaluation)
@@ -161,9 +149,8 @@ if(HEAT3D_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     add_executable(test_heat3d_rhs_pattern tests/test_heat3d_rhs_pattern.cpp)
     target_include_directories(test_heat3d_rhs_pattern PRIVATE ${HEAT3D_INCLUDE_DIR})
     target_link_libraries(test_heat3d_rhs_pattern PRIVATE
-      OpenPFC
-     
-      ${_heat3d_heffte_tgt}
+      OpenPFC::openpfc
+
       Catch2::Catch2
     )
     add_test(NAME heat3d-rhs-pattern COMMAND test_heat3d_rhs_pattern)
@@ -172,9 +159,8 @@ if(HEAT3D_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     add_executable(test_heat3d_fd_convergence tests/test_heat3d_fd_convergence.cpp)
     target_include_directories(test_heat3d_fd_convergence PRIVATE ${HEAT3D_INCLUDE_DIR})
     target_link_libraries(test_heat3d_fd_convergence PRIVATE
-      OpenPFC
-     
-      ${_heat3d_heffte_tgt}
+      OpenPFC::openpfc
+
       Catch2::Catch2
     )
     add_test(NAME heat3d-fd-convergence COMMAND test_heat3d_fd_convergence)
@@ -187,9 +173,8 @@ if(HEAT3D_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     add_executable(test_heat3d_spectral_content tests/test_heat3d_spectral_content.cpp)
     target_include_directories(test_heat3d_spectral_content PRIVATE ${HEAT3D_INCLUDE_DIR})
     target_link_libraries(test_heat3d_spectral_content PRIVATE
-      OpenPFC
-     
-      ${_heat3d_heffte_tgt}
+      OpenPFC::openpfc
+
       Catch2::Catch2
     )
     add_test(NAME heat3d-spectral-content COMMAND test_heat3d_spectral_content)

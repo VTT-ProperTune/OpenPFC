@@ -7,27 +7,18 @@ option(EHD_FILM_ENABLE_TESTS "Enable building ehd-film tests" ON)
 
 set(EHD_FILM_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-set(_ehd_film_heffte_tgt "")
-if(TARGET Heffte::Heffte)
-  set(_ehd_film_heffte_tgt Heffte::Heffte)
-elseif(TARGET Heffte)
-  set(_ehd_film_heffte_tgt Heffte)
-elseif(TARGET heffte)
-  set(_ehd_film_heffte_tgt heffte)
-endif()
-
 function(ehd_film_cpu_executable target)
   add_executable(${target} ${ARGN})
   target_include_directories(${target} PRIVATE ${EHD_FILM_INCLUDE_DIR})
-  target_link_libraries(${target} PRIVATE OpenPFC
-                        nlohmann_json::nlohmann_json ${_ehd_film_heffte_tgt})
+  target_link_libraries(${target} PRIVATE OpenPFC::openpfc
+                        nlohmann_json::nlohmann_json )
 endfunction()
 
 function(ehd_film_hip_executable target)
   add_executable(${target} ${ARGN} src/gpu/ehd_film_pointwise.hip)
   target_include_directories(${target} PRIVATE ${EHD_FILM_INCLUDE_DIR})
-  target_link_libraries(${target} PRIVATE OpenPFC
-                        nlohmann_json::nlohmann_json ${_ehd_film_heffte_tgt}
+  target_link_libraries(${target} PRIVATE OpenPFC::openpfc
+                        nlohmann_json::nlohmann_json
                         hip::host openpfc_hip_kernels)
   set_target_properties(${target} PROPERTIES
     HIP_STANDARD 20

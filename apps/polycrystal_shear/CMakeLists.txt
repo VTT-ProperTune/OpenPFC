@@ -1,17 +1,8 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-set(_shear_heffte_tgt "")
-if(TARGET Heffte::Heffte)
-  set(_shear_heffte_tgt Heffte::Heffte)
-elseif(TARGET Heffte)
-  set(_shear_heffte_tgt Heffte)
-elseif(TARGET heffte)
-  set(_shear_heffte_tgt heffte)
-endif()
-
 add_executable(polycrystal_shear src/polycrystal_shear.cpp)
-target_link_libraries(polycrystal_shear PRIVATE OpenPFC ${_shear_heffte_tgt})
+target_link_libraries(polycrystal_shear PRIVATE OpenPFC::openpfc )
 install(TARGETS polycrystal_shear DESTINATION bin)
 
 if(OpenPFC_BUILD_TESTS)

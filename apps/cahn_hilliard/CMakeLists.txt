@@ -8,27 +8,18 @@ option(CAHN_HILLIARD_ENABLE_TESTS "Enable building Cahn–Hilliard tests" ON)
 
 set(CAHN_HILLIARD_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-set(_cahn_hilliard_heffte_tgt "")
-if(TARGET Heffte::Heffte)
-  set(_cahn_hilliard_heffte_tgt Heffte::Heffte)
-elseif(TARGET Heffte)
-  set(_cahn_hilliard_heffte_tgt Heffte)
-elseif(TARGET heffte)
-  set(_cahn_hilliard_heffte_tgt heffte)
-endif()
-
 function(cahn_hilliard_cpu_executable target)
   add_executable(${target} ${ARGN})
   target_include_directories(${target} PRIVATE ${CAHN_HILLIARD_INCLUDE_DIR})
-  target_link_libraries(${target} PRIVATE OpenPFC
-                        nlohmann_json::nlohmann_json ${_cahn_hilliard_heffte_tgt})
+  target_link_libraries(${target} PRIVATE OpenPFC::openpfc
+                        nlohmann_json::nlohmann_json )
 endfunction()
 
 function(cahn_hilliard_hip_executable target)
   add_executable(${target} ${ARGN} src/gpu/cahn_hilliard_pointwise.hip)
   target_include_directories(${target} PRIVATE ${CAHN_HILLIARD_INCLUDE_DIR})
-  target_link_libraries(${target} PRIVATE OpenPFC
-                        nlohmann_json::nlohmann_json ${_cahn_hilliard_heffte_tgt}
+  target_link_libraries(${target} PRIVATE OpenPFC::openpfc
+                        nlohmann_json::nlohmann_json
                         hip::host openpfc_hip_kernels)
   set_target_properties(${target} PROPERTIES
     HIP_STANDARD 20

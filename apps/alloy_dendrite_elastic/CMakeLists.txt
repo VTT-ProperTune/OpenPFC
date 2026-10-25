@@ -10,14 +10,6 @@ set(ALLOY_DENDRITE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 # verification from every non-HeFFTe configuration, including one CI runs),
 # the elastic path is compiled in only when HeFFTe is available and the
 # drivers report a clear error when it is asked for and absent.
-set(_alloy_dendrite_heffte_tgt "")
-if(TARGET Heffte::Heffte)
-  set(_alloy_dendrite_heffte_tgt Heffte::Heffte)
-elseif(TARGET Heffte)
-  set(_alloy_dendrite_heffte_tgt Heffte)
-elseif(TARGET heffte)
-  set(_alloy_dendrite_heffte_tgt heffte)
-endif()
 
 set(_alloy_dendrite_elastic_def ALLOY_DENDRITE_HAVE_ELASTICITY=0)
 if(OpenPFC_ENABLE_HEFFTE)
@@ -28,8 +20,7 @@ function(alloy_dendrite_add_driver name source)
   add_executable(${name} ${source})
   target_include_directories(${name} PRIVATE ${ALLOY_DENDRITE_INCLUDE_DIR})
   target_compile_definitions(${name} PRIVATE ${_alloy_dendrite_elastic_def})
-  target_link_libraries(${name} PRIVATE OpenPFC
-                        ${_alloy_dendrite_heffte_tgt})
+  target_link_libraries(${name} PRIVATE OpenPFC::openpfc)
   install(TARGETS ${name} DESTINATION bin)
 endfunction()
 
@@ -59,16 +50,15 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
                              ${ALLOY_DENDRITE_INCLUDE_DIR})
   target_compile_definitions(alloy_dendrite_hip_parity PRIVATE
                              ${_alloy_dendrite_elastic_def})
-  target_link_libraries(alloy_dendrite_hip_parity PRIVATE OpenPFC
-                        hip::host openpfc_hip_kernels
-                        ${_alloy_dendrite_heffte_tgt})
+  target_link_libraries(alloy_dendrite_hip_parity PRIVATE OpenPFC::openpfc
+                        hip::host openpfc_hip_kernels)
   set_target_properties(alloy_dendrite_hip_parity PROPERTIES
     HIP_STANDARD 17
     HIP_STANDARD_REQUIRED ON)
   install(TARGETS alloy_dendrite_hip_parity DESTINATION bin)
   message(STATUS "alloy_dendrite_hip_parity (MPI + HIP) enabled")
 
-  if(_alloy_dendrite_heffte_tgt)
+  if(OpenPFC_ENABLE_HEFFTE)
     add_executable(alloy_dendrite_coupled_cost
       src/hip/alloy_dendrite_coupled_cost.cpp
       src/hip/alloy_dendrite_hip_kernels.hip)
@@ -76,9 +66,8 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
                                ${ALLOY_DENDRITE_INCLUDE_DIR})
     target_compile_definitions(alloy_dendrite_coupled_cost PRIVATE
                                ${_alloy_dendrite_elastic_def})
-    target_link_libraries(alloy_dendrite_coupled_cost PRIVATE OpenPFC
-                          hip::host openpfc_hip_kernels
-                          ${_alloy_dendrite_heffte_tgt})
+    target_link_libraries(alloy_dendrite_coupled_cost PRIVATE OpenPFC::openpfc
+                          hip::host openpfc_hip_kernels)
     if(TARGET openpfc_microelasticity_hip)
       target_link_libraries(alloy_dendrite_coupled_cost PRIVATE
                             openpfc_microelasticity_hip)
@@ -100,10 +89,9 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
       target_compile_definitions(alloy_dendrite_hip_growth PRIVATE
                              ${_alloy_dendrite_elastic_def}
                              OpenPFC_ENABLE_HIP_SPECTRAL)
-      target_link_libraries(alloy_dendrite_hip_growth PRIVATE OpenPFC
+      target_link_libraries(alloy_dendrite_hip_growth PRIVATE OpenPFC::openpfc
                             hip::host openpfc_hip_kernels
-                            openpfc_microelasticity_hip
-                            ${_alloy_dendrite_heffte_tgt})
+                            openpfc_microelasticity_hip)
       set_target_properties(alloy_dendrite_hip_growth PROPERTIES
         HIP_STANDARD 17
         HIP_STANDARD_REQUIRED ON)
@@ -124,8 +112,8 @@ if(ALLOY_DENDRITE_ENABLE_TESTS AND OpenPFC_BUILD_TESTS
                              ${ALLOY_DENDRITE_INCLUDE_DIR})
   target_compile_definitions(test_alloy_dendrite PRIVATE
                              ${_alloy_dendrite_elastic_def})
-  target_link_libraries(test_alloy_dendrite PRIVATE OpenPFC
-                        Catch2::Catch2 ${_alloy_dendrite_heffte_tgt})
+  target_link_libraries(test_alloy_dendrite PRIVATE OpenPFC::openpfc
+                        Catch2::Catch2 )
   include(CTest)
   # The Catch binary is the Stage-1 planar run *and* the coupled elastic
   # controls. Debug FFT on a 2-core runner is the slow path; RUN_SERIAL so
