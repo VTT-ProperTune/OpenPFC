@@ -5,9 +5,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Sphinx documentation site
 
-OpenPFC publishes one documentation site. MyST renders the Markdown under
-`docs/`, Doxygen extracts the C++ API as XML, and Breathe places that generated
-reference inside the same Sphinx navigation and search index.
+The OpenPFC website serves the handbook under `/OpenPFC/docs/`. MyST renders
+the Markdown under `docs/`, Doxygen extracts the C++ API as XML, and Breathe
+places that generated reference inside the same Sphinx navigation and search
+index.
 
 Configuration lives in [`conf.py`](../conf.py). Python dependencies are managed
 with `uv` in `docs/pyproject.toml` and `docs/uv.lock`. Doxygen XML settings live
@@ -72,8 +73,12 @@ The documentation uses complementary checks:
    including files outside `docs/`;
 2. Sphinx validates the rendered document tree, MyST cross-references, anchors,
    Breathe input, and navigation;
-3. `docs/_ext/repo_links.py` rewrites valid links outside `docs/` to
-   commit-pinned GitHub URLs in the rendered site.
+3. `docs/_ext/repo_pages.py` publishes installation, project, application and
+   example READMEs from their original repository files;
+4. `docs/_ext/repo_links.py` keeps links to published pages inside the handbook
+   and rewrites other repository links to commit-pinned GitHub URLs;
+5. the website workflow checks links and resources after combining the
+   Quarto website and Sphinx handbook.
 
 This keeps source links useful when Markdown is read directly on GitHub without
 requiring duplicate copies of `INSTALL.md`, application inputs, headers, or
@@ -81,14 +86,8 @@ scripts inside the documentation source tree.
 
 ## API generation
 
-Doxygen is not a second presentation layer. It only generates XML:
-
-```bash
-cmake -S docs -B build/docs -GNinja
-cmake --build build/docs --target openpfc-doxygen-xml
-```
-
-Breathe reads `build/docs/xml/` and renders the curated declarations from
+Doxygen generates XML as part of `scripts/build_docs.sh`. Breathe reads
+`build/docs/xml/` and renders the curated declarations from
 [`api/index.md`](../api/index.md). The compatibility target `docs` still points
 to `openpfc-doxygen-xml` for existing local commands.
 
@@ -101,12 +100,23 @@ cleanup reduces a category, lower its recorded baseline in the same change.
 
 | URL area | Content |
 |----------|---------|
-| Pages root | Unified Sphinx site with prose and API |
-| `/api/` | Breathe-rendered C++ API inside the main site |
-| `/dev/` | Compatibility redirect to `/api/` |
+| `/OpenPFC/` | Quarto website from `ahojukka5/openpfc-pages` |
+| `/OpenPFC/docs/` | Sphinx handbook with prose and API |
+| `/OpenPFC/docs/api/` | Breathe-rendered C++ API reference |
+| `/OpenPFC/dev/` and `/OpenPFC/api/` | Compatibility redirects to `/OpenPFC/docs/api/` |
 
-The Documentation workflow uploads one HTML artifact. A push to `master`
-publishes that artifact through GitHub Pages.
+The [Documentation workflow](../../.github/workflows/docs.yml) builds the
+handbook in both repositories. On `VTT-ProperTune/OpenPFC` `master`, it also
+checks out the private Quarto website source, renders it, places the handbook
+under `docs/`, and deploys the combined artifact through GitHub Pages. A push
+to that branch or a manual workflow dispatch on it can publish the website.
+Pull requests and builds in the canonical development repository,
+`ahojukka5/OpenPFC`, validate documentation without deploying it.
+
+The combined site includes `revision.txt`, which records both source commits.
+Use it to check whether a documentation change has reached the published
+website. The local preview above serves only the Sphinx handbook, so its root
+corresponds to `/OpenPFC/docs/` on the published website.
 
 ## Navigation
 
