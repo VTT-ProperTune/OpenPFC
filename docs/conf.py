@@ -87,6 +87,8 @@ html_favicon = "_static/openpfc/brand/favicon.svg"
 # OpenPFC design system; docs/_static/openpfc/SOURCE records the commit.
 _site_url = os.environ.get("OPENPFC_SITE_URL", "https://vtt-propertune.github.io/OpenPFC/")
 html_static_path = ["_static"]
+templates_path = ["_templates"]
+html_js_files = ["openpfc/accessibility.js"]
 html_css_files = [
     "openpfc/fonts/fonts.css",
     "openpfc/sphinx/tokens.css",

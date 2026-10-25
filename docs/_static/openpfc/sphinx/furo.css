@@ -198,3 +198,9 @@ body[data-theme="dark"] {
   outline: 2px solid var(--openpfc-copper);
   outline-offset: 3px;
 }
+
+/* Keep compact section links usable by touch, and allow catalog identifiers
+ * to wrap before falling back to the table's horizontal scrollbar. */
+.toc-tree a { display: inline-block; min-height: 24px; }
+.content :is(p, li, td) code { overflow-wrap: anywhere; }
+.content table td { overflow-wrap: anywhere; }

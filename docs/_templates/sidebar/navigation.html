@@ -1,0 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+{# Sphinx's toctree captions need a level when exposed as ARIA headings. #}
+<div class="sidebar-tree">
+  {{ furo_navigation_tree | replace('role="heading"', 'role="heading" aria-level="2"') }}
+</div>
