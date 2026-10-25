@@ -281,6 +281,16 @@
       "capabilities": []
     },
     {
+      "target": "periodic_collocation",
+      "source": "differentiation/collocation/model.cpp",
+      "chapter": "differentiation/collocation/index.qmd",
+      "capabilities": [
+        "spectral-gradients",
+        "fft",
+        "distributed-fields"
+      ]
+    },
+    {
       "target": "periodic_differentiation",
       "source": "differentiation/periodic/model.cpp",
       "chapter": "differentiation/periodic/index.qmd",
@@ -369,14 +379,14 @@
       "program": 4,
       "title": "periodic spectral differentiation",
       "source": "https://people.maths.ox.ac.uk/trefethen/p4.m",
-      "chapter": null,
+      "chapter": "differentiation/collocation/index.qmd",
       "scope": "Original periodic cotangent differentiation of hat and analytic profiles."
     },
     {
       "program": 5,
       "title": "repetition of p4.m via FFT",
       "source": "https://people.maths.ox.ac.uk/trefethen/p5.m",
-      "chapter": null,
+      "chapter": "differentiation/collocation/index.qmd",
       "scope": "FFT version of both program 4 profiles, compared against the matrix action."
     },
     {

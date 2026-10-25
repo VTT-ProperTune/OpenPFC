@@ -107,6 +107,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `periodic_differentiation` | `differentiation/periodic/model.cpp` | Analytic derivative, second/fourth-order FD, and Fourier convergence |
 | `heat_exponential` | `heat/exponential/model.cpp` | Exact linear Fourier propagator; compare spatial and temporal error |
 | `cardinal_interpolation` | `interpolation/cardinal/model.cpp` | Trefethen program 3: cardinal sinc reconstruction of three sampled signals |
+| `periodic_collocation` | `differentiation/collocation/model.cpp` | Cotangent collocation matrix versus FFT derivatives of a hat and analytic profile |
 
 ## Research prototypes
 

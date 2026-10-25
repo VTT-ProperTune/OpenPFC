@@ -93,7 +93,7 @@ display sampling, not the interpolation problem.
 The sample field has nonperiodic metadata and includes both endpoints
 $-10$ and $10$. We do not wrap the sinc tails around this interval.
 Periodic trigonometric interpolation is a different basis and boundary
-assumption, developed in the matrix/FFT differentiation lesson.
+assumption, developed in the [matrix/FFT differentiation lesson](../../differentiation/collocation/index.qmd).
 
 The complete [C++ model](model.cpp) and [starting input](input.json)
 are available with this lesson.

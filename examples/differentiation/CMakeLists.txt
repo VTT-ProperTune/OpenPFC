@@ -4,3 +4,7 @@
 add_executable(periodic_differentiation periodic/model.cpp)
 target_link_libraries(periodic_differentiation PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(periodic_differentiation PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(periodic_collocation collocation/model.cpp)
+target_link_libraries(periodic_collocation PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(periodic_collocation PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")

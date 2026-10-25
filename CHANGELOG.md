@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Express the same periodic derivative through a dense cotangent matrix and native Fourier transforms. Check complete fields and retain the hat-function regularity caveat.
+
 - Show how shifted cardinal functions reconstruct sampled profiles. Check interpolation at every node, the analytic sinc field and overshoot of the discontinuous profile.
 
 - Put both transform layouts behind one small runnable model while preserving its executable. Exercise local and distributed paths and reject an invalid multi-rank local invocation.

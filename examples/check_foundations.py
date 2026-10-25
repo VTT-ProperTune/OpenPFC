@@ -80,6 +80,22 @@ def verify_03_parallel_fft(bin_dir, root, launch, ranks):
         assert abs(value - expected) < 1e-11, row
 
 
+def verify_periodic_collocation(bin_dir, root, launch, ranks):
+    binary = lambda name: bin_dir / name
+    collocation = root / "collocation"
+    run(binary("periodic_collocation"), collocation, launch)
+    rows = [
+        row
+        for path in (collocation / "results").glob("derivative_rank_*.csv")
+        for row in table(path)
+    ]
+    assert len(rows) == 48
+    for row in rows:
+        assert abs(float(row["matrix"]) - float(row["fourier"])) < 1e-11
+        if row["profile"] == "analytic":
+            assert abs(float(row["fourier"]) - float(row["exact"])) < 1e-10
+
+
 def verify_06_multi_index(bin_dir, root, launch, ranks):
     binary = lambda name: bin_dir / name
     offsets = run(binary("06_multi_index"), root / "boxes").splitlines()
@@ -149,6 +165,7 @@ def main():
             "03_parallel_fft",
             "09_parallel_fft_high_level",
             "cardinal_interpolation",
+            "periodic_collocation",
         ],
     )
     args = parser.parse_args()
@@ -188,6 +205,10 @@ def main():
             root = base / "cardinal_interpolation"
             root.mkdir()
             verify_cardinal_interpolation(bin_dir, root, launch, ranks)
+        if args.case in (None, "periodic_collocation"):
+            root = base / "periodic_collocation"
+            root.mkdir()
+            verify_periodic_collocation(bin_dir, root, launch, ranks)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 
