@@ -323,6 +323,57 @@ def check_square(binary, directory, kind):
     )
 
 
+def check_gamma(binary, directory):
+    run(binary, directory)
+    data = rows(directory / "results/gamma.csv")
+    convergence = rows(directory / "results/convergence.csv")
+    assert len(data) == 76 * 51 and sum(int(r["pole"]) for r in data) == 4
+    indexed = {
+        (round(float(r["real"]), 8), round(float(r["imag"]), 8)): r for r in data
+    }
+    for key, row in indexed.items():
+        value = complex(float(row["reciprocal_real"]), float(row["reciprocal_imag"]))
+        assert math.isfinite(abs(value))
+        if int(row["pole"]):
+            assert math.isnan(float(row["gamma_abs"]))
+            continue
+        assert math.isfinite(float(row["gamma_abs"]))
+        other = indexed[key[0], -key[1]]
+        conjugate = complex(
+            float(other["reciprocal_real"]), float(other["reciprocal_imag"])
+        ).conjugate()
+        assert abs(value - conjugate) < 1e-9 * max(1, abs(value))
+        if 0.5 <= key[0] <= 3:
+            nextrow = indexed[round(key[0] + 1, 8), key[1]]
+            nextvalue = complex(
+                float(nextrow["reciprocal_real"]), float(nextrow["reciprocal_imag"])
+            )
+            assert abs(complex(*key) * nextvalue - value) < 1e-8 * max(1, abs(value))
+    exact = {
+        0.5: 1 / math.sqrt(math.pi),
+        1.0: 1,
+        1.5: 2 / math.sqrt(math.pi),
+        2.0: 1,
+        3.0: 0.5,
+        4.0: 1 / 6,
+    }
+    for row in convergence:
+        samples = int(row["samples"])
+        if samples >= 70:
+            tolerance = 1e-9 if samples == 70 else 1e-11
+            assert abs(float(row["reciprocal"]) - exact[float(row["z"])]) < tolerance
+    for z in exact:
+        errors = {
+            int(r["samples"]): abs(float(r["reciprocal"]) - exact[z])
+            for r in convergence
+            if float(r["z"]) == z
+        }
+        assert errors[70] < errors[40] / 10000
+    run(
+        binary, directory.parent / "bad-gamma", parameters={"samples": 7}, success=False
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -341,6 +392,7 @@ def main():
             "square_poisson",
             "square_helmholtz",
             "square_laplace",
+            "gamma_contour",
         ],
     )
     args = parser.parse_args()
@@ -384,6 +436,10 @@ def main():
             root = base / "square_laplace"
             root.mkdir()
             check_square(bin_dir / "square_laplace", root / "laplace", "laplace")
+        if args.case in (None, "gamma_contour"):
+            root = base / "gamma_contour"
+            root.mkdir()
+            check_gamma(bin_dir / "gamma_contour", root)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

@@ -75,6 +75,7 @@ add_subdirectory(output)
 add_subdirectory(parallel)
 add_subdirectory(phase-fields)
 add_subdirectory(polynomials)
+add_subdirectory(quadrature)
 add_subdirectory(waves)
 
 if(OpenPFC_BUILD_TESTS)
@@ -424,6 +425,9 @@ if(OpenPFC_BUILD_TESTS)
   add_test(NAME example-square-laplace
            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_spectra.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case square_laplace)
   set_tests_properties(example-square-laplace PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+  add_test(NAME example-gamma-contour
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_spectra.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case gamma_contour)
+  set_tests_properties(example-gamma-contour PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
 endif()
 
 add_executable(23_halo_microtiming 23_halo_microtiming.cpp)

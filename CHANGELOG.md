@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Teach contour quadrature and complex arithmetic through reciprocal Gamma. Verify identities, zeros and convergence against independent special-function formulas.
+
 - Show how boundary values enter interior equations through explicit lifting. Check full fields, boundary values and an exact harmonic manufactured solution.
 
 - Extend the square tensor action with a reaction shift and homogeneous boundaries. Verify the entire computed field and a manufactured reference with independent matrices.

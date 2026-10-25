@@ -300,6 +300,15 @@
       ]
     },
     {
+      "target": "gamma_contour",
+      "source": "quadrature/complex-contour/model.cpp",
+      "chapter": "quadrature/complex-contour/index.qmd",
+      "capabilities": [
+        "complex-arithmetic",
+        "quadrature-reference"
+      ]
+    },
+    {
       "target": "harmonic_oscillator",
       "source": "fourier/harmonic-oscillator/model.cpp",
       "chapter": "fourier/harmonic-oscillator/index.qmd",
@@ -863,7 +872,7 @@
       "program": 31,
       "title": "gamma function via complex integral, trapezoid rule",
       "source": "https://people.maths.ox.ac.uk/trefethen/p31.m",
-      "chapter": null,
+      "chapter": "quadrature/complex-contour/index.qmd",
       "scope": "Original 70-point circular gamma contour and complex rectangle; retain reciprocal estimates and explicitly mark poles."
     },
     {
