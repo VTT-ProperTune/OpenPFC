@@ -64,8 +64,14 @@ namespace pfc::data {
  *                     backend via `memory_space_to_backend_t`.
  *
  * Logical indices `(i, j, k)` are **local** (0-based on the owned box). Halo
- * cells are addressable in `[-halo, n + halo)` on every axis, exactly as the
- * legacy `PaddedBrick`.
+ * cells are addressable in `[-storage_halo, n + storage_halo)` on each axis.
+ * halo_width() is the iteration halo and does not imply allocated padding;
+ * face-halo layouts can have storage_halo == 0 with a nonzero iteration halo.
+ *
+ * apply(), operator() and value-taking for_each_owned() require host storage.
+ * data() points to the selected memory space, including a device pointer for
+ * device fields. Use with_host_read()/with_host_view() for host-side device
+ * access; index-only iteration does not itself dereference device storage.
  */
 template <typename T, typename MemorySpace = pfc::HostSpace> class Field {
 public:
