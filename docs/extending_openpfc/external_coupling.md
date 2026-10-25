@@ -9,6 +9,8 @@ OpenPFC can run as a library inside a host solver (FEM, another PDE code, or a
 custom orchestrator). The stable surface is small on purpose.
 
 Runnable sketch: [`examples/coupling/host-orchestrator/model.cpp`](../../examples/coupling/host-orchestrator/model.cpp).
+The accompanying [Quarto lesson](https://vtt-propertune.github.io/OpenPFC/learn/coupling/host-orchestrator/)
+explains the field lifetime, coordinate offset and complete accepted-state check.
 
 ## What is stable
 
@@ -43,14 +45,18 @@ inside `SimulationState`).
 The host owns the outer loop. Before an attempt:
 
 ```cpp
-const double dt = time.clip_attempt_dt(host_proposed_dt);
-time.begin_attempt(dt);
-source.apply(state, time.get_accepted_time());
+const double t0 = time.get_accepted_time();
+time.begin_attempt(std::min(host_proposed_dt, time.get_dt()));
+const double dt = time.get_attempted_dt();
 // ... host physics / OpenPFC step ...
+source.apply(state, t0 + dt);  // This sketch prescribes the new endpoint values.
 time.commit_attempt();
+time.increment_step_success();
 ```
 
-`clip_attempt_dt` never lengthens the proposal. Reject with
+`begin_attempt` uses `clip_attempt_dt`, which never lengthens the proposal.
+The sketch imposes field values rather than adding a time-integrated source.
+Choose the application time according to the actual coupling algorithm. Reject with
 `time.reject_attempt()` if the host step fails.
 
 ## Restart coordination
