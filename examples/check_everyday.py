@@ -107,6 +107,37 @@ def check_catalog(binary, root, launch):
     )
 
 
+def check_session(binary, root, launch):
+    outputs, documents = [], []
+    for extension in ("json", "toml"):
+        folder = root / ("session-" + extension)
+        folder.mkdir()
+        command = [
+            *launch,
+            str(binary),
+            str(SOURCE / "configuration/session" / ("input." + extension)),
+        ]
+        result = subprocess.run(
+            command, cwd=folder, capture_output=True, text=True, timeout=90
+        )
+        assert result.returncode == 0, (result.stdout, result.stderr)
+        data = fields(folder)
+        unique_grid(data, 16, 4, 4, (-2, 0, 0), (0.5, 1, 1))
+        k = math.pi / 4
+        amplitude = 0.2 / ((1 + 0.07 * k * k) ** 2 * (1 + 0.06 * k * k))
+        for row in data:
+            exact = 1 + amplitude * math.cos(k * (float(row["x"]) + 2))
+            assert abs(float(row["u"]) - exact) < 2e-13
+        outputs.append(
+            sorted(data, key=lambda row: tuple(float(row[k]) for k in ("x", "y", "z")))
+        )
+        documents.append(json.loads((folder / "results/settings.json").read_text()))
+    assert outputs[0] == outputs[1] and documents[0] == documents[1]
+    bad = json.loads((SOURCE / "configuration/session/input.json").read_text())
+    bad["method"] = "fd"
+    run(binary, root / "bad-session", launch, bad, success=False)
+
+
 def verify_first_domain(bin_dir, root, launch, ranks):
     assert "(-0.625,0.5,0)" in run(bin_dir / "first_domain", root)
     axes = table(root / "results/domain.csv")
@@ -122,7 +153,12 @@ def main():
     parser.add_argument("--ranks", default=1, type=int)
     parser.add_argument(
         "--case",
-        choices=["first_domain", "14_custom_field_initializer", "10_ui_register_ic"],
+        choices=[
+            "first_domain",
+            "14_custom_field_initializer",
+            "10_ui_register_ic",
+            "json_read",
+        ],
     )
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
@@ -145,6 +181,10 @@ def main():
             root = base / "10_ui_register_ic"
             root.mkdir()
             check_catalog(bin_dir / "10_ui_register_ic", root, launch)
+        if args.case in (None, "json_read"):
+            root = base / "json_read"
+            root.mkdir()
+            check_session(bin_dir / "json_read", root, launch)
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 

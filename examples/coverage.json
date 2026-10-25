@@ -272,9 +272,15 @@
     },
     {
       "target": "json_read",
-      "source": "json_read.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "configuration/session/model.cpp",
+      "chapter": "configuration/session/index.qmd",
+      "capabilities": [
+        "json-settings",
+        "toml-settings",
+        "simulation-session",
+        "session-selection",
+        "distributed-fft"
+      ]
     },
     {
       "target": "mhd2d",
@@ -934,6 +940,7 @@
         "parameter_schema.hpp"
       ],
       "chapters": [
+        "configuration/session/index.qmd",
         "initialization/catalog/index.qmd"
       ]
     },

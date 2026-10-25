@@ -1,0 +1,13 @@
+method = "spectral"
+backend = "cpu"
+
+[domain]
+size = [16, 4, 4]
+lower = [-2.0, 0.0, 0.0]
+upper = [6.0, 4.0, 4.0]
+
+[timestepping]
+t0 = 0.0
+t1 = 0.2
+dt = 0.07
+saveat = 0.1

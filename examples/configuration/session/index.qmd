@@ -1,0 +1,86 @@
+---
+title: "Turn a settings file into a runnable session"
+description: "Use native JSON/TOML loading and the spectral session factory, then evolve a mode with the actual clock intervals."
+order: 56
+categories: [Configuration, Workflows]
+targets: [json_read]
+capabilities: [json-settings, toml-settings, simulation-session, session-selection, distributed-fft]
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[OpenPFC / From settings to a run]{.lesson-kicker}
+
+# Turn a settings file into a runnable session
+
+[A configuration file should describe a computation, and the resulting computation should have an answer you can check.]{.lesson-deck}
+:::
+
+The old `json_read` program printed raw JSON. This version uses the native
+settings loader and constructs a real spectral CPU session. JSON and TOML
+describe the same domain, method, backend and time interval. Physics
+remains a small visible callback.
+
+## Load the native schema
+
+```{.cpp include="model.cpp" snippet="session" dedent=4}
+```
+
+`load_settings_file` recognizes `.json` and `.toml` and reports syntax
+errors. `make_simulation_session` interprets the domain and time schema
+and checks that method/backend selection matches the requested stack.
+Choosing `"method":"fd"` cannot silently turn a `SpectralCPUStack`
+into a finite-difference stack.
+
+The domain uses `size`, `lower` and `upper`. On the periodic x axis,
+$h_x=(\mathrm{upper}_x-\mathrm{lower}_x)/N_x$; the upper boundary is not
+a duplicated sample. The default interval $[-2,6)$ therefore has length 8.
+
+## Let the session own the clock and stack
+
+For $u_t=\Delta u$, start with
+$u(x,0)=1+.2\cos[2\pi(x+2)/8]$ and apply backward Euler in Fourier space:
+
+```{.cpp include="model.cpp" snippet="run" dedent=4}
+```
+
+The callback receives the actual accepted interval. The default steps are
+.07, .07 and .06, ending at .2. A multiplier cached once for .07 would
+integrate the wrong final interval. The mean stays one and the mode's
+amplitude is multiplied by $\prod_m(1+k^2\Delta t_m)^{-1}$, where
+$k=2\pi/8$.
+
+## Compare the two file formats
+
+```sh
+openpfc run model.cpp input.json --launcher=none
+```
+
+The companion [TOML file](input.toml) describes the same computation.
+After building OpenPFC, run it from the repository root with:
+
+```sh
+./builds/release/examples/json_read examples/configuration/session/input.toml
+```
+
+Adjust `builds/release` to your build directory. The numerical regression
+launches the built executable with each file and checks identical complete
+fields and equivalent normalized settings. Source-based `openpfc run`
+currently validates JSON when snapshotting its input; TOML is supported
+by the library loader used by the compiled program.
+
+Rank zero writes the parsed document to `results/settings.json`; every
+rank writes its owned values to `results/field_rank_*.csv`.
+There is no interactive stdin prompt. Change the bounds, timestep or
+backend token, then inspect either the result or the native validation
+message. This lesson demonstrates session construction, not every
+application-specific `model.params` schema.
+
+Keep the [source](model.cpp), [JSON input](input.json) and
+[TOML input](input.toml) together. Continue with
+time-loop hooks or
+writing a result series.
+:::

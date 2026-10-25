@@ -74,5 +74,5 @@ inspects it without evolving a periodic PDE.
 
 Keep the [model](model.cpp), [input](input.json) and
 [shared helper](../lesson.hpp). Continue with
-a native configuration-driven session.
+[a native configuration-driven session](../../configuration/session/index.qmd).
 :::

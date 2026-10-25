@@ -17,7 +17,7 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 :::
 
 There are 60 declared runnable example targets and
-40 Quarto teaching chapters. The table includes older programs
+41 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -107,7 +107,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `fft_kspace_helpers_example` | Pending conversion. |
 | `first_domain` | [Read the lesson](geometry/first-domain/index.qmd) |
 | `heat_exponential` | [Read the lesson](heat/exponential/index.qmd) |
-| `json_read` | Pending conversion. |
+| `json_read` | [Read the lesson](configuration/session/index.qmd) |
 | `mhd2d` | Pending conversion. |
 | `mpi_timers` | [Read the lesson](diagnostics/mpi-timing/index.qmd) |
 | `mpi_worker` | [Read the lesson](parallel/hello/index.qmd) |
@@ -161,7 +161,7 @@ fixed-step restart does not establish an adaptive restart contract.
 | multi-field runtime integration | [runtime-fields](coupling/runtime-fields/index.qmd) |
 | exponential and adaptive ETD | [exponential](heat/exponential/index.qmd), [adaptive-etd](integration/adaptive-etd/index.qmd) |
 | initial conditions and modifiers | [coordinate-fields](geometry/coordinate-fields/index.qmd), [patterns](initialization/patterns/index.qmd), [catalog](initialization/catalog/index.qmd) |
-| JSON/TOML validation and application sessions | [catalog](initialization/catalog/index.qmd) |
+| JSON/TOML validation and application sessions | [session](configuration/session/index.qmd), [catalog](initialization/catalog/index.qmd) |
 | field output and visualization | Pending a teaching chapter. |
 | checkpoints and restart | [checkpoint-restart](output/checkpoint-restart/index.qmd) |
 | Krylov and nonlinear solves | [integration](polynomials/integration/index.qmd), [boundary-values](polynomials/boundary-values/index.qmd), [nonlinear-boundary](polynomials/nonlinear-boundary/index.qmd) |
