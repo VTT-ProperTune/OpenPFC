@@ -54,8 +54,6 @@ target_link_libraries(mpi_timers PRIVATE OpenPFC::openpfc )
 add_executable(profiling_timer_report profiling_timer_report.cpp)
 target_link_libraries(profiling_timer_report PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json )
 
-add_executable(time time.cpp)
-target_link_libraries(time PRIVATE OpenPFC::openpfc )
 
 add_executable(write_results write_results.cpp)
 target_link_libraries(write_results PRIVATE OpenPFC::openpfc )
@@ -285,6 +283,9 @@ if(OpenPFC_BUILD_TESTS)
     set_tests_properties(example-24-adaptive-etd-mpi PROPERTIES PROCESSORS 2 TIMEOUT 360
                          ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
   endif()
+  add_test(NAME example-time
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_workflows.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --case time)
+  set_tests_properties(example-time PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
 endif()
 
 add_executable(23_halo_microtiming 23_halo_microtiming.cpp)

@@ -410,9 +410,13 @@
     },
     {
       "target": "time",
-      "source": "time.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "integration/output-clock/model.cpp",
+      "chapter": "integration/output-clock/index.qmd",
+      "capabilities": [
+        "time",
+        "output-scheduling",
+        "attempt-transactions"
+      ]
     },
     {
       "target": "variable_transport",
@@ -820,7 +824,8 @@
       "chapters": [
         "heat/finite-differences/index.qmd",
         "integration/stability/index.qmd",
-        "integration/adaptive-rk/index.qmd"
+        "integration/adaptive-rk/index.qmd",
+        "integration/output-clock/index.qmd"
       ]
     },
     {

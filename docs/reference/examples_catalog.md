@@ -85,7 +85,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `mpi_worker_inside_class` | `mpi_worker_inside_class.cpp` | MPI worker encapsulated in a class |
 | `mpi_timers` | `mpi_timers.cpp` | MPI timing |
 | `profiling_timer_report` | `profiling_timer_report.cpp` | Profiling and timer reporting |
-| `time` | `time.cpp` | Time-stepping utilities |
+| `time` | `integration/output-clock/model.cpp` | Time-stepping utilities |
 | `write_results` | `write_results.cpp` | Results I/O variant |
 | `diffusion_model_with_custom_initial_condition` | `diffusion_model_with_custom_initial_condition.cpp` | Diffusion with a custom initial condition |
 | `json_read` | `json_read.cpp` | Standalone nlohmann JSON read; does not link OpenPFC |

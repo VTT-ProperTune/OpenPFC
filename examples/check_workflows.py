@@ -150,6 +150,20 @@ def check_etd(binary, directory, launch, ranks):
     run(binary, directory.parent / "bad-etd", launch, {"n": 7}, success=False)
 
 
+def check_clock(binary, directory):
+    run(binary, directory)
+    data = rows(directory / "results/clock.csv")
+    assert data[0]["event"] == "initial" and data[1]["event"] == "rejected"
+    assert float(data[1]["time"]) == 0 and int(data[1]["increment"]) == 0
+    accepted = [r for r in data if r["event"] == "accepted"]
+    expected = [0.13, 0.2, 0.33, 0.4, 0.53, 0.6, 0.73, 0.8, 0.93, 1.0]
+    assert len(accepted) == len(expected)
+    for i, (row, t) in enumerate(zip(accepted, expected), 1):
+        assert abs(float(row["time"]) - t) < 1e-13 and int(row["increment"]) == i
+        assert int(row["save"]) == int(i % 2 == 0)
+    run(binary, directory.parent / "bad-clock", parameters={"dt": 0}, success=False)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", required=True, type=Path)
@@ -157,7 +171,9 @@ def main():
     parser.add_argument("--launcher")
     parser.add_argument("--rank-flag", default="-n")
     parser.add_argument("--ranks", default=1, type=int)
-    parser.add_argument("--case", choices=["21_adaptive_stepping", "24_adaptive_etd"])
+    parser.add_argument(
+        "--case", choices=["21_adaptive_stepping", "24_adaptive_etd", "time"]
+    )
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     bin_dir = args.bin_dir.resolve()
@@ -175,6 +191,10 @@ def main():
             root = base / "24_adaptive_etd"
             root.mkdir()
             check_etd(bin_dir / "24_adaptive_etd", root / "etd", launch, ranks)
+        if args.case in (None, "time"):
+            root = base / "time"
+            root.mkdir()
+            check_clock(bin_dir / "time", root / "clock")
     print(f"Selected teaching checks passed ({ranks} rank(s)).")
 
 
