@@ -497,3 +497,12 @@ frames, named metrics and placement output. It preserves the original
 two-rank smoke configuration, then varies warmup and frame counts. These
 are export-contract checks; they neither replace halo numerical correctness
 tests nor assert any timing or bandwidth threshold.
+
+## Nonlinear Fourier course companion
+
+`phase-fields/alias-free-cubic` owns the moved course model, input and
+independent convolution/RK4 verifier. Its executable name and CTest cases
+are unchanged. The verifier and input retain their bytes; C++ changes are
+excerpt markers only. The native website's six-part course remains the
+longer explanation. Historical provenance pinned to an older source path
+stays pinned: update only active current-source links after a move.

@@ -1,5 +1,9 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
+add_executable(nonlinear_spectral_course model.cpp)
+target_link_libraries(nonlinear_spectral_course PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(nonlinear_spectral_course PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
 if(OpenPFC_BUILD_TESTS)
   find_package(Python3 COMPONENTS Interpreter REQUIRED)
   add_test(NAME nonlinear-spectral-course

@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Connect the nonlinear Fourier course to a themed cubic-projection lesson,
+  preserving its solver, independent verifier and numerical acceptance criteria.
+
 - Teach the retained halo profiler through measured-frame boundaries, warmup
   and independent checks of its complete per-rank JSON export.
 

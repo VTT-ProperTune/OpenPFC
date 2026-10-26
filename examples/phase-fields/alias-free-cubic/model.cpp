@@ -81,11 +81,13 @@ double phi2(double z) {
   return (std::expm1(z) - z) / (z * z);
 }
 
+// start snippet physics
 struct AllenCahn {
   double diffusivity;
   double linear(double k_squared) const { return 1 - diffusivity * k_squared; }
   double nonlinear(double value) const { return -value * value * value; }
 };
+// end snippet physics
 
 class Solver {
 public:
@@ -121,6 +123,7 @@ public:
     project(spectrum);
   }
 
+  // start snippet etd2
   void step() {
     nonlinear(spectrum, first);
     for (std::size_t i = 0; i < spectrum.size(); ++i)
@@ -130,6 +133,8 @@ public:
       spectrum[i] = predictor[i] + h_phi2[i] * (second[i] - first[i]);
     project(spectrum);
   }
+
+  // end snippet etd2
 
   // RMS and energy are global averages; the reaction does not conserve mean.
   std::array<double, 3> diagnostics() {
@@ -192,12 +197,15 @@ private:
       if (!keep[i]) values[i] = 0;
   }
 
+  // start snippet nonlinear
   void nonlinear(const std::vector<Complex> &state, std::vector<Complex> &rates) {
     stack.fft().backward(state, scratch);
     for (double &value : scratch) value = physics.nonlinear(value);
     stack.fft().forward(scratch, rates);
     project(rates);
   }
+
+  // end snippet nonlinear
 
   Settings s;
   AllenCahn physics;

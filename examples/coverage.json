@@ -569,9 +569,15 @@
     },
     {
       "target": "nonlinear_spectral_course",
-      "source": "nonlinear_spectral/allen_cahn.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "phase-fields/alias-free-cubic/model.cpp",
+      "chapter": "phase-fields/alias-free-cubic/index.qmd",
+      "capabilities": [
+        "cubic-dealiasing",
+        "galerkin-projection",
+        "etd2",
+        "independent-convolution",
+        "distributed-fft"
+      ]
     },
     {
       "target": "ns2d_flux_balance",

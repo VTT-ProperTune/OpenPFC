@@ -17,7 +17,7 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 :::
 
 There are 83 declared runnable example targets and
-76 Quarto teaching chapters. The table includes older programs
+77 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -130,7 +130,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `mpi_worker` | [Read the lesson](parallel/hello/index.qmd) |
 | `mpi_worker_inside_class` | [Read the lesson](parallel/session/index.qmd) |
 | `multigrid_poisson` | [Read the lesson](elliptic/multigrid/index.qmd) |
-| `nonlinear_spectral_course` | Pending conversion. |
+| `nonlinear_spectral_course` | [Read the lesson](phase-fields/alias-free-cubic/index.qmd) |
 | `ns2d_flux_balance` | Pending conversion. |
 | `ns2d_spatial_refine` | Pending conversion. |
 | `ns2d_temporal_refine` | Pending conversion. |

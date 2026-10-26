@@ -1,0 +1,160 @@
+---
+title: "A cubic needs room in Fourier space"
+description: "Run the existing nonlinear Fourier course model, derive its sampling condition and separate implementation checks from PDE accuracy."
+order: 67
+categories: [Phase fields, Fourier methods, Tough challenges]
+capabilities: ["cubic-dealiasing", "galerkin-projection", "etd2", "independent-convolution", "distributed-fft"]
+targets: [nonlinear_spectral_course]
+bibliography: ../../references.bib
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[Phase fields / A nonlinear Fourier challenge]{.lesson-kicker}
+
+# A cubic needs room in Fourier space
+
+[Keep the equation small. Make its nonlinear projection explicit.]{.lesson-deck}
+:::
+
+The [six-part nonlinear Fourier course](https://vtt-propertune.github.io/OpenPFC/spectral/)
+uses this same model to explore normalization, aliasing, exponential time
+stepping and verification. Here is its runnable companion in the example
+book. The numerical implementation and its independent verifier are
+retained; the new chapter connects their mathematical choices to the C++.
+
+On the periodic interval $[0,2\pi)$, solve
+
+$$
+u_t=D u_{xx}+u-u^3,
+$$
+
+starting with $u(x,0)=m+a_1\cos x+a_3\cos 3x$. The defaults use
+$D=0.1$, $m=0.2$, $a_1=0.35$ and $a_3=0.15$. The reaction can change the
+mean: this is Allen–Cahn dynamics, whereas the
+[Cahn–Hilliard lesson](../cahn-hilliard/index.qmd) illustrates conserved
+phase-field evolution.
+
+## Put the mathematical split in two small functions
+
+```{.cpp include="model.cpp" snippet="physics"}
+```
+
+For mode $k$, the linear symbol is $L_k=1-Dk^2$. The nonlinear part is
+$F(u)=-u^3$. The solver uses `SpectralCPUStack` to own the distributed
+field and FFT plan. It embeds the one-dimensional problem in an
+$N\times4\times4$ periodic grid, retaining only modes $(k,0,0)$ with
+$|k|\leq K$. Those extra axes exercise real distributed inbox/outbox
+ownership; they do not add transverse physics.
+
+## Derive the sampling condition for a cubic
+
+Multiplying three fields supported on $[-K,K]$ produces frequencies as
+large as $3K$. On an $N$-point grid, modes separated by $N$ are
+indistinguishable. A cubic mode can therefore alias into the retained
+band when its distance from that band is a multiple of $N$.
+
+The largest possible distance is $3K+K=4K$. Requiring
+
+$$
+4K<N
+$$
+
+prevents this wraparound into the retained band. This is a sufficient
+condition for the projected cubic used here; it is not the quadratic
+two-thirds rule. General Fourier sampling and aliasing ideas are developed
+in @trefethen2000.
+
+```{.cpp include="model.cpp" snippet="nonlinear" dedent=2}
+```
+
+Each evaluation transforms back to nodal values, applies the cubic,
+transforms forward, then projects onto the retained modes. Projection
+also removes every mode with nonzero transverse index. The raw forward
+FFT is unscaled, and its inverse divides by the **global** $16N$ cell
+count. The exported coefficients are normalized by that same count.
+
+The default $N=32$, $K=7$ satisfies the strict inequality. Increasing $N$
+at fixed $K$ gives more sampling room for the same Galerkin system;
+increasing $K$ changes the system itself.
+
+## Integrate the linear symbol exponentially
+
+The program uses a two-stage exponential Runge–Kutta step of order two,
+following the ETD approach of @cox2002. With $h=\Delta t$, define
+
+$$
+\begin{aligned}
+\varphi_1(z)&=(e^z-1)/z,\\
+\varphi_2(z)&=(e^z-1-z)/z^2.
+\end{aligned}
+$$
+
+Their removable limits are $\varphi_1(0)=1$ and $\varphi_2(0)=1/2$.
+For a spectral state $c$, the predictor and corrected state are
+
+$$
+\begin{aligned}
+a&=e^{hL}c+h\varphi_1(hL)F(c),\\
+c_{\mathrm{new}}&=a+h\varphi_2(hL)\bigl(F(a)-F(c)\bigr).
+\end{aligned}
+$$
+
+```{.cpp include="model.cpp" snippet="etd2" dedent=2}
+```
+
+The coefficient arrays already include their factors of $h$. The native
+coefficient helper evaluates the first two arrays, while the local `phi2`
+function uses a small-argument series near zero. A zero linear symbol is
+an ordinary case, not a reason to divide by zero. Integrating the linear
+part exactly does not remove nonlinear time-discretization error.
+
+## Run and ask an independent question
+
+Download the [model](model.cpp), [input](input.json) and
+[standard-library Python verifier](verify.py). With a compatible installed
+spectral CPU SDK:
+
+```sh
+openpfc run model.cpp input.json --launcher=none
+openpfc run model.cpp input.json --ranks=2 --launcher=mpirun
+```
+
+Each printed attempt contains `results/diagnostics.csv`, `summary.json`
+and per-rank field, normalized-mode and layout files. Supply the two
+actual attempt paths to the verifier:
+
+```sh
+python3 verify.py input.json /path/to/serial/results /path/to/two-rank/results
+```
+
+The verifier uses full, non-circular coefficient convolution and refined
+classical RK4. It keeps the entire quadratic intermediate while forming
+the cubic; truncating that intermediate early would change the equation.
+It also checks complete ownership, reconstruction, Parseval, diagnostics
+and agreement across rank counts. Its default field-error budget is
+$2\times10^{-5}$ for the supplied input, and it reports its own RK4
+step-doubling change separately.
+
+This reference solves the Fourier ODE at the same $K$. It checks the
+implementation and time approximation, not accuracy against the exact
+infinite-dimensional PDE. For three distinct experiments:
+
+- Double `n` at fixed `cutoff`: check the same retained-band product.
+- Halve `dt` and double `steps`: keep final time fixed and examine time error.
+- Increase `cutoff`, with sufficient `n`: examine spatial truncation as well.
+
+Keep the sampling inequality valid in every case. Use the course's
+[verification chapter](https://vtt-propertune.github.io/OpenPFC/spectral/verification/)
+for the interpretation of these separate error questions. The executable
+name remains `nonlinear_spectral_course`; build it through `scripts/build.sh`.
+
+## References
+
+::: {#refs}
+:::
+
+:::

@@ -10,7 +10,7 @@ Fourier normalization, nonlinear aliasing, cubic dealiasing, ETD2, verification
 and distributed FFT ownership. This directory owns its runnable model and
 independent verifier.
 
-`allen_cahn.cpp` solves `u_t = D u_xx + u - u^3` on `[0, 2π)` with initial
+`model.cpp` solves `u_t = D u_xx + u - u^3` on `[0, 2π)` with initial
 field `mean + a1*cos(x) + a3*cos(3*x)`. It embeds that one-dimensional problem
 in an `n × 4 × 4` periodic grid using OpenPFC's HeFFTe/FFTW CPU stack. Only
 `(kx,0,0)` with `|kx| <= cutoff` remain live. Requiring `4*cutoff < n` makes
@@ -28,8 +28,8 @@ source-model workflow is:
 
 ```sh
 openpfc doctor --sdk /path/to/sdk
-openpfc run allen_cahn.cpp input.json --sdk /path/to/sdk --launcher=none
-openpfc run allen_cahn.cpp input.json --sdk /path/to/sdk --ranks=2 --launcher=mpirun
+openpfc run model.cpp input.json --sdk /path/to/sdk --launcher=none
+openpfc run model.cpp input.json --sdk /path/to/sdk --ranks=2 --launcher=mpirun
 ```
 
 Invoke the CLI once outside an MPI launch. Each printed attempt contains
