@@ -21,6 +21,8 @@ bibliography: ../../references.bib
 
 [A warmer point gives heat to its neighbours. Can a few lines of C++ preserve that simple picture?]{.lesson-deck}
 
+[First six experiments · 4 of 6](../../start/index.qmd){.lesson-route-label}
+
 :::
 
 The heat equation smooths temperature differences. A periodic box makes
@@ -29,8 +31,7 @@ boundary, so the spatial mean must remain constant. A single cosine mode
 also gives us an exact decay rate. We can check conservation and accuracy
 without guessing what a plausible field should look like.
 
-This lesson refactors the former `19_explicit_stepper_fd.cpp`. The
-[separated-halo lesson](../separated-halos/index.qmd) studies the
+The [separated-halo lesson](../separated-halos/index.qmd) studies the
 communication buffers while keeping the same physical problem.
 
 ## One problem, three methods
@@ -171,6 +172,12 @@ keep its relative location when saving the files.
 ## References
 
 ::: {#refs}
+:::
+
+::: {.lesson-navigation role="navigation" aria-label="Beginner lessons"}
+[← Previous lesson](../../differentiation/periodic/index.qmd)
+
+[Next: Fourier heat →](../fourier/index.qmd)
 :::
 
 :::

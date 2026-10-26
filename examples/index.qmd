@@ -33,6 +33,10 @@ change a parameter, and try to predict the result before running it.
 
 ## Start with a question
 
+**New to OpenPFC?** Follow [your first six experiments](start/index.qmd):
+one guided route from a physical grid to three ways of solving the heat
+equation. Each chapter has a complete runnable download and a next step.
+
 For a first C++ program, start by [giving a grid physical meaning](geometry/first-domain/index.qmd).
 Then let that grid carry a field and a numerical question.
 

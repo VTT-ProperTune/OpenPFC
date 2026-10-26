@@ -21,6 +21,8 @@ bibliography: ../../references.bib
 
 [Once a PDE becomes independent scalar ODEs, why approximate an evolution we can solve?]{.lesson-deck}
 
+[First six experiments · 6 of 6](../../start/index.qmd){.lesson-route-label}
+
 :::
 
 Fourier differentiation made the spatial operator exact for our cosine
@@ -29,10 +31,9 @@ diffusivity gives us another option: solve the equation of each Fourier
 coefficient analytically. The resulting implementation is a transform,
 a multiplication, and an inverse transform.
 
-This develops the forward/multiply/backward pattern already used in
-`04_diffusion_model.cpp`. That earlier example uses a backward-Euler
-multiplier. Here we replace it with the exact linear propagator and
-explain the difference.
+The forward/multiply/backward pattern keeps the mathematical update visible.
+Compare its exact linear multiplier with the implicit approximation in
+[backward-Euler heat](../implicit-euler/index.qmd).
 
 ## Solve the coefficient equation
 
@@ -145,6 +146,12 @@ keep its relative location when saving the files.
 ## References
 
 ::: {#refs}
+:::
+
+::: {.lesson-navigation role="navigation" aria-label="Beginner lessons"}
+[← Previous lesson](../fourier/index.qmd)
+
+[Next: the complete collection →](../../index.qmd)
 :::
 
 :::

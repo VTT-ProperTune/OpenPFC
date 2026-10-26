@@ -13,6 +13,7 @@ project:
     - "*/*/lesson.zip"
   render:
     - index.qmd
+    - start/index.qmd
     - coverage.qmd
     - "*/*/index.qmd"
 website:

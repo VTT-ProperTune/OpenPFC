@@ -21,6 +21,8 @@ bibliography: ../../references.bib
 
 [What if the spatial derivative is already exact for our wave, but the answer still has an error?]{.lesson-deck}
 
+[First six experiments · 5 of 6](../../start/index.qmd){.lesson-route-label}
+
 :::
 
 In the [previous lesson](../finite-differences/index.qmd), a finite stencil
@@ -143,6 +145,12 @@ keep its relative location when saving the files.
 ## References
 
 ::: {#refs}
+:::
+
+::: {.lesson-navigation role="navigation" aria-label="Beginner lessons"}
+[← Previous lesson](../finite-differences/index.qmd)
+
+[Next: exact heat evolution →](../exponential/index.qmd)
 :::
 
 :::

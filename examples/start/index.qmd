@@ -1,0 +1,172 @@
+---
+title: "Your first six experiments"
+description: "A guided route from a physical grid to finite-difference, Fourier and exact heat evolution."
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[OpenPFC / Start learning]{.lesson-kicker}
+
+# Six experiments. One equation you can understand.
+
+[Give a grid physical meaning, put a field on it, and follow heat as it spreads. Then change the numerical method and explain what changes in the answer.]{.lesson-deck}
+:::
+
+Beginner · six lessons · allow about 45 minutes after setting up your SDK.
+All six experiments run on one CPU process. Basic C++ loops and functions
+are enough to start; each chapter explains the OpenPFC objects it introduces.
+
+## Get ready once
+
+Install the [OpenPFC SDK and native CLI](https://vtt-propertune.github.io/OpenPFC/docs/project/install/)
+and load its compiler/MPI environment. These examples include Fourier
+transforms, so choose an SDK with the CPU FFT/HeFFTe backend. Check it once:
+
+```sh
+openpfc doctor
+```
+
+Each lesson has a **Download runnable lesson** link. Extract the archive,
+open its named folder, and use the command in its README. The package includes
+the model, inputs and shared headers in their original relative layout.
+The same C++ is shown in the chapter.
+
+Recorded runs print an `Attempt` directory. Read its `stdout.log` for console
+output and its `results/` directory for data files. Each run keeps its own
+result, so you can compare experiments after changing an input.
+
+## Take one step at a time
+
+::: {.lesson-steps}
+::: {.lesson-step}
+[01 / Geometry]{.lesson-kicker}
+
+### [Give the grid a physical meaning](../geometry/first-domain/index.qmd)
+
+An index becomes a position through an origin and a spacing. Predict the
+coordinate before running the short program.
+
+**Check:** explain why the last periodic sample and the box's upper boundary
+are different positions.
+:::
+::: {.lesson-step}
+[02 / Fields]{.lesson-kicker}
+
+### [Put values on that geometry](../geometry/field-storage/index.qmd)
+
+A field connects physical coordinates, owned samples and memory. See the
+same polynomial stored with and without halo padding.
+
+**Check:** explain how 96 owned values can occupy either 96 or 288 slots.
+:::
+::: {.lesson-step}
+[03 / Differentiation]{.lesson-kicker}
+
+### [Compare three derivatives](../differentiation/periodic/index.qmd)
+
+Apply second-order differences, fourth-order differences and Fourier
+differentiation to the same smooth periodic function.
+
+**Check:** find refinement ratios approaching four and sixteen, and identify
+where floating-point roundoff stops further improvement.
+:::
+::: {.lesson-step}
+[04 / Neighbouring values]{.lesson-kicker}
+
+### [Let heat flow between samples](../heat/finite-differences/index.qmd)
+
+Use neighbouring values to approximate a Laplacian, then advance the heat
+equation with forward Euler. Read the update directly in C++.
+
+**Check:** the mean stays near one while the temperature variation decreases.
+Respect the chapter's explicit timestep bound when refining the grid.
+:::
+::: {.lesson-step}
+[05 / Fourier modes]{.lesson-kicker}
+
+### [Change the spatial derivative](../heat/fourier/index.qmd)
+
+Keep the same equation, initial condition and Euler step. Compute the
+Laplacian through Fourier coefficients instead.
+
+**Check:** identify the time error that remains after this spatial change.
+:::
+::: {.lesson-step}
+[06 / Exact evolution]{.lesson-kicker}
+
+### [Let each wave decay exactly](../heat/exponential/index.qmd)
+
+Solve the scalar equation of each retained Fourier mode with an exponential.
+Compare the result with both earlier heat implementations.
+
+**Check:** distinguish the continuum solution, the discrete spatial operator
+and the time integration rule.
+:::
+:::
+
+## Make a prediction, then test it
+
+The three heat lessons use the same starting inputs and the same periodic
+equation. Their initial field is
+
+$$
+u(x,y,z,0)=1+0.2\cos x\cos y\cos z,
+$$
+
+and the heat equation $u_t=D\nabla^2u$ gives
+
+$$
+u(x,y,z,t)=1+0.2e^{-3Dt}\cos x\cos y\cos z.
+$$
+
+Run each implementation with the supplied input. Open the final row of
+`results/diagnostics.csv` in the printed attempt directory. Compare `mean`,
+`rms_fluctuation` and `rms_error`.
+
+Now halve `dt` and double `steps`, keeping the same final time. For the
+starting case, the changed input is:
+
+```json
+{
+  "n": 16,
+  "steps": 200,
+  "dt": 0.0005,
+  "diffusivity": 1.0
+}
+```
+
+Before running again, predict which error will decrease and which method
+already has an exact evolution rule for this linear problem.
+
+<details class="lesson-answer">
+<summary>Check your prediction</summary>
+
+The final time stays $T=0.1$. The mean remains one and the exact cosine
+amplitude is $0.2e^{-0.3}\approx0.14816$.
+
+For the Fourier/Euler model, the spatial representation resolves this mode;
+Euler's first-order time error should decrease by about a factor of two.
+For the exponential model, the retained modes already follow their exact
+linear evolution, so a smaller timestep need not improve a result near
+roundoff.
+
+The finite-difference model has both spatial and time errors. They can
+partly cancel, so its total error need not fall monotonically when only
+the timestep changes. Keep the grid fixed to study time error, then use the
+chapter's stability bound when refining space.
+
+</details>
+
+## Choose the next question
+
+Continue with [which timesteps are stable](../integration/stability/index.qmd),
+[a field with a physical boundary](../boundaries/outward-flux/index.qmd), or
+[your first two MPI ranks](../parallel/hello/index.qmd). The
+[complete collection](../index.qmd) offers the remaining numerical methods
+and more demanding experiments.
+
+[Begin with a physical grid](../geometry/first-domain/index.qmd){.btn .btn-primary}
+:::

@@ -22,6 +22,8 @@ bibliography: ../../references.bib
 
 [A local stencil and a global trigonometric interpolant look at the same samples. How much can each one learn?]{.lesson-deck}
 
+[First six experiments · 3 of 6](../../start/index.qmd){.lesson-route-label}
+
 :::
 
 Suppose all we know about a function is its value at equally spaced points.
@@ -165,6 +167,12 @@ Download the [program 1 resolution preset](trefethen-p1.json) for the book compa
 ## References
 
 ::: {#refs}
+:::
+
+::: {.lesson-navigation role="navigation" aria-label="Beginner lessons"}
+[← Previous lesson](../../geometry/field-storage/index.qmd)
+
+[Next: finite-difference heat →](../../heat/finite-differences/index.qmd)
 :::
 
 :::

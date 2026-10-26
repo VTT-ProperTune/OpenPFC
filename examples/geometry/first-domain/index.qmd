@@ -17,12 +17,13 @@ capabilities: [domain, strong-types, coordinates, periodicity]
 # Give the grid a physical meaning
 
 [Sixteen samples do not define a physical length until we say where they are.]{.lesson-deck}
+
+[First six experiments · 1 of 6](../../start/index.qmd){.lesson-route-label}
 :::
 
 A `Domain` describes the global grid. Its dimensions count samples;
 its origin and spacing assign those samples physical coordinates.
 It does not allocate a solution field or choose a differential operator.
-This small program replaces the introductory `01_hello_world/world.cpp`.
 
 ## State the geometry in one expression
 
@@ -69,4 +70,11 @@ reported upper boundary. This program does not initialize MPI.
 The complete [source](model.cpp) and [input](input.json) are available.
 Continue with [distributed ownership](../decomposition/index.qmd) or
 [a first derivative](../../differentiation/periodic/index.qmd).
+
+::: {.lesson-navigation role="navigation" aria-label="Beginner lessons"}
+[← First six experiments](../../start/index.qmd)
+
+[Next: a field →](../field-storage/index.qmd)
+:::
+
 :::

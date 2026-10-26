@@ -30,6 +30,8 @@ def test_stage_preserves_site_and_imports_runnable_sources(tmp_path):
     assert "openpfc-include-code-files" in (tmp_path / "learn/_metadata.yml").read_text()
     assert (tmp_path / "learn/coverage.json").read_bytes() == (ROOT / "examples/coverage.json").read_bytes()
     assert "learn/coverage.qmd" in (tmp_path / "_quarto-examples.yml").read_text()
+    assert "learn/start/index.qmd" in (tmp_path / "_quarto-examples.yml").read_text()
+    assert (tmp_path / "learn/start/index.qmd").read_bytes() == (ROOT / "examples/start/index.qmd").read_bytes()
     for chapter in (ROOT / "examples").glob("*/*/index.qmd"):
         downloads = [*chapter.parent.glob("*.json"), *chapter.parent.glob("*.toml"),
                      *chapter.parent.glob("*.hpp"), *chapter.parent.parent.glob("*.hpp"),

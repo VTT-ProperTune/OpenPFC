@@ -17,11 +17,12 @@ targets: [07_array]
 # A field is more than a vector
 
 [The same 96 physical values can occupy 96 or 288 storage slots. The distinction matters at every boundary.]{.lesson-deck}
+
+[First six experiments · 2 of 6](../../start/index.qmd){.lesson-route-label}
 :::
 
-The old array example introduced several containers and formatting helpers.
-This version concentrates on the useful abstraction: a `Field` connects a
-global domain, an owned index box, physical coordinates, and storage.
+A `Field` connects a global domain, an owned index box, physical coordinates,
+and storage.
 Padding supports neighbouring-value calculations without changing which
 physical values the rank owns.
 
@@ -84,5 +85,11 @@ shows that next step. The
 defines the ownership and indexing contracts.
 The complete [C++ model](model.cpp) and [starting input](input.json)
 are available with this lesson.
+
+::: {.lesson-navigation role="navigation" aria-label="Beginner lessons"}
+[← Previous lesson](../first-domain/index.qmd)
+
+[Next: a derivative →](../../differentiation/periodic/index.qmd)
+:::
 
 :::

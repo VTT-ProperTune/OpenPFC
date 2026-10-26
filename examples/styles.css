@@ -61,3 +61,40 @@
   margin-top: .4rem;
   font-size: .9rem;
 }
+
+.openpfc-lessons .lesson-steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-block: 1.5rem 2rem;
+}
+.openpfc-lessons .lesson-step {
+  padding: 1.25rem;
+  border: 1px solid var(--openpfc-line, #dfe3e2);
+}
+.openpfc-lessons .lesson-step h3 {
+  font-family: var(--openpfc-font-serif, Georgia, serif);
+  font-size: 1.55rem;
+  line-height: 1.2;
+  margin-block: .5rem 1rem;
+}
+.openpfc-lessons .lesson-route-label { font-size: .9rem; }
+.openpfc-lessons .lesson-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--openpfc-line, #dfe3e2);
+}
+.openpfc-lessons .lesson-navigation p { margin: 0; }
+.openpfc-lessons .lesson-answer { margin-block: 1rem 2rem; }
+.openpfc-lessons .lesson-answer summary {
+  cursor: pointer;
+  color: var(--openpfc-tide, currentColor);
+  margin-bottom: 1rem;
+}
+@media (max-width: 700px) {
+  .openpfc-lessons .lesson-steps { grid-template-columns: 1fr; }
+}

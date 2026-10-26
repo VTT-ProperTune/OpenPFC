@@ -34,6 +34,7 @@ def stage(site: Path) -> None:
     source = ROOT / "examples"
     files = {source / "index.qmd", source / "coverage.qmd", source / "coverage.json",
              source / "_metadata.yml", source / "styles.css", source / "references.bib"}
+    files.update(source.glob("start/index.qmd"))
     for chapter in sorted(source.glob("*/*/index.qmd")):
         files.add(chapter)
         files.update(chapter.parent.glob("*.cpp"))
@@ -73,6 +74,7 @@ def stage(site: Path) -> None:
     profile.write_text(notice + """project:
   render:
     - learn/index.qmd
+    - learn/start/index.qmd
     - learn/coverage.qmd
     - learn/*/*/index.qmd
   resources:
