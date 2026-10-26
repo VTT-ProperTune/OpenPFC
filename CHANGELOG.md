@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Build the native CLI artifact for mixed C++/Python pull-request checks
+  while retaining component-scoped CTest selection.
+
 - Add a Q1 finite-element lesson with analytic weak loads, nodal multigrid-CG
   and independent discrete-versus-continuum nodal error checks.
 

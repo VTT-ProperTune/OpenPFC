@@ -134,7 +134,9 @@ def build_targets(plan, codemodel, reply):
     if plan["shared"]:
         return ["all"]
     targets = set()
-    if plan["cli"]:
+    # The Python job downloads this executable whenever a C++ job runs.
+    # Building it does not select the separate installed-CLI test suite.
+    if plan["cli"] or plan["python"]:
         targets.update({"openpfc", "openpfc_cli"})
     found_apps = set()
     for entry in codemodel["configurations"][0]["targets"]:

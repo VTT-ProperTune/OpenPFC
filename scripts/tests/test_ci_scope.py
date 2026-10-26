@@ -155,3 +155,24 @@ def test_registration_paths_may_use_a_checkout_symlink(tmp_path):
     alias = tmp_path / "alias"
     alias.symlink_to(source, target_is_directory=True)
     assert scope.owner(str(alias / "apps/heat3d/CMakeLists.txt"), source) == "apps/heat3d"
+
+
+@pytest.mark.parametrize("component", ["examples/lesson", "apps/heat3d"])
+def test_mixed_python_scope_builds_the_uploaded_cli(tmp_path, component):
+    (tmp_path / "component.json").write_text(json.dumps({
+        "name": "changed-model", "paths": {"source": component}}))
+    model = {"configurations": [{"targets": [{"jsonFile": "component.json"}]}]}
+    plan = scope.classify([component + "/model.cpp", "scripts/check_doc_links.py"],
+                          "pull_request")
+    assert plan["cpp"] and plan["python"] and not plan["cli"]
+    assert not plan["shared"] and not plan["full"]
+    assert scope.build_targets(plan, model, tmp_path) == [
+        "changed-model", "openpfc", "openpfc_cli"]
+
+
+def test_examples_without_python_do_not_build_cli(tmp_path):
+    (tmp_path / "example.json").write_text(json.dumps({
+        "name": "example", "paths": {"source": "examples/lesson"}}))
+    model = {"configurations": [{"targets": [{"jsonFile": "example.json"}]}]}
+    plan = scope.classify(["examples/lesson/model.cpp"], "pull_request")
+    assert scope.build_targets(plan, model, tmp_path) == ["example"]
