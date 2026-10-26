@@ -90,7 +90,7 @@ _site_url = os.environ.get("OPENPFC_SITE_URL", "https://vtt-propertune.github.io
 html_context = {"openpfc_site_url": _site_url.rstrip("/") + "/"}
 html_static_path = ["_static"]
 templates_path = ["_templates"]
-html_js_files = ["openpfc/accessibility.js"]
+html_js_files = ["openpfc/accessibility.js", "handbook.js"]
 html_css_files = [
     "openpfc/fonts/fonts.css",
     "openpfc/sphinx/tokens.css",
