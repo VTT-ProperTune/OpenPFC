@@ -49,3 +49,15 @@
 
 /* Scientific references may contain URLs longer than a phone line. */
 .openpfc-lessons .csl-entry { overflow-wrap: anywhere; }
+
+.openpfc-lessons .lesson-download {
+  margin-block: 1.5rem 2rem;
+  padding: 1rem 1.25rem;
+  border-inline-start: 3px solid var(--openpfc-tide, currentColor);
+  background: var(--openpfc-wash, var(--bs-tertiary-bg, transparent));
+}
+.openpfc-lessons .lesson-download p { margin: 0; }
+.openpfc-lessons .lesson-download p + p {
+  margin-top: .4rem;
+  font-size: .9rem;
+}

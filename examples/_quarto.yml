@@ -7,6 +7,10 @@ metadata-files:
 project:
   type: website
   output-dir: _build/site
+  pre-render:
+    - python3 ../scripts/package_example_lessons.py
+  resources:
+    - "*/*/lesson.zip"
   render:
     - index.qmd
     - coverage.qmd

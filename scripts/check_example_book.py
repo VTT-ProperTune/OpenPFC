@@ -52,6 +52,8 @@ def main() -> None:
             continue
         chapter = Chapter()
         chapter.feed(page.read_text())
+        if "lesson.zip" not in chapter.links:
+            errors.append(f"Missing runnable lesson download: {page}")
         if not chapter.code or any(len(block.strip()) < 20 for block in chapter.code):
             errors.append(f"Missing or empty C++ source excerpts: {page}")
         if any("// start snippet" in block or "// end snippet" in block for block in chapter.code):

@@ -62,17 +62,25 @@ def test_stage_keeps_nested_shared_header_paths(tmp_path):
     scripts = project / "scripts"
     scripts.mkdir(parents=True)
     shutil.copyfile(ROOT / "scripts/stage_example_book.py", scripts / "stage_example_book.py")
+    shutil.copyfile(ROOT / "scripts/package_example_lessons.py", scripts / "package_example_lessons.py")
     source.mkdir()
     for name in ("index.qmd", "coverage.qmd", "coverage.json", "_metadata.yml",
-                 "styles.css", "references.bib"):
+                 "styles.css", "references.bib", "downloads.toml"):
         shutil.copyfile(ROOT / "examples" / name, source / name)
     extension = source / "_extensions/include-code-files"
     extension.mkdir(parents=True)
     (extension / "include-code-files.lua").write_text("-- fixture")
+    shutil.copytree(ROOT / "examples/_extensions/lesson-download",
+                    source / "_extensions/lesson-download")
+    licenses = project / "LICENSES"
+    licenses.mkdir()
+    shutil.copyfile(ROOT / "LICENSES/AGPL-3.0-or-later.txt",
+                    licenses / "AGPL-3.0-or-later.txt")
     chapter = source / "flow/vortex"
     chapter.mkdir(parents=True)
     (chapter / "index.qmd").write_text("---\ntitle: Vortex\n---\n")
     (chapter / "model.cpp").write_text('#include "../ns2d/math.hpp"\n')
+    (chapter / "input.json").write_text("{}\n")
     for namespace in ("ns2d", "other"):
         header = source / "flow" / namespace / "math.hpp"
         header.parent.mkdir()

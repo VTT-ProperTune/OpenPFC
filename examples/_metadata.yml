@@ -3,6 +3,7 @@
 
 filters:
   - include-code-files
+  - lesson-download
 title-block-style: none
 link-citations: true
 code-line-numbers: false
