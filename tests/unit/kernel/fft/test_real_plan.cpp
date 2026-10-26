@@ -24,25 +24,24 @@ std::size_t offset(const Point &p, const heffte::box3d<> &box) {
 template <typename F> void each_point(const Point &size, F &&f) {
   for (int z = 0; z < size[2]; ++z)
     for (int y = 0; y < size[1]; ++y)
-      for (int x = 0; x < size[0]; ++x)
-        f(Point{x, y, z});
+      for (int x = 0; x < size[0]; ++x) f(Point{x, y, z});
 }
 
 template <typename T> void check_transform(const Point &size, const Point &order) {
   INFO("scalar bytes " << sizeof(T));
-  const heffte::box3d<> inbox({0, 0, 0},
-                            {size[0] - 1, size[1] - 1, size[2] - 1}, order);
+  const heffte::box3d<> inbox({0, 0, 0}, {size[0] - 1, size[1] - 1, size[2] - 1},
+                              order);
   const auto outbox = inbox.r2c(0);
   auto options = heffte::default_options<heffte::backend::fftw>();
   options.use_reorder = false; // Exercise strided, batched plans as well.
   heffte::fft3d_r2c<heffte::backend::fftw> fft(inbox, outbox, 0, MPI_COMM_SELF,
-                                            options);
+                                               options);
   std::vector<T> input(inbox.count()), restored(inbox.count());
   std::vector<std::complex<T>> spectrum(outbox.count());
   each_point(size, [&](const Point &p) {
     const double t = p[0] + 13.0 * p[1] + 29.0 * p[2];
-    input[offset(p, inbox)] = T(0.5 + 0.2 * std::cos(0.1 * t) +
-                              0.05 * std::sin(0.37 * t));
+    input[offset(p, inbox)] =
+        T(0.5 + 0.2 * std::cos(0.1 * t) + 0.05 * std::sin(0.37 * t));
   });
   const auto original = input;
   fft.forward(input.data(), spectrum.data(), heffte::scale::none);
