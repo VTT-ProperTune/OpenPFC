@@ -13,7 +13,8 @@ Members of the `propertune` group can load a released OpenPFC instead of
 building it:
 
 ```bash
-module use /task/juajukka/modulefiles
+: "${OPENPFC_MODULE_ROOT:?Set OPENPFC_MODULE_ROOT to the shared module directory}"
+module use "$OPENPFC_MODULE_ROOT"
 module avail openpfc
 module load openpfc/0.5.0-cpu
 srun --mpi=pmix -p all6 -n 4 tungsten case.json
@@ -69,7 +70,7 @@ srun -p cuda -c 16 --mem=64G -t 4:00:00 bash -lc "
   scripts/build_tohtori.sh --build-ucx --build-openmpi --heffte-only --cuda"
 ```
 
-Some `all` nodes (for example `c1007`) lack `libefa.so.1`, which the site
+Some nodes in the `all` partition lack `libefa.so.1`, which the site
 Open MPI needs through libfabric; `ompi_info` fails there. Use `all6` or
 `week` until that is fixed.
 
@@ -176,7 +177,7 @@ Open the generated `.pvti` files in ParaView (multi-rank) or the single `.vti` i
 
 ## 6. HIP on the `amdgpu` partition (MI210)
 
-Tohtori has AMD GPUs on **`amdgpu`** (for example `g0004`, 2× MI210 `gfx90a`). CUDA remains NVIDIA-only (`nvidia_h100` / `g0005`).
+Tohtori has AMD GPUs on **`amdgpu`** (2× MI210 `gfx90a`). CUDA remains NVIDIA-only (`nvidia_h100`).
 
 ```bash
 # From the repo root, after the HIP/ROCm HeFFTe prefix exists:

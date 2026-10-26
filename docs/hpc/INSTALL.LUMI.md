@@ -12,21 +12,21 @@ dependencies and installation options.
 
 ## Storage and account
 
-This checkout's working account is `project_462001519`. The maintained juaho
-layout is:
+Use your own authorized allocation and writable directories. Set these in
+your submission shell; keep personal values in local configuration:
 
-| Purpose | Location |
-|---|---|
-| Source checkout tracking `origin/master` | `/flash/project_462001519/juaho/dev/openpfc-master` |
-| HIP build tree | `/flash/project_462001519/juaho/build/openpfc-lumi-rocm-master` |
-| Job logs | `/scratch/project_462001519/juaho/logs/` |
-| Large simulation output | A run-specific directory under `/scratch/project_462001519/juaho/` |
+```bash
+: "${HPC_ACCOUNT:?Set HPC_ACCOUNT to your authorized Slurm allocation}"
+: "${FLASH:?Set FLASH to your writable flash directory}"
+: "${SCRATCH:?Set SCRATCH to your writable scratch directory}"
+export OPENPFC_BUILD_DIR="$FLASH/build/openpfc-rocm"
+export OPENPFC_RUN_ROOT="$SCRATCH/openpfc"
+mkdir -p "$OPENPFC_RUN_ROOT/logs"
+```
 
-Use your own authorized project and user paths when adapting this recipe.
-Keep builds outside the clone and large job output on scratch. Do not copy
-files onto `/users/juaho/dev/openpfc-0.2`; that is a frozen historical checkout.
-Older presets and archived campaign records can contain different accounts;
-they are not the current build recipe.
+Keep the source checkout separate from the build tree, and put large
+simulation output under a run-specific directory on scratch. Existing
+private execution records are not installation defaults.
 
 ## Build and test
 
@@ -35,8 +35,8 @@ From the maintained source checkout:
 ```bash
 git pull --ff-only
 ./scripts/build.sh --machine=lumi --with-rocm \
-  --account=project_462001519 --partition=standard-g \
-  --build-dir=/flash/project_462001519/juaho/build/openpfc-lumi-rocm-master \
+  --account="$HPC_ACCOUNT" --partition=standard-g \
+  --build-dir="$OPENPFC_BUILD_DIR" \
   --wait
 ```
 
@@ -70,11 +70,10 @@ the same stack for the run as for the build. The following single-node check
 runs inside a GPU allocation and writes its log under scratch:
 
 ```bash
-mkdir -p /scratch/project_462001519/juaho/logs
-sbatch --account=project_462001519 --partition=standard-g \
+sbatch --account="$HPC_ACCOUNT" --partition=standard-g \
   --nodes=1 --ntasks-per-node=8 --gpus-per-node=8 --time=00:10:00 \
-  --output=/scratch/project_462001519/juaho/logs/gpu-mpi-%j.out \
-  --wrap='export MPICH_GPU_SUPPORT_ENABLED=1; srun --cpu-bind=cores /flash/project_462001519/juaho/build/openpfc-lumi-rocm-master/apps/tungsten/verify_gpu_aware_mpi'
+  --output="$OPENPFC_RUN_ROOT/logs/gpu-mpi-%j.out" \
+  --wrap='export MPICH_GPU_SUPPORT_ENABLED=1; srun --cpu-bind=cores "$OPENPFC_BUILD_DIR/apps/tungsten/verify_gpu_aware_mpi"'
 ```
 
 This assumes the modules above are loaded in the submission shell. Success
@@ -114,14 +113,15 @@ for Cray wrappers, HIP and GPU-aware MPI. OpenPFC's HIP executables use rocFFT
 through the compiled HIP stack; setting `backend = "cuda"` in an input does not
 select AMD hardware.
 
-## Released modules Released modules (no build)
+## Released modules (no build)
 
 Everything above builds OpenPFC from a source checkout, which is the path for
 development. Project members who only run a release load it as a module from
 the project's shared EasyBuild tree:
 
 ```bash
-export EBU_USER_PREFIX=/projappl/project_462001519/EasyBuild
+: "${OPENPFC_EASYBUILD_ROOT:?Set OPENPFC_EASYBUILD_ROOT to the shared EasyBuild directory}"
+export EBU_USER_PREFIX="$OPENPFC_EASYBUILD_ROOT"
 module load LUMI/25.09 partition/C
 module load OpenPFC/0.5.0-cpeGNU-25.09
 srun -p small -n 4 tungsten case.json

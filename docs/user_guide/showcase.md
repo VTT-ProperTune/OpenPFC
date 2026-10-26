@@ -90,7 +90,7 @@ This page ties **figures** you may see in the repository or publications to **ru
 | **ParaView** | File → Open `reduced/weibel_f_xvx.xdmf` (and `Bz` / `Ey` / `Jy`) |
 | **Concepts** | 1D2V Weibel; paired linear $\gamma$ arm; reduced movie frames |
 
-Heavy frames live on `/scratch/project_462001519/juaho/openpfc-showcase/`.
+Store generated frames in your configured simulation output directory.
 
 ## Alloy dendrite (2-D, LUMI-G)
 
@@ -101,7 +101,7 @@ Heavy frames live on `/scratch/project_462001519/juaho/openpfc-showcase/`.
 | **ParaView** | File → Open `fields_off/off.xdmf` and `fields_on/on.xdmf` |
 | **Concepts** | isothermal free growth; device Green; Al-4.5wt%Cu; $\lambda_{\mathrm{el}}=0$ vs $\lambda$ |
 
-Frames live on `/scratch/project_462001519/juaho/openpfc-showcase/`.
+Store generated frames in your configured simulation output directory.
 
 ## Alloy dendrite (3-D, LUMI-G)
 
