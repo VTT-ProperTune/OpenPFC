@@ -17,6 +17,12 @@ target_include_directories(test_memory_traffic PRIVATE ${CMAKE_CURRENT_SOURCE_DI
 target_link_libraries(test_memory_traffic PRIVATE OpenPFC Catch2::Catch2WithMain)
 add_test(NAME MemoryTraffic COMMAND test_memory_traffic)
 
+# Public JSON headers must compile with only the OpenPFC target's usage
+# requirements, including when nlohmann_json is installed outside /usr/include.
+add_executable(test_public_json_headers packaging/public_json_headers.cpp)
+target_link_libraries(test_public_json_headers PRIVATE OpenPFC::openpfc)
+add_test(NAME PublicJSONHeaders COMMAND test_public_json_headers)
+
 # Add tests/ directory to include path so fixtures/ can be found
 target_include_directories(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 # Share example-local helpers (e.g. diffusion spectral step) with fixtures

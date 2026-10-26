@@ -241,7 +241,8 @@ if(DEFINED nlohmann_json_SOURCE_DIR)
       $<BUILD_INTERFACE:${nlohmann_json_SOURCE_DIR}/include>
       $<BUILD_INTERFACE:${nlohmann_json_SOURCE_DIR}/single_include>)
 else()
-  target_link_libraries(openpfc PRIVATE nlohmann_json::nlohmann_json)
+  target_link_libraries(openpfc PUBLIC
+      $<BUILD_INTERFACE:nlohmann_json::nlohmann_json>)
   target_link_libraries(openpfc_kernel_obj PRIVATE nlohmann_json::nlohmann_json)
   target_link_libraries(openpfc_frontend_obj PRIVATE nlohmann_json::nlohmann_json)
 endif()

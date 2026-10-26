@@ -11,6 +11,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - Select PR CI checks by changed components; reserve the full routine suite
   for integration, and skip unrelated C++ builds for documentation-only PRs (#710).
 
+- Propagate externally installed JSON headers to build-tree consumers of the
+  OpenPFC target, including installations outside system include paths (#708).
+
 - Refactor custom-initial-condition diffusion into a periodic Gaussian heat lesson. Preserve its target, expose complete owned fields and mass diagnostics, and verify backward Euler against independent Fourier sums on one and two ranks.
 
 - Replace the printed k-space helper comparison with a runnable lesson on physical wave numbers, Nyquist derivative conventions and heat multipliers. Preserve its executable and check every symbol against an independent Fourier basis.
