@@ -6,7 +6,6 @@
 #if !defined(OPENPFC_TEST_TUNGSTEN_ETD_HIP) &&                                      \
     !defined(OPENPFC_TEST_TUNGSTEN_ETD_CUDA)
 
-
 int main(int argc, char *argv[]) { return pfc::test::run(argc, argv); }
 
 #else

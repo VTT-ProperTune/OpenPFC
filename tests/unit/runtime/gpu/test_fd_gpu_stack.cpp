@@ -6,7 +6,6 @@
 #if !defined(OPENPFC_TEST_FD_GPU_STACK_HIP) &&                                      \
     !defined(OPENPFC_TEST_FD_GPU_STACK_CUDA)
 
-
 int main(int argc, char *argv[]) { return pfc::test::run(argc, argv); }
 
 #else

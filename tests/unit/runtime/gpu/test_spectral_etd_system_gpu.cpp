@@ -13,7 +13,6 @@
 #if !defined(OPENPFC_TEST_SPECTRAL_ETD_HIP) &&                                      \
     !defined(OPENPFC_TEST_SPECTRAL_ETD_CUDA)
 
-
 int main(int argc, char *argv[]) { return pfc::test::run(argc, argv); }
 
 #else

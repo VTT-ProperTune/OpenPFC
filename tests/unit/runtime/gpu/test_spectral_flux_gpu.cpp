@@ -12,7 +12,6 @@
 #if !defined(OPENPFC_TEST_SPECTRAL_FLUX_HIP) &&                                     \
     !defined(OPENPFC_TEST_SPECTRAL_FLUX_CUDA)
 
-
 int main(int argc, char *argv[]) { return pfc::test::run(argc, argv); }
 
 #else
