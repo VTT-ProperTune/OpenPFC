@@ -65,6 +65,9 @@ and use an exact coupled mode to distinguish spatial error from stage errors.
 Then [generate a small pointwise law](coupling/symbolic-rhs/index.qmd),
 inspect its shared expression, and verify its explicit source.
 
+Compare [host and device FFT buffers](fourier/backend-buffers/index.qmd),
+keeping ownership and normalization fixed while changing the backend.
+
 ## Make your first change
 
 Install a compatible OpenPFC SDK and CLI using the

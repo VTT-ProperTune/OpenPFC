@@ -400,9 +400,16 @@
     },
     {
       "target": "fft_backend_benchmark",
-      "source": "fft_backend_benchmark.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "fourier/backend-buffers/model.cpp",
+      "chapter": "fourier/backend-buffers/index.qmd",
+      "capabilities": [
+        "fft-backends",
+        "device-buffers",
+        "fft-normalization",
+        "collective-participation",
+        "cuda",
+        "hip"
+      ]
     },
     {
       "target": "fft_kspace_helpers_example",
@@ -1324,9 +1331,13 @@
       "name": "CUDA and HIP execution",
       "header_search_terms": [
         "gpu_spectral_stack.hpp",
-        "gpu_field.hpp"
+        "gpu_field.hpp",
+        "databuffer_gpu.hpp",
+        "fft_gpu.hpp"
       ],
-      "chapters": []
+      "chapters": [
+        "fourier/backend-buffers/index.qmd"
+      ]
     },
     {
       "name": "nonlinear models and incompressible flow",

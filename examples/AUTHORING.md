@@ -464,3 +464,25 @@ The moved header and dependency manifest retain their previous bytes.
 Website staging includes chapter-owned `.py` files and `requirements.txt`
 so the generation instructions also work from downloaded sources; it does
 not import repository-wide checkers or execute Python during rendering.
+
+## Host and device FFT buffers
+
+The backend checker produces complete real/spectral fields for the same
+physical mode on even and odd grids and after repeated round trips:
+
+```sh
+python examples/check_backend_buffers.py --bin-dir builds/cpu/examples \
+  --output results/example-checks
+python examples/check_backend_buffers.py --bin-dir builds/cuda/examples \
+  --output results/example-checks --backend cuda
+uv run --with matplotlib==3.11.2 python examples/render_backend_buffers.py \
+  --cpu results/example-checks/backend-cpu-1/default \
+  --device results/example-checks/backend-cuda-1/default
+```
+
+Run the CUDA checker inside a GPU allocation. For two processes add
+`--launcher /path/to/mpirun --ranks 2`; the checker writes a separate
+`backend-cuda-2` directory. The renderer requires a real CUDA or HIP
+summary and matching physical grids; it cannot label CPU output as device
+output. Only the derived SVG belongs in Git. Do not turn its floating-point
+error comparison into a timing or speedup claim.

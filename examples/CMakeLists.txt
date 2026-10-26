@@ -1,20 +1,6 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-# FFT Backend Benchmark (requires MPI)
-add_executable(fft_backend_benchmark fft_backend_benchmark.cpp)
-
-target_link_libraries(fft_backend_benchmark PRIVATE OpenPFC::openpfc )
-if(OpenPFC_ENABLE_CUDA)
-  target_compile_definitions(fft_backend_benchmark PRIVATE OpenPFC_ENABLE_CUDA)
-endif()
-if(OpenPFC_ENABLE_HIP)
-  target_compile_definitions(fft_backend_benchmark PRIVATE OpenPFC_ENABLE_HIP)
-endif()
-if(OpenPFC_ENABLE_HIP_SPECTRAL)
-  target_compile_definitions(fft_backend_benchmark PRIVATE OpenPFC_ENABLE_HIP_SPECTRAL)
-endif()
-
 # add_executable(01_hello_world 01_hello_world.cpp)
 # target_link_libraries(01_hello_world PRIVATE OpenPFC::openpfc)
 
@@ -493,6 +479,25 @@ if(OpenPFC_BUILD_TESTS)
   add_test(NAME example-generated-coupled-rhs
            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_symbolic.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks")
   set_tests_properties(example-generated-coupled-rhs PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 90)
+  add_test(NAME example-fft-backend-cpu
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_backend_buffers.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks")
+  set_tests_properties(example-fft-backend-cpu PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 120)
+  if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
+    add_test(NAME example-fft-backend-cpu-mpi
+             COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_backend_buffers.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --launcher "${MPIEXEC_EXECUTABLE}" "--rank-flag=${MPIEXEC_NUMPROC_FLAG}" --ranks 2)
+    set_tests_properties(example-fft-backend-cpu-mpi PROPERTIES PROCESSORS 2 TIMEOUT 180
+                         ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+  endif()
+  if(OpenPFC_ENABLE_CUDA_SPECTRAL)
+    add_test(NAME example-fft-backend-cuda
+             COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_backend_buffers.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --backend cuda)
+    set_tests_properties(example-fft-backend-cuda PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 120)
+  endif()
+  if(OpenPFC_ENABLE_HIP_SPECTRAL)
+    add_test(NAME example-fft-backend-hip
+             COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_backend_buffers.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" --backend hip)
+    set_tests_properties(example-fft-backend-hip PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 120)
+  endif()
   add_executable(test_example_eigensystem tests/eigensystem.cpp)
   target_link_libraries(test_example_eigensystem PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
   add_test(NAME example-eigensystem-reference COMMAND test_example_eigensystem)

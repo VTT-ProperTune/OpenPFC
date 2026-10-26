@@ -17,7 +17,7 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 :::
 
 There are 83 declared runnable example targets and
-74 Quarto teaching chapters. The table includes older programs
+75 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -114,7 +114,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `diffusion_model_with_custom_initial_condition` | [Read the lesson](heat/gaussian-pulse/index.qmd) |
 | `disk_eigenmodes` | [Read the lesson](polynomials/disk-modes/index.qmd) |
 | `disk_poisson` | [Read the lesson](polynomials/poisson-disk/index.qmd) |
-| `fft_backend_benchmark` | Pending conversion. |
+| `fft_backend_benchmark` | [Read the lesson](fourier/backend-buffers/index.qmd) |
 | `fft_kspace_helpers_example` | [Read the lesson](fourier/symbols/index.qmd) |
 | `first_domain` | [Read the lesson](geometry/first-domain/index.qmd) |
 | `gamma_contour` | [Read the lesson](quadrature/complex-contour/index.qmd) |
@@ -192,7 +192,7 @@ fixed-step restart does not establish an adaptive restart contract.
 | microelasticity and homogenization | Pending a teaching chapter. |
 | coupling and transactional attempts | [host-orchestrator](coupling/host-orchestrator/index.qmd), [adaptive-rk](integration/adaptive-rk/index.qmd), [adaptive-etd](integration/adaptive-etd/index.qmd) |
 | profiling and communication diagnostics | [mpi-timing](diagnostics/mpi-timing/index.qmd), [profiling](diagnostics/profiling/index.qmd) |
-| CUDA and HIP execution | Pending a teaching chapter. |
+| CUDA and HIP execution | [backend-buffers](fourier/backend-buffers/index.qmd) |
 | nonlinear models and incompressible flow | [kdv](waves/kdv/index.qmd), [allen-cahn-fixed](polynomials/allen-cahn-fixed/index.qmd), [allen-cahn-driven](polynomials/allen-cahn-driven/index.qmd), [cahn-hilliard](phase-fields/cahn-hilliard/index.qmd) |
 
 Every family needs an actual model, a useful mathematical story and appropriate runtime evidence.

@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Turn the FFT backend benchmark into a configurable host/device buffer lesson,
+  fixing collective rank participation and checking complete fields and modes.
+
 - Teach bounded symbolic RHS generation through a runnable C++ consumer,
   with generator downloads, deterministic artifacts and independent rate checks.
 

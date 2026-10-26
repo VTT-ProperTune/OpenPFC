@@ -68,7 +68,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 
 | Executable | Source | What it demonstrates |
 |------------|--------|----------------------|
-| `fft_backend_benchmark` | `fft_backend_benchmark.cpp` | FFT backend benchmarking (FFTW vs CUDA / HIP) |
+| `fft_backend_benchmark` | `fourier/backend-buffers/model.cpp` | Host/device FFT buffers, complete round-trip fields and collective participation |
 | `02_domain_decomposition` | `geometry/decomposition/model.cpp` | `Domain`, `Decomposition`, MPI |
 | `03_parallel_fft` | `fourier/round-trip/model.cpp` | Distributed FFT (HeFFTe) |
 | `04_diffusion_model` | `heat/implicit-euler/model.cpp` | Backward-Euler spectral heat with a complete-field oracle |
