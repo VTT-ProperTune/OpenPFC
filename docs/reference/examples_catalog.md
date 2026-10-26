@@ -107,6 +107,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `ns2d_vorticity` | `flow/vorticity/model.cpp` | Issue #21 2-D vorticity–streamfunction Navier–Stokes (CPU). See [`../../examples/ns2d_vorticity/README.md`](../../examples/ns2d_vorticity/README.md). |
 | `ns2d_spatial_refine` | `flow/spatial-refinement/model.cpp` | Fixed-timestep grid refinement, common-grid Fourier restriction and a time-step control |
 | `ns2d_temporal_refine` | `flow/temporal-refinement/model.cpp` | Fixed-grid IFRK4 time refinement with a finest-step reference and guarded order estimates |
+| `ns2d_flux_balance` | `flow/flux-balance/model.cpp` | Analytic Fourier face integrals, modal divergence and nodal-quadrature comparisons |
 | `periodic_differentiation` | `differentiation/periodic/model.cpp` | Analytic derivative, second/fourth-order FD, and Fourier convergence |
 | `heat_exponential` | `heat/exponential/model.cpp` | Exact linear Fourier propagator; compare spatial and temporal error |
 | `cardinal_interpolation` | `interpolation/cardinal/model.cpp` | Trefethen program 3: cardinal sinc reconstruction of three sampled signals |

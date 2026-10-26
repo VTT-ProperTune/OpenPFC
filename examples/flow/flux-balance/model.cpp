@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file flux_balance.cpp
+ * @file model.cpp
  * @brief Divergence and closed-box flux of the 2-D spectral velocity (#226).
  *
  * The step list is fixed before the run. Shear uses N=128, 256, and 512
@@ -33,9 +33,9 @@
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
 
-#include <ns2d/cases.hpp>
-#include <ns2d/flux_balance.hpp>
-#include <ns2d/vorticity_stream.hpp>
+#include "../ns2d/cases.hpp"
+#include "../ns2d/flux_balance.hpp"
+#include "../ns2d/vorticity_stream.hpp"
 
 namespace {
 
@@ -122,6 +122,7 @@ std::vector<long long> save_steps(const std::vector<double> &times, double dt) {
   return steps;
 }
 
+// start snippet boxes
 std::vector<NamedBox> control_volumes(double length, int n) {
   const double dx = length / static_cast<double>(n);
   return {
@@ -132,6 +133,8 @@ std::vector<NamedBox> control_volumes(double length, int n) {
       {"offset", {0.2 * length, 0.7 * length, 0.15 * length, 0.45 * length}},
   };
 }
+
+// end snippet boxes
 
 void write_hats(ns2d::VorticityStreamCPU &solver,
                 std::vector<ns2d::SpectralPlane::Complex> &u_hat,

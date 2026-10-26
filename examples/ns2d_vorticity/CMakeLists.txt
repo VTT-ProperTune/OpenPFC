@@ -13,11 +13,6 @@ elseif(TARGET heffte)
   set(_ns2d_heffte_tgt heffte)
 endif()
 
-add_executable(ns2d_flux_balance src/flux_balance.cpp)
-target_include_directories(ns2d_flux_balance PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/../flow)
-target_link_libraries(ns2d_flux_balance PRIVATE OpenPFC ${_ns2d_heffte_tgt})
-
 add_executable(mhd2d src/mhd.cpp)
 target_include_directories(mhd2d PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../flow)
 target_link_libraries(mhd2d PRIVATE OpenPFC ${_ns2d_heffte_tgt})

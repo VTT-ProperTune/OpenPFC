@@ -581,9 +581,14 @@
     },
     {
       "target": "ns2d_flux_balance",
-      "source": "ns2d_vorticity/src/flux_balance.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "flow/flux-balance/model.cpp",
+      "chapter": "flow/flux-balance/index.qmd",
+      "capabilities": [
+        "spectral-flux-integration",
+        "modal-divergence",
+        "hermitian-partners",
+        "quadrature-comparison"
+      ]
     },
     {
       "target": "ns2d_spatial_refine",
@@ -1380,7 +1385,8 @@
         "phase-fields/cahn-hilliard/index.qmd",
         "flow/vorticity/index.qmd",
         "flow/spatial-refinement/index.qmd",
-        "flow/temporal-refinement/index.qmd"
+        "flow/temporal-refinement/index.qmd",
+        "flow/flux-balance/index.qmd"
       ]
     }
   ]

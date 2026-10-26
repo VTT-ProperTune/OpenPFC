@@ -1,0 +1,132 @@
+---
+title: "Check flux on the field you actually represent"
+description: "Integrate a Fourier velocity over closed boxes, reconstruct its missing conjugate modes and distinguish spectral identities from nodal quadrature."
+order: 73
+categories: [Incompressible flow, Fourier methods, Tough challenges]
+capabilities: ["spectral-flux-integration", "modal-divergence", "hermitian-partners", "quadrature-comparison"]
+targets: [ns2d_flux_balance]
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[Flow / Choose a meaningful conservation check]{.lesson-kicker}
+
+# Check flux on the field you actually represent
+
+[Integrate the Fourier interpolant, then ask what a nodal quadrature adds.]{.lesson-deck}
+:::
+
+A divergence-free periodic velocity should have zero net outward flux
+through a closed rectangle. The retained flow diagnostic checks that
+statement for the represented trigonometric field. Its helper named
+`face_flux` integrates Fourier modes; it is distinct from OpenPFC's
+finite-volume face-field operators.
+
+For $B=[x_0,x_1]\times[y_0,y_1]$, write the outward flux as
+
+$$
+\begin{aligned}
+\Phi_x&=\int_{y_0}^{y_1}\!\bigl[u(x_1,y)-u(x_0,y)\bigr]dy,\\
+\Phi_y&=\int_{x_0}^{x_1}\!\bigl[v(x,y_1)-v(x,y_0)\bigr]dx,\\
+\Phi&=\Phi_x+\Phi_y.
+\end{aligned}
+$$
+
+The signs come from the outward normal: right and top are positive,
+left and bottom negative. Integrating the represented divergence gives
+the same flux, up to floating point effects when evaluating the sums.
+
+## Integrate each mode analytically
+
+A mode separates into exponentials along the two axes. Its one-dimensional
+integral has a removable zero-wavenumber case:
+
+$$
+\int_a^b e^{iks}ds=
+\begin{cases}
+b-a,&k=0,\\
+(e^{ikb}-e^{ika})/(ik),&k\ne0.
+\end{cases}
+$$
+
+```{.cpp include="../ns2d/flux_balance.hpp" snippet="integrate_mode"}
+```
+
+The helper sums those integrals over normalized velocity coefficients.
+The forward transform is unscaled, so it divides by the global cell count
+before interpreting a coefficient as a physical amplitude.
+
+A real-to-complex spectrum stores only nonnegative $k_x$. For interior
+stored $k_x$, the helper also adds the conjugate mode at $(-k_x,-k_y)$.
+It avoids adding that partner twice on the zero and Nyquist planes, whose
+partners are already represented. The retained flow states have zero
+Nyquist coefficients under the two-thirds mask. A small imaginary remainder is a useful
+check of this reconstruction.
+
+## Test more than the full period
+
+```{.cpp include="model.cpp" snippet="boxes"}
+```
+
+The boxes include the whole domain, smaller aligned rectangles, one cell
+and an off-node rectangle. The analytic mode integrals work at arbitrary
+box coordinates; the corners need not be grid nodes.
+
+The full-period integral of divergence is zero for **every** periodic
+Fourier velocity, because its derivative has zero DC. That single number
+therefore cannot establish incompressibility. Smaller boxes and nonzero
+modal divergence coefficients ask a stronger question.
+
+The diagnostic also computes the largest normalized modal amplitude of
+$ik_x\widehat u+ik_y\widehat v$, using the same odd derivative symbols as
+the solver. Interpret that alongside the nodal divergence norms and the
+individual box fluxes.
+
+## Keep the quadrature comparison separate
+
+The `trap_net` column applies composite trapezoidal quadrature to the
+nodal velocity on aligned box faces. It samples the same field through a
+different numerical operation. On a subinterval, that quadrature can have
+error even when the Fourier interpolant is divergence free.
+
+When a corner is off-node, the helper returns no trapezoid value and the
+CSV cell is empty. Treat that as unavailable data, rather than zero flux.
+`relative` divides the signed net flux by the sum of absolute face
+integrals; when that denominator vanishes, the program records zero.
+Inspect the absolute `net` column and the scale as well.
+
+## Run the retained diagnostic
+
+From the repository root, with a compatible installed spectral CPU SDK:
+
+```sh
+mkdir -p results
+openpfc compile examples/flow/flux-balance/model.cpp --source-root examples/flow -o results/flux-balance
+results/flux-balance --case two-mode --n 16 --dt 0.02 --times 0.02 --nu 0.05 --outdir results/flow/flux-balance
+```
+
+Use one MPI rank, as required by this driver so its mode sum owns every
+coefficient. This small case retains the existing CTest smoke settings.
+The executable name remains `ns2d_flux_balance` at its original build
+location. The [model](model.cpp) shares
+[flux_balance.hpp](../ns2d/flux_balance.hpp),
+[cases.hpp](../ns2d/cases.hpp),
+[vorticity_stream.hpp](../ns2d/vorticity_stream.hpp) and
+[spectral.hpp](../ns2d/spectral.hpp); keep that relative layout when
+using downloads.
+
+Read `flux_balance.csv` and `run.json`. Compare `net`, `imag`, `trap_net`,
+`modal_div`, `div_linf` and `div_l2` across the different boxes. `status`
+reports the run's finite-field and CFL guards; it does not apply a flux
+accuracy threshold. The retained numerical tests exercise the integration
+helpers separately.
+
+Repeat at a finer grid and at a later, common physical time. A change in
+nodal trapezoid error is a quadrature question. A change in the underlying
+velocity after grid or time refinement is a solution-accuracy question.
+Keeping them separate makes a conservation diagnostic useful.
+
+:::

@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Teach spectral velocity flux balances with conjugate-completed mode
+  integrals, subdomain checks and a separate nodal-quadrature comparison.
+
 - Teach nonlinear IFRK4 time refinement at a fixed grid, including finite
   reference-step error, synchronized sample times and guarded order estimates.
 

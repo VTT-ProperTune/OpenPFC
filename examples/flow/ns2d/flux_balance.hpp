@@ -41,12 +41,15 @@ struct FaceFlux {
 
 namespace detail {
 
+// start snippet integrate_mode
 [[nodiscard]] inline SpectralPlane::Complex integrate_exp(double k, double a,
                                                           double b) {
   if (k == 0.0) return SpectralPlane::Complex(b - a, 0.0);
   const SpectralPlane::Complex ik(0.0, k);
   return (std::exp(ik * b) - std::exp(ik * a)) / ik;
 }
+
+// end snippet integrate_mode
 
 struct FaceAccum {
   SpectralPlane::Complex right{};
