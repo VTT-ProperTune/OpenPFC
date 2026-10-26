@@ -1,0 +1,18 @@
+<!--
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+{% extends "!search.html" %}
+
+{% block content %}
+<h1>Search the handbook</h1>
+<p>Find an installation step, a command, a numerical method or a C++ API entry.</p>
+<form class="handbook-search" role="search" action="{{ pathto('search') }}" method="get">
+  <label for="handbook-query">Search the handbook and C++ API</label>
+  <input id="handbook-query" name="q" type="search" placeholder="Try FFT, halo or installation" autocomplete="off">
+  <button type="submit">Search</button>
+</form>
+<p>For the courses and interactive experiments, use <a href="{{ openpfc_site_url }}search/">the full website search</a>.
+You can also <a href="{{ pathto('index') }}">browse the handbook by topic</a>.</p>
+{{ super() }}
+{% endblock %}

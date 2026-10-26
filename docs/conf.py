@@ -87,6 +87,7 @@ html_favicon = "_static/openpfc/brand/favicon.svg"
 # The site serves this build at docs/. Its theme is vendored from the
 # OpenPFC design system; docs/_static/openpfc/SOURCE records the commit.
 _site_url = os.environ.get("OPENPFC_SITE_URL", "https://vtt-propertune.github.io/OpenPFC/")
+html_context = {"openpfc_site_url": _site_url.rstrip("/") + "/"}
 html_static_path = ["_static"]
 templates_path = ["_templates"]
 html_js_files = ["openpfc/accessibility.js"]
@@ -94,6 +95,7 @@ html_css_files = [
     "openpfc/fonts/fonts.css",
     "openpfc/sphinx/tokens.css",
     "openpfc/sphinx/furo.css",
+    "handbook.css",
 ]
 html_theme_options = {
     "source_repository": "https://github.com/VTT-ProperTune/OpenPFC/",

@@ -1,0 +1,6 @@
+/* SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+ * SPDX-License-Identifier: AGPL-3.0-or-later */
+.handbook-search { display: flex; flex-wrap: wrap; gap: .7rem; margin: 1.5rem 0; }
+.handbook-search label { width: 100%; }
+.handbook-search input { min-width: 8rem; flex: 1; padding: .7rem; font: inherit; color: var(--color-foreground-primary); background: var(--color-background-primary); border: 1px solid var(--color-foreground-primary); }
+.handbook-search button { padding: .7rem 1rem; font: inherit; color: var(--openpfc-paper); background: var(--openpfc-tide); border: 1px solid var(--color-foreground-primary); cursor: pointer; }
