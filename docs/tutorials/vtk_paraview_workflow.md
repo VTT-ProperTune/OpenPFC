@@ -50,11 +50,12 @@ Select the scalar array `density`. To inspect the sequence, open all three
 Consult `lesson_manifest.json` for the physical times: a filename ordinal is
 not a simulation step or time.
 
-With multiple ranks, VTK output uses `.vti` pieces and a `.pvti` master with
-non-overlapping point extents. Some readers do not assemble these into a single
-image. Inspect an individual piece or use the generated XDMF series for the
-global raw field; do not interpret a reader's assembly limitation as missing
-simulation data.
+With multiple ranks, open the `.pvti` master to read the complete image. Its
+`.vti` pieces share boundary points, so cells continue across process seams.
+Keep the master and pieces together: their paths are relative to the master.
+The samples retain their original physical origin and spacing. See the
+[parallel reader verification](../development/parallel_vtk.md) for the installed
+consumer and direct VTK reader checks.
 
 ## Use VTK in a configured application
 

@@ -599,7 +599,7 @@ TEST_CASE("VTKWriter - Parallel PVTI WholeExtent", "[vtk_writer][io][parallel]")
         VTKWriterTestFixture::read_file_content("test_pvti_extent_0001.pvti");
     for (int r = 0; r < fixture.m_num_ranks; ++r) {
       const int x0 = r * nx_local;
-      const int x1 = x0 + nx_local - 1;
+      const int x1 = x0 + nx_local - 1 + (r + 1 < fixture.m_num_ranks ? 1 : 0);
       const std::string piece_extent =
           "Extent=\"" + std::to_string(x0) + " " + std::to_string(x1) + " 0 7 0 7\"";
       REQUIRE(content.find(piece_extent) != std::string::npos);
@@ -699,12 +699,13 @@ TEST_CASE("VTKWriter uneven pieces reconstruct the global point field",
   int cursor = 0;
   for (int r = 0; r < ranks; ++r) {
     const int x0 = cursor;
-    const int x1 = cursor + width[r] - 1;
+    const int piece_width = width[r] + (r + 1 < ranks ? 1 : 0);
+    const int x1 = cursor + piece_width - 1;
     const std::string piece_extent =
         "Extent=\"" + std::to_string(x0) + " " + std::to_string(x1) + " 0 2 0 1\"";
     REQUIRE(master.find(piece_extent) != std::string::npos);
     const std::string piece = "test_uneven_0001_" + std::to_string(r) + ".vti";
-    const std::size_t n = static_cast<std::size_t>(width[r]) * ny * nz;
+    const std::size_t n = static_cast<std::size_t>(piece_width) * ny * nz;
     const auto got = read_appended_doubles(piece, n);
     std::size_t i = 0;
     for (int z = 0; z < nz; ++z) {
@@ -714,9 +715,19 @@ TEST_CASE("VTKWriter uneven pieces reconstruct the global point field",
         }
       }
     }
-    cursor = x1 + 1;
+    cursor += width[r];
   }
   REQUIRE(cursor == nx);
+}
+
+TEST_CASE("VTKWriter rejects overlapping rank ownership collectively",
+          "[vtk_writer][io][parallel][error]") {
+  VTKWriterTestFixture fixture;
+  if (fixture.m_num_ranks == 1) SKIP("Requires overlapping rank partitions");
+  VTKWriter writer("test_overlap_%04d.vti");
+  writer.set_domain({2, 2, 2}, {2, 2, 2}, {0, 0, 0});
+  const auto values = fixture.create_test_data(8);
+  REQUIRE_THROWS_AS(writer.write(1, values), std::runtime_error);
 }
 
 TEST_CASE("VTKWriter rejects invalid VTK extents/domain metadata",
@@ -935,9 +946,10 @@ TEST_CASE("VTKWriter - PVTI file open error", "[vtk_writer][io][error]") {
                               static_cast<std::size_t>(4);
     auto data = fixture.create_test_data(n_pts);
 
-    // On rank 0, create a directory with the exact name of the expected .pvti file.
-    // std::ofstream will fail to open a path that is itself a directory, triggering
-    // the PVTI file-open error path specifically while per-rank .vti files succeed.
+    // On rank 0, create a directory with the exact name of the expected .pvti
+    // file. std::ofstream will fail to open a path that is itself a directory,
+    // triggering the PVTI file-open error path specifically while per-rank .vti
+    // files succeed.
     const std::string pvti_filename = "test_pvti_open_0001.pvti";
     if (fixture.m_rank == 0) {
       std::filesystem::create_directory(pvti_filename);
@@ -947,8 +959,8 @@ TEST_CASE("VTKWriter - PVTI file open error", "[vtk_writer][io][error]") {
     // proceed
     MPI_Barrier(MPI_COMM_WORLD);
 
-    // Only rank 0 throws std::runtime_error because only rank 0 writes the .pvti
-    // master file
+    // Only rank 0 throws std::runtime_error because only rank 0 writes the
+    // .pvti master file
     if (fixture.m_rank == 0) {
       REQUIRE_THROWS_AS(writer.write(1, data), std::runtime_error);
 
@@ -969,7 +981,8 @@ TEST_CASE("test_vtk_writer_collective_error_field_size_mismatch",
 
   // Only run this test with multiple MPI ranks
   if (fixture.m_num_ranks < 2) {
-    SKIP("Test requires multiple MPI ranks to verify collective error agreement");
+    SKIP("Test requires multiple MPI ranks to verify collective error "
+         "agreement");
   }
 
   VTKWriter writer("test_collective_size_mismatch_%04d.vti");
@@ -1007,7 +1020,8 @@ TEST_CASE("test_vtk_writer_collective_error_file_open_failure",
 
   // Only run this test with multiple MPI ranks
   if (fixture.m_num_ranks < 2) {
-    SKIP("Test requires multiple MPI ranks to verify collective error agreement");
+    SKIP("Test requires multiple MPI ranks to verify collective error "
+         "agreement");
   }
 
   // Use a filename pattern that will fail on rank 0 only
@@ -1056,7 +1070,8 @@ TEST_CASE("test_vtk_writer_collective_error_file_write_failure",
 
   // Only run this test with multiple MPI ranks
   if (fixture.m_num_ranks < 2) {
-    SKIP("Test requires multiple MPI ranks to verify collective error agreement");
+    SKIP("Test requires multiple MPI ranks to verify collective error "
+         "agreement");
   }
 
   // Force a genuine write failure on rank 0 only, using /dev/full: a
@@ -1106,7 +1121,8 @@ TEST_CASE("test_vtk_writer_complexfield_collective_error_agreement",
 
   // Only run this test with multiple MPI ranks
   if (fixture.m_num_ranks < 2) {
-    SKIP("Test requires multiple MPI ranks to verify collective error agreement");
+    SKIP("Test requires multiple MPI ranks to verify collective error "
+         "agreement");
   }
 
   VTKWriter writer("test_collective_complex_mismatch_%04d.vti");

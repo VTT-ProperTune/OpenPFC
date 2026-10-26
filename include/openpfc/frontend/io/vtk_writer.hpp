@@ -16,11 +16,10 @@
  * - Real and complex field data
  * - Appended raw binary with a UInt64 length prefix
  *
- * Parallel pieces are non-overlapping inclusive point extents. The master
- * file records that same Extent on every Piece. VTK 9.0.1 and ParaView
- * 5.10 do not assemble those pieces into one image; open each piece, or
- * the serial file. The writer does not duplicate the boundary point to
- * satisfy that reader.
+ * Parallel pieces share their upper boundary points with adjacent pieces.
+ * The writer exchanges these samples without changing their physical
+ * coordinates. Cells belong to the piece containing their lower corner;
+ * shared points therefore close process seams without duplicating cells.
  *
  * @example
  * @code
@@ -40,7 +39,8 @@
  *
  * @see ResultsWriter base class
  * @see vtk_writer_validate.hpp for domain/layout validation (separate module)
- * @see examples/11_write_results.hpp for a thin tutorial wrapper around this class
+ * @see examples/11_write_results.hpp for a thin tutorial wrapper around this
+ * class
  */
 
 #ifndef PFC_VTK_WRITER_HPP
@@ -83,7 +83,8 @@ private:
   /**
    * @brief Write VTK header XML
    */
-  void write_vti_header(std::ofstream &file, int increment) const;
+  void write_vti_header(std::ofstream &file, int increment,
+                        const std::array<int, 3> &piece_size) const;
 
   /**
    * @brief Write VTK data section
@@ -101,8 +102,8 @@ public:
    * @brief Construct VTKWriter with filename pattern
    *
    * @param filename Filename pattern (e.g., "output_%04d.vti")
-   * @param comm MPI communicator for rank/size and collective VTK metadata (default
-   *        world communicator)
+   * @param comm MPI communicator for rank/size and collective VTK metadata
+   * (default world communicator)
    */
   explicit VTKWriter(const std::string &filename, MPI_Comm comm = MPI_COMM_WORLD)
       : FileResultsWriter(filename), m_comm(comm) {

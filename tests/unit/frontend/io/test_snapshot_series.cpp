@@ -619,7 +619,17 @@ TEST_CASE("Two ranks write VTK pieces of the owned brick", "[snapshot][MPI]") {
       reinterpret_cast<const unsigned char *>(text.data() + marker + 2);
   std::uint64_t bytes = 0;
   for (int i = 0; i < 8; ++i) bytes |= static_cast<std::uint64_t>(raw[i]) << (8 * i);
-  REQUIRE(bytes == 4 * sizeof(double));
+  // The lower piece includes the next rank's first point plane so the
+  // reader can form cells across the cut without gaps or duplicate cells.
+  const int width = rank == 0 ? 3 : 2;
+  REQUIRE(bytes == static_cast<std::uint64_t>(2 * width) * sizeof(double));
+  for (int j = 0; j < 2; ++j)
+    for (int i = 0; i < width; ++i) {
+      double value = 0;
+      std::memcpy(&value, raw + 8 + (i + width * j) * sizeof(double),
+                  sizeof(double));
+      REQUIRE(value == static_cast<double>(rank * 2 + i + 10 * j));
+    }
   double first = 0.0;
   std::memcpy(&first, raw + 8, sizeof(double));
   REQUIRE_THAT(first, WithinAbs(static_cast<double>(rank * 2), 1e-12));
