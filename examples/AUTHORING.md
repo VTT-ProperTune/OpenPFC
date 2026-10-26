@@ -19,6 +19,23 @@ experiment from a complete reproduction of a published program or study.
 
 ## Preview the chapters
 
+The standard-library packager (`scripts/package_example_lessons.py`, Python
+3.11 or newer) creates a complete `lesson.zip` for each lesson. It preserves source bytes,
+relative quoted includes, inputs mentioned in the lesson and the license.
+The archive's README gives a command from the extracted root; `lesson.json`
+identifies the checkout and records checksums of the bundled source files.
+
+JSON-driven lessons use their existing `input.json`. Flag-driven lessons
+declare a small documented case in `downloads.toml`. Keep those arguments
+aligned with the chapter's runnable example. Private configuration, outputs,
+build trees and unmentioned files do not belong in a lesson download.
+
+To inspect fresh downloads without rendering HTML:
+
+```sh
+python3 scripts/package_example_lessons.py --output results/lesson-downloads
+```
+
 Use Quarto 1.10.19, matching the website. No numerical runtime is needed:
 
 ```sh

@@ -1,0 +1,74 @@
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Small cases already documented in flag-driven lessons. JSON-driven models
+# use their canonical input.json automatically.
+[cli."diagnostics/halo-frames"]
+ranks = 2
+args = [
+  "--nx", "16",
+  "--iters", "4",
+  "--warmup", "1",
+  "--output", "results/profile.json",
+]
+
+[cli."flow/vorticity"]
+args = [
+  "--verify",
+  "--N", "16",
+  "--steps", "8",
+  "--dt", "0.05",
+  "--nu", "0.1",
+  "--outdir", "results/flow/vorticity",
+]
+
+[cli."flow/magnetohydrodynamics"]
+args = [
+  "--verify",
+  "--N", "16",
+  "--steps", "8",
+  "--dt", "0.05",
+  "--nu", "0.1",
+  "--eta", "0.1",
+  "--outdir", "results/flow/magnetic-decay",
+]
+
+[cli."flow/flux-balance"]
+args = [
+  "--case", "two-mode",
+  "--n", "16",
+  "--dt", "0.02",
+  "--times", "0.02",
+  "--nu", "0.05",
+  "--outdir", "results/flow/flux-balance",
+]
+
+[cli."flow/spatial-refinement"]
+args = [
+  "--resolutions", "16,32",
+  "--reference", "32",
+  "--dt", "0.01",
+  "--times", "0.02",
+  "--nu", "1e-3",
+  "--rho", "10",
+  "--eps", "0.05",
+  "--control-n", "16",
+  "--control-dt-factor", "0.5",
+  "--outdir", "results/flow/spatial-refinement",
+]
+
+[cli."flow/temporal-refinement"]
+args = [
+  "--case", "two-mode",
+  "--n", "16",
+  "--dts", "0.2,0.1,0.05,0.025",
+  "--times", "0.8",
+  "--nu", "0.05",
+  "--outdir", "results/flow/temporal-refinement",
+]
+
+[cli."flow/taylor-green-3d"]
+args = [
+  "--case", "smoke",
+  "--outdir", "results/flow/taylor-green",
+]
