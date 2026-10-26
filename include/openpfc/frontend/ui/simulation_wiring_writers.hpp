@@ -36,7 +36,11 @@ struct NamedResultsWriter {
 };
 
 /**
- * @brief Ensure parent directory of a writer path exists (rank 0 only)
+ * @brief Ensure this rank can see the parent directory of a writer path.
+ *
+ * Every rank calls this idempotent operation before opening its output files.
+ * It needs no communicator and also works with rank-local filesystems.
+ * Only rank zero emits directory-status messages.
  *
  * @param output File or URI path used by a results writer
  * @param mpi_rank Rank for log attribution
@@ -44,10 +48,6 @@ struct NamedResultsWriter {
  */
 inline bool ensure_results_parent_dir_for_writer(const std::string &output,
                                                  int mpi_rank) {
-  if (mpi_rank != 0) {
-    return false;
-  }
-
   const pfc::Logger lg{pfc::LogLevel::Info, mpi_rank};
   std::filesystem::path results_dir(output);
   if (results_dir.has_filename()) {
@@ -56,15 +56,16 @@ inline bool ensure_results_parent_dir_for_writer(const std::string &output,
   if (results_dir.empty()) {
     return false;
   }
-  if (!std::filesystem::exists(results_dir)) {
-    pfc::log_info(lg, std::string("Results dir ") + results_dir.string() +
-                          " does not exist, creating");
-    std::filesystem::create_directories(results_dir);
-    return true;
+  const bool created = std::filesystem::create_directories(results_dir);
+  if (mpi_rank == 0) {
+    if (created) {
+      pfc::log_info(lg, std::string("Created results dir ") + results_dir.string());
+    } else {
+      pfc::log_warning(lg, std::string("results dir ") + results_dir.string() +
+                               " already exists");
+    }
   }
-  pfc::log_warning(lg, std::string("results dir ") + results_dir.string() +
-                           " already exists");
-  return false;
+  return created;
 }
 
 [[nodiscard]] inline std::vector<NamedResultsWriter>
@@ -100,9 +101,9 @@ parse_result_writers_from_json(const nlohmann::json &settings,
       if (field.contains("writer") && field["writer"].is_string()) {
         writer_type = field["writer"].get<std::string>();
       }
+      (void)ensure_results_parent_dir_for_writer(data, ctx.mpi_rank);
       auto writer = writer_catalog.create_writer(writer_type, data, ctx.comm, name);
       if (ctx.rank0) {
-        (void)ensure_results_parent_dir_for_writer(data, ctx.mpi_rank);
         pfc::log_info(lg, "Writing field " + name + " to " + data +
                               " (writer: " + writer_type + ")");
       }

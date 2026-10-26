@@ -31,3 +31,14 @@ if(OpenPFC_ENABLE_HEFFTE)
   set_tests_properties(session-matrix PROPERTIES
     ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
 endif()
+
+# Rank one prepares and opens output before rank zero enters writer wiring.
+add_executable(test_writer_directory writer_directory_mpi.cpp)
+target_link_libraries(test_writer_directory PRIVATE OpenPFC::openpfc)
+if(OpenPFC_RUN_MPI_SUITES)
+  add_test(NAME WriterDirectoryMPI
+    COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+      ${MPIEXEC_PREFLAGS} $<TARGET_FILE:test_writer_directory>
+      ${MPIEXEC_POSTFLAGS})
+  set_tests_properties(WriterDirectoryMPI PROPERTIES TIMEOUT 30 PROCESSORS 2)
+endif()

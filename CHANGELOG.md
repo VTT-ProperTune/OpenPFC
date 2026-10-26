@@ -224,6 +224,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   scientific references, source downloads and an explicit coverage inventory.
   Import chapters into the existing website through an owned staging profile.
 
+- Ensure each MPI rank creates its output directory before writer construction,
+  avoiding missing-directory failures when rank zero arrives later.
+
 - Export toml++ as a public settings-loader dependency. Fetched toml++ headers,
   license and CMake target are installed as a relocatable dependency package;
   system-provided toml++ remains external. Exercise the loader and TOML parsing
