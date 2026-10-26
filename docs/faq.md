@@ -100,7 +100,7 @@ contract is in [Binary field file layout](reference/binary_field_io_spec.md).
 
 Follow the [extension guide](extending_openpfc/README.md), then use the
 [minimal custom application tutorial](tutorials/custom_app_minimal.md) for an
-out-of-tree `App<Model>` executable.
+out-of-tree session-based executable.
 
 ### How do I add an initial or boundary condition?
 

@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-# Recipe: run tungsten with JSON (spectral `App`)
+# Recipe: run tungsten with JSON (spectral session)
 
 **Goal:** run the shipped **tungsten** application with a **JSON** config from the repository (production-style spectral PFC path).
 
@@ -17,14 +17,16 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 1. Build OpenPFC (Release recommended).
 
-2. From the **build directory**, run with a sample JSON (paths relative to `build/`):
+2. Follow [the first tungsten run](../quickstart.md#run-an-application) to copy
+   the small single-seed input into `results/first-tungsten/` and replace its
+   site-specific output paths. From the checkout root, run:
 
    ```bash
-   cd build
-   mpirun -n 4 ./apps/tungsten/tungsten ../apps/tungsten/inputs_json/tungsten_single_seed.json
+   mpirun -n 1 ./builds/release/apps/tungsten/tungsten results/first-tungsten/input.json
    ```
 
-   Increase `-n` for larger jobs; match what your site expects (`mpirun` vs `srun` on Slurm: see [`hpc_operator_guide.md`](../hpc/operator_guide.md)).
+   Increase `-n` only within the available allocation. On a cluster use its
+   supported launcher; see [the HPC operator guide](../hpc/operator_guide.md).
 
 3. Inspect the config if you change ranks or paths — writers and `fields` entries must stay consistent ([`spectral_app_config_reference.md`](../reference/spectral_app_config_reference.md), [`io_results.md`](../user_guide/io_results.md)).
 

@@ -34,7 +34,7 @@ Requirements in settings: `saveat > 0`, `fields` array with `name` and `data`.
 
 ## VTK (ParaView / VisIt)
 
-[`include/openpfc/frontend/io/vtk_writer.hpp`](../../include/openpfc/frontend/io/vtk_writer.hpp) — `VTKWriter`: `.vti` / `.pvti` output. Extent/origin/spacing and local point-count checks are implemented in [`vtk_writer_validate.hpp`](../../include/openpfc/frontend/io/vtk_writer_validate.hpp) (`pfc::io::vtk_validate`), separate from XML and file I/O. Typical use is programmatic: construct `VTKWriter`, `set_domain`, `set_origin`, `set_spacing`, then `add_results_writer` or call from your step loop. See `examples/output/vtk-series/model.cpp` and Doxygen on `VTKWriter`.
+[`include/openpfc/frontend/io/vtk_writer.hpp`](../../include/openpfc/frontend/io/vtk_writer.hpp) — `VTKWriter`: `.vti` / `.pvti` output. Extent/origin/spacing and local point-count checks are implemented in [`vtk_writer_validate.hpp`](../../include/openpfc/frontend/io/vtk_writer_validate.hpp) (`pfc::io::vtk_validate`), separate from XML and file I/O. For programmatic output, construct `VTKWriter`, `set_domain`, `set_origin`, `set_spacing`, then `add_results_writer` or call from your step loop. See `examples/output/vtk-series/model.cpp` and Doxygen on `VTKWriter`.
 
 ## PNG (2D grayscale, quick look)
 
@@ -46,8 +46,9 @@ Requirements in settings: `saveat > 0`, `fields` array with `name` and `data`.
 
 | Goal | Mechanism |
 |------|-----------|
-| Large production runs, restarts | `BinaryWriter` + `BinaryReader`; match JSON `fields`/`data` paths. |
-| Interactive visualization | `VTKWriter` from code or extend wiring to register it. |
+| Field dumps and post-processing | `BinaryWriter` + `BinaryReader`; retain geometry and time metadata. |
+| Durable accepted-state restart bundles | [Checkpoint publication](../development/checkpoint_publish.md), with metadata and accepted field bricks. |
+| Interactive visualization | Set `fields[].writer` to `"vtk"`, or use `SnapshotSeries` / `VTKWriter` in code. |
 | Quick 2D snapshot | `png_writer.hpp` helpers |
 
 ## See also

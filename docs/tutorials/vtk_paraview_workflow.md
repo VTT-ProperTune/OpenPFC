@@ -5,54 +5,64 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Tutorial: VTK output and ParaView
 
-OpenPFC can write **VTK Image Data** (`.vti` per rank, or combined pieces you open as a time series). The JSON `App` path registers **binary** writers by default; **VTK is usually attached in C++** (see [`../io_results.md`](../user_guide/io_results.md)). This tutorial uses the built-in `examples/` targets that already call `VTKWriter`.
+A field needs geometry and physical time before a viewer can interpret it.
+OpenPFC's `SnapshotSeries` writes VTK and raw arrays together with a manifest
+and XDMF series. The [result-series lesson](https://vtt-propertune.github.io/OpenPFC/learn/output/vtk-series/)
+explains the complete runnable example, its source and its independent checks.
+This page gives the path from that output to a viewer.
 
 ## Prerequisites
 
-- OpenPFC built with examples (`OpenPFC_BUILD_EXAMPLES=ON`, default).  
-- MPI launcher from the same stack you used at configure time.  
-- [ParaView](https://www.paraview.org/) (or another VTK-capable viewer) installed locally.
+Build OpenPFC with examples enabled through `scripts/build.sh`, as described in
+[Quick start](../quickstart.md). Load the MPI environment matching that build.
+Run MPI commands inside your workstation resources or scheduler allocation;
+use the [LUMI guide](../hpc/INSTALL.LUMI.md) on that cluster.
 
-## Example 1: single `results.vti` (`11_write_results`)
+Install [ParaView](https://www.paraview.org/) or another VTK-capable viewer on
+the machine where you will inspect the results.
 
-This program builds a small `pfc::data::Field<double>` from decomposition geometry, fills it with a simple pattern, and writes one file.
+## Write a small result series
 
-```bash
-cd build
-mpirun -n 2 ./examples/11_write_results
-```
-
-**Artifact:** `results.vti` in the **current working directory** (usually `build/`).
-
-**ParaView:** *File → Open* → select `results.vti` → *Apply*. Choose the point array named `density` (see source: `examples/output/vtk-series/model.cpp`).
-
-**Modern API:** The field is created using `pfc::data::field_from_subdomain()` from decomposition geometry, which returns a `pfc::data::Field<T, HostSpace>` with correct domain, local box, and spacing metadata. This is the canonical M2 approach for allocating fields that match MPI subdomain layouts.
-
-**Source:** [`examples/output/vtk-series/model.cpp`](../../examples/output/vtk-series/model.cpp) — shows `set_uri`, `set_field_name`, `set_domain`, `set_origin`, `set_spacing`, `initialize`, `write`.
-
-## Example 2: time series (`12_cahn_hilliard`)
-
-Cahn–Hilliard-style stepping with VTK snapshots every 10 steps:
+From the checkout root, the retained target name `11_write_results` now runs
+the `examples/output/vtk-series/model.cpp` lesson:
 
 ```bash
-cd build
-mpirun -n 4 ./examples/12_cahn_hilliard
+mpirun -n 1 ./builds/release/examples/11_write_results
 ```
 
-**Artifacts:** `cahn_hilliard_0000.vti`, `cahn_hilliard_0001.vti`, … in the working directory.
+It prints `Wrote 3 frames` and writes under `results/`:
 
-**ParaView:** *File → Open* → select **all** `cahn_hilliard_*.vti` → ParaView offers to group them as a time sequence; use the playback controls.
+- `density_0000.vti`, `density_0001.vti` and `density_0002.vti` in a serial run;
+- raw binary frames for the same owned field;
+- `lesson_manifest.json`, recording geometry, steps 0/4/8 and times 0/0.25/0.5;
+- XDMF metadata for the raw binary time series.
 
-**Source:** [`examples/phase-fields/cahn-hilliard/model.cpp`](../../examples/phase-fields/cahn-hilliard/model.cpp) — `VtkWriter` updates `set_uri` each output.
+The field is prescribed as `1 + x + 2*y + 3*z + t`; it is an output-format
+example, not a simulated PDE solution. Padding cells carry a sentinel value
+that must not appear in the saved field. The lesson tests decode the payloads
+and verify the physical coordinates, values and times.
 
-## Tips
+## Open the VTK frames
 
-- **Paths:** Run from `build/` so outputs land where you expect; or use a job script that `cd`s to a known directory before `mpirun`.  
-- **MPI ranks:** Decomposition affects how data are split across ranks; the sample sources show a simple pattern—if you change ranks or grid, re-check where files appear and that all ranks still participate where the writer requires collective behavior.  
-- **Production JSON runs:** To get VTK from `tungsten`-style configs, set `fields[].writer` to `"vtk"` (catalog key) or attach a `VTKWriter` in the session save hook.
+In ParaView choose **File → Open**, select `density_0000.vti`, then **Apply**.
+Select the scalar array `density`. To inspect the sequence, open all three
+`density_*.vti` frames as a file series and use the playback controls.
+Consult `lesson_manifest.json` for the physical times: a filename ordinal is
+not a simulation step or time.
 
-## See also
+With multiple ranks, VTK output uses `.vti` pieces and a `.pvti` master with
+non-overlapping point extents. Some readers do not assemble these into a single
+image. Inspect an individual piece or use the generated XDMF series for the
+global raw field; do not interpret a reader's assembly limitation as missing
+simulation data.
 
-- [`../io_results.md`](../user_guide/io_results.md) — `VTKWriter` vs `BinaryWriter`
-- [`../examples_catalog.md`](../reference/examples_catalog.md) — catalog entries for `11_write_results`, `12_cahn_hilliard`
-- [`../class_tour.md`](../reference/class_tour.md) — `ResultsWriter`, `pfc::data::Field`  
+## Use VTK in a configured application
+
+The default results-writer catalog includes `binary` and `vtk`, with `hdf5`
+when that build enables HDF5. In a tungsten-style input set a field's
+`"writer": "vtk"` and use a `.vti` filename template. All ranks must participate
+in each write. An unknown writer key is an error.
+
+For programmatic output use `SnapshotSeries` or attach `VTKWriter` to the
+session's save hook. See [Results I/O](../user_guide/io_results.md) and the
+[configuration reference](../reference/spectral_app_config_reference.md).

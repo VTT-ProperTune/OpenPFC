@@ -17,7 +17,7 @@ CMake or the compiler is not using the same MPI you intend. Before `cmake`:
 2. Set `CC` / `CXX` to the MPI wrappers or module `gcc` explicitly.
 3. Remove a stale build tree or re-run `cmake` with `-DCMAKE_C_COMPILER=…` and `-DCMAKE_CXX_COMPILER=…` so `CMakeCache.txt` does not still point at `/usr/bin/gcc`.
 
-HIP/Cray builds may need extra include flags for MPI in HIP translation units; see [`INSTALL.LUMI.md`](hpc/INSTALL.LUMI.md) §2.
+HIP/Cray builds may need extra include flags for MPI in HIP translation units; see [the LUMI toolchain diagnosis](hpc/INSTALL.LUMI.md#diagnosing-the-toolchain).
 
 ### CMake finds the wrong GCC (e.g. GCC 8 instead of 11)
 

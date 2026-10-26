@@ -31,7 +31,7 @@ This document summarizes how we organize code, name things, and shape APIs (free
 | Area | Role |
 |------|------|
 | [`include/openpfc/`](../../include/openpfc) | Public API — headers only, mirroring the kernel / runtime / frontend split (see below). |
-| [`src/openpfc/`](../../src/openpfc) | Library implementation — `.cpp` (and backend-specific sources) for symbols declared in `include/`. Paths mirror the include tree (e.g. `kernel/data/world.cpp`). |
+| [`src/openpfc/`](../../src/openpfc) | Library implementation — `.cpp` (and backend-specific sources) for symbols declared in `include/`. Paths follow the kernel, runtime and frontend boundaries. |
 | [`apps/`](../../apps) | Full applications (e.g. scenario-specific drivers, JSON inputs). Each app has its own `CMakeLists.txt` where appropriate. |
 | [`examples/`](../../examples) | Small, teaching executables — prefer clear names; many tutorials use numeric prefixes (`01_…`, `02_…`). |
 | [`tests/unit/`](../../tests/unit) | Unit tests (Catch2), grouped under `kernel/`, `runtime/`, `frontend/`, etc., mirroring library structure. |
@@ -79,11 +79,11 @@ When adding a feature, choose the lowest layer that can express it without break
 
 OpenPFC favors a laboratory, not fortress style: code should be easy to read, experiment with, and compose. Prefer exposing behavior as free functions in the appropriate namespace over member functions when the operation is a natural query or transformation on a value, rather than something that must stay tied to hidden invariants.
 
-- Examples already in the tree: `pfc::domain::get_size(domain, …)` takes `Domain` as an argument; `get_world` is a free function for `Decomposition` and `Field` (see `get_world(const Decomposition&)` and `get_world(const Field<T>&)` in their headers). Prefer `get_world(decomp)` / `get_world(field)` over a member spelling when both exist.
+- Examples already in the tree: `pfc::domain::get_size(domain, …)` takes `Domain` as an argument; `pfc::decomposition::domain(decomp)` returns a global domain, while `field.domain()` exposes the domain carried by a field. Use the current declarations rather than the removed `get_world` accessors.
 - Time and driver: prefer the `pfc::time::` free functions (`current`, `increment`, `do_save`, `next`, `done`) over member spellings, and drive steppers through `pfc::sim::run` (`simulation/simulation_driver.hpp`) rather than a class that owns the loop. Fields are owned by `SimulationState` and reached by name (`state.get_field<T>(name)`); geometry queries are free functions (`pfc::domain::get_size`, `get_spacing`, `get_origin`).
 - Older APIs: when a type still exposes a member query that is a natural free function, introduce a free overload in the same module and call that in new or touched code. Full migration can be incremental; the direction of travel is free functions at namespace scope.
 - Classes as data carriers: types should primarily hold state. Prefer `public` data members when there is no concrete reason to hide them—in practice many types should read like `struct`s. Reserve `private` members (with the `m_` convention) for cases where hiding genuinely prevents invalid states or where encapsulation is clearly justified, not as a default habit.
-- **Virtual bases are extension seams.** Subclass `Model`, `FieldModifier`, or `ResultsWriter` when the framework must **dispatch across app-defined types** at runtime. Implement the bulk of physics, I/O, and wiring as **free functions** (and small POD-ish state) that those overrides call into—avoid growing wide hierarchies for “organization only.”
+- **Virtual bases are extension seams.** Physics is a callable object, not a subclass of the removed `Model`. Subclass `FieldModifier` or `ResultsWriter` when the framework must **dispatch across app-defined types** at runtime. Implement the bulk of physics, I/O, and wiring as **free functions** (and small POD-ish state) that those overrides call into—avoid growing wide hierarchies for “organization only.”
 
 This sits alongside the layer rules in [architecture.md](../concepts/architecture.md): kernel/runtime/frontend boundaries still apply; openness is about how each type exposes its *own* fields and helpers, not about crossing forbidden includes.
 
@@ -111,7 +111,7 @@ After structural changes, update or add Doxygen on public types and functions wh
 ## Documentation and cross-references
 
 - Design / physics / algorithms: add or extend Markdown under `docs/` and link from related headers (as with `docs/halo_exchange.md`).
-- User-facing build and HPC notes: INSTALL.md, `docs/build_cpu_gpu.md`, site-specific guides (e.g. `docs/INSTALL.LUMI.md`).
+- User-facing build and HPC notes: INSTALL.md, `docs/hpc/build_cpu_gpu.md`, site-specific guides (e.g. `docs/hpc/INSTALL.LUMI.md`).
 - API reference: Doxygen extracts public headers as XML and Breathe renders the curated pages under [`docs/api/`](../api/index.md).
 
 ## Tests and quality gate

@@ -5,76 +5,85 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Tutorial: end-to-end run and artifacts
 
-This tutorial connects **configure → run → files you can inspect**. Prerequisites: a working OpenPFC build per [`INSTALL.md`](../../INSTALL.md) (MPI, HeFFTe, modules as needed).
+Start from a working compiler, MPI and HeFFTe stack, then run a small case and
+inspect its output before increasing the grid or rank count. The
+[installation guide](../../INSTALL.md) covers dependencies; the
+[first-model walkthrough](../start_here_15_minutes.md) is the shorter route
+when you already have an installed SDK.
 
-## 1. Build the project
+## Build the project
 
-From the repository root:
+From the repository root on Tohtori:
 
 ```bash
-cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
-cmake --build build -j"$(nproc)"
+./scripts/build.sh --machine=tohtori --cpu
+module load openmpi/5.0.10
 ```
 
-Ensure examples and apps are enabled (defaults): `OpenPFC_BUILD_EXAMPLES=ON`, `OpenPFC_BUILD_APPS=ON`. If you disabled them earlier, reconfigure with `ON` and rebuild.
+The script builds and tests in `builds/release`. Its module changes apply only
+inside its process, so load the matching MPI stack in the launch shell too.
+Use `--machine=portable` on a workstation with dependencies installed. On
+LUMI follow the [scheduled build and run guide](../hpc/INSTALL.LUMI.md).
 
----
+The runs below assume an allocation providing the requested MPI ranks.
+Keep generated files under `results/`, or under scratch for large HPC runs.
 
-## Track A — PNG snapshots (2D Allen–Cahn, fastest visual)
+## Track A: PNG snapshots from Allen–Cahn
 
-Goal: two PNG files (initial and final field) without writing JSON.
+This small 2-D program takes command-line parameters rather than JSON:
 
-1. From your **build directory**, use the same argument order as in [`apps/allen_cahn/README.md`](../../apps/allen_cahn/README.md) (defaults and **growth check** evolve with the app — the stock example below matches the shipped README):
+```bash
+mkdir -p results/allen-cahn
+mpirun -n 1 ./builds/release/apps/allen_cahn/allen_cahn 256 256 5000 0.005 8.0 0.75 0.25 \
+  results/allen-cahn/initial.png results/allen-cahn/final.png
+```
 
-   ```bash
-   cd build
-   mkdir -p png_out
-   mpirun -n 4 ./apps/allen_cahn/allen_cahn 256 256 5000 0.005 8.0 0.75 0.25 \
-     png_out/initial.png png_out/final.png
-   ```
+A successful run exits zero and produces the initial and final grayscale
+images, with a fixed scale from −1 to 1. Its internal growth check can reject
+a case; use the [application README](../../apps/allen_cahn/README.md) for the
+parameter meanings and expected behaviour. These pictures are a quick visual
+check, not a convergence study.
 
-2. **Success**: `mpirun` exits with status 0. On rank 0 you should find `png_out/initial.png` and `png_out/final.png` (grayscale, fixed \[-1,1\] scale — see [`io_results.md`](../user_guide/io_results.md)). The app may **exit non-zero** if its internal growth check fails—reduce ranks or adjust parameters per the app README.
+## Track B: tungsten binary field dumps
 
-3. **Details**: full CLI reference — [`apps/allen_cahn/README.md`](../../apps/allen_cahn/README.md).
+Prepare the small single-seed case from the checkout root:
 
----
+```bash
+mkdir -p results/first-tungsten
+cp apps/tungsten/inputs_json/tungsten_single_seed.json \
+  results/first-tungsten/input.json
+```
 
-## Track B — Config-driven Tungsten + binary field dumps
+Edit the copied input's `fields[]` entries: set the `psi` data path to
+`results/first-tungsten/psi_%d.bin` and `psiMF` to
+`results/first-tungsten/psimf_%d.bin`. The shipped file contains absolute paths
+from its original site. Retain a positive `saveat` in `timestepping`.
 
-Goal: run the **Tungsten** `App` with JSON and produce **MPI-IO binary** time slices under a directory you control.
+Run the CPU executable:
 
-The stock file [`apps/tungsten/inputs_json/tungsten_single_seed.json`](../../apps/tungsten/inputs_json/tungsten_single_seed.json) uses a **small** $32^3$ domain but ships with **absolute** `fields[].data` paths. For a self-contained tutorial, copy it and point output at `./data/`.
+```bash
+mpirun -n 1 ./builds/release/apps/tungsten/tungsten \
+  results/first-tungsten/input.json
+```
 
-1. From `build/`, create a writable config (example edits):
+Check exit zero, the progress log and the expected binary frames. A `%d`
+filename suffix is a frame ordinal. Retain the input's domain, field names and
+save cadence with the data; raw arrays have no header. See the
+[binary format](../reference/binary_field_io_spec.md) before decoding them.
+A field dump alone is not a complete restart bundle; the
+[checkpoint protocol](../development/checkpoint_publish.md) has a separate
+accepted-state and metadata contract.
 
-   ```bash
-   cd build
-   mkdir -p data
-   cp ../apps/tungsten/inputs_json/tungsten_single_seed.json ./tutorial_tungsten.json
-   ```
-
-2. Edit `tutorial_tungsten.json`:
-
-   - Set each `fields[]` entry’s `"data"` to a path under your build tree, e.g. `"./data/psi_%d.bin"` and `"./data/psimf_%d.bin"` (same pattern the stock file uses for the two fields).
-   - Keep `"saveat"` > 0 in `timestepping` so writers run (the sample uses `"saveat": 1.0`).
-
-3. Run (CPU binary):
-
-   ```bash
-   mpirun -n 4 ./apps/tungsten/tungsten ./tutorial_tungsten.json
-   ```
-
-4. **Success**: exit code 0; rank 0 logs progress. **Artifacts**: binary files under `./data/` whose names match your `data` templates (frame index in place of `%d`). **On-disk layout:** [`binary_field_io_spec.md`](../reference/binary_field_io_spec.md); overview: [`io_results.md`](../user_guide/io_results.md).
-
-5. **Visualization**: VTK/ParaView from the default JSON path is not automatic — the stock wiring registers binary writers. For VTK, attach `VTKWriter` in code (see [`io_results.md`](../user_guide/io_results.md) and `examples/output/vtk-series/model.cpp`). For large campaigns, binary + postprocessing is typical.
-
----
+For VTK output choose `"writer": "vtk"` and a `.vti` data template for each
+field. For a programmatic series that records geometry, steps and time,
+continue with [VTK and ParaView](vtk_paraview_workflow.md) and the
+[result-series lesson](https://vtt-propertune.github.io/OpenPFC/learn/output/vtk-series/).
 
 ## What to read next
 
 | Goal | Document |
-|------|----------|
-| Full app comparison (JSON vs CLI, GPU) | [`applications.md`](../user_guide/applications.md) |
-| JSON → `Simulator` order | [`app_pipeline.md`](../user_guide/app_pipeline.md) |
-| Example executables by topic | [`examples_catalog.md`](../reference/examples_catalog.md) |
-| Figures and which runnable produced them | [`showcase.md`](../user_guide/showcase.md) |
+|---|---|
+| Compare application inputs and backends | [Applications](../user_guide/applications.md) |
+| Understand configuration and the run lifecycle | [Application pipeline](../user_guide/app_pipeline.md) |
+| Follow runnable examples by topic | [Examples catalog](../reference/examples_catalog.md) |
+| Understand which model produced a figure | [Showcase](../user_guide/showcase.md) |

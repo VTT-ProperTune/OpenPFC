@@ -18,7 +18,7 @@ Optionally compile the examples as standalone programs with
 emitted under `<build>/docs/api/examples/`.
 
 Read them **in order** the first time: each file builds on the same stack
-(`Domain` → decomposition / FFT → `Simulator` → I/O and modifiers).
+(`Domain` → decomposition / FFT → `pfc::sim::run` → I/O and modifiers).
 
 | # | Source | Focus |
 |---|--------|--------|

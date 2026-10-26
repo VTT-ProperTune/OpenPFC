@@ -265,6 +265,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   GrainFront (`grainfront::grain`). Consumers that need the old module pin an
   OpenPFC revision before this change (#657).
 
+- Audit the complete published documentation: repair original-source links,
+  search entry, accessible checklists and table headings; update beginner,
+  GPU and output guides to the current API and correct the heat-equation
+  Euler stability comparison.
+
 ## [0.5.0] - 2026-10-22
 
 Source-level break from 0.4.0 for inputs and some public APIs. ABI

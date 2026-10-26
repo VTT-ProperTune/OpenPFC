@@ -10,7 +10,7 @@ Short definitions for OpenPFC and PFC simulation vocabulary. Deeper design detai
 | Term | Meaning |
 |------|---------|
 | Phase field crystal (PFC) | Semi-atomistic modeling: periodic order parameters approximate crystal density; used for microstructure, defects, and large-scale evolution. |
-| Domain | Global description of the grid: dimensions, spacing, origin, periodicity (`kernel/data`). *Note: World is a deprecated alias for Domain.* |
+| Domain | Global description of the grid: dimensions, spacing, origin, periodicity (`kernel/data`). *Note: The former World alias has been removed; use Domain.* |
 | Decomposition | Partition of the domain across MPI ranks; each rank owns an inbox of local samples. |
 | Inbox / outbox | Real-space samples owned by a rank (inbox) and complex outbox layout after real-to-complex FFT (sizes differ due to symmetry). |
 | Halo (ghost cells) | Overlapping boundary layers exchanged between neighbors for finite differences or stencils. |

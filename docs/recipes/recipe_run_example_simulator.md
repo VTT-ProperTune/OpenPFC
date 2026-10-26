@@ -14,13 +14,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## Steps
 
-1. Configure and build from the repo root (see [`start_here_15_minutes.md`](../start_here_15_minutes.md) or [`quickstart.md`](../quickstart.md) §1).
+1. Configure and build from the repo root (see [`start_here_15_minutes.md`](../start_here_15_minutes.md) or [`quickstart.md`](../quickstart.md)).
 
-2. Run from the **build directory**:
+2. Run from the checkout root, using one rank for the first check:
 
    ```bash
-   cd build
-   mpirun -n 4 ./examples/05_simulator
+   mpirun -n 1 ./builds/release/examples/05_simulator
    ```
 
    Adjust `-n` to your machine; use at least 1 rank.
@@ -29,7 +28,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 - Process exits with code **0**.  
 - Rank 0 typically emits INFO logs (world size, simulation stepping).  
-- No output files are required for “success”; this recipe is a **stack check**.
+- The driver-hooks example also writes its event ledger and field samples under `results/`. Use the [driver-hooks lesson](https://vtt-propertune.github.io/OpenPFC/learn/heat/driver-hooks/) to inspect the saved states; exit zero alone is only a launch check.
 
 ## Next steps
 

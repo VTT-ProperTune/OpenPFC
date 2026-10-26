@@ -17,10 +17,10 @@ flowchart TD
   D -->|No| E[Fix HeFFTe + toolkit first — see INSTALL]
   D -->|Yes| F[Separate GPU build directory + matching OpenPFC flags]
   C --> G[mpirun CPU tungsten / examples]
-  F --> H[JSON backend + tungsten_cuda or tungsten_hip]
+  F --> H[Matching input + tungsten_cuda or tungsten_hip]
 ```
 
-- **Stick to CPU** if you are learning the framework, debugging physics, or your cluster does not expose GPUs consistently. The **same** spectral APIs exist; only the FFT backend and runtime differ.  
+- **Stick to CPU** if you are learning the framework, debugging physics, or your cluster does not expose GPUs consistently. The **same** spectral APIs exist; only the FFT backend and runtime differ.
 - **Move to GPU** when you have a **HeFFTe build** with CUDA or ROCm enabled that matches your `nvcc` / ROCm stack, and you use shipped GPU binaries (`tungsten_cuda`, `tungsten_hip`) or your own code paths that pull in device FFT.
 
 ## Preconditions (all must align)
@@ -33,13 +33,13 @@ flowchart TD
 
 ## Golden path (after CPU works)
 
-1. Keep your working **CPU** tree (`build-cpu`).  
-2. Create **`build-gpu`** (or `build-hip`) and configure with GPU flags + correct `CMAKE_PREFIX_PATH` to the GPU HeFFTe prefix ([`build_cpu_gpu.md`](build_cpu_gpu.md)).  
-3. Run the GPU quickstart: [`tutorials/gpu_app_quickstart.md`](../tutorials/gpu_app_quickstart.md) (`backend` in JSON, `tungsten_cuda` / `tungsten_hip`).  
+1. Keep your working **CPU** tree (`builds/cpu`).
+2. Use `scripts/build.sh` with a separate **`builds/cuda`** directory on Tohtori or an external flash HIP tree on LUMI ([`build_cpu_gpu.md`](build_cpu_gpu.md)).
+3. Run the GPU quickstart: [`tutorials/gpu_app_quickstart.md`](../tutorials/gpu_app_quickstart.md) (`tungsten_cuda` / `tungsten_hip` with the matching compiled stack).
 4. Compare log shapes to CPU: [`example_run_output.md`](../reference/example_run_output.md).
 
 ## See also
 
-- [`build_options.md`](../reference/build_options.md) — CMake reference  
-- [`INSTALL.LUMI.md`](INSTALL.LUMI.md) — ROCm / LUMI-G example  
-- [`spectral_stack.md`](../concepts/spectral_stack.md) — where FFT sits in the stack  
+- [`build_options.md`](../reference/build_options.md) — CMake reference
+- [`INSTALL.LUMI.md`](INSTALL.LUMI.md) — ROCm / LUMI-G example
+- [`spectral_stack.md`](../concepts/spectral_stack.md) — where FFT sits in the stack

@@ -16,7 +16,7 @@ Best for interactive 3D visualization without writing parsers.
 
 ## Path B — Raw binary (MPI-IO)
 
-Best for restarts and custom post-processing; **no file header** — you need sidecar metadata.
+Use for field dumps and custom post-processing; the files have no header, so retain geometry and time metadata. A raw field dump is not a complete restart bundle. Durable restart publication uses the [checkpoint protocol](../development/checkpoint_publish.md).
 
 1. Normative layout: [`binary_field_io_spec.md`](../reference/binary_field_io_spec.md).  
 2. Offline sketches (Python, caveats): [`postprocess_binary_fields.md`](../user_guide/postprocess_binary_fields.md).  

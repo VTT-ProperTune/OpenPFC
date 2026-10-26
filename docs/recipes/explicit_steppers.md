@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Recipe: Migrate from Model::step(double t) to explicit steppers
 
-**Goal:** Transition legacy spectral apps using `Model::step(double t)` to the new pluggable integrator architecture with `pfc::sim::steppers::create()`, enabling replaceable integrators (Euler, RK2, RK4, IMEX) without rewriting physics.
+**Goal:** Transition legacy spectral apps using `Model::step(double t)` to the new pluggable integrator architecture with `pfc::sim::steppers::create()`, separating pointwise physics from explicit Euler and Runge–Kutta integration. IMEX methods additionally need an appropriate implicit-operator contract.
 
 ## Prerequisites
 
@@ -185,22 +185,32 @@ final check.
 
 ## Complete working examples
 
-See [`../../examples/heat/finite-differences/model.cpp`](../../examples/heat/finite-differences/model.cpp) for the FD backend and [`../../examples/heat/fourier/model.cpp`](../../examples/heat/fourier/model.cpp) for the spectral backend. Both solve the same heat equation with identical physics (`HeatModel::rhs`) but different gradient evaluators.
+See [`../../examples/heat/finite-differences/model.cpp`](../../examples/heat/finite-differences/model.cpp) for the FD backend and [`../../examples/heat/fourier/model.cpp`](../../examples/heat/fourier/model.cpp) for the spectral backend. Both solve the same heat equation with the same pointwise Laplacian combination and different gradient evaluators. These teaching examples display the Euler accumulation explicitly rather than calling the stepper factory.
 
 ## Stability considerations
 
-Explicit Euler has the same stability limit regardless of backend:
+For the periodic heat equation $u_t=D\nabla^2u$, forward Euler requires
+$\Delta t\,|\lambda_{\min}|\le2$, where $\lambda_{\min}$ is the most negative
+eigenvalue of the spatial operator. The integrator's stability region is the
+same across backends; the spatial eigenvalues are different.
 
-```cpp
-// Heat equation: dt <= dx^2 / (6*D) in 3D
-const double dt = 0.15 * dx * dx / (6.0 * D);  // Conservative safety factor
-```
+On a 3-D uniform grid of spacing $h$, the second-order central FD Laplacian
+has $|\lambda_{\min}|\le12D/h^2$, giving $\Delta t\le h^2/(6D)$. Fourier
+collocation on an even grid retains modes up to $\pi/h$ in each direction,
+giving $|\lambda_{\min}|=3D\pi^2/h^2$ and the tighter
+$\Delta t\le2h^2/(3\pi^2D)$. These are the separate bounds checked by the
+linked runnable heat examples. Use a safety factor below the limit. Higher
+FD orders and other PDEs require their own operator bound.
 
-Spectral methods are exact in space but still time-step limited for explicit integration. For unconditional stability, consider IMEX (`ImexEulerStepper`) or the framework spectral ETD system, which treats the diagonal linear operator exactly.
+Fourier differentiation is exact for the retained trigonometric polynomial;
+a finite grid still truncates unresolved modes, and nonlinear products can
+alias. It does not remove the explicit time-step restriction. Implicit methods
+or an ETD treatment of a diagonal linear operator change that restriction;
+they do not guarantee accuracy or unconditional stability of a nonlinear split.
 
 ## Benefits of pluggable integrators
 
-- **Swap algorithms:** Change `EulerStepper` to `RK2Stepper` or `RK4Stepper` without touching physics
+- **Swap algorithms:** Pass an RK2 or RK4 `ButcherTableau` to the `ExplicitRKStepper` factory without changing the pointwise RHS
 - **Backend-agnostic physics:** Same `HeatModel::rhs()` works with FD or spectral gradients
 - **Clear separation:** Integrator owns time-stepping, evaluator owns spatial derivatives, model owns point-wise physics
 - **Testability:** Pure `rhs(t, g)` functions are easy to unit test
