@@ -1,5 +1,7 @@
-// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
-// SPDX-License-Identifier: AGPL-3.0-or-later
+<!--
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 
 # State Access and Storage Usage Guide
 
@@ -354,7 +356,7 @@ void validate_backend_compatibility<const FieldView<T>&,
 } // namespace pfc::field
 ```
 
-Note: FieldView<T> is intentionally backend-agnostic. Backend-specific validation is provided through compile-time backend tags and can be extended with backend-specific implementations in separate headers.
+Note: `FieldView<T>` is intentionally backend-agnostic. Backend-specific validation is provided through compile-time backend tags and can be extended with backend-specific implementations in separate headers.
 
 ## Legacy Field Migration (Historical)
 
@@ -518,11 +520,13 @@ for (std::size_t i = 0; i < u.size(); ++i) {
 
 ## Legacy Field Types (Deprecated)
 
-The following field types are retained for compatibility but are deprecated:
+The following names are historical and are no longer supplied by the current
+headers. The old-pattern snippets above explain migration; they are not
+examples to compile against a current SDK:
 
-- **LocalField<T>**: Unpadded field with halo metadata -> Use `pfc::data::Field<T, HostSpace>` with `field_from_subdomain_unpadded<T>()`
-- **PaddedBrick<T>**: Padded field with halo storage -> Use `pfc::data::Field<T, HostSpace>` with `field_from_subdomain<T>(decomp, rank, halo)`
-- **DiscreteField<T>**: Gen-1 discrete field wrapper -> Use `pfc::data::Field<T, MemorySpace>` directly
+- **`LocalField<T>`**: Unpadded field with halo metadata -> Use `pfc::data::Field<T, HostSpace>` with `field_from_subdomain_unpadded<T>()`
+- **`PaddedBrick<T>`**: Padded field with halo storage -> Use `pfc::data::Field<T, HostSpace>` with `field_from_subdomain<T>(decomp, rank, halo)`
+- **`DiscreteField<T>`**: Gen-1 discrete field wrapper -> Use `pfc::data::Field<T, MemorySpace>` directly
 
 ### Legacy API Migration Table
 
@@ -533,7 +537,7 @@ The following field types are retained for compatibility but are deprecated:
 | `for_each_owner(field, fn)` | `field.for_each_owned(fn)` | Member function on pfc::data::Field |
 | `field(i, j, k)` | `field(i, j, k)` | Same syntax supported |
 
-These legacy types are maintained to allow gradual migration. New code should use `pfc::data::Field<T, MemorySpace>` and factory functions.
+Current code should use `pfc::data::Field<T, MemorySpace>` and factory functions.
 
 ## Common Error Patterns and Resolution
 
@@ -595,12 +599,12 @@ This section summarizes how verification is performed for each semantic requirem
 
 | Requirement | Verification Method | Example |
 |-------------|-------------------|---------|
-| Const input semantics | FieldView<T>::data() const | `const double* data = view.data();` |
-| Mutable output semantics | FieldOutput<T>::data() non-const | `double* data = output.data();` |
+| Const input semantics | `FieldView<T>`::data() const | `const double* data = view.data();` |
+| Mutable output semantics | `FieldOutput<T>`::data() non-const | `double* data = output.data();` |
 | Aliasing detection | validate_no_alias() pointer comparison | `output.validate_no_alias(input);` |
 | Shape compatibility | validate_shape_compatibility() structural check | `validate_shape_compatibility(f1, f2);` |
 | Backend compatibility | validate_backend_compatibility() static_assert | `validate_backend_compatibility<double, CPU, CPU>(f1, f2);` |
-| Workspace ownership | Workspace<T> private members | `Workspace<double> ws(extents, stages);` |
+| Workspace ownership | `Workspace<T>` private members | `Workspace<double> ws(extents, stages);` |
 | Stage context coordination | StageContext struct fields | `ctx.needs_halo_exchange = true;` |
 
 All verification is performed at compile time (static_assert, type system) or at binding time (validation functions called once during construction/binding), ensuring no per-evaluation overhead.

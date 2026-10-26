@@ -1,5 +1,7 @@
-// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
-// SPDX-License-Identifier: AGPL-3.0-or-later
+<!--
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 
 # State Access and Storage Design
 
@@ -7,11 +9,11 @@ This document describes the design rationale for evidence-driven state access pr
 
 ## Legacy Field Types Context
 
-> **[Legacy]** Earlier OpenPFC versions used multiple field container types: `LocalField<T>`, `PaddedBrick<T>`, and `DiscreteField<T>`. These have been unified into the canonical `pfc::data::Field<T, MemorySpace>` type. The legacy types are retained for compatibility through M2 but are not recommended for new code. Use `pfc::data::Field` with the `field_from_subdomain*` factory functions instead.
+> **[Legacy]** Earlier OpenPFC versions used multiple field container types: `LocalField<T>`, `PaddedBrick<T>`, and `DiscreteField<T>`. These have been unified into the canonical `pfc::data::Field<T, MemorySpace>` type. Those names are historical; current code uses the canonical field type. Use `pfc::data::Field` with the `field_from_subdomain*` factory functions instead.
 
 ## Rationale for Value-Semantic Approach
 
-The implementation uses value-semantic types (FieldView<T>, FieldOutput<T>, FieldBundle<Ts...>) rather than type erasure or virtual interfaces for the following reasons:
+The implementation uses value-semantic types (`FieldView<T>`, `FieldOutput<T>`, `FieldBundle<Ts...>`) rather than type erasure or virtual interfaces for the following reasons:
 
 ### No Virtual Dispatch
 
@@ -63,8 +65,8 @@ pfc::data::Field<double, pfc::HostSpace> v =
 
 **Pattern**:
 - Single scalar field u (temperature)
-- pfc::data::Field<double> for state storage
-- FDGradient<HeatGrads> for Laplacian evaluation
+- `pfc::data::Field<double>` for state storage
+- `FDGradient<HeatGrads>` for Laplacian evaluation
 - Explicit Euler time integration: u += dt * du
 
 **Key observations**:
@@ -75,9 +77,9 @@ pfc::data::Field<double, pfc::HostSpace> v =
 - Clear separation between state and workspace
 
 **Design implications**:
-- FieldView<T> provides const access to field data and geometry
-- FieldOutput<T> provides mutable output storage
-- Workspace<T> owns scratch buffers for intermediate computations
+- `FieldView<T>` provides const access to field data and geometry
+- `FieldOutput<T>` provides mutable output storage
+- `Workspace<T>` owns scratch buffers for intermediate computations
 
 ### Wave2D Multi-Field Pattern
 
@@ -85,7 +87,7 @@ pfc::data::Field<double, pfc::HostSpace> v =
 
 **Pattern**:
 - Multiple fields: u (displacement), v (velocity), lap (Laplacian)
-- pfc::data::Field<double> for each field
+- `pfc::data::Field<double>` for each field
 - Coupled time integration: u += dt * v, v += dt * k^2 * lap
 - Coordinated halo exchange across fields
 
@@ -96,16 +98,16 @@ pfc::data::Field<double, pfc::HostSpace> v =
 - Coordinated validation across field bundle
 
 **Design implications**:
-- FieldBundle<Ts...> groups multiple fields
+- `FieldBundle<Ts...>` groups multiple fields
 - validate_shape_compatibility() ensures geometric compatibility
-- Coordinated access via get<I>() interface
+- Coordinated access via `get<I>()` interface
 
 ### Complex Field Usage
 
 **Source**: Spectral method implementations
 
 **Pattern**:
-- Complex hats are `pfc::Field<std::complex<double>>` (or `FieldView<std::complex<double>>` at I/O)
+- Complex hats are `pfc::data::Field<std::complex<double>, pfc::HostSpace>` (or `FieldView<std::complex<double>>` at I/O)
 - Same access patterns as real fields
 - Used in Fourier space computations
 
@@ -115,7 +117,7 @@ pfc::data::Field<double, pfc::HostSpace> v =
 - Same read/write semantics
 
 **Design implications**:
-- Template types parameterized by T (double or std::complex<double>)
+- Template types parameterized by T (double or `std::complex<double>`)
 - Single implementation works for both types
 
 ### Backend Differences
@@ -278,7 +280,7 @@ validate_backend_compatibility<double, CPUBackendTag, CUDABackendTag>(field1, fi
 
 ### Why Backend Tags Are Template Parameters
 
-1. **FieldView<T> is backend-agnostic**:
+1. **`FieldView<T>` is backend-agnostic**:
    - `FieldView<T>` holds only `const T*` and geometry
    - Backend type information is not available from FieldView alone
    - Backend tags must be provided by calling code

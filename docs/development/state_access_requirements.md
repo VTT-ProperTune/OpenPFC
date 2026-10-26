@@ -1,5 +1,7 @@
-// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
-// SPDX-License-Identifier: AGPL-3.0-or-later
+<!--
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 
 # State Access and Storage Requirements
 
@@ -25,7 +27,7 @@ The requirements are derived from existing field implementations and usage patte
 - **Geometry queries**: Operators must query size, spacing, origin, and global bounds
 - **No mutation of input state**: Input fields must remain observationally unchanged during evaluation
 
-**Verification**: FieldView<T> provides const-only access to field data through `data()` const member function. The const qualifier prevents mutation through the view.
+**Verification**: `FieldView<T>` provides const-only access to field data through `data()` const member function. The const qualifier prevents mutation through the view.
 
 **Example from Heat3D**:
 ```cpp
@@ -42,7 +44,7 @@ pfc::Int3 u_extents = u.extents();
 - **Separate from input state**: Output storage must be distinct from input state (no in-place mutation unless explicitly supported)
 - **Shape compatibility with input fields**: Output must have matching size and layout
 
-**Verification**: FieldOutput<T> provides mutable access through `data()` non-const member function. Aliasing validation ensures output storage does not alias input storage.
+**Verification**: `FieldOutput<T>` provides mutable access through `data()` non-const member function. Aliasing validation ensures output storage does not alias input storage.
 
 **Example from Heat3D**:
 ```cpp
@@ -56,7 +58,7 @@ double* du_data = du.data();
 - **Single interface for both types**: Same access patterns work for `double` and `std::complex<double>`
 - **No code duplication**: Templates provide generic programming support
 
-**Verification**: FieldView<T>, FieldOutput<T>, and FieldBundle<Ts...> are all template types parameterized by value type T, supporting both `double` and `std::complex<double>` without code duplication.
+**Verification**: `FieldView<T>`, `FieldOutput<T>`, and `FieldBundle<Ts...>` are all template types parameterized by value type T, supporting both `double` and `std::complex<double>` without code duplication.
 
 ## Aliasing Validation Requirements
 
@@ -88,7 +90,7 @@ void validate_no_alias(const FieldOutput<T>& output, const InputView& input) {
 - **Output parameters**: Non-const pointers/references
 - **Const alone insufficient**: Need pointer comparison for alias detection
 
-**Verification**: FieldView<T> only provides const access to data. FieldOutput<T> provides mutable access but requires explicit validation against input views.
+**Verification**: `FieldView<T>` only provides const access to data. `FieldOutput<T>` provides mutable access but requires explicit validation against input views.
 
 ## Shape/Layout Compatibility Requirements
 
@@ -138,7 +140,7 @@ void validate_shape_compatibility(const FieldView<T>& field1,
 - **Backend-specific allocation APIs**: Each backend uses its own allocation mechanisms
 - **No shared abstraction layer**: No requirement for a unified memory abstraction
 
-**Verification**: FieldView<T> is backend-agnostic, working with any contiguous storage (host `std::vector` / `DataBuffer<CPUTag>`, device `DataBuffer<CUDATag>` / `DataBuffer<HIPTag>`). The same read/write contracts apply to both backends.
+**Verification**: `FieldView<T>` is backend-agnostic, working with any contiguous storage (host `std::vector` / `DataBuffer<CPUTag>`, device `DataBuffer<CUDATag>` / `DataBuffer<HIPTag>`). The same read/write contracts apply to both backends.
 
 **Example**:
 ```cpp
@@ -191,7 +193,7 @@ validate_backend_compatibility<double, CPUBackendTag, CUDABackendTag>(field1, fi
 - Specializations can add runtime checks for device ID compatibility, stream compatibility, etc.
 - The generic interface remains the same, ensuring semantic equivalence across backends
 
-**Note**: FieldView<T> is intentionally backend-agnostic (const T* + geometry metadata) to allow single header usage across CPU and GPU backends. Backend tags are provided by the calling code, not extracted from FieldView, enabling compile-time enforcement without virtual dispatch.
+**Note**: `FieldView<T>` is intentionally backend-agnostic (const T* + geometry metadata) to allow single header usage across CPU and GPU backends. Backend tags are provided by the calling code, not extracted from FieldView, enabling compile-time enforcement without virtual dispatch.
 
 ## Workspace Storage Requirements
 
@@ -201,7 +203,7 @@ validate_backend_compatibility<double, CPUBackendTag, CUDABackendTag>(field1, fi
 - **Lifetime options**: Per-method-object, per-step, or pooled lifetime
 - **Not exposed to models or drivers**: Workspace is internal to integrators
 
-**Verification**: Workspace<T> class owns all storage (stage buffers and scratch buffer). Storage is allocated in constructor and freed in destructor. No access to workspace storage is provided outside the integrator.
+**Verification**: `Workspace<T>` class owns all storage (stage buffers and scratch buffer). Storage is allocated in constructor and freed in destructor. No access to workspace storage is provided outside the integrator.
 
 **Example**:
 ```cpp
@@ -221,7 +223,7 @@ auto& scratch = workspace.scratch();
 - **Reused across steps**: Avoids allocation overhead
 - **Size matches field dimensions**: Stage buffers sized to field extents
 
-**Verification**: Workspace<T>::stage() returns a bounds-checked `std::vector<T>&` for each pre-allocated stage. Stage count and size are fixed at construction time.
+**Verification**: `Workspace<T>`::stage() returns a bounds-checked `std::vector<T>&` for each pre-allocated stage. Stage count and size are fixed at construction time.
 
 ### Scratch Buffers
 
@@ -229,7 +231,7 @@ auto& scratch = workspace.scratch();
 - **Cleared/reclaimed between uses**: No persistent state across steps
 - **Lifetime**: Managed by integrator, not exposed externally
 
-**Verification**: Workspace<T>::scratch() returns the scratch `std::vector<T>&`. Workspace<T>::clear() / `reset()` zero all buffers.
+**Verification**: `Workspace<T>`::scratch() returns the scratch `std::vector<T>&`. `Workspace<T>`::clear() / `reset()` zero all buffers.
 
 ## MPI Coordination Requirements
 
@@ -271,12 +273,12 @@ if (ctx.needs_halo_exchange) {
 
 | Requirement | Verification Method | Location |
 |-------------|-------------------|----------|
-| Const input semantics | FieldView<T>::data() const | state_access.hpp |
-| Mutable output semantics | FieldOutput<T>::data() non-const | state_access.hpp |
+| Const input semantics | `FieldView<T>`::data() const | state_access.hpp |
+| Mutable output semantics | `FieldOutput<T>`::data() non-const | state_access.hpp |
 | Aliasing detection | validate_no_alias() pointer comparison | validation.hpp |
 | Shape compatibility | validate_shape_compatibility() structural check | validation.hpp |
 | Backend compatibility | validate_backend_compatibility() static_assert | validation.hpp |
-| Workspace ownership | Workspace<T> private member variables | workspace.hpp |
+| Workspace ownership | `Workspace<T>` private member variables | workspace.hpp |
 | Stage context coordination | StageContext struct fields | stage_context.hpp |
 
 All verification is performed at compile time (static_assert, type system) or at binding time (validation functions called once during construction/binding), ensuring no per-evaluation overhead.
