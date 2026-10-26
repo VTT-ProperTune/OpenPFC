@@ -751,6 +751,17 @@
       ]
     },
     {
+      "target": "symbolic_coupled_rhs",
+      "source": "coupling/symbolic-rhs/model.cpp",
+      "chapter": "coupling/symbolic-rhs/index.qmd",
+      "capabilities": [
+        "symbolic-rhs",
+        "common-subexpressions",
+        "fixed-tuple-scatter",
+        "manufactured-source"
+      ]
+    },
+    {
       "target": "taylor_green3d",
       "source": "taylor_green3d/src/taylor_green.cpp",
       "chapter": null,
@@ -825,8 +836,8 @@
       "chapter": "geometry/first-domain/index.qmd"
     },
     {
-      "source": "symbolic_rhs/generate.py",
-      "chapter": null
+      "source": "coupling/symbolic-rhs/generate.py",
+      "chapter": "coupling/symbolic-rhs/index.qmd"
     }
   ],
   "book": [
@@ -1192,7 +1203,8 @@
       ],
       "chapters": [
         "coupling/runtime-fields/index.qmd",
-        "coupling/fixed-tuples/index.qmd"
+        "coupling/fixed-tuples/index.qmd",
+        "coupling/symbolic-rhs/index.qmd"
       ]
     },
     {

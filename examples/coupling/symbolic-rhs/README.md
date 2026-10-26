@@ -31,9 +31,9 @@ Generate with Python 3.9 or newer:
 
 ```sh
 python3 -m venv /path/outside/checkout/generation-env
-/path/outside/checkout/generation-env/bin/pip install -r examples/symbolic_rhs/requirements.txt
-/path/outside/checkout/generation-env/bin/python examples/symbolic_rhs/generate.py
-/path/outside/checkout/generation-env/bin/python examples/symbolic_rhs/generate.py --check
+/path/outside/checkout/generation-env/bin/pip install -r examples/coupling/symbolic-rhs/requirements.txt
+/path/outside/checkout/generation-env/bin/python examples/coupling/symbolic-rhs/generate.py
+/path/outside/checkout/generation-env/bin/python examples/coupling/symbolic-rhs/generate.py --check
 ```
 
 SymPy 1.14.0 and mpmath 1.3.0 are pinned generation dependencies. C++

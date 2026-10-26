@@ -37,6 +37,8 @@ def stage(site: Path) -> None:
         files.update(chapter.parent.glob("*.cpp"))
         files.update(chapter.parent.glob("*.json"))
         files.update(chapter.parent.glob("*.toml"))
+        files.update(chapter.parent.glob("*.py"))
+        files.update(chapter.parent.glob("requirements.txt"))
         for suffix in ("*.hpp", "*.h"):
             files.update(chapter.parent.glob(suffix))
             files.update(chapter.parent.parent.glob(suffix))
@@ -70,6 +72,8 @@ def stage(site: Path) -> None:
     - learn/**/*.h
     - learn/**/*.json
     - learn/**/*.toml
+    - learn/**/*.py
+    - learn/**/requirements.txt
 execute:
   enabled: false
 """)

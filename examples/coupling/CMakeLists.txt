@@ -10,3 +10,7 @@ target_link_libraries(runtime_coupled_fields PRIVATE OpenPFC::openpfc nlohmann_j
 set_target_properties(runtime_coupled_fields PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
 
 add_subdirectory(fixed-tuples)
+
+add_executable(symbolic_coupled_rhs symbolic-rhs/model.cpp)
+target_link_libraries(symbolic_coupled_rhs PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(symbolic_coupled_rhs PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")

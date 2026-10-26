@@ -66,10 +66,10 @@ SPDX-FileCopyrightText = "2026 VTT Technical Research Centre of Finland Ltd"
 SPDX-License-Identifier = "AGPL-3.0-or-later"
 
 
-# Written byte-for-byte by examples/symbolic_rhs/generate.py and compared by
+# Written byte-for-byte by examples/coupling/symbolic-rhs/generate.py and compared by
 # its --check mode, so the JSON cannot carry an inline header.
 [[annotations]]
-path = ["examples/symbolic_rhs/dependency_manifest.json"]
+path = ["examples/coupling/symbolic-rhs/dependency_manifest.json"]
 SPDX-FileCopyrightText = "2026 VTT Technical Research Centre of Finland Ltd"
 SPDX-License-Identifier = "AGPL-3.0-or-later"
 

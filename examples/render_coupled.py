@@ -99,12 +99,71 @@ def coupled(runs, output):
     save_svg(figure, output / "coupling/fixed-tuples/figures/coupled.svg")
 
 
+def symbolic(runs, output):
+    forced, homogeneous = line(rows(runs / "forced")), line(rows(runs / "homogeneous"))
+    assert len(forced) == len(homogeneous)
+    figure, axes = plt.subplots(2, 1, figsize=(6.5, 6.5), layout="constrained")
+    x = [float(row["x"]) for row in forced]
+    for key, color, label, marker in (
+        ("du", "#286b83", "u rate", "o"),
+        ("dv", "#ab5137", "v rate", "x"),
+    ):
+        axes[0].plot(
+            x,
+            [float(row[key]) for row in homogeneous],
+            "--",
+            color=color,
+            alpha=0.65,
+            label=label + ", r = 0",
+        )
+        axes[0].plot(
+            x,
+            [float(row[key]) for row in forced],
+            marker=marker,
+            markersize=4,
+            color=color,
+            label=label + ", r = 0.1",
+        )
+        axes[1].plot(
+            x,
+            [float(a[key]) - float(b[key]) for a, b in zip(forced, homogeneous)],
+            marker=marker,
+            markersize=5,
+            linestyle="none",
+            color=color,
+            label="Change in " + key,
+        )
+    # An analytic comparator for the difference, not a substitute for C++ data.
+    axes[1].plot(
+        x, [0.1 * 0.75 * q for q in x], "-", color=".5", linewidth=1, label="r t x"
+    )
+    axes[0].set(
+        title="Evaluate the generated law, with and without its source",
+        ylabel="Rate at t = 0.75",
+    )
+    axes[1].set(
+        title="Both outputs receive the same explicit source",
+        ylabel="Forced rate − homogeneous rate",
+    )
+    for ax in axes:
+        ax.set_xlabel("x at y = z = 0")
+        ax.grid(alpha=0.15)
+        ax.legend(fontsize=9, ncol=2 if ax is axes[0] else 1)
+    save_svg(figure, output / "coupling/symbolic-rhs/figures/symbolic.svg")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--coupled", type=Path, required=True)
+    parser.add_argument("--coupled", type=Path)
+    parser.add_argument("--symbolic", type=Path)
     parser.add_argument("--output", type=Path, default=Path(__file__).resolve().parent)
     args = parser.parse_args()
-    coupled(args.coupled, args.output)
+    if not args.coupled and not args.symbolic:
+        parser.error("provide --coupled and/or --symbolic run directories")
+    if args.coupled:
+        coupled(args.coupled, args.output)
+    if args.symbolic:
+        symbolic(args.symbolic, args.output)
 
 
 if __name__ == "__main__":

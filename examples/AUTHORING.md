@@ -443,3 +443,24 @@ the `j=k=0` line of the FD24 snapshot; the continuous rates come from the
 known mode, not from a separate Python PDE solver. `--spectral` requires a
 HeFFTe-enabled CPU build. The preserved allocation/stage regression is a
 separate test executable, so the downloadable model stays readable.
+
+## Bounded symbolic generation
+
+Run the generated-law consumer through its independent checker, then draw
+its native rates and forcing differences:
+
+```sh
+python examples/check_symbolic.py --bin-dir builds/release/examples \
+  --output results/example-checks
+uv run --with matplotlib==3.11.2 python examples/render_coupled.py \
+  --symbolic results/example-checks/symbolic
+uv run --with sympy==1.14.0 --with mpmath==1.3.0 --with pytest==8.4.2 \
+  python -m pytest scripts/tests/test_symbolic_rhs.py
+```
+
+The last command actually invokes the generator twice with different hash
+seeds, checks committed bytes and reconstructs its reduced expressions.
+The moved header and dependency manifest retain their previous bytes.
+Website staging includes chapter-owned `.py` files and `requirements.txt`
+so the generation instructions also work from downloaded sources; it does
+not import repository-wide checkers or execute Python during rendering.

@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Teach bounded symbolic RHS generation through a runnable C++ consumer,
+  with generator downloads, deterministic artifacts and independent rate checks.
+
 - Turn the coupled-field demonstrator into a configurable Quarto lesson with
   complete FD6/spectral rate data, preserving stage, scatter and HIP regressions.
 

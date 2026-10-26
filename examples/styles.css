@@ -46,3 +46,6 @@
   overflow-y: hidden;
   padding-block: .2rem;
 }
+
+/* Scientific references may contain URLs longer than a phone line. */
+.openpfc-lessons .csl-entry { overflow-wrap: anywhere; }

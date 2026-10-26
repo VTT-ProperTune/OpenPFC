@@ -16,8 +16,8 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 [Follow what is taught, what is adapted, and what still needs a chapter.]{.lesson-deck}
 :::
 
-There are 82 declared runnable example targets and
-73 Quarto teaching chapters. The table includes older programs
+There are 83 declared runnable example targets and
+74 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -152,6 +152,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `square_laplace` | [Read the lesson](polynomials/laplace-square/index.qmd) |
 | `square_poisson` | [Read the lesson](polynomials/poisson-square/index.qmd) |
 | `stability_regions` | [Read the lesson](integration/stability/index.qmd) |
+| `symbolic_coupled_rhs` | [Read the lesson](coupling/symbolic-rhs/index.qmd) |
 | `taylor_green3d` | Pending conversion. |
 | `time` | [Read the lesson](integration/output-clock/index.qmd) |
 | `variable_transport` | [Read the lesson](waves/variable-transport/index.qmd) |
@@ -163,7 +164,7 @@ remain in the inventory while applicability and implementation are assessed.
 ## Additional sources
 
 - `geometry/first-domain/model.cpp`: [Read the lesson](geometry/first-domain/index.qmd)
-- `symbolic_rhs/generate.py`: Pending conversion.
+- `coupling/symbolic-rhs/generate.py`: [Read the lesson](coupling/symbolic-rhs/index.qmd)
 
 ## Capability coverage
 
@@ -180,7 +181,7 @@ fixed-step restart does not establish an adaptive restart contract.
 | finite differences and spectral gradients | [periodic](differentiation/periodic/index.qmd), [smoothness](differentiation/smoothness/index.qmd), [stencils](differentiation/stencils/index.qmd) |
 | conservative fluxes and nonperiodic boundaries | Pending a teaching chapter. |
 | fixed and adaptive integration | [finite-differences](heat/finite-differences/index.qmd), [stability](integration/stability/index.qmd), [adaptive-rk](integration/adaptive-rk/index.qmd), [output-clock](integration/output-clock/index.qmd) |
-| multi-field runtime integration | [runtime-fields](coupling/runtime-fields/index.qmd), [fixed-tuples](coupling/fixed-tuples/index.qmd) |
+| multi-field runtime integration | [runtime-fields](coupling/runtime-fields/index.qmd), [fixed-tuples](coupling/fixed-tuples/index.qmd), [symbolic-rhs](coupling/symbolic-rhs/index.qmd) |
 | exponential and adaptive ETD | [exponential](heat/exponential/index.qmd), [adaptive-etd](integration/adaptive-etd/index.qmd) |
 | initial conditions and modifiers | [coordinate-fields](geometry/coordinate-fields/index.qmd), [patterns](initialization/patterns/index.qmd), [catalog](initialization/catalog/index.qmd) |
 | JSON/TOML validation and application sessions | [session](configuration/session/index.qmd), [catalog](initialization/catalog/index.qmd) |

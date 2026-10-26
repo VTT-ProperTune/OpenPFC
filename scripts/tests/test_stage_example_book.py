@@ -31,9 +31,12 @@ def test_stage_preserves_site_and_imports_runnable_sources(tmp_path):
     assert "learn/coverage.qmd" in (tmp_path / "_quarto-examples.yml").read_text()
     for chapter in (ROOT / "examples").glob("*/*/index.qmd"):
         downloads = [*chapter.parent.glob("*.json"), *chapter.parent.glob("*.toml"),
-                     *chapter.parent.glob("*.hpp"), *chapter.parent.parent.glob("*.hpp")]
+                     *chapter.parent.glob("*.hpp"), *chapter.parent.parent.glob("*.hpp"),
+                     *chapter.parent.glob("*.py"), *chapter.parent.glob("requirements.txt")]
         for source in downloads:
             assert (tmp_path / "learn" / source.relative_to(ROOT / "examples")).read_bytes() == source.read_bytes()
+    assert "learn/**/*.py" in (tmp_path / "_quarto-examples.yml").read_text()
+    assert "learn/**/requirements.txt" in (tmp_path / "_quarto-examples.yml").read_text()
     assert "learn/**/*.toml" in (tmp_path / "_quarto-examples.yml").read_text()
 
 

@@ -11,7 +11,7 @@ import sys
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE = ROOT / "examples" / "symbolic_rhs"
+SOURCE = ROOT / "examples" / "coupling" / "symbolic-rhs"
 
 
 def load_generator():

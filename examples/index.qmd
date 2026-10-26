@@ -62,6 +62,8 @@ by normalizing a Sobel kernel and checking its polynomial moments.
 
 Compose [two derivative requests in one sweep](coupling/fixed-tuples/index.qmd)
 and use an exact coupled mode to distinguish spatial error from stage errors.
+Then [generate a small pointwise law](coupling/symbolic-rhs/index.qmd),
+inspect its shared expression, and verify its explicit source.
 
 ## Make your first change
 
