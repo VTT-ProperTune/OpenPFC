@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Locate native CLI resources on macOS, including invocation through a symlink
+  outside the installation prefix.
+
 - Correct FFTW real-transform planning in fetched HeFFTe 2.4.1 and document
   rebuilding installed providers; cover both precisions against a direct DFT.
 

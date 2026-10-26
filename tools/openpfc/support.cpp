@@ -3,6 +3,7 @@
 #include "cli.hpp"
 #include <array>
 #include <cerrno>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
@@ -17,6 +18,10 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
 
 namespace openpfc_cli {
 bool Arguments::has(const std::string &key) const { return options.contains(key); }
@@ -97,7 +102,22 @@ std::string env(const std::string &name) {
 fs::path absolute_path(const fs::path &path) {
   return fs::absolute(path).lexically_normal();
 }
-fs::path executable() { return fs::read_symlink("/proc/self/exe"); }
+fs::path executable() {
+#ifdef __APPLE__
+  std::uint32_t size = 256;
+  std::vector<char> path(size);
+  if (_NSGetExecutablePath(path.data(), &size) != 0) {
+    path.resize(size);
+    if (_NSGetExecutablePath(path.data(), &size) != 0)
+      throw Error("cannot locate the native executable");
+  }
+  // dyld may return a symlink or a path containing '..'. Resources belong to
+  // the real executable prefix, independently of the caller's PATH and cwd.
+  return fs::canonical(path.data());
+#else
+  return fs::read_symlink("/proc/self/exe");
+#endif
+}
 fs::path prefix() { return executable().parent_path().parent_path(); }
 fs::path checkout(const Arguments &args) {
   auto selected = args.get("source", env("OPENPFC_SOURCE_DIR"));

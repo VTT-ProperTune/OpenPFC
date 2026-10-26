@@ -8,9 +8,47 @@ function(call expected)
   set(output "${out}" PARENT_SCOPE)
   set(error "${err}" PARENT_SCOPE)
 endfunction()
+find_program(true_program NAMES true PATHS /bin /usr/bin NO_DEFAULT_PATH REQUIRED)
 string(RANDOM LENGTH 12 id)
 set(root "${build}/cli-cases-${id}")
 file(MAKE_DIRECTORY "${root}")
+# Locate resources beside the real executable when invoked through a PATH
+# alias outside its prefix, from another working directory.
+set(alias_directory "${root}/PATH with spaces ü")
+file(MAKE_DIRECTORY "${alias_directory}")
+file(CREATE_LINK "${cli}" "${alias_directory}/openpfc-alias" SYMBOLIC)
+execute_process(COMMAND "${CMAKE_COMMAND}" -E env
+  "PATH=${alias_directory}:$ENV{PATH}" openpfc-alias init
+  "${root}/aliased model" --model=diffusion
+  WORKING_DIRECTORY "${root}"
+  RESULT_VARIABLE code OUTPUT_VARIABLE out ERROR_VARIABLE err)
+if(NOT code EQUAL 0 OR NOT EXISTS "${root}/aliased model/model.cpp")
+  message(FATAL_ERROR "PATH alias did not locate starter resources: ${out}\n${err}")
+endif()
+# A relocated executable path longer than the initial dyld buffer must discover
+# its own templates, rather than falling back to the original build prefix.
+set(deep_prefix "${root}")
+foreach(index RANGE 1 7)
+  string(APPEND deep_prefix "/a long installation directory with spaces ${index}")
+endforeach()
+file(MAKE_DIRECTORY "${deep_prefix}/bin" "${deep_prefix}/share/openpfc/templates")
+file(COPY "${cli}" DESTINATION "${deep_prefix}/bin")
+file(COPY "${build}/share/openpfc/templates/diffusion"
+  DESTINATION "${deep_prefix}/share/openpfc/templates")
+file(APPEND "${deep_prefix}/share/openpfc/templates/diffusion/README.md"
+  "\nTemplate from the relocated prefix.\n")
+get_filename_component(cli_name "${cli}" NAME)
+execute_process(COMMAND "${deep_prefix}/bin/${cli_name}" init
+  "${root}/relocated model" --model=diffusion
+  WORKING_DIRECTORY "${root}"
+  RESULT_VARIABLE code OUTPUT_VARIABLE out ERROR_VARIABLE err)
+if(NOT code EQUAL 0)
+  message(FATAL_ERROR "Long relocated executable failed: ${out}\n${err}")
+endif()
+file(READ "${root}/relocated model/README.md" relocated_readme)
+if(NOT relocated_readme MATCHES "Template from the relocated prefix")
+  message(FATAL_ERROR "Relocated CLI used templates from another prefix")
+endif()
 call(0 init "${root}/nested/parent/new case")
 call(0 --version)
 if(NOT output MATCHES "OpenPFC [0-9]+\\.[0-9]+\\.[0-9]+")
@@ -96,17 +134,17 @@ endforeach()
 set(case "${root}/tungsten-smoke with spaces ü")
 call(2 run "${case}" --ranks=0)
 call(2 run "${case}" --executable=/does/not/exist)
-call(0 run "${case}" --executable=/bin/true --dry-run --ranks=2 --launcher=mpirun)
+call(0 run "${case}" "--executable=${true_program}" --dry-run --ranks=2 --launcher=mpirun)
 if(NOT output MATCHES "mpirun" OR NOT output MATCHES "\"2\"")
   message(FATAL_ERROR "Incorrect launcher arguments: ${output}")
 endif()
 foreach(rank OMPI_COMM_WORLD_RANK PMI_RANK PMIX_RANK SLURM_PROCID)
   set(ENV{${rank}} 0)
-  call(0 run "${case}" --executable=/bin/true --dry-run)
+  call(0 run "${case}" "--executable=${true_program}" --dry-run)
   if(output MATCHES "mpirun|srun")
     message(FATAL_ERROR "Nested MPI launcher: ${output}")
   endif()
-  call(2 run "${case}" --executable=/bin/true --ranks=2)
+  call(2 run "${case}" "--executable=${true_program}" --ranks=2)
   unset(ENV{${rank}})
 endforeach()
 set(fake "${root}/fake app")
@@ -131,7 +169,7 @@ foreach(profile local tohtori lumi)
     set(flag --with-rocm)
   endif()
   file(WRITE "${root}/source/scripts/build.sh"
-    "printf '%s\\n' \"$@\" > arguments.txt\nfor arg in \"$@\"; do\ncase \"$arg\" in --build-dir=*) cli_build=\"\${arg#*=}\";; esac\ndone\nmkdir -p \"$cli_build/apps/tungsten\"\ncp /bin/true \"$cli_build/apps/tungsten/${binary}\"\n")
+    "printf '%s\\n' \"$@\" > arguments.txt\nfor arg in \"$@\"; do\ncase \"$arg\" in --build-dir=*) cli_build=\"\${arg#*=}\";; esac\ndone\nmkdir -p \"$cli_build/apps/tungsten\"\ncp \"${true_program}\" \"$cli_build/apps/tungsten/${binary}\"\n")
   call(0 compile "${case}" "--profile=${profile}" --source "${root}/source"
     --build-dir "${root}/case-build" --jobs=2)
   file(READ "${root}/source/arguments.txt" arguments)

@@ -6,6 +6,7 @@ function(check)
     message(FATAL_ERROR "Native model check failed (${code}): ${out}\n${err}")
   endif()
 endfunction()
+find_program(true_program NAMES true PATHS /bin /usr/bin NO_DEFAULT_PATH REQUIRED)
 function(cli_call expected)
   execute_process(COMMAND "${cli}" ${ARGN} WORKING_DIRECTORY "${root}"
     RESULT_VARIABLE code OUTPUT_VARIABLE out ERROR_VARIABLE err)
@@ -42,7 +43,9 @@ endif()
 # this restricted PATH; CMake, compiler, binutils and MPI stay pre-provisioned.
 # Open MPI 4 validates its ssh/rsh agent even for a local two-rank launch.
 file(MAKE_DIRECTORY "${root}/native-tools")
-foreach(program cmake ninja make gcc g++ cc c++ as ld ar ranlib strip pkg-config mpicc mpicxx mpiexec mpirun ssh rsh uname)
+foreach(program cmake ninja make gcc g++ cc c++ clang clang++ as ld ar ranlib strip
+    pkg-config mpicc mpicxx mpiexec mpirun ssh rsh uname
+    xcrun sw_vers vm_stat ps sysctl)
   unset(found CACHE)
   find_program(found "${program}")
   if(found)
@@ -55,7 +58,7 @@ foreach(rank OMPI_COMM_WORLD_RANK PMI_RANK PMIX_RANK SLURM_PROCID SLURM_JOB_ID)
 endforeach()
 cli_call(0 --version)
 cli_call(0 init "${root}/installed case")
-cli_call(0 run "${root}/installed case" --launcher=none --executable=/bin/true)
+cli_call(0 run "${root}/installed case" --launcher=none "--executable=${true_program}")
 # A complete model owns its JSON interpretation and writes only to results/.
 set(project "${root}/project with spaces ü ' $(touch should-not-exist)")
 file(MAKE_DIRECTORY "${project}")
