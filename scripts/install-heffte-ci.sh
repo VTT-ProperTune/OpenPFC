@@ -11,20 +11,27 @@ fi
 
 build_type=$1
 build_dir=$2
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 heffte_version=2.4.1
-archive="/tmp/heffte-v${heffte_version}.tar.gz"
-source_dir="/tmp/heffte-${heffte_version}"
+# Match the immutable source and correction used by cmake/FetchHeffte.cmake.
+heffte_revision=6e16996e5a3eb65c60fd62fd4d93c4b2df833033
+archive_sha256=543cc06336140d6eddbc7a0955fe795bf400440578131121fb7b03ca4922fba6
+work_dir="$(mktemp -d "${TMPDIR:-/tmp}/openpfc-heffte-ci.XXXXXX")"
+archive="${work_dir}/heffte.tar.gz"
+source_dir="${work_dir}/heffte-${heffte_revision}"
 install_prefix="${HEFFTE_INSTALL_PREFIX:-$HOME/opt/heffte/${heffte_version}-cpu}"
 
 cleanup() {
-  rm -rf "${build_dir}" "${archive}" "${source_dir}"
+  rm -rf "${build_dir}" "${work_dir}"
 }
 trap cleanup EXIT
 
-cleanup
+rm -rf "${build_dir}"
 wget -q -O "${archive}" \
-  "https://github.com/icl-utk-edu/heffte/archive/refs/tags/v${heffte_version}.tar.gz"
-tar xzf "${archive}" -C /tmp
+  "https://codeload.github.com/icl-utk-edu/heffte/tar.gz/${heffte_revision}"
+printf '%s  %s\n' "${archive_sha256}" "${archive}" | sha256sum --check -
+tar xzf "${archive}" -C "${work_dir}"
+cmake "-DSOURCE_DIR=${source_dir}" -P "${script_dir}/../cmake/PatchHeffteFftw.cmake"
 
 # When OPENPFC_CI_HEFFTE_ADDRESS_SANITIZER=1, build HeFFTe with AddressSanitizer
 # so it matches OpenPFC configured with -DOpenPFC_ENABLE_ADDRESS_SANITIZER=ON.

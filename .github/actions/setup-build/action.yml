@@ -71,7 +71,7 @@ runs:
       uses: actions/cache@v5
       with:
         path: ~/opt/heffte/2.4.1-cpu
-        key: heffte-2.4.1-cpu-${{ inputs.os }}-${{ inputs.cc }}-${{ inputs.mpi }}-${{ inputs.build-type }}-${{ hashFiles('scripts/install-heffte-ci.sh') }}
+        key: heffte-2.4.1-cpu-${{ inputs.os }}-${{ inputs.cc }}-${{ inputs.mpi }}-${{ inputs.build-type }}-${{ hashFiles('scripts/install-heffte-ci.sh', 'cmake/PatchHeffteFftw.cmake', 'cmake/patches/heffte-2.4.1-fftw-plans.patch') }}
 
     - name: Build and install HeFFTe
       if: inputs.heffte == 'true' && steps.cache.outputs.cache-hit != 'true'

@@ -64,6 +64,9 @@ PRs have no C++ build/test job; `docs.yml` renders changed documentation.
 
 Host jobs set up through `.github/actions/setup-build` (apt packages and the
 cached HeFFTe build).
+The installed CI provider uses the same pinned HeFFTe source and FFTW planning
+correction as `cmake/FetchHeffte.cmake`. The cache key covers the installer,
+patch helper and patch, so an older uncorrected provider cannot be restored.
 
 ### `compatibility.yml` - Monthly compatibility matrix
 
