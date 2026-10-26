@@ -6,6 +6,10 @@
 #include <mpi.h>
 #include <string>
 
+#if defined(__linux__) || defined(__APPLE__)
+#include <dlfcn.h>
+#endif
+
 #ifdef OPENPFC_SDK_LINK_PROBE
 #include <openpfc/kernel/utils/logging.hpp>
 #endif
@@ -27,6 +31,23 @@ static void field(const char *key, const std::string &value) {
     }
   }
   std::cout << '"';
+}
+
+// MPI may be linked implicitly by a site compiler wrapper. Version labels
+// cannot identify that library; inspect the module providing the real symbol.
+static std::string loaded_mpi_library() {
+#if defined(__linux__) || defined(__APPLE__)
+  Dl_info mpi{}, executable{};
+  // Taking a function's address can resolve to the executable's PLT stub in
+  // non-PIE builds. The loader lookup identifies the providing shared object.
+  const void *symbol = dlsym(RTLD_DEFAULT, "MPI_Get_library_version");
+  if (symbol && dladdr(symbol, &mpi) &&
+      dladdr(reinterpret_cast<const void *>(&field), &executable) &&
+      mpi.dli_fbase != executable.dli_fbase && mpi.dli_fname)
+    return mpi.dli_fname;
+#endif
+  // Static MPI or an unsupported loader still needs explicit link-file evidence.
+  return "unknown";
 }
 
 int main() {
@@ -95,5 +116,7 @@ int main() {
   std::cout << ',';
   field("mpi_library_version",
         std::string(version, static_cast<std::size_t>(length)));
+  std::cout << ',';
+  field("mpi_library_path", loaded_mpi_library());
   std::cout << "}\n";
 }

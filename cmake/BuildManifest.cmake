@@ -115,7 +115,6 @@ while(_queue)
   endforeach()
 endwhile()
 
-_openpfc_mpi_library_evidence(_mpi_libraries)
 _openpfc_manifest_variables(_mpi MPI_C_COMPILER MPI_CXX_COMPILER MPI_C_VERSION
   MPI_CXX_VERSION MPI_C_COMPILE_OPTIONS MPI_CXX_COMPILE_OPTIONS
   MPI_C_COMPILE_DEFINITIONS MPI_CXX_COMPILE_DEFINITIONS MPI_C_INCLUDE_DIRS
@@ -123,7 +122,6 @@ _openpfc_manifest_variables(_mpi MPI_C_COMPILER MPI_CXX_COMPILER MPI_C_VERSION
   MPI_CXX_LIBRARIES OpenPFC_MPI_CUDA_AWARE OpenPFC_MPI_HIP_AWARE
   OPENPFC_OMPI_CUDA_MPI_AWARE_OK OPENPFC_GPU_AWARE_MPI_CUDA_PROBE_SKIPPED
   OPENPFC_MPIX_QUERY_CUDA_SUPPORT_COMPILES)
-string(JSON _mpi SET "${_mpi}" libraries "${_mpi_libraries}")
 foreach(_backend CUDA HIP)
   if(OpenPFC_SDK_${_backend} AND OpenPFC_MPI_${_backend}_AWARE)
     string(JSON _mpi SET "${_mpi}" "${_backend}_device_buffers" true)
@@ -248,6 +246,8 @@ endif()
 foreach(_configuration IN LISTS OpenPFC_BUILD_CONFIGURATIONS)
   string(TOUPPER "${_configuration}" _upper)
   _openpfc_sdk_probe(_host_probe _probe_status "${_configuration}" _OpenPFC_SDKHostContext)
+  _openpfc_mpi_library_evidence(_mpi_libraries "${_host_probe}")
+  string(JSON _mpi SET "${_mpi}" libraries "${_mpi_libraries}")
   if(_probe_status STREQUAL "compiled-linked-ran")
     string(JSON _stdlib GET "${_host_probe}" stdlib)
     if(_stdlib STREQUAL "libstdc++")

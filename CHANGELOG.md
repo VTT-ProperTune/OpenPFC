@@ -16,6 +16,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - Keep MPI test case ordering and default random seeds consistent across ranks,
   including application and device test runners, with Catch2 3.16 and older.
 
+- Verify implicitly linked MPI libraries through the SDK probe's loaded symbol,
+  and preserve versioned compiler drivers in Python-free native CLI checks.
+
 - Write shared boundary points in parallel VTK pieces so the `.pvti` master
   assembles as one image, preserving sample geometry and seam-crossing cells.
 

@@ -22,7 +22,7 @@ function(_openpfc_sdk_probe out status configuration link_target)
     CMAKE_FLAGS "-DCMAKE_CXX_STANDARD=20" "-DCMAKE_CXX_STANDARD_REQUIRED=ON"
       "-DCMAKE_BUILD_TYPE=${configuration}"
     COMPILE_DEFINITIONS ${_definitions}
-    LINK_LIBRARIES ${link_target}
+    LINK_LIBRARIES ${link_target} ${CMAKE_DL_LIBS}
     COMPILE_OUTPUT_VARIABLE _compile_output
     RUN_OUTPUT_VARIABLE _output)
   string(JSON _type ERROR_VARIABLE _error TYPE "${_output}")
@@ -111,7 +111,7 @@ function(openpfc_check_compatibility)
       endif()
     endforeach()
     # Matching version labels alone cannot establish MPI library compatibility.
-    _openpfc_mpi_library_evidence(_consumer_libraries)
+    _openpfc_mpi_library_evidence(_consumer_libraries "${_consumer}")
     string(JSON _sdk_libraries GET "${_manifest}" mpi libraries)
     set(_unresolved FALSE)
     foreach(_side sdk consumer)
@@ -169,7 +169,34 @@ function(_openpfc_mpi_library_evidence out)
   set(_libraries ${MPI_CXX_LIBRARIES})
   if(TARGET MPI::MPI_CXX)
     get_target_property(_links MPI::MPI_CXX INTERFACE_LINK_LIBRARIES)
-    list(APPEND _libraries ${_links})
+    if(_links)
+      list(APPEND _libraries ${_links})
+    endif()
+  endif()
+  if(ARGC GREATER 1)
+    string(JSON _loaded ERROR_VARIABLE _error GET "${ARGV1}" mpi_library_path)
+    if(NOT _error AND NOT _loaded STREQUAL "unknown")
+      list(APPEND _libraries "${_loaded}")
+      if(IS_ABSOLUTE "${_loaded}" AND EXISTS "${_loaded}")
+        # FindMPI may list a wrapper's implicit dependencies explicitly in one
+        # project and leave them implicit in another. Resolve the same complete
+        # set on both sides; never replace file comparison with version labels.
+        foreach(_implicit IN LISTS CMAKE_CXX_IMPLICIT_LINK_LIBRARIES)
+          if(IS_ABSOLUTE "${_implicit}")
+            list(APPEND _libraries "${_implicit}")
+            continue()
+          endif()
+          unset(_implicit_file)
+          find_library(_implicit_file NAMES "${_implicit}"
+            PATHS ${CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES} NO_DEFAULT_PATH NO_CACHE)
+          if(_implicit_file)
+            list(APPEND _libraries "${_implicit_file}")
+          else()
+            list(APPEND _libraries "unresolved implicit library: ${_implicit}")
+          endif()
+        endforeach()
+      endif()
+    endif()
   endif()
   list(REMOVE_DUPLICATES _libraries)
   set(_evidence "[]")

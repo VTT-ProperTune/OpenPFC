@@ -43,9 +43,24 @@ endif()
 # this restricted PATH; CMake, compiler, binutils and MPI stay pre-provisioned.
 # Open MPI 4 validates its ssh/rsh agent even for a local two-rank launch.
 file(MAKE_DIRECTORY "${root}/native-tools")
-foreach(program cmake ninja make gcc g++ cc c++ clang clang++ as ld ar ranlib strip
+set(programs cmake ninja make gcc g++ cc c++ clang clang++ as ld ar ranlib strip
     pkg-config mpicc mpicxx mpiexec mpirun ssh rsh uname
     xcrun sw_vers vm_stat ps sysctl)
+# Site wrappers may exec a versioned native driver (for example g++-14).
+# Keep those real compiler dependencies while still excluding every Python.
+cmake_path(CONVERT "$ENV{PATH}" TO_CMAKE_PATH_LIST native_search_path)
+foreach(directory IN LISTS native_search_path)
+  file(GLOB drivers "${directory}/gcc-[0-9]*" "${directory}/g++-[0-9]*"
+    "${directory}/clang-[0-9]*" "${directory}/clang++-[0-9]*")
+  foreach(driver IN LISTS drivers)
+    get_filename_component(name "${driver}" NAME)
+    if(name MATCHES "^(gcc|g\\+\\+|clang|clang\\+\\+)-[0-9.]+$")
+      list(APPEND programs "${name}")
+    endif()
+  endforeach()
+endforeach()
+list(REMOVE_DUPLICATES programs)
+foreach(program IN LISTS programs)
   unset(found CACHE)
   find_program(found "${program}")
   if(found)
@@ -53,7 +68,9 @@ foreach(program cmake ninja make gcc g++ cc c++ clang clang++ as ld ar ranlib st
   endif()
 endforeach()
 set(ENV{PATH} "${root}/native-tools")
-foreach(rank OMPI_COMM_WORLD_RANK PMI_RANK PMIX_RANK SLURM_PROCID SLURM_JOB_ID)
+# The CLI is one orchestration process, but its MPI children still need the
+# active Slurm allocation (Cray's mpirun delegates to srun).
+foreach(rank OMPI_COMM_WORLD_RANK PMI_RANK PMIX_RANK SLURM_PROCID)
   unset(ENV{${rank}})
 endforeach()
 cli_call(0 --version)
