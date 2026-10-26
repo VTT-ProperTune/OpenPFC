@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Place the shared two-dimensional flow-example headers under `examples/flow/ns2d`
+  while preserving solver operations and existing executable/test contracts.
+
 - Preserve nested shared example-header paths in native Quarto downloads.
 
 - Connect the nonlinear Fourier course to a themed cubic-projection lesson,

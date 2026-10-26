@@ -10,7 +10,7 @@ It is a verification experiment for the spectral stack. Moving it to
 `apps/` is a separate decision under the
 [admission criteria](../../apps/README.md#what-belongs-here); a fixed
 application count is not why it stays here. Shared spectral pieces are
-`include/ns2d/spectral.hpp`. Navier–Stokes is
+`../flow/ns2d/spectral.hpp`. Navier–Stokes is
 `vorticity_stream.hpp` (#21/#22). Two-dimensional incompressible
 visco-resistive MHD is `mhd.hpp` (#23). This is **not** Strauss reduced
 MHD and it is **not** Cahn–Hilliard–Navier–Stokes.

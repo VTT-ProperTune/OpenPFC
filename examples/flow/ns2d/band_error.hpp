@@ -28,8 +28,8 @@
 
 #include <openpfc/kernel/fft/kspace_iterator.hpp>
 
-#include <ns2d/spectral.hpp>
-#include <ns2d/vorticity_stream.hpp>
+#include "spectral.hpp"
+#include "vorticity_stream.hpp"
 
 namespace ns2d {
 

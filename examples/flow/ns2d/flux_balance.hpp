@@ -14,7 +14,7 @@
  * values.
  */
 
-#include <ns2d/spectral.hpp>
+#include "spectral.hpp"
 
 #include <cmath>
 #include <complex>

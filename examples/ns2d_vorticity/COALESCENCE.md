@@ -91,7 +91,7 @@ This is not $\phi\propto a$ (which stagnates at the O-points) and
 not a single Fourier mode (which only translates the lattice). The
 shape and amplitude are frozen during Stage 0 and are **not**
 retuned with $\eta$. Constants live in
-`include/ns2d/mhd_cases.hpp` as `coalescence_abar` and
+`../flow/ns2d/mhd_cases.hpp` as `coalescence_abar` and
 `coalescence_eps`.
 
 Stage-0 parameters: $\nu=\eta=0.01$, $P_m=1$.

@@ -15,26 +15,26 @@ endif()
 
 add_executable(ns2d_vorticity src/ns2d.cpp)
 target_include_directories(ns2d_vorticity PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/include)
+  ${CMAKE_CURRENT_SOURCE_DIR}/../flow)
 target_link_libraries(ns2d_vorticity PRIVATE OpenPFC ${_ns2d_heffte_tgt})
 
 add_executable(ns2d_spatial_refine src/spatial_refine.cpp)
 target_include_directories(ns2d_spatial_refine PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/include)
+  ${CMAKE_CURRENT_SOURCE_DIR}/../flow)
 target_link_libraries(ns2d_spatial_refine PRIVATE OpenPFC ${_ns2d_heffte_tgt})
 
 add_executable(ns2d_temporal_refine src/temporal_refine.cpp)
 target_include_directories(ns2d_temporal_refine PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/include)
+  ${CMAKE_CURRENT_SOURCE_DIR}/../flow)
 target_link_libraries(ns2d_temporal_refine PRIVATE OpenPFC ${_ns2d_heffte_tgt})
 
 add_executable(ns2d_flux_balance src/flux_balance.cpp)
 target_include_directories(ns2d_flux_balance PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/include)
+  ${CMAKE_CURRENT_SOURCE_DIR}/../flow)
 target_link_libraries(ns2d_flux_balance PRIVATE OpenPFC ${_ns2d_heffte_tgt})
 
 add_executable(mhd2d src/mhd.cpp)
-target_include_directories(mhd2d PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(mhd2d PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../flow)
 target_link_libraries(mhd2d PRIVATE OpenPFC ${_ns2d_heffte_tgt})
 
 if(OpenPFC_BUILD_TESTS)
@@ -105,7 +105,7 @@ endif()
 if(OpenPFC_BUILD_TESTS AND TARGET Catch2::Catch2)
   add_executable(test_ns2d_vorticity tests/test_ns2d.cpp)
   target_include_directories(test_ns2d_vorticity PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    ${CMAKE_CURRENT_SOURCE_DIR}/../flow)
   target_link_libraries(test_ns2d_vorticity PRIVATE OpenPFC Catch2::Catch2
                         ${_ns2d_heffte_tgt})
   add_test(NAME ns2d-vorticity-cpu COMMAND test_ns2d_vorticity)
@@ -113,7 +113,7 @@ if(OpenPFC_BUILD_TESTS AND TARGET Catch2::Catch2)
 
   add_executable(test_mhd2d tests/test_mhd.cpp)
   target_include_directories(test_mhd2d PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    ${CMAKE_CURRENT_SOURCE_DIR}/../flow)
   target_link_libraries(test_mhd2d PRIVATE OpenPFC Catch2::Catch2
                         ${_ns2d_heffte_tgt})
   add_test(NAME mhd2d-cpu COMMAND test_mhd2d)

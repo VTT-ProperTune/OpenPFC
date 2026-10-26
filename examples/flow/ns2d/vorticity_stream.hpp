@@ -25,7 +25,7 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 
-#include <ns2d/spectral.hpp>
+#include "spectral.hpp"
 
 namespace ns2d {
 

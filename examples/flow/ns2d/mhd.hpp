@@ -48,7 +48,7 @@
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 
-#include <ns2d/spectral.hpp>
+#include "spectral.hpp"
 
 namespace ns2d {
 
