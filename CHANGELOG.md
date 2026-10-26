@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Preserve nested shared example-header paths in native Quarto downloads.
+
 - Connect the nonlinear Fourier course to a themed cubic-projection lesson,
   preserving its solver, independent verifier and numerical acceptance criteria.
 

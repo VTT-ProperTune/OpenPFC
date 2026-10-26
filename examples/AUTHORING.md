@@ -506,3 +506,11 @@ are unchanged. The verifier and input retain their bytes; C++ changes are
 excerpt markers only. The native website's six-part course remains the
 longer explanation. Historical provenance pinned to an older source path
 stays pinned: update only active current-source links after a move.
+
+## Shared headers below a theme
+
+The website stager retains nested `.hpp` and `.h` paths below each chapter's
+theme. A model may share a header such as `flow/ns2d/spectral.hpp` without
+flattening its namespace directory into the lesson folder. Preserve those
+relative paths when downloading sources; use the theme as `--source-root`
+for native source compilation when the model includes sibling headers.

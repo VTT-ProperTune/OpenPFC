@@ -4,6 +4,7 @@
 """Exercise the actual staging command and its source/website boundary."""
 
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
@@ -53,3 +54,35 @@ def test_stage_refuses_unowned_lesson_directory(tmp_path):
     result = subprocess.run([*COMMAND, str(tmp_path)], capture_output=True)
     assert result.returncode != 0
     assert owned.read_text() == "An existing tutorial"
+
+
+def test_stage_keeps_nested_shared_header_paths(tmp_path):
+    project = tmp_path / "source"
+    source = project / "examples"
+    scripts = project / "scripts"
+    scripts.mkdir(parents=True)
+    shutil.copyfile(ROOT / "scripts/stage_example_book.py", scripts / "stage_example_book.py")
+    source.mkdir()
+    for name in ("index.qmd", "coverage.qmd", "coverage.json", "_metadata.yml",
+                 "styles.css", "references.bib"):
+        shutil.copyfile(ROOT / "examples" / name, source / name)
+    extension = source / "_extensions/include-code-files"
+    extension.mkdir(parents=True)
+    (extension / "include-code-files.lua").write_text("-- fixture")
+    chapter = source / "flow/vortex"
+    chapter.mkdir(parents=True)
+    (chapter / "index.qmd").write_text("---\ntitle: Vortex\n---\n")
+    (chapter / "model.cpp").write_text('#include "../ns2d/math.hpp"\n')
+    for namespace in ("ns2d", "other"):
+        header = source / "flow" / namespace / "math.hpp"
+        header.parent.mkdir()
+        header.write_text(f"// {namespace} retains its own header path\n")
+    site = tmp_path / "site"
+    site.mkdir()
+    (site / "_quarto.yml").write_text("project:\n  type: website\n")
+    subprocess.run([sys.executable, str(scripts / "stage_example_book.py"), str(site)],
+                   check=True, capture_output=True)
+    for namespace in ("ns2d", "other"):
+        relative = Path("flow") / namespace / "math.hpp"
+        assert (site / "learn" / relative).read_bytes() == (source / relative).read_bytes()
+    assert not (site / "learn/flow/math.hpp").exists()

@@ -41,7 +41,7 @@ def stage(site: Path) -> None:
         files.update(chapter.parent.glob("requirements.txt"))
         for suffix in ("*.hpp", "*.h"):
             files.update(chapter.parent.glob(suffix))
-            files.update(chapter.parent.parent.glob(suffix))
+            files.update(chapter.parent.parent.rglob(suffix))
     files.update(source.glob("*/figures/*.svg"))
     files.update(source.glob("*/*/figures/*.svg"))
     for path in sorted(files):
