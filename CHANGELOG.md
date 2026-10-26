@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Teach the retained three-dimensional Taylor–Green driver through velocity
+  projection, rotational tendency, energy norms and nonlinear shell transfer.
+
 - Teach the retained two-field MHD prototype through explicit Lorentz
   coupling, magnetic diffusion, gauge choice and an Alfvénic sign check.
 

@@ -12,11 +12,6 @@ elseif(TARGET heffte)
   set(_tg_heffte_tgt heffte)
 endif()
 
-add_executable(taylor_green3d src/taylor_green.cpp)
-target_include_directories(taylor_green3d PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(taylor_green3d PRIVATE OpenPFC ${_tg_heffte_tgt})
-
 if(OpenPFC_BUILD_TESTS)
   # The driver calls MPI_Init itself. Do not wrap it with srun.
   add_test(NAME taylor-green3d-smoke
@@ -31,7 +26,7 @@ endif()
 if(OpenPFC_BUILD_TESTS AND TARGET Catch2::Catch2)
   add_executable(test_taylor_green3d tests/test_taylor_green.cpp)
   target_include_directories(test_taylor_green3d PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    ${CMAKE_CURRENT_SOURCE_DIR}/../flow)
   target_link_libraries(test_taylor_green3d PRIVATE OpenPFC Catch2::Catch2
                         ${_tg_heffte_tgt})
   add_test(NAME taylor-green3d-cpu COMMAND test_taylor_green3d)

@@ -809,9 +809,15 @@
     },
     {
       "target": "taylor_green3d",
-      "source": "taylor_green3d/src/taylor_green.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "flow/taylor-green-3d/model.cpp",
+      "chapter": "flow/taylor-green-3d/index.qmd",
+      "capabilities": [
+        "fourier-vector",
+        "leray-projection",
+        "rotational-tendency",
+        "velocity-ifrk4",
+        "shell-energy"
+      ]
     },
     {
       "target": "time",
@@ -1382,7 +1388,8 @@
       "name": "nonlinear models and incompressible flow",
       "header_search_terms": [
         "spectral_flux.hpp",
-        "fourier_vector.hpp"
+        "fourier_vector.hpp",
+        "rotational.hpp"
       ],
       "chapters": [
         "waves/kdv/index.qmd",
@@ -1393,7 +1400,8 @@
         "flow/spatial-refinement/index.qmd",
         "flow/temporal-refinement/index.qmd",
         "flow/flux-balance/index.qmd",
-        "flow/magnetohydrodynamics/index.qmd"
+        "flow/magnetohydrodynamics/index.qmd",
+        "flow/taylor-green-3d/index.qmd"
       ]
     }
   ]

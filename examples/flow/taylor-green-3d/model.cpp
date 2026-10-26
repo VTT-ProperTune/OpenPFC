@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file taylor_green.cpp
+ * @file model.cpp
  * @brief Locked 3-D Taylor–Green ladder (issue #229).
  *
  * The sample times are 0, 1/2, and 1. Every step below divides both
@@ -32,7 +32,7 @@
 
 #include <openpfc/runtime/common/mpi_main.hpp>
 
-#include <tg3d/verify.hpp>
+#include "../tg3d/verify.hpp"
 
 namespace {
 

@@ -1,0 +1,164 @@
+---
+title: "Let a three-dimensional vortex change its shape"
+description: "Use the installed Fourier velocity projector and rotational tendency, then interpret energy and shell diagnostics in the retained 3-D Taylor–Green driver."
+order: 75
+categories: [Incompressible flow, Fourier methods, Tough challenges]
+capabilities: ["fourier-vector", "leray-projection", "rotational-tendency", "velocity-ifrk4", "shell-energy"]
+targets: [taylor_green3d]
+bibliography: ../../references.bib
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[Flow / Follow a vector field in three dimensions]{.lesson-kicker}
+
+# Let a three-dimensional vortex change its shape
+
+[Project velocity. Evolve its rotational tendency. Watch new modes appear.]{.lesson-deck}
+:::
+
+The two-dimensional [exact vortex](../vorticity/index.qmd) keeps its shape
+while viscosity changes its amplitude. This three-dimensional initial
+field has a genuinely nonlinear evolution on $[0,2\pi)^3$:
+
+$$
+\begin{aligned}
+u&=\sin x\cos y\cos z,\\
+v&=-\cos x\sin y\cos z,\\
+w&=0.
+\end{aligned}
+$$
+
+Taylor and Green's study provides the historical background for this
+vortex family [@taylor1937]. Here the retained driver uses a small smoke
+case to teach OpenPFC's Fourier vector operations and their diagnostics.
+
+## Put the initial field in ordinary lambdas
+
+```{.cpp include="../tg3d/verify.hpp" snippet="initial_velocity" dedent=2}
+```
+
+The third field starts at zero. That is an initial condition, not a
+constraint maintained throughout the evolution: the nonlinear step can
+produce a nonzero third velocity component. The retained tests explicitly
+check that it does.
+
+After transforming all three components, the helper uses the installed
+projector and state filter:
+
+```{.cpp include="../tg3d/verify.hpp" snippet="projection" dedent=2}
+```
+
+For a nonzero wave vector, the Leray projection removes the longitudinal
+component of a vector $\widehat{\mathbf f}$:
+
+$$
+\widehat{P\mathbf f}
+=\widehat{\mathbf f}
+-\mathbf k\,\frac{\mathbf k\cdot\widehat{\mathbf f}}{|\mathbf k|^2}.
+$$
+
+The zero mode is left unchanged. Consistent odd derivative symbols handle
+Nyquist components; the state-level two-thirds filter also removes the
+high-frequency part of the initial state and subsequent stages.
+
+## Use the installed rotational tendency
+
+With $\boldsymbol\omega=\nabla\times\mathbf u$, the incompressible
+velocity equation can be written
+
+$$
+\mathbf u_t=P(\mathbf u\times\boldsymbol\omega)
+             +\nu\nabla^2\mathbf u.
+$$
+
+Projection removes the pressure-gradient contribution. The example
+composes the public `ifrk4_velocity` and `rotational_tendency` operations,
+with viscosity integrated through precomputed exponentials:
+
+```{.cpp include="../tg3d/verify.hpp" snippet="velocity_step"}
+```
+
+The helper retains the existing one-rank ownership requirement. This
+chapter does not change its solver or introduce a second velocity
+projector alongside the installed library implementation.
+
+## Define the norms before comparing them
+
+At time zero, trigonometric orthogonality gives
+
+$$
+\begin{aligned}
+E_0&=\tfrac12\langle u^2+v^2+w^2\rangle=\tfrac18,\\
+\Omega_0&=\langle|\boldsymbol\omega|^2\rangle=\tfrac34.
+\end{aligned}
+$$
+
+This driver's `enstrophy` column is the **full** mean squared vorticity.
+The two-dimensional vorticity lesson's $Z$ contains an additional factor
+of one half. Definitions, rather than column names alone, determine how
+to compare those numbers.
+
+The continuous periodic energy identity is
+
+$$
+\frac{dE}{dt}=-\nu\Omega.
+$$
+
+All initial modes have $|\mathbf k|^2=3$. Pure viscosity acting on that
+initial shell would give
+
+$$
+E_{\mathrm{linear}}(t)=\tfrac18e^{-6\nu t}.
+$$
+
+The nonlinear tendency transfers energy between shells. Consequently the
+`ke_linear` column is an initial-shell comparison, not an exact later-time
+Navier–Stokes solution. A difference from that curve is not, by itself,
+a numerical error.
+
+## Run the bounded smoke case
+
+From the repository root, with a compatible installed spectral CPU SDK:
+
+```sh
+mkdir -p results
+openpfc compile examples/flow/taylor-green-3d/model.cpp --source-root examples/flow -o results/taylor-green
+results/taylor-green --case smoke --outdir results/flow/taylor-green
+```
+
+Use one MPI rank, as required by this driver. The retained smoke case uses
+$N=16$, $\nu=0.05$, $h=1/64$ and two steps, reaching $T=1/32$.
+The [model](model.cpp) shares [verify.hpp](../tg3d/verify.hpp); keep their
+relative layout when using downloaded sources. The CMake target remains
+`taylor_green3d`, with its original build location and numerical tests.
+
+Read `errors.csv`, `spectrum.csv` and `run.json`. The smoke case computes
+diagnostics without a separately refined trajectory, so its solution-error
+columns are empty. Treat those as unavailable comparisons, rather than
+zero errors. Inspect divergence, energy, the third velocity component and
+the shell-energy sum instead. At time zero, energy belongs to the
+$|\mathbf k|^2=3$ shell; later rows can show transfer to other shells.
+
+The existing tests verify the analytic initial norms, small divergence,
+energy loss with positive viscosity, growth of the third component,
+shell-energy normalization and common-grid restriction. Their criteria
+remain unchanged. The retained larger `spatial` and `temporal` options
+keep their existing fixed protocols; the smoke command is the small
+entry point for this lesson.
+
+In your own copy, change the initial amplitude and derive its time-zero
+energy scaling before running. Then inspect which diagnostics test the
+initial condition, which test incompressibility and which require a
+separate grid or time reference. Keeping those questions distinct makes
+a complex three-dimensional example teachable.
+
+## References
+
+::: {#refs}
+:::
+
+:::

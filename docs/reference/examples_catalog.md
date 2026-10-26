@@ -109,6 +109,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `ns2d_temporal_refine` | `flow/temporal-refinement/model.cpp` | Fixed-grid IFRK4 time refinement with a finest-step reference and guarded order estimates |
 | `ns2d_flux_balance` | `flow/flux-balance/model.cpp` | Analytic Fourier face integrals, modal divergence and nodal-quadrature comparisons |
 | `mhd2d` | `flow/magnetohydrodynamics/model.cpp` | Issue #23 2-D incompressible visco-resistive MHD (CPU). See the retained flow README. |
+| `taylor_green3d` | `flow/taylor-green-3d/model.cpp` | Issue #229 3-D periodic Taylor–Green on the Fourier velocity (CPU). See [`../../examples/taylor_green3d/README.md`](../../examples/taylor_green3d/README.md). |
 | `periodic_differentiation` | `differentiation/periodic/model.cpp` | Analytic derivative, second/fourth-order FD, and Fourier convergence |
 | `heat_exponential` | `heat/exponential/model.cpp` | Exact linear Fourier propagator; compare spatial and temporal error |
 | `cardinal_interpolation` | `interpolation/cardinal/model.cpp` | Trefethen program 3: cardinal sinc reconstruction of three sampled signals |
@@ -151,15 +152,13 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `allen_cahn_fixed` | `polynomials/allen-cahn-fixed/model.cpp` | Lift the boundary before evolving the interior |
 | `allen_cahn_driven` | `polynomials/allen-cahn-driven/model.cpp` | A changing wall must enter the next derivative |
 
-## Research prototypes
+## Flow prototype notes
 
-These targets are built from `examples/` subdirectories. They are **not**
-part of the numbered teaching ladder and are **not** shipped `apps/`
-catalog entries.
-
-| Executable | Source | What it demonstrates |
-|------------|--------|----------------------|
-| `taylor_green3d` | `taylor_green3d/src/taylor_green.cpp` | Issue #229 3-D periodic Taylor–Green on the Fourier velocity (CPU). See [`../../examples/taylor_green3d/README.md`](../../examples/taylor_green3d/README.md). |
+The flow lessons retain their prototype executable names, build locations and
+verification criteria. Operational and historical notes remain in the
+[2-D flow README](../../examples/ns2d_vorticity/README.md) and
+[3-D Taylor–Green README](../../examples/taylor_green3d/README.md).
+Application admission follows the [apps policy](../../apps/README.md#what-belongs-here).
 
 ## Sources not built by default
 

@@ -166,23 +166,28 @@ inline void initialize_taylor_green(Flow &flow) {
       rz(domain, inbox, 0);
   // Keep model formulas with this independent app/example owner; Field owns
   // the reusable indexing rather than introducing a model API in the SDK.
+  // start snippet initial_velocity
   rx.apply([](double x, double y, double z) {
     return std::sin(x) * std::cos(y) * std::cos(z);
   });
   ry.apply([](double x, double y, double z) {
     return -std::cos(x) * std::sin(y) * std::cos(z);
   });
+  // end snippet initial_velocity
   fft.forward(rx.vec(), flow.u);
   fft.forward(ry.vec(), flow.v);
   fft.forward(rz.vec(), flow.w);
   const auto outbox = fft.get_outbox_bounds();
   const auto nhat = flow.u.size();
+  // start snippet projection
   pfc::field::leray_project(outbox, flow.n, flow.spacing, flow.u.data(),
                             flow.v.data(), flow.w.data(), nhat);
   pfc::field::apply_two_thirds(outbox, flow.n, flow.spacing, flow.u.data(),
                                flow.v.data(), flow.w.data(), nhat);
+  // end snippet projection
 }
 
+// start snippet velocity_step
 inline void step(Flow &flow) {
   auto &fft = flow.stack->fft();
   const auto outbox = fft.get_outbox_bounds();
@@ -197,6 +202,8 @@ inline void step(Flow &flow) {
       },
       true);
 }
+
+// end snippet velocity_step
 
 [[nodiscard]] inline bool state_finite(const Flow &flow) {
   auto ok = [](const std::vector<Complex> &hat) {

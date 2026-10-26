@@ -50,3 +50,8 @@ add_executable(mhd2d magnetohydrodynamics/model.cpp)
 target_include_directories(mhd2d PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(mhd2d PRIVATE OpenPFC ${_flow_heffte_tgt})
 set_target_properties(mhd2d PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples/ns2d_vorticity")
+
+add_executable(taylor_green3d taylor-green-3d/model.cpp)
+target_include_directories(taylor_green3d PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(taylor_green3d PRIVATE OpenPFC ${_flow_heffte_tgt})
+set_target_properties(taylor_green3d PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples/taylor_green3d")
