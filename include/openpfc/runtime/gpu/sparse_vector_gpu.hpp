@@ -92,6 +92,13 @@ inline void copy_data_to_device_impl<backend::CUDATag, std::uint64_t>(
 }
 
 template <>
+inline void copy_data_to_device_impl<backend::CUDATag, int>(
+    DataBuffer<backend::CUDATag, int> &buf, size_t n,
+    const std::vector<int> &host_data) {
+  gpu_copy_h2d<CUDAH2D>(buf.data(), host_data.data(), n, sizeof(int));
+}
+
+template <>
 inline void copy_data_to_device_impl<backend::CUDATag, float>(
     DataBuffer<backend::CUDATag, float> &buf, size_t n,
     const std::vector<float> &host_data) {
@@ -119,6 +126,14 @@ inline void copy_data_to_device_impl<backend::HIPTag, std::uint64_t>(
     DataBuffer<backend::HIPTag, std::uint64_t> &buf, size_t n,
     const std::vector<std::uint64_t> &host_data) {
   gpu_copy_h2d<HIPH2D>(buf.data(), host_data.data(), n, sizeof(std::uint64_t));
+}
+
+template <>
+inline void
+copy_data_to_device_impl<backend::HIPTag, int>(DataBuffer<backend::HIPTag, int> &buf,
+                                               size_t n,
+                                               const std::vector<int> &host_data) {
+  gpu_copy_h2d<HIPH2D>(buf.data(), host_data.data(), n, sizeof(int));
 }
 
 template <>

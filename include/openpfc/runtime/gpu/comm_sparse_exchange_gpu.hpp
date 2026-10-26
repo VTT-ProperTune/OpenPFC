@@ -55,8 +55,8 @@ template <typename Tag, typename T> struct DeviceRemoteHalo {
 };
 
 template <typename Space, typename Tag, typename T> class DeviceSparseExchange {
-  static_assert(std::is_same_v<T, double>,
-                "pfc::comm::SparseExchange on device is double-only "
+  static_assert(std::is_same_v<T, double> || std::is_same_v<T, int>,
+                "pfc::comm::SparseExchange on device supports double and int "
                 "(existing gather/scatter kernels)");
 
 public:
@@ -239,10 +239,11 @@ private:
       } else {
         const int count = pfc::mpi::ensure_mpi_int_count(
             h.recv_values.size(), "SparseExchange host-stage recv");
-        pfc::mpi::throw_on_mpi_error(MPI_Irecv(m_host_recv[i].data(), count,
-                                               MPI_DOUBLE, h.peer_rank, h.recv_tag,
-                                               m_comm, &m_requests[req]),
-                                     "SparseExchange host-stage MPI_Irecv");
+        pfc::mpi::throw_on_mpi_error(
+            MPI_Irecv(m_host_recv[i].data(), count,
+                      pfc::exchange::detail::get_mpi_type<T>(), h.peer_rank,
+                      h.recv_tag, m_comm, &m_requests[req]),
+            "SparseExchange host-stage MPI_Irecv");
       }
       ++req;
     }
@@ -256,10 +257,11 @@ private:
       } else {
         const int count = pfc::mpi::ensure_mpi_int_count(
             h.send_values.size(), "SparseExchange host-stage send");
-        pfc::mpi::throw_on_mpi_error(MPI_Isend(m_host_send[i].data(), count,
-                                               MPI_DOUBLE, h.peer_rank, h.send_tag,
-                                               m_comm, &m_requests[req]),
-                                     "SparseExchange host-stage MPI_Isend");
+        pfc::mpi::throw_on_mpi_error(
+            MPI_Isend(m_host_send[i].data(), count,
+                      pfc::exchange::detail::get_mpi_type<T>(), h.peer_rank,
+                      h.send_tag, m_comm, &m_requests[req]),
+            "SparseExchange host-stage MPI_Isend");
       }
       ++req;
     }

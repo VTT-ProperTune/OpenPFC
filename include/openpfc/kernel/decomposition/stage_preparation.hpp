@@ -5,7 +5,7 @@
 
 /**
  * @file stage_preparation.hpp
- * @brief CPU/MPI stage-preparation protocol over existing padded halo exchangers.
+ * @brief Stage-preparation protocol over existing host/device halo exchangers.
  *
  * @details
  * `pfc::comm::HaloExchange` is **transport**: it moves ghost faces given a
@@ -93,7 +93,7 @@ struct StagePreparationRequirements {
 };
 
 /**
- * @brief Blocking CPU/MPI stage preparation over named `HaloExchange`s.
+ * @brief Blocking stage preparation over named host/device exchangers.
  *
  * Bind brick-backed exchangers by name, optionally set a boundary hook, then
  * call `prepare` with requirements and the field name list for this stage.
@@ -102,7 +102,11 @@ struct StagePreparationRequirements {
  * walls run after both of those, so they see exchanged tangential halos.
  * Corners are composed in axis order X, then Y, then Z.
  *
- * @tparam T Element type of the bound exchangers (default `double`).
+ * @tparam T Default element type retained for source compatibility. Individual
+ * bindings may use different element types, including integer label fields.
+ * Device reflection requires the selected runtime reflection header at the
+ * call site. Fields, buffers and exchangers must remain valid until rebound
+ * or the service is destroyed; operations must complete before returning.
  */
 template <typename T = double> class StagePreparationService {
 public:
@@ -116,7 +120,9 @@ public:
    * @param name      Field / binding name (owned copy stored).
    * @param exchanger Exchanger to drive when this name is prepared.
    */
-  void bind(std::string_view name, comm::HaloExchange<HostSpace, T> &exchanger) {
+  template <class Exchange>
+    requires requires(Exchange &exchange) { exchange.exchange(); }
+  void bind(std::string_view name, Exchange &exchanger) {
     bind(name, [&exchanger] { exchanger.exchange(); });
   }
 
@@ -146,20 +152,22 @@ public:
    * that exchange also runs. The field must be the buffer the exchanger
    * writes. Pass empty walls to clear.
    */
-  void set_reflection(std::string_view name, const ReflectionWalls<T> &walls,
-                      data::Field<T, HostSpace> &field) {
+  template <class Value, class Space>
+  void set_reflection(std::string_view name, const ReflectionWalls<Value> &walls,
+                      data::Field<Value, Space> &field) {
     bool any = false;
-    const ReflectionSide<T> sides[6] = {walls.xm, walls.xp, walls.ym,
-                                        walls.yp, walls.zm, walls.zp};
-    for (const ReflectionSide<T> &side : sides) {
+    const ReflectionSide<Value> sides[6] = {walls.xm, walls.xp, walls.ym,
+                                            walls.yp, walls.zm, walls.zp};
+    for (const ReflectionSide<Value> &side : sides) {
       any = any || side.enabled;
     }
     if (!any) {
       m_reflections.erase(std::string(name));
       return;
     }
-    m_reflections.insert_or_assign(std::string(name),
-                                   ReflectionBinding{walls, &field});
+    m_reflections.insert_or_assign(std::string(name), [&field, walls] {
+      apply_reflection_ghosts(field, walls);
+    });
   }
 
   /**
@@ -237,17 +245,12 @@ private:
       if (it == m_reflections.end()) {
         continue;
       }
-      apply_reflection_ghosts(*it->second.field, it->second.walls);
+      it->second();
     }
   }
 
-  struct ReflectionBinding {
-    ReflectionWalls<T> walls{};
-    data::Field<T, HostSpace> *field = nullptr;
-  };
-
   std::unordered_map<std::string, std::function<void()>> m_exchangers;
-  std::unordered_map<std::string, ReflectionBinding> m_reflections;
+  std::unordered_map<std::string, std::function<void()>> m_reflections;
   std::function<void(std::string_view)> m_boundary_hook;
 };
 

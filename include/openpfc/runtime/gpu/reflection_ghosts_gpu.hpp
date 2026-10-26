@@ -26,11 +26,13 @@ namespace pfc::communication::detail {
 #if defined(OpenPFC_ENABLE_CUDA)
 void reflection_ghosts_cuda_impl(double *pad, ReflectionGeometry<double> geom);
 void reflection_ghosts_cuda_impl(float *pad, ReflectionGeometry<float> geom);
+void reflection_ghosts_cuda_impl(int *pad, ReflectionGeometry<int> geom);
 #endif
 
 #if defined(OpenPFC_ENABLE_HIP)
 void reflection_ghosts_hip_impl(double *pad, ReflectionGeometry<double> geom);
 void reflection_ghosts_hip_impl(float *pad, ReflectionGeometry<float> geom);
+void reflection_ghosts_hip_impl(int *pad, ReflectionGeometry<int> geom);
 #endif
 
 } // namespace pfc::communication::detail
@@ -42,8 +44,9 @@ template <typename T>
 void apply_reflection_ghosts(
     pfc::data::Field<T, CUDASpace> &u, const ReflectionWalls<T> &walls,
     ReflectionExtent extent = ReflectionExtent::PhysicalFaces) {
-  static_assert(std::is_same_v<T, double> || std::is_same_v<T, float>,
-                "device reflection supports float and double");
+  static_assert(std::is_same_v<T, double> || std::is_same_v<T, float> ||
+                    std::is_same_v<T, int>,
+                "device reflection supports float, double and int");
   if (u.storage_halo() < 1) {
     return;
   }
@@ -61,8 +64,9 @@ template <typename T>
 void apply_reflection_ghosts(
     pfc::data::Field<T, HIPSpace> &u, const ReflectionWalls<T> &walls,
     ReflectionExtent extent = ReflectionExtent::PhysicalFaces) {
-  static_assert(std::is_same_v<T, double> || std::is_same_v<T, float>,
-                "device reflection supports float and double");
+  static_assert(std::is_same_v<T, double> || std::is_same_v<T, float> ||
+                    std::is_same_v<T, int>,
+                "device reflection supports float, double and int");
   if (u.storage_halo() < 1) {
     return;
   }

@@ -51,6 +51,10 @@ namespace pfc::core {
 void gather_cuda_impl(size_t n, const size_t *indices, double *data,
                       const double *source, size_t source_size,
                       size_t index_end = unknown_index_end);
+void gather_cuda_impl(size_t n, const size_t *indices, int *data, const int *source,
+                      size_t source_size, size_t index_end = unknown_index_end);
+void scatter_cuda_impl(size_t n, const size_t *indices, const int *data, int *dest,
+                       size_t dest_size, size_t index_end = unknown_index_end);
 void gather_cuda_impl(size_t n, const size_t *indices, float *data,
                       const float *source, size_t source_size,
                       size_t index_end = unknown_index_end);
@@ -83,10 +87,12 @@ inline void gather(SparseVector<backend::CUDATag, double> &sparse_vector,
  * storage. Empty selections do not dereference source. Bounds come from
  * `index_end()`, recorded when the indices were built on the host; only a
  * vector sized without indices is downloaded for validation.
- * Scatter remains double-only. This does not add a Float32 remapping API.
+ * Scatter supports double and int; float selection remains read-only. This does not
+ * add a Float32 remapping API.
  */
 template <typename T>
-  requires(std::same_as<T, float> || std::same_as<T, std::uint64_t>)
+  requires(std::same_as<T, float> || std::same_as<T, std::uint64_t> ||
+           std::same_as<T, int>)
 inline void gather(SparseVector<backend::CUDATag, T> &sparse_vector, const T *source,
                    size_t source_size) {
   if (sparse_vector.empty()) return;
@@ -101,6 +107,17 @@ inline void gather(SparseVector<backend::CUDATag, T> &sparse_vector, const T *so
  */
 inline void scatter(const SparseVector<backend::CUDATag, double> &sparse_vector,
                     double *dest, size_t dest_size) {
+  if (sparse_vector.empty()) {
+    return;
+  }
+  scatter_cuda_impl(sparse_vector.size(), sparse_vector.indices().data(),
+                    sparse_vector.data().data(), dest, dest_size,
+                    sparse_vector.index_end());
+}
+
+/// Exact integer-label scatter; validates bounds before any device write.
+inline void scatter(const SparseVector<backend::CUDATag, int> &sparse_vector,
+                    int *dest, size_t dest_size) {
   if (sparse_vector.empty()) {
     return;
   }
@@ -127,6 +144,10 @@ inline void scatter(const SparseVector<backend::CUDATag, double> &sparse_vector,
 void gather_hip_impl(size_t n, const size_t *indices, double *data,
                      const double *source, size_t source_size,
                      size_t index_end = unknown_index_end);
+void gather_hip_impl(size_t n, const size_t *indices, int *data, const int *source,
+                     size_t source_size, size_t index_end = unknown_index_end);
+void scatter_hip_impl(size_t n, const size_t *indices, const int *data, int *dest,
+                      size_t dest_size, size_t index_end = unknown_index_end);
 void gather_hip_impl(size_t n, const size_t *indices, float *data,
                      const float *source, size_t source_size,
                      size_t index_end = unknown_index_end);
@@ -159,10 +180,12 @@ inline void gather(SparseVector<backend::HIPTag, double> &sparse_vector,
  * storage. Empty selections do not dereference source. Bounds come from
  * `index_end()`, recorded when the indices were built on the host; only a
  * vector sized without indices is downloaded for validation.
- * Scatter remains double-only. This does not add a Float32 remapping API.
+ * Scatter supports double and int; float selection remains read-only. This does not
+ * add a Float32 remapping API.
  */
 template <typename T>
-  requires(std::same_as<T, float> || std::same_as<T, std::uint64_t>)
+  requires(std::same_as<T, float> || std::same_as<T, std::uint64_t> ||
+           std::same_as<T, int>)
 inline void gather(SparseVector<backend::HIPTag, T> &sparse_vector, const T *source,
                    size_t source_size) {
   if (sparse_vector.empty()) return;
@@ -177,6 +200,17 @@ inline void gather(SparseVector<backend::HIPTag, T> &sparse_vector, const T *sou
  */
 inline void scatter(const SparseVector<backend::HIPTag, double> &sparse_vector,
                     double *dest, size_t dest_size) {
+  if (sparse_vector.empty()) {
+    return;
+  }
+  scatter_hip_impl(sparse_vector.size(), sparse_vector.indices().data(),
+                   sparse_vector.data().data(), dest, dest_size,
+                   sparse_vector.index_end());
+}
+
+/// Exact integer-label scatter; validates bounds before any device write.
+inline void scatter(const SparseVector<backend::HIPTag, int> &sparse_vector,
+                    int *dest, size_t dest_size) {
   if (sparse_vector.empty()) {
     return;
   }

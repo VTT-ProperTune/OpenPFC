@@ -125,6 +125,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 - Express Cahn-Hilliard through native ETD symbols and a visible local cubic law. Preserve its executable, update the spectral reading path and check complete nonlinear fields against independent Fourier sums.
 
+- Prepare runtime-sized host/device field sets through the shared stage
+  protocol, with typed integer sparse transport and device wall reflection.
+
 - Write a small time-dependent field through native snapshot-series services. Preserve the executable and check actual binary and VTK payloads, geometry, time and rank metadata.
 
 - Replace the output printout with a collective binary write and readback story. Preserve its target and check every stored value and owned coordinate independently.

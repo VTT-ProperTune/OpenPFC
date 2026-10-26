@@ -98,6 +98,9 @@ void reflection_ghosts_cuda_impl(double *pad, ReflectionGeometry<double> geom) {
 void reflection_ghosts_cuda_impl(float *pad, ReflectionGeometry<float> geom) {
   launch_reflection_ghosts(pad, geom);
 }
+void reflection_ghosts_cuda_impl(int *pad, ReflectionGeometry<int> geom) {
+  launch_reflection_ghosts(pad, geom);
+}
 #endif
 
 #if defined(OpenPFC_ENABLE_HIP) && defined(OPENPFC_GPU_API_HIP)
@@ -105,6 +108,9 @@ void reflection_ghosts_hip_impl(double *pad, ReflectionGeometry<double> geom) {
   launch_reflection_ghosts(pad, geom);
 }
 void reflection_ghosts_hip_impl(float *pad, ReflectionGeometry<float> geom) {
+  launch_reflection_ghosts(pad, geom);
+}
+void reflection_ghosts_hip_impl(int *pad, ReflectionGeometry<int> geom) {
   launch_reflection_ghosts(pad, geom);
 }
 #endif

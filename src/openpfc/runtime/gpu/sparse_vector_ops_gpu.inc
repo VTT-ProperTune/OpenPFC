@@ -45,8 +45,9 @@ __global__ void gather_kernel(size_t n, const size_t *indices, T *data,
   }
 }
 
-__global__ void scatter_kernel(size_t n, const size_t *indices, const double *data,
-                               double *dest) {
+template <typename T>
+__global__ void scatter_kernel(size_t n, const size_t *indices, const T *data,
+                               T *dest) {
   size_t i = blockIdx.x * blockDim.x + threadIdx.x;
   if (i < n) {
     size_t idx = indices[i];
@@ -113,8 +114,9 @@ void launch_gather(size_t n, const size_t *indices, T *data, const T *source,
   }
 }
 
-void launch_scatter(size_t n, const size_t *indices, const double *data,
-                    double *dest, size_t dest_size, size_t index_end) {
+template <typename T>
+void launch_scatter(size_t n, const size_t *indices, const T *data, T *dest,
+                    size_t dest_size, size_t index_end) {
   if (n == 0) {
     return;
   }
@@ -144,6 +146,15 @@ void gather_cuda_impl(size_t n, const size_t *indices, double *data,
   launch_gather(n, indices, data, source, source_size, index_end);
 }
 
+void gather_cuda_impl(size_t n, const size_t *indices, int *data, const int *source,
+                      size_t source_size, size_t index_end) {
+  launch_gather(n, indices, data, source, source_size, index_end);
+}
+void scatter_cuda_impl(size_t n, const size_t *indices, const int *data, int *dest,
+                       size_t dest_size, size_t index_end) {
+  launch_scatter(n, indices, data, dest, dest_size, index_end);
+}
+
 void gather_cuda_impl(size_t n, const size_t *indices, float *data,
                       const float *source, size_t source_size, size_t index_end) {
   launch_gather(n, indices, data, source, source_size, index_end);
@@ -165,6 +176,15 @@ void scatter_cuda_impl(size_t n, const size_t *indices, const double *data,
 void gather_hip_impl(size_t n, const size_t *indices, double *data,
                      const double *source, size_t source_size, size_t index_end) {
   launch_gather(n, indices, data, source, source_size, index_end);
+}
+
+void gather_hip_impl(size_t n, const size_t *indices, int *data, const int *source,
+                     size_t source_size, size_t index_end) {
+  launch_gather(n, indices, data, source, source_size, index_end);
+}
+void scatter_hip_impl(size_t n, const size_t *indices, const int *data, int *dest,
+                      size_t dest_size, size_t index_end) {
+  launch_scatter(n, indices, data, dest, dest_size, index_end);
 }
 
 void gather_hip_impl(size_t n, const size_t *indices, float *data,
