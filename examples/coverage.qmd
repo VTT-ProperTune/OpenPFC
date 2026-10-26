@@ -16,8 +16,8 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 [Follow what is taught, what is adapted, and what still needs a chapter.]{.lesson-deck}
 :::
 
-There are 85 declared runnable example targets and
-85 Quarto teaching chapters. The table includes older programs
+There are 86 declared runnable example targets and
+86 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -148,6 +148,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `polynomial_nonlinear_boundary` | [Read the lesson](polynomials/nonlinear-boundary/index.qmd) |
 | `polynomial_regularity` | [Read the lesson](polynomials/regularity/index.qmd) |
 | `profiling_timer_report` | [Read the lesson](diagnostics/profiling/index.qmd) |
+| `q1_multigrid` | [Read the lesson](finite-elements/q1-multigrid/index.qmd) |
 | `runtime_coupled_fields` | [Read the lesson](coupling/runtime-fields/index.qmd) |
 | `spectral_smoothness` | [Read the lesson](differentiation/smoothness/index.qmd) |
 | `square_helmholtz` | [Read the lesson](polynomials/helmholtz-square/index.qmd) |
@@ -190,12 +191,13 @@ fixed-step restart does not establish an adaptive restart contract.
 | field output and visualization | [binary-field](output/binary-field/index.qmd), [vtk-series](output/vtk-series/index.qmd) |
 | checkpoints and restart | [checkpoint-restart](output/checkpoint-restart/index.qmd) |
 | Krylov and nonlinear solves | [integration](polynomials/integration/index.qmd), [boundary-values](polynomials/boundary-values/index.qmd), [nonlinear-boundary](polynomials/nonlinear-boundary/index.qmd) |
-| geometric multigrid | [multigrid](elliptic/multigrid/index.qmd) |
+| geometric multigrid | [multigrid](elliptic/multigrid/index.qmd), [q1-multigrid](finite-elements/q1-multigrid/index.qmd) |
 | microelasticity and homogenization | [layered-homogenization](materials/layered-homogenization/index.qmd) |
 | coupling and transactional attempts | [host-orchestrator](coupling/host-orchestrator/index.qmd), [adaptive-rk](integration/adaptive-rk/index.qmd), [adaptive-etd](integration/adaptive-etd/index.qmd) |
 | profiling and communication diagnostics | [mpi-timing](diagnostics/mpi-timing/index.qmd), [profiling](diagnostics/profiling/index.qmd) |
 | CUDA and HIP execution | [backend-buffers](fourier/backend-buffers/index.qmd) |
 | nonlinear models and incompressible flow | [kdv](waves/kdv/index.qmd), [allen-cahn-fixed](polynomials/allen-cahn-fixed/index.qmd), [allen-cahn-driven](polynomials/allen-cahn-driven/index.qmd), [cahn-hilliard](phase-fields/cahn-hilliard/index.qmd), [vorticity](flow/vorticity/index.qmd), [spatial-refinement](flow/spatial-refinement/index.qmd), [temporal-refinement](flow/temporal-refinement/index.qmd), [flux-balance](flow/flux-balance/index.qmd), [magnetohydrodynamics](flow/magnetohydrodynamics/index.qmd), [taylor-green-3d](flow/taylor-green-3d/index.qmd) |
+| finite elements and nodal solvers | [q1-multigrid](finite-elements/q1-multigrid/index.qmd) |
 
 Every family needs an actual model, a useful mathematical story and appropriate runtime evidence.
 

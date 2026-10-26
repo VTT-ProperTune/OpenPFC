@@ -557,3 +557,14 @@ arithmetic mean for finite-N tensor comparisons, not its continuum limit.
 CTest invokes the actual model at two grids and in the homogeneous limit,
 on one and two MPI ranks. This linear, moderate-contrast teaching cell is
 not a convergence claim for general composite microstructures.
+
+## Q1 free-node multigrid
+
+`render_q1_multigrid.py --run <native-working-directory>` checks every owned
+free node against a discrete sine-mode amplitude derived from Q1 stiffness,
+consistent mass and the integrated continuum forcing. It does not generate
+its reference by applying the tested operator. The continuum comparison is
+a nodal norm, not an integrated finite-element function error. Regenerate
+the committed figure from native CSVs using Matplotlib 3.11.2. CTest invokes
+the actual model on both supported free-node grids and a reaction case,
+on one and two ranks; the library's hierarchy settings remain unchanged.

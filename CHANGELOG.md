@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Add a Q1 finite-element lesson with analytic weak loads, nodal multigrid-CG
+  and independent discrete-versus-continuum nodal error checks.
+
 - Add a graded-layer elasticity lesson using six periodic homogenization
   loads, with independent tensor and complete nodal shear checks.
 

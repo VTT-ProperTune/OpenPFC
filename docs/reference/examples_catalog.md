@@ -112,6 +112,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `taylor_green3d` | `flow/taylor-green-3d/model.cpp` | Issue #229 3-D periodic Taylor–Green on the Fourier velocity (CPU). See [`../../examples/taylor_green3d/README.md`](../../examples/taylor_green3d/README.md). |
 | `outward_diffusion_flux` | `boundaries/outward-flux/model.cpp` | Nonperiodic SBP diffusion, equivalent derivative/flux inputs and an exact weighted mass budget |
 | `layered_homogenization` | `materials/layered-homogenization/model.cpp` | Six periodic elastic unit loads, engineering Voigt convention and independent layered tensor/local-field checks |
+| `q1_multigrid` | `finite-elements/q1-multigrid/model.cpp` | Q1 weak loads, eliminated Dirichlet nodes, distributed nodal multigrid-CG and an independent sine-mode oracle |
 | `periodic_differentiation` | `differentiation/periodic/model.cpp` | Analytic derivative, second/fourth-order FD, and Fourier convergence |
 | `heat_exponential` | `heat/exponential/model.cpp` | Exact linear Fourier propagator; compare spatial and temporal error |
 | `cardinal_interpolation` | `interpolation/cardinal/model.cpp` | Trefethen program 3: cardinal sinc reconstruction of three sampled signals |

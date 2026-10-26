@@ -762,6 +762,18 @@
       ]
     },
     {
+      "target": "q1_multigrid",
+      "source": "finite-elements/q1-multigrid/model.cpp",
+      "chapter": "finite-elements/q1-multigrid/index.qmd",
+      "capabilities": [
+        "q1-finite-elements",
+        "dirichlet-elimination",
+        "nodal-multigrid",
+        "preconditioned-cg",
+        "weak-load"
+      ]
+    },
+    {
       "target": "runtime_coupled_fields",
       "source": "coupling/runtime-fields/model.cpp",
       "chapter": "coupling/runtime-fields/index.qmd",
@@ -1363,7 +1375,8 @@
         "nodal_dirichlet_multigrid.hpp"
       ],
       "chapters": [
-        "elliptic/multigrid/index.qmd"
+        "elliptic/multigrid/index.qmd",
+        "finite-elements/q1-multigrid/index.qmd"
       ]
     },
     {
@@ -1430,6 +1443,16 @@
         "flow/flux-balance/index.qmd",
         "flow/magnetohydrodynamics/index.qmd",
         "flow/taylor-green-3d/index.qmd"
+      ]
+    },
+    {
+      "name": "finite elements and nodal solvers",
+      "header_search_terms": [
+        "nodal_dirichlet_multigrid.hpp",
+        "nodal_dirichlet_kernels.hpp"
+      ],
+      "chapters": [
+        "finite-elements/q1-multigrid/index.qmd"
       ]
     }
   ]
