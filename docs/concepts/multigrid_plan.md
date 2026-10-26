@@ -169,6 +169,5 @@ The CPU tests under \`test_multigrid_plan.cpp\` check 64→8→1,
 cross-group transfers, minimum widths, invalid prime rank factors
 and checked 64-bit global sizes without a GPU or MPI world.
 
-This is infrastructure progress on #420, **not a closure of #420
-or #591** and not authorization to run DiscretizationLab's
-[deferred HPC campaign #169](https://github.com/ahojukka5/DiscretizationLab/issues/169).
+These checks establish transfer correctness for the covered cases. They do not
+measure multi-node performance or complete the broader multigrid solver work.
