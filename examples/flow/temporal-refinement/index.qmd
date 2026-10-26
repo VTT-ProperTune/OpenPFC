@@ -1,0 +1,151 @@
+---
+title: "Measure time accuracy with a nonlinear field"
+description: "Hold the grid fixed, activate nonlinear mode interactions and interpret a guarded observed-order estimate from the retained IFRK4 driver."
+order: 72
+categories: [Incompressible flow, Time integration, Tough challenges]
+capabilities: ["temporal-refinement", "ifrk4", "observed-order", "reference-error", "nonlinear-interactions"]
+targets: [ns2d_temporal_refine]
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[Flow / Let the nonlinear stages do some work]{.lesson-kicker}
+
+# Measure time accuracy with a nonlinear field
+
+[Fix the grid. Refine the step. Keep the comparison above its floor.]{.lesson-deck}
+:::
+
+The [exact vortex](../vorticity/index.qmd) has no advective tendency, so
+its exact viscous decay cannot establish nonlinear fourth-order time
+accuracy. This retained driver offers a two-mode field whose interactions
+do activate the nonlinear stages:
+
+$$
+\begin{aligned}
+\omega(x,y,0)&=\sin x\sin y\\
+&\quad+\tfrac12\sin(2x)\sin(2y).
+\end{aligned}
+$$
+
+It lives on $[0,2\pi)^2$. Its two Fourier shells have different Laplacian
+eigenvalues, so vorticity is not a single constant multiple of its
+streamfunction and advection need not vanish.
+
+The separate shear option uses the unit square. The driver keeps those
+geometries explicit:
+
+```{.cpp include="model.cpp" snippet="setup"}
+```
+
+## Keep the viscous part in an integrating factor
+
+For one spectral mode, write $\dot w=Lw+N(w)$ with $L=-\nu|\mathbf k|^2$.
+The variable $v=e^{-Lt}w$ satisfies
+
+$$
+\dot v=e^{-Lt}N(e^{Lt}v).
+$$
+
+Classical RK4 applied to this transformed equation produces four nonlinear
+stages. In the implementation, `exp_dt` is $e^{hL}$ and `exp_half` is
+$e^{hL/2}$; the final combination is
+
+```{.cpp include="../ns2d/spectral.hpp" snippet="ifrk4_update" dedent=2}
+```
+
+The two-thirds state projection also applies before each stage's products.
+When $N=0$, only the exact viscous exponential remains. When $L=0$, this
+reduces to classical RK4. With both parts active, the nonlinear stages
+matter; a stable run alone does not establish their order.
+
+## Compare with one finest-step trajectory
+
+The grid, viscosity, initial field and physical sample times remain fixed.
+Only $h$ changes. Let
+
+$$
+E(h)=\|\omega_h(T)-\omega_{h_{\mathrm{ref}}}(T)\|_{\mathrm{RMS}}.
+$$
+
+The comparison reuses the common-grid Fourier helper from the
+[spatial lesson](../spatial-refinement/index.qmd), with equal grid sizes.
+There is no spatial rescaling between these trajectories. The reference
+is still a finite-step numerical solution, not an exact answer.
+
+For adjacent steps related by a factor two, the reported estimate is
+
+$$
+p=\log_2\!\bigl(E(h)/E(h/2)\bigr).
+$$
+
+```{.cpp include="../ns2d/temporal_order.hpp" snippet="observed_order"}
+```
+
+Choose a factor-of-two ladder when interpreting this helper's `log2`
+formula.
+
+The driver withholds a value when either error is at or below the configured
+floor, when a row failed, or when the finer comparison is the reference
+itself. Its `roundoff` label means that the floor prevented the estimate;
+it does not prove that floating point error is the only source of the
+small difference. Even above that floor, reference-step error can bias a
+ratio. Refine the reference before interpreting a stable estimate as a
+method's asymptotic order.
+
+## Run a small nonlinear ladder
+
+From the repository root, with a compatible installed spectral CPU SDK:
+
+```sh
+mkdir -p results
+openpfc compile examples/flow/temporal-refinement/model.cpp --source-root examples/flow -o results/temporal-refinement
+results/temporal-refinement --case two-mode --n 16 --dts 0.2,0.1,0.05,0.025 --times 0.8 --nu 0.05 --outdir results/flow/temporal-refinement
+```
+
+Use one MPI rank, as required by this comparison driver. Each step must be
+an integer multiple of the finest step. Sample times are rounded to
+finest-step indices, and those indices must be divisible by every coarser
+subdivision. Choose observation times that are exact multiples of every
+step and check the recorded time column.
+
+The [model](model.cpp) uses the shared
+[solver](../ns2d/vorticity_stream.hpp),
+[spectral operations](../ns2d/spectral.hpp),
+[initial fields](../ns2d/cases.hpp),
+[comparison helper](../ns2d/band_error.hpp) and
+[order helper](../ns2d/temporal_order.hpp). Keep their relative layout when
+using downloads; the declared source root captures their quoted includes.
+The CMake target remains `ns2d_temporal_refine` at its existing location.
+Its original short smoke case and numerical tests are retained.
+
+The supplied small ladder gives the following representative differences
+against its finest step:
+
+| $h$ | Vorticity RMS difference | Reported $p$ |
+|---:|---:|---:|
+| $0.2$ | $1.54\times10^{-7}$ | $3.99$ |
+| $0.1$ | $9.69\times10^{-9}$ | $4.08$ |
+| $0.05$ | $5.73\times10^{-10}$ | — |
+| $0.025$ | Reference | — |
+
+The last comparison is withheld because its finer member is the reference.
+A value slightly above four can reflect reference-step bias; it does not
+establish a higher-order method.
+
+Read `temporal_errors.csv` and `run.json` under the result directory.
+Inspect `status` before interpreting error or order columns. Rows with
+nonfinite fields or excessive CFL are recorded as failures; their data
+must not be fitted into a convergence line. The table also records mean
+drift, divergence, energy differences and the outer-band diagnostic.
+
+Add a finer reference step, keeping the physical times fixed. Then repeat
+at a finer grid. The first experiment tests sensitivity to reference time
+error; the second asks whether spatial truncation affects the time study.
+A two-level smoke test checks execution and output structure, while a
+meaningful order estimate needs multiple valid levels above the floor.
+
+:::

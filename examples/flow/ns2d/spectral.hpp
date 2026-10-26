@@ -210,6 +210,7 @@ void ifrk4_one(SpectralPlane &sp, std::vector<SpectralPlane::Complex> &u_hat,
   }
   sp.project_hat(stage);
   N(stage, n4);
+  // start snippet ifrk4_update
   const double dt6 = dt / 6.0;
   for (std::size_t i = 0; i < u_hat.size(); ++i) {
     u_hat[i] =
@@ -217,6 +218,7 @@ void ifrk4_one(SpectralPlane &sp, std::vector<SpectralPlane::Complex> &u_hat,
         dt6 * (exp_dt[i] * n1[i] + 2.0 * exp_half[i] * (n2[i] + n3[i]) + n4[i]);
   }
   sp.project_hat(u_hat);
+  // end snippet ifrk4_update
 }
 
 /// IFRK4 for a coupled pair with (possibly different) linear symbols.

@@ -17,10 +17,13 @@
 
 namespace ns2d {
 
+// start snippet observed_order
 [[nodiscard]] inline std::optional<double>
 observed_order(double e_coarse, double e_fine, double floor) {
   if (!(e_coarse > floor && e_fine > floor)) return std::nullopt;
   return std::log2(e_coarse / e_fine);
 }
+
+// end snippet observed_order
 
 } // namespace ns2d

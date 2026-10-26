@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Teach nonlinear IFRK4 time refinement at a fixed grid, including finite
+  reference-step error, synchronized sample times and guarded order estimates.
+
 - Teach spatial flow refinement through normalized Fourier restriction,
   fixed timesteps and a separate time-step control, retaining the driver.
 

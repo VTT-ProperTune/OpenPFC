@@ -35,3 +35,8 @@ add_executable(ns2d_spatial_refine spatial-refinement/model.cpp)
 target_include_directories(ns2d_spatial_refine PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(ns2d_spatial_refine PRIVATE OpenPFC ${_flow_heffte_tgt})
 set_target_properties(ns2d_spatial_refine PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples/ns2d_vorticity")
+
+add_executable(ns2d_temporal_refine temporal-refinement/model.cpp)
+target_include_directories(ns2d_temporal_refine PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(ns2d_temporal_refine PRIVATE OpenPFC ${_flow_heffte_tgt})
+set_target_properties(ns2d_temporal_refine PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples/ns2d_vorticity")

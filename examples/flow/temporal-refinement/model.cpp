@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file temporal_refine.cpp
+ * @file model.cpp
  * @brief Fixed-grid timestep ladder for IFRK4 (#225).
  *
  * The step list is chosen before the run. Shear uses N=512, the finest
@@ -36,10 +36,10 @@
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
 
-#include <ns2d/band_error.hpp>
-#include <ns2d/cases.hpp>
-#include <ns2d/temporal_order.hpp>
-#include <ns2d/vorticity_stream.hpp>
+#include "../ns2d/band_error.hpp"
+#include "../ns2d/cases.hpp"
+#include "../ns2d/temporal_order.hpp"
+#include "../ns2d/vorticity_stream.hpp"
 
 namespace {
 
@@ -94,6 +94,7 @@ struct Protocol {
   double dt_ref{0.0};
 };
 
+// start snippet setup
 Held make_solver(CaseKind kind, int n, double dt, double nu, int rank, int nproc) {
   const auto domain =
       (kind == CaseKind::Shear) ? ns2d::make_unit_slab(n) : ns2d::make_twopi_slab(n);
@@ -104,6 +105,8 @@ Held make_solver(CaseKind kind, int n, double dt, double nu, int rank, int nproc
       std::make_unique<ns2d::VorticityStreamCPU>(*h.stack, ns2d::Params{nu, dt});
   return h;
 }
+
+// end snippet setup
 
 bool field_is_finite(ns2d::VorticityStreamCPU &solver) {
   bool ok = true;
