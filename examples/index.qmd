@@ -74,6 +74,9 @@ and distinguish warmup, collective waiting and per-rank records.
 Connect the nonlinear course to [an alias-free cubic model](phase-fields/alias-free-cubic/index.qmd),
 then separate sampling, cutoff and time-refinement questions.
 
+Begin the flow challenges by [recovering velocity from vorticity](flow/vorticity/index.qmd)
+and checking an exact two-dimensional vortex.
+
 ## Make your first change
 
 Install a compatible OpenPFC SDK and CLI using the

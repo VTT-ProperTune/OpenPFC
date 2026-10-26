@@ -599,9 +599,15 @@
     },
     {
       "target": "ns2d_vorticity",
-      "source": "ns2d_vorticity/src/ns2d.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "flow/vorticity/model.cpp",
+      "chapter": "flow/vorticity/index.qmd",
+      "capabilities": [
+        "vorticity-streamfunction",
+        "spectral-poisson",
+        "ifrk4",
+        "quadratic-dealiasing",
+        "exact-flow-mode"
+      ]
     },
     {
       "target": "orr_sommerfeld",
@@ -1360,7 +1366,8 @@
         "waves/kdv/index.qmd",
         "polynomials/allen-cahn-fixed/index.qmd",
         "polynomials/allen-cahn-driven/index.qmd",
-        "phase-fields/cahn-hilliard/index.qmd"
+        "phase-fields/cahn-hilliard/index.qmd",
+        "flow/vorticity/index.qmd"
       ]
     }
   ]

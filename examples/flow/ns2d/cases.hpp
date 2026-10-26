@@ -56,10 +56,13 @@ enum class Case { taylor_green, shear, two_mode };
   return -std::cos(x) * std::sin(y) * std::exp(-2.0 * nu * t);
 }
 
+// start snippet exact_omega
 [[nodiscard]] inline double taylor_green_omega(double x, double y, double nu,
                                                double t) noexcept {
   return 2.0 * std::sin(x) * std::sin(y) * std::exp(-2.0 * nu * t);
 }
+
+// end snippet exact_omega
 
 [[nodiscard]] inline double taylor_green_ke(double nu, double t) noexcept {
   return 0.25 * std::exp(-4.0 * nu * t);

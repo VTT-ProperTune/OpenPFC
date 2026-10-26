@@ -104,6 +104,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `23_halo_microtiming` | `diagnostics/halo-frames/model.cpp` | Timed `HaloExchange` loop; schema-v2 JSON (`--cuda` / `--hip` / `--full`) |
 | `24_adaptive_etd` | `integration/adaptive-etd/model.cpp` | ETD1 step doubling: a heat mode against `exp(-k²t)`, then `∂t ψ = ∇²ψ − ψ³` with the memoryless controller |
 | `nonlinear_spectral_course` | `phase-fields/alias-free-cubic/model.cpp` | Periodic Allen–Cahn: cubic Galerkin projection with `4K < N`, ETD2, independent convolution/RK4 checks and MPI ownership output |
+| `ns2d_vorticity` | `flow/vorticity/model.cpp` | Issue #21 2-D vorticity–streamfunction Navier–Stokes (CPU). See [`../../examples/ns2d_vorticity/README.md`](../../examples/ns2d_vorticity/README.md). |
 | `periodic_differentiation` | `differentiation/periodic/model.cpp` | Analytic derivative, second/fourth-order FD, and Fourier convergence |
 | `heat_exponential` | `heat/exponential/model.cpp` | Exact linear Fourier propagator; compare spatial and temporal error |
 | `cardinal_interpolation` | `interpolation/cardinal/model.cpp` | Trefethen program 3: cardinal sinc reconstruction of three sampled signals |
@@ -154,7 +155,6 @@ catalog entries.
 
 | Executable | Source | What it demonstrates |
 |------------|--------|----------------------|
-| `ns2d_vorticity` | `ns2d_vorticity/src/ns2d.cpp` | Issue #21 2-D vorticity–streamfunction Navier–Stokes (CPU). See [`../../examples/ns2d_vorticity/README.md`](../../examples/ns2d_vorticity/README.md). |
 | `mhd2d` | `ns2d_vorticity/src/mhd.cpp` | Issue #23 2-D incompressible visco-resistive MHD (CPU). Same README. |
 | `taylor_green3d` | `taylor_green3d/src/taylor_green.cpp` | Issue #229 3-D periodic Taylor–Green on the Fourier velocity (CPU). See [`../../examples/taylor_green3d/README.md`](../../examples/taylor_green3d/README.md). |
 

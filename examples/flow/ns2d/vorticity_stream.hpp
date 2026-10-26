@@ -203,6 +203,7 @@ public:
   }
 
 private:
+  // start snippet advection
   void nonlinear_from_hat(const std::vector<Complex> &omega_hat,
                           std::vector<Complex> &n_hat) {
     m_plane.poisson(omega_hat, m_psi_hat);
@@ -216,6 +217,8 @@ private:
     m_plane.project_hat(n_hat);
     m_plane.zero_dc(n_hat);
   }
+
+  // end snippet advection
 
   pfc::sim::stacks::SpectralCPUStack *m_stack{nullptr};
   SpectralPlane m_plane;

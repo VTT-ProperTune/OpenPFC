@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Teach the retained vorticity–streamfunction example through an exact
+  Taylor–Green mode, Poisson recovery and explicit nonlinear advection.
+
 - Place the shared two-dimensional flow-example headers under `examples/flow/ns2d`
   while preserving solver operations and existing executable/test contracts.
 

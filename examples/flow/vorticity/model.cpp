@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file ns2d.cpp
+ * @file model.cpp
  * @brief CLI driver for the 2-D vorticity–streamfunction prototype (#21).
  *
  * Verification (`--case taylor_green --verify`) and the Kelvin–Helmholtz
@@ -27,8 +27,8 @@
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
 
-#include <ns2d/cases.hpp>
-#include <ns2d/vorticity_stream.hpp>
+#include "../ns2d/cases.hpp"
+#include "../ns2d/vorticity_stream.hpp"
 
 namespace {
 
@@ -162,9 +162,12 @@ int run(const Cli &cli, int rank, int nproc) {
     std::cout << "integrator=IFRK4  dt=" << dt << " nu=" << cli.nu << "\n";
   }
 
+  // start snippet solver
   pfc::sim::stacks::SpectralCPUStack stack(ns2d::make_slab(cli.n, length), rank,
                                            nproc, MPI_COMM_WORLD);
   ns2d::VorticityStreamCPU solver(stack, ns2d::Params{cli.nu, dt});
+
+  // end snippet solver
 
   if (cli.cse == ns2d::Case::taylor_green) {
     solver.initialize_omega([&](double x, double y, double) {
