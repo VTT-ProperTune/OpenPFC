@@ -5,7 +5,10 @@
 #include <cmath>
 #include <openpfc/kernel/field/face_current.hpp>
 #include <openpfc/kernel/field/face_flux.hpp>
+#include <openpfc/kernel/field/padded_face_flux.hpp>
+#include <openpfc/runtime/gpu/databuffer_gpu.hpp>
 #include <openpfc/runtime/gpu/gpu_api.hpp>
+#include <openpfc/runtime/gpu/memory_space_gpu.hpp>
 #include <vector>
 
 namespace {
@@ -88,5 +91,92 @@ TEST_CASE(
       CHECK(std::abs(sum * 0.125 - fd::outer_flux(gx, gy, gz, nx, ny, nz,
                                                   {true, true, true}, 0.5, 0.5,
                                                   0.5)) < 1e-10);
+  }
+}
+
+TEST_CASE("padded device flux matches an independent finite-volume balance",
+          "[face_current][padded_face_flux][integration]") {
+  int device_count = 0;
+#if defined(OPENPFC_GPU_API_HIP)
+  const auto status = hipGetDeviceCount(&device_count);
+  using Space = pfc::HIPSpace;
+#else
+  const auto status = cudaGetDeviceCount(&device_count);
+  using Space = pfc::CUDASpace;
+#endif
+  if (status != pfc::gpuSuccess || device_count == 0) SKIP("No allocated device");
+  // Thin owned axes and distinct padding widths exercise both field pitches.
+  for (int nx : {1, 7}) {
+    const int ny = 3, nz = 2, n = nx * ny * nz;
+    const auto domain = pfc::domain::with_spacing({nx, ny, nz}, {0.5, 0.7, 0.9},
+                                                  {false, true, true});
+    const auto box = pfc::Box3i::from_bounds({0, 0, 0}, {nx - 1, ny - 1, nz - 1});
+    pfc::data::Field<double, Space> a(domain, box, 1), p(domain, box, 2);
+    const auto coefficient = [](int i, int j, int k) {
+      return 1.0 + 0.05 * i + 0.03 * j + 0.02 * k;
+    };
+    const auto potential = [](int i, int j, int k) {
+      return double(i * i + 2 * j * j - k * k);
+    };
+    a.with_host_view([&](double *data, std::size_t) {
+      for (int k = -1; k < nz + 1; ++k)
+        for (int j = -1; j < ny + 1; ++j)
+          for (int i = -1; i < nx + 1; ++i)
+            data[a.idx(i, j, k)] = coefficient(i, j, k);
+    });
+    p.with_host_view([&](double *data, std::size_t) {
+      for (int k = -2; k < nz + 2; ++k)
+        for (int j = -2; j < ny + 2; ++j)
+          for (int i = -2; i < nx + 2; ++i)
+            data[p.idx(i, j, k)] = potential(i, j, k);
+    });
+    Allocation result;
+    REQUIRE(pfc::gpuMalloc(reinterpret_cast<void **>(&result.data),
+                           n * sizeof(double)) == pfc::gpuSuccess);
+    for (auto average : {fd::FaceAverage::Arithmetic, fd::FaceAverage::Harmonic}) {
+      auto walls = fd::model_walls();
+      walls.xm = walls.xp = {fd::WallPolicy::Zero, 0};
+      const auto flux = fd::padded_face_flux(a, p, average);
+      const auto div = fd::face_divergence(flux, nx, ny, nz, {true, true, true}, 0.5,
+                                           0.7, 0.9, walls);
+      evaluate<<<(n + 127) / 128, 128>>>(div, result.data, nx, ny, nz);
+      REQUIRE(pfc::gpuGetLastError() == pfc::gpuSuccess);
+      std::vector<double> got(n);
+      REQUIRE(pfc::gpuMemcpy(got.data(), result.data, n * sizeof(double),
+                             pfc::gpuMemcpyDeviceToHost) == pfc::gpuSuccess);
+      for (int k = 0; k < nz; ++k)
+        for (int j = 0; j < ny; ++j)
+          for (int i = 0; i < nx; ++i) {
+            double expected = 0;
+            const int cell[3] = {i, j, k};
+            const int extent[3] = {nx, ny, nz};
+            const double h[3] = {0.5, 0.7, 0.9};
+            for (int axis = 0; axis < 3; ++axis) {
+              double face[2]{};
+              for (int side = 0; side < 2; ++side) {
+                if (axis == 0 && cell[axis] == (side == 0 ? 0 : extent[axis] - 1))
+                  continue;
+                const int lo[3] = {i - (axis == 0 && side == 0),
+                                   j - (axis == 1 && side == 0),
+                                   k - (axis == 2 && side == 0)};
+                const int hi[3] = {lo[0] + (axis == 0), lo[1] + (axis == 1),
+                                   lo[2] + (axis == 2)};
+                const double al = coefficient(lo[0], lo[1], lo[2]);
+                const double ah = coefficient(hi[0], hi[1], hi[2]);
+                const double af = average == fd::FaceAverage::Arithmetic
+                                      ? (al + ah) / 2
+                                      : 2 * al * ah / (al + ah);
+                face[side] = af *
+                             (potential(hi[0], hi[1], hi[2]) -
+                              potential(lo[0], lo[1], lo[2])) /
+                             h[axis];
+              }
+              expected += (face[1] - face[0]) / h[axis];
+            }
+            CHECK(std::abs(got[fd::cell_index(nx, ny, i, j, k)] - expected) < 1e-11);
+          }
+    }
+    pfc::data::Field<double, Space> unpadded(domain, box, 0);
+    CHECK_THROWS_AS(fd::padded_face_flux(a, unpadded), std::invalid_argument);
   }
 }
