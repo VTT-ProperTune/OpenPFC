@@ -19,6 +19,7 @@ from urllib.parse import quote, unquote
 from sphinx.application import Sphinx
 
 from repo_pages import GENERATED_ROOTS, published_pages
+from publication import public_sources
 
 _LINK_RE = re.compile(
     r"(?P<prefix>!?\[[^\]]*\]\()"
@@ -42,6 +43,7 @@ def _rewrite_repository_links(app: Sphinx, docname: str, source: list[str]) -> N
     repository = os.environ.get("OPENPFC_REPOSITORY", "VTT-ProperTune/OpenPFC")
     revision = os.environ.get("OPENPFC_REVISION", "master")
     pages = published_pages(repository_root)
+    approved = public_sources(repository_root)
     origins = {doc: src for src, doc in pages.items()}
     written_in = origins.get(docname, page_path)
 
@@ -66,7 +68,7 @@ def _rewrite_repository_links(app: Sphinx, docname: str, source: list[str]) -> N
         page = None
         if resolved in pages:
             page = docs_dir / f"{pages[resolved]}.md"
-        elif not _is_generated(resolved, docs_dir):
+        elif resolved in approved and not _is_generated(resolved, docs_dir):
             try:
                 resolved.relative_to(docs_dir)
                 page = resolved

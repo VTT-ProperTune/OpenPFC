@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Publish repository guides that live outside docs/ as handbook pages.
+"""Publish selected repository guides outside docs/ as handbook pages.
 
 The repository files stay the only source. At build time each one is copied
 into the Sphinx source tree under a stable docname (``INSTALL.md`` becomes
@@ -19,6 +19,8 @@ from pathlib import Path
 
 from sphinx.application import Sphinx
 
+from publication import public_sources
+
 # Single files: repository path -> docname.
 PROJECT_PAGES = {
     "INSTALL.md": "project/install",
@@ -28,9 +30,9 @@ PROJECT_PAGES = {
     "containers/runtime/README.md": "project/containers",
 }
 
-# Every README below these directories becomes the index page of its
-# directory under the same path. Other notes there (measurement records,
-# derivations) stay repository files and are linked on GitHub.
+# Selected READMEs below these directories become their directory's index.
+# docs/public_pages.txt is the publication boundary; other notes remain files
+# in the repository and are linked on GitHub.
 MIRRORED_TREES = ("apps", "examples")
 
 GENERATED_ROOTS = ("project", *MIRRORED_TREES)
@@ -56,7 +58,8 @@ def published_pages(repository_root: Path) -> dict[Path, str]:
         for path in _readmes(repository_root, tree):
             relative = path.relative_to(repository_root).parent / "index"
             pages[path.resolve()] = relative.as_posix()
-    return {path: doc for path, doc in pages.items() if path.exists()}
+    approved = public_sources(repository_root)
+    return {path: doc for path, doc in pages.items() if path in approved}
 
 
 def _generate(app: Sphinx) -> None:

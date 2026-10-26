@@ -73,8 +73,9 @@ The documentation uses complementary checks:
    including files outside `docs/`;
 2. Sphinx validates the rendered document tree, MyST cross-references, anchors,
    Breathe input, and navigation;
-3. `docs/_ext/repo_pages.py` publishes installation, project, application and
-   example READMEs from their original repository files;
+3. `docs/public_pages.txt` selects the public sources; `docs/_ext/repo_pages.py`
+   mirrors only selected repository guides, and `docs/public_redirects.json`
+   keeps former operational-page URLs pointed at useful public guides;
 4. `docs/_ext/repo_links.py` keeps links to published pages inside the handbook
    and rewrites other repository links to commit-pinned GitHub URLs;
 5. the website workflow checks links and resources after combining the

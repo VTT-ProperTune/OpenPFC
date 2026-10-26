@@ -19,16 +19,6 @@ Start with the [HPC operator guide](operator_guide.md).
 | MPI-IO paths and collective layout | [MPI-IO layout checklist](mpi_io_layout_checklist.md) |
 | Runtime instrumentation | [Performance profiling](performance_profiling.md) |
 | Profiling output contract | [Profiling export schema](profiling_export_schema.md) |
-| LUMI-G tungsten_hip 1–8 GCD campaign | [LUMI GPU scaling](lumi_gpu_scaling.md) |
-| LUMI-G Heat3D 1-node cost-matrix recipe | [Heat3D N^3 cost](heat3d_n3_cost.md) |
-| LUMI-G Heat3D FD weak scaling | [Heat3D FD weak](lumi_gpu_heat3d_fd_weak.md) |
-| LUMI-G FD-order halo-overlap scaling | [FD-order scaling](fd_order_scaling.md) |
-| LUMI-G HeFFTe reshape tournament | [HeFFTe protocol tournament](heffte_protocol_tournament.md) |
-| LUMI-G HeFFTe-trace vs OSU; 32-node pencils | [HeFFTe bandwidth calibrate](heffte_bandwidth_calibrate.md) |
-| Held-out HeFFTe selector (blocked) | [HeFFTe selector regret](heffte_selector_regret.md) |
-| LUMI-G HeFFTe topology crossovers | [HeFFTe topology crossover](heffte_topology_crossover.md) |
-| LUMI-G topology metadata actually exposed | [HeFFTe topology observability](heffte_topology_observability.md) |
-| #106 H1/H2/H3 decision tests | [HeFFTe pre-analysis](heffte_topology_preanalysis.md) |
 | First batch submission | [Slurm day one](../tutorials/hpc_slurm_day_one.md) |
 
 ## Site-specific guidance
@@ -36,14 +26,9 @@ Start with the [HPC operator guide](operator_guide.md).
 | Site | Document |
 |------|----------|
 | LUMI software and ROCm environment | [LUMI installation](INSTALL.LUMI.md) |
-| LUMI scheduler examples | [LUMI Slurm guide](../lumi_slurm/README.md) |
 | VTT Tohtori modules and paths | [Tohtori installation](INSTALL.tohtori.md) |
-| [`vlasov_gpu.md`](vlasov_gpu.md) | 1D2V Vlasov-Maxwell on MI250X: what was ported, what deliberately was not, and the measurement that decided each |
-| Weibel showcase (8 GCD) | [`showcase_weibel.sbatch`](../../apps/vlasov_maxwell/slurm/showcase_weibel.sbatch) |
-| Dendrite 2-D showcase (8 GCD) | [`showcase_dendrite2d.sbatch`](../../apps/alloy_dendrite_elastic/slurm/showcase_dendrite2d.sbatch) |
-| Dendrite 3-D showcase (8 GCD) | [`showcase_dendrite3d.sbatch`](../../apps/alloy_dendrite_elastic/slurm/showcase_dendrite3d.sbatch) |
 
-Site pages may name current modules and filesystem paths. Generic API, CMake,
+Site pages name public module stacks and use configurable local paths. Generic API, CMake,
 and configuration contracts belong in the main install guide and reference
 pages rather than being copied into site notes.
 

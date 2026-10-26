@@ -15,8 +15,11 @@ class ArticleText(HTMLParser):
         self.in_title = False
         self.in_article = False
         self.skip = 0
+        self.is_redirect = False
 
     def handle_starttag(self, tag, attrs):
+        if tag == "meta" and dict(attrs).get("name") == "openpfc-public-redirect":
+            self.is_redirect = True
         if tag == "title" and not self.title:
             self.in_title = True
         if tag == "article":
@@ -50,6 +53,8 @@ def export_index(app, exception):
             continue
         article = ArticleText()
         article.feed(path.read_text(encoding="utf-8"))
+        if article.is_redirect:
+            continue
         text = " ".join(" ".join(article.text).split())
         if not text:
             continue

@@ -12,6 +12,9 @@ DOCS_DIR = Path(__file__).resolve().parent
 REPOSITORY_ROOT = DOCS_DIR.parent
 sys.path.insert(0, str(DOCS_DIR / "_ext"))
 
+from publication import public_sources
+from repo_pages import published_pages
+
 project = "OpenPFC"
 author = "OpenPFC contributors"
 copyright = "2026, VTT Technical Research Centre of Finland Ltd"
@@ -22,6 +25,7 @@ release = _version_match.group(1) if _version_match else "development"
 version = release
 
 extensions = [
+    "publication",
     "myst_parser",
     "breathe",
     "sphinxcontrib.mermaid",
@@ -34,6 +38,14 @@ extensions = [
 source_suffix = {".md": "markdown"}
 root_doc = "index"
 primary_domain = "cpp"
+
+# Repository notes are not publication consent. Both prose and mirrored guides
+# must be selected explicitly before entering HTML, downloads or search data.
+include_patterns = [
+    path.relative_to(DOCS_DIR).as_posix()
+    for path in public_sources(REPOSITORY_ROOT)
+    if path.is_relative_to(DOCS_DIR)
+] + [f"{docname}.md" for docname in published_pages(REPOSITORY_ROOT).values()]
 
 exclude_patterns = [
     "README.md",

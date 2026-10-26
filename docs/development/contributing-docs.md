@@ -45,9 +45,17 @@ local index and to `docs/index.md` when they belong in primary navigation.
 User-facing content goes on the website: a handbook page here, or a site page
 in openpfc-pages. The root README stays a short entry that links to the site;
 add a link there only for a top-level entry point, and use the published URL.
-Guides beside the code (`INSTALL.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, every
-`apps/**/README.md` and `examples/**/README.md`) are published automatically
-by `docs/_ext/repo_pages.py`.
+Only sources selected in `docs/public_pages.txt` enter the public handbook.
+This includes selected guides beside the code, mirrored by
+`docs/_ext/repo_pages.py`. New Markdown files and READMEs are not automatically
+approved for publication. Review their text, linked downloads and metadata
+before adding them. Public instructions use configurable directories and
+allocations; personal paths, scheduler identifiers and operational records
+stay outside the publication list. Preserve existing source and evidence.
+
+Render into a fresh output directory when reviewing a publication change, so
+old HTML or downloads from a previous build cannot enter the published tree.
+Inspect the actual HTML and both search indexes as well as the source diff.
 
 ## Before opening a pull request
 

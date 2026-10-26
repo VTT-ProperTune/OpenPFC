@@ -44,3 +44,17 @@ def test_failed_build_does_not_publish_an_index(tmp_path):
     app = SimpleNamespace(outdir=tmp_path, builder=SimpleNamespace(format="html"))
     public_search.export_index(app, RuntimeError("build failed"))
     assert not (tmp_path / "search-index.json").exists()
+
+
+def test_redirects_do_not_replace_real_guides_in_search(tmp_path):
+    (tmp_path / "old.html").write_text(
+        '<meta name="openpfc-public-redirect" content="true">'
+        '<article>Continue to the public guide.</article>'
+    )
+    (tmp_path / "guide.html").write_text(
+        '<title>Public guide</title><article>Use configurable storage.</article>'
+    )
+    app = SimpleNamespace(outdir=tmp_path, builder=SimpleNamespace(format="html"))
+    public_search.export_index(app, None)
+    documents = json.loads((tmp_path / "search-index.json").read_text())
+    assert [document["href"] for document in documents] == ["guide.html"]

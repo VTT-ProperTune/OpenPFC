@@ -67,16 +67,8 @@ hpc/build_cpu_gpu
 hpc/mpi_io_layout_checklist
 hpc/performance_profiling
 hpc/profiling_export_schema
-hpc/lumi_gpu_scaling
-hpc/heat3d_n3_cost
-hpc/lumi_gpu_heat3d_fd_weak
-hpc/heffte_protocol_tournament
-hpc/heffte_bandwidth_calibrate
 hpc/INSTALL.LUMI
 hpc/INSTALL.tohtori
-lumi_slurm/README
-project/easybuild
-project/containers
 ```
 
 ```{toctree}
@@ -97,7 +89,6 @@ apps/*/*/index
 :glob:
 
 examples/index
-examples/*/index
 ```
 
 ```{toctree}
@@ -138,7 +129,6 @@ api/index
 :caption: Project
 :maxdepth: 3
 
-project/changelog
 project/contributing
 development/README
 development/testing
@@ -151,6 +141,4 @@ development/from_paper_to_run
 adr/README
 archive/README
 development/handbook_build
-development/image-prompts
-hpc/scalability_analysis_plan
 ```
