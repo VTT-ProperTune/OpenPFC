@@ -1,0 +1,14 @@
+<!--
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+{% extends "!page.html" %}
+
+{% block body %}
+{{ super()
+  | replace('<aside class="announcement-content">', '<aside class="announcement-content" aria-label="Project information">')
+  | replace('<aside class="sidebar-drawer">', '<aside class="sidebar-drawer" aria-label="Handbook navigation">')
+  | replace('<aside class="toc-drawer">', '<aside class="toc-drawer" aria-label="Page contents">')
+  | replace('<div class="content-icon-container">', '<div class="content-icon-container" role="region" aria-label="Page actions">')
+}}
+{% endblock %}

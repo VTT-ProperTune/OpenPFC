@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 {% block content %}
 <h1>Search the handbook</h1>
 <p>Find an installation step, a command, a numerical method or a C++ API entry.</p>
-<form class="handbook-search" role="search" action="{{ pathto('search') }}" method="get">
+<form class="handbook-search" role="search" aria-label="Handbook content search" action="{{ pathto('search') }}" method="get">
   <label for="handbook-query">Search the handbook and C++ API</label>
   <input id="handbook-query" name="q" type="search" placeholder="Try FFT, halo or installation" autocomplete="off">
   <button type="submit">Search</button>
