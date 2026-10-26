@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Correct FFTW real-transform planning in fetched HeFFTe 2.4.1 and document
+  rebuilding installed providers; cover both precisions against a direct DFT.
+
 - Keep MPI test case ordering and default random seeds consistent across ranks,
   including application and device test runners, with Catch2 3.16 and older.
 

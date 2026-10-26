@@ -200,6 +200,20 @@ GitHub Actions in this repository follow the same policy: workflows download HeF
 
 If no HeFFTe is found, CMake can fetch v2.4.1 via FetchContent into `build/_deps/` inside an OpenPFC build directory (FFTW + MPI still required). This is a fallback only: for day-to-day work, prefer installs under `$HOME/opt/heffte/<variant>` as above. FetchContent must not be used as an excuse to extract HeFFTe into the OpenPFC source tree.
 
+The fallback pins the v2.4.1 source commit and archive checksum and applies
+OpenPFC's FFTW real-plan correction (Git is required). Stock HeFFTe 2.4.1 plans
+with two null pointers, which FFTW treats as an in-place layout, then executes
+with distinct arrays. On macOS this can corrupt a 512-point transform or crash
+with a reduced singleton axis. The correction plans with separate temporary
+arrays sized for the complete strided batch. It uses `FFTW_UNALIGNED` so later
+execution need not match the temporary arrays' alignment; FFTW may consequently
+use fewer SIMD optimizations. Performance has not been qualified.
+
+An already installed HeFFTe takes precedence and is never modified by OpenPFC.
+Rebuild it from corrected sources using the manual instructions below. For an
+explicit fallback build, combine `-DOpenPFC_FETCH_HEFFTE=ON` with
+`-DCMAKE_DISABLE_FIND_PACKAGE_Heffte=ON`.
+
 ### Optional: Lmod modulefiles (`$HOME/privatemodules`)
 
 After installing to e.g. `$HOME/opt/heffte/2.4.1-cpu`, you can add a personal module that prepends `CMAKE_PREFIX_PATH`** (and anything else your site needs):
@@ -229,6 +243,17 @@ tar xf "$HOME/src/v${VER}.tar.gz" -C "$HOME/src"
 export CC=$(which gcc)
 export CXX=$(which g++)
 ```
+
+From the OpenPFC checkout, apply the bounded correction before configuring
+HeFFTe (including CPU, CUDA and ROCm variants that enable FFTW):
+
+```bash
+cmake -DSOURCE_DIR="$SRC" -P cmake/PatchHeffteFftw.cmake
+```
+
+This accepts the original v2.4.1 header or an already corrected copy. It refuses
+unexpected header contents without overwriting them. Rebuild and reinstall
+HeFFTe afterward; changing source alone does not update an installed provider.
 
 CUDA + FFTW → install to `$HOME/opt/heffte/2.4.1-cuda`:
 

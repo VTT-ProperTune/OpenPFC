@@ -19,7 +19,11 @@ endif()
 
 FetchContent_Declare(
   openpfc_heffte
-  URL https://github.com/icl-utk-edu/heffte/archive/refs/tags/v2.4.1.tar.gz
+  # Upstream v2.4.1, pinned independently of the mutable tag.
+  URL https://codeload.github.com/icl-utk-edu/heffte/tar.gz/6e16996e5a3eb65c60fd62fd4d93c4b2df833033
+  URL_HASH SHA256=543cc06336140d6eddbc7a0955fe795bf400440578131121fb7b03ca4922fba6
+  PATCH_COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR=<SOURCE_DIR>
+    -P "${CMAKE_CURRENT_LIST_DIR}/PatchHeffteFftw.cmake"
   DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
 
 FetchContent_MakeAvailable(openpfc_heffte)

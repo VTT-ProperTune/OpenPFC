@@ -16,6 +16,7 @@ endif()
 if(OpenPFC_ENABLE_HEFFTE)
   if(OpenPFC_HAS_FFTW3)
     target_sources(openpfc-tests PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_real_plan.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test_mixed_transform.cpp)
     if(OpenPFC_ENABLE_CUDA_SPECTRAL OR OpenPFC_ENABLE_HIP_SPECTRAL)
       target_sources(openpfc-tests PRIVATE
