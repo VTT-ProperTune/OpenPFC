@@ -39,11 +39,11 @@
 #include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/execution/memory_space.hpp>
+#include <openpfc/solvers/multigrid_mpi_transfers.hpp>
+#include <openpfc/solvers/multigrid_plan.hpp>
 #include <openpfc/solvers/nodal_dirichlet_coarse.hpp>
 #include <openpfc/solvers/nodal_dirichlet_kernels.hpp>
 #include <openpfc/solvers/nodal_dirichlet_nested_geometry.hpp>
-#include <openpfc/solvers/multigrid_mpi_transfers.hpp>
-#include <openpfc/solvers/multigrid_plan.hpp>
 #include <openpfc/solvers/nodal_multigrid_kernels.hpp>
 
 namespace pfc::solvers {
@@ -158,12 +158,11 @@ public:
    * This is a second layout policy for the SAME matrix-free Q1 kernel,
    * smoother and fixed symmetric V-cycle, not another numerical solver.
    */
-  NodalDirichletMultigrid(const MultigridPlan &plan, int rank,
-                          MPI_Comm comm)
+  NodalDirichletMultigrid(const MultigridPlan &plan, int rank, MPI_Comm comm)
       : NodalDirichletMultigrid(plan, rank, comm, Controls{}) {}
 
-  NodalDirichletMultigrid(const MultigridPlan &plan, int rank,
-                          MPI_Comm comm, Controls controls)
+  NodalDirichletMultigrid(const MultigridPlan &plan, int rank, MPI_Comm comm,
+                          Controls controls)
       : m_comm(comm), m_rank(rank), m_controls(controls) {
     if (comm == MPI_COMM_NULL)
       throw std::invalid_argument("NodalDirichletMultigrid: null communicator");
@@ -174,8 +173,7 @@ public:
         !(controls.reaction >= 0.0) || !std::isfinite(controls.reaction) ||
         !(controls.jacobi_weight > 0.0 && controls.jacobi_weight < 1.0) ||
         !std::isfinite(controls.jacobi_weight) || controls.pre < 1 ||
-        controls.pre != controls.post ||
-        controls.coarsest_free_extent != 7 ||
+        controls.pre != controls.post || controls.coarsest_free_extent != 7 ||
         controls.max_coarse_unknowns < 1 || plan.levels().size() < 2)
       throw std::invalid_argument(
           "NodalDirichletMultigrid: invalid agglomerated plan or controls");
@@ -193,13 +191,12 @@ public:
         m_levels.emplace_back(nullptr);
         continue;
       }
-      const int local = static_cast<int>(
-          std::distance(level.active_world_ranks.begin(), it));
+      const int local =
+          static_cast<int>(std::distance(level.active_world_ranks.begin(), it));
       nmg::dirichlet::validate_nested_local_width(level.partition);
       m_levels.push_back(std::make_unique<Level>(
-          level.domain, level.partition, local,
-          m_transfers->level_comm(i), make_stencil(level.domain, controls),
-          controls.jacobi_weight));
+          level.domain, level.partition, local, m_transfers->level_comm(i),
+          make_stencil(level.domain, controls), controls.jacobi_weight));
     }
 
     m_coarse_domain = hierarchy.back().domain;
@@ -212,8 +209,7 @@ public:
       m_coarse_rhs.assign(n, 0.0);
       m_coarse_x.assign(n, 0.0);
       m_coarse_factor = nmg::dirichlet::DenseCoarseCholesky(
-          domain::get_size(m_coarse_domain),
-          make_stencil(m_coarse_domain, controls),
+          domain::get_size(m_coarse_domain), make_stencil(m_coarse_domain, controls),
           static_cast<std::size_t>(controls.max_coarse_unknowns));
     }
   }
@@ -222,12 +218,12 @@ public:
     return static_cast<int>(m_levels.size()) + 1;
   }
   [[nodiscard]] std::size_t coarse_unknowns() const noexcept {
-    return m_plan ? static_cast<std::size_t>(
-        m_plan->levels().back().global_nodes) : m_coarse_rhs.size();
+    return m_plan ? static_cast<std::size_t>(m_plan->levels().back().global_nodes)
+                  : m_coarse_rhs.size();
   }
 
   [[nodiscard]] bool active_on_level(std::size_t index) const {
-    if (index >= levels()) 
+    if (index >= levels())
       throw std::out_of_range("NodalDirichletMultigrid: level out of range");
     if (!m_plan) return true; // Legacy hierarchy has replicated leaf.
     const auto &ranks = m_plan->levels()[index].active_world_ranks;
@@ -447,9 +443,8 @@ private:
   static std::vector<double> pack(const FieldT &field) {
     std::vector<double> out;
     out.reserve(owned_count(field.box()));
-    each_owned(field.box(), [&](int i, int j, int k) {
-      out.push_back(field(i, j, k));
-    });
+    each_owned(field.box(),
+               [&](int i, int j, int k) { out.push_back(field(i, j, k)); });
     return out;
   }
 
@@ -458,9 +453,8 @@ private:
       throw std::invalid_argument(
           "NodalDirichletMultigrid: coarse owned size mismatch");
     std::size_t k = 0;
-    each_owned(target.box(), [&](int i, int j, int z) {
-      target(i, j, z) = source[k++];
-    });
+    each_owned(target.box(),
+               [&](int i, int j, int z) { target(i, j, z) = source[k++]; });
   }
 
   static void add_owned(const std::vector<double> &source, FieldT &target) {
@@ -468,9 +462,8 @@ private:
       throw std::invalid_argument(
           "NodalDirichletMultigrid: fine correction size mismatch");
     std::size_t k = 0;
-    each_owned(target.box(), [&](int i, int j, int z) {
-      target(i, j, z) += source[k++];
-    });
+    each_owned(target.box(),
+               [&](int i, int j, int z) { target(i, j, z) += source[k++]; });
   }
 
   void cycle(std::size_t l) {

@@ -113,9 +113,9 @@ struct Fixture {
           MPI_Comm_rank(c, &value);
           return value;
         }()),
-        domain(pfc::domain::create(
-            pfc::GridSize(n), pfc::PhysicalOrigin(origin),
-            pfc::GridSpacing(spacing), pfc::Bool3{false, false, false})),
+        domain(pfc::domain::create(pfc::GridSize(n), pfc::PhysicalOrigin(origin),
+                                   pfc::GridSpacing(spacing),
+                                   pfc::Bool3{false, false, false})),
         decomposition(pfc::decomposition::create(domain, grid)) {}
 
   Field field() const {
@@ -769,7 +769,6 @@ TEST_CASE("Dirichlet nested geometry fails before invalid GPU hierarchy",
   REQUIRE_THROWS_AS(q1::make_nested_decompositions(dec), std::invalid_argument);
 }
 
-
 namespace {
 
 std::vector<pfc::Int3> plan_grids(int ranks) {
@@ -781,8 +780,7 @@ std::vector<pfc::Int3> plan_grids(int ranks) {
   return {};
 }
 
-void check_agglomerated(const Fixture &f, int min_extent,
-                         double reaction = 0.0) {
+void check_agglomerated(const Fixture &f, int min_extent, double reaction = 0.0) {
   using Plan = pfc::solvers::MultigridPlan;
   pfc::solvers::MultigridPlanOptions options;
   options.minimum_owned_extent = min_extent;
@@ -792,8 +790,7 @@ void check_agglomerated(const Fixture &f, int min_extent,
   config.reaction = reaction;
   MG mg(plan, f.rank, f.comm, config);
   REQUIRE(mg.levels() == static_cast<int>(plan.levels().size()));
-  REQUIRE(mg.coarse_unknowns() ==
-          (f.nodes[2] == f.nodes[0] ? 343 : 735));
+  REQUIRE(mg.coarse_unknowns() == (f.nodes[2] == f.nodes[0] ? 343 : 735));
   REQUIRE(mg.local_unknowns() ==
           count(pfc::decomposition::local_box(f.decomposition, f.rank).size));
   for (std::size_t level = 0; level < plan.levels().size(); ++level) {
@@ -806,15 +803,15 @@ void check_agglomerated(const Fixture &f, int min_extent,
   Field x = f.field(), y = f.field();
   fill(x, sample_a);
   mg.apply_operator(x, y);
-  const auto oracle = independent_action(
-      f.nodes, f.h, gather(x, f.comm), 1.0, reaction);
+  const auto oracle =
+      independent_action(f.nodes, f.h, gather(x, f.comm), 1.0, reaction);
   const auto action_result = gather(y, f.comm);
   double mismatch = 0.0;
   for (std::size_t k = 0; k < oracle.size(); ++k)
     mismatch = std::max(mismatch, std::abs(oracle[k] - action_result[k]));
-  INFO("planned MPI grid " << f.proc_grid[0] << "x" << f.proc_grid[1]
-       << "x" << f.proc_grid[2] << " n=" << f.nodes[0]
-       << " by " << f.nodes[2]);
+  INFO("planned MPI grid " << f.proc_grid[0] << "x" << f.proc_grid[1] << "x"
+                           << f.proc_grid[2] << " n=" << f.nodes[0] << " by "
+                           << f.nodes[2]);
   REQUIRE(mismatch < 3e-11);
 
   // Two independent Krylov vectors check symmetry and positive energy
@@ -850,9 +847,7 @@ void check_agglomerated(const Fixture &f, int min_extent,
         mg.apply_operator(v[0], out[0]);
       },
       rhs, solution, cg_controls,
-      [&](const Ops::Vector &r, Ops::Vector &z, int) {
-        mg.apply(r[0], z[0]);
-      });
+      [&](const Ops::Vector &r, Ops::Vector &z, int) { mg.apply(r[0], z[0]); });
   INFO("agglomerated PCG iterations=" << status.iterations);
   REQUIRE(status.converged());
   REQUIRE(status.iterations <= 100);
@@ -877,8 +872,7 @@ void check_agglomerated(const Fixture &f, int min_extent,
   mg.apply(a, again);
   double local_delta = 0.0;
   owned(again, [&](int i, int j, int k) {
-    local_delta = std::max(local_delta,
-                           std::abs(again(i, j, k) - ma(i, j, k)));
+    local_delta = std::max(local_delta, std::abs(again(i, j, k) - ma(i, j, k)));
   });
   double max_delta = 0.0;
   MPI_Allreduce(&local_delta, &max_delta, 1, MPI_DOUBLE, MPI_MAX, f.comm);
@@ -887,17 +881,14 @@ void check_agglomerated(const Fixture &f, int min_extent,
 
 // Manufactured Poisson forcing integrated independently on each Q1 element.
 // This is NOT A*u_exact and does not use the multigrid row kernel.
-std::vector<double> manufactured_load(const pfc::Int3 &n,
-                                      const pfc::Real3 &h) {
+std::vector<double> manufactured_load(const pfc::Int3 &n, const pfc::Real3 &h) {
   const double pi = std::numbers::pi_v<double>;
-  const double length[3] = {(n[0] + 1) * h[0], (n[1] + 1) * h[1],
-                            (n[2] + 1) * h[2]};
-  const double eigen = pi * pi *
-      (1.0 / (length[0] * length[0]) +
-       1.0 / (length[1] * length[1]) +
+  const double length[3] = {(n[0] + 1) * h[0], (n[1] + 1) * h[1], (n[2] + 1) * h[2]};
+  const double eigen =
+      pi * pi *
+      (1.0 / (length[0] * length[0]) + 1.0 / (length[1] * length[1]) +
        1.0 / (length[2] * length[2]));
-  const double gauss[2] = {0.5 - 0.5 / std::sqrt(3.0),
-                           0.5 + 0.5 / std::sqrt(3.0)};
+  const double gauss[2] = {0.5 - 0.5 / std::sqrt(3.0), 0.5 + 0.5 / std::sqrt(3.0)};
   const double volume = h[0] * h[1] * h[2];
   std::vector<double> load(count(n), 0.0);
   for (int ez = 0; ez <= n[2]; ++ez)
@@ -908,21 +899,19 @@ std::vector<double> manufactured_load(const pfc::Int3 &n,
             for (int gx = 0; gx < 2; ++gx) {
               const double q[3] = {gauss[gx], gauss[gy], gauss[gz]};
               const double source = eigen *
-                  std::sin(pi * (ex + q[0]) * h[0] / length[0]) *
-                  std::sin(pi * (ey + q[1]) * h[1] / length[1]) *
-                  std::sin(pi * (ez + q[2]) * h[2] / length[2]);
+                                    std::sin(pi * (ex + q[0]) * h[0] / length[0]) *
+                                    std::sin(pi * (ey + q[1]) * h[1] / length[1]) *
+                                    std::sin(pi * (ez + q[2]) * h[2] / length[2]);
               for (int a = 0; a < 8; ++a) {
-                const int node[3] = {
-                    ex + ((a >> 0) & 1) - 1,
-                    ey + ((a >> 1) & 1) - 1,
-                    ez + ((a >> 2) & 1) - 1};
-                if (node[0] < 0 || node[1] < 0 || node[2] < 0 ||
-                    node[0] >= n[0] || node[1] >= n[1] ||
-                    node[2] >= n[2]) continue;
-                const double shape =
-                    (((a >> 0) & 1) ? q[0] : 1 - q[0]) *
-                    (((a >> 1) & 1) ? q[1] : 1 - q[1]) *
-                    (((a >> 2) & 1) ? q[2] : 1 - q[2]);
+                const int node[3] = {ex + ((a >> 0) & 1) - 1,
+                                     ey + ((a >> 1) & 1) - 1,
+                                     ez + ((a >> 2) & 1) - 1};
+                if (node[0] < 0 || node[1] < 0 || node[2] < 0 || node[0] >= n[0] ||
+                    node[1] >= n[1] || node[2] >= n[2])
+                  continue;
+                const double shape = (((a >> 0) & 1) ? q[0] : 1 - q[0]) *
+                                     (((a >> 1) & 1) ? q[1] : 1 - q[1]) *
+                                     (((a >> 2) & 1) ? q[2] : 1 - q[2]);
                 load[id(n, node[0], node[1], node[2])] +=
                     volume / 8.0 * shape * source;
               }
@@ -933,8 +922,8 @@ std::vector<double> manufactured_load(const pfc::Int3 &n,
 double physical_l2(const pfc::Int3 &n, const pfc::Real3 &h,
                    const std::vector<double> &values) {
   const double pi = std::numbers::pi_v<double>;
-  const double g[3] = {(1.0 - std::sqrt(3.0 / 5.0)) / 2.0,
-                       0.5, (1.0 + std::sqrt(3.0 / 5.0)) / 2.0};
+  const double g[3] = {(1.0 - std::sqrt(3.0 / 5.0)) / 2.0, 0.5,
+                       (1.0 + std::sqrt(3.0 / 5.0)) / 2.0};
   const double w[3] = {5.0 / 18.0, 8.0 / 18.0, 5.0 / 18.0};
   const double volume = h[0] * h[1] * h[2];
   double error = 0.0;
@@ -947,18 +936,16 @@ double physical_l2(const pfc::Int3 &n, const pfc::Real3 &h,
               const double q[3] = {g[gx], g[gy], g[gz]};
               double uh = 0.0;
               for (int a = 0; a < 8; ++a) {
-                const int node[3] = {
-                    ex + ((a >> 0) & 1) - 1,
-                    ey + ((a >> 1) & 1) - 1,
-                    ez + ((a >> 2) & 1) - 1};
-                if (node[0] < 0 || node[1] < 0 || node[2] < 0 ||
-                    node[0] >= n[0] || node[1] >= n[1] ||
-                    node[2] >= n[2]) continue;
-                const double shape =
-                    (((a >> 0) & 1) ? q[0] : 1 - q[0]) *
-                    (((a >> 1) & 1) ? q[1] : 1 - q[1]) *
-                    (((a >> 2) & 1) ? q[2] : 1 - q[2]);
-                uh += shape * values[id(n,node[0],node[1],node[2])];
+                const int node[3] = {ex + ((a >> 0) & 1) - 1,
+                                     ey + ((a >> 1) & 1) - 1,
+                                     ez + ((a >> 2) & 1) - 1};
+                if (node[0] < 0 || node[1] < 0 || node[2] < 0 || node[0] >= n[0] ||
+                    node[1] >= n[1] || node[2] >= n[2])
+                  continue;
+                const double shape = (((a >> 0) & 1) ? q[0] : 1 - q[0]) *
+                                     (((a >> 1) & 1) ? q[1] : 1 - q[1]) *
+                                     (((a >> 2) & 1) ? q[2] : 1 - q[2]);
+                uh += shape * values[id(n, node[0], node[1], node[2])];
               }
               const double u = std::sin(pi * (ex + q[0]) / (n[0] + 1)) *
                                std::sin(pi * (ey + q[1]) / (n[1] + 1)) *
@@ -986,13 +973,9 @@ double check_manufactured(const Fixture &f) {
   controls.maximum_iterations = 150;
   const auto status = pfc::solvers::cg(
       ops,
-      [&](const Ops::Vector &x, Ops::Vector &y) {
-        mg.apply_operator(x[0], y[0]);
-      },
+      [&](const Ops::Vector &x, Ops::Vector &y) { mg.apply_operator(x[0], y[0]); },
       rhs, solution, controls,
-      [&](const Ops::Vector &r, Ops::Vector &z, int) {
-        mg.apply(r[0], z[0]);
-      });
+      [&](const Ops::Vector &r, Ops::Vector &z, int) { mg.apply(r[0], z[0]); });
   REQUIRE(status.converged());
   Field ax = f.field();
   mg.apply_operator(solution[0], ax);
@@ -1021,28 +1004,28 @@ TEST_CASE("rank-agglomerated Dirichlet V-cycle solves Q1 on active MPI levels",
   if (grids.empty()) SKIP("bounded active MPI ranks: 1, 2, 3, 4, or 6");
 
   for (const auto &grid : grids) {
-    const pfc::Int3 n{31,31,31};
-    const pfc::Real3 h{1.0/32,1.3/32,0.7/32};
-    Fixture cubic(n,h,grid,MPI_COMM_WORLD);
-    check_agglomerated(cubic,4);
+    const pfc::Int3 n{31, 31, 31};
+    const pfc::Real3 h{1.0 / 32, 1.3 / 32, 0.7 / 32};
+    Fixture cubic(n, h, grid, MPI_COMM_WORLD);
+    check_agglomerated(cubic, 4);
     if (ranks == 6) {
       const auto plan = pfc::solvers::MultigridPlan::build(
           cubic.decomposition,
-          pfc::solvers::MultigridPlanOptions{.minimum_owned_extent=4});
+          pfc::solvers::MultigridPlanOptions{.minimum_owned_extent = 4});
       REQUIRE(plan.levels().size() == 3);
       REQUIRE(plan.levels()[0].active_count() == 6);
       REQUIRE(plan.levels()[1].active_count() == 3);
       REQUIRE(plan.levels()[2].active_count() == 1);
     }
     if (ranks <= 3 || ranks == 6) {
-      Fixture tall({31,31,63},{1.0/32,1.3/32,0.7/64},
-                   grid,MPI_COMM_WORLD);
-      check_agglomerated(tall,4);
+      Fixture tall({31, 31, 63}, {1.0 / 32, 1.3 / 32, 0.7 / 64}, grid,
+                   MPI_COMM_WORLD);
+      check_agglomerated(tall, 4);
     }
     if (ranks <= 2) {
-      Fixture refined({63,63,63},{1.0/64,1.3/64,0.7/64},
-                      grid,MPI_COMM_WORLD);
-      check_agglomerated(refined,8,0.2);
+      Fixture refined({63, 63, 63}, {1.0 / 64, 1.3 / 64, 0.7 / 64}, grid,
+                      MPI_COMM_WORLD);
+      check_agglomerated(refined, 8, 0.2);
     }
   }
 }
@@ -1053,13 +1036,13 @@ TEST_CASE("rank-agglomerated Q1 Galerkin manufactured solution is second order",
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &ranks);
   if (ranks > 2) SKIP("physical accuracy control runs on one/two MPI ranks");
-  const pfc::Int3 grid{ranks,1,1};
+  const pfc::Int3 grid{ranks, 1, 1};
   // A free-node Domain starts one element spacing inside the physical
   // Dirichlet boundary. Do not accidentally test a shifted physical field.
-  Fixture coarse({15,15,15},{1.0/16,1.3/16,0.7/16},
-                 grid,MPI_COMM_WORLD,{1.0/16,1.3/16,0.7/16});
-  Fixture fine({31,31,31},{1.0/32,1.3/32,0.7/32},
-               grid,MPI_COMM_WORLD,{1.0/32,1.3/32,0.7/32});
+  Fixture coarse({15, 15, 15}, {1.0 / 16, 1.3 / 16, 0.7 / 16}, grid, MPI_COMM_WORLD,
+                 {1.0 / 16, 1.3 / 16, 0.7 / 16});
+  Fixture fine({31, 31, 31}, {1.0 / 32, 1.3 / 32, 0.7 / 32}, grid, MPI_COMM_WORLD,
+               {1.0 / 32, 1.3 / 32, 0.7 / 32});
   const double error_coarse = check_manufactured(coarse);
   const double error_fine = check_manufactured(fine);
   INFO("L2 error coarse=" << error_coarse << " fine=" << error_fine);
