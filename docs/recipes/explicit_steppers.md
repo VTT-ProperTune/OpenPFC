@@ -78,18 +78,18 @@ struct HeatModel {
 
 ### 2. Choose backend and construct gradient evaluator
 
-**Finite difference (needs halo exchange):**
-```cpp
-#include <openpfc/kernel/field/fd_gradient.hpp>
-#include <openpfc/kernel/simulation/stacks/fd_cpu_stack.hpp>
+For finite differences, follow the maintained
+[owned-field heat lesson](https://vtt-propertune.github.io/OpenPFC/learn/heat/finite-differences/).
+It constructs a padded field from the rank's owned box, exchanges its ghosts,
+evaluates the gradient on owned cells and accumulates the update on those
+same cells. The [separated-halo lesson](https://vtt-propertune.github.io/OpenPFC/learn/heat/separated-halos/)
+shows the alternative face-buffer layout explicitly.
 
-pfc::sim::stacks::FDCPUStack stack(
-  pfc::domain::create(pfc::GridSize{{N, N, N}}, pfc::PhysicalOrigin{{0.0, 0.0, 0.0}}, pfc::GridSpacing{{dx, dx, dx}}),
-  fd_order, rank, nproc);
-
-auto& u = stack.u();
-auto grad = pfc::field::create<HeatGrads>(u, fd_order);
-```
+Field storage and evaluator indices must agree with the stepper's output
+layout. A padded allocation includes ghosts; its complete `vec()` is not a
+packed array of owned values. Use the owned-field update demonstrated by those
+lessons when adapting this recipe to FD. The contiguous-buffer factory below
+is illustrated with the unpadded spectral field.
 
 **Spectral (no halo exchange, FFTs in evaluator):**
 ```cpp
@@ -115,13 +115,13 @@ auto stepper = pfc::sim::steppers::create(u, grad, model, dt);
 
 ### 4. Replace time loop
 
-**FD backend (halo exchange required):**
-```cpp
-for (int step = 0; step < n_steps; ++step) {
-  stack.exchange_halos();  // Must call before stepper.step()
-  t = stepper.step(t, u.vec());
-}
-```
+For an FD Euler step, exchange the current field before evaluating the RHS,
+then update the owned cells as shown in the linked lesson. For multistage RK,
+prepare halos from each intermediate stage before its RHS evaluation. One
+exchange at the beginning of a whole RK step leaves later stages with stale
+neighbours. A gradient's preparation callback can coordinate that work, but
+the field publication and output layout must also satisfy the selected
+stepper's contract.
 
 **Spectral backend (no halo exchange):**
 ```cpp
