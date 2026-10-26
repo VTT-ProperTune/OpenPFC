@@ -4,7 +4,7 @@
 name: Unit Tests
 
 # Three tiers (see README.md in this directory):
-#   pull request  code quality + one build: GCC 13, Release, unit and 2-rank MPI tests
+#   pull request  relevant static/Python checks and selected C++ components
 #   push master   adds the small matrix: GCC 13 Debug with the 3/4/6-rank
 #                 multigrid transfers and benchmark compile, the Clang compile
 #                 check, packaging, CUDA and HIP compile-only
@@ -23,12 +23,61 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  scope:
+    name: Select checks
+    if: github.repository == 'ahojukka5/OpenPFC'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      plan: ${{ steps.select.outputs.plan }}
+      cpp: ${{ steps.select.outputs.cpp }}
+      python: ${{ steps.select.outputs.python }}
+      full: ${{ steps.select.outputs.full }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Classify changed paths
+        id: select
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python3 scripts/ci/scope.py select --base "$BASE" --head "$HEAD"
+
+  python-tests:
+    name: Python tooling
+    if: always() && needs.scope.outputs.python == 'true' && (needs.build-and-test.result == 'success' || needs.scope.outputs.cpp != 'true')
+    needs: [scope, build-and-test]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install test dependencies
+        run: python3 -m pip install pytest pyyaml numpy
+      - name: Download native CLI for packaging tests
+        if: needs.scope.outputs.cpp == 'true'
+        uses: actions/download-artifact@v5
+        with:
+          name: native-cli
+          path: native-cli
+      - name: Test Python tooling
+        run: |
+          if [ -f native-cli/openpfc ]; then
+            chmod +x native-cli/openpfc
+            export OPENPFC_TEST_CLI="$PWD/native-cli/openpfc"
+          fi
+          python3 -m pytest scripts/tests -q
+
   # ============================================================================
   # Code Quality Checks
   # ============================================================================
   code-quality:
     name: Code Quality
     if: github.repository == 'ahojukka5/OpenPFC'
+    needs: [scope]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -38,6 +87,7 @@ jobs:
           submodules: true
 
       - name: Check code formatting (clang-format)
+        if: needs.scope.outputs.cpp == 'true'
         uses: jidicula/clang-format-action@v4.18.0
         with:
           clang-format-version: '20'
@@ -47,42 +97,50 @@ jobs:
           exclude-regex: '(build|\.cache|extern|third[-_]party|doxygen-awesome-css)'
 
       - name: Clean up clang-format artifacts
+        if: needs.scope.outputs.cpp == 'true'
         run: rm -f failing-files.txt
 
       - name: Check REUSE compliance
         uses: fsfe/reuse-action@v6
 
       - name: Kernel layering (no frontend includes)
+        if: needs.scope.outputs.cpp == 'true'
         run: |
           bash scripts/ci/apt_update.sh
           sudo apt-get install -y ripgrep
           bash scripts/check_kernel_no_frontend_includes.sh
 
       - name: Kernel layering self-test (checker detects a deliberate violation)
+        if: needs.scope.outputs.cpp == 'true'
         run: bash scripts/check_kernel_no_frontend_includes.sh --self-test
 
       - name: GPU memcpy stays in runtime/gpu
+        if: needs.scope.outputs.cpp == 'true'
         run: bash scripts/check_gpu_memcpy_single_source.sh
 
       - name: GPU memcpy checker self-test
+        if: needs.scope.outputs.cpp == 'true'
         run: bash scripts/check_gpu_memcpy_single_source.sh --self-test
 
       - name: App self-containment
+        if: needs.scope.outputs.cpp == 'true'
         run: bash scripts/check_app_self_containment.sh
 
       - name: App self-containment self-test
+        if: needs.scope.outputs.cpp == 'true'
         run: bash scripts/check_app_self_containment.sh --self-test
 
       - name: Accelerator build contract policy
+        if: needs.scope.outputs.cpp == 'true'
         run: python3 scripts/check_gpu_ci_policy.py
 
   # ============================================================================
-  # The common build, on every event: GCC 13, Release, full unit and MPI tests.
+  # PR: selected components. Master/dispatch: complete Release suite.
   # ============================================================================
   build-and-test:
     name: ubuntu-24.04 / gcc-13 / Release
-    if: github.repository == 'ahojukka5/OpenPFC'
-    needs: [code-quality]
+    if: needs.scope.outputs.cpp == 'true'
+    needs: [scope, code-quality]
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
@@ -104,7 +162,15 @@ jobs:
           cxx: g++-13
           build-type: Release
 
+      - name: Check affected PR components
+        if: github.event_name == 'pull_request'
+        env:
+          CI_PLAN: ${{ needs.scope.outputs.plan }}
+          CMAKE_PREFIX_PATH: ${{ steps.setup.outputs.heffte-prefix }}
+        run: python3 scripts/ci/scope.py run-pr
+
       - name: Configure OpenPFC
+        if: github.event_name != 'pull_request'
         run: |
           cmake -S . -B build -GNinja \
             -DCMAKE_BUILD_TYPE=Release \
@@ -117,9 +183,11 @@ jobs:
             -DOpenPFC_MPI_TEST_MAX_WORLD_SIZE=2
 
       - name: Build OpenPFC
+        if: github.event_name != 'pull_request'
         run: cmake --build build -j2
 
       - name: Run tests
+        if: github.event_name != 'pull_request'
         working-directory: build
         run: |
           set -o pipefail
@@ -127,12 +195,22 @@ jobs:
           total=$(grep -E "Total Test time" ctest.log | tail -1 || true)
           echo "gcc-13/Release CTest — ${total:-time unavailable}" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Share native CLI with Python packaging tests
+        if: success() && needs.scope.outputs.python == 'true'
+        uses: actions/upload-artifact@v5
+        with:
+          name: native-cli
+          path: build/bin/openpfc
+          if-no-files-found: error
+
       - name: Upload test results
         if: failure()
         uses: actions/upload-artifact@v5
         with:
           name: test-results-gcc-13-Release
-          path: build/Testing/Temporary/LastTest.log
+          path: |
+            build/Testing/Temporary/LastTest.log
+            build/pr-selection.json
 
   # ============================================================================
   # Master only: Debug, the multi-rank multigrid transfers and benchmarks.
@@ -418,33 +496,18 @@ jobs:
           ctest --test-dir build-hip -N -R DirichletGPU_hip_1rank_Required
 
   # ============================================================================
-  # Status Check. A pull request needs code quality and the common build; a
-  # push to master needs every job.
+  # Status Check. Require selected PR jobs; integration requires every job.
   # ============================================================================
   ci-status:
     name: CI Status
     if: always() && github.repository == 'ahojukka5/OpenPFC'
-    needs: [code-quality, build-and-test, debug-and-mpi, clang-compile, packaging-smoke, cuda-compile, hip-compile]
+    needs: [scope, code-quality, python-tests, build-and-test, debug-and-mpi, clang-compile, packaging-smoke, cuda-compile, hip-compile]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - name: Check all jobs status
+      - uses: actions/checkout@v5
+      - name: Check selected jobs status
         env:
-          EVENT: ${{ github.event_name }}
+          CI_PLAN: ${{ needs.scope.outputs.plan }}
           RESULTS: ${{ toJSON(needs) }}
-        run: |
-          python3 - <<'PY'
-          import json, os, sys
-          pr = os.environ["EVENT"] == "pull_request"
-          required = {"code-quality", "build-and-test"}
-          failed = []
-          for job, info in json.loads(os.environ["RESULTS"]).items():
-              result = info["result"]
-              if result == "success" or (pr and job not in required and result == "skipped"):
-                  continue
-              failed.append(f"{job}: {result}")
-          if failed:
-              print("CI failed:", *failed, sep="\n  ")
-              sys.exit(1)
-          print("All CI checks passed")
-          PY
+        run: python3 scripts/ci/scope.py status

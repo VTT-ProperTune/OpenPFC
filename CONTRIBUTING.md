@@ -227,9 +227,12 @@ history there; keep its `master` at the same commit as the canonical `master`.
 CI under [`.github/workflows/`](.github/workflows) has three tiers (details in
 its README):
 
-- **Pull request:** `ci.yml` code quality and one build, GCC 13 Release with
-  the full `ctest` including 2-rank MPI; `docs.yml` when documentation
-  sources change.
+- **Pull request:** `ci.yml` selects changed components from the base/head
+  diff. Documentation-only changes run REUSE and documentation checks without
+  a C++ build. Application, example, native CLI and Python tooling changes run
+  their relevant checks. Shared or unclassified changes run library tests,
+  SDK contracts and consumer smoke checks, with the fallback reason logged.
+  The complete routine CTest suite runs after integration to `master`.
 - **Push to master:** adds GCC 13 Debug with the 3/4/6-rank multigrid
   transfers and the benchmark compile, the clang-18 compile check,
   packaging smoke, and CUDA/HIP compile-only. All must pass CI Status. These

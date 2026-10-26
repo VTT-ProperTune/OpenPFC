@@ -66,7 +66,7 @@ Minimal new-test walkthrough: [`tutorials/add_catch2_test.md`](../tutorials/add_
 
 | Check | GitHub Actions CI | Cluster (tohtori / LUMI) |
 |-------|-------------------|--------------------------|
-| CPU unit + integration (`ctest`) | pull requests: gcc-13 Release; master: also gcc-13 Debug; monthly: gcc-11–14, clang-18, MPICH, no HeFFTe | yes |
+| CPU unit + integration (`ctest`) | PRs: selected components with gcc-13 Release; master: complete Release and Debug suites; monthly: gcc-11–14, clang-18, MPICH, no HeFFTe | yes |
 | MPI suites | 2 ranks; master also runs the multigrid plan on 3/4/6 ranks | 2/3/4 ranks (`build.sh --mpi-tests`) |
 | `find_package(OpenPFC)` packaging smoke | yes (`packaging-smoke` job) | `tests/packaging/consumer` |
 | CUDA/HIP **compile** (no GPU) | required `cuda-compile` / `hip-compile` jobs on every master push | `build.sh --with-cuda --no-test`, `build.sh --with-rocm --no-test` |
