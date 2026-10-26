@@ -80,6 +80,9 @@ and checking an exact two-dimensional vortex.
 Track a nonperiodic boundary by [counting what leaves the interval](boundaries/outward-flux/index.qmd),
 then check the weighted mass plus its accepted outward flux.
 
+Recover a macroscopic elastic law by [homogenizing a graded layered cell](materials/layered-homogenization/index.qmd),
+and derive its arithmetic and harmonic shear averages.
+
 ## Make your first change
 
 Install a compatible OpenPFC SDK and CLI using the

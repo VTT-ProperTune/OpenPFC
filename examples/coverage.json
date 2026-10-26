@@ -492,6 +492,18 @@
       ]
     },
     {
+      "target": "layered_homogenization",
+      "source": "materials/layered-homogenization/model.cpp",
+      "chapter": "materials/layered-homogenization/index.qmd",
+      "capabilities": [
+        "microelasticity",
+        "periodic-homogenization",
+        "engineering-voigt",
+        "layered-material",
+        "six-unit-loads"
+      ]
+    },
+    {
       "target": "mathieu_spectrum",
       "source": "fourier/mathieu/model.cpp",
       "chapter": "fourier/mathieu/index.qmd",
@@ -1360,7 +1372,9 @@
         "microelasticity.hpp",
         "homogenization.hpp"
       ],
-      "chapters": []
+      "chapters": [
+        "materials/layered-homogenization/index.qmd"
+      ]
     },
     {
       "name": "coupling and transactional attempts",

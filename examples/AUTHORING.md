@@ -545,3 +545,15 @@ both physical flux and outward-derivative input, and both inventory signs.
 The oracle uses closed-form nodal values and inventory, not the operator
 applied to the manufactured field. This is a boundary/accounting example,
 not a convergence-order result or a finite-volume face-field tutorial.
+
+## Graded layered elasticity
+
+`render_layered_homogenization.py --run <native-working-directory>` checks
+all tensor columns, imposed mean strains, reports and owned shear nodes
+before plotting the native field with Matplotlib 3.11.2. Its layered
+oracle follows constant normal/shear traction and compatible periodic
+strains; it does not call the solver or its Green operator. Use the grid
+arithmetic mean for finite-N tensor comparisons, not its continuum limit.
+CTest invokes the actual model at two grids and in the homogeneous limit,
+on one and two MPI ranks. This linear, moderate-contrast teaching cell is
+not a convergence claim for general composite microstructures.

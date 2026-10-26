@@ -16,8 +16,8 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 [Follow what is taught, what is adapted, and what still needs a chapter.]{.lesson-deck}
 :::
 
-There are 84 declared runnable example targets and
-84 Quarto teaching chapters. The table includes older programs
+There are 85 declared runnable example targets and
+85 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -122,6 +122,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `heat_exponential` | [Read the lesson](heat/exponential/index.qmd) |
 | `json_read` | [Read the lesson](configuration/session/index.qmd) |
 | `kdv_integrating_factor` | [Read the lesson](waves/kdv/index.qmd) |
+| `layered_homogenization` | [Read the lesson](materials/layered-homogenization/index.qmd) |
 | `mathieu_spectrum` | [Read the lesson](fourier/mathieu/index.qmd) |
 | `membrane_eigenmodes` | [Read the lesson](polynomials/membrane/index.qmd) |
 | `mhd2d` | [Read the lesson](flow/magnetohydrodynamics/index.qmd) |
@@ -190,7 +191,7 @@ fixed-step restart does not establish an adaptive restart contract.
 | checkpoints and restart | [checkpoint-restart](output/checkpoint-restart/index.qmd) |
 | Krylov and nonlinear solves | [integration](polynomials/integration/index.qmd), [boundary-values](polynomials/boundary-values/index.qmd), [nonlinear-boundary](polynomials/nonlinear-boundary/index.qmd) |
 | geometric multigrid | [multigrid](elliptic/multigrid/index.qmd) |
-| microelasticity and homogenization | Pending a teaching chapter. |
+| microelasticity and homogenization | [layered-homogenization](materials/layered-homogenization/index.qmd) |
 | coupling and transactional attempts | [host-orchestrator](coupling/host-orchestrator/index.qmd), [adaptive-rk](integration/adaptive-rk/index.qmd), [adaptive-etd](integration/adaptive-etd/index.qmd) |
 | profiling and communication diagnostics | [mpi-timing](diagnostics/mpi-timing/index.qmd), [profiling](diagnostics/profiling/index.qmd) |
 | CUDA and HIP execution | [backend-buffers](fourier/backend-buffers/index.qmd) |
