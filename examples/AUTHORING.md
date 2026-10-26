@@ -407,3 +407,20 @@ is a run directory containing `results/`. Give `--output results/plots` for
 exploratory figures. The checker compares complete Gaussian fields with
 direct Fourier sums, including one/two-rank ownership and time refinement.
 A continuous Fourier series checks the model's image-sum reference.
+
+## Generic stencils
+
+Run the stencil model twice, keeping the outputs in separate directories:
+
+```sh
+example_binaries="$(pwd)/builds/release/examples"
+mkdir -p results/example-book/stencil-edge results/example-book/stencil-polynomial
+(cd results/example-book/stencil-edge && "$example_binaries/18_sobel_edge_detection")
+(cd results/example-book/stencil-polynomial && "$example_binaries/18_sobel_edge_detection" ../../../examples/differentiation/stencils/polynomial.json)
+uv run --with matplotlib==3.11.2 python examples/render_stencils.py \
+  --edge results/example-book/stencil-edge \
+  --polynomial results/example-book/stencil-polynomial
+```
+
+The displayed curves are native interior samples and responses. The checker
+uses independent affine and polynomial moment identities, not parity alone.

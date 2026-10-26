@@ -43,8 +43,6 @@ endif()
 
 
 
-add_executable(18_sobel_edge_detection 18_sobel_edge_detection.cpp)
-target_link_libraries(18_sobel_edge_detection PRIVATE OpenPFC::openpfc )
 
 
 
@@ -482,6 +480,9 @@ if(OpenPFC_BUILD_TESTS)
     set_tests_properties(example-gaussian-pulse-mpi PROPERTIES PROCESSORS 2 TIMEOUT 180
                          ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
   endif()
+  add_test(NAME example-generic-stencils
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_stencils.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks")
+  set_tests_properties(example-generic-stencils PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 90)
   add_executable(test_example_eigensystem tests/eigensystem.cpp)
   target_link_libraries(test_example_eigensystem PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
   add_test(NAME example-eigensystem-reference COMMAND test_example_eigensystem)

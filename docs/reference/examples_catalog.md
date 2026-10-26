@@ -95,7 +95,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `15_finite_difference_heat` | `heat/separated-halos/model.cpp` | Finite-difference heat with separated halos; see [`halo_exchange.md`](../concepts/halo_exchange.md) |
 | `16_strong_types_demo` | `geometry/strong-arguments/model.cpp` | Strongly typed domain inputs |
 | `17_custom_coordinate_system` | `geometry/polar-patterns/model.cpp` | Polar-defined Cartesian field and smooth origin limits |
-| `18_sobel_edge_detection` | `18_sobel_edge_detection.cpp` | Sobel-style field operations and edge detection |
+| `18_sobel_edge_detection` | `differentiation/stencils/model.cpp` | Sobel-style field operations and edge detection |
 | `world_strong_types_example` | `geometry/anisotropic-grid/model.cpp` | Strong types with `Domain` compatibility helpers |
 | `19_explicit_stepper_fd` | `heat/finite-differences/model.cpp` | Explicit stepping with finite-difference operators |
 | `20_explicit_stepper_spectral` | `heat/fourier/model.cpp` | Explicit stepping with spectral operators |

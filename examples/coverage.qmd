@@ -17,7 +17,7 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 :::
 
 There are 82 declared runnable example targets and
-71 Quarto teaching chapters. The table includes older programs
+72 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -92,7 +92,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `15_finite_difference_heat` | [Read the lesson](heat/separated-halos/index.qmd) |
 | `16_strong_types_demo` | [Read the lesson](geometry/strong-arguments/index.qmd) |
 | `17_custom_coordinate_system` | [Read the lesson](geometry/polar-patterns/index.qmd) |
-| `18_sobel_edge_detection` | Pending conversion. |
+| `18_sobel_edge_detection` | [Read the lesson](differentiation/stencils/index.qmd) |
 | `19_explicit_stepper_fd` | [Read the lesson](heat/finite-differences/index.qmd) |
 | `20_explicit_stepper_spectral` | [Read the lesson](heat/fourier/index.qmd) |
 | `21_adaptive_stepping` | [Read the lesson](integration/adaptive-rk/index.qmd) |
@@ -177,7 +177,7 @@ fixed-step restart does not establish an adaptive restart contract.
 | geometry | [decomposition](geometry/decomposition/index.qmd), [index-boxes](geometry/index-boxes/index.qmd), [field-storage](geometry/field-storage/index.qmd) |
 | distributed fields and MPI | [coordinate-fields](geometry/coordinate-fields/index.qmd), [finite-differences](heat/finite-differences/index.qmd) |
 | local and distributed FFT | [round-trip](fourier/round-trip/index.qmd), [field-layout](fourier/field-layout/index.qmd) |
-| finite differences and spectral gradients | [periodic](differentiation/periodic/index.qmd), [smoothness](differentiation/smoothness/index.qmd) |
+| finite differences and spectral gradients | [periodic](differentiation/periodic/index.qmd), [smoothness](differentiation/smoothness/index.qmd), [stencils](differentiation/stencils/index.qmd) |
 | conservative fluxes and nonperiodic boundaries | Pending a teaching chapter. |
 | fixed and adaptive integration | [finite-differences](heat/finite-differences/index.qmd), [stability](integration/stability/index.qmd), [adaptive-rk](integration/adaptive-rk/index.qmd), [output-clock](integration/output-clock/index.qmd) |
 | multi-field runtime integration | [runtime-fields](coupling/runtime-fields/index.qmd) |

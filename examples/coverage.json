@@ -167,9 +167,14 @@
     },
     {
       "target": "18_sobel_edge_detection",
-      "source": "18_sobel_edge_detection.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "differentiation/stencils/model.cpp",
+      "chapter": "differentiation/stencils/index.qmd",
+      "capabilities": [
+        "generic-stencils",
+        "separable-stencils",
+        "stencil-moments",
+        "boundary-support"
+      ]
     },
     {
       "target": "19_explicit_stepper_fd",
@@ -1141,11 +1146,13 @@
       "name": "finite differences and spectral gradients",
       "header_search_terms": [
         "fd_gradient.hpp",
-        "spectral_gradient.hpp"
+        "spectral_gradient.hpp",
+        "stencil_apply.hpp"
       ],
       "chapters": [
         "differentiation/periodic/index.qmd",
-        "differentiation/smoothness/index.qmd"
+        "differentiation/smoothness/index.qmd",
+        "differentiation/stencils/index.qmd"
       ]
     },
     {

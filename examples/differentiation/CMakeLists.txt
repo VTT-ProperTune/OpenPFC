@@ -12,3 +12,7 @@ set_target_properties(periodic_collocation PROPERTIES RUNTIME_OUTPUT_DIRECTORY "
 add_executable(spectral_smoothness smoothness/model.cpp)
 target_link_libraries(spectral_smoothness PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
 set_target_properties(spectral_smoothness PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")
+
+add_executable(18_sobel_edge_detection stencils/model.cpp)
+target_link_libraries(18_sobel_edge_detection PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
+set_target_properties(18_sobel_edge_detection PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples")

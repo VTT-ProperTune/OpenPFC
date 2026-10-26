@@ -57,6 +57,9 @@ array indices, physical units and the Nyquist derivative convention.
 Follow [a spreading Gaussian pulse](heat/gaussian-pulse/index.qmd) to distinguish
 conserved discrete mass, spatial sampling and time-stepping accuracy.
 
+Learn [what a stencil's weights mean](differentiation/stencils/index.qmd)
+by normalizing a Sobel kernel and checking its polynomial moments.
+
 ## Make your first change
 
 Install a compatible OpenPFC SDK and CLI using the
