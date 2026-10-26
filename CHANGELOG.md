@@ -198,6 +198,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 - Refactor the discrete-field demonstration into coordinate-aware initialization with an ownership reduction. Verify that the queried physical value has exactly one owner on one and two ranks.
 
+- Fuse multiple owned-cell GPU expressions into sum/min/max reductions with
+  compact MPI scalar collectives and an all-rank success check.
+
 - Explain padding, component storage and coordinate-aware fields in a focused chapter. Retain the legacy array target and check storage sizes and owned offsets.
 
 - Make index-box iteration a small readable example with an explicit offset calculation. Preserve the executable and verify the complete offset sequence.
