@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file spatial_refine.cpp
+ * @file model.cpp
  * @brief Fixed-dt spatial ladder for the unit-square double shear (#224).
  *
  * Every resolution uses the same dt. Field error is the common-band
@@ -30,9 +30,9 @@
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
 
-#include <ns2d/band_error.hpp>
-#include <ns2d/cases.hpp>
-#include <ns2d/vorticity_stream.hpp>
+#include "../ns2d/band_error.hpp"
+#include "../ns2d/cases.hpp"
+#include "../ns2d/vorticity_stream.hpp"
 
 namespace {
 
@@ -65,6 +65,7 @@ struct Held {
   std::unique_ptr<ns2d::VorticityStreamCPU> solver;
 };
 
+// start snippet setup
 Held make_solver(int n, double dt, double nu, int rank, int nproc) {
   Held h;
   h.stack = std::make_unique<pfc::sim::stacks::SpectralCPUStack>(
@@ -73,6 +74,8 @@ Held make_solver(int n, double dt, double nu, int rank, int nproc) {
       std::make_unique<ns2d::VorticityStreamCPU>(*h.stack, ns2d::Params{nu, dt});
   return h;
 }
+
+// end snippet setup
 
 std::vector<long long> steps_for(const std::vector<double> &times, double dt) {
   std::vector<long long> steps;

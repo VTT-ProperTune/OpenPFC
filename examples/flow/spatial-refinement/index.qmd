@@ -1,0 +1,135 @@
+---
+title: "Compare grids without changing the time question"
+description: "Use the retained spatial-refinement driver to compare normalized Fourier modes at a fixed timestep and inspect a separate time control."
+order: 71
+categories: [Incompressible flow, Fourier methods, Tough challenges]
+capabilities: ["spatial-refinement", "spectral-restriction", "error-norms", "time-error-control"]
+targets: [ns2d_spatial_refine]
+bibliography: ../../references.bib
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[Flow / Ask one refinement question at a time]{.lesson-kicker}
+
+# Compare grids without changing the time question
+
+[Hold the timestep fixed. Compare the same physical Fourier modes.]{.lesson-deck}
+:::
+
+The [vorticity lesson](../vorticity/index.qmd) starts with an exact vortex.
+Here the retained spatial-refinement driver uses a nonlinear double-shear
+field on the **unit square**. There is no supplied exact solution at later
+times. The finest grid supplies a numerical comparison, and its own
+accuracy remains a question to investigate.
+
+If both grid spacing and timestep change together, a smaller difference
+cannot identify which change mattered. This driver uses the same
+$h=\Delta t$ on every spatial level, then repeats one level with a smaller
+$h$ as a separate control.
+
+## Build the same equation on each grid
+
+```{.cpp include="model.cpp" snippet="setup"}
+```
+
+Only the grid size changes in the spatial ladder. Viscosity, shear-layer
+parameters, timestep and observation times remain fixed. The
+`SpectralCPUStack` and the same vorticity solver are composed afresh for
+each resolution. Fourier resolution and spectral accuracy are discussed
+in @trefethen2000; a nonlinear calculation still needs its time error
+controlled separately.
+
+The layer parameter $\rho$ describes thickness $1/\rho$ in this unit box.
+Its raw cells per thickness are $N/\rho$, and the two-thirds retained
+band reduces the effective resolution. A small program that finishes
+successfully need not resolve that layer.
+
+## Match integer modes and their normalization
+
+A fine-grid field cannot simply be subtracted from a coarse-grid array.
+The helper matches signed integer Fourier modes that the coarse layout
+can represent, then transforms the restricted coefficients on that grid.
+Because forward FFTs are unscaled, it first adjusts their scale:
+
+$$
+\widehat\omega_{\mathrm{coarse}}
+=\frac{N_{\mathrm{coarse}}^2}{N_{\mathrm{fine}}^2}
+\widehat\omega_{\mathrm{fine}}
+$$
+
+for each copied mode. The inverse on the coarse grid then recovers the
+same physical amplitude. This is a mode-layout operation, rather than an
+interpolation of all fine-grid nodal values.
+
+```{.cpp include="../ns2d/band_error.hpp" snippet="restrict_reference" dedent=2}
+```
+
+The same restricted vorticity supplies a reference streamfunction and
+velocity. The common-grid vorticity difference is measured as
+
+$$
+E_N=\sqrt{\frac{1}{N^2}\sum_{i,j}
+  \bigl(\omega_N-R_N\omega_{\mathrm{ref}}\bigr)_{ij}^2},
+$$
+
+where $R_N$ denotes the implemented Fourier restriction and inverse.
+The comparison includes represented coarse-grid modes; it does not
+claim that the two resolutions have identical active two-thirds bands.
+The CSV also records maximum vorticity difference and velocity RMS error.
+Relative errors use the restricted reference norm; inspect absolute
+errors when that norm vanishes, since the helper records zero in the
+relative column in that case.
+
+## Run a small ladder and a time control
+
+From the repository root, with a compatible installed spectral CPU SDK:
+
+```sh
+mkdir -p results
+openpfc compile examples/flow/spatial-refinement/model.cpp --source-root examples/flow -o results/spatial-refinement
+results/spatial-refinement --resolutions 16,32 --reference 32 --dt 0.01 --times 0.02 --nu 1e-3 --rho 10 --eps 0.05 --control-n 16 --control-dt-factor 0.5 --outdir results/flow/spatial-refinement
+```
+
+This short case teaches the comparison's structure. It uses one MPI rank,
+as required by this driver so every reference mode is available locally.
+It preserves the existing CTest smoke configuration and the executable
+name `ns2d_spatial_refine`; build users retain its original location.
+
+The [model](model.cpp) shares
+[band_error.hpp](../ns2d/band_error.hpp),
+[cases.hpp](../ns2d/cases.hpp),
+[vorticity_stream.hpp](../ns2d/vorticity_stream.hpp) and
+[spectral.hpp](../ns2d/spectral.hpp). Keep their relative layout when
+using downloaded sources; `--source-root` lets the native compiler capture
+this closed group of quoted dependencies.
+
+Inspect `spatial_errors.csv` and `run.json` below the result directory:
+
+- `reference` identifies the finest numerical trajectory. Its zero error
+  columns do not establish that it is an exact PDE solution.
+- `spatial` compares a coarser run with the restricted reference at the
+  same physical time and the same timestep.
+- `temporal` compares two timesteps at the control grid. Their difference
+  reveals sensitivity to time resolution at that grid.
+
+`outer_rms_fraction` measures the vorticity in the outer half of the
+retained band, above $N/6$ in either direction, relative to the full RMS.
+It is a resolution diagnostic, not energy beyond the already masked
+cutoff and not an accuracy certificate.
+
+Increase the resolutions while holding `dt` fixed. Then lower `dt` and
+repeat the whole ladder. Compare the spatial differences, time-control
+difference and outer-band indicator together. Two grids and one control
+pair demonstrate the workflow; they do not establish an asymptotic
+convergence rate or a universal resolved-grid threshold.
+
+## References
+
+::: {#refs}
+:::
+
+:::

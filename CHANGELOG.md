@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Teach spatial flow refinement through normalized Fourier restriction,
+  fixed timesteps and a separate time-step control, retaining the driver.
+
 - Teach the retained vorticity–streamfunction example through an exact
   Taylor–Green mode, Poisson recovery and explicit nonlinear advection.
 

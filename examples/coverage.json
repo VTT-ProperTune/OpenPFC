@@ -587,9 +587,14 @@
     },
     {
       "target": "ns2d_spatial_refine",
-      "source": "ns2d_vorticity/src/spatial_refine.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "flow/spatial-refinement/model.cpp",
+      "chapter": "flow/spatial-refinement/index.qmd",
+      "capabilities": [
+        "spatial-refinement",
+        "spectral-restriction",
+        "error-norms",
+        "time-error-control"
+      ]
     },
     {
       "target": "ns2d_temporal_refine",
@@ -1367,7 +1372,8 @@
         "polynomials/allen-cahn-fixed/index.qmd",
         "polynomials/allen-cahn-driven/index.qmd",
         "phase-fields/cahn-hilliard/index.qmd",
-        "flow/vorticity/index.qmd"
+        "flow/vorticity/index.qmd",
+        "flow/spatial-refinement/index.qmd"
       ]
     }
   ]

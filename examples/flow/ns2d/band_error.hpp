@@ -80,6 +80,7 @@ inline CommonBandError
 common_band_error_from_hat(SpectralPlane &reference_plane,
                            const std::vector<SpectralPlane::Complex> &reference_hat,
                            VorticityStreamCPU &coarse, MPI_Comm comm) {
+  // start snippet restrict_reference
   coarse.recover_velocity_from_omega();
   std::vector<SpectralPlane::Complex> restricted;
   restrict_hat_by_k(reference_plane, reference_hat, coarse.plane(), restricted);
@@ -93,6 +94,7 @@ common_band_error_from_hat(SpectralPlane &reference_plane,
   std::vector<double> u_ref(plane.in_n(), 0.0);
   std::vector<double> v_ref(plane.in_n(), 0.0);
   plane.curl_from_hat(psi, u_ref, v_ref);
+  // end snippet restrict_reference
 
   double e2 = 0.0;
   double r2 = 0.0;

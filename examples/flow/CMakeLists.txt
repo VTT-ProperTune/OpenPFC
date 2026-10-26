@@ -30,3 +30,8 @@ if(OpenPFC_BUILD_TESTS)
       ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
   endif()
 endif()
+
+add_executable(ns2d_spatial_refine spatial-refinement/model.cpp)
+target_include_directories(ns2d_spatial_refine PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(ns2d_spatial_refine PRIVATE OpenPFC ${_flow_heffte_tgt})
+set_target_properties(ns2d_spatial_refine PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples/ns2d_vorticity")
