@@ -103,16 +103,19 @@ device code, not to this GCC version).
 
 **Implementation detail:** The hand-written comparison operators use element-by-element comparison of the underlying array members to avoid calling `std::array::operator==`, which is not available in device code.
 
-**Workaround:** The code-level workaround is automatic - no user action required. The strong types in `strong_types.hpp` guard `#include <compare>` and the defaulted `operator<=>` behind `#ifndef __CUDACC__`, providing a hand-written `__host__ __device__` `operator==` instead when compiling under nvcc.
+**Workaround:** The code-level workaround is automatic - no user action required. The strong types in `strong_types.hpp` guard `#include <compare>` and the defaulted `operator<=>` behind the `OPENPFC_GPU_DEVICE_TU` guard for CUDA and HIP translation units, providing a hand-written `__host__ __device__` `operator==` instead when compiling under nvcc.
 
-**Verification:** Test CUDA compilation with:
+**Verification:** Test CUDA compilation with the installed SDK include directory
+in place of `/path/to/openpfc/include`:
 
 ```bash
-echo '#include <openpfc/kernel/data/world.hpp>
-int main(){return 0;}' | nvcc --std=c++20 -x cu -c -o /tmp/test_world_cu.o -
+mkdir -p builds/compiler-checks
+echo '#include <openpfc/kernel/data/strong_types.hpp>
+int main(){return 0;}' | nvcc --std=c++20 -I/path/to/openpfc/include -x cu -c \
+  -o builds/compiler-checks/test_strong_types_cu.o -
 ```
 
-If you encounter similar issues with other C++20 features in CUDA device code, apply the same pattern: guard the C++20-only construct behind `#ifndef __CUDACC__` and provide a hand-written `__host__ __device__` equivalent for device code.
+If you encounter similar issues with other C++20 features in CUDA device code, apply the same pattern: guard the C++20-only construct behind the `OPENPFC_GPU_DEVICE_TU` guard for CUDA and HIP translation units and provide a hand-written `__host__ __device__` equivalent for device code.
 
 ### Process exits immediately with “validation” or parameter errors
 
