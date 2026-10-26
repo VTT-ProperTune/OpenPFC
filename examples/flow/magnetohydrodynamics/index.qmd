@@ -1,0 +1,157 @@
+---
+title: "Couple vorticity to a magnetic potential"
+description: "Inspect two-field incompressible MHD, check an exact magnetic mode and use an aligned state to test the Lorentz sign."
+order: 74
+categories: [Magnetohydrodynamics, Fourier methods, Tough challenges]
+capabilities: ["two-field-mhd", "lorentz-coupling", "magnetic-potential", "gauge", "coupled-ifrk4"]
+targets: [mhd2d]
+bibliography: ../../references.bib
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[Flow / Give two fields distinct physical jobs]{.lesson-kicker}
+
+# Couple vorticity to a magnetic potential
+
+[A shared Fourier layout. Two diffusion symbols. Explicit magnetic feedback.]{.lesson-deck}
+:::
+
+The retained two-dimensional, incompressible MHD prototype evolves
+vorticity $\omega$ and a magnetic potential $a$ on $[0,2\pi)^2$:
+
+$$
+\begin{aligned}
+\omega_t+\mathbf u\cdot\nabla\omega
+  &=\mathbf B\cdot\nabla j+\nu\nabla^2\omega,\\
+a_t+\mathbf u\cdot\nabla a&=\eta\nabla^2a.
+\end{aligned}
+$$
+
+Velocity and magnetic field come from scalar potentials:
+
+$$
+\begin{aligned}
+\mathbf u&=(\phi_y,-\phi_x),&\omega&=-\nabla^2\phi,\\
+\mathbf B&=(a_y,-a_x),&j&=-\nabla^2a.
+\end{aligned}
+$$
+
+Both vector fields are divergence free by construction. Viscosity $\nu$
+and magnetic diffusivity $\eta$ play distinct roles. The named
+Orszag–Tang option connects this prototype to the two-dimensional MHD
+literature [@orszag1979]. Here we begin with small verification cases.
+
+## Keep the coupling visible
+
+```{.cpp include="model.cpp" snippet="setup" dedent=2}
+```
+
+The shared stack supplies a field layout and FFT plan. `MHDSolver` owns
+the second evolving field and the working fields for current, velocity
+and magnetic derivatives. The final parameter `+1.0` selects the retained
+Lorentz sign.
+
+```{.cpp include="../ns2d/mhd.hpp" snippet="coupled_rhs" dedent=4}
+```
+
+The two tendencies are evaluated from the same stage state. The vorticity
+receives advective and magnetic terms, while $a$ is advected by velocity.
+A paired integrating-factor RK4 step uses $-\nu|\mathbf k|^2$ and
+$-\eta|\mathbf k|^2$ for the two linear symbols, recomputing the coupled
+nonlinear tendencies at each stage. The two-thirds state/product
+projection follows the policy of the [vorticity lesson](../vorticity/index.qmd).
+
+## Check magnetic diffusion before a complex evolution
+
+Take $\omega=0$ and
+
+$$
+a(x,y,0)=\sin x\sin y.
+$$
+
+Then $j=2a$ and $\mathbf B\cdot\nabla j=2\mathbf B\cdot\nabla a=0$.
+The velocity remains zero, leaving a closed-form resistive mode:
+
+```{.cpp include="../ns2d/mhd_cases.hpp" snippet="magnetic_decay"}
+```
+
+This checks current recovery, derivative conventions, FFT normalization
+and the magnetic diffusion factor. It does not by itself distinguish the
+Lorentz sign, since that term vanishes in this case.
+
+The retained tests therefore also use an Alfvénic two-mode state with
+$\mathbf u=\mathbf B$ and $j=\omega$. Its two nonzero vorticity tendencies
+cancel with the correct sign. A deliberately flipped sign breaks that
+cancellation, and the test requires a large response. This is a stronger
+coupling question than accepting a small error in one decaying mode.
+
+## Distinguish gauge and physical diagnostics
+
+Adding a constant to $a$ leaves $\mathbf B$ unchanged. The solver fixes
+$\widehat a(0)=0$ and reports the gauge-independent variance
+
+$$
+A_2=\tfrac12\langle(a-\langle a\rangle)^2\rangle.
+$$
+
+Its total energy and continuous dissipation identity are
+
+$$
+\begin{aligned}
+E&=\tfrac12\langle|\mathbf u|^2+|\mathbf B|^2\rangle,\\
+\frac{dE}{dt}&=-\nu\langle\omega^2\rangle-\eta\langle j^2\rangle.
+\end{aligned}
+$$
+
+The reported budget residual compares the energy change between diagnostic
+evaluations with the trapezoidal average of their dissipation. Its size
+depends on diagnostic spacing as well as solution accuracy. Try `--diag 1`
+to sample every step before refining time. The initial zero residual is an
+initialization placeholder, with no earlier interval to compare.
+
+## Run the small verification cases
+
+From the repository root, with a compatible installed spectral CPU SDK:
+
+```sh
+mkdir -p results
+openpfc compile examples/flow/magnetohydrodynamics/model.cpp --source-root examples/flow -o results/mhd
+results/mhd --verify --N 16 --steps 8 --dt 0.05 --nu 0.1 --eta 0.1 --outdir results/flow/magnetic-decay
+results/mhd --case alfven --N 16 --steps 8 --dt 0.05 --nu 0.1 --eta 0.1 --outdir results/flow/alfven
+```
+
+`--verify` selects the force-free mode and checks final magnetic-potential
+error against the retained $10^{-9}$ criterion. The separate aligned-state
+run exposes its diagnostics; the sign-flip negative control belongs to
+the retained numerical tests. The executable name remains `mhd2d`, with
+its existing build location and verification tests.
+
+The [model](model.cpp) shares
+[mhd.hpp](../ns2d/mhd.hpp),
+[mhd_cases.hpp](../ns2d/mhd_cases.hpp) and
+[spectral.hpp](../ns2d/spectral.hpp). Keep that relative layout when
+using downloads. Diagnostics, metadata and field snapshots are written
+below each chosen result directory.
+
+Inspect both divergence columns, energy, dissipation, mean potential and
+`cfl_elsasser_sum`. The `--cfl` option selects a fixed initial timestep
+from the grid spacing; the measured characteristic indicator uses
+$\mathbf z^\pm=\mathbf u\pm\mathbf B$. The nominal selector is not the
+same quantity as the evolving measured CFL.
+
+Change `eta` in the magnetic-decay case and predict its exponential
+before running. For the aligned case, compare equal and unequal `nu` and
+`eta`: equal diffusion preserves the alignment relation, whereas unequal
+diffusion asks a different coupled question. Refine timestep and grid
+before interpreting a more complex field evolution quantitatively.
+
+## References
+
+::: {#refs}
+:::
+
+:::

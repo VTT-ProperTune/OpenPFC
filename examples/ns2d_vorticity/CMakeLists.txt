@@ -13,10 +13,6 @@ elseif(TARGET heffte)
   set(_ns2d_heffte_tgt heffte)
 endif()
 
-add_executable(mhd2d src/mhd.cpp)
-target_include_directories(mhd2d PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../flow)
-target_link_libraries(mhd2d PRIVATE OpenPFC ${_ns2d_heffte_tgt})
-
 if(OpenPFC_BUILD_TESTS)
   # The driver calls MPI_Init itself. Do not wrap with srun/mpiexec here:
   # on LUMI login nodes srun needs a partition and fails the regex check.

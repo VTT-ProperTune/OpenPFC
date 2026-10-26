@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file mhd.cpp
+ * @file model.cpp
  * @brief CLI for 2-D incompressible visco-resistive MHD (#23, #113).
  *
  * Verification cases and the Orszag–Tang showcase are separate. A current
@@ -27,9 +27,9 @@
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
 
-#include <ns2d/mhd.hpp>
-#include <ns2d/mhd_cases.hpp>
-#include <ns2d/spectral.hpp>
+#include "../ns2d/mhd.hpp"
+#include "../ns2d/mhd_cases.hpp"
+#include "../ns2d/spectral.hpp"
 
 namespace {
 
@@ -196,9 +196,12 @@ int run(const Cli &cli, int rank, int nproc) {
                  "dt*max(|zx|/dx+|zy|/dy); abort if that > 2\n";
   }
 
+  // start snippet setup
   pfc::sim::stacks::SpectralCPUStack stack(ns2d::make_twopi_slab(cli.n), rank, nproc,
                                            MPI_COMM_WORLD);
   ns2d::MHDSolver solver(stack, ns2d::MHDParams{cli.nu, cli.eta, dt, +1.0});
+
+  // end snippet setup
 
   if (cli.cse == ns2d::MHDCase::orszag_tang) {
     const double drive = cli.drive;

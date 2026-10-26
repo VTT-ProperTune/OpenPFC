@@ -17,7 +17,7 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 :::
 
 There are 83 declared runnable example targets and
-81 Quarto teaching chapters. The table includes older programs
+82 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -124,7 +124,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `kdv_integrating_factor` | [Read the lesson](waves/kdv/index.qmd) |
 | `mathieu_spectrum` | [Read the lesson](fourier/mathieu/index.qmd) |
 | `membrane_eigenmodes` | [Read the lesson](polynomials/membrane/index.qmd) |
-| `mhd2d` | Pending conversion. |
+| `mhd2d` | [Read the lesson](flow/magnetohydrodynamics/index.qmd) |
 | `mixed_wave_tank` | [Read the lesson](waves/mixed-tank/index.qmd) |
 | `mpi_timers` | [Read the lesson](diagnostics/mpi-timing/index.qmd) |
 | `mpi_worker` | [Read the lesson](parallel/hello/index.qmd) |
@@ -193,7 +193,7 @@ fixed-step restart does not establish an adaptive restart contract.
 | coupling and transactional attempts | [host-orchestrator](coupling/host-orchestrator/index.qmd), [adaptive-rk](integration/adaptive-rk/index.qmd), [adaptive-etd](integration/adaptive-etd/index.qmd) |
 | profiling and communication diagnostics | [mpi-timing](diagnostics/mpi-timing/index.qmd), [profiling](diagnostics/profiling/index.qmd) |
 | CUDA and HIP execution | [backend-buffers](fourier/backend-buffers/index.qmd) |
-| nonlinear models and incompressible flow | [kdv](waves/kdv/index.qmd), [allen-cahn-fixed](polynomials/allen-cahn-fixed/index.qmd), [allen-cahn-driven](polynomials/allen-cahn-driven/index.qmd), [cahn-hilliard](phase-fields/cahn-hilliard/index.qmd), [vorticity](flow/vorticity/index.qmd), [spatial-refinement](flow/spatial-refinement/index.qmd), [temporal-refinement](flow/temporal-refinement/index.qmd), [flux-balance](flow/flux-balance/index.qmd) |
+| nonlinear models and incompressible flow | [kdv](waves/kdv/index.qmd), [allen-cahn-fixed](polynomials/allen-cahn-fixed/index.qmd), [allen-cahn-driven](polynomials/allen-cahn-driven/index.qmd), [cahn-hilliard](phase-fields/cahn-hilliard/index.qmd), [vorticity](flow/vorticity/index.qmd), [spatial-refinement](flow/spatial-refinement/index.qmd), [temporal-refinement](flow/temporal-refinement/index.qmd), [flux-balance](flow/flux-balance/index.qmd), [magnetohydrodynamics](flow/magnetohydrodynamics/index.qmd) |
 
 Every family needs an actual model, a useful mathematical story and appropriate runtime evidence.
 

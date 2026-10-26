@@ -69,10 +69,13 @@ enum class MHDCase {
   return std::sin(x) * std::sin(y);
 }
 
+// start snippet magnetic_decay
 [[nodiscard]] inline double force_free_a_exact(double x, double y, double eta,
                                                double t) noexcept {
   return force_free_a(x, y) * std::exp(-2.0 * eta * t);
 }
+
+// end snippet magnetic_decay
 
 /// Two-mode streamfunction shared by ω and a for the Alfvénic state u=B.
 [[nodiscard]] inline double alfven_phi(double x, double y) noexcept {

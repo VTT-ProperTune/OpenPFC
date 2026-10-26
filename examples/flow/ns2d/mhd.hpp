@@ -361,6 +361,7 @@ private:
     m_plane.invert_ik(m_j_hat, m_plane.ky_odd(), +1.0, m_jy);
     m_plane.invert_ik(a_hat, m_plane.kx_odd(), +1.0, m_ax);
     m_plane.invert_ik(a_hat, m_plane.ky_odd(), +1.0, m_ay);
+    // start snippet coupled_rhs
     const double s = m_params.lorentz_sign;
     for (std::size_t i = 0; i < m_nw.size(); ++i) {
       const double adv_w = m_u[i] * m_wx[i] + m_v[i] * m_wy[i];
@@ -368,6 +369,7 @@ private:
       m_nw[i] = -adv_w + s * lorentz;
       m_na[i] = -(m_u[i] * m_ax[i] + m_v[i] * m_ay[i]);
     }
+    // end snippet coupled_rhs
     m_plane.fft().forward(m_nw, nw);
     m_plane.fft().forward(m_na, na);
     m_plane.project_hat(nw);

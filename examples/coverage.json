@@ -511,9 +511,15 @@
     },
     {
       "target": "mhd2d",
-      "source": "ns2d_vorticity/src/mhd.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "flow/magnetohydrodynamics/model.cpp",
+      "chapter": "flow/magnetohydrodynamics/index.qmd",
+      "capabilities": [
+        "two-field-mhd",
+        "lorentz-coupling",
+        "magnetic-potential",
+        "gauge",
+        "coupled-ifrk4"
+      ]
     },
     {
       "target": "mixed_wave_tank",
@@ -1386,7 +1392,8 @@
         "flow/vorticity/index.qmd",
         "flow/spatial-refinement/index.qmd",
         "flow/temporal-refinement/index.qmd",
-        "flow/flux-balance/index.qmd"
+        "flow/flux-balance/index.qmd",
+        "flow/magnetohydrodynamics/index.qmd"
       ]
     }
   ]

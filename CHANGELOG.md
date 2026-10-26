@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Teach the retained two-field MHD prototype through explicit Lorentz
+  coupling, magnetic diffusion, gauge choice and an Alfvénic sign check.
+
 - Teach spectral velocity flux balances with conjugate-completed mode
   integrals, subdomain checks and a separate nodal-quadrature comparison.
 
