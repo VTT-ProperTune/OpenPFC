@@ -31,6 +31,7 @@ if(OpenPFC_BUILD_TESTS)
     add_test(NAME NativeCLI_InstalledModels
       COMMAND ${CMAKE_COMMAND} "-Dbuild=${CMAKE_BINARY_DIR}" "-Dsource=${CMAKE_SOURCE_DIR}"
         "-Dcc=${CMAKE_C_COMPILER}" "-Dcxx=${CMAKE_CXX_COMPILER}" "-Dconfiguration=$<CONFIG>"
+        "-Dgpu_sdk=$<OR:$<BOOL:${OpenPFC_CUDA_AVAILABLE}>,$<BOOL:${OpenPFC_HIP_AVAILABLE}>>"
         "${_native_cli_coverage}" -P ${CMAKE_SOURCE_DIR}/tests/cli/check_models.cmake)
     set_tests_properties(NativeCLI_InstalledModels PROPERTIES TIMEOUT 600 RUN_SERIAL TRUE)
     foreach(_pair "tungsten,tungsten" "aluminum,aluminum_etd" "cahn_hilliard,cahn_hilliard"

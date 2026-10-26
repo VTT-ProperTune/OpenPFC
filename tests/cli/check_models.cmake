@@ -466,6 +466,23 @@ if(NOT error MATCHES "refusing to overwrite")
   message(FATAL_ERROR "Existing bundle image was not protected: ${error}")
 endif()
 file(REMOVE "${bundle_image}")
+if(gpu_sdk)
+  # A CUDA/HIP SDK links its runtime into this otherwise ordinary MPI model.
+  # Such an ELF must remain rejected, even with --prepare-only. The CPU SDK
+  # continues through all successful recipe, cache and runscript checks below.
+  cli_call(2 bundle "${project}/mpi.cpp" --prepare-only --output "${bundle_image}"
+    --base "${bundle_base}" --site=openmpi ${common})
+  if(NOT error MATCHES "model links [^;]+; native bundles currently qualify CPU host-MPI only"
+     OR EXISTS "${bundle_image}")
+    message(FATAL_ERROR "GPU-linked model did not fail closed: ${output}\n${error}")
+  endif()
+  file(GLOB staged_gpu_bundles "${cache}/bundles/openpfc-bundle-*")
+  if(staged_gpu_bundles)
+    message(FATAL_ERROR "Rejected GPU-linked model published a bundle recipe")
+  endif()
+  message(STATUS "GPU-linked model correctly rejected by CPU-only bundle contract")
+  return()
+endif()
 set(host_args)
 set(bundle_output "")
 set(bundle_error "")

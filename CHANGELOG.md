@@ -263,6 +263,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   by `/bin/sh`, and `/bin/sh` itself. Host MPI and fabric libraries stay outside.
   `--base` still selects a pinned image that supplies glibc and the shell (#636).
 
+- Check that CUDA/HIP SDK models fail closed under CPU-only bundling; retain
+  the complete successful bundle checks for CPU SDKs.
+
 - Add `openpfc bundle` to package a compiled CPU model, its non-MPI runtime
   libraries and its build fingerprint into an Apptainer/Singularity recipe.
   Host MPI stays outside the image. Fabric libraries that share a system
