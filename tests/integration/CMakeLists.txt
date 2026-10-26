@@ -81,6 +81,7 @@ endif()
 # itself a `.cu` file added to the test target only on CUDA builds.
 if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
   target_sources(openpfc-tests PRIVATE
+    scenarios/gpu_validation/test_rotation.cu
     scenarios/gpu_validation/test_fd_gradient_device.cu
     scenarios/gpu_validation/test_face_current.cu
     scenarios/gpu_validation/test_composite_gradient_pod_size.cu
@@ -98,6 +99,7 @@ endif()
 # CUDA POD-layout lock.
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
   target_sources(openpfc-tests PRIVATE
+    scenarios/gpu_validation/test_rotation.hip
     scenarios/gpu_validation/test_fd_gradient_device_hip.hip
     scenarios/gpu_validation/test_face_current.hip
     scenarios/gpu_validation/test_composite_gradient_pod_size_hip.hip

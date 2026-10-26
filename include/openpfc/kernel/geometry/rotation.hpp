@@ -18,24 +18,34 @@
 
 namespace pfc::geometry {
 
+/**
+ * @brief Trivially copyable SO(3) value, usable by CUDA/HIP kernels.
+ *
+ * Construct and validate arbitrary rotations on the host with
+ * rotation_from_matrix or rotation_about, then pass the value or an array of
+ * values to a kernel. col, apply and apply_transpose are non-throwing device
+ * arithmetic. Validation factories remain host-only; direct matrix mutation
+ * makes the caller responsible for orthonormality and positive determinant.
+ */
 struct Rotation {
   /// Column-major. Column `j` is `matrix[j*3 + i]` (row `i`).
   double matrix[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
 
-  OPENPFC_HD Vec3 col(int j) const {
+  OPENPFC_HD Vec3 col(int j) const noexcept {
     return {matrix[j * 3], matrix[j * 3 + 1], matrix[j * 3 + 2]};
   }
 
-  OPENPFC_HD Vec3 apply(Vec3 local) const {
+  OPENPFC_HD Vec3 apply(Vec3 local) const noexcept {
     return col(0) * local.x + col(1) * local.y + col(2) * local.z;
   }
 
-  OPENPFC_HD Vec3 apply_transpose(Vec3 world) const {
+  OPENPFC_HD Vec3 apply_transpose(Vec3 world) const noexcept {
     return {dot(col(0), world), dot(col(1), world), dot(col(2), world)};
   }
 };
 
-inline Rotation identity_rotation() { return {}; }
+/// Identity needs no validation and can also be constructed on the device.
+OPENPFC_HD inline Rotation identity_rotation() noexcept { return {}; }
 
 inline Rotation rotation_from_matrix(const double m[9]) {
   Rotation r;
