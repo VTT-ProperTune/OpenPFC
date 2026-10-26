@@ -10,3 +10,11 @@
 .table-wrapper table td:first-child {
   min-width: 8ch;
 }
+
+/* Mermaid's default grey edge labels miss text contrast in the dark theme. */
+.mermaid .edgeLabel,
+.mermaid .edgeLabel .labelBkg,
+.mermaid .edgeLabel p {
+  color: var(--color-foreground-primary) !important;
+  background-color: var(--color-background-primary) !important;
+}
