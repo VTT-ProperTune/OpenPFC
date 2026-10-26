@@ -12,6 +12,11 @@ u_t = v + a*u_xy
 v_t = b*(u_xx + u_yy + u_zz) + c*v_xz + d*u_yz
 ```
 
+Start with the [Quarto lesson](index.qmd) and its configurable `model.cpp`.
+It writes complete snapshot fields and rates; `input.json` selects FD6 and
+`spectral.json` selects Fourier gradients. Keep `../equations.hpp` alongside
+the chapter when using `openpfc run --source-root ..`.
+
 `Model::rhs(stage_time, Local{UGrads u, VGrads v})` returns model-owned
 `Increments{du,dv}` with the host tuple protocol. `UGrads` requests only
 `xx,yy,zz,xy,yz`; `VGrads` requests only `value,xz`. Derivatives include
@@ -29,8 +34,8 @@ stage time and physical position forwarding through the same canonical RHS
 call, without changing the homogeneous equations or their exact solution. This is a numerical API control, not a physical
 model or a performance comparison.
 
-Build and check through `scripts/build.sh`. The `coupled_fields_example`
-entry point is also built and invoked by CTest when other examples are off.
+Build and check through `scripts/build.sh`. The preserved `test_coupled_fields_example`
+verification entry point is also built and invoked by CTest when other examples are off.
 It requires one MPI rank. FD6 uses padded fields and explicitly declares
 `HaloConnectivity::Full`; the real Full halo exchange refreshes poisoned
 faces, edges and corners before each stage. A preallocated midpoint RK

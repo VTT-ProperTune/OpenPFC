@@ -483,6 +483,13 @@ if(OpenPFC_BUILD_TESTS)
   add_test(NAME example-generic-stencils
            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_stencils.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks")
   set_tests_properties(example-generic-stencils PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 90)
+  set(coupled_check_options "")
+  if(OpenPFC_ENABLE_HEFFTE)
+    list(APPEND coupled_check_options --spectral)
+  endif()
+  add_test(NAME example-coupled-gradients
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_coupled.py" --bin-dir "${CMAKE_BINARY_DIR}/examples" --output "${PROJECT_SOURCE_DIR}/results/example-checks" ${coupled_check_options})
+  set_tests_properties(example-coupled-gradients PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 180)
   add_executable(test_example_eigensystem tests/eigensystem.cpp)
   target_link_libraries(test_example_eigensystem PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
   add_test(NAME example-eigensystem-reference COMMAND test_example_eigensystem)
@@ -512,9 +519,6 @@ add_subdirectory(ns2d_vorticity)
 # Issue #229 verification driver under examples/, not an apps/ executable.
 add_subdirectory(taylor_green3d)
 
-if(NOT TARGET coupled_fields_example)
-  add_subdirectory(coupled_fields)
-endif()
 
 # Checked nonlinear Fourier/ETD2 teaching model and independent verifier.
 add_executable(nonlinear_spectral_course nonlinear_spectral/allen_cahn.cpp)

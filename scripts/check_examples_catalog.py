@@ -18,8 +18,9 @@ ADD_EXE_RE = re.compile(r"^\s*add_executable\(\s*([^\s\)]+)")
 
 def targets_from_cmake() -> set[str]:
     # Themed teaching examples own their targets below examples/<theme>/.
-    themed = [path for path in CMAKE.parent.glob("*/CMakeLists.txt")
-              if any(path.parent.glob("*/index.qmd"))]
+    themed = [path for path in CMAKE.parent.rglob("CMakeLists.txt")
+              if path != CMAKE and ((path.parent / "index.qmd").is_file()
+                                     or any(path.parent.glob("*/index.qmd")))]
     text = "\n".join(path.read_text(encoding="utf-8", errors="replace")
                      for path in [CMAKE, *themed])
     out: set[str] = set()

@@ -5,6 +5,7 @@
 #include <openpfc/kernel/data/host_device.hpp>
 #include <tuple>
 namespace coupled {
+// start snippet derivatives
 // Only these members are requested from either gradient backend.
 struct UGrads {
   double xx{}, yy{}, zz{}, xy{}, yz{};
@@ -16,14 +17,20 @@ struct Local {
   UGrads u;
   VGrads v;
 };
+// end snippet derivatives
+
 struct Parameters {
   double a{.3}, b{.04}, c{-.2}, d{2. / 15.};
 };
+// start snippet increments
 struct Increments {
   double du{}, dv{};
   auto as_tuple() { return std::tie(du, dv); }
   auto as_tuple() const { return std::tie(du, dv); }
 };
+// end snippet increments
+
+// start snippet equations
 struct Model {
   Parameters parameters;
   OPENPFC_HD Increments rhs(double /*stage_time*/, const Local &g) const noexcept {
@@ -32,6 +39,8 @@ struct Model {
             p.b * (g.u.xx + g.u.yy + g.u.zz) + p.c * g.v.xz + p.d * g.u.yz};
   }
 };
+// end snippet equations
+
 struct Position {
   double x{}, y{}, z{};
 };

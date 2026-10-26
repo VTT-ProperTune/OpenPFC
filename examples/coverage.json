@@ -343,9 +343,14 @@
     },
     {
       "target": "coupled_fields_example",
-      "source": "coupled_fields/main.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "coupling/fixed-tuples/model.cpp",
+      "chapter": "coupling/fixed-tuples/index.qmd",
+      "capabilities": [
+        "composite-gradient",
+        "fixed-tuple-scatter",
+        "mixed-derivatives",
+        "full-halo"
+      ]
     },
     {
       "target": "davies_pseudospectra",
@@ -1186,7 +1191,8 @@
         "coupled_spectral_etd2.hpp"
       ],
       "chapters": [
-        "coupling/runtime-fields/index.qmd"
+        "coupling/runtime-fields/index.qmd",
+        "coupling/fixed-tuples/index.qmd"
       ]
     },
     {

@@ -9,7 +9,7 @@ This test invokes the production `create(fields, eval, model, dt, tableau)`
 factory with model-owned gradient and increment aggregates. It uses midpoint
 RK2 and classical RK4, rather than an independently orchestrated stage loop.
 The homogeneous coefficients and coupled mixed-derivative equations match
-[the teaching model](../../../examples/coupled_fields/model.hpp). Optional
+[the teaching model](../../../examples/coupling/equations.hpp). Optional
 first-derivative, nonlinear and explicit-time coefficients are active in the
 independent stage control; they are explicitly zero for the harmonic Fourier
 control.

@@ -60,6 +60,9 @@ conserved discrete mass, spatial sampling and time-stepping accuracy.
 Learn [what a stencil's weights mean](differentiation/stencils/index.qmd)
 by normalizing a Sobel kernel and checking its polynomial moments.
 
+Compose [two derivative requests in one sweep](coupling/fixed-tuples/index.qmd)
+and use an exact coupled mode to distinguish spatial error from stage errors.
+
 ## Make your first change
 
 Install a compatible OpenPFC SDK and CLI using the

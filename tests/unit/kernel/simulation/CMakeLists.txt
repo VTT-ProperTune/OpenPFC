@@ -45,5 +45,5 @@ add_subdirectory(steppers)
 add_subdirectory(stacks)
 
 # Exercise the teaching entry point even when the example catalogue is disabled.
-add_subdirectory(${CMAKE_SOURCE_DIR}/examples/coupled_fields
+add_subdirectory(${CMAKE_SOURCE_DIR}/examples/coupling/fixed-tuples
                  ${CMAKE_CURRENT_BINARY_DIR}/coupled_fields)

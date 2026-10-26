@@ -119,6 +119,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `polynomial_boundary_values` | `polynomials/boundary-values/model.cpp` | Programs 13, 32 and 33: homogeneous, lifted and mixed boundary conditions with GMRES |
 | `polynomial_nonlinear_boundary` | `polynomials/nonlinear-boundary/model.cpp` | Program 14 adapted to native Newton–GMRES, checked by an analytic solution and scalar root |
 | `runtime_coupled_fields` | `coupling/runtime-fields/model.cpp` | Runtime field RK4 staging, two-field oscillator and exact recurrence |
+| `coupled_fields_example` | `coupling/fixed-tuples/model.cpp` | Two requested gradient packs, full halos and tuple scatter |
 | `checkpoint_restart` | `output/checkpoint-restart/model.cpp` | Collective checkpoint publication, fresh-state restart and discrete trajectory equivalence |
 | `first_domain` | `geometry/first-domain/model.cpp` | Give the grid a physical meaning |
 | `harmonic_oscillator` | `fourier/harmonic-oscillator/model.cpp` | Find the energies of a harmonic trap |

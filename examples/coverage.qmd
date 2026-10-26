@@ -17,7 +17,7 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 :::
 
 There are 82 declared runnable example targets and
-72 Quarto teaching chapters. The table includes older programs
+73 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -109,7 +109,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `checkpoint_restart` | [Read the lesson](output/checkpoint-restart/index.qmd) |
 | `clamped_beam` | [Read the lesson](polynomials/clamped-beam/index.qmd) |
 | `clamped_plate` | [Read the lesson](polynomials/clamped-plate/index.qmd) |
-| `coupled_fields_example` | Pending conversion. |
+| `coupled_fields_example` | [Read the lesson](coupling/fixed-tuples/index.qmd) |
 | `davies_pseudospectra` | [Read the lesson](polynomials/pseudospectra/index.qmd) |
 | `diffusion_model_with_custom_initial_condition` | [Read the lesson](heat/gaussian-pulse/index.qmd) |
 | `disk_eigenmodes` | [Read the lesson](polynomials/disk-modes/index.qmd) |
@@ -180,7 +180,7 @@ fixed-step restart does not establish an adaptive restart contract.
 | finite differences and spectral gradients | [periodic](differentiation/periodic/index.qmd), [smoothness](differentiation/smoothness/index.qmd), [stencils](differentiation/stencils/index.qmd) |
 | conservative fluxes and nonperiodic boundaries | Pending a teaching chapter. |
 | fixed and adaptive integration | [finite-differences](heat/finite-differences/index.qmd), [stability](integration/stability/index.qmd), [adaptive-rk](integration/adaptive-rk/index.qmd), [output-clock](integration/output-clock/index.qmd) |
-| multi-field runtime integration | [runtime-fields](coupling/runtime-fields/index.qmd) |
+| multi-field runtime integration | [runtime-fields](coupling/runtime-fields/index.qmd), [fixed-tuples](coupling/fixed-tuples/index.qmd) |
 | exponential and adaptive ETD | [exponential](heat/exponential/index.qmd), [adaptive-etd](integration/adaptive-etd/index.qmd) |
 | initial conditions and modifiers | [coordinate-fields](geometry/coordinate-fields/index.qmd), [patterns](initialization/patterns/index.qmd), [catalog](initialization/catalog/index.qmd) |
 | JSON/TOML validation and application sessions | [session](configuration/session/index.qmd), [catalog](initialization/catalog/index.qmd) |

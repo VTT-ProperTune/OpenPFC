@@ -424,3 +424,22 @@ uv run --with matplotlib==3.11.2 python examples/render_stencils.py \
 
 The displayed curves are native interior samples and responses. The checker
 uses independent affine and polynomial moment identities, not parity alone.
+
+## Coupled gradient requests
+
+The independent checker invokes the configurable coupled model on five FD
+resolutions and two spectral snapshots. After building, reproduce its native
+CSV inputs in an allocated environment:
+
+```sh
+python examples/check_coupled.py --bin-dir builds/release/examples \
+  --output results/example-checks --spectral
+uv run --with matplotlib==3.11.2 python examples/render_coupled.py \
+  --coupled results/example-checks/coupled
+```
+
+The figure uses every owned rate for its maximum error. Its first panel is
+the `j=k=0` line of the FD24 snapshot; the continuous rates come from the
+known mode, not from a separate Python PDE solver. `--spectral` requires a
+HeFFTe-enabled CPU build. The preserved allocation/stage regression is a
+separate test executable, so the downloadable model stays readable.

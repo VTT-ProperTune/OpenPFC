@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Turn the coupled-field demonstrator into a configurable Quarto lesson with
+  complete FD6/spectral rate data, preserving stage, scatter and HIP regressions.
+
 - Refactor the Sobel demonstration into a normalized three-dimensional stencil lesson. Explain its factor of 32, transverse smoothing and boundary support, and verify every interior response with affine and polynomial identities.
 - Select PR CI checks by changed components; reserve the full routine suite
   for integration, and skip unrelated C++ builds for documentation-only PRs (#710).
