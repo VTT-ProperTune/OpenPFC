@@ -630,7 +630,7 @@ python3 examples/ns2d_vorticity/scripts/plot_mhd_diagnostics.py \
 - Ideal OT, $N=32$, $T=0.2$, $\nu=\eta=0$. Relative drift of
   $E$, $H_c$ and $A_2$ (high-precision CSV):
 
-  | $\Delta t$ | $\delta E/E$ | $\delta H_c/H_c$ | $\delta A_2/A_2$ |
+  | Time step $\Delta t$ | Energy change $\delta E/E$ | Cross-helicity change $\delta H_c/H_c$ | Potential-square change $\delta A_2/A_2$ |
   |-------------:|---------------:|-------------------:|-------------------:|
   | 0.02 | $1.18\times10^{-9}$ | $2.44\times10^{-9}$ | $5.60\times10^{-10}$ |
   | 0.01 | $3.54\times10^{-11}$ | $8.19\times10^{-11}$ | $2.25\times10^{-11}$ |
