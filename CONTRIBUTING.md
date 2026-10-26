@@ -5,11 +5,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Contributing to OpenPFC
 
-[OodiHandbook](https://github.com/ahojukka5/OodiHandbook/blob/v0.1.0/index.qmd)
-is the source of common rules. Follow the repository's explicitly adopted
-immutable release (AUTH-003). Use [reviewed master guidance](https://github.com/ahojukka5/OodiHandbook/blob/master/index.qmd)
-as a voluntary improvement target (AUTH-006). Local instructions provide
-technical details and do not override the Handbook.
+OodiHandbook is the internal maintainer source of common rules. Follow the
+repository's explicitly adopted immutable release (AUTH-003), with reviewed
+master guidance as a voluntary improvement target (AUTH-006). Local
+instructions provide technical details and do not override the Handbook.
+Access to that internal resource is restricted; the public contribution
+instructions are provided on this page.
 
 Every commit is a small, self-contained, reviewable, revertable unit that
 tells one clear story. That is the bar for humans and agents alike.
