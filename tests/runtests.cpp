@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #define CATCH_CONFIG_RUNNER
-#include <catch2/catch_session.hpp>
+#include "fixtures/session.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <openpfc/kernel/mpi/worker.hpp>
 
@@ -24,5 +24,5 @@ int main(int argc, char *argv[]) {
     static pfc::MPI_Worker worker(argc, argv, MPI_COMM_WORLD, false);
   }
 
-  return Catch::Session().run(argc, argv);
+  return pfc::test::run(argc, argv);
 }

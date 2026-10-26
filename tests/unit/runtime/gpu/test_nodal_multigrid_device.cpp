@@ -6,6 +6,8 @@
 //   mpiexec -n 2 test_nodal_multigrid_cuda
 // (each rank selects device rank % count).
 
+#include "../../../fixtures/session.hpp"
+
 #include "mechanics_backend.hpp"
 
 #include <cmath>
@@ -14,7 +16,6 @@
 #include <random>
 #include <string_view>
 
-#include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <mpi.h>
 
@@ -939,7 +940,7 @@ int main(int argc, char **argv) {
       return 2;
     }
   }
-  const int result = Catch::Session().run(argc, argv);
+  const int result = pfc::test::run(argc, argv);
   MPI_Finalize();
   return result;
 }

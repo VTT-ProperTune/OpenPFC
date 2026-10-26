@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Keep MPI test case ordering and default random seeds consistent across ranks,
+  including application and device test runners, with Catch2 3.16 and older.
+
 - Build the native CLI artifact for mixed C++/Python pull-request checks
   while retaining component-scoped CTest selection.
 

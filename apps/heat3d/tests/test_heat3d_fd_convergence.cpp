@@ -28,7 +28,8 @@
  * measured here is purely the stencil's spatial truncation error.
  */
 
-#include <catch2/catch_session.hpp>
+#include "../../../tests/fixtures/session.hpp"
+
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
 #include <cstddef>
@@ -89,7 +90,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "test_heat3d_fd_convergence: MPI_Init failed\n";
     return 1;
   }
-  const int result = Catch::Session().run(argc, argv);
+  const int result = pfc::test::run(argc, argv);
   MPI_Finalize();
   return result;
 }

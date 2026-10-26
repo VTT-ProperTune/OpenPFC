@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
+#include "../../../fixtures/session.hpp"
+
 #include "mechanics_backend.hpp"
-#include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
 #include <openpfc/runtime/gpu/vector_operations.hpp>
@@ -110,7 +111,7 @@ TEST_CASE(
 }
 int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
-  int result = Catch::Session().run(argc, argv);
+  int result = pfc::test::run(argc, argv);
   MPI_Finalize();
   return result;
 }

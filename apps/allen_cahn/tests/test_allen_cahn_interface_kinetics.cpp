@@ -26,8 +26,9 @@
  * `out/report/data/allen_cahn_resolution_margin.csv` for the measurements.
  */
 
+#include "../../../tests/fixtures/session.hpp"
+
 #define CATCH_CONFIG_RUNNER
-#include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
@@ -567,7 +568,7 @@ TEST_CASE("sub-cell numbers print beside the cell count and stay out of the verd
 
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
-  const int result = Catch::Session().run(argc, argv);
+  const int result = pfc::test::run(argc, argv);
   MPI_Finalize();
   return result;
 }

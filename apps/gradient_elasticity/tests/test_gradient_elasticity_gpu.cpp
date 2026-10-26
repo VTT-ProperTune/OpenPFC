@@ -6,13 +6,14 @@
  * @brief CPU vs HIP one-shot session parity for gradient elasticity.
  */
 
+#include "../../../tests/fixtures/session.hpp"
+
 #include "test_helpers.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <vector>
 
-#include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <mpi.h>
 #include <nlohmann/json.hpp>
@@ -90,5 +91,5 @@ int main(int argc, char *argv[]) {
   if (mpi_initialized == 0) {
     MPI_Init(&argc, &argv);
   }
-  return Catch::Session().run(argc, argv);
+  return pfc::test::run(argc, argv);
 }

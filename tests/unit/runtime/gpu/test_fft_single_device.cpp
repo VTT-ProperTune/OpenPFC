@@ -6,11 +6,11 @@
 // the backward input is preserved; GPUSpectralStack exposes it on request.
 // Built once per vendor (OPENPFC_TEST_SPACE selects CUDASpace or HIPSpace).
 
+#include "../../../fixtures/session.hpp"
+
 #if !(defined(OpenPFC_ENABLE_CUDA_SPECTRAL) || defined(OpenPFC_ENABLE_HIP_SPECTRAL))
 
-#include <catch2/catch_session.hpp>
-
-int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
+int main(int argc, char *argv[]) { return pfc::test::run(argc, argv); }
 
 #else
 
@@ -26,7 +26,6 @@ int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
 #include <type_traits>
 #include <vector>
 
-#include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <mpi.h>
 
@@ -253,7 +252,7 @@ TEST_CASE("Local FFT rejects inconsistent ranks before device allocation",
 
 int main(int argc, char *argv[]) {
   ensure_mpi();
-  const int rc = Catch::Session().run(argc, argv);
+  const int rc = pfc::test::run(argc, argv);
   MPI_Finalize();
   return rc;
 }

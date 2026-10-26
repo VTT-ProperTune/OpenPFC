@@ -54,6 +54,8 @@
  * @see moments.hpp for why midpoint quadrature is the right rule here
  */
 
+#include "../../../tests/fixtures/session.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -1398,7 +1400,7 @@ TEST_CASE("the electrostatic reduction holds Ey and Bz at zero",
 
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
-  const int result = Catch::Session().run(argc, argv);
+  const int result = pfc::test::run(argc, argv);
   MPI_Finalize();
   return result;
 }

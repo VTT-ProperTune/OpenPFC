@@ -3,12 +3,13 @@
 
 // FieldMultigrid on the device reproduces the host V-cycle and operator (#470).
 
+#include "../../../fixtures/session.hpp"
+
 #include "mechanics_backend.hpp"
 
 #include <cmath>
 #include <random>
 
-#include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <mpi.h>
 
@@ -119,7 +120,7 @@ TEST_CASE("FieldMultigrid device V-cycle and operator match the host",
 
 int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
-  const int result = Catch::Session().run(argc, argv);
+  const int result = pfc::test::run(argc, argv);
   MPI_Finalize();
   return result;
 }

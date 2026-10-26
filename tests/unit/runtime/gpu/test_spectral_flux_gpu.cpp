@@ -7,12 +7,13 @@
  * `spectral_flux_pointwise.cu` / `.hip`.
  */
 
+#include "../../../fixtures/session.hpp"
+
 #if !defined(OPENPFC_TEST_SPECTRAL_FLUX_HIP) &&                                     \
     !defined(OPENPFC_TEST_SPECTRAL_FLUX_CUDA)
 
-#include <catch2/catch_session.hpp>
 
-int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
+int main(int argc, char *argv[]) { return pfc::test::run(argc, argv); }
 
 #else
 
@@ -24,7 +25,6 @@ int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
 #include <complex>
 #include <vector>
 
-#include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <mpi.h>
 
@@ -196,7 +196,7 @@ int main(int argc, char *argv[]) {
   if (mpi_initialized == 0) {
     MPI_Init(&argc, &argv);
   }
-  const int result = Catch::Session().run(argc, argv);
+  const int result = pfc::test::run(argc, argv);
   int mpi_finalized = 0;
   MPI_Finalized(&mpi_finalized);
   if (mpi_finalized == 0) {

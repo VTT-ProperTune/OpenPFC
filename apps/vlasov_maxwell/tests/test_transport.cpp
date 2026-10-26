@@ -45,6 +45,8 @@
  * N-rank comparison) where it is the subject rather than a confounder.
  */
 
+#include "../../../tests/fixtures/session.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <complex>
@@ -1319,7 +1321,7 @@ TEST_CASE("reduced f(x,vx) integrates the owned v_y slab", "[unit][reduced]") {
 
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
-  const int result = Catch::Session().run(argc, argv);
+  const int result = pfc::test::run(argc, argv);
   MPI_Finalize();
   return result;
 }

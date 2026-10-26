@@ -49,6 +49,19 @@ MPI CTest targets are optional because many laptops and CI runners cannot launch
 
 VTK writer tests and other targets may `add_test` separately under `tests/unit/frontend/io/` — use `ctest -N` to list everything after configure.
 
+## Consistent MPI test sessions
+
+MPI Catch2 runners use the private `tests/fixtures/session.hpp` helper. It
+selects declaration order and random seed `1` before parsing CLI options,
+so ranks enter the same cases, sections and generators with both older
+Catch2 releases and the randomized default in Catch2 3.16. MPI startup and
+shutdown stay in each runner; the library runner's listing/discovery path
+continues to avoid MPI initialization.
+
+Explicit `--order` and `--rng-seed` options still override the defaults.
+For randomized runs, pass the same order and numeric seed to every rank.
+These settings do not change test selection or numerical tolerances.
+
 ## Application tests
 
 When `OpenPFC_BUILD_APPS=ON`, some apps register extra CTest entries (e.g. tungsten / aluminum checks). Those live next to each app’s `CMakeLists.txt`. `tungsten-golden-4rank` and `aluminum-golden-4rank` follow `OpenPFC_MPI_TEST_MAX_WORLD_SIZE` (CI uses 2, so they are omitted on GitHub-hosted runners).

@@ -1,12 +1,13 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#include "../../../fixtures/session.hpp"
+
 #if !defined(OPENPFC_TEST_FD_GPU_STACK_HIP) &&                                      \
     !defined(OPENPFC_TEST_FD_GPU_STACK_CUDA)
 
-#include <catch2/catch_session.hpp>
 
-int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
+int main(int argc, char *argv[]) { return pfc::test::run(argc, argv); }
 
 #else
 
@@ -15,7 +16,6 @@ int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
 #include <stdexcept>
 #include <string>
 
-#include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <mpi.h>
 #include <nlohmann/json.hpp>
@@ -196,7 +196,7 @@ int main(int argc, char *argv[]) {
   if (mpi_initialized == 0) {
     MPI_Init(&argc, &argv);
   }
-  return Catch::Session().run(argc, argv);
+  return pfc::test::run(argc, argv);
 }
 
 #endif

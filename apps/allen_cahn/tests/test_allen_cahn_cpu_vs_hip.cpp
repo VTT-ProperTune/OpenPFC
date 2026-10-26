@@ -1,13 +1,14 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#include "../../../tests/fixtures/session.hpp"
+
 #if !defined(OpenPFC_ENABLE_HIP)
 #error                                                                              \
     "test_allen_cahn_cpu_vs_hip requires HIP (configure with -DOpenPFC_ENABLE_HIP=ON)"
 #endif
 
 #define CATCH_CONFIG_RUNNER
-#include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <hip/hip_runtime.h>
@@ -135,7 +136,7 @@ TEST_CASE("Allen–Cahn CPU vs HIP agreement (single rank)", "[AllenCahn][HIP]")
 
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
-  const int result = Catch::Session().run(argc, argv);
+  const int result = pfc::test::run(argc, argv);
   MPI_Finalize();
   return result;
 }

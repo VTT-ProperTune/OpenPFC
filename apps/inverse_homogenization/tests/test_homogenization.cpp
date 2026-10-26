@@ -11,8 +11,9 @@
  * objective is not an oracle for the gradient.
  */
 
+#include "../../../tests/fixtures/session.hpp"
+
 #define CATCH_CONFIG_RUNNER
-#include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
@@ -55,7 +56,7 @@ using RealField = pfc::data::Field<double>;
 
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
-  const int result = Catch::Session().run(argc, argv);
+  const int result = pfc::test::run(argc, argv);
   MPI_Finalize();
   return result;
 }

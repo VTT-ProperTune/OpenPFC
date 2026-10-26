@@ -9,8 +9,9 @@
  * repeat the spatial or temporal ladder.
  */
 
+#include "../../../tests/fixtures/session.hpp"
+
 #define CATCH_CONFIG_RUNNER
-#include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
@@ -181,7 +182,7 @@ TEST_CASE("Taylor-Green t=0 vorticity cube matches the enstrophy",
 
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
-  const int result = Catch::Session().run(argc, argv);
+  const int result = pfc::test::run(argc, argv);
   MPI_Finalize();
   return result;
 }

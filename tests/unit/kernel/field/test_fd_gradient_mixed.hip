@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#include <catch2/catch_session.hpp>
+#include "../../../fixtures/session.hpp"
+
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
 #include <hip/hip_runtime.h>
@@ -101,7 +102,7 @@ TEST_CASE("Native HIP mixed FD matches host Full-halo evaluation",
 
 int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
-  const int status = Catch::Session().run(argc, argv);
+  const int status = pfc::test::run(argc, argv);
   MPI_Finalize();
   return status;
 }

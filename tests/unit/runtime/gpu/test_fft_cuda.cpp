@@ -2,18 +2,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 // CPU-only clang-tidy builds omit OpenPFC_ENABLE_CUDA; this TU must still parse.
+#include "../../../fixtures/session.hpp"
+
 #if !defined(OpenPFC_ENABLE_CUDA)
 
-#include <catch2/catch_session.hpp>
-
-int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
+int main(int argc, char *argv[]) { return pfc::test::run(argc, argv); }
 
 #else
 
 #include "test_helpers.hpp"
 #include <algorithm>
 #include <catch2/catch_approx.hpp>
-#include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
 #include <complex>
@@ -230,7 +229,7 @@ int main(int argc, char *argv[]) {
     MPI_Init(&argc, &argv);
   }
 
-  int result = Catch::Session().run(argc, argv);
+  int result = pfc::test::run(argc, argv);
 
   if (mpi_initialized == 0) {
     MPI_Finalize();

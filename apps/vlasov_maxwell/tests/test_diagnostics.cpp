@@ -13,9 +13,10 @@
  * hardest kind of error to notice and the easiest kind to publish.
  */
 
+#include "../../../tests/fixtures/session.hpp"
+
 #define CATCH_CONFIG_RUNNER
 #include <catch2/catch_approx.hpp>
-#include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <cmath>
@@ -425,7 +426,7 @@ int main(int argc, char *argv[]) {
   // suite that only works outside an MPI context is a suite that will not
   // run the same way as the application it is testing.
   MPI_Init(&argc, &argv);
-  const int result = Catch::Session().run(argc, argv);
+  const int result = pfc::test::run(argc, argv);
   MPI_Finalize();
   return result;
 }

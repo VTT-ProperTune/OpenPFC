@@ -6,9 +6,10 @@
  * @brief Catch2 tests for the Kawahara spectral app.
  */
 
+#include "../../../tests/fixtures/session.hpp"
+
 #define CATCH_CONFIG_RUNNER
 #include <catch2/catch_approx.hpp>
-#include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
@@ -1234,7 +1235,7 @@ TEST_CASE("Kawahara: fifth-order dispersion makes a KdV solitary wave radiate",
 
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
-  const int result = Catch::Session().run(argc, argv);
+  const int result = pfc::test::run(argc, argv);
   MPI_Finalize();
   return result;
 }

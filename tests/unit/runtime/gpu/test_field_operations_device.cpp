@@ -10,13 +10,14 @@
  * exchange. HIP uses the same source when OPENPFC_TEST_MECHANICS_HIP is set.
  */
 
+#include "../../../fixtures/session.hpp"
+
 #include "mechanics_backend.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <vector>
 
-#include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <mpi.h>
 
@@ -260,7 +261,7 @@ TEST_CASE("a device Field starts zero and allocates its host mirror on demand",
 
 int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
-  const int result = Catch::Session().run(argc, argv);
+  const int result = pfc::test::run(argc, argv);
   MPI_Finalize();
   return result;
 }

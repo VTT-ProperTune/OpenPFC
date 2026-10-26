@@ -1,12 +1,13 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#include "../../../tests/fixtures/session.hpp"
+
 #if !defined(OpenPFC_ENABLE_CUDA)
 #error "test_wave2d_cpu_vs_cuda requires CUDA"
 #endif
 
 #define CATCH_CONFIG_RUNNER
-#include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <cuda_runtime.h>
@@ -162,7 +163,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "MPI_Init failed\n";
     return 1;
   }
-  const int r = Catch::Session().run(argc, argv);
+  const int r = pfc::test::run(argc, argv);
   MPI_Finalize();
   return r;
 }

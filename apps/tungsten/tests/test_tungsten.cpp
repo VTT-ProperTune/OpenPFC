@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#include "../../../tests/fixtures/session.hpp"
+
 #define CATCH_CONFIG_RUNNER
 #include <array>
 #include <catch2/catch_approx.hpp>
-#include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <cmath>
@@ -372,7 +373,7 @@ int main(int argc, char *argv[]) {
   }
 
   // Run Catch2 tests
-  int result = Catch::Session().run(argc, argv);
+  int result = pfc::test::run(argc, argv);
 
   // Finalize MPI
   MPI_Finalize();

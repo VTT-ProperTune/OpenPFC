@@ -27,7 +27,8 @@
  * in the driver.
  */
 
-#include <catch2/catch_session.hpp>
+#include "../../../tests/fixtures/session.hpp"
+
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
@@ -251,7 +252,7 @@ TEST_CASE("heat3d spectral content: family held-out gate fails closed",
 
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
-  const int result = Catch::Session().run(argc, argv);
+  const int result = pfc::test::run(argc, argv);
   MPI_Finalize();
   return result;
 }

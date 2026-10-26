@@ -19,6 +19,8 @@
  * the fields are frozen).
  */
 
+#include "../../../tests/fixtures/session.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -207,7 +209,7 @@ TEST_CASE("discrete-velocity recurrence time matches 2 pi / (k dv) at three N_v"
 
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
-  const int result = Catch::Session().run(argc, argv);
+  const int result = pfc::test::run(argc, argv);
   MPI_Finalize();
   return result;
 }

@@ -36,6 +36,8 @@
  * a wish.
  */
 
+#include "../../../tests/fixtures/session.hpp"
+
 #include <array>
 #include <cmath>
 #include <cstdlib>
@@ -1493,7 +1495,7 @@ TEST_CASE("lagging the elastic solve is bounded, and warm start is cheaper",
 
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
-  const int result = Catch::Session().run(argc, argv);
+  const int result = pfc::test::run(argc, argv);
   MPI_Finalize();
   return result;
 }

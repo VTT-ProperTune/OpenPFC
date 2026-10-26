@@ -18,8 +18,9 @@
  * [10.0, 24.0].
  */
 
+#include "../../../tests/fixtures/session.hpp"
+
 #define CATCH_CONFIG_RUNNER
-#include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
@@ -422,7 +423,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "test_wave2d_rk_convergence: MPI_Init failed\n";
     return 1;
   }
-  const int result = Catch::Session().run(argc, argv);
+  const int result = pfc::test::run(argc, argv);
   MPI_Finalize();
   return result;
 }

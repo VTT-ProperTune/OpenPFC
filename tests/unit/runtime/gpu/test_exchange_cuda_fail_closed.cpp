@@ -6,17 +6,16 @@
  * @brief Fail-closed CUDA SparseVector isend/irecv without GPU-aware MPI
  */
 
+#include "../../../fixtures/session.hpp"
+
 #if !defined(OpenPFC_ENABLE_CUDA)
 
-#include <catch2/catch_session.hpp>
-
-int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
+int main(int argc, char *argv[]) { return pfc::test::run(argc, argv); }
 
 #else
 
 #include "test_helpers.hpp"
 
-#include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <cuda_runtime.h>
 #include <mpi.h>
@@ -101,7 +100,7 @@ int main(int argc, char *argv[]) {
     MPI_Init(&argc, &argv);
   }
 
-  int result = Catch::Session().run(argc, argv);
+  int result = pfc::test::run(argc, argv);
 
   if (mpi_initialized == 0) {
     MPI_Finalize();

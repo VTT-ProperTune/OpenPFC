@@ -15,6 +15,8 @@
  * every rank the same way would still match the kinetic theory.
  */
 
+#include "../../../tests/fixtures/session.hpp"
+
 #include <cmath>
 #include <vector>
 
@@ -117,7 +119,7 @@ TEST_CASE("Landau gamma agrees between 1 rank and N ranks", "[mpi][science]") {
 
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
-  const int result = Catch::Session().run(argc, argv);
+  const int result = pfc::test::run(argc, argv);
   MPI_Finalize();
   return result;
 }
