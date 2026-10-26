@@ -18,3 +18,33 @@
   color: var(--color-foreground-primary) !important;
   background-color: var(--color-background-primary) !important;
 }
+
+/* Fullscreen diagrams open at readable size, with explicit keyboard controls. */
+.mermaid-container-fullscreen {
+  display: block !important;
+  background: var(--color-background-primary) !important;
+}
+.mermaid-container-fullscreen pre.mermaid {
+  display: block !important;
+  width: max-content !important;
+  min-width: 100%;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.mermaid-fullscreen-tools {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  display: flex;
+  gap: .4rem;
+  z-index: 10000;
+}
+.mermaid-fullscreen-tools button {
+  padding: .5rem .65rem;
+  font: inherit;
+  color: var(--color-foreground-primary);
+  background: var(--color-background-primary);
+  border: 1px solid var(--color-foreground-primary);
+  cursor: pointer;
+}

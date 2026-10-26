@@ -32,6 +32,44 @@
         element.inert = true;
         element.setAttribute('aria-hidden', 'true');
       }
+      const viewport = modal.querySelector('.mermaid-container-fullscreen');
+      const svg = viewport.querySelector('svg');
+      if (svg) {
+        viewport.tabIndex = 0;
+        viewport.setAttribute('role', 'region');
+        viewport.setAttribute('aria-label', 'Diagram; use arrow keys to scroll');
+        modal.querySelector('.mermaid-fullscreen-tools')?.remove();
+        const toolbar = document.createElement('div');
+        toolbar.className = 'mermaid-fullscreen-tools';
+        const available = () => viewport.clientWidth -
+          parseFloat(getComputedStyle(viewport).paddingLeft) -
+          parseFloat(getComputedStyle(viewport).paddingRight);
+        let width = Math.max(available(),
+          Math.min(1000, svg.viewBox.baseVal.width || 1000));
+        const resize = (nextWidth, keepCentre = true) => {
+          const centre = (viewport.scrollLeft + viewport.clientWidth / 2) /
+            Math.max(1, viewport.scrollWidth);
+          width = Math.max(200, Math.min(4000, nextWidth));
+          svg.style.setProperty('width', `${width}px`, 'important');
+          svg.style.setProperty('height', 'auto', 'important');
+          svg.style.setProperty('max-width', 'none', 'important');
+          viewport.scrollLeft = (keepCentre ? centre : .5) * viewport.scrollWidth -
+            viewport.clientWidth / 2;
+        };
+        for (const [label, change] of [
+          ['Zoom in', () => resize(width * 1.4)],
+          ['Zoom out', () => resize(width / 1.4)],
+          ['Fit', () => resize(available(), false)]
+        ]) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.textContent = label;
+          button.addEventListener('click', change);
+          toolbar.append(button);
+        }
+        modal.append(toolbar);
+        resize(width, false);
+      }
       modal.querySelector('.mermaid-fullscreen-close').focus();
     }
   };
