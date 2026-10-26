@@ -495,6 +495,7 @@ int bundle_model(const Arguments &args) {
       {"launch_shell", scratch ? Json("/bin/sh") : Json(nullptr)},
       {"input_sha256",
        input_name.empty() ? Json(nullptr) : Json(sha256(input_bytes))},
+      {"input_filename", input_name.empty() ? Json(nullptr) : Json(input_name)},
       {"sdk_manifest_sha256", sdk_manifest},
       {"interpreter", closure.interpreter},
       {"closure", "dt-needed"},
@@ -573,8 +574,8 @@ int bundle_model(const Arguments &args) {
     if (!input_name.empty()) {
       runscript =
           "    if [ \"$#\" -eq 0 ]; then\n        exec /opt/openpfc/bin/model "
-          "/opt/openpfc/inputs/" +
-          input_name + "\n    fi\n    exec /opt/openpfc/bin/model \"$@\"\n";
+          "'/opt/openpfc/inputs/" +
+          input_name + "'\n    fi\n    exec /opt/openpfc/bin/model \"$@\"\n";
     }
     std::string definition;
     if (scratch) {

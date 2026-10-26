@@ -518,6 +518,38 @@ if(NOT EXISTS "${bundle_dir}/payload/bin/model" OR NOT EXISTS "${bundle_dir}/bun
    NOT EXISTS "${bundle_dir}/payload/provenance.json" OR NOT EXISTS "${bundle_dir}/run-host.sh")
   message(FATAL_ERROR "Bundle recipe is incomplete: ${bundle_dir}")
 endif()
+# Exercise the actual generated default runscript through /bin/sh. Replace only
+# the container's executable path with an argument checker available on the host.
+file(WRITE "${root}/capture-bundle-input.sh" [=[#!/bin/sh
+[ "$#" -eq 1 ] && [ "$1" = "$EXPECTED_BUNDLE_INPUT" ]
+]=])
+file(CHMOD "${root}/capture-bundle-input.sh"
+  PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
+foreach(input_name IN ITEMS "input with spaces.json"
+                           "input $(touch shell-expanded) $HOME [x].json")
+  # Identical bytes must still yield the requested default pathname after
+  # a cache hit; the basename participates in the bundle's identity.
+  file(WRITE "${project}/${input_name}" "{}\n")
+  cli_call(0 bundle "${project}/mpi.cpp" --prepare-only --output "${bundle_image}"
+    --base "${bundle_base}" --site=openmpi ${host_args} ${common}
+    --input "${project}/${input_name}")
+  if(NOT output MATCHES "Bundle: ([^\n]+)")
+    message(FATAL_ERROR "Input bundle did not report its recipe: ${output}")
+  endif()
+  file(READ "${CMAKE_MATCH_1}/bundle.def" input_definition)
+  string(REGEX REPLACE "^.*%runscript\n" "" runscript "${input_definition}")
+  string(REPLACE "exec /opt/openpfc/bin/model"
+    "exec \"${root}/capture-bundle-input.sh\"" runscript "${runscript}")
+  file(WRITE "${root}/check-bundle-runscript.sh" "${runscript}")
+  set(ENV{EXPECTED_BUNDLE_INPUT} "/opt/openpfc/inputs/${input_name}")
+  execute_process(COMMAND /bin/sh "${root}/check-bundle-runscript.sh"
+    WORKING_DIRECTORY "${root}" RESULT_VARIABLE input_code)
+  if(NOT input_code EQUAL 0 OR EXISTS "${root}/shell-expanded")
+    message(FATAL_ERROR "Bundle input pathname was split or expanded: ${input_name}")
+  endif()
+endforeach()
+unset(ENV{EXPECTED_BUNDLE_INPUT})
+
 file(READ "${bundle_dir}/bundle.def" bundle_definition)
 if(NOT bundle_definition MATCHES "Bootstrap: localimage" OR
    NOT bundle_definition MATCHES "From: base.sif" OR
