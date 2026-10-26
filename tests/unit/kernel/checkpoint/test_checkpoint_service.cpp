@@ -384,7 +384,8 @@ TEST_CASE("coupling imposed source matches FieldModifier-shaped write 2-rank",
   require_fields_equal(a.get_field<double>("u"), b.get_field<double>("u"));
 }
 
-TEST_CASE("Checkpoint periodicity round-trip and restart identity", "[checkpoint][metadata][service]") {
+TEST_CASE("Checkpoint periodicity round-trip and restart identity",
+          "[checkpoint][metadata][service]") {
   pfc::checkpoint::CheckpointMetadata want;
   want.domain.global_dimensions = {8, 8, 8};
   want.domain.grid_spacing = {1.0, 1.0, 1.0};
@@ -401,9 +402,10 @@ TEST_CASE("Checkpoint periodicity round-trip and restart identity", "[checkpoint
   legacy["domain"].erase("periodic");
   auto old = pfc::checkpoint::from_json(legacy);
   REQUIRE(old.domain.periodic == pfc::Bool3{true, true, true});
-  REQUIRE_THROWS_AS(pfc::sim::require_checkpoint_identity(old, want), std::invalid_argument);
-  for (const auto &bad : {nlohmann::json{true, 1, false}, nlohmann::json{true, false},
-                         nlohmann::json(nullptr)}) {
+  REQUIRE_THROWS_AS(pfc::sim::require_checkpoint_identity(old, want),
+                    std::invalid_argument);
+  for (const auto &bad : {nlohmann::json{true, 1, false},
+                          nlohmann::json{true, false}, nlohmann::json(nullptr)}) {
     auto malformed = encoded;
     malformed["domain"]["periodic"] = bad;
     REQUIRE_THROWS_AS(pfc::checkpoint::from_json(malformed), std::invalid_argument);

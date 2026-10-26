@@ -16,8 +16,8 @@
 #include <nlohmann/json.hpp>
 
 #include <openpfc/frontend/ui/from_json_world_time.hpp>
-#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/frontend/utils/toml_to_json.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/decomposition_neighbors.hpp>
 
@@ -134,10 +134,11 @@ TEST_CASE("Removed keys are rejected at the root and next to new keys",
   REQUIRE_THAT(error_of(mixed), ContainsSubstring("'origin'"));
 }
 
-TEST_CASE("JSON and TOML preserve mixed per-axis periodicity", "[domain][json][toml]") {
-  for (const pfc::Bool3 periodic : {pfc::Bool3{true, true, true},
-                                   pfc::Bool3{false, false, false},
-                                   pfc::Bool3{true, true, false}}) {
+TEST_CASE("JSON and TOML preserve mixed per-axis periodicity",
+          "[domain][json][toml]") {
+  for (const pfc::Bool3 periodic :
+       {pfc::Bool3{true, true, true}, pfc::Bool3{false, false, false},
+        pfc::Bool3{true, true, false}}) {
     json j = box({8, 6, 4}, {0, 0, 0}, {8, 6, 3});
     j["domain"]["periodic"] = periodic;
     const auto d = from_json<Domain>(j);
@@ -156,9 +157,9 @@ periodic = [true, true, false]
 }
 
 TEST_CASE("Domain periodic flags reject malformed input", "[domain][json]") {
-  for (const json &flags : {json{true, false}, json{true, false, true, false},
-                            json{true, 1, false}, json{true, "false", false},
-                            json(nullptr), json("false")}) {
+  for (const json &flags :
+       {json{true, false}, json{true, false, true, false}, json{true, 1, false},
+        json{true, "false", false}, json(nullptr), json("false")}) {
     auto j = box({4, 4, 4}, {0, 0, 0}, {1, 1, 1});
     j["domain"]["periodic"] = flags;
     REQUIRE_THAT(error_of(j), ContainsSubstring("domain.periodic"));
@@ -168,20 +169,22 @@ TEST_CASE("Domain periodic flags reject malformed input", "[domain][json]") {
   REQUIRE_THAT(error_of(singleton), ContainsSubstring("at least two"));
 }
 
-TEST_CASE("Configured periodicity reaches boundary and interior neighbours", "[domain][json]") {
+TEST_CASE("Configured periodicity reaches boundary and interior neighbours",
+          "[domain][json]") {
   for (const bool bounded : {false, true}) {
     auto j = box({8, 6, 10}, {0, 0, 0}, {8, 6, 9});
     j["domain"]["periodic"] = {true, true, !bounded};
     const auto d = from_json<Domain>(j);
-    for (const pfc::Int3 grid : {pfc::Int3{1,1,1}, pfc::Int3{1,1,3}}) {
+    for (const pfc::Int3 grid : {pfc::Int3{1, 1, 1}, pfc::Int3{1, 1, 3}}) {
       const auto decomp = pfc::decomposition::create(d, grid);
-      REQUIRE(pfc::decomposition::get_neighbor_rank(decomp, d, 0, {0,0,-1}) ==
-              (bounded ? -1 : grid[2]-1));
-      REQUIRE(pfc::decomposition::get_neighbor_rank(decomp, d, grid[2]-1, {0,0,1}) ==
-              (bounded ? -1 : 0));
+      REQUIRE(pfc::decomposition::get_neighbor_rank(decomp, d, 0, {0, 0, -1}) ==
+              (bounded ? -1 : grid[2] - 1));
+      REQUIRE(pfc::decomposition::get_neighbor_rank(
+                  decomp, d, grid[2] - 1, {0, 0, 1}) == (bounded ? -1 : 0));
       if (grid[2] == 3) {
-        REQUIRE(pfc::decomposition::get_neighbor_rank(decomp, d, 1, {0,0,-1}) == 0);
-        REQUIRE(pfc::decomposition::get_neighbor_rank(decomp, d, 1, {0,0,1}) == 2);
+        REQUIRE(pfc::decomposition::get_neighbor_rank(decomp, d, 1, {0, 0, -1}) ==
+                0);
+        REQUIRE(pfc::decomposition::get_neighbor_rank(decomp, d, 1, {0, 0, 1}) == 2);
       }
     }
   }

@@ -5,8 +5,8 @@
 #include <algorithm>
 #include <array>
 #include <catch2/catch_test_macros.hpp>
-#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/frontend/ui/from_json_world_time.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 
@@ -89,8 +89,11 @@ void run(const pfc::Bool3 &periodic, bool slab, Producer producer) {
     pfc::Real3 upper{};
     for (int axis = 0; axis < 3; ++axis)
       upper[axis] = domain.spacing[axis] * (extent[axis] - (periodic[axis] ? 0 : 1));
-    const nlohmann::json config{{"domain", {{"size", extent}, {"lower", {0,0,0}},
-                                            {"upper", upper}, {"periodic", periodic}}}};
+    const nlohmann::json config{{"domain",
+                                 {{"size", extent},
+                                  {"lower", {0, 0, 0}},
+                                  {"upper", upper},
+                                  {"periodic", periodic}}}};
     domain = pfc::ui::from_json<pfc::Domain>(config);
   }
   auto decomp = pfc::decomposition::create(domain, grid);

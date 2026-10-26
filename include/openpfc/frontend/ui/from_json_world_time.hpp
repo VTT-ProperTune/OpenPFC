@@ -185,13 +185,16 @@ template <> [[nodiscard]] inline Domain from_json<Domain>(const json &j) {
           "\"lower\": [0.0, 0.0, 0.0], \"upper\": [64.0, 64.0, 64.0]"));
     }
   }
-  const auto periodic = d.contains("periodic")
-      ? detail::read_triple<bool>(d, "periodic", "per-axis periodicity",
-            "three booleans", "[true, true, false]", [](bool) { return true; })
-      : pfc::Bool3{true, true, true};
+  const auto periodic =
+      d.contains("periodic")
+          ? detail::read_triple<bool>(d, "periodic", "per-axis periodicity",
+                                      "three booleans", "[true, true, false]",
+                                      [](bool) { return true; })
+          : pfc::Bool3{true, true, true};
   for (int a = 0; a < 3; ++a) {
     if (!periodic[a] && size[a] < 2) {
-      throw std::invalid_argument("domain.size: non-periodic axes require at least two grid points");
+      throw std::invalid_argument(
+          "domain.size: non-periodic axes require at least two grid points");
     }
   }
   return pfc::domain::from_bounds({size[0], size[1], size[2]},

@@ -243,7 +243,8 @@ publish_field_bundle(const std::filesystem::path &dir,
   for (const auto &[name, f] : fields) {
     if (f == nullptr || f->global_size() != g || f->local_size() != n ||
         f->lower_global() != lo || f->origin() != f0.origin() ||
-        f->spacing() != f0.spacing() || f->domain().periodic != f0.domain().periodic) {
+        f->spacing() != f0.spacing() ||
+        f->domain().periodic != f0.domain().periodic) {
       throw std::invalid_argument(
           "publish_field_bundle: fields differ in grid or layout: " + name);
     }
@@ -293,7 +294,8 @@ load_field_bundle(const std::filesystem::path &dir,
   for (const auto &[name, f] : fields) {
     const auto g = f->global_size();
     if (meta.domain.periodic != f->domain().periodic) {
-      throw std::invalid_argument("load_field_bundle: bundle periodicity differs from field " + name);
+      throw std::invalid_argument(
+          "load_field_bundle: bundle periodicity differs from field " + name);
     }
     for (int a = 0; a < 3; ++a) {
       if (meta.domain.global_dimensions[a] != g[a] ||
