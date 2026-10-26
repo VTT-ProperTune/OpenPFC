@@ -28,6 +28,7 @@ extensions = [
     "sphinx.ext.githubpages",
     "repo_links",
     "public_search",
+    "reading_accessibility",
 ]
 
 source_suffix = {".md": "markdown"}
