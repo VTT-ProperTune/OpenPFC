@@ -132,6 +132,12 @@ inline void check_face_extents(int nx, int ny, int nz) {
   }
 }
 
+/// Arithmetic grouping for conservative face contributions.
+/// SequentialUniform preserves `((Fx+ - Fx- + Fy+) - Fy- + Fz+) - Fz-`,
+/// followed by one common inverse spacing. Select it when migrating a
+/// uniform-grid solver whose reproducibility contract fixes that ordering.
+enum class FaceAccumulation { AxisDifferences, SequentialUniform };
+
 /**
  * Pointwise `+div G`, with the same face-current convention as `fill_faces`.
  *
@@ -164,10 +170,13 @@ template <class Flux> struct FaceDivergence {
   bool active[3];
   double inverse_spacing[3];
   Wall walls[6]; // -x,+x,-y,+y,-z,+z
+  FaceAccumulation accumulation = FaceAccumulation::AxisDifferences;
 
   OPENPFC_HD double operator()(int i, int j, int k) const {
     double div = 0.0;
     const int cell[3] = {i, j, k};
+    bool first = true;
+    double uniform_inverse = 1.0;
     for (int axis = 0; axis < 3; ++axis) {
       if (!active[axis]) continue;
       const Wall &lo = walls[2 * axis];
@@ -180,9 +189,19 @@ template <class Flux> struct FaceDivergence {
           cell[axis] == extent[axis] - 1 && hi.policy != WallPolicy::Model
               ? (hi.policy == WallPolicy::Zero ? 0.0 : hi.value)
               : flux(axis, i, j, k);
-      div += (high - low) * inverse_spacing[axis];
+      if (accumulation == FaceAccumulation::SequentialUniform) {
+        if (first) {
+          div = high - low;
+          uniform_inverse = inverse_spacing[axis];
+          first = false;
+        } else
+          div = div + high - low;
+      } else
+        div += (high - low) * inverse_spacing[axis];
     }
-    return div;
+    return accumulation == FaceAccumulation::SequentialUniform
+               ? div * uniform_inverse
+               : div;
   }
 };
 
@@ -190,7 +209,8 @@ template <class Flux> struct FaceDivergence {
 template <class Flux>
 [[nodiscard]] FaceDivergence<Flux>
 face_divergence(Flux flux, int nx, int ny, int nz, std::array<bool, 3> active,
-                double dx, double dy, double dz, const Walls &walls) {
+                double dx, double dy, double dz, const Walls &walls,
+                FaceAccumulation accumulation = FaceAccumulation::AxisDifferences) {
   check_face_extents(nx, ny, nz);
   const double spacing[3] = {dx, dy, dz};
   double inverse[3]{};
@@ -202,11 +222,25 @@ face_divergence(Flux flux, int nx, int ny, int nz, std::array<bool, 3> active,
       inverse[axis] = 1.0 / spacing[axis];
     }
   }
+  if (accumulation != FaceAccumulation::AxisDifferences &&
+      accumulation != FaceAccumulation::SequentialUniform)
+    throw std::invalid_argument("face_divergence: invalid accumulation");
+  if (accumulation == FaceAccumulation::SequentialUniform) {
+    double previous = 0;
+    for (int axis = 0; axis < 3; ++axis)
+      if (active[axis]) {
+        if (previous != 0 && spacing[axis] != previous)
+          throw std::invalid_argument(
+              "face_divergence: SequentialUniform needs equal active spacings");
+        previous = spacing[axis];
+      }
+  }
   return {std::move(flux),
           {nx, ny, nz},
           {active[0], active[1], active[2]},
           {inverse[0], inverse[1], inverse[2]},
-          {walls.xm, walls.xp, walls.ym, walls.yp, walls.zm, walls.zp}};
+          {walls.xm, walls.xp, walls.ym, walls.yp, walls.zm, walls.zp},
+          accumulation};
 }
 
 /// Overwrite @p rhs with `+div G` of the three face arrays.

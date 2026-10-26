@@ -7,6 +7,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Add explicit sequential face accumulation on uniform grids so consumers
+  can adopt shared conservative divergence while preserving their existing
+  floating-point evaluation order (#699).
+
 - Locate native CLI resources on macOS, including invocation through a symlink
   outside the installation prefix.
 

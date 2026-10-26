@@ -528,3 +528,41 @@ TEST_CASE(
       face_divergence(flux, 1, 1, 1, {true, false, false}, 0, 1, 1, model_walls()),
       std::invalid_argument);
 }
+
+TEST_CASE("uniform face accumulation preserves sequential arithmetic",
+          "[face_current]") {
+  using namespace pfc::field::fd;
+  struct Current {
+    double values[6];
+    double operator()(int axis, int i, int j, int k) const {
+      const int coordinate = axis == 0 ? i : (axis == 1 ? j : k);
+      return values[2 * axis + (coordinate < 0)];
+    }
+  };
+  // Cancellation separates left-to-right faces from pre-grouped axis pairs.
+  const Current current{{1, 0, 1e16, 1e16, 0, 0}};
+  const auto sequential =
+      face_divergence(current, 1, 1, 1, {true, true, true}, .5, .5, .5,
+                      model_walls(), FaceAccumulation::SequentialUniform);
+  const double *f = current.values;
+  const double expected = (f[0] - f[1] + f[2] - f[3] + f[4] - f[5]) * 2;
+  REQUIRE(sequential(0, 0, 0) == expected);
+  const auto grouped = face_divergence(current, 1, 1, 1, {true, true, true}, .5, .5,
+                                       .5, model_walls());
+  REQUIRE(grouped(0, 0, 0) != sequential(0, 0, 0));
+  // A second case distinguishes final common scaling from per-axis scaling.
+  const Current other{{.7, .13, .19, .11, .31, .17}};
+  const auto eval =
+      face_divergence(other, 1, 1, 1, {true, true, true}, .7, .7, .7, model_walls(),
+                      FaceAccumulation::SequentialUniform);
+  const auto *g = other.values;
+  REQUIRE(eval(0, 0, 0) == (g[0] - g[1] + g[2] - g[3] + g[4] - g[5]) * (1 / .7));
+  REQUIRE_THROWS_AS(face_divergence(current, 1, 1, 1, {true, true, true}, 1, 2, 1,
+                                    model_walls(),
+                                    FaceAccumulation::SequentialUniform),
+                    std::invalid_argument);
+  const auto inactive =
+      face_divergence(current, 1, 1, 1, {false, true, false}, 0, .5, 0,
+                      model_walls(), FaceAccumulation::SequentialUniform);
+  REQUIRE(inactive(0, 0, 0) == 0);
+}
