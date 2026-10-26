@@ -16,8 +16,8 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 [Follow what is taught, what is adapted, and what still needs a chapter.]{.lesson-deck}
 :::
 
-There are 83 declared runnable example targets and
-83 Quarto teaching chapters. The table includes older programs
+There are 84 declared runnable example targets and
+84 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -136,6 +136,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `ns2d_temporal_refine` | [Read the lesson](flow/temporal-refinement/index.qmd) |
 | `ns2d_vorticity` | [Read the lesson](flow/vorticity/index.qmd) |
 | `orr_sommerfeld` | [Read the lesson](polynomials/orr-sommerfeld/index.qmd) |
+| `outward_diffusion_flux` | [Read the lesson](boundaries/outward-flux/index.qmd) |
 | `periodic_collocation` | [Read the lesson](differentiation/collocation/index.qmd) |
 | `periodic_differentiation` | [Read the lesson](differentiation/periodic/index.qmd) |
 | `polynomial_boundary_values` | [Read the lesson](polynomials/boundary-values/index.qmd) |
@@ -179,7 +180,7 @@ fixed-step restart does not establish an adaptive restart contract.
 | distributed fields and MPI | [coordinate-fields](geometry/coordinate-fields/index.qmd), [finite-differences](heat/finite-differences/index.qmd) |
 | local and distributed FFT | [round-trip](fourier/round-trip/index.qmd), [field-layout](fourier/field-layout/index.qmd) |
 | finite differences and spectral gradients | [periodic](differentiation/periodic/index.qmd), [smoothness](differentiation/smoothness/index.qmd), [stencils](differentiation/stencils/index.qmd) |
-| conservative fluxes and nonperiodic boundaries | Pending a teaching chapter. |
+| conservative fluxes and nonperiodic boundaries | [outward-flux](boundaries/outward-flux/index.qmd) |
 | fixed and adaptive integration | [finite-differences](heat/finite-differences/index.qmd), [stability](integration/stability/index.qmd), [adaptive-rk](integration/adaptive-rk/index.qmd), [output-clock](integration/output-clock/index.qmd) |
 | multi-field runtime integration | [runtime-fields](coupling/runtime-fields/index.qmd), [fixed-tuples](coupling/fixed-tuples/index.qmd), [symbolic-rhs](coupling/symbolic-rhs/index.qmd) |
 | exponential and adaptive ETD | [exponential](heat/exponential/index.qmd), [adaptive-etd](integration/adaptive-etd/index.qmd) |

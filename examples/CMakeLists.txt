@@ -39,6 +39,7 @@
 
 
 # Teaching chapters own their implementations; binary names remain stable.
+add_subdirectory(boundaries)
 add_subdirectory(configuration)
 add_subdirectory(coupling)
 add_subdirectory(diagnostics)

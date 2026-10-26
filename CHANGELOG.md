@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Add a nonperiodic SBP diffusion lesson with explicit outward-flux semantics,
+  equivalent derivative inputs and independent field/inventory checks.
+
 - Teach the retained three-dimensional Taylor–Green driver through velocity
   projection, rotational tendency, energy norms and nonlinear shell transfer.
 

@@ -1,0 +1,7 @@
+{
+  "n": 33,
+  "diffusivity": 0.2,
+  "amplitude": 0.5,
+  "final_time": 0.1,
+  "boundary": "flux"
+}

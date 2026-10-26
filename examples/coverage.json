@@ -643,6 +643,18 @@
       ]
     },
     {
+      "target": "outward_diffusion_flux",
+      "source": "boundaries/outward-flux/model.cpp",
+      "chapter": "boundaries/outward-flux/index.qmd",
+      "capabilities": [
+        "sbp-diffusion",
+        "nonperiodic-boundaries",
+        "outward-flux",
+        "weighted-inventory",
+        "flux-ledger"
+      ]
+    },
+    {
       "target": "periodic_collocation",
       "source": "differentiation/collocation/model.cpp",
       "chapter": "differentiation/collocation/index.qmd",
@@ -1230,7 +1242,9 @@
         "sbp_diffusion.hpp",
         "reaction_flux.hpp"
       ],
-      "chapters": []
+      "chapters": [
+        "boundaries/outward-flux/index.qmd"
+      ]
     },
     {
       "name": "fixed and adaptive integration",

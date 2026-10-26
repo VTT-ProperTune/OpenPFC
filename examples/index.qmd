@@ -77,6 +77,9 @@ then separate sampling, cutoff and time-refinement questions.
 Begin the flow challenges by [recovering velocity from vorticity](flow/vorticity/index.qmd)
 and checking an exact two-dimensional vortex.
 
+Track a nonperiodic boundary by [counting what leaves the interval](boundaries/outward-flux/index.qmd),
+then check the weighted mass plus its accepted outward flux.
+
 ## Make your first change
 
 Install a compatible OpenPFC SDK and CLI using the

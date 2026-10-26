@@ -534,3 +534,14 @@ uv run --with matplotlib==3.11.2 python examples/render_flow_vorticity.py \
 
 The plotted curve is measured binary-field error, not an inferred error
 from the six-digit diagnostics CSV. Commit only the derived SVG.
+
+## Outward boundary flux
+
+`render_outward_flux.py --run <native-working-directory>` checks the entire
+native field and budget against the quadratic diffusion solution before
+plotting. Use Matplotlib 3.11.2 to regenerate the committed SVG. The CTest
+entrypoint invokes the actual model with six small cases: three grids,
+both physical flux and outward-derivative input, and both inventory signs.
+The oracle uses closed-form nodal values and inventory, not the operator
+applied to the manufactured field. This is a boundary/accounting example,
+not a convergence-order result or a finite-volume face-field tutorial.
