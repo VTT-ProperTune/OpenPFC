@@ -138,7 +138,7 @@ method identity).
 
 ## Difference from `BinaryWriter` dumps
 
-| | `BinaryWriter` / `ResultsWriter` | `publish_checkpoint_directory` |
+| Property | `BinaryWriter` / `ResultsWriter` | `publish_checkpoint_directory` |
 |--|----------------------------------|--------------------------------|
 | Purpose | Scheduled periodic field dumps, post-processing | Durable accepted-state restart bundle |
 | Metadata | None in file (sidecar out of band) | Versioned `metadata.json` in the bundle |

@@ -17,7 +17,7 @@ presents the full Vlasov–Maxwell system before deriving the 1D2V
 reduction. GPU measurements live in
 [`docs/hpc/vlasov_gpu.md`](../../docs/hpc/vlasov_gpu.md).
 
-| | |
+| Property | Description |
 |---|---|
 | Unknown | $f_s(x, v_x, v_y, t)$ plus $E_x, E_y, B_z$ |
 | Domain | one OpenPFC 3-D `Domain`; decompose on $v_y$ only |

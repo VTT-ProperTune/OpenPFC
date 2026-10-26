@@ -197,7 +197,7 @@ $\mathrm{Re}_\lambda=7.160$.
 
 Scalars on $\Delta t=1/256$. The reference grid is $N=128$.
 
-| $N$ | $E(0)$ | $E(1)$ | $\Omega(1)$ | $\mathrm{Re}_\lambda(1)$ | $k_{\max}\eta(0)$ | $k_{\max}\eta(1)$ |
+| Grid size $N$ | Initial energy $E(0)$ | Final energy $E(1)$ | Final enstrophy $\Omega(1)$ | Final Reynolds number $\mathrm{Re}_\lambda(1)$ | Initial resolution $k_{\max}\eta(0)$ | Final resolution $k_{\max}\eta(1)$ |
 |------:|---------:|---------:|--------------:|---------------------------:|--------------------:|--------------------:|
 | 128 | 0.625173 | 0.172601 | 9.68567 | 7.15982 | 2.376 | 3.367 |
 | 64 | 0.625173 | 0.172589 | 9.68498 | 7.15960 | 1.188 | 1.683 |
@@ -216,7 +216,7 @@ Relative common-band $L^2$ against $N=128$. The reference error
 is blank. The outer fraction is the modal kinetic energy in modes
 with a component above $N/6$.
 
-| $N$ | velocity, $t=0.5$ | velocity, $t=1$ | vorticity, $t=0.5$ | vorticity, $t=1$ | outer fraction, $t=1$ |
+| Grid size $N$ | velocity, $t=0.5$ | velocity, $t=1$ | vorticity, $t=0.5$ | vorticity, $t=1$ | outer fraction, $t=1$ |
 |------:|--------------------:|------------------:|---------------------:|-------------------:|------------------------:|
 | 32 | $1.72\times 10^{-1}$ | $1.82\times 10^{-1}$ | $3.69\times 10^{-1}$ | $3.72\times 10^{-1}$ | $1.99\times 10^{-1}$ |
 | 64 | $1.17\times 10^{-2}$ | $6.44\times 10^{-3}$ | $4.94\times 10^{-2}$ | $2.85\times 10^{-2}$ | $9.88\times 10^{-3}$ |
@@ -249,7 +249,7 @@ stores the two-point residual instead.
 Absolute $L^2$ at $t=1$ on $N=64$ against $\Delta t=1/256$.
 The order on a row compares that row with the next finer step.
 
-| $\Delta t$ | velocity $L^2$ | $p_u$ | vorticity $L^2$ | $p_\omega$ |
+| Time step $\Delta t$ | velocity $L^2$ | Velocity order $p_u$ | vorticity $L^2$ | Vorticity order $p_\omega$ |
 |---:|---:|---:|---:|---:|
 | $1/32$ | $1.27\times 10^{-5}$ | 4.038 | $1.32\times 10^{-4}$ | 4.027 |
 | $1/64$ | $7.73\times 10^{-7}$ | 4.106 | $8.10\times 10^{-6}$ | 4.100 |
@@ -334,7 +334,7 @@ $E(20)-E(10)-\int_{10}^{20}(P-\varepsilon)\,dt$, with the
 trapezoid on the half-unit samples. It checks that identity. The
 window can still drift while that residual stays small.
 
-| run | $N$ | $\Delta t$ | $\langle E\rangle$ | stderr | $\langle\varepsilon\rangle$ | $\mathrm{Re}_\lambda$ | $k_{\max}\eta$ | budget residual |
+| run | Grid size $N$ | Time step $\Delta t$ | Mean energy $\langle E\rangle$ | stderr | Mean dissipation $\langle\varepsilon\rangle$ | Reynolds number $\mathrm{Re}_\lambda$ | Resolution $k_{\max}\eta$ | budget residual |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | spatial | 128 | $1/256$ | 1.254104 | 0.024317 | 0.256418 | 45.3983 | 3.14496 | $-6.906\times 10^{-5}$ |
 | spatial | 64 | $1/256$ | 1.254029 | 0.024300 | 0.256448 | 45.3910 | 1.57241 | $-7.152\times 10^{-5}$ |

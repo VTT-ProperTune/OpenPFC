@@ -13,7 +13,7 @@ This page ties **figures** you may see in the repository or publications to **ru
 
 *Representative large-scale solidification and defect structure (from project materials; parameters may differ from your run).*
 
-| | |
+| Property | Description |
 |---|---|
 | **Typical app** | [`apps/tungsten`](../../apps/tungsten/README.md) — JSON/TOML configs under [`apps/tungsten/inputs_json/`](../../apps/tungsten/inputs_json/README.md) |
 | **Concepts** | 3D PFC, boundary conditions, MPI + spectral FFT stack |
@@ -25,7 +25,7 @@ This page ties **figures** you may see in the repository or publications to **ru
 
 *Illustrative scaling results; your hardware and problem size will differ.*
 
-| | |
+| Property | Description |
 |---|---|
 | **Context** | HPC campaigns on large grids (e.g. LUMI); see [`performance_profiling.md`](../hpc/performance_profiling.md), [`lumi_slurm/README.md`](../lumi_slurm/README.md) |
 | **Typical app** | Same [`apps/tungsten`](../../apps/tungsten/README.md) family with performance-oriented inputs (e.g. `tungsten_performance.json` — large domain; use for scaling studies, not first debug) |
@@ -34,7 +34,7 @@ This page ties **figures** you may see in the repository or publications to **ru
 
 ![Cahn–Hilliard example animation](../img/cahn_hilliard.gif)
 
-| | |
+| Property | Description |
 |---|---|
 | **Materials app** | [`apps/cahn_hilliard`](../../apps/cahn_hilliard/README.md) — Fe–Cr-like spinodal, JSON, VTK of `c` |
 | **Teaching example** | `examples/12_cahn_hilliard` (see [`examples_catalog.md`](../reference/examples_catalog.md)) |
@@ -43,7 +43,7 @@ This page ties **figures** you may see in the repository or publications to **ru
 
 ## Surface diffusion (nanoscale smoothing)
 
-| | |
+| Property | Description |
 |---|---|
 | **Runnable** | [`apps/surface_diffusion`](../../apps/surface_diffusion/README.md) — `smoothing.json` |
 | **VTK** | height `h` under `results/surface_diffusion/`; mode-amplitude recipe in the app README |
@@ -51,7 +51,7 @@ This page ties **figures** you may see in the repository or publications to **ru
 
 ## Kawahara (capillary–gravity waves)
 
-| | |
+| Property | Description |
 |---|---|
 | **Runnable** | [`apps/kawahara`](../../apps/kawahara/README.md) — `pulse.json` |
 | **VTK** | height `u` under `results/kawahara/` |
@@ -59,7 +59,7 @@ This page ties **figures** you may see in the repository or publications to **ru
 
 ## EHD film (flexible plate)
 
-| | |
+| Property | Description |
 |---|---|
 | **Runnable** | [`apps/ehd_film`](../../apps/ehd_film/README.md) — `relaxation.json` |
 | **VTK** | gap `h` under `results/ehd_film/` |
@@ -67,7 +67,7 @@ This page ties **figures** you may see in the repository or publications to **ru
 
 ## Gradient elasticity (size-dependent defects)
 
-| | |
+| Property | Description |
 |---|---|
 | **Runnable** | [`apps/gradient_elasticity`](../../apps/gradient_elasticity/README.md) — `inclusion.json` / `gaussian.json` |
 | **VTK** | inclusion `g` and displacement `ux`,`uy` under `results/gradient_elasticity/` |
@@ -75,7 +75,7 @@ This page ties **figures** you may see in the repository or publications to **ru
 
 ## Thin-film dewetting / coating
 
-| | |
+| Property | Description |
 |---|---|
 | **Runnable** | [`apps/thin_film`](../../apps/thin_film/README.md) — `dewetting.json` / `leveling.json` |
 | **VTK** | film height `h` under `results/thin_film/` |
@@ -83,7 +83,7 @@ This page ties **figures** you may see in the repository or publications to **ru
 
 ## Weibel / Vlasov–Maxwell (LUMI-G)
 
-| | |
+| Property | Description |
 |---|---|
 | **Runnable** | `vlasov_run --case=weibel --device=hip --reduced-dir=DIR` — [`apps/vlasov_maxwell`](../../apps/vlasov_maxwell/README.md) |
 | **Recipe** | [`showcase_weibel.sbatch`](../../apps/vlasov_maxwell/slurm/showcase_weibel.sbatch) (8 GCDs) |
@@ -94,7 +94,7 @@ Heavy frames live on `/scratch/project_462001519/juaho/openpfc-showcase/`.
 
 ## Alloy dendrite (2-D, LUMI-G)
 
-| | |
+| Property | Description |
 |---|---|
 | **Runnable** | `alloy_dendrite_hip_growth` — [`apps/alloy_dendrite_elastic`](../../apps/alloy_dendrite_elastic/README.md) |
 | **Recipe** | [`showcase_dendrite2d.sbatch`](../../apps/alloy_dendrite_elastic/slurm/showcase_dendrite2d.sbatch) (8 GCDs) |
@@ -105,7 +105,7 @@ Frames live on `/scratch/project_462001519/juaho/openpfc-showcase/`.
 
 ## Alloy dendrite (3-D, LUMI-G)
 
-| | |
+| Property | Description |
 |---|---|
 | **Runnable** | `alloy_dendrite_hip_growth --nz=N` with $N>1$ |
 | **Recipe** | [`showcase_dendrite3d.sbatch`](../../apps/alloy_dendrite_elastic/slurm/showcase_dendrite3d.sbatch) (8 GCDs) |
@@ -116,7 +116,7 @@ Frames live on `/scratch/project_462001519/juaho/openpfc-showcase/`.
 
 The **Allen–Cahn** demo can write **grayscale PNG** snapshots (optional final, or initial + final). No JSON `App` — CLI arguments only.
 
-| | |
+| Property | Description |
 |---|---|
 | **Runnable** | [`apps/allen_cahn`](../../apps/allen_cahn/README.md) — e.g. `mpirun -n 4 ./apps/allen_cahn/allen_cahn 128 128 500 … initial.png final.png` |
 | **Concepts** | 2D explicit interface, FD + halos; PNG via [`io_results.md`](io_results.md) |

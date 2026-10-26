@@ -9,7 +9,7 @@ Both names describe **interface-driven** continuum models, but the **shipped Ope
 
 ## `cahn_hilliard` (application, `#77`)
 
-| | |
+| Property | Description |
 |---|---|
 | **What** | Conserved Cahn–Hilliard with a Fe–Cr-like regular-solution free energy; spectral ETD, $L(k)\propto k^4$. |
 | **Dimension** | 2D periodic slab in the shipped input (`Lz = 1`); 3D works if you set `Lz`. |
@@ -19,7 +19,7 @@ Both names describe **interface-driven** continuum models, but the **shipped Ope
 
 ## `12_cahn_hilliard` (example)
 
-| | |
+| Property | Description |
 |---|---|
 | **What** | Spectral **Cahn–Hilliard–style** split operator on a structured grid; nonlinear + biharmonic-type stiffening via operators in Fourier space. |
 | **Dimension** | Often **2D slab** (`Lz = 1`) in the source; grid sizes set in C++. |
@@ -29,7 +29,7 @@ Both names describe **interface-driven** continuum models, but the **shipped Ope
 
 ## `allen_cahn` (application)
 
-| | |
+| Property | Description |
 |---|---|
 | **What** | **2D Allen–Cahn**-type **reaction–diffusion** with a double-well potential; **finite differences** with halos on a 2D grid. |
 | **Driver** | **CLI arguments** (no JSON `App`). |

@@ -17,7 +17,7 @@ spectrally on the *same* decomposition inside the same time step — see
 [The elastic coupling](#the-elastic-coupling). Local FD physics and a global
 FFT solve, coupled, in one application; that combination is the point.
 
-| | |
+| Property | Description |
 |---|---|
 | Fields | `phi` (−1 liquid, +1 solid), `U` (supersaturation), `theta` (undercooling), `u` (displacement, slaved) |
 | Discretisation | high-order central FD via `pfc::gradient::FDGradient`, orders 2–14 |
@@ -301,7 +301,7 @@ Windows in **cells** answer "does the grid resolve the fit". Windows in
 **units of `rho`** (`measure_tip_scan_relative`, the literature convention,
 0.5/1/1.5/2) answer "is the shape a parabola". Those are different questions:
 
-| | `dx = 0.5` | `dx = 0.4` |
+| Observable | `dx = 0.5` | `dx = 0.4` |
 |---|---:|---:|
 | `V` | 0.21273 | 0.21429 (converged to 0.7 %) |
 | relative-window spread | 48.9 % | 49.0 % (**does not move**) |
@@ -456,7 +456,7 @@ Copper contracts the aluminium lattice (`eps_c < 0`) and the latent heat it
 releases expands it (`eps_T > 0`), in the same place at the same time.
 `600^2`, `dx = 0.8`, `--Mc=0.5 --evolve-theta=1 --Dth=20`, `t_end = 250`:
 
-| | `V` | `dV/V` | `int f_el` |
+| Eigenstrain | `V` | `dV/V` | `int f_el` |
 |---|---:|---:|---:|
 | off | 0.121417 | -- | 0 |
 | solutal only (`--eps-T=0`) | 0.113783 | -6.29 % | 55.5 |
@@ -633,7 +633,7 @@ subtracted. Job **21916748**, `96^3`, `dx = 0.8 W0`, order 4,
 `eps4 = 0.2` (a deliberately severe 20 % anisotropy so the branch is
 unmistakably live), `D_th = 2`, `M_c = 0.5`, anti-trapping on, 200 steps:
 
-| | `phi` | `U` | `theta` |
+| Difference measure | `phi` | `U` | `theta` |
 |---|---:|---:|---:|
 | `max abs` difference | **4.9e−13** | 5.8e−14 | 4.2e−14 |
 | relative to the field's max | 4.9e−13 | 9.8e−14 | 1.9e−13 |
@@ -727,7 +727,7 @@ initial iterate. In this time loop, where the interface moves a small
 fraction of a cell per step, it halves the iteration count and therefore
 halves the cost:
 
-| | iterations | `t_el` at `96^3` | at `128^3` | at `192^3` |
+| Initial guess | iterations | `t_el` at `96^3` | at `128^3` | at `192^3` |
 |---|---:|---:|---:|---:|
 | cold | 16.5 | 2058 ms | 5517 ms | 34631 ms |
 | warm | 8.5 | 1060 ms | 2918 ms | 18049 ms |
@@ -880,7 +880,7 @@ agree that it is not 10x, which is the part that matters.
 Loosening `tol_el` is the cheaper lever, and combining the two is cheaper
 still but again not multiplicatively:
 
-| | `tol_el = 1e-6` | `tol_el = 1e-3` |
+| Update interval | `tol_el = 1e-6` | `tol_el = 1e-3` |
 |---|---:|---:|
 | `N = 1` | 8.3 its, 2788 ms/step | 1.0 its, **364 ms/step** |
 | `N = 10` | 13.0 its, 439 ms/step | 3.25 its, **112 ms/step** |
@@ -970,7 +970,7 @@ O(`tol_el`). CSV:
 `out/report/data/alloy_dendrite_hip_science_22045158.csv`. The
 22043824 table below is the original kinetics snapshot.
 
-| | `V` | `rho` | `int f_el` | `max σ_vm` | last iters | `t_el` (ms) |
+| Eigenstrain | `V` | `rho` | `int f_el` | `max σ_vm` | last iters | `t_el` (ms) |
 |---|---:|---:|---:|---:|---:|---:|
 | off | 0.1650 | 10.96 | 0 | 0 | 0 | 0 |
 | on (no eigenstrain) | 0.1650 | 10.96 | 0 | 0 | 1 | 1.65 |

@@ -173,7 +173,7 @@ per lattice period.
 Measured with `tungsten_dealias_study` (same seeded solidification, same IC,
 same 1000 steps, mask off then on):
 
-| points / period | $\Delta x$ | $\Delta$ power | $\Delta\max\psi$ | $\Delta k_1$ |
+| points / period | Grid spacing $\Delta x$ | $\Delta$ power | Peak density change $\Delta\max\psi$ | Peak wavenumber change $\Delta k_1$ |
 |---|---|---|---|---|
 | 5.66 (**shipped**) | 1.1107 | 1.70 % | 1.07 % | 9e-06 |
 | 6.00 | 1.0472 | 1.27 % | 1.04 % | 1.4e-04 |

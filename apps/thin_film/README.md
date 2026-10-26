@@ -149,7 +149,7 @@ flux needs: if the mobility at a face is formed from the mobilities of the
 two cells it separates, the flux out of a vanishing cell vanishes with it,
 and the cell cannot be driven negative. Two solvers, same equation:
 
-| | `thin_film_nonlinear` (spectral ETD1) | `thin_film_fd` (conservative FD) |
+| Property | `thin_film_nonlinear` (spectral ETD1) | `thin_film_fd` (conservative FD) |
 |---|---|---|
 | Flux | pointwise `M(h) grad p` in real space, transformed as a whole | formed *at cell faces*, `M_face (p_R - p_L)/dx` |
 | Mass conservation | exact in the continuum (`k=0` mode untouched); not face-by-face | **exact to round-off, for any `dt`**, by telescoping (Test: `FD flux divergence sums to zero...`) |
@@ -238,7 +238,7 @@ flattering. The two binaries start from a *bit-identical* initial condition
 `t1`/`dt`/the `"fd"` block; `t = 0` `min_h`/`max_h`/volume match to 15
 significant digits). They do **not** track each other closely afterwards:
 
-| | Spectral (`thin_film_nonlinear`) | FD (`thin_film_fd`) |
+| Behaviour | Spectral (`thin_film_nonlinear`) | FD (`thin_film_fd`) |
 |---|---|---|
 | Crosses/approaches `h*` at | `t = 140` (crosses, keeps falling) | `t ~ 340`-`400` (approaches asymptotically, does not cross) |
 | `min h` at `t = 100` | `0.705` | `0.990` |

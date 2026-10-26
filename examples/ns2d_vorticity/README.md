@@ -151,7 +151,7 @@ removes that contamination.
 All three resolutions finished $t=1.2$ finite. Mean $\omega$ is
 constant to printer precision. Spectral divergence stays $\le10^{-12}$.
 
-| $N$ | cells / $1/\rho$ | KE($t=1.2$) | $Z(t=1.2)$ | $\max\Vert \omega\Vert $ | $\max\Vert u\Vert $ peak |
+| Grid size $N$ | cells / $1/\rho$ | KE($t=1.2$) | Enstrophy $Z(t=1.2)$ | Peak vorticity $\max\Vert \omega\Vert $ | $\max\Vert u\Vert $ peak |
 |------:|-------------------:|--------------:|-------------:|-------------------:|-------------------:|
 | 128 | 4.27 (2.84 eff.) | 0.425162 | 32.1945 | 28.297 | 1.438 at $t=0.8$ |
 | 256 | 8.53 (5.69) | 0.425162 | 32.1923 | 28.206 | 1.439 at $t=0.8$ |
@@ -199,7 +199,7 @@ parent `6316f822425a` and driver content `a474b887e3bb`.
 
 Relative vorticity $L^2$ against $N=512$:
 
-| $N$ | $t=0.4$ | $t=0.8$ | $t=1.2$ | outer fraction, $t=1.2$ |
+| Grid size $N$ | Error at $t=0.4$ | Error at $t=0.8$ | Error at $t=1.2$ | outer fraction, $t=1.2$ |
 |------:|----------:|----------:|----------:|--------------------------:|
 | 64 | $1.12\times 10^{-2}$ | $8.44\times 10^{-2}$ | $1.71\times 10^{-1}$ | 0.289 |
 | 128 | $8.81\times 10^{-5}$ | $6.50\times 10^{-3}$ | $1.52\times 10^{-2}$ | 0.093 |
@@ -267,7 +267,7 @@ $0.4/2048$.
 Absolute vorticity $L^2$ against $\Delta t=0.4/2048$. The order
 on a row is the comparison with the next finer step:
 
-| $\Delta t$ | $t=0.4$ | $t=0.8$ | $t=1.2$ | $p(0.4)$ | $p(0.8)$ | $p(1.2)$ |
+| Time step $\Delta t$ | Error at $t=0.4$ | Error at $t=0.8$ | Error at $t=1.2$ | Order $p(0.4)$ | Order $p(0.8)$ | Order $p(1.2)$ |
 |---:|---:|---:|---:|---:|---:|---:|
 | $0.4/128$ | non-finite |  |  |  |  |  |
 | $0.4/256$ | $6.64\times 10^{-10}$ | $1.95\times 10^{-6}$ | non-finite | 4.005 | 4.004 |  |
@@ -383,7 +383,7 @@ rectangle $[0.2L,0.7L]\times[0.15L,0.45L]$.
 All 60 shear rows have status `ok`. Absolute spectral `net` at
 $t=1.2$ and $\Delta t=0.4/512$:
 
-| box | $N=128$ | $N=256$ | $N=512$ |
+| box | Grid $N=128$ | Grid $N=256$ | Grid $N=512$ |
 |---|---:|---:|---:|
 | full | $9\times 10^{-33}$ | $8\times 10^{-32}$ | $2\times 10^{-31}$ |
 | half | $1\times 10^{-16}$ | $6\times 10^{-17}$ | $5\times 10^{-16}$ |
@@ -659,7 +659,7 @@ CFL starts at 0.8.
 **$P_m=1$, $\nu=\eta=0.02$, $t=2$:** 128² and 256² agree to six
 digits on $E$, KE, ME, $\max\|j\|$. Finite, `div` $\sim10^{-14}$.
 
-| $N$ | $E(t=2)$ | KE | ME | $\max\Vert j\Vert $ | $\max\Vert \omega\Vert $ |
+| Grid size $N$ | Energy $E(t=2)$ | KE | ME | Peak current $\max\Vert j\Vert $ | Peak vorticity $\max\Vert \omega\Vert $ |
 |------:|----------:|---:|---:|-------------:|------------------:|
 | 128 | 0.760592 | 0.219881 | 0.540711 | 15.752 | 4.322 |
 | 256 | 0.760592 | 0.219881 | 0.540711 | 15.752 | 4.322 |
@@ -668,7 +668,7 @@ digits on $E$, KE, ME, $\max\|j\|$. Finite, `div` $\sim10^{-14}$.
 hydro is an exact decaying eigenmode. At $\nu=0.005$, $N=256$,
 $t=2.50$:
 
-| | KE | ME | $E$ | $\max\Vert \omega\Vert $ | $\max\Vert j\Vert $ |
+| Model | KE | ME | Total energy $E$ | Peak vorticity $\max\Vert \omega\Vert $ | Peak current $\max\Vert j\Vert $ |
 |---|---:|---:|---:|---:|---:|
 | hydro | 0.4876 | 0 | 0.4876 | 1.975 | 0 |
 | MHD | 0.2299 | 0.6219 | 0.8518 | 13.58 | 31.62 |
@@ -689,7 +689,7 @@ $\max\|j\|$ explodes. The defensible window is $t\le 2.5$.
 **Field-level 256² vs 512²** (restrict 512 r2c hats onto the 256
 integer-$k$ lattice, then relative $L^2$):
 
-| $t$ | $\Vert a\Vert _{2,\mathrm{rel}}$ | $\Vert j\Vert _{2,\mathrm{rel}}$ | $\Vert \omega\Vert _{2,\mathrm{rel}}$ | ME-spectrum | $j$-spectrum |
+| Time $t$ | Potential error $\Vert a\Vert _{2,\mathrm{rel}}$ | Current error $\Vert j\Vert _{2,\mathrm{rel}}$ | Vorticity error $\Vert \omega\Vert _{2,\mathrm{rel}}$ | ME-spectrum | $j$-spectrum |
 |------:|---------------------------:|---------------------------:|-------------------------------:|------------:|---------------:|
 | 1.492 | $4.4\times10^{-8}$ | $9.6\times10^{-5}$ | $5.2\times10^{-5}$ | $2.3\times10^{-9}$ | $6.4\times10^{-8}$ |
 | 1.924 | $5.6\times10^{-7}$ | $1.0\times10^{-3}$ | $4.9\times10^{-4}$ | $4.4\times10^{-9}$ | $1.3\times10^{-6}$ |

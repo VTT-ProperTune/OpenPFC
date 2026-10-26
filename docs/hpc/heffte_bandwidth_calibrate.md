@@ -139,7 +139,7 @@ clearly better.
 Compact table: [`heffte_pencils_ab_32n.csv`](heffte_pencils_ab_32n.csv).
 Job **22208300** admits `use_pencils=1`, `gpu_aware=1`, tracing.
 
-| | slab 22207838 | pencils 22208300 |
+| Measure | slab 22207838 | pencils 22208300 |
 |---|---:|---:|
 | wall/step (s) | 1.416 | 1.408 |
 | $T_{\mathrm{mpi}}$ (s) | 0.877 | 0.875 |

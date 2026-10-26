@@ -263,7 +263,7 @@ real-space order metric needs the whole grid; see `diagnostics.hpp`).
 reciprocal-space peak amplitudes at $\|k\|=1$ and $\|k\|=q_1$, and
 $(\psi_4,\psi_6)$ every `saveat`.
 
-| case | kernel | IC | box | $\bar\psi$ | role |
+| case | kernel | IC | box | Mean density $\bar\psi$ | role |
 |---|---|---|---|---|---|
 | `single_mode_triangular.json` | `n_modes=1` | noise | square | $-0.15$ | single-mode reference **and** triangular-favouring control (2D single-mode PFC has one band, at $\Vert k\Vert =1$; Elder et al., *Phys. Rev. Lett.* **88**, 245701 (2002), is the classical result that this selects triangular order) |
 | `two_mode_square.json` | `n_modes=2`, `q1=√2`, `r1=0.02` | noise | square | $-0.15$ | two-mode square-favouring, matched box/IC/quench to the row above (issue's "same conditions" comparison) |
@@ -279,7 +279,7 @@ density; $(\psi_4,\psi_6)$ are `(global, local)`, see "Real-space order
 metric" above; mean neighbours is the average bond count the order-parameter
 cutoff found (4 for square, 6 for triangular, in an ideal lattice).
 
-| case | $f$: initial $\to$ final | $k_{\text{peak}}$ | $S(\Vert k\Vert {=}1)$: initial $\to$ final | $S(\Vert k\Vert {=}q_1)$: initial $\to$ final | $\psi_4$ | $\psi_6$ | mean nb. | real-space verdict |
+| case | $f$: initial $\to$ final | Peak wavenumber $k_{\text{peak}}$ | $S(\Vert k\Vert {=}1)$: initial $\to$ final | $S(\Vert k\Vert {=}q_1)$: initial $\to$ final | Fourfold order $\psi_4$ | Sixfold order $\psi_6$ | mean nb. | real-space verdict |
 |---|---|---|---|---|---|---|---|---|
 | `single_mode_triangular` (noise, $t{:}0\to400$) | $0.00970\to0.00585$ | $1.031$ | $0.15\to160132$ | $0.14\to39.5$ | $(0.014,\ 0.094)$ | $(0.335,\ \mathbf{0.852})$ | $5.87$ | **triangular**, polycrystalline (global ≪ local) |
 | `two_mode_square` (noise, $t{:}0\to400$) | $0.2051\to0.0389$ | $1.031$ | $0.15\to111849$ | $0.14\to27574$ | $(0.341,\ \mathbf{0.806})$ | $(0.022,\ 0.247)$ | $4.04$ | **square**, mostly one orientation (global ≈ 0.4× local, not ≪) |

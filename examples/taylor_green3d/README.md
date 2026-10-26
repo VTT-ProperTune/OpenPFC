@@ -72,7 +72,7 @@ Relative vorticity $L^2$ against $N=256$. The $t=0$ column is the
 sampling of one trigonometric field. The outer fraction is the share of
 kinetic energy in modes with $\max(|k_i|,|k_j|,|k_k|) > N/6$.
 
-| $N$ | $t=0$ | $t=0.5$ | $t=1$ | outer fraction, $t=1$ |
+| Grid size $N$ | Error at $t=0$ | Error at $t=0.5$ | Error at $t=1$ | outer fraction, $t=1$ |
 |------:|--------:|----------:|--------:|------------------------:|
 | 32 | $1.17\times 10^{-15}$ | $3.25\times 10^{-7}$ | $4.49\times 10^{-5}$ | $1.82\times 10^{-6}$ |
 | 64 | $3.53\times 10^{-15}$ | $8.00\times 10^{-14}$ | $1.15\times 10^{-9}$ | $4.54\times 10^{-11}$ |
@@ -116,7 +116,7 @@ no order: its error against itself is zero.
 Absolute $L^2$ at $t=1$ against $\Delta t=1/512$. The order on a
 row is the comparison with the next finer step:
 
-| $\Delta t$ | velocity $L^2$ | $p_u$ | vorticity $L^2$ | $p_\omega$ |
+| Time step $\Delta t$ | velocity $L^2$ | Velocity order $p_u$ | vorticity $L^2$ | Vorticity order $p_\omega$ |
 |---:|---:|---:|---:|---:|
 | $1/32$ | $1.66\times 10^{-9}$ | 3.997 | $9.15\times 10^{-9}$ | 3.995 |
 | $1/64$ | $1.04\times 10^{-10}$ | roundoff | $5.74\times 10^{-10}$ | 4.003 |
