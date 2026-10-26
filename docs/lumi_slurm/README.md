@@ -3,12 +3,19 @@ SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-# Slurm: tungsten performance on LUMI
+# Legacy Slurm launchers on LUMI
+
+These launchers and campaign recipes are retained for historical reference.
+They do not define the current build or submission defaults and are not extended.
+For a new run, start with the [LUMI installation guide](../hpc/INSTALL.LUMI.md)
+and [first Slurm job tutorial](../tutorials/hpc_slurm_day_one.md). The current
+project account is `project_462001519`; older paths and accounts below describe
+the original campaigns, not an instruction to submit new work to them.
 
 Scripts and TOML inputs for running tungsten on LUMI-C (CPU / FFTW) and LUMI-G
 (HIP / rocFFT).
 
-## 0.2 GPU scaling campaign (start here)
+## Historical 0.2 GPU scaling campaign
 
 Issue `#87` first slice: size `tungsten_hip` on one GCD, then strong-scale
 1/2/4/8 GCDs with I/O off. Recipe, account, and scratch paths:

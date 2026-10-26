@@ -60,7 +60,8 @@ timestep and treat time-to-solution as a separate question.
 
 ## Account and scratch
 
-New jobs bill **`project_462001245`**.
+The archived jobs billed `project_462001245`. The paths below describe that
+study; new builds and runs follow the [current LUMI guide](INSTALL.LUMI.md).
 
 ```text
 /scratch/project_462001245/juaho/openpfc-scaling/fd-order-108/

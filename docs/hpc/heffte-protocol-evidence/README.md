@@ -11,7 +11,9 @@ the frozen measurement protocol are separate conditions. Sixteen historical
 records billed account519; eight more used 105 steps and five warmup steps.
 These remain in `all-runs.csv` but are excluded from `campaign-runs.csv`.
 The matched cohort contains 113 records: 112 admitted and one failed.
-All new campaign compute uses `project_462001245`.
+The archived campaign used `project_462001245` for its matched cohort.
+These account labels describe historical records, not current submission
+instructions; use the [LUMI guide](../INSTALL.LUMI.md) for new builds and runs.
 
 The corrected analysis retains node and rank counts separately and applies
 warmup to absolute timestep labels. The executable already removes its warmup

@@ -8,7 +8,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 This tutorial introduces the lowest-level path through OpenPFC:
 
 ```text
-Domain → Decomposition → FFT → Model → Simulator
+Domain → Decomposition → FFT → physics step → simulation driver
 ```
 
 You will first build a minimal downstream consumer, then connect its concepts to
@@ -24,8 +24,8 @@ verifies that OpenPFC itself builds and that the MPI and HeFFTe stack works.
 | `Domain` | Global grid size, spacing, origin, and periodicity |
 | `Decomposition` | Partition of the global domain across MPI ranks |
 | `FFT` | Distributed real-to-complex and complex-to-real transforms |
-| `Model` | Application-specific fields and time-step physics |
-| `Simulator` | Time loop, modifiers, and result writers |
+| Physics object | Application-specific fields and callable `step(t)` |
+| `pfc::sim::SimulationDriver` | Clock, time loop, modifiers, and result writers |
 
 The full package boundaries are described in
 [Architecture](../../concepts/architecture.md). Exact declarations belong in
@@ -122,9 +122,14 @@ const auto decomposition = pfc::decomposition::create(domain, comm_size);
 Build the examples in the OpenPFC tree and run:
 
 ```bash
-cmake --build build --target 02_domain_decomposition
-mpirun -n 2 ./build/examples/02_domain_decomposition
+./scripts/build.sh --cpu
+mpirun -n 2 ./builds/release/examples/02_domain_decomposition
 ```
+
+On Tohtori, load `openmpi/5.0.10` in the launch shell after the build; the
+script loads modules only in its own process. On LUMI use the
+[scheduled build and launch route](../../hpc/INSTALL.LUMI.md) instead of
+running MPI examples on the login node.
 
 The decomposition is determined by the global grid and communicator size. Code
 that owns MPI must initialize it before creating communication-dependent
@@ -153,15 +158,15 @@ fft.forward(input, output);
 Build and run it first with one rank:
 
 ```bash
-cmake --build build --target 03_parallel_fft
-mpirun -n 1 ./build/examples/03_parallel_fft
+./scripts/build.sh --cpu
+mpirun -n 1 ./builds/release/examples/03_parallel_fft
 ```
 
 Then run with a rank count supported by the example dimensions and your
 launcher allocation:
 
 ```bash
-mpirun -n 2 ./build/examples/03_parallel_fft
+mpirun -n 2 ./builds/release/examples/03_parallel_fft
 ```
 
 The real-space inbox and Fourier-space outbox can have different local extents.
@@ -170,7 +175,9 @@ than deriving local sizes from the global domain manually.
 
 ## 5. Move from transforms to a model
 
-A model owns the fields and describes one time step. A typical spectral step
+A physics object owns or borrows the fields and supplies a callable `step(t)`.
+The current framework uses `pfc::sim::run` with a clock and driver; it has no
+`Model` or `Simulator` base class. A typical spectral step
 contains:
 
 1. a forward transform from real space;

@@ -4,3 +4,9 @@
 .handbook-search label { width: 100%; }
 .handbook-search input { min-width: 8rem; flex: 1; padding: .7rem; font: inherit; color: var(--color-foreground-primary); background: var(--color-background-primary); border: 1px solid var(--color-foreground-primary); }
 .handbook-search button { padding: .7rem 1rem; font: inherit; color: var(--openpfc-paper); background: var(--openpfc-tide); border: 1px solid var(--color-foreground-primary); cursor: pointer; }
+
+/* Preserve readable row labels when a wide scientific table scrolls on phones. */
+.table-wrapper table th:first-child,
+.table-wrapper table td:first-child {
+  min-width: 8ch;
+}
