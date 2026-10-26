@@ -503,19 +503,12 @@ if(OpenPFC_BUILD_TESTS)
   add_test(NAME example-eigensystem-reference COMMAND test_example_eigensystem)
 endif()
 
-add_executable(23_halo_microtiming 23_halo_microtiming.cpp)
-target_link_libraries(23_halo_microtiming PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
-if(OpenPFC_ENABLE_CUDA)
-  target_compile_definitions(23_halo_microtiming PRIVATE OpenPFC_ENABLE_CUDA)
-endif()
-if(OpenPFC_ENABLE_HIP)
-  target_compile_definitions(23_halo_microtiming PRIVATE OpenPFC_ENABLE_HIP)
-endif()
 if(OpenPFC_BUILD_TESTS AND MPIEXEC_EXECUTABLE)
   add_test(NAME halo-microtiming-host-2rank
-           COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
-                   $<TARGET_FILE:23_halo_microtiming> --nx 16 --iters 4 --warmup 1
-                   --output ${CMAKE_CURRENT_BINARY_DIR}/halo_microtiming_smoke.json)
+           COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check_halo_frames.py"
+                   --binary $<TARGET_FILE:23_halo_microtiming> --launcher "${MPIEXEC_EXECUTABLE}"
+                   "--rank-flag=${MPIEXEC_NUMPROC_FLAG}" --ranks 2
+                   --output "${PROJECT_SOURCE_DIR}/results/example-checks/halo-frames")
   set_tests_properties(halo-microtiming-host-2rank PROPERTIES
                        ENVIRONMENT
                        "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")

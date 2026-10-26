@@ -68,6 +68,9 @@ inspect its shared expression, and verify its explicit source.
 Compare [host and device FFT buffers](fourier/backend-buffers/index.qmd),
 keeping ownership and normalization fixed while changing the backend.
 
+For a diagnostic challenge, [put a halo exchange inside a measured frame](diagnostics/halo-frames/index.qmd)
+and distinguish warmup, collective waiting and per-rank records.
+
 ## Make your first change
 
 Install a compatible OpenPFC SDK and CLI using the

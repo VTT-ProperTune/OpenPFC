@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Teach the retained halo profiler through measured-frame boundaries, warmup
+  and independent checks of its complete per-rank JSON export.
+
 - Turn the FFT backend benchmark into a configurable host/device buffer lesson,
   fixing collective rank participation and checking complete fields and modes.
 

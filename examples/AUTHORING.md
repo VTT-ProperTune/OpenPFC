@@ -486,3 +486,14 @@ Run the CUDA checker inside a GPU allocation. For two processes add
 summary and matching physical grids; it cannot label CPU output as device
 output. Only the derived SVG belongs in Git. Do not turn its floating-point
 error comparison into a timing or speedup claim.
+
+## Halo profiling frames
+
+`diagnostics/halo-frames/model.cpp` retains the former halo microtiming
+implementation and flags. The old root source includes it for existing
+compile scripts; frozen performance records keep their historical paths.
+`check_halo_frames.py` invokes the real executable and inspects every rank's
+frames, named metrics and placement output. It preserves the original
+two-rank smoke configuration, then varies warmup and frame counts. These
+are export-contract checks; they neither replace halo numerical correctness
+tests nor assert any timing or bandwidth threshold.

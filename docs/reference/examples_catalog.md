@@ -101,7 +101,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `20_explicit_stepper_spectral` | `heat/fourier/model.cpp` | Explicit stepping with spectral operators |
 | `21_adaptive_stepping` | `integration/adaptive-rk/model.cpp` | Adaptive Bogacki–Shampine 3(2) with `Time` attempt transactions |
 | `22_external_coupling` | `coupling/host-orchestrator/model.cpp` | Mock FEM loop: `FieldHandle` export, `clip_attempt_dt`, FieldModifier-shaped source |
-| `23_halo_microtiming` | `23_halo_microtiming.cpp` | Timed `HaloExchange` loop; schema-v2 JSON (`--cuda` / `--hip` / `--full`) |
+| `23_halo_microtiming` | `diagnostics/halo-frames/model.cpp` | Timed `HaloExchange` loop; schema-v2 JSON (`--cuda` / `--hip` / `--full`) |
 | `24_adaptive_etd` | `integration/adaptive-etd/model.cpp` | ETD1 step doubling: a heat mode against `exp(-k²t)`, then `∂t ψ = ∇²ψ − ψ³` with the memoryless controller |
 | `nonlinear_spectral_course` | `nonlinear_spectral/allen_cahn.cpp` | Periodic Allen–Cahn: cubic Galerkin projection with `4K < N`, ETD2, independent convolution/RK4 checks and MPI ownership output |
 | `periodic_differentiation` | `differentiation/periodic/model.cpp` | Analytic derivative, second/fourth-order FD, and Fourier convergence |

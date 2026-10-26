@@ -221,9 +221,14 @@
     },
     {
       "target": "23_halo_microtiming",
-      "source": "23_halo_microtiming.cpp",
-      "chapter": null,
-      "capabilities": []
+      "source": "diagnostics/halo-frames/model.cpp",
+      "chapter": "diagnostics/halo-frames/index.qmd",
+      "capabilities": [
+        "halo-profiling",
+        "frame-boundaries",
+        "mpi-aggregation",
+        "warmup"
+      ]
     },
     {
       "target": "24_adaptive_etd",

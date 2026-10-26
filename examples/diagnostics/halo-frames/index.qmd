@@ -1,0 +1,150 @@
+---
+title: "A halo exchange inside a measured frame"
+description: "Separate warmup, synchronized frame time and communication regions in the existing halo profiler."
+order: 37
+categories: [Diagnostics, MPI, Tough challenges]
+capabilities: ["halo-profiling", "frame-boundaries", "mpi-aggregation", "warmup"]
+targets: [23_halo_microtiming]
+---
+
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+::: {.article-body}
+::: {.article-title}
+[Diagnostics / Know what the clock contains]{.lesson-kicker}
+
+# A halo exchange inside a measured frame
+
+[One exchange, two barriers, and a report that keeps every rank visible.]{.lesson-deck}
+:::
+
+The [halo lesson](../../heat/separated-halos/index.qmd) explains why neighboring
+subdomains need ghost values. The [profiling lesson](../profiling/index.qmd)
+shows how to name work. Here we combine those ideas in the existing
+`23_halo_microtiming` program, without turning a small teaching run into a
+machine performance claim.
+
+The field is initialized once. Each iteration exchanges its halo, and the
+profiler records a frame. The host facade is the default; the executable
+also retains its existing `--cuda`, `--hip` and `--full` options.
+This is a diagnostic experiment, with no PDE time integration.
+
+## Define the boundary before reading the number
+
+```{.cpp include="model.cpp" snippet="warmup" dedent=2}
+```
+
+Warmup exchanges happen before the session begins. They exercise the
+communication path but create no recorded frames. A barrier then lets all
+ranks reach the measured sequence.
+
+```{.cpp include="model.cpp" snippet="frames" dedent=2}
+```
+
+For rank $r$ and frame $m$, the exported `wall_step` is its own elapsed
+interval
+
+$$
+\Delta t_{r,m}=t^{\mathrm{end}}_{r,m}-t^{\mathrm{start}}_{r,m}.
+$$
+
+The first barrier is **before** `t0`. The second is **inside** the measured
+interval. The number therefore includes the exchange and the wait at the
+trailing barrier, plus the code between the two readings. It excludes MPI
+startup, decomposition, field allocation, initialization, warmup and JSON
+export. It does not compare absolute timestamps from different ranks.
+
+The `communication` region is recorded inside the halo implementation.
+Its boundary differs from `wall_step`: do not treat their difference as a
+pure network measurement. Small intervals also contain instrumentation
+and scheduling effects.
+
+## Keep the rank dimension
+
+```{.cpp include="model.cpp" snippet="export" dedent=2}
+```
+
+Every rank participates in finalization; rank zero writes the combined
+schema-version-2 JSON. Its `frame_metric_names` describes the scalar vector
+in each frame. Resolve columns by name rather than assuming a fixed scalar
+position. Each entry in `ranks` has its own `mpi_rank`, `n_frames` and
+`frames`.
+
+For $P$ ranks and $K$ measured iterations,
+
+$$
+N_{\mathrm{frames}}=PK.
+$$
+
+That is a count of stored rank-frames. It is neither the number of global
+iterations nor a sum of elapsed wall time. At a fixed iteration a useful
+summary is $\max_r\Delta t_{r,m}$; it is still the maximum of these defined
+local intervals, not the duration of the whole application.
+
+The three memory scalars are passed as zero in this program. They mean
+that memory was not measured; they do not establish zero memory use.
+Likewise, a finite communication duration does not establish that every
+ghost value is correct. Use the halo correctness tests for that claim.
+
+## Run a small host experiment
+
+This program retains ordinary command-line flags. With a matching installed
+CPU SDK, compile the [complete model](model.cpp), then use the executable
+directly:
+
+```sh
+openpfc compile model.cpp -o halo-frames
+mkdir -p results/halo-frames
+cd results/halo-frames
+mpirun -n 2 ../../halo-frames --nx 16 --iters 4 --warmup 1 --output profile.json
+```
+
+The report contains two ranks with four frames each: steps zero through
+three, eight stored rank-frames. `halo_placement.txt` records the rank,
+host and Cartesian placement beside it. Run from a new result directory
+for each experiment so these files stay together.
+
+The built checkout target has the same name as before. Build it through
+`scripts/build.sh` and find `23_halo_microtiming` under the build's
+`examples/` directory. GPU variants require the corresponding build and a
+suitable scheduler allocation; this chapter's source compilation route
+qualifies the CPU SDK.
+
+Try increasing `--warmup` while keeping `--iters 4`. Predict the stored
+frame count first. Then increase `--iters` instead and locate the extra
+step indices in each rank's array. The checker validates the real output's
+schema, rank/step identities, exact frame counts and finite nonnegative
+durations. It imposes no microsecond threshold.
+
+## Count geometric work before timing it
+
+For local owned dimensions $n_x,n_y,n_z$ and halo width $h$, the six face
+slabs contain
+
+$$
+V_F=2h(n_y n_z+n_x n_z+n_x n_y)
+$$
+
+ghost slots. Including edges and corners gives
+
+$$
+\begin{aligned}
+V_{\mathrm{full}}&=V_F+4h^2(n_x+n_y+n_z)\\
+&\quad+8h^3.
+\end{aligned}
+$$
+
+These are geometric counts for a rectangular halo. They are not network
+byte counts: a periodic neighbor can be the same rank, and a backend can
+pack or stage data differently. Use the local dimensions printed by the
+program, rather than substituting the global grid size into these formulas.
+
+For a geometric question, change `--nx`, `--ny` and `--nz` while keeping
+the process count fixed. Explain which local faces become larger before
+looking at timings. Then compare `--full`, which requests edge and corner
+connectivity as well as faces. Neither changing connectivity nor changing
+message size alone predicts elapsed time: decomposition, local copies,
+MPI protocol and device staging also matter.
+
+:::

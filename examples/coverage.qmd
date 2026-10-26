@@ -17,7 +17,7 @@ description: "An explicit inventory of existing programs, teaching chapters and 
 :::
 
 There are 83 declared runnable example targets and
-75 Quarto teaching chapters. The table includes older programs
+76 Quarto teaching chapters. The table includes older programs
 that have not yet been converted. Target counts exclude test executables;
 optional configurations can affect which targets a particular build enables.
 
@@ -97,7 +97,7 @@ remain in the inventory while applicability and implementation are assessed.
 | `20_explicit_stepper_spectral` | [Read the lesson](heat/fourier/index.qmd) |
 | `21_adaptive_stepping` | [Read the lesson](integration/adaptive-rk/index.qmd) |
 | `22_external_coupling` | [Read the lesson](coupling/host-orchestrator/index.qmd) |
-| `23_halo_microtiming` | Pending conversion. |
+| `23_halo_microtiming` | [Read the lesson](diagnostics/halo-frames/index.qmd) |
 | `24_adaptive_etd` | [Read the lesson](integration/adaptive-etd/index.qmd) |
 | `airy_eigenproblem` | [Read the lesson](polynomials/airy/index.qmd) |
 | `allen_cahn_driven` | [Read the lesson](polynomials/allen-cahn-driven/index.qmd) |
