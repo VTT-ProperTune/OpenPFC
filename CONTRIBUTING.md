@@ -5,261 +5,28 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Contributing to OpenPFC
 
-OodiHandbook is the internal maintainer source of common rules. Follow the
-repository's explicitly adopted immutable release (AUTH-003), with reviewed
-master guidance as a voluntary improvement target (AUTH-006). Local
-instructions provide technical details and do not override the Handbook.
-Access to that internal resource is restricted; the public contribution
-instructions are provided on this page.
+> Process rules come from the latest approved
+> [OodiHandbook](https://github.com/ahojukka5/OodiHandbook) tag (AUTH-007).
+> Start with its `guides/local-development.qmd` and `guides/contributing.qmd`.
+> This file adds only this repository's facts (ENG-001, ENG-028).
 
-Every commit is a small, self-contained, reviewable, revertable unit that
-tells one clear story. That is the bar for humans and agents alike.
+Commits, history and review follow ENG-005, ENG-006, ENG-008 and ENG-018
+(rebase-merge, never squash); branches follow ENG-026. Build, test and CI
+details are in [`AGENTS.md`](AGENTS.md); guides start at
+[`docs/README.md`](docs/README.md). Bugs and features go to
+[GitHub Issues](https://github.com/ahojukka5/OpenPFC/issues).
 
-## Documentation
-
-- [`docs/README.md`](docs/README.md) — index of all guides (architecture, HPC, tutorials). **API reference (HTML)** vs prose: see the opening table there.
-- [`docs/learning_paths.md`](docs/learning_paths.md) — run / extend / integrate tracks.
-- [`docs/tutorials/README.md`](docs/tutorials/README.md) — step-by-step tutorials (VTK, HeFFTe, spectral examples, GPU, …).
-- [`docs/personas.md`](docs/development/personas.md) — short entry points by role (cluster runner, model developer, integrator).
-- [`docs/tutorials/add_catch2_test.md`](docs/tutorials/add_catch2_test.md) — minimal Catch2 / `ctest` pattern.
-- [`docs/showcase.md`](docs/user_guide/showcase.md) — figures mapped to apps and examples.
-- [`docs/testing.md`](docs/development/testing.md) — `ctest`, `openpfc-tests`, MPI test CMake options.
-- [`docs/contributing-docs.md`](docs/development/contributing-docs.md) — link checks, SPDX headers, where to add cross-links in the doc index.
-- Run from the repo root: `python3 scripts/check_doc_links.py`
-- Style for code and headers: [`docs/styleguide.md`](docs/development/styleguide.md)
-- Extending the library (models, `App`, validation): [`docs/extending_openpfc/README.md`](docs/extending_openpfc/README.md), [`docs/class_tour.md`](docs/reference/class_tour.md), [`docs/tutorials/custom_app_minimal.md`](docs/tutorials/custom_app_minimal.md), [`docs/parameter_validation.md`](docs/user_guide/parameter_validation.md)
-
-## Build and test
-
-Use [`scripts/build.sh`](scripts/build.sh) with the local toolchain;
-`--machine=portable` preserves an ordinary workstation environment. Direct
-local CMake/CTest commands are appropriate when the script does not support
-the available environment. Report missing dependencies and unrun checks.
-See [`AGENTS.md`](AGENTS.md) for Tohtori vs LUMI. Manual toolchain notes live
-in [`INSTALL.md`](INSTALL.md).
-
-```bash
-./scripts/build.sh --help
-./scripts/build.sh                              # auto-detects Tohtori vs LUMI
-./scripts/build.sh --machine=tohtori --with-cuda
-./scripts/build.sh --machine=lumi --with-rocm   # HIP; compile+test on standard-g
-```
-
-Verify locally before opening or merging a PR. Run the **full** suite, not
-just tests for files you touched: a change to shared state (a field type, a
-halo exchanger, a CMake option) can break a test that never appears in your
-diff. "My new tests pass" and "nothing broke" are different claims; only the
-full suite proves the second. If CI is broken or unavailable, that raises
-the bar — run the suite yourself before merging.
-
-If a PR adds a new entry point (binary, script, CMake target), the suite
-must invoke that entry point. Unit tests of helpers are not enough.
-
-## Commit scope
-
-One commit = one logical change. Nothing unrelated riding along.
-
-- Prefer **1–5 files** per commit. Exceed that only when the extra files
-  are inseparable parts of the same entity (a function and the one test
-  that proves it; a header and its `.cpp`).
-- Default to **one file per commit** when the files are not tightly coupled.
-- Do **not** mix unrelated implementation, tests, docs, cleanup, generated
-  files, or refactors in one commit.
-- Implementation, tests, and docs *may* share a commit when they describe
-  one capability and are more useful reviewed together.
-- If a change could be reviewed, reverted, or explained independently of
-  the rest, split it.
-- If your change breaks or updates an existing test elsewhere, fold that
-  fix into the **same** commit that caused it. Never leave a "fix tests"
-  commit that hides which change broke the suite.
-- Unrelated hunks in one file belong in different commits (`git add -p`).
-- Cleanup or formatting that is not required by the functional change is
-  its own commit — or, better, left out of the PR.
-
-**Split** when the description would need "and also"; when file groups
-touch different subsystems (e.g. halo vs FFT vs frontend); when tests
-cover a different feature than the implementation; or when docs describe
-behavior this commit did not change.
-
-**Combine** commits that were only split by authorship mechanics, not
-logical independence:
-
-- a `test:` commit whose test exercises several preceding commits together
-  means those commits were never independently revertable — squash them;
-- a `docs:` commit that describes the combined effect of several preceding
-  commits, rather than one commit's own change, is the same signal;
-- a chain of `fix:` commits that correct mistakes introduced earlier in
-  the *same* PR (not a regression in already-merged code) — squash each
-  fix into the commit whose mistake it corrects so history shows the
-  feature working on the first attempt, not the debugging trail.
-
-When unsure, **split further**. Small and reviewable beats big and tidy.
-
-## Commit messages
-
-[Conventional Commits](https://www.conventionalcommits.org/) subject plus a
-short body. Every commit, human or agent:
-
-```
-type(scope): short imperative subject
-
-One to three sentences on what changed and why, not a restatement of the
-subject and not a file list.
-
-- optional one-line bullet with a decision, tradeoff, or coverage note
-- another bullet only if it adds something the summary does not say
-```
-
-Rules:
-
-- Subject: imperative mood (`add`, `fix`, `reject` — not `added`/`adding`),
-  **max 72 characters**, no trailing period.
-- One blank line between subject and body.
-- Body lines wrap at **80 characters**.
-- Body starts with 1–3 sentences of what and why.
-- Extra detail goes in bullets **after** the summary, only if needed.
-- The body is never just a list of edited files.
-- **Each bullet is one line.** If it does not fit, shorten the wording —
-  do not wrap the bullet onto a continuation line.
-
-**Type** (what kind of change):
-
-| Type | Use for |
-|------|---------|
-| `feat` | new user-facing capability |
-| `fix` | bug fix |
-| `refactor` | internal change with no behavior change |
-| `perf` | performance improvement |
-| `test` | test-only changes |
-| `docs` | documentation-only changes |
-| `build` | CMake, HeFFTe, `scripts/build.sh`, dependencies |
-| `ci` | GitHub Actions / workflow changes |
-| `chore` | maintenance that does not fit the types above |
-| `revert` | deliberate reversal of an earlier commit |
-
-**Scope** (where it lives). Type and scope are independent: write
-`test(halo): …`, not a collapsed `test:` or `halo:` when both help a
-skimmer. Include a meaningful scope (ENG-005). Prefer
-these OpenPFC names and reuse them consistently:
-
+**Commit scopes.** Use `type(scope): subject` with one of:
 `kernel`, `data`, `field`, `domain`, `decomp`, `halo`, `fft`, `gpu`,
 `simulation`, `stepper`, `frontend`, `io`, `apps`, `tungsten`,
-`aluminum`, `kobayashi`, `cmake`, `ci`, `docs`, `tests`
+`aluminum`, `kobayashi`, `cmake`, `ci`, `docs`, `tests`.
+`build` covers CMake, HeFFTe, `scripts/build.sh` and dependencies.
 
-Example:
+**Hook.** `git config core.hooksPath .githooks` enables the pre-commit
+check: clang-format 20 on staged C/C++ files, as in CI.
 
-```
-fix(halo): reject a zero direction in padded slab geometry
-
-padded_send_slab treated {0,0,0} as a valid neighbour and produced an
-empty slab instead of failing closed. Callers then posted a zero-byte
-MPI message and silently skipped the exchange.
-
-- throw std::invalid_argument from validate_padded_slab_args
-- cover the zero-direction case in test_halo_geometry
-```
-
-A subject-only commit is fine for a genuine one-line typo fix. That is
-the exception, not the default.
-
-## Cleaning up a branch before review
-
-If the branch already has mass commits, `wip`/`fix`/`more changes`
-subjects, mixed unrelated files, or throwaway checkpoints, **rewrite
-it before asking for review**. Reviewers should see the final history,
-not how you got there.
-
-```bash
-git rebase -i origin/master
-```
-
-- Reorder, split (`edit` + `git reset HEAD^` + `git add -p`), reword,
-  and `squash`/`fixup` into the units above.
-- Drop throwaway checkpoint commits rather than leaving them for a
-  reviewer to decode.
-- After rewriting, confirm only boundaries moved:
-  `diff <(git diff old-tip...origin/master) <(git diff HEAD...origin/master)`
-- Force-push **only that feature branch** with
-  `git push --force-with-lease`. Never force-push `master` / `main`.
-
-If `git rebase -i` is unavailable, assemble the same history forward:
-`git checkout -b rewritten origin/master`, then
-`git cherry-pick -n <commit>`, `git reset -- <paths for later>`,
-commit, repeat, folding fixes into the commit that should have had them.
-
-To collapse an over-split branch that was never independently
-revertable: `git reset --soft origin/master` and one commit that
-follows the message rules.
-
-## Pull requests and merging
-
-`ahojukka5/OpenPFC` is the source of truth for development, issues and pull
-requests. `VTT-ProperTune/OpenPFC` mirrors the reviewed code and publishes the
-website. Replicate canonical commits to the mirror without developing a separate
-history there; keep its `master` at the same commit as the canonical `master`.
-
-- Branch from the latest `master`. A PR can and often should contain
-  multiple commits, as long as each is a small, coherent, independently
-  reviewable/revertable unit.
-- Keep unrelated changes in separate PRs.
-- Describe impact, behavior changes, and what you actually ran
-  (`./scripts/build.sh …` on which machine). If you could not run the
-  suite (no GPU allocation, no cluster access), say so in the PR
-  description — an unverified PR should read as unverified.
-- Read the **full** diff yourself, not just the hunks you expect. A
-  rewrite can silently drop trailing content (a license block, a doc
-  link) that no test exercises.
-- If the PR removes or replaces a path (a fallback, a deprecated flag),
-  grep the repo for leftovers — docs, error messages, CI scripts — and
-  fix them in the same PR.
-- Only mark a PR ready once every commit is reviewable on its own.
-- **Merge by rebase, not squash**, so the commit boundaries you settled
-  on during review are what lands on `master`. That is why messages and
-  boundaries have to be right *before* merge.
-- If review finds a defect in a specific commit, amend or rewrite that
-  commit (`git rebase -i`). Do not append a correction on top: a commit
-  that is only correct after a later "fix" was never self-contained, and
-  `git bisect` lands on the broken intermediate.
-- Never push directly to `master`. Limina gate agents use the same reviewed
-  PR and authorized rebase-merge process (ENG-007, ENG-018).
-
-## CI (GitHub Actions)
-
-CI under [`.github/workflows/`](.github/workflows) has three tiers (details in
-its README):
-
-- **Pull request:** `ci.yml` selects changed components from the base/head
-  diff. Documentation-only changes run REUSE and documentation checks without
-  a C++ build. Application, example, native CLI and Python tooling changes run
-  their relevant checks. Shared or unclassified changes run library tests,
-  SDK contracts and consumer smoke checks, with the fallback reason logged.
-  The complete routine CTest suite runs after integration to `master`.
-- **Push to master:** adds GCC 13 Debug with the 3/4/6-rank multigrid
-  transfers and the benchmark compile, the clang-18 compile check,
-  packaging smoke, and CUDA/HIP compile-only. All must pass CI Status. These
-  SDK checks need no GPU; device and GPU spectral/HeFFTe validation remain
-  allocated cluster checks.
-- **Monthly:** `compatibility.yml` (GCC 11–14, Clang 18, Ubuntu 22.04/24.04,
-  MPICH, no HeFFTe), then coverage, clang-tidy and AddressSanitizer; all also
-  `workflow_dispatch`.
-
-CI runs in `ahojukka5/OpenPFC`; VTT-ProperTune/OpenPFC only publishes the
-website. Doc-only edits still trigger the Documentation link job — run
-`python3 scripts/check_doc_links.py` locally before pushing.
-
-Passing checks make a PR mergeable, not right. Fix only lint/test
-failures **this PR introduced**; fold those fixes into the commit that
-caused them. Leave pre-existing baseline debt alone.
-
-## Changelog
-
-User-visible and developer-facing changes go in
-[`CHANGELOG.md`](CHANGELOG.md) under `[Unreleased]` when they affect
-behavior, CMake options, or config keys. Put that note in the same
-commit as the change when the changelog line is about that one change;
-do not bundle an unrelated Unreleased dump.
-
-## Questions
-
-Use [GitHub Issues](https://github.com/ahojukka5/OpenPFC/issues)
-for bugs and feature discussion.
+**Never commit:** build trees (`build/`, `builds/`), run output
+(`results/`, `out/`, `*.log`, `*.out`), HeFFTe sources or tarballs, Julia
+manifests, local preferences, or new `*.sbatch` campaign launchers. A user-
+or developer-visible change adds a `CHANGELOG.md` `[Unreleased]` line in the
+same commit.
