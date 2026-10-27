@@ -245,7 +245,11 @@ def check_vtk(binary, root, launch, ranks):
         )
         pieces = sorted((folder / "results").glob(f"density_{frame:04d}*.vti"))
         assert len(pieces) == ranks, pieces
-        seen = set()
+        # The VTK writer now duplicates seam points between adjacent pieces.
+        # Owned field/CSV samples must remain unique; only VTK point data
+        # legitimately contains these overlap copies.
+        seen = {}
+        shared = set()
         for path in pieces:
             image, extent, values = vtk_piece(path)
             assert list(map(float, image.attrib["Origin"].split())) == [-1, 2, 3]
@@ -261,9 +265,16 @@ def check_vtk(binary, root, launch, ranks):
                 for i in range(extent[0], extent[1] + 1)
             ]
             for index, value in zip(indices, values):
-                assert index not in seen and value == affine(*index, 0.25 * frame)
-                seen.add(index)
+                # Check every copy, including the shared sample, against the
+                # independently prescribed physical field.
+                assert value == affine(*index, 0.25 * frame), (path, index, value)
+                if index in seen:
+                    assert value == seen[index], (path, index, value, seen[index])
+                    shared.add(index)
+                else:
+                    seen[index] = value
         assert len(seen) == 64
+        assert bool(shared) == (ranks > 1)
     xdmf = list((folder / "results").glob("*.xmf")) + list(
         (folder / "results").glob("*.xdmf")
     )
