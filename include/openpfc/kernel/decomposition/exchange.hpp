@@ -45,6 +45,7 @@
 
 #include <cstdint>
 #include <mpi.h>
+#include <type_traits>
 #include <vector>
 
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>
@@ -60,7 +61,16 @@ namespace detail {
 /**
  * @brief Get MPI datatype for type T
  */
-template <typename T> MPI_Datatype get_mpi_type();
+// uint64_t can alias size_t (Linux) or a distinct unsigned type (macOS).
+// Keep its fallback in the primary template to avoid duplicate specializations.
+template <typename T> MPI_Datatype get_mpi_type() {
+  if constexpr (std::is_same_v<T, std::uint64_t>) {
+    return MPI_UINT64_T;
+  } else {
+    static_assert(dependent_false_exchange<T>,
+                  "unsupported MPI exchange value type");
+  }
+}
 
 template <> inline MPI_Datatype get_mpi_type<double>() { return MPI_DOUBLE; }
 

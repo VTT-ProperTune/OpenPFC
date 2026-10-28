@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Preserve full-width `std::uint64_t` identities in host MPI exchanges on
+  platforms where that type differs from `size_t`, including macOS ARM.
+
 - Let the native CLI compile, bundle and launch runs from a Slurm batch script
   or a one-task `srun` step. Only a step with several tasks counts as an
   enclosing MPI launch.
