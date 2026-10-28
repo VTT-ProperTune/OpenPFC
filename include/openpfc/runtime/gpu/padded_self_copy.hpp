@@ -12,12 +12,27 @@
  * by the host halo code and the vendor kernels in `padded_halo_faces_gpu.inc`.
  */
 
+#include <cstdint>
+#include <type_traits>
+
+namespace pfc::gpu {
+
+/// Element types the device halo exchangers and their bitwise pack kernels
+/// support. Each needs an explicit kernel instantiation in
+/// `padded_halo_faces_gpu.inc` and an `exchange::detail::get_mpi_type`.
+template <typename T>
+inline constexpr bool is_halo_element_v =
+    std::is_same_v<T, double> || std::is_same_v<T, float> ||
+    std::is_same_v<T, std::uint32_t>;
+
+} // namespace pfc::gpu
+
 namespace pfc::gpu::detail {
 
 inline constexpr int kMaxSelfCopyFields = 8;
 
-struct PaddedSelfCopy {
-  double *pads[kMaxSelfCopyFields] = {};
+template <typename T> struct PaddedSelfCopy {
+  T *pads[kMaxSelfCopyFields] = {};
   int nfields = 0;
   int nslab = 0;      ///< 1 or 2 slab pairs (faces) in this launch
   int src[2][3] = {}; ///< slab origin to read (padded coordinates)

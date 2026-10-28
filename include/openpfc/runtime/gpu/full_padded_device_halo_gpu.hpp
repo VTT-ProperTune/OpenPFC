@@ -63,7 +63,10 @@ namespace pfc::gpu {
  *
  * Non-copyable; tie lifetime to the owning padded device allocations.
  */
-template <typename Ops> class DeviceFullHalo {
+template <typename Ops, typename T = double> class DeviceFullHalo {
+  static_assert(is_halo_element_v<T>,
+                "DeviceFullHalo: element must be double, float or std::uint32_t");
+
 public:
   using Int3 = pfc::types::Int3;
   using stream_t = typename Ops::stream_t;
@@ -219,7 +222,7 @@ public:
                                      (m_use_contiguous || !m_use_gpu_aware);
       if (need_device_pools) {
         const std::size_t nslot = 2 * m_n_fields;
-        const std::size_t bytes = m_scratch_elems * sizeof(double);
+        const std::size_t bytes = m_scratch_elems * sizeof(T);
         m_d_send_pool.assign(nslot, nullptr);
         m_d_recv_pool.assign(nslot, nullptr);
         for (std::size_t i = 0; i < nslot; ++i) {
@@ -246,22 +249,22 @@ public:
   DeviceFullHalo &operator=(const DeviceFullHalo &) = delete;
 
   ~DeviceFullHalo() {
-    for (double *p : m_d_send_pool) {
+    for (T *p : m_d_send_pool) {
       if (p != nullptr) {
         Ops::free_dev(p);
       }
     }
-    for (double *p : m_d_recv_pool) {
+    for (T *p : m_d_recv_pool) {
       if (p != nullptr) {
         Ops::free_dev(p);
       }
     }
-    for (double *p : m_h_send_pool) {
+    for (T *p : m_h_send_pool) {
       if (p != nullptr) {
         Ops::free_host(p);
       }
     }
-    for (double *p : m_h_recv_pool) {
+    for (T *p : m_h_recv_pool) {
       if (p != nullptr) {
         Ops::free_host(p);
       }
@@ -299,7 +302,7 @@ public:
    *       the requested Full connectivity. Without GPU-aware MPI the
    *       26-fill still runs; real-neighbor axes host-stage packed slabs.
    */
-  void exchange(double *const *fields, stream_t stream) {
+  void exchange(T *const *fields, stream_t stream) {
     const bool perf = Ops::perf_enabled();
     auto &H = Ops::timers();
 
@@ -327,7 +330,7 @@ public:
                                 MPI_Wtime() - t0);
   }
 
-  void exchange(std::initializer_list<double *> fields, stream_t stream = nullptr) {
+  void exchange(std::initializer_list<T *> fields, stream_t stream = nullptr) {
     if (fields.size() != m_n_fields) {
       throw std::invalid_argument("DeviceFullHalo::exchange: field count mismatch");
     }
@@ -381,7 +384,7 @@ private:
     (void)ny;
     (void)nz;
     (void)hw;
-    const MPI_Datatype elem = pfc::exchange::detail::get_mpi_type<double>();
+    const MPI_Datatype elem = pfc::exchange::detail::get_mpi_type<T>();
     for (int a = 0; a < 3; ++a) {
       if (!m_axis_active[a]) continue;
       for (int f = 0; f < 2; ++f) {
@@ -395,7 +398,7 @@ private:
     }
   }
 
-  void run_pass_(int axis, double *const *fields, stream_t stream) {
+  void run_pass_(int axis, T *const *fields, stream_t stream) {
     if (m_axis_is_self[axis]) {
       run_self_pass_(axis, fields, stream);
       // All-self exchange: stream order serialises the widening passes and later
@@ -411,8 +414,8 @@ private:
 
   /// Both faces of a self-periodic axis for all fields: one fused in-place copy
   /// per batch of `kMaxSelfCopyFields` fields (interior strip -> opposite halo).
-  void run_self_pass_(int axis, double *const *fields, stream_t stream) {
-    ::pfc::gpu::detail::PaddedSelfCopy c;
+  void run_self_pass_(int axis, T *const *fields, stream_t stream) {
+    ::pfc::gpu::detail::PaddedSelfCopy<T> c;
     c.nslab = 2;
     c.nxp = m_nxp;
     c.nyp = m_nyp;
@@ -439,7 +442,7 @@ private:
     }
   }
 
-  void run_mpi_pass_(int axis, double *const *fields, stream_t stream) {
+  void run_mpi_pass_(int axis, T *const *fields, stream_t stream) {
     if (m_use_contiguous) {
       run_mpi_pass_contiguous_(axis, fields, stream);
       return;
@@ -476,7 +479,7 @@ private:
     pfc::exchange::wait_all(m_requests.data(), static_cast<int>(req_count));
   }
 
-  void run_mpi_pass_host_staged_(int axis, double *const *fields, stream_t stream) {
+  void run_mpi_pass_host_staged_(int axis, T *const *fields, stream_t stream) {
     std::size_t req_count = 0;
     std::size_t idx = 0;
     for (std::size_t fld = 0; fld < m_n_fields; ++fld) {
@@ -491,8 +494,9 @@ private:
         const int face_count =
             pfc::mpi::ensure_mpi_int_count(n, "DeviceFullHalo host-staged face");
         pfc::mpi::throw_on_mpi_error(MPI_Irecv(m_h_recv_pool[idx], face_count,
-                                               MPI_DOUBLE, m_neighbors[axis][f], tag,
-                                               m_comm, &m_requests[req_count]),
+                                               exchange::detail::get_mpi_type<T>(),
+                                               m_neighbors[axis][f], tag, m_comm,
+                                               &m_requests[req_count]),
                                      "DeviceFullHalo host-staged MPI_Irecv");
         ++req_count;
         ++idx;
@@ -508,8 +512,8 @@ private:
                               static_cast<std::size_t>(send.sz);
         Ops::pack_face(m_d_send_pool[idx], fields[fld], send.ox, send.oy, send.oz,
                        send.sx, send.sy, send.sz, m_nxp, m_nyp, m_nzp, stream);
-        Ops::memcpy_async_d2h(m_h_send_pool[idx], m_d_send_pool[idx],
-                              n * sizeof(double), stream, Ops::memcpy_d2h);
+        Ops::memcpy_async_d2h(m_h_send_pool[idx], m_d_send_pool[idx], n * sizeof(T),
+                              stream, Ops::memcpy_d2h);
         ++idx;
       }
     }
@@ -528,8 +532,9 @@ private:
         const int face_count =
             pfc::mpi::ensure_mpi_int_count(n, "DeviceFullHalo host-staged face");
         pfc::mpi::throw_on_mpi_error(MPI_Isend(m_h_send_pool[idx], face_count,
-                                               MPI_DOUBLE, m_neighbors[axis][f], tag,
-                                               m_comm, &m_requests[req_count]),
+                                               exchange::detail::get_mpi_type<T>(),
+                                               m_neighbors[axis][f], tag, m_comm,
+                                               &m_requests[req_count]),
                                      "DeviceFullHalo host-staged MPI_Isend");
         ++req_count;
         ++idx;
@@ -550,8 +555,8 @@ private:
         const std::size_t n = static_cast<std::size_t>(recv.sx) *
                               static_cast<std::size_t>(recv.sy) *
                               static_cast<std::size_t>(recv.sz);
-        Ops::memcpy_async_h2d(m_d_recv_pool[idx], m_h_recv_pool[idx],
-                              n * sizeof(double), stream, Ops::memcpy_h2d);
+        Ops::memcpy_async_h2d(m_d_recv_pool[idx], m_h_recv_pool[idx], n * sizeof(T),
+                              stream, Ops::memcpy_h2d);
         Ops::unpack_face(fields[fld], m_d_recv_pool[idx], recv.ox, recv.oy, recv.oz,
                          recv.sx, recv.sy, recv.sz, m_nxp, m_nyp, m_nzp, stream);
         ++idx;
@@ -559,7 +564,7 @@ private:
     }
   }
 
-  void run_mpi_pass_contiguous_(int axis, double *const *fields, stream_t stream) {
+  void run_mpi_pass_contiguous_(int axis, T *const *fields, stream_t stream) {
     std::size_t req_count = 0;
     std::size_t idx = 0;
     for (std::size_t fld = 0; fld < m_n_fields; ++fld) {
@@ -574,8 +579,9 @@ private:
         const int face_count =
             pfc::mpi::ensure_mpi_int_count(n, "DeviceFullHalo contig face");
         pfc::mpi::throw_on_mpi_error(MPI_Irecv(m_d_recv_pool[idx], face_count,
-                                               MPI_DOUBLE, m_neighbors[axis][f], tag,
-                                               m_comm, &m_requests[req_count]),
+                                               exchange::detail::get_mpi_type<T>(),
+                                               m_neighbors[axis][f], tag, m_comm,
+                                               &m_requests[req_count]),
                                      "DeviceFullHalo contig MPI_Irecv");
         ++req_count;
         ++idx;
@@ -606,8 +612,9 @@ private:
         const int face_count =
             pfc::mpi::ensure_mpi_int_count(n, "DeviceFullHalo contig face");
         pfc::mpi::throw_on_mpi_error(MPI_Isend(m_d_send_pool[idx], face_count,
-                                               MPI_DOUBLE, m_neighbors[axis][f], tag,
-                                               m_comm, &m_requests[req_count]),
+                                               exchange::detail::get_mpi_type<T>(),
+                                               m_neighbors[axis][f], tag, m_comm,
+                                               &m_requests[req_count]),
                                      "DeviceFullHalo contig MPI_Isend");
         ++req_count;
         ++idx;
@@ -655,10 +662,10 @@ private:
   bool m_any_real_axis = false; ///< some active axis has a real (MPI) neighbor
   bool m_use_contiguous = false;
 
-  std::vector<double *> m_d_send_pool;
-  std::vector<double *> m_d_recv_pool;
-  std::vector<double *> m_h_send_pool;
-  std::vector<double *> m_h_recv_pool;
+  std::vector<T *> m_d_send_pool;
+  std::vector<T *> m_d_recv_pool;
+  std::vector<T *> m_h_send_pool;
+  std::vector<T *> m_h_recv_pool;
 };
 
 } // namespace pfc::gpu

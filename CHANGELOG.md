@@ -7,6 +7,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Exchange `float` and `std::uint32_t` device fields through
+  `pfc::comm::HaloExchange<CUDASpace|HIPSpace, T>` (Faces and Full, all
+  transports), alongside `double`. Integer halos are exact bitwise copies;
+  unsupported element types fail at compile time.
+
 - Add explicit sequential face accumulation on uniform grids so consumers
   can adopt shared conservative divergence while preserving their existing
   floating-point evaluation order (#699).

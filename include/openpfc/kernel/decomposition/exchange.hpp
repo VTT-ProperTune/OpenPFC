@@ -43,6 +43,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <mpi.h>
 #include <vector>
 
@@ -66,6 +67,10 @@ template <> inline MPI_Datatype get_mpi_type<double>() { return MPI_DOUBLE; }
 template <> inline MPI_Datatype get_mpi_type<float>() { return MPI_FLOAT; }
 
 template <> inline MPI_Datatype get_mpi_type<int>() { return MPI_INT; }
+
+template <> inline MPI_Datatype get_mpi_type<std::uint32_t>() {
+  return MPI_UINT32_T;
+}
 
 template <> inline MPI_Datatype get_mpi_type<size_t>() {
   return MPI_UNSIGNED_LONG_LONG;

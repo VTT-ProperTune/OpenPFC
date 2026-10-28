@@ -145,17 +145,22 @@ using ::pfc::gpu::detail::FaceSlabSpec;
 using ::pfc::gpu::detail::getenv_truthy;
 using ::pfc::gpu::detail::make_padded_face_slabs;
 
-void launch_padded_pack_face(double *d_dst_contig, const double *d_pad, int ox,
-                             int oy, int oz, int sx, int sy, int sz, int nxp,
-                             int nyp, int nzp, cudaStream_t stream);
+// Explicitly instantiated in padded_halo_faces_gpu.inc for every
+// `pfc::gpu::is_halo_element_v` type.
+template <typename T>
+void launch_padded_pack_face(T *d_dst_contig, const T *d_pad, int ox, int oy, int oz,
+                             int sx, int sy, int sz, int nxp, int nyp, int nzp,
+                             cudaStream_t stream);
 
-void launch_padded_unpack_face(double *d_pad, const double *d_src_contig, int ox,
-                               int oy, int oz, int sx, int sy, int sz, int nxp,
-                               int nyp, int nzp, cudaStream_t stream);
+template <typename T>
+void launch_padded_unpack_face(T *d_pad, const T *d_src_contig, int ox, int oy,
+                               int oz, int sx, int sy, int sz, int nxp, int nyp,
+                               int nzp, cudaStream_t stream);
 
 /// Fused self-neighbor copy (both faces of one axis, up to kMaxSelfCopyFields
 /// buffers).
-void launch_padded_self_copy_faces(const ::pfc::gpu::detail::PaddedSelfCopy &c,
+template <typename T>
+void launch_padded_self_copy_faces(const ::pfc::gpu::detail::PaddedSelfCopy<T> &c,
                                    cudaStream_t stream);
 
 inline bool runtime_mpi_cuda_aware() {
@@ -264,19 +269,21 @@ struct CUDAHaloOps {
     check(cudaStreamSynchronize(stream), what);
   }
   static void device_sync(const char *what) { check(cudaDeviceSynchronize(), what); }
-  static void pack_face(double *d_dst, const double *d_pad, int ox, int oy, int oz,
-                        int sx, int sy, int sz, int nxp, int nyp, int nzp,
-                        stream_t stream) {
+  template <typename T>
+  static void pack_face(T *d_dst, const T *d_pad, int ox, int oy, int oz, int sx,
+                        int sy, int sz, int nxp, int nyp, int nzp, stream_t stream) {
     detail::launch_padded_pack_face(d_dst, d_pad, ox, oy, oz, sx, sy, sz, nxp, nyp,
                                     nzp, stream);
   }
-  static void unpack_face(double *d_pad, const double *d_src, int ox, int oy, int oz,
-                          int sx, int sy, int sz, int nxp, int nyp, int nzp,
+  template <typename T>
+  static void unpack_face(T *d_pad, const T *d_src, int ox, int oy, int oz, int sx,
+                          int sy, int sz, int nxp, int nyp, int nzp,
                           stream_t stream) {
     detail::launch_padded_unpack_face(d_pad, d_src, ox, oy, oz, sx, sy, sz, nxp, nyp,
                                       nzp, stream);
   }
-  static void self_copy_faces(const ::pfc::gpu::detail::PaddedSelfCopy &c,
+  template <typename T>
+  static void self_copy_faces(const ::pfc::gpu::detail::PaddedSelfCopy<T> &c,
                               stream_t stream) {
     detail::launch_padded_self_copy_faces(c, stream);
   }
@@ -292,17 +299,22 @@ using ::pfc::gpu::detail::FaceSlabSpec;
 using ::pfc::gpu::detail::getenv_truthy;
 using ::pfc::gpu::detail::make_padded_face_slabs;
 
-void launch_padded_pack_face(double *d_dst_contig, const double *d_pad, int ox,
-                             int oy, int oz, int sx, int sy, int sz, int nxp,
-                             int nyp, int nzp, hipStream_t stream);
+// Explicitly instantiated in padded_halo_faces_gpu.inc for every
+// `pfc::gpu::is_halo_element_v` type.
+template <typename T>
+void launch_padded_pack_face(T *d_dst_contig, const T *d_pad, int ox, int oy, int oz,
+                             int sx, int sy, int sz, int nxp, int nyp, int nzp,
+                             hipStream_t stream);
 
-void launch_padded_unpack_face(double *d_pad, const double *d_src_contig, int ox,
-                               int oy, int oz, int sx, int sy, int sz, int nxp,
-                               int nyp, int nzp, hipStream_t stream);
+template <typename T>
+void launch_padded_unpack_face(T *d_pad, const T *d_src_contig, int ox, int oy,
+                               int oz, int sx, int sy, int sz, int nxp, int nyp,
+                               int nzp, hipStream_t stream);
 
 /// Fused self-neighbor copy (both faces of one axis, up to kMaxSelfCopyFields
 /// buffers).
-void launch_padded_self_copy_faces(const ::pfc::gpu::detail::PaddedSelfCopy &c,
+template <typename T>
+void launch_padded_self_copy_faces(const ::pfc::gpu::detail::PaddedSelfCopy<T> &c,
                                    hipStream_t stream);
 
 inline bool runtime_mpi_hip_aware() {
@@ -411,19 +423,21 @@ struct HIPHaloOps {
     check(hipStreamSynchronize(stream), what);
   }
   static void device_sync(const char *what) { check(hipDeviceSynchronize(), what); }
-  static void pack_face(double *d_dst, const double *d_pad, int ox, int oy, int oz,
-                        int sx, int sy, int sz, int nxp, int nyp, int nzp,
-                        stream_t stream) {
+  template <typename T>
+  static void pack_face(T *d_dst, const T *d_pad, int ox, int oy, int oz, int sx,
+                        int sy, int sz, int nxp, int nyp, int nzp, stream_t stream) {
     detail::launch_padded_pack_face(d_dst, d_pad, ox, oy, oz, sx, sy, sz, nxp, nyp,
                                     nzp, stream);
   }
-  static void unpack_face(double *d_pad, const double *d_src, int ox, int oy, int oz,
-                          int sx, int sy, int sz, int nxp, int nyp, int nzp,
+  template <typename T>
+  static void unpack_face(T *d_pad, const T *d_src, int ox, int oy, int oz, int sx,
+                          int sy, int sz, int nxp, int nyp, int nzp,
                           stream_t stream) {
     detail::launch_padded_unpack_face(d_pad, d_src, ox, oy, oz, sx, sy, sz, nxp, nyp,
                                       nzp, stream);
   }
-  static void self_copy_faces(const ::pfc::gpu::detail::PaddedSelfCopy &c,
+  template <typename T>
+  static void self_copy_faces(const ::pfc::gpu::detail::PaddedSelfCopy<T> &c,
                               stream_t stream) {
     detail::launch_padded_self_copy_faces(c, stream);
   }
@@ -485,7 +499,10 @@ template <typename Ops> void print_halo_exchange_cpu_timers(MPI_Comm comm) {
  * Field overloads are the primary API; raw-pointer overloads remain for
  * backward compatibility.
  */
-template <typename Ops> class DeviceFacesHalo {
+template <typename Ops, typename T = double> class DeviceFacesHalo {
+  static_assert(is_halo_element_v<T>,
+                "DeviceFacesHalo: element must be double, float or std::uint32_t");
+
 public:
   using Int3 = pfc::types::Int3;
   using stream_t = typename Ops::stream_t;
@@ -544,8 +561,7 @@ public:
     // above second order. `apps/kobayashi` never hit it only because its
     // stencil is second order and `hw == 1` satisfies the check by accident.
     m_face_types = halo::create_padded_face_types_6(
-        nx, ny, nz, m_halo_width, exchange::detail::get_mpi_type<double>(),
-        m_active);
+        nx, ny, nz, m_halo_width, exchange::detail::get_mpi_type<T>(), m_active);
     m_requests.resize(2 * 6);
 
     m_scratch_elems = 0;
@@ -578,7 +594,7 @@ public:
         if (!m_active[i] || m_face_elems[i] == 0) {
           continue;
         }
-        const std::size_t bytes = m_face_elems[i] * sizeof(double);
+        const std::size_t bytes = m_face_elems[i] * sizeof(T);
         Ops::malloc_host(reinterpret_cast<void **>(&m_h_send[i]), bytes,
                          Ops::malloc_host_send);
         Ops::malloc_host(reinterpret_cast<void **>(&m_h_recv[i]), bytes,
@@ -589,7 +605,7 @@ public:
         if (!m_active[i] || m_neighbors[i] == m_rank || m_face_elems[i] == 0) {
           continue;
         }
-        const std::size_t bytes = m_face_elems[i] * sizeof(double);
+        const std::size_t bytes = m_face_elems[i] * sizeof(T);
         Ops::malloc_dev(reinterpret_cast<void **>(&m_d_send[i]), bytes,
                         Ops::malloc_contig_send);
         Ops::malloc_dev(reinterpret_cast<void **>(&m_d_recv[i]), bytes,
@@ -598,12 +614,12 @@ public:
     }
     if (m_scratch_elems > 0) {
       Ops::malloc_dev(reinterpret_cast<void **>(&m_d_scratch),
-                      m_scratch_elems * sizeof(double), Ops::malloc_scratch);
+                      m_scratch_elems * sizeof(T), Ops::malloc_scratch);
     }
   }
 
-  template <typename T>
-  DeviceFacesHalo(const pfc::data::Field<T, typename Ops::space> &field,
+  template <typename U>
+  DeviceFacesHalo(const pfc::data::Field<U, typename Ops::space> &field,
                   const decomposition::Decomposition &decomp, int rank,
                   MPI_Comm comm,
                   halo::HaloDirectionSet dirs = halo::presets::Axes3D(),
@@ -643,31 +659,28 @@ public:
     m_request_count = 0;
   }
 
-  template <typename T>
   void exchange_halos_device(pfc::data::Field<T, typename Ops::space> &field,
                              stream_t stream = nullptr) {
     exchange_halos_device_impl(field.data(), field.size(), stream);
   }
 
-  void exchange_halos_device(double *d_padded, std::size_t padded_size,
+  void exchange_halos_device(T *d_padded, std::size_t padded_size,
                              stream_t stream = nullptr) {
     exchange_halos_device_impl(d_padded, padded_size, stream);
   }
 
-  template <typename T>
   void start_halos_device(pfc::data::Field<T, typename Ops::space> &field,
                           stream_t stream = nullptr) {
     start_halos_device_impl(field.data(), field.size(), stream);
   }
 
-  template <typename T>
   void complete_halos_device(pfc::data::Field<T, typename Ops::space> &field,
                              stream_t stream = nullptr) {
     complete_halos_device_impl(field.data(), stream);
   }
 
 private:
-  void exchange_halos_device_impl(double *d_padded, std::size_t padded_size,
+  void exchange_halos_device_impl(T *d_padded, std::size_t padded_size,
                                   stream_t stream) {
     const bool perf = Ops::perf_enabled();
     auto &H = Ops::timers();
@@ -687,7 +700,7 @@ private:
                            MPI_Wtime() - t0);
   }
 
-  void start_halos_device_impl(double *d_padded, std::size_t padded_size,
+  void start_halos_device_impl(T *d_padded, std::size_t padded_size,
                                stream_t stream) {
     (void)padded_size;
     const bool perf = Ops::perf_enabled();
@@ -713,7 +726,7 @@ private:
     }
   }
 
-  void complete_halos_device_impl(double *d_padded, stream_t stream) {
+  void complete_halos_device_impl(T *d_padded, stream_t stream) {
     const bool perf = Ops::perf_enabled();
     auto &H = Ops::timers();
     if (m_use_gpu_aware) {
@@ -735,7 +748,7 @@ private:
     }
   }
 
-  void copy_self_neighbor_faces_(double *d_padded, stream_t stream,
+  void copy_self_neighbor_faces_(T *d_padded, stream_t stream,
                                  const char *sync_kind) {
     if (!m_any_self_neighbor) {
       return;
@@ -784,7 +797,7 @@ private:
     m_request_count = static_cast<int>(req_count);
   }
 
-  void post_gpu_aware_contiguous_(double *d_padded, stream_t stream) {
+  void post_gpu_aware_contiguous_(T *d_padded, stream_t stream) {
     std::size_t req_count = 0;
     for (std::size_t i = 0; i < 6; ++i) {
       if (!m_active[i] || m_neighbors[i] == m_rank) {
@@ -793,10 +806,10 @@ private:
       const int tag = m_base_tag + pfc::halo::opposite_slot(static_cast<int>(i));
       const int face_count = pfc::mpi::ensure_mpi_int_count(
           m_face_elems[i], "DeviceFacesHalo contig face");
-      pfc::mpi::throw_on_mpi_error(MPI_Irecv(m_d_recv[i], face_count, MPI_DOUBLE,
-                                             m_neighbors[i], tag, m_comm,
-                                             &m_requests[req_count]),
-                                   "DeviceFacesHalo contig MPI_Irecv");
+      pfc::mpi::throw_on_mpi_error(
+          MPI_Irecv(m_d_recv[i], face_count, exchange::detail::get_mpi_type<T>(),
+                    m_neighbors[i], tag, m_comm, &m_requests[req_count]),
+          "DeviceFacesHalo contig MPI_Irecv");
       ++req_count;
     }
 
@@ -817,16 +830,16 @@ private:
       const int tag = m_base_tag + static_cast<int>(i);
       const int face_count = pfc::mpi::ensure_mpi_int_count(
           m_face_elems[i], "DeviceFacesHalo contig face");
-      pfc::mpi::throw_on_mpi_error(MPI_Isend(m_d_send[i], face_count, MPI_DOUBLE,
-                                             m_neighbors[i], tag, m_comm,
-                                             &m_requests[req_count]),
-                                   "DeviceFacesHalo contig MPI_Isend");
+      pfc::mpi::throw_on_mpi_error(
+          MPI_Isend(m_d_send[i], face_count, exchange::detail::get_mpi_type<T>(),
+                    m_neighbors[i], tag, m_comm, &m_requests[req_count]),
+          "DeviceFacesHalo contig MPI_Isend");
       ++req_count;
     }
     m_request_count = static_cast<int>(req_count);
   }
 
-  void unpack_gpu_aware_contiguous_(double *d_padded, stream_t stream) {
+  void unpack_gpu_aware_contiguous_(T *d_padded, stream_t stream) {
     for (std::size_t i = 0; i < 6; ++i) {
       if (!m_active[i] || m_neighbors[i] == m_rank) {
         continue;
@@ -837,7 +850,7 @@ private:
     }
   }
 
-  void post_packed_fallback_(double *d_padded, stream_t stream) {
+  void post_packed_fallback_(T *d_padded, stream_t stream) {
     const bool perf = Ops::perf_enabled();
     auto &H = Ops::timers();
 
@@ -849,10 +862,10 @@ private:
       const int tag = m_base_tag + pfc::halo::opposite_slot(static_cast<int>(i));
       const int face_count = pfc::mpi::ensure_mpi_int_count(
           m_face_elems[i], "DeviceFacesHalo packed face");
-      pfc::mpi::throw_on_mpi_error(MPI_Irecv(m_h_recv[i], face_count, MPI_DOUBLE,
-                                             m_neighbors[i], tag, m_comm,
-                                             &m_requests[req_count]),
-                                   "DeviceFacesHalo packed-fallback MPI_Irecv");
+      pfc::mpi::throw_on_mpi_error(
+          MPI_Irecv(m_h_recv[i], face_count, exchange::detail::get_mpi_type<T>(),
+                    m_neighbors[i], tag, m_comm, &m_requests[req_count]),
+          "DeviceFacesHalo packed-fallback MPI_Irecv");
       ++req_count;
     }
 
@@ -864,9 +877,8 @@ private:
       const auto &send = m_face_specs[i].first;
       Ops::pack_face(m_d_scratch, d_padded, send.ox, send.oy, send.oz, send.sx,
                      send.sy, send.sz, m_nxp, m_nyp, m_nzp, stream);
-      Ops::memcpy_async_d2h(m_h_send[i], m_d_scratch,
-                            m_face_elems[i] * sizeof(double), stream,
-                            Ops::memcpy_d2h);
+      Ops::memcpy_async_d2h(m_h_send[i], m_d_scratch, m_face_elems[i] * sizeof(T),
+                            stream, Ops::memcpy_d2h);
       Ops::stream_sync(stream, Ops::sync_pack);
       if (perf) {
         H.packed_face_pack_d2h_sync += MPI_Wtime() - t_face;
@@ -875,16 +887,16 @@ private:
       const int tag = m_base_tag + static_cast<int>(i);
       const int face_count = pfc::mpi::ensure_mpi_int_count(
           m_face_elems[i], "DeviceFacesHalo packed face");
-      pfc::mpi::throw_on_mpi_error(MPI_Isend(m_h_send[i], face_count, MPI_DOUBLE,
-                                             m_neighbors[i], tag, m_comm,
-                                             &m_requests[req_count]),
-                                   "DeviceFacesHalo packed-fallback MPI_Isend");
+      pfc::mpi::throw_on_mpi_error(
+          MPI_Isend(m_h_send[i], face_count, exchange::detail::get_mpi_type<T>(),
+                    m_neighbors[i], tag, m_comm, &m_requests[req_count]),
+          "DeviceFacesHalo packed-fallback MPI_Isend");
       ++req_count;
     }
     m_request_count = static_cast<int>(req_count);
   }
 
-  void unpack_packed_fallback_(double *d_padded, stream_t stream) {
+  void unpack_packed_fallback_(T *d_padded, stream_t stream) {
     const bool perf = Ops::perf_enabled();
     auto &H = Ops::timers();
     for (std::size_t i = 0; i < 6; ++i) {
@@ -892,9 +904,8 @@ private:
         continue;
       }
       const double t_face = perf ? MPI_Wtime() : 0.0;
-      Ops::memcpy_async_h2d(m_d_scratch, m_h_recv[i],
-                            m_face_elems[i] * sizeof(double), stream,
-                            Ops::memcpy_h2d);
+      Ops::memcpy_async_h2d(m_d_scratch, m_h_recv[i], m_face_elems[i] * sizeof(T),
+                            stream, Ops::memcpy_h2d);
       Ops::stream_sync(stream, Ops::sync_unpack);
 
       const auto &recv = m_face_specs[i].second;
@@ -962,11 +973,11 @@ private:
   bool m_use_gpu_aware = false;
   bool m_use_contiguous = false;
   bool m_any_self_neighbor = false;
-  std::array<double *, 6> m_h_send{};
-  std::array<double *, 6> m_h_recv{};
-  std::array<double *, 6> m_d_send{};
-  std::array<double *, 6> m_d_recv{};
-  double *m_d_scratch = nullptr;
+  std::array<T *, 6> m_h_send{};
+  std::array<T *, 6> m_h_recv{};
+  std::array<T *, 6> m_d_send{};
+  std::array<T *, 6> m_d_recv{};
+  T *m_d_scratch = nullptr;
 };
 
 } // namespace pfc::gpu

@@ -13,12 +13,14 @@
  * Symbols stay `pfc::cuda::detail::launch_padded_pack_face` /
  * `pfc::hip::detail::launch_padded_pack_face` (and unpack twins), plus
  * `launch_padded_self_copy_faces` (fused self-neighbor copy, both faces of one
- * axis).
+ * axis). The kernels are bitwise element copies, explicitly instantiated at the
+ * end of this file for every `pfc::gpu::is_halo_element_v` type.
  *
  * @see runtime/gpu/padded_device_halo_exchange_gpu.hpp
  */
 
 #include <cstddef>
+#include <cstdint>
 #include <stdexcept>
 #include <string>
 
@@ -35,9 +37,10 @@ constexpr const char *kGpuKind = "hip";
 using ::pfc::gpu::detail::PaddedSelfCopy;
 #endif
 
-__global__ void padded_pack_face_kernel(double *dst_contig, const double *pad,
-                                        int ox, int oy, int oz, int sx, int sy,
-                                        int sz, int nxp, int nyp, int nzp) {
+template <typename T>
+__global__ void padded_pack_face_kernel(T *dst_contig, const T *pad, int ox, int oy,
+                                        int oz, int sx, int sy, int sz, int nxp,
+                                        int nyp, int nzp) {
   (void)nzp;
   const int n = sx * sy * sz;
   const int tid = static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x);
@@ -59,9 +62,10 @@ __global__ void padded_pack_face_kernel(double *dst_contig, const double *pad,
   dst_contig[tid] = pad[lin];
 }
 
-__global__ void padded_unpack_face_kernel(double *pad, const double *src_contig,
-                                          int ox, int oy, int oz, int sx, int sy,
-                                          int sz, int nxp, int nyp, int nzp) {
+template <typename T>
+__global__ void padded_unpack_face_kernel(T *pad, const T *src_contig, int ox,
+                                          int oy, int oz, int sx, int sy, int sz,
+                                          int nxp, int nyp, int nzp) {
   (void)nzp;
   const int n = sx * sy * sz;
   const int tid = static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x);
@@ -83,9 +87,10 @@ __global__ void padded_unpack_face_kernel(double *pad, const double *src_contig,
   pad[lin] = src_contig[tid];
 }
 
-void launch_padded_pack_face(double *d_dst_contig, const double *d_pad, int ox,
-                             int oy, int oz, int sx, int sy, int sz, int nxp,
-                             int nyp, int nzp, ::pfc::gpuStream_t stream) {
+template <typename T>
+void launch_padded_pack_face(T *d_dst_contig, const T *d_pad, int ox, int oy, int oz,
+                             int sx, int sy, int sz, int nxp, int nyp, int nzp,
+                             ::pfc::gpuStream_t stream) {
   const int n = sx * sy * sz;
   if (n <= 0) {
     return;
@@ -102,9 +107,10 @@ void launch_padded_pack_face(double *d_dst_contig, const double *d_pad, int ox,
   }
 }
 
-void launch_padded_unpack_face(double *d_pad, const double *d_src_contig, int ox,
-                               int oy, int oz, int sx, int sy, int sz, int nxp,
-                               int nyp, int nzp, ::pfc::gpuStream_t stream) {
+template <typename T>
+void launch_padded_unpack_face(T *d_pad, const T *d_src_contig, int ox, int oy,
+                               int oz, int sx, int sy, int sz, int nxp, int nyp,
+                               int nzp, ::pfc::gpuStream_t stream) {
   const int n = sx * sy * sz;
   if (n <= 0) {
     return;
@@ -124,7 +130,8 @@ void launch_padded_unpack_face(double *d_pad, const double *d_src_contig, int ox
 /// Self-neighbor copy of up to `kMaxSelfCopyFields` padded buffers and two
 /// slab pairs (one axis, both faces) in one launch: pad[dst] = pad[src].
 /// Source (interior strip) and destination (opposite halo strip) never overlap.
-__global__ void padded_self_copy_faces_kernel(PaddedSelfCopy c) {
+template <typename T>
+__global__ void padded_self_copy_faces_kernel(PaddedSelfCopy<T> c) {
   const long long v0 =
       static_cast<long long>(c.ext[0][0]) * c.ext[0][1] * c.ext[0][2];
   const long long v1 =
@@ -150,12 +157,13 @@ __global__ void padded_self_copy_faces_kernel(PaddedSelfCopy c) {
     const std::size_t dst = static_cast<std::size_t>(c.dst[s][0] + ix) +
                             static_cast<std::size_t>(c.dst[s][1] + iy) * nxp +
                             static_cast<std::size_t>(c.dst[s][2] + iz) * nxy;
-    double *pad = c.pads[f];
+    T *pad = c.pads[f];
     pad[dst] = pad[src];
   }
 }
 
-void launch_padded_self_copy_faces(const PaddedSelfCopy &c,
+template <typename T>
+void launch_padded_self_copy_faces(const PaddedSelfCopy<T> &c,
                                    ::pfc::gpuStream_t stream) {
   long long n = 0;
   for (int s = 0; s < c.nslab; ++s) {
@@ -176,5 +184,19 @@ void launch_padded_self_copy_faces(const PaddedSelfCopy &c,
                              ::pfc::gpuGetErrorString(err));
   }
 }
+
+#define OPENPFC_PADDED_HALO_FACES_INSTANTIATE(T)                                    \
+  template void launch_padded_pack_face<T>(T *, const T *, int, int, int, int, int, \
+                                           int, int, int, int, ::pfc::gpuStream_t); \
+  template void launch_padded_unpack_face<T>(T *, const T *, int, int, int, int,    \
+                                             int, int, int, int, int,               \
+                                             ::pfc::gpuStream_t);                   \
+  template void launch_padded_self_copy_faces<T>(const PaddedSelfCopy<T> &,         \
+                                                 ::pfc::gpuStream_t);
+
+OPENPFC_PADDED_HALO_FACES_INSTANTIATE(double)
+OPENPFC_PADDED_HALO_FACES_INSTANTIATE(float)
+OPENPFC_PADDED_HALO_FACES_INSTANTIATE(std::uint32_t)
+#undef OPENPFC_PADDED_HALO_FACES_INSTANTIATE
 
 } // namespace pfc::{cuda,hip}::detail

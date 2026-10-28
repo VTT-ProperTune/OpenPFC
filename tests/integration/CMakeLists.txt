@@ -9,6 +9,7 @@ target_sources(openpfc-tests PRIVATE
   scenarios/parallel_scaling/test_halo_exchange_driver.cpp
   scenarios/parallel_scaling/test_full_padded_device_halo.cpp
   scenarios/parallel_scaling/test_full_padded_device_halo_hip.cpp
+  scenarios/parallel_scaling/test_device_halo_element_types.cpp
   scenarios/parallel_scaling/test_full_halo_fd6.cpp
   scenarios/parallel_scaling/test_padded_device_halo_self_wrap.cpp
   scenarios/parallel_scaling/test_comm_halo_exchange.cpp

@@ -13,8 +13,9 @@
  * facade. Faces supports split-phase `start()` / `finish()` (and optional
  * `progress()` / `MPI_Testall`) so interior stencil work can run while
  * MPI is in flight. Full stays blocking because each widening pass must
- * complete before the next. `persistent` still fails closed. Pack kernels
- * are double-only.
+ * complete before the next. `persistent` still fails closed. Elements are
+ * `double`, `float` or `std::uint32_t` (`gpu::is_halo_element_v`); halos are
+ * bitwise copies, so integer labels arrive exactly.
  *
  * Faces dependency graph (GPU-aware contiguous path):
  * 1. `start()`: stream-sync so `u` is ready; copy self-periodic faces;
@@ -64,9 +65,9 @@ namespace detail {
  */
 template <typename Space, typename FaceEx, typename FullEx, typename T>
 class DeviceHaloExchange {
-  static_assert(std::is_same_v<T, double>,
-                "pfc::comm::HaloExchange on device is double-only "
-                "(existing pack/unpack kernels)");
+  static_assert(gpu::is_halo_element_v<T>,
+                "pfc::comm::HaloExchange on device supports double, float and "
+                "std::uint32_t elements");
 
 public:
   using FieldT = data::Field<T, Space>;
@@ -276,12 +277,13 @@ private:
 #if defined(OpenPFC_ENABLE_CUDA)
 template <typename T>
 class HaloExchange<CUDASpace, T>
-    : public detail::DeviceHaloExchange<CUDASpace,
-                                        gpu::DeviceFacesHalo<cuda::CUDAHaloOps>,
-                                        gpu::DeviceFullHalo<cuda::CUDAHaloOps>, T> {
+    : public detail::DeviceHaloExchange<
+          CUDASpace, gpu::DeviceFacesHalo<cuda::CUDAHaloOps, T>,
+          gpu::DeviceFullHalo<cuda::CUDAHaloOps, T>, T> {
   using Base =
-      detail::DeviceHaloExchange<CUDASpace, gpu::DeviceFacesHalo<cuda::CUDAHaloOps>,
-                                 gpu::DeviceFullHalo<cuda::CUDAHaloOps>, T>;
+      detail::DeviceHaloExchange<CUDASpace,
+                                 gpu::DeviceFacesHalo<cuda::CUDAHaloOps, T>,
+                                 gpu::DeviceFullHalo<cuda::CUDAHaloOps, T>, T>;
 
 public:
   using Base::Base;
@@ -292,11 +294,11 @@ public:
 template <typename T>
 class HaloExchange<HIPSpace, T>
     : public detail::DeviceHaloExchange<HIPSpace,
-                                        gpu::DeviceFacesHalo<hip::HIPHaloOps>,
-                                        gpu::DeviceFullHalo<hip::HIPHaloOps>, T> {
+                                        gpu::DeviceFacesHalo<hip::HIPHaloOps, T>,
+                                        gpu::DeviceFullHalo<hip::HIPHaloOps, T>, T> {
   using Base =
-      detail::DeviceHaloExchange<HIPSpace, gpu::DeviceFacesHalo<hip::HIPHaloOps>,
-                                 gpu::DeviceFullHalo<hip::HIPHaloOps>, T>;
+      detail::DeviceHaloExchange<HIPSpace, gpu::DeviceFacesHalo<hip::HIPHaloOps, T>,
+                                 gpu::DeviceFullHalo<hip::HIPHaloOps, T>, T>;
 
 public:
   using Base::Base;
