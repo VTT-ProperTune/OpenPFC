@@ -106,7 +106,10 @@ namespace pfc::gradient {
  *           members of `G` to populate. Mixed second derivatives require
  *           explicit Full connectivity; face-only callers remain unchanged.
  */
-template <class G> class FDGradient {
+template <class G, class T = double> class FDGradient {
+  static_assert(std::is_same_v<T, double> || std::is_same_v<T, float>,
+                "FDGradient: field values must be double or float");
+
 public:
   /**
    * @brief Construct an FD point evaluator over a contiguous brick.
@@ -145,7 +148,7 @@ public:
    *         half-width for those members.
    */
   FDGradient(
-      const double *core, int nx, int ny, int nz, double dx, double dy, double dz,
+      const T *core, int nx, int ny, int nz, double dx, double dy, double dz,
       int halo_width, int order = 2,
       std::function<void()> halo_prepare_callback = {},
       pfc::comm::HaloConnectivity connectivity = pfc::comm::HaloConnectivity::Faces)
@@ -159,7 +162,7 @@ public:
                    std::move(halo_prepare_callback), connectivity) {}
 
   /**
-   * @brief Bind the evaluator to a padded `pfc::data::Field<double>`
+   * @brief Bind the evaluator to a padded `pfc::data::Field<T>`
    *        (`storage_halo() > 0`).
    *
    * Pre-offsets the stored core pointer to the field's **owned** `(0, 0, 0)`
@@ -176,7 +179,7 @@ public:
    *         `pfc::field::create(Field)` for the unpadded face-halo layout).
    */
   explicit FDGradient(
-      const pfc::data::Field<double> &u, int order = 2,
+      const pfc::data::Field<T> &u, int order = 2,
       std::function<void()> halo_prepare_callback = {},
       pfc::comm::HaloConnectivity connectivity = pfc::comm::HaloConnectivity::Faces)
       : FDGradient(field_owned_origin_(require_padded_field_(u)), u.local_size()[0],
@@ -307,8 +310,8 @@ public:
   }
 
 private:
-  static const pfc::data::Field<double> &
-  require_padded_field_(const pfc::data::Field<double> &u) {
+  static const pfc::data::Field<T> &
+  require_padded_field_(const pfc::data::Field<T> &u) {
     if (u.storage_halo() <= 0) {
       throw std::invalid_argument(
           "pfc::gradient::FDGradient(Field): storage_halo must be > 0 for the "
@@ -318,8 +321,7 @@ private:
     return u;
   }
 
-  static const double *
-  field_owned_origin_(const pfc::data::Field<double> &u) noexcept {
+  static const T *field_owned_origin_(const pfc::data::Field<T> &u) noexcept {
     const std::size_t hw = static_cast<std::size_t>(u.storage_halo());
     const std::size_t nxp = static_cast<std::size_t>(u.padded_extent(0));
     const std::size_t nyp = static_cast<std::size_t>(u.padded_extent(1));
@@ -327,7 +329,7 @@ private:
   }
 
   /// Common private constructor — every public ctor delegates here.
-  FDGradient(const double *core, int nx, int ny, int nz, std::ptrdiff_t sy,
+  FDGradient(const T *core, int nx, int ny, int nz, std::ptrdiff_t sy,
              std::ptrdiff_t sxy, double dx, double dy, double dz, int imin, int imax,
              int jmin, int jmax, int kmin, int kmax, int halo_width, int order,
              std::function<void()> halo_prepare_callback,
@@ -375,9 +377,9 @@ private:
       }
       m_d2_stencil = st2;
       const double inv_den2 = 1.0 / static_cast<double>(st2.denom);
-      m_sx2 = inv_dx2 * inv_den2;
-      m_sy2 = inv_dy2 * inv_den2;
-      m_sz2 = inv_dz2 * inv_den2;
+      m_sx2 = static_cast<T>(inv_dx2 * inv_den2);
+      m_sy2 = static_cast<T>(inv_dy2 * inv_den2);
+      m_sz2 = static_cast<T>(inv_dz2 * inv_den2);
       if (st2.half_width > required_half_width) {
         required_half_width = st2.half_width;
       }
@@ -394,9 +396,9 @@ private:
       }
       m_d1_stencil = st1;
       const double inv_den1 = 1.0 / static_cast<double>(st1.denom);
-      m_sx1 = inv_dx * inv_den1;
-      m_sy1 = inv_dy * inv_den1;
-      m_sz1 = inv_dz * inv_den1;
+      m_sx1 = static_cast<T>(inv_dx * inv_den1);
+      m_sy1 = static_cast<T>(inv_dy * inv_den1);
+      m_sz1 = static_cast<T>(inv_dz * inv_den1);
       if (st1.half_width > required_half_width) {
         required_half_width = st1.half_width;
       }
@@ -425,7 +427,7 @@ private:
     }
   }
 
-  const double *m_core{nullptr};
+  const T *m_core{nullptr};
   int m_nx{0};
   int m_ny{0};
   int m_nz{0};
@@ -437,15 +439,15 @@ private:
   int m_hw{0};
 
   // D2 (xx, yy, zz) per-axis combined scale `1 / (h_i^2 * denom_2)`.
-  double m_sx2{0.0};
-  double m_sy2{0.0};
-  double m_sz2{0.0};
+  T m_sx2{0.0};
+  T m_sy2{0.0};
+  T m_sz2{0.0};
   pfc::field::fd::EvenCentralD2View m_d2_stencil{};
 
   // D1 (x, y, z) per-axis combined scale `1 / (h_i * denom_1)`.
-  double m_sx1{0.0};
-  double m_sy1{0.0};
-  double m_sz1{0.0};
+  T m_sx1{0.0};
+  T m_sy1{0.0};
+  T m_sz1{0.0};
   pfc::field::fd::EvenCentralD1View m_d1_stencil{};
   std::function<void()> m_halo_prepare_callback{};
 };
@@ -496,7 +498,8 @@ namespace pfc::field {
  * compile while users migrate to the new name. New code should use
  * `pfc::gradient::FDGradient<G>` directly.
  */
-template <class G> using FDGradient = pfc::gradient::FDGradient<G>;
+template <class G, class T = double>
+using FDGradient = pfc::gradient::FDGradient<G, T>;
 
 /**
  * @brief Free-function factory: build an `FDGradient<G>` from a `pfc::data::Field`.
@@ -549,19 +552,19 @@ template <class G> using FDGradient = pfc::gradient::FDGradient<G>;
  *         `u.halo_width()` is strictly less than the required stencil
  *         half-width.
  */
-template <class G>
-[[nodiscard]] inline FDGradient<G> create(
-    const pfc::data::Field<double> &u, int order = 2,
+template <class G, class T>
+[[nodiscard]] inline FDGradient<G, T> create(
+    const pfc::data::Field<T> &u, int order = 2,
     pfc::comm::HaloConnectivity connectivity = pfc::comm::HaloConnectivity::Faces) {
   // Unpadded Field (storage_halo==0): tightly packed core + iteration halo.
   // Padded Field (storage_halo>0): owned origin + padded strides.
   if (u.storage_halo() == 0) {
     const auto sz = u.local_size();
     const auto sp = u.spacing();
-    return FDGradient<G>(u.data(), sz[0], sz[1], sz[2], sp[0], sp[1], sp[2],
-                         u.halo_width(), order, {}, connectivity);
+    return FDGradient<G, T>(u.data(), sz[0], sz[1], sz[2], sp[0], sp[1], sp[2],
+                            u.halo_width(), order, {}, connectivity);
   }
-  return FDGradient<G>(u, order, {}, connectivity);
+  return FDGradient<G, T>(u, order, {}, connectivity);
 }
 
 } // namespace pfc::field

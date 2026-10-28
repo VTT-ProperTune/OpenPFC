@@ -84,8 +84,8 @@ namespace detail {
  */
 template <class T> struct is_fd_gradient : std::false_type {};
 
-template <class G>
-struct is_fd_gradient<pfc::gradient::FDGradient<G>> : std::true_type {};
+template <class G, class T>
+struct is_fd_gradient<pfc::gradient::FDGradient<G, T>> : std::true_type {};
 
 /**
  * @brief Type trait to detect spectral gradient evaluator types.

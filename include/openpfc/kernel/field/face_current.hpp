@@ -243,11 +243,13 @@ face_divergence(Flux flux, int nx, int ny, int nz, std::array<bool, 3> active,
           accumulation};
 }
 
-/// Overwrite @p rhs with `+div G` of the three face arrays.
-inline void face_divergence(std::span<const double> gx, std::span<const double> gy,
-                            std::span<const double> gz, std::span<double> rhs,
-                            int nx, int ny, int nz, std::array<bool, 3> active,
-                            double dx, double dy, double dz) {
+namespace detail {
+
+template <class T>
+void face_divergence_spans(std::span<const T> gx, std::span<const T> gy,
+                           std::span<const T> gz, std::span<T> rhs, int nx, int ny,
+                           int nz, std::array<bool, 3> active, double dx, double dy,
+                           double dz) {
   check_face_extents(nx, ny, nz);
   const std::size_t n = n_cells(nx, ny, nz);
   if (rhs.size() != n) {
@@ -272,13 +274,13 @@ inline void face_divergence(std::span<const double> gx, std::span<const double> 
     throw std::invalid_argument("pfc::field::fd::face_divergence: dy");
   if (use_z && !(dz > 0.0))
     throw std::invalid_argument("pfc::field::fd::face_divergence: dz");
-  const double invx = use_x ? 1.0 / dx : 0.0;
-  const double invy = use_y ? 1.0 / dy : 0.0;
-  const double invz = use_z ? 1.0 / dz : 0.0;
+  const T invx = use_x ? static_cast<T>(1.0 / dx) : T{0};
+  const T invy = use_y ? static_cast<T>(1.0 / dy) : T{0};
+  const T invz = use_z ? static_cast<T>(1.0 / dz) : T{0};
   for (int k = 0; k < nz; ++k) {
     for (int j = 0; j < ny; ++j) {
       for (int i = 0; i < nx; ++i) {
-        double div = 0.0;
+        T div{0};
         if (use_x) {
           div += (gx[xface_index(nx, ny, i + 1, j, k)] -
                   gx[xface_index(nx, ny, i, j, k)]) *
@@ -298,6 +300,26 @@ inline void face_divergence(std::span<const double> gx, std::span<const double> 
       }
     }
   }
+}
+
+} // namespace detail
+
+/// Overwrite @p rhs with `+div G` of the three face arrays. Arithmetic is in
+/// the array type; the `float` overload rounds `1 / dx` to `float` once.
+inline void face_divergence(std::span<const double> gx, std::span<const double> gy,
+                            std::span<const double> gz, std::span<double> rhs,
+                            int nx, int ny, int nz, std::array<bool, 3> active,
+                            double dx, double dy, double dz) {
+  detail::face_divergence_spans<double>(gx, gy, gz, rhs, nx, ny, nz, active, dx, dy,
+                                        dz);
+}
+
+inline void face_divergence(std::span<const float> gx, std::span<const float> gy,
+                            std::span<const float> gz, std::span<float> rhs, int nx,
+                            int ny, int nz, std::array<bool, 3> active, double dx,
+                            double dy, double dz) {
+  detail::face_divergence_spans<float>(gx, gy, gz, rhs, nx, ny, nz, active, dx, dy,
+                                       dz);
 }
 
 /// Surface integral of `G · n_out` over the owned-box boundary.
@@ -374,20 +396,12 @@ inline void apply_walls(std::span<double> gx, std::span<double> gy,
   }
 }
 
-/**
- * Fill every face from @p flux, then apply @p walls.
- *
- * `flux(axis, i, j, k)` returns the +e component of G on the face whose
- * lower-index cell is `(i, j, k)`. `axis` is 0, 1 or 2. The lower index
- * along that axis is in `[-1, n)` (the −e wall is `−1`). Zero and
- * Prescribed walls skip the functor.
- *
- * Inactive axes are not filled.
- */
-template <class Flux>
-void fill_faces(Flux &&flux, std::span<double> gx, std::span<double> gy,
-                std::span<double> gz, int nx, int ny, int nz,
-                std::array<bool, 3> active, const Walls &walls) {
+namespace detail {
+
+template <class T, class Flux>
+void fill_faces_spans(Flux &flux, std::span<T> gx, std::span<T> gy, std::span<T> gz,
+                      int nx, int ny, int nz, std::array<bool, 3> active,
+                      const Walls &walls) {
   check_face_extents(nx, ny, nz);
   auto skip = [](int face, int n, const Wall &lo, const Wall &hi) -> const Wall * {
     if (face == 0 && lo.policy != WallPolicy::Model) return &lo;
@@ -402,8 +416,9 @@ void fill_faces(Flux &&flux, std::span<double> gx, std::span<double> gy,
         for (int i = 0; i <= nx; ++i) {
           const Wall *w = skip(i, nx, walls.xm, walls.xp);
           const std::size_t idx = xface_index(nx, ny, i, j, k);
-          gx[idx] = w ? (w->policy == WallPolicy::Zero ? 0.0 : w->value)
-                      : flux(0, i - 1, j, k);
+          gx[idx] =
+              w ? static_cast<T>(w->policy == WallPolicy::Zero ? 0.0 : w->value)
+                : static_cast<T>(flux(0, i - 1, j, k));
         }
   }
   if (active[1]) {
@@ -414,8 +429,9 @@ void fill_faces(Flux &&flux, std::span<double> gx, std::span<double> gy,
         for (int i = 0; i < nx; ++i) {
           const Wall *w = skip(j, ny, walls.ym, walls.yp);
           const std::size_t idx = yface_index(nx, ny, i, j, k);
-          gy[idx] = w ? (w->policy == WallPolicy::Zero ? 0.0 : w->value)
-                      : flux(1, i, j - 1, k);
+          gy[idx] =
+              w ? static_cast<T>(w->policy == WallPolicy::Zero ? 0.0 : w->value)
+                : static_cast<T>(flux(1, i, j - 1, k));
         }
   }
   if (active[2]) {
@@ -426,10 +442,38 @@ void fill_faces(Flux &&flux, std::span<double> gx, std::span<double> gy,
         for (int i = 0; i < nx; ++i) {
           const Wall *w = skip(k, nz, walls.zm, walls.zp);
           const std::size_t idx = zface_index(nx, ny, i, j, k);
-          gz[idx] = w ? (w->policy == WallPolicy::Zero ? 0.0 : w->value)
-                      : flux(2, i, j, k - 1);
+          gz[idx] =
+              w ? static_cast<T>(w->policy == WallPolicy::Zero ? 0.0 : w->value)
+                : static_cast<T>(flux(2, i, j, k - 1));
         }
   }
+}
+
+} // namespace detail
+
+/**
+ * Fill every face from @p flux, then apply @p walls.
+ *
+ * `flux(axis, i, j, k)` returns the +e component of G on the face whose
+ * lower-index cell is `(i, j, k)`. `axis` is 0, 1 or 2. The lower index
+ * along that axis is in `[-1, n)` (the −e wall is `−1`). Zero and
+ * Prescribed walls skip the functor.
+ *
+ * Inactive axes are not filled. Face arrays are `double` or `float`; a
+ * `float` array stores the rounded flux and wall values.
+ */
+template <class Flux>
+void fill_faces(Flux &&flux, std::span<double> gx, std::span<double> gy,
+                std::span<double> gz, int nx, int ny, int nz,
+                std::array<bool, 3> active, const Walls &walls) {
+  detail::fill_faces_spans<double>(flux, gx, gy, gz, nx, ny, nz, active, walls);
+}
+
+template <class Flux>
+void fill_faces(Flux &&flux, std::span<float> gx, std::span<float> gy,
+                std::span<float> gz, int nx, int ny, int nz,
+                std::array<bool, 3> active, const Walls &walls) {
+  detail::fill_faces_spans<float>(flux, gx, gy, gz, nx, ny, nz, active, walls);
 }
 
 } // namespace pfc::field::fd

@@ -12,7 +12,9 @@
  * `SparseExchange` (heat3d / wave2d). This stack is the CPU twin of
  * `FDGPUStack`:
  *
- *     Domain → Decomposition → Field<double, HostSpace> → HaloExchange
+ *     Domain → Decomposition → Field<T, HostSpace> → HaloExchange
+ *
+ * `T` is `double` (`FDPaddedCPUStack`) or `float`.
  *
  * Storage halo equals the constructor `halo_width` (Kobayashi uses 1).
  * Extra fields on the same subdomain use `make_field()`; extra halo groups
@@ -22,6 +24,7 @@
  */
 
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -35,15 +38,19 @@
 
 namespace pfc::sim::stacks {
 
-class FDPaddedCPUStack {
-public:
-  using field_type = data::Field<double, HostSpace>;
-  using exchange_type = comm::HaloExchange<HostSpace, double>;
+template <class T = double> class BasicFDPaddedCPUStack {
+  static_assert(std::is_same_v<T, double> || std::is_same_v<T, float>,
+                "FDPaddedCPUStack: field values must be double or float");
 
-  FDPaddedCPUStack(const FDPaddedCPUStack &) = delete;
-  FDPaddedCPUStack &operator=(const FDPaddedCPUStack &) = delete;
-  FDPaddedCPUStack(FDPaddedCPUStack &&) = delete;
-  FDPaddedCPUStack &operator=(FDPaddedCPUStack &&) = delete;
+public:
+  using value_type = T;
+  using field_type = data::Field<T, HostSpace>;
+  using exchange_type = comm::HaloExchange<HostSpace, T>;
+
+  BasicFDPaddedCPUStack(const BasicFDPaddedCPUStack &) = delete;
+  BasicFDPaddedCPUStack &operator=(const BasicFDPaddedCPUStack &) = delete;
+  BasicFDPaddedCPUStack(BasicFDPaddedCPUStack &&) = delete;
+  BasicFDPaddedCPUStack &operator=(BasicFDPaddedCPUStack &&) = delete;
 
   /**
    * @param domain      Global Cartesian domain.
@@ -53,9 +60,9 @@ public:
    * @param comm        Communicator for halo exchange.
    * @param opt         Halo knobs (`Axes2D()` for nz=1 slabs).
    */
-  explicit FDPaddedCPUStack(pfc::Domain domain, int halo_width, int rank, int nproc,
-                            MPI_Comm comm = MPI_COMM_WORLD,
-                            comm::HaloExchangeOptions opt = {})
+  explicit BasicFDPaddedCPUStack(pfc::Domain domain, int halo_width, int rank,
+                                 int nproc, MPI_Comm comm = MPI_COMM_WORLD,
+                                 comm::HaloExchangeOptions opt = {})
       : m_domain(std::move(domain)),
         m_decomp(pfc::decomposition::create(m_domain, nproc)),
         m_u(m_domain, pfc::decomposition::local_box(m_decomp, rank),
@@ -120,5 +127,7 @@ private:
   int m_nproc{1};
   MPI_Comm m_comm{MPI_COMM_WORLD};
 };
+
+using FDPaddedCPUStack = BasicFDPaddedCPUStack<double>;
 
 } // namespace pfc::sim::stacks

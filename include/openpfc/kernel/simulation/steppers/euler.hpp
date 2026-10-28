@@ -603,14 +603,21 @@ template <class... Ts, class Eval, class Model>
  * `for_each_interior`'s OpenMP loop still terminates the process. That is
  * the existing loop contract, not a new one.
  *
- * `du` is allocated once, at `field.size()`, and is not resized by `step`.
+ * `du` is allocated once, at `field.size()`, in `Scalar` (`double` or
+ * `float`), and is not resized by `step`. The update is `field += dt * du`
+ * with the usual arithmetic conversions: a `float` field with `double` rates
+ * is updated in `double` and rounded once.
  * Cells the right-hand side does not overwrite keep the previous rate.
  * `eval.idx(i, j, k)` must be `Field::idx(i, j, k)` so the scatter and the
  * owned update name the same cell. `dt` must be finite and positive.
  */
-template <class Rhs, std::size_t N> class OwnedEulerStepper {
+template <class Rhs, std::size_t N, class Scalar = double> class OwnedEulerStepper {
+  static_assert(std::is_same_v<Scalar, double> || std::is_same_v<Scalar, float>,
+                "OwnedEulerStepper: rate storage must be double or float");
+
 public:
   static constexpr std::size_t field_count = N;
+  using value_type = Scalar;
 
   OwnedEulerStepper(double dt, std::array<std::size_t, N> sizes, Rhs rhs)
       : m_dt(dt), m_sizes(sizes), m_rhs(std::move(rhs)) {
@@ -623,7 +630,7 @@ public:
         throw std::invalid_argument(
             "OwnedEulerStepper: field size must be positive");
       }
-      m_du[i].assign(sizes[i], 0.0);
+      m_du[i].assign(sizes[i], Scalar{0});
     }
   }
 
@@ -632,7 +639,7 @@ public:
   /// Bytes of method-owned `du` storage. Constant across `step` calls.
   [[nodiscard]] std::size_t workspace_bytes() const noexcept {
     std::size_t n = 0;
-    for (const auto &du : m_du) n += du.size() * sizeof(double);
+    for (const auto &du : m_du) n += du.size() * sizeof(Scalar);
     return n;
   }
 
@@ -665,7 +672,7 @@ private:
     (add_one(fields, m_du[I]), ...);
   }
 
-  template <class F> void add_one(F &field, const std::vector<double> &du) const {
+  template <class F> void add_one(F &field, const std::vector<Scalar> &du) const {
     const auto n = field.local_size();
     for (int k = 0; k < n[2]; ++k) {
       for (int j = 0; j < n[1]; ++j) {
@@ -678,7 +685,7 @@ private:
 
   double m_dt{0.0};
   std::array<std::size_t, N> m_sizes{};
-  std::array<std::vector<double>, N> m_du{};
+  std::array<std::vector<Scalar>, N> m_du{};
   Rhs m_rhs;
 };
 

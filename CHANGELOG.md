@@ -7,6 +7,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Accept `float` as well as `double` in the host padded FD services:
+  `BasicFDPaddedCPUStack<T>` (`FDPaddedCPUStack` stays `double`),
+  `FDGradient<G, T>` and `create<G>(Field<T>)`, the span forms of
+  `fill_faces` and `face_divergence`, and `OwnedEulerStepper<Rhs, N, Scalar>`.
+  The `double` path is unchanged.
+
 - Exchange `float` and `std::uint32_t` device fields through
   `pfc::comm::HaloExchange<CUDASpace|HIPSpace, T>` (Faces and Full, all
   transports), alongside `double`. Integer halos are exact bitwise copies;
