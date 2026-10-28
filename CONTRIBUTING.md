@@ -5,28 +5,40 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Contributing to OpenPFC
 
-> Process rules come from the latest approved
-> [OodiHandbook](https://github.com/ahojukka5/OodiHandbook) tag (AUTH-007).
-> Start with its `guides/local-development.qmd` and `guides/contributing.qmd`.
-> This file adds only this repository's facts (ENG-001, ENG-028).
+> Exception to ENG-028 (owner approval,
+> [#767](https://github.com/ahojukka5/OpenPFC/issues/767)): OpenPFC is public,
+> so this file is self-contained for contributors who cannot open the private
+> OodiHandbook. Agents also follow [`AGENTS.md`](AGENTS.md) and the Handbook.
 
-Commits, history and review follow ENG-005, ENG-006, ENG-008 and ENG-018
-(rebase-merge, never squash); branches follow ENG-026. Build, test and CI
-details are in [`AGENTS.md`](AGENTS.md); guides start at
-[`docs/README.md`](docs/README.md). Bugs and features go to
-[GitHub Issues](https://github.com/ahojukka5/OpenPFC/issues).
+Thank you for helping. Bugs and feature ideas go to
+[GitHub Issues](https://github.com/ahojukka5/OpenPFC/issues); start a change
+from an issue so its purpose is agreed first.
 
-**Commit scopes.** Use `type(scope): subject` with one of:
-`kernel`, `data`, `field`, `domain`, `decomp`, `halo`, `fft`, `gpu`,
-`simulation`, `stepper`, `frontend`, `io`, `apps`, `tungsten`,
-`aluminum`, `kobayashi`, `cmake`, `ci`, `docs`, `tests`.
-`build` covers CMake, HeFFTe, `scripts/build.sh` and dependencies.
+**Workflow.** Branch from `master` as `<type>/<issue-number>-<slug>`, for
+example `fix/412-halo-corner`. Keep one coherent change per PR. The maintainer
+reviews every PR and integrates it by rebase-merge, so `master` stays a
+straight line; please do not merge or squash yourself.
 
-**Hook.** `git config core.hooksPath .githooks` enables the pre-commit
-check: clang-format 20 on staged C/C++ files, as in CI.
+**Commits.** Subject `type(scope): imperative description`, at most 72
+characters, then a blank line and a body wrapped at 80 columns that says why.
+One logical change per commit, with its tests. No `Co-authored-by` or tool
+attribution lines. Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`,
+`build`, `ci`, `style`, `chore`. Scopes: `kernel`, `data`, `field`,
+`domain`, `decomp`, `halo`, `fft`, `gpu`, `simulation`, `stepper`,
+`frontend`, `io`, `apps`, `tungsten`, `aluminum`, `kobayashi`, `cmake`, `ci`,
+`docs`, `tests`; `build` covers CMake, HeFFTe, `scripts/build.sh` and
+dependencies.
 
-**Never commit:** build trees (`build/`, `builds/`), run output
-(`results/`, `out/`, `*.log`, `*.out`), HeFFTe sources or tarballs, Julia
-manifests, local preferences, or new `*.sbatch` campaign launchers. A user-
-or developer-visible change adds a `CHANGELOG.md` `[Unreleased]` line in the
-same commit.
+**Tests.** Run the smallest test that exercises your change, and the full
+`ctest` for wide changes (field type, halo, decomposition, FFT or a CMake
+option). In the PR, name the commands you ran and what you could not run.
+Build and test commands are in [`AGENTS.md`](AGENTS.md); guides start at
+[`docs/README.md`](docs/README.md).
+
+**Hook.** `git config core.hooksPath .githooks` enables the pre-commit check:
+clang-format 20 on staged C/C++ files, as in CI.
+
+**Never commit:** build trees (`build/`, `builds/`), run output (`results/`,
+`out/`, `*.log`, `*.out`), HeFFTe sources or tarballs, Julia manifests, local
+preferences, or new `*.sbatch` campaign launchers. A user- or developer-visible
+change adds a `CHANGELOG.md` `[Unreleased]` line in the same commit.
