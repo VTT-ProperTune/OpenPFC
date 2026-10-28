@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #include "cli.hpp"
 #include <algorithm>
+#include <cctype>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -194,8 +195,23 @@ void raise_glibc(int &major, int &minor, int candidate_major, int candidate_mino
   return header.size() >= offset + magic.size() && header.starts_with(launch) &&
          std::string_view(header).substr(offset, magic.size()) == magic;
 }
+struct OptionalBind {
+  std::string source;
+  std::string target;
+};
+// Optional binds are written unquoted into a shell word list, so they are
+// limited to characters that need no quoting.
+void require_plain_path(const std::string &path, const std::string &label) {
+  const auto plain = [](char character) {
+    return std::isalnum(static_cast<unsigned char>(character)) != 0 ||
+           std::string_view("/._+-").find(character) != std::string_view::npos;
+  };
+  if (path.empty() || !std::ranges::all_of(path, plain))
+    throw Error(label + " must contain only letters, digits and /._+-: " + path);
+}
 [[nodiscard]] std::string helper_script(const std::string &runtime,
                                         const std::vector<std::string> &binds,
+                                        const std::vector<OptionalBind> &optional,
                                         const std::string &library_path,
                                         const std::string &filename) {
   std::ostringstream script;
@@ -227,11 +243,18 @@ void raise_glibc(int &major, int &minor, int candidate_major, int candidate_mino
             "fi\n"
             "if [ -n \"${PMIX_SERVER_TMPDIR:-}\" ]; then\n"
             "  add_session \"$PMIX_SERVER_TMPDIR\"\n"
-            "fi\n"
-            "exec "
-         << shell_quote(runtime) << " run";
+            "fi\n";
+  // Host fabric libraries and provider directories differ between nodes. Bind
+  // the ones this node has; the dynamic loader reports anything still missing.
+  script << "optional_binds=\n";
+  for (const auto &bind : optional)
+    script << "if [ -e " << bind.source << " ]; then\n"
+           << "  optional_binds=\"$optional_binds --bind " << bind.source << ':'
+           << bind.target << ":ro\"\n"
+           << "fi\n";
+  script << "exec " << shell_quote(runtime) << " run";
   for (const auto &bind : binds) script << " --bind " << shell_quote(bind);
-  script << " $session_binds --env "
+  script << " $session_binds $optional_binds --env "
          << shell_quote("LD_LIBRARY_PATH=" + library_path) << " \"$bundle_dir\"/"
          << shell_quote(filename) << " \"$@\"\n";
   return script.str();
@@ -281,6 +304,17 @@ void add_interpreter(std::map<std::string, fs::path> &files,
   if (interpreter.empty()) throw Error(label + " has no ELF interpreter");
   add_scratch_file(files, fs::path(interpreter).lexically_normal().string(),
                    canonical_file(interpreter, label));
+}
+// A host fabric library is bound by its soname link, such as
+// /usr/lib64/libfabric.so.1, so each node supplies its own installed version.
+// The versioned file seen at bundle time need not exist on other nodes.
+[[nodiscard]] fs::path host_bind_source(const RuntimeLibrary &library) {
+  const auto link = library.path.parent_path() / library.soname;
+  std::error_code error;
+  if (fs::exists(link, error) && fs::weakly_canonical(link, error) == library.path &&
+      !error)
+    return link;
+  return library.path;
 }
 [[nodiscard]] bool host_executable(const fs::path &path) {
   std::error_code error;
@@ -376,6 +410,7 @@ int bundle_model(const Arguments &args) {
   std::map<std::string, fs::path> bundled;
   std::map<std::string, fs::path> host_from_prefix;
   std::map<std::string, fs::path> host_from_file;
+  std::map<std::string, fs::path> host_bind_sources;
   std::map<std::string, fs::path> system;
   std::set<fs::path> used_host_libs;
   std::set<std::string> provider_binds;
@@ -405,6 +440,7 @@ int bundle_model(const Arguments &args) {
     }
     if (explicit_host != nullptr) {
       host_from_file.emplace(library.soname, library.path);
+      host_bind_sources.emplace(library.soname, host_bind_source(library));
       used_host_libs.insert(library.path);
       if (const auto leaf = provider_leaf(library.soname)) {
         if (const auto directory = provider_directory(library.path, *leaf))
@@ -466,8 +502,9 @@ int bundle_model(const Arguments &args) {
     sdk_manifest = consumer.at("sdk_manifest_sha256").at("value");
   Json host_records = library_records(host_from_prefix);
   for (const auto &[name, path] : host_from_file)
-    host_records[name] =
-        Json{{"path", path.string()}, {"sha256", file_sha256(path)}};
+    host_records[name] = Json{{"path", path.string()},
+                              {"sha256", file_sha256(path)},
+                              {"bind_source", host_bind_sources.at(name).string()}};
   Json scratch_records = Json::object();
   for (const auto &[container, host] : scratch_files)
     scratch_records[container] =
@@ -518,8 +555,11 @@ int bundle_model(const Arguments &args) {
       {"source_identity_note",
        "build_id is the content-addressed model build. The SIF digest "
        "is stored beside the image, not in this file."}};
+  // host_helper_version changes when the generated run-host.sh changes, so a
+  // cached bundle never keeps a helper written by an older CLI.
   Json identity{{"schema_version", 1},
                 {"domain", "openpfc.model-bundle.v1"},
+                {"host_helper_version", 2},
                 {"provenance", provenance}};
   const auto id = sha256(identity.dump());
   const auto cache = cache_root();
@@ -552,6 +592,30 @@ int bundle_model(const Arguments &args) {
       if (file_sha256(root / name) != manifest.at(name).get<std::string>())
         throw Error("cached bundle recipe changed: " + (root / name).string());
     }
+  };
+  const auto host_helper = [&](const std::string &filename) {
+    std::vector<std::string> binds;
+    for (const auto &prefix : bind_prefixes)
+      binds.push_back(prefix + ":" + prefix + ":ro");
+    if (site == "cray") binds.emplace_back("/var/spool/slurmd:/var/spool/slurmd");
+    std::vector<OptionalBind> optional;
+    for (const auto &directory : provider_binds) {
+      require_plain_path(directory, "host provider directory");
+      optional.push_back({directory, directory});
+    }
+    for (const auto &[name, path] : host_bind_sources) {
+      require_plain_path(path.string(), "--host-lib");
+      optional.push_back({path.string(), "/opt/openpfc/hostlib/" + name});
+    }
+    std::set<std::string> host_directories;
+    for (const auto &[name, path] : host_from_prefix) {
+      host_directories.insert(path.parent_path().string());
+      (void)name;
+    }
+    std::string library_path = "/opt/openpfc/lib";
+    if (!host_from_file.empty()) library_path += ":/opt/openpfc/hostlib";
+    for (const auto &directory : host_directories) library_path += ":" + directory;
+    return helper_script(runtime_name, binds, optional, library_path, filename);
   };
   if (!fs::exists(root)) {
     const auto stage = cache / "staging" / ("bundle-" + unique_id());
@@ -611,24 +675,7 @@ int bundle_model(const Arguments &args) {
           runscript;
     }
     publish(stage / "bundle.def", definition, false);
-    std::vector<std::string> binds;
-    for (const auto &prefix : bind_prefixes)
-      binds.push_back(prefix + ":" + prefix + ":ro");
-    for (const auto &directory : provider_binds)
-      binds.push_back(directory + ":" + directory + ":ro");
-    if (site == "cray") binds.emplace_back("/var/spool/slurmd:/var/spool/slurmd");
-    for (const auto &[name, path] : host_from_file)
-      binds.push_back(path.string() + ":/opt/openpfc/hostlib/" + name + ":ro");
-    std::set<std::string> host_directories;
-    for (const auto &[name, path] : host_from_prefix) {
-      host_directories.insert(path.parent_path().string());
-      (void)name;
-    }
-    std::string library_path = "/opt/openpfc/lib";
-    if (!host_from_file.empty()) library_path += ":/opt/openpfc/hostlib";
-    for (const auto &directory : host_directories) library_path += ":" + directory;
-    publish(stage / "run-host.sh",
-            helper_script(runtime_name, binds, library_path, "model.sif"), true);
+    publish(stage / "run-host.sh", host_helper("model.sif"), true);
     const auto payload_bytes = tree_bytes(stage / "payload");
     Json manifest{
         {"schema_version", 1},
@@ -689,26 +736,7 @@ int bundle_model(const Arguments &args) {
     fs::rename(temporary, output);
     const auto digest = file_sha256(output);
     publish(sidecar, digest + "\n", false);
-    std::vector<std::string> binds;
-    for (const auto &prefix : bind_prefixes)
-      binds.push_back(prefix + ":" + prefix + ":ro");
-    for (const auto &directory : provider_binds)
-      binds.push_back(directory + ":" + directory + ":ro");
-    if (site == "cray") binds.emplace_back("/var/spool/slurmd:/var/spool/slurmd");
-    for (const auto &[name, path] : host_from_file)
-      binds.push_back(path.string() + ":/opt/openpfc/hostlib/" + name + ":ro");
-    std::set<std::string> host_directories;
-    for (const auto &[name, path] : host_from_prefix) {
-      host_directories.insert(path.parent_path().string());
-      (void)name;
-    }
-    std::string library_path = "/opt/openpfc/lib";
-    if (!host_from_file.empty()) library_path += ":/opt/openpfc/hostlib";
-    for (const auto &directory : host_directories) library_path += ":" + directory;
-    publish(
-        launched,
-        helper_script(runtime_name, binds, library_path, output.filename().string()),
-        true);
+    publish(launched, host_helper(output.filename().string()), true);
     std::cout << "Image: " << output.string()
               << "\nImage bytes: " << fs::file_size(output)
               << "\nDigest: " << sidecar.string() << '\n';

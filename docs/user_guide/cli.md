@@ -342,13 +342,27 @@ classification. The closure is the ELF `NEEDED` graph. A library that the model
 opens only with `dlopen` is not copied.
 
 `model.sif.run` is a POSIX `sh` helper. It bind-mounts the declared host MPI
-prefixes read-only and executes the image. When `TMPDIR` or
+prefixes read-only and executes the image. Each `--host-lib` file is bound by
+its soname link, such as `/usr/lib64/libfabric.so.1`, not by the versioned file
+seen when the image was built. The helper binds a host library or provider
+directory only when the node that launches it has one. Nodes in one cluster
+often have different fabric library versions, or none, so the image uses the
+launching node's own stack. A library the model still needs but the node lacks
+is then reported by the dynamic loader. When `TMPDIR` or
 `PMIX_SERVER_TMPDIR` is set, as it is under `mpirun`, the helper also
 bind-mounts that directory so the process manager's session is visible.
 `./model.sif input.json` passes
 arguments through the runscript, and it works when the required libraries are
 already visible to the container. Host MPI is not visible that way unless the
-helper, or an equivalent bind, is used. An optional `--input FILE` stores one
+helper, or an equivalent bind, is used. Like any Apptainer run, the container
+sees the home directory, `/tmp` and the working directory, so keep the input
+file in the run directory or bind its location.
+
+Launch the helper once per rank from the host MPI launcher, for example
+`mpirun -n 8 --map-by ppr:4:node ./model.sif.run input.json` across two nodes.
+On Tohtori the CPU scratch image of the diffusion starter is about 17 MB
+(37.8 MB uncompressed payload). Over Open MPI's TCP transport on two nodes it
+wrote the same bytes as the native executable. An optional `--input FILE` stores one
 frozen input in the image and records its digest. Calling the image with
 arguments still passes those arguments to the model.
 

@@ -17,6 +17,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   `fill_faces` and `face_divergence`, and `OwnedEulerStepper<Rhs, N, Scalar>`.
   The `double` path is unchanged.
 
+- Bind each `openpfc bundle --host-lib` library by its soname link, and only
+  when the launching node has it, so one image runs on nodes whose fabric
+  library versions differ from the build host. A cached bundle with an older
+  launch helper is not reused.
+
 - Exchange `float` and `std::uint32_t` device fields through
   `pfc::comm::HaloExchange<CUDASpace|HIPSpace, T>` (Faces and Full, all
   transports), alongside `double`. Integer halos are exact bitwise copies;
