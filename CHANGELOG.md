@@ -7,6 +7,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Let the native CLI compile, bundle and launch runs from a Slurm batch script
+  or a one-task `srun` step. Only a step with several tasks counts as an
+  enclosing MPI launch.
+
 - Accept `float` as well as `double` in the host padded FD services:
   `BasicFDPaddedCPUStack<T>` (`FDPaddedCPUStack` stays `double`),
   `FDGradient<G, T>` and `create<G>(Field<T>)`, the span forms of

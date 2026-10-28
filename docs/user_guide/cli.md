@@ -235,6 +235,8 @@ For source models, invoke the CLI once, outside an MPI launch:
 openpfc run model.cpp input.json --ranks=2 --launcher=mpirun
 ```
 
+A Slurm batch script and a one-task `srun` step count as outside an MPI launch,
+although Slurm sets `SLURM_PROCID=0` there; a step with several tasks does not.
 `auto` selects `srun` inside a Slurm allocation and `mpirun` otherwise. Source runs
 default to one explicitly selected rank; `--launcher=none` supports one rank.
 The MPI executable discovered by CMake is preferred for `mpirun`. Load the

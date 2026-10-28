@@ -247,10 +247,12 @@ void freeze_file(const fs::path &path) {
                   fs::perm_options::remove);
 }
 bool outer_mpi() {
-  for (const auto *name :
-       {"OMPI_COMM_WORLD_RANK", "PMI_RANK", "PMIX_RANK", "SLURM_PROCID"})
+  for (const auto *name : {"OMPI_COMM_WORLD_RANK", "PMI_RANK", "PMIX_RANK"})
     if (!env(name).empty()) return true;
-  return false;
+  // Slurm sets SLURM_PROCID=0 in a batch script and in a one-task srun step.
+  // Neither is a parallel launch; only a step with several tasks is.
+  const auto tasks = env("SLURM_STEP_NUM_TASKS");
+  return !env("SLURM_PROCID").empty() && !tasks.empty() && tasks != "1";
 }
 void require_single_process() {
   if (outer_mpi())
