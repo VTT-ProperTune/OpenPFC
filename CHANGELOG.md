@@ -7,6 +7,73 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-29
+
+Source-level break from 0.5.0: the grain module leaves OpenPFC and some
+public APIs and tools change. ABI compatibility is not claimed. C++20
+remains the language baseline. OpenPFC is still pre-1.0.
+
+**Breaking**
+
+- The grain module is removed: `pfc::grain` and its CPU, CUDA and HIP
+  runtime headers under `kernel/grain`, `runtime/common`, `runtime/cpu` and
+  `runtime/gpu`, `grain_remapping_example` and the grain documentation.
+  Grain identity, contacts, colouring and remapping live in GrainFront
+  (`grainfront::grain`); consumers of the old module stay on 0.5.0 (#657).
+- Memory-traffic accounting moves from `kernel/grain/diagnostics.hpp` to
+  `kernel/diagnostics/memory_traffic.hpp`: `pfc::grain::Diagnostics` is
+  `pfc::diagnostics::Traffic`, copies are counted per `Direction`, and GPU
+  `DataBuffer::copy_from_host`, `copy_to_host` and `to_host` no longer take
+  a `Field` tag (#657).
+- The `openpfc` command is a native C++20 executable instead of the Python
+  CLI (#635). `openpfc compile MODEL.cpp` writes an executable in the
+  current directory (#696). `openpfc bundle` replaces `scripts/bake_case.py`
+  and `containers/runtime/baked_case.py`. Building the CLI requires OpenSSL
+  Crypto 1.1 or newer.
+- Apps no longer discover a compiler runtime or site paths; mixed toolchains
+  set `OpenPFC_APP_CXX_RUNTIME` (#654). The polycrystal solver no longer
+  takes rendering flags; `openpfc_render_polycrystal` renders saved slices
+  (#652).
+- Host FFT factory overloads reject communicator, layout-size and explicit
+  rank mismatches before planning.
+- Checkpoints use schema version 2, which records per-axis periodicity.
+  0.6.0 still reads fully periodic version-1 bundles, but earlier releases
+  reject version-2 checkpoints (#136).
+
+**Highlights**
+
+- Domains can be bounded per axis: JSON/TOML inputs take three `periodic`
+  booleans, and checkpoints preserve them and reject incompatible restores
+  collectively without changing fields or restart state (#136).
+- The native CLI compiles, runs, records and exports source models against
+  an installed SDK, packages CPU models and app cases as Apptainer images
+  with host MPI (`openpfc bundle`), creates starter models (`openpfc init`)
+  and checks an SDK against the active toolchain (`openpfc doctor`).
+  Installed SDKs export a JSON build manifest and
+  `openpfc_check_compatibility` (#634).
+- Device halo exchange accepts `float` and `std::uint32_t` fields alongside
+  `double`, and the host padded FD services, `FDGradient`, face fill and
+  divergence and `OwnedEulerStepper` accept `float`.
+- Fused owned-cell GPU sum/min/max reductions, a device-safe diffusive face
+  flux, explicit sequential face accumulation, and runtime-sized host and
+  device field sets with typed integer sparse transport.
+- A native Quarto teaching collection, including all forty Trefethen
+  spectral-methods programs, with runnable sources and independent checks.
+- Fixes: FFTW real-transform planning in fetched HeFFTe 2.4.1, assembled
+  parallel VTK seams, full-width `std::uint64_t` MPI exchanges on macOS ARM,
+  per-rank output directories, and consistent MPI test ordering and seeds.
+  An installed HeFFTe 2.4.1 with the FFTW backend must be rebuilt with the
+  same real-transform planning correction (see `INSTALL.md`); otherwise float
+  and strided real transforms can fail.
+- toml++ is installed as a relocatable public dependency of the settings
+  loader.
+
+Applications that need these APIs should require
+`find_package(OpenPFC 0.6 CONFIG REQUIRED)`. The package version file uses
+`AnyNewerVersion`, so an older minimum such as `0.5` still accepts 0.6.0
+despite the breaks above. The entries below are the development record
+since 0.5.0.
+
 - JSON/TOML domains accept per-axis `periodic` booleans (#136). Bundles and
   checkpoint services preserve them, collectively reject incompatible fields
   before restoration, and leave fields and restart state intact on rejection.
