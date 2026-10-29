@@ -28,6 +28,21 @@ target_include_directories(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 # Share example-local helpers (e.g. diffusion spectral step) with fixtures
 target_include_directories(openpfc-tests PRIVATE ${CMAKE_SOURCE_DIR}/examples)
 
+# MPI test options. Define them before the subdirectories, which read them when
+# registering multi-rank tests; otherwise a first configure skips those tests.
+option(OpenPFC_RUN_MPI_SUITES "Enable explicit MPI multi-rank test suites" OFF)
+# When ON, register mpi_3procs_ring / mpi_4procs_grid_multiple even if this machine
+# reports fewer logical CPUs at configure time (e.g. configure on a login node, run
+# tests on a compute node with mpirun --oversubscribe).
+option(OpenPFC_MPI_TEST_REGISTER_HIGH_RANK_ALWAYS
+       "Always register 3- and 4-rank MPI CTest targets regardless of configure host CPU count"
+       OFF)
+set(OpenPFC_MPI_TEST_MAX_WORLD_SIZE
+    "0"
+    CACHE STRING
+    "If > 0, omit MPI CTest targets that need more ranks than this (e.g. 2 on runners where OpenMPI rejects mpirun -n 3+). 0 = no cap from this option."
+)
+
 # Add test subdirectories (they will add their sources via target_sources)
 add_subdirectory(unit)
 add_subdirectory(integration)
@@ -105,18 +120,6 @@ else()
 endif()
 
 # Register MPI tests explicitly with mpiexec wrappers
-option(OpenPFC_RUN_MPI_SUITES "Enable explicit MPI multi-rank test suites" OFF)
-# When ON, register mpi_3procs_ring / mpi_4procs_grid_multiple even if this machine
-# reports fewer logical CPUs at configure time (e.g. configure on a login node, run
-# tests on a compute node with mpirun --oversubscribe).
-option(OpenPFC_MPI_TEST_REGISTER_HIGH_RANK_ALWAYS
-       "Always register 3- and 4-rank MPI CTest targets regardless of configure host CPU count"
-       OFF)
-set(OpenPFC_MPI_TEST_MAX_WORLD_SIZE
-    "0"
-    CACHE STRING
-    "If > 0, omit MPI CTest targets that need more ranks than this (e.g. 2 on runners where OpenMPI rejects mpirun -n 3+). 0 = no cap from this option."
-)
 find_package(MPI REQUIRED)
 if(OpenPFC_RUN_MPI_SUITES AND MPI_CXX_FOUND)
   cmake_host_system_information(RESULT _openpfc_mpi_configure_cores
