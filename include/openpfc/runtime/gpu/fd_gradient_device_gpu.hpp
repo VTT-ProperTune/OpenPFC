@@ -74,6 +74,7 @@
 #include <functional>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 #include <openpfc/kernel/data/grid_field.hpp>
@@ -109,12 +110,14 @@ inline constexpr int kFDDeviceMaxHw2 = 10;
  * unused (D1 always has zero centre weight); kept for layout symmetry
  * with the CPU view.
  */
-struct FDGradientDevicePOD {
-  const double *d_core{nullptr}; ///< Padded device buffer (cell `(-hw,-hw,-hw)`).
-  int nxp{0};                    ///< Padded x extent.
-  int nyp{0};                    ///< Padded y extent.
-  int nzp{0};                    ///< Padded z extent.
-  int hw{0};                     ///< Halo width (= `order / 2`).
+template <class T> struct FDGradientDevicePODT {
+  static_assert(std::is_same_v<T, double> || std::is_same_v<T, float>,
+                "FDGradientDevicePODT: field values must be double or float");
+  const T *d_core{nullptr}; ///< Padded device buffer (cell `(-hw,-hw,-hw)`).
+  int nxp{0};               ///< Padded x extent.
+  int nyp{0};               ///< Padded y extent.
+  int nzp{0};               ///< Padded z extent.
+  int hw{0};                ///< Halo width (= `order / 2`).
 
   // Strides through the padded buffer.
   std::ptrdiff_t sx{0}; ///< stride along x = 1
@@ -134,6 +137,48 @@ struct FDGradientDevicePOD {
   double cz2[kFDDeviceMaxHw2 + 1]{};
 };
 
+/// The double-valued POD (the original payload type).
+using FDGradientDevicePOD = FDGradientDevicePODT<double>;
+
+namespace detail {
+
+template <class G, class = void> struct fd_scalar {
+  using type = void;
+};
+template <class G> struct fd_scalar<G, std::void_t<typename G::value_type>> {
+  using type = typename G::value_type;
+};
+
+} // namespace detail
+
+/**
+ * @brief Arithmetic type of `evaluate_fd_grad<G>` on values of type `T`:
+ *        `G::value_type` when `G` declares one, otherwise `T`.
+ *
+ * Float storage with `using value_type = double;` in `G` gives mixed
+ * precision: float reads, double sums. With `T = double` and no
+ * `value_type` every cast is the identity, so double results are unchanged.
+ */
+template <class G, class T>
+using fd_scalar_t =
+    std::conditional_t<std::is_void_v<typename detail::fd_scalar<G>::type>, T,
+                       typename detail::fd_scalar<G>::type>;
+
+/**
+ * @brief The same evaluator on another field with the identical padded
+ *        layout (extents, halo, spacing): only the data pointer changes.
+ *
+ * For models with a runtime number of same-shaped fields (for example one
+ * phase field per slot), one host-built POD serves all of them inside a
+ * kernel.
+ */
+template <class T>
+OPENPFC_INLINE_HD FDGradientDevicePODT<T> with_core(FDGradientDevicePODT<T> e,
+                                                    const T *d_core) noexcept {
+  e.d_core = d_core;
+  return e;
+}
+
 /**
  * @brief Device-side per-point evaluator: returns `G` populated according
  *        to `has_*<G>`.
@@ -148,9 +193,10 @@ struct FDGradientDevicePOD {
  *       product. The padded buffer must have valid edge/corner ghosts
  *       (`HaloExchange` Full or equivalent corner fill).
  */
-template <class G>
-OPENPFC_INLINE_HD G evaluate_fd_grad(const FDGradientDevicePOD &e, int ix, int iy,
-                                     int iz) noexcept {
+template <class G, class T>
+OPENPFC_INLINE_HD G evaluate_fd_grad(const FDGradientDevicePODT<T> &e, int ix,
+                                     int iy, int iz) noexcept {
+  using A = fd_scalar_t<G, T>;
   const std::ptrdiff_t c = static_cast<std::ptrdiff_t>(ix + e.hw) +
                            static_cast<std::ptrdiff_t>(iy + e.hw) * e.sy +
                            static_cast<std::ptrdiff_t>(iz + e.hw) * e.sz;
@@ -158,55 +204,55 @@ OPENPFC_INLINE_HD G evaluate_fd_grad(const FDGradientDevicePOD &e, int ix, int i
   G g{};
 
   if constexpr (pfc::field::has_value<G>) {
-    g.value = e.d_core[c];
+    g.value = A(e.d_core[c]);
   }
 
   if constexpr (pfc::field::has_x<G>) {
-    double acc = 0.0;
+    A acc = A(0);
     for (int k = 1; k <= e.hw1; ++k) {
       const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * e.sx;
-      acc += e.cx1[k] * (e.d_core[c + ks] - e.d_core[c - ks]);
+      acc += A(e.cx1[k]) * (A(e.d_core[c + ks]) - A(e.d_core[c - ks]));
     }
     g.x = acc;
   }
   if constexpr (pfc::field::has_y<G>) {
-    double acc = 0.0;
+    A acc = A(0);
     for (int k = 1; k <= e.hw1; ++k) {
       const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * e.sy;
-      acc += e.cy1[k] * (e.d_core[c + ks] - e.d_core[c - ks]);
+      acc += A(e.cy1[k]) * (A(e.d_core[c + ks]) - A(e.d_core[c - ks]));
     }
     g.y = acc;
   }
   if constexpr (pfc::field::has_z<G>) {
-    double acc = 0.0;
+    A acc = A(0);
     for (int k = 1; k <= e.hw1; ++k) {
       const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * e.sz;
-      acc += e.cz1[k] * (e.d_core[c + ks] - e.d_core[c - ks]);
+      acc += A(e.cz1[k]) * (A(e.d_core[c + ks]) - A(e.d_core[c - ks]));
     }
     g.z = acc;
   }
 
   if constexpr (pfc::field::has_xx<G>) {
-    double acc = e.cx2[0] * e.d_core[c];
+    A acc = A(e.cx2[0]) * A(e.d_core[c]);
     for (int k = 1; k <= e.hw2; ++k) {
       const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * e.sx;
-      acc += e.cx2[k] * (e.d_core[c + ks] + e.d_core[c - ks]);
+      acc += A(e.cx2[k]) * (A(e.d_core[c + ks]) + A(e.d_core[c - ks]));
     }
     g.xx = acc;
   }
   if constexpr (pfc::field::has_yy<G>) {
-    double acc = e.cy2[0] * e.d_core[c];
+    A acc = A(e.cy2[0]) * A(e.d_core[c]);
     for (int k = 1; k <= e.hw2; ++k) {
       const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * e.sy;
-      acc += e.cy2[k] * (e.d_core[c + ks] + e.d_core[c - ks]);
+      acc += A(e.cy2[k]) * (A(e.d_core[c + ks]) + A(e.d_core[c - ks]));
     }
     g.yy = acc;
   }
   if constexpr (pfc::field::has_zz<G>) {
-    double acc = e.cz2[0] * e.d_core[c];
+    A acc = A(e.cz2[0]) * A(e.d_core[c]);
     for (int k = 1; k <= e.hw2; ++k) {
       const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * e.sz;
-      acc += e.cz2[k] * (e.d_core[c + ks] + e.d_core[c - ks]);
+      acc += A(e.cz2[k]) * (A(e.d_core[c + ks]) + A(e.d_core[c - ks]));
     }
     g.zz = acc;
   }
@@ -215,40 +261,40 @@ OPENPFC_INLINE_HD G evaluate_fd_grad(const FDGradientDevicePOD &e, int ix, int i
   // reduces to the familiar 4-corner stencil with weight
   // (1/(2 dx))*(1/(2 dy)).
   if constexpr (pfc::field::has_xy<G>) {
-    double acc = 0.0;
+    A acc = A(0);
     for (int i = 1; i <= e.hw1; ++i) {
       const std::ptrdiff_t is = static_cast<std::ptrdiff_t>(i) * e.sx;
       for (int j = 1; j <= e.hw1; ++j) {
         const std::ptrdiff_t js = static_cast<std::ptrdiff_t>(j) * e.sy;
-        acc += e.cx1[i] * e.cy1[j] *
-               (e.d_core[c + is + js] - e.d_core[c - is + js] -
-                e.d_core[c + is - js] + e.d_core[c - is - js]);
+        acc += A(e.cx1[i]) * A(e.cy1[j]) *
+               (A(e.d_core[c + is + js]) - A(e.d_core[c - is + js]) -
+                A(e.d_core[c + is - js]) + A(e.d_core[c - is - js]));
       }
     }
     g.xy = acc;
   }
   if constexpr (pfc::field::has_xz<G>) {
-    double acc = 0.0;
+    A acc = A(0);
     for (int i = 1; i <= e.hw1; ++i) {
       const std::ptrdiff_t is = static_cast<std::ptrdiff_t>(i) * e.sx;
       for (int k = 1; k <= e.hw1; ++k) {
         const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * e.sz;
-        acc += e.cx1[i] * e.cz1[k] *
-               (e.d_core[c + is + ks] - e.d_core[c - is + ks] -
-                e.d_core[c + is - ks] + e.d_core[c - is - ks]);
+        acc += A(e.cx1[i]) * A(e.cz1[k]) *
+               (A(e.d_core[c + is + ks]) - A(e.d_core[c - is + ks]) -
+                A(e.d_core[c + is - ks]) + A(e.d_core[c - is - ks]));
       }
     }
     g.xz = acc;
   }
   if constexpr (pfc::field::has_yz<G>) {
-    double acc = 0.0;
+    A acc = A(0);
     for (int j = 1; j <= e.hw1; ++j) {
       const std::ptrdiff_t js = static_cast<std::ptrdiff_t>(j) * e.sy;
       for (int k = 1; k <= e.hw1; ++k) {
         const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * e.sz;
-        acc += e.cy1[j] * e.cz1[k] *
-               (e.d_core[c + js + ks] - e.d_core[c - js + ks] -
-                e.d_core[c + js - ks] + e.d_core[c - js - ks]);
+        acc += A(e.cy1[j]) * A(e.cz1[k]) *
+               (A(e.d_core[c + js + ks]) - A(e.d_core[c - js + ks]) -
+                A(e.d_core[c + js - ks]) + A(e.d_core[c - js - ks]));
       }
     }
     g.yz = acc;
@@ -328,7 +374,11 @@ OPENPFC_INLINE_HD Composite evaluate_fd_grad_composite(
  * is safe to destroy as soon as the kernel has been launched (the POD
  * carries everything that lives across the kernel call).
  */
-template <class G> class FDGradientDevice {
+/// @tparam T Field value type: double (default) or float. Weights stay double
+///           on the host and are rounded to the arithmetic type
+///           `fd_scalar_t<G, T>` on the device; float fields with
+///           `G::value_type = double` give float storage with double sums.
+template <class G, class T = double> class FDGradientDevice {
 public:
   /**
    * @param d_core      Pointer to the **padded** device buffer, cell
@@ -347,8 +397,8 @@ public:
    *         half-width exceeds the compiled-in POD caps, or if
    *         `halo_width` is strictly less than the required half-width.
    */
-  FDGradientDevice(const double *d_core, int nx, int ny, int nz, double dx,
-                   double dy, double dz, int halo_width, int order) {
+  FDGradientDevice(const T *d_core, int nx, int ny, int nz, double dx, double dy,
+                   double dz, int halo_width, int order) {
     m_pod.d_core = d_core;
     m_pod.hw = halo_width;
     m_pod.nxp = nx + 2 * halo_width;
@@ -447,10 +497,10 @@ public:
   void prepare() noexcept {}
 
   /// Trivially-copyable payload to pass into the device kernel.
-  [[nodiscard]] const FDGradientDevicePOD &pod() const noexcept { return m_pod; }
+  [[nodiscard]] const FDGradientDevicePODT<T> &pod() const noexcept { return m_pod; }
 
 private:
-  FDGradientDevicePOD m_pod;
+  FDGradientDevicePODT<T> m_pod;
 };
 
 /**
@@ -556,6 +606,7 @@ create_composite_device(const FDGradientDevice<PerFieldGrads> &...evals) {
  * the field's halo exchange mechanism on `u.data()`.
  *
  * @tparam G            Model-owned grads aggregate (see `grad_concepts.hpp`).
+ * @tparam T            Field value type, double or float (see `FDGradientDevice`).
  * @tparam MemorySpace  Field placement (`HostSpace`, `CUDASpace`, or `HIPSpace`).
  * @param u             Padded field (`storage_halo() > 0`; must outlive the
  *                      returned evaluator). Device kernels require the
@@ -569,9 +620,9 @@ create_composite_device(const FDGradientDevice<PerFieldGrads> &...evals) {
  *
  * @return FDGradientDevice<G> ready for use with for_each_interior_device.
  */
-template <class G, typename MemorySpace>
-[[nodiscard]] inline FDGradientDevice<G>
-create(const pfc::data::Field<double, MemorySpace> &u, int order = 2) {
+template <class G, class T, typename MemorySpace>
+[[nodiscard]] inline FDGradientDevice<G, T>
+create(const pfc::data::Field<T, MemorySpace> &u, int order = 2) {
   if (u.storage_halo() <= 0) {
     throw std::invalid_argument(
         "FDGradientDevice: create(Field) requires a padded Field "
@@ -579,8 +630,8 @@ create(const pfc::data::Field<double, MemorySpace> &u, int order = 2) {
   }
   const auto sp = u.spacing();
   const auto sz = u.local_size();
-  return FDGradientDevice<G>(u.data(), sz[0], sz[1], sz[2], sp[0], sp[1], sp[2],
-                             u.storage_halo(), order);
+  return FDGradientDevice<G, T>(u.data(), sz[0], sz[1], sz[2], sp[0], sp[1], sp[2],
+                                u.storage_halo(), order);
 }
 
 } // namespace pfc::gpu

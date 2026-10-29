@@ -22,11 +22,14 @@ using ::pfc::gpu::create;
 using ::pfc::gpu::create_composite_device;
 using ::pfc::gpu::evaluate_fd_grad;
 using ::pfc::gpu::evaluate_fd_grad_composite;
+using ::pfc::gpu::fd_scalar_t;
 using ::pfc::gpu::FDGradientDevice;
 using ::pfc::gpu::FDGradientDevicePOD;
+using ::pfc::gpu::FDGradientDevicePODT;
 using ::pfc::gpu::kFDDeviceMaxHw1;
 using ::pfc::gpu::kFDDeviceMaxHw2;
 using ::pfc::gpu::kMaxCompositeFields;
+using ::pfc::gpu::with_core;
 
 } // namespace pfc::hip
 
