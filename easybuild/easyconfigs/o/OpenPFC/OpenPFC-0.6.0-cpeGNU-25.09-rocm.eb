@@ -1,14 +1,14 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Module install of OpenPFC 0.5.0 on LUMI-G with HIP/ROCm. The configure
+# Module install of OpenPFC 0.6.0 on LUMI-G with HIP/ROCm. The configure
 # options mirror `scripts/build.sh --machine=lumi --with-rocm`; see
 # docs/hpc/INSTALL.LUMI.md.
 
 easyblock = 'CMakeMake'
 
 name =          'OpenPFC'
-version =       '0.5.0'
+version =       '0.6.0'
 versionsuffix = '-rocm'
 
 homepage = 'https://github.com/VTT-ProperTune/OpenPFC'
@@ -33,14 +33,14 @@ sources = {
     'filename':          SOURCELOWER_TAR_GZ,
     'source_urls':       ['https://github.com/VTT-ProperTune/OpenPFC/archive/refs/tags/'],
 }
-checksums = ['23ac391eaa4e9bee84babb8412f2c95fc346f226cc77afd95481645aaf62c226']
+checksums = ['b2ffe50ed80699ae2feb8b4ae58ebcc54fd846d6cf3f55b8484dc6e925cbc456']
 
 builddependencies = [
     ('buildtools', '%(toolchain_version)s', '', True),
 ]
 
 dependencies = [
-    ('HeFFTe',    '2.4.1', '-rocm'),
+    ('HeFFTe',    '2.4.1', '-rocm-planfix'),
     ('cray-fftw', EXTERNAL_MODULE),
     ('rocm',      EXTERNAL_MODULE),
 ]
@@ -51,7 +51,7 @@ dependencies = [
 preconfigopts = 'export CRAYPE_LINK_TYPE=dynamic && '
 modextravars = {'MPICH_GPU_SUPPORT_ENABLED': '1'}
 
-# See OpenPFC-0.5.0-cpeGNU-25.09.eb for the FetchContent network requirement.
+# See OpenPFC-0.6.0-cpeGNU-25.09.eb for the FetchContent network requirement.
 configopts  = '-D CMAKE_BUILD_TYPE=Release '
 configopts += '-D CMAKE_C_COMPILER=cc '
 configopts += '-D CMAKE_CXX_COMPILER=CC '

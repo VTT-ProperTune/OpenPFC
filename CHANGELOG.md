@@ -7,6 +7,22 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Release modules pair each OpenPFC version with a HeFFTe 2.4.1 that carries
+  the FFTW real-plan correction (#788). On Tohtori,
+  `install_release_module.sh` defaults to the corrected
+  `2.4.1-fftw-plans-{cpu,cuda}-ompi5` prefixes, and `build_tohtori.sh`
+  patches the HeFFTe 2.4.1 source it downloads. On LUMI, the new
+  `HeFFTe-2.4.1-cpeGNU-25.09-{fftw,rocm}-planfix` easyconfigs apply the
+  same patch, and the OpenPFC easyconfigs move to 0.6.0.
+- Tohtori release modules can be chosen by version and variant
+  (`openpfc/0.6.0-cuda`), by variant alone (`openpfc/cpu` and
+  `openpfc/cuda`, the newest release) or as plain `openpfc` (the newest CPU
+  release). The installer refreshes these aliases in `.modulerc.lua`, and
+  `--update-aliases` refreshes only them. Modules now set `CC` and `CXX` to
+  the release's compilers. Without them, a consumer that enables C picked
+  the system GCC 8 and could not link the SDK, which made `openpfc doctor`
+  fail its consumer probe.
+
 - Add the `25_halo_bandwidth` diagnostics chapter (#786), a halo-only
   throughput table for `HaloExchange` on the host and, in a CUDA or HIP
   build, on the device. `--axis` selects one face pair and `--faces` all

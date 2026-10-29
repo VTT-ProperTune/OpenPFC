@@ -27,7 +27,7 @@ def release(tmp_path):
     git(repo, "-c", "tag.gpgSign=false", "tag", "-a", "-m", "release", "v1.2.3")
     root = tmp_path / "shared"
     for backend in ("cpu-ompi5", "cuda-ompi5"):
-        (root / f"apps/heffte/2.4.1-{backend}/lib64/cmake/Heffte").mkdir(parents=True)
+        (root / f"apps/heffte/2.4.1-fftw-plans-{backend}/lib64/cmake/Heffte").mkdir(parents=True)
     mpicc = root / "apps/openmpi/5.0.10-cuda/bin/mpicc"
     mpicc.parent.mkdir(parents=True)
     mpicc.write_text("#!/bin/sh\n")
@@ -54,7 +54,7 @@ def test_prepare_cpu(release):
     assert 'family("openpfc")' in module
     assert 'depends_on("openmpi/5.0.10")' in module
     assert f'local root = "{root}/apps/openpfc/1.2.3-cpu"' in module
-    assert f"{root}/apps/heffte/2.4.1-cpu-ompi5/lib64" in module
+    assert f"{root}/apps/heffte/2.4.1-fftw-plans-cpu-ompi5/lib64" in module
     assert not (root / "apps/openpfc").exists()
     assert not (root / "modulefiles").exists()
 
@@ -94,3 +94,19 @@ def test_existing_install_is_not_replaced(release):
     result = install(repo, root, "--prepare-only")
     assert result.returncode != 0
     assert "is not replaced" in result.stderr
+
+
+def test_update_aliases_names_newest_release_per_variant(release):
+    repo, root, _ = release
+    modules = root / "modulefiles/openpfc"
+    modules.mkdir(parents=True)
+    for name in ("0.4.0-cpu", "0.9.0-cuda", "0.10.0-cpu", "0.10.0-cuda", "notes"):
+        (modules / f"{name}.lua").write_text("")
+    result = install(repo, root, "--update-aliases")
+    assert result.returncode == 0, result.stderr
+    rc = (modules / ".modulerc.lua").read_text().splitlines()
+    assert rc[1:] == [
+        'module_version("openpfc/0.10.0-cpu", "cpu")',
+        'module_version("openpfc/0.10.0-cuda", "cuda")',
+        'module_version("openpfc/0.10.0-cpu", "default")',
+    ]

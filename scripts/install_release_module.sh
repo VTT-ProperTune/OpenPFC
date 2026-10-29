@@ -28,6 +28,7 @@ CUDA_MODULE="cuda/13.1"
 # A100, A40 and H100: the cuda and nvidia_h100 partitions.
 CUDA_ARCHITECTURES="80;86;90"
 PREPARE_ONLY=0
+UPDATE_ALIASES=0
 
 usage() {
   cat <<'EOF'
@@ -37,7 +38,14 @@ Build tag vX.Y.Z on Tohtori, install it under ROOT/apps/openpfc/X.Y.Z-BACKEND
 and write ROOT/modulefiles/openpfc/X.Y.Z-BACKEND.lua. Users then run:
 
   module use ROOT/modulefiles
-  module load openpfc/X.Y.Z-BACKEND
+  module load openpfc/X.Y.Z-BACKEND   # one version and variant
+  module load openpfc/BACKEND         # newest release of a variant
+  module load openpfc                 # newest CPU release
+
+Every install refreshes ROOT/modulefiles/openpfc/.modulerc.lua, which
+names the newest release of each variant (openpfc/cpu, openpfc/cuda) and
+makes the newest CPU release the default. Loading another openpfc module
+swaps the loaded one.
 
 Nothing installed or loaded may resolve through $HOME: on Tohtori it is
 private to its owner. Run the build on a compute node, e.g.
@@ -51,8 +59,10 @@ Options:
   --root=PATH           Shared root (default: /task/$USER)
   --repository=PATH     Git repository holding the tag (default: this checkout)
   --heffte-prefix=PATH  HeFFTe 2.4.1 install for this backend
-                        cpu default:  ROOT/apps/heffte/2.4.1-cpu-ompi5
-                        cuda default: ROOT/apps/heffte/2.4.1-cuda-ompi5
+                        cpu default:  ROOT/apps/heffte/2.4.1-fftw-plans-cpu-ompi5
+                        cuda default: ROOT/apps/heffte/2.4.1-fftw-plans-cuda-ompi5
+                        Both must carry the FFTW real-plan correction
+                        (cmake/patches/heffte-2.4.1-fftw-plans.patch)
   --openmpi-root=PATH   cuda only: CUDA-aware Open MPI install
                         (default: ROOT/apps/openmpi/5.0.10-cuda)
   --cuda-architectures=LIST
@@ -60,6 +70,8 @@ Options:
   --jobs=N, -j N        Parallel build jobs (default: 32)
   --prepare-only        Export the sources and write the modulefile text
                         under the staging directory; do not build
+  --update-aliases      Only refresh ROOT/modulefiles/openpfc/.modulerc.lua
+                        from the installed modulefiles; --version is ignored
   -h, --help            Show this help
 
 The install prefix must not exist; an installed release is never replaced.
@@ -95,6 +107,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --prepare-only) PREPARE_ONLY=1 ;;
+    --update-aliases) UPDATE_ALIASES=1 ;;
     -h|--help)
       usage
       exit 0
@@ -103,6 +116,40 @@ while [[ $# -gt 0 ]]; do
   esac
   shift
 done
+
+# Name the newest X.Y.Z-BACKEND of each backend, and make the newest CPU
+# release the default; otherwise Lmod would pick the lexically last name.
+write_aliases() {
+  local dir="$1" file name variant newest
+  local -A latest=()
+  for file in "${dir}"/*.lua; do
+    [[ -e "${file}" ]] || continue
+    name="$(basename "${file}" .lua)"
+    [[ "${name}" =~ ^[0-9]+\.[0-9]+\.[0-9]+-([a-z0-9]+)$ ]] || continue
+    variant="${BASH_REMATCH[1]}"
+    newest="$(printf '%s\n' "${latest[${variant}]-}" "${name}" | sed '/^$/d' | sort -V | tail -1)"
+    latest[${variant}]="${newest}"
+  done
+  {
+    echo "-- Written by scripts/install_release_module.sh; regenerated on each install."
+    for variant in $(printf '%s\n' "${!latest[@]}" | sort); do
+      echo "module_version(\"openpfc/${latest[${variant}]}\", \"${variant}\")"
+    done
+    if [[ -n "${latest[cpu]-}" ]]; then
+      echo "module_version(\"openpfc/${latest[cpu]}\", \"default\")"
+    fi
+  } > "${dir}/.modulerc.lua.tmp"
+  mv "${dir}/.modulerc.lua.tmp" "${dir}/.modulerc.lua"
+  chmod a+r "${dir}/.modulerc.lua"
+}
+
+if (( UPDATE_ALIASES )); then
+  [[ "${ROOT}" == /* ]] || die "--root must be absolute (got '${ROOT}')"
+  [[ -d "${ROOT}/modulefiles/openpfc" ]] || die "no ${ROOT}/modulefiles/openpfc"
+  write_aliases "${ROOT}/modulefiles/openpfc"
+  cat "${ROOT}/modulefiles/openpfc/.modulerc.lua"
+  exit 0
+fi
 
 VERSION="${VERSION#v}"
 [[ "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] ||
@@ -114,10 +161,10 @@ VERSION="${VERSION#v}"
 
 case "${BACKEND}" in
   cpu)
-    HEFFTE_PREFIX="${HEFFTE_PREFIX:-${ROOT}/apps/heffte/2.4.1-cpu-ompi5}"
+    HEFFTE_PREFIX="${HEFFTE_PREFIX:-${ROOT}/apps/heffte/2.4.1-fftw-plans-cpu-ompi5}"
     ;;
   cuda)
-    HEFFTE_PREFIX="${HEFFTE_PREFIX:-${ROOT}/apps/heffte/2.4.1-cuda-ompi5}"
+    HEFFTE_PREFIX="${HEFFTE_PREFIX:-${ROOT}/apps/heffte/2.4.1-fftw-plans-cuda-ompi5}"
     OPENMPI_ROOT="${OPENMPI_ROOT:-${ROOT}/apps/openmpi/5.0.10-cuda}"
     ;;
   *) die "--backend must be cpu or cuda (got '${BACKEND}')" ;;
@@ -256,8 +303,18 @@ if [[ -n "${leaks}" ]]; then
   die "installed binaries have RUNPATH entries under /home; module not written"
 fi
 
+# Consumers must compile with the release's compilers. Without CC, CMake
+# finds the system cc before the module's gcc and then pairs the system c++
+# with it, which cannot link the installed libraries.
+cache="${STAGE}/build/CMakeCache.txt"
+cc="$(sed -n 's/^CMAKE_C_COMPILER:[A-Z]*=//p' "${cache}")"
+cxx="$(sed -n 's/^CMAKE_CXX_COMPILER:[A-Z]*=//p' "${cache}")"
+[[ -x "${cc}" && -x "${cxx}" ]] || die "build compilers not found in ${cache}"
+printf 'setenv("CC", "%s")\nsetenv("CXX", "%s")\n' "${cc}" "${cxx}" >> "${STAGE}/${NAME}.lua"
+
 mkdir -p "${MODULE_DIR}"
 cp "${STAGE}/${NAME}.lua" "${MODULE_FILE}"
+write_aliases "${MODULE_DIR}"
 chmod -R a+rX "${PREFIX}" "${ROOT}/modulefiles"
 echo "Installed ${TAG} (${BACKEND}) to ${PREFIX}"
 echo "Module: module use ${ROOT}/modulefiles && module load openpfc/${NAME}"

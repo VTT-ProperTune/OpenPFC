@@ -506,6 +506,13 @@ build_heffte() {
     tar xf "${tarball}" -C "${HEFFTE_SRC_ROOT}"
   fi
 
+  # Plain 2.4.1 plans FFTW real transforms in place and executes them out of
+  # place. Apply the planning correction; the script is idempotent and
+  # refuses an unexpected header.
+  if [[ "${ver}" == 2.4.1 ]]; then
+    cmake -DSOURCE_DIR="${src}" -P "${REPO_ROOT}/cmake/PatchHeffteFftw.cmake"
+  fi
+
   if [[ "${CLEAN_HEFFTE}" -eq 1 ]]; then
     log "Removing HeFFTe build dir ${HEFFTE_BUILD_DIR}"
     rm -rf "${HEFFTE_BUILD_DIR}"

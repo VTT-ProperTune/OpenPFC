@@ -81,7 +81,7 @@ See [docs/hpc/INSTALL.tohtori.md](../docs/hpc/INSTALL.tohtori.md) §0.
 ```bash
 scripts/install_release_module.sh --help
 srun -p all6 -c 32 --mem=64G -t 2:00:00 \
-  scripts/install_release_module.sh --version=0.4.0 --backend=cpu
+  scripts/install_release_module.sh --version=0.6.0 --backend=cpu
 ```
 
 ### build_tohtori.sh

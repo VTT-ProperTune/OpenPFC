@@ -16,8 +16,20 @@ building it:
 : "${OPENPFC_MODULE_ROOT:?Set OPENPFC_MODULE_ROOT to the shared module directory}"
 module use "$OPENPFC_MODULE_ROOT"
 module avail openpfc
-module load openpfc/0.5.0-cpu
+module load openpfc/0.6.0-cpu
 srun --mpi=pmix -p all6 -n 4 tungsten case.json
+```
+
+Every release stays installed, one module per version and variant:
+`openpfc/<version>-cpu` and `openpfc/<version>-cuda`. Without a version,
+`openpfc/cpu` and `openpfc/cuda` load the newest release of that variant,
+and plain `openpfc` loads the newest CPU release. Loading another `openpfc`
+module replaces the loaded one, so switching is a single `module load`:
+
+```bash
+module load openpfc/0.6.0-cuda   # one version and variant
+module load openpfc/0.5.0-cpu    # replaces it
+module load openpfc/cuda         # newest CUDA release
 ```
 
 Pass `--mpi=pmix`: Tohtori's Slurm has no MPI default, and without it each
@@ -25,7 +37,7 @@ task starts as its own one-rank job. The module loads its MPI stack, puts the
 shipped applications on `PATH`, and adds the install to `CMAKE_PREFIX_PATH`,
 so `find_package(OpenPFC)` works for code built against it. The package asks
 MPI for its C and CXX components, so a consumer declares
-`project(<name> C CXX)`. Only one `openpfc` module loads at a time.
+`project(<name> C CXX)`.
 
 `openpfc/<version>-cuda` adds the `*_cuda` applications and GPU-aware MPI
 (UCX 1.20 and Open MPI 5.0.10 built with CUDA 13.1, HeFFTe with cuFFT). It is
@@ -34,7 +46,7 @@ compiled for A100, A40 and H100 (`sm_80`, `sm_86`, `sm_90`), so it runs on the
 has no CUDA 13. Request one GPU per rank:
 
 ```bash
-module load openpfc/0.5.0-cuda
+module load openpfc/0.6.0-cuda
 srun --mpi=pmix -p cuda -n 2 --gres=gpu:2 -c 4 --mem=16G -t 1:00:00 \
   aluminum_etd_cuda case.json
 ```
@@ -44,19 +56,30 @@ revision, HeFFTe and MPI of the install.
 Maintainers install a new release with
 [`scripts/install_release_module.sh`](../../scripts/install_release_module.sh).
 It builds the tag with that tag's own `scripts/build.sh`, installs under
-`/task/$USER/apps/openpfc/<version>-<backend>`, and writes the modulefile.
+`/task/$USER/apps/openpfc/<version>-<backend>`, writes the modulefile and
+refreshes the `openpfc/cpu`, `openpfc/cuda` and default aliases in
+`modulefiles/openpfc/.modulerc.lua`. `--update-aliases` refreshes only those.
 Nothing it installs may resolve through `/home`, which is private to its
 owner. Run it inside an allocation:
 
 ```bash
 git fetch --tags origin
 srun -p all6 -c 32 --mem=64G -t 2:00:00 \
-  scripts/install_release_module.sh --version=0.4.0 --backend=cpu
+  scripts/install_release_module.sh --version=0.6.0 --backend=cpu
 ```
 
 An existing install is never replaced. `--help` lists the HeFFTe and MPI
 prefixes it expects. The CPU build uses the site `openmpi/5.0.10` and
-`/task/$USER/apps/heffte/2.4.1-cpu-ompi5`. The CUDA stack under
+`/task/$USER/apps/heffte/2.4.1-fftw-plans-cpu-ompi5`.
+
+Both HeFFTe prefixes are HeFFTe 2.4.1 with
+[`cmake/patches/heffte-2.4.1-fftw-plans.patch`](../../cmake/patches/heffte-2.4.1-fftw-plans.patch)
+applied; `scripts/build_tohtori.sh` applies it to the 2.4.1 source it
+downloads. Without it, FFTW real transforms can crash or give wrong float
+and strided results (#781). The 0.4.0 and 0.5.0 modules keep the unpatched
+`2.4.1-cpu-ompi5` and `2.4.1-cuda-ompi5` they were built with. A corrected
+`include/heffte_backend_fftw.h` has SHA-256
+`c7b0d134809a3fa8105bb52cb8ee1476a386ac30a6bc1951ee24e81f11ae6788`. The CUDA stack under
 `/task/$USER/apps` comes from [`scripts/build_tohtori.sh`](../../scripts/build_tohtori.sh):
 
 ```bash
@@ -66,7 +89,7 @@ srun -p cuda -c 16 --mem=64G -t 4:00:00 bash -lc "
   export OPENPFC_GCC_MODULE=gcc/15.2.0 CUDA_ARCHITECTURES='80;86;90'
   export UCX_PREFIX=$T/apps/ucx/1.20.0-cuda UCX_BUILD_DIR=$T/build/ucx-1.20.0-cuda
   export OPENMPI_PREFIX=$T/apps/openmpi/5.0.10-cuda OPENMPI_BUILD_DIR=$T/build/openmpi-5.0.10-cuda
-  export HEFFTE_PREFIX=$T/apps/heffte/2.4.1-cuda-ompi5 HEFFTE_BUILD_DIR=$T/build/heffte-2.4.1-cuda-ompi5
+  export HEFFTE_PREFIX=$T/apps/heffte/2.4.1-fftw-plans-cuda-ompi5 HEFFTE_BUILD_DIR=$T/build/heffte-2.4.1-fftw-plans-cuda-ompi5
   scripts/build_tohtori.sh --build-ucx --build-openmpi --heffte-only --cuda"
 ```
 
