@@ -33,7 +33,7 @@
 namespace pfc::checkpoint {
 
 /// On-disk metadata schema version for published checkpoint bundles.
-inline constexpr int kCheckpointFormatVersion = 1;
+inline constexpr int kCheckpointFormatVersion = 2;
 
 /**
  * @brief Global domain geometry recorded in checkpoint metadata.
@@ -83,6 +83,12 @@ struct CheckpointMetadata {
  * Omits `decomposition` when nullopt; always emits `method_identity`.
  */
 [[nodiscard]] inline nlohmann::json to_json(const CheckpointMetadata &meta) {
+  if (meta.format_version != 1 && meta.format_version != kCheckpointFormatVersion)
+    throw std::invalid_argument("CheckpointMetadata: unsupported schema version");
+  if (meta.format_version == 1 &&
+      meta.domain.periodic != std::array<bool, 3>{true, true, true})
+    throw std::invalid_argument(
+        "CheckpointMetadata: schema version 1 cannot encode bounded axes");
   nlohmann::json j;
   j["format_version"] = meta.format_version;
   j["accepted_time"] = meta.accepted_time;
@@ -113,7 +119,7 @@ struct CheckpointMetadata {
 /**
  * @brief Parse @p j into `CheckpointMetadata`.
  *
- * Requires `format_version` equal to @ref kCheckpointFormatVersion.
+ * Reads current topology-aware metadata and legacy fully periodic version 1.
  * Missing or mistyped required keys throw `std::invalid_argument` naming
  * the field.
  */
@@ -133,10 +139,10 @@ struct CheckpointMetadata {
         "CheckpointMetadata: format_version must be an integer");
   }
   meta.format_version = ver.get<int>();
-  if (meta.format_version != kCheckpointFormatVersion) {
+  if (meta.format_version != 1 && meta.format_version != kCheckpointFormatVersion) {
     throw std::invalid_argument(
         "CheckpointMetadata schema version mismatch: file has " +
-        std::to_string(meta.format_version) + ", expected " +
+        std::to_string(meta.format_version) + ", expected " + "1 or " +
         std::to_string(kCheckpointFormatVersion));
   }
 
@@ -152,6 +158,9 @@ struct CheckpointMetadata {
       dom.at("physical_origin").get<std::array<double, 3>>();
   meta.domain.grid_spacing = dom.at("grid_spacing").get<std::array<double, 3>>();
 
+  if (meta.format_version == kCheckpointFormatVersion && !dom.contains("periodic"))
+    throw std::invalid_argument(
+        "CheckpointMetadata: schema version 2 requires domain.periodic");
   if (dom.contains("periodic")) {
     const auto &flags = dom.at("periodic");
     if (!flags.is_array() || flags.size() != 3 || !flags[0].is_boolean() ||
@@ -161,6 +170,10 @@ struct CheckpointMetadata {
     }
     meta.domain.periodic = flags.get<std::array<bool, 3>>();
   }
+  if (meta.format_version == 1 &&
+      meta.domain.periodic != std::array<bool, 3>{true, true, true})
+    throw std::invalid_argument(
+        "CheckpointMetadata: schema version 1 cannot encode bounded axes");
 
   if (j.contains("decomposition") && !j["decomposition"].is_null()) {
     const auto &d = j["decomposition"];

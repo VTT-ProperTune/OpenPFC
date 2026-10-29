@@ -30,7 +30,7 @@ filesystem restart.
 
 | Symbol | Header | Role |
 |--------|--------|------|
-| `CheckpointMetadata`, `DomainParams`, `DecompositionLayout`, `kCheckpointFormatVersion`, `to_json`, `from_json` | `checkpoint_metadata.hpp` | Versioned sidecar JSON (schema version 1) |
+| `CheckpointMetadata`, `DomainParams`, `DecompositionLayout`, `kCheckpointFormatVersion`, `to_json`, `from_json` | `checkpoint_metadata.hpp` | Versioned sidecar JSON (schema version 2, with legacy version-1 reads) |
 | `PublishOutcome`, `FieldsWriter`, `publish_checkpoint_directory(final_dir, meta, comm, write_fields)`, `make_publish_ok`, `make_publish_failed` | `publish.hpp` | MPI-collective atomic directory publish (the only publisher) |
 | `write_real_brick_mpi` | `brick_io.hpp` | Kernel MPI-IO of one owned float64 brick (no frontend include) |
 | `publish_field_bundle`, `load_field_bundle`, `FieldBundleState`, `FieldBundleSidecar`, `read_checkpoint_metadata`, `write_field_brick`, `read_field_brick` | `field_bundle.hpp` | Save/restore an explicit named set of `Field<double>` as one bundle, with caller time, method identity, boundary records and an optional JSON sidecar; restart on any decomposition |
@@ -72,9 +72,11 @@ A checkpoint is a **directory** (not a single opaque file):
 ```
 
 A bundle is considered loadable only when `final_dir` exists as a directory
-and contains readable `metadata.json` with `format_version` equal to
-`kCheckpointFormatVersion` (currently 1). `from_json` rejects any other
-schema version.
+and contains readable `metadata.json` in a supported schema. New checkpoints
+use `kCheckpointFormatVersion` (currently 2), which requires three boolean
+`domain.periodic` flags. A version-1 reader rejects version 2 instead of
+silently treating a bounded axis as periodic. Current readers also accept
+legacy version 1 as fully periodic; version 1 cannot encode bounded axes.
 
 `CheckpointService` writes bundles at `<directory>/step_<increment>/`. JSON:
 
@@ -89,11 +91,13 @@ schema version.
 host mirror — `CheckpointService` methods are templated on `MemorySpace`), `Time` accepted
 increment/time, result counter, and integrator method identity. Complex
 workspace hats (e.g. tungsten `N_hat`) are omitted and recomputed on the
-next step. Grid or method mismatch is a hard error that names the field.
+next step. A grid, periodicity or method mismatch on any rank rejects the
+request before field I/O. Every destination is validated, and metadata
+rejection preserves the fields, clock, result counter and boundary records.
 Halos are not stored; exchange them after load.
 
 Spectral JSON sessions also publish an optional `boundary_conditions` array
-in schema-v1 metadata. Entries contain the original BC `config` and its
+in checkpoint metadata (including legacy version 1). Entries contain the original BC `config` and its
 `state`, in application order. The session verifies configuration equality
 before restoring each modifier through `FieldModifier::restore_checkpoint_state`.
 Stateless modifiers return null from `checkpoint_state`; stateful modifiers

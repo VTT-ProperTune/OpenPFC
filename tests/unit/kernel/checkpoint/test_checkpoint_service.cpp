@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <filesystem>
+#include <fstream>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -391,6 +393,7 @@ TEST_CASE("Checkpoint periodicity round-trip and restart identity",
   want.domain.grid_spacing = {1.0, 1.0, 1.0};
   want.domain.periodic = {true, true, false};
   const auto encoded = pfc::checkpoint::to_json(want);
+  REQUIRE(encoded.at("format_version") == 2);
   const auto file = pfc::checkpoint::from_json(encoded);
   REQUIRE(file.domain.periodic == want.domain.periodic);
   REQUIRE_NOTHROW(pfc::sim::require_checkpoint_identity(file, want));
@@ -400,14 +403,101 @@ TEST_CASE("Checkpoint periodicity round-trip and restart identity",
                       ContainsSubstring("periodicity"));
   auto legacy = encoded;
   legacy["domain"].erase("periodic");
+  REQUIRE_THROWS_AS(pfc::checkpoint::from_json(legacy), std::invalid_argument);
+  legacy["format_version"] = 1;
   auto old = pfc::checkpoint::from_json(legacy);
   REQUIRE(old.domain.periodic == pfc::Bool3{true, true, true});
   REQUIRE_THROWS_AS(pfc::sim::require_checkpoint_identity(old, want),
                     std::invalid_argument);
+  auto periodic_want = want;
+  periodic_want.domain.periodic = {true, true, true};
+  REQUIRE_NOTHROW(pfc::sim::require_checkpoint_identity(old, periodic_want));
+  auto unsafe_legacy = want;
+  unsafe_legacy.format_version = 1;
+  REQUIRE_THROWS_AS(pfc::checkpoint::to_json(unsafe_legacy), std::invalid_argument);
+  auto unsafe_json = encoded;
+  unsafe_json["format_version"] = 1;
+  REQUIRE_THROWS_AS(pfc::checkpoint::from_json(unsafe_json), std::invalid_argument);
   for (const auto &bad : {nlohmann::json{true, 1, false},
                           nlohmann::json{true, false}, nlohmann::json(nullptr)}) {
     auto malformed = encoded;
     malformed["domain"]["periodic"] = bad;
     REQUIRE_THROWS_AS(pfc::checkpoint::from_json(malformed), std::invalid_argument);
   }
+}
+
+TEST_CASE("checkpoint service rejects every field before changing restart state",
+          "[checkpoint][service][MPI][periodicity_reject]") {
+  int rank = 0, ranks = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &ranks);
+  if (ranks > 4) SKIP("bounded restart rejection ranks");
+  auto make_fields = [&](const std::string &incompatible, bool source) {
+    pfc::SimulationState state;
+    for (const std::string name : {"u", "v"}) {
+      auto domain = pfc::domain::with_spacing({8, 8, 2}, {1.0, 1.0, 1.0});
+      if (rank == ranks - 1 && name == incompatible) domain.periodic[2] = false;
+      const auto dec = pfc::decomposition::create(domain, pfc::Int3{ranks, 1, 1});
+      auto field = pfc::data::field_from_subdomain<double>(dec, rank, 0);
+      const double value = source ? (name == "u" ? 3.0 : 5.0) : -7.0;
+      field.apply([=](double, double, double) { return value; });
+      state.add_field(name, std::move(field));
+    }
+    return state;
+  };
+  TempCkpt tmp("openpfc_ckpt_collective_periodicity");
+  CheckpointService writer({.directory = tmp.root}, MPI_COMM_WORLD);
+  writer.set_result_counter(7);
+  writer.set_boundary_conditions({{"published", true}});
+  auto source = make_fields("", true);
+  pfc::Time saved_time({0.0, 1.0, 0.1}, 0.0);
+  saved_time.next();
+  saved_time.next();
+  writer.save(source, saved_time);
+  bool legacy = false;
+  SECTION("current bundle metadata") { legacy = false; }
+  SECTION("legacy metadata without periodicity or field names") { legacy = true; }
+  if (legacy) {
+    if (rank == 0) {
+      const auto path = writer.step_dir(2) / "metadata.json";
+      nlohmann::json metadata;
+      {
+        std::ifstream input(path);
+        input >> metadata;
+      }
+      metadata["domain"].erase("periodic");
+      metadata.erase("fields");
+      metadata["format_version"] = 1;
+      std::ofstream(path) << metadata.dump(2);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+  }
+  CheckpointService reader({}, MPI_COMM_WORLD);
+  for (const std::string bad_field : {"v", "u"}) {
+    auto destination = make_fields(bad_field, false);
+    pfc::Time time({0.0, 1.0, 0.1}, 0.0);
+    reader.set_result_counter(99);
+    reader.set_boundary_conditions({{"keep", true}});
+    CHECK_THROWS_AS(reader.load(destination, time, writer.step_dir(2)),
+                    std::invalid_argument);
+    REQUIRE(time.get_increment() == 0);
+    REQUIRE(time.get_current() == 0.0);
+    REQUIRE(reader.result_counter() == 99);
+    REQUIRE(reader.boundary_conditions() == nlohmann::json{{"keep", true}});
+    for (const std::string name : {"u", "v"}) {
+      const auto &values = destination.get_field<double>(name).vec();
+      REQUIRE(std::all_of(values.begin(), values.end(),
+                          [](double x) { return x == -7.0; }));
+    }
+  }
+  auto compatible = make_fields("", false);
+  pfc::Time time({0.0, 1.0, 0.1}, 0.0);
+  reader.load(compatible, time, writer.step_dir(2));
+  REQUIRE(time.get_increment() == 2);
+  REQUIRE(reader.result_counter() == 7);
+  REQUIRE(reader.boundary_conditions() == nlohmann::json{{"published", true}});
+  require_fields_equal(source.get_field<double>("u"),
+                       compatible.get_field<double>("u"));
+  require_fields_equal(source.get_field<double>("v"),
+                       compatible.get_field<double>("v"));
 }

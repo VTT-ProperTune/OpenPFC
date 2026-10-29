@@ -15,9 +15,9 @@
  * field and an optional caller-owned JSON sidecar, and publishes everything
  * through `publish_checkpoint_directory`. `load_field_bundle` reads the
  * metadata on rank 0, broadcasts it, requires the same field names in the same
- * order and the same global grid, and reads each brick into the owned cells
- * of the caller's fields. Any decomposition may restore any other: bricks are
- * global and x-fastest. Halos are neither stored nor refreshed.
+ * order and the same global grid and periodicity, and reads each brick into the
+ * owned cells of the caller's fields. Any decomposition may restore any other:
+ * bricks are global and x-fastest. Halos are neither stored nor refreshed.
  *
  * Fields must share one domain and one decomposition. Host and device fields
  * are supported, with or without storage halos. Device fields go through
@@ -194,6 +194,47 @@ read_checkpoint_metadata(const std::filesystem::path &dir, MPI_Comm comm) {
   return from_json(nlohmann::json::parse(buf));
 }
 
+namespace detail {
+
+inline void require_collective_checkpoint_input(const std::string &error,
+                                                MPI_Comm comm) {
+  int local_ok = error.empty() ? 1 : 0, all_ok = 0;
+  pfc::mpi::throw_on_mpi_error(
+      MPI_Allreduce(&local_ok, &all_ok, 1, MPI_INT, MPI_MIN, comm),
+      "MPI_Allreduce checkpoint input");
+  if (!all_ok)
+    throw std::invalid_argument(
+        error.empty() ? "checkpoint input mismatch on another rank" : error);
+}
+
+template <class MemorySpace>
+inline void require_bundle_fields(const CheckpointMetadata &meta,
+                                  const std::vector<NamedField<MemorySpace>> &fields,
+                                  MPI_Comm comm, bool check_names = true) {
+  std::string error;
+  std::vector<std::string> names;
+  for (const auto &[name, f] : fields) {
+    names.push_back(name);
+    if (!f) {
+      error = "load_field_bundle: null field " + name;
+      continue;
+    }
+    if (meta.domain.periodic != f->domain().periodic)
+      error = "load_field_bundle: bundle periodicity differs from field " + name;
+    const auto g = f->global_size();
+    for (int a = 0; a < 3; ++a)
+      if (meta.domain.global_dimensions[a] != g[a] ||
+          meta.domain.grid_spacing[a] != f->spacing()[a] ||
+          meta.domain.physical_origin[a] != f->origin()[a])
+        error = "load_field_bundle: bundle grid differs from field " + name;
+  }
+  if (check_names && meta.fields != names)
+    error = "load_field_bundle: bundle fields differ from the requested fields";
+  require_collective_checkpoint_input(error, comm);
+}
+
+} // namespace detail
+
 /**
  * @brief Atomically publish @p fields at @p dir (MPI-collective).
  *
@@ -208,16 +249,17 @@ publish_field_bundle(const std::filesystem::path &dir,
                      const std::vector<NamedField<MemorySpace>> &fields,
                      const FieldBundleState &state, MPI_Comm comm,
                      const FieldBundleSidecar &sidecar = {}) {
-  if (fields.empty()) {
-    throw std::invalid_argument("publish_field_bundle: no fields");
-  }
+  std::string error;
+  if (fields.empty()) error = "publish_field_bundle: no fields";
+  for (const auto &[name, f] : fields)
+    if (!f) error = "publish_field_bundle: null field " + name;
   if (!sidecar.content.is_null() &&
       (sidecar.name.empty() || sidecar.name == "metadata.json" ||
        sidecar.name == "fields" ||
        std::filesystem::path(sidecar.name).has_parent_path())) {
-    throw std::invalid_argument("publish_field_bundle: invalid sidecar name '" +
-                                sidecar.name + "'");
+    error = "publish_field_bundle: invalid sidecar name '" + sidecar.name + "'";
   }
+  detail::require_collective_checkpoint_input(error, comm);
   const auto &f0 = *fields.front().second;
   const auto g = f0.global_size();
   const auto n = f0.local_size();
@@ -245,11 +287,24 @@ publish_field_bundle(const std::filesystem::path &dir,
         f->lower_global() != lo || f->origin() != f0.origin() ||
         f->spacing() != f0.spacing() ||
         f->domain().periodic != f0.domain().periodic) {
-      throw std::invalid_argument(
-          "publish_field_bundle: fields differ in grid or layout: " + name);
+      error = "publish_field_bundle: fields differ in grid or layout: " + name;
     }
     meta.fields.push_back(name);
   }
+  detail::require_collective_checkpoint_input(error, comm);
+  int mask = 0;
+  for (int a = 0; a < 3; ++a)
+    if (meta.domain.periodic[a]) mask |= 1 << a;
+  int minimum = 0, maximum = 0;
+  pfc::mpi::throw_on_mpi_error(
+      MPI_Allreduce(&mask, &minimum, 1, MPI_INT, MPI_MIN, comm),
+      "MPI_Allreduce checkpoint periodicity minimum");
+  pfc::mpi::throw_on_mpi_error(
+      MPI_Allreduce(&mask, &maximum, 1, MPI_INT, MPI_MAX, comm),
+      "MPI_Allreduce checkpoint periodicity maximum");
+  if (minimum != maximum)
+    throw std::invalid_argument(
+        "publish_field_bundle: periodicity differs across ranks");
 
   return publish_checkpoint_directory(
       dir, meta, comm, [&](const std::filesystem::path &fields_dir) {
@@ -270,12 +325,13 @@ publish_field_bundle(const std::filesystem::path &dir,
  * @brief Restore exactly the named @p fields from @p dir (MPI-collective).
  *
  * The bundle must list the same field names in the same order, and its global
- * grid (size, origin, spacing) must equal that of every field. The current
- * decomposition may differ from the saved one.
+ * grid (size, origin, spacing, periodicity) must equal that of every field. The
+ * current decomposition may differ from the saved one.
  *
  * @return the bundle metadata (time, increment, method identity, boundary
  *         records). A sidecar, if any, is not read.
- * @throws std::invalid_argument on a name or grid mismatch, on every rank.
+ * @throws std::invalid_argument on a name, grid or periodicity mismatch, on every
+ * rank.
  */
 template <class MemorySpace = pfc::HostSpace>
 [[nodiscard]] CheckpointMetadata
@@ -283,29 +339,7 @@ load_field_bundle(const std::filesystem::path &dir,
                   const std::vector<NamedField<MemorySpace>> &fields,
                   MPI_Comm comm) {
   const auto meta = read_checkpoint_metadata(dir, comm);
-  std::vector<std::string> names;
-  for (const auto &kv : fields) {
-    names.push_back(kv.first);
-  }
-  if (meta.fields != names) {
-    throw std::invalid_argument(
-        "load_field_bundle: bundle fields differ from the requested fields");
-  }
-  for (const auto &[name, f] : fields) {
-    const auto g = f->global_size();
-    if (meta.domain.periodic != f->domain().periodic) {
-      throw std::invalid_argument(
-          "load_field_bundle: bundle periodicity differs from field " + name);
-    }
-    for (int a = 0; a < 3; ++a) {
-      if (meta.domain.global_dimensions[a] != g[a] ||
-          meta.domain.grid_spacing[a] != f->spacing()[a] ||
-          meta.domain.physical_origin[a] != f->origin()[a]) {
-        throw std::invalid_argument(
-            "load_field_bundle: bundle grid differs from field " + name);
-      }
-    }
-  }
+  detail::require_bundle_fields(meta, fields, comm);
   for (const auto &[name, f] : fields) {
     read_field_brick(dir / "fields" / (name + ".bin"), comm, *f);
   }

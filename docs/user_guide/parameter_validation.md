@@ -110,6 +110,14 @@ faces; boundary-stage operators must still provide the desired boundary values.
 Fourier/HeFFTe operators retain their periodic basis assumptions. Setting domain
 metadata does not make a Fourier operator a bounded spectral method.
 
-Checkpoint domain metadata records periodicity and restart rejects mismatches
-before restoring fields. Older bundles without the field are interpreted as
-fully periodic, so they cannot silently restart a mixed-periodic configuration.
+Checkpoint schema version 2 records periodicity and restart rejects mismatches
+before restoring fields. Legacy version-1 bundles without the field are
+interpreted as fully periodic, so they cannot silently restart a mixed-periodic
+configuration. Older readers reject version 2; a topology-aware checkpoint
+must not be labeled version 1. See [checkpoint publication](../development/checkpoint_publish.md).
+
+All ranks must agree on source periodicity before a bundle is published.
+On restart, every destination field is checked on every rank before collective
+field I/O; one rank's topology mismatch rejects the complete request. The
+checkpoint service also leaves its clock, result counter and boundary records
+unchanged when that metadata validation fails.

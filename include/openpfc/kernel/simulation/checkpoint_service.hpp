@@ -86,7 +86,10 @@ domain_params_from(const pfc::Domain &d) {
 
 inline void require_checkpoint_identity(const checkpoint::CheckpointMetadata &file,
                                         const checkpoint::CheckpointMetadata &want) {
-  if (file.format_version != want.format_version) {
+  const bool readable_legacy =
+      file.format_version == 1 &&
+      want.format_version == checkpoint::kCheckpointFormatVersion;
+  if (file.format_version != want.format_version && !readable_legacy) {
     throw std::invalid_argument(
         "checkpoint identity mismatch: schema version file=" +
         std::to_string(file.format_version) +
@@ -194,38 +197,47 @@ public:
         }
       }
     }
-    if (names.empty()) {
-      throw std::invalid_argument("checkpoint load: no field names");
-    }
-    const auto &field0 = state.get_field<double, MemorySpace>(names.front());
-    checkpoint::CheckpointMetadata want;
-    want.format_version = checkpoint::kCheckpointFormatVersion;
-    want.domain = domain_params_from(field0.domain());
-    want.method_identity = pfc::sim::steppers::to_string(time.method());
-    require_checkpoint_identity(meta, want);
+    std::vector<checkpoint::NamedField<MemorySpace>> fields;
+    Time candidate_time = time;
+    std::string error;
+    try {
+      if (names.empty())
+        throw std::invalid_argument("checkpoint load: no field names");
+      for (const auto &name : names)
+        fields.emplace_back(name, &state.get_field<double, MemorySpace>(name));
+      checkpoint::CheckpointMetadata want;
+      want.format_version = checkpoint::kCheckpointFormatVersion;
+      want.domain = domain_params_from(fields.front().second->domain());
+      want.method_identity = pfc::sim::steppers::to_string(time.method());
+      require_checkpoint_identity(meta, want);
 
-    time.set_increment(meta.accepted_increment);
-    if (std::abs(time.get_current() - meta.accepted_time) > 1e-9) {
-      throw std::invalid_argument(
-          "checkpoint identity mismatch: accepted_time file=" +
-          std::to_string(meta.accepted_time) +
-          " reconstructed=" + std::to_string(time.get_current()));
-    }
-    if (!meta.method_identity.empty()) {
-      auto parsed = pfc::sim::steppers::resolve_method_id(meta.method_identity);
-      if (!parsed) {
-        throw std::invalid_argument("checkpoint load: unknown method_identity '" +
-                                    meta.method_identity + "'");
+      candidate_time.set_increment(meta.accepted_increment);
+      if (std::abs(candidate_time.get_current() - meta.accepted_time) > 1e-9)
+        throw std::invalid_argument(
+            "checkpoint identity mismatch: accepted_time file=" +
+            std::to_string(meta.accepted_time) +
+            " reconstructed=" + std::to_string(candidate_time.get_current()));
+      if (!meta.method_identity.empty()) {
+        const auto parsed =
+            pfc::sim::steppers::resolve_method_id(meta.method_identity);
+        if (!parsed)
+          throw std::invalid_argument("checkpoint load: unknown method_identity '" +
+                                      meta.method_identity + "'");
+        candidate_time.set_method(*parsed);
       }
-      time.set_method(*parsed);
+    } catch (const std::exception &e) {
+      error = e.what();
     }
+    checkpoint::detail::require_collective_checkpoint_input(error, m_comm);
+    // Old field-only checkpoints may omit names. Preserve that lookup while
+    // validating every requested destination on every rank before any write.
+    checkpoint::detail::require_bundle_fields(meta, fields, m_comm,
+                                              !meta.fields.empty());
+    for (const auto &[name, field] : fields)
+      checkpoint::read_field_brick(dir / "fields" / (name + ".bin"), m_comm, *field);
+    time = candidate_time;
     m_result_counter = meta.result_counter;
     m_boundary_conditions = meta.boundary_conditions;
-
-    for (const auto &name : names) {
-      checkpoint::read_field_brick(dir / "fields" / (name + ".bin"), m_comm,
-                                   state.get_field<double, MemorySpace>(name));
-    }
   }
 
   template <class MemorySpace = pfc::HostSpace>

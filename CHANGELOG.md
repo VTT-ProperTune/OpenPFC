@@ -7,6 +7,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- JSON/TOML domains accept per-axis `periodic` booleans (#136). Bundles and
+  checkpoint services preserve them, collectively reject incompatible fields
+  before restoration, and leave fields and restart state intact on rejection.
+  New checkpoints use schema version 2 so old readers reject them; legacy
+  fully periodic version-1 bundles remain readable.
+
 - Package compiled CPU app cases with `openpfc bundle CASE -o CASE.sif`, using
   the same native packager as C++ source models. Case images provide native
   `--version`, `--provenance`, `init CASE` and externally launched `run CASE`.
@@ -354,9 +360,6 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   content-addressed build/run records and non-overwriting attempts; `export`
   copies records to durable storage. Existing catalogued case commands remain
   available (#635). Building the CLI requires OpenSSL Crypto 1.1 or newer.
-
-- JSON/TOML domains accept per-axis `periodic` booleans; checkpoint bundles
-  preserve and validate periodicity on restart (#136).
 
 - Installed SDKs export a relocatable JSON build manifest with compiler, MPI
   library/ABI evidence and effective CUDA/HIP configuration. CMake consumers can

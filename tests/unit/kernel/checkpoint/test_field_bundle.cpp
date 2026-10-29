@@ -441,7 +441,13 @@ TEST_CASE("field bundle rejects periodicity mismatch before destination writes",
   second_source.with_host_view(
       [](double *data, std::size_t size) { std::fill(data, data + size, 5.0); });
   auto destination_grid = source_grid;
-  destination_grid.periodic = {true, true, true};
+  bool rank_local = false;
+  SECTION("all ranks have an incompatible destination") { rank_local = false; }
+  SECTION("only the last rank has an incompatible destination") {
+    rank_local = true;
+  }
+  if (!rank_local || comm_rank(MPI_COMM_WORLD) == comm_size(MPI_COMM_WORLD) - 1)
+    destination_grid.periodic = {true, true, true};
   // The first destination is compatible; the second must reject the complete
   // bundle before even the first field has been overwritten, on every rank.
   Field first_destination(source_grid, local_box);
@@ -492,4 +498,22 @@ TEST_CASE("field bundle rejects periodicity mismatch before destination writes",
         std::all_of(data, data + size, [](double value) { return value == 5.0; });
   });
   REQUIRE(all_ranks(first_ok && second_ok, MPI_COMM_WORLD));
+}
+
+TEST_CASE("field bundle rejects rank-inconsistent source periodicity",
+          "[checkpoint][field_bundle][MPI][periodicity_reject]") {
+  if (comm_size(MPI_COMM_WORLD) == 1) SKIP("requires different rank inputs");
+  auto source_grid = grid();
+  if (comm_rank(MPI_COMM_WORLD) == comm_size(MPI_COMM_WORLD) - 1)
+    source_grid.periodic[2] = false;
+  Field source(source_grid, x_slab(MPI_COMM_WORLD));
+  fill(source, 1);
+  BundleDir tmp("source_periodicity");
+  const auto dir = tmp.root / "bundle";
+  CHECK_THROWS_AS(publish_field_bundle(dir,
+                                       std::vector<NamedField<>>{{"u", &source}},
+                                       FieldBundleState{}, MPI_COMM_WORLD),
+                  std::invalid_argument);
+  REQUIRE_FALSE(fs::exists(dir));
+  REQUIRE_FALSE(fs::exists(fs::path(dir.string() + ".publishing")));
 }
