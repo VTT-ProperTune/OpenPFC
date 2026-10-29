@@ -17,6 +17,7 @@ void print_help(const std::string &command) {
                  "  openpfc compile CASE [--source CHECKOUT]\n"
                  "  openpfc run CASE [--ranks N]\n"
                  "  openpfc bundle MODEL.cpp -o MODEL.sif [--base BASE.sif]\n"
+                 "  openpfc bundle CASE -o CASE.sif [--prepare-only]\n"
                  "  openpfc export CACHED_RECORD NEW_DIRECTORY\n\n"
                  "Use openpfc COMMAND --help or openpfc help COMMAND for details.\n"
                  "Source builds require a compatible installed SDK and compiler/MPI "
@@ -130,6 +131,7 @@ void print_help(const std::string &command) {
   } else if (command == "bundle") {
     std::cout
         << "Usage: openpfc bundle MODEL.cpp -o MODEL.sif [options]\n"
+           "       openpfc bundle CASE -o CASE.sif [options]\n"
            "       openpfc bundle MODEL.cpp -o MODEL.sif --base BASE.sif "
            "[options]\n\n"
            "Package a compiled CPU model and its non-MPI runtime libraries into "
@@ -179,7 +181,18 @@ void print_help(const std::string &command) {
            "--prepare-only needs no container runtime. The staged directory "
            "contains bundle.def, the payload and provenance.\n"
            "The image digest is the sidecar, not a field inside the image.\n"
-           "Catalogued app cases continue to use scripts/bake_case.py.\n";
+           "CASE must already be compiled with profile local. Its input.json is "
+           "frozen\n"
+           "in the image. Case images accept --version, --provenance, init CASE "
+           "and\n"
+           "run CASE. Launch run through outer mpirun/srun; no Python is needed.\n";
+  } else if (command == "image") {
+    std::cout
+        << "Usage: openpfc image {--version | --provenance | init CASE | run "
+           "CASE}\n\n"
+           "Runtime entry point inside a bundled app case. Usually invoked by\n"
+           "CASE.sif.run. init refuses existing destinations; run executes the\n"
+           "image's app directly under the outer MPI launcher.\n";
   } else if (command == "export") {
     std::cout
         << "Usage: openpfc export CACHED_RECORD NEW_DIRECTORY\n\n"

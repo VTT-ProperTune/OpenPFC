@@ -331,11 +331,13 @@ int bundle_model(const Arguments &args) {
               "define",   "build-type", "toolchain",    "source-root", "generator",
               "cxx",      "cc",         "jobs",         "backend",     "profile"});
   if (args.positional.size() != 1)
-    throw Error("bundle expects one C++ model source file");
+    throw Error("bundle expects one C++ model source file or compiled app case");
   const auto extension = fs::path(args.positional.front()).extension();
-  if (extension != ".cpp" && extension != ".cc" && extension != ".cxx")
-    throw Error("bundle packages a C++ model such as model.cpp; catalogued app "
-                "cases still use scripts/bake_case.py");
+  const bool case_bundle =
+      extension != ".cpp" && extension != ".cc" && extension != ".cxx";
+  if (case_bundle)
+    args.allow({"output", "base", "prepare-only", "runtime", "host-prefix",
+                "host-lib", "site", "profile", "backend"});
   const auto requested = args.get("profile", "local-cpu");
   if (requested != "local" && requested != "local-cpu")
     throw Error("profile " + requested +
@@ -402,10 +404,73 @@ int bundle_model(const Arguments &args) {
       throw Error("--input must be a single file name without quotes");
     input_bytes = read(input);
   }
-  auto build = compile_source(args);
-  const auto model = build.root / "model";
+  require_single_process();
+  Build build;
+  fs::path model;
+  Json original_case;
+  std::map<std::string, std::string> payload_files;
+  std::string case_app;
+  if (case_bundle) {
+    auto [project, manifest] = case_manifest(args);
+    if (manifest.value("profile", "") != "local")
+      throw Error("case bundle requires a compiled CPU case with profile local; GPU "
+                  "profiles remain unqualified");
+    if (!manifest.contains("executable") || !manifest.contains("build_dir"))
+      throw Error("case must be compiled before bundling");
+    model = canonical_file(manifest.at("executable").get<std::string>(),
+                           "case executable");
+    input_name = "input.json";
+    input_bytes = read(project / input_name);
+    validate_bundle_input(Json::parse(input_bytes));
+    original_case = manifest;
+    case_app = manifest.at("app").get<std::string>();
+    const auto version =
+        canonical_file(fs::path(manifest.at("build_dir").get<std::string>()) /
+                           "share/openpfc/version",
+                       "case build version");
+    payload_files["share/openpfc/version"] = read(version);
+    payload_files["bin/openpfc"] = read(executable());
+    payload_files["case/input.json"] = input_bytes;
+    payload_files["case/openpfc.json"] =
+        Json{{"format_version", 1},
+             {"app", case_app},
+             {"input", "input.json"},
+             {"profile", "local"},
+             {"executable", "/opt/openpfc/bin/model"}}
+            .dump(2) +
+        "\n";
+    build.manifest = {{"build_id", nullptr},
+                      {"binary_sha256", file_sha256(model)},
+                      {"case_manifest", original_case},
+                      {"source_identity_note",
+                       "Case build metadata observed at packaging time; not proof "
+                       "of the source or toolchain that produced the binary."}};
+    payload_files["build-manifest.json"] = build.manifest.dump(2) + "\n";
+  } else {
+    build = compile_source(args);
+    model = build.root / "model";
+    payload_files["build-manifest.json"] = read(build.root / "build-manifest.json");
+    if (!input_name.empty()) payload_files["inputs/" + input_name] = input_bytes;
+  }
   require_executable(model);
-  const auto closure = dynamic_closure(model);
+  auto closure = dynamic_closure(model);
+  if (case_bundle) {
+    const auto cli_closure = dynamic_closure(executable());
+    if (cli_closure.interpreter != closure.interpreter)
+      throw Error("CLI and app use incompatible ELF interpreters");
+    for (const auto &library : cli_closure.libraries) {
+      const auto found =
+          std::ranges::find_if(closure.libraries, [&](const auto &other) {
+            return other.soname == library.soname;
+          });
+      if (found != closure.libraries.end() && found->path != library.path)
+        throw Error("CLI and app resolve incompatible runtime libraries: " +
+                    library.soname);
+      if (found == closure.libraries.end()) closure.libraries.push_back(library);
+    }
+    raise_glibc(closure.glibc_major, closure.glibc_minor, cli_closure.glibc_major,
+                cli_closure.glibc_minor);
+  }
   const auto &mpi_pattern = site == "cray" ? k_cray : k_openmpi;
   std::map<std::string, fs::path> bundled;
   std::map<std::string, fs::path> host_from_prefix;
@@ -496,10 +561,12 @@ int bundle_model(const Arguments &args) {
     }
   }
   const auto floor = glibc_text(glibc_major, glibc_minor);
-  const auto &consumer = build.manifest.at("identity").at("consumer");
   Json sdk_manifest = nullptr;
-  if (consumer.contains("sdk_manifest_sha256"))
-    sdk_manifest = consumer.at("sdk_manifest_sha256").at("value");
+  if (!case_bundle) {
+    const auto &consumer = build.manifest.at("identity").at("consumer");
+    if (consumer.contains("sdk_manifest_sha256"))
+      sdk_manifest = consumer.at("sdk_manifest_sha256").at("value");
+  }
   Json host_records = library_records(host_from_prefix);
   for (const auto &[name, path] : host_from_file)
     host_records[name] = Json{{"path", path.string()},
@@ -512,7 +579,7 @@ int bundle_model(const Arguments &args) {
   const std::map<std::string, fs::path> no_libraries;
   Json provenance{
       {"format_version", 1},
-      {"kind", "openpfc.model-bundle"},
+      {"kind", case_bundle ? "openpfc.case-bundle" : "openpfc.model-bundle"},
       {"profile", "local-cpu"},
       {"profile_qualification", "cpu-host-mpi"},
       {"unqualified_profiles", {"tohtori-cuda", "lumi-g"}},
@@ -553,10 +620,19 @@ int bundle_model(const Arguments &args) {
       {"host_provider_directories",
        std::vector<std::string>(provider_binds.begin(), provider_binds.end())},
       {"source_identity_note",
-       "build_id is the content-addressed model build. The SIF digest "
-       "is stored beside the image, not in this file."}};
-  // host_helper_version changes when the generated run-host.sh changes, so a
-  // cached bundle never keeps a helper written by an older CLI.
+       case_bundle ? "Case build metadata is observed at packaging time, not proof "
+                     "of binary build provenance. build_id is null."
+                   : "build_id is the content-addressed model build. The SIF digest "
+                     "is stored beside the image, not in this file."}};
+  if (case_bundle) {
+    provenance["case_app"] = case_app;
+    provenance["case_manifest_canonical_sha256"] = sha256(original_case.dump());
+  }
+  Json payload_records = Json::object();
+  for (const auto &[name, bytes] : payload_files)
+    payload_records[name] = sha256(bytes);
+  provenance["payload_files"] = payload_records;
+  // Invalidate recipes when the generated launch helper changes.
   Json identity{{"schema_version", 1},
                 {"domain", "openpfc.model-bundle.v1"},
                 {"host_helper_version", 2},
@@ -586,6 +662,10 @@ int bundle_model(const Arguments &args) {
       const auto path = root / "rootfs" / fs::path(file.key()).relative_path();
       if (file_sha256(path) != file.value().at("sha256").get<std::string>())
         throw Error("cached scratch file changed: " + path.string());
+    }
+    for (const auto &[name, bytes] : payload_files) {
+      if (file_sha256(root / "payload" / name) != sha256(bytes))
+        throw Error("cached bundle payload changed: " + name);
     }
     for (const auto *name :
          {"bundle.def", "run-host.sh", "payload/provenance.json"}) {
@@ -627,15 +707,16 @@ int bundle_model(const Arguments &args) {
     publish(stage / "payload/bin/model", read(model), true);
     for (const auto &[name, path] : bundled)
       publish(stage / "payload/lib" / name, read(path), false);
-    if (!input_name.empty()) {
-      safe_directory(stage / "payload/inputs");
-      publish(stage / "payload/inputs" / input_name, input_bytes, false);
+    for (const auto &[name, bytes] : payload_files) {
+      const auto path = stage / "payload" / name;
+      safe_directory(path.parent_path());
+      publish(path, bytes, name == "bin/openpfc");
     }
-    publish(stage / "payload/build-manifest.json",
-            read(build.root / "build-manifest.json"), false);
     publish(stage / "payload/provenance.json", provenance.dump(2) + "\n", false);
     std::string runscript = "    exec /opt/openpfc/bin/model \"$@\"\n";
-    if (!input_name.empty()) {
+    if (case_bundle) {
+      runscript = "    exec /opt/openpfc/bin/openpfc image \"$@\"\n";
+    } else if (!input_name.empty()) {
       runscript =
           "    if [ \"$#\" -eq 0 ]; then\n        exec /opt/openpfc/bin/model "
           "'/opt/openpfc/inputs/" +

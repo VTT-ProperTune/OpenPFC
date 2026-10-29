@@ -26,7 +26,6 @@ const std::map<std::string, App> &catalog() {
   }();
   return apps;
 }
-namespace {
 std::pair<fs::path, Json> case_manifest(const Arguments &args) {
   if (args.positional.size() != 1) throw Error("expected one case directory");
   auto project = absolute_path(args.positional.front());
@@ -48,6 +47,7 @@ std::pair<fs::path, Json> case_manifest(const Arguments &args) {
     throw Error("case input.json is missing");
   return {project, manifest};
 }
+namespace {
 std::string backend(const std::string &profile) {
   if (profile == "local") return "cpu";
   if (profile == "tohtori") return "cuda";

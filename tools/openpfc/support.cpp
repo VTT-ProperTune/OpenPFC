@@ -58,8 +58,8 @@ void Arguments::allow(const std::vector<std::string> &keys) const {
 }
 Arguments parse(int argc, char **argv) {
   Arguments args;
-  const std::set<std::string> flags{"version", "help", "dry-run", "no-test",
-                                    "prepare-only"};
+  const std::set<std::string> flags{"version", "help",         "dry-run",
+                                    "no-test", "prepare-only", "provenance"};
   bool positional_only = false;
   for (int i = 1; i < argc; ++i) {
     std::string value(argv[i]);

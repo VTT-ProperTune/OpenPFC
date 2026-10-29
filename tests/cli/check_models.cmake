@@ -768,3 +768,6 @@ file(SHA256 "${scratch_dir}/payload/provenance.json" scratch_after)
 if(NOT scratch_before STREQUAL scratch_after)
   message(FATAL_ERROR "Repeated scratch prepare-only rewrote provenance")
 endif()
+
+# The same packager and runtime serve compiled catalogued app cases.
+include("${source}/tests/cli/check_case_bundles.cmake")

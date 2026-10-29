@@ -366,6 +366,36 @@ wrote the same bytes as the native executable. An optional `--input FILE` stores
 frozen input in the image and records its digest. Calling the image with
 arguments still passes those arguments to the model.
 
-Catalogued app cases are a different packaging path. The
-[legacy CPU runtime baker](../../containers/runtime/README.md) still packages a
-compiled tungsten case with `scripts/bake_case.py`.
+Compiled catalogued CPU app cases use the same packager:
+
+```bash
+openpfc compile mycase --profile=local
+openpfc bundle mycase -o case.sif --host-prefix /path/to/openmpi
+./case.sif.run --version
+./case.sif.run --provenance
+./case.sif.run init fresh-case
+mpirun -n 2 ./case.sif.run run fresh-case
+```
+
+The case must already have a `local` compile record and an existing executable;
+`bundle CASE` does not compile it. Source-build options and `--input` apply only
+to source models. A case always freezes its own `input.json`. Case images also
+carry the native CLI and its runtime library closure, with no SDK or Python.
+`init` refuses an existing destination; run outputs belong to the copied case.
+`run` replaces each outer MPI rank with the bundled executable, without a nested
+launcher. Its case app must match the image. Editing the copied input is allowed;
+input portability is checked again before running.
+
+Case inputs must be self-contained. Restart inputs and file-based initial or boundary
+conditions are rejected. Field, checkpoint and diagnostics paths must be
+relative paths under `results/`. The supported analytic initial conditions
+include the shipped catalog presets. Additional data files are not bundled.
+
+Case provenance records the binary, frozen input, native CLI, version and library
+hashes and retains the original case compile metadata. Legacy case compilation
+does not record a verifiable content-addressed build identity, so `build_id` and
+the SDK digest are null for cases; packaging metadata does not prove the source
+or toolchain that produced the binary. Source-model bundles retain their
+content-addressed build identity. Keep original build records with durable
+results. See [runtime images](../../containers/runtime/README.md) for migration
+from the retired Python baker.

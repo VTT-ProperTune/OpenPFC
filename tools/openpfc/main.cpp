@@ -7,6 +7,7 @@ int main(int argc, char **argv) {
   using namespace openpfc_cli;
   try {
     auto args = parse(argc, argv);
+    if (args.command == "image" && !args.has("help")) return image_command(args);
     if (args.has("version")) {
       args.allow({"version"});
       if (!args.command.empty()) throw Error("--version takes no command");

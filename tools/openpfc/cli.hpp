@@ -78,6 +78,9 @@ struct App {
 const std::map<std::string, App> &catalog();
 int catalog_command(const Arguments &args);
 int init_model(const Arguments &args);
+std::pair<fs::path, Json> case_manifest(const Arguments &args);
+void validate_bundle_input(const Json &settings);
+int image_command(const Arguments &args);
 int compile_case(const Arguments &args);
 int run_case(const Arguments &args);
 struct Build {
