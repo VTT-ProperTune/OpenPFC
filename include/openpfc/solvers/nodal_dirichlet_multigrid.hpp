@@ -168,15 +168,65 @@ public:
       throw std::invalid_argument("NodalDirichletMultigrid: null communicator");
     MPI_Comm_rank(comm, &m_rank);
     MPI_Comm_size(comm, &m_size);
-    if (rank != m_rank || m_size != plan.world_size() ||
+    const auto n = plan.levels().size() < 2
+                       ? 0
+                       : product(domain::get_size(plan.levels().back().domain));
+    const bool invalid =
+        rank != m_rank || m_size != plan.world_size() ||
         !(controls.diffusion > 0.0) || !std::isfinite(controls.diffusion) ||
         !(controls.reaction >= 0.0) || !std::isfinite(controls.reaction) ||
         !(controls.jacobi_weight > 0.0 && controls.jacobi_weight < 1.0) ||
         !std::isfinite(controls.jacobi_weight) || controls.pre < 1 ||
         controls.pre != controls.post || controls.coarsest_free_extent != 7 ||
-        controls.max_coarse_unknowns < 1 || plan.levels().size() < 2)
+        controls.max_coarse_unknowns < 1 || plan.levels().size() < 2 ||
+        n > static_cast<std::size_t>(controls.max_coarse_unknowns) ||
+        n > static_cast<std::size_t>(std::numeric_limits<int>::max());
+    int local_valid = invalid ? 0 : 1, all_valid = 0;
+    MPI_Allreduce(&local_valid, &all_valid, 1, MPI_INT, MPI_MIN, comm);
+    if (!all_valid)
       throw std::invalid_argument(
           "NodalDirichletMultigrid: invalid agglomerated plan or controls");
+
+    // A valid local plan is insufficient: different plans or coefficients
+    // on peers can disagree on collective order or invalidate SPD symmetry.
+    // Plan::build is deterministic in these inputs. Compare them before
+    // creating level communicators, halos, fields or the terminal factor.
+    const auto &fine = plan.levels().front();
+    const auto &options = plan.options();
+    const std::vector<double> signature{
+        static_cast<double>(fine.domain.size[0]),
+        static_cast<double>(fine.domain.size[1]),
+        static_cast<double>(fine.domain.size[2]),
+        fine.domain.spacing[0],
+        fine.domain.spacing[1],
+        fine.domain.spacing[2],
+        fine.domain.origin[0],
+        fine.domain.origin[1],
+        fine.domain.origin[2],
+        static_cast<double>(fine.process_grid[0]),
+        static_cast<double>(fine.process_grid[1]),
+        static_cast<double>(fine.process_grid[2]),
+        controls.diffusion,
+        controls.reaction,
+        controls.jacobi_weight,
+        static_cast<double>(controls.pre),
+        static_cast<double>(controls.post),
+        static_cast<double>(controls.coarsest_free_extent),
+        static_cast<double>(controls.max_coarse_unknowns),
+        static_cast<double>(options.minimum_owned_extent),
+        static_cast<double>(options.halo_width),
+        static_cast<double>(options.estimated_padded_fields),
+        static_cast<double>(options.terminal_short_extent),
+        static_cast<double>(options.permit_factor_three),
+        static_cast<double>(options.maximum_route_elements)};
+    std::vector<double> minimum(signature.size()), maximum(signature.size());
+    MPI_Allreduce(signature.data(), minimum.data(),
+                  static_cast<int>(signature.size()), MPI_DOUBLE, MPI_MIN, comm);
+    MPI_Allreduce(signature.data(), maximum.data(),
+                  static_cast<int>(signature.size()), MPI_DOUBLE, MPI_MAX, comm);
+    if (minimum != maximum)
+      throw std::invalid_argument(
+          "NodalDirichletMultigrid: inconsistent collective plan or controls");
 
     m_plan = std::make_unique<MultigridPlan>(plan);
     // MPI_Comm_split happens collectively before any level allocates fields.
@@ -200,11 +250,6 @@ public:
     }
 
     m_coarse_domain = hierarchy.back().domain;
-    const auto n = product(domain::get_size(m_coarse_domain));
-    if (n > static_cast<std::size_t>(controls.max_coarse_unknowns) ||
-        n > static_cast<std::size_t>(std::numeric_limits<int>::max()))
-      throw std::invalid_argument(
-          "NodalDirichletMultigrid: coarse dense capacity exceeded");
     if (m_rank == hierarchy.back().active_world_ranks.front()) {
       m_coarse_rhs.assign(n, 0.0);
       m_coarse_x.assign(n, 0.0);
@@ -223,7 +268,7 @@ public:
   }
 
   [[nodiscard]] bool active_on_level(std::size_t index) const {
-    if (index >= levels())
+    if (index >= static_cast<std::size_t>(levels()))
       throw std::out_of_range("NodalDirichletMultigrid: level out of range");
     if (!m_plan) return true; // Legacy hierarchy has replicated leaf.
     const auto &ranks = m_plan->levels()[index].active_world_ranks;

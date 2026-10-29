@@ -316,7 +316,9 @@ private:
         for (int gz : choices[2]) {
           const Int3 g{gx, gy, gz};
           const auto active = grid_count(g);
-          bool valid = true;
+          // The terminal factor is owned by one rank, even when the long
+          // axis of a 7x7x15 leaf could still fit several valid bricks.
+          bool valid = size[0] != opt.terminal_short_extent || active == 1;
           for (int a = 0; a < 3; ++a)
             if (g[a] > size[a] ||
                 size[a] / g[a] <

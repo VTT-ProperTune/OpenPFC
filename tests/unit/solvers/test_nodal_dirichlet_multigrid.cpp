@@ -790,6 +790,7 @@ void check_agglomerated(const Fixture &f, int min_extent, double reaction = 0.0)
   config.reaction = reaction;
   MG mg(plan, f.rank, f.comm, config);
   REQUIRE(mg.levels() == static_cast<int>(plan.levels().size()));
+  REQUIRE_THROWS_AS(mg.active_on_level(plan.levels().size()), std::out_of_range);
   REQUIRE(mg.coarse_unknowns() == (f.nodes[2] == f.nodes[0] ? 343 : 735));
   REQUIRE(mg.local_unknowns() ==
           count(pfc::decomposition::local_box(f.decomposition, f.rank).size));
@@ -1048,4 +1049,38 @@ TEST_CASE("rank-agglomerated Q1 Galerkin manufactured solution is second order",
   INFO("L2 error coarse=" << error_coarse << " fine=" << error_fine);
   REQUIRE(error_coarse > error_fine);
   REQUIRE(std::log2(error_coarse / error_fine) > 1.8);
+}
+
+TEST_CASE("agglomerated solver rejects inconsistent ranks collectively",
+          "[nodal_dirichlet_plan][MPI][validation]") {
+  int rank = 0, ranks = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &ranks);
+  if (plan_grids(ranks).empty()) SKIP("bounded constructor-validation ranks");
+  Fixture f({31, 31, 31}, {0.05, 0.05, 0.05}, {ranks, 1, 1}, MPI_COMM_WORLD);
+  pfc::solvers::MultigridPlanOptions options;
+  options.minimum_owned_extent = 4;
+  const auto plan = pfc::solvers::MultigridPlan::build(f.decomposition, options);
+  const bool last = rank == ranks - 1;
+  REQUIRE_THROWS_AS(MG(plan, rank, MPI_COMM_NULL), std::invalid_argument);
+  REQUIRE_THROWS_AS(MG(plan, last ? rank + 1 : rank, MPI_COMM_WORLD),
+                    std::invalid_argument);
+  MG::Controls controls;
+  if (last) controls.jacobi_weight = -1;
+  REQUIRE_THROWS_AS(MG(plan, rank, MPI_COMM_WORLD, controls), std::invalid_argument);
+  controls = MG::Controls{};
+  if (last) controls.max_coarse_unknowns = 1;
+  REQUIRE_THROWS_AS(MG(plan, rank, MPI_COMM_WORLD, controls), std::invalid_argument);
+  if (ranks > 1) {
+    REQUIRE_THROWS_AS(MG(plan, 0, MPI_COMM_SELF), std::invalid_argument);
+    controls = MG::Controls{};
+    if (last) controls.diffusion = 2;
+    REQUIRE_THROWS_AS(MG(plan, rank, MPI_COMM_WORLD, controls),
+                      std::invalid_argument);
+    Fixture other(last ? pfc::Int3{63, 63, 63} : f.nodes, f.h, {ranks, 1, 1},
+                  MPI_COMM_WORLD);
+    const auto inconsistent =
+        pfc::solvers::MultigridPlan::build(other.decomposition, options);
+    REQUIRE_THROWS_AS(MG(inconsistent, rank, MPI_COMM_WORLD), std::invalid_argument);
+  }
 }

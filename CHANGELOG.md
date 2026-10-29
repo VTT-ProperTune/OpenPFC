@@ -29,6 +29,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   six. It prints remote face bytes, time, GB/s and whether GPU-aware MPI is
   on, and steps no model. A check recomputes the byte counts and rates.
 
+- Add an opt-in rank-agglomerated CPU/MPI Dirichlet Q1 V-cycle using
+  existing kernels, active communicators and owned P/P-transpose routes
+  (#608). Reject inconsistent collective constructor inputs before level
+  setup, and contract elongated terminal grids to their single factor owner.
+  GPU execution and performance optimization remain unqualified.
+
 ## [0.6.0] - 2026-10-29
 
 Source-level break from 0.5.0: the grain module leaves OpenPFC and some
@@ -548,14 +554,6 @@ development record since 0.4.0.
   records the install provenance and refuses any RUNPATH under `/home`. The
   CUDA build targets `sm_80;86;90`, and `build_tohtori.sh --cuda` now also
   builds HeFFTe's cuFFT backend (#613).
-
-- Add an opt-in rank-agglomerated CPU/MPI Dirichlet Q1 V-cycle to the
-  existing NodalDirichletMultigrid. The same Q1/GMG/CG mathematics now
-  consumes planned active communicators and owned P/P-transpose routes,
-  allocating intermediate Fields and the terminal Cholesky only on
-  active ranks. GPU numerical execution and optimization remain deferred
-  (#608).
-
 
 - Add CPU-testable `solvers::MultigridPlan`: plan OpenPFC-owned Q1
   rank-agglomerated hierarchies with 1/2/3 process-grid contractions,

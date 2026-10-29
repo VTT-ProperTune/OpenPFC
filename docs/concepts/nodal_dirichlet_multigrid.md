@@ -49,14 +49,14 @@ admission.
 
 ## Rank-agglomerated CPU/MPI V-cycle
 
-An optional \`NodalDirichletMultigrid(const MultigridPlan&, rank, comm,
-Controls)\` constructor executes the **same** matrix-free free-node Q1 row,
-Jacobi smoother and bounded \`DenseCoarseCholesky\` as the original
+An optional `NodalDirichletMultigrid(const MultigridPlan&, rank, comm,
+Controls)` constructor executes the **same** matrix-free free-node Q1 row,
+Jacobi smoother and bounded `DenseCoarseCholesky` as the original
 same-process-grid constructor.
 
 Construct the plan before the solver on every rank of the fine-level
 communicator. The constructor creates the plan's nested active MPI
-communicators via \`MultigridMPITransfers\`, and allocates \`Level\` Fields,
+communicators via `MultigridMPITransfers`, and allocates `Level` Fields,
 halo buffers and smoothing scratch only on active ranks. Inactive ranks
 participate in their last active fine-level transfer but do not execute
 deeper levels. The tiny terminal 7³ or 7×7×15 Cholesky factor and RHS
@@ -64,8 +64,8 @@ live **only on the single terminal rank**, instead of being replicated
 among idle ranks.
 
 Each V-cycle pre-smooths, applies the existing 27-point Q1 row operator,
-forms its owned residual, uses the verified \`Pᵀ\` MPI route to the smaller
-active communicator, recursively solves, reverses the route via \`P\`
+forms its owned residual, uses the verified `Pᵀ` MPI route to the smaller
+active communicator, recursively solves, reverses the route via `P`
 and post-smooths. The symmetric zero-initialized preconditioner is a
 fixed linear operator suitable for CG. The old constructor and the GPU
 V-cycle remain unchanged.
@@ -76,7 +76,7 @@ allocates local packing/route buffers per V-cycle; device workspaces,
 amortized allocations, rank-policy tuning, and accelerator performance
 are deferred. This is not a GPU-validated result.
 
-Numerical admission is recorded by \`[nodal_dirichlet_plan][MPI]\`:
+Numerical admission is recorded by `[nodal_dirichlet_plan][MPI]`:
 independently assembled Gauss Q1 owned action, V-cycle symmetry,
 positive energy, true global unpreconditioned PCG residual, repeated
 preconditioner calls, and independent manufactured Galerkin forcing
