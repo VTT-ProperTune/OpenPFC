@@ -15,7 +15,8 @@
  *   - double values: the analytic Laplacian to round-off;
  *   - float values, float sums: the analytic Laplacian to float tolerance;
  *   - float values, double sums (`value_type = double`): the host stencil in
- *     double on the float-rounded values, to double round-off.
+ *     double on the float-rounded values, to double round-off;
+ *   - evaluate_fd_grad(pod, core, ...) equals the with_core form exactly.
  */
 
 #include <catch2/catch_approx.hpp>
@@ -77,6 +78,9 @@ __global__ void laplacians(pfc::gpu::FDGradientDevicePODT<T> e, const T *second,
   const int i = t % kN, j = (t / kN) % kN, k = t / (kN * kN);
   const G a = pfc::gpu::evaluate_fd_grad<G>(e, i, j, k);
   const G b = pfc::gpu::evaluate_fd_grad<G>(pfc::gpu::with_core(e, second), i, j, k);
+  const G c = pfc::gpu::evaluate_fd_grad<G>(e, second, i, j, k); // copy-free
+  if (c.xx != b.xx || c.yy != b.yy || c.zz != b.zz)
+    out[2 * kN * kN * kN] = 1.0; // flag: the two forms must agree exactly
   out[t] = static_cast<double>(a.xx + a.yy + a.zz);
   out[kN * kN * kN + t] = static_cast<double>(b.xx + b.yy + b.zz);
 }
@@ -88,13 +92,14 @@ template <class G, class T> std::vector<double> run() {
   double *dout = nullptr;
   REQUIRE(cudaMalloc(&du, bytes) == cudaSuccess);
   REQUIRE(cudaMalloc(&dw, bytes) == cudaSuccess);
-  REQUIRE(cudaMalloc(&dout, 2 * cells * sizeof(double)) == cudaSuccess);
+  REQUIRE(cudaMalloc(&dout, (2 * cells + 1) * sizeof(double)) == cudaSuccess);
+  REQUIRE(cudaMemset(dout, 0, (2 * cells + 1) * sizeof(double)) == cudaSuccess);
   cudaMemcpy(du, u.data(), bytes, cudaMemcpyHostToDevice);
   cudaMemcpy(dw, w.data(), bytes, cudaMemcpyHostToDevice);
   const pfc::gpu::FDGradientDevice<G, T> eval(du, kN, kN, kN, kH, kH, kH, kHw, 2);
   laplacians<G, T><<<(cells + 127) / 128, 128>>>(eval.pod(), dw, dout);
   REQUIRE(cudaDeviceSynchronize() == cudaSuccess);
-  std::vector<double> out(2 * cells);
+  std::vector<double> out(2 * cells + 1);
   cudaMemcpy(out.data(), dout, out.size() * sizeof(double), cudaMemcpyDeviceToHost);
   cudaFree(du);
   cudaFree(dw);
@@ -141,16 +146,19 @@ TEST_CASE("FDGradientDevice in float, mixed and double over two fields via "
   const double expected[2] = {5.0, 8.0};
 
   const auto d = run<LapDouble, double>();
+  REQUIRE(d[2 * cells] == 0.0); // with_core and the core overload agree
   for (int f = 0; f < 2; ++f)
     for (int t = 0; t < cells; ++t)
       REQUIRE(d[f * cells + t] == Catch::Approx(expected[f]).margin(1e-11));
 
   const auto s = run<LapFloat, float>();
+  REQUIRE(s[2 * cells] == 0.0);
   for (int f = 0; f < 2; ++f)
     for (int t = 0; t < cells; ++t)
       REQUIRE(s[f * cells + t] == Catch::Approx(expected[f]).margin(5e-4));
 
   const auto m = run<LapMixed, float>();
+  REQUIRE(m[2 * cells] == 0.0);
   const std::vector<float> fields[2] = {padded<float>(0), padded<float>(1)};
   for (int f = 0; f < 2; ++f)
     for (int t = 0; t < cells; ++t) {

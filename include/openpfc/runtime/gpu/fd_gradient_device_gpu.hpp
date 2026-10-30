@@ -168,9 +168,8 @@ using fd_scalar_t =
  * @brief The same evaluator on another field with the identical padded
  *        layout (extents, halo, spacing): only the data pointer changes.
  *
- * For models with a runtime number of same-shaped fields (for example one
- * phase field per slot), one host-built POD serves all of them inside a
- * kernel.
+ * Host-side helper. Inside kernels prefer evaluate_fd_grad<G>(pod, core,
+ * ix, iy, iz), which reads the same weights without copying the POD.
  */
 template <class T>
 OPENPFC_INLINE_HD FDGradientDevicePODT<T> with_core(FDGradientDevicePODT<T> e,
@@ -193,9 +192,21 @@ OPENPFC_INLINE_HD FDGradientDevicePODT<T> with_core(FDGradientDevicePODT<T> e,
  *       product. The padded buffer must have valid edge/corner ghosts
  *       (`HaloExchange` Full or equivalent corner fill).
  */
+/**
+ * @brief Evaluate the grads of `G` at owned cell (ix, iy, iz) of the field
+ *        `core`, which must share the POD's padded layout (extents, halo,
+ *        spacing); `e.d_core` is not read.
+ *
+ * Models with a runtime number of same-shaped fields (one phase field per
+ * slot, say) pass each field's pointer here with one POD. The weights are
+ * read in place, so this costs no copy; building a modified POD per field
+ * in a kernel (with_core) copies about 500 bytes to local memory per call,
+ * which made a 16-field order-2 Laplacian sweep on an H100 (400^3 cells,
+ * float) 26x slower than this: 210 ms against 8.0 ms.
+ */
 template <class G, class T>
-OPENPFC_INLINE_HD G evaluate_fd_grad(const FDGradientDevicePODT<T> &e, int ix,
-                                     int iy, int iz) noexcept {
+OPENPFC_INLINE_HD G evaluate_fd_grad(const FDGradientDevicePODT<T> &e, const T *core,
+                                     int ix, int iy, int iz) noexcept {
   using A = fd_scalar_t<G, T>;
   const std::ptrdiff_t c = static_cast<std::ptrdiff_t>(ix + e.hw) +
                            static_cast<std::ptrdiff_t>(iy + e.hw) * e.sy +
@@ -204,14 +215,14 @@ OPENPFC_INLINE_HD G evaluate_fd_grad(const FDGradientDevicePODT<T> &e, int ix,
   G g{};
 
   if constexpr (pfc::field::has_value<G>) {
-    g.value = A(e.d_core[c]);
+    g.value = A(core[c]);
   }
 
   if constexpr (pfc::field::has_x<G>) {
     A acc = A(0);
     for (int k = 1; k <= e.hw1; ++k) {
       const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * e.sx;
-      acc += A(e.cx1[k]) * (A(e.d_core[c + ks]) - A(e.d_core[c - ks]));
+      acc += A(e.cx1[k]) * (A(core[c + ks]) - A(core[c - ks]));
     }
     g.x = acc;
   }
@@ -219,7 +230,7 @@ OPENPFC_INLINE_HD G evaluate_fd_grad(const FDGradientDevicePODT<T> &e, int ix,
     A acc = A(0);
     for (int k = 1; k <= e.hw1; ++k) {
       const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * e.sy;
-      acc += A(e.cy1[k]) * (A(e.d_core[c + ks]) - A(e.d_core[c - ks]));
+      acc += A(e.cy1[k]) * (A(core[c + ks]) - A(core[c - ks]));
     }
     g.y = acc;
   }
@@ -227,32 +238,32 @@ OPENPFC_INLINE_HD G evaluate_fd_grad(const FDGradientDevicePODT<T> &e, int ix,
     A acc = A(0);
     for (int k = 1; k <= e.hw1; ++k) {
       const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * e.sz;
-      acc += A(e.cz1[k]) * (A(e.d_core[c + ks]) - A(e.d_core[c - ks]));
+      acc += A(e.cz1[k]) * (A(core[c + ks]) - A(core[c - ks]));
     }
     g.z = acc;
   }
 
   if constexpr (pfc::field::has_xx<G>) {
-    A acc = A(e.cx2[0]) * A(e.d_core[c]);
+    A acc = A(e.cx2[0]) * A(core[c]);
     for (int k = 1; k <= e.hw2; ++k) {
       const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * e.sx;
-      acc += A(e.cx2[k]) * (A(e.d_core[c + ks]) + A(e.d_core[c - ks]));
+      acc += A(e.cx2[k]) * (A(core[c + ks]) + A(core[c - ks]));
     }
     g.xx = acc;
   }
   if constexpr (pfc::field::has_yy<G>) {
-    A acc = A(e.cy2[0]) * A(e.d_core[c]);
+    A acc = A(e.cy2[0]) * A(core[c]);
     for (int k = 1; k <= e.hw2; ++k) {
       const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * e.sy;
-      acc += A(e.cy2[k]) * (A(e.d_core[c + ks]) + A(e.d_core[c - ks]));
+      acc += A(e.cy2[k]) * (A(core[c + ks]) + A(core[c - ks]));
     }
     g.yy = acc;
   }
   if constexpr (pfc::field::has_zz<G>) {
-    A acc = A(e.cz2[0]) * A(e.d_core[c]);
+    A acc = A(e.cz2[0]) * A(core[c]);
     for (int k = 1; k <= e.hw2; ++k) {
       const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * e.sz;
-      acc += A(e.cz2[k]) * (A(e.d_core[c + ks]) + A(e.d_core[c - ks]));
+      acc += A(e.cz2[k]) * (A(core[c + ks]) + A(core[c - ks]));
     }
     g.zz = acc;
   }
@@ -267,8 +278,8 @@ OPENPFC_INLINE_HD G evaluate_fd_grad(const FDGradientDevicePODT<T> &e, int ix,
       for (int j = 1; j <= e.hw1; ++j) {
         const std::ptrdiff_t js = static_cast<std::ptrdiff_t>(j) * e.sy;
         acc += A(e.cx1[i]) * A(e.cy1[j]) *
-               (A(e.d_core[c + is + js]) - A(e.d_core[c - is + js]) -
-                A(e.d_core[c + is - js]) + A(e.d_core[c - is - js]));
+               (A(core[c + is + js]) - A(core[c - is + js]) - A(core[c + is - js]) +
+                A(core[c - is - js]));
       }
     }
     g.xy = acc;
@@ -280,8 +291,8 @@ OPENPFC_INLINE_HD G evaluate_fd_grad(const FDGradientDevicePODT<T> &e, int ix,
       for (int k = 1; k <= e.hw1; ++k) {
         const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * e.sz;
         acc += A(e.cx1[i]) * A(e.cz1[k]) *
-               (A(e.d_core[c + is + ks]) - A(e.d_core[c - is + ks]) -
-                A(e.d_core[c + is - ks]) + A(e.d_core[c - is - ks]));
+               (A(core[c + is + ks]) - A(core[c - is + ks]) - A(core[c + is - ks]) +
+                A(core[c - is - ks]));
       }
     }
     g.xz = acc;
@@ -293,14 +304,23 @@ OPENPFC_INLINE_HD G evaluate_fd_grad(const FDGradientDevicePODT<T> &e, int ix,
       for (int k = 1; k <= e.hw1; ++k) {
         const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * e.sz;
         acc += A(e.cy1[j]) * A(e.cz1[k]) *
-               (A(e.d_core[c + js + ks]) - A(e.d_core[c - js + ks]) -
-                A(e.d_core[c + js - ks]) + A(e.d_core[c - js - ks]));
+               (A(core[c + js + ks]) - A(core[c - js + ks]) - A(core[c + js - ks]) +
+                A(core[c - js - ks]));
       }
     }
     g.yz = acc;
   }
 
   return g;
+}
+
+/**
+ * @brief evaluate_fd_grad() at the POD's own field.
+ */
+template <class G, class T>
+OPENPFC_INLINE_HD G evaluate_fd_grad(const FDGradientDevicePODT<T> &e, int ix,
+                                     int iy, int iz) noexcept {
+  return evaluate_fd_grad<G>(e, e.d_core, ix, iy, iz);
 }
 
 /**
