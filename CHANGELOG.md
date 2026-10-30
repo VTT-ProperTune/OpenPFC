@@ -7,6 +7,24 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-10-30
+
+Source-compatible with 0.6.0: additions and fixes only, no public API is
+removed or changed in meaning. C++20 remains the language baseline.
+
+**Highlights**
+
+- The GPU FD evaluator takes float fields (#790):
+  `FDGradientDevicePOD` is the double alias of `FDGradientDevicePODT<T>`,
+  and `FDGradientDevice<G, T = double>` and `create<G>(Field<T>)` accept
+  float, as the CPU `FDGradient<G, T>` already did. Sums use
+  `fd_scalar_t<G, T>` (`G::value_type` when declared, else `T`), so float
+  storage with `value_type = double` is mixed precision; double results are
+  unchanged. `evaluate_fd_grad(pod, core, ix, iy, iz)` evaluates another
+  field of the same padded layout without copying the POD, for a runtime
+  number of same-shaped fields: a 16-field order-2 sweep on an H100 takes
+  8.0 ms that way against 210 ms with a per-field POD copy (`with_core`,
+  which remains for host use).
 - `pfc::field::parallel_for_cells(n, fn)` calls `fn(i, j, k)` once per
   cell of an extent with the `(k, j)` rows shared among OpenMP threads
   (serial without OpenMP), for host staging buffers that are not Fields,
