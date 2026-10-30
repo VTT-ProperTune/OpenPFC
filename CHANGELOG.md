@@ -7,6 +7,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- `pfc::field::parallel_for_cells(n, fn)` calls `fn(i, j, k)` once per
+  cell of an extent with the `(k, j)` rows shared among OpenMP threads
+  (serial without OpenMP), for host staging buffers that are not Fields,
+  such as the host-side initialization of device fields.
+  `for_each_omp` and `for_each_owned_omp` now run on it instead of
+  serially. `fn` must be safe for concurrent calls on distinct cells.
+
 - Release modules pair each OpenPFC version with a HeFFTe 2.4.1 that carries
   the FFTW real-plan correction (#788). On Tohtori,
   `install_release_module.sh` defaults to the corrected

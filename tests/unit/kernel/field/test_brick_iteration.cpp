@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#include <atomic>
 #include <cmath>
 #include <set>
 #include <tuple>
@@ -15,6 +16,10 @@
 #include <openpfc/kernel/field/brick_iteration.hpp>
 #include <openpfc/kernel/field/fd_stencils.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
+
+#if defined(_OPENMP)
+#include <omp.h>
+#endif
 
 using namespace pfc;
 
@@ -276,6 +281,59 @@ TEST_CASE("for_each_owned_omp visits same set as serial counterpart",
   bool all_cells_visited = true;
   for (int v : hits) all_cells_visited &= v == 1;
   REQUIRE(all_cells_visited);
+}
+
+TEST_CASE("parallel_for_cells visits every cell exactly once on threads",
+          "[field][brick_iteration]") {
+  for (const std::array<int, 3> n :
+       {std::array<int, 3>{7, 5, 3}, std::array<int, 3>{1, 9, 4},
+        std::array<int, 3>{0, 4, 4}, std::array<int, 3>{16, 16, 16}}) {
+    std::vector<std::atomic<int>> hits(static_cast<std::size_t>(n[0]) * n[1] * n[2]);
+    std::atomic<int> outside{0};
+    std::vector<std::atomic<int>> threads(64);
+#if defined(_OPENMP)
+    const int before = omp_get_max_threads();
+    omp_set_num_threads(4);
+#endif
+    field::parallel_for_cells(n, [&](int i, int j, int k) {
+      if (i < 0 || i >= n[0] || j < 0 || j >= n[1] || k < 0 || k >= n[2]) {
+        ++outside;
+        return;
+      }
+      ++hits[static_cast<std::size_t>(i) +
+             static_cast<std::size_t>(n[0]) *
+                 (j + static_cast<std::size_t>(n[1]) * k)];
+#if defined(_OPENMP)
+      ++threads[static_cast<std::size_t>(omp_get_thread_num()) % 64];
+#endif
+    });
+#if defined(_OPENMP)
+    omp_set_num_threads(before);
+    int used = 0;
+    for (auto &t : threads) used += t > 0;
+    if (n[0] > 0 && n[1] * n[2] >= 4) REQUIRE(used > 1); // the rows were shared
+#endif
+    REQUIRE(outside == 0);
+    bool once = true;
+    for (auto &h : hits) once &= h == 1;
+    REQUIRE(once);
+  }
+}
+
+TEST_CASE("for_each_omp yields every owned Int3 exactly once",
+          "[field][brick_iteration]") {
+  auto u = make_brick(5, /*hw=*/1);
+  const auto sz = u.local_size();
+  std::vector<std::atomic<int>> hits(static_cast<std::size_t>(sz[0]) * sz[1] *
+                                     sz[2]);
+  field::for_each_omp(u, [&](const pfc::Int3 &idx) {
+    ++hits[static_cast<std::size_t>(idx[0]) +
+           static_cast<std::size_t>(sz[0]) *
+               (idx[1] + static_cast<std::size_t>(sz[1]) * idx[2])];
+  });
+  bool once = true;
+  for (auto &h : hits) once &= h == 1;
+  REQUIRE(once);
 }
 
 TEST_CASE("for_each_coords fills every owned cell from physical coordinates",

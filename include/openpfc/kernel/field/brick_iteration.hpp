@@ -13,9 +13,9 @@
  *  - **Index-aggregate form** (preferred for new code)
  *    - `for_each(field, fn)`                — every owned cell, lambda
  *                                             takes `const pfc::Int3&`.
- *    - `for_each_omp(field, fn)`            — same domain (serial wrapper
- *                                             today; Field members are not
- *                                             OpenMP-parallel).
+ *    - `for_each_omp(field, fn)`            — same domain, (k, j) rows
+ *                                             shared among OpenMP threads
+ *                                             (serial without OpenMP).
  *
  *    Pair these with `pfc::gradient::evaluate(grad, idx)` to keep the
  *    inner loop dimension-agnostic and free of `(i, j, k)` boilerplate.
@@ -48,6 +48,7 @@
  * @see kernel/data/grid_field.hpp for the owning data layout.
  */
 
+#include <array>
 #include <type_traits>
 #include <utility>
 
@@ -108,16 +109,35 @@ inline void for_each(const pfc::data::Field<T, MemorySpace> &field, Fn &&fn) {
 }
 
 /**
- * @brief OMP-parallel `for_each` for data::Field.
+ * @brief Call `fn(i, j, k)` once for every cell of `[0, n[0]) x [0, n[1]) x
+ *        [0, n[2])`, with the `(k, j)` rows shared among OpenMP threads.
  *
- * Note: This serial wrapper is provided for API compatibility.
- * For true parallel iteration, use the field's native iteration methods
- * or custom OpenMP loops.
+ * In a translation unit compiled with OpenMP the rows are distributed by
+ * `#pragma omp parallel for collapse(2) schedule(static)` (i stays the
+ * contiguous inner loop); without OpenMP this is the serial k-outer,
+ * j-middle, i-inner loop. `fn` must be safe to call concurrently for
+ * distinct cells, and the visiting order across threads is unspecified.
+ * The extents need not belong to a Field: host staging buffers of a device
+ * field (initialization, say) use it directly.
+ */
+template <class Fn> inline void parallel_for_cells(std::array<int, 3> n, Fn &&fn) {
+#if defined(_OPENMP)
+#pragma omp parallel for collapse(2) schedule(static)
+#endif
+  for (int k = 0; k < n[2]; ++k)
+    for (int j = 0; j < n[1]; ++j)
+      for (int i = 0; i < n[0]; ++i) fn(i, j, k);
+}
+
+/**
+ * @brief OpenMP-parallel `for_each` for data::Field: every owned cell once,
+ *        rows shared among threads (see parallel_for_cells).
  */
 template <typename T, typename MemorySpace, class Fn>
 inline void for_each_omp(const pfc::data::Field<T, MemorySpace> &field, Fn &&fn) {
-  // Serialize for now; Field::for_each_owned is not parallelized
-  for_each(field, std::forward<Fn>(fn));
+  const auto n = field.local_size();
+  parallel_for_cells({n[0], n[1], n[2]},
+                     [&](int i, int j, int k) { fn(pfc::Int3{i, j, k}); });
 }
 
 /**
@@ -129,13 +149,14 @@ inline void for_each_owned(const pfc::data::Field<T, MemorySpace> &field, Fn &&f
 }
 
 /**
- * @brief OMP-parallel `for_each_owned` for data::Field (serial wrapper).
+ * @brief OpenMP-parallel `for_each_owned` for data::Field: `fn(i, j, k)` for
+ *        every owned cell once, rows shared among threads.
  */
 template <typename T, typename MemorySpace, class Fn>
 inline void for_each_owned_omp(const pfc::data::Field<T, MemorySpace> &field,
                                Fn &&fn) {
-  // Serialize for now
-  for_each_owned(field, std::forward<Fn>(fn));
+  const auto n = field.local_size();
+  parallel_for_cells({n[0], n[1], n[2]}, fn);
 }
 
 /**
