@@ -7,6 +7,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- `remove_owned_component_mean` removes each component mean over uniquely
+  owned entries and divides by the global node count. The shared coarse
+  correction uses it for the periodic gauge. Local `project` is unchanged
+  (#505).
 - Device shared coarse correction records restriction, device-to-host, the
   MPI reduction, host-to-device, the coarse solve, prolongation and the
   translation gauge as separate stage times, and synchronizes the device

@@ -9,6 +9,8 @@ target_sources(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_field_oper
 target_sources(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_newton.cpp)
 target_sources(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_scalar_root.cpp)
 target_sources(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_multigrid.cpp)
+target_sources(openpfc-tests PRIVATE
+               ${CMAKE_CURRENT_SOURCE_DIR}/test_owned_component_mean.cpp)
 target_sources(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_field_multigrid.cpp)
 target_sources(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_nodal_multigrid.cpp)
 target_sources(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_nodal_dirichlet_multigrid.cpp)

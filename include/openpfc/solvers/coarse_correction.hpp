@@ -4,6 +4,7 @@
 #include <chrono>
 #include <mpi.h>
 #include <openpfc/solvers/multigrid.hpp>
+#include <openpfc/solvers/owned_component_mean.hpp>
 #include <optional>
 namespace pfc::solvers {
 /** Small replicated coarse correction for a uniquely owned structured operator.
@@ -163,17 +164,7 @@ private:
   }
   void remove_global_mean(std::vector<double> &z) const {
     if (fine_.boundary != Boundary::Periodic) return;
-    std::vector<double> local(fine_.components), global(fine_.components);
-    for (std::size_t i = 0; i < owned_.size(); ++i)
-      local[owned_[i] % fine_.components] += z[i];
-    if (comm_ != MPI_COMM_NULL) {
-      if (MPI_Allreduce(local.data(), global.data(), fine_.components, MPI_DOUBLE,
-                        MPI_SUM, comm_) != MPI_SUCCESS)
-        throw std::runtime_error("coarse gauge reduction failed");
-    } else
-      global = local;
-    for (std::size_t i = 0; i < owned_.size(); ++i)
-      z[i] -= global[owned_[i] % fine_.components] / fine_.nodes();
+    remove_owned_component_mean(z, owned_, fine_.components, fine_.nodes(), comm_);
   }
 };
 /** Multiplicative two-level step: Jacobi on the caller action, then one

@@ -56,9 +56,12 @@ Owned fine residuals restrict with the rows of P^T, one small collective
 sums the coarse residual, and the existing coarse solve prolongs the
 correction. The coarse unknown may be replicated while it stays under the
 explicit size bound. Periodic constants use one communicator-wide mean, so
-unequal ownership does not remove a different gauge on each rank. This is
-a two-level correction, not a distributed hierarchy with a coarse-rank
-policy.
+unequal ownership does not remove a different gauge on each rank. That
+gauge is `remove_owned_component_mean`: uniquely owned entries, one
+reduction over the components, and division by the global node count.
+`StructuredGrid::project` and the device `VectorOperations::project` stay
+local. This is a two-level correction, not a distributed hierarchy with a
+coarse-rank policy.
 
 The device-resident correction in `runtime/gpu/coarse_correction.hpp`
 splits each application into restriction, device-to-host, the MPI
