@@ -99,17 +99,6 @@ TEST_CASE("test_solve_options_with_preconditioner") {
   REQUIRE(opts.preconditioner_desc->operator_identifier == "jacobi");
 }
 
-TEST_CASE("test_convergence_status_enum_values") {
-  std::vector<ConvergenceStatus> all_statuses = {
-      ConvergenceStatus::converged,
-      ConvergenceStatus::max_iterations_reached,
-      ConvergenceStatus::stagnation_detected,
-      ConvergenceStatus::ill_conditioned,
-      ConvergenceStatus::cancelled,
-      ConvergenceStatus::unknown_failure};
-  REQUIRE(all_statuses.size() == 6);
-}
-
 TEST_CASE("test_solve_outcome_solution_field_present") {
   using TargetType = std::vector<double>;
   std::vector<double> solution_field{1.0, 2.0, 3.0};
@@ -159,24 +148,20 @@ TEST_CASE("test_tuple_protocol_field_bundle_compatible") {
   // Single field wrapped via std::tie (scalar protocol)
   double scalar_field = 0.0;
   auto scalar_bundle = std::tie(scalar_field);
-  static_assert(tuple_protocol<decltype(scalar_bundle)>);
+  STATIC_REQUIRE(tuple_protocol<decltype(scalar_bundle)>);
 
   // Multi-field via std::tuple
   std::vector<double> field1 = {0.0};
   std::vector<double> field2 = {0.0};
   auto multi_field = std::make_tuple(std::ref(field1), std::ref(field2));
-  static_assert(tuple_protocol<decltype(multi_field)>);
-
-  // Check concept satisfaction
-  REQUIRE(tuple_protocol<decltype(scalar_bundle)>);
-  REQUIRE(tuple_protocol<decltype(multi_field)>);
+  STATIC_REQUIRE(tuple_protocol<decltype(multi_field)>);
 }
 
 TEST_CASE("test_tuple_protocol_with_raw_scalar") {
   double scalar = 1.0;
   // Raw scalar should be wrapped via forward_as_tuple
   auto wrapped = pfc::field::detail::to_tuple(scalar);
-  static_assert(tuple_protocol<decltype(wrapped)>);
+  STATIC_REQUIRE(tuple_protocol<decltype(wrapped)>);
 }
 
 TEST_CASE("test_solver_function_concept_satisfies_requirement_with_inplace") {
@@ -277,7 +262,7 @@ TEST_CASE("test_stage_context_contains_execution_service") {
   MockExecutionService mock_service;
   StageContext ctx{.time = 1.5, .execution_service = &mock_service};
 
-  static_assert(std::is_same_v<StageContext, pfc::integrator::StageContext>);
+  STATIC_REQUIRE(std::is_same_v<StageContext, pfc::integrator::StageContext>);
   REQUIRE(ctx.time == 1.5);
   REQUIRE(ctx.execution_service == &mock_service);
   REQUIRE(&ctx.service() == &mock_service);
@@ -302,25 +287,31 @@ TEST_CASE("test_execution_service_interface_methods") {
 }
 
 TEST_CASE("test_execution_service_virtual_destructor") {
-  // Ensure ExecutionService has a virtual destructor for proper cleanup
-  static_assert(std::has_virtual_destructor_v<ExecutionService>);
-
-  auto service = std::make_unique<MockExecutionService>();
-  REQUIRE(service != nullptr);
+  STATIC_REQUIRE(std::has_virtual_destructor_v<ExecutionService>);
 }
 
-TEST_CASE("test_convergence_status_all_values_distinct") {
-  // Ensure all enum values are distinct (compile-time check)
-  constexpr auto converged = ConvergenceStatus::converged;
-  constexpr auto max_iter = ConvergenceStatus::max_iterations_reached;
-  constexpr auto stagnation = ConvergenceStatus::stagnation_detected;
-  constexpr auto ill_cond = ConvergenceStatus::ill_conditioned;
-  constexpr auto cancelled = ConvergenceStatus::cancelled;
-  constexpr auto unknown = ConvergenceStatus::unknown_failure;
+namespace {
 
-  static_assert(converged != max_iter);
-  static_assert(max_iter != stagnation);
-  static_assert(stagnation != ill_cond);
-  static_assert(ill_cond != cancelled);
-  static_assert(cancelled != unknown);
+// Named enumerators only. ConvergenceStatus publishes no count or visitor,
+// so a new enumerator does not fail this check.
+constexpr bool listed_convergence_statuses_differ() {
+  constexpr ConvergenceStatus listed[] = {ConvergenceStatus::converged,
+                                          ConvergenceStatus::max_iterations_reached,
+                                          ConvergenceStatus::stagnation_detected,
+                                          ConvergenceStatus::ill_conditioned,
+                                          ConvergenceStatus::cancelled,
+                                          ConvergenceStatus::unknown_failure};
+  constexpr std::size_t n = sizeof(listed) / sizeof(listed[0]);
+  for (std::size_t i = 0; i < n; ++i) {
+    for (std::size_t j = i + 1; j < n; ++j) {
+      if (listed[i] == listed[j]) return false;
+    }
+  }
+  return true;
+}
+
+} // namespace
+
+TEST_CASE("test_convergence_status_listed_values_distinct") {
+  STATIC_REQUIRE(listed_convergence_statuses_differ());
 }
