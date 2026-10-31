@@ -46,6 +46,17 @@ A random symmetry probe, positive sampled curvature or successful CG run
 cannot establish that property. CG checks curvature and verifies its true
 residual, but those checks are safeguards rather than a proof.
 
+GPU `dot`, `dots` and `norm` still return host doubles. That path is the
+reference for `solvers::cg` and `solvers::gmres`. `solvers::gpu::cg` and
+`solvers::gpu::gmres` keep the same recurrences, but the dot products, step
+lengths and Gram-Schmidt coefficients stay in device scalars. The host
+copies one convergence probe every `poll_interval` iterations. The default
+interval is 1, so the stop decision matches the reference one iteration at
+a time. A larger interval lets the device latch a breakdown, a nonfinite
+value or an estimated residual and skip further vector updates until the
+host looks. `MPI_COMM_NULL` does not copy the coefficient batch. A real
+communicator reduces that batch once. Pipelined CG is not part of this path.
+
 The finite-strain FFT Newton driver defaults to GMRES. Set
 `NewtonControls::krylov_method = KrylovMethod::CG` and
 `operator_is_spd = true` only with a mathematical justification on the

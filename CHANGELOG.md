@@ -7,6 +7,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Device CG and GMRES can keep Krylov scalars on the GPU. `solvers::gpu::cg`
+  and `solvers::gpu::gmres` compute dot products, step lengths and
+  Gram-Schmidt coefficients in device memory and copy one convergence probe
+  every `poll_interval` iterations. `solvers::cg`, `solvers::gmres` and the
+  host-returning `dot` / `norm` stay the reference (#472).
 - `remove_owned_component_mean` removes each component mean over uniquely
   owned entries and divides by the global node count. The shared coarse
   correction uses it for the periodic gauge. Local `project` is unchanged

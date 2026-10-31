@@ -488,6 +488,12 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
   add_test(NAME Multigrid_cuda COMMAND test_multigrid_cuda)
   set_tests_properties(Multigrid_cuda PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 4)
 
+  add_executable(test_krylov_device_cuda test_krylov_device.cpp)
+  target_link_libraries(test_krylov_device_cuda PRIVATE Catch2::Catch2
+      openpfc_gpu_kernels CUDA::cudart MPI::MPI_CXX)
+  add_test(NAME Krylov_cuda COMMAND test_krylov_device_cuda)
+  set_tests_properties(Krylov_cuda PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 4)
+
   add_executable(test_field_operations_cuda test_field_operations_device.cpp)
   target_link_libraries(test_field_operations_cuda PRIVATE Catch2::Catch2 openpfc
       openpfc_gpu_kernels CUDA::cudart MPI::MPI_CXX)
@@ -531,6 +537,13 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
   target_compile_definitions(test_multigrid_hip PRIVATE OPENPFC_TEST_MECHANICS_HIP)
   add_test(NAME Multigrid_hip COMMAND test_multigrid_hip)
   set_tests_properties(Multigrid_hip PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 4)
+
+  add_executable(test_krylov_device_hip test_krylov_device.cpp)
+  target_link_libraries(test_krylov_device_hip PRIVATE Catch2::Catch2
+      openpfc_hip_kernels hip::host MPI::MPI_CXX)
+  target_compile_definitions(test_krylov_device_hip PRIVATE OPENPFC_TEST_MECHANICS_HIP)
+  add_test(NAME Krylov_hip COMMAND test_krylov_device_hip)
+  set_tests_properties(Krylov_hip PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 4)
 
   add_executable(test_field_operations_hip test_field_operations_device.cpp)
   target_link_libraries(test_field_operations_hip PRIVATE Catch2::Catch2 openpfc
