@@ -7,6 +7,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Device shared coarse correction records restriction, device-to-host, the
+  MPI reduction, host-to-device, the coarse solve, prolongation and the
+  translation gauge as separate stage times, and synchronizes the device
+  at each boundary. `communication_seconds` is only the two copies and the
+  reduction (#498). `gpu::Multigrid::jacobi` applies weighted Jacobi with
+  the resident auxiliary operator and does not run the local V-cycle.
+
 ## [0.6.1] - 2026-10-30
 
 Source-compatible with 0.6.0: additions and fixes only, no public API is

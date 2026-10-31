@@ -60,6 +60,16 @@ unequal ownership does not remove a different gauge on each rank. This is
 a two-level correction, not a distributed hierarchy with a coarse-rank
 policy.
 
+The device-resident correction in `runtime/gpu/coarse_correction.hpp`
+splits each application into restriction, device-to-host, the MPI
+reduction, host-to-device, the coarse solve, prolongation and the
+translation gauge. The device is synchronized at each boundary, so a
+stage does not include kernels still queued from the previous one.
+`communication_seconds` is the two copies plus the reduction.
+`gpu::Multigrid::jacobi` applies weighted Jacobi with the auxiliary
+operator on the finest resident level and does not run the local
+V-cycle.
+
 # Matrix-free nodal Q1 multigrid
 
 `openpfc/solvers/nodal_multigrid.hpp` supplies `NodalMultigrid<Space>`, a

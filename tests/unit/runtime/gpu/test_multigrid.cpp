@@ -4,11 +4,13 @@
 
 #include "mechanics_backend.hpp"
 #include <catch2/catch_test_macros.hpp>
+#include <cmath>
 #include <openpfc/runtime/gpu/coarse_correction.hpp>
 #include <openpfc/runtime/gpu/multigrid.hpp>
 #include <openpfc/solvers/krylov.hpp>
 #include <openpfc/solvers/structured_operators.hpp>
 #include <random>
+#include <stdexcept>
 using Tag = mechanics_test::Tag;
 namespace sol = pfc::solvers;
 using Ops = sol::gpu::VectorOperations<Tag>;
@@ -121,7 +123,53 @@ TEST_CASE(
   REQUIRE(std::sqrt(error / std::max(1., scale)) < 1e-9);
   REQUIRE(device.collective_bytes ==
           2 * static_cast<std::size_t>(device.coarse_dofs()) * sizeof(double));
+  const auto &stage = device.stages;
+  REQUIRE(device.communication_seconds ==
+          stage.device_to_host + stage.reduction + stage.host_to_device);
+  for (double seconds :
+       {stage.restriction, stage.device_to_host, stage.reduction,
+        stage.host_to_device, stage.coarse_solve, stage.prolongation, stage.gauge}) {
+    REQUIRE(std::isfinite(seconds));
+    REQUIRE(seconds >= 0);
+  }
   REQUIRE(device.retained_host_coarse_bytes() == 0);
+}
+TEST_CASE("device Jacobi matches one host sweep without a V-cycle",
+          "[multigrid][device]") {
+  if (!mechanics_test::available()) SKIP("GPU unavailable");
+  sol::StructuredGrid grid{{9, 7, 5}, 1, sol::Boundary::Periodic};
+  auto factory = [](const sol::StructuredGrid &g) {
+    return sol::poisson_auxiliary(g);
+  };
+  sol::MultigridControls controls;
+  controls.jacobi_weight = 0.6;
+  sol::gpu::Multigrid<Tag> mg(grid, factory, controls);
+  auto action = factory(grid);
+  std::vector<double> rhs(grid.size()), unknown(grid.size(), 0);
+  std::mt19937 rng(498);
+  for (auto &value : rhs) value = std::uniform_real_distribution<double>(-1, 1)(rng);
+  grid.project(rhs);
+  std::vector<double> ax(action.size()), expected = unknown;
+  action(unknown, ax);
+  for (int i = 0; i < action.size(); ++i)
+    expected[i] += controls.jacobi_weight * (rhs[i] - ax[i]) / action.diagonal[i];
+  grid.project(expected);
+  Ops ops;
+  auto b = ops.make(grid.size()), x = ops.make(grid.size());
+  b.copy_from_host(rhs);
+  x.copy_from_host(unknown);
+  mg.jacobi(b, x, 1);
+  auto got = x.to_host();
+  double error = 0, scale = 0;
+  for (int i = 0; i < grid.size(); ++i) {
+    error += (got[i] - expected[i]) * (got[i] - expected[i]);
+    scale += expected[i] * expected[i];
+  }
+  REQUIRE(std::sqrt(error / std::max(1., scale)) < 1e-12);
+  REQUIRE_THROWS_AS(mg.jacobi(b, x, 0), std::invalid_argument);
+  auto small = ops.make(3);
+  REQUIRE_THROWS_AS(mg.jacobi(small, x, 1), std::invalid_argument);
+  REQUIRE_THROWS_AS(mg.jacobi(b, b, 1), std::invalid_argument);
 }
 TEST_CASE("two devices share one coarse correction on unequal ownership",
           "[coarse][MPI][device]") {

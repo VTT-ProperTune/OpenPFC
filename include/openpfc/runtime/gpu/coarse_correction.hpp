@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #pragma once
+#include <chrono>
 #include <openpfc/runtime/gpu/multigrid.hpp>
 #include <openpfc/solvers/coarse_correction.hpp>
 #include <optional>
@@ -13,6 +14,22 @@ template <class Tag> class SharedCoarseCorrection {
 public:
   using Vector = typename VectorOperations<Tag>::Vector;
   using Controls = solvers::CoarseControls;
+  /// Accumulated stage times. Each application adds the interval after a
+  /// device synchronization. The entry synchronization is not charged to
+  /// restriction, so a caller's queued kernels stay out of these fields.
+  struct Stages {
+    double restriction = 0;
+    double device_to_host = 0;
+    double reduction = 0;
+    double host_to_device = 0;
+    double coarse_solve = 0;
+    double prolongation = 0;
+    double gauge = 0;
+  };
+  Stages stages;
+  /// Sum of `stages.device_to_host`, `stages.reduction` and
+  /// `stages.host_to_device`. Restriction, the coarse solve, prolongation
+  /// and the gauge stay in `stages`.
   double communication_seconds = 0;
   std::size_t collective_bytes = 0;
   int applications = 0;
@@ -57,30 +74,50 @@ public:
         MPI_Allreduce(&valid, &all, 1, MPI_INT, MPI_MIN, comm_) != MPI_SUCCESS)
       throw std::runtime_error("coarse ownership check failed");
     if (!all) throw std::invalid_argument("owned residual size mismatch");
-    restriction_(r, coarse_residual_);
+    synchronize();
+    stages.restriction += time_stage([&] { restriction_(r, coarse_residual_); });
     std::vector<double> host(coarse_count_), reduced(coarse_count_);
-    auto start = std::chrono::steady_clock::now();
-    coarse_residual_.copy_to_host(host.data(), host.size());
-    if (comm_ != MPI_COMM_NULL) {
-      if (MPI_Allreduce(host.data(), reduced.data(), coarse_count_, MPI_DOUBLE,
-                        MPI_SUM, comm_) != MPI_SUCCESS)
-        throw std::runtime_error("coarse residual reduction failed");
-      host.swap(reduced);
-    }
-    coarse_residual_.copy_from_host(host);
+    double device_to_host =
+        time_stage([&] { coarse_residual_.copy_to_host(host.data(), host.size()); });
+    double reduction = time_stage([&] {
+      if (comm_ != MPI_COMM_NULL) {
+        if (MPI_Allreduce(host.data(), reduced.data(), coarse_count_, MPI_DOUBLE,
+                          MPI_SUM, comm_) != MPI_SUCCESS)
+          throw std::runtime_error("coarse residual reduction failed");
+        host.swap(reduced);
+      }
+    });
+    double host_to_device =
+        time_stage([&] { coarse_residual_.copy_from_host(host); });
+    stages.device_to_host += device_to_host;
+    stages.reduction += reduction;
+    stages.host_to_device += host_to_device;
     collective_bytes += 2 * static_cast<std::size_t>(coarse_count_) * sizeof(double);
-    communication_seconds +=
-        std::chrono::duration<double>(std::chrono::steady_clock::now() - start)
-            .count();
-    (*solver_)(coarse_residual_, coarse_update_);
-    prolongation_(coarse_update_, z);
-    if (periodic_)
-      for (int component = 0; component < components_; ++component)
-        ops_.axpy(z, -ops_.dot(z, masks_[component]) / nodes_, masks_[component]);
+    communication_seconds =
+        stages.device_to_host + stages.reduction + stages.host_to_device;
+    stages.coarse_solve +=
+        time_stage([&] { (*solver_)(coarse_residual_, coarse_update_); });
+    stages.prolongation += time_stage([&] { prolongation_(coarse_update_, z); });
+    stages.gauge += time_stage([&] {
+      if (periodic_)
+        for (int component = 0; component < components_; ++component)
+          ops_.axpy(z, -ops_.dot(z, masks_[component]) / nodes_, masks_[component]);
+    });
     ++applications;
   }
 
 private:
+  void synchronize() const {
+    if (pfc::gpuDeviceSynchronize() != pfc::gpuSuccess)
+      throw std::runtime_error("coarse stage synchronization failed");
+  }
+  template <class Body> double time_stage(Body &&body) {
+    auto start = std::chrono::steady_clock::now();
+    body();
+    synchronize();
+    return std::chrono::duration<double>(std::chrono::steady_clock::now() - start)
+        .count();
+  }
   VectorOperations<Tag> ops_;
   MPI_Comm comm_;
   int components_, nodes_, coarse_count_ = 0;

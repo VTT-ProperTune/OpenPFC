@@ -227,6 +227,23 @@ public:
     cycle(0);
     ops_.copy(l.x, z);
   }
+  /// Weighted Jacobi on the finest resident level. Restriction, the coarse
+  /// correction and prolongation do not run.
+  void jacobi(const Vector &rhs, Vector &unknown, int sweeps = 1) {
+    if (sweeps < 1)
+      throw std::invalid_argument("multigrid Jacobi needs at least one sweep");
+    auto &level = levels_.front();
+    if (rhs.size() != static_cast<std::size_t>(level.grid.size()) ||
+        unknown.size() != rhs.size())
+      throw std::invalid_argument("multigrid Jacobi vector size mismatch");
+    if (rhs.data() == unknown.data())
+      throw std::invalid_argument("multigrid Jacobi forbids input alias");
+    ops_.copy(rhs, level.b);
+    project(level.b, level.grid);
+    ops_.copy(unknown, level.x);
+    smooth(level, sweeps);
+    ops_.copy(level.x, unknown);
+  }
   const SparseOperator<Tag> &operator_at(int level) const {
     return levels_.at(level).action;
   }
