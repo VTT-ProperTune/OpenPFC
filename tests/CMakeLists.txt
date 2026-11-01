@@ -185,6 +185,11 @@ if(OpenPFC_RUN_MPI_SUITES AND MPI_CXX_FOUND)
         $<TARGET_FILE:openpfc-tests> "[dirichlet_bc][MPI]")
     set_tests_properties(dirichlet_bc_${_ranks}ranks PROPERTIES
       TIMEOUT 120 RUN_SERIAL TRUE)
+    add_test(NAME robin_bc_${_ranks}ranks
+      COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${_ranks}
+        $<TARGET_FILE:openpfc-tests> "[robin_bc][MPI]")
+    set_tests_properties(robin_bc_${_ranks}ranks PROPERTIES
+      TIMEOUT 120 RUN_SERIAL TRUE)
   endforeach()
 
   foreach(_ranks 1 2 4)

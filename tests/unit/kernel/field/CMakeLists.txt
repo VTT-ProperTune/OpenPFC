@@ -21,6 +21,7 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/field_from_subdomain_tests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_dirichlet_ghosts.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_dirichlet_boundary.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_robin_boundary.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_reflection_ghosts.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_padded_face_flux.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_face_flux.cpp

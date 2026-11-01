@@ -89,6 +89,19 @@ Use an unpadded `pfc::data::Field<T>` (`storage_halo == 0`) + `pfc::SparseHaloEx
 Cell-face centering puts the wall halfway outside the first sample (`u(-k) = 2g - u(k-1)`). Owned samples are not pinned. `wave2d` uses that ghost rule and, separately, writes its endpoint rows after the wave update. Those are different statements: the ghost rule does not fix an owned unknown, and the wave pin is not a cell-face mirror.
 
 A face on a periodic axis is rejected unless `extent` is `AllOutside`. The one-axis helper `apply_dirichlet_ghosts` still uses `AllOutside`, which is how `wave2d` overwrites a periodic y wrap. Constant and time-dependent values go through `apply_reflection_ghosts`, including the CUDA and HIP reflection kernels. There is no device kernel that pins owned nodes, and `bind_dirichlet` accepts host fields only. A coordinate callback `g(x, t)` is host-only; `x` is the wall coordinate (node index, or the halfway face). This metadata does not give a Fourier operator a bounded basis.
+
+### Named Robin faces
+
+`pfc::communication::RobinBoundary` is the linear relation `alpha u + beta du/dn = gamma` on the same face names. `n` is the outward normal: `-1` on `xm` / `ym` / `zm` and `+1` on `xp` / `yp` / `zp`. JSON and TOML use one object:
+
+```json
+{"faces": [{"face": "xm", "alpha": 1.0, "beta": 0.5, "gamma": -0.25}]}
+```
+
+Coefficients are constant. `gamma` may instead be a C++ callback of time. Node samples sit on the wall. The closure that makes every central first derivative exact is linear in the layer index `k`: on a low face `u(-k) = u(k) - 2 k h du/dx`, and on a high face `u(N-1+k) = u(N-1-k) + 2 k h du/dx`, with `du/dx` taken from the Robin relation at the owned wall sample. Fill every stored halo layer, so a stencil of half-width `M` needs `storage_halo() >= M`. The same relation is exact for quadratic polynomials. It does not reproduce a cubic ghost. Face values are the supported closure; a corner composes those one-axis maps in order X, then Y, then Z, and a later odd map changes the sign of an earlier jump.
+
+`beta = 0` with `alpha != 0` is node Dirichlet: the owned wall is pinned to `gamma / alpha` before the exchange, and ghosts are the odd mirror. `alpha = 0` with `beta != 0` is Neumann; a zero `gamma` is the even mirror. An exact `(0, 0)` pair is rejected. `coefficient_tolerance` defaults to 0. A positive tolerance rejects a face when both `|alpha|` and `|beta|` are at most that tolerance, and again when both `|alpha|` and `|beta| / h` are at most it. A small nonzero `beta` stays Robin. Cell-face Robin is not this operator. `bind_robin` and the ghost fill accept host fields only; there is no device kernel. A periodic axis is rejected unless `extent` is `AllOutside`. Fourier operators stay periodic.
+
 - Rejection / retry does not roll back halo buffers: re-prepare from the accepted owned core.
 
 Method and operator layers should request `prepare` rather than embedding ad-hoc MPI at each evaluation site. Raw exchanger calls remain valid for drivers that manage timing themselves.

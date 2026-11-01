@@ -89,7 +89,7 @@ cartesian_face_is_low(CartesianFace face) noexcept {
     }
   }
   throw std::invalid_argument(
-      "Dirichlet face must be one of xm, xp, ym, yp, zm, zp");
+      "Cartesian face must be one of xm, xp, ym, yp, zm, zp");
 }
 
 /**

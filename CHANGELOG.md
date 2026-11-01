@@ -7,6 +7,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Named Cartesian Robin faces use constant `alpha`, `beta` and `gamma`
+  (`alpha u + beta du/dn = gamma`, outward normal). `beta = 0` is the
+  node Dirichlet mirror and pins the owned wall; `alpha = 0` is Neumann.
+  Ghosts are filled on the host after the halo exchange. An exact `(0, 0)`
+  pair is rejected, and a positive `coefficient_tolerance` also rejects a
+  pair that is negligible against that tolerance and against the spacing.
+  There is no device Robin kernel (#139).
 - Named Cartesian Dirichlet faces are configured as `xm`…`zp` values and
   applied by stage preparation. Node walls are pinned on the host before the
   halo exchange; ghosts are the existing odd reflection and run after it.

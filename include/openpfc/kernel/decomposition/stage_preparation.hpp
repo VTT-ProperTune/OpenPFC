@@ -13,8 +13,9 @@
  * protocol** (M10): it interprets stage requirements (`needs_halo_exchange`,
  * `needs_boundary_update`, region kind, boundary/halo ordering) and drives
  * those exchangers plus an injectable boundary hook — FD Dirichlet ghosts
- * (`apply_dirichlet_ghosts` or `DirichletBoundary`), even/odd
- * `ReflectionWalls`, or spectral penalty writes on owned cells.
+ * (`apply_dirichlet_ghosts` or `DirichletBoundary`), Robin faces
+ * (`RobinBoundary`), even/odd `ReflectionWalls`, or spectral penalty
+ * writes on owned cells.
  * There is no parallel `ExecutionService::prepare_boundaries` path and no
  * BC flag on `StageContext`.
  *
