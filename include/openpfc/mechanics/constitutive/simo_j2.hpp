@@ -16,12 +16,14 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <stdexcept>
 #include <vector>
 
+#include <openpfc/kernel/data/host_device.hpp>
 #include <openpfc/mechanics/constitutive/history.hpp>
 #include <openpfc/mechanics/constitutive/integration_count.hpp>
 #include <openpfc/mechanics/piola_tangent.hpp>
@@ -53,6 +55,27 @@ struct J2Response {
   double equivalent = 0.0;
 };
 
+/// Failure of the nonthrowing return map. The host wrapper throws the
+/// historical exception; a device kernel stores the status beside the point.
+enum class J2Status : int {
+  Success = 0,
+  Moduli = 1,
+  Singular = 2,
+  Finger = 3,
+  TrialStress = 4,
+};
+
+[[nodiscard]] inline const char *j2_status_message(J2Status status) noexcept {
+  switch (status) {
+  case J2Status::Moduli: return "J2 shear and plastic modulus must be positive";
+  case J2Status::Singular: return "deformation gradient is singular";
+  case J2Status::Finger: return "elastic Finger tensor is not positive definite";
+  case J2Status::TrialStress: return "J2 return map has a vanishing trial stress";
+  case J2Status::Success: return "";
+  }
+  return "";
+}
+
 [[nodiscard]] inline J2State identity_j2_state() noexcept {
   J2State state;
   state.finger = identity2();
@@ -65,8 +88,10 @@ namespace detail {
 struct Tensor4 {
   double c[3][3][3][3]{};
 
-  double &operator()(int i, int j, int k, int l) noexcept { return c[i][j][k][l]; }
-  double operator()(int i, int j, int k, int l) const noexcept {
+  OPENPFC_HD double &operator()(int i, int j, int k, int l) noexcept {
+    return c[i][j][k][l];
+  }
+  OPENPFC_HD double operator()(int i, int j, int k, int l) const noexcept {
     return c[i][j][k][l];
   }
 };
@@ -76,7 +101,7 @@ struct Spectral3 {
   double vector[3][3]{};
 };
 
-[[nodiscard]] inline Spectral3 symmetric_eigen(const Tensor2 &tensor) {
+[[nodiscard]] OPENPFC_INLINE_HD Spectral3 symmetric_eigen(const Tensor2 &tensor) {
   double a[3][3];
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
@@ -143,13 +168,17 @@ struct Spectral3 {
   return out;
 }
 
-[[nodiscard]] inline Tensor2 spectral_map(const Tensor2 &tensor, bool logarithm) {
-  const Spectral3 spectral = symmetric_eigen(tensor);
+[[nodiscard]] OPENPFC_INLINE_HD Tensor2 spectral_map(const Tensor2 &tensor,
+                                                     bool logarithm,
+                                                     J2Status &status) {
   Tensor2 out;
+  if (status != J2Status::Success) return out;
+  const Spectral3 spectral = symmetric_eigen(tensor);
   for (int k = 0; k < 3; ++k) {
     const double value = spectral.value[k];
     if (logarithm && !(value > 0.0)) {
-      throw std::runtime_error("elastic Finger tensor is not positive definite");
+      status = J2Status::Finger;
+      return Tensor2{};
     }
     const double mapped = logarithm ? std::log(value) : std::exp(value);
     for (int i = 0; i < 3; ++i) {
@@ -161,18 +190,20 @@ struct Spectral3 {
   return out;
 }
 
-[[nodiscard]] inline double determinant(const Tensor2 &a) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD double determinant(const Tensor2 &a) noexcept {
   return a(0, 0) * (a(1, 1) * a(2, 2) - a(1, 2) * a(2, 1)) -
          a(0, 1) * (a(1, 0) * a(2, 2) - a(1, 2) * a(2, 0)) +
          a(0, 2) * (a(1, 0) * a(2, 1) - a(1, 1) * a(2, 0));
 }
 
-[[nodiscard]] inline Tensor2 inverse(const Tensor2 &a) {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor2 inverse(const Tensor2 &a, J2Status &status) {
+  Tensor2 out;
+  if (status != J2Status::Success) return out;
   const double det = determinant(a);
   if (!(std::abs(det) > 0.0)) {
-    throw std::runtime_error("deformation gradient is singular");
+    status = J2Status::Singular;
+    return out;
   }
-  Tensor2 out;
   out(0, 0) = (a(1, 1) * a(2, 2) - a(1, 2) * a(2, 1)) / det;
   out(0, 1) = (a(0, 2) * a(2, 1) - a(0, 1) * a(2, 2)) / det;
   out(0, 2) = (a(0, 1) * a(1, 2) - a(0, 2) * a(1, 1)) / det;
@@ -185,7 +216,7 @@ struct Spectral3 {
   return out;
 }
 
-[[nodiscard]] inline Tensor2 deviator(const Tensor2 &tensor) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor2 deviator(const Tensor2 &tensor) noexcept {
   const double mean = trace(tensor) / 3.0;
   Tensor2 out = tensor;
   out(0, 0) -= mean;
@@ -194,12 +225,13 @@ struct Spectral3 {
   return out;
 }
 
-[[nodiscard]] inline double equivalent_stress(const Tensor2 &tensor) noexcept {
+[[nodiscard]] OPENPFC_INLINE_HD double
+equivalent_stress(const Tensor2 &tensor) noexcept {
   const Tensor2 dev = deviator(tensor);
   return std::sqrt(1.5 * frobenius_dot(dev, dev));
 }
 
-[[nodiscard]] inline Tensor4 identity_right() {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor4 identity_right() {
   Tensor4 out;
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
@@ -209,7 +241,7 @@ struct Spectral3 {
   return out;
 }
 
-[[nodiscard]] inline Tensor4 identity_transpose() {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor4 identity_transpose() {
   Tensor4 out;
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
@@ -219,7 +251,8 @@ struct Spectral3 {
   return out;
 }
 
-[[nodiscard]] inline Tensor4 scaled4(const Tensor4 &tensor, double factor) {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor4 scaled4(const Tensor4 &tensor,
+                                                double factor) {
   Tensor4 out;
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
@@ -233,7 +266,8 @@ struct Spectral3 {
   return out;
 }
 
-[[nodiscard]] inline Tensor4 add4(const Tensor4 &left, const Tensor4 &right) {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor4 add4(const Tensor4 &left,
+                                             const Tensor4 &right) {
   Tensor4 out;
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
@@ -247,7 +281,8 @@ struct Spectral3 {
   return out;
 }
 
-[[nodiscard]] inline Tensor4 dyad(const Tensor2 &left, const Tensor2 &right) {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor4 dyad(const Tensor2 &left,
+                                             const Tensor2 &right) {
   Tensor4 out;
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
@@ -262,8 +297,8 @@ struct Spectral3 {
 }
 
 /// `C_ij = A_ijkl B_lk`, the GooseFFT `ddot42` contraction.
-[[nodiscard]] inline Tensor2 contract42(const Tensor4 &tensor,
-                                        const Tensor2 &vector) {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor2 contract42(const Tensor4 &tensor,
+                                                   const Tensor2 &vector) {
   Tensor2 out;
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
@@ -279,7 +314,8 @@ struct Spectral3 {
   return out;
 }
 
-[[nodiscard]] inline Tensor4 contract44(const Tensor4 &left, const Tensor4 &right) {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor4 contract44(const Tensor4 &left,
+                                                   const Tensor4 &right) {
   Tensor4 out;
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
@@ -300,7 +336,8 @@ struct Spectral3 {
 }
 
 /// `C_ijkm = A_ijkl B_lm`.
-[[nodiscard]] inline Tensor4 push42(const Tensor4 &tensor, const Tensor2 &vector) {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor4 push42(const Tensor4 &tensor,
+                                               const Tensor2 &vector) {
   Tensor4 out;
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
@@ -319,7 +356,8 @@ struct Spectral3 {
 }
 
 /// `C_ikmn = A_ij B_jkmn`.
-[[nodiscard]] inline Tensor4 push24(const Tensor2 &vector, const Tensor4 &tensor) {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor4 push24(const Tensor2 &vector,
+                                               const Tensor4 &tensor) {
   Tensor4 out;
   for (int i = 0; i < 3; ++i) {
     for (int k = 0; k < 3; ++k) {
@@ -337,11 +375,11 @@ struct Spectral3 {
   return out;
 }
 
-[[nodiscard]] inline Tensor4 symmetric_identity() {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor4 symmetric_identity() {
   return scaled4(add4(identity_right(), identity_transpose()), 0.5);
 }
 
-[[nodiscard]] inline Tensor4 elastic_stiffness(J2Moduli moduli) {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor4 elastic_stiffness(J2Moduli moduli) {
   const Tensor4 volumetric = dyad(identity2(), identity2());
   const Tensor4 deviatoric =
       add4(symmetric_identity(), scaled4(volumetric, -1.0 / 3.0));
@@ -349,7 +387,7 @@ struct Spectral3 {
               scaled4(deviatoric, 2.0 * moduli.shear));
 }
 
-[[nodiscard]] inline Tensor4 logarithm_derivative(const Tensor2 &finger) {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor4 logarithm_derivative(const Tensor2 &finger) {
   const Spectral3 spectral = symmetric_eigen(finger);
   Tensor4 out;
   for (int m = 0; m < 3; ++m) {
@@ -381,15 +419,16 @@ struct Spectral3 {
 struct IntegratedJ2 {
   J2Response response;
   Tensor4 tangent;
+  J2Status status = J2Status::Success;
 };
 
-[[nodiscard]] inline Tensor2 kirchhoff_from_log(const Tensor2 &log_finger,
-                                                J2Moduli moduli) {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor2 kirchhoff_from_log(const Tensor2 &log_finger,
+                                                           J2Moduli moduli) {
   return contract42(scaled4(elastic_stiffness(moduli), 0.5), log_finger);
 }
 
 /// Public `K_ijkl = A_jikl`, so `K.action` matches `consistent_action`.
-[[nodiscard]] inline PiolaTangent
+[[nodiscard]] OPENPFC_INLINE_HD PiolaTangent
 published_tangent(const Tensor4 &tangent) noexcept {
   PiolaTangent out;
   for (int i = 0; i < 3; ++i) {
@@ -404,17 +443,27 @@ published_tangent(const Tensor4 &tangent) noexcept {
   return out;
 }
 
-[[nodiscard]] inline IntegratedJ2 integrate(J2Moduli moduli, const J2State &state,
-                                            const Tensor2 &deformation) {
+[[nodiscard]] OPENPFC_INLINE_HD IntegratedJ2
+try_integrate(J2Moduli moduli, const J2State &state, const Tensor2 &deformation) {
+  IntegratedJ2 out;
   if (!(moduli.shear > 0.0) || !(moduli.hardening + 3.0 * moduli.shear > 0.0)) {
-    throw std::invalid_argument("J2 shear and plastic modulus must be positive");
+    out.status = J2Status::Moduli;
+    return out;
   }
-  note_constitutive_integration();
-  const Tensor2 inverse_previous = inverse(state.deformation);
+  J2Status status = J2Status::Success;
+  const Tensor2 inverse_previous = inverse(state.deformation, status);
+  if (status != J2Status::Success) {
+    out.status = status;
+    return out;
+  }
   const Tensor2 relative = matmul(deformation, inverse_previous);
   const Tensor2 trial_finger =
       matmul(relative, matmul(state.finger, transposed(relative)));
-  const Tensor2 trial_log = spectral_map(trial_finger, true);
+  const Tensor2 trial_log = spectral_map(trial_finger, true, status);
+  if (status != J2Status::Success) {
+    out.status = status;
+    return out;
+  }
   const Tensor2 trial_kirchhoff = kirchhoff_from_log(trial_log, moduli);
   const Tensor2 trial_deviator = deviator(trial_kirchhoff);
   const double trial_equivalent = equivalent_stress(trial_kirchhoff);
@@ -424,19 +473,27 @@ published_tangent(const Tensor4 &tangent) noexcept {
   const double phi = 0.5 * (raw_phi + std::abs(raw_phi));
   const bool plastic = phi > 0.0;
   if (plastic && !(trial_equivalent > 0.0)) {
-    throw std::runtime_error("J2 return map has a vanishing trial stress");
+    out.status = J2Status::TrialStress;
+    return out;
   }
   const Tensor2 flow =
       plastic ? scaled(trial_deviator, 1.5 / trial_equivalent) : Tensor2{};
   const double gamma = phi / (moduli.hardening + 3.0 * moduli.shear);
 
-  IntegratedJ2 out;
   out.response.plastic = state.plastic + gamma;
   out.response.kirchhoff =
       add(trial_kirchhoff, scaled(flow, -2.0 * gamma * moduli.shear));
   const Tensor2 corrected_log = add(trial_log, scaled(flow, -2.0 * gamma));
-  out.response.finger = spectral_map(corrected_log, false);
-  const Tensor2 inverse_deformation = inverse(deformation);
+  out.response.finger = spectral_map(corrected_log, false, status);
+  if (status != J2Status::Success) {
+    out.status = status;
+    return out;
+  }
+  const Tensor2 inverse_deformation = inverse(deformation, status);
+  if (status != J2Status::Success) {
+    out.status = status;
+    return out;
+  }
   out.response.piola =
       matmul(out.response.kirchhoff, transposed(inverse_deformation));
   out.response.equivalent = equivalent_stress(out.response.kirchhoff);
@@ -470,12 +527,30 @@ published_tangent(const Tensor4 &tangent) noexcept {
   spatial = add4(geometric, spatial);
   out.tangent =
       push42(push24(inverse_deformation, spatial), transposed(inverse_deformation));
+  out.status = J2Status::Success;
+  return out;
+}
+
+/// Host wrapper. Counts the attempt, then throws the historical exception.
+[[nodiscard]] inline IntegratedJ2 integrate(J2Moduli moduli, const J2State &state,
+                                            const Tensor2 &deformation) {
+  if (!(moduli.shear > 0.0) || !(moduli.hardening + 3.0 * moduli.shear > 0.0)) {
+    throw std::invalid_argument(j2_status_message(J2Status::Moduli));
+  }
+  note_constitutive_integration();
+  IntegratedJ2 out = try_integrate(moduli, state, deformation);
+  if (out.status == J2Status::Moduli) {
+    throw std::invalid_argument(j2_status_message(out.status));
+  }
+  if (out.status != J2Status::Success) {
+    throw std::runtime_error(j2_status_message(out.status));
+  }
   return out;
 }
 
 /// Directional derivative `dP = (K : dF^T)^T` in the GooseFFT layout.
-[[nodiscard]] inline Tensor2 consistent_action(const Tensor4 &tangent,
-                                               const Tensor2 &increment) {
+[[nodiscard]] OPENPFC_INLINE_HD Tensor2 consistent_action(const Tensor4 &tangent,
+                                                          const Tensor2 &increment) {
   return transposed(contract42(tangent, transposed(increment)));
 }
 
@@ -497,6 +572,27 @@ struct J2Evaluation {
   PiolaTangent tangent;
   J2State trial;
 };
+
+struct J2EvaluationResult {
+  J2Evaluation value{};
+  J2Status status = J2Status::Success;
+};
+
+/// Nonthrowing return map. Does not touch the host integration counter.
+[[nodiscard]] OPENPFC_INLINE_HD J2EvaluationResult
+try_evaluate_j2(J2Moduli moduli, const J2State &state, const Tensor2 &deformation) {
+  const detail::IntegratedJ2 integrated =
+      detail::try_integrate(moduli, state, deformation);
+  J2EvaluationResult out;
+  out.status = integrated.status;
+  if (out.status != J2Status::Success) return out;
+  out.value.response = integrated.response;
+  out.value.tangent = detail::published_tangent(integrated.tangent);
+  out.value.trial.finger = integrated.response.finger;
+  out.value.trial.deformation = deformation;
+  out.value.trial.plastic = integrated.response.plastic;
+  return out;
+}
 
 [[nodiscard]] inline J2Evaluation evaluate_j2(J2Moduli moduli, const J2State &state,
                                               const Tensor2 &deformation) {

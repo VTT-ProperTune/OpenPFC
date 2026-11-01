@@ -31,6 +31,7 @@ using pfc::finite_strain::FccEvaluation;
 using pfc::finite_strain::FccSlipMaterial;
 using pfc::finite_strain::FccSlipParameters;
 using pfc::finite_strain::FccSlipState;
+using pfc::finite_strain::FccStatus;
 using pfc::finite_strain::identity2;
 using pfc::finite_strain::identity_j2_state;
 using pfc::finite_strain::integrate_fcc;
@@ -41,11 +42,14 @@ using pfc::finite_strain::J2Evaluation;
 using pfc::finite_strain::J2Moduli;
 using pfc::finite_strain::J2Response;
 using pfc::finite_strain::J2State;
+using pfc::finite_strain::J2Status;
 using pfc::finite_strain::reset_constitutive_integrations;
 using pfc::finite_strain::SaintVenantKirchhoffMaterial;
 using pfc::finite_strain::SimoJ2Material;
 using pfc::finite_strain::tangent_action;
 using pfc::finite_strain::Tensor2;
+using pfc::finite_strain::try_evaluate_fcc;
+using pfc::finite_strain::try_evaluate_j2;
 
 namespace {
 
@@ -145,6 +149,20 @@ Tensor2 scaled_diff(const Tensor2 &later, const Tensor2 &earlier, double scale) 
     }
   }
   return out;
+}
+
+void require_same_evaluation(const J2Evaluation &left, const J2Evaluation &right) {
+  REQUIRE(gap(left.response.piola, right.response.piola) == 0.0);
+  REQUIRE(gap(left.response.kirchhoff, right.response.kirchhoff) == 0.0);
+  REQUIRE(gap(left.response.finger, right.response.finger) == 0.0);
+  REQUIRE(left.response.plastic == right.response.plastic);
+  REQUIRE(left.response.equivalent == right.response.equivalent);
+  REQUIRE(same_j2(left.trial, right.trial));
+  for (int index = 0; index < 9; ++index) {
+    const Tensor2 direction = basis(index);
+    REQUIRE(gap(left.tangent.action(direction), right.tangent.action(direction)) ==
+            0.0);
+  }
 }
 
 } // namespace
@@ -402,4 +420,127 @@ TEST_CASE("Saint-Venant evaluation stores the analytic tangent",
   REQUIRE(gap(material.evaluate(0, deformation).response.piola,
               evaluation.response.piola) == 0.0);
   REQUIRE(constitutive_integrations() == 0);
+}
+
+TEST_CASE("try_evaluate_j2 matches evaluate_j2 without counting",
+          "[finite_strain][j2]") {
+  const J2Moduli moduli = j2_moduli();
+  const J2State committed = identity_j2_state();
+  for (const double stretch : {1.01, 1.2}) {
+    const Tensor2 deformation = uniaxial(stretch);
+    reset_constitutive_integrations();
+    const auto tried = try_evaluate_j2(moduli, committed, deformation);
+    REQUIRE(constitutive_integrations() == 0);
+    REQUIRE(tried.status == J2Status::Success);
+    if (stretch == 1.01) {
+      REQUIRE(tried.value.response.plastic == 0.0);
+    } else {
+      REQUIRE(tried.value.response.plastic > 0.0);
+    }
+    const J2Evaluation evaluation = evaluate_j2(moduli, committed, deformation);
+    REQUIRE(constitutive_integrations() == 1);
+    require_same_evaluation(tried.value, evaluation);
+  }
+}
+
+TEST_CASE("try_evaluate_j2 keeps the historical J2 exceptions",
+          "[finite_strain][j2]") {
+  const J2Moduli moduli = j2_moduli();
+  const J2State committed = identity_j2_state();
+  const Tensor2 deformation = uniaxial(1.01);
+
+  J2Moduli rejected = moduli;
+  rejected.shear = 0.0;
+  reset_constitutive_integrations();
+  REQUIRE(try_evaluate_j2(rejected, committed, deformation).status ==
+          J2Status::Moduli);
+  REQUIRE(constitutive_integrations() == 0);
+  std::string moduli_message;
+  try {
+    (void)evaluate_j2(rejected, committed, deformation);
+    moduli_message = "no throw";
+  } catch (const std::invalid_argument &error) {
+    moduli_message = error.what();
+  }
+  REQUIRE(moduli_message == "J2 shear and plastic modulus must be positive");
+  REQUIRE(constitutive_integrations() == 0);
+
+  J2State singular = committed;
+  singular.deformation = Tensor2{};
+  reset_constitutive_integrations();
+  REQUIRE(try_evaluate_j2(moduli, singular, deformation).status ==
+          J2Status::Singular);
+  REQUIRE(constitutive_integrations() == 0);
+  std::string singular_message;
+  try {
+    (void)evaluate_j2(moduli, singular, deformation);
+    singular_message = "no throw";
+  } catch (const std::runtime_error &error) {
+    singular_message = error.what();
+  }
+  REQUIRE(singular_message == "deformation gradient is singular");
+  REQUIRE(constitutive_integrations() == 1);
+
+  reset_constitutive_integrations();
+  REQUIRE(try_evaluate_j2(moduli, committed, Tensor2{}).status == J2Status::Finger);
+  REQUIRE(constitutive_integrations() == 0);
+  std::string finger_message;
+  try {
+    (void)evaluate_j2(moduli, committed, Tensor2{});
+    finger_message = "no throw";
+  } catch (const std::runtime_error &error) {
+    finger_message = error.what();
+  }
+  REQUIRE(finger_message == "elastic Finger tensor is not positive definite");
+  REQUIRE(constitutive_integrations() == 1);
+
+  J2Moduli vanishing = moduli;
+  vanishing.initial_yield = -0.1;
+  reset_constitutive_integrations();
+  REQUIRE(try_evaluate_j2(vanishing, committed, identity2()).status ==
+          J2Status::TrialStress);
+  REQUIRE(constitutive_integrations() == 0);
+  std::string trial_message;
+  try {
+    (void)evaluate_j2(vanishing, committed, identity2());
+    trial_message = "no throw";
+  } catch (const std::runtime_error &error) {
+    trial_message = error.what();
+  }
+  REQUIRE(trial_message == "J2 return map has a vanishing trial stress");
+  REQUIRE(constitutive_integrations() == 1);
+}
+
+TEST_CASE("try_evaluate_fcc reports a refused shear without counting",
+          "[finite_strain][crystal]") {
+  const FccSlipParameters parameters = slipping_fcc();
+  const Tensor2 orientation = identity2();
+  const FccSlipState committed = fcc_identity_state(parameters);
+  const Tensor2 accepted = simple_shear(0.15);
+  reset_constitutive_integrations();
+  const auto tried = try_evaluate_fcc(parameters, orientation, committed, accepted);
+  REQUIRE(constitutive_integrations() == 0);
+  REQUIRE(tried.status == FccStatus::Success);
+  const FccEvaluation evaluation =
+      evaluate_fcc(parameters, orientation, committed, accepted);
+  REQUIRE(constitutive_integrations() == 1);
+  REQUIRE(gap(tried.value.update.piola, evaluation.update.piola) == 0.0);
+  REQUIRE(same_fcc(tried.value.update.state, evaluation.update.state));
+  REQUIRE(gap(tried.value.tangent.action(basis(1)),
+              evaluation.tangent.action(basis(1))) == 0.0);
+
+  reset_constitutive_integrations();
+  const auto refused =
+      try_evaluate_fcc(parameters, orientation, committed, simple_shear(0.3));
+  REQUIRE(refused.status == FccStatus::ResistanceIterations);
+  REQUIRE(constitutive_integrations() == 0);
+  std::string refusal;
+  try {
+    (void)evaluate_fcc(parameters, orientation, committed, simple_shear(0.3));
+    refusal = "no throw";
+  } catch (const std::runtime_error &error) {
+    refusal = error.what();
+  }
+  REQUIRE(refusal == "FCC slip resistance did not converge");
+  REQUIRE(constitutive_integrations() == 1);
 }

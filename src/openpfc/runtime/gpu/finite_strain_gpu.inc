@@ -1,5 +1,7 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
+#include <openpfc/runtime/gpu/constitutive_point.hpp>
+#include <openpfc/runtime/gpu/gpu_api.hpp>
 #include <openpfc/solvers/finite_strain_fft/gpu/projector.hpp>
 namespace pfc::finite_strain::gpu {
 __global__ void project_tensor_kernel(ComplexComponents fields, ProjectionGrid grid,
@@ -57,3 +59,51 @@ void apply_tangents_hip(const double *K, const double *v, double *w, std::size_t
   solvers::gpu::detail::check(pfc::gpuGetLastError());
 }
 } // namespace pfc::finite_strain::gpu
+
+namespace pfc::finite_strain {
+__global__ void j2_point_kernel(J2Moduli moduli, J2State state, Tensor2 deformation,
+                                J2EvaluationResult *out) {
+  *out = try_evaluate_j2(moduli, state, deformation);
+}
+__global__ void fcc_point_kernel(FccSlipParameters parameters, Tensor2 orientation,
+                                 FccSlipState state, Tensor2 deformation,
+                                 FccEvaluationResult *out) {
+  *out = try_evaluate_fcc(parameters, orientation, state, deformation);
+}
+
+#if defined(OPENPFC_GPU_API_CUDA)
+void evaluate_j2_point_cuda(J2Moduli moduli, const J2State &state,
+                            const Tensor2 &deformation, J2EvaluationResult *out) {
+#else
+void evaluate_j2_point_hip(J2Moduli moduli, const J2State &state,
+                           const Tensor2 &deformation, J2EvaluationResult *out) {
+#endif
+  J2EvaluationResult *device = nullptr;
+  solvers::gpu::detail::check(
+      pfc::gpuMalloc(reinterpret_cast<void **>(&device), sizeof(*device)));
+  j2_point_kernel<<<1, 1>>>(moduli, state, deformation, device);
+  solvers::gpu::detail::check(pfc::gpuGetLastError());
+  solvers::gpu::detail::check(
+      pfc::gpuMemcpy(out, device, sizeof(*device), pfc::gpuMemcpyDeviceToHost));
+  solvers::gpu::detail::check(pfc::gpuFree(device));
+}
+
+#if defined(OPENPFC_GPU_API_CUDA)
+void evaluate_fcc_point_cuda(const FccSlipParameters &parameters,
+                             const Tensor2 &orientation, const FccSlipState &state,
+                             const Tensor2 &deformation, FccEvaluationResult *out) {
+#else
+void evaluate_fcc_point_hip(const FccSlipParameters &parameters,
+                            const Tensor2 &orientation, const FccSlipState &state,
+                            const Tensor2 &deformation, FccEvaluationResult *out) {
+#endif
+  FccEvaluationResult *device = nullptr;
+  solvers::gpu::detail::check(
+      pfc::gpuMalloc(reinterpret_cast<void **>(&device), sizeof(*device)));
+  fcc_point_kernel<<<1, 1>>>(parameters, orientation, state, deformation, device);
+  solvers::gpu::detail::check(pfc::gpuGetLastError());
+  solvers::gpu::detail::check(
+      pfc::gpuMemcpy(out, device, sizeof(*device), pfc::gpuMemcpyDeviceToHost));
+  solvers::gpu::detail::check(pfc::gpuFree(device));
+}
+} // namespace pfc::finite_strain

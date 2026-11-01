@@ -463,6 +463,28 @@ foreach(_backend IN ITEMS cuda hip)
   set_tests_properties(FccBatch_${_backend} PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 4)
 endforeach()
 
+foreach(_backend IN ITEMS cuda hip)
+  if(_backend STREQUAL "cuda" AND OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
+    set(_runtime openpfc_gpu_kernels CUDA::cudart)
+    set(_definition OPENPFC_TEST_J2_CUDA)
+  elseif(_backend STREQUAL "hip" AND OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+    set(_runtime openpfc_hip_kernels hip::host)
+    set(_definition OPENPFC_TEST_J2_HIP)
+  else()
+    continue()
+  endif()
+  add_executable(test_constitutive_point_${_backend} test_constitutive_point.cpp)
+  target_link_libraries(test_constitutive_point_${_backend}
+      PRIVATE Catch2::Catch2 ${_runtime})
+  target_compile_definitions(test_constitutive_point_${_backend}
+      PRIVATE ${_definition})
+  target_compile_features(test_constitutive_point_${_backend} PRIVATE cxx_std_20)
+  add_test(NAME ConstitutivePoint_${_backend}
+      COMMAND test_constitutive_point_${_backend})
+  set_tests_properties(ConstitutivePoint_${_backend} PROPERTIES
+      TIMEOUT 180 SKIP_RETURN_CODE 4)
+endforeach()
+
 if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
   add_executable(test_solver_vectors_cuda test_solver_vectors.cpp solver_toys.cu)
   target_link_libraries(test_solver_vectors_cuda PRIVATE Catch2::Catch2

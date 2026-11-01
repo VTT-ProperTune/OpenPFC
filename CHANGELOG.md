@@ -7,6 +7,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- `try_evaluate_j2` is the nonthrowing Simo J2 return map shared by the host
+  wrapper and a one-point CUDA/HIP kernel. `evaluate_j2` still throws the
+  historical exceptions and counts the attempt. The same launch checks
+  `try_evaluate_fcc`. The device point matches the host on an elastic J2
+  step, a plastic J2 step, both tangents of an accepted yield state, an FCC
+  shear of 0.15, and a refused FCC shear of 0.3 (#391).
 - `decomposition::gather_owned_blocks` gathers the owned cells of one or
   more decomposed fields into global x-fastest host buffers on one rank.
   `scatter_owned_blocks` writes those buffers back into the owned blocks.
