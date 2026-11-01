@@ -11,6 +11,7 @@ if(OpenPFC_HAS_FFTW3)
   target_sources(openpfc-tests PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}/test_local_fft.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_chebyshev.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_complex_line_fft.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_real_transform.cpp)
 endif()
 if(OpenPFC_ENABLE_HEFFTE)
@@ -49,6 +50,7 @@ endif()
 
 if(OpenPFC_HAS_FFTW3)
   add_test(NAME LocalFFT COMMAND openpfc-tests "[local_fft]~[MPI]")
+  add_test(NAME ComplexLineFFT COMMAND openpfc-tests "[line_dft]")
   if(OpenPFC_ENABLE_HEFFTE AND OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
      (OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 2))
     add_test(NAME LocalFFT_Reject2Rank

@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Chebyshev line transforms call an unnormalized one-dimensional complex
+  DFT. The real-to-complex pencil FFT is a different contract. Device and
+  distributed line DFTs are not part of this step (#141).
 - Named Cartesian Robin faces use constant `alpha`, `beta` and `gamma`
   (`alpha u + beta du/dn = gamma`, outward normal). `beta = 0` is the
   node Dirichlet mirror and pins the owned wall; `alpha = 0` is Neumann.

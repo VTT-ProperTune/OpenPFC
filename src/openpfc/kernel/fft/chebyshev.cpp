@@ -5,6 +5,7 @@
  * @file chebyshev.cpp
  * @brief Even-extension FFT for a Chebyshev–Lobatto series.
  *
+ * The complex DFT is ComplexLineFFT. The even extension stays in this file.
  * A pure mode T_k, 0 < k < n, has forward bins U_k = U_{2n-k} = n.
  * The endpoint bins use weight 2, so U_0 = 2n a_0 and U_n = 2n a_n.
  * The interior derivative is the theta derivative divided by -sin(theta).
@@ -35,11 +36,11 @@
  */
 
 #include <openpfc/kernel/fft/chebyshev.hpp>
+#include <openpfc/kernel/fft/complex_line_fft.hpp>
 
 #include <algorithm>
 #include <cmath>
 #include <complex>
-#include <fftw3.h>
 #include <limits>
 #include <stdexcept>
 #include <utility>
@@ -48,59 +49,30 @@ namespace pfc::fft {
 namespace {
 
 struct Plan {
-  int length{0};
-  fftw_complex *in{nullptr};
-  fftw_complex *out{nullptr};
-  fftw_plan forward{};
-  fftw_plan backward{};
+  ComplexLineFFT transform;
+  std::vector<std::complex<double>> in;
+  std::vector<std::complex<double>> out;
 
-  explicit Plan(int n) : length(n) {
-    if (n < 2) {
-      throw std::invalid_argument("chebyshev: FFT length must be at least 2");
-    }
-    const auto bytes = sizeof(fftw_complex) * static_cast<std::size_t>(n);
-    in = static_cast<fftw_complex *>(fftw_malloc(bytes));
-    out = static_cast<fftw_complex *>(fftw_malloc(bytes));
-    if (in == nullptr || out == nullptr) {
-      fftw_free(in);
-      fftw_free(out);
-      throw std::bad_alloc();
-    }
-    forward = fftw_plan_dft_1d(n, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
-    backward = fftw_plan_dft_1d(n, in, out, FFTW_BACKWARD, FFTW_ESTIMATE);
-    if (forward == nullptr || backward == nullptr) {
-      fftw_destroy_plan(forward);
-      fftw_destroy_plan(backward);
-      fftw_free(in);
-      fftw_free(out);
-      throw std::runtime_error("chebyshev: FFTW plan failed");
-    }
-  }
+  explicit Plan(int n)
+      : transform(n), in(static_cast<std::size_t>(n)),
+        out(static_cast<std::size_t>(n)) {}
 
   Plan(const Plan &) = delete;
   Plan &operator=(const Plan &) = delete;
 
-  ~Plan() {
-    fftw_destroy_plan(forward);
-    fftw_destroy_plan(backward);
-    fftw_free(in);
-    fftw_free(out);
-  }
-
   void load(const std::vector<std::complex<double>> &samples) {
-    for (int i = 0; i < length; ++i) {
-      in[i][0] = samples[static_cast<std::size_t>(i)].real();
-      in[i][1] = samples[static_cast<std::size_t>(i)].imag();
+    if (samples.size() != in.size()) {
+      throw std::invalid_argument(
+          "chebyshev: FFT line length does not match the plan");
     }
+    in = samples;
   }
 
-  [[nodiscard]] std::vector<std::complex<double>> read() const {
-    std::vector<std::complex<double>> samples(static_cast<std::size_t>(length));
-    for (int i = 0; i < length; ++i) {
-      samples[static_cast<std::size_t>(i)] = {out[i][0], out[i][1]};
-    }
-    return samples;
-  }
+  void execute_forward() { transform.forward(in, out); }
+
+  void execute_backward() { transform.backward(in, out); }
+
+  [[nodiscard]] std::vector<std::complex<double>> read() const { return out; }
 };
 
 [[nodiscard]] int degree_of(std::span<const double> samples, const char *what) {
@@ -133,7 +105,7 @@ forward_bins(std::span<const double> values) {
   auto extended = even_extension(values);
   Plan plan(static_cast<int>(extended.size()));
   plan.load(extended);
-  fftw_execute(plan.forward);
+  plan.execute_forward();
   return plan.read();
 }
 
@@ -360,7 +332,7 @@ periodic_derivative(std::span<const double> values, int nx, int ny, int nline,
         }
       }
       plan.load(line);
-      fftw_execute(plan.forward);
+      plan.execute_forward();
       auto bins = plan.read();
       for (int mode = 0; mode < count; ++mode) {
         const bool nyquist = count % 2 == 0 && mode == count / 2;
@@ -369,7 +341,7 @@ periodic_derivative(std::span<const double> values, int nx, int ny, int nline,
         bins[static_cast<std::size_t>(mode)] = std::complex<double>(0.0, wave) * bin;
       }
       plan.load(bins);
-      fftw_execute(plan.backward);
+      plan.execute_backward();
       const auto samples = plan.read();
       if (along_x) {
         for (int ix = 0; ix < nx; ++ix) {
@@ -460,7 +432,7 @@ std::vector<double> chebyshev_values(std::span<const double> coefficients) {
   }
   Plan plan(m);
   plan.load(bins);
-  fftw_execute(plan.backward);
+  plan.execute_backward();
   const auto samples = plan.read();
   for (int j = 0; j <= n; ++j) {
     values[static_cast<std::size_t>(j)] =
@@ -489,7 +461,7 @@ std::vector<double> chebyshev_derivative(std::span<const double> values) {
   }
   Plan plan(m);
   plan.load(spectrum);
-  fftw_execute(plan.backward);
+  plan.execute_backward();
   const auto theta = plan.read();
   const auto nodes = chebyshev_lobatto(n);
   for (int j = 1; j < n; ++j) {
@@ -547,7 +519,7 @@ std::vector<double> fourier_chebyshev_laplacian(std::span<const double> values,
         line[static_cast<std::size_t>(ix)] = values[mixed_index(iz, ix, nx)];
       }
       plan.load(line);
-      fftw_execute(plan.forward);
+      plan.execute_forward();
       const auto bins = plan.read();
       for (int mode = 0; mode < nx; ++mode) {
         modes[mixed_index(iz, mode, nx)] = bins[static_cast<std::size_t>(mode)];
@@ -593,7 +565,7 @@ std::vector<double> fourier_chebyshev_laplacian(std::span<const double> values,
       line[static_cast<std::size_t>(mode)] = modes[mixed_index(iz, mode, nx)];
     }
     plan.load(line);
-    fftw_execute(plan.backward);
+    plan.execute_backward();
     const auto samples = plan.read();
     for (int ix = 0; ix < nx; ++ix) {
       laplacian[mixed_index(iz, ix, nx)] =
@@ -638,7 +610,7 @@ std::vector<double> fourier_chebyshev_laplacian(std::span<const double> values,
             values[tensor_index(iz, iy, ix, ny, nx)];
       }
       plan_x.load(line_x);
-      fftw_execute(plan_x.forward);
+      plan_x.execute_forward();
       const auto bins = plan_x.read();
       for (int mode = 0; mode < nx; ++mode) {
         modes[tensor_index(iz, iy, mode, ny, nx)] =
@@ -656,7 +628,7 @@ std::vector<double> fourier_chebyshev_laplacian(std::span<const double> values,
             modes[tensor_index(iz, iy, mx, ny, nx)];
       }
       plan_y.load(line_y);
-      fftw_execute(plan_y.forward);
+      plan_y.execute_forward();
       const auto bins = plan_y.read();
       for (int my = 0; my < ny; ++my) {
         modes[tensor_index(iz, my, mx, ny, nx)] = bins[static_cast<std::size_t>(my)];
@@ -695,7 +667,7 @@ std::vector<double> fourier_chebyshev_laplacian(std::span<const double> values,
             modes[tensor_index(iz, my, mx, ny, nx)];
       }
       plan_y.load(line_y);
-      fftw_execute(plan_y.backward);
+      plan_y.execute_backward();
       const auto samples = plan_y.read();
       for (int iy = 0; iy < ny; ++iy) {
         modes[tensor_index(iz, iy, mx, ny, nx)] =
@@ -713,7 +685,7 @@ std::vector<double> fourier_chebyshev_laplacian(std::span<const double> values,
             modes[tensor_index(iz, iy, mx, ny, nx)];
       }
       plan_x.load(line_x);
-      fftw_execute(plan_x.backward);
+      plan_x.execute_backward();
       const auto samples = plan_x.read();
       for (int ix = 0; ix < nx; ++ix) {
         laplacian[tensor_index(iz, iy, ix, ny, nx)] =
@@ -768,7 +740,7 @@ std::vector<double> fourier_chebyshev_dirichlet_poisson(
         line[static_cast<std::size_t>(ix)] = forcing[mixed_index(iz, ix, nx)];
       }
       plan.load(line);
-      fftw_execute(plan.forward);
+      plan.execute_forward();
       const auto bins = plan.read();
       for (int mode = 0; mode < nx; ++mode) {
         modes[mixed_index(iz, mode, nx)] = bins[static_cast<std::size_t>(mode)];
@@ -779,14 +751,14 @@ std::vector<double> fourier_chebyshev_dirichlet_poisson(
           value_at_plus[static_cast<std::size_t>(ix)];
     }
     plan.load(line);
-    fftw_execute(plan.forward);
+    plan.execute_forward();
     plus_hat = plan.read();
     for (int ix = 0; ix < nx; ++ix) {
       line[static_cast<std::size_t>(ix)] =
           value_at_minus[static_cast<std::size_t>(ix)];
     }
     plan.load(line);
-    fftw_execute(plan.forward);
+    plan.execute_forward();
     minus_hat = plan.read();
   }
 
@@ -830,7 +802,7 @@ std::vector<double> fourier_chebyshev_dirichlet_poisson(
       line[static_cast<std::size_t>(mode)] = modes[mixed_index(iz, mode, nx)];
     }
     plan.load(line);
-    fftw_execute(plan.backward);
+    plan.execute_backward();
     const auto samples = plan.read();
     for (int ix = 0; ix < nx; ++ix) {
       solution[mixed_index(iz, ix, nx)] =
@@ -887,7 +859,7 @@ fourier_chebyshev_dirichlet_poisson(std::span<const double> forcing, int nx, int
             forcing[tensor_index(iz, iy, ix, ny, nx)];
       }
       plan_x.load(line_x);
-      fftw_execute(plan_x.forward);
+      plan_x.execute_forward();
       const auto bins = plan_x.read();
       for (int mode = 0; mode < nx; ++mode) {
         modes[tensor_index(iz, iy, mode, ny, nx)] =
@@ -905,7 +877,7 @@ fourier_chebyshev_dirichlet_poisson(std::span<const double> forcing, int nx, int
             modes[tensor_index(iz, iy, mx, ny, nx)];
       }
       plan_y.load(line_y);
-      fftw_execute(plan_y.forward);
+      plan_y.execute_forward();
       const auto bins = plan_y.read();
       for (int my = 0; my < ny; ++my) {
         modes[tensor_index(iz, my, mx, ny, nx)] = bins[static_cast<std::size_t>(my)];
@@ -921,7 +893,7 @@ fourier_chebyshev_dirichlet_poisson(std::span<const double> forcing, int nx, int
             trace[tensor_index(0, iy, ix, ny, nx)];
       }
       plan_x.load(line_x);
-      fftw_execute(plan_x.forward);
+      plan_x.execute_forward();
       const auto bins = plan_x.read();
       for (int mx = 0; mx < nx; ++mx) {
         hat[tensor_index(0, iy, mx, ny, nx)] = bins[static_cast<std::size_t>(mx)];
@@ -932,7 +904,7 @@ fourier_chebyshev_dirichlet_poisson(std::span<const double> forcing, int nx, int
         line_y[static_cast<std::size_t>(iy)] = hat[tensor_index(0, iy, mx, ny, nx)];
       }
       plan_y.load(line_y);
-      fftw_execute(plan_y.forward);
+      plan_y.execute_forward();
       const auto bins = plan_y.read();
       for (int my = 0; my < ny; ++my) {
         hat[tensor_index(0, my, mx, ny, nx)] = bins[static_cast<std::size_t>(my)];
@@ -975,7 +947,7 @@ fourier_chebyshev_dirichlet_poisson(std::span<const double> forcing, int nx, int
             modes[tensor_index(iz, my, mx, ny, nx)];
       }
       plan_y.load(line_y);
-      fftw_execute(plan_y.backward);
+      plan_y.execute_backward();
       const auto samples = plan_y.read();
       for (int iy = 0; iy < ny; ++iy) {
         modes[tensor_index(iz, iy, mx, ny, nx)] =
@@ -993,7 +965,7 @@ fourier_chebyshev_dirichlet_poisson(std::span<const double> forcing, int nx, int
             modes[tensor_index(iz, iy, mx, ny, nx)];
       }
       plan_x.load(line_x);
-      fftw_execute(plan_x.backward);
+      plan_x.execute_backward();
       const auto samples = plan_x.read();
       for (int ix = 0; ix < nx; ++ix) {
         solution[tensor_index(iz, iy, ix, ny, nx)] =
@@ -1048,7 +1020,7 @@ std::vector<double> fourier_chebyshev_neumann_poisson(
         line[static_cast<std::size_t>(ix)] = forcing[mixed_index(iz, ix, nx)];
       }
       plan.load(line);
-      fftw_execute(plan.forward);
+      plan.execute_forward();
       const auto bins = plan.read();
       for (int mode = 0; mode < nx; ++mode) {
         modes[mixed_index(iz, mode, nx)] = bins[static_cast<std::size_t>(mode)];
@@ -1059,14 +1031,14 @@ std::vector<double> fourier_chebyshev_neumann_poisson(
           slope_at_plus[static_cast<std::size_t>(ix)];
     }
     plan.load(line);
-    fftw_execute(plan.forward);
+    plan.execute_forward();
     plus_hat = plan.read();
     for (int ix = 0; ix < nx; ++ix) {
       line[static_cast<std::size_t>(ix)] =
           slope_at_minus[static_cast<std::size_t>(ix)];
     }
     plan.load(line);
-    fftw_execute(plan.forward);
+    plan.execute_forward();
     minus_hat = plan.read();
   }
 
@@ -1110,7 +1082,7 @@ std::vector<double> fourier_chebyshev_neumann_poisson(
       line[static_cast<std::size_t>(mode)] = modes[mixed_index(iz, mode, nx)];
     }
     plan.load(line);
-    fftw_execute(plan.backward);
+    plan.execute_backward();
     const auto samples = plan.read();
     for (int ix = 0; ix < nx; ++ix) {
       solution[mixed_index(iz, ix, nx)] =
@@ -1167,7 +1139,7 @@ fourier_chebyshev_neumann_poisson(std::span<const double> forcing, int nx, int n
             forcing[tensor_index(iz, iy, ix, ny, nx)];
       }
       plan_x.load(line_x);
-      fftw_execute(plan_x.forward);
+      plan_x.execute_forward();
       const auto bins = plan_x.read();
       for (int mode = 0; mode < nx; ++mode) {
         modes[tensor_index(iz, iy, mode, ny, nx)] =
@@ -1185,7 +1157,7 @@ fourier_chebyshev_neumann_poisson(std::span<const double> forcing, int nx, int n
             modes[tensor_index(iz, iy, mx, ny, nx)];
       }
       plan_y.load(line_y);
-      fftw_execute(plan_y.forward);
+      plan_y.execute_forward();
       const auto bins = plan_y.read();
       for (int my = 0; my < ny; ++my) {
         modes[tensor_index(iz, my, mx, ny, nx)] = bins[static_cast<std::size_t>(my)];
@@ -1201,7 +1173,7 @@ fourier_chebyshev_neumann_poisson(std::span<const double> forcing, int nx, int n
             trace[tensor_index(0, iy, ix, ny, nx)];
       }
       plan_x.load(line_x);
-      fftw_execute(plan_x.forward);
+      plan_x.execute_forward();
       const auto bins = plan_x.read();
       for (int mx = 0; mx < nx; ++mx) {
         hat[tensor_index(0, iy, mx, ny, nx)] = bins[static_cast<std::size_t>(mx)];
@@ -1212,7 +1184,7 @@ fourier_chebyshev_neumann_poisson(std::span<const double> forcing, int nx, int n
         line_y[static_cast<std::size_t>(iy)] = hat[tensor_index(0, iy, mx, ny, nx)];
       }
       plan_y.load(line_y);
-      fftw_execute(plan_y.forward);
+      plan_y.execute_forward();
       const auto bins = plan_y.read();
       for (int my = 0; my < ny; ++my) {
         hat[tensor_index(0, my, mx, ny, nx)] = bins[static_cast<std::size_t>(my)];
@@ -1255,7 +1227,7 @@ fourier_chebyshev_neumann_poisson(std::span<const double> forcing, int nx, int n
             modes[tensor_index(iz, my, mx, ny, nx)];
       }
       plan_y.load(line_y);
-      fftw_execute(plan_y.backward);
+      plan_y.execute_backward();
       const auto samples = plan_y.read();
       for (int iy = 0; iy < ny; ++iy) {
         modes[tensor_index(iz, iy, mx, ny, nx)] =
@@ -1273,7 +1245,7 @@ fourier_chebyshev_neumann_poisson(std::span<const double> forcing, int nx, int n
             modes[tensor_index(iz, iy, mx, ny, nx)];
       }
       plan_x.load(line_x);
-      fftw_execute(plan_x.backward);
+      plan_x.execute_backward();
       const auto samples = plan_x.read();
       for (int ix = 0; ix < nx; ++ix) {
         solution[tensor_index(iz, iy, ix, ny, nx)] =
@@ -1330,7 +1302,7 @@ std::vector<double> fourier_chebyshev_robin_poisson(
         line[static_cast<std::size_t>(ix)] = forcing[mixed_index(iz, ix, nx)];
       }
       plan.load(line);
-      fftw_execute(plan.forward);
+      plan.execute_forward();
       const auto bins = plan.read();
       for (int mode = 0; mode < nx; ++mode) {
         modes[mixed_index(iz, mode, nx)] = bins[static_cast<std::size_t>(mode)];
@@ -1341,14 +1313,14 @@ std::vector<double> fourier_chebyshev_robin_poisson(
           data_at_plus[static_cast<std::size_t>(ix)];
     }
     plan.load(line);
-    fftw_execute(plan.forward);
+    plan.execute_forward();
     plus_hat = plan.read();
     for (int ix = 0; ix < nx; ++ix) {
       line[static_cast<std::size_t>(ix)] =
           data_at_minus[static_cast<std::size_t>(ix)];
     }
     plan.load(line);
-    fftw_execute(plan.forward);
+    plan.execute_forward();
     minus_hat = plan.read();
   }
 
@@ -1394,7 +1366,7 @@ std::vector<double> fourier_chebyshev_robin_poisson(
       line[static_cast<std::size_t>(mode)] = modes[mixed_index(iz, mode, nx)];
     }
     plan.load(line);
-    fftw_execute(plan.backward);
+    plan.execute_backward();
     const auto samples = plan.read();
     for (int ix = 0; ix < nx; ++ix) {
       solution[mixed_index(iz, ix, nx)] =
@@ -1453,7 +1425,7 @@ std::vector<double> fourier_chebyshev_robin_poisson(
             forcing[tensor_index(iz, iy, ix, ny, nx)];
       }
       plan_x.load(line_x);
-      fftw_execute(plan_x.forward);
+      plan_x.execute_forward();
       const auto bins = plan_x.read();
       for (int mode = 0; mode < nx; ++mode) {
         modes[tensor_index(iz, iy, mode, ny, nx)] =
@@ -1471,7 +1443,7 @@ std::vector<double> fourier_chebyshev_robin_poisson(
             modes[tensor_index(iz, iy, mx, ny, nx)];
       }
       plan_y.load(line_y);
-      fftw_execute(plan_y.forward);
+      plan_y.execute_forward();
       const auto bins = plan_y.read();
       for (int my = 0; my < ny; ++my) {
         modes[tensor_index(iz, my, mx, ny, nx)] = bins[static_cast<std::size_t>(my)];
@@ -1487,7 +1459,7 @@ std::vector<double> fourier_chebyshev_robin_poisson(
             trace[tensor_index(0, iy, ix, ny, nx)];
       }
       plan_x.load(line_x);
-      fftw_execute(plan_x.forward);
+      plan_x.execute_forward();
       const auto bins = plan_x.read();
       for (int mx = 0; mx < nx; ++mx) {
         hat[tensor_index(0, iy, mx, ny, nx)] = bins[static_cast<std::size_t>(mx)];
@@ -1498,7 +1470,7 @@ std::vector<double> fourier_chebyshev_robin_poisson(
         line_y[static_cast<std::size_t>(iy)] = hat[tensor_index(0, iy, mx, ny, nx)];
       }
       plan_y.load(line_y);
-      fftw_execute(plan_y.forward);
+      plan_y.execute_forward();
       const auto bins = plan_y.read();
       for (int my = 0; my < ny; ++my) {
         hat[tensor_index(0, my, mx, ny, nx)] = bins[static_cast<std::size_t>(my)];
@@ -1545,7 +1517,7 @@ std::vector<double> fourier_chebyshev_robin_poisson(
             modes[tensor_index(iz, my, mx, ny, nx)];
       }
       plan_y.load(line_y);
-      fftw_execute(plan_y.backward);
+      plan_y.execute_backward();
       const auto samples = plan_y.read();
       for (int iy = 0; iy < ny; ++iy) {
         modes[tensor_index(iz, iy, mx, ny, nx)] =
@@ -1563,7 +1535,7 @@ std::vector<double> fourier_chebyshev_robin_poisson(
             modes[tensor_index(iz, iy, mx, ny, nx)];
       }
       plan_x.load(line_x);
-      fftw_execute(plan_x.backward);
+      plan_x.execute_backward();
       const auto samples = plan_x.read();
       for (int ix = 0; ix < nx; ++ix) {
         solution[tensor_index(iz, iy, ix, ny, nx)] =
@@ -1625,7 +1597,7 @@ std::vector<double> fourier_chebyshev_robin_helmholtz(
         line[static_cast<std::size_t>(ix)] = forcing[mixed_index(iz, ix, nx)];
       }
       plan.load(line);
-      fftw_execute(plan.forward);
+      plan.execute_forward();
       const auto bins = plan.read();
       for (int mode = 0; mode < nx; ++mode) {
         modes[mixed_index(iz, mode, nx)] = bins[static_cast<std::size_t>(mode)];
@@ -1636,14 +1608,14 @@ std::vector<double> fourier_chebyshev_robin_helmholtz(
           data_at_plus[static_cast<std::size_t>(ix)];
     }
     plan.load(line);
-    fftw_execute(plan.forward);
+    plan.execute_forward();
     plus_hat = plan.read();
     for (int ix = 0; ix < nx; ++ix) {
       line[static_cast<std::size_t>(ix)] =
           data_at_minus[static_cast<std::size_t>(ix)];
     }
     plan.load(line);
-    fftw_execute(plan.forward);
+    plan.execute_forward();
     minus_hat = plan.read();
   }
 
@@ -1689,7 +1661,7 @@ std::vector<double> fourier_chebyshev_robin_helmholtz(
       line[static_cast<std::size_t>(mode)] = modes[mixed_index(iz, mode, nx)];
     }
     plan.load(line);
-    fftw_execute(plan.backward);
+    plan.execute_backward();
     const auto samples = plan.read();
     for (int ix = 0; ix < nx; ++ix) {
       solution[mixed_index(iz, ix, nx)] =
@@ -1754,7 +1726,7 @@ std::vector<double> fourier_chebyshev_robin_helmholtz(
             forcing[tensor_index(iz, iy, ix, ny, nx)];
       }
       plan_x.load(line_x);
-      fftw_execute(plan_x.forward);
+      plan_x.execute_forward();
       const auto bins = plan_x.read();
       for (int mode = 0; mode < nx; ++mode) {
         modes[tensor_index(iz, iy, mode, ny, nx)] =
@@ -1772,7 +1744,7 @@ std::vector<double> fourier_chebyshev_robin_helmholtz(
             modes[tensor_index(iz, iy, mx, ny, nx)];
       }
       plan_y.load(line_y);
-      fftw_execute(plan_y.forward);
+      plan_y.execute_forward();
       const auto bins = plan_y.read();
       for (int my = 0; my < ny; ++my) {
         modes[tensor_index(iz, my, mx, ny, nx)] = bins[static_cast<std::size_t>(my)];
@@ -1788,7 +1760,7 @@ std::vector<double> fourier_chebyshev_robin_helmholtz(
             trace[tensor_index(0, iy, ix, ny, nx)];
       }
       plan_x.load(line_x);
-      fftw_execute(plan_x.forward);
+      plan_x.execute_forward();
       const auto bins = plan_x.read();
       for (int mx = 0; mx < nx; ++mx) {
         hat[tensor_index(0, iy, mx, ny, nx)] = bins[static_cast<std::size_t>(mx)];
@@ -1799,7 +1771,7 @@ std::vector<double> fourier_chebyshev_robin_helmholtz(
         line_y[static_cast<std::size_t>(iy)] = hat[tensor_index(0, iy, mx, ny, nx)];
       }
       plan_y.load(line_y);
-      fftw_execute(plan_y.forward);
+      plan_y.execute_forward();
       const auto bins = plan_y.read();
       for (int my = 0; my < ny; ++my) {
         hat[tensor_index(0, my, mx, ny, nx)] = bins[static_cast<std::size_t>(my)];
@@ -1846,7 +1818,7 @@ std::vector<double> fourier_chebyshev_robin_helmholtz(
             modes[tensor_index(iz, my, mx, ny, nx)];
       }
       plan_y.load(line_y);
-      fftw_execute(plan_y.backward);
+      plan_y.execute_backward();
       const auto samples = plan_y.read();
       for (int iy = 0; iy < ny; ++iy) {
         modes[tensor_index(iz, iy, mx, ny, nx)] =
@@ -1864,7 +1836,7 @@ std::vector<double> fourier_chebyshev_robin_helmholtz(
             modes[tensor_index(iz, iy, mx, ny, nx)];
       }
       plan_x.load(line_x);
-      fftw_execute(plan_x.backward);
+      plan_x.execute_backward();
       const auto samples = plan_x.read();
       for (int ix = 0; ix < nx; ++ix) {
         solution[tensor_index(iz, iy, ix, ny, nx)] =
