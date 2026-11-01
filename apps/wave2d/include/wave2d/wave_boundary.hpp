@@ -9,6 +9,7 @@
  */
 
 #include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/decomposition/dirichlet_ghosts.hpp>
 #include <stdexcept>
 
 namespace wave2d {
@@ -19,17 +20,23 @@ enum class YBoundaryKind { Dirichlet, Neumann };
  * @brief Overwrite y-halo cells that lie outside `[0, Ny)` in
  *        global y after a periodic halo exchange.
  *
- * Second-order cell-centred ghosts: partner global row `yp` in `[0, Ny-1]`.
- * **Dirichlet** (odd extension about \f$u=u_\mathrm{wall}\f$): lower
- * `yp = -1 - gj`, upper `yp = 2 * Ny - 1 - gj`,
- * `u_g = 2 u_\mathrm{wall} - u(yp)`.
- * **Neumann** (even extension): lower `yp = -gj`, upper
- * `yp = 2 * (Ny - 1) - gj`, `u_g = u(yp)`.
+ * Dirichlet ghosts are the kernel cell-face odd mirror
+ * (`apply_dirichlet_ghosts` on axis y). That closure does not pin owned
+ * samples. `enforce_dirichlet_y_walls_owned` is a separate wave update:
+ * it sets the endpoint rows of `u` and `v`, which this grid stores as
+ * owned samples even though the ghost formula is cell-face centred.
+ * Neumann keeps the even node extension below.
  */
 template <class T>
 inline void fill_y_physical_ghosts_padded(pfc::data::Field<T, pfc::HostSpace> &u,
                                           YBoundaryKind ybc, int Ny_global,
                                           T u_wall = T{}) {
+  if (ybc == YBoundaryKind::Dirichlet) {
+    pfc::communication::apply_dirichlet_ghosts(
+        u, /*axis=*/1, u_wall, u_wall,
+        pfc::communication::BoundaryCentering::CellFace);
+    return;
+  }
   const auto lo = u.box().low;
   const int hw = u.halo_width();
   const auto sz = u.local_size();
@@ -40,36 +47,23 @@ inline void fill_y_physical_ghosts_padded(pfc::data::Field<T, pfc::HostSpace> &u
       if (gj >= 0 && gj < Ny_global) {
         continue;
       }
-      int yp = 0;
-      if (gj < 0) {
-        yp = (ybc == YBoundaryKind::Dirichlet) ? (-1 - gj) : (-gj);
-      } else {
-        yp = (ybc == YBoundaryKind::Dirichlet) ? (2 * Ny_global - 1 - gj)
-                                               : (2 * (Ny_global - 1) - gj);
-      }
+      const int yp = (gj < 0) ? (-gj) : (2 * (Ny_global - 1) - gj);
       const int jm = yp - lo[1];
 
       // Bounds check: mirrored local index must be within valid padded range
       if (jm < -hw || jm >= sz[1] + hw) {
-        const std::string kind_str =
-            (ybc == YBoundaryKind::Dirichlet) ? "Dirichlet" : "Neumann";
         throw std::out_of_range(
             "fill_y_physical_ghosts_padded: mirrored ghost index out of bounds. "
             "halo_width=" +
             std::to_string(hw) + ", local_ny=" + std::to_string(sz[1]) +
             ", valid_range=[" + std::to_string(-hw) + "," +
-            std::to_string(sz[1] + hw) + "), mirrored_global_yp=" +
-            std::to_string(yp) + ", computed_local_jm=" + std::to_string(jm) +
-            ", boundary_kind=" + kind_str);
+            std::to_string(sz[1] + hw) +
+            "), mirrored_global_yp=" + std::to_string(yp) +
+            ", computed_local_jm=" + std::to_string(jm) + ", boundary_kind=Neumann");
       }
 
       for (int i = -hw; i < sz[0] + hw; ++i) {
-        const T um = u(i, jm, k);
-        if (ybc == YBoundaryKind::Dirichlet) {
-          u(i, j, k) = static_cast<T>(static_cast<T>(2) * u_wall - um);
-        } else {
-          u(i, j, k) = um;
-        }
+        u(i, j, k) = u(i, jm, k);
       }
     }
   }

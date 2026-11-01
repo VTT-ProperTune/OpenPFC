@@ -425,8 +425,9 @@ void apply_reflection_host(pfc::data::Field<T, pfc::HostSpace> &u,
  *
  * Owned samples are not written. A side that is outside the domain but
  * disabled leaves that ghost unchanged, including corners that touch it.
- * Call after the halo exchange when a tangential halo is part of the source
- * (periodic neighbour, or a widened edge).
+ * `mirror_disabled_corners` keeps a one-axis Dirichlet mirror on those
+ * corners. Call after the halo exchange when a tangential halo is part of
+ * the source (periodic neighbour, or a widened edge).
  *
  * @throws std::out_of_range if an enabled ghost layer does not mirror into
  *         the global index range and this rank's padded box.
@@ -434,12 +435,18 @@ void apply_reflection_host(pfc::data::Field<T, pfc::HostSpace> &u,
 template <typename T>
 void apply_reflection_ghosts(
     pfc::data::Field<T, pfc::HostSpace> &u, const ReflectionWalls<T> &walls,
-    ReflectionExtent extent = ReflectionExtent::PhysicalFaces) {
+    ReflectionExtent extent = ReflectionExtent::PhysicalFaces,
+    bool mirror_disabled_corners = false) {
   if (u.storage_halo() < 1) {
     return;
   }
-  const detail::ReflectionGeometry<T> geom =
+  detail::ReflectionGeometry<T> geom =
       detail::build_reflection_geometry(u, walls, extent);
+  // One-axis Dirichlet still mirrors a corner that also lies outside a
+  // disabled axis. Ordinary reflection leaves that corner unchanged.
+  if (mirror_disabled_corners) {
+    geom.skip_disabled = 1;
+  }
   detail::validate_reflection_geometry(geom);
   detail::apply_reflection_host(u, geom);
 }

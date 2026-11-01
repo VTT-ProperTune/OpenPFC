@@ -7,6 +7,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Named Cartesian Dirichlet faces are configured as `xm`…`zp` values and
+  applied by stage preparation. Node walls are pinned on the host before the
+  halo exchange; ghosts are the existing odd reflection and run after it.
+  Cell-face ghosts match the wave2d closure and do not pin owned samples.
+  Coordinate callbacks stay on the host. Device ghost fill is the existing
+  reflection kernel; there is no device owned-node kernel (#137).
 - Device CG and GMRES can keep Krylov scalars on the GPU. `solvers::gpu::cg`
   and `solvers::gpu::gmres` compute dot products, step lengths and
   Gram-Schmidt coefficients in device memory and copy one convergence probe

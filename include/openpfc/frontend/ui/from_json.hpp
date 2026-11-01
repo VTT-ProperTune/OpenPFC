@@ -20,6 +20,7 @@
  * - `from_json_simulation_session.hpp` — JSON → `SimulationSession<Stack>`
  *   (include directly; not part of this umbrella to avoid pulling stacks)
  * - `from_json_field_modifiers.hpp` — built-in IC/BC `from_json` overloads
+ * - `from_json_dirichlet.hpp` — named Cartesian `DirichletBoundary<double>`
  *
  * Include this header for the full surface area (same as before the split).
  * GPU stack helpers that only need the HeFFTe overlay may include
@@ -36,6 +37,7 @@
 #ifndef PFC_UI_FROM_JSON_HPP
 #define PFC_UI_FROM_JSON_HPP
 
+#include <openpfc/frontend/ui/from_json_dirichlet.hpp>
 #include <openpfc/frontend/ui/from_json_fft_backend.hpp>
 #include <openpfc/frontend/ui/from_json_field_modifiers.hpp>
 #include <openpfc/frontend/ui/from_json_fwd.hpp>

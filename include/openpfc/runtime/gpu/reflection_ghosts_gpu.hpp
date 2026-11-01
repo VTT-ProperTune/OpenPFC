@@ -43,15 +43,19 @@ namespace pfc::communication {
 template <typename T>
 void apply_reflection_ghosts(
     pfc::data::Field<T, CUDASpace> &u, const ReflectionWalls<T> &walls,
-    ReflectionExtent extent = ReflectionExtent::PhysicalFaces) {
+    ReflectionExtent extent = ReflectionExtent::PhysicalFaces,
+    bool mirror_disabled_corners = false) {
   static_assert(std::is_same_v<T, double> || std::is_same_v<T, float> ||
                     std::is_same_v<T, int>,
                 "device reflection supports float, double and int");
   if (u.storage_halo() < 1) {
     return;
   }
-  const detail::ReflectionGeometry<T> geom =
+  detail::ReflectionGeometry<T> geom =
       detail::build_reflection_geometry(u, walls, extent);
+  if (mirror_disabled_corners) {
+    geom.skip_disabled = 1;
+  }
   detail::validate_reflection_geometry(geom);
   u.sync_to_device();
   detail::reflection_ghosts_cuda_impl(u.data(), geom);
@@ -63,15 +67,19 @@ void apply_reflection_ghosts(
 template <typename T>
 void apply_reflection_ghosts(
     pfc::data::Field<T, HIPSpace> &u, const ReflectionWalls<T> &walls,
-    ReflectionExtent extent = ReflectionExtent::PhysicalFaces) {
+    ReflectionExtent extent = ReflectionExtent::PhysicalFaces,
+    bool mirror_disabled_corners = false) {
   static_assert(std::is_same_v<T, double> || std::is_same_v<T, float> ||
                     std::is_same_v<T, int>,
                 "device reflection supports float, double and int");
   if (u.storage_halo() < 1) {
     return;
   }
-  const detail::ReflectionGeometry<T> geom =
+  detail::ReflectionGeometry<T> geom =
       detail::build_reflection_geometry(u, walls, extent);
+  if (mirror_disabled_corners) {
+    geom.skip_disabled = 1;
+  }
   detail::validate_reflection_geometry(geom);
   u.sync_to_device();
   detail::reflection_ghosts_hip_impl(u.data(), geom);

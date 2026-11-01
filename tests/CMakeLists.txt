@@ -172,6 +172,21 @@ if(OpenPFC_RUN_MPI_SUITES AND MPI_CXX_FOUND)
     endif()
   endif()
 
+  foreach(_ranks 2 3)
+    if(OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER 0 AND
+       _ranks GREATER OpenPFC_MPI_TEST_MAX_WORLD_SIZE)
+      continue()
+    endif()
+    if(_ranks EQUAL 3 AND NOT _openpfc_mpi_register_3rank)
+      continue()
+    endif()
+    add_test(NAME dirichlet_bc_${_ranks}ranks
+      COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${_ranks}
+        $<TARGET_FILE:openpfc-tests> "[dirichlet_bc][MPI]")
+    set_tests_properties(dirichlet_bc_${_ranks}ranks PROPERTIES
+      TIMEOUT 120 RUN_SERIAL TRUE)
+  endforeach()
+
   foreach(_ranks 1 2 4)
     if(OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER 0 AND
        _ranks GREATER OpenPFC_MPI_TEST_MAX_WORLD_SIZE)

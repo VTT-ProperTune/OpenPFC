@@ -13,8 +13,8 @@
  * protocol** (M10): it interprets stage requirements (`needs_halo_exchange`,
  * `needs_boundary_update`, region kind, boundary/halo ordering) and drives
  * those exchangers plus an injectable boundary hook — FD Dirichlet ghosts
- * (`apply_dirichlet_ghosts`), even/odd `ReflectionWalls`, or spectral
- * penalty writes on owned cells.
+ * (`apply_dirichlet_ghosts` or `DirichletBoundary`), even/odd
+ * `ReflectionWalls`, or spectral penalty writes on owned cells.
  * There is no parallel `ExecutionService::prepare_boundaries` path and no
  * BC flag on `StageContext`.
  *
@@ -171,6 +171,27 @@ public:
   }
 
   /**
+   * @brief Per-field owned-boundary update, run with the boundary hook.
+   *
+   * Empty @p update clears the registration. `DirichletBoundary` pins
+   * node walls here so `BoundaryThenHalo` publishes them.
+   */
+  void set_owned_update(std::string_view name, std::function<void()> update) {
+    assign_named_(m_owned_updates, name, std::move(update));
+  }
+
+  /**
+   * @brief Per-field ghost update, run after the hook, the exchange and
+   *        registered reflection.
+   *
+   * Empty @p update clears the registration. Dirichlet ghost fill is
+   * registered here so it sees tangential halos from the exchange.
+   */
+  void set_ghost_update(std::string_view name, std::function<void()> update) {
+    assign_named_(m_ghost_updates, name, std::move(update));
+  }
+
+  /**
    * @brief Run blocking pre-evaluation stage preparation for @p fields.
    *
    * @param req    Halo / boundary / ordering requirements.
@@ -179,8 +200,9 @@ public:
    * @throws std::invalid_argument if any name in @p fields is unbound.
    *
    * @note When `needs_halo_exchange` is false, exchangers are not called.
-   * @note When `needs_boundary_update` is true and no hook is set, BC is a
-   *       no-op. Post-evaluation BC enforcement is outside this call.
+   * @note An empty global hook skips only that hook. Registered owned and
+   *       ghost updates still run when `needs_boundary_update` is set.
+   *       Post-evaluation BC enforcement is outside this call.
    * @note Reject/retry: poison or discard ghosts and call `prepare` again from
    *       the accepted owned core; no halo rollback API is provided.
    */
@@ -218,6 +240,7 @@ public:
     }
     if (run_boundary) {
       run_reflections_(fields);
+      run_named_(m_ghost_updates, fields);
     }
 
     (void)req.region_kind; // recorded for callers/docs; full face ring on halo
@@ -225,11 +248,14 @@ public:
 
 private:
   void run_boundary_hooks_(std::span<const std::string_view> fields) {
-    if (!m_boundary_hook) {
-      return;
-    }
     for (const std::string_view name : fields) {
-      m_boundary_hook(name);
+      if (m_boundary_hook) {
+        m_boundary_hook(name);
+      }
+      const auto owned = m_owned_updates.find(std::string(name));
+      if (owned != m_owned_updates.end()) {
+        owned->second();
+      }
     }
   }
 
@@ -240,9 +266,25 @@ private:
   }
 
   void run_reflections_(std::span<const std::string_view> fields) {
+    run_named_(m_reflections, fields);
+  }
+
+  static void
+  assign_named_(std::unordered_map<std::string, std::function<void()>> &map,
+                std::string_view name, std::function<void()> update) {
+    if (!update) {
+      map.erase(std::string(name));
+      return;
+    }
+    map.insert_or_assign(std::string(name), std::move(update));
+  }
+
+  static void
+  run_named_(const std::unordered_map<std::string, std::function<void()>> &map,
+             std::span<const std::string_view> fields) {
     for (const std::string_view name : fields) {
-      const auto it = m_reflections.find(std::string(name));
-      if (it == m_reflections.end()) {
+      const auto it = map.find(std::string(name));
+      if (it == map.end()) {
         continue;
       }
       it->second();
@@ -251,6 +293,8 @@ private:
 
   std::unordered_map<std::string, std::function<void()>> m_exchangers;
   std::unordered_map<std::string, std::function<void()>> m_reflections;
+  std::unordered_map<std::string, std::function<void()>> m_owned_updates;
+  std::unordered_map<std::string, std::function<void()>> m_ghost_updates;
   std::function<void(std::string_view)> m_boundary_hook;
 };
 

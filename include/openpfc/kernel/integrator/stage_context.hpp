@@ -16,7 +16,7 @@
  * Boundary conditions are **not** flags on this struct. Drivers map the
  * context through `requirements_from(ctx, needs_boundary)` and call
  * `pfc::communication::StagePreparationService::prepare` (FD Dirichlet
- * ghosts or spectral penalty modifiers on the injectable hook).
+ * ghosts, `DirichletBoundary`, or spectral penalty modifiers).
  *
  * @see kernel/integrator/workspace.hpp for integrator-owned storage
  * @see openpfc/kernel/decomposition/stage_preparation.hpp for the executable

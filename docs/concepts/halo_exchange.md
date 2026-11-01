@@ -73,7 +73,22 @@ Use an unpadded `pfc::data::Field<T>` (`storage_halo == 0`) + `pfc::SparseHaloEx
   This closure does not imply high-order boundary accuracy. Device callers
   use the existing CUDA/HIP reflection entry point; rebuild headers and
   libraries together because the geometry descriptor is passed by value.
+- `set_owned_update` runs with that hook. `set_ghost_update` runs after the hook, the exchange and `set_reflection`. `DirichletBoundary::bind_dirichlet` uses those two slots.
 - `prepare` is **pre-evaluation** only. Post-evaluation BC enforcement after writing new owned values stays a separate driver responsibility outside `prepare`.
+
+### Named Dirichlet faces
+
+`pfc::communication::DirichletBoundary` selects Cartesian faces `xm`, `xp`, `ym`, `yp`, `zm` and `zp`. JSON and TOML use one object:
+
+```json
+{"centering": "node", "faces": [{"face": "zm", "value": 0.0}]}
+```
+
+`centering` is `node` (default) or `cell`. A missing face is not a wall. On a node-centred grid the owned sample at global index `0` or `N-1` is the wall: `bind_dirichlet` pins it to `g` before the halo exchange when `prepare` uses `dirichlet_stage_requirements` (`BoundaryThenHalo`). Ghost layer `k` is then `2g - u(k)` on the low face and `2g - u(N-1-k)` on the high face, including every stored halo layer, so a stencil of half-width `M` needs `storage_halo() >= M`. The ghost fill runs after the exchange. An RK step that rewrites the wall must call `enforce_owned_nodes` again; `prepare` does not do that.
+
+Cell-face centering puts the wall halfway outside the first sample (`u(-k) = 2g - u(k-1)`). Owned samples are not pinned. `wave2d` uses that ghost rule and, separately, writes its endpoint rows after the wave update. Those are different statements: the ghost rule does not fix an owned unknown, and the wave pin is not a cell-face mirror.
+
+A face on a periodic axis is rejected unless `extent` is `AllOutside`. The one-axis helper `apply_dirichlet_ghosts` still uses `AllOutside`, which is how `wave2d` overwrites a periodic y wrap. Constant and time-dependent values go through `apply_reflection_ghosts`, including the CUDA and HIP reflection kernels. There is no device kernel that pins owned nodes, and `bind_dirichlet` accepts host fields only. A coordinate callback `g(x, t)` is host-only; `x` is the wall coordinate (node index, or the halfway face). This metadata does not give a Fourier operator a bounded basis.
 - Rejection / retry does not roll back halo buffers: re-prepare from the accepted owned core.
 
 Method and operator layers should request `prepare` rather than embedding ad-hoc MPI at each evaluation site. Raw exchanger calls remain valid for drivers that manage timing themselves.
