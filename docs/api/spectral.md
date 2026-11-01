@@ -51,10 +51,11 @@ per bounded line; factorization/plan caching is not provided.
 The Chebyshev line transform calls `pfc::fft::ComplexLineFFT`, an ordinary
 unnormalized complex DFT. For a Lobatto series of degree n the even
 extension has length 2n. FFTW scaling applies: the backward transform of
-the forward transform is `length` times the input. `IHostFFT` and the
-cuFFT/rocFFT pencil plans are real-to-complex volume transforms. They do
-not replace this line DFT. A device or distributed one-dimensional
-transform is not part of this step (#141).
+the forward transform is `length` times the input. `CudaComplexLineFFT`
+is the same contract on one rank through `cufftPlan1d` Z2Z. `IHostFFT`
+and the cuFFT/rocFFT pencil plans remain real-to-complex volume
+transforms. rocFFT and a distributed or HeFFTe line DFT are not part of
+this step (#141).
 
 ## `pfc::decomposition::Decomposition`
 

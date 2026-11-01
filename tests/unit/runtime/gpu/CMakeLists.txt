@@ -38,6 +38,17 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
       set_tests_properties(GPU_FFT_LocalReject2Rank PROPERTIES TIMEOUT 120 RUN_SERIAL TRUE)
     endif()
 
+    if(OpenPFC_HAS_FFTW3)
+      add_executable(test_complex_line_fft_cuda test_complex_line_fft_cuda.cpp)
+      target_include_directories(test_complex_line_fft_cuda PRIVATE
+          ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+          ${CMAKE_SOURCE_DIR}/include)
+      target_link_libraries(test_complex_line_fft_cuda PRIVATE
+          Catch2::Catch2 openpfc CUDA::cudart CUDA::cufft MPI::MPI_CXX
+          Heffte::Heffte)
+      add_test(NAME CUDA_ComplexLineFFT COMMAND test_complex_line_fft_cuda)
+    endif()
+
     # One device-vs-host ETD parity target (plain, mean-field, moving-frame toys);
     # the toy pointwise functors are instantiated for the device in the .cu TU.
     add_executable(test_spectral_etd_system_cuda

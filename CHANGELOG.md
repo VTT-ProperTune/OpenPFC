@@ -7,6 +7,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- `CudaComplexLineFFT` is the one-rank cuFFT Z2Z form of the unnormalized
+  complex line DFT. It matches `ComplexLineFFT`, including the even
+  extension a Chebyshev series feeds that transform. The 3D pencil plans
+  stay real-to-complex volume transforms. rocFFT and a distributed line
+  DFT are not part of this step (#141).
 - `try_evaluate_j2` is the nonthrowing Simo J2 return map shared by the host
   wrapper and a one-point CUDA/HIP kernel. `evaluate_j2` still throws the
   historical exceptions and counts the attempt. The same launch checks

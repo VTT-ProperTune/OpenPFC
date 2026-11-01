@@ -337,7 +337,8 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
       # Keep these objects in openpfc with the shared axis-contract definitions:
       # a reverse dependency from the separate kernel archive breaks static links.
       target_sources(openpfc_kernel_obj PRIVATE
-          src/openpfc/runtime/gpu/batched_transform.cu)
+          src/openpfc/runtime/gpu/batched_transform.cu
+          src/openpfc/runtime/gpu/complex_line_fft_cuda.cpp)
       set_target_properties(openpfc_kernel_obj PROPERTIES
           CUDA_STANDARD 20 CUDA_STANDARD_REQUIRED ON)
       target_link_libraries(openpfc_kernel_obj PRIVATE CUDA::cufft)
