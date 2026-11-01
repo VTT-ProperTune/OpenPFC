@@ -29,9 +29,6 @@
 #include <stdexcept>
 
 #include <openpfc/kernel/decomposition/reflection_ghosts.hpp>
-#if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
-#include <openpfc/runtime/gpu/reflection_ghosts_gpu.hpp>
-#endif
 
 namespace pfc::communication {
 
@@ -49,8 +46,9 @@ namespace pfc::communication {
  * overwritten too. `DirichletBoundary` is the named-face operator and
  * rejects a periodic axis unless its extent says otherwise.
  *
- * Host and device fields share this function. A device field needs the
- * reflection kernel declared above; the owned wall itself is not pinned.
+ * Host and device fields share this function. The device overload is
+ * declared with the host fill and defined in the runtime GPU header.
+ * The owned wall itself is not pinned.
  *
  * @param u     Padded field (`storage_halo() >= 1`).
  * @param axis  0, 1, or 2.

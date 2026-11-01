@@ -41,10 +41,9 @@ namespace pfc::communication {
 
 #if defined(OpenPFC_ENABLE_CUDA)
 template <typename T>
-void apply_reflection_ghosts(
-    pfc::data::Field<T, CUDASpace> &u, const ReflectionWalls<T> &walls,
-    ReflectionExtent extent = ReflectionExtent::PhysicalFaces,
-    bool mirror_disabled_corners = false) {
+void apply_reflection_ghosts(pfc::data::Field<T, CUDASpace> &u,
+                             const ReflectionWalls<T> &walls,
+                             ReflectionExtent extent, bool mirror_disabled_corners) {
   static_assert(std::is_same_v<T, double> || std::is_same_v<T, float> ||
                     std::is_same_v<T, int>,
                 "device reflection supports float, double and int");
@@ -65,10 +64,9 @@ void apply_reflection_ghosts(
 
 #if defined(OpenPFC_ENABLE_HIP)
 template <typename T>
-void apply_reflection_ghosts(
-    pfc::data::Field<T, HIPSpace> &u, const ReflectionWalls<T> &walls,
-    ReflectionExtent extent = ReflectionExtent::PhysicalFaces,
-    bool mirror_disabled_corners = false) {
+void apply_reflection_ghosts(pfc::data::Field<T, HIPSpace> &u,
+                             const ReflectionWalls<T> &walls,
+                             ReflectionExtent extent, bool mirror_disabled_corners) {
   static_assert(std::is_same_v<T, double> || std::is_same_v<T, float> ||
                     std::is_same_v<T, int>,
                 "device reflection supports float, double and int");

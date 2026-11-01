@@ -72,6 +72,17 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/data/host_device.hpp>
 
+#if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
+namespace pfc {
+#if defined(OpenPFC_ENABLE_CUDA)
+struct CUDASpace;
+#endif
+#if defined(OpenPFC_ENABLE_HIP)
+struct HIPSpace;
+#endif
+} // namespace pfc
+#endif
+
 namespace pfc::communication {
 
 /// Copy the mirror, or reflect it through a wall value.
@@ -450,5 +461,21 @@ void apply_reflection_ghosts(
   detail::validate_reflection_geometry(geom);
   detail::apply_reflection_host(u, geom);
 }
+
+#if defined(OpenPFC_ENABLE_CUDA)
+template <typename T>
+void apply_reflection_ghosts(
+    pfc::data::Field<T, pfc::CUDASpace> &u, const ReflectionWalls<T> &walls,
+    ReflectionExtent extent = ReflectionExtent::PhysicalFaces,
+    bool mirror_disabled_corners = false);
+#endif
+
+#if defined(OpenPFC_ENABLE_HIP)
+template <typename T>
+void apply_reflection_ghosts(
+    pfc::data::Field<T, pfc::HIPSpace> &u, const ReflectionWalls<T> &walls,
+    ReflectionExtent extent = ReflectionExtent::PhysicalFaces,
+    bool mirror_disabled_corners = false);
+#endif
 
 } // namespace pfc::communication
