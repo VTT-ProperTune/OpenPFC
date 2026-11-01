@@ -7,6 +7,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- `decomposition::gather_owned_blocks` gathers the owned cells of one or
+  more decomposed fields into global x-fastest host buffers on one rank.
+  `scatter_owned_blocks` writes those buffers back into the owned blocks.
+  A field halo stays out of the transfer. Existing writers are unchanged
+  (#545).
 - Chebyshev line transforms call an unnormalized one-dimensional complex
   DFT. The real-to-complex pencil FFT is a different contract. Device and
   distributed line DFTs are not part of this step (#141).

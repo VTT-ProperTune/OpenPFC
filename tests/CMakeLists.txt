@@ -268,6 +268,26 @@ if(OpenPFC_RUN_MPI_SUITES AND MPI_CXX_FOUND)
       TIMEOUT 300 RUN_SERIAL TRUE)
   endforeach()
 
+  # Owned-block gather/scatter. 3- and 4-rank runs follow the same host gates
+  # as mpi_3procs_ring and mpi_4procs_grid_multiple.
+  foreach(_ranks 1 2 3 4)
+    if(OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER 0 AND
+       _ranks GREATER OpenPFC_MPI_TEST_MAX_WORLD_SIZE)
+      continue()
+    endif()
+    if(_ranks EQUAL 3 AND NOT _openpfc_mpi_register_3rank)
+      continue()
+    endif()
+    if(_ranks EQUAL 4 AND NOT _openpfc_mpi_register_4rank)
+      continue()
+    endif()
+    add_test(NAME owned_block_${_ranks}ranks
+      COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${_ranks}
+        $<TARGET_FILE:openpfc-tests> "[owned_block][MPI]")
+    set_tests_properties(owned_block_${_ranks}ranks PROPERTIES
+      TIMEOUT 120 RUN_SERIAL TRUE)
+  endforeach()
+
   # 2-process MPI suite: runs MPI tests suitable for 2 ranks
   add_test(NAME mpi_2procs_all
        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2

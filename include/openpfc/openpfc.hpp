@@ -33,6 +33,7 @@
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
+#include <openpfc/kernel/decomposition/owned_block_gather.hpp>
 #include <openpfc/kernel/fft/power_spectrum.hpp>
 #ifdef OpenPFC_ENABLE_HEFFTE
 #include <openpfc/kernel/fft/fft_fftw.hpp>

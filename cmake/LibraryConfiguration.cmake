@@ -33,6 +33,7 @@ set(_openpfc_kernel_obj_sources
     src/openpfc/runtime/common/mpi_startup.cpp
     src/openpfc/kernel/decomposition/decomposition.cpp
     src/openpfc/kernel/decomposition/decomposition_factory.cpp
+    src/openpfc/kernel/decomposition/owned_block_gather.cpp
     src/openpfc/kernel/profiling/session.cpp
     src/openpfc/kernel/profiling/detail/session_merge_json.cpp
     $<$<BOOL:${OpenPFC_ENABLE_HDF5}>:src/openpfc/kernel/profiling/detail/session_profiling_hdf5.cpp>
