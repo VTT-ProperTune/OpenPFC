@@ -9,7 +9,7 @@
  * This is the line transform used by the Chebyshev even extension. It is
  * not `IHostFFT`: that contract, and the cuFFT and rocFFT pencil plans,
  * are complete-domain real-to-complex volume transforms. The matching
- * one-rank device plan is `CudaComplexLineFFT`.
+ * one-rank device plans are `CudaComplexLineFFT` and `HipComplexLineFFT`.
  */
 
 #include <complex>

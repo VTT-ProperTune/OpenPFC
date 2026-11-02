@@ -27,8 +27,8 @@ namespace pfc::fft {
  * legacy default stream.
  *
  * Planning must be serialized with other cuFFT planners. One instance
- * is not reentrant. Copying and moving are disabled. rocFFT and a
- * distributed line are a different step.
+ * is not reentrant. Copying and moving are disabled. A distributed line
+ * is a different step.
  */
 class CudaComplexLineFFT {
 public:

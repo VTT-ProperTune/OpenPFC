@@ -370,7 +370,8 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
       set_source_files_properties(src/openpfc/runtime/gpu/batched_transform.hip
           PROPERTIES LANGUAGE HIP)
       target_sources(openpfc_kernel_obj PRIVATE
-          src/openpfc/runtime/gpu/batched_transform.hip)
+          src/openpfc/runtime/gpu/batched_transform.hip
+          src/openpfc/runtime/gpu/complex_line_fft_hip.cpp)
       set_target_properties(openpfc_kernel_obj PROPERTIES
           HIP_STANDARD 20 HIP_STANDARD_REQUIRED ON)
       target_link_libraries(openpfc_kernel_obj PRIVATE roc::rocfft)

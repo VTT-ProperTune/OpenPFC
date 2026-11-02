@@ -300,6 +300,16 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
         target_link_libraries(test_fft_single_device_hip PRIVATE Catch2::Catch2 openpfc
             openpfc_hip_kernels hip::host MPI::MPI_CXX Heffte::Heffte)
         add_test(NAME HIP_FFT_SingleDevice COMMAND test_fft_single_device_hip)
+
+        if(OpenPFC_HAS_FFTW3)
+          add_executable(test_complex_line_fft_hip test_complex_line_fft_hip.cpp)
+          target_include_directories(test_complex_line_fft_hip PRIVATE
+              ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+              ${CMAKE_SOURCE_DIR}/include)
+          target_link_libraries(test_complex_line_fft_hip PRIVATE
+              Catch2::Catch2 openpfc hip::host MPI::MPI_CXX Heffte::Heffte)
+          add_test(NAME HIP_ComplexLineFFT COMMAND test_complex_line_fft_hip)
+        endif()
         if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
            (OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 2))
           add_test(NAME HIP_FFT_LocalReject2Rank

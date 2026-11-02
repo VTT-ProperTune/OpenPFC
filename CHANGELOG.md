@@ -178,7 +178,6 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   change did not rerun the case; source-pinned device evidence remains
   outstanding in #468. `WallPolicy` is unchanged.
 
-
 - `cahn_hilliard_elastic_hip` runs equal-stiffness coherent
   Cahn–Hilliard ETD1 on the device-resident Green solver. The host reference
   uses the same split step. The original host JSON driver remains unchanged;
@@ -230,6 +229,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   `(exp(s dt) - 1) / s`, with the Taylor branch when `|s dt| < 1e-8`.
   `AmplitudeSpectralETD1Cuda` runs that update on the device FFT. The
   one-field `SpectralETDSystem` is unchanged. HIP was not run (#422).
+
+- `HipComplexLineFFT` is the one-rank rocFFT form of the unnormalized
+  complex line DFT. `backward(forward(x))` equals `length * x`, and the
+  spectrum matches `ComplexLineFFT`. The Chebyshev oracle and
+  `CudaComplexLineFFT` are unchanged. A distributed line is not added.
+  #141 stays open.
 
 - Automatic single-rank FFT selection admits the direct rocFFT plan only
   when one HIP rank owns the whole domain. CPU (FFTW) and CUDA (cuFFT)
@@ -1505,7 +1510,6 @@ The entries below are the development record since 0.2.0.
   within each workload family and protocol.
 - Reject failed inverse checkpoint metadata writes/publication collectively,
   check field sizes, and validate restored snapshot indices (issue #96).
-
 
 - Reject inverse checkpoint restarts whose requested iteration budget has no
   step remaining, preserving evaluated final-field semantics (issue #94).
