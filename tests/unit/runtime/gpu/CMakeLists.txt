@@ -132,6 +132,21 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
         CUDA_STANDARD_REQUIRED ON)
     add_test(NAME CUDA_GrainInterface COMMAND test_grain_interface_cuda)
 
+    add_executable(test_fft_noncubic_cuda test_fft_noncubic_cuda.cpp)
+    target_include_directories(test_fft_noncubic_cuda PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+        ${CMAKE_SOURCE_DIR}/tests
+        ${CMAKE_SOURCE_DIR}/include)
+    target_link_libraries(test_fft_noncubic_cuda PRIVATE
+        Catch2::Catch2 openpfc openpfc_gpu_kernels CUDA::cudart MPI::MPI_CXX
+        Heffte::Heffte)
+    set_target_properties(test_fft_noncubic_cuda PROPERTIES
+        CUDA_STANDARD 20
+        CUDA_STANDARD_REQUIRED ON)
+    add_test(NAME CUDA_NoncubicRoundTrip COMMAND test_fft_noncubic_cuda)
+    set_tests_properties(CUDA_NoncubicRoundTrip PROPERTIES
+        TIMEOUT 180 SKIP_RETURN_CODE 4)
+
     target_include_directories(test_spectral_flux_cuda PRIVATE
         ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
         ${CMAKE_SOURCE_DIR}/tests
@@ -728,7 +743,6 @@ foreach(backend cuda hip)
       TIMEOUT 150 RUN_SERIAL TRUE SKIP_REGULAR_EXPRESSION "SKIP: no usable device")
   endif()
 endforeach()
-
 
 # Opt-in numerical admission on REAL allocated Tohtori/LUMI devices only.
 # GitHub's device-less CUDA/HIP builders continue to compile/link tests, but

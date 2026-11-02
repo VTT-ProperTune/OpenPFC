@@ -256,6 +256,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   admitted transform is double-precision real-to-complex with x fastest.
   Startup still prints `SPECTRAL_FFT implementation=` (#508).
 
+- `create_cuda` round-trips one rank of a 12×10×8 field on every reduced
+  axis. The HeFFTe plan built by that factory meets the same absolute
+  bound, 2e-12. The provider is unchanged. HIP was not run (#762).
+
 - `CudaComplexLineFFT` is the one-rank cuFFT Z2Z form of the unnormalized
   complex line DFT. It matches `ComplexLineFFT`, including the even
   extension a Chebyshev series feeds that transform. The 3D pencil plans
