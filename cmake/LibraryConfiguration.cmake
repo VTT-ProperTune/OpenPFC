@@ -50,7 +50,9 @@ if(OpenPFC_ENABLE_HEFFTE)
   list(APPEND _openpfc_kernel_obj_sources src/openpfc/runtime/cpu/fft.cpp)
   if(OpenPFC_HAS_FFTW3)
     list(APPEND _openpfc_kernel_obj_sources
-         src/openpfc/runtime/cpu/mixed_transform.cpp)
+         src/openpfc/runtime/cpu/mixed_transform.cpp
+         src/openpfc/runtime/cpu/distributed_complex_line_fft.cpp
+         src/openpfc/runtime/cpu/bounded_axis_cost.cpp)
   endif()
 endif()
 if(OpenPFC_ENABLE_CUDA_SPECTRAL OR OpenPFC_ENABLE_HIP_SPECTRAL)

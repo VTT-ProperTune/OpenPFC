@@ -19,7 +19,18 @@ if(OpenPFC_ENABLE_HEFFTE)
     target_sources(openpfc-tests PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_selection.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test_real_plan.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/test_mixed_transform.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_mixed_transform.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_distributed_line_fft.cpp)
+    add_test(NAME DistributedLineDFT COMMAND openpfc-tests "[distributed_line]")
+    if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
+       (OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR
+        OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 2))
+      add_test(NAME DistributedLineDFT_2ranks COMMAND ${MPIEXEC_EXECUTABLE}
+          ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS}
+          $<TARGET_FILE:openpfc-tests> "[distributed_line]" ${MPIEXEC_POSTFLAGS})
+      set_tests_properties(DistributedLineDFT_2ranks PROPERTIES PROCESSORS 2
+          TIMEOUT 180)
+    endif()
     add_test(NAME FFTSelection COMMAND openpfc-tests "[fft_selection]")
     if(OpenPFC_ENABLE_CUDA_SPECTRAL OR OpenPFC_ENABLE_HIP_SPECTRAL)
       target_sources(openpfc-tests PRIVATE
