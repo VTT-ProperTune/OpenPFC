@@ -76,7 +76,9 @@ Spectral binaries accept root-level `"fft": "local"` in JSON, or
 cuFFT (CUDA) or rocFFT (HIP) 3-D real/complex plan. The communicator must have exactly one rank, with the
 whole domain on that rank. A distributed run rejects this choice at startup.
 
-Omit `fft`, or set `"fft": "heffte"`, to retain the distributed HeFFTe path.
+Set `"fft": "heffte"` to keep HeFFTe on one rank. Omit `fft` and CPU or
+CUDA stays on HeFFTe; one HIP rank that owns the whole domain then uses
+the direct rocFFT plan. More than one rank always uses HeFFTe.
 The hardware `backend` choice is independent of `fft`; existing
 `plan_options` affect the HeFFTe path only.
 Both paths retain the same spectral layout, inverse normalization and

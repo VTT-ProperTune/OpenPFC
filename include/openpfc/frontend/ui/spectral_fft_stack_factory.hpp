@@ -31,6 +31,7 @@
 #include <openpfc/frontend/ui/from_json_heffte.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
+#include <openpfc/kernel/fft/fft_selection.hpp>
 
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL) || defined(OpenPFC_ENABLE_HIP_SPECTRAL)
 #include <openpfc/runtime/gpu/fft_plan_defaults.hpp>
@@ -39,7 +40,13 @@
 
 namespace pfc::ui {
 
-/** @brief Read the explicit FFT implementation, independently of hardware backend.
+/**
+ * @brief Read an explicit FFT implementation, independently of hardware.
+ *
+ * A missing `fft` key is not a request. This reader still returns
+ * `"heffte"` for that case so a caller that does not apply
+ * `automatic_single_rank_fft` keeps the historical label. Stack
+ * construction goes through `spectral_session_uses_local_fft`.
  */
 [[nodiscard]] inline std::string
 spectral_fft_choice_from_json(const nlohmann::json &settings) {
@@ -119,6 +126,40 @@ cpu_spectral_plan_options_from_json(const nlohmann::json &settings, int nproc = 
   }
   apply_heffte_comm_scale(options, nproc);
   return options;
+}
+
+/**
+ * @brief Communicator size used by automatic FFT selection.
+ *
+ * Returns 0 when `comm` is null or its size disagrees with `nproc`, so
+ * the automatic path stays on HeFFTe. Explicit `fft` values do not call
+ * this.
+ */
+[[nodiscard]] inline int spectral_fft_communicator_size(int nproc, MPI_Comm comm) {
+  if (comm == MPI_COMM_NULL) return 0;
+  int actual = 0;
+  MPI_Comm_size(comm, &actual);
+  return actual == nproc ? actual : 0;
+}
+
+/**
+ * @brief Whether a spectral session should build the direct vendor plan.
+ *
+ * An explicit `fft` key wins. Otherwise one HIP rank that owns the whole
+ * domain gets the direct plan; CPU and CUDA stay on HeFFTe. A one-rank
+ * spectral decomposition owns the complete domain.
+ */
+[[nodiscard]] inline bool
+spectral_session_uses_local_fft(const nlohmann::json &settings,
+                                pfc::fft::FftHardware hardware, int nproc,
+                                MPI_Comm comm, int nx, int ny, int nz) {
+  if (settings.contains("fft"))
+    return spectral_fft_choice_from_json(settings) == "local";
+  const int communicator_size = spectral_fft_communicator_size(nproc, comm);
+  const bool owns_complete_domain = communicator_size == 1;
+  return pfc::fft::automatic_single_rank_fft(
+             {hardware, communicator_size, owns_complete_domain, nx, ny, nz}) ==
+         pfc::fft::AutomaticFft::local;
 }
 
 /**

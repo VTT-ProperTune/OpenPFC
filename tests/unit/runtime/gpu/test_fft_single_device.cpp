@@ -28,9 +28,12 @@ int main(int argc, char *argv[]) { return pfc::test::run(argc, argv); }
 
 #include <catch2/catch_test_macros.hpp>
 #include <mpi.h>
+#include <nlohmann/json.hpp>
 
 #include <openpfc/domain/create.hpp>
+#include <openpfc/frontend/ui/from_json_simulation_session.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/fft/fft_selection.hpp>
 #include <openpfc/runtime/gpu/fft_gpu.hpp>
 #include <openpfc/runtime/gpu/fft_single_device.hpp>
 #include <openpfc/runtime/gpu/gpu_spectral_stack.hpp>
@@ -207,6 +210,59 @@ TEST_CASE("SingleDeviceFFT agrees with the heFFTe backend",
         std::array<int, 3>{15, 9, 7}, std::array<int, 3>{13, 17, 11},
         std::array<int, 3>{1, 24, 20}})
     compare(n);
+}
+
+TEST_CASE("Automatic policy selects the measured device FFT",
+          "[gpu][fft][single_device][fft_selection]") {
+  if (!available()) SKIP("no GPU");
+  ensure_mpi();
+#if defined(OPENPFC_TEST_HIP)
+  const auto hardware = pfc::fft::FftHardware::hip;
+  const auto expected = pfc::fft::AutomaticFft::local;
+  const auto choice = pfc::sim::stacks::DeviceFFTChoice::single_device;
+#else
+  const auto hardware = pfc::fft::FftHardware::cuda;
+  const auto expected = pfc::fft::AutomaticFft::heffte;
+  const auto choice = pfc::sim::stacks::DeviceFFTChoice::heffte;
+#endif
+  const std::array<int, 3> n{32, 16, 8};
+  REQUIRE(pfc::fft::automatic_single_rank_fft(
+              {hardware, 1, true, n[0], n[1], n[2]}) == expected);
+  REQUIRE(
+      pfc::fft::automatic_single_rank_fft({hardware, 4, true, n[0], n[1], n[2]}) ==
+      pfc::fft::AutomaticFft::heffte);
+#if defined(OPENPFC_TEST_HIP)
+  const char *backend = "hip";
+#else
+  const char *backend = "cuda";
+#endif
+  nlohmann::json doc{
+      {"method", "spectral"},
+      {"backend", backend},
+      {"domain",
+       {{"size", {n[0], n[1], n[2]}},
+        {"lower", {0.0, 0.0, 0.0}},
+        {"upper",
+         {static_cast<double>(n[0]), static_cast<double>(n[1]),
+          static_cast<double>(n[2])}}}},
+      {"timestepping", {{"t0", 0.0}, {"t1", 0.1}, {"dt", 0.1}, {"saveat", 0.1}}}};
+  auto omitted =
+      pfc::ui::make_simulation_session<pfc::sim::stacks::GPUSpectralStack<Space>>(
+          doc, 0, 1, MPI_COMM_SELF);
+  REQUIRE(omitted.stack().fft_choice() == choice);
+  doc["fft"] = "heffte";
+  auto forced_heffte =
+      pfc::ui::make_simulation_session<pfc::sim::stacks::GPUSpectralStack<Space>>(
+          doc, 0, 1, MPI_COMM_SELF);
+  REQUIRE(forced_heffte.stack().fft_choice() ==
+          pfc::sim::stacks::DeviceFFTChoice::heffte);
+  doc["fft"] = "local";
+  auto forced_local =
+      pfc::ui::make_simulation_session<pfc::sim::stacks::GPUSpectralStack<Space>>(
+          doc, 0, 1, MPI_COMM_SELF);
+  REQUIRE(forced_local.stack().fft_choice() ==
+          pfc::sim::stacks::DeviceFFTChoice::single_device);
+  compare(n);
 }
 
 TEST_CASE("GPUSpectralStack exposes the single-device FFT on request",

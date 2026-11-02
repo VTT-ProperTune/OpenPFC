@@ -59,8 +59,10 @@ Start from defaults (`fftw`, `alltoall`, `use_pencils = false`) and change **one
 JSON-driven spectral sessions, including Tungsten, accept a root
 `"fft": "local"` (`fft = "local"` before any table in TOML). This uses the
 direct FFTW/cuFFT/rocFFT 3-D plans and requires a one-rank communicator.
-`"fft": "heffte"` is the default and supports distributed execution. This
-selection is independent of the hardware `backend`; HeFFTe `plan_options` do not tune the direct plan.
+`"fft": "heffte"` forces HeFFTe, including on one rank. Omitting `fft`
+keeps HeFFTe on CPU and CUDA. On HIP, one rank that owns the whole domain
+then uses the direct rocFFT plan. More than one rank always uses HeFFTe.
+This selection is independent of the hardware `backend`; HeFFTe `plan_options` do not tune the direct plan.
 The selected implementation and vendor backend are printed at startup.
 
 The host `SpectralCPUStack::fft()` accessor now returns `IHostFFT&`, so the

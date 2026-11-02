@@ -43,9 +43,11 @@ make_simulation_session(const json &settings, int rank, int nproc,
                                         pfc::sim::SimulationMethod::Spectral,
                                         pfc::sim::SimulationBackend::Cpu);
     const auto options = cpu_spectral_plan_options_from_json(settings, nproc);
-    const auto choice = spectral_fft_choice_from_json(settings) == "local"
-                            ? pfc::fft::Implementation::Local
-                            : pfc::fft::Implementation::Heffte;
+    const bool use_local = spectral_session_uses_local_fft(
+        settings, pfc::fft::FftHardware::cpu, nproc, comm, domain.size[0],
+        domain.size[1], domain.size[2]);
+    const auto choice = use_local ? pfc::fft::Implementation::Local
+                                  : pfc::fft::Implementation::Heffte;
     return pfc::sim::SimulationSession<Stack>(selection, std::move(time), [&] {
       return Stack(std::move(domain), rank, nproc, comm, choice, options);
     });
@@ -56,9 +58,11 @@ make_simulation_session(const json &settings, int rank, int nproc,
                                         pfc::sim::SimulationMethod::Spectral,
                                         pfc::sim::SimulationBackend::Cuda);
     const auto options = cuda_spectral_plan_options_from_json(settings, nproc);
-    const auto choice = spectral_fft_choice_from_json(settings) == "local"
-                            ? pfc::sim::stacks::DeviceFFTChoice::single_device
-                            : pfc::sim::stacks::DeviceFFTChoice::heffte;
+    const bool use_local = spectral_session_uses_local_fft(
+        settings, pfc::fft::FftHardware::cuda, nproc, comm, domain.size[0],
+        domain.size[1], domain.size[2]);
+    const auto choice = use_local ? pfc::sim::stacks::DeviceFFTChoice::single_device
+                                  : pfc::sim::stacks::DeviceFFTChoice::heffte;
     return pfc::sim::SimulationSession<Stack>(selection, std::move(time), [&] {
       return Stack(std::move(domain), rank, nproc, comm, choice, options);
     });
@@ -70,9 +74,11 @@ make_simulation_session(const json &settings, int rank, int nproc,
                                         pfc::sim::SimulationMethod::Spectral,
                                         pfc::sim::SimulationBackend::Hip);
     const auto options = hip_spectral_plan_options_from_json(settings, nproc);
-    const auto choice = spectral_fft_choice_from_json(settings) == "local"
-                            ? pfc::sim::stacks::DeviceFFTChoice::single_device
-                            : pfc::sim::stacks::DeviceFFTChoice::heffte;
+    const bool use_local = spectral_session_uses_local_fft(
+        settings, pfc::fft::FftHardware::hip, nproc, comm, domain.size[0],
+        domain.size[1], domain.size[2]);
+    const auto choice = use_local ? pfc::sim::stacks::DeviceFFTChoice::single_device
+                                  : pfc::sim::stacks::DeviceFFTChoice::heffte;
     return pfc::sim::SimulationSession<Stack>(selection, std::move(time), [&] {
       return Stack(std::move(domain), rank, nproc, comm, choice, options);
     });

@@ -230,6 +230,14 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   `(exp(s dt) - 1) / s`, with the Taylor branch when `|s dt| < 1e-8`.
   `AmplitudeSpectralETD1Cuda` runs that update on the device FFT. The
   one-field `SpectralETDSystem` is unchanged. HIP was not run (#422).
+
+- Automatic single-rank FFT selection admits the direct rocFFT plan only
+  when one HIP rank owns the whole domain. CPU (FFTW) and CUDA (cuFFT)
+  keep HeFFTe. Explicit `"fft": "local"` and `"fft": "heffte"` still
+  override that choice, and more than one rank stays on HeFFTe. The
+  admitted transform is double-precision real-to-complex with x fastest.
+  Startup still prints `SPECTRAL_FFT implementation=` (#508).
+
 - `CudaComplexLineFFT` is the one-rank cuFFT Z2Z form of the unnormalized
   complex line DFT. It matches `ComplexLineFFT`, including the even
   extension a Chebyshev series feeds that transform. The 3D pencil plans
