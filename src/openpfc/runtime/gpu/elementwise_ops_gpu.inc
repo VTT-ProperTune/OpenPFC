@@ -162,6 +162,58 @@ void launch_axpy_fill(T *out, const T *x, T alpha, T beta, std::size_t n) {
   check_elem_launch("axpy_fill");
 }
 
+__global__ void amplitude_pair_etd1_kernel(const double *re, const double *im,
+                                           const double *nre, const double *nim,
+                                           const double *e1, const double *p1,
+                                           const double *e2, const double *p2,
+                                           double *ore, double *oim, std::size_t n) {
+  const std::size_t i =
+      static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (i >= n) {
+    return;
+  }
+  const double hr = re[2 * i];
+  const double hi = re[2 * i + 1];
+  const double kr = im[2 * i];
+  const double ki = im[2 * i + 1];
+  const double nr = nre[2 * i];
+  const double ni = nre[2 * i + 1];
+  const double mr = nim[2 * i];
+  const double mi = nim[2 * i + 1];
+  const double c1r = hr - ki;
+  const double c1i = hi + kr;
+  const double c2r = hr + ki;
+  const double c2i = hi - kr;
+  const double n1r = nr - mi;
+  const double n1i = ni + mr;
+  const double n2r = nr + mi;
+  const double n2i = ni - mr;
+  const double d1r = e1[i] * c1r + p1[i] * n1r;
+  const double d1i = e1[i] * c1i + p1[i] * n1i;
+  const double d2r = e2[i] * c2r + p2[i] * n2r;
+  const double d2i = e2[i] * c2i + p2[i] * n2i;
+  ore[2 * i] = 0.5 * (d1r + d2r);
+  ore[2 * i + 1] = 0.5 * (d1i + d2i);
+  const double dr = d1r - d2r;
+  const double di = d1i - d2i;
+  oim[2 * i] = 0.5 * di;
+  oim[2 * i + 1] = -0.5 * dr;
+}
+
+void launch_amplitude_pair_etd1(const double *re, const double *im,
+                                const double *nre, const double *nim,
+                                const double *e1, const double *p1, const double *e2,
+                                const double *p2, double *ore, double *oim,
+                                std::size_t n) {
+  if (n == 0) {
+    return;
+  }
+  constexpr int threads = 256;
+  amplitude_pair_etd1_kernel<<<elem_blocks(n), threads>>>(re, im, nre, nim, e1, p1,
+                                                          e2, p2, ore, oim, n);
+  check_elem_launch("amplitude_pair_etd1");
+}
+
 #if defined(OpenPFC_ENABLE_CUDA) && defined(OPENPFC_GPU_API_CUDA)
 void multiply_complex_real_cuda_impl(const std::complex<double> *a, const double *b,
                                      std::complex<double> *out, std::size_t n) {
@@ -224,6 +276,22 @@ void axpy_fill_cuda_impl(double *out, const double *x, double alpha, double beta
 void axpy_fill_cuda_impl(float *out, const float *x, float alpha, float beta,
                          std::size_t n) {
   launch_axpy_fill(out, x, alpha, beta, n);
+}
+void amplitude_pair_etd1_cuda_impl(const std::complex<double> *re_hat,
+                                   const std::complex<double> *im_hat,
+                                   const std::complex<double> *nre_hat,
+                                   const std::complex<double> *nim_hat,
+                                   const double *exp_plus, const double *phi_plus,
+                                   const double *exp_minus, const double *phi_minus,
+                                   std::complex<double> *out_re,
+                                   std::complex<double> *out_im, std::size_t n) {
+  launch_amplitude_pair_etd1(reinterpret_cast<const double *>(re_hat),
+                             reinterpret_cast<const double *>(im_hat),
+                             reinterpret_cast<const double *>(nre_hat),
+                             reinterpret_cast<const double *>(nim_hat), exp_plus,
+                             phi_plus, exp_minus, phi_minus,
+                             reinterpret_cast<double *>(out_re),
+                             reinterpret_cast<double *>(out_im), n);
 }
 #endif
 
@@ -289,6 +357,22 @@ void axpy_fill_hip_impl(double *out, const double *x, double alpha, double beta,
 void axpy_fill_hip_impl(float *out, const float *x, float alpha, float beta,
                         std::size_t n) {
   launch_axpy_fill(out, x, alpha, beta, n);
+}
+void amplitude_pair_etd1_hip_impl(const std::complex<double> *re_hat,
+                                  const std::complex<double> *im_hat,
+                                  const std::complex<double> *nre_hat,
+                                  const std::complex<double> *nim_hat,
+                                  const double *exp_plus, const double *phi_plus,
+                                  const double *exp_minus, const double *phi_minus,
+                                  std::complex<double> *out_re,
+                                  std::complex<double> *out_im, std::size_t n) {
+  launch_amplitude_pair_etd1(reinterpret_cast<const double *>(re_hat),
+                             reinterpret_cast<const double *>(im_hat),
+                             reinterpret_cast<const double *>(nre_hat),
+                             reinterpret_cast<const double *>(nim_hat), exp_plus,
+                             phi_plus, exp_minus, phi_minus,
+                             reinterpret_cast<double *>(out_re),
+                             reinterpret_cast<double *>(out_im), n);
 }
 #endif
 

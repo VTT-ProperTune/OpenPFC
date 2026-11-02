@@ -200,6 +200,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   still grow when that split is outside the stable timestep, while a
   chemical spinodal grows for a physical reason. The split stays the
   production scheme only inside the stable timestep (#803).
+- `AmplitudeSpectralETD1` integrates several complex amplitudes with one
+  ETD1 step on a real-to-complex FFT. Each amplitude is a pair of real
+  fields. The two half-spectrum combinations use the caller's symbols
+  `s(q)` and `s(-q)`. The weight is the reference
+  `(exp(s dt) - 1) / s`, with the Taylor branch when `|s dt| < 1e-8`.
+  `AmplitudeSpectralETD1Cuda` runs that update on the device FFT. The
+  one-field `SpectralETDSystem` is unchanged. HIP was not run (#422).
 - `CudaComplexLineFFT` is the one-rank cuFFT Z2Z form of the unnormalized
   complex line DFT. It matches `ComplexLineFFT`, including the even
   extension a Chebyshev series feeds that transform. The 3D pencil plans

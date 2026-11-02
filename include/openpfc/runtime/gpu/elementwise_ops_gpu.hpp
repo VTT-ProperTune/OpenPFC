@@ -55,6 +55,14 @@ void axpy_fill_cuda_impl(double *out, const double *x, double alpha, double beta
                          std::size_t n);
 void axpy_fill_cuda_impl(float *out, const float *x, float alpha, float beta,
                          std::size_t n);
+void amplitude_pair_etd1_cuda_impl(const std::complex<double> *re_hat,
+                                   const std::complex<double> *im_hat,
+                                   const std::complex<double> *nre_hat,
+                                   const std::complex<double> *nim_hat,
+                                   const double *exp_plus, const double *phi_plus,
+                                   const double *exp_minus, const double *phi_minus,
+                                   std::complex<double> *out_re,
+                                   std::complex<double> *out_im, std::size_t n);
 #endif
 
 #if defined(OpenPFC_ENABLE_HIP)
@@ -88,6 +96,14 @@ void axpy_fill_hip_impl(double *out, const double *x, double alpha, double beta,
                         std::size_t n);
 void axpy_fill_hip_impl(float *out, const float *x, float alpha, float beta,
                         std::size_t n);
+void amplitude_pair_etd1_hip_impl(const std::complex<double> *re_hat,
+                                  const std::complex<double> *im_hat,
+                                  const std::complex<double> *nre_hat,
+                                  const std::complex<double> *nim_hat,
+                                  const double *exp_plus, const double *phi_plus,
+                                  const double *exp_minus, const double *phi_minus,
+                                  std::complex<double> *out_re,
+                                  std::complex<double> *out_im, std::size_t n);
 #endif
 
 } // namespace pfc

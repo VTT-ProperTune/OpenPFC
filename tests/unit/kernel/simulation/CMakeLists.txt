@@ -30,10 +30,16 @@ if(OpenPFC_ENABLE_HEFFTE)
       ${CMAKE_CURRENT_SOURCE_DIR}/test_spectral_etd_system.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_etd_step_doubling.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_coupled_spectral_etd2.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_amplitude_spectral_etd1.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_spectral_flux.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_swift_hohenberg_three_way.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_simulation_session.cpp
   )
+  add_test(NAME amplitude-spectral-etd1
+           COMMAND openpfc-tests "[amplitude_etd1]")
+  set_tests_properties(amplitude-spectral-etd1 PROPERTIES
+    ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1"
+    TIMEOUT 120)
 endif()
 
 # Add wave2d include directory for WaveModel access
