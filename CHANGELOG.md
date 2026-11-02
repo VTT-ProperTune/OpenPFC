@@ -135,6 +135,16 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   11,108 assertions in `HIP_ReflectionGhosts`. This documentation-only
   change did not rerun the case; source-pinned device evidence remains
   outstanding in #468. `WallPolicy` is unchanged.
+
+- `cahn_hilliard_elastic` writes the probed Fourier amplitude, clip count,
+  and chemical bulk and gradient energy before and after composition
+  projection when `qualification` is present. Without that block the step
+  is unchanged. On a synthetic equal-stiffness cell the native one-step
+  gain matches the explicit-elastic split for a [100] mode, a [110] mode
+  of the same wavenumber, and the k = 0 mean. A continuum-stable mode can
+  still grow when that split is outside the stable timestep, while a
+  chemical spinodal grows for a physical reason. The split stays the
+  production scheme only inside the stable timestep (#803).
 - `CudaComplexLineFFT` is the one-rank cuFFT Z2Z form of the unnormalized
   complex line DFT. It matches `ComplexLineFFT`, including the even
   extension a Chebyshev series feeds that transform. The 3D pencil plans

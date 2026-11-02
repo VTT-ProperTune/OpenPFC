@@ -44,6 +44,25 @@ the dendrite and inverse homogenization. Both phases are treated as equal
 stiffness solids (a coherent pair, not a solid–liquid contrast). The
 device Green (#157) is still open, so this path is CPU-only.
 
+The elastic chemical potential is an explicit remainder on the chemical
+ETD1 symbol. A public synthetic case (not the Fe–Cr preset) compares one
+native step with an independent dilatational modulus from the cubic
+Christoffel tensor, including [100], [110] at the same wavenumber, and the
+k = 0 mean. The native gain matches that split. Fully coupled linear
+evolution of the same mode can be stable while the split grows, so a large
+`dt` is not safe merely because the continuum eigenvalue is negative.
+`qualification` records the mode amplitude, the clip count, and the
+chemical bulk and gradient energy before and after `project_c`. It does
+not alter the step when it is omitted, and it does not solve elasticity a
+second time. The 2/3 mask is part of the retained band: a mode inside that
+band keeps the split gain, and a chemically unstable mode is reported as
+physical growth. Closed #209 remains the step-doubling error baseline.
+#222 is an audit of an embedded pair and is not implemented here. #252 is
+the separate device-resident elastic path. Closed #543 integrates two
+dynamical fields; this problem has one conserved field and a quasistatic
+displacement, so that class is not used. The linear comparison is decisive,
+so no convex-splitting scheme is added. No second integrator is added.
+
 The box must be large compared with the selected wavelength or the statistics
 are meaningless. At `c₀ = 0.5` the model predicts `λ_max ≈ 17.3` code units, so
 512² holds about 30 wavelengths per side.

@@ -34,7 +34,9 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -313,6 +315,72 @@ inline int run_cahn_hilliard_elastic(int rank, int nproc, MPI_Comm comm,
                           ? std::max(1, static_cast<int>(std::llround(saveat / dt)))
                           : n_steps;
 
+    // Optional read-only probe. Absent means the step below is unchanged.
+    const bool qualify = cfg.contains("qualification");
+    int qnx = 0, qny = 0, qnz = 0;
+    std::ofstream qout;
+    if (qualify) {
+      const auto &q = cfg.at("qualification");
+      qnx = q.at("nx").get<int>();
+      qny = q.at("ny").get<int>();
+      qnz = q.at("nz").get<int>();
+      if (qnx < 0 || qny < 0 || qnz < 0)
+        throw std::invalid_argument("qualification mode indices must be >= 0");
+      if (rank == 0) {
+        qout.open(q.at("report").get<std::string>());
+        if (!qout) throw std::runtime_error("cannot open qualification report");
+        qout << "step,stage,amplitude,min,max,clipped,bulk_energy,gradient_energy\n";
+      }
+    }
+    // Read-only. The chemical sample does not solve elasticity again, so a
+    // present qualification block cannot change the next update.
+    auto write_qualification = [&](int step, const char *stage) {
+      if (!qualify) return;
+      const auto n = pfc::domain::get_size(domain);
+      const auto sp = pfc::domain::get_spacing(domain);
+      const double Lx = static_cast<double>(n[0]) * sp[0];
+      const double Ly = static_cast<double>(n[1]) * sp[1];
+      const double Lz = static_cast<double>(n[2]) * sp[2];
+      const double twopi = 2.0 * std::acos(-1.0);
+      const auto ls = c.local_size();
+      double sum = 0.0;
+      double mn = std::numeric_limits<double>::infinity();
+      double mx = -std::numeric_limits<double>::infinity();
+      int clipped = 0;
+      constexpr double lo = 1.0e-8, hi = 1.0 - 1.0e-8;
+      for (int k = 0; k < ls[2]; ++k) {
+        for (int j = 0; j < ls[1]; ++j) {
+          for (int i = 0; i < ls[0]; ++i) {
+            const double v = c(i, j, k);
+            const auto x = c.coords(i, j, k);
+            const double phase = twopi * (static_cast<double>(qnx) * x[0] / Lx +
+                                          static_cast<double>(qny) * x[1] / Ly +
+                                          static_cast<double>(qnz) * x[2] / Lz);
+            sum += v * std::cos(phase);
+            mn = std::min(mn, v);
+            mx = std::max(mx, v);
+            if (v < lo || v > hi) ++clipped;
+          }
+        }
+      }
+      double gsum = 0.0, gmn = 0.0, gmx = 0.0;
+      int gclip = 0;
+      MPI_Allreduce(&sum, &gsum, 1, MPI_DOUBLE, MPI_SUM, comm);
+      MPI_Allreduce(&mn, &gmn, 1, MPI_DOUBLE, MPI_MIN, comm);
+      MPI_Allreduce(&mx, &gmx, 1, MPI_DOUBLE, MPI_MAX, comm);
+      MPI_Allreduce(&clipped, &gclip, 1, MPI_INT, MPI_SUM, comm);
+      const double ntot =
+          static_cast<double>(n[0]) * static_cast<double>(n[1]) * n[2];
+      const bool zero_mode = qnx == 0 && qny == 0 && qnz == 0;
+      const double amplitude = zero_mode ? gsum / ntot : 2.0 * gsum / ntot;
+      const auto chem = diagnostics.sample(c, ch);
+      if (rank == 0) {
+        qout << step << ',' << stage << ',' << std::setprecision(17) << amplitude
+             << ',' << gmn << ',' << gmx << ',' << gclip << ',' << chem.bulk_energy
+             << ',' << chem.gradient_energy << '\n';
+      }
+    };
+
     auto elastic_step = [&]() -> std::pair<int, double> {
       assemble_amp();
       const auto rep = solver.solve(h, amp, &dh, &damp);
@@ -328,6 +396,7 @@ inline int run_cahn_hilliard_elastic(int rank, int nproc, MPI_Comm comm,
 
     auto [it0, mu0] = elastic_step();
     report(0, 0.0, it0, mu0);
+    write_qualification(0, "initial");
 
     double t = 0.0;
     for (int step = 1; step <= n_steps; ++step) {
@@ -338,7 +407,9 @@ inline int run_cahn_hilliard_elastic(int rank, int nproc, MPI_Comm comm,
       Ops::combine(c_hat, n_hat, exp_Ldt, n_weight, candidate);
       Ops::swap(c_hat, candidate);
       Ops::backward(stack.fft(), c_hat, c);
+      write_qualification(step, "pre");
       project_c();
+      write_qualification(step, "post");
       t = dt * static_cast<double>(step);
       if (step % every == 0 || step == n_steps) report(step, t, iters, max_mu);
     }

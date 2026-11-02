@@ -20,6 +20,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <mpi.h>
 #include <numbers>
 #include <stdexcept>
@@ -756,5 +757,347 @@ TEST_CASE("Elastic CH conserves mass on a noisy cell", "[cahn_hilliard][elastic]
     return std::stod(row.substr(c2 + 1, c3 - c2 - 1));
   };
   REQUIRE_THAT(mean_of(last), WithinAbs(mean_of(first), 1e-12));
+  std::filesystem::remove_all(dir);
+}
+
+namespace {
+
+/// Independent dilatational modulus B = d(mu_el)/d(theta), theta = c - c_ref.
+/// k = 0 is the constrained cell (zero strain). A nonzero direction uses the
+/// cubic Christoffel tensor and is not the solver's Green matrix.
+double independent_dilatational_B(double c11, double c12, double c44, double eps0,
+                                  double nx, double ny, double nz) {
+  const double K = (c11 + 2.0 * c12) / 3.0;
+  const double n2 = nx * nx + ny * ny + nz * nz;
+  if (n2 == 0.0) return 9.0 * K * eps0 * eps0;
+  const double inv = 1.0 / std::sqrt(n2);
+  const double n[3] = {nx * inv, ny * inv, nz * inv};
+  const double H = c11 - c12 - 2.0 * c44;
+  double A[3][3];
+  for (int i = 0; i < 3; ++i) {
+    for (int j = 0; j < 3; ++j) {
+      A[i][j] = (c12 + c44) * n[i] * n[j];
+      if (i == j) A[i][j] += c44 + H * n[i] * n[i];
+    }
+  }
+  const double C00 = A[1][1] * A[2][2] - A[1][2] * A[2][1];
+  const double C01 = A[0][2] * A[2][1] - A[0][1] * A[2][2];
+  const double C02 = A[0][1] * A[1][2] - A[0][2] * A[1][1];
+  const double C10 = A[1][2] * A[2][0] - A[1][0] * A[2][2];
+  const double C11 = A[0][0] * A[2][2] - A[0][2] * A[2][0];
+  const double C12 = A[0][2] * A[1][0] - A[0][0] * A[1][2];
+  const double C20 = A[1][0] * A[2][1] - A[1][1] * A[2][0];
+  const double C21 = A[0][1] * A[2][0] - A[0][0] * A[2][1];
+  const double C22 = A[0][0] * A[1][1] - A[0][1] * A[1][0];
+  const double det = A[0][0] * C00 + A[0][1] * C10 + A[0][2] * C20;
+  const double nGn = (n[0] * (C00 * n[0] + C01 * n[1] + C02 * n[2]) +
+                      n[1] * (C10 * n[0] + C11 * n[1] + C12 * n[2]) +
+                      n[2] * (C20 * n[0] + C21 * n[1] + C22 * n[2])) /
+                     det;
+  return 9.0 * K * eps0 * eps0 * (1.0 - K * nGn);
+}
+
+struct SplitGain {
+  double lambda;
+  double split;
+  double full;
+};
+
+SplitGain split_gain(double fpp, double kappa, double mobility, double k, double B,
+                     double dt) {
+  const double k2 = k * k;
+  const double lambda_chem = -mobility * k2 * (fpp + kappa * k2);
+  const double lambda_el = -mobility * k2 * B;
+  const auto coeff = pfc::integrator::spectral_exp_coeffs(lambda_chem, dt);
+  SplitGain g;
+  g.lambda = lambda_chem + lambda_el;
+  g.split = coeff.exp_Ldt + coeff.phi1_L * (-mobility * k2) * B;
+  g.full = std::exp(dt * g.lambda);
+  return g;
+}
+
+struct ProbeRow {
+  double amplitude;
+  double minimum;
+  double maximum;
+  int clipped;
+  double bulk_energy;
+  double gradient_energy;
+};
+
+std::map<std::string, ProbeRow> read_probe(const std::filesystem::path &path) {
+  std::ifstream in(path);
+  std::map<std::string, ProbeRow> rows;
+  std::string line;
+  std::getline(in, line);
+  while (std::getline(in, line)) {
+    if (line.empty()) continue;
+    std::string cols[8];
+    std::size_t p = 0;
+    for (int c = 0; c < 8; ++c) {
+      const auto n = line.find(',', p);
+      cols[c] = line.substr(p, n == std::string::npos ? std::string::npos : n - p);
+      if (n == std::string::npos) break;
+      p = n + 1;
+    }
+    rows[cols[0] + ":" + cols[1]] =
+        ProbeRow{std::stod(cols[2]), std::stod(cols[3]), std::stod(cols[4]),
+                 std::stoi(cols[5]), std::stod(cols[6]), std::stod(cols[7])};
+  }
+  return rows;
+}
+
+} // namespace
+
+TEST_CASE("Christoffel dilatational modulus is direction-independent when isotropic",
+          "[cahn_hilliard][chemoelastic]") {
+  const double B100 = independent_dilatational_B(300.0, 100.0, 100.0, 0.2, 1, 0, 0);
+  const double B110 = independent_dilatational_B(300.0, 100.0, 100.0, 0.2, 1, 1, 0);
+  const double B0 = independent_dilatational_B(300.0, 100.0, 100.0, 0.2, 0, 0, 0);
+  REQUIRE_THAT(B100, WithinRel(B110, 1e-12));
+  REQUIRE_THAT(B100, WithinRel(80.0 / 3.0, 1e-12));
+  REQUIRE(B0 > B100);
+  const double cubic100 =
+      independent_dilatational_B(300.0, 100.0, 120.0, 0.2, 1, 0, 0);
+  const double cubic110 =
+      independent_dilatational_B(300.0, 100.0, 120.0, 0.2, 1, 1, 0);
+  REQUIRE(std::abs(cubic100 - cubic110) > 1.0e-3 * std::abs(cubic100));
+}
+
+TEST_CASE("Homogeneous microelasticity matches the independent dilatational modulus",
+          "[cahn_hilliard][chemoelastic]") {
+  if (world_size() != 1) SKIP("single-rank spectral check");
+  constexpr int N = 32;
+  const json cfg{{"domain",
+                  {{"size", {N, N, 1}},
+                   {"lower", {0.0, 0.0, 0.0}},
+                   {"upper", {32.0, 32.0, 1.0}}}}};
+  const auto domain = pfc::ui::from_json<pfc::Domain>(cfg);
+  pfc::sim::stacks::SpectralCPUStack stack(domain, 0, 1, MPI_COMM_WORLD);
+  const auto box = stack.fft().get_inbox_bounds();
+  const double A = 1.0e-2;
+  const double eps0 = 0.2;
+  const auto C = pfc::solvers::Stiffness::cubic(300.0, 100.0, 120.0);
+
+  auto measure = [&](int nx, int ny) {
+    pfc::data::Field<double> h(domain, box, 0);
+    pfc::data::Field<double> amp(domain, box, 0);
+    pfc::data::Field<double> dh(domain, box, 0);
+    pfc::data::Field<double> damp(domain, box, 0);
+    const auto ls = amp.local_size();
+    const auto sp = amp.spacing();
+    const double Lx = static_cast<double>(ls[0]) * sp[0];
+    const double Ly = static_cast<double>(ls[1]) * sp[1];
+    const double twopi = 2.0 * std::numbers::pi;
+    for (int j = 0; j < ls[1]; ++j) {
+      for (int i = 0; i < ls[0]; ++i) {
+        const auto x = amp.coords(i, j, 0);
+        const double phase = twopi * (nx * x[0] / Lx + ny * x[1] / Ly);
+        h(i, j, 0) = 1.0;
+        dh(i, j, 0) = 0.0;
+        damp(i, j, 0) = 1.0;
+        amp(i, j, 0) = A * std::cos(phase);
+      }
+    }
+    h.note_host_write();
+    dh.note_host_write();
+    damp.note_host_write();
+    amp.note_host_write();
+    pfc::solvers::MicroelasticityParams mp;
+    mp.stiffness_at_one = C;
+    mp.stiffness_at_zero = C;
+    mp.eigenstrain_pattern = pfc::solvers::Sym3{{eps0, eps0, eps0, 0.0, 0.0, 0.0}};
+    mp.comm = MPI_COMM_WORLD;
+    mp.warm_start = false;
+    pfc::solvers::EigenstrainMicroelasticity solver(domain, stack.fft(), mp);
+    const auto rep = solver.solve(h, amp, &dh, &damp);
+    const double theta = amp(0, 0, 0);
+    const double from_mu = solver.elastic_energy_derivative()(0, 0, 0) / theta;
+    const double volume = Lx * Ly * sp[2];
+    const bool wave = nx != 0 || ny != 0;
+    const double from_energy =
+        (wave ? 4.0 : 2.0) * solver.total_elastic_energy() / (volume * A * A);
+    return std::tuple<bool, int, double, double>{rep.converged, rep.iterations,
+                                                 from_mu, from_energy};
+  };
+
+  for (const auto mode : {std::pair<int, int>{1, 0}, {1, 1}, {0, 0}, {2, 0}}) {
+    const auto [converged, iterations, from_mu, from_energy] =
+        measure(mode.first, mode.second);
+    REQUIRE(converged);
+    REQUIRE(iterations == 1);
+    const double want = independent_dilatational_B(300.0, 100.0, 120.0, eps0,
+                                                   mode.first, mode.second, 0.0);
+    REQUIRE_THAT(from_mu, WithinRel(want, 1e-8));
+    REQUIRE_THAT(from_energy, WithinRel(want, 1e-8));
+  }
+}
+
+TEST_CASE("Native elastic Cahn-Hilliard one-step gain matches the split symbol",
+          "[cahn_hilliard][chemoelastic]") {
+  if (world_size() != 1) SKIP("single-rank spectral check");
+  cahn_hilliard::CahnHilliardParams stable;
+  cahn_hilliard::apply_cahn_hilliard_json(json{{"c0", 0.5},
+                                               {"T", 500.0},
+                                               {"R", 8.0},
+                                               {"Omega", 8.0},
+                                               {"Vm", 4000.0},
+                                               {"kappa", 1.0},
+                                               {"M", 1.0}},
+                                          stable);
+  REQUIRE(stable.fpp0 > 0.0);
+  const double f0 = stable.scales().f0(stable.T);
+  REQUIRE(f0 > 0.0);
+
+  cahn_hilliard::CahnHilliardParams spinodal = stable;
+  cahn_hilliard::apply_cahn_hilliard_json(json{{"c0", 0.5},
+                                               {"T", 500.0},
+                                               {"R", 8.0},
+                                               {"Omega", 20000.0},
+                                               {"Vm", 4000.0},
+                                               {"kappa", 1.0},
+                                               {"M", 1.0}},
+                                          spinodal);
+  REQUIRE(spinodal.fpp0 < 0.0);
+
+  const auto dir = std::filesystem::temp_directory_path() /
+                   ("ch_el_split_" + std::to_string(::getpid()));
+  std::filesystem::create_directories(dir);
+
+  auto run_one = [&](const cahn_hilliard::CahnHilliardParams &ch, int n,
+                     double length, int nx, int ny, double dt, double eps0,
+                     double c44) {
+    const auto path = dir / "case.json";
+    const auto report = dir / "mode.csv";
+    const auto diag = dir / "d.csv";
+    json cfg = {{"model",
+                 {{"name", "cahn_hilliard"},
+                  {"params",
+                   {{"c0", ch.c0},
+                    {"T", ch.T},
+                    {"R", ch.R},
+                    {"Omega", ch.Omega},
+                    {"Vm", ch.Vm},
+                    {"kappa", ch.kappa},
+                    {"M", ch.M}}}}},
+                {"elasticity",
+                 {{"eps0", eps0},
+                  {"c_ref", ch.c0},
+                  {"c11", 300.0},
+                  {"c12", 100.0},
+                  {"c44", c44}}},
+                {"domain",
+                 {{"size", {n, n, 1}},
+                  {"lower", {0.0, 0.0, 0.0}},
+                  {"upper", {length, length, 1.0}}}},
+                {"timestepping", {{"t1", dt}, {"dt", dt}}},
+                {"diagnostics", {{"csv", diag.string()}}},
+                {"qualification",
+                 {{"nx", nx}, {"ny", ny}, {"nz", 0}, {"report", report.string()}}},
+                {"initial_conditions", json::array({{{"type", "cosine_mode"},
+                                                     {"c0", ch.c0},
+                                                     {"amplitude", 1.0e-4},
+                                                     {"nx", nx},
+                                                     {"ny", ny},
+                                                     {"nz", 0}}})}};
+    {
+      std::ofstream out(path);
+      out << cfg.dump(2);
+    }
+    REQUIRE(cahn_hilliard::run_cahn_hilliard_elastic(0, 1, MPI_COMM_WORLD,
+                                                     path.string()) == 0);
+    const auto rows = read_probe(report);
+    REQUIRE(rows.count("0:initial") == 1);
+    REQUIRE(rows.count("1:pre") == 1);
+    REQUIRE(rows.count("1:post") == 1);
+    return rows;
+  };
+
+  const double length = 64.0;
+  const double k = 2.0 * std::numbers::pi / length;
+  // JSON stiffness is in pascals. The driver divides by f0 before the solve.
+  const double B =
+      independent_dilatational_B(300.0 / f0, 100.0 / f0, 120.0 / f0, 0.2, 1, 0, 0);
+  REQUIRE(pfc::fft::kspace::two_thirds_keep(k, 0.0, 0.0, {1.0, 1.0, 1.0}));
+
+  // Frozen before the run: dt = 0.05 and 5 stay inside |G| < 1; dt = 80 is the
+  // explicit-split hazard. N = 64 and N = 128 share this wavenumber.
+  for (const double dt : {0.05, 5.0, 80.0}) {
+    const auto g = split_gain(stable.fpp0, stable.kappa, stable.M, k, B, dt);
+    REQUIRE(g.lambda < 0.0);
+    const auto rows = run_one(stable, 64, length, 1, 0, dt, 0.2, 120.0);
+    const double got = rows.at("1:pre").amplitude / rows.at("0:initial").amplitude;
+    REQUIRE_THAT(got, WithinRel(g.split, 1e-6));
+    REQUIRE_THAT(rows.at("1:post").amplitude,
+                 WithinRel(rows.at("1:pre").amplitude, 1e-10));
+    REQUIRE(rows.at("1:pre").clipped == 0);
+    REQUIRE(std::isfinite(rows.at("1:pre").bulk_energy));
+    REQUIRE(rows.at("0:initial").gradient_energy > 0.0);
+    REQUIRE_THAT(rows.at("1:post").bulk_energy,
+                 WithinRel(rows.at("1:pre").bulk_energy, 1e-12));
+    REQUIRE_THAT(rows.at("1:post").gradient_energy,
+                 WithinAbs(rows.at("1:pre").gradient_energy, 1e-12));
+    if (dt == 80.0) {
+      REQUIRE(std::abs(g.split) > 1.0);
+      REQUIRE(std::abs(g.full) < 1.0);
+      REQUIRE(std::abs(got) > 1.0);
+      REQUIRE(rows.at("1:pre").gradient_energy >
+              rows.at("0:initial").gradient_energy);
+    } else {
+      REQUIRE(std::abs(g.split) < 1.0);
+    }
+  }
+
+  const auto coarse = run_one(stable, 64, length, 1, 0, 0.05, 0.2, 120.0);
+  const auto fine = run_one(stable, 128, length, 1, 0, 0.05, 0.2, 120.0);
+  REQUIRE(pfc::fft::kspace::two_thirds_keep(k, 0.0, 0.0, {0.5, 0.5, 1.0}));
+  const double coarse_g =
+      coarse.at("1:pre").amplitude / coarse.at("0:initial").amplitude;
+  const double fine_g = fine.at("1:pre").amplitude / fine.at("0:initial").amplitude;
+  REQUIRE_THAT(fine_g, WithinRel(coarse_g, 1e-6));
+
+  const auto g0 = split_gain(stable.fpp0, stable.kappa, stable.M, k, 0.0, 0.05);
+  const auto chemical = run_one(stable, 64, length, 1, 0, 0.05, 0.0, 120.0);
+  REQUIRE_THAT(chemical.at("1:pre").amplitude / chemical.at("0:initial").amplitude,
+               WithinRel(g0.split, 1e-8));
+  REQUIRE_THAT(g0.split, WithinRel(g0.full, 1e-12));
+
+  const auto gs =
+      split_gain(spinodal.fpp0, spinodal.kappa, spinodal.M, k, 0.0, 0.05);
+  REQUIRE(gs.lambda > 0.0);
+  REQUIRE(gs.split > 1.0);
+  const auto grown = run_one(spinodal, 64, length, 1, 0, 0.05, 0.0, 120.0);
+  REQUIRE_THAT(grown.at("1:pre").amplitude / grown.at("0:initial").amplitude,
+               WithinRel(gs.split, 1e-8));
+  REQUIRE(grown.at("1:pre").gradient_energy > grown.at("0:initial").gradient_energy);
+
+  // Same |k| along [110]: box side L*sqrt(2), integer mode (1,1).
+  const double side = length * std::sqrt(2.0);
+  const double kx = 2.0 * std::numbers::pi / side;
+  REQUIRE(pfc::fft::kspace::two_thirds_keep(kx, kx, 0.0,
+                                            {side / 64.0, side / 64.0, 1.0}));
+  const double B110 =
+      independent_dilatational_B(300.0 / f0, 100.0 / f0, 120.0 / f0, 0.2, 1, 1, 0);
+  REQUIRE(std::abs(B110 - B) > 1.0e-3 * std::abs(B));
+  const auto g110 = split_gain(stable.fpp0, stable.kappa, stable.M, k, B110, 0.05);
+  const auto g100 = split_gain(stable.fpp0, stable.kappa, stable.M, k, B, 0.05);
+  const auto off = run_one(stable, 64, side, 1, 1, 0.05, 0.2, 120.0);
+  const double got110 = off.at("1:pre").amplitude / off.at("0:initial").amplitude;
+  REQUIRE_THAT(got110, WithinRel(g110.split, 1e-6));
+  REQUIRE(std::abs(got110 - g100.split) > 1.0e-4);
+  REQUIRE(off.at("1:pre").clipped == 0);
+  REQUIRE(off.at("0:initial").gradient_energy > 0.0);
+
+  // k = 0 is a uniform field. Both symbols are 1, and the mean does not move.
+  const auto gzero = split_gain(stable.fpp0, stable.kappa, stable.M, 0.0, B, 0.05);
+  REQUIRE_THAT(gzero.split, WithinAbs(1.0, 1e-12));
+  REQUIRE_THAT(gzero.full, WithinAbs(1.0, 1e-12));
+  const auto flat = run_one(stable, 64, length, 0, 0, 0.05, 0.2, 120.0);
+  REQUIRE_THAT(flat.at("1:pre").amplitude / flat.at("0:initial").amplitude,
+               WithinAbs(1.0, 1e-8));
+  REQUIRE(flat.at("1:pre").clipped == 0);
+  REQUIRE_THAT(flat.at("1:post").bulk_energy,
+               WithinRel(flat.at("1:pre").bulk_energy, 1e-12));
+
   std::filesystem::remove_all(dir);
 }
