@@ -10,8 +10,8 @@
 #include <limits>
 #include <mpi.h>
 #include <span>
-#include <stdexcept>
 #include <sstream>
+#include <stdexcept>
 #include <vector>
 
 #include <cahn_hilliard/bounded_axis.hpp>
@@ -254,12 +254,16 @@ TEST_CASE("Rejected bounded RK stages restore the owned field and ledger",
     ++exchanges;
     if (exchanges == 2) throw std::runtime_error("injected halo failure");
   };
-  REQUIRE_THROWS_AS(
-      cahn_hilliard::advance_bounded_axis(
-          axis, 0, n, [&](int i) { return field[static_cast<std::size_t>(i)]; },
-          [&](int i, double v) { field[static_cast<std::size_t>(i)] = v; },
-          refresh, model, 0.0, stable_dt(intervals, model), ledger),
-      std::runtime_error);
+  const auto read = [&](int i) { return field[static_cast<std::size_t>(i)]; };
+  const auto write = [&](int i, double value) {
+    field[static_cast<std::size_t>(i)] = value;
+  };
+  const auto failure = [&] {
+    cahn_hilliard::advance_bounded_axis(
+        axis, 0, n, read, write, refresh, model, 0.0,
+        stable_dt(intervals, model), ledger);
+  };
+  REQUIRE_THROWS_AS(failure(), std::runtime_error);
   REQUIRE(exchanges == 2);
   REQUIRE(field == before);
   REQUIRE_FALSE(ledger.active());
