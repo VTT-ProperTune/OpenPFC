@@ -7,6 +7,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- `sample_reference` reads a filled cylinder, disk, or ball through the
+  series the caller already holds and through one `AffineMap`. There is
+  no domain-shape enum. An identity map uses the embedding Laplacian,
+  and a uniform scale uses that chart's inverse metric. The periodic
+  Cartesian symbol stays on `laplacian_symbol`. Boundary conditions
+  remain a separate roadmap (#130).
+
 - `FilledBall` is the reference volume `0 <= r <= R`, distinct from a sphere
   surface. `r = 0` is the origin, not a boundary. The wall `r = R` is the
   boundary a condition can name. Modes are the frozen solid harmonics
