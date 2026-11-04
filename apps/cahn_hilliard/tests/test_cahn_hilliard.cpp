@@ -1116,20 +1116,30 @@ TEST_CASE("Elastic CH report-open failure is collective with two MPI ranks",
   int config_ready = 1;
   if (rank == 0) {
     std::filesystem::create_directories(dir);
-    const json cfg = {
-        {"model", {{"name", "cahn_hilliard"}, {"params", {{"c0", 0.5}}}}},
-        {"elasticity", {{"eps0", 0.1}, {"c11", 300.0},
-                         {"c12", 100.0}, {"c44", 120.0}}},
-        {"domain", {{"size", {16, 16, 1}},
-                    {"lower", {0.0, 0.0, 0.0}},
-                    {"upper", {16.0, 16.0, 1.0}}}},
-        {"timestepping", {{"t1", 0.02}, {"dt", 0.02}}},
-        {"qualification", {{"nx", 1}, {"ny", 0}, {"nz", 0},
-                            {"report", missing_report.string()}}},
-        {"initial_conditions",
-         json::array({{{"type", "cosine_mode"}, {"c0", 0.5},
-                       {"amplitude", 1.0e-4}, {"nx", 1},
-                       {"ny", 0}, {"nz", 0}}})}};
+    json cfg = json::object();
+    cfg["model"]["name"] = "cahn_hilliard";
+    cfg["model"]["params"]["c0"] = 0.5;
+    cfg["elasticity"]["eps0"] = 0.1;
+    cfg["elasticity"]["c11"] = 300.0;
+    cfg["elasticity"]["c12"] = 100.0;
+    cfg["elasticity"]["c44"] = 120.0;
+    cfg["domain"]["size"] = {16, 16, 1};
+    cfg["domain"]["lower"] = {0.0, 0.0, 0.0};
+    cfg["domain"]["upper"] = {16.0, 16.0, 1.0};
+    cfg["timestepping"]["t1"] = 0.02;
+    cfg["timestepping"]["dt"] = 0.02;
+    cfg["qualification"]["nx"] = 1;
+    cfg["qualification"]["ny"] = 0;
+    cfg["qualification"]["nz"] = 0;
+    cfg["qualification"]["report"] = missing_report.string();
+    json mode = json::object();
+    mode["type"] = "cosine_mode";
+    mode["c0"] = 0.5;
+    mode["amplitude"] = 1.0e-4;
+    mode["nx"] = 1;
+    mode["ny"] = 0;
+    mode["nz"] = 0;
+    cfg["initial_conditions"] = json::array({mode});
     std::ofstream output(file);
     config_ready = output.good() ? 1 : 0;
     if (config_ready != 0) output << cfg.dump();
