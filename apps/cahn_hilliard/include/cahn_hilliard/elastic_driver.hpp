@@ -331,7 +331,8 @@ inline int run_cahn_hilliard_elastic(int rank, int nproc, MPI_Comm comm,
       if (rank == 0) {
         qout.open(report_path);
         if (qout) {
-          qout << "step,stage,amplitude,min,max,clipped,bulk_energy,gradient_energy\n";
+          qout << "step,stage,amplitude,min,max,clipped,"
+                  "bulk_energy,gradient_energy\n";
         }
         report_ready = qout.good() ? 1 : 0;
       }
