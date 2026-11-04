@@ -32,6 +32,15 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   to a flat ellipse. The area factor is `|column_0 × column_1|`, and the
   Laplacian uses that induced metric (#134).
 
+- Hagen–Poiseuille flow on the filled cylinder is a steady balance in
+  the incompressible-flow application. The axial velocity is a radial
+  series on that domain. The Laplacian, gradient, and flow rate use the
+  cylinder operators, and the no-slip value is the series at `r = R`.
+  A degree-0 series misses the balance. Degrees 1–3 recover the
+  parabola, the flow rate, and the wall shear. Admitted angular and
+  axial modes stay at coefficient zero. This is not a Cartesian mask
+  and not a turbulent pipe (#235).
+
 - `FilledCylinder` is the reference domain `0 <= r <= R` with `θ` `2π`-periodic.
   `r = 0` is an axis, not a boundary. Caps exist only for a finite axial
   policy. Scalar modes are Fourier in `θ` and smooth powers `r^{|m|}(r²)^k`,

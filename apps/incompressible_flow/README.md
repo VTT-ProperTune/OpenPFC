@@ -412,13 +412,39 @@ acceleration to the viscous step and restores the walls. A
 parallel profile agrees with the viscous step. Turbulent
 channel statistics are not this case.
 
+## Filled-cylinder pipe
+
+Hagen–Poiseuille is a separate steady balance on the filled
+cylinder `0 <= r <= R`, with periodic `θ` and `z`. The radial
+wall is `r = R`. The axis is not a boundary, and a periodic
+axis has no caps. The axial velocity is a scalar series in the
+smooth powers `r^{2k}`. `hagen_poiseuille` calls
+`cylinder_physical_laplacian`, `cylinder_gradient`, and
+`integrate_cylinder`. The identity map is the physical pipe.
+The basis does not replace `1/r` by `1/(r+ε)`.
+
+No-slip is the value of the series at `r = R`. A constant axial
+body force `G` is the pressure gradient. The balance is
+`ν Δu + G = 0`. The velocity is divergence-free, so that
+residual is already the projected acceleration. Degree 0 has
+only the zero field that meets the wall, and the momentum
+residual stays at `|G|`. The parabola `G (R² − r²) / (4ν)` is
+in degree 1. Degrees 2 and 3, one angular mode, and one axial
+mode keep coefficient zero. The flow rate is
+`π G R⁴ / (8ν)` and the outward wall shear is `−G R / 2`.
+
+The periodic Fourier binary is unchanged. This case does not
+add a ghost scheme, a Cartesian mask, or turbulent pipe
+statistics. The boundary-condition roadmap stays separate.
+
 ## Limits
 
 The run is periodic and three-dimensional. Taylor–Green and
 decaying-hit are unforced. forced-hit adds the one low-mode scheme
 above. The locked ladders are one rank. A user run may use the
 HeFFTe pencil. The periodic cases use one viscosity on a cube.
-Pipe flow is outside this application. The channel section
+The filled-cylinder pipe above is the laminar balance, not a
+masked cube and not a turbulent pipe. The channel section
 records the steady laminar balance, one explicit viscous
 step, the convective term, and one step that adds the two, on
 the Chebyshev ends. A 2-D double shear is not

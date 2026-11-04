@@ -59,12 +59,15 @@ if(OpenPFC_BUILD_TESTS AND TARGET Catch2::Catch2)
     tests/test_decaying_hit.cpp
     tests/test_forced_hit.cpp
     tests/test_channel.cpp
+    tests/test_pipe.cpp
     src/wall.cpp)
   target_include_directories(test_incompressible_flow PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include)
   target_link_libraries(test_incompressible_flow PRIVATE OpenPFC::openpfc Catch2::Catch2)
   add_test(NAME incompressible-flow-cpu COMMAND test_incompressible_flow)
   set_tests_properties(incompressible-flow-cpu PROPERTIES TIMEOUT 180)
+  add_test(NAME incompressible-pipe COMMAND test_incompressible_flow "[pipe]")
+  set_tests_properties(incompressible-pipe PROPERTIES TIMEOUT 60)
   if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
      (OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR
       OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 2))
