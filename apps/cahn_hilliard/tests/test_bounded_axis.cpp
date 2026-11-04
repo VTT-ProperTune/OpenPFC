@@ -258,10 +258,10 @@ TEST_CASE("Rejected bounded RK stages restore the owned field and ledger",
   const auto write = [&](int i, double value) {
     field[static_cast<std::size_t>(i)] = value;
   };
+  const double dt = stable_dt(intervals, model);
   const auto failure = [&] {
-    cahn_hilliard::advance_bounded_axis(
-        axis, 0, n, read, write, refresh, model, 0.0,
-        stable_dt(intervals, model), ledger);
+    cahn_hilliard::advance_bounded_axis(axis, 0, n, read, write, refresh, model,
+                                        0.0, dt, ledger);
   };
   REQUIRE_THROWS_AS(failure(), std::runtime_error);
   REQUIRE(exchanges == 2);
