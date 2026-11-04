@@ -7,6 +7,14 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- `FilledDisk` is the reference domain `0 <= r <= R` with `θ` `2π`-periodic.
+  `r = 0` is the origin, not a boundary. The wall `r = R` is the boundary
+  a condition can name. Scalar modes reuse the cylinder powers
+  `r^{|m|}(r²)^k`, so the Laplacian does not use `1/(r+ε)`. Chebyshev,
+  Jacobi, and Zernike bases are not selected. `AffineMap` sends the disk
+  to a flat ellipse. The area factor is `|column_0 × column_1|`, and the
+  Laplacian uses that induced metric (#134).
+
 - `FilledCylinder` is the reference domain `0 <= r <= R` with `θ` `2π`-periodic.
   `r = 0` is an axis, not a boundary. Caps exist only for a finite axial
   policy. Scalar modes are Fourier in `θ` and smooth powers `r^{|m|}(r²)^k`,
