@@ -339,3 +339,19 @@ TEST_CASE("amplitude ETD1 rejects a bad step without writing the fields",
   REQUIRE(max_abs(im0, sys.imag(0)) == 0.0);
   REQUIRE_THROWS_AS(sys.real(2), std::out_of_range);
 }
+
+TEST_CASE("amplitude ETD1 phi weight is accurate at the Taylor threshold",
+          "[unit][simulation][amplitude_etd1]") {
+  // The independent integral/Taylor oracle is accurate to O(z^4) here.
+  // Subtracting exp(z)-1 loses significant digits immediately above 1e-8.
+  const double dt = 0.5;
+  for (double z : {-1.01e-8, -0.99e-8, 0.0, 0.99e-8, 1.01e-8}) {
+    const double symbol = z / dt;
+    const auto weight = pfc::sim::amplitude_etd1_weight(symbol, dt);
+    const double expected =
+        dt * (1.0 + 0.5 * z + z * z / 6.0 + z * z * z / 24.0);
+    REQUIRE(std::abs(weight.phi1 - expected) < 2.0e-15);
+    REQUIRE(std::isfinite(weight.exp_s));
+    REQUIRE(std::isfinite(weight.phi1));
+  }
+}

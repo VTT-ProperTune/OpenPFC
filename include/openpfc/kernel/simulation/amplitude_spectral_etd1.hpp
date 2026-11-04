@@ -53,7 +53,8 @@ struct AmplitudeETD1Weight {
   if (std::abs(z) < 1e-8) {
     w.phi1 = dt * (1.0 + 0.5 * z);
   } else {
-    w.phi1 = (w.exp_s - 1.0) / symbol;
+    // expm1 avoids subtractive cancellation near the Taylor threshold.
+    w.phi1 = std::expm1(z) / symbol;
   }
   if (!std::isfinite(w.exp_s) || !std::isfinite(w.phi1)) {
     throw std::domain_error("amplitude ETD1 weight is not finite");
