@@ -53,10 +53,13 @@ endif()
 if(CAHN_HILLIARD_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
   find_package(Catch2 QUIET)
   if(TARGET Catch2::Catch2)
-    cahn_hilliard_cpu_executable(test_cahn_hilliard tests/test_cahn_hilliard.cpp)
+    cahn_hilliard_cpu_executable(test_cahn_hilliard
+      tests/test_cahn_hilliard.cpp tests/test_bounded_axis.cpp)
     target_link_libraries(test_cahn_hilliard PRIVATE Catch2::Catch2)
     include(CTest)
     add_test(NAME cahn-hilliard-all-tests COMMAND test_cahn_hilliard)
+    add_test(NAME cahn-hilliard-bounded COMMAND test_cahn_hilliard "[bounded]")
+    set_tests_properties(cahn-hilliard-bounded PROPERTIES TIMEOUT 120)
     if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
        (OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 2))
       add_test(NAME cahn-hilliard-mpi-tests

@@ -136,6 +136,14 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   change did not rerun the case; source-pinned device evidence remains
   outstanding in #468. `WallPolicy` is unchanged.
 
+
+- `advance_bounded_axis` evolves one linear Cahn–Hilliard line on a
+  non-periodic `DiffusionAxis`. The composition gradient uses a zero
+  outward derivative, and the composition flux is `reaction_face` on a
+  `FluxLedger`. A zero sink conserves the weighted inventory. A nonzero
+  sink changes that inventory by the accepted outward flux. One owned
+  split matches the unsplit step. This is not a grain boundary or a
+  free surface. The periodic spectral session is unchanged (#253).
 - `cahn_hilliard_elastic` writes the probed Fourier amplitude, clip count,
   and chemical bulk and gradient energy before and after composition
   projection when `qualification` is present. Without that block the step
