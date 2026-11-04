@@ -7,6 +7,16 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- `FilledBall` is the reference volume `0 <= r <= R`, distinct from a sphere
+  surface. `r = 0` is the origin, not a boundary. The wall `r = R` is the
+  boundary a condition can name. Modes are the frozen solid harmonics
+  `S_l^m` for `l <= 3`, times `(r²)^k`. Those polynomials do not use
+  `1/(r+ε)`. A general spherical-harmonic transform is not selected. For a
+  pure solid harmonic the Laplacian is zero and the Euler derivative equals
+  `l` times the value, which carries the spherical eigenvalue `-l(l+1)`.
+  `AffineMap` sends the ball to an ellipsoid with volume factor `|det A|`
+  (#135).
+
 - `FilledDisk` is the reference domain `0 <= r <= R` with `θ` `2π`-periodic.
   `r = 0` is the origin, not a boundary. The wall `r = R` is the boundary
   a condition can name. Scalar modes reuse the cylinder powers
