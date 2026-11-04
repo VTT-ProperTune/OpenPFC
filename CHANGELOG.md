@@ -7,6 +7,14 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- `FilledCylinder` is the reference domain `0 <= r <= R` with `θ` `2π`-periodic.
+  `r = 0` is an axis, not a boundary. Caps exist only for a finite axial
+  policy. Scalar modes are Fourier in `θ` and smooth powers `r^{|m|}(r²)^k`,
+  so the Laplacian does not use `1/(r+ε)`. Periodic `z` is Fourier; finite
+  `z` is verified on monomials. The production radial basis and the finite-z
+  production basis are not selected. `AffineMap` sends the embedding to
+  physical space. The integral weight is `r` (#133).
+
 - The constant AffineMap Jacobian, inverse, determinant, translation and
   identity fast-path cache are immutable after validated construction.
   Standalone affine geometry tests remain available without FFTW.
