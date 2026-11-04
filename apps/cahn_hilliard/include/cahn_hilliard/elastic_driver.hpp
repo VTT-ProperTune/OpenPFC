@@ -326,11 +326,19 @@ inline int run_cahn_hilliard_elastic(int rank, int nproc, MPI_Comm comm,
       qnz = q.at("nz").get<int>();
       if (qnx < 0 || qny < 0 || qnz < 0)
         throw std::invalid_argument("qualification mode indices must be >= 0");
+      const std::string report_path = q.at("report").get<std::string>();
+      int report_ready = 1;
       if (rank == 0) {
-        qout.open(q.at("report").get<std::string>());
-        if (!qout) throw std::runtime_error("cannot open qualification report");
-        qout << "step,stage,amplitude,min,max,clipped,bulk_energy,gradient_energy\n";
+        qout.open(report_path);
+        if (qout) {
+          qout << "step,stage,amplitude,min,max,clipped,bulk_energy,gradient_energy\n";
+        }
+        report_ready = qout.good() ? 1 : 0;
       }
+      // A root-only file error must not strand other MPI ranks in collectives.
+      MPI_Bcast(&report_ready, 1, MPI_INT, 0, comm);
+      if (report_ready == 0)
+        throw std::runtime_error("cannot open qualification report");
     }
     // Read-only. The chemical sample does not solve elasticity again, so a
     // present qualification block cannot change the next update.
@@ -374,11 +382,16 @@ inline int run_cahn_hilliard_elastic(int rank, int nproc, MPI_Comm comm,
       const bool zero_mode = qnx == 0 && qny == 0 && qnz == 0;
       const double amplitude = zero_mode ? gsum / ntot : 2.0 * gsum / ntot;
       const auto chem = diagnostics.sample(c, ch);
+      int report_written = 1;
       if (rank == 0) {
         qout << step << ',' << stage << ',' << std::setprecision(17) << amplitude
              << ',' << gmn << ',' << gmx << ',' << gclip << ',' << chem.bulk_energy
              << ',' << chem.gradient_energy << '\n';
+        report_written = qout.good() ? 1 : 0;
       }
+      MPI_Bcast(&report_written, 1, MPI_INT, 0, comm);
+      if (report_written == 0)
+        throw std::runtime_error("cannot write qualification report");
     };
 
     auto elastic_step = [&]() -> std::pair<int, double> {
@@ -414,17 +427,18 @@ inline int run_cahn_hilliard_elastic(int rank, int nproc, MPI_Comm comm,
       if (step % every == 0 || step == n_steps) report(step, t, iters, max_mu);
     }
 
+    // Root-only printing, but every rank must execute these collectives
+    // in the same order or the final diagnostics can hang under MPI.
+    const auto final_sample = diagnostics.sample(c, ch);
+    const auto [p_axis, p_diag] = axis_vs_diag();
+    const double final_elastic = solver.total_elastic_energy();
     if (rank == 0) {
-      auto s = diagnostics.sample(c, ch);
-      const auto [p_axis, p_diag] = axis_vs_diag();
       std::printf("CAHN_HILLIARD_ELASTIC mean=%.17g min=%.17g max=%.17g "
                   "el_energy=%.17g domain_length=%.17g eps0=%.17g "
                   "axis_power=%.17g diag_power=%.17g\n",
-                  s.mean, s.minimum, s.maximum, solver.total_elastic_energy(),
-                  s.domain_length, el.eps0, p_axis, p_diag);
-    } else {
-      (void)diagnostics.sample(c, ch);
-      (void)solver.total_elastic_energy();
+                  final_sample.mean, final_sample.minimum, final_sample.maximum,
+                  final_elastic, final_sample.domain_length, el.eps0, p_axis,
+                  p_diag);
     }
     if (diag) diag->close();
     snapshots.close();

@@ -921,7 +921,7 @@ TEST_CASE("Homogeneous microelasticity matches the independent dilatational modu
                                                  from_mu, from_energy};
   };
 
-  for (const auto mode : {std::pair<int, int>{1, 0}, {1, 1}, {0, 0}, {2, 0}}) {
+  for (const auto &mode : {std::pair<int, int>{1, 0}, {1, 1}, {0, 0}, {2, 0}}) {
     const auto [converged, iterations, from_mu, from_energy] =
         measure(mode.first, mode.second);
     REQUIRE(converged);
@@ -1100,4 +1100,49 @@ TEST_CASE("Native elastic Cahn-Hilliard one-step gain matches the split symbol",
                WithinRel(flat.at("1:pre").bulk_energy, 1e-12));
 
   std::filesystem::remove_all(dir);
+}
+
+TEST_CASE("Elastic CH report-open failure is collective with two MPI ranks",
+          "[cahn_hilliard][chemoelastic][MPI]") {
+  if (world_size() != 2) SKIP("requires two MPI ranks");
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  int root_pid = rank == 0 ? static_cast<int>(::getpid()) : 0;
+  MPI_Bcast(&root_pid, 1, MPI_INT, 0, MPI_COMM_WORLD);
+  const auto dir = std::filesystem::temp_directory_path() /
+                   ("ch_qual_collective_" + std::to_string(root_pid));
+  const auto file = dir / "case.json";
+  const auto missing_report = dir / "not_created" / "report.csv";
+  int config_ready = 1;
+  if (rank == 0) {
+    std::filesystem::create_directories(dir);
+    const json cfg = {
+        {"model", {{"name", "cahn_hilliard"}, {"params", {{"c0", 0.5}}}}},
+        {"elasticity", {{"eps0", 0.1}, {"c11", 300.0},
+                         {"c12", 100.0}, {"c44", 120.0}}},
+        {"domain", {{"size", {16, 16, 1}},
+                    {"lower", {0.0, 0.0, 0.0}},
+                    {"upper", {16.0, 16.0, 1.0}}}},
+        {"timestepping", {{"t1", 0.02}, {"dt", 0.02}}},
+        {"qualification", {{"nx", 1}, {"ny", 0}, {"nz", 0},
+                            {"report", missing_report.string()}}},
+        {"initial_conditions",
+         json::array({{{"type", "cosine_mode"}, {"c0", 0.5},
+                       {"amplitude", 1.0e-4}, {"nx", 1},
+                       {"ny", 0}, {"nz", 0}}})}};
+    std::ofstream output(file);
+    config_ready = output.good() ? 1 : 0;
+    if (config_ready != 0) output << cfg.dump();
+    if (!output.good()) config_ready = 0;
+  }
+  MPI_Bcast(&config_ready, 1, MPI_INT, 0, MPI_COMM_WORLD);
+  REQUIRE(config_ready == 1);
+  const int rc = cahn_hilliard::run_cahn_hilliard_elastic(
+      rank, world_size(), MPI_COMM_WORLD, file.string());
+  REQUIRE(rc == 2);
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (rank == 0) {
+    std::filesystem::remove(file);
+    std::filesystem::remove(dir);
+  }
 }
