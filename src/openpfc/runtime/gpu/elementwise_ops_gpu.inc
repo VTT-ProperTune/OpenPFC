@@ -80,23 +80,25 @@ int elem_blocks(std::size_t n) {
 }
 
 template <typename T>
-void launch_multiply_complex_real(const T *a, const T *b, T *out, std::size_t n) {
+void launch_multiply_complex_real(const T *a, const T *b, T *out, std::size_t n,
+                                  gpuStream_t stream = nullptr) {
   if (n == 0) {
     return;
   }
   constexpr int threads = 256;
-  multiply_complex_real_kernel<<<elem_blocks(n), threads>>>(a, b, out, n);
+  multiply_complex_real_kernel<<<elem_blocks(n), threads, 0, stream>>>(a, b, out, n);
   check_elem_launch("multiply_complex_real");
 }
 
 template <typename T>
 void launch_combine_two_term(const T *x0, const T *x1, const T *w0, const T *w1,
-                             T *out, std::size_t n) {
+                             T *out, std::size_t n, gpuStream_t stream = nullptr) {
   if (n == 0) {
     return;
   }
   constexpr int threads = 256;
-  combine_two_term_kernel<<<elem_blocks(n), threads>>>(x0, x1, w0, w1, out, n);
+  combine_two_term_kernel<<<elem_blocks(n), threads, 0, stream>>>(x0, x1, w0, w1,
+                                                                  out, n);
   check_elem_launch("combine_two_term");
 }
 
@@ -122,13 +124,14 @@ __global__ void combine_two_term_complex_kernel(const T *x0, const T *x1,
 
 template <typename T>
 void launch_combine_two_term_complex(const T *x0, const T *x1, const T *w0,
-                                     const T *w1, T *out, std::size_t n) {
+                                     const T *w1, T *out, std::size_t n,
+                                     gpuStream_t stream = nullptr) {
   if (n == 0) {
     return;
   }
   constexpr int threads = 256;
-  combine_two_term_complex_kernel<<<elem_blocks(n), threads>>>(x0, x1, w0, w1, out,
-                                                               n);
+  combine_two_term_complex_kernel<<<elem_blocks(n), threads, 0, stream>>>(
+      x0, x1, w0, w1, out, n);
   check_elem_launch("combine_two_term_complex");
 }
 
@@ -144,22 +147,25 @@ __global__ void combine_two_term_real_kernel(const T *x0, const T *x1, const T *
 
 template <typename T>
 void launch_combine_two_term_real(const T *x0, const T *x1, const T *w0, const T *w1,
-                                  T *out, std::size_t n) {
+                                  T *out, std::size_t n,
+                                  gpuStream_t stream = nullptr) {
   if (n == 0) {
     return;
   }
   constexpr int threads = 256;
-  combine_two_term_real_kernel<<<elem_blocks(n), threads>>>(x0, x1, w0, w1, out, n);
+  combine_two_term_real_kernel<<<elem_blocks(n), threads, 0, stream>>>(x0, x1, w0,
+                                                                       w1, out, n);
   check_elem_launch("combine_two_term_real");
 }
 
 template <typename T>
-void launch_axpy_fill(T *out, const T *x, T alpha, T beta, std::size_t n) {
+void launch_axpy_fill(T *out, const T *x, T alpha, T beta, std::size_t n,
+                      gpuStream_t stream = nullptr) {
   if (n == 0) {
     return;
   }
   constexpr int threads = 256;
-  axpy_fill_kernel<<<elem_blocks(n), threads>>>(out, x, alpha, beta, n);
+  axpy_fill_kernel<<<elem_blocks(n), threads, 0, stream>>>(out, x, alpha, beta, n);
   check_elem_launch("axpy_fill");
 }
 
@@ -457,6 +463,74 @@ void axpy_fill_cuda_impl(float *out, const float *x, float alpha, float beta,
                          std::size_t n) {
   launch_axpy_fill(out, x, alpha, beta, n);
 }
+void multiply_complex_real_cuda_impl(const std::complex<double> *a, const double *b,
+                                     std::complex<double> *out, std::size_t n,
+                                     gpuStream_t stream) {
+  launch_multiply_complex_real(reinterpret_cast<const double *>(a), b,
+                               reinterpret_cast<double *>(out), n, stream);
+}
+void multiply_complex_real_cuda_impl(const std::complex<float> *a, const float *b,
+                                     std::complex<float> *out, std::size_t n,
+                                     gpuStream_t stream) {
+  launch_multiply_complex_real(reinterpret_cast<const float *>(a), b,
+                               reinterpret_cast<float *>(out), n, stream);
+}
+void combine_two_term_cuda_impl(const std::complex<double> *x0,
+                                const std::complex<double> *x1, const double *w0,
+                                const double *w1, std::complex<double> *out,
+                                std::size_t n, gpuStream_t stream) {
+  launch_combine_two_term(reinterpret_cast<const double *>(x0),
+                          reinterpret_cast<const double *>(x1), w0, w1,
+                          reinterpret_cast<double *>(out), n, stream);
+}
+void combine_two_term_cuda_impl(const std::complex<float> *x0,
+                                const std::complex<float> *x1, const float *w0,
+                                const float *w1, std::complex<float> *out,
+                                std::size_t n, gpuStream_t stream) {
+  launch_combine_two_term(reinterpret_cast<const float *>(x0),
+                          reinterpret_cast<const float *>(x1), w0, w1,
+                          reinterpret_cast<float *>(out), n, stream);
+}
+void combine_two_term_cuda_impl(const std::complex<double> *x0,
+                                const std::complex<double> *x1,
+                                const std::complex<double> *w0,
+                                const std::complex<double> *w1,
+                                std::complex<double> *out, std::size_t n,
+                                gpuStream_t stream) {
+  launch_combine_two_term_complex(
+      reinterpret_cast<const double *>(x0), reinterpret_cast<const double *>(x1),
+      reinterpret_cast<const double *>(w0), reinterpret_cast<const double *>(w1),
+      reinterpret_cast<double *>(out), n, stream);
+}
+void combine_two_term_cuda_impl(const std::complex<float> *x0,
+                                const std::complex<float> *x1,
+                                const std::complex<float> *w0,
+                                const std::complex<float> *w1,
+                                std::complex<float> *out, std::size_t n,
+                                gpuStream_t stream) {
+  launch_combine_two_term_complex(
+      reinterpret_cast<const float *>(x0), reinterpret_cast<const float *>(x1),
+      reinterpret_cast<const float *>(w0), reinterpret_cast<const float *>(w1),
+      reinterpret_cast<float *>(out), n, stream);
+}
+void combine_two_term_cuda_impl(const double *x0, const double *x1, const double *w0,
+                                const double *w1, double *out, std::size_t n,
+                                gpuStream_t stream) {
+  launch_combine_two_term_real(x0, x1, w0, w1, out, n, stream);
+}
+void combine_two_term_cuda_impl(const float *x0, const float *x1, const float *w0,
+                                const float *w1, float *out, std::size_t n,
+                                gpuStream_t stream) {
+  launch_combine_two_term_real(x0, x1, w0, w1, out, n, stream);
+}
+void axpy_fill_cuda_impl(double *out, const double *x, double alpha, double beta,
+                         std::size_t n, gpuStream_t stream) {
+  launch_axpy_fill(out, x, alpha, beta, n, stream);
+}
+void axpy_fill_cuda_impl(float *out, const float *x, float alpha, float beta,
+                         std::size_t n, gpuStream_t stream) {
+  launch_axpy_fill(out, x, alpha, beta, n, stream);
+}
 void amplitude_pair_etd1_cuda_impl(const std::complex<double> *re_hat,
                                    const std::complex<double> *im_hat,
                                    const std::complex<double> *nre_hat,
@@ -557,6 +631,74 @@ void axpy_fill_hip_impl(double *out, const double *x, double alpha, double beta,
 void axpy_fill_hip_impl(float *out, const float *x, float alpha, float beta,
                         std::size_t n) {
   launch_axpy_fill(out, x, alpha, beta, n);
+}
+void multiply_complex_real_hip_impl(const std::complex<double> *a, const double *b,
+                                    std::complex<double> *out, std::size_t n,
+                                    gpuStream_t stream) {
+  launch_multiply_complex_real(reinterpret_cast<const double *>(a), b,
+                               reinterpret_cast<double *>(out), n, stream);
+}
+void multiply_complex_real_hip_impl(const std::complex<float> *a, const float *b,
+                                    std::complex<float> *out, std::size_t n,
+                                    gpuStream_t stream) {
+  launch_multiply_complex_real(reinterpret_cast<const float *>(a), b,
+                               reinterpret_cast<float *>(out), n, stream);
+}
+void combine_two_term_hip_impl(const std::complex<double> *x0,
+                               const std::complex<double> *x1, const double *w0,
+                               const double *w1, std::complex<double> *out,
+                               std::size_t n, gpuStream_t stream) {
+  launch_combine_two_term(reinterpret_cast<const double *>(x0),
+                          reinterpret_cast<const double *>(x1), w0, w1,
+                          reinterpret_cast<double *>(out), n, stream);
+}
+void combine_two_term_hip_impl(const std::complex<float> *x0,
+                               const std::complex<float> *x1, const float *w0,
+                               const float *w1, std::complex<float> *out,
+                               std::size_t n, gpuStream_t stream) {
+  launch_combine_two_term(reinterpret_cast<const float *>(x0),
+                          reinterpret_cast<const float *>(x1), w0, w1,
+                          reinterpret_cast<float *>(out), n, stream);
+}
+void combine_two_term_hip_impl(const std::complex<double> *x0,
+                               const std::complex<double> *x1,
+                               const std::complex<double> *w0,
+                               const std::complex<double> *w1,
+                               std::complex<double> *out, std::size_t n,
+                               gpuStream_t stream) {
+  launch_combine_two_term_complex(
+      reinterpret_cast<const double *>(x0), reinterpret_cast<const double *>(x1),
+      reinterpret_cast<const double *>(w0), reinterpret_cast<const double *>(w1),
+      reinterpret_cast<double *>(out), n, stream);
+}
+void combine_two_term_hip_impl(const std::complex<float> *x0,
+                               const std::complex<float> *x1,
+                               const std::complex<float> *w0,
+                               const std::complex<float> *w1,
+                               std::complex<float> *out, std::size_t n,
+                               gpuStream_t stream) {
+  launch_combine_two_term_complex(
+      reinterpret_cast<const float *>(x0), reinterpret_cast<const float *>(x1),
+      reinterpret_cast<const float *>(w0), reinterpret_cast<const float *>(w1),
+      reinterpret_cast<float *>(out), n, stream);
+}
+void combine_two_term_hip_impl(const double *x0, const double *x1, const double *w0,
+                               const double *w1, double *out, std::size_t n,
+                               gpuStream_t stream) {
+  launch_combine_two_term_real(x0, x1, w0, w1, out, n, stream);
+}
+void combine_two_term_hip_impl(const float *x0, const float *x1, const float *w0,
+                               const float *w1, float *out, std::size_t n,
+                               gpuStream_t stream) {
+  launch_combine_two_term_real(x0, x1, w0, w1, out, n, stream);
+}
+void axpy_fill_hip_impl(double *out, const double *x, double alpha, double beta,
+                        std::size_t n, gpuStream_t stream) {
+  launch_axpy_fill(out, x, alpha, beta, n, stream);
+}
+void axpy_fill_hip_impl(float *out, const float *x, float alpha, float beta,
+                        std::size_t n, gpuStream_t stream) {
+  launch_axpy_fill(out, x, alpha, beta, n, stream);
 }
 void amplitude_pair_etd1_hip_impl(const std::complex<double> *re_hat,
                                   const std::complex<double> *im_hat,

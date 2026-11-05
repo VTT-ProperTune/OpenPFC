@@ -72,6 +72,25 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
         CUDA_STANDARD_REQUIRED ON)
     add_test(NAME CUDA_SpectralETD COMMAND test_spectral_etd_system_cuda)
 
+    add_executable(test_spectral_etd_graph_cuda
+        test_spectral_etd_graph.cpp
+        spectral_etd_toys_pointwise.cu)
+    target_include_directories(test_spectral_etd_graph_cuda PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+        ${CMAKE_SOURCE_DIR}/tests
+        ${CMAKE_SOURCE_DIR}/include)
+    target_link_libraries(test_spectral_etd_graph_cuda PRIVATE
+        Catch2::Catch2 openpfc openpfc_gpu_kernels CUDA::cudart MPI::MPI_CXX
+        Heffte::Heffte)
+    target_compile_definitions(test_spectral_etd_graph_cuda PRIVATE
+        OPENPFC_TEST_SPECTRAL_GRAPH_CUDA)
+    set_target_properties(test_spectral_etd_graph_cuda PROPERTIES
+        CUDA_STANDARD 20
+        CUDA_STANDARD_REQUIRED ON)
+    add_test(NAME CUDA_SpectralETDGraph COMMAND test_spectral_etd_graph_cuda)
+    set_tests_properties(CUDA_SpectralETDGraph PROPERTIES
+        TIMEOUT 180 SKIP_RETURN_CODE 4)
+
     add_executable(test_amplitude_spectral_etd1_cuda
         test_amplitude_spectral_etd1_cuda.cpp)
     target_include_directories(test_amplitude_spectral_etd1_cuda PRIVATE
@@ -309,6 +328,25 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
             HIP_STANDARD 20
             HIP_STANDARD_REQUIRED ON)
         add_test(NAME HIP_SpectralETD COMMAND test_spectral_etd_system_hip)
+
+        add_executable(test_spectral_etd_graph_hip
+            test_spectral_etd_graph.cpp
+            spectral_etd_toys_pointwise.hip)
+        target_include_directories(test_spectral_etd_graph_hip PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+            ${CMAKE_SOURCE_DIR}/tests
+            ${CMAKE_SOURCE_DIR}/include)
+        target_link_libraries(test_spectral_etd_graph_hip PRIVATE
+            Catch2::Catch2 openpfc openpfc_hip_kernels hip::host MPI::MPI_CXX
+            Heffte::Heffte)
+        target_compile_definitions(test_spectral_etd_graph_hip PRIVATE
+            OPENPFC_TEST_SPECTRAL_GRAPH_HIP)
+        set_target_properties(test_spectral_etd_graph_hip PROPERTIES
+            HIP_STANDARD 20
+            HIP_STANDARD_REQUIRED ON)
+        add_test(NAME HIP_SpectralETDGraph COMMAND test_spectral_etd_graph_hip)
+        set_tests_properties(HIP_SpectralETDGraph PROPERTIES
+            TIMEOUT 180 SKIP_RETURN_CODE 4)
 
         target_include_directories(test_spectral_flux_hip PRIVATE
             ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu

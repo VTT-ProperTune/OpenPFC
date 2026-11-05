@@ -27,6 +27,7 @@
 #include <complex>
 #include <cstddef>
 #include <span>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -36,6 +37,9 @@
 #include <openpfc/kernel/simulation/spectral_pointwise.hpp>
 
 namespace pfc::sim {
+
+/// True for `CUDASpace` and `HIPSpace`. The device header specializes this.
+template <class MemorySpace> struct is_device_spectral_space : std::false_type {};
 
 /**
  * @brief Per-memory-space operations for the spectral ETD driver.

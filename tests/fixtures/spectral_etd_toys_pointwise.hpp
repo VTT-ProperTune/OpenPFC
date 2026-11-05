@@ -37,6 +37,8 @@ struct MeanFieldToyPointwise {
 /// Moving-frame toy: \f$N = p_3\psi^2 + q_3\psi_{MF}^2 - P{*}\psi + g\,(x - t)\f$
 /// with free-energy density \f$\tfrac12\psi^2\f$.
 struct MovingFrameToyPointwise {
+  /// `nonlinearity` reads `SpectralCell::t`, so a captured step cannot replay.
+  static constexpr bool time_dependent_coefficients = true;
   double p3{-0.5};
   double q3{0.1};
   double g{0.01};

@@ -43,6 +43,7 @@
  * attempt and reduces it (`last_free_energy_sum`, `last_free_energy`).
  */
 
+#include <algorithm>
 #include <complex>
 #include <cstddef>
 #include <span>
@@ -86,6 +87,9 @@ struct SpectralETDOptions {
   std::string fe_name{"fe_density"};
   bool dealias{false};           ///< Orszag 2/3-rule mask on \f$\hat N\f$
   MPI_Comm comm{MPI_COMM_WORLD}; ///< reduction communicator for observables
+  /// Linear symbols or the pointwise term change with `t`. `step_n` refuses
+  /// this: a captured graph would replay the coefficients of the first step.
+  bool time_dependent_coefficients{false};
 };
 
 /**
@@ -100,6 +104,15 @@ struct SpectralStepAttempt {
   double t1{};
   bool success{false};
 };
+
+/// True when `T::time_dependent_coefficients` is present and true.
+template <class T> constexpr bool declares_time_dependent() {
+  if constexpr (requires { T::time_dependent_coefficients; }) {
+    return static_cast<bool>(T::time_dependent_coefficients);
+  } else {
+    return false;
+  }
+}
 
 /**
  * @brief Pseudo-spectral ETD1 system for one real field and its Fourier hat.
@@ -154,6 +167,7 @@ public:
 
   SpectralETDSystem(const SpectralETDSystem &) = delete;
   SpectralETDSystem &operator=(const SpectralETDSystem &) = delete;
+  ~SpectralETDSystem() { release_graph(); }
 
   /**
    * @brief Build the k-space diagonals for the current `dt` and upload them.
@@ -162,6 +176,7 @@ public:
    * parameter change on `physics()`.
    */
   void prepare_operators() {
+    release_graph();
     const auto outbox = m_fft.get_outbox_bounds();
     const auto &dom = psi().domain();
     const std::size_t n = m_fft.size_outbox();
@@ -277,6 +292,7 @@ public:
     auto &n_real = real_field(m_opt.n_name);
     auto &n_hat = complex_field(m_opt.n_hat_name);
 
+    note_launch();
     Ops::forward(m_fft, psi, psi_hat);
     ++m_forward_count;
 
@@ -286,14 +302,16 @@ public:
     if constexpr (has_mean_field) {
       psi_mf = &real_field(m_opt.psi_mf_name);
       auto &psi_mf_hat = complex_field(m_opt.psi_mf_hat_name);
-      Ops::multiply(psi_hat, m_filter_dev, psi_mf_hat);
+      etd_multiply(psi_hat, m_filter_dev, psi_mf_hat);
+      note_launch();
       Ops::backward(m_fft, psi_mf_hat, *psi_mf);
       ++m_backward_count;
     }
     if constexpr (has_correlation) {
       p_star = &real_field(m_opt.p_star_name);
       auto &p_hat = complex_field(m_opt.p_hat_name);
-      Ops::multiply(psi_hat, m_kernel_dev, p_hat);
+      etd_multiply(psi_hat, m_kernel_dev, p_hat);
+      note_launch();
       Ops::backward(m_fft, p_hat, *p_star);
       ++m_backward_count;
     }
@@ -301,23 +319,23 @@ public:
       fe = &real_field(m_opt.fe_name);
     }
 
-    Ops::pointwise(m_geometry, t, psi, psi_mf, p_star, n_real, fe, m_pointwise);
+    etd_pointwise(m_geometry, t, psi, psi_mf, p_star, n_real, fe, m_pointwise);
     ++m_nonlinear_count;
+    note_launch();
     Ops::forward(m_fft, n_real, n_hat);
     ++m_forward_count;
 
     if (m_opt.dealias) {
-      Ops::multiply(n_hat, m_mask_dev, m_n_masked);
+      etd_multiply(n_hat, m_mask_dev, m_n_masked);
       if constexpr (has_complex_linear) {
-        Ops::combine(psi_hat, m_n_masked, m_exp_c_dev, m_n_weight_c_dev,
-                     m_candidate);
+        etd_combine(psi_hat, m_n_masked, m_exp_c_dev, m_n_weight_c_dev, m_candidate);
       } else {
-        Ops::combine(psi_hat, m_n_masked, m_exp_dev, m_n_weight_dev, m_candidate);
+        etd_combine(psi_hat, m_n_masked, m_exp_dev, m_n_weight_dev, m_candidate);
       }
     } else if constexpr (has_complex_linear) {
-      Ops::combine(psi_hat, n_hat, m_exp_c_dev, m_n_weight_c_dev, m_candidate);
+      etd_combine(psi_hat, n_hat, m_exp_c_dev, m_n_weight_c_dev, m_candidate);
     } else {
-      Ops::combine(psi_hat, n_hat, m_exp_dev, m_n_weight_dev, m_candidate);
+      etd_combine(psi_hat, n_hat, m_exp_dev, m_n_weight_dev, m_candidate);
     }
 
     if constexpr (has_free_energy) {
@@ -330,6 +348,7 @@ public:
   void commit() {
     auto &psi_hat = complex_field(m_opt.psi_hat_name);
     Ops::swap(psi_hat, m_candidate);
+    note_launch();
     Ops::backward(m_fft, psi_hat, psi());
     ++m_backward_count;
   }
@@ -341,12 +360,76 @@ public:
    * @brief One ETD1 step (`attempt` + `commit`). Returns `t + dt`.
    */
   double step(double t) {
+    if (!m_capturing) {
+      release_graph();
+    }
     const auto a = attempt(t);
     if (!a.success) {
       throw std::runtime_error("SpectralETDSystem: ETD1 attempt failed");
     }
     commit();
     return a.t1;
+  }
+
+  /**
+   * @brief Bind the stream used by the elementwise kernels.
+   *
+   * The device FFT must be constructed on this same stream. `nullptr` is the
+   * legacy stream, and it is the default. Graph replay requires a non-legacy
+   * stream because capture cannot record the legacy stream.
+   */
+  template <class Stream> void set_stream(Stream stream) {
+    if (m_capturing) {
+      throw std::logic_error("SpectralETDSystem::set_stream during graph capture");
+    }
+    release_graph();
+    if constexpr (std::is_null_pointer_v<Stream>) {
+      m_compute_stream = nullptr;
+    } else {
+      m_compute_stream = reinterpret_cast<void *>(stream);
+    }
+  }
+
+  /**
+   * @brief Advance `n` steps, capturing the first and replaying the rest.
+   *
+   * The first call records one step and replays that record `n` times. Capture
+   * does not execute the launches. Time-dependent coefficients and a host
+   * free-energy reduction are refused: both make the recorded launches a
+   * different step from the next one. Returns the time after `n` steps.
+   */
+  double step_n(double t, int n) {
+    if (n < 1) {
+      throw std::invalid_argument("SpectralETDSystem::step_n: n must be >= 1");
+    }
+    if (m_opt.time_dependent_coefficients || declares_time_dependent<Physics>() ||
+        declares_time_dependent<Pointwise>()) {
+      throw std::invalid_argument(
+          "SpectralETDSystem::step_n refuses time-dependent coefficients");
+    }
+    if constexpr (has_free_energy) {
+      throw std::invalid_argument(
+          "SpectralETDSystem::step_n refuses a host free-energy reduction");
+    }
+    if constexpr (!is_device_spectral_space<MemorySpace>::value) {
+      throw std::logic_error(
+          "SpectralETDSystem::step_n requires a device memory space");
+    } else {
+      return step_n_device(t, n);
+    }
+  }
+
+  /// Elementwise and transform launches recorded while the graph was captured.
+  [[nodiscard]] int captured_op_launches() const noexcept {
+    return m_captured_launches;
+  }
+  /// Nodes in the captured graph, including the device FFT.
+  [[nodiscard]] std::size_t graph_node_count() const noexcept {
+    return m_graph_nodes;
+  }
+  /// Kernel nodes in the captured graph.
+  [[nodiscard]] std::size_t graph_kernel_nodes() const noexcept {
+    return m_graph_kernel_nodes;
   }
 
   // ---- queries ----------------------------------------------------------
@@ -481,6 +564,112 @@ private:
     add_declared_field<T, MemorySpace>(m_state, name, domain, box, 0);
   }
 
+  void note_launch() noexcept {
+    if (m_capturing) {
+      ++m_captured_launches;
+    }
+  }
+
+  template <class... Args> void etd_multiply(Args &&...args) {
+    note_launch();
+    if constexpr (is_device_spectral_space<MemorySpace>::value) {
+      Ops::multiply(std::forward<Args>(args)..., m_compute_stream);
+    } else {
+      Ops::multiply(std::forward<Args>(args)...);
+    }
+  }
+
+  template <class... Args> void etd_combine(Args &&...args) {
+    note_launch();
+    if constexpr (is_device_spectral_space<MemorySpace>::value) {
+      Ops::combine(std::forward<Args>(args)..., m_compute_stream);
+    } else {
+      Ops::combine(std::forward<Args>(args)...);
+    }
+  }
+
+  template <class... Args> void etd_pointwise(Args &&...args) {
+    note_launch();
+    if constexpr (is_device_spectral_space<MemorySpace>::value) {
+      Ops::pointwise(std::forward<Args>(args)..., m_compute_stream);
+    } else {
+      Ops::pointwise(std::forward<Args>(args)...);
+    }
+  }
+
+  void release_graph() noexcept {
+    if constexpr (is_device_spectral_space<MemorySpace>::value) {
+      if (m_graph != nullptr || m_exec != nullptr) {
+        Ops::destroy_graph(m_graph, m_exec);
+        m_graph = nullptr;
+        m_exec = nullptr;
+        m_graph_nodes = 0;
+        m_graph_kernel_nodes = 0;
+      }
+    }
+  }
+
+  double step_n_device(double t, int n) {
+    if (m_compute_stream == nullptr) {
+      throw std::invalid_argument(
+          "SpectralETDSystem::step_n requires an explicit non-legacy stream");
+    }
+    if (m_exec == nullptr) {
+      // HeFFTe builds the cuFFT/rocFFT plan on the first execute of each
+      // direction, and that allocates. Capture rejects an allocation, so both
+      // directions run once here. The backward overwrites `psi`; the saved
+      // field is restored before the record. Capture itself does not execute.
+      psi().sync_to_device();
+      std::vector<double> saved_psi;
+      psi().with_host_read([&](double const *data, std::size_t count) {
+        saved_psi.assign(data, data + count);
+      });
+      Ops::forward(m_fft, psi(), psi_hat());
+      Ops::backward(m_fft, psi_hat(), psi());
+      Ops::stream_synchronize(m_compute_stream);
+      Ops::device_synchronize();
+      psi().with_host_view([&](double *data, std::size_t count) {
+        std::copy(saved_psi.begin(), saved_psi.end(), data);
+      });
+      psi().sync_to_device();
+
+      m_capturing = true;
+      m_captured_launches = 0;
+      const int forwards = m_forward_count;
+      const int backwards = m_backward_count;
+      const int nonlinear = m_nonlinear_count;
+      Ops::capture_begin(m_compute_stream);
+      try {
+        step(t);
+      } catch (...) {
+        m_capturing = false;
+        Ops::capture_abort(m_compute_stream);
+        throw;
+      }
+      const auto captured = Ops::capture_end(m_compute_stream);
+      m_capturing = false;
+      m_graph = captured.graph;
+      m_exec = captured.exec;
+      m_graph_nodes = captured.nodes;
+      m_graph_kernel_nodes = captured.kernel_nodes;
+      m_forward_delta = m_forward_count - forwards;
+      m_backward_delta = m_backward_count - backwards;
+      m_nonlinear_delta = m_nonlinear_count - nonlinear;
+      m_forward_count = forwards;
+      m_backward_count = backwards;
+      m_nonlinear_count = nonlinear;
+    }
+    for (int i = 0; i < n; ++i) {
+      Ops::replay(m_exec, m_compute_stream);
+      Ops::stream_synchronize(m_compute_stream);
+      m_forward_count += m_forward_delta;
+      m_backward_count += m_backward_delta;
+      m_nonlinear_count += m_nonlinear_delta;
+      t += m_dt;
+    }
+    return t;
+  }
+
   void reduce_free_energy(RealField &fe) {
     m_fe_sum = sum_owned(fe);
     int mpi_ready = 0;
@@ -527,6 +716,16 @@ private:
   int m_forward_count{0};
   int m_backward_count{0};
   int m_nonlinear_count{0};
+  void *m_compute_stream{nullptr};
+  void *m_graph{nullptr};
+  void *m_exec{nullptr};
+  std::size_t m_graph_nodes{0};
+  std::size_t m_graph_kernel_nodes{0};
+  int m_captured_launches{0};
+  int m_forward_delta{0};
+  int m_backward_delta{0};
+  int m_nonlinear_delta{0};
+  bool m_capturing{false};
 };
 
 } // namespace pfc::sim

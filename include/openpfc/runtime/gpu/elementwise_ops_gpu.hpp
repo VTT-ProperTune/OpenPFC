@@ -20,6 +20,7 @@
 #if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
 
 #include <openpfc/kernel/field/grain_interface.hpp>
+#include <openpfc/runtime/gpu/gpu_api.hpp>
 
 #include <complex>
 #include <cstddef>
@@ -57,6 +58,40 @@ void axpy_fill_cuda_impl(double *out, const double *x, double alpha, double beta
                          std::size_t n);
 void axpy_fill_cuda_impl(float *out, const float *x, float alpha, float beta,
                          std::size_t n);
+void multiply_complex_real_cuda_impl(const std::complex<double> *a, const double *b,
+                                     std::complex<double> *out, std::size_t n,
+                                     gpuStream_t stream);
+void multiply_complex_real_cuda_impl(const std::complex<float> *a, const float *b,
+                                     std::complex<float> *out, std::size_t n,
+                                     gpuStream_t stream);
+void combine_two_term_cuda_impl(const std::complex<double> *x0,
+                                const std::complex<double> *x1, const double *w0,
+                                const double *w1, std::complex<double> *out,
+                                std::size_t n, gpuStream_t stream);
+void combine_two_term_cuda_impl(const std::complex<double> *x0,
+                                const std::complex<double> *x1,
+                                const std::complex<double> *w0,
+                                const std::complex<double> *w1,
+                                std::complex<double> *out, std::size_t n,
+                                gpuStream_t stream);
+void combine_two_term_cuda_impl(const std::complex<float> *x0,
+                                const std::complex<float> *x1, const float *w0,
+                                const float *w1, std::complex<float> *out,
+                                std::size_t n, gpuStream_t stream);
+void combine_two_term_cuda_impl(const std::complex<float> *x0,
+                                const std::complex<float> *x1, const float *w0,
+                                const float *w1, std::complex<float> *out,
+                                std::size_t n, gpuStream_t stream);
+void combine_two_term_cuda_impl(const double *x0, const double *x1, const double *w0,
+                                const double *w1, double *out, std::size_t n,
+                                gpuStream_t stream);
+void combine_two_term_cuda_impl(const float *x0, const float *x1, const float *w0,
+                                const float *w1, float *out, std::size_t n,
+                                gpuStream_t stream);
+void axpy_fill_cuda_impl(double *out, const double *x, double alpha, double beta,
+                         std::size_t n, gpuStream_t stream);
+void axpy_fill_cuda_impl(float *out, const float *x, float alpha, float beta,
+                         std::size_t n, gpuStream_t stream);
 void amplitude_pair_etd1_cuda_impl(const std::complex<double> *re_hat,
                                    const std::complex<double> *im_hat,
                                    const std::complex<double> *nre_hat,
@@ -109,6 +144,40 @@ void axpy_fill_hip_impl(double *out, const double *x, double alpha, double beta,
                         std::size_t n);
 void axpy_fill_hip_impl(float *out, const float *x, float alpha, float beta,
                         std::size_t n);
+void multiply_complex_real_hip_impl(const std::complex<double> *a, const double *b,
+                                    std::complex<double> *out, std::size_t n,
+                                    gpuStream_t stream);
+void multiply_complex_real_hip_impl(const std::complex<float> *a, const float *b,
+                                    std::complex<float> *out, std::size_t n,
+                                    gpuStream_t stream);
+void combine_two_term_hip_impl(const std::complex<double> *x0,
+                               const std::complex<double> *x1, const double *w0,
+                               const double *w1, std::complex<double> *out,
+                               std::size_t n, gpuStream_t stream);
+void combine_two_term_hip_impl(const std::complex<double> *x0,
+                               const std::complex<double> *x1,
+                               const std::complex<double> *w0,
+                               const std::complex<double> *w1,
+                               std::complex<double> *out, std::size_t n,
+                               gpuStream_t stream);
+void combine_two_term_hip_impl(const std::complex<float> *x0,
+                               const std::complex<float> *x1, const float *w0,
+                               const float *w1, std::complex<float> *out,
+                               std::size_t n, gpuStream_t stream);
+void combine_two_term_hip_impl(const std::complex<float> *x0,
+                               const std::complex<float> *x1, const float *w0,
+                               const float *w1, std::complex<float> *out,
+                               std::size_t n, gpuStream_t stream);
+void combine_two_term_hip_impl(const double *x0, const double *x1, const double *w0,
+                               const double *w1, double *out, std::size_t n,
+                               gpuStream_t stream);
+void combine_two_term_hip_impl(const float *x0, const float *x1, const float *w0,
+                               const float *w1, float *out, std::size_t n,
+                               gpuStream_t stream);
+void axpy_fill_hip_impl(double *out, const double *x, double alpha, double beta,
+                        std::size_t n, gpuStream_t stream);
+void axpy_fill_hip_impl(float *out, const float *x, float alpha, float beta,
+                        std::size_t n, gpuStream_t stream);
 void amplitude_pair_etd1_hip_impl(const std::complex<double> *re_hat,
                                   const std::complex<double> *im_hat,
                                   const std::complex<double> *nre_hat,

@@ -39,7 +39,8 @@ using FFT_CUDA = FFT_Impl<heffte::backend::cufft, IDeviceFFT<pfc::CUDASpace>>;
 
 [[nodiscard]] FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id,
                                    MPI_Comm comm, int r2c_direction,
-                                   const heffte::plan_options &options);
+                                   const heffte::plan_options &options,
+                                   void *stream = nullptr);
 
 [[nodiscard]] FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id,
                                    MPI_Comm comm = MPI_COMM_WORLD,
@@ -59,7 +60,8 @@ using FFT_HIP = FFT_Impl<heffte::backend::rocfft, IDeviceFFT<pfc::HIPSpace>>;
 
 [[nodiscard]] FFT_HIP create_hip(const Decomposition &decomposition, int rank_id,
                                  MPI_Comm comm, int r2c_direction,
-                                 const heffte::plan_options &options);
+                                 const heffte::plan_options &options,
+                                 void *stream = nullptr);
 
 [[nodiscard]] FFT_HIP create_hip(const Decomposition &decomposition, int rank_id,
                                  MPI_Comm comm = MPI_COMM_WORLD,

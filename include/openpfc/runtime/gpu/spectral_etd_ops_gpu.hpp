@@ -28,6 +28,7 @@
 #include <span>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/fft/fft_interface.hpp>
@@ -39,6 +40,13 @@
 #include <openpfc/runtime/gpu/spectral_pointwise_gpu.hpp>
 
 namespace pfc::sim {
+
+#if defined(OpenPFC_ENABLE_CUDA)
+template <> struct is_device_spectral_space<pfc::CUDASpace> : std::true_type {};
+#endif
+#if defined(OpenPFC_ENABLE_HIP)
+template <> struct is_device_spectral_space<pfc::HIPSpace> : std::true_type {};
+#endif
 
 namespace detail {
 
@@ -77,38 +85,40 @@ template <class MemorySpace> struct DeviceSpectralETDOps {
   }
 
   static void multiply(const ComplexField &in, const real_coeffs &w,
-                       ComplexField &out) {
-    multiply_raw(in.data(), w.data(), out.data(), in.size());
+                       ComplexField &out, void *stream = nullptr) {
+    multiply_raw(in.data(), w.data(), out.data(), in.size(), stream);
     out.note_device_write();
   }
   static void multiply(const ComplexField &in, const real_coeffs &w,
-                       complex_scratch &out) {
-    multiply_raw(in.data(), w.data(), out.data(), in.size());
+                       complex_scratch &out, void *stream = nullptr) {
+    multiply_raw(in.data(), w.data(), out.data(), in.size(), stream);
   }
 
   static void combine(const ComplexField &u, const ComplexField &n_hat,
                       const real_coeffs &exp_Ldt, const real_coeffs &n_weight,
-                      complex_scratch &out) {
+                      complex_scratch &out, void *stream = nullptr) {
     combine_raw(u.data(), n_hat.data(), exp_Ldt.data(), n_weight.data(), out.data(),
-                u.size());
+                u.size(), stream);
   }
   static void combine(const ComplexField &u, const complex_scratch &n_hat,
                       const real_coeffs &exp_Ldt, const real_coeffs &n_weight,
-                      complex_scratch &out) {
+                      complex_scratch &out, void *stream = nullptr) {
     combine_raw(u.data(), n_hat.data(), exp_Ldt.data(), n_weight.data(), out.data(),
-                u.size());
+                u.size(), stream);
   }
   static void combine(const ComplexField &u, const ComplexField &n_hat,
                       const complex_scratch &exp_Ldt,
-                      const complex_scratch &n_weight, complex_scratch &out) {
+                      const complex_scratch &n_weight, complex_scratch &out,
+                      void *stream = nullptr) {
     combine_raw(u.data(), n_hat.data(), exp_Ldt.data(), n_weight.data(), out.data(),
-                u.size());
+                u.size(), stream);
   }
   static void combine(const ComplexField &u, const complex_scratch &n_hat,
                       const complex_scratch &exp_Ldt,
-                      const complex_scratch &n_weight, complex_scratch &out) {
+                      const complex_scratch &n_weight, complex_scratch &out,
+                      void *stream = nullptr) {
     combine_raw(u.data(), n_hat.data(), exp_Ldt.data(), n_weight.data(), out.data(),
-                u.size());
+                u.size(), stream);
   }
 
   /// Commit: the candidate buffer becomes the field's device storage (O(1)).
@@ -121,7 +131,7 @@ template <class MemorySpace> struct DeviceSpectralETDOps {
     requires SpectralPointwise<F>
   static void pointwise(const PointwiseGeometry &g, double t, RealField &psi,
                         RealField *psi_mf, RealField *p_star, RealField &n,
-                        RealField *fe, const F &f) {
+                        RealField *fe, const F &f, void *stream = nullptr) {
     psi.sync_to_device();
     if (psi_mf != nullptr) {
       psi_mf->sync_to_device();
@@ -132,55 +142,127 @@ template <class MemorySpace> struct DeviceSpectralETDOps {
     pfc::sim::gpu::spectral_pointwise_apply<F>(
         g, t, psi.data(), psi_mf != nullptr ? psi_mf->data() : nullptr,
         p_star != nullptr ? p_star->data() : nullptr, n.data(),
-        fe != nullptr ? fe->data() : nullptr, f, gpuStream_t{});
+        fe != nullptr ? fe->data() : nullptr, f, static_cast<gpuStream_t>(stream));
     n.note_device_write();
     if (fe != nullptr) {
       fe->note_device_write();
     }
   }
 
+  /// One captured spectral step. Pointers are an opaque vendor graph.
+  struct CapturedGraph {
+    void *graph{nullptr};
+    void *exec{nullptr};
+    std::size_t nodes{0};
+    std::size_t kernel_nodes{0};
+  };
+
+  static void device_synchronize() { GPU_CHECK(gpuDeviceSynchronize()); }
+
+  static void stream_synchronize(void *stream) {
+    GPU_CHECK(gpuStreamSynchronize(static_cast<gpuStream_t>(stream)));
+  }
+
+  static void capture_begin(void *stream) {
+    GPU_CHECK(gpuStreamBeginCapture(static_cast<gpuStream_t>(stream)));
+  }
+
+  static CapturedGraph capture_end(void *stream) {
+    gpuGraph_t graph{};
+    GPU_CHECK(gpuStreamEndCapture(static_cast<gpuStream_t>(stream), &graph));
+    gpuGraphExec_t exec{};
+    GPU_CHECK(gpuGraphInstantiate(&exec, graph));
+    std::size_t count = 0;
+    GPU_CHECK(gpuGraphGetNodes(graph, nullptr, &count));
+    std::vector<gpuGraphNode_t> nodes(count);
+    if (count > 0) {
+      GPU_CHECK(gpuGraphGetNodes(graph, nodes.data(), &count));
+    }
+    std::size_t kernels = 0;
+    for (std::size_t i = 0; i < count; ++i) {
+      gpuGraphNodeType kind{};
+      GPU_CHECK(gpuGraphNodeGetType(nodes[i], &kind));
+      if (kind == gpuGraphNodeTypeKernel) {
+        ++kernels;
+      }
+    }
+    return CapturedGraph{graph, exec, count, kernels};
+  }
+
+  static void capture_abort(void *stream) noexcept {
+    gpuGraph_t graph{};
+    if (gpuStreamEndCapture(static_cast<gpuStream_t>(stream), &graph) ==
+            gpuSuccess &&
+        graph != nullptr) {
+      gpuGraphDestroy(graph);
+    }
+  }
+
+  static void replay(void *exec, void *stream) {
+    GPU_CHECK(gpuGraphLaunch(static_cast<gpuGraphExec_t>(exec),
+                             static_cast<gpuStream_t>(stream)));
+  }
+
+  static void destroy_graph(void *graph, void *exec) noexcept {
+    if (exec != nullptr) {
+      gpuGraphExecDestroy(static_cast<gpuGraphExec_t>(exec));
+    }
+    if (graph != nullptr) {
+      gpuGraphDestroy(static_cast<gpuGraph_t>(graph));
+    }
+  }
+
 private:
+  static gpuStream_t as_stream(void *stream) {
+    return static_cast<gpuStream_t>(stream);
+  }
+
   static void multiply_raw(const Complex *in, const double *w, Complex *out,
-                           std::size_t n) {
+                           std::size_t n, void *stream) {
+    const auto s = as_stream(stream);
 #if defined(OpenPFC_ENABLE_CUDA)
     if constexpr (std::is_same_v<MemorySpace, pfc::CUDASpace>) {
-      pfc::multiply_complex_real_cuda_impl(in, w, out, n);
+      pfc::multiply_complex_real_cuda_impl(in, w, out, n, s);
       return;
     }
 #endif
 #if defined(OpenPFC_ENABLE_HIP)
     if constexpr (std::is_same_v<MemorySpace, pfc::HIPSpace>) {
-      pfc::multiply_complex_real_hip_impl(in, w, out, n);
+      pfc::multiply_complex_real_hip_impl(in, w, out, n, s);
       return;
     }
 #endif
   }
   static void combine_raw(const Complex *u, const Complex *n_hat, const double *e,
-                          const double *w, Complex *out, std::size_t n) {
+                          const double *w, Complex *out, std::size_t n,
+                          void *stream) {
+    const auto s = as_stream(stream);
 #if defined(OpenPFC_ENABLE_CUDA)
     if constexpr (std::is_same_v<MemorySpace, pfc::CUDASpace>) {
-      pfc::combine_two_term_cuda_impl(u, n_hat, e, w, out, n);
+      pfc::combine_two_term_cuda_impl(u, n_hat, e, w, out, n, s);
       return;
     }
 #endif
 #if defined(OpenPFC_ENABLE_HIP)
     if constexpr (std::is_same_v<MemorySpace, pfc::HIPSpace>) {
-      pfc::combine_two_term_hip_impl(u, n_hat, e, w, out, n);
+      pfc::combine_two_term_hip_impl(u, n_hat, e, w, out, n, s);
       return;
     }
 #endif
   }
   static void combine_raw(const Complex *u, const Complex *n_hat, const Complex *e,
-                          const Complex *w, Complex *out, std::size_t n) {
+                          const Complex *w, Complex *out, std::size_t n,
+                          void *stream) {
+    const auto s = as_stream(stream);
 #if defined(OpenPFC_ENABLE_CUDA)
     if constexpr (std::is_same_v<MemorySpace, pfc::CUDASpace>) {
-      pfc::combine_two_term_cuda_impl(u, n_hat, e, w, out, n);
+      pfc::combine_two_term_cuda_impl(u, n_hat, e, w, out, n, s);
       return;
     }
 #endif
 #if defined(OpenPFC_ENABLE_HIP)
     if constexpr (std::is_same_v<MemorySpace, pfc::HIPSpace>) {
-      pfc::combine_two_term_hip_impl(u, n_hat, e, w, out, n);
+      pfc::combine_two_term_hip_impl(u, n_hat, e, w, out, n, s);
       return;
     }
 #endif

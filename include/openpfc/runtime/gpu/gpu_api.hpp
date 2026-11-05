@@ -107,6 +107,39 @@ inline const char *gpuGetErrorString(gpuError_t error) {
   return cudaGetErrorString(error);
 }
 
+using gpuGraph_t = cudaGraph_t;
+using gpuGraphExec_t = cudaGraphExec_t;
+using gpuGraphNode_t = cudaGraphNode_t;
+using gpuGraphNodeType = cudaGraphNodeType;
+inline constexpr gpuGraphNodeType gpuGraphNodeTypeKernel = cudaGraphNodeTypeKernel;
+inline constexpr auto gpuStreamCaptureModeGlobal = cudaStreamCaptureModeGlobal;
+
+inline gpuError_t gpuStreamBeginCapture(gpuStream_t stream) {
+  return cudaStreamBeginCapture(stream, gpuStreamCaptureModeGlobal);
+}
+inline gpuError_t gpuStreamEndCapture(gpuStream_t stream, gpuGraph_t *graph) {
+  return cudaStreamEndCapture(stream, graph);
+}
+inline gpuError_t gpuGraphInstantiate(gpuGraphExec_t *exec, gpuGraph_t graph) {
+  return cudaGraphInstantiate(exec, graph, 0);
+}
+inline gpuError_t gpuGraphDestroy(gpuGraph_t graph) {
+  return cudaGraphDestroy(graph);
+}
+inline gpuError_t gpuGraphExecDestroy(gpuGraphExec_t exec) {
+  return cudaGraphExecDestroy(exec);
+}
+inline gpuError_t gpuGraphLaunch(gpuGraphExec_t exec, gpuStream_t stream) {
+  return cudaGraphLaunch(exec, stream);
+}
+inline gpuError_t gpuGraphGetNodes(gpuGraph_t graph, gpuGraphNode_t *nodes,
+                                   std::size_t *count) {
+  return cudaGraphGetNodes(graph, nodes, count);
+}
+inline gpuError_t gpuGraphNodeGetType(gpuGraphNode_t node, gpuGraphNodeType *type) {
+  return cudaGraphNodeGetType(node, type);
+}
+
 #elif defined(OPENPFC_GPU_API_HIP)
 
 using gpuStream_t = hipStream_t;
@@ -165,6 +198,42 @@ inline gpuError_t gpuDeviceSynchronize() { return hipDeviceSynchronize(); }
 inline gpuError_t gpuGetLastError() { return hipGetLastError(); }
 inline const char *gpuGetErrorString(gpuError_t error) {
   return hipGetErrorString(error);
+}
+
+using gpuGraph_t = hipGraph_t;
+using gpuGraphExec_t = hipGraphExec_t;
+using gpuGraphNode_t = hipGraphNode_t;
+using gpuGraphNodeType = hipGraphNodeType;
+inline constexpr gpuGraphNodeType gpuGraphNodeTypeKernel = hipGraphNodeTypeKernel;
+inline constexpr auto gpuStreamCaptureModeGlobal = hipStreamCaptureModeGlobal;
+
+inline gpuError_t gpuStreamBeginCapture(gpuStream_t stream) {
+  return hipStreamBeginCapture(stream, gpuStreamCaptureModeGlobal);
+}
+inline gpuError_t gpuStreamEndCapture(gpuStream_t stream, gpuGraph_t *graph) {
+  return hipStreamEndCapture(stream, graph);
+}
+inline gpuError_t gpuGraphInstantiate(gpuGraphExec_t *exec, gpuGraph_t graph) {
+  // ROCm 7 publishes the five-argument instantiate. The three-argument
+  // flags overload is CUDA's. A null error node and log keep the call
+  // equivalent to hipGraphInstantiateWithFlags(..., 0).
+  return hipGraphInstantiate(exec, graph, nullptr, nullptr, 0);
+}
+inline gpuError_t gpuGraphDestroy(gpuGraph_t graph) {
+  return hipGraphDestroy(graph);
+}
+inline gpuError_t gpuGraphExecDestroy(gpuGraphExec_t exec) {
+  return hipGraphExecDestroy(exec);
+}
+inline gpuError_t gpuGraphLaunch(gpuGraphExec_t exec, gpuStream_t stream) {
+  return hipGraphLaunch(exec, stream);
+}
+inline gpuError_t gpuGraphGetNodes(gpuGraph_t graph, gpuGraphNode_t *nodes,
+                                   std::size_t *count) {
+  return hipGraphGetNodes(graph, nodes, count);
+}
+inline gpuError_t gpuGraphNodeGetType(gpuGraphNode_t node, gpuGraphNodeType *type) {
+  return hipGraphNodeGetType(node, type);
 }
 
 #endif

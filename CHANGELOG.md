@@ -200,6 +200,15 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   still grow when that split is outside the stable timestep, while a
   chemical spinodal grows for a physical reason. The split stays the
   production scheme only inside the stable timestep (#803).
+- `SpectralETDSystem::step_n` records one GPU ETD1 step on an explicit
+  stream and replays that record. The default remains the legacy stream.
+  cuFFT and rocFFT plans are built before capture. Time-dependent
+  coefficients and a host free-energy reduction are refused. On g0002,
+  one A40, four replays match plain stepping bitwise: 34 graph nodes,
+  33 kernel nodes, and 5 recorded launches. On g0004, one MI210, the
+  same four steps match: 30 graph nodes, 21 kernel nodes, and 5
+  recorded launches (#383).
+
 - `build_grain_interface` stores one periodic grain-id field and a narrow
   band of face, triple, and higher junctions. Two nearest-seed maps, the
   27-image search and the min-image formula, share the lower-index tie.
