@@ -165,8 +165,8 @@ TEST_CASE("an affine map sends the disk to a flat ellipse", "[geometry][disk]") 
   add_disk_harmonic(mixed, {-2, 0, {0.0, 0.25}});
   require_complex(disk_laplacian(mixed, 0.3, 1.0), 0.0, 1.0e-12);
   // The induced inverse metric of the in-plane shear has g_xy=-0.5.
-  require_complex(disk_physical_laplacian(mixed, shear, 0.3, 1.0), -1.0,
-                  1.0e-12);
+  const auto mapped = disk_physical_laplacian(mixed, shear, 0.3, 1.0);
+  require_complex(mapped, -1.0, 1.0e-12);
 
   const auto tilt =
       affine_map_from_columns({1, 0, 1}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0});
