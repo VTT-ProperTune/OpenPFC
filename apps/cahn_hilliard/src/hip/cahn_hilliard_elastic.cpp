@@ -86,13 +86,11 @@ int main(int argc, char *argv[]) {
   } catch (const std::exception &e) {
     // A rank-local JSON/device exception must not leave peer ranks blocked
     // inside a later FFT or microelasticity MPI collective.
-    std::cerr << "cahn_hilliard_elastic_hip rank " << rank << ": " << e.what()
-              << "\n" << std::flush;
+    std::cerr << "CH HIP rank " << rank << ": " << e.what() << std::endl;
     MPI_Abort(MPI_COMM_WORLD, 2);
     return 2; // MPI_Abort is normally non-returning.
   } catch (...) {
-    std::cerr << "cahn_hilliard_elastic_hip rank " << rank
-              << ": unknown fatal error\n" << std::flush;
+    std::cerr << "CH HIP rank " << rank << ": unknown fatal error" << std::endl;
     MPI_Abort(MPI_COMM_WORLD, 2);
     return 2;
   }
