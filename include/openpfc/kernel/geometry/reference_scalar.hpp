@@ -13,7 +13,9 @@
  * holds. Overload resolution selects the chart.
  *
  * `sample_reference` reads the physical Laplacian at one station, the
- * reference integral, and the physical measure. An identity Jacobian uses
+ * reference integral, the Jacobian-scaled physical integral, and physical
+ * measure. Both integrals have explicit frame names so users cannot compute
+ * an invalid physical mean by mixing coordinate systems. Identity uses
  * the embedding Laplacian. Any other constant map uses the inverse metric
  * already implemented for that chart. This header does not add a boundary
  * condition, a material model, or a second Cartesian fast path.
@@ -45,9 +47,14 @@ struct BallStation {
 };
 
 struct ReferenceReading {
+  /// Physical-space scalar Laplacian at the requested station.
   std::complex<double> laplacian{};
-  std::complex<double> integral{};
-  double measure = 0;
+  /// Integral with the native reference chart's volume/area element.
+  std::complex<double> reference_integral{};
+  /// Integral with the constant map's physical volume/area element.
+  std::complex<double> physical_integral{};
+  /// Physical volume for 3D charts, physical area for the 2D disk.
+  double physical_measure = 0;
 };
 
 [[nodiscard]] inline std::complex<double>
@@ -99,14 +106,29 @@ reference_integral(const BallSeries &series) {
   return ball_physical_volume(domain, map);
 }
 
+/// Unmapped size of each chart, before the constant physical Jacobian.
+[[nodiscard]] inline double reference_domain_measure(const FilledCylinder &domain) {
+  return domain.volume();
+}
+[[nodiscard]] inline double reference_domain_measure(const FilledDisk &domain) {
+  return domain.area();
+}
+[[nodiscard]] inline double reference_domain_measure(const FilledBall &domain) {
+  return domain.volume();
+}
+
 /// One reading for whichever reference series the caller already holds.
+/// The combined integral/measure values use compatible coordinate frames.
 template <class Series, class Station>
 [[nodiscard]] inline ReferenceReading
 sample_reference(const Series &series, const AffineMap &map, Station station) {
   ReferenceReading reading;
   reading.laplacian = reference_laplacian(series, map, station);
-  reading.integral = reference_integral(series);
-  reading.measure = reference_measure(series.domain, map);
+  reading.reference_integral = reference_integral(series);
+  reading.physical_measure = reference_measure(series.domain, map);
+  const double reference_size = reference_domain_measure(series.domain);
+  reading.physical_integral =
+      reading.reference_integral * (reading.physical_measure / reference_size);
   return reading;
 }
 
