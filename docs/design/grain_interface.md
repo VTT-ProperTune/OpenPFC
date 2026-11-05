@@ -10,11 +10,13 @@ images. `assign_periodic_voronoi_min_image` uses the separated min-image
 formula. The two maps are the geometry check.
 
 Cells whose 26-neighbourhood contains another grain form the band. A site
-records the owner, the other material, the number of distinct ids, a unit
-normal that points from the owner toward the other cells, and a positive
-distance on that cell. Two ids are a face, three are a triple line, and
-more than three is a higher junction. There is no signed-distance field
-per grain, and the band does not move.
+records the owner, the other material, the number of distinct ids, a local
+neighbour-direction estimate, and a positive half-neighbour spacing. When the
+neighbour votes cancel, the normal estimate is zero rather than an invented
+direction. These quantities are **not** an exact interface normal or a true
+signed-distance solution. Two ids are a face, three a triple line, and more
+than three a higher junction under this local 26-neighbour classification.
+There is no signed-distance field per grain, and the band does not move.
 
 `compact_storage_bytes` is the host grain-id field, the band, and the
 per-grain totals. `dense_level_set_bytes` is the rejected layout of one
