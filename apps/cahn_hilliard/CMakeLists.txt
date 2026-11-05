@@ -68,11 +68,12 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
         # A missing argument causes a rank-local error, which must terminate
         # the whole MPI job rather than leave the other rank in a collective.
         add_test(NAME cahn-hilliard-elastic-hip-error-2ranks
-          COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
-            ${MPIEXEC_PREFLAGS} $<TARGET_FILE:cahn_hilliard_elastic_hip>
-            ${MPIEXEC_POSTFLAGS})
+          COMMAND ${CMAKE_COMMAND} -E env ${MPIEXEC_EXECUTABLE}
+            ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS}
+            $<TARGET_FILE:cahn_hilliard_elastic_hip> ${MPIEXEC_POSTFLAGS})
         set_tests_properties(cahn-hilliard-elastic-hip-error-2ranks PROPERTIES
-          WILL_FAIL TRUE TIMEOUT 30 PROCESSORS 2)
+          PASS_REGULAR_EXPRESSION "CH HIP rank"
+          TIMEOUT 30 PROCESSORS 2)
       endif()
     endif()
   endif()
