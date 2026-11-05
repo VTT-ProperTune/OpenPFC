@@ -60,7 +60,7 @@ struct LevelSetCentroid {
 }
 
 /// Scalar characteristic-speed estimate for a single active direction.
-/// For multi-direction advection use level_set_advection_stable_dt instead.
+/// For multi-direction advection use advection_stable_dt instead.
 [[nodiscard]] inline double level_set_stable_dt(const LevelSetGrid &grid,
                                                 double max_speed, double cfl) {
   if (!(grid.hx > 0.0) || !(grid.hy > 0.0) || !(grid.hz > 0.0))
@@ -73,21 +73,30 @@ struct LevelSetCentroid {
   return cfl * h / max_speed;
 }
 
-/// Monotone SSP-RK2/upwind CFL for a spatially varying velocity field.
-/// Sum directional Courant contributions at each cell, then take the maximum:
-/// dt <= cfl / max(|vx|/hx + |vy|/hy + |vz|/hz).
-/// A singleton axis contributes no derivative. Zero velocity has no finite
-/// advection CFL bound; this helper rejects it rather than returning infinity.
-[[nodiscard]] inline double
-level_set_advection_stable_dt(const LevelSetGrid &grid, std::span<const double> vx,
-                              std::span<const double> vy,
-                              std::span<const double> vz, double cfl) {
+/// Spatially varying directional velocity and requested CFL fraction.
+struct AdvectionCflInput {
+  LevelSetGrid grid{};
+  std::span<const double> vx;
+  std::span<const double> vy;
+  std::span<const double> vz;
+  double cfl{0.5};
+};
+
+/// Monotone SSP-RK2/upwind CFL: dt <= cfl/max(sum_a |v_a|/h_a).
+/// Singleton axes contribute no derivative; zero velocity has no finite
+/// advection CFL bound and is rejected instead of returning infinity.
+[[nodiscard]] inline double advection_stable_dt(const AdvectionCflInput &input) {
+  const auto &grid = input.grid;
+  const auto vx = input.vx;
+  const auto vy = input.vy;
+  const auto vz = input.vz;
+  const double cfl = input.cfl;
   const std::size_t n = level_set_count(grid);
   if (grid.nx < 2 || grid.ny < 1 || grid.nz < 1)
     throw std::invalid_argument("level-set advection needs valid dimensions");
-  if (!(grid.hx > 0.0) || !(grid.hy > 0.0) || !(grid.hz > 0.0) ||
-      !std::isfinite(grid.hx) || !std::isfinite(grid.hy) ||
-      !std::isfinite(grid.hz))
+  auto valid_spacing = [](double h) { return h > 0.0 && std::isfinite(h); };
+  if (!valid_spacing(grid.hx) || !valid_spacing(grid.hy) ||
+      !valid_spacing(grid.hz))
     throw std::invalid_argument("level-set advection spacing invalid");
   if (n == 0 || vx.size() != n || vy.size() != n || vz.size() != n)
     throw std::invalid_argument("level-set advection velocity sizes invalid");
