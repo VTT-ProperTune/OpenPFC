@@ -78,22 +78,24 @@ struct LevelSetCentroid {
 /// dt <= cfl / max(|vx|/hx + |vy|/hy + |vz|/hz).
 /// A singleton axis contributes no derivative. Zero velocity has no finite
 /// advection CFL bound; this helper rejects it rather than returning infinity.
-[[nodiscard]] inline double level_set_advection_stable_dt(
-    const LevelSetGrid &grid, std::span<const double> vx,
-    std::span<const double> vy, std::span<const double> vz, double cfl) {
+[[nodiscard]] inline double
+level_set_advection_stable_dt(const LevelSetGrid &grid, std::span<const double> vx,
+                              std::span<const double> vy,
+                              std::span<const double> vz, double cfl) {
   const std::size_t n = level_set_count(grid);
-  if (grid.nx < 2 || grid.ny < 1 || grid.nz < 1 ||
-      !(grid.hx > 0.0) || !(grid.hy > 0.0) || !(grid.hz > 0.0) ||
+  if (grid.nx < 2 || grid.ny < 1 || grid.nz < 1)
+    throw std::invalid_argument("level-set advection needs valid dimensions");
+  if (!(grid.hx > 0.0) || !(grid.hy > 0.0) || !(grid.hz > 0.0) ||
       !std::isfinite(grid.hx) || !std::isfinite(grid.hy) ||
-      !std::isfinite(grid.hz) || n == 0 || vx.size() != n ||
-      vy.size() != n || vz.size() != n)
-    throw std::invalid_argument("level-set advection grid or velocity sizes invalid");
+      !std::isfinite(grid.hz))
+    throw std::invalid_argument("level-set advection spacing invalid");
+  if (n == 0 || vx.size() != n || vy.size() != n || vz.size() != n)
+    throw std::invalid_argument("level-set advection velocity sizes invalid");
   if (!(cfl > 0.0) || cfl > 1.0 || !std::isfinite(cfl))
     throw std::invalid_argument("level-set CFL must lie in (0, 1]");
   double max_rate = 0.0;
   for (std::size_t i = 0; i < n; ++i) {
-    if (!std::isfinite(vx[i]) || !std::isfinite(vy[i]) ||
-        !std::isfinite(vz[i]))
+    if (!std::isfinite(vx[i]) || !std::isfinite(vy[i]) || !std::isfinite(vz[i]))
       throw std::invalid_argument("level-set advection speed is not finite");
     const double rate = std::abs(vx[i]) / grid.hx +
                         (grid.ny > 1 ? std::abs(vy[i]) / grid.hy : 0.0) +
