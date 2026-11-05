@@ -98,6 +98,15 @@ void require_compact(const GrainInterface &in, int n_grains) {
 
 } // namespace
 
+TEST_CASE("Grain reference rejects grids beyond int-indexed band capacity",
+          "[unit][field][grain_interface]") {
+  const GrainGrid oversized{46341, 46341, 1, 1.0, 1.0, 1.0};
+  const std::vector<GrainSeed> seed{{0.5, 0.5, 0.5}};
+  REQUIRE_THROWS_AS(grain_cell_count(oversized), std::length_error);
+  REQUIRE_THROWS_AS(build_grain_interface(oversized, seed), std::length_error);
+  REQUIRE(grain_cell_count({1024, 1024, 1, 1.0, 1.0, 1.0}) == 1048576);
+}
+
 TEST_CASE("Periodic grain ids stay compact and match both Voronoi maps",
           "[unit][field][grain_interface]") {
   const GrainGrid grid = cube(32);
