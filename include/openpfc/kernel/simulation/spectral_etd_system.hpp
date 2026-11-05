@@ -633,28 +633,37 @@ private:
       });
       psi().sync_to_device();
 
-      m_capturing = true;
       m_captured_launches = 0;
       const int forwards = m_forward_count;
       const int backwards = m_backward_count;
       const int nonlinear = m_nonlinear_count;
-      Ops::capture_begin(m_compute_stream);
+      bool capture_started = false;
       try {
+        // Begin, record and instantiate must share the same cleanup guard.
+        Ops::capture_begin(m_compute_stream);
+        capture_started = true;
+        m_capturing = true;
         step(t);
+        const auto captured = Ops::capture_end(m_compute_stream);
+        capture_started = false;
+        m_capturing = false;
+        m_graph = captured.graph;
+        m_exec = captured.exec;
+        m_graph_nodes = captured.nodes;
+        m_graph_kernel_nodes = captured.kernel_nodes;
+        m_forward_delta = m_forward_count - forwards;
+        m_backward_delta = m_backward_count - backwards;
+        m_nonlinear_delta = m_nonlinear_count - nonlinear;
       } catch (...) {
         m_capturing = false;
-        Ops::capture_abort(m_compute_stream);
+        if (capture_started) Ops::capture_abort(m_compute_stream);
+        m_forward_count = forwards;
+        m_backward_count = backwards;
+        m_nonlinear_count = nonlinear;
+        m_captured_launches = 0;
+        release_graph();
         throw;
       }
-      const auto captured = Ops::capture_end(m_compute_stream);
-      m_capturing = false;
-      m_graph = captured.graph;
-      m_exec = captured.exec;
-      m_graph_nodes = captured.nodes;
-      m_graph_kernel_nodes = captured.kernel_nodes;
-      m_forward_delta = m_forward_count - forwards;
-      m_backward_delta = m_backward_count - backwards;
-      m_nonlinear_delta = m_nonlinear_count - nonlinear;
       m_forward_count = forwards;
       m_backward_count = backwards;
       m_nonlinear_count = nonlinear;
