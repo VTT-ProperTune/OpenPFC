@@ -64,11 +64,13 @@ public:
   [[nodiscard]] int global_length() const;
   [[nodiscard]] int local_length() const;
   [[nodiscard]] int local_offset() const;
-  /// Transform scratch on this rank, in bytes. One rank reports the HeFFTe
-  /// workspace. Several ranks report the gathered line and its image.
+  /// Explicitly owned transform buffers on this rank, in bytes (the stage
+  /// and HeFFTe workspace, or stage/gather/image). Excludes FFTW plan-owned
+  /// arrays, MPI internal buffers and allocator overhead: NOT peak RSS.
   [[nodiscard]] std::size_t workspace_bytes() const;
-  /// Bytes moved for this rank. One rank reports the HeFFTe communication
-  /// scratch. Several ranks report the samples this rank does not own.
+  /// Logical per-rank Allgatherv payload, in bytes: bytes received from
+  /// peers PLUS local payload delivered to the other ranks. One rank has
+  /// zero MPI communication; excludes MPI transport and protocol overhead.
   [[nodiscard]] std::size_t comm_bytes() const;
 
 private:
