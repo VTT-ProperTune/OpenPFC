@@ -7,6 +7,24 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Static periodic map feasibility (#210): Fourier operators remain on the
+  uniform computational line. The localized bump yields a coarse-grid
+  improvement at N=32 but no equal-error reduction in points for either
+  the error <10 (both N=48) or error <1e-3 (both N=64) gates.
+  A mapped second derivative requires two successive Fourier gradients,
+  while the uniform second derivative needs only one spectral multiplier.
+  **Decision: STOP / keep the standalone research reference only**; do
+  not integrate this map into Domain/HeFFTe or claim a work saving.
+  Analytic map tests also build independently of optional FFTW3.
+
+- `PeriodicClusterMap` is a static circle map
+  `x = ξ + (a L / 2π) sin(2π ξ / L)` with `|a| < 1`. Derivatives are
+  Fourier multipliers on the uniform `ξ` line through `ComplexLineFFT`.
+  The identity amplitude recovers the uniform derivative. Packing nodes
+  at the peak lowers the unresolved second-derivative error of
+  `exp(12 cos(2π x))` and raises it once the uniform grid has resolved
+  the bump. The next uniform count already beats the coarse packed grid,
+  so this gate does not change `Domain` or HeFFTe (#210).
 - `advance_solute_partition` evolves one conserved solute line on a
   non-periodic `DiffusionAxis`. The chemical potential is the composition
   divided by a prescribed positive partition factor. Mobility is constant.
