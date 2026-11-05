@@ -25,5 +25,8 @@ grain-id field, the band, the per-grain counts, and one mismatch word.
 `GrainInterfaceCuda::measure` uploads that layout, recounts the cells, and
 checks each band site against the resident ids.
 
-The coefficients are code units. Grain-boundary kinetics are out of scope.
+The coefficients are code units. The single-rank reference uses `int` band
+indices and explicitly rejects grids whose total cell count exceeds
+`INT_MAX`; this is **not** a distributed large-domain grain-network solver.
+Grain-boundary kinetics are out of scope.
 HIP was not run.
