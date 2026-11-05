@@ -16,7 +16,10 @@ namespace pfc::fft {
 namespace {
 void require_collective(int invalid, MPI_Comm comm, const char *message) {
   int any = 0;
-  MPI_Allreduce(&invalid, &any, 1, MPI_INT, MPI_MAX, comm);
+  const int status = MPI_Allreduce(&invalid, &any, 1, MPI_INT, MPI_MAX, comm);
+  if (status != MPI_SUCCESS) {
+    throw std::runtime_error("DistributedComplexLineFFT: validation Allreduce failed");
+  }
   if (any) throw std::invalid_argument(message);
 }
 
@@ -106,8 +109,12 @@ struct DistributedComplexLineFFT::Impl {
       }
       return;
     }
-    MPI_Allgatherv(stage.data(), bytes_of(local), MPI_BYTE, gathered.data(),
-                   counts.data(), displs.data(), MPI_BYTE, comm);
+    const int status =
+        MPI_Allgatherv(stage.data(), bytes_of(local), MPI_BYTE, gathered.data(),
+                       counts.data(), displs.data(), MPI_BYTE, comm);
+    if (status != MPI_SUCCESS) {
+      throw std::runtime_error("DistributedComplexLineFFT: MPI_Allgatherv failed");
+    }
     if (backward) {
       serial->backward(gathered, full);
     } else {
