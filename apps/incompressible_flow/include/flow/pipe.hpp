@@ -340,8 +340,8 @@ inline double abs_complex(std::complex<double> value) {
         pfc::geometry::cylinder_gradient(velocity, sample.r, sample.theta, sample.z);
     report.divergence =
         std::max(report.divergence, pipe_detail::abs_complex(gradient[2]));
-    const auto value = pfc::geometry::evaluate_cylinder(
-        velocity, sample.r, sample.theta, sample.z);
+    const auto value =
+        pfc::geometry::evaluate_cylinder(velocity, sample.r, sample.theta, sample.z);
     const double oracle = request.force *
                           (request.radius * request.radius - sample.r * sample.r) /
                           (4.0 * request.viscosity);
