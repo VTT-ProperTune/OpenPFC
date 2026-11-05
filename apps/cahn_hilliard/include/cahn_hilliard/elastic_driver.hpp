@@ -25,7 +25,8 @@
  *
  * Stiffnesses are converted from Pa into the CH energy unit \f$RT/V_m\f$
  * so \f$\mu_{\mathrm{el}}\f$ adds to \f$f'(c)\f$ with no extra scale.
- * Host-only: the Green operator has no device path (#157).
+ * This JSON driver keeps the host Green solver. The separate HIP path is
+ * `advance_coherent_elastic_hip`.
  */
 
 #include <algorithm>

@@ -11,7 +11,7 @@ issue `#77`. The older teaching program `examples/12_cahn_hilliard` is a
 hard-coded math demo on the historical stack; use this app for JSON/TOML,
 Catch2 checks, and a HIP twin when rocFFT HeFFTe is on.
 
-Binaries: `cahn_hilliard` (CPU); `cahn_hilliard_hip` when `OpenPFC_ENABLE_HIP_SPECTRAL` is on; `cahn_hilliard_elastic` (CPU, coherent Vegard misfit on the existing Green operator — host-only, #157). Built when `OpenPFC_ENABLE_HEFFTE=ON`.
+Binaries: `cahn_hilliard` (CPU); `cahn_hilliard_hip` when `OpenPFC_ENABLE_HIP_SPECTRAL` is on; `cahn_hilliard_elastic` (CPU, coherent Vegard misfit); `cahn_hilliard_elastic_hip` on the HIP microelasticity solver. Built when `OpenPFC_ENABLE_HEFFTE=ON`.
 
 ## Fe–Cr ageing: problem setup
 
@@ -41,8 +41,9 @@ boundaries. Coherent elastic misfit is known to bias α/α′ morphology; it is
 `cahn_hilliard_elastic` adds a Vegard eigenstrain
 `ε* = ε0 (c − c_ref) I` on the same Khachaturyan Green operator used by
 the dendrite and inverse homogenization. Both phases are treated as equal
-stiffness solids (a coherent pair, not a solid–liquid contrast). The
-device Green (#157) is still open, so this path is CPU-only.
+stiffness solids (a coherent pair, not a solid–liquid contrast).
+`cahn_hilliard_elastic_hip` runs that periodic case with the
+device-resident Green operator. CUDA is not wired on this path.
 
 The elastic chemical potential is an explicit remainder on the chemical
 ETD1 symbol. A public synthetic case (not the Fe–Cr preset) compares one
@@ -57,8 +58,10 @@ not alter the step when it is omitted, and it does not solve elasticity a
 second time. The 2/3 mask is part of the retained band: a mode inside that
 band keeps the split gain, and a chemically unstable mode is reported as
 physical growth. Closed #209 remains the step-doubling error baseline.
-#222 is an audit of an embedded pair and is not implemented here. #252 is
-the separate device-resident elastic path. Closed #543 integrates two
+#222 is an audit of an embedded pair and is not implemented here.
+`advance_coherent_elastic_host` and `advance_coherent_elastic_hip`
+share an ETD1 step without the host JSON driver's range projection.
+The qualified range stays in (0, 1). Closed #543 integrates two
 dynamical fields; this problem has one conserved field and a quasistatic
 displacement, so that class is not used. The linear comparison is decisive,
 so no convex-splitting scheme is added. No second integrator is added.

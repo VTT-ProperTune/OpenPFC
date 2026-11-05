@@ -137,6 +137,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   outstanding in #468. `WallPolicy` is unchanged.
 
 
+- `cahn_hilliard_elastic_hip` runs equal-stiffness coherent
+  Cahn–Hilliard ETD1 on the device-resident Green solver. The host reference
+  uses the same split step. The original host JSON driver remains unchanged;
+  CUDA is not wired on this device path (#252).
+
 - `advance_bounded_axis` evolves one linear Cahn–Hilliard line on a
   non-periodic `DiffusionAxis`. The composition gradient uses a zero
   outward derivative, and the composition flux is `reaction_face` on a
