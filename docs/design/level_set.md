@@ -19,7 +19,7 @@ field, smoothed by `s = phi0 / sqrt(phi0^2 + h^2)` with `h` the smallest
 spacing. The rate is `-s |grad phi| + s`. Time stepping is SSP-RK2. The scalar helper `level_set_stable_dt` estimates `cfl * min(h) / max|speed|`
 for a single characteristic direction (and is used for redistancing).
 That is **not** a universal multi-dimensional advection limit. For an
-upwind advection field use `level_set_advection_stable_dt` instead:
+upwind advection field use `advection_stable_dt({grid, vx, vy, vz, cfl})` instead:
 `dt <= cfl / max_cells(|vx|/hx + |vy|/hy + |vz|/hz)`, dropping singleton
 axes. This is the monotone SSP-RK2 directional Courant condition.
 The caller is responsible for enforcing a stable `dt`; the stepper rejects
