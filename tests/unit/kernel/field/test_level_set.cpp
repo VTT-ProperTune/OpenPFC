@@ -268,10 +268,10 @@ TEST_CASE("directional CFL keeps diagonal upwind advection monotone",
   }
   auto stable = checker;
   auto excessive = checker;
-  (void)advance_level_set(grid, stable, LevelSetMode::Advection, vx, vy, vz,
-                          {}, {}, dt);
-  (void)advance_level_set(grid, excessive, LevelSetMode::Advection, vx, vy, vz,
-                          {}, {}, old_scalar_dt);
+  (void)advance_level_set(grid, stable, LevelSetMode::Advection, vx, vy, vz, {}, {},
+                          dt);
+  (void)advance_level_set(grid, excessive, LevelSetMode::Advection, vx, vy, vz, {},
+                          {}, old_scalar_dt);
   double stable_peak = 0.0;
   double excessive_peak = 0.0;
   for (std::size_t i = 0; i < n; ++i) {
