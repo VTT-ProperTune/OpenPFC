@@ -171,22 +171,28 @@ template <class MemorySpace> struct DeviceSpectralETDOps {
     gpuGraph_t graph{};
     GPU_CHECK(gpuStreamEndCapture(static_cast<gpuStream_t>(stream), &graph));
     gpuGraphExec_t exec{};
-    GPU_CHECK(gpuGraphInstantiate(&exec, graph));
-    std::size_t count = 0;
-    GPU_CHECK(gpuGraphGetNodes(graph, nullptr, &count));
-    std::vector<gpuGraphNode_t> nodes(count);
-    if (count > 0) {
-      GPU_CHECK(gpuGraphGetNodes(graph, nodes.data(), &count));
-    }
-    std::size_t kernels = 0;
-    for (std::size_t i = 0; i < count; ++i) {
-      gpuGraphNodeType kind{};
-      GPU_CHECK(gpuGraphNodeGetType(nodes[i], &kind));
-      if (kind == gpuGraphNodeTypeKernel) {
-        ++kernels;
+    try {
+      GPU_CHECK(gpuGraphInstantiate(&exec, graph));
+      std::size_t count = 0;
+      GPU_CHECK(gpuGraphGetNodes(graph, nullptr, &count));
+      std::vector<gpuGraphNode_t> nodes(count);
+      if (count > 0) {
+        GPU_CHECK(gpuGraphGetNodes(graph, nodes.data(), &count));
       }
+      std::size_t kernels = 0;
+      for (std::size_t i = 0; i < count; ++i) {
+        gpuGraphNodeType kind{};
+        GPU_CHECK(gpuGraphNodeGetType(nodes[i], &kind));
+        if (kind == gpuGraphNodeTypeKernel) ++kernels;
+      }
+      return CapturedGraph{graph, exec, count, kernels};
+    } catch (...) {
+      // The stream capture has already ended; neither graph object is owned
+      // by the system unless this function returns successfully.
+      if (exec != nullptr) (void)gpuGraphExecDestroy(exec);
+      if (graph != nullptr) (void)gpuGraphDestroy(graph);
+      throw;
     }
-    return CapturedGraph{graph, exec, count, kernels};
   }
 
   static void capture_abort(void *stream) noexcept {
