@@ -7,6 +7,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- An earlier test-author report for `apply_reflection_ghosts` describes
+  matching HIP/host float and double odd-node, even-cell-face and linear-wall
+  ghost fills, including corners, on g0004 (MI210, `gfx90a`): reportedly
+  11,108 assertions in `HIP_ReflectionGhosts`. This documentation-only
+  change did not rerun the case; source-pinned device evidence remains
+  outstanding in #468. `WallPolicy` is unchanged.
 - `CudaComplexLineFFT` is the one-rank cuFFT Z2Z form of the unnormalized
   complex line DFT. It matches `ComplexLineFFT`, including the even
   extension a Chebyshev series feeds that transform. The 3D pencil plans
