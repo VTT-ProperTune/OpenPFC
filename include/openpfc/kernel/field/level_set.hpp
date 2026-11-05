@@ -95,9 +95,10 @@ struct AdvectionCflInput {
   if (grid.nx < 2 || grid.ny < 1 || grid.nz < 1)
     throw std::invalid_argument("level-set advection needs valid dimensions");
   auto valid_spacing = [](double h) { return h > 0.0 && std::isfinite(h); };
-  if (!valid_spacing(grid.hx) || !valid_spacing(grid.hy) ||
-      !valid_spacing(grid.hz))
-    throw std::invalid_argument("level-set advection spacing invalid");
+  for (double h : {grid.hx, grid.hy, grid.hz}) {
+    if (!valid_spacing(h))
+      throw std::invalid_argument("level-set advection spacing invalid");
+  }
   if (n == 0 || vx.size() != n || vy.size() != n || vz.size() != n)
     throw std::invalid_argument("level-set advection velocity sizes invalid");
   if (!(cfl > 0.0) || cfl > 1.0 || !std::isfinite(cfl))
