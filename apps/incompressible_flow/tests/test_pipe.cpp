@@ -5,8 +5,9 @@
  * @file test_pipe.cpp
  * @brief Laminar Hagen–Poiseuille balance on the filled cylinder.
  *
- * The measured profile, wall value, flow rate, wall shear, and
- * momentum residual come from `hagen_poiseuille`. That function calls
+ * The pointwise profile error at independent interior radii, wall value,
+ * flow rate, signed kinematic wall flux and momentum residual come from
+ * `hagen_poiseuille`. That function calls
  * the cylinder Laplacian, gradient, and integral. Degree 0 cannot
  * carry the parabola. Degrees 1–3 recover it, including when one
  * angular mode and one axial mode are admitted. The periodic cube is
@@ -61,6 +62,7 @@ void expect_resolved(const flow::PipeRequest &request) {
   REQUIRE(report.radial_wall);
   REQUIRE_FALSE(report.has_caps);
   REQUIRE(report.wall_error < 1e-12);
+  REQUIRE(report.profile_error < 1e-9);
   REQUIRE(report.axis_gradient < 1e-9);
   REQUIRE_THAT(report.axis_value, WithinAbs(oracle.center, 1e-9));
   REQUIRE_THAT(report.flow_rate, WithinAbs(oracle.flow_rate, 1e-9));
@@ -84,6 +86,7 @@ TEST_CASE("Hagen-Poiseuille recovers the filled-cylinder parabola", "[pipe]") {
   REQUIRE_THAT(missed.flow_rate, WithinAbs(0.0, 1e-15));
   REQUIRE_THAT(missed.axis_value, WithinAbs(0.0, 1e-15));
   REQUIRE(missed.momentum > 0.5 * unresolved.force);
+  REQUIRE(missed.profile_error > 0.1);
   REQUIRE(missed.radial_wall);
   REQUIRE_FALSE(missed.has_caps);
 
