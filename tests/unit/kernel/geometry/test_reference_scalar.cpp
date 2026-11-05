@@ -23,6 +23,7 @@
 #include <stdexcept>
 
 using Catch::Matchers::WithinAbs;
+using pfc::geometry::affine_map_from_matrix;
 
 namespace {
 
@@ -46,8 +47,7 @@ void expect_reading(const Series &series, const pfc::geometry::AffineMap &map,
 }
 
 void require_constant_physical_mean(const pfc::geometry::ReferenceReading &reading) {
-  const auto physical_mean =
-      reading.physical_integral / reading.physical_measure;
+  const auto physical_mean = reading.physical_integral / reading.physical_measure;
   REQUIRE_THAT(physical_mean.real(), WithinAbs(1.0, 1e-12));
   REQUIRE_THAT(physical_mean.imag(), WithinAbs(0.0, 1e-12));
 }
@@ -143,7 +143,6 @@ TEST_CASE("A reference scalar reads the map without a domain enum",
 
   // Invalid maps cannot be manufactured through the validated public API.
   const double singular[9] = {0, 0, 0, 0, 1, 0, 0, 0, 1};
-  REQUIRE_THROWS_AS(
-      pfc::geometry::affine_map_from_matrix(singular, {0, 0, 0}),
-      std::invalid_argument);
+  const pfc::geometry::Vec3 shift{0, 0, 0};
+  REQUIRE_THROWS_AS(affine_map_from_matrix(singular, shift), std::invalid_argument);
 }
