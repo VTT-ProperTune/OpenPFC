@@ -12,6 +12,7 @@
  */
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <complex>
 #include <cstddef>
@@ -113,15 +114,32 @@ TEST_CASE("create_cuda round-trips two 12x10x8 fields on every reduced axis",
     pfc::fft::RealDataBufferCUDA back(direct.size_inbox());
     Work workspace(direct.size_workspace());
 
-    // Use both fields sequentially with the *same* plans and workspaces, as
-    // the installed two-field acceptance consumer does after its trajectory.
+    // Match the installed acceptance consumer's post-step two-field state
+    // without relying on its implementation: a 3D wall/periodic mode with
+    // eight explicit, coupled linear updates in code units.
+    constexpr double pi = 3.14159265358979323846;
+    constexpr double hx = 0.7, hy = 0.9, hz = 1.1;
+    constexpr double dt = 0.001, coupling = 0.3;
+    const double lambda = 2.0 * (std::cos(pi / 12.0) - 1.0) / (hx * hx) +
+                          2.0 * (std::cos(2.0 * pi / 10.0) - 1.0) / (hy * hy) +
+                          2.0 * (std::cos(2.0 * pi / 8.0) - 1.0) / (hz * hz);
+    double a = 0.2, b = -0.1;
+    for (int step = 0; step < 8; ++step) {
+      const double next_a = a + dt * (lambda * a + coupling * (b - a));
+      b += dt * (2.0 * lambda * b + coupling * (a - b));
+      a = next_a;
+    }
+    const std::array<double, 2> amplitudes{a, b};
     for (int component = 0; component < 2; ++component) {
       std::vector<double> field(direct.size_inbox());
-      for (std::size_t i = 0; i < field.size(); ++i) {
-        const double x = static_cast<double>(i);
-        const double first = std::sin(0.17 * x) + 0.3 * std::cos(0.05 * x);
-        const double second = 0.7 * std::cos(0.11 * x) - 0.2 * std::sin(0.31 * x);
-        field[i] = component == 0 ? first : second;
+      for (std::size_t q = 0; q < field.size(); ++q) {
+        const int i = static_cast<int>(q % 12);
+        const int j = static_cast<int>((q / 12) % 10);
+        const int k = static_cast<int>(q / 120);
+        const double mode = std::cos(pi * (i + 0.5) / 12.0) *
+                            std::sin(2.0 * pi * j / 10.0) *
+                            std::cos(2.0 * pi * k / 8.0);
+        field[q] = 1.0 + amplitudes[static_cast<std::size_t>(component)] * mode;
       }
 
       real.copy_from_host(field);
