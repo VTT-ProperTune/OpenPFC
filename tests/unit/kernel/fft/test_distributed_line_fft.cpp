@@ -60,8 +60,18 @@ TEST_CASE("Distributed complex line matches the one-rank DFT",
   MPI_Allreduce(&roundtrip, &reduced_round, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
   REQUIRE(reduced_peak < 1e-10);
   REQUIRE(reduced_round < 1e-10);
+  // For Allgatherv each rank receives n-local peer samples and
+  // contributes local samples to each of the ranks-1 other peers.
+  const std::size_t expected_payload =
+      (static_cast<std::size_t>(n - block.count) +
+       static_cast<std::size_t>(ranks - 1) *
+           static_cast<std::size_t>(block.count)) *
+      sizeof(std::complex<double>);
+  REQUIRE(distributed.comm_bytes() == expected_payload);
   if (ranks > 1) {
-    REQUIRE(distributed.comm_bytes() > 0);
+    REQUIRE(distributed.workspace_bytes() ==
+            (2u * n + static_cast<std::size_t>(block.count)) *
+                sizeof(std::complex<double>));
   }
 }
 
