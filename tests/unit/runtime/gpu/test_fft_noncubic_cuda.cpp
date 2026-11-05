@@ -11,6 +11,7 @@
  * HIP is not run. The FFT provider is unchanged.
  */
 
+#include <algorithm>
 #include <cmath>
 #include <complex>
 #include <cstddef>
