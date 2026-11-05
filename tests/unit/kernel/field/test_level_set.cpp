@@ -17,7 +17,7 @@
 #include <vector>
 
 using pfc::field::level_set::advance_level_set;
-using pfc::field::level_set::level_set_advection_stable_dt;
+using pfc::field::level_set::advection_stable_dt;
 using pfc::field::level_set::level_set_count;
 using pfc::field::level_set::level_set_halo_width;
 using pfc::field::level_set::level_set_negative_centroid;
@@ -256,7 +256,7 @@ TEST_CASE("directional CFL keeps diagonal upwind advection monotone",
   const std::vector<double> vy(n, 0.5);
   const std::vector<double> vz(n, 0.0);
   constexpr double cfl = 0.8;
-  const double dt = level_set_advection_stable_dt(grid, vx, vy, vz, cfl);
+  const double dt = advection_stable_dt({grid, vx, vy, vz, cfl});
   const double old_scalar_dt = level_set_stable_dt(grid, 0.5, cfl);
   REQUIRE(std::abs(dt - cfl * grid.hx / 1.0) < 1e-14);
   REQUIRE(std::abs(old_scalar_dt - 2.0 * dt) < 1e-14);
@@ -280,7 +280,7 @@ TEST_CASE("directional CFL keeps diagonal upwind advection monotone",
   }
   REQUIRE(stable_peak <= 1.0 + 1e-12);
   REQUIRE(excessive_peak > 1.0 + 0.1);
-  REQUIRE_THROWS_AS(level_set_advection_stable_dt(grid, vx, vy, vz, 1.1),
+  REQUIRE_THROWS_AS(advection_stable_dt({grid, vx, vy, vz, 1.1}),
                     std::invalid_argument);
 }
 
