@@ -78,6 +78,8 @@ TEST_CASE("a filled ball is a volume and the origin is not a boundary",
   // A caller may mutate a public series, bypassing the construction guard.
   rejected.modes.push_back({2, bad_order, 0, 1.0});
   REQUIRE_THROWS_AS(evaluate_ball(rejected, 0.4, 0.6, 0.2), std::invalid_argument);
+  REQUIRE_THROWS_AS(integrate_ball(rejected), std::invalid_argument);
+  REQUIRE_THROWS_AS(ball_boundary_flux(rejected), std::invalid_argument);
 }
 
 TEST_CASE("a constant ball field and a radial polynomial", "[geometry][ball]") {
