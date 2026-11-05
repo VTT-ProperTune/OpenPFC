@@ -74,8 +74,15 @@ struct JunctionCensus {
 
 [[nodiscard]] inline std::size_t grain_cell_count(const GrainGrid &grid) {
   if (grid.nx < 1 || grid.ny < 1 || grid.nz < 1) return 0;
-  return static_cast<std::size_t>(grid.nx) * static_cast<std::size_t>(grid.ny) *
-         static_cast<std::size_t>(grid.nz);
+  // BandSite::index and the neighborhood loop use int offsets. Reject an
+  // unsupported one-rank reference grid before integer arithmetic or allocation.
+  const auto nx = static_cast<std::size_t>(grid.nx);
+  const auto ny = static_cast<std::size_t>(grid.ny);
+  const auto nz = static_cast<std::size_t>(grid.nz);
+  const auto limit = static_cast<std::size_t>(std::numeric_limits<int>::max());
+  if (nx > limit / ny || nx * ny > limit / nz)
+    throw std::length_error("grain reference grid exceeds int-indexed capacity");
+  return nx * ny * nz;
 }
 
 /// Host bytes of the grain-id field, the band, and the per-grain totals.
