@@ -74,8 +74,8 @@ struct DistributedComplexLineFFT::Impl {
                                                                     options);
       const auto scratch = std::max<std::size_t>(plan->size_workspace(), 1);
       work.resize(scratch);
-      workspace = (static_cast<std::size_t>(local) + scratch) *
-                   sizeof(std::complex<double>);
+      const auto workspace_items = static_cast<std::size_t>(local) + scratch;
+      workspace = workspace_items * sizeof(std::complex<double>);
       communication = 0; // one rank has no peer traffic
       return;
     }
