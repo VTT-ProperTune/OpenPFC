@@ -191,6 +191,35 @@ TEST_CASE("CUDA amplitude ETD1 matches exp(s dt) and the host APFC step",
   REQUIRE(apfc < 1e-10);
 }
 
+TEST_CASE("CUDA amplitude ETD1 timestep rollback preserves all weights",
+          "[gpu][amplitude_etd1]") {
+  if (!pfc::gpu::test::is_cuda_available()) SKIP("CUDA device not available");
+  int rank = 0;
+  int ranks = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &ranks);
+  if (ranks != 1) SKIP("one-rank amplitude regression");
+  auto decomp = pfc::decomposition::create(square(), 1);
+  auto fft = pfc::fft::create_cuda(decomp, rank, MPI_COMM_WORLD);
+  AmplitudeSpectralETD1Cuda sys(fft, 2);
+  for (std::size_t j = 0; j < 2; ++j)
+    fill_wave(sys.real(j), sys.imag(j), static_cast<int>(j));
+  const std::vector<double> original0(sys.real(0).begin(), sys.real(0).end());
+  const std::vector<double> original1(sys.real(1).begin(), sys.real(1).end());
+  constexpr double old_dt = 1.0e-4;
+  constant_symbol(sys, 0, -1.0, -1.0);
+  constant_symbol(sys, 1, 1000.0, 1000.0);
+  sys.set_dt(old_dt);
+  REQUIRE_THROWS_AS(sys.set_dt(1.0), std::domain_error);
+  REQUIRE(sys.step(0.0, zero_n) == old_dt);
+  std::vector<double> expected0 = original0;
+  std::vector<double> expected1 = original1;
+  for (double &v : expected0) v *= std::exp(-old_dt);
+  for (double &v : expected1) v *= std::exp(1000.0 * old_dt);
+  REQUIRE(max_abs(expected0, sys.real(0)) < 1e-10);
+  REQUIRE(max_abs(expected1, sys.real(1)) < 1e-10);
+}
+
 int main(int argc, char *argv[]) {
   int mpi_initialized = 0;
   MPI_Initialized(&mpi_initialized);
