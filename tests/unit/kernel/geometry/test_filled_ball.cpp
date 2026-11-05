@@ -8,6 +8,7 @@
 
 #include <cmath>
 #include <complex>
+#include <limits>
 #include <numbers>
 
 using Catch::Matchers::WithinAbs;
@@ -23,6 +24,7 @@ using pfc::geometry::ball_laplacian;
 using pfc::geometry::ball_physical_laplacian;
 using pfc::geometry::ball_physical_point;
 using pfc::geometry::ball_physical_volume;
+using pfc::geometry::ball_wall_normal_derivative;
 using pfc::geometry::BallBoundary;
 using pfc::geometry::BallHarmonic;
 using pfc::geometry::BallSeries;
@@ -68,6 +70,15 @@ TEST_CASE("a filled ball is a volume and the origin is not a boundary",
                     std::invalid_argument);
   REQUIRE_THROWS_AS(add_ball_harmonic(rejected, {1, 2, 0, 1.0}),
                     std::invalid_argument);
+  const int bad_order = std::numeric_limits<int>::min();
+  REQUIRE_THROWS_AS(add_ball_harmonic(rejected, {2, bad_order, 0, 1.0}),
+                    std::invalid_argument);
+  REQUIRE_THROWS_AS(add_ball_harmonic(rejected, {bad_order, 0, 0, 1.0}),
+                    std::invalid_argument);
+  // A caller may mutate a public series, bypassing the construction guard.
+  rejected.modes.push_back({2, bad_order, 0, 1.0});
+  REQUIRE_THROWS_AS(evaluate_ball(rejected, 0.4, 0.6, 0.2),
+                    std::invalid_argument);
 }
 
 TEST_CASE("a constant ball field and a radial polynomial", "[geometry][ball]") {
@@ -77,6 +88,7 @@ TEST_CASE("a constant ball field and a radial polynomial", "[geometry][ball]") {
   require_complex(ball_laplacian(constant, 0.3, 0.4, 0.2), 0.0, 0.0);
   require_complex(integrate_ball(constant), ball.volume(), 1.0e-12);
   require_complex(ball_boundary_flux(constant), 0.0, 0.0);
+  require_complex(ball_wall_normal_derivative(constant, 0.7, 0.3), 0.0, 0.0);
 
   const auto radial = series_with(ball, {0, 0, 1, 1.0});
   const double r = 0.4;
@@ -85,6 +97,8 @@ TEST_CASE("a constant ball field and a radial polynomial", "[geometry][ball]") {
   require_complex(ball_laplacian(radial, r, 1.1, 0.3), 6.0, 1.0e-12);
   require_complex(ball_laplacian(radial, 0.0, 0.2, 0.2), 6.0, 1.0e-12);
   require_complex(ball_euler(radial, r, 0.7, 0.1), 2.0 * r * r, 1.0e-12);
+  require_complex(ball_wall_normal_derivative(radial, 0.7, 0.1),
+                  2.0 * ball.radius, 1.0e-12);
 }
 
 TEST_CASE("solid harmonics are regular at the origin", "[geometry][ball]") {
@@ -128,6 +142,9 @@ TEST_CASE("a solid harmonic has spherical eigenvalue through the Euler operator"
                   2.0 * evaluate_ball(mode, r, theta, phi), 1.0e-12);
   require_complex(integrate_ball(mode), 0.0, 0.0);
   require_complex(ball_boundary_flux(mode), 0.0, 0.0);
+  const auto wall_value = evaluate_ball(mode, ball.radius, theta, phi);
+  require_complex(ball_wall_normal_derivative(mode, theta, phi),
+                  2.0 * wall_value / ball.radius, 1.0e-12);
 
   const auto cubic = series_with(ball, {3, 1, 0, 1.0});
   const auto cubic_value =
@@ -171,4 +188,16 @@ TEST_CASE("an affine map sends the ball to an ellipsoid", "[geometry][ball]") {
       affine_map_from_columns({1, 0, 0}, {0.5, 1, 0}, {0, 0, 1}, {1, -2, 0.25});
   require_complex(ball_physical_laplacian(radial, shear, 0.3, 1.0, 0.4), 6.5,
                   1.0e-12);
+
+  // x*z = (S_2^+1 + S_2^-1)/2 has only a mixed xz Hessian.
+  // Under A with shear A_xz = 1/2, the inverse metric has g_xz=-1/2.
+  BallSeries mixed;
+  mixed.domain = ball;
+  add_ball_harmonic(mixed, {2, 1, 0, 0.5});
+  add_ball_harmonic(mixed, {2, -1, 0, 0.5});
+  const auto xz_shear = affine_map_from_columns(
+      {1, 0, 0}, {0, 1, 0}, {0.5, 0, 1}, {0, 0, 0});
+  require_complex(ball_laplacian(mixed, 0.6, 0.7, 0.8), 0.0, 1.0e-12);
+  require_complex(ball_physical_laplacian(mixed, xz_shear, 0.6, 0.7, 0.8),
+                  -1.0, 1.0e-12);
 }
