@@ -340,6 +340,29 @@ TEST_CASE("amplitude ETD1 rejects a bad step without writing the fields",
   REQUIRE_THROWS_AS(sys.real(2), std::out_of_range);
 }
 
+TEST_CASE("failed amplitude ETD1 timestep change preserves all weights",
+          "[unit][simulation][amplitude_etd1]") {
+  auto fft = pfc::fft::create(pfc::decomposition::create(square(), 1));
+  AmplitudeSpectralETD1 sys(fft, 2);
+  for (std::size_t j = 0; j < 2; ++j)
+    fill_wave(sys.real(j), sys.imag(j), static_cast<int>(j));
+  const std::vector<double> original0(sys.real(0).begin(), sys.real(0).end());
+  const std::vector<double> original1(sys.real(1).begin(), sys.real(1).end());
+  constexpr double old_dt = 1.0e-4;
+  constant_symbol(sys, 0, -1.0, -1.0);
+  constant_symbol(sys, 1, 1000.0, 1000.0);
+  sys.set_dt(old_dt);
+  REQUIRE_THROWS_AS(sys.set_dt(1.0), std::domain_error);
+  REQUIRE(sys.dt() == old_dt);
+  REQUIRE(sys.step(0.0, zero_nonlinear) == old_dt);
+  std::vector<double> expected0 = original0;
+  std::vector<double> expected1 = original1;
+  for (double &v : expected0) v *= std::exp(-old_dt);
+  for (double &v : expected1) v *= std::exp(1000.0 * old_dt);
+  REQUIRE(max_abs(expected0, sys.real(0)) < 1e-12);
+  REQUIRE(max_abs(expected1, sys.real(1)) < 1e-12);
+}
+
 TEST_CASE("amplitude ETD1 phi weight is accurate at the Taylor threshold",
           "[unit][simulation][amplitude_etd1]") {
   // The independent integral/Taylor oracle is accurate to O(z^4) here.
