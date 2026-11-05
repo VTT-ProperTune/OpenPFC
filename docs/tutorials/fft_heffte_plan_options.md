@@ -62,8 +62,22 @@ direct FFTW/cuFFT/rocFFT 3-D plans and requires a one-rank communicator.
 `"fft": "heffte"` forces HeFFTe, including on one rank. Omitting `fft`
 keeps HeFFTe on CPU and CUDA. On HIP, one rank that owns the whole domain
 then uses the direct rocFFT plan. More than one rank always uses HeFFTe.
-This selection is independent of the hardware `backend`; HeFFTe `plan_options` do not tune the direct plan.
-The selected implementation and vendor backend are printed at startup.
+This selection is independent of the hardware `backend`; HeFFTe
+`plan_options` do not tune the direct plan. The selected implementation
+and vendor backend are printed at startup.
+
+**Performance and qualification boundary.** The HIP default is a provisional
+selection policy, not a speed guarantee for all shapes. An older
+[MI250X, ROCm 6.4.4, 256³ BCC/FCC study](https://github.com/ahojukka5/SolidificationLab/blob/4682b8b88df09075f2649cd736a279f130245870/apps/pfc/retained/results/pfc3d-hip-qualification/README.md)
+reported 4.45/4.44 ms per step with the direct plan versus 14.9/15.0 ms
+with HeFFTe on one GCD, using OpenPFC `b6ef4f22`. This **historical**
+run neither tests this PR's current revision nor establishes plan setup
+amortization, memory, numerical parity or performance for odd, prime,
+anisotropic, singleton or g0004/MI210 grids. Those cases require pinned
+device receipts before claiming a general win. For reproducible baseline
+comparisons, set `fft` explicitly and record the startup implementation
+label, platform, source SHA, shape, plan creation, step and peak-memory
+measurements.
 
 The host `SpectralCPUStack::fft()` accessor now returns `IHostFFT&`, so the
 same solver can use either implementation. This is a source compatibility
