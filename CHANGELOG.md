@@ -7,6 +7,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- `advance_solved_heat` integrates one heat line on a non-periodic
+  `DiffusionAxis`, and `advance_substrate_pfc` reads that temperature.
+  Heat is RK4. The substrate end is a constitutive flux on a `FluxLedger`.
+  The density wall is a zero outward derivative, and that step is forward
+  Euler. Periodic, reservoir, and substrate stay distinct. A free surface
+  is rejected. The coupling is one-way, in code units, with the caller's
+  coefficients and no latent heat (#250).
 - An earlier test-author report for `apply_reflection_ghosts` describes
   matching HIP/host float and double odd-node, even-cell-face and linear-wall
   ghost fills, including corners, on g0004 (MI210, `gfx90a`): reportedly
