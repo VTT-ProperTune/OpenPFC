@@ -94,11 +94,12 @@ struct BallSeries {
 
 [[nodiscard]] inline bool ball_harmonic_is_admissible(const BallHarmonic &mode) {
   // Validate the small degree first: negating an unchecked INT_MIN order is UB.
-  return mode.degree >= 0 && mode.degree <= 3 &&
-         mode.order >= -mode.degree && mode.order <= mode.degree &&
-         mode.radial >= 0 && mode.radial <= 12 &&
-         std::isfinite(mode.coefficient.real()) &&
-         std::isfinite(mode.coefficient.imag());
+  if (mode.degree < 0 || mode.degree > 3) return false;
+  if (mode.order < -mode.degree || mode.order > mode.degree) return false;
+  if (mode.radial < 0 || mode.radial > 12) return false;
+  if (!std::isfinite(mode.coefficient.real())) return false;
+  if (!std::isfinite(mode.coefficient.imag())) return false;
+  return true;
 }
 
 inline void add_ball_harmonic(BallSeries &series, BallHarmonic mode) {
