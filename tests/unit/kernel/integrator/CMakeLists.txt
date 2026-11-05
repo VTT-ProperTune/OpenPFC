@@ -6,6 +6,7 @@ target_sources(openpfc-tests
     ${CMAKE_CURRENT_SOURCE_DIR}/test_spectral_exp_coefficients.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_error_evidence.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_matrix_phi_2x2.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_erk_stiff_order.cpp
 )
 
 # AC-facing CTest name: `ctest -R spectral_exp` (shared openpfc-tests binary).
@@ -23,4 +24,9 @@ set_tests_properties(test_error_evidence PROPERTIES
 add_test(NAME test_matrix_phi_2x2
          COMMAND $<TARGET_FILE:openpfc-tests> "[integrator][matrix_phi]")
 set_tests_properties(test_matrix_phi_2x2 PROPERTIES
+  ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+
+add_test(NAME test_erk_stiff_order
+         COMMAND $<TARGET_FILE:openpfc-tests> "[integrator][erk_stiff_order]")
+set_tests_properties(test_erk_stiff_order PROPERTIES
   ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")

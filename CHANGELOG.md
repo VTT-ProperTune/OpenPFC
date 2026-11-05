@@ -7,6 +7,23 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- ERK43ZB audit now distinguishes strong stiff-order residuals from the
+  Hochbruck–Ostermann *weak* fixed-step fourth-order conditions: psi4(0)
+  and outer b_i(0) with nonzero internal Z. Four noncommuting/nonnormal
+  matrix fixtures and a corrupted-weight control guard this distinction.
+  This is a coefficient audit, not an adaptive time-stepper.
+
+- ERK43ZB Table 10 (arXiv:2303.12139v2) is checked against the
+  Hochbruck–Ostermann stiff-order conditions. The weights are
+  φ-combinations of a 2×2 argument, and the residual is the Frobenius
+  norm of each condition. This does not take a time step. The order-4
+  row meets conditions 1–5 and misses 6–9 when the Jacobian does not
+  commute with the argument. At a zero argument, conditions 1–9 are
+  numerical zeros. The embedded row meets 1–5 at zero and misses
+  condition 6 there, so the estimate does not rise to order 4.
+  Krogstad ERK4K meets 1–5 and 9 and misses 6, 7 and 8 on the same
+  probe. The pair is not implemented. Step doubling stays the
+  baseline (#222).
 - Static periodic map feasibility (#210): Fourier operators remain on the
   uniform computational line. The localized bump yields a coarse-grid
   improvement at N=32 but no equal-error reduction in points for either
