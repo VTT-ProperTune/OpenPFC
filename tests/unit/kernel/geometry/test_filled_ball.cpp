@@ -199,7 +199,6 @@ TEST_CASE("an affine map sends the ball to an ellipsoid", "[geometry][ball]") {
   const Vec3 third{0.5, 0, 1};
   const auto xz_shear = affine_map_from_columns(first, second, third, {0, 0, 0});
   require_complex(ball_laplacian(mixed, 0.6, 0.7, 0.8), 0.0, 1.0e-12);
-  const auto mapped_mixed =
-      ball_physical_laplacian(mixed, xz_shear, 0.6, 0.7, 0.8);
-  require_complex(mapped_mixed, -1.0, 1.0e-12);
+  const auto lap = ball_physical_laplacian(mixed, xz_shear, 0.6, 0.7, 0.8);
+  require_complex(lap, -1.0, 1.0e-12);
 }
