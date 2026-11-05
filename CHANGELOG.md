@@ -200,6 +200,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   still grow when that split is outside the stable timestep, while a
   chemical spinodal grows for a physical reason. The split stays the
   production scheme only inside the stable timestep (#803).
+- `advance_level_set` evolves one periodic level set with SSP-RK2. Advection
+  is first-order upwind. Normal motion is the Osher–Sethian Godunov flux.
+  `redistance_level_set` is the Sussman iteration at CFL speed one. The halo
+  width is one cell, and an x-slab reads that neighbour from the caller.
+  `LevelSetCuda` runs the same periodic step on one device. Volume is the
+  count of negative cells. HIP was not run (#436).
+
 - `AmplitudeSpectralETD1` integrates several complex amplitudes with one
   ETD1 step on a real-to-complex FFT. Each amplitude is a pair of real
   fields. The two half-spectrum combinations use the caller's symbols

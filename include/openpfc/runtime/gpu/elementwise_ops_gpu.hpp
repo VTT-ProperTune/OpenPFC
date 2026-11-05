@@ -63,6 +63,13 @@ void amplitude_pair_etd1_cuda_impl(const std::complex<double> *re_hat,
                                    const double *exp_minus, const double *phi_minus,
                                    std::complex<double> *out_re,
                                    std::complex<double> *out_im, std::size_t n);
+void level_set_rate_cuda_impl(const double *phi, const double *vx, const double *vy,
+                              const double *vz, const double *vn, const double *phi0,
+                              double *rate, int nx, int ny, int nz, double hx,
+                              double hy, double hz, int mode);
+void level_set_combine3_cuda_impl(const double *x, const double *y, const double *z,
+                                  double *out, double alpha, double beta,
+                                  double gamma, std::size_t n);
 #endif
 
 #if defined(OpenPFC_ENABLE_HIP)
@@ -104,6 +111,13 @@ void amplitude_pair_etd1_hip_impl(const std::complex<double> *re_hat,
                                   const double *exp_minus, const double *phi_minus,
                                   std::complex<double> *out_re,
                                   std::complex<double> *out_im, std::size_t n);
+void level_set_rate_hip_impl(const double *phi, const double *vx, const double *vy,
+                             const double *vz, const double *vn, const double *phi0,
+                             double *rate, int nx, int ny, int nz, double hx,
+                             double hy, double hz, int mode);
+void level_set_combine3_hip_impl(const double *x, const double *y, const double *z,
+                                 double *out, double alpha, double beta,
+                                 double gamma, std::size_t n);
 #endif
 
 } // namespace pfc

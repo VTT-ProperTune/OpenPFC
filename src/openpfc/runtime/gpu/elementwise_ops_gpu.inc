@@ -214,6 +214,117 @@ void launch_amplitude_pair_etd1(const double *re, const double *im,
   check_elem_launch("amplitude_pair_etd1");
 }
 
+__device__ int level_set_wrap(int i, int n) {
+  const int m = i % n;
+  return m < 0 ? m + n : m;
+}
+
+__device__ double level_set_at(const double *phi, int i, int j, int k, int nx,
+                               int ny, int nz) {
+  const int ix = level_set_wrap(i, nx);
+  const int jx = level_set_wrap(j, ny);
+  const int kx = level_set_wrap(k, nz);
+  return phi[static_cast<std::size_t>(ix + nx * (jx + ny * kx))];
+}
+
+__device__ double level_set_godunov(double speed, double backward, double forward) {
+  const double a = speed >= 0.0 ? (backward > 0.0 ? backward : 0.0)
+                                : (backward < 0.0 ? backward : 0.0);
+  const double b = speed >= 0.0 ? (forward < 0.0 ? forward : 0.0)
+                                : (forward > 0.0 ? forward : 0.0);
+  const double aa = a * a;
+  const double bb = b * b;
+  return aa > bb ? aa : bb;
+}
+
+__global__ void level_set_rate_kernel(const double *phi, const double *vx,
+                                      const double *vy, const double *vz,
+                                      const double *vn, const double *phi0,
+                                      double *rate, int nx, int ny, int nz,
+                                      double hx, double hy, double hz, int mode) {
+  const std::size_t n = static_cast<std::size_t>(nx) * static_cast<std::size_t>(ny) *
+                        static_cast<std::size_t>(nz);
+  const std::size_t p =
+      static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (p >= n) {
+    return;
+  }
+  const int i = static_cast<int>(p % static_cast<std::size_t>(nx));
+  const std::size_t tile = p / static_cast<std::size_t>(nx);
+  const int j = static_cast<int>(tile % static_cast<std::size_t>(ny));
+  const int k = static_cast<int>(tile / static_cast<std::size_t>(ny));
+  const double c = level_set_at(phi, i, j, k, nx, ny, nz);
+  const double dmx = (c - level_set_at(phi, i - 1, j, k, nx, ny, nz)) / hx;
+  const double dpx = (level_set_at(phi, i + 1, j, k, nx, ny, nz) - c) / hx;
+  const double dmy =
+      ny == 1 ? 0.0 : (c - level_set_at(phi, i, j - 1, k, nx, ny, nz)) / hy;
+  const double dpy =
+      ny == 1 ? 0.0 : (level_set_at(phi, i, j + 1, k, nx, ny, nz) - c) / hy;
+  const double dmz =
+      nz == 1 ? 0.0 : (c - level_set_at(phi, i, j, k - 1, nx, ny, nz)) / hz;
+  const double dpz =
+      nz == 1 ? 0.0 : (level_set_at(phi, i, j, k + 1, nx, ny, nz) - c) / hz;
+  double out = 0.0;
+  if (mode == 0) {
+    const double ux = vx[p] > 0.0 ? vx[p] * dmx : (vx[p] < 0.0 ? vx[p] * dpx : 0.0);
+    const double uy = vy[p] > 0.0 ? vy[p] * dmy : (vy[p] < 0.0 ? vy[p] * dpy : 0.0);
+    const double uz = vz[p] > 0.0 ? vz[p] * dmz : (vz[p] < 0.0 ? vz[p] * dpz : 0.0);
+    out = -(ux + uy + uz);
+  } else {
+    double speed = 0.0;
+    if (mode == 1) {
+      speed = vn[p];
+    } else {
+      const double h = hx < hy ? (hx < hz ? hx : hz) : (hy < hz ? hy : hz);
+      const double base = phi0[p];
+      speed = base / sqrt(base * base + h * h);
+    }
+    const double mag = sqrt(level_set_godunov(speed, dmx, dpx) +
+                            level_set_godunov(speed, dmy, dpy) +
+                            level_set_godunov(speed, dmz, dpz));
+    out = mode == 2 ? -speed * mag + speed : -speed * mag;
+  }
+  rate[p] = out;
+}
+
+__global__ void level_set_combine3_kernel(const double *x, const double *y,
+                                          const double *z, double *out, double alpha,
+                                          double beta, double gamma, std::size_t n) {
+  const std::size_t i =
+      static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (i >= n) {
+    return;
+  }
+  out[i] = alpha * x[i] + beta * y[i] + gamma * z[i];
+}
+
+void launch_level_set_rate(const double *phi, const double *vx, const double *vy,
+                           const double *vz, const double *vn, const double *phi0,
+                           double *rate, int nx, int ny, int nz, double hx,
+                           double hy, double hz, int mode) {
+  const std::size_t n = static_cast<std::size_t>(nx) * static_cast<std::size_t>(ny) *
+                        static_cast<std::size_t>(nz);
+  if (n == 0) {
+    return;
+  }
+  constexpr int threads = 256;
+  level_set_rate_kernel<<<elem_blocks(n), threads>>>(phi, vx, vy, vz, vn, phi0, rate,
+                                                     nx, ny, nz, hx, hy, hz, mode);
+  check_elem_launch("level_set_rate");
+}
+
+void launch_level_set_combine3(const double *x, const double *y, const double *z,
+                               double *out, double alpha, double beta, double gamma,
+                               std::size_t n) {
+  if (n == 0) {
+    return;
+  }
+  constexpr int threads = 256;
+  level_set_combine3_kernel<<<elem_blocks(n), threads>>>(x, y, z, out, alpha, beta,
+                                                         gamma, n);
+  check_elem_launch("level_set_combine3");
+}
+
 #if defined(OpenPFC_ENABLE_CUDA) && defined(OPENPFC_GPU_API_CUDA)
 void multiply_complex_real_cuda_impl(const std::complex<double> *a, const double *b,
                                      std::complex<double> *out, std::size_t n) {
@@ -292,6 +403,18 @@ void amplitude_pair_etd1_cuda_impl(const std::complex<double> *re_hat,
                              phi_plus, exp_minus, phi_minus,
                              reinterpret_cast<double *>(out_re),
                              reinterpret_cast<double *>(out_im), n);
+}
+void level_set_rate_cuda_impl(const double *phi, const double *vx, const double *vy,
+                              const double *vz, const double *vn, const double *phi0,
+                              double *rate, int nx, int ny, int nz, double hx,
+                              double hy, double hz, int mode) {
+  launch_level_set_rate(phi, vx, vy, vz, vn, phi0, rate, nx, ny, nz, hx, hy, hz,
+                        mode);
+}
+void level_set_combine3_cuda_impl(const double *x, const double *y, const double *z,
+                                  double *out, double alpha, double beta,
+                                  double gamma, std::size_t n) {
+  launch_level_set_combine3(x, y, z, out, alpha, beta, gamma, n);
 }
 #endif
 
@@ -373,6 +496,18 @@ void amplitude_pair_etd1_hip_impl(const std::complex<double> *re_hat,
                              phi_plus, exp_minus, phi_minus,
                              reinterpret_cast<double *>(out_re),
                              reinterpret_cast<double *>(out_im), n);
+}
+void level_set_rate_hip_impl(const double *phi, const double *vx, const double *vy,
+                             const double *vz, const double *vn, const double *phi0,
+                             double *rate, int nx, int ny, int nz, double hx,
+                             double hy, double hz, int mode) {
+  launch_level_set_rate(phi, vx, vy, vz, vn, phi0, rate, nx, ny, nz, hx, hy, hz,
+                        mode);
+}
+void level_set_combine3_hip_impl(const double *x, const double *y, const double *z,
+                                 double *out, double alpha, double beta,
+                                 double gamma, std::size_t n) {
+  launch_level_set_combine3(x, y, z, out, alpha, beta, gamma, n);
 }
 #endif
 

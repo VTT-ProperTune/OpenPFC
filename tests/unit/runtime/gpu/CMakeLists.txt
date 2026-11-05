@@ -87,6 +87,19 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     add_test(NAME CUDA_AmplitudeSpectralETD1
              COMMAND test_amplitude_spectral_etd1_cuda)
 
+    add_executable(test_level_set_cuda test_level_set_cuda.cpp)
+    target_include_directories(test_level_set_cuda PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+        ${CMAKE_SOURCE_DIR}/tests
+        ${CMAKE_SOURCE_DIR}/include)
+    target_link_libraries(test_level_set_cuda PRIVATE
+        Catch2::Catch2 openpfc openpfc_gpu_kernels CUDA::cudart MPI::MPI_CXX
+        Heffte::Heffte)
+    set_target_properties(test_level_set_cuda PROPERTIES
+        CUDA_STANDARD 20
+        CUDA_STANDARD_REQUIRED ON)
+    add_test(NAME CUDA_LevelSet COMMAND test_level_set_cuda)
+
     target_include_directories(test_spectral_flux_cuda PRIVATE
         ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
         ${CMAKE_SOURCE_DIR}/tests
