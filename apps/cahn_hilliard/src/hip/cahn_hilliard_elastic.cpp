@@ -35,7 +35,6 @@ int main(int argc, char *argv[]) {
   int nproc = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
-  int status = 0;
   try {
     if (argc != 2) {
       throw std::invalid_argument("usage: cahn_hilliard_elastic_hip CASE.json");
@@ -85,11 +84,18 @@ int main(int argc, char *argv[]) {
                   report.iterations, report.residual, report.converged ? 1 : 0);
     }
   } catch (const std::exception &e) {
-    if (rank == 0) {
-      std::cerr << "cahn_hilliard_elastic_hip: " << e.what() << "\n";
-    }
-    status = 2;
+    // A rank-local JSON/device exception must not leave peer ranks blocked
+    // inside a later FFT or microelasticity MPI collective.
+    std::cerr << "cahn_hilliard_elastic_hip rank " << rank << ": " << e.what()
+              << "\n" << std::flush;
+    MPI_Abort(MPI_COMM_WORLD, 2);
+    return 2; // MPI_Abort is normally non-returning.
+  } catch (...) {
+    std::cerr << "cahn_hilliard_elastic_hip rank " << rank
+              << ": unknown fatal error\n" << std::flush;
+    MPI_Abort(MPI_COMM_WORLD, 2);
+    return 2;
   }
   MPI_Finalize();
-  return status;
+  return 0;
 }
