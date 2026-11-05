@@ -7,6 +7,14 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- `advance_solute_partition` evolves one conserved solute line on a
+  non-periodic `DiffusionAxis`. The chemical potential is the composition
+  divided by a prescribed positive partition factor. Mobility is constant.
+  Both ends are a zero outward constitutive flux on a `FluxLedger`. RK4
+  keeps the weighted inventory. A constant potential is the equilibrium
+  `c = K m / Σ w K`, so a factor below one holds less solute. The factor
+  does not move. This is not a crystalline density, not melt flow, and
+  not an aluminum calibration. The alloy roadmap stays open (#251).
 - `advance_solved_heat` integrates one heat line on a non-periodic
   `DiffusionAxis`, and `advance_substrate_pfc` reads that temperature.
   Heat is RK4. The substrate end is a constitutive flux on a `FluxLedger`.

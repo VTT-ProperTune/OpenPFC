@@ -29,9 +29,14 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_float_cpu_services.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_fourier_and_noise.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_thermal_pfc.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_solute_partition.cpp
 )
 add_test(NAME thermal-pfc COMMAND openpfc-tests "[thermal_pfc]")
 set_tests_properties(thermal-pfc PROPERTIES
+  ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1"
+  TIMEOUT 120)
+add_test(NAME solute-partition COMMAND openpfc-tests "[solute_partition]")
+set_tests_properties(solute-partition PROPERTIES
   ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1"
   TIMEOUT 120)
 if(OpenPFC_ENABLE_HEFFTE)
