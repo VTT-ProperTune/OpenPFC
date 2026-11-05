@@ -137,7 +137,7 @@ public:
     m_symbol_q[amplitude].assign(symbol_q.begin(), symbol_q.end());
     m_symbol_m[amplitude].assign(symbol_minus_q.begin(), symbol_minus_q.end());
     if (m_dt_set) {
-      rebuild_weights(amplitude);
+      rebuild_weights(amplitude, m_dt, m_exp_q, m_phi_q, m_exp_m, m_phi_m);
     }
     m_ready[amplitude] = true;
   }
@@ -147,13 +147,23 @@ public:
       throw std::invalid_argument(
           "AmplitudeSpectralETD1: dt must be positive and finite");
     }
-    m_dt = dt;
-    m_dt_set = true;
+    // Build the complete coefficient family before publishing the new time step.
+    // An overflow on a later amplitude must not leave earlier ones updated.
+    auto exp_q = m_exp_q;
+    auto phi_q = m_phi_q;
+    auto exp_m = m_exp_m;
+    auto phi_m = m_phi_m;
     for (std::size_t j = 0; j < m_count; ++j) {
       if (m_ready[j]) {
-        rebuild_weights(j);
+        rebuild_weights(j, dt, exp_q, phi_q, exp_m, phi_m);
       }
     }
+    m_exp_q.swap(exp_q);
+    m_phi_q.swap(phi_q);
+    m_exp_m.swap(exp_m);
+    m_phi_m.swap(phi_m);
+    m_dt = dt;
+    m_dt_set = true;
   }
 
   /**
@@ -264,25 +274,29 @@ private:
     }
   }
 
-  void rebuild_weights(std::size_t amplitude) {
+  void rebuild_weights(std::size_t amplitude, double dt,
+                       std::vector<std::vector<double>> &exp_q_table,
+                       std::vector<std::vector<double>> &phi_q_table,
+                       std::vector<std::vector<double>> &exp_m_table,
+                       std::vector<std::vector<double>> &phi_m_table) {
     std::vector<double> exp_q(m_m);
     std::vector<double> phi_q(m_m);
     std::vector<double> exp_m(m_m);
     std::vector<double> phi_m(m_m);
     for (std::size_t q = 0; q < m_m; ++q) {
       const AmplitudeETD1Weight wq =
-          amplitude_etd1_weight(m_symbol_q[amplitude][q], m_dt);
+          amplitude_etd1_weight(m_symbol_q[amplitude][q], dt);
       const AmplitudeETD1Weight wm =
-          amplitude_etd1_weight(m_symbol_m[amplitude][q], m_dt);
+          amplitude_etd1_weight(m_symbol_m[amplitude][q], dt);
       exp_q[q] = wq.exp_s;
       phi_q[q] = wq.phi1;
       exp_m[q] = wm.exp_s;
       phi_m[q] = wm.phi1;
     }
-    m_exp_q[amplitude].swap(exp_q);
-    m_phi_q[amplitude].swap(phi_q);
-    m_exp_m[amplitude].swap(exp_m);
-    m_phi_m[amplitude].swap(phi_m);
+    exp_q_table[amplitude].swap(exp_q);
+    phi_q_table[amplitude].swap(phi_q);
+    exp_m_table[amplitude].swap(exp_m);
+    phi_m_table[amplitude].swap(phi_m);
   }
 
   void integrate_one(std::size_t amplitude) {
