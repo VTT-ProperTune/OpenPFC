@@ -118,8 +118,9 @@ TEST_CASE("create_cuda round-trips two 12x10x8 fields on every reduced axis",
       std::vector<double> field(direct.size_inbox());
       for (std::size_t i = 0; i < field.size(); ++i) {
         const double x = static_cast<double>(i);
-        field[i] = component == 0 ? std::sin(0.17 * x) + 0.3 * std::cos(0.05 * x)
-                                  : 0.7 * std::cos(0.11 * x) - 0.2 * std::sin(0.31 * x);
+        const double first = std::sin(0.17 * x) + 0.3 * std::cos(0.05 * x);
+        const double second = 0.7 * std::cos(0.11 * x) - 0.2 * std::sin(0.31 * x);
+        field[i] = component == 0 ? first : second;
       }
 
       real.copy_from_host(field);
