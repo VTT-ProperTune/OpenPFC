@@ -67,7 +67,9 @@ struct BoundedAxisComparison {
   double distributed_line_seconds = 0;
   double fd4_seconds = 0;
   double fd8_seconds = 0;
+  /// Explicit transform buffers only; FFTW/MPI internal allocations excluded.
   std::size_t distributed_workspace_bytes = 0;
+  /// Maximum rank's logical Allgatherv send+receive payload, not network bytes.
   std::size_t distributed_comm_bytes = 0;
   std::size_t fd_matrix_bytes = 0;
   double distributed_roundtrip_peak = 0;
