@@ -9,7 +9,7 @@ Full programs built when **`OpenPFC_BUILD_APPS=ON`** (default). They install und
 
 User-facing overview and example commands: [`docs/user_guide/applications.md`](../docs/user_guide/applications.md).
 
-CMake wires subdirectories from [`apps/CMakeLists.txt`](CMakeLists.txt) in this order: `tungsten`, `aluminumNew`, `cahn_hilliard`, `thin_film`, `surface_diffusion`, `kawahara`, `ehd_film`, `gradient_elasticity`, `higher_order_pfc`, `inverse_homogenization`, `incompressible_flow`, `polycrystal_shear`, `allen_cahn`, `alloy_dendrite_elastic`, `heat3d`, `wave2d`, `kobayashi`, `vlasov_maxwell`.
+CMake wires subdirectories from [`apps/CMakeLists.txt`](CMakeLists.txt) in this order: `tungsten`, `aluminumNew`, `cahn_hilliard`, `thin_film`, `surface_diffusion`, `kawahara`, `ehd_film`, `gradient_elasticity`, `higher_order_pfc`, `inverse_homogenization`, `incompressible_flow`, `polycrystal_shear`, `allen_cahn`, `alloy_dendrite_elastic`, `heat3d`, `wave2d`, `kobayashi`, `vlasov_maxwell`, `burgers`.
 
 For the nine JSON-session apps, `./scripts/openpfc apps` lists presets and
 supported backends. Create a case with `openpfc init CASE --app=NAME`; see the
@@ -71,6 +71,7 @@ in installed OpenPFC modules. They are not hidden inside an app.
 | [**`wave2d/`**](wave2d/README.md) | **2D acoustic wave** as **coupled first-order** system; mixed periodic / physical **y** boundaries | CLI (+ optional `--vtk` on all variants) | FD (manual 2nd order or orders 2–20); CPU + optional CUDA/HIP |
 | [**`kobayashi/`**](kobayashi/README.md) | **Kobayashi** dendritic **phase field + temperature** (periodic **x,y**); Julia `kobayashi_v1`-style FD | CLI; PNG snapshots of $\phi$ | **`kobayashi_fd_manual`** (MPI halos); **`kobayashi_fd_openmp`** (torus wrap + OpenMP); CPU |
 | [**`vlasov_maxwell/`**](vlasov_maxwell/README.md) | **1D2V electromagnetic Vlasov–Maxwell** (kinetic distribution on a 3-D phase-space grid, self-consistent Maxwell) | CLI only (`--key=value`); CSV diagnostics | Strang split: exact spectral $x$-shift, semi-Lagrangian velocity, exact ETD light wave; CPU + optional HIP |
+| [**`burgers/`**](burgers/README.md) | **Periodic viscous Burgers** on one sine wave, compared across dealiased Fourier, conservative FD2 and monotone finite volume | CLI (`--method`, `--N`, `--nu`, `--dt`, `--time`) | SSP-RK3; `ComplexLineFFT` and `fd::evaluate<2>`; single-rank CPU |
 | [**`incompressible_flow/`**](incompressible_flow/README.md) | Periodic **3-D incompressible Navier–Stokes**. Taylor–Green, decaying homogeneous isotropic turbulence, and constant-power low-mode forcing on the same Fourier velocity. The 2-D vorticity–streamfunction prototype stays under `examples/ns2d_vorticity/`. | CLI (`--case taylor-green`, `--case decaying-hit`, `--case forced-hit`) | Installed Leray step, spectral / HeFFTe, CPU, distributed pencil |
 | [**`polycrystal_shear/`**](polycrystal_shear/README.md) | Periodic **FCC polycrystal** in finite-strain simple shear. The mid-plane scalar is the Frobenius norm of the deviator of the symmetric Piola stress. | CLI | Newton–GMRES, aluminum slip law, HeFFTe, CPU, MPI |
 

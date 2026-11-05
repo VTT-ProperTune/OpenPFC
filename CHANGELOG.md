@@ -7,6 +7,21 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- The Burgers CPU FDM2/FVM paths and their named tests now build without
+  FFTW3; spectral methods fail explicitly when the backend is absent.
+  The CLI is exercised directly in CTest. SSP-RK3 rejects unsafe steps and
+  nonfinite candidates without partially publishing them.
+
+- `apps/burgers` advances one periodic Burgers problem,
+  `u_t + (u^2/2)_x = ν u_xx` with `u(x,0)=sin(x)`, by SSP-RK3.
+  The baselines are a 2/3-dealiased Fourier product through
+  `ComplexLineFFT`, the conservative FD2 flux from `fd::evaluate<2>`,
+  and a first-order Rusanov finite-volume update. An aliased product
+  and the advective form `-u D_h u` are named diagnostics. The
+  advective form keeps the same discrete mass, because the order-2
+  central stencil is skew, and still separates pointwise from the
+  flux form. Tests compare the characteristic solution, a Cole–Hopf
+  reference and the entropy shock (#369).
 - ERK43ZB audit now distinguishes strong stiff-order residuals from the
   Hochbruck–Ostermann *weak* fixed-step fourth-order conditions: psi4(0)
   and outer b_i(0) with nonzero internal Z. Four noncommuting/nonnormal
