@@ -17,6 +17,7 @@
 #include <vector>
 
 using pfc::field::level_set::advance_level_set;
+using pfc::field::level_set::level_set_advection_stable_dt;
 using pfc::field::level_set::level_set_count;
 using pfc::field::level_set::level_set_halo_width;
 using pfc::field::level_set::level_set_negative_centroid;
@@ -245,6 +246,42 @@ TEST_CASE("level-set upwind matches an independent one-step oracle",
   report("oracle_rk2", step_gap, step.dt, step.negative_volume, 0.0);
   REQUIRE(step_gap < 1e-12);
   REQUIRE(step.dt == dt);
+}
+
+TEST_CASE("directional CFL keeps diagonal upwind advection monotone",
+          "[unit][field][level_set]") {
+  const LevelSetGrid grid = make_grid(16, 16, 1);
+  const std::size_t n = level_set_count(grid);
+  const std::vector<double> vx(n, 0.5);
+  const std::vector<double> vy(n, 0.5);
+  const std::vector<double> vz(n, 0.0);
+  constexpr double cfl = 0.8;
+  const double dt = level_set_advection_stable_dt(grid, vx, vy, vz, cfl);
+  const double old_scalar_dt = level_set_stable_dt(grid, 0.5, cfl);
+  REQUIRE(std::abs(dt - cfl * grid.hx / 1.0) < 1e-14);
+  REQUIRE(std::abs(old_scalar_dt - 2.0 * dt) < 1e-14);
+  std::vector<double> checker(n);
+  for (int j = 0; j < grid.ny; ++j) {
+    for (int i = 0; i < grid.nx; ++i) {
+      checker[index_of(grid, i, j, 0)] = ((i + j) % 2 == 0) ? 1.0 : -1.0;
+    }
+  }
+  auto stable = checker;
+  auto excessive = checker;
+  (void)advance_level_set(grid, stable, LevelSetMode::Advection, vx, vy, vz,
+                          {}, {}, dt);
+  (void)advance_level_set(grid, excessive, LevelSetMode::Advection, vx, vy, vz,
+                          {}, {}, old_scalar_dt);
+  double stable_peak = 0.0;
+  double excessive_peak = 0.0;
+  for (std::size_t i = 0; i < n; ++i) {
+    stable_peak = std::max(stable_peak, std::abs(stable[i]));
+    excessive_peak = std::max(excessive_peak, std::abs(excessive[i]));
+  }
+  REQUIRE(stable_peak <= 1.0 + 1e-12);
+  REQUIRE(excessive_peak > 1.0 + 0.1);
+  REQUIRE_THROWS_AS(level_set_advection_stable_dt(grid, vx, vy, vz, 1.1),
+                    std::invalid_argument);
 }
 
 TEST_CASE("level-set Godunov flux matches an independent stencil",
