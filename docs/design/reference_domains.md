@@ -13,10 +13,15 @@ A geometry operator takes two objects.
   keeps the embedding operator. Any other constant nonsingular map uses
   that chart's inverse metric.
 
-`sample_reference` is the scalar reading shared by the three filled
-reference series. It returns the physical Laplacian at one station, the
-integral in the reference weight, and the physical measure. The caller
-passes the series it holds. Cylinder, disk, and ball each keep the
+`sample_reference` is the combined *diagnostic* reading shared by the
+three filled reference series. It returns the physical Laplacian at one
+station and explicitly separated `reference_integral`, `physical_integral`
+and `physical_measure` values. Under a constant affine map, the physical
+integral uses |det A| in 3D or the induced in-plane area Jacobian in the disk.
+Thus the physical mean of a constant field is `physical_integral /
+physical_measure = 1` even after a non-unit affine stretch. Do not divide
+the reference integral by the physical measure. The caller passes the series
+it holds. Cylinder, disk, and ball each keep the
 transform strategy from their own implementation: smooth powers of `r²`
 for the cylinder and the disk, and frozen solid harmonics for the ball.
 None of those strategies replaces `1/r` by `1/(r+ε)`.
