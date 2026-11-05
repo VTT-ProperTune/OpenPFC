@@ -345,6 +345,8 @@ ball_physical_laplacian(const BallSeries &series, const AffineMap &map, double r
   std::complex<double> sum;
   const double radius = series.domain.radius;
   for (const BallHarmonic &mode : series.modes) {
+    if (!ball_harmonic_is_admissible(mode))
+      throw std::invalid_argument("ball integral received an invalid harmonic");
     if (mode.degree != 0) continue;
     const int power = 2 * mode.radial + 3;
     sum += mode.coefficient * 4.0 * std::numbers::pi *
@@ -360,6 +362,8 @@ ball_boundary_flux(const BallSeries &series) {
   std::complex<double> flux;
   const double radius = series.domain.radius;
   for (const BallHarmonic &mode : series.modes) {
+    if (!ball_harmonic_is_admissible(mode))
+      throw std::invalid_argument("ball flux received an invalid harmonic");
     if (mode.degree != 0 || mode.radial == 0) continue;
     const int radial = mode.radial;
     flux += mode.coefficient * (2.0 * static_cast<double>(radial)) * 4.0 *
