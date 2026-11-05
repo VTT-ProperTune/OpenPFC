@@ -62,11 +62,11 @@ TEST_CASE("Distributed complex line matches the one-rank DFT",
   REQUIRE(reduced_round < 1e-10);
   // For Allgatherv each rank receives n-local peer samples and
   // contributes local samples to each of the ranks-1 other peers.
+  const std::size_t received = static_cast<std::size_t>(n - block.count);
+  const std::size_t sent =
+      static_cast<std::size_t>(ranks - 1) * static_cast<std::size_t>(block.count);
   const std::size_t expected_payload =
-      (static_cast<std::size_t>(n - block.count) +
-       static_cast<std::size_t>(ranks - 1) *
-           static_cast<std::size_t>(block.count)) *
-      sizeof(std::complex<double>);
+      (received + sent) * sizeof(std::complex<double>);
   REQUIRE(distributed.comm_bytes() == expected_payload);
   if (ranks > 1) {
     REQUIRE(distributed.workspace_bytes() ==
