@@ -19,7 +19,9 @@
  * are built to vanish there. This is not a ghost scheme and it does
  * not close the boundary-condition roadmap. A constant axial body
  * force is the pressure gradient. The steady statement is
- * `ν Δu + G = 0`. The velocity is divergence-free, so that residual
+ * `ν Δu + G = 0`. The fitted scalar series is an **analytic reference**,
+ * not an executed velocity/pressure projection simulation. The velocity
+ * is divergence-free, so that residual
  * needs no further pressure correction.
  *
  * Radial degree 0 has only the zero field that meets the wall, and the
@@ -58,8 +60,13 @@ struct PipeBalance {
   double wall_error{0.0};
   double axis_value{0.0};
   double axis_gradient{0.0};
+  /// Maximum error against the independently evaluated Poiseuille profile
+  /// on off-grid interior probes, including the imaginary component.
+  double profile_error{0.0};
   double flow_rate{0.0};
   double flow_imag{0.0};
+  /// Signed kinematic-viscosity momentum flux nu*d(u_z)/dr at r=R.
+  /// Dimensional wall stress requires dynamic viscosity mu=rho*nu.
   double wall_shear{0.0};
   double shear_spread{0.0};
   double momentum{0.0};
@@ -333,6 +340,13 @@ inline double abs_complex(std::complex<double> value) {
         pfc::geometry::cylinder_gradient(velocity, sample.r, sample.theta, sample.z);
     report.divergence =
         std::max(report.divergence, pipe_detail::abs_complex(gradient[2]));
+    const auto value = pfc::geometry::evaluate_cylinder(
+        velocity, sample.r, sample.theta, sample.z);
+    const double oracle = request.force *
+                          (request.radius * request.radius - sample.r * sample.r) /
+                          (4.0 * request.viscosity);
+    report.profile_error =
+        std::max(report.profile_error, pipe_detail::abs_complex(value - oracle));
     const pfc::geometry::Vec3 reference_gradient{
         gradient[0].real(), gradient[1].real(), gradient[2].real()};
     const pfc::geometry::Vec3 physical = map.physical_gradient(reference_gradient);
