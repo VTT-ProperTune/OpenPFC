@@ -6,7 +6,8 @@
  *
  * The shipped call is `pfc::fft::create_cuda`. The same plan is also built
  * directly with HeFFTe, so a wrapper mistake is not hidden behind the
- * provider. Both recover the field to an absolute error below 2e-12.
+ * provider. Both recover two successive component fields to an absolute
+ * error below 2e-12, without rebuilding the FFT plans between components.
  * HIP is not run. The FFT provider is unchanged.
  */
 
@@ -59,19 +60,19 @@ std::size_t complex_count(int axis) {
   return static_cast<std::size_t>(n[0] * n[1] * n[2]);
 }
 
-void report(int axis, double direct_error, double wrapped_error,
+void report(int axis, int component, double direct_error, double wrapped_error,
             const std::string &device) {
   std::ostringstream out;
   out.setf(std::ios::scientific);
   out.precision(17);
-  out << "FFT_NONCUBIC axis " << axis << " " << direct_error << " " << wrapped_error
-      << " " << device << '\n';
+  out << "FFT_NONCUBIC axis " << axis << " component " << component << " "
+      << direct_error << " " << wrapped_error << " " << device << '\n';
   std::cout << out.str();
 }
 
 } // namespace
 
-TEST_CASE("create_cuda round-trips a 12x10x8 field on every reduced axis",
+TEST_CASE("create_cuda round-trips two 12x10x8 fields on every reduced axis",
           "[gpu][fft][noncubic]") {
   if (!pfc::gpu::test::is_cuda_available()) SKIP("CUDA not available");
 
@@ -106,35 +107,42 @@ TEST_CASE("create_cuda round-trips a 12x10x8 field on every reduced axis",
     REQUIRE(direct.size_outbox() == complex_count(axis));
     REQUIRE(wrapped.size_outbox() == direct.size_outbox());
 
-    std::vector<double> field(direct.size_inbox());
-    for (std::size_t i = 0; i < field.size(); ++i) {
-      field[i] = std::sin(0.17 * static_cast<double>(i)) +
-                 0.3 * std::cos(0.05 * static_cast<double>(i));
-    }
-
     pfc::fft::RealDataBufferCUDA real(direct.size_inbox());
     pfc::fft::ComplexDataBufferCUDA spectrum(direct.size_outbox());
     pfc::fft::RealDataBufferCUDA back(direct.size_inbox());
-    real.copy_from_host(field);
-
     Work workspace(direct.size_workspace());
-    direct.forward(real.data(), spectrum.data(), workspace.data());
-    direct.backward(spectrum.data(), back.data(), workspace.data(),
-                    heffte::scale::full);
-    const std::vector<double> direct_host = back.to_host();
 
-    real.copy_from_host(field);
-    wrapped.forward(real, spectrum);
-    wrapped.backward(spectrum, back);
-    const std::vector<double> wrapped_host = back.to_host();
+    // Use both fields sequentially with the *same* plans and workspaces, as
+    // the installed two-field acceptance consumer does after its trajectory.
+    for (int component = 0; component < 2; ++component) {
+      std::vector<double> field(direct.size_inbox());
+      for (std::size_t i = 0; i < field.size(); ++i) {
+        const double x = static_cast<double>(i);
+        field[i] = component == 0 ? std::sin(0.17 * x) + 0.3 * std::cos(0.05 * x)
+                                  : 0.7 * std::cos(0.11 * x) - 0.2 * std::sin(0.31 * x);
+      }
 
-    REQUIRE(all_finite(direct_host));
-    REQUIRE(all_finite(wrapped_host));
-    const double direct_error = max_abs(direct_host, field);
-    const double wrapped_error = max_abs(wrapped_host, field);
-    report(axis, direct_error, wrapped_error, device);
-    REQUIRE(direct_error < 2e-12);
-    REQUIRE(wrapped_error < 2e-12);
+      real.copy_from_host(field);
+      direct.forward(real.data(), spectrum.data(), workspace.data());
+      direct.backward(spectrum.data(), back.data(), workspace.data(),
+                      heffte::scale::full);
+      const std::vector<double> direct_host = back.to_host();
+
+      real.copy_from_host(field);
+      wrapped.forward(real, spectrum);
+      const std::vector<double> preserved_input = real.to_host();
+      wrapped.backward(spectrum, back);
+      const std::vector<double> wrapped_host = back.to_host();
+
+      REQUIRE(all_finite(direct_host));
+      REQUIRE(all_finite(wrapped_host));
+      const double direct_error = max_abs(direct_host, field);
+      const double wrapped_error = max_abs(wrapped_host, field);
+      report(axis, component, direct_error, wrapped_error, device);
+      REQUIRE(preserved_input == field);
+      REQUIRE(direct_error < 2e-12);
+      REQUIRE(wrapped_error < 2e-12);
+    }
   }
 }
 
