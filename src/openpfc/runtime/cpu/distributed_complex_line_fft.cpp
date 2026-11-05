@@ -18,7 +18,7 @@ void require_collective(int invalid, MPI_Comm comm, const char *message) {
   int any = 0;
   const int status = MPI_Allreduce(&invalid, &any, 1, MPI_INT, MPI_MAX, comm);
   if (status != MPI_SUCCESS) {
-    throw std::runtime_error("DistributedComplexLineFFT: validation Allreduce failed");
+    throw std::runtime_error("line FFT validation Allreduce failed");
   }
   if (any) throw std::invalid_argument(message);
 }
