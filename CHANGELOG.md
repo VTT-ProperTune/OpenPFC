@@ -200,6 +200,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   still grow when that split is outside the stable timestep, while a
   chemical spinodal grows for a physical reason. The split stays the
   production scheme only inside the stable timestep (#803).
+- `build_grain_interface` stores one periodic grain-id field and a narrow
+  band of face, triple, and higher junctions. Two nearest-seed maps, the
+  27-image search and the min-image formula, share the lower-index tie.
+  Storage grows with the boundary, not with one signed-distance field per
+  grain. `GrainInterfaceCuda` keeps that layout on one device and reports
+  its bytes. HIP was not run (#437).
+
 - `advance_level_set` evolves one periodic level set with SSP-RK2. Advection
   is first-order upwind. Normal motion is the Osher–Sethian Godunov flux.
   `redistance_level_set` is the Sussman iteration at CFL speed one. The halo

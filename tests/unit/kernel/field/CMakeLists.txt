@@ -32,6 +32,7 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_thermal_pfc.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_solute_partition.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_level_set.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_grain_interface.cpp
 )
 add_test(NAME thermal-pfc COMMAND openpfc-tests "[thermal_pfc]")
 set_tests_properties(thermal-pfc PROPERTIES
@@ -42,6 +43,10 @@ set_tests_properties(solute-partition PROPERTIES
   ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1"
   TIMEOUT 120)
 add_test(NAME level-set COMMAND openpfc-tests "[level_set]")
+add_test(NAME grain-interface COMMAND openpfc-tests "[grain_interface]")
+set_tests_properties(grain-interface PROPERTIES
+  ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1"
+  TIMEOUT 180)
 set_tests_properties(level-set PROPERTIES
   ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1"
   TIMEOUT 180)

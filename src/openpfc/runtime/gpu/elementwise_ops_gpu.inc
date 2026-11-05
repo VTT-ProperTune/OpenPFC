@@ -16,6 +16,7 @@
 #include <stdexcept>
 #include <string>
 
+#include <openpfc/kernel/field/grain_interface.hpp>
 #include <openpfc/runtime/gpu/gpu_api.hpp>
 
 namespace pfc {
@@ -325,6 +326,74 @@ void launch_level_set_combine3(const double *x, const double *y, const double *z
   check_elem_launch("level_set_combine3");
 }
 
+__device__ int grain_wrap_coord(int i, int n) {
+  if (i < 0) return i + n;
+  if (i >= n) return i - n;
+  return i;
+}
+
+__global__ void grain_count_kernel(const int *ids, int *counts, std::size_t n) {
+  const std::size_t i =
+      static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (i >= n) return;
+  atomicAdd(counts + ids[i], 1);
+}
+
+__global__ void grain_band_kernel(const int *ids,
+                                  const field::grain_interface::BandSite *band,
+                                  int n_band, int nx, int ny, int nz,
+                                  int *mismatches) {
+  const int b =
+      static_cast<int>(blockIdx.x) * blockDim.x + static_cast<int>(threadIdx.x);
+  if (b >= n_band) return;
+  const int p = band[b].index;
+  const int nxny = nx * ny;
+  const int k = p / nxny;
+  const int rem = p - k * nxny;
+  const int j = rem / nx;
+  const int i = rem - j * nx;
+  const int owner = ids[p];
+  int seen[27];
+  int nseen = 0;
+  seen[nseen++] = owner;
+  for (int dk = -1; dk <= 1; ++dk) {
+    for (int dj = -1; dj <= 1; ++dj) {
+      for (int di = -1; di <= 1; ++di) {
+        if (di == 0 && dj == 0 && dk == 0) continue;
+        const int ii = grain_wrap_coord(i + di, nx);
+        const int jj = grain_wrap_coord(j + dj, ny);
+        const int kk = grain_wrap_coord(k + dk, nz);
+        const int q = ii + nx * (jj + ny * kk);
+        if (q == p) continue;
+        const int id = ids[q];
+        int known = 0;
+        for (int t = 0; t < nseen; ++t) {
+          if (seen[t] == id) known = 1;
+        }
+        if (known == 0) seen[nseen++] = id;
+      }
+    }
+  }
+  if (owner != band[b].owner || nseen != band[b].n_ids) atomicAdd(mismatches, 1);
+}
+
+void launch_grain_count(const int *ids, int *counts, std::size_t n) {
+  if (n == 0) return;
+  constexpr int threads = 256;
+  grain_count_kernel<<<elem_blocks(n), threads>>>(ids, counts, n);
+  check_elem_launch("grain_count");
+}
+
+void launch_grain_band(const int *ids, const field::grain_interface::BandSite *band,
+                       int n_band, int nx, int ny, int nz, int *mismatches) {
+  if (n_band == 0) return;
+  constexpr int threads = 256;
+  const std::size_t n = static_cast<std::size_t>(n_band);
+  grain_band_kernel<<<elem_blocks(n), threads>>>(ids, band, n_band, nx, ny, nz,
+                                                 mismatches);
+  check_elem_launch("grain_band");
+}
+
 #if defined(OpenPFC_ENABLE_CUDA) && defined(OPENPFC_GPU_API_CUDA)
 void multiply_complex_real_cuda_impl(const std::complex<double> *a, const double *b,
                                      std::complex<double> *out, std::size_t n) {
@@ -415,6 +484,14 @@ void level_set_combine3_cuda_impl(const double *x, const double *y, const double
                                   double *out, double alpha, double beta,
                                   double gamma, std::size_t n) {
   launch_level_set_combine3(x, y, z, out, alpha, beta, gamma, n);
+}
+void grain_count_cuda_impl(const int *ids, int *counts, std::size_t n) {
+  launch_grain_count(ids, counts, n);
+}
+void grain_band_cuda_impl(const int *ids,
+                          const field::grain_interface::BandSite *band, int n_band,
+                          int nx, int ny, int nz, int *mismatches) {
+  launch_grain_band(ids, band, n_band, nx, ny, nz, mismatches);
 }
 #endif
 
@@ -508,6 +585,14 @@ void level_set_combine3_hip_impl(const double *x, const double *y, const double 
                                  double *out, double alpha, double beta,
                                  double gamma, std::size_t n) {
   launch_level_set_combine3(x, y, z, out, alpha, beta, gamma, n);
+}
+void grain_count_hip_impl(const int *ids, int *counts, std::size_t n) {
+  launch_grain_count(ids, counts, n);
+}
+void grain_band_hip_impl(const int *ids,
+                         const field::grain_interface::BandSite *band, int n_band,
+                         int nx, int ny, int nz, int *mismatches) {
+  launch_grain_band(ids, band, n_band, nx, ny, nz, mismatches);
 }
 #endif
 

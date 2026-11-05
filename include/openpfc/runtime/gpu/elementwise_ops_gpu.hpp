@@ -19,6 +19,8 @@
 
 #if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
 
+#include <openpfc/kernel/field/grain_interface.hpp>
+
 #include <complex>
 #include <cstddef>
 
@@ -70,6 +72,10 @@ void level_set_rate_cuda_impl(const double *phi, const double *vx, const double 
 void level_set_combine3_cuda_impl(const double *x, const double *y, const double *z,
                                   double *out, double alpha, double beta,
                                   double gamma, std::size_t n);
+void grain_count_cuda_impl(const int *ids, int *counts, std::size_t n);
+void grain_band_cuda_impl(const int *ids,
+                          const field::grain_interface::BandSite *band, int n_band,
+                          int nx, int ny, int nz, int *mismatches);
 #endif
 
 #if defined(OpenPFC_ENABLE_HIP)
@@ -118,6 +124,10 @@ void level_set_rate_hip_impl(const double *phi, const double *vx, const double *
 void level_set_combine3_hip_impl(const double *x, const double *y, const double *z,
                                  double *out, double alpha, double beta,
                                  double gamma, std::size_t n);
+void grain_count_hip_impl(const int *ids, int *counts, std::size_t n);
+void grain_band_hip_impl(const int *ids,
+                         const field::grain_interface::BandSite *band, int n_band,
+                         int nx, int ny, int nz, int *mismatches);
 #endif
 
 } // namespace pfc
