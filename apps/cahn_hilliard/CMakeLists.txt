@@ -62,6 +62,18 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
       set_tests_properties(cahn-hilliard-elastic-hip-smoke PROPERTIES
         PASS_REGULAR_EXPRESSION "CAHN_HILLIARD_ELASTIC_HIP"
         TIMEOUT 180)
+      if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
+         (OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR
+          OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 2))
+        # A missing argument causes a rank-local error, which must terminate
+        # the whole MPI job rather than leave the other rank in a collective.
+        add_test(NAME cahn-hilliard-elastic-hip-error-2ranks
+          COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+            ${MPIEXEC_PREFLAGS} $<TARGET_FILE:cahn_hilliard_elastic_hip>
+            ${MPIEXEC_POSTFLAGS})
+        set_tests_properties(cahn-hilliard-elastic-hip-error-2ranks PROPERTIES
+          WILL_FAIL TRUE TIMEOUT 30 PROCESSORS 2)
+      endif()
     endif()
   endif()
   if(CAHN_HILLIARD_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
