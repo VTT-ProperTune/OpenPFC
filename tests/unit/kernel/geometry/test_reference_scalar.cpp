@@ -34,9 +34,22 @@ void expect_reading(const Series &series, const pfc::geometry::AffineMap &map,
       pfc::geometry::sample_reference(series, map, station);
   REQUIRE_THAT(reading.laplacian.real(), WithinAbs(laplacian, 1e-12));
   REQUIRE_THAT(reading.laplacian.imag(), WithinAbs(0.0, 1e-12));
-  REQUIRE_THAT(reading.integral.real(), WithinAbs(integral, 1e-12));
-  REQUIRE_THAT(reading.integral.imag(), WithinAbs(0.0, 1e-12));
-  REQUIRE_THAT(reading.measure, WithinAbs(measure, 1e-12));
+  REQUIRE_THAT(reading.reference_integral.real(), WithinAbs(integral, 1e-12));
+  REQUIRE_THAT(reading.reference_integral.imag(), WithinAbs(0.0, 1e-12));
+  REQUIRE_THAT(reading.physical_measure, WithinAbs(measure, 1e-12));
+  const double reference_size =
+      pfc::geometry::reference_domain_measure(series.domain);
+  const double physical_integral = integral * measure / reference_size;
+  REQUIRE_THAT(reading.physical_integral.real(),
+               WithinAbs(physical_integral, 1e-12));
+  REQUIRE_THAT(reading.physical_integral.imag(), WithinAbs(0.0, 1e-12));
+}
+
+void require_constant_physical_mean(const pfc::geometry::ReferenceReading &reading) {
+  const auto physical_mean =
+      reading.physical_integral / reading.physical_measure;
+  REQUIRE_THAT(physical_mean.real(), WithinAbs(1.0, 1e-12));
+  REQUIRE_THAT(physical_mean.imag(), WithinAbs(0.0, 1e-12));
 }
 
 } // namespace
@@ -73,6 +86,9 @@ TEST_CASE("A reference scalar reads the map without a domain enum",
                  cylinder_volume);
   expect_reading(cylinder_one, scaled, cylinder_station, 0.0, cylinder_volume,
                  cylinder_volume * scale * scale * scale);
+  const auto cylinder_physical =
+      pfc::geometry::sample_reference(cylinder_one, scaled, cylinder_station);
+  require_constant_physical_mean(cylinder_physical);
   expect_reading(cylinder_parabola, identity, cylinder_station, -4.0,
                  cylinder_parabola_integral, cylinder_volume);
   expect_reading(cylinder_parabola, scaled, cylinder_station, -4.0 / (scale * scale),
@@ -91,6 +107,9 @@ TEST_CASE("A reference scalar reads the map without a domain enum",
   expect_reading(disk_one, identity, disk_station, 0.0, disk_area, disk_area);
   expect_reading(disk_one, scaled, disk_station, 0.0, disk_area,
                  disk_area * scale * scale);
+  const auto disk_physical =
+      pfc::geometry::sample_reference(disk_one, scaled, disk_station);
+  require_constant_physical_mean(disk_physical);
   expect_reading(disk_parabola, identity, disk_station, -4.0, disk_parabola_integral,
                  disk_area);
   expect_reading(disk_parabola, scaled, disk_station, -4.0 / (scale * scale),
@@ -109,6 +128,9 @@ TEST_CASE("A reference scalar reads the map without a domain enum",
   expect_reading(ball_one, identity, ball_station, 0.0, ball_volume, ball_volume);
   expect_reading(ball_one, scaled, ball_station, 0.0, ball_volume,
                  ball_volume * scale * scale * scale);
+  const auto ball_physical =
+      pfc::geometry::sample_reference(ball_one, scaled, ball_station);
+  require_constant_physical_mean(ball_physical);
   expect_reading(ball_parabola, identity, ball_station, -6.0, ball_parabola_integral,
                  ball_volume);
   expect_reading(ball_parabola, scaled, ball_station, -6.0 / (scale * scale),
