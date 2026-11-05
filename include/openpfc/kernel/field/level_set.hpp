@@ -59,6 +59,8 @@ struct LevelSetCentroid {
          static_cast<std::size_t>(grid.nz);
 }
 
+/// Scalar characteristic-speed estimate for a single active direction.
+/// For multi-direction advection use level_set_advection_stable_dt instead.
 [[nodiscard]] inline double level_set_stable_dt(const LevelSetGrid &grid,
                                                 double max_speed, double cfl) {
   if (!(grid.hx > 0.0) || !(grid.hy > 0.0) || !(grid.hz > 0.0))
@@ -69,6 +71,40 @@ struct LevelSetCentroid {
     throw std::invalid_argument("level-set CFL must lie in (0, 1]");
   const double h = std::min(grid.hx, std::min(grid.hy, grid.hz));
   return cfl * h / max_speed;
+}
+
+/// Monotone SSP-RK2/upwind CFL for a spatially varying velocity field.
+/// Sum directional Courant contributions at each cell, then take the maximum:
+/// dt <= cfl / max(|vx|/hx + |vy|/hy + |vz|/hz).
+/// A singleton axis contributes no derivative. Zero velocity has no finite
+/// advection CFL bound; this helper rejects it rather than returning infinity.
+[[nodiscard]] inline double level_set_advection_stable_dt(
+    const LevelSetGrid &grid, std::span<const double> vx,
+    std::span<const double> vy, std::span<const double> vz, double cfl) {
+  const std::size_t n = level_set_count(grid);
+  if (grid.nx < 2 || grid.ny < 1 || grid.nz < 1 ||
+      !(grid.hx > 0.0) || !(grid.hy > 0.0) || !(grid.hz > 0.0) ||
+      !std::isfinite(grid.hx) || !std::isfinite(grid.hy) ||
+      !std::isfinite(grid.hz) || n == 0 || vx.size() != n ||
+      vy.size() != n || vz.size() != n)
+    throw std::invalid_argument("level-set advection grid or velocity sizes invalid");
+  if (!(cfl > 0.0) || cfl > 1.0 || !std::isfinite(cfl))
+    throw std::invalid_argument("level-set CFL must lie in (0, 1]");
+  double max_rate = 0.0;
+  for (std::size_t i = 0; i < n; ++i) {
+    if (!std::isfinite(vx[i]) || !std::isfinite(vy[i]) ||
+        !std::isfinite(vz[i]))
+      throw std::invalid_argument("level-set advection speed is not finite");
+    const double rate = std::abs(vx[i]) / grid.hx +
+                        (grid.ny > 1 ? std::abs(vy[i]) / grid.hy : 0.0) +
+                        (grid.nz > 1 ? std::abs(vz[i]) / grid.hz : 0.0);
+    if (!std::isfinite(rate))
+      throw std::invalid_argument("level-set advection Courant rate overflow");
+    max_rate = std::max(max_rate, rate);
+  }
+  if (!(max_rate > 0.0))
+    throw std::invalid_argument("level-set advection has zero characteristic speed");
+  return cfl / max_rate;
 }
 
 [[nodiscard]] inline LevelSetCentroid
