@@ -109,9 +109,6 @@ TEST_CASE("create_cuda round-trips two 12x10x8 fields on every reduced axis",
     REQUIRE(direct.size_outbox() == complex_count(axis));
     REQUIRE(wrapped.size_outbox() == direct.size_outbox());
 
-    pfc::fft::RealDataBufferCUDA real(direct.size_inbox());
-    pfc::fft::ComplexDataBufferCUDA spectrum(direct.size_outbox());
-    pfc::fft::RealDataBufferCUDA back(direct.size_inbox());
     Work workspace(direct.size_workspace());
 
     // Match the installed acceptance consumer's post-step two-field state
@@ -131,6 +128,11 @@ TEST_CASE("create_cuda round-trips two 12x10x8 fields on every reduced axis",
     }
     const std::array<double, 2> amplitudes{a, b};
     for (int component = 0; component < 2; ++component) {
+      // Match the installed consumer: each component allocates fresh GPU
+      // buffers, while the FFT plans persist across components.
+      pfc::fft::RealDataBufferCUDA real(direct.size_inbox());
+      pfc::fft::ComplexDataBufferCUDA spectrum(direct.size_outbox());
+      pfc::fft::RealDataBufferCUDA back(direct.size_inbox());
       std::vector<double> field(direct.size_inbox());
       for (std::size_t q = 0; q < field.size(); ++q) {
         const int i = static_cast<int>(q % 12);
