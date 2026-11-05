@@ -16,12 +16,14 @@
  * whole domain, stays on HeFFTe. An explicit `heffte` or `local` choice
  * is applied by the caller and overrides this function.
  *
- * Direct rocFFT is admitted for every positive grid on one HIP rank.
- * Measured cubic, anisotropic, odd/prime and singleton grids were faster
- * there once plan setup was included, and they used less device memory.
- * FFTW and cuFFT stay on HeFFTe: on at least one of those classes the
- * direct plan lost on plan setup or on the round trip, and the memory
- * comparison did not favour it. Campaign figures stay outside this header.
+ * HIP's single-rank default is a provisional vendor-specific heuristic,
+ * NOT a demonstrated speed win for every positive grid. In an earlier
+ * OpenPFC/SolidificationLab MI250X 256^3 BCC/FCC study (OpenPFC b6ef4f22,
+ * ROCm 6.4.4), direct rocFFT avoided heFFTe reorder costs. That evidence
+ * does not establish the current source's odd/prime/singleton or MI210
+ * performance or amortized plan-creation cost. Real application benchmarks
+ * must compare elapsed time and peak memory per geometry before any
+ * general speed claim. CPU/CUDA retain their historical HeFFTe default.
  */
 
 namespace pfc::fft {
