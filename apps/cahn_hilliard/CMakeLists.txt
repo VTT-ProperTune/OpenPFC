@@ -74,6 +74,21 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
         set_tests_properties(cahn-hilliard-elastic-hip-error-2ranks PROPERTIES
           PASS_REGULAR_EXPRESSION "CH HIP rank"
           TIMEOUT 30 PROCESSORS 2)
+        # Unlike two identical invalid arguments, this launches *different*
+        # programs/arguments in a single MPI world. Rank 0 fails to open
+        # its file while rank 1 parses the shipped valid GPU case.
+        find_package(Python3 COMPONENTS Interpreter QUIET)
+        if(Python3_Interpreter_FOUND)
+          add_test(NAME cahn-hilliard-elastic-hip-asymmetric-error-2ranks
+            COMMAND ${Python3_EXECUTABLE}
+              ${CMAKE_CURRENT_SOURCE_DIR}/tests/check_hip_mpi_abort.py
+              ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG}
+              $<TARGET_FILE:cahn_hilliard_elastic_hip>
+              ${CMAKE_CURRENT_SOURCE_DIR}/tests/fe_cr_elastic_hip_smoke.json)
+          set_tests_properties(cahn-hilliard-elastic-hip-asymmetric-error-2ranks
+            PROPERTIES PASS_REGULAR_EXPRESSION "CH_HIP_ASYMMETRIC_ABORT_OK"
+              TIMEOUT 35 PROCESSORS 2)
+        endif()
       endif()
     endif()
   endif()
