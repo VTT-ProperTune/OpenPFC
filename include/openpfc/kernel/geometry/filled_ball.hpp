@@ -92,12 +92,17 @@ struct BallSeries {
   return {radial * std::cos(phi), radial * std::sin(phi), r * std::cos(theta)};
 }
 
+[[nodiscard]] inline bool ball_harmonic_is_admissible(const BallHarmonic &mode) {
+  // Validate the small degree first: negating an unchecked INT_MIN order is UB.
+  return mode.degree >= 0 && mode.degree <= 3 &&
+         mode.order >= -mode.degree && mode.order <= mode.degree &&
+         mode.radial >= 0 && mode.radial <= 12 &&
+         std::isfinite(mode.coefficient.real()) &&
+         std::isfinite(mode.coefficient.imag());
+}
+
 inline void add_ball_harmonic(BallSeries &series, BallHarmonic mode) {
-  const int abs_order = mode.order < 0 ? -mode.order : mode.order;
-  if (mode.degree < 0 || mode.degree > 3 || abs_order > mode.degree ||
-      mode.radial < 0 || mode.radial > 12 ||
-      !std::isfinite(mode.coefficient.real()) ||
-      !std::isfinite(mode.coefficient.imag())) {
+  if (!ball_harmonic_is_admissible(mode)) {
     throw std::invalid_argument(
         "ball harmonic degree or coefficient is not in the frozen set");
   }
@@ -216,6 +221,9 @@ inline Jet zeta_jet(int order, double x, double y) {
 }
 
 inline Jet solid_jet(int degree, int order, double x, double y, double z) {
+  // A public BallSeries can also be modified after add_ball_harmonic.
+  if (degree < 0 || degree > 3 || order < -degree || order > degree)
+    throw std::invalid_argument("ball solid harmonic degree/order is invalid");
   const int abs_order = order < 0 ? -order : order;
   const Jet rho = axis_x(x) * axis_x(x) + axis_y(y) * axis_y(y);
   const Jet vertical = axis_z(z);
@@ -239,6 +247,8 @@ inline Jet solid_jet(int degree, int order, double x, double y, double z) {
 }
 
 inline Jet harmonic_jet(const BallHarmonic &mode, double x, double y, double z) {
+  if (!ball_harmonic_is_admissible(mode))
+    throw std::invalid_argument("ball harmonic was mutated to an invalid mode");
   const Jet radius2 =
       axis_x(x) * axis_x(x) + axis_y(y) * axis_y(y) + axis_z(z) * axis_z(z);
   return jet_scale(solid_jet(mode.degree, mode.order, x, y, z) *
@@ -298,6 +308,15 @@ ball_euler(const BallSeries &series, double r, double theta, double phi) {
   const Vec3 point = ball_embedding(r, theta, phi);
   const auto jet = ball_detail::series_jet(series, r, theta, phi);
   return point.x * jet.x + point.y * jet.y + point.z * jet.z;
+}
+
+/// Reference sphere r=R: local outward normal derivative d(u)/dr.
+/// The reference radial normal is not the physical normal on a mapped ellipsoid.
+[[nodiscard]] inline std::complex<double>
+ball_wall_normal_derivative(const BallSeries &series, double theta, double phi) {
+  ball_detail::require_radius(series.domain);
+  const double radius = series.domain.radius;
+  return ball_euler(series, radius, theta, phi) / radius;
 }
 
 [[nodiscard]] inline std::complex<double>
