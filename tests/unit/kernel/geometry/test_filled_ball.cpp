@@ -77,8 +77,7 @@ TEST_CASE("a filled ball is a volume and the origin is not a boundary",
                     std::invalid_argument);
   // A caller may mutate a public series, bypassing the construction guard.
   rejected.modes.push_back({2, bad_order, 0, 1.0});
-  REQUIRE_THROWS_AS(evaluate_ball(rejected, 0.4, 0.6, 0.2),
-                    std::invalid_argument);
+  REQUIRE_THROWS_AS(evaluate_ball(rejected, 0.4, 0.6, 0.2), std::invalid_argument);
 }
 
 TEST_CASE("a constant ball field and a radial polynomial", "[geometry][ball]") {
@@ -97,8 +96,8 @@ TEST_CASE("a constant ball field and a radial polynomial", "[geometry][ball]") {
   require_complex(ball_laplacian(radial, r, 1.1, 0.3), 6.0, 1.0e-12);
   require_complex(ball_laplacian(radial, 0.0, 0.2, 0.2), 6.0, 1.0e-12);
   require_complex(ball_euler(radial, r, 0.7, 0.1), 2.0 * r * r, 1.0e-12);
-  require_complex(ball_wall_normal_derivative(radial, 0.7, 0.1),
-                  2.0 * ball.radius, 1.0e-12);
+  const auto radial_wall = ball_wall_normal_derivative(radial, 0.7, 0.1);
+  require_complex(radial_wall, 2.0 * ball.radius, 1.0e-12);
 }
 
 TEST_CASE("solid harmonics are regular at the origin", "[geometry][ball]") {
@@ -195,9 +194,12 @@ TEST_CASE("an affine map sends the ball to an ellipsoid", "[geometry][ball]") {
   mixed.domain = ball;
   add_ball_harmonic(mixed, {2, 1, 0, 0.5});
   add_ball_harmonic(mixed, {2, -1, 0, 0.5});
-  const auto xz_shear = affine_map_from_columns(
-      {1, 0, 0}, {0, 1, 0}, {0.5, 0, 1}, {0, 0, 0});
+  const Vec3 first{1, 0, 0};
+  const Vec3 second{0, 1, 0};
+  const Vec3 third{0.5, 0, 1};
+  const auto xz_shear = affine_map_from_columns(first, second, third, {0, 0, 0});
   require_complex(ball_laplacian(mixed, 0.6, 0.7, 0.8), 0.0, 1.0e-12);
-  require_complex(ball_physical_laplacian(mixed, xz_shear, 0.6, 0.7, 0.8),
-                  -1.0, 1.0e-12);
+  const auto mapped_mixed =
+      ball_physical_laplacian(mixed, xz_shear, 0.6, 0.7, 0.8);
+  require_complex(mapped_mixed, -1.0, 1.0e-12);
 }
