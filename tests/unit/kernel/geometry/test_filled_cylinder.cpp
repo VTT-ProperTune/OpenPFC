@@ -140,10 +140,10 @@ TEST_CASE("periodic cylinder axial Fourier modes admit a real cosine",
   add_cylinder_harmonic(series, {0, 0, -1, 0.5});
   const double z = 0.37;
   const double wave = std::numbers::pi;
-  require_complex(evaluate_cylinder(series, 0.4, 0.1, z),
-                  std::cos(wave * z), 1.0e-12);
-  require_complex(cylinder_laplacian(series, 0.4, 0.1, z),
-                  -wave * wave * std::cos(wave * z), 1.0e-11);
+  const auto value = evaluate_cylinder(series, 0.4, 0.1, z);
+  const auto lap = cylinder_laplacian(series, 0.4, 0.1, z);
+  require_complex(value, std::cos(wave * z), 1.0e-12);
+  require_complex(lap, -wave * wave * std::cos(wave * z), 1.0e-11);
   require_complex(integrate_cylinder(series), 0.0, 1.0e-12);
 }
 
