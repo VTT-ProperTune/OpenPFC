@@ -74,8 +74,9 @@ struct DistributedComplexLineFFT::Impl {
                                                                     options);
       const auto scratch = std::max<std::size_t>(plan->size_workspace(), 1);
       work.resize(scratch);
-      workspace = plan->size_workspace() * sizeof(std::complex<double>);
-      communication = plan->size_comm_buffers() * sizeof(std::complex<double>);
+      workspace = (static_cast<std::size_t>(local) + scratch) *
+                  sizeof(std::complex<double>);
+      communication = 0; // one rank has no peer traffic
       return;
     }
     // HeFFTe's process grid cannot sit on two axes of length one.
@@ -89,9 +90,15 @@ struct DistributedComplexLineFFT::Impl {
       counts[static_cast<std::size_t>(peer)] = bytes_of(peer_block.count);
       displs[static_cast<std::size_t>(peer)] = bytes_of(peer_block.offset);
     }
-    workspace = 2 * static_cast<std::size_t>(n) * sizeof(std::complex<double>);
-    communication =
-        static_cast<std::size_t>(n - local) * sizeof(std::complex<double>);
+    workspace = (2 * static_cast<std::size_t>(n) +
+                 static_cast<std::size_t>(local)) *
+                sizeof(std::complex<double>);
+    // Allgatherv is a collective: count receive bytes AND local data sent
+    // to the other ranks. This is logical payload, not a network benchmark.
+    const auto receive = static_cast<std::size_t>(n - local);
+    const auto send = static_cast<std::size_t>(ranks - 1) *
+                      static_cast<std::size_t>(local);
+    communication = (receive + send) * sizeof(std::complex<double>);
   }
 
   void execute(std::span<const std::complex<double>> in,
