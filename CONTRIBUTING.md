@@ -5,14 +5,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Contributing to OpenPFC
 
-> Exception to ENG-028 (owner approval,
-> [#767](https://github.com/ahojukka5/OpenPFC/issues/767)): OpenPFC is public,
-> so this file is self-contained for contributors who cannot open the private
-> OodiHandbook. Agents also follow [`AGENTS.md`](AGENTS.md) and the Handbook.
-
 Thank you for helping. Bugs and feature ideas go to
-[GitHub Issues](https://github.com/ahojukka5/OpenPFC/issues); start a change
-from an issue so its purpose is agreed first.
+[GitHub Issues](https://github.com/VTT-ProperTune/OpenPFC/issues); start a
+change from an issue so its purpose is agreed first.
 
 **Workflow.** Branch from `master` as `<type>/<issue-number>-<slug>`, for
 example `fix/412-halo-corner`. Keep one coherent change per PR. The maintainer

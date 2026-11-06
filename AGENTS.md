@@ -5,21 +5,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Agent and contributor notes (OpenPFC)
 
-> Process rules come from the latest approved
-> [OodiHandbook](https://github.com/ahojukka5/OodiHandbook) tag (AUTH-007).
-> Start with its `guides/local-development.qmd` and `guides/contributing.qmd`.
-> This file adds only this repository's facts (ENG-001, ENG-028).
-
 Technical orientation for agents. Human contributors start from
 [`CONTRIBUTING.md`](CONTRIBUTING.md); prose documentation starts from
 [`docs/README.md`](docs/README.md) and the root [`README.md`](README.md).
-
-## Repositories
-
-`ahojukka5/OpenPFC` is the source of truth for development, issues, pull
-requests and CI. `VTT-ProperTune/OpenPFC` mirrors the reviewed code and
-publishes the website: replicate canonical commits there without a separate
-history, and keep its `master` at the canonical `master` commit.
 
 ## Repository map
 
@@ -38,7 +26,7 @@ history, and keep its `master` at the canonical `master` commit.
 Use [`scripts/build.sh`](scripts/build.sh) with the local toolchain;
 `--machine=portable` preserves an ordinary workstation environment. Direct
 CMake/CTest commands are appropriate when the script does not support the
-available environment. Report missing dependencies and unrun checks (ENG-011).
+available environment. Report missing dependencies and unrun checks.
 
 ```bash
 ./scripts/build.sh --help
@@ -70,9 +58,9 @@ available environment. Report missing dependencies and unrun checks (ENG-011).
 The Catch2 suite builds as `openpfc-tests`; details and every CTest name are
 in [`docs/development/testing.md`](docs/development/testing.md). Run the
 smallest test that exercises the change, and the full `ctest` suite when the
-change is wide (ENG-015, Handbook `guides/testing.qmd`). In OpenPFC, shared
-state is wide: a field type, a halo exchanger, decomposition, FFT or a CMake
-option can break tests that never appear in the diff.
+change is wide. In OpenPFC, shared state is wide: a field type, a halo
+exchanger, decomposition, FFT or a CMake option can break tests that never
+appear in the diff.
 
 ```bash
 ./openpfc-tests '[halo]'            # one Catch2 tag or test name
@@ -94,8 +82,8 @@ ctest --output-on-failure           # full suite
 ## CI tiers
 
 Workflows live in [`.github/workflows/`](.github/workflows) (see its README);
-do not change them unasked (ENG-009). A merge waits only for checks an active
-ruleset requires (ENG-007, ENG-022).
+do not change them unasked. A merge waits only for checks an active ruleset
+requires.
 
 - **Pull request:** `ci.yml` selects components from the base/head diff.
   Doc-only changes run REUSE and documentation checks without a C++ build;
@@ -111,8 +99,7 @@ ruleset requires (ENG-007, ENG-022).
 
 ## Language and style
 
-- **C++20** (`cmake/CompilerSettings.cmake`). Generic C++/CUDA/HIP advice:
-  Handbook `guides/coding-cpp.qmd`; naming: SWE-015 and `guides/naming.qmd`.
+- **C++20** (`cmake/CompilerSettings.cmake`).
 - OpenPFC code and header style: [`docs/development/styleguide.md`](docs/development/styleguide.md),
   root `.clang-format` (clang-format 20, as in CI) and `.clang-tidy`.
 - For clangd, configure with `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` after the
@@ -126,8 +113,8 @@ ruleset requires (ENG-007, ENG-022).
   `results/`; app configs and job scripts prefer paths there. `.gitignore`
   covers `build`, `builds`, `results` and similar paths.
 - This package is the library: no campaign records, measurement dumps or
-  pointers to research results (PUB-008). Launchers already under
-  `apps/*/slurm` and `docs/lumi_slurm` are legacy; they do not grow.
+  pointers to research results. Launchers already under `apps/*/slurm` and
+  `docs/lumi_slurm` are legacy; they do not grow.
 - Changelog: user-visible and developer-facing changes to behaviour, CMake
   options or config keys go in [`CHANGELOG.md`](CHANGELOG.md) under
   `[Unreleased]`, in the same commit as the change.
