@@ -472,6 +472,19 @@ foreach(_backend IN ITEMS cuda hip)
   target_compile_features(test_fcc_batch_${_backend} PRIVATE cxx_std_20)
   add_test(NAME FccBatch_${_backend} COMMAND test_fcc_batch_${_backend})
   set_tests_properties(FccBatch_${_backend} PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 4)
+
+  add_executable(test_fcc_quaternion_batch_${_backend}
+      test_fcc_quaternion_batch.cpp)
+  target_link_libraries(test_fcc_quaternion_batch_${_backend}
+      PRIVATE Catch2::Catch2 openpfc ${_runtime} MPI::MPI_CXX)
+  target_compile_definitions(test_fcc_quaternion_batch_${_backend}
+      PRIVATE ${_definition})
+  target_compile_features(test_fcc_quaternion_batch_${_backend} PRIVATE cxx_std_20)
+  add_test(NAME FccQuaternionBatch_${_backend}
+      COMMAND test_fcc_quaternion_batch_${_backend})
+  set_tests_properties(FccQuaternionBatch_${_backend} PROPERTIES
+      TIMEOUT 180 SKIP_RETURN_CODE 4
+      PROCESSORS 1)
 endforeach()
 
 foreach(_backend IN ITEMS cuda hip)
