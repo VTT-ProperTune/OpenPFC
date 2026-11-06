@@ -59,8 +59,9 @@ struct AluminumPointwise {
    * no bound of its own, so on a domain 1393 reduced units long any
    * non-trivial `G` drives it arbitrarily far from `T_const`. `T_min` and
    * `T_max` were declared required and read nowhere until 0.2; this is what
-   * they now mean. Both shipped presets are isothermal (`G_grid = 0`), so
-   * every pinned checksum is unaffected.
+   * they now mean. The isothermal presets have `G_grid = 0`, so every pinned
+   * checksum is unaffected. The directional preset keeps its own profile
+   * inside the window.
    *
    * Inactive when `T_max <= T_min` — that combination is rejected at load
    * time by `validate_temperature_window`, so it can only arise from a

@@ -1,0 +1,64 @@
+{
+    "model": {
+        "name": "aluminum",
+        "params": {
+            "T0": 89285.0,
+            "Bx": 0.817900686921996,
+            "T_const": 980.0,
+            "T_min": 780.0,
+            "T_max": 1280.0,
+            "G_grid": 2.0,
+            "V_grid": 0.1,
+            "x_initial": 60.0,
+            "alpha": 0.20,
+            "lambda": 0.22,
+            "stabP": 0.0,
+            "p2_bar": 0.8286531831,
+            "p3_bar": -0.04204863,
+            "p4_bar": 0.007533,
+            "q20_bar": 0.016531729105214,
+            "q21_bar": 5.467,
+            "q30_bar": 1.7152418049986,
+            "q31_bar": 0.45,
+            "q40_bar": 0.787482
+        }
+    },
+    "domain": {
+        "size": [48, 16, 16],
+        "lower": [0.0, 0.0, 0.0],
+        "upper": [65.2967771136, 21.7655923712, 21.7655923712]
+    },
+    "timestepping": {
+        "t0": 0.0,
+        "t1": 40.0,
+        "dt": 1.0,
+        "saveat": -1.0,
+        "integrator": {"method": "etd1"}
+    },
+    "initial_conditions": [
+        {"target": "psi", "type": "constant", "n0": -0.006},
+        {
+            "target": "psi",
+            "type": "seed_grid_fcc",
+            "X0": 18.0,
+            "Ny": 1,
+            "Nz": 1,
+            "radius": 22.0,
+            "amplitude": 0.4,
+            "rho": -0.036,
+            "rseed": 42
+        }
+    ],
+    "boundary_conditions": [
+        {
+            "type": "moving",
+            "target": "psi",
+            "rho_low": -1.297,
+            "rho_high": -0.006,
+            "width": 2.0,
+            "alpha": 1.0,
+            "disp": 8.0,
+            "xpos": 0.0
+        }
+    ]
+}

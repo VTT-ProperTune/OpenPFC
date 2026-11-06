@@ -7,6 +7,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- The small aluminum directional preset imposes `G_grid=2` and `V_grid=0.1`
+  with a moving density reservoir. Host tests compare restart/zero-pull and
+  isothermal controls; the late RMS front becomes `not_single_front` and
+  does not constitute a measured sustained growth speed (#248, still open).
 - Crystal-front and grain-orientation observables report a planar RMS
   front, its sub-cell crossing, and the time-series velocity
   `(x(t1) - x(t0)) / (t1 - t0)`. A real density wave is reduced by the

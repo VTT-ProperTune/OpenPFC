@@ -20,6 +20,20 @@ there is no seed in it and it never develops structure.
 [`inputs_json/fcc_seed_nucleus.json`](inputs_json/fcc_seed_nucleus.json) is a
 `192^3` single-seed case that runs on one core in a few minutes; see "The
 isothermal case is a nucleation threshold, not growth" below.
+`inputs_json/aluminum_directional.json` is a distinct small pulled
+reservoir smoke case, with `G_grid=2`, `V_grid=0.1`, and an independent
+temperature station at `x_initial=60`. The field is not a calibrated casting
+model. Its front becomes ambiguous during the short run: the test intentionally
+reports `not_single_front`, so this is NOT a demonstrated sustained physical
+growth-front speed. The moving BC checkpoint/restart parity and zero-pull
+and isothermal controls are the bounded results at this stage. The
+periodic-unwrapping seam used by the prescribed temperature field remains
+fixed at the case's initial `x_initial` station, while the temperature
+profile's time dependence uses `V_grid` and the density reservoir tracks its
+own `MovingBC` position. There is no feedback from the measured crystal
+interface or moving density reservoir into that temperature seam. A reservoir
+position must not be interpreted as a physical solidification front.
+
 `tests/test_aluminum_inputs.cpp` (ctest `aluminum-shipped-inputs`) checks that
 every file under `inputs_json/` still loads through the schema and the
 initial-condition catalog. That is a rot check, not a physics check.
@@ -32,14 +46,14 @@ initial-condition catalog. That is a rot check, not a physics check.
 | **Grid/time** | `t` in `[0, 2000]`, `dt = 1` (2000 steps), field dump every 200 |
 | **Boundary conditions** | Periodic on all three axes (the FFT has no other mode), plus a stationary `fixed` sigmoid density-reservoir band pulling `psi` between `-1.297` and `-0.006` near the high-`x` end -- see "Why periodic" below |
 | **Initial condition** | Uniform `psi = -0.006`, then `seed_grid_fcc`: a `2 x 1` row of FCC seeds of radius 120 at `x = 130`, amplitude 0.4, `rho = -0.036`, each jittered by `+/-0.2 R` and randomly oriented. Each seed is built from four `<111>` wave vectors, unlike tungsten's six `{110}` |
-| **Key physical parameters** | `T_const = 980` clamped into `[T_min, T_max] = [780, 1280]`, `T0 = 89285` (no unit is stated anywhere in this app); `Bx = 0.81790`, `alpha = 0.20`; barred polynomial coefficients. The coexistence densities `-0.036` / `-1.297` live in the `initial_conditions` / `boundary_conditions` blocks, not in `model.params`. **`G_grid = V_grid = 0`, so the shipped run is isothermal** -- the moving-frame machinery is present and tested but no shipped preset exercises it, and the temperature clamp is therefore a no-op on every shipped preset. Reduced PFC units throughout, with no SI mapping in this repository |
+| **Key physical parameters** | `T_const = 980` clamped into `[T_min, T_max] = [780, 1280]`, `T0 = 89285` (no unit is stated anywhere in this app); `Bx = 0.81790`, `alpha = 0.20`; barred polynomial coefficients. The coexistence densities `-0.036` / `-1.297` live in the `initial_conditions` / `boundary_conditions` blocks, not in `model.params`. **The original demonstration is isothermal** (`G_grid=V_grid=0`); the separate directional smoke case uses nonzero `G_grid`/`V_grid` with a prescribed temperature profile. Reduced PFC units throughout, with no SI mapping in this repository |
 | **Observable** | `SPECTRAL_CHECKSUM` `sum`/`sumsq`/`l2` of `psi`; the summed free energy (`last_free_energy_sum`), which this app computes per cell and `tungsten` does not; binary field dumps |
 | **Model maturity** | numerical verification: **regression** -- the operators, the pointwise nonlinearity and the free-energy density are checked to `1e-14` against an independently written reference formula, and one synthetic case is pinned; there is no closed-form solution of the model. Physical completeness: **extended** -- the tungsten equation of state plus a separate correlation kernel `P(k)` and a travelling temperature field. Calibration: **representative**, with the same caveat as tungsten: no source is cited anywhere in this repository for any aluminium coefficient |
 
 ### The isothermal case is nucleation, not steady growth
 
-Every shipped input sets `G_grid = V_grid = 0`, so the thermal drive is off and
-the run is isothermal. It is tempting to describe what is left as seeded
+The original isothermal seed experiments set `G_grid = V_grid = 0`,
+so their thermal drive is off. It is tempting to describe what is left as seeded
 growth. That is not what happens. Measured on
 [`inputs_json/fcc_seed_nucleus.json`](inputs_json/fcc_seed_nucleus.json)
 (`192^3`, one randomly oriented FCC seed, `n0 = -0.006`, `T_const = 980`),
@@ -127,9 +141,9 @@ reduced units long any non-trivial `G_grid` drives it arbitrarily far from
 `T_const`. `clamp_temperature` now holds `T_const + T_var` inside
 `[T_min, T_max]`, and `T_min < T_max` with `T_const` inside the window is
 checked at load time (`validate_temperature_window`) rather than silently
-freezing the domain at one end. **Both shipped presets are isothermal
-(`G_grid = V_grid = 0`), so the clamp is a no-op on them and no pinned
-checksum moved.**
+freezing the domain at one end. **The original isothermal presets have zero gradient and unchanged
+checksums.** The separate directional reference uses the same clamp with
+a nonzero imposed gradient.
 
 ## Provenance and reduced units
 
@@ -144,8 +158,9 @@ temperature, time, and amplitude have no SI conversion here. The
 classification is not a material validation.
 
 `x_initial` is a case station, not intrinsically the same as the seed's
-`X0`. The maintained isothermal seeded cases choose equal values, but a
-future directional case may specify an independent thermal-profile station.
+`X0`. The maintained isothermal seeded cases choose equal values. The
+shipped `aluminum_directional.json` instead places the prescribed thermal
+station at `x_initial=60` and the FCC seed at `X0=18`, deliberately separate.
 `fcc_seed_nucleus.json` still lists `n0`, `n_sol`, `n_vap`, `alpha_farTol`,
 `alpha_highOrd`, `shift_u`, and `shift_s` under `model.params`. The schema
 does not read those keys. The C++ defaults are the same table, not a second
@@ -171,7 +186,7 @@ into the model-coefficient table as if each preset shared a fixed value.
 | `seed_grid_fcc.radius`, `amplitude`, `rho`, `rseed` | Seed-envelope radius, crystalline-wave amplitude (`SeedFCC` adds `2 amplitude cos(k·x)` per wave), solid reference density and random seed. The large demo uses radius 120, the nucleus study 60, and both use amplitude 0.4. | reduced length, reduced amplitude, reduced amplitude, dimensionless pseudorandom seed; `radius>0` |
 | `fixed.rho_low`, `rho_high` | Density-reservoir values in the fixed boundary; from the case record. | reduced amplitude, uncited representative |
 | `FixedBC::xwidth`, `alpha` | The *currently hardcoded* fixed-reservoir band half-width `20` and sigmoid sharpness `1`; these are not JSON parameters in this implementation. | reduced length, inverse reduced length |
-| `moving.rho_low`, `rho_high`, `width`, `alpha`, `disp`, `xpos` | If a directional case is added, its independently configurable reservoir densities, half-width, sigmoid sharpness, front offset and initial checkpointed position. | reduced amplitude; length; inverse length; length; length |
+| `moving.rho_low`, `rho_high`, `width`, `alpha`, `disp`, `xpos` | Directional preset's separately configured density reservoir, half-width, sigmoid sharpness, tracking offset and checkpointed position; not a measured physical crystal-front position. | reduced amplitude; length; inverse length; length; length |
 | `fields[].name`, `fields[].data`, `checkpoint.*` | Output/restart controls; not physical inputs. | filenames, steps and paths |
 
 No scientifically established range or uncertainty is provided for the

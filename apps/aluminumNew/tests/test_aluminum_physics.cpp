@@ -121,8 +121,8 @@ TEST_CASE("AluminumPhysics::from_json enforces its own schema",
  *
  * Before 0.2 both were declared required and read nowhere, so a
  * `G_grid != 0` run drove `T_const + T_var` arbitrarily far along `x` with
- * nothing to stop it. Every shipped preset is isothermal, so the clamp does
- * not move any pinned checksum.
+ * nothing to stop it. The isothermal presets leave the clamp idle, so it
+ * does not move any pinned checksum.
  */
 TEST_CASE("AluminumPhysics clamps the temperature into [T_min, T_max]",
           "[aluminum][physics][temperature]") {

@@ -49,8 +49,9 @@ namespace aluminum {
  * `AluminumPointwise::clamp_temperature`). The pair names an obvious bound
  * on a quantity the model already computes, the shipped values bracket
  * `T_const = 980`, and the moving-frame profile `T_const + G(x - x0 - Vt)`
- * is otherwise unbounded along a 1393-unit domain. Every shipped preset has
- * `G_grid = 0`, so the clamp is a no-op on them and no pinned result moved.
+ * is otherwise unbounded along a 1393-unit domain. The original isothermal
+ * presets have `G_grid = 0`, so the clamp is a no-op for their pinned results.
+ * The directional smoke case supplies a nonzero gradient.
  *
  * *Removed* — the other seven named nothing this model computes:
  * - `alpha_farTol`, `alpha_highOrd` parametrise **tungsten's** `C2`
