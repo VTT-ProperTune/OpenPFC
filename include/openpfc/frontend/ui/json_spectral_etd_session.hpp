@@ -16,6 +16,9 @@
  *   `GPUSpectralStack<MemorySpace>`) via `make_simulation_session`;
  * - the physics from `Physics::from_json(model_params, domain, inbox)` and its
  *   fields on an owning `SimulationState`;
+ * - an optional boolean `model.dealias`. When the key is present it sets the
+ *   Orszag 2/3 mask on the nonlinear update. When it is absent the mask stays
+ *   off, which is the historical default;
  * - initial and boundary conditions from the `FieldModifier` catalog
  *   (`initial_conditions[]` / `boundary_conditions[]`, `default` target = the
  *   physics' primary field); apps register their own modifiers on the
@@ -168,6 +171,17 @@ public:
                                   system_options.psi_name + "'");
     }
     m_psi_name = system_options.psi_name;
+
+    // The installed binary constructs the session from JSON alone. A present
+    // boolean overrides the constructor default; omitting the key does not.
+    if (m_settings.contains("model") && m_settings["model"].contains("dealias")) {
+      const nlohmann::json &flag = m_settings["model"]["dealias"];
+      if (!flag.is_boolean()) {
+        throw std::invalid_argument(
+            "SpectralETDSession: model.dealias must be a boolean");
+      }
+      system_options.dealias = flag.get<bool>();
+    }
 
     // Conditions from the catalog; ICs applied once, BCs kept for the loop.
     auto &modifiers = default_field_modifier_catalog();

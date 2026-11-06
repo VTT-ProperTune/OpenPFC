@@ -10,12 +10,11 @@ Production tungsten phase-field crystal binary: JSON/TOML → `pfc::ui::Spectral
 ## Problem setup
 
 The `Problem setup` block the report contract (`#112`) asks every application
-to carry. Two shipped configurations are described: `tungsten_moving_bc.json`,
-the directional-solidification case, and `tungsten_single_seed.json`, the
-smallest one. **No shipped input is executed by ctest** -- the tests build
-equivalent configurations in C++ -- so none of these files is a verification
-preset in the sense the contract means; they are demonstration and performance
-configurations.
+to carry. Two shipped configurations are described below:
+`tungsten_moving_bc.json`, the directional-solidification case, and
+`tungsten_single_seed.json`, the smallest demonstration. Those files are
+not executed by ctest. `tungsten_resolved_bcc.json` is: it is the numerical
+resolution preset. It does not calibrate tungsten.
 
 | Item | Directional solidification (`tungsten_moving_bc.json`) | Single seed (`tungsten_single_seed.json`) |
 |---|---|---|
@@ -155,35 +154,77 @@ fall on the same step.
 | Session aliases + catalog registration | `include/tungsten/tungsten_session.hpp` (`pfc::ui::SpectralETDSession`) |
 | ICs / BCs / writers | Framework catalogs: `constant`, `single_seed`, `seed_grid` ICs; `fixed` / `moving` reservoir BCs local to this app (`tungsten::register_catalog()`); `fields[]` writers (`binary`, `vtk`, `hdf5`) |
 | Device instantiation of the nonlinearity | `src/gpu/tungsten_pointwise.inc` (stamped into `.cu` / `.hip`) |
-| Grid criteria for dealiasing | `include/tungsten/resolution.hpp`, pinned by `test_tungsten_resolution.cpp` (`[resolution]`) |
+| Grid criteria for dealiasing | `include/tungsten/resolution.hpp`, pinned by `test_tungsten_resolution.cpp` (`[resolution]`, and `[preset]` for the qualified file) |
 | Resolution study | `src/cpu/tungsten_dealias_study.cpp` -> `out/report/data/tungsten_dealias_resolution.csv` |
 | `main()` | `src/{cpu,cuda,hip}/tungsten.cpp` via `pfc::ui::run_json_session_main` |
 
 ## Dealiasing and resolution
 
-This app runs its cubic nonlinearity **undealiased**, and the shipped grid is
-6.1% too coarse to change that safely. The crystal sits at $k_0=1$ and
-carries real content at $2k_0$ and $3k_0$; with $\Delta x=1.1107$,
-$k_{\mathrm{Ny}}=2.828$, so the third harmonic at 3.0 folds back onto
-$k=2.657$ — and the 2/3 cut at 1.886 sits *below* the second harmonic at
-2.0, so switching the mask on would delete part of the crystal instead of
-fixing anything. Both conditions clear at $\Delta x\le\pi/3$, six points
-per lattice period.
+This section is a numerical resolution qualification. It does not calibrate
+the model and it does not convert the representative coefficients to SI.
 
-Measured with `tungsten_dealias_study` (same seeded solidification, same IC,
-same 1000 steps, mask off then on):
+`inputs_json/tungsten_resolved_bcc.json` is the selected preset. The box is
+one BCC cell, side $a=2\pi\sqrt{2}$, with 16 points along that side. That is
+11.31 points per period of $|k|=1$, inside the cubic 1/2 rule (8 points per
+period, `dealias_clean_dx`). `model.dealias` is true, so the installed
+`TungstenSession` path applies the Orszag 2/3 mask to the nonlinear update.
+At this spacing the cut sits above the second harmonic, so the mask does not
+delete the crystal.
+
+The gate is that file run through `TungstenSession` for $t\in[0,20]$, $dt=1$,
+against the same model, the same box and the same mask on a $32^3$ grid.
+The density RMS stays within $10^{-6}$ relative and the density maximum
+within $10^{-4}$ relative. The test additionally compares the **full
+coarse-grid field** with the 32³ field at the same physical nodes, and
+the six complex normalized first-shell BCC coefficients; these comparisons
+detect phase or structural disagreements that scalar extrema can hide. Turning the mask off on the $16^3$ preset changes
+the maximum by less than $10^{-4}$, and the power in $|k|>2$ by less than
+$10^{-4}$. The same mask comparison at the historical spacing ($8^3$ on this
+box, $\Delta x=1.11072$, 5.66 points per period) moves the maximum by about
+one percent and removes most of that high-mode power. That spacing fails
+both grid criteria, so it is not selected.
+
+The cell is bulk crystal. It has no solidification front. `TungstenPhysics`
+does not expose a free-energy density, so the gate uses the density maximum,
+the density RMS and the $|k|>2$ power. Cost is secondary. ctest also runs
+the mask-off twin and the $8^3$ pair, all at 20 steps on one CPU rank.
+`tungsten-resolved-bcc-cli` separately executes the actual `tungsten`
+binary with this maintained JSON and checks the finite-field checksum.
+To capture the numeric acceptance record in a local or source-pinned CI
+log, run `build/apps/tungsten/test_tungsten "[preset]"`; it prints
+`TUNGSTEN_BCC` with field and Fourier-mode errors.
+
+**Limitation:** `high_mode_power` is the *final density tail* for
+`|k|>2`, not a direct estimate of alias energy folded into retained
+low-wavenumber modes of the nonlinear RHS. The declared 2/3 output mask
+is not a generic cubic 1/2-rule de-aliaser. This one-cell 20-step gate
+must not be generalized to all solidification fronts or parameter sets
+without an independent nonlinear-product alias benchmark.
+
+The historical solidification presets stay at $\Delta x=1.1107$ and omit
+`model.dealias`, so their mask stays off. They are demonstration
+configurations. The crystal sits at $k_0=1$ and carries real content at
+$2k_0$ and $3k_0$; with that spacing, $k_{\mathrm{Ny}}=2.828$, so the third
+harmonic at 3.0 folds back onto $k=2.657$, and the 2/3 cut at 1.886 sits
+below the second harmonic at 2.0. Switching the mask on there would delete
+part of the crystal. Both conditions clear at $\Delta x\le\pi/3$, six points
+per lattice period. Eight points is the cubic 1/2 rule.
+
+An earlier `tungsten_dealias_study` (same seeded solidification, same IC,
+1000 steps, mask off then on, not this CI gate) measured:
 
 | points / period | Grid spacing $\Delta x$ | $\Delta$ power | Peak density change $\Delta\max\psi$ | Peak wavenumber change $\Delta k_1$ |
 |---|---|---|---|---|
-| 5.66 (**shipped**) | 1.1107 | 1.70 % | 1.07 % | 9e-06 |
+| 5.66 (historical) | 1.1107 | 1.70 % | 1.07 % | 9e-06 |
 | 6.00 | 1.0472 | 1.27 % | 1.04 % | 1.4e-04 |
 | 6.67 | 0.9425 | 0.48 % | 0.29 % | 4.7e-04 |
 | 8.00 | 0.7854 | **0.009 %** | 0.018 % | 2.5e-06 |
 
-So results here carry a ~2% uncertainty on amplitudes and spectral power, and
-essentially none on the selected wavenumber $k_1$ — the lattice constant,
-which is what these runs are normally read for. The $k_1$ column is scatter
-between two nearly identical runs, not a trend.
+On that historical spacing the long study saw about 2% in amplitude and
+spectral power, and essentially none in the selected wavenumber $k_1$. The
+$k_1$ column is scatter between two nearly identical runs, not a trend.
+The qualified preset above is a different grid and a shorter horizon; its
+tolerance is the ctest gate, not this table.
 
 Regenerate the data (minutes, single rank):
 

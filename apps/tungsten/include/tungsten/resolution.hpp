@@ -35,11 +35,11 @@
  * \f]
  *
  * Below that threshold a grid is squeezed from both sides: aliasing if the
- * mask is off, amputation if it is on. The shipped tungsten presets use
- * \f$\Delta x = 1.1107\f$, which is 6.1% coarser than \f$\pi/3\f$ — close
- * enough to have never looked wrong, far enough to be measurable. See
- * `tungsten_dealias_study` and the resolution section of the tungsten
- * chapter for what that costs.
+ * mask is off, amputation if it is on. The historical solidification presets
+ * use \f$\Delta x = 1.1107\f$, which is 6.1% coarser than \f$\pi/3\f$. The
+ * qualified preset is a separate file at a finer spacing; see
+ * `tungsten_resolved_bcc.json`. `tungsten_dealias_study` is the long
+ * measurement, not the CI gate.
  *
  * Exact dealiasing of a *cubic* term needs the 1/2 rule rather than the 2/3
  * rule, \f$2k_0\le\frac{1}{2}k_{\mathrm{Ny}}\f$, i.e. 8 points per period.

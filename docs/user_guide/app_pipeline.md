@@ -89,6 +89,7 @@ Exact keys vary slightly by app and schema version; always treat
 | `t0`, `t1`, `dt`, `saveat` | `Time` | Integration interval and output cadence. |
 | `plan_options` | HeFFTe `plan_options` | FFT backend (`backend`), `use_gpu_aware`, `reshape_algorithm`, etc. |
 | `model.name`, `model.params` | App-local physics params | Physics coefficients. |
+| `model.dealias` | `SpectralETDSession` | Optional boolean. The Orszag 2/3 mask on the nonlinear update. Omitted means off. |
 | `fields`, `saveat` | `parse_result_writers_from_json` | If `saveat > 0`, each `fields[]` entry with `name` and `data` path gets a writer from `ResultsWriterCatalog` (default `writer`: `"binary"`). |
 | `initial_conditions[]` | `parse_initial_conditions_from_json` | Each entry has `type`, optional `target`, type-specific fields. |
 | `boundary_conditions[]` | `parse_boundary_conditions_from_json` | Same pattern: `type`, `target`, … |

@@ -7,6 +7,18 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Tungsten resolved-BCC gate now compares the actual 16³ field sampled
+  against 32³ and all six complex first-shell BCC Fourier coefficients.
+  The real tungsten CLI is also registered as an executable smoke test.
+  High-mode power is labeled as final-density tail, not folded RHS alias.
+
+- `tungsten_resolved_bcc.json` is one periodic BCC cell, 16 points along
+  the lattice constant, with the 2/3 dealias mask on. The same model on
+  a 32³ grid in that box keeps the density RMS inside 1e-6 relative and
+  the density maximum inside 1e-4. The mask changes that maximum by less
+  than 1e-4. The historical spacing, 5.66 points per period, still moves
+  the maximum by about one percent, so it is not the selected preset.
+  This is a numerical resolution gate, not a material calibration (#246).
 - The small aluminum directional preset imposes `G_grid=2` and `V_grid=0.1`
   with a moving density reservoir. Host tests compare restart/zero-pull and
   isothermal controls; the late RMS front becomes `not_single_front` and

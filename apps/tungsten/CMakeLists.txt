@@ -127,6 +127,16 @@ if(TUNGSTEN_ENABLE_TESTS)
 
     add_test(NAME tungsten-all-tests COMMAND test_tungsten)
     add_test(NAME tungsten-shipped-inputs COMMAND test_tungsten "[inputs]")
+    add_test(NAME tungsten-resolved-bcc COMMAND test_tungsten "[preset]")
+    set_tests_properties(tungsten-resolved-bcc PROPERTIES TIMEOUT 120)
+    # Exercise the actual maintained executable, not just the in-process
+    # session API; both use the same shipped JSON file.
+    add_test(NAME tungsten-resolved-bcc-cli
+      COMMAND $<TARGET_FILE:tungsten>
+        "${CMAKE_CURRENT_SOURCE_DIR}/inputs_json/tungsten_resolved_bcc.json")
+    set_tests_properties(tungsten-resolved-bcc-cli PROPERTIES
+      PASS_REGULAR_EXPRESSION "SPECTRAL_CHECKSUM field=psi"
+      TIMEOUT 120)
     add_test(NAME tungsten-cpu-golden COMMAND test_tungsten "[etd_cpu_golden]")
     add_test(NAME tungsten-etd-cpu-golden COMMAND test_tungsten "[etd_cpu_golden]")
     if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)

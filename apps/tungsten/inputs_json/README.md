@@ -47,6 +47,7 @@ Each JSON file follows this structure:
 4. `tungsten_performance.json` - Performance testing configuration
 5. `tungsten_restart.json` - Restart from checkpoint
 6. `tungsten_single_seed.json` - Single seed initial condition
+7. `tungsten_resolved_bcc.json` - One BCC cell at the qualified spacing, 2/3 mask on. Numerical resolution, not a material calibration. ctest runs this file.
 
 ## Model Parameters
 
