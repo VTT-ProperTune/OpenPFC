@@ -118,6 +118,13 @@ if(TUNGSTEN_ENABLE_TESTS)
       TUNGSTEN_CUDA_EXAMPLE_JSON="${CMAKE_CURRENT_SOURCE_DIR}/tungsten_single_seed_256_cuda.json")
     include(CTest)
     # Run all tungsten tests in a single invocation to avoid per-test MPI overhead
+    tungsten_cpu_executable(test_tungsten_crystal_observables
+                            tests/test_crystal_observables.cpp)
+    target_link_libraries(test_tungsten_crystal_observables PRIVATE Catch2::Catch2)
+    add_test(NAME tungsten-crystal-observables
+             COMMAND test_tungsten_crystal_observables)
+    set_tests_properties(tungsten-crystal-observables PROPERTIES TIMEOUT 120)
+
     add_test(NAME tungsten-all-tests COMMAND test_tungsten)
     add_test(NAME tungsten-shipped-inputs COMMAND test_tungsten "[inputs]")
     add_test(NAME tungsten-cpu-golden COMMAND test_tungsten "[etd_cpu_golden]")

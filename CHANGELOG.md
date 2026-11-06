@@ -7,6 +7,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Crystal-front and grain-orientation observables report a planar RMS
+  front, its sub-cell crossing, and the time-series velocity
+  `(x(t1) - x(t0)) / (t1 - t0)`. A real density wave is reduced by the
+  cosine gauge `k ~ -k`, then by a caller-selected four-fold, six-fold
+  or cubic representative. The tungsten and aluminum tests record that
+  row through `DiagnosticsSeries` instead of a second implementation
+  (#247).
 - Aluminum provenance: document active case/initial/boundary controls alongside
   model coefficients, discover shipped presets rather than fixing a four-file
   test list, and classify G_grid/V_grid as variable case controls.

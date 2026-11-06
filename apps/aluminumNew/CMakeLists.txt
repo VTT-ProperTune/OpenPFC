@@ -86,6 +86,13 @@ if(ALUMINUM_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
       ALUMINUM_INPUTS_JSON_DIR="${CMAKE_CURRENT_SOURCE_DIR}/inputs_json")
     include(CTest)
     # Run all aluminum tests in a single invocation to avoid per-test MPI overhead
+    aluminum_cpu_executable(test_aluminum_crystal_observables
+                            tests/test_crystal_observables.cpp)
+    target_link_libraries(test_aluminum_crystal_observables PRIVATE Catch2::Catch2)
+    add_test(NAME aluminum-crystal-observables
+             COMMAND test_aluminum_crystal_observables)
+    set_tests_properties(aluminum-crystal-observables PROPERTIES TIMEOUT 120)
+
     aluminum_cpu_executable(test_aluminum_coefficient_provenance
                             tests/test_coefficient_provenance.cpp)
     target_link_libraries(test_aluminum_coefficient_provenance

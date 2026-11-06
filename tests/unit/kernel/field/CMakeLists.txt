@@ -28,6 +28,7 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_face_current.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_float_cpu_services.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_fourier_and_noise.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_crystal_observables.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_thermal_pfc.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_solute_partition.cpp
 )
@@ -45,6 +46,21 @@ if(OpenPFC_ENABLE_HEFFTE)
       ${CMAKE_CURRENT_SOURCE_DIR}/test_field_comprehensive.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_spectral_gradient.cpp
   )
+endif()
+
+if(OpenPFC_RUN_MPI_SUITES)
+  foreach(_crystal_ranks 1 2)
+    if(OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER 0 AND
+       _crystal_ranks GREATER OpenPFC_MPI_TEST_MAX_WORLD_SIZE)
+      continue()
+    endif()
+    add_test(NAME crystal_observables_${_crystal_ranks}ranks
+      COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${_crystal_ranks}
+        ${MPIEXEC_PREFLAGS} $<TARGET_FILE:openpfc-tests> "[MPI][crystal_observables]"
+        ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(crystal_observables_${_crystal_ranks}ranks PROPERTIES
+      TIMEOUT 120 RUN_SERIAL TRUE)
+  endforeach()
 endif()
 
 # Exact mixed-derivative decomposition matrix, including periodic corners.

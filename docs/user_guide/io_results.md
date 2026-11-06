@@ -51,6 +51,31 @@ Requirements in settings: `saveat > 0`, `fields` array with `name` and `data`.
 | Interactive visualization | Set `fields[].writer` to `"vtk"`, or use `SnapshotSeries` / `VTKWriter` in code. |
 | Quick 2D snapshot | `png_writer.hpp` helpers |
 
+## Crystal front and orientation
+
+`pfc::observables::planar_front_position` reduces the root-mean-square of
+a periodic density along the two directions transverse to a chosen axis.
+The position is the linear crossing of a caller-supplied level, so the
+reported front can move by less than one grid spacing. Velocity is not a
+spatial derivative and does not unwrap the box: it is
+`(x(t1) - x(t0)) / (t1 - t0)` for two samples whose validity is
+`FrontValidity::valid`.
+
+`region_orientation` estimates one real wave `A cos(k · x + φ)` from
+order-2 central differences and folds `k ~ -k` so the first nonzero
+component is positive. `four_fold` and `six_fold` then rotate about +z
+into `[0, π/2)` and `[0, π/3)`. `cubic` keeps the proper cubic image of
+`k` or `-k` with the greatest z, then y, then x. `label_grains` votes
+owned cells for the nearest supplied candidate under that representative.
+
+`pfc::io::record_crystal_diagnostics` writes those values on the normal
+diagnostics-series path. The columns are `front_position`,
+`front_velocity`, `front_valid`, `wave_x`, `wave_y`, `wave_z`,
+`orientation_angle`, `orientation_valid`, `voting_cells` and one
+`grain_i` fraction per candidate. The tungsten and aluminum test drivers
+call this function. Neither application keeps a copy of the estimator.
+The host implementation does not read device memory.
+
 ## See also
 
 - [`binary_field_io_spec.md`](../reference/binary_field_io_spec.md) — normative binary field file description  
