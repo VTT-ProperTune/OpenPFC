@@ -220,6 +220,9 @@ public:
     std::copy(m_data.begin(), m_data.end(), ptr);
   }
 
+  /// Copy into a host span. `dst.size()` must equal `size()`.
+  void copy_to_host(std::span<T> dst) const { copy_to_host(dst.data(), dst.size()); }
+
   /**
    * @brief Copy data to host vector
    * @return Vector containing buffer data

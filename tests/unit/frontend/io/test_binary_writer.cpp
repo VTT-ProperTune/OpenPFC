@@ -21,10 +21,14 @@
 #include <filesystem>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 using namespace pfc;
 using Catch::Matchers::WithinAbs;
+
+static_assert(std::is_nothrow_destructible_v<BinaryWriter>);
+static_assert(std::is_nothrow_destructible_v<BinaryReader>);
 
 namespace {
 
@@ -204,6 +208,45 @@ TEST_CASE("BinaryWriter std::vector<double> round-trip via BinaryReader",
     reader.set_domain(domain.global, domain.local, domain.offset);
     REQUIRE_NOTHROW(reader.read(path, read_back));
   }
+
+  REQUIRE(read_back.size() == written.size());
+  for (std::size_t i = 0; i < written.size(); ++i) {
+    REQUIRE_THAT(read_back[i], WithinAbs(written[i], kTol));
+  }
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (rank == 0) {
+    std::filesystem::remove(path);
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+TEST_CASE("BinaryWriter::close frees the filetype and the file still reads",
+          "[binary_writer][io]") {
+  const int rank = mpi::get_rank();
+  const int size = mpi::get_size();
+  if (size > 2) {
+    SKIP("binary_writer tests support 1 or 2 ranks only");
+  }
+
+  const DomainBrick domain = make_domain(rank, size);
+  const auto out_dir = test_dir();
+  const std::string template_path = (out_dir / "closed_%d.bin").string();
+  const std::string path = (out_dir / "closed_0.bin").string();
+  const std::vector<double> written = make_real(domain, rank);
+
+  BinaryWriter writer(template_path);
+  writer.set_domain(domain.global, domain.local, domain.offset);
+  REQUIRE_NOTHROW(writer.write(0, written));
+  REQUIRE_NOTHROW(writer.close());
+  REQUIRE_NOTHROW(writer.close());
+
+  std::vector<double> read_back(local_count(domain));
+  BinaryReader reader;
+  reader.set_domain(domain.global, domain.local, domain.offset);
+  REQUIRE_NOTHROW(reader.read(path, read_back));
+  REQUIRE_NOTHROW(reader.close());
+  REQUIRE_NOTHROW(reader.close());
 
   REQUIRE(read_back.size() == written.size());
   for (std::size_t i = 0; i < written.size(); ++i) {

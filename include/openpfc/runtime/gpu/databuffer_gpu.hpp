@@ -215,6 +215,9 @@ public:
     }
   }
 
+  /// Copy into a host span. `dst.size()` must equal `size()`.
+  void copy_to_host(std::span<T> dst) const { copy_to_host(dst.data(), dst.size()); }
+
   std::vector<T> to_host() const {
     std::vector<T> result(m_size);
     if (m_size > 0) {

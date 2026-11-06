@@ -43,10 +43,11 @@ namespace pfc::mpi {
 class communicator {
 
 private:
-  static constexpr auto comm_deleter = [](MPI_Comm *comm) {
-    if (comm && *comm != MPI_COMM_WORLD && *comm != MPI_COMM_SELF &&
+  static constexpr auto comm_deleter = [](MPI_Comm *comm) noexcept {
+    if (comm != nullptr && *comm != MPI_COMM_WORLD && *comm != MPI_COMM_SELF &&
         *comm != MPI_COMM_NULL) {
-      MPI_Comm_free(comm);
+      pfc::mpi::abort_on_mpi_error(MPI_Comm_free(comm),
+                                   "MPI_Comm_free in communicator deleter");
     }
     delete comm;
   };

@@ -74,9 +74,10 @@ namespace pfc {
  * product from `set_domain`. A mismatch is fail-closed (communicator-wide
  * agreement via `MPI_Allreduce`) before `MPI_File_open` / `MPI_File_read_all`.
  *
- * @note Destructor: The destructor is noexcept(false) and fails closed on
- * MPI_Type_free errors via pfc::mpi::throw_on_mpi_error (same policy as
- * environment::~environment).
+ * @note Cleanup: `close()` is local (not collective) and reports
+ * `MPI_Type_free` with `throw_on_mpi_error`. A second `close()` is a no-op.
+ * The destructor is `noexcept` and calls `abort_on_mpi_error` on that same
+ * failure, matching `environment::~environment`.
  */
 class BinaryReader {
 
@@ -97,10 +98,7 @@ private:
     if (m_type_valid && m_etype == etype) {
       return;
     }
-    if (m_type_valid) {
-      pfc::mpi::throw_on_mpi_error(MPI_Type_free(&m_filetype), "MPI_Type_free");
-      m_type_valid = false;
-    }
+    release_filetype_(false);
     pfc::mpi::throw_on_mpi_error(
         MPI_Type_create_subarray(3, m_global.data(), m_local.data(), m_offset.data(),
                                  MPI_ORDER_FORTRAN, etype, &m_filetype),
@@ -108,6 +106,25 @@ private:
     pfc::mpi::throw_on_mpi_error(MPI_Type_commit(&m_filetype), "MPI_Type_commit");
     m_etype = etype;
     m_type_valid = true;
+  }
+
+  /// Free the committed filetype. `in_destructor` aborts; otherwise throws.
+  /// The flag stays set when the free fails, so a later destructor can retry.
+  void release_filetype_(bool in_destructor) {
+    if (!m_type_valid) {
+      return;
+    }
+    const int err = MPI_Type_free(&m_filetype);
+    if (err == MPI_SUCCESS) {
+      m_type_valid = false;
+      m_etype = MPI_DATATYPE_NULL;
+      return;
+    }
+    if (in_destructor) {
+      pfc::mpi::abort_on_mpi_error(err, "MPI_Type_free in ~BinaryReader");
+      return;
+    }
+    pfc::mpi::throw_on_mpi_error(err, "MPI_Type_free");
   }
 
   template <typename T>
@@ -183,24 +200,17 @@ public:
   BinaryReader(BinaryReader &&) = delete;
   BinaryReader &operator=(BinaryReader &&) = delete;
 
-  ~BinaryReader() noexcept(false) {
-    if (m_type_valid) {
-      // Fail closed: silent MPI_Type_free errors mask corrupted MPI state.
-      pfc::mpi::throw_on_mpi_error(MPI_Type_free(&m_filetype),
-                                   "MPI_Type_free in ~BinaryReader");
-    }
-  }
+  ~BinaryReader() noexcept { release_filetype_(true); }
+
+  /// Report `MPI_Type_free`. A second call does nothing.
+  void close() { release_filetype_(false); }
 
   void set_domain(const std::array<int, 3> &arr_global,
                   const std::array<int, 3> &arr_local,
                   const std::array<int, 3> &arr_offset) {
     pfc::mpi::validate_subarray_domain(arr_global, arr_local, arr_offset,
                                        "BinaryReader::set_domain");
-    if (m_type_valid) {
-      pfc::mpi::throw_on_mpi_error(MPI_Type_free(&m_filetype), "MPI_Type_free");
-      m_type_valid = false;
-      m_etype = MPI_DATATYPE_NULL;
-    }
+    release_filetype_(false);
     m_global = arr_global;
     m_local = arr_local;
     m_offset = arr_offset;

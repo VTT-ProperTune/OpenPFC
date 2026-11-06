@@ -918,10 +918,11 @@ private:
     }
   }
 
-  void free_all_requests() {
+  void free_all_requests() noexcept {
     for (auto &r : m_requests) {
       if (r != MPI_REQUEST_NULL) {
-        MPI_Request_free(&r);
+        pfc::mpi::abort_on_mpi_error(MPI_Request_free(&r),
+                                     "MPI_Request_free in HostPersistentFaces");
         r = MPI_REQUEST_NULL;
       }
     }

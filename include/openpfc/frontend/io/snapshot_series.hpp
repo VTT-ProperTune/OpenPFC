@@ -14,10 +14,11 @@
  *
  * The registered field is not owned. It must outlive every `write`. Device
  * fields are read through `with_host_read`, so a device backend is not
- * special-cased here. Call `close()` on the successful path so a manifest
- * or XDMF failure is reported. The destructor also calls `close()` and
- * swallows that error; it does not throw. `BinaryWriter::~BinaryWriter`
- * can still throw; that cleanup belongs to issue #171.
+ * special-cased here. Call `close()` on the successful path so a writer,
+ * manifest, or XDMF failure is reported. The destructor also calls
+ * `close()` and swallows that error; it does not throw. `BinaryWriter`
+ * frees its MPI filetype in `close()` and aborts from its destructor if
+ * that free fails.
  */
 
 #include <exception>
@@ -226,6 +227,22 @@ public:
   /// error text; the others report a collective failure.
   void close() {
     if (m_closed) return;
+    for (auto &slot : m_slots) {
+      if (!slot.writer) continue;
+      std::string error;
+      int local_ok = 1;
+      try {
+        slot.writer->close();
+      } catch (const std::exception &ex) {
+        local_ok = 0;
+        error = ex.what();
+      } catch (...) {
+        local_ok = 0;
+        error = "snapshot series: writer close failed for '" + slot.name + "'";
+      }
+      agree_(local_ok, error,
+             "snapshot series: a peer failed while closing '" + slot.name + "'");
+    }
     m_closed = true;
     if (m_slots.empty()) return;
     std::string error;

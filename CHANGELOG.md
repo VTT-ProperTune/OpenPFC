@@ -7,6 +7,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- `BinaryWriter::close` and `BinaryReader::close` report `MPI_Type_free`.
+  Their destructors no longer throw: a free failure aborts, matching the
+  MPI cleanup policy. `ResultsWriter::close` is the reporting hook, and
+  the snapshot series calls it before the manifest. `FieldView::span`,
+  `FieldOutput::span`, and CPU `DataBuffer::copy_to_host(std::span)` are
+  the storage views. The language baseline stays C++20 (#171).
 - Tungsten resolved-BCC gate now compares the actual 16³ field sampled
   against 32³ and all six complex first-shell BCC Fourier coefficients.
   The real tungsten CLI is also registered as an executable smoke test.

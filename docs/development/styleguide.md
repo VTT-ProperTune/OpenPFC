@@ -135,7 +135,10 @@ For questions not covered here, use [architecture.md](../concepts/architecture.m
 
 Cleanup paths that run in `noexcept` contexts — destructors of RAII guards
 (`pfc::mpi::MPI_File_guard`, `pfc::MPI_Type_guard`), their move-assignment
-operators, and `pfc::mpi::environment::~environment` — must **not throw**.
+operators, `pfc::mpi::environment::~environment`, `BinaryWriter` /
+`BinaryReader`, the `communicator` deleter, and
+`HostPersistentFaces::free_all_requests` — must **not throw**. Report the
+same failure from `close()` when the type has one.
 Throwing from a destructor risks `std::terminate` during stack unwinding, and a
 nonzero MPI error code during cleanup indicates corrupted MPI state that cannot
 be recovered from locally.

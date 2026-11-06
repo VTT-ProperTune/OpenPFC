@@ -190,10 +190,22 @@ public:
   /**
    * @brief Virtual destructor
    *
-   * Marked noexcept(false) to allow subclasses to throw on MPI cleanup
-   * failures (fail-closed policy).
+   * Library writers do not throw from this destructor. `BinaryWriter::close`
+   * reports `MPI_Type_free`, and its destructor aborts if that free fails.
+   * The specification stays `noexcept(false)` so a user override that calls
+   * a potentially throwing function still compiles. Prefer `close()` when
+   * the failure must be reported.
    */
   virtual ~ResultsWriter() noexcept(false) = default;
+
+  /**
+   * @brief Release owned resources and report a cleanup error.
+   *
+   * A second call is a no-op. The default does nothing. `BinaryWriter`
+   * overrides this for its MPI filetype. This call is not collective unless
+   * the override says so.
+   */
+  virtual void close() {}
 
   /**
    * @brief Configure the domain decomposition for parallel I/O

@@ -62,9 +62,10 @@ namespace pfc {
  * (`MPI_DOUBLE` or `MPI_DOUBLE_COMPLEX`), so filetype oldtype and etype always
  * match.
  *
- * @note Destructor: The destructor is noexcept(false) and fails closed on
- * MPI_Type_free errors via pfc::mpi::throw_on_mpi_error (same policy as
- * environment::~environment).
+ * @note Cleanup: `close()` is local (not collective) and reports
+ * `MPI_Type_free` with `throw_on_mpi_error`. A second `close()` is a no-op.
+ * The destructor is `noexcept` and calls `abort_on_mpi_error` on that same
+ * failure, matching `environment::~environment`.
  *
  * @see ResultsWriter - base class interface
  * @see BinaryReader - read binary files for restart
@@ -99,10 +100,7 @@ private:
     if (m_type_valid && m_etype == etype) {
       return;
     }
-    if (m_type_valid) {
-      pfc::mpi::throw_on_mpi_error(MPI_Type_free(&m_filetype), "MPI_Type_free");
-      m_type_valid = false;
-    }
+    release_filetype_(false);
     pfc::mpi::throw_on_mpi_error(
         MPI_Type_create_subarray(3, m_global.data(), m_local.data(), m_offset.data(),
                                  MPI_ORDER_FORTRAN, etype, &m_filetype),
@@ -112,14 +110,30 @@ private:
     m_type_valid = true;
   }
 
-public:
-  ~BinaryWriter() noexcept(false) override {
-    if (m_type_valid) {
-      // Fail closed: silent MPI_Type_free errors mask corrupted MPI state.
-      pfc::mpi::throw_on_mpi_error(MPI_Type_free(&m_filetype),
-                                   "MPI_Type_free in ~BinaryWriter");
+  /// Free the committed filetype. `in_destructor` aborts; otherwise throws.
+  /// The flag stays set when the free fails, so a later destructor can retry.
+  void release_filetype_(bool in_destructor) {
+    if (!m_type_valid) {
+      return;
     }
+    const int err = MPI_Type_free(&m_filetype);
+    if (err == MPI_SUCCESS) {
+      m_type_valid = false;
+      m_etype = MPI_DATATYPE_NULL;
+      return;
+    }
+    if (in_destructor) {
+      pfc::mpi::abort_on_mpi_error(err, "MPI_Type_free in ~BinaryWriter");
+      return;
+    }
+    pfc::mpi::throw_on_mpi_error(err, "MPI_Type_free");
   }
+
+public:
+  ~BinaryWriter() noexcept override { release_filetype_(true); }
+
+  /// Report `MPI_Type_free`. A second call does nothing.
+  void close() override { release_filetype_(false); }
 
   BinaryWriter(const BinaryWriter &) = delete;
   BinaryWriter &operator=(const BinaryWriter &) = delete;
@@ -134,11 +148,7 @@ public:
                   const std::array<int, 3> &arr_offset) override {
     pfc::mpi::validate_subarray_domain(arr_global, arr_local, arr_offset,
                                        "BinaryWriter::set_domain");
-    if (m_type_valid) {
-      pfc::mpi::throw_on_mpi_error(MPI_Type_free(&m_filetype), "MPI_Type_free");
-      m_type_valid = false;
-      m_etype = MPI_DATATYPE_NULL;
-    }
+    release_filetype_(false);
     m_global = arr_global;
     m_local = arr_local;
     m_offset = arr_offset;

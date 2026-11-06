@@ -31,6 +31,10 @@ TEST_CASE("FieldView const access", "[field][state_access]") {
   SECTION("construction and data access") {
     REQUIRE(view.data() == data.data());
     REQUIRE(view.size() == 64);
+    REQUIRE(view.span().data() == data.data());
+    REQUIRE(view.span().size() == data.size());
+    data[3] = 2.5;
+    REQUIRE(view.span()[3] == 2.5);
     REQUIRE(view.extents() == extents);
     REQUIRE(view.spacing() == spacing);
     REQUIRE(view.origin() == origin);
@@ -85,6 +89,10 @@ TEST_CASE("FieldOutput mutable access", "[field][state_access]") {
   SECTION("construction and data access") {
     REQUIRE(output.data() == data.data());
     REQUIRE(output.size() == 64);
+    REQUIRE(output.span().data() == data.data());
+    REQUIRE(output.span().size() == data.size());
+    output.span()[1] = 7.0;
+    REQUIRE(data[1] == 7.0);
   }
 
   SECTION("write semantics") {

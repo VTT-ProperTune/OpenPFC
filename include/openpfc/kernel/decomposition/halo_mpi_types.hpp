@@ -119,7 +119,9 @@ create_face_type(int nx, int ny, int nz, int start_x, int start_y, int start_z,
   }
   err = MPI_Type_commit(&dt);
   if (err != MPI_SUCCESS) {
-    MPI_Type_free(&dt);
+    pfc::mpi::abort_on_mpi_error(
+        MPI_Type_free(&dt),
+        "MPI_Type_free after MPI_Type_commit failed in create_face_type");
     throw std::runtime_error("MPI_Type_commit failed");
   }
   return MPI_Type_guard(dt);

@@ -8,6 +8,7 @@
 #include <openpfc/kernel/execution/backend_tags.hpp>
 #include <openpfc/kernel/execution/databuffer.hpp>
 #include <openpfc/kernel/execution/memory_traits.hpp>
+#include <span>
 #include <vector>
 
 using Catch::Approx;
@@ -91,6 +92,18 @@ TEST_CASE("DataBuffer CPU copy_from_host", "[core][databuffer][cpu]") {
     values_match &= buf[i] == Approx(input[i]);
   }
   REQUIRE(values_match);
+}
+
+TEST_CASE("DataBuffer CPU copy_to_host span", "[core][databuffer][cpu]") {
+  pfc::core::DataBuffer<pfc::backend::CPUTag, double> buf(3);
+  buf[0] = 1.0;
+  buf[1] = 2.0;
+  buf[2] = 4.0;
+  std::vector<double> out(3, 0.0);
+  buf.copy_to_host(std::span<double>(out.data(), out.size()));
+  REQUIRE(out[0] == Approx(1.0));
+  REQUIRE(out[1] == Approx(2.0));
+  REQUIRE(out[2] == Approx(4.0));
 }
 
 TEST_CASE("DataBuffer CPU to_host", "[core][databuffer][cpu]") {

@@ -31,6 +31,7 @@
  */
 
 #include <cstddef>
+#include <span>
 #include <stdexcept>
 #include <tuple>
 #include <type_traits>
@@ -107,6 +108,11 @@ public:
    * @return std::size_t Number of elements
    */
   std::size_t size() const noexcept { return m_size; }
+
+  /// Storage view. Geometry stays on this object; the span does not own it.
+  [[nodiscard]] std::span<const T> span() const noexcept {
+    return std::span<const T>(m_data, m_size);
+  }
 
   /**
    * @brief Get grid extents
@@ -199,6 +205,9 @@ public:
    * @return std::size_t Number of elements
    */
   std::size_t size() const noexcept { return m_size; }
+
+  /// Mutable storage view. The span does not own the caller buffer.
+  [[nodiscard]] std::span<T> span() noexcept { return std::span<T>(m_data, m_size); }
 
   /// Element access (no bounds check).
   T &operator[](std::size_t i) noexcept { return m_data[i]; }
