@@ -320,7 +320,7 @@ hardcoded binary `fba65f33…`, banner confirms `reshape=`). Same 768³
 Checksum HEX `0x1.7785970621a73p+3` on all four. Production
 `p2p_plined` wins on-node *and* off-node at this 16-GCD point. A
 large-rank protocol tournament (issue
-[#61](https://github.com/ahojukka5/OpenPFC/issues/61),
+#61,
 [`heffte_protocol_tournament.md`](heffte_protocol_tournament.md))
 tests whether the ranking changes at hundreds or thousands of ranks.
 Do not treat the 16-GCD table as that result.

@@ -20,7 +20,7 @@ concurrency:
 jobs:
   clang-tidy:
     name: Clang-Tidy Analysis
-    if: github.repository == 'ahojukka5/OpenPFC'
+    if: github.repository == 'VTT-ProperTune/OpenPFC'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:

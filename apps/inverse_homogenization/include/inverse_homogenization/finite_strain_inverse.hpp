@@ -5,7 +5,7 @@
 
 /**
  * @file finite_strain_inverse.hpp
- * @brief First 2-D finite-strain multimaterial experiment (research #484).
+ * @brief First 2-D finite-strain multimaterial experiment.
  *
  * Frozen protocol: 16² neo-Hookean rotating-square family. Compare
  * single-material+void against stiff/compliant/void (hinge-painted)

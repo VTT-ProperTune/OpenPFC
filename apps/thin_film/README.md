@@ -101,8 +101,8 @@ isolated hole, not a selected pattern wavelength. Call the imposed feature
 an initial-thickness depression, not a substrate defect or chemical
 heterogeneity: no substrate parameter is varied.
 
-Completing the matched cells at those two amplitudes (OpenPFC #128 /
-research #609) gives first-precursor contact at `t = 50` for noise `0.01`
+Completing the matched cells at those two amplitudes (OpenPFC #128)
+gives first-precursor contact at `t = 50` for noise `0.01`
 with the depression, `t = 85` for noise `0.002` with the depression, and
 no precursor for noise `0.002` without it: that spectral run's last
 finite save is `t = 290` with `min h = 0.197`. Failure remains localized to the

@@ -3,14 +3,14 @@
 """Guard the supported SDK build contracts without requiring GPU hardware.
 
 CUDA and HIP compile-only jobs belong to the master tier: they must run on
-every push to master of ahojukka5/OpenPFC (pull requests check affected
+every push to master of VTT-ProperTune/OpenPFC (pull requests check affected
 components), must not be optional, and must fail CI Status when they fail.
 """
 import importlib.util
 import re
 from pathlib import Path
 
-MASTER_TIER = "github.repository == 'ahojukka5/OpenPFC' && github.event_name != 'pull_request'"
+MASTER_TIER = "github.repository == 'VTT-ProperTune/OpenPFC' && github.event_name != 'pull_request'"
 
 
 def block(source, name):

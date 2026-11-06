@@ -48,9 +48,9 @@ output directory.
 
 A **research prototype** (not part of the numbered teaching ladder) is
 `ns2d_vorticity`: 2-D vorticity–streamfunction Navier–Stokes
-([#21](https://github.com/ahojukka5/OpenPFC/issues/21)) and
+(#21) and
 incompressible MHD (`mhd2d`,
-[#23](https://github.com/ahojukka5/OpenPFC/issues/23)). See
+#23). See
 [`ns2d_vorticity/README.md`](ns2d_vorticity/README.md). Conference
 figures for the accepted MHD windows:
 [`ns2d_vorticity/VISUALS.md`](ns2d_vorticity/VISUALS.md). Bounded

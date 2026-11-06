@@ -19,7 +19,7 @@ concurrency:
 jobs:
   build-and-test:
     name: ${{ matrix.os }} / ${{ matrix.cc }} / ${{ matrix.build_type }} / ${{ matrix.mpi }}${{ matrix.heffte == 'false' && ' / no HeFFTe' || '' }}
-    if: github.repository == 'ahojukka5/OpenPFC'
+    if: github.repository == 'VTT-ProperTune/OpenPFC'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:

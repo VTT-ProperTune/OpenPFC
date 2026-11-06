@@ -101,18 +101,17 @@ cleanup reduces a category, lower its recorded baseline in the same change.
 
 | URL area | Content |
 |----------|---------|
-| `/OpenPFC/` | Quarto website from `ahojukka5/openpfc-pages` |
+| `/OpenPFC/` | Quarto website from the private `openpfc-pages` repository |
 | `/OpenPFC/docs/` | Sphinx handbook with prose and API |
 | `/OpenPFC/docs/api/` | Breathe-rendered C++ API reference |
 | `/OpenPFC/dev/` and `/OpenPFC/api/` | Compatibility redirects to `/OpenPFC/docs/api/` |
 
 The [Documentation workflow](../../.github/workflows/docs.yml) builds the
-handbook in both repositories. On `VTT-ProperTune/OpenPFC` `master`, it also
-checks out the private Quarto website source, renders it, places the handbook
-under `docs/`, and deploys the combined artifact through GitHub Pages. A push
-to that branch or a manual workflow dispatch on it can publish the website.
-Pull requests and builds in the canonical development repository,
-`ahojukka5/OpenPFC`, validate documentation without deploying it.
+handbook. On `VTT-ProperTune/OpenPFC` `master`, it also checks out the private
+Quarto website source, renders it, places the handbook under `docs/`, and
+deploys the combined artifact through GitHub Pages. A push to that branch or a
+manual workflow dispatch on it can publish the website. Pull requests and
+other builds validate documentation without deploying it.
 
 The combined site includes `revision.txt`, which records both source commits.
 Use it to check whether a documentation change has reached the published

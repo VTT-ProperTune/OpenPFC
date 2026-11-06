@@ -3,7 +3,7 @@
 
 /**
  * @file finite_strain_inverse.cpp
- * @brief CLI for the frozen research #484 2-D experiment.
+ * @brief CLI for the frozen 2-D experiment.
  */
 
 #include <fstream>

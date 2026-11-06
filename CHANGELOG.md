@@ -1535,28 +1535,25 @@ The entries below are the development record since 0.2.0.
   \(|k| < (2/3)\pi/\Delta x\), so an exactly-on-cutoff mode is removed.
 
 - Higher-order PFC seed-ensemble driver and $256^2$ same-$dx$ box-control
-  inputs (`apps/higher_order_pfc`, research
-  #608). Frozen seeds
+  inputs (`apps/higher_order_pfc`). Frozen seeds
   `42, 7, 11, 99, 137, 256, 1024, 2024` and a mode-32 $|k|=1$ torus that
   keeps $dx$ fixed. Diagnostics already exported the time series.
 
 - **Exact forced linear EHD oracle** (`apps/ehd_film`, OpenPFC
-  [#126](https://github.com/ahojukka5/OpenPFC/issues/126), research
-  #610). Closed-form
+  #126). Closed-form
   constant-mobility bending+tension solution on the sampled periodic
   load, a Catch2 check that the flux stepper matches it through
   load/switch-off, and a DFT helper for the paper comparator. Qualifies
   the README recovery-mechanism sentence: similar normalized endpoint
   recovery is empirical, not a `gamma`-only rate law.
 - Matched thin-film 2×2 presets (`apps/thin_film`, OpenPFC
-  [#128](https://github.com/ahojukka5/OpenPFC/issues/128), research
-  #609): noise
+  #128): noise
   amplitude 0.002 without a depression, and noise 0.01 with the 30 %
   Gaussian thickness depression, completing the shipped one-factor
   design. The README no longer presents the unmatched 85-versus-140
   precursor times as an isolated ~40 % defect effect.
 - **Heat3D 1-node GPU cost matrix** at \(N=512\) and \(N=1024\)
-  (issue [#124](https://github.com/ahojukka5/OpenPFC/issues/124)).
+  (issue #124).
   Spectral, FD-2, FD-8 and FD-12 on one LUMI-G node, 8 GCDs, GPU-aware
   slabs, 30/5/25 `wall_step`, three independent repeats. Harvest:
   jobs 22209970–72. The committed summary CSV left this tree as
@@ -1567,7 +1564,7 @@ The entries below are the development record since 0.2.0.
 
 - **Doubly-periodic magnetic-island coalescence** on the 2-D
   incompressible MHD prototype (issue
-  [#113](https://github.com/ahojukka5/OpenPFC/issues/113), parent
+  #113, parent
   ).
   Literature-matched flux \(a=0.4\sin x\sin y\) plus a frozen
   \(k=1\) streamfunction seed. Stage 0 at \(\eta=\nu=0.01\) only.
@@ -1577,47 +1574,47 @@ The entries below are the development record since 0.2.0.
   raw-data common-band 128²/256² field gate.
 
 - **HeFFTe-trace MPI vs GPU OSU bandwidth campaign** (issue
-  [#119](https://github.com/ahojukka5/OpenPFC/issues/119)). Optional
+  #119). Optional
   `OPENPFC_HEFFTE_TRACE` around `mpi_main`, diagnostic Heat3D/OSU
   sbatch on `standard-g` at 1/2/8/32 nodes (`dev-g` MaxSubmitJobs=2).
   Admitted 8--32 node \(B_{\mathrm{mpi}}\) matches GPU OSU within 4%.
   Does not change production HeFFTe or the reshape default.
 - **32-node Heat3D pencil vs slab A/B** (issue
-  [#121](https://github.com/ahojukka5/OpenPFC/issues/121)). Same
+  #121). Same
   diagnostic binary and GPU-aware MPI as #119; `HEAT3D_USE_PENCILS=1`
   vs admitted slab 22207838. Pencils keep the slab min-reshape grids
   and are 0.5% faster. Does not change production
   `use_pencils=false`.
 - **Blocked HeFFTe selector regret scaffold** (issue
-  [#107](https://github.com/ahojukka5/OpenPFC/issues/107)). Feature
+  #107). Feature
   schema, train/held-out split records, and regret tests. Does not time
   held-out families or change production policy.
 - **HeFFTe topology-crossover campaign tooling** (issue
-  [#106](https://github.com/ahojukka5/OpenPFC/issues/106)). Randomized
+  #106). Randomized
   protocol order, dense node counts around the #61 ranking changes, and
   placement metadata collection. All three 128-node allocations elect
   `p2p_plined` (H3 rejected there; H2 not supported). Does not change
   the production reshape default.
 - **Pre-execution HeFFTe reshape descriptors and harvest status**
-  (issue [#106](https://github.com/ahojukka5/OpenPFC/issues/106)).
+  (issue #106).
   Deterministic communication tables from the OpenPFC slab/min-reshape
   replica, candidate unfitted cost models, and a harvest command that
   keeps rejected and missing protocol rows. Status spread is the
   elected-protocol repeat range, not the gap across protocols.
 - **FD-order halo-overlap scaling campaign tooling** (issue
-  [#108](https://github.com/ahojukka5/OpenPFC/issues/108)). Weak-scaling
+  #108). Weak-scaling
   ladder at 256³ interior/GCD for FD-2/4/8/12/20, including the
   FD-20 512-node n=3 median. Diagnostic `exposed_wait` at 8 and 1024
   nodes supports H1 (width-dominated). Does not change production FD
   physics.
 - **FD-order geometry table and harvest status** (issue
-  [#108](https://github.com/ahojukka5/OpenPFC/issues/108)). Deterministic
+  #108). Deterministic
   packed-face / interior-shell quantities from the production exchange
   and `EvenCentralD2` stencils, plus a harvest command that keeps
   rejected runs.
 - **2-D MHD conference visualization package**
   (`examples/ns2d_vorticity`, issue
-  [#71](https://github.com/ahojukka5/OpenPFC/issues/71)). Evidence
+  #71). Evidence
   animations and paper figures from the accepted #27/#39 windows;
   late-time movie labelled as a dynamics showcase. Does not change
   the solver or the scaling decision.
@@ -1631,9 +1628,9 @@ The entries below are the development record since 0.2.0.
   `include/openpfc/frontend/utils/cli_options.hpp`). Standalone drivers
   parse named flags without a per-app copy of the same class; unknown
   keys are an error after the driver has queried every option it
-  understands ([#66](https://github.com/ahojukka5/OpenPFC/issues/66)).
+  understands (#66).
 - **Inverse homogenization checkpoint problem fingerprint** (issue
-  [#72](https://github.com/ahojukka5/OpenPFC/issues/72)). Schema 3
+  #72). Schema 3
   `state.txt` records the target tensor, moduli, SIMP/regularization
   endpoints, step/projection, window, tolerances, and whether the
   bundle is running or terminal. A restart with a different frozen
@@ -1649,9 +1646,9 @@ The entries below are the development record since 0.2.0.
   optional `MPI_Testall` pump → `finish()` → border. `HaloOverlapMode`
   is 0/1/2 (`Blocking` / `Waitall` / `Testall`). The helper does not
   read app env names
-  ([#68](https://github.com/ahojukka5/OpenPFC/issues/68)).
+  (#68).
 - **Inverse-homogenization convergence protocol** (issue
-  [#59](https://github.com/ahojukka5/OpenPFC/issues/59)). After
+  #59). After
   `--continuation-steps` the SIMP/regularization problem is frozen.
   Stopping requires simultaneous post-projection design RMS, relative
   \(J\), and relative \(\lVert C_H\rVert_F\) for `--conv-window`
@@ -1660,20 +1657,20 @@ The entries below are the development record since 0.2.0.
   22162138 still had `step_rms≈0.019` at step 300, so a J-only stop
   would have been premature.
 - **HeFFTe reshape-algorithm tournament** (issue
-  [#61](https://github.com/ahojukka5/OpenPFC/issues/61)). LUMI-G
+  #61). LUMI-G
   constant-local-work Heat3D spectral campaign comparing
   `p2p_plined` / `p2p` / `alltoallv` / `alltoall` under account
   `project_462001245`. Production FFT defaults are unchanged. Submit
   fails closed on leaked `HEAT3D_*` / `OPENPFC_FFT_*` knobs and on
   account `project_462001519`.
 - **2-D finite-strain multimaterial experiment** (issue
-  [#57](https://github.com/ahojukka5/OpenPFC/issues/57), research #484).
+  #57).
   16² periodic neo-Hookean homogenizer with \(P_{22}=0\); rotating-square
   half sweep; single-material+void versus hinge-painted
   stiff/compliant/void. Frozen family does not produce \(\nu_t>0\) then
   \(\nu_t<0\). Not small-strain \(C_H\).
 - **2-D finite-strain forward ladder** (issue
-  [#55](https://github.com/ahojukka5/OpenPFC/issues/55)). Plane-strain
+  #55). Plane-strain
   neo-Hookean / St.\ Venant--Kirchhoff \(P=\partial W/\partial F\),
   uniaxial \(F_{11}\) with \(P_{22}=0\), and tangent
   \(\nu_t=-\mathrm{d}\ln F_{22}/\mathrm{d}\ln F_{11}\) by finite
@@ -1702,7 +1699,7 @@ The entries below are the development record since 0.2.0.
   remains a fail-closed override; `OPENPFC_FFT_COMPLEX_OUTBOX=legacy`
   restores the even-divisibility y-slab heuristic.
 - **3-D inverse target/init surface** (issue
-  [#9](https://github.com/ahojukka5/OpenPFC/issues/9)). CPU and HIP
+  #9). CPU and HIP
   inverse drivers load a 6×6 Voigt `C_target` file, a Fortran design
   brick, `--init=yang-a3`, and 3-D spinodal seeding. Successor to
   stale PR #19; not a merge of that branch.
@@ -1726,7 +1723,7 @@ The entries below are the development record since 0.2.0.
   convergence window or verification hold (#91).
 
 - **Inverse-homogenization CSV / accepted-state / SIMP** (issue
-  [#63](https://github.com/ahojukka5/OpenPFC/issues/63)). HIP no longer
+  #63). HIP no longer
   writes a truncated extra iterate row after the loop; CPU and HIP share
   the 26-column header and emit unpenalized final \(C_H\) as a
   `# FINAL_RECOMPUTE` comment. Logged row \(s\) compares accepted
@@ -1792,13 +1789,13 @@ The entries below are the development record since 0.2.0.
 ### Added
 
 - **Inverse-homogenization 8-GCD HIP driver** (issue
-  [#8](https://github.com/ahojukka5/OpenPFC/issues/8), successor to
+  #8, successor to
   PR #14). `openpfc_inverse_homogenize_hip` matches the CPU inverse
   CLI subset on `GPUSpectralStack` (rotating-square seed, CSV
   \(C_H\)/\(\nu_{\mathrm{eff}}\), MPI-IO `h` bricks, HIP_MEM).
   Does not overwrite CPU compliance diagnostics from #29.
 - **Heat3D HIP FD weak scaling** (issue)
-  [#25](https://github.com/ahojukka5/OpenPFC/issues/25)). Rectangular
+  #25). Rectangular
   `<Nx> <Ny> <Nz>` CLI for `heat3d_fd_hip`, `OPENPFC_FD_PROC_GRID`
   Cartesian override, fail-closed `HEAT3D_REQUIRE_INTERIOR`, and a
   LUMI-G 1–16-node recipe at constant 256³ owned cells/GCD. Cubic CLI
@@ -1806,7 +1803,7 @@ The entries below are the development record since 0.2.0.
   (`HEAT3D_DIAG_TIMING=1`) and are not the admitted `wall_step`.
 - **Yang 2015 A3 re-entrant skeleton**
   (`openpfc_homogenize --shape=yang-a3`, issue
-  [#43](https://github.com/ahojukka5/OpenPFC/issues/43)). Published
+  #43). Published
   cell box \(2(H-L\cos\theta)\times(2L\sin\theta)^2\), inward V's,
   half-cell layer shift, square-section members, density-qualified
   against Table 1 \(\bar\rho=0.233\), but **not auxetic** in
@@ -1815,19 +1812,19 @@ The entries below are the development record since 0.2.0.
   inverse design.
 - **3-D re-entrant honeycomb forward oracle**
   (`openpfc_homogenize --shape=reentrant-3d`, issue
-  [#36](https://github.com/ahojukka5/OpenPFC/issues/36)). Evans / Yang
+  #36). Evans / Yang
   inverted honeycomb with Gibson--Robert four-fold vertical patterning.
   Prescribed struts, not an extrusion and not inverse design.
 - **Extruded rotating-square 3-D consistency oracle**
   (`openpfc_homogenize --shape=rotating-squares`, issue
-  [#33](https://github.com/ahojukka5/OpenPFC/issues/33)). The qualified
+  #33). The qualified
   2-D Grima seed (\(h_{3\mathrm{D}}(x,y,z)=h_{2\mathrm{D}}(x,y)\)) is
   evaluated by the 3-D homogenizer to test whether \(\nu_{xy}<0\)
   survives the 3-D compliance path. Not a 3-D metamaterial and not an
   inverse search.
 - **3-D rotating-cube forward oracle** (`openpfc_homogenize
   --shape=rotating-cubes`, issue
-  [#31](https://github.com/ahojukka5/OpenPFC/issues/31)). Prescribed
+  #31). Prescribed
   periodic eight-cube cell (Attard & Grima rotating-rigid-unit idea),
   not an extrusion and not an inverse search. The homogenizer prints
   compliance Poisson ratios, SPD / \(\lambda_{\min}\), and periodic
@@ -1835,7 +1832,7 @@ The entries below are the development record since 0.2.0.
   another Allen–Cahn experiment.
 - **2-D incompressible visco-resistive MHD prototype** (`mhd2d` in
   `examples/ns2d_vorticity`, issue
-  [#23](https://github.com/ahojukka5/OpenPFC/issues/23)). Coupled
+  #23). Coupled
   \((\omega,a)\) on the shared `SpectralPlane` from #22: Lorentz
   \(+B\cdot\nabla j\), state 2/3 on both fields, IFRK4. Hydro reduction,
   force-free diffusion, Alfvénic sign test, ideal invariants, energy
@@ -1843,7 +1840,7 @@ The entries below are the development record since 0.2.0.
   reconnection claim.
 - **2-D vorticity–streamfunction Navier–Stokes prototype**
   (`examples/ns2d_vorticity`, issue
-  [#21](https://github.com/ahojukka5/OpenPFC/issues/21)). Periodic
+  #21). Periodic
   spectral CPU solver: FFT Poisson for \(\psi\), Orszag 2/3 projection
   of the *state* and of \(\hat N\), integrating-factor RK4 (viscous
   \(e^{L\Delta t}\) plus RK4 Jacobian). Taylor–Green is spectrally
@@ -3173,7 +3170,7 @@ sessions, a second field representation at the modifier/writer boundary).
 - Coverage: stop overwriting `CMAKE_CXX_FLAGS` in CompilerSettings; apply `--coverage` before tests are added so `lcov` finds `.gcda`.
 - REUSE: copyright on `grid_field` / `residency` headers and tests; SPDX on wave2d README, docs toolchain files; `REUSE.toml` annotations for `uv.lock`, `.python-version`, `integrator_selection.json`, and vendored stb.
 - Doxygen: drop unknown `\\partial_t` / `\\Delta` commands in `json_fd_session.hpp`; replace unresolved `@ref` to C++20 concepts and checkpoint payload types so the unresolved-reference count stays within the legacy baseline.
-- GitHub Actions `code-quality` no longer depends on the private `ahojukka5/clang-format-action` (the VTT-ProperTune token cannot resolve it, so the Unit Tests workflow never reached a compiler). The check uses public `jidicula/clang-format-action@v4.18.0` and stays advisory (`continue-on-error`).
+- GitHub Actions `code-quality` no longer depends on a private `clang-format-action` fork (the VTT-ProperTune token cannot resolve it, so the Unit Tests workflow never reached a compiler). The check uses public `jidicula/clang-format-action@v4.18.0` and stays advisory (`continue-on-error`).
 - Clang-tidy is a dedicated non-blocking workflow again. `WarningsAsErrors` is not clean on this tree; making it a Unit Tests gate skipped the GCC matrix.
 - `docs/user_guide/parameter_validation.md` no longer links to the deleted `appconcretemodelmain-order-of-operations` anchor or the removed `JsonAppRun` / `SpectralSimulationSession` path (Sphinx `myst.xref_missing`).
 - `restore_field` reports `BytesSizeMismatch` / `BufferTooSmall` before optional decomposition metadata, so a truncated payload is not classified as `DecompositionMismatch`.

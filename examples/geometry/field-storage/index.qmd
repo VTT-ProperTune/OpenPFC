@@ -81,7 +81,7 @@ The program does not fill meaningful ghost values or calculate a stencil.
 Padding allocates space; a halo exchange or boundary treatment supplies
 its contents. The [heat lesson](../../heat/finite-differences/index.qmd)
 shows that next step. The
-[Field header](https://github.com/ahojukka5/OpenPFC/blob/master/include/openpfc/kernel/data/grid_field.hpp)
+[Field header](https://github.com/VTT-ProperTune/OpenPFC/blob/master/include/openpfc/kernel/data/grid_field.hpp)
 defines the ownership and indexing contracts.
 The complete [C++ model](model.cpp) and [starting input](input.json)
 are available with this lesson.

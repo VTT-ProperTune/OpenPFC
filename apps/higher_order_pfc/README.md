@@ -375,7 +375,7 @@ for case in single_mode_triangular two_mode_square two_mode_degenerate \
   ./apps/higher_order_pfc/higher_order_pfc \
       ../apps/higher_order_pfc/inputs_json/${case}.json
 done
-# eight-seed ensemble (research #608 Gate B)
+# eight-seed ensemble (Gate B)
 bash apps/higher_order_pfc/scripts/run_seed_ensemble.sh
 # 256^2 same-dx box control (Gate C)
 for case in single_mode_triangular_256 two_mode_square_256; do

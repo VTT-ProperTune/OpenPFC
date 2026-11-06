@@ -141,7 +141,7 @@ it makes no claim about MPI pools or all system allocations. The optional
 HIP regression checks actual device evaluation and scatter with uploaded
 host-filled halos. This CPU tutorial does not execute a device stepper.
 The existing multi-field stepper limitations remain documented in
-[#355](https://github.com/ahojukka5/OpenPFC/issues/355); this lesson does not
+#355; this lesson does not
 hide them inside a new integration wrapper.
 
 :::

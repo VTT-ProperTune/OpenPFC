@@ -124,7 +124,7 @@ openpfc run model.cpp input.json --launcher=none
 
 The printed attempt directory contains `results/convergence.csv`, with
 columns `n,fd2,fd4,fourier`. Its values supply @fig-convergence; the plotting
-command is in the [examples authoring guide](https://github.com/ahojukka5/OpenPFC/blob/master/examples/AUTHORING.md).
+command is in the [examples authoring guide](https://github.com/VTT-ProperTune/OpenPFC/blob/master/examples/AUTHORING.md).
 The source is [model.cpp](model.cpp) and the editable input is
 [input.json](input.json).
 

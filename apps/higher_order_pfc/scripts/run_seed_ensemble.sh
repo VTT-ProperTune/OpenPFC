@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Frozen eight-seed ensemble for research #608 Gate B.
+# Frozen eight-seed ensemble for Gate B.
 # Seeds are declared before any run and are not discarded after inspection.
 
 set -euo pipefail

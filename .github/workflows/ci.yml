@@ -25,7 +25,7 @@ concurrency:
 jobs:
   scope:
     name: Select checks
-    if: github.repository == 'ahojukka5/OpenPFC'
+    if: github.repository == 'VTT-ProperTune/OpenPFC'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
@@ -76,7 +76,7 @@ jobs:
   # ============================================================================
   code-quality:
     name: Code Quality
-    if: github.repository == 'ahojukka5/OpenPFC'
+    if: github.repository == 'VTT-ProperTune/OpenPFC'
     needs: [scope]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -217,7 +217,7 @@ jobs:
   # ============================================================================
   debug-and-mpi:
     name: ubuntu-24.04 / gcc-13 / Debug + 3/4/6-rank MPI
-    if: github.repository == 'ahojukka5/OpenPFC' && github.event_name != 'pull_request'
+    if: github.repository == 'VTT-ProperTune/OpenPFC' && github.event_name != 'pull_request'
     needs: [code-quality]
     runs-on: ubuntu-24.04
     timeout-minutes: 120
@@ -310,7 +310,7 @@ jobs:
   # ============================================================================
   clang-compile:
     name: Clang compile check (library + FFT backend)
-    if: github.repository == 'ahojukka5/OpenPFC' && github.event_name != 'pull_request'
+    if: github.repository == 'VTT-ProperTune/OpenPFC' && github.event_name != 'pull_request'
     needs: [code-quality]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -352,7 +352,7 @@ jobs:
   # ============================================================================
   packaging-smoke:
     name: Packaging (find_package consumer)
-    if: github.repository == 'ahojukka5/OpenPFC' && github.event_name != 'pull_request'
+    if: github.repository == 'VTT-ProperTune/OpenPFC' && github.event_name != 'pull_request'
     needs: [code-quality]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -423,7 +423,7 @@ jobs:
   # ============================================================================
   cuda-compile:
     name: CUDA compile-only (no GPU)
-    if: github.repository == 'ahojukka5/OpenPFC' && github.event_name != 'pull_request'
+    if: github.repository == 'VTT-ProperTune/OpenPFC' && github.event_name != 'pull_request'
     needs: [code-quality]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -468,7 +468,7 @@ jobs:
 
   hip-compile:
     name: HIP compile-only (no GPU)
-    if: github.repository == 'ahojukka5/OpenPFC' && github.event_name != 'pull_request'
+    if: github.repository == 'VTT-ProperTune/OpenPFC' && github.event_name != 'pull_request'
     needs: [code-quality]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -511,7 +511,7 @@ jobs:
   # ============================================================================
   ci-status:
     name: CI Status
-    if: always() && github.repository == 'ahojukka5/OpenPFC'
+    if: always() && github.repository == 'VTT-ProperTune/OpenPFC'
     needs: [scope, code-quality, python-tests, build-and-test, debug-and-mpi, clang-compile, packaging-smoke, cuda-compile, hip-compile]
     runs-on: ubuntu-24.04
     timeout-minutes: 10

@@ -101,7 +101,7 @@ AGPL-3.0-or-later; see [LICENSE.md](LICENSE.md).
 [doi-badge-url]: https://zenodo.org/doi/10.5281/zenodo.10799935
 [site-badge-img]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/docs.yml/badge.svg
 [site-badge-url]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/docs.yml
-[ci-badge-img]: https://github.com/ahojukka5/OpenPFC/actions/workflows/ci.yml/badge.svg
-[ci-badge-url]: https://github.com/ahojukka5/OpenPFC/actions/workflows/ci.yml
+[ci-badge-img]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/ci.yml/badge.svg
+[ci-badge-url]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/ci.yml
 [license-img]: https://img.shields.io/github/license/VTT-ProperTune/OpenPFC
 [license-url]: https://github.com/VTT-ProperTune/OpenPFC/blob/master/LICENSE.md

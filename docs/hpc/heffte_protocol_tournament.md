@@ -13,7 +13,7 @@ reshape A/B or the production `p2p_plined` weak curve in
 [`lumi_gpu_scaling.md`](lumi_gpu_scaling.md). Do not mix those tables
 with this campaign.
 
-Issue: [#61](https://github.com/ahojukka5/OpenPFC/issues/61).
+Issue: #61.
 
 ## Question
 

@@ -15,7 +15,7 @@ jobs:
   # ============================================================================
   coverage:
     name: Code Coverage
-    if: github.repository == 'ahojukka5/OpenPFC'
+    if: github.repository == 'VTT-ProperTune/OpenPFC'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:

@@ -78,8 +78,8 @@ physical coordinates rather than copying the previous expected output.
 
 This lesson initializes a field; it does not evolve a PDE or fill halos.
 For those operations continue with [finite-difference heat flow](../../heat/finite-differences/index.qmd).
-See the [field factory](https://github.com/ahojukka5/OpenPFC/blob/master/include/openpfc/kernel/field/field_factory.hpp)
-and [Field API](https://github.com/ahojukka5/OpenPFC/blob/master/include/openpfc/kernel/data/grid_field.hpp)
+See the [field factory](https://github.com/VTT-ProperTune/OpenPFC/blob/master/include/openpfc/kernel/field/field_factory.hpp)
+and [Field API](https://github.com/VTT-ProperTune/OpenPFC/blob/master/include/openpfc/kernel/data/grid_field.hpp)
 for the underlying public operations.
 The complete [C++ model](model.cpp) and [starting input](input.json)
 are available with this lesson.

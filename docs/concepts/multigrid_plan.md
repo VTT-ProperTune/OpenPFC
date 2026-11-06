@@ -8,7 +8,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 `pfc::solvers::MultigridPlan` (header
 `openpfc/solvers/multigrid_plan.hpp`) is the **planning-only** first
 step towards rank-agglomerated geometric multigrid under
-[OpenPFC issue #420](https://github.com/ahojukka5/OpenPFC/issues/420).
+OpenPFC issue #420.
 
 The plan owns **metadata**, not CUDA/HIP buffers, communicators, MPI
 requests, or a new domain partitioner. Its `decomposition` members and

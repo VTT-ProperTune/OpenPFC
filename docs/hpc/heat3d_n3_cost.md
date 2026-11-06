@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 # Heat3D one-node GPU cost matrix
 
 Recipe for the Heat3D benchmark behind
-[issue #124](https://github.com/ahojukka5/OpenPFC/issues/124). It times one
+issue #124. It times one
 GPU node at two cubic resolutions and four operators. It does not store a
 measured campaign.
 

@@ -7,7 +7,7 @@
  * @file finite_strain_forward.hpp
  * @brief 2-D plane-strain finite-strain forward ladder (OpenPFC #55).
  *
- * Frozen kinematics for research #484's forward gate:
+ * Frozen kinematics for the forward gate:
  * - in-plane deformation gradient \f$F\f$ with \f$F_{33}=1\f$;
  * - first Piola--Kirchhoff stress \f$P=\partial W/\partial F\f$;
  * - logarithmic strain \f$\varepsilon_i=\ln F_{ii}\f$ on a principal path;

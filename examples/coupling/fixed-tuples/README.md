@@ -49,7 +49,7 @@ it does not observe malloc, MPI/runtime memory pools or hardware accesses.
 This example does not use the existing `MultiExplicitRKStepper` factory:
 its evaluator can remain bound to the original field rather than the passed
 stage buffer, and its current stage-vector construction allocates. Those
-library limitations are tracked in [#355](https://github.com/ahojukka5/OpenPFC/issues/355)
+library limitations are tracked in #355
 and are not repaired or hidden by this demonstrator. The
 model ABI and canonical `for_each_interior` driver remain unchanged.
 

@@ -5,7 +5,7 @@
 
 /**
  * @file finite_strain_grid.hpp
- * @brief Small 2-D periodic finite-strain homogenizer (research #484).
+ * @brief Small 2-D periodic finite-strain homogenizer.
  *
  * Cell-centred fluctuation displacement, central differences, plane strain.
  * Macroscopic \f$F_{11}\f$ is prescribed; \f$F_{22}\f$ is relaxed so

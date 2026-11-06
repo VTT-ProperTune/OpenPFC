@@ -75,8 +75,8 @@ $1+\cos(3x)$ is a small resolved mode; the
 [coefficient lesson](../round-trip/index.qmd) provides an independent DFT
 comparison instead of relying only on a round trip.
 
-See the [local FFT contract](https://github.com/ahojukka5/OpenPFC/blob/master/include/openpfc/kernel/fft/local_fft.hpp)
-and [host FFT interface](https://github.com/ahojukka5/OpenPFC/blob/master/include/openpfc/kernel/fft/fft_interface.hpp)
+See the [local FFT contract](https://github.com/VTT-ProperTune/OpenPFC/blob/master/include/openpfc/kernel/fft/local_fft.hpp)
+and [host FFT interface](https://github.com/VTT-ProperTune/OpenPFC/blob/master/include/openpfc/kernel/fft/fft_interface.hpp)
 for ownership, normalization and lifetime details.
 
 The complete [C++ model](model.cpp) and [starting input](input.json)

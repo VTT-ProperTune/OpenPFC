@@ -13,8 +13,7 @@ This page is the **recipe**. It does not replace the admitted production
 Heat3D weak curve or the extra-wall envelope in the research report.
 Do not mix those tables with this campaign.
 
-Issue: [#119](https://github.com/ahojukka5/OpenPFC/issues/119). Research
-#589.
+Issue: #119.
 
 ## Question
 
@@ -152,7 +151,7 @@ Pencils do not change the layout at this min-reshape size (`Ny=768`
 divides 256 ranks). Wall differs by 0.5%. Keep production slabs.
 Do not grow the campaign.
 
-Issue: [#121](https://github.com/ahojukka5/OpenPFC/issues/121).
+Issue: #121.
 
 `OPENPFC_HEFFTE_TRACE` is set by the sbatch. HeFFTe writes
 `heffte_trace_<rank>.log`. Collect rebuilds CSV from run directories.

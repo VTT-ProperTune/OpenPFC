@@ -1,5 +1,5 @@
 {
-  "source_repository": "https://github.com/ahojukka5/OpenPFC",
+  "source_repository": "https://github.com/VTT-ProperTune/OpenPFC",
   "binary_source_revision": "8c0fb7637095e84de5a3ae3e4eb4ac779dcff165",
   "binary_sha256": "17c7cfba804f9a13a89d2a431aebc82340cfa094887212dad66757131b1d1457",
   "numerical_driver_revisions": [

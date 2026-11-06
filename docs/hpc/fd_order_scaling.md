@@ -12,7 +12,7 @@ overlap, or vice versa?
 This is not an accuracy comparison. Do not change production FD physics
 from these jobs.
 
-Issue: [#108](https://github.com/ahojukka5/OpenPFC/issues/108).
+Issue: #108.
 
 ## Frozen weak-scaling protocol
 

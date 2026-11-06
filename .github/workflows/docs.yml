@@ -184,9 +184,9 @@ jobs:
           path: site
           retention-days: 1
 
-  # The website is ahojukka5/openpfc-pages (private, Quarto). VTT-ProperTune
-  # receives master as a mirror of ahojukka5/OpenPFC and is the only place it
-  # is published; the fork builds the documentation but does not deploy.
+  # The website source is the private Quarto repository openpfc-pages. Only
+  # VTT-ProperTune/OpenPFC master publishes it; elsewhere the documentation is
+  # built but not deployed.
   build-site:
     name: Render the website with the documentation
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master' && github.repository == 'VTT-ProperTune/OpenPFC'

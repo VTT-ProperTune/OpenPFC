@@ -8,8 +8,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 This is software scaffolding only. Do **not** start held-out jobs. Do
 **not** fit a selector. Do **not** change production reshape policy.
 
-Issue: [#107](https://github.com/ahojukka5/OpenPFC/issues/107).
-Depends on [#106](https://github.com/ahojukka5/OpenPFC/issues/106).
+Issue: #107.
+Depends on #106.
 
 ## Allowed now
 

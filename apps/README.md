@@ -36,7 +36,7 @@ A new `apps/<name>` entry should satisfy most of the following:
    includes its own headers and public OpenPFC headers. It does not
    depend on another application directory, and it does not recreate a
    shared `apps/common` (issue
-   [#65](https://github.com/ahojukka5/OpenPFC/issues/65)).
+   #65).
 3. **Verification.** It has quantitative correctness tests, or a bounded
    validation protocol appropriate to its model.
 4. **Realistic execution path.** It exercises OpenPFC as a usable

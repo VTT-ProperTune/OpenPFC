@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # HeFFTe protocol crossovers and LUMI-G topology (issue #106)
 
-Mechanism study: is the non-monotone HeFFTe ranking from [#61](https://github.com/ahojukka5/OpenPFC/issues/61)
+Mechanism study: is the non-monotone HeFFTe ranking from #61
 smooth rank/message scaling, associated with allocation/topology
 regimes, or too unstable under independent allocations and randomized
 protocol order?
@@ -15,7 +15,7 @@ in [`heffte-protocol-evidence/`](heffte-protocol-evidence/README.md). Do
 not mix those tables with this campaign. Do not change the production
 reshape default here.
 
-Issue: [#106](https://github.com/ahojukka5/OpenPFC/issues/106).
+Issue: #106.
 
 ## Frozen numerical / FFT policy
 

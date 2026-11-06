@@ -9,7 +9,7 @@ For mathematical experiments with editable C++ models, start with
 [OpenPFC by example](https://vtt-propertune.github.io/OpenPFC/learn/).
 The Quarto sequence develops geometry, differentiation, evolution and
 boundary problems with runnable source and independent checks. The
-[teaching source tree](https://github.com/ahojukka5/OpenPFC/tree/master/examples)
+[teaching source tree](https://github.com/VTT-ProperTune/OpenPFC/tree/master/examples)
 keeps articles, models and inputs together.
 
 The tutorials are for moments when you want to do one concrete thing with OpenPFC and understand what just happened. They are not meant to be read alphabetically. If you have not yet built the project, start with [`../start_here_15_minutes.md`](../start_here_15_minutes.md); if you are still deciding which route fits you, use [`../learning_paths.md`](../learning_paths.md).

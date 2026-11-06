@@ -17,8 +17,7 @@ This directory contains CI/CD workflows for the OpenPFC project.
 | Push to master | The pull-request jobs plus the small matrix: GCC 13 Debug with the 3/4/6-rank multigrid transfers and the benchmark compile, the Clang compile check, packaging, CUDA and HIP compile-only | ~45 min |
 | Monthly (and on demand) | `compatibility.yml`, then coverage, clang-tidy and ASan on the following days | a few hours |
 
-Every job runs in `ahojukka5/OpenPFC` only. VTT-ProperTune/OpenPFC mirrors
-`master` and runs only the documentation and website workflow.
+Every job runs in `VTT-ProperTune/OpenPFC` only; forks and copies skip them.
 
 ### `ci.yml` - Pull request and master tiers
 
@@ -106,7 +105,7 @@ Jobs:
    or Sphinx diagnostics.
 3. Render the website (VTT-ProperTune/OpenPFC master, on push or
    `workflow_dispatch`; dispatch it after an openpfc-pages change): checks
-   out `ahojukka5/openpfc-pages` `master` with the `OPENPFC_PAGES_REPO`
+   out the private `openpfc-pages` repository `master` with the `OPENPFC_PAGES_REPO`
    secret of the `OpenPFC` environment, renders it with pinned Quarto, puts
    the handbook at `docs/` (API at `docs/api/`), redirects the old `dev/` and
    `api/` URLs, and checks every link.
