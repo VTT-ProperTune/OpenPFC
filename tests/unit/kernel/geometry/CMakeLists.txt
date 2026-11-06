@@ -8,5 +8,9 @@ file(GLOB GEOMETRY_UNIT_TEST_SOURCES CONFIGURE_DEPENDS
 if(NOT OpenPFC_HAS_FFTW3)
   list(FILTER GEOMETRY_UNIT_TEST_SOURCES EXCLUDE REGEX
        "/test_periodic_cluster_map[.]cpp$")
+  # Keep pure geometry tests runnable when the optional compiled FFTW backend
+  # is absent; both spectral parity fixtures require that backend.
+  list(FILTER GEOMETRY_UNIT_TEST_SOURCES EXCLUDE REGEX
+       "/test_affine_map[.]cpp$")
 endif()
 target_sources(openpfc-tests PRIVATE ${GEOMETRY_UNIT_TEST_SOURCES})
