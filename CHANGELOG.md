@@ -7,6 +7,15 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Aluminum provenance: document active case/initial/boundary controls alongside
+  model coefficients, discover shipped presets rather than fixing a four-file
+  test list, and classify G_grid/V_grid as variable case controls.
+- Aluminum coefficients are classified by `coefficient_provenance()`.
+  Representative free-energy numbers are uncited. Derived coefficients
+  come from `AluminumParams::recompute_derived`. Length, temperature,
+  time, and amplitude stay in reduced units. This repository does not
+  convert them to SI, and the table is not a material validation (#249).
+
 - The Burgers CPU FDM2/FVM paths and their named tests now build without
   FFTW3; spectral methods fail explicitly when the backend is absent.
   The CLI is exercised directly in CTest. SSP-RK3 rejects unsafe steps and

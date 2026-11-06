@@ -33,6 +33,7 @@
 #include <string>
 
 #include <aluminum/aluminum_pointwise.hpp>
+#include <aluminum/coefficient_provenance.hpp>
 
 namespace aluminum {
 
@@ -68,28 +69,53 @@ namespace aluminum {
  * the removed seven load unchanged.
  */
 struct AluminumSchemaValues {
-  double T0{89285.0};
-  double Bx{0.817900686921996};
-  double T_const{980.0};
+  double T0{coefficient_value("T0")};
+  double Bx{coefficient_value("Bx")};
+  double T_const{coefficient_value("T_const")};
   /** Upper clamp on `T_const + T_var`; must exceed `T_min`. */
-  double T_max{1280.0};
+  double T_max{coefficient_value("T_max")};
   /** Lower clamp on `T_const + T_var`; must be below `T_max`. */
-  double T_min{780.0};
-  double G_grid{0.0};
-  double V_grid{0.0};
-  double x_initial{130.0};
-  double alpha{0.20};
-  double lambda{0.22};
-  double stabP{0.0};
-  double p2_bar{0.8286531831};
-  double p3_bar{-0.04204863};
-  double p4_bar{0.007533};
-  double q20_bar{0.016531729105214};
-  double q21_bar{5.467};
-  double q30_bar{1.7152418049986};
-  double q31_bar{0.45};
-  double q40_bar{0.787482};
+  double T_min{coefficient_value("T_min")};
+  double G_grid{coefficient_value("G_grid")};
+  double V_grid{coefficient_value("V_grid")};
+  double x_initial{coefficient_value("x_initial")};
+  double alpha{coefficient_value("alpha")};
+  double lambda{coefficient_value("lambda")};
+  double stabP{coefficient_value("stabP")};
+  double p2_bar{coefficient_value("p2_bar")};
+  double p3_bar{coefficient_value("p3_bar")};
+  double p4_bar{coefficient_value("p4_bar")};
+  double q20_bar{coefficient_value("q20_bar")};
+  double q21_bar{coefficient_value("q21_bar")};
+  double q30_bar{coefficient_value("q30_bar")};
+  double q31_bar{coefficient_value("q31_bar")};
+  double q40_bar{coefficient_value("q40_bar")};
 };
+
+/// Read one schema field. Throws if @p key is not a model coefficient.
+[[nodiscard]] inline double schema_field(const AluminumSchemaValues &values,
+                                         std::string_view key) {
+  if (key == "T0") return values.T0;
+  if (key == "Bx") return values.Bx;
+  if (key == "T_const") return values.T_const;
+  if (key == "T_max") return values.T_max;
+  if (key == "T_min") return values.T_min;
+  if (key == "G_grid") return values.G_grid;
+  if (key == "V_grid") return values.V_grid;
+  if (key == "x_initial") return values.x_initial;
+  if (key == "alpha") return values.alpha;
+  if (key == "lambda") return values.lambda;
+  if (key == "stabP") return values.stabP;
+  if (key == "p2_bar") return values.p2_bar;
+  if (key == "p3_bar") return values.p3_bar;
+  if (key == "p4_bar") return values.p4_bar;
+  if (key == "q20_bar") return values.q20_bar;
+  if (key == "q21_bar") return values.q21_bar;
+  if (key == "q30_bar") return values.q30_bar;
+  if (key == "q31_bar") return values.q31_bar;
+  if (key == "q40_bar") return values.q40_bar;
+  throw std::invalid_argument("aluminum coefficient: unknown model key");
+}
 
 struct AluminumParams : AluminumSchemaValues {
   double tau_const{0.0};

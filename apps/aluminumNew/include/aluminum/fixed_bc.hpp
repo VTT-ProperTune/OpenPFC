@@ -64,6 +64,9 @@ public:
   void set_rho_low(double rho_low) { m_rho_low = rho_low; }
   void set_rho_high(double rho_high) { m_rho_high = rho_high; }
 
+  [[nodiscard]] double rho_low() const { return m_rho_low; }
+  [[nodiscard]] double rho_high() const { return m_rho_high; }
+
   const std::string &get_modifier_name() const override { return m_name; }
 
   /// The band against the upper x limit of the box, wherever the box is.

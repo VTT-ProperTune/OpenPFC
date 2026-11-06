@@ -86,6 +86,16 @@ if(ALUMINUM_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
       ALUMINUM_INPUTS_JSON_DIR="${CMAKE_CURRENT_SOURCE_DIR}/inputs_json")
     include(CTest)
     # Run all aluminum tests in a single invocation to avoid per-test MPI overhead
+    aluminum_cpu_executable(test_aluminum_coefficient_provenance
+                            tests/test_coefficient_provenance.cpp)
+    target_link_libraries(test_aluminum_coefficient_provenance
+                          PRIVATE Catch2::Catch2 MPI::MPI_CXX)
+    target_compile_definitions(test_aluminum_coefficient_provenance PRIVATE
+      ALUMINUM_APP_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+    add_test(NAME aluminum-coefficient-provenance
+             COMMAND test_aluminum_coefficient_provenance)
+    set_tests_properties(aluminum-coefficient-provenance PROPERTIES TIMEOUT 120)
+
     add_test(NAME aluminum-all-tests COMMAND aluminumTest)
     add_test(NAME aluminum-shipped-inputs COMMAND aluminumTest "[inputs]")
     add_test(NAME aluminum-etd-cpu-golden COMMAND aluminumTest

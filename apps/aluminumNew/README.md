@@ -131,6 +131,56 @@ freezing the domain at one end. **Both shipped presets are isothermal
 (`G_grid = V_grid = 0`), so the clamp is a no-op on them and no pinned
 checksum moved.**
 
+## Provenance and reduced units
+
+`coefficient_provenance()` in
+[`include/aluminum/coefficient_provenance.hpp`](include/aluminum/coefficient_provenance.hpp)
+classifies every shipped model coefficient, the derived coefficients
+`AluminumParams::recompute_derived` produces, and the densities the initial
+and boundary conditions actually write. Representative numbers are uncited:
+this repository does not name a paper, a fit, or a measurement for them.
+`reduced_unit_convention()` is the reduced-unit convention. Length,
+temperature, time, and amplitude have no SI conversion here. The
+classification is not a material validation.
+
+`x_initial` is a case station, not intrinsically the same as the seed's
+`X0`. The maintained isothermal seeded cases choose equal values, but a
+future directional case may specify an independent thermal-profile station.
+`fcc_seed_nucleus.json` still lists `n0`, `n_sol`, `n_vap`, `alpha_farTol`,
+`alpha_highOrd`, `shift_u`, and `shift_s` under `model.params`. The schema
+does not read those keys. The C++ defaults are the same table, not a second
+set of coefficients.
+
+
+### Case and boundary parameter provenance
+
+The table above owns the **19 model coefficients** and the separately listed
+derived and density constants. Other inputs in the delivered cases are
+**case controls**, not calibrated aluminum properties. The source of their
+numeric values is the relevant maintained JSON/TOML file; there is no
+cited measurement or fitted uncertainty for them. They must not be copied
+into the model-coefficient table as if each preset shared a fixed value.
+
+| Input key | Implemented meaning and source | Reduced units / admissibility |
+|---|---|---|
+| `model.params.G_grid`, `V_grid`, `x_initial` | Prescribed thermal slope, profile speed and zero-departure station. Each case supplies its own values; these are not material constants. | temperature/length, length/time, length; no SI calibration |
+| `domain.size`, `lower`, `upper` | Sampling resolution and physical box; chosen by the case. Grid spacing is computed as `(upper-lower)/size`. | count, reduced length, reduced length |
+| `timestepping.t0`, `t1`, `dt`, `saveat` | Numerical run horizon, integrator step and output cadence. | reduced time; `dt > 0` |
+| `constant.n0` | Melt-background density, from the initial-condition record (current shipped value `-0.006`). | reduced amplitude, uncited representative |
+| `seed_grid_fcc.X0`, `Ny`, `Nz` | Absolute seed station and seed-grid counts; chosen in each case. | reduced length, counts ≥1 |
+| `seed_grid_fcc.radius`, `amplitude`, `rho`, `rseed` | Seed-envelope radius, crystalline-wave amplitude (`SeedFCC` adds `2 amplitude cos(k·x)` per wave), solid reference density and random seed. The large demo uses radius 120, the nucleus study 60, and both use amplitude 0.4. | reduced length, reduced amplitude, reduced amplitude, dimensionless pseudorandom seed; `radius>0` |
+| `fixed.rho_low`, `rho_high` | Density-reservoir values in the fixed boundary; from the case record. | reduced amplitude, uncited representative |
+| `FixedBC::xwidth`, `alpha` | The *currently hardcoded* fixed-reservoir band half-width `20` and sigmoid sharpness `1`; these are not JSON parameters in this implementation. | reduced length, inverse reduced length |
+| `moving.rho_low`, `rho_high`, `width`, `alpha`, `disp`, `xpos` | If a directional case is added, its independently configurable reservoir densities, half-width, sigmoid sharpness, front offset and initial checkpointed position. | reduced amplitude; length; inverse length; length; length |
+| `fields[].name`, `fields[].data`, `checkpoint.*` | Output/restart controls; not physical inputs. | filenames, steps and paths |
+
+No scientifically established range or uncertainty is provided for the
+representative free-energy coefficients, seed amplitudes/radii, density
+reservoirs, or transport controls. **Unknown is not zero uncertainty.** The
+preset values describe particular numerical experiments, not a defensible
+reduced-to-SI mapping. In particular, an increased `G_grid` or `V_grid`
+does not validate a physical undercooling, heat transfer or pulling speed.
+
 ## Build
 
 Built with the main OpenPFC tree when `OpenPFC_BUILD_APPS=ON` (default):

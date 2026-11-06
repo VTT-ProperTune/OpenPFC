@@ -45,6 +45,9 @@ public:
   void set_density(double rho) { m_rho = rho; }
   void set_rseed(double rseed) { m_rseed = rseed; }
 
+  [[nodiscard]] double x0() const { return m_X0; }
+  [[nodiscard]] double density() const { return m_rho; }
+
   const std::string &get_modifier_name() const override {
     static const std::string k{"SeedGridFCC"};
     return k;
