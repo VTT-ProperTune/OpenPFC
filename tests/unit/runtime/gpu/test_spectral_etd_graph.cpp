@@ -228,6 +228,32 @@ TEST_CASE("graph replay matches plain spectral ETD stepping bitwise",
               << " kernels=" << graph.graph_kernel_nodes()
               << " ops=" << graph.captured_op_launches()
               << " mismatches=0 device=" << device_name() << '\n';
+
+    // The download above marked the host mirror authoritative. A second
+    // replay must still advance the device state and expose it to the host,
+    // and a plain step afterwards must continue from the replayed state.
+    for (int s = 0; s < steps; ++s) {
+      t = plain.step(t);
+    }
+    const double t_end2 = graph.step_n(t_end, steps);
+    REQUIRE(t_end2 == t);
+    const std::vector<double> plain_psi2 =
+        download(plain_state.template get_field<double, Space>("psi"));
+    const std::vector<double> graph_psi2 =
+        download(graph_state.template get_field<double, Space>("psi"));
+    REQUIRE(std::memcmp(graph_psi2.data(), plain_psi2.data(),
+                        graph_psi2.size() * sizeof(double)) == 0);
+    REQUIRE(std::memcmp(graph_psi2.data(), graph_psi.data(),
+                        graph_psi2.size() * sizeof(double)) != 0);
+    t = plain.step(t);
+    const double t_end3 = graph.step(t_end2);
+    REQUIRE(t_end3 == t);
+    const std::vector<double> plain_psi3 =
+        download(plain_state.template get_field<double, Space>("psi"));
+    const std::vector<double> graph_psi3 =
+        download(graph_state.template get_field<double, Space>("psi"));
+    REQUIRE(std::memcmp(graph_psi3.data(), plain_psi3.data(),
+                        graph_psi3.size() * sizeof(double)) == 0);
   }
   GPU_CHECK(pfc::gpuStreamDestroy(stream));
 }

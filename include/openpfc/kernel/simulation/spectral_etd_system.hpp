@@ -668,6 +668,11 @@ private:
       m_backward_count = backwards;
       m_nonlinear_count = nonlinear;
     }
+    // A host read between two calls (`with_host_view`) marks the host mirror
+    // authoritative. Push it before replaying, and record every device write
+    // the replayed record performs, so the next host read pulls the new state
+    // and the next plain `step` does not copy a stale mirror over the device.
+    psi().sync_to_device();
     for (int i = 0; i < n; ++i) {
       Ops::replay(m_exec, m_compute_stream);
       Ops::stream_synchronize(m_compute_stream);
@@ -676,7 +681,24 @@ private:
       m_nonlinear_count += m_nonlinear_delta;
       t += m_dt;
     }
+    note_replay_writes();
     return t;
+  }
+
+  /// The fields the captured step writes on the device.
+  void note_replay_writes() {
+    psi().note_device_write();
+    complex_field(m_opt.psi_hat_name).note_device_write();
+    real_field(m_opt.n_name).note_device_write();
+    complex_field(m_opt.n_hat_name).note_device_write();
+    if constexpr (has_mean_field) {
+      real_field(m_opt.psi_mf_name).note_device_write();
+      complex_field(m_opt.psi_mf_hat_name).note_device_write();
+    }
+    if constexpr (has_correlation) {
+      real_field(m_opt.p_star_name).note_device_write();
+      complex_field(m_opt.p_hat_name).note_device_write();
+    }
   }
 
   void reduce_free_energy(RealField &fe) {
