@@ -207,6 +207,8 @@ sbatch scripts/sbatch_openpfc_hip_amdgpu.sbatch
 
 The job loads `rocm/7.2.1` + `openmpi/5.0.10`, rebuilds HeFFTe-ROCm into `$HOME/opt/heffte/2.4.1-rocm-ompi5` if that prefix is missing (the older `2.4.1-rocm` tree was Open MPI 4.1.1 / ROCm 6.4.0 and does not run on current `amdgpu` nodes), then runs `scripts/build.sh --machine=tohtori --with-rocm`. GPU-aware MPI stays **off** (`MPI_HIP_AWARE=0`); that is a LUMI Cray-MPICH probe, not a Tohtori HIP requirement.
 
+Slurm exports both `ROCR_VISIBLE_DEVICES` and `CUDA_VISIBLE_DEVICES` for an `amdgpu` allocation. The HIP runtime honours `CUDA_VISIBLE_DEVICES` as well, so with `ROCR_VISIBLE_DEVICES=1` ROCr already exposes the assigned card as device 0 and `CUDA_VISIBLE_DEVICES=1` then filters it away: `rocminfo` lists one `gfx90a`, `hipGetDeviceCount` returns `no ROCm-capable device is detected`, tests report `HIP not available` and rocFFT `plan create failed with error code: 1`. Jobs that land on the second card see this; `unset CUDA_VISIBLE_DEVICES` in the job script before running HIP binaries (the ROCr variable keeps the job on its assigned device).
+
 `module load rocm/7.2.1` does **not** set `CMAKE_PREFIX_PATH`. `build.sh --with-rocm` infers `ROCM_PATH` from `hipcc`. If you configure by hand, pass `-DCMAKE_PREFIX_PATH=/opt/rocm-7.2.1:$HOME/opt/heffte/2.4.1-rocm-ompi5`.
 
 Request **at least 4 Slurm tasks** so CTest's 2-/3-/4-rank MPI suites have Open MPI slots. One or two GPUs are enough; do not pair `--ntasks=4` with `--gpus-per-task=1` unless the node has four GPUs.
