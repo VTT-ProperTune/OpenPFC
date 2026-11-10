@@ -45,7 +45,13 @@ ROCM_MODULE="${ROCM_MODULE:-rocm/7.2.1}"
 # component) at OPENMPI_ROOT_CUDA. When that install exists, CUDA builds use
 # it automatically in place of the site module and MPI_CUDA_AWARE defaults ON;
 # otherwise this falls back to the old safe default (site module, OFF).
-OPENMPI_ROOT_CUDA="${OPENMPI_ROOT_CUDA:-${HOME}/opt/openmpi/5.0.10-cuda}"
+if [[ -z "${OPENMPI_ROOT_CUDA:-}" ]]; then
+  if [[ -x "/task/${USER}/apps/openmpi/5.0.10-cuda/bin/mpicc" ]]; then
+    OPENMPI_ROOT_CUDA="/task/${USER}/apps/openmpi/5.0.10-cuda"
+  else
+    OPENMPI_ROOT_CUDA="${HOME}/opt/openmpi/5.0.10-cuda"
+  fi
+fi
 OPENPFC_GCC_MODULE_CUDA="${OPENPFC_GCC_MODULE_CUDA:-gcc/15.2.0}"
 MPI_CUDA_AWARE="${MPI_CUDA_AWARE:-}"
 MPI_HIP_AWARE="${MPI_HIP_AWARE:-}"
@@ -123,13 +129,21 @@ Tohtori environment overrides:
   OPENMPI_MODULE          Default: openmpi/5.0.10
   CUDA_MODULE             Default: cuda/13.1
   ROCM_MODULE             Default: rocm/7.2.1
-  HEFFTE_PREFIX           Backend-specific install prefix; selected automatically
-  HEFFTE_MODULE           Optional module to load; CUDA defaults to
-                          heffte/2.4.1-cuda-openmpi5
+  HEFFTE_PREFIX           Backend-specific install prefix. CUDA default: the
+                          first existing of
+                          /task/$USER/apps/heffte/<ver>-fftw-plans-cuda-ompi5,
+                          $HOME/opt/heffte/<ver>-fftw-plans-cuda-ompi5 (both
+                          sm_80/86/90), then $HOME/opt/heffte/<ver>-cuda
+  HEFFTE_MODULE           Optional module to load; none by default. The
+                          private heffte/<ver>-cuda-openmpi5 module points at
+                          an H100-only (sm_90) build, see #848
+  HEFFTE_SKIP_ARCH_CHECK  1 skips the CUDA kernel-image check of libheffte.so
   HEFFTE_VERSION          Default: 2.4.1
-  CUDA_ARCHITECTURES      Passed to CMAKE_CUDA_ARCHITECTURES (CUDA default: 90)
+  CUDA_ARCHITECTURES      Passed to CMAKE_CUDA_ARCHITECTURES (Tohtori CUDA
+                          default: 80;86;90 for A100, A40 and H100)
   ROCM_ARCHITECTURES      Passed to CMAKE_HIP_ARCHITECTURES when set
-  OPENMPI_ROOT_CUDA       Default: $HOME/opt/openmpi/5.0.10-cuda. When this
+  OPENMPI_ROOT_CUDA       Default: /task/$USER/apps/openmpi/5.0.10-cuda if it
+                          exists, else $HOME/opt/openmpi/5.0.10-cuda. When this
                           contains a working mpicc, CUDA builds use it in
                           place of the site openmpi/5.0.10 module (whose
                           linked UCX 1.17 lacks --with-cuda and segfaults on
@@ -350,16 +364,18 @@ esac
 BACKEND="cpu"
 if (( WITH_CUDA )); then
   BACKEND="cuda"
+  # The cuda partition has A100 (sm_80) and A40 (sm_86) nodes next to the
+  # H100 (sm_90) node. A binary and a HeFFTe built for sm_90 alone run on an
+  # A40 with cuFFT working and HeFFTe's own kernels never launching, and the
+  # FFT returns silently wrong data (#848). Build for all three by default.
   if [[ "${MACHINE}" == "tohtori" && -z "${CUDA_ARCHITECTURES}" ]]; then
-    CUDA_ARCHITECTURES="90"
+    CUDA_ARCHITECTURES="80;86;90"
   fi
-  # heffte/2.4.1-cuda-openmpi5 depends_on the site openmpi/5.0.10 module,
-  # which would re-prepend the site MPI onto PATH and undo the custom stack
-  # below. HEFFTE_PREFIX + CMAKE_PREFIX_PATH (already set up further down)
-  # are sufficient without the module in that case.
-  if [[ "${MACHINE}" == "tohtori" && -z "${HEFFTE_MODULE}" ]] && (( ! USE_CUSTOM_CUDA_MPI )); then
-    HEFFTE_MODULE="heffte/${HEFFTE_VERSION}-cuda-openmpi5"
-  fi
+  # No HeFFTe module is loaded by default: the private
+  # heffte/<ver>-cuda-openmpi5 module points at the H100-only build, and it
+  # depends_on the site openmpi module, which would undo the custom CUDA-aware
+  # stack below. HEFFTE_PREFIX (resolved in setup_tohtori_env) plus
+  # CMAKE_PREFIX_PATH, LD_LIBRARY_PATH and CPATH set further down are enough.
 elif (( WITH_ROCM )); then
   BACKEND="rocm"
   if [[ "${MACHINE}" == "lumi" && -z "${ROCM_ARCHITECTURES}" ]]; then
@@ -566,8 +582,58 @@ setup_tohtori_env() {
   command -v mpicxx >/dev/null 2>&1 || die "mpicxx not found after loading ${OPENMPI_MODULE}"
 
   if [[ -z "${HEFFTE_PREFIX}" ]]; then
-    HEFFTE_PREFIX="${HOME}/opt/heffte/${HEFFTE_VERSION}-${BACKEND}"
+    if [[ "${BACKEND}" == "cuda" ]]; then
+      # Multi-arch (sm_80/86/90) builds first; the bare -cuda prefix is the
+      # historical H100-only tree and is checked by check_heffte_kernel_images.
+      local candidate
+      for candidate in "/task/${USER}/apps/heffte/${HEFFTE_VERSION}-fftw-plans-cuda-ompi5" \
+                       "${HOME}/opt/heffte/${HEFFTE_VERSION}-fftw-plans-cuda-ompi5" \
+                       "${HOME}/opt/heffte/${HEFFTE_VERSION}-cuda"; do
+        if [[ -d "${candidate}" ]]; then
+          HEFFTE_PREFIX="${candidate}"
+          break
+        fi
+      done
+      [[ -n "${HEFFTE_PREFIX}" ]] || HEFFTE_PREFIX="${HOME}/opt/heffte/${HEFFTE_VERSION}-cuda"
+    else
+      HEFFTE_PREFIX="${HOME}/opt/heffte/${HEFFTE_VERSION}-${BACKEND}"
+    fi
   fi
+}
+
+# Refuse a CUDA build whose HeFFTe has no kernel image for a requested
+# architecture. Without an image HeFFTe's pack/scale kernels fail to launch on
+# that GPU while cuFFT still runs, so FFT results are wrong without any error
+# (#848). PTX for a lower architecture JIT-compiles forward and counts.
+check_heffte_kernel_images() {
+  (( WITH_CUDA )) || return 0
+  [[ "${HEFFTE_SKIP_ARCH_CHECK:-0}" == "1" ]] && return 0
+  local cuobjdump lib="" elf ptx arch p ok missing=()
+  cuobjdump="$(command -v cuobjdump 2>/dev/null || true)"
+  [[ -n "${cuobjdump}" ]] || return 0
+  for lib in "${HEFFTE_PREFIX}/lib64/libheffte.so" "${HEFFTE_PREFIX}/lib/libheffte.so"; do
+    [[ -f "${lib}" ]] && break
+  done
+  [[ -f "${lib}" ]] || return 0
+  elf="$("${cuobjdump}" --list-elf "${lib}" 2>/dev/null | grep -o 'sm_[0-9]*' | sort -u | tr '\n' ' ')"
+  ptx="$("${cuobjdump}" --list-ptx "${lib}" 2>/dev/null | grep -o 'sm_[0-9]*' | sort -u | tr '\n' ' ')"
+  [[ -n "${elf}${ptx}" ]] || return 0
+  local IFS=';'
+  for arch in ${CUDA_ARCHITECTURES}; do
+    arch="${arch%%-*}"
+    [[ "${arch}" =~ ^[0-9]+$ ]] || continue
+    ok=0
+    [[ " ${elf}" == *" sm_${arch} "* ]] && ok=1
+    for p in ${ptx// /;}; do
+      [[ -n "${p}" ]] && (( ${p#sm_} <= arch )) && ok=1
+    done
+    (( ok )) || missing+=("sm_${arch}")
+  done
+  unset IFS
+  if (( ${#missing[@]} )); then
+    die "HeFFTe at ${HEFFTE_PREFIX} carries kernel images for [${elf}] (PTX [${ptx}]) but CUDA_ARCHITECTURES=${CUDA_ARCHITECTURES} needs ${missing[*]}. On a GPU without an image the FFT returns silently wrong data (#848). Set HEFFTE_PREFIX to a multi-arch build such as /task/\$USER/apps/heffte/${HEFFTE_VERSION}-fftw-plans-cuda-ompi5, restrict CUDA_ARCHITECTURES to the images present, or set HEFFTE_SKIP_ARCH_CHECK=1."
+  fi
+  echo "  HeFFTe kernel images: ${elf}(PTX: ${ptx}) cover CUDA_ARCHITECTURES=${CUDA_ARCHITECTURES}"
 }
 
 setup_lumi_env() {
@@ -627,6 +693,7 @@ if (( ENABLE_HEFFTE )) && [[ "${MACHINE}" != "portable" ]]; then
   resolve_heffte_dir
   [[ -n "${HEFFTE_DIR}" ]] ||
     die "HeFFTe ${BACKEND} package not found (prefix ${HEFFTE_PREFIX}; module '${HEFFTE_MODULE:-none}')"
+  check_heffte_kernel_images
 
   if [[ -z "${HEFFTE_MODULE}" ]]; then
     # No module loaded to set HeFFTe's runtime LD_LIBRARY_PATH / build-time CPATH

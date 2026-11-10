@@ -139,33 +139,28 @@ Without this, CMake may still find `/usr/local/cuda/bin/nvcc`, but your `PATH` a
 
 OpenPFC links HeFFTe for FFT/decomposition. A **CPU-only** HeFFTe install (e.g. `2.4.1-cpu`) is sufficient for CPU FFTs and for CUDA finite-difference / kernel-only applications that do not use HeFFTe’s cuFFT backend (for example `wave2d_cuda`).
 
-For **CUDA spectral FFT** paths (Tungsten CUDA spectral binaries, CUDA FFT runtime, CUDA FFT tests), HeFFTe must be configured with the CUDA backend (`-DHeffte_ENABLE_CUDA=ON` when building HeFFTe). Install it to a **separate** prefix, e.g.:
+For **CUDA spectral FFT** paths (Tungsten CUDA spectral binaries, CUDA FFT runtime, CUDA FFT tests), HeFFTe must be configured with the CUDA backend (`-DHeffte_ENABLE_CUDA=ON` when building HeFFTe) **and compiled for every GPU it will run on**. HeFFTe launches its own pack, unpack and scaling kernels around cuFFT. On a GPU for which `libheffte.so` carries no kernel image, cuFFT still runs but those kernels never launch, and before #848 the transform returned unscaled data with no error; OpenPFC now throws `HeFFTe device transform failed: no kernel image is available for execution on the device (209)` from the transform instead.
 
-```text
-$HOME/opt/heffte/2.4.1-cuda
-```
+The `cuda` partition mixes architectures, so the HeFFTe build must cover all of them:
 
-The current Tohtori CUDA installation can be loaded from the private module tree:
+| Prefix | Kernel images | Runs on |
+|---|---|---|
+| `/task/$USER/apps/heffte/2.4.1-fftw-plans-cuda-ompi5` (also under `$HOME/opt/heffte/`) | `sm_80`, `sm_86`, `sm_90` | `cuda` partition A100 (g0003) and A40 (g0001, g0002), `nvidia_h100` H100 |
+| `$HOME/opt/heffte/2.4.1-cuda` and the private module `heffte/2.4.1-cuda-openmpi5` | `sm_90` only | H100 only; **wrong results on A100 and A40** |
 
-```bash
-module load heffte/2.4.1-cuda-openmpi5
-```
-
-That module selects GCC 15.2.0, Open MPI 5.0.10, CUDA 13.1, and the H100-targeted
-HeFFTe build. A private HeFFTe module should set `Heffte_DIR` to the CMake package
-directory:
-
-```text
-$HOME/opt/heffte/2.4.1-cuda/lib64/cmake/Heffte
-```
-
-and load a **GCC** and **Open MPI** build that matches that HeFFTe (often a site **`openmpi/…-cuda`** or **`openmpi/5.0.10`** stack built with CUDA-aware support).
-
-**Important:** If both CPU and CUDA HeFFTe installs exist under `$HOME/opt/heffte/`, OpenPFC’s autodetection may pick the **CPU** tree first. For CUDA spectral builds, set the package location explicitly on the **first** `cmake` invocation:
+`scripts/build.sh --machine=tohtori --with-cuda` defaults to the first prefix that exists in that order and to `CUDA_ARCHITECTURES=80;86;90`. It refuses to configure when the chosen `libheffte.so` lacks an image for a requested architecture (`HEFFTE_SKIP_ARCH_CHECK=1` overrides). Check any prefix yourself with the CUDA module loaded:
 
 ```bash
--DHeffte_DIR=$HOME/opt/heffte/2.4.1-cuda/lib64/cmake/Heffte
+cuobjdump --list-elf $HEFFTE_PREFIX/lib64/libheffte.so | grep -o 'sm_[0-9]*' | sort -u
 ```
+
+The multi-arch prefix is built by `scripts/build_tohtori.sh` as shown in §0 together with its CUDA-aware Open MPI in `/task/$USER/apps/openmpi/5.0.10-cuda`; configure OpenPFC against that MPI, not the site `openmpi/5.0.10` module. Set the package location explicitly when configuring by hand:
+
+```text
+-DHeffte_DIR=/task/$USER/apps/heffte/2.4.1-fftw-plans-cuda-ompi5/lib64/cmake/Heffte
+```
+
+**Important:** If both CPU and CUDA HeFFTe installs exist under the same parent directory, OpenPFC’s autodetection may pick the **CPU** tree first. For CUDA spectral builds, set `Heffte_DIR` explicitly on the **first** `cmake` invocation, as above.
 
 (or set environment variable `HEFFTE_DIR` to that same directory before configuring).
 
@@ -175,15 +170,18 @@ After `module load` (GCC, Open MPI, CUDA), a CUDA finite-difference build can us
 
 ```bash
 export CC=$(which gcc) CXX=$(which g++)
+H=/task/$USER/apps/heffte/2.4.1-fftw-plans-cuda-ompi5
 cmake -S . -B build-gpu \
   -DOpenPFC_ENABLE_CUDA=ON \
-  -DCMAKE_CUDA_ARCHITECTURES=native \
-  -DHeffte_DIR=$HOME/opt/heffte/2.4.1-cuda/lib64/cmake/Heffte \
-  -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cuda \
+  -DCMAKE_CUDA_ARCHITECTURES='80;86;90' \
+  -DMPI_C_COMPILER=/task/$USER/apps/openmpi/5.0.10-cuda/bin/mpicc \
+  -DMPI_CXX_COMPILER=/task/$USER/apps/openmpi/5.0.10-cuda/bin/mpicxx \
+  -DHeffte_DIR=$H/lib64/cmake/Heffte \
+  -DCMAKE_PREFIX_PATH=$H \
   ...
 ```
 
-Use `CMAKE_CUDA_ARCHITECTURES` appropriate for your GPU (e.g. `86` for Ampere). CMake 3.22 on this system is supported for CUDA: OpenPFC teaches older CMake releases the `--std=c++20` nvcc flag so CUDA targets can include OpenPFC’s C++20 public headers without requiring native “CUDA20” dialect support from CMake itself.
+Use `CMAKE_CUDA_ARCHITECTURES=native` only inside an allocation on the node type you will run on, and never a single architecture for a binary that may land on another `cuda` node (§3). CMake 3.22 on this system is supported for CUDA: OpenPFC teaches older CMake releases the `--std=c++20` nvcc flag so CUDA targets can include OpenPFC’s C++20 public headers without requiring native “CUDA20” dialect support from CMake itself.
 
 ## 5. wave2d: VTK output and CUDA binary
 

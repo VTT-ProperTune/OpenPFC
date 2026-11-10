@@ -57,6 +57,14 @@ You launched with **`srun`**, but this Open MPI was configured **without** Slurm
 
 **Remediation (preferred order):** (1) `module load` the intended GCC and OpenMPI, then rebuild HeFFTe into a clean prefix and re-run OpenPFC CMake so it picks up the new HeFFTe. (2) Do not mix a system `g++` for OpenPFC with a HeFFTe built under a module GCC without aligning `LD_LIBRARY_PATH` — fix the build instead. (3) CI uses `scripts/install-heffte-ci.sh` with the same compiler matrix as the build; mirror that locally when debugging.
 
+### CUDA FFT: `HeFFTe device transform failed: no kernel image is available for execution on the device (209)`
+
+**Symptom:** a CUDA spectral run or `openpfc-tests` throws this from `FFT_Impl::forward` or `FFT_Impl::backward`. Before #848 the same situation produced no error and unscaled FFT output (round-trip errors of order 10³, `CPU vs CUDA Laplacian equivalence` far off, a later unrelated kernel reporting error 209).
+
+**Cause:** the `libheffte.so` you linked was compiled for other GPU architectures than the one Slurm assigned. cuFFT ships every architecture, HeFFTe's own pack and scale kernels do not. On Tohtori the historical `$HOME/opt/heffte/2.4.1-cuda` tree and the private `heffte/2.4.1-cuda-openmpi5` module are `sm_90` (H100) only, while the `cuda` partition has A100 and A40 nodes.
+
+**Fix:** link a HeFFTe built for every target (`cuobjdump --list-elf libheffte.so | grep -o 'sm_[0-9]*' | sort -u` lists the images) and build OpenPFC with matching `CMAKE_CUDA_ARCHITECTURES`. `scripts/build.sh --machine=tohtori --with-cuda` now defaults to the multi-arch prefix and `80;86;90` and refuses a mismatched combination; see [`docs/hpc/INSTALL.tohtori.md`](hpc/INSTALL.tohtori.md) §3.
+
 ### Missing `examples/` or `apps/...` binaries
 
 Examples and apps are controlled by `OpenPFC_BUILD_EXAMPLES` and `OpenPFC_BUILD_APPS` (default ON). If you configured with OFF, reconfigure with ON and rebuild. See [`quickstart.md`](quickstart.md).

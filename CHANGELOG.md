@@ -14,6 +14,17 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   unscaled data silently (round-trip errors of order 10³). The CUDA
   round-trip tests assert a clean device error state (#848, #762).
 
+- Tohtori CUDA builds default to a HeFFTe with kernel images for every
+  `cuda` partition GPU. `scripts/build.sh --machine=tohtori --with-cuda`
+  moves from the H100-only `2.4.1-cuda` HeFFTe and `CUDA_ARCHITECTURES=90`
+  to the first existing `2.4.1-fftw-plans-cuda-ompi5` prefix under
+  `/task/$USER/apps/heffte` or `$HOME/opt/heffte` and to `80;86;90`, loads
+  no HeFFTe module by default, prefers the CUDA-aware Open MPI under
+  `/task/$USER/apps`, and refuses a `libheffte.so` that lacks an image for
+  a requested architecture (`HEFFTE_SKIP_ARCH_CHECK=1` overrides).
+  `docs/hpc/INSTALL.tohtori.md` §3 and §4 and `docs/troubleshooting.md`
+  state which prefix runs on which partition (#848).
+
 - `sample_reference` reads a filled cylinder, disk, or ball through the
   series the caller already holds and through one `AffineMap`. There is
   no domain-shape enum. An identity map uses the embedding Laplacian,
