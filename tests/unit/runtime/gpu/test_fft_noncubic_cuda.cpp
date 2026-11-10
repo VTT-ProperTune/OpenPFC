@@ -155,6 +155,9 @@ TEST_CASE("create_cuda round-trips two 12x10x8 fields on every reduced axis",
       const std::vector<double> preserved_input = real.to_host();
       wrapped.backward(spectrum, back);
       const std::vector<double> wrapped_host = back.to_host();
+      // A missing kernel image now throws inside the transform (#848); this
+      // keeps the device error state itself under test as well.
+      REQUIRE(cudaGetLastError() == cudaSuccess);
 
       REQUIRE(all_finite(direct_host));
       REQUIRE(all_finite(wrapped_host));

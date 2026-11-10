@@ -15,6 +15,7 @@
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
+#include <cuda_runtime_api.h>
 #include <openpfc/kernel/execution/backend_tags.hpp>
 #include <openpfc/runtime/cuda/fft_cuda.hpp>
 #endif
@@ -55,6 +56,8 @@ TEST_CASE("CUDA FFT roundtrip (double) [integration][gpu]", "[gpu]") {
   fft::IDeviceFFT<CUDASpace> &iface = fft;
   iface.forward(real_in, freq);
   iface.backward(freq, real_out);
+  // The transform throws on a device error since #848; the state must be clean.
+  REQUIRE(cudaGetLastError() == cudaSuccess);
 
   // Copy back and verify
   auto host_out = real_out.to_host();

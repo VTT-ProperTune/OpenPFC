@@ -42,6 +42,46 @@ namespace fft {
 namespace detail {
 
 /**
+ * @brief Throw if the device reports an error after a HeFFTe device transform.
+ *
+ * HeFFTe launches its own pack, unpack and scaling kernels around the vendor
+ * FFT. When the linked HeFFTe carries no kernel image for the assigned GPU,
+ * those launches fail with `cudaErrorNoKernelImageForDevice` (209), or the
+ * HIP equivalent, while the vendor FFT still runs, and the transform returns
+ * unscaled data with no exception (#848). This reads and clears the device
+ * error state right after the transform so that failure surfaces here. An
+ * error left behind by an earlier unrelated launch is reported here as well;
+ * that is still a device fault the caller must not ignore.
+ */
+template <typename BackendTag>
+inline void throw_on_device_transform_error([[maybe_unused]] const char *what) {
+#if defined(OpenPFC_ENABLE_CUDA)
+  if constexpr (std::is_same_v<BackendTag, heffte::backend::cufft>) {
+    const cudaError_t status = cudaGetLastError();
+    if (status != cudaSuccess) {
+      throw std::runtime_error(
+          std::string(what) +
+          ": HeFFTe device transform failed: " + cudaGetErrorString(status) + " (" +
+          std::to_string(static_cast<int>(status)) +
+          "); code 209 means the linked HeFFTe has no kernel image for this GPU");
+    }
+  }
+#endif
+#if defined(OpenPFC_ENABLE_HIP)
+  if constexpr (std::is_same_v<BackendTag, heffte::backend::rocfft>) {
+    const hipError_t status = hipGetLastError();
+    if (status != hipSuccess) {
+      throw std::runtime_error(
+          std::string(what) +
+          ": HeFFTe device transform failed: " + hipGetErrorString(status) + " (" +
+          std::to_string(static_cast<int>(status)) +
+          "); the linked HeFFTe may have no kernel image for this GPU");
+    }
+  }
+#endif
+}
+
+/**
  * @brief Throw if a transform buffer extent does not match the FFT contract.
  * @param actual Caller buffer size
  * @param expected Required size (`size_inbox()` or `size_outbox()`)
@@ -386,6 +426,7 @@ private:
       m_fft.forward(in.data(), out.data(), m_ws.data_gpu_float());
     }
     m_fft_time += MPI_Wtime();
+    detail::throw_on_device_transform_error<BackendTag>("FFT_Impl::forward");
   }
 
   template <typename ComplexBackendTag, typename RealBackendTag, typename RealType>
@@ -409,6 +450,7 @@ private:
                      heffte::scale::full);
     }
     m_fft_time += MPI_Wtime();
+    detail::throw_on_device_transform_error<BackendTag>("FFT_Impl::backward");
   }
 };
 

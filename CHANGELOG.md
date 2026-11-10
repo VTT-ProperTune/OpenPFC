@@ -7,6 +7,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Device FFTs fail loudly when HeFFTe's kernels do not run. `FFT_Impl`
+  reads the CUDA or HIP error state after every HeFFTe device `forward`
+  and `backward` and throws `std::runtime_error` naming the error; before,
+  a HeFFTe built without a kernel image for the assigned GPU returned
+  unscaled data silently (round-trip errors of order 10³). The CUDA
+  round-trip tests assert a clean device error state (#848, #762).
+
 - `sample_reference` reads a filled cylinder, disk, or ball through the
   series the caller already holds and through one `AffineMap`. There is
   no domain-shape enum. An identity map uses the embedding Laplacian,
