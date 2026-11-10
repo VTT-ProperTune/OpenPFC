@@ -236,11 +236,14 @@ inline int run_cahn_hilliard_elastic(int rank, int nproc, MPI_Comm comm,
       for (std::size_t i = 0; i < n_in; ++i) amp.data()[i] = c.data()[i] - c_ref;
     };
 
+    // Composition is projected onto [lo, hi]; the qualification probe counts
+    // the cells outside the same interval.
+    constexpr double lo = 1.0e-8, hi = 1.0 - 1.0e-8;
+
     auto project_c = [&] {
       // ETD1 treats N explicitly; once interfaces sharpen, a step can leave
       // (0,1) and the log potential explodes. Project onto [lo,hi] and
       // restore the mean so the scheme stays conservative.
-      constexpr double lo = 1.0e-8, hi = 1.0 - 1.0e-8;
       const double mean0 = [&] {
         double s = 0.0;
         for (std::size_t i = 0; i < n_in; ++i) s += c.data()[i];
@@ -356,7 +359,6 @@ inline int run_cahn_hilliard_elastic(int rank, int nproc, MPI_Comm comm,
       double mn = std::numeric_limits<double>::infinity();
       double mx = -std::numeric_limits<double>::infinity();
       int clipped = 0;
-      constexpr double lo = 1.0e-8, hi = 1.0 - 1.0e-8;
       for (int k = 0; k < ls[2]; ++k) {
         for (int j = 0; j < ls[1]; ++j) {
           for (int i = 0; i < ls[0]; ++i) {
