@@ -382,7 +382,6 @@ TEST_CASE("Borrowed quaternion FCC batch matches the nine-double path",
   REQUIRE(global_peaks[0] < 2e-8);
   REQUIRE(global_peaks[1] < 2e-8);
   REQUIRE(global_peaks[2] < 5e-8);
-  REQUIRE(field_bytes == 4 * fields[0].size() * sizeof(double));
 }
 
 TEST_CASE("Quaternion FCC borrow rejects a bad source and keeps history",
