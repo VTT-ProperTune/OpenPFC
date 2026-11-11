@@ -16,7 +16,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   changed components with CMake directory targets (`apps/<name>/all`)
   and runs the matching labels; `CI Status` is a single YAML condition.
   `scripts/ci/scope.py` and its tests are gone; `scripts/check_gpu_ci_policy.py`
-  guards the GPU compile jobs in the new condition (#845).
+  guards the GPU compile jobs in the new condition (#845). The smoke
+  requirement is checked in host builds with tests only; CUDA and HIP
+  builds register device-only checks outside `OpenPFC_BUILD_TESTS`.
 
 - Tohtori HIP builds can use a ROCm-aware Open MPI. `scripts/build_tohtori.sh
   --rocm` builds UCX with the `rocm_copy`/`rocm_ipc` transports and Open MPI

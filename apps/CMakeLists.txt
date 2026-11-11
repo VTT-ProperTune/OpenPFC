@@ -12,6 +12,14 @@ include(${PROJECT_SOURCE_DIR}/cmake/OpenPFCAppRuntime.cmake)
 function(openpfc_add_app name)
   add_subdirectory(${name})
   set_property(DIRECTORY ${name} PROPERTY LABELS "app:${name}")
+  # The smoke test is a host test under OpenPFC_BUILD_TESTS. Device builds
+  # register device-only checks outside that guard (vlasov_maxwell's HIP
+  # cases) or lose their host test on images without OpenMP (kobayashi), so
+  # the requirement is enforced only where it is meaningful: host builds
+  # with tests, which is what the pull-request tier of CI configures.
+  if(NOT OpenPFC_BUILD_TESTS OR OpenPFC_ENABLE_CUDA OR OpenPFC_ENABLE_HIP)
+    return()
+  endif()
   get_directory_property(_tests DIRECTORY ${name} TESTS)
   if(NOT _tests)
     return()
