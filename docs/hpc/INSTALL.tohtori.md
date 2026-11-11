@@ -205,7 +205,38 @@ Tohtori has AMD GPUs on **`amdgpu`** (2× MI210 `gfx90a`). CUDA remains NVIDIA-o
 sbatch scripts/sbatch_openpfc_hip_amdgpu.sbatch
 ```
 
-The job loads `rocm/7.2.1` + `openmpi/5.0.10`, rebuilds HeFFTe-ROCm into `$HOME/opt/heffte/2.4.1-rocm-ompi5` if that prefix is missing (the older `2.4.1-rocm` tree was Open MPI 4.1.1 / ROCm 6.4.0 and does not run on current `amdgpu` nodes), then runs `scripts/build.sh --machine=tohtori --with-rocm`. GPU-aware MPI stays **off** (`MPI_HIP_AWARE=0`); that is a LUMI Cray-MPICH probe, not a Tohtori HIP requirement.
+The job loads `rocm/7.2.1` + `openmpi/5.0.10`, rebuilds HeFFTe-ROCm into `$HOME/opt/heffte/2.4.1-rocm-ompi5` if that prefix is missing (the older `2.4.1-rocm` tree was Open MPI 4.1.1 / ROCm 6.4.0 and does not run on current `amdgpu` nodes), then runs `scripts/build.sh --machine=tohtori --with-rocm`. With the site module GPU-aware MPI stays **off** (`MPI_HIP_AWARE=0`): `openmpi/5.0.10` was configured `--with-rocm` but ships only the `null` accelerator component and a UCX without ROCm memory support, so `MPIX_Query_rocm_support()` returns 0 and device buffers in `MPI_Send` would be copied as host memory.
+
+### ROCm-aware MPI (device-buffer transport, SDK `HIP_device_buffers`)
+
+The installed-SDK acceptance (`tests/packaging/backend_acceptance`) and
+resident multi-GPU stepping need MPI that accepts device pointers. Build the
+AMD twin of the CUDA stack once, on an `amdgpu` node (ROCm headers live only
+there), with the same script that builds the CUDA-aware stack:
+
+```bash
+# sbatch --partition=amdgpu --gres=gpu:mi210:1 --cpus-per-task=16 ... on g0004
+module load rocm/7.2.1
+UCX_PREFIX=/task/$USER/apps/ucx/1.20.0-rocm \
+OPENMPI_PREFIX=/task/$USER/apps/openmpi/5.0.10-rocm \
+  scripts/build_tohtori.sh --build-ucx --build-openmpi --ucx-only --rocm   # UCX
+UCX_HOME=/task/$USER/apps/ucx/1.20.0-rocm \
+OPENMPI_PREFIX=/task/$USER/apps/openmpi/5.0.10-rocm \
+  scripts/build_tohtori.sh --build-openmpi --openmpi-only --rocm           # Open MPI
+```
+
+UCX then lists the `rocm_copy` and `rocm_ipc` transports, `ompi_info` the
+`accelerator:rocm` component, and `MPIX_Query_rocm_support()` returns 1.
+HeFFTe links `libmpi`, so build it again against that MPI into
+`/task/$USER/apps/heffte/2.4.1-rocm-ompi5-rocmaware` (`-DHeffte_ENABLE_ROCM=ON
+-DHeffte_ENABLE_FFTW=ON -DMPI_CXX_COMPILER=.../5.0.10-rocm/bin/mpicxx`).
+When `/task/$USER/apps/openmpi/5.0.10-rocm/bin/mpicc` exists,
+`scripts/build.sh --machine=tohtori --with-rocm` uses it instead of the
+module, picks that HeFFTe prefix and sets `MPI_HIP_AWARE=1`; the SDK
+manifest then records `HIP_device_buffers: true`. `OPENMPI_ROOT_ROCM`,
+`HEFFTE_PREFIX` and `MPI_HIP_AWARE` override each step. Two ranks need both
+MI210 cards (`--gres=gpu:mi210:2`); a 4-rank device run is not qualified on
+this node.
 
 Slurm exports both `ROCR_VISIBLE_DEVICES` and `CUDA_VISIBLE_DEVICES` for an `amdgpu` allocation. The HIP runtime honours `CUDA_VISIBLE_DEVICES` as well, so with `ROCR_VISIBLE_DEVICES=1` ROCr already exposes the assigned card as device 0 and `CUDA_VISIBLE_DEVICES=1` then filters it away: `rocminfo` lists one `gfx90a`, `hipGetDeviceCount` returns `no ROCm-capable device is detected`, tests report `HIP not available` and rocFFT `plan create failed with error code: 1`. Jobs that land on the second card see this; `unset CUDA_VISIBLE_DEVICES` in the job script before running HIP binaries (the ROCr variable keeps the job on its assigned device).
 

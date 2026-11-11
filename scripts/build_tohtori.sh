@@ -27,6 +27,10 @@ fi
 #   --build-ucx       Build/install UCX to UCX_PREFIX, set UCX_HOME for OpenMPI (--with-ucx).
 #   --ucx-only        Only build/install UCX.
 #   --clean-ucx       Remove UCX VPATH build dir before configuring UCX.
+#   --rocm            Build UCX with rocm_copy/rocm_ipc transports and Open MPI's
+#                     accelerator/rocm component (MPIX_Query_rocm_support() == 1) for
+#                     GPU-aware MPI on the amdgpu partition. Combine with --build-ucx
+#                     --build-openmpi; load `rocm/X.Y` first or set ROCM_HOME.
 #   --cuda            Build UCX with cuda_copy/cuda_ipc transports and Open MPI's
 #                     accelerator/cuda component (device-pointer-safe GPU-aware MPI).
 #                     Combine with --build-ucx --build-openmpi; load `cuda/X.Y` first
@@ -48,6 +52,8 @@ fi
 #   UCX_BUILD_DIR     Default: $HOME/opt/ucx/build-$UCX_VER
 #   UCX_HOME          If set (and not using --build-ucx), OpenMPI gets --with-ucx=UCX_HOME
 #   CUDA_HOME         Used with --cuda; default: two levels up from `nvcc` on PATH
+#   ROCM_HOME         Used with --rocm; default: the first of /opt/rocm-<ver> or
+#                     /opt/rocm that holds include/hip/hip_runtime.h
 #
 # This script loads the site **openmpi/5.0.10** module and its compiler dependency. For a
 # custom Open MPI build, OPENPFC_GCC_MODULE selects the compiler module (default gcc/11.2.0).
@@ -90,6 +96,19 @@ if command -v nvcc >/dev/null 2>&1; then
 fi
 CUDA_HOME="${CUDA_HOME:-${CUDA_HOME_DEFAULT}}"
 
+# --rocm: the same for AMD GPUs: UCX rocm_copy/rocm_ipc transports and Open
+# MPI's accelerator/rocm component. The site openmpi/5.0.10 module was
+# configured --with-rocm but ships only the null accelerator and a UCX without
+# ROCm memory support, so MPIX_Query_rocm_support() returns 0 there.
+WITH_ROCM=0
+ROCM_HOME_DEFAULT=""
+for _cand in /opt/rocm-[0-9]* /opt/rocm; do
+  if [[ -f "${_cand}/include/hip/hip_runtime.h" ]]; then
+    ROCM_HOME_DEFAULT="${_cand}"
+  fi
+done
+ROCM_HOME="${ROCM_HOME:-${ROCM_HOME_DEFAULT}}"
+
 # If the user exported OPENMPI_ROOT before this script, keep it when not passing --build-openmpi
 # (otherwise we would unset it and CMake would fall back to site Open MPI in the toolchain).
 _PRESERVE_OPENMPI_ROOT="${OPENMPI_ROOT-}"
@@ -123,6 +142,9 @@ Options:
   --build-ucx        Build UCX from source; sets UCX_HOME for OpenMPI when combined.
   --ucx-only         Only build/install UCX.
   --clean-ucx        Remove UCX VPATH build dir before configuring UCX.
+  --rocm             Build UCX with rocm_copy/rocm_ipc transports and Open MPI's
+                     accelerator/rocm component (GPU-aware MPI on amdgpu); use with
+                     --build-ucx --build-openmpi and distinct *-rocm prefixes.
   --cuda             Build UCX with cuda_copy/cuda_ipc transports, Open MPI's
                      accelerator/cuda component, and HeFFTe's cuFFT backend
                      (CUDA_ARCHITECTURES, default 90). Load cuda/X.Y first (or set
@@ -147,6 +169,7 @@ Environment:
   UCX_BUILD_DIR      (default: $HOME/opt/ucx/build-$UCX_VER)
   UCX_HOME           optional; adds --with-ucx to OpenMPI (if not using --build-ucx)
   CUDA_HOME          used with --cuda (default: two levels up from `nvcc` on PATH)
+  ROCM_HOME          used with --rocm (default: newest /opt/rocm* with HIP headers)
 
 UCX configure uses --without-go (skips Go bindings; they often break in VPATH builds).
 
@@ -175,6 +198,7 @@ while [[ $# -gt 0 ]]; do
     --ucx-only) UCX_ONLY=1; BUILD_UCX=1 ;;
     --clean-ucx) CLEAN_UCX=1 ;;
     --cuda) WITH_CUDA=1 ;;
+    --rocm) WITH_ROCM=1 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
   esac
@@ -184,6 +208,15 @@ done
 if [[ "${OPENMPI_ONLY}" -eq 1 ]]; then
   HEFFTE_ONLY=0
   SKIP_HEFFTE=1
+fi
+
+if [[ "${WITH_CUDA}" -eq 1 && "${WITH_ROCM}" -eq 1 ]]; then
+  echo "ERROR: --cuda and --rocm are exclusive; build two stacks with distinct prefixes." >&2
+  exit 1
+fi
+if [[ "${WITH_ROCM}" -eq 1 && -z "${ROCM_HOME}" ]]; then
+  echo "ERROR: --rocm given but ROCM_HOME could not be determined (no /opt/rocm* with include/hip/hip_runtime.h; load rocm/X.Y on an amdgpu node or set ROCM_HOME)." >&2
+  exit 1
 fi
 
 if [[ "${UCX_ONLY}" -eq 1 ]]; then
@@ -245,6 +278,9 @@ build_ucx() {
     fi
     log "Building UCX with CUDA support (CUDA_HOME=${CUDA_HOME})"
     cuda_args=(--with-cuda="${CUDA_HOME}" --without-rocm)
+  elif [[ "${WITH_ROCM}" -eq 1 ]]; then
+    log "Building UCX with ROCm support (ROCM_HOME=${ROCM_HOME})"
+    cuda_args=(--with-rocm="${ROCM_HOME}" --without-cuda)
   else
     cuda_args=(--without-cuda --without-rocm)
   fi
@@ -356,6 +392,13 @@ build_openmpi() {
     fi
     log "Building OpenMPI with CUDA support (CUDA_HOME=${CUDA_HOME})"
     cuda_args=(--with-cuda="${CUDA_HOME}")
+  elif [[ "${WITH_ROCM}" -eq 1 ]]; then
+    # accelerator/rocm needs the HIP runtime headers. Keep the Fortran
+    # bindings (--enable-mpi-fortran=all below): OpenPFC's binary writer uses
+    # the MPI_DOUBLE_COMPLEX datatype, which a Fortran-less build rejects
+    # with MPI_ERR_TYPE in MPI_File_set_view.
+    log "Building OpenMPI with ROCm support (ROCM_HOME=${ROCM_HOME})"
+    cuda_args=(--with-rocm="${ROCM_HOME}" --without-cuda)
   fi
   (
     cd "${OPENMPI_BUILD_DIR}"

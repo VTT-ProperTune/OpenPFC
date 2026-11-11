@@ -7,6 +7,17 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Tohtori HIP builds can use a ROCm-aware Open MPI. `scripts/build_tohtori.sh
+  --rocm` builds UCX with the `rocm_copy`/`rocm_ipc` transports and Open MPI
+  with the `accelerator/rocm` component; when that install exists at
+  `OPENMPI_ROOT_ROCM` (default `/task/$USER/apps/openmpi/5.0.10-rocm`),
+  `scripts/build.sh --machine=tohtori --with-rocm` uses it instead of the
+  site module, defaults `MPI_HIP_AWARE=1` and picks the matching HeFFTe
+  prefix `<ver>-rocm-ompi5-rocmaware`, so the SDK manifest records
+  `HIP_device_buffers: true`. The site `openmpi/5.0.10` module reports
+  `MPIX_Query_rocm_support() == 0` and keeps `MPI_HIP_AWARE=0`.
+  `docs/hpc/INSTALL.tohtori.md` §6 describes the stack (#761, #542).
+
 - Device FFTs fail loudly when HeFFTe's kernels do not run. `FFT_Impl`
   reads the CUDA or HIP error state after every HeFFTe device `forward`
   and `backward` and throws `std::runtime_error` naming the error; before,

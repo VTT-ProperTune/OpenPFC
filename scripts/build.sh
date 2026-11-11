@@ -53,6 +53,18 @@ if [[ -z "${OPENMPI_ROOT_CUDA:-}" ]]; then
   fi
 fi
 OPENPFC_GCC_MODULE_CUDA="${OPENPFC_GCC_MODULE_CUDA:-gcc/15.2.0}"
+# The same for HIP: `scripts/build_tohtori.sh --build-ucx --build-openmpi --rocm`
+# builds UCX with rocm_copy/rocm_ipc and Open MPI with accelerator/rocm at
+# OPENMPI_ROOT_ROCM. The site openmpi/5.0.10 module reports
+# MPIX_Query_rocm_support() == 0 (null accelerator, UCX without ROCm memory),
+# so without this install HIP builds keep MPI_HIP_AWARE=0.
+if [[ -z "${OPENMPI_ROOT_ROCM:-}" ]]; then
+  if [[ -x "/task/${USER}/apps/openmpi/5.0.10-rocm/bin/mpicc" ]]; then
+    OPENMPI_ROOT_ROCM="/task/${USER}/apps/openmpi/5.0.10-rocm"
+  else
+    OPENMPI_ROOT_ROCM="${HOME}/opt/openmpi/5.0.10-rocm"
+  fi
+fi
 MPI_CUDA_AWARE="${MPI_CUDA_AWARE:-}"
 MPI_HIP_AWARE="${MPI_HIP_AWARE:-}"
 HEFFTE_VERSION="${HEFFTE_VERSION:-2.4.1}"
@@ -133,7 +145,12 @@ Tohtori environment overrides:
                           first existing of
                           /task/$USER/apps/heffte/<ver>-fftw-plans-cuda-ompi5,
                           $HOME/opt/heffte/<ver>-fftw-plans-cuda-ompi5 (both
-                          sm_80/86/90), then $HOME/opt/heffte/<ver>-cuda
+                          sm_80/86/90), then $HOME/opt/heffte/<ver>-cuda.
+                          ROCm default: with OPENMPI_ROOT_ROCM the first
+                          existing <ver>-rocm-ompi5-rocmaware under
+                          /task/$USER/apps/heffte or $HOME/opt/heffte (HeFFTe
+                          linked against that MPI); otherwise
+                          $HOME/opt/heffte/<ver>-rocm-ompi5, then <ver>-rocm
   HEFFTE_MODULE           Optional module to load; none by default. The
                           private heffte/<ver>-cuda-openmpi5 module points at
                           an H100-only (sm_90) build, see #848
@@ -149,9 +166,19 @@ Tohtori environment overrides:
                           linked UCX 1.17 lacks --with-cuda and segfaults on
                           GPU-Direct MPI sends despite Open MPI's own probe
                           claiming support) and MPI_CUDA_AWARE defaults ON.
-  OPENPFC_GCC_MODULE_CUDA Compiler module for OPENMPI_ROOT_CUDA (default: gcc/15.2.0).
+  OPENPFC_GCC_MODULE_CUDA Compiler module for OPENMPI_ROOT_CUDA and
+                          OPENMPI_ROOT_ROCM (default: gcc/15.2.0).
+  OPENMPI_ROOT_ROCM       Default: /task/$USER/apps/openmpi/5.0.10-rocm if it
+                          exists, else $HOME/opt/openmpi/5.0.10-rocm. When this
+                          contains a working mpicc, ROCm builds use it in place
+                          of the site module (whose accelerator/rocm component
+                          and UCX ROCm transports are missing, so
+                          MPIX_Query_rocm_support() is 0) and MPI_HIP_AWARE
+                          defaults ON. Built by
+                          scripts/build_tohtori.sh --build-ucx --build-openmpi --rocm.
   MPI_CUDA_AWARE          Default: auto (1 when OPENMPI_ROOT_CUDA is usable, else 0).
-  MPI_HIP_AWARE           Default: 0 on Tohtori, 1 on LUMI (Cray MPICH +
+  MPI_HIP_AWARE           Default: auto on Tohtori (1 when OPENMPI_ROOT_ROCM is
+                          usable, else 0), 1 on LUMI (Cray MPICH +
                           MPICH_GPU_SUPPORT_ENABLED=1).
 
 LUMI environment:
@@ -327,6 +354,12 @@ if [[ "${MACHINE}" == "tohtori" ]] && (( WITH_CUDA )) && [[ -z "${OPENMPI_ROOT:-
    [[ -x "${OPENMPI_ROOT_CUDA}/bin/mpicc" ]]; then
   USE_CUSTOM_CUDA_MPI=1
 fi
+# The ROCm-aware twin (see OPENMPI_ROOT_ROCM above), for HIP builds on Tohtori.
+USE_CUSTOM_ROCM_MPI=0
+if [[ "${MACHINE}" == "tohtori" ]] && (( WITH_ROCM )) && [[ -z "${OPENMPI_ROOT:-}" ]] &&
+   [[ -x "${OPENMPI_ROOT_ROCM}/bin/mpicc" ]]; then
+  USE_CUSTOM_ROCM_MPI=1
+fi
 
 if [[ -z "${MPI_CUDA_AWARE}" ]]; then
   MPI_CUDA_AWARE=$(( USE_CUSTOM_CUDA_MPI ? 1 : 0 ))
@@ -335,7 +368,7 @@ if [[ -z "${MPI_HIP_AWARE}" ]]; then
   if [[ "${MACHINE}" == "lumi" ]]; then
     MPI_HIP_AWARE=1
   else
-    MPI_HIP_AWARE=0
+    MPI_HIP_AWARE=$(( USE_CUSTOM_ROCM_MPI ? 1 : 0 ))
   fi
 fi
 MPI_CUDA_AWARE="$(as_bool "${MPI_CUDA_AWARE}")"
@@ -541,12 +574,19 @@ resolve_rocm_path() {
 }
 
 setup_tohtori_env() {
+  local custom_mpi=""
   if (( USE_CUSTOM_CUDA_MPI )); then
-    echo "Using custom CUDA-aware Open MPI: ${OPENMPI_ROOT_CUDA}"
+    custom_mpi="${OPENMPI_ROOT_CUDA}"
+    echo "Using custom CUDA-aware Open MPI: ${custom_mpi}"
+  elif (( USE_CUSTOM_ROCM_MPI )); then
+    custom_mpi="${OPENMPI_ROOT_ROCM}"
+    echo "Using custom ROCm-aware Open MPI: ${custom_mpi}"
+  fi
+  if [[ -n "${custom_mpi}" ]]; then
     module load "${OPENPFC_GCC_MODULE_CUDA}"
-    export PATH="${OPENMPI_ROOT_CUDA}/bin:${PATH}"
-    export LD_LIBRARY_PATH="${OPENMPI_ROOT_CUDA}/lib64:${OPENMPI_ROOT_CUDA}/lib:${LD_LIBRARY_PATH:-}"
-    export OPENMPI_ROOT="${OPENMPI_ROOT_CUDA}"
+    export PATH="${custom_mpi}/bin:${PATH}"
+    export LD_LIBRARY_PATH="${custom_mpi}/lib64:${custom_mpi}/lib:${LD_LIBRARY_PATH:-}"
+    export OPENMPI_ROOT="${custom_mpi}"
   else
     module load "${OPENMPI_MODULE}"
   fi
@@ -573,7 +613,7 @@ setup_tohtori_env() {
   export CC="$(command -v gcc)"
   export CXX="$(command -v g++)"
   export OPENPFC_GCC_ROOT="$(cd "$(dirname "${CXX}")/.." && pwd)"
-  if (( ! USE_CUSTOM_CUDA_MPI )); then
+  if (( ! USE_CUSTOM_CUDA_MPI && ! USE_CUSTOM_ROCM_MPI )); then
     unset OPENMPI_ROOT
   fi
 
@@ -595,6 +635,25 @@ setup_tohtori_env() {
         fi
       done
       [[ -n "${HEFFTE_PREFIX}" ]] || HEFFTE_PREFIX="${HOME}/opt/heffte/${HEFFTE_VERSION}-cuda"
+    elif [[ "${BACKEND}" == "rocm" ]]; then
+      # HeFFTe links libmpi: a build against the ROCm-aware Open MPI only
+      # pairs with that MPI, and the site-module builds only with the module.
+      local candidate
+      local -a candidates=()
+      if (( USE_CUSTOM_ROCM_MPI )); then
+        candidates+=("/task/${USER}/apps/heffte/${HEFFTE_VERSION}-rocm-ompi5-rocmaware"
+                     "${HOME}/opt/heffte/${HEFFTE_VERSION}-rocm-ompi5-rocmaware")
+      else
+        candidates+=("${HOME}/opt/heffte/${HEFFTE_VERSION}-rocm-ompi5"
+                     "${HOME}/opt/heffte/${HEFFTE_VERSION}-rocm")
+      fi
+      for candidate in "${candidates[@]}"; do
+        if [[ -d "${candidate}" ]]; then
+          HEFFTE_PREFIX="${candidate}"
+          break
+        fi
+      done
+      [[ -n "${HEFFTE_PREFIX}" ]] || HEFFTE_PREFIX="${candidates[0]}"
     else
       HEFFTE_PREFIX="${HOME}/opt/heffte/${HEFFTE_VERSION}-${BACKEND}"
     fi
