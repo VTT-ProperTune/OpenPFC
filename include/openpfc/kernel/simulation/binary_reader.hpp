@@ -226,7 +226,7 @@ public:
 
   MPI_Status read(const std::string &filename,
                   pfc::field::FieldOutput<std::complex<double>> data) {
-    return read_mpi_binary(filename, data, MPI_DOUBLE_COMPLEX, "complex elements");
+    return read_mpi_binary(filename, data, MPI_C_DOUBLE_COMPLEX, "complex elements");
   }
 };
 

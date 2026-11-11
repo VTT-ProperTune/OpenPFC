@@ -59,7 +59,7 @@ namespace pfc {
  * (`offset + local <= global` per axis) via `pfc::mpi::validate_subarray_domain`
  * before marking the domain valid. Before each write, the MPI filetype is
  * rebuilt from the same element type used as the `MPI_File_set_view` etype
- * (`MPI_DOUBLE` or `MPI_DOUBLE_COMPLEX`), so filetype oldtype and etype always
+ * (`MPI_DOUBLE` or `MPI_C_DOUBLE_COMPLEX`), so filetype oldtype and etype always
  * match.
  *
  * @note Cleanup: `close()` is local (not collective) and reports
@@ -90,7 +90,7 @@ private:
   }
   static MPI_Datatype
   get_type([[maybe_unused]] pfc::field::FieldView<std::complex<double>> field) {
-    return MPI_DOUBLE_COMPLEX;
+    return MPI_C_DOUBLE_COMPLEX;
   }
 
   void ensure_filetype(MPI_Datatype etype) {

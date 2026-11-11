@@ -18,6 +18,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   `MPIX_Query_rocm_support() == 0` and keeps `MPI_HIP_AWARE=0`.
   `docs/hpc/INSTALL.tohtori.md` §6 describes the stack (#761, #542).
 
+- Binary field I/O describes `std::complex<double>` with the C datatype
+  `MPI_C_DOUBLE_COMPLEX` instead of Fortran's `MPI_DOUBLE_COMPLEX` in
+  `BinaryWriter` and `BinaryReader`. The file layout is unchanged (two
+  doubles per element); an MPI built without Fortran bindings rejected the
+  old type with `MPI_ERR_TYPE` in `MPI_File_set_view`.
+
 - Device FFTs fail loudly when HeFFTe's kernels do not run. `FFT_Impl`
   reads the CUDA or HIP error state after every HeFFTe device `forward`
   and `backward` and throws `std::runtime_error` naming the error; before,

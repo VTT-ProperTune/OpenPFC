@@ -393,10 +393,7 @@ build_openmpi() {
     log "Building OpenMPI with CUDA support (CUDA_HOME=${CUDA_HOME})"
     cuda_args=(--with-cuda="${CUDA_HOME}")
   elif [[ "${WITH_ROCM}" -eq 1 ]]; then
-    # accelerator/rocm needs the HIP runtime headers. Keep the Fortran
-    # bindings (--enable-mpi-fortran=all below): OpenPFC's binary writer uses
-    # the MPI_DOUBLE_COMPLEX datatype, which a Fortran-less build rejects
-    # with MPI_ERR_TYPE in MPI_File_set_view.
+    # accelerator/rocm needs the HIP runtime headers.
     log "Building OpenMPI with ROCm support (ROCM_HOME=${ROCM_HOME})"
     cuda_args=(--with-rocm="${ROCM_HOME}" --without-cuda)
   fi

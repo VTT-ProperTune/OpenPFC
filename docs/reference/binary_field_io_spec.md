@@ -21,8 +21,8 @@ restart contract.
 | Property | Value |
 |----------|--------|
 | **Layout** | A single **global** 3D array in **Fortran (column-major) order** (`MPI_ORDER_FORTRAN` in `MPI_Type_create_subarray`). |
-| **Element type** | Real fields: `double` (`MPI_DOUBLE`). Complex fields: `std::complex<double>` (`MPI_DOUBLE_COMPLEX`). Each complex element occupies `sizeof(std::complex<double>)` bytes (two native doubles) in the raw payload. |
-| **MPI filetype / etype** | `BinaryWriter` and `BinaryReader` build the MPI filetype subarray from the **same** element type used as the `MPI_File_set_view` etype. Real paths use `MPI_DOUBLE`; complex paths use `MPI_DOUBLE_COMPLEX`. The filetype is rebuilt if the same writer/reader instance later switches element type after one `set_domain()`. |
+| **Element type** | Real fields: `double` (`MPI_DOUBLE`). Complex fields: `std::complex<double>` (`MPI_C_DOUBLE_COMPLEX`). Each complex element occupies `sizeof(std::complex<double>)` bytes (two native doubles) in the raw payload. |
+| **MPI filetype / etype** | `BinaryWriter` and `BinaryReader` build the MPI filetype subarray from the **same** element type used as the `MPI_File_set_view` etype. Real paths use `MPI_DOUBLE`; complex paths use `MPI_C_DOUBLE_COMPLEX`. The filetype is rebuilt if the same writer/reader instance later switches element type after one `set_domain()`. |
 | **Byte order** | **Native** (`"native"` in `MPI_File_set_view`) — endianness matches the machine that wrote the file. |
 | **Header / magic** | **None.** The file is only the raw payload for the MPI file view (no metadata block, no version tag). |
 | **Per-rank data** | Each MPI rank writes its **local** brick; together the ranks cover the global grid without overlap. The view is built from `(global_size, local_size, local_offset)` passed to `set_domain()`. |
@@ -54,7 +54,7 @@ The `increment` value is advanced by the simulator according to configuration (s
 | API | Element type |
 |-----|--------------|
 | `BinaryReader::read(filename, field::FieldOutput<double>)` (`Field::output()` or a `std::vector<double>`) | `MPI_DOUBLE` |
-| `BinaryReader::read(filename, field::FieldOutput<std::complex<double>>)` | `MPI_DOUBLE_COMPLEX` |
+| `BinaryReader::read(filename, field::FieldOutput<std::complex<double>>)` | `MPI_C_DOUBLE_COMPLEX` |
 
 **Implications:**
 
