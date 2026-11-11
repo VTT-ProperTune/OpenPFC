@@ -52,6 +52,7 @@ if(HIGHER_ORDER_PFC_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     target_link_libraries(test_higher_order_pfc PRIVATE Catch2::Catch2)
     include(CTest)
     add_test(NAME higher-order-pfc-all-tests COMMAND test_higher_order_pfc)
+    openpfc_app_smoke_test(higher-order-pfc-all-tests)
     if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
        (OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 2))
       add_test(NAME higher-order-pfc-mpi-tests

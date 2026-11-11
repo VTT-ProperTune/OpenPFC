@@ -59,6 +59,7 @@ if(ALLEN_CAHN_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     add_test(NAME allen-cahn-cpu-golden COMMAND test_allen_cahn_cpu_golden)
     set_tests_properties(allen-cahn-cpu-golden PROPERTIES
       ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+    openpfc_app_smoke_test(allen-cahn-cpu-golden)
 
     # Grid-independence of the pass criterion. Runs the shipped update at two
     # grid sizes, so it is the slowest test here (a few seconds) rather than a

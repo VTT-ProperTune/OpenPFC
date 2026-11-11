@@ -56,6 +56,7 @@ if(EHD_FILM_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     target_link_libraries(test_ehd_film PRIVATE Catch2::Catch2)
     include(CTest)
     add_test(NAME ehd-film-all-tests COMMAND test_ehd_film)
+    openpfc_app_smoke_test(ehd-film-all-tests)
 
     if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
       ehd_film_hip_executable(test_ehd_film_hip tests/test_ehd_film_gpu.cpp)

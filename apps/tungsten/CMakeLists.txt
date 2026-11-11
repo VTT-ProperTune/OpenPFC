@@ -137,6 +137,7 @@ if(TUNGSTEN_ENABLE_TESTS)
     set_tests_properties(tungsten-resolved-bcc-cli PROPERTIES
       PASS_REGULAR_EXPRESSION "SPECTRAL_CHECKSUM field=psi"
       TIMEOUT 120)
+    openpfc_app_smoke_test(tungsten-resolved-bcc-cli)
     add_test(NAME tungsten-cpu-golden COMMAND test_tungsten "[etd_cpu_golden]")
     add_test(NAME tungsten-etd-cpu-golden COMMAND test_tungsten "[etd_cpu_golden]")
     if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)

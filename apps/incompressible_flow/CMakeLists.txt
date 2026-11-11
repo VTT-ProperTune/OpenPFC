@@ -26,6 +26,7 @@ if(OpenPFC_BUILD_TESTS)
   set_tests_properties(incompressible-flow-smoke PROPERTIES
                        PASS_REGULAR_EXPRESSION "incompressible_flow status=ok"
                        TIMEOUT 120)
+  openpfc_app_smoke_test(incompressible-flow-smoke)
   add_test(NAME incompressible-flow-hit-smoke
            COMMAND $<TARGET_FILE:incompressible_flow>
                    --case decaying-hit

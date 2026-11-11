@@ -35,6 +35,7 @@ if(BURGERS_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     add_test(NAME burgers-cli-fdm2
       COMMAND $<TARGET_FILE:burgers> --method fdm2 --N 64 --nu 0
         --dt 0.001 --time 0.5)
+    openpfc_app_smoke_test(burgers-cli-fdm2)
     add_test(NAME burgers-cli-fvm
       COMMAND $<TARGET_FILE:burgers> --method fvm --N 64 --nu 0
         --dt 0.001 --time 0.5)

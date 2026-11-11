@@ -123,6 +123,7 @@ if(ALLOY_DENDRITE_ENABLE_TESTS AND OpenPFC_BUILD_TESTS
     ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1"
     TIMEOUT 900
     RUN_SERIAL TRUE)
+  openpfc_app_smoke_test(alloy-dendrite-planar)
 
   if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
     # Same physics on two ranks: the halo exchange of three field groups and

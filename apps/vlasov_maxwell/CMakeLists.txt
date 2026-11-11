@@ -27,6 +27,7 @@ if(VLASOV_ENABLE_TESTS AND OpenPFC_BUILD_TESTS AND TARGET Catch2::Catch2WithMain
   target_link_libraries(test_plasma_dispersion PRIVATE Catch2::Catch2WithMain)
   add_test(NAME vlasov-plasma-dispersion COMMAND test_plasma_dispersion)
   set_tests_properties(vlasov-plasma-dispersion PROPERTIES TIMEOUT 300)
+  openpfc_app_smoke_test(vlasov-plasma-dispersion)
 endif()
 if(VLASOV_ENABLE_TESTS AND OpenPFC_BUILD_TESTS AND TARGET Catch2::Catch2)
   file(GLOB _vlasov_tests ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_*.cpp)

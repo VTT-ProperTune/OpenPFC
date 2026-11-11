@@ -7,6 +7,17 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- CI selection moved from a Python scheduler to CMake and CTest. Every
+  test now carries a CTest label (`library`, `cli`, `app:<name>`,
+  `examples`, `smoke`); each application names its one smoke test with
+  `openpfc_app_smoke_test()` and `examples/CMakeLists.txt` lists the
+  lesson smoke set, so `ctest -L` is the selection. The pull-request tier
+  of `ci.yml` classifies the diff with declared path filters, builds the
+  changed components with CMake directory targets (`apps/<name>/all`)
+  and runs the matching labels; `CI Status` is a single YAML condition.
+  `scripts/ci/scope.py` and its tests are gone; `scripts/check_gpu_ci_policy.py`
+  guards the GPU compile jobs in the new condition (#845).
+
 - Tohtori HIP builds can use a ROCm-aware Open MPI. `scripts/build_tohtori.sh
   --rocm` builds UCX with the `rocm_copy`/`rocm_ipc` transports and Open MPI
   with the `accelerator/rocm` component; when that install exists at

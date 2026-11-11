@@ -27,6 +27,13 @@ def test_policy_rejects_hidden_failures(name, failure):
     elif failure == 'omitted':
         broken = SOURCE.replace(f', {name}', '')
     else:
-        broken = SOURCE.replace('RESULTS: ${{ toJSON(needs) }}', 'RESULTS: "{}"')
+        broken = SOURCE.replace(f"\n               || needs.{name}.result != 'success'", '')
+    assert broken != SOURCE
+    with pytest.raises(AssertionError):
+        policy.check(broken)
+
+
+def test_status_runs_after_failures_and_never_accepts_a_failed_status_step():
+    broken = SOURCE.replace('    if: always() && github.repository', '    if: github.repository')
     with pytest.raises(AssertionError):
         policy.check(broken)

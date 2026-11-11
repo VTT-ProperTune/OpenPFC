@@ -106,6 +106,7 @@ if(ALUMINUM_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
 
     add_test(NAME aluminum-all-tests COMMAND aluminumTest)
     add_test(NAME aluminum-shipped-inputs COMMAND aluminumTest "[inputs]")
+    openpfc_app_smoke_test(aluminum-shipped-inputs)
     add_test(NAME aluminum-directional COMMAND aluminumTest "[directional]")
     set_tests_properties(aluminum-directional PROPERTIES TIMEOUT 180)
     add_test(NAME aluminum-etd-cpu-golden COMMAND aluminumTest

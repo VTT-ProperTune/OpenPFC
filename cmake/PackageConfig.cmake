@@ -69,7 +69,7 @@ if(OpenPFC_BUILD_TESTS AND DEFINED Heffte_DIR AND NOT Heffte_DIR STREQUAL "Hefft
       "-Dcc=${CMAKE_C_COMPILER}" "-Dcxx=${CMAKE_CXX_COMPILER}"
       "${_owned_block_coverage}"
       -P ${CMAKE_SOURCE_DIR}/tests/packaging/check_owned_block_consumer.cmake)
-  set_tests_properties(OwnedBlock_InstalledConsumer PROPERTIES TIMEOUT 180 RUN_SERIAL TRUE)
+  set_tests_properties(OwnedBlock_InstalledConsumer PROPERTIES TIMEOUT 180 RUN_SERIAL TRUE LABELS library)
 endif()
 
 if(OpenPFC_BUILD_TESTS AND OpenPFC_HAS_FFTW3)
@@ -79,7 +79,7 @@ if(OpenPFC_BUILD_TESTS AND OpenPFC_HAS_FFTW3)
       "-Dcc=${CMAKE_C_COMPILER}" "-Dcxx=${CMAKE_CXX_COMPILER}"
       "${_local_fft_coverage}"
       -P ${CMAKE_SOURCE_DIR}/tests/packaging/check_local_fft_consumer.cmake)
-  set_tests_properties(LocalFFT_InstalledConsumer PROPERTIES TIMEOUT 180 RUN_SERIAL TRUE)
+  set_tests_properties(LocalFFT_InstalledConsumer PROPERTIES TIMEOUT 180 RUN_SERIAL TRUE LABELS library)
 endif()
 
 # Build-tree consumers use the same helper and probe as installed consumers.
@@ -95,5 +95,5 @@ if(OpenPFC_BUILD_TESTS)
       "-Dcc=${CMAKE_C_COMPILER}" "-Dcxx=${CMAKE_CXX_COMPILER}"
       "-Dconfiguration=$<CONFIG>" "${_manifest_coverage}"
       -P ${CMAKE_SOURCE_DIR}/tests/packaging/check_sdk_consumer.cmake)
-  set_tests_properties(SDK_InstalledCompatibility PROPERTIES TIMEOUT 300 RUN_SERIAL TRUE)
+  set_tests_properties(SDK_InstalledCompatibility PROPERTIES TIMEOUT 300 RUN_SERIAL TRUE LABELS library)
 endif()

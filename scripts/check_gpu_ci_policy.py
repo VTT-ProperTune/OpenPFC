@@ -4,9 +4,9 @@
 
 CUDA and HIP compile-only jobs belong to the master tier: they must run on
 every push to master of VTT-ProperTune/OpenPFC (pull requests check affected
-components), must not be optional, and must fail CI Status when they fail.
+components), must not be optional, and must fail CI Status when they fail,
+are cancelled or are skipped.
 """
-import importlib.util
 import re
 from pathlib import Path
 
@@ -25,30 +25,20 @@ def check(source):
     needs = re.search(r'^    needs:\s*\[([^]]+)\]', status, re.M)
     assert needs, 'Missing aggregate job dependencies'
     dependencies = {x.strip() for x in needs[1].split(',')}
-    assert 'RESULTS: ${{ toJSON(needs) }}' in status, 'CI Status does not read every job result'
-    assert 'CI_PLAN: ${{ needs.scope.outputs.plan }}' in status, 'CI Status omits the selected plan'
-    assert 'run: python3 scripts/ci/scope.py status' in status, 'CI Status omits the checked aggregator'
-    spec = importlib.util.spec_from_file_location('ci_scope', Path(__file__).parent / 'ci/scope.py')
-    scope = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(scope)
-    plan = scope.classify([], 'push')
-    required = scope.required_jobs(plan)
+    assert re.search(r'^    if:\s*always\(\)', status, re.M), 'CI Status must run after failures'
+    failure = re.search(r"^      - name: A selected job did not succeed\n        if: >-\n(.*?)\n        run: exit 1$",
+                        status, re.M | re.S)
+    assert failure, 'CI Status omits the failure condition'
+    master = re.search(r"github\.event_name != 'pull_request' && \((.*)\)\)", failure[1], re.S)
+    assert master, 'CI Status has no master-tier clause'
     for name in ('cuda-compile', 'hip-compile'):
         job = block(source, name)
         assert not re.search(r'^    continue-on-error:\s*true', job, re.M), name
         conditions = re.findall(r'^    if:\s*(.+)$', job, re.M)
         assert conditions == [MASTER_TIER], f'{name} must run on every push to master'
         assert name in dependencies, f'{name} omitted from aggregate status'
-        assert name in required, f'{name} not required by master status'
-        for result in ('skipped', 'failure', 'cancelled'):
-            results = {job: {'result': 'success'} for job in required}
-            results[name]['result'] = result
-            try:
-                scope.check_status(plan, results)
-            except RuntimeError:
-                pass
-            else:
-                raise AssertionError(f'CI Status accepts {name}: {result} on master')
+        assert f"needs.{name}.result != 'success'" in master[1], \
+            f'CI Status accepts a failed, cancelled or skipped {name} on master'
 
 
 if __name__ == '__main__':

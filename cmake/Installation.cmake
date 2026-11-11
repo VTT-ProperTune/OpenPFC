@@ -26,14 +26,14 @@ if(OpenPFC_BUILD_TESTS)
     add_test(NAME NativeCLI_Cases
       COMMAND ${CMAKE_COMMAND} "-Dcli=$<TARGET_FILE:openpfc_cli>" "-Dbuild=${CMAKE_BINARY_DIR}"
         -P ${CMAKE_SOURCE_DIR}/tests/cli/check_cases.cmake)
-    set_tests_properties(NativeCLI_Cases PROPERTIES TIMEOUT 120)
+    set_tests_properties(NativeCLI_Cases PROPERTIES TIMEOUT 120 LABELS cli)
     openpfc_installed_consumer_coverage_arguments(_native_cli_coverage)
     add_test(NAME NativeCLI_InstalledModels
       COMMAND ${CMAKE_COMMAND} "-Dbuild=${CMAKE_BINARY_DIR}" "-Dsource=${CMAKE_SOURCE_DIR}"
         "-Dcc=${CMAKE_C_COMPILER}" "-Dcxx=${CMAKE_CXX_COMPILER}" "-Dconfiguration=$<CONFIG>"
         "-Dgpu_sdk=$<OR:$<BOOL:${OpenPFC_CUDA_AVAILABLE}>,$<BOOL:${OpenPFC_HIP_AVAILABLE}>>"
         "${_native_cli_coverage}" -P ${CMAKE_SOURCE_DIR}/tests/cli/check_models.cmake)
-    set_tests_properties(NativeCLI_InstalledModels PROPERTIES TIMEOUT 600 RUN_SERIAL TRUE)
+    set_tests_properties(NativeCLI_InstalledModels PROPERTIES TIMEOUT 600 RUN_SERIAL TRUE LABELS cli)
     foreach(_pair "tungsten,tungsten" "aluminum,aluminum_etd" "cahn_hilliard,cahn_hilliard"
                   "thin_film,thin_film" "surface_diffusion,surface_diffusion"
                   "kawahara,kawahara" "ehd_film,ehd_film"
@@ -46,7 +46,7 @@ if(OpenPFC_BUILD_TESTS)
               COMMAND ${CMAKE_COMMAND} "-Dcli=$<TARGET_FILE:openpfc_cli>" "-Dbinary=$<TARGET_FILE:${_binary}>"
                 "-Dapp=${_app}" "-Dbuild=${CMAKE_BINARY_DIR}"
                 -P ${CMAKE_SOURCE_DIR}/tests/cli/smoke_case.cmake)
-            set_tests_properties(openpfc-cli-${_app}-smoke PROPERTIES TIMEOUT 120)
+            set_tests_properties(openpfc-cli-${_app}-smoke PROPERTIES TIMEOUT 120 LABELS cli)
         endif()
     endforeach()
     if(TARGET cahn_hilliard AND OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
@@ -56,7 +56,7 @@ if(OpenPFC_BUILD_TESTS)
             add_test(NAME cahn-hilliard-diagnostics-workflow
                 COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/tests/cahn_hilliard_diagnostics_smoke.py
                     --binary $<TARGET_FILE:cahn_hilliard> --mpiexec ${MPIEXEC_EXECUTABLE})
-            set_tests_properties(cahn-hilliard-diagnostics-workflow PROPERTIES TIMEOUT 180 PROCESSORS 2)
+            set_tests_properties(cahn-hilliard-diagnostics-workflow PROPERTIES TIMEOUT 180 PROCESSORS 2 LABELS smoke)
         endif()
     endif()
 endif()

@@ -20,6 +20,7 @@ if(OpenPFC_BUILD_TESTS)
                        PASS_REGULAR_EXPRESSION
                        "polycrystal_shear status=ok grid=4x4x4 steps_completed=2"
                        TIMEOUT 180)
+  openpfc_app_smoke_test(polycrystal-shear-smoke)
   if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
      (NOT DEFINED OpenPFC_MPI_TEST_MAX_WORLD_SIZE OR
       OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR

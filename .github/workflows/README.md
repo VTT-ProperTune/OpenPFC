@@ -13,7 +13,7 @@ This directory contains CI/CD workflows for the OpenPFC project.
 
 | Event | What runs | Typical time |
 | --- | --- | --- |
-| Pull request | Relevant static checks; selected GCC 13 Release components and Python tooling; documentation rendering for documentation changes | scope dependent |
+| Pull request | Relevant static checks; the GCC 13 Release build and `ctest -L` selection of the changed components, Python tooling; documentation rendering for documentation changes | component dependent |
 | Push to master | The pull-request jobs plus the small matrix: GCC 13 Debug with the 3/4/6-rank multigrid transfers and the benchmark compile, the Clang compile check, packaging, CUDA and HIP compile-only | ~45 min |
 | Monthly (and on demand) | `compatibility.yml`, then coverage, clang-tidy and ASan on the following days | a few hours |
 
@@ -23,30 +23,28 @@ Every job runs in `VTT-ProperTune/OpenPFC` only; forks and copies skip them.
 
 Runs on: pull requests to master, pushes to master, `workflow_dispatch`.
 
-`scope` classifies the complete base/head diff (including deleted paths and
-both sides of renames). `code-quality` always checks REUSE; its C++ checks run
-only for C++ selections. `build-and-test` and `python-tests` run when selected.
-`debug-and-mpi`, `clang-compile`, `packaging-smoke`, `cuda-compile` and
-`hip-compile` run on integration only. `CI Status` requires every selected job to succeed, rejects
-failures/cancellations, and permits only deliberately unselected jobs to skip.
-A newer pull-request push cancels the running check; master runs are not cancelled.
+`changes` classifies the pull-request diff with declared path filters
+(`dorny/paths-filter`, pinned): `apps` (`apps/*/**`), `examples`, `cli`
+(`tools/openpfc/`, `tests/cli/`), `python` (`scripts/**/*.py`) and `shared`
+(every other non-documentation path, including CMake, `include/`, `src/`,
+`tests/` and the workflows). Documentation paths select nothing here;
+`docs.yml` renders them. The installed CLI packages the applications and
+examples, so `cli` together with either is `shared`. Master and dispatch
+runs select everything. The selection is printed to the job summary.
 
 1. Code Quality: clang-format 20 (advisory), REUSE compliance, kernel
    layering, GPU memcpy single-source, app self-containment and the
    accelerator build policy (`scripts/check_gpu_ci_policy.py`).
 2. Release build (`build-and-test`): on master/dispatch, build all apps and
-   examples and run full CTest including 2-rank MPI. On PRs,
-   `scripts/ci/scope.py` uses CMake's target codemodel and CTest registration
-   backtraces to build/test changed apps, examples or the native CLI. App-only
-   changes build only targets owned by those apps. Shared library/build files
-   and unknown paths select a broader build, library unit/integration tests,
-   SDK/native CLI contracts and at least one smoke check per consumer directory.
-   Complete app/example regression coverage remains in the master tier.
-   Empty change lists select broader checks; unmapped components fail rather
-   than silently selecting nothing. Selected targets/tests are printed and saved
-   as `build/pr-selection.json`. Test selection preserves the two-rank cap and
-   existing per-test timeouts; it does not change numerical acceptance criteria.
-   Release remains the `scripts/build.sh` default and module configuration.
+   examples and run full CTest including 2-rank MPI. On pull requests the
+   job builds the CMake directory targets of the selected components
+   (`apps/<name>/all`, `examples/all`, the native CLI) or everything for a
+   shared change, and runs `ctest -L` with the labels registered in CMake:
+   `app:<name>` and `examples` for component changes; `library`, `cli` and
+   `smoke` (one named test per application and lesson theme) for shared
+   changes. `docs/development/testing.md` lists the labels. The two-rank
+   cap and per-test timeouts are unchanged; selection never changes
+   numerical acceptance criteria.
 3. `debug-and-mpi`: GCC 13 Debug `ctest`, the multigrid plan on 3, 4 and 6
    oversubscribed ranks, and the benchmark compile.
 4. `clang-compile`: clang-18 builds the library and the test TU that
@@ -54,12 +52,17 @@ A newer pull-request push cancels the running check; master runs are not cancell
 5. `packaging-smoke`: install and build `find_package(OpenPFC)` consumers.
 6. `cuda-compile` / `hip-compile`: compile-only in the official CUDA and ROCm
    images, without HeFFTe; required on every master push.
+7. `CI Status`: one YAML condition. Every job the event selected must have
+   succeeded; a selected job that failed, was cancelled or was skipped
+   fails the status, and jobs the selection left out may skip.
+   `scripts/check_gpu_ci_policy.py` keeps the GPU compile jobs in that
+   condition.
 
-Python script changes select `scripts/tests`; CI control changes also exercise
-the selection-policy regressions and the broader C++ path. When both jobs are
-selected, Python tests consume the built native CLI artifact so packaging tests
-exercise that entry point instead of skipping for a missing executable. Documentation-only
-PRs have no C++ build/test job; `docs.yml` renders changed documentation.
+Python script changes run `scripts/tests`; when a C++ job also runs, the
+Python tests consume the built native CLI artifact so packaging tests
+exercise that entry point instead of skipping for a missing executable.
+A newer pull-request push cancels the running check; master runs are not
+cancelled.
 
 Host jobs set up through `.github/actions/setup-build` (apt packages and the
 cached HeFFTe build).

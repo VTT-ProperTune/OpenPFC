@@ -1,6 +1,10 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
+# Every example test carries the CTest label `examples`; the lessons named
+# below are also `smoke` and run for shared C++ changes.
+set_directory_properties(PROPERTIES LABELS examples)
+
 # add_executable(01_hello_world 01_hello_world.cpp)
 # target_link_libraries(01_hello_world PRIVATE OpenPFC::openpfc)
 
@@ -505,6 +509,12 @@ if(OpenPFC_BUILD_TESTS)
   add_executable(test_example_eigensystem tests/eigensystem.cpp)
   target_link_libraries(test_example_eigensystem PRIVATE OpenPFC::openpfc nlohmann_json::nlohmann_json)
   add_test(NAME example-eigensystem-reference COMMAND test_example_eigensystem)
+
+  # Consumer smoke set for shared C++ changes: one quick lesson per theme.
+  set_property(TEST example-periodic-differentiation example-15-finite-difference-heat
+                    example-03-parallel-fft example-08-discrete-fields example-square-poisson
+                    example-checkpoint-restart example-12-cahn-hilliard
+               APPEND PROPERTY LABELS smoke)
 endif()
 
 if(OpenPFC_BUILD_TESTS AND MPIEXEC_EXECUTABLE)

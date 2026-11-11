@@ -49,6 +49,33 @@ MPI CTest targets are optional because many laptops and CI runners cannot launch
 
 VTK writer tests and other targets may `add_test` separately under `tests/unit/frontend/io/` — use `ctest -N` to list everything after configure.
 
+## CTest labels
+
+Every registered test carries a label that names the component it checks;
+`ctest --print-labels` lists them after configure and `ctest -L <regex>`
+selects by label. The pull-request tier of `.github/workflows/ci.yml` runs
+exactly these selections, so `ctest -N -L ...` shows what CI will run.
+
+| Label | Set in | Tests |
+|-------|--------|-------|
+| `library` | `tests/CMakeLists.txt` (directory property) | everything under `tests/`, including `openpfc-all-tests` and the `mpi_*` suites |
+| `cli` | `cmake/Installation.cmake` | `NativeCLI_*` and `openpfc-cli-*-smoke`, the installed native CLI contracts |
+| `app:<name>` | `apps/CMakeLists.txt` (`openpfc_add_app`) | every test of `apps/<name>/` |
+| `examples` | `examples/CMakeLists.txt` (directory property) | every lesson check |
+| `smoke` | `openpfc_app_smoke_test(<test>)` in each `apps/*/CMakeLists.txt`; the `smoke` list in `examples/CMakeLists.txt` | one quick CPU test per application and lesson theme; what a shared C++ change runs for every consumer |
+| `gpu`, `dirichlet`, `required-device` | `tests/unit/runtime/gpu/` | device qualification suites (see below) |
+
+An application that registers tests must name exactly one smoke test, or
+configure fails; pick the test that exercises the maintained executable or
+its model in a few seconds. Build one component with the CMake directory
+target, for example `cmake --build build --target apps/heat3d/all`.
+
+```bash
+ctest -L '^smoke$'                 # consumer smoke set
+ctest -L '^app:tungsten$'          # one application
+ctest -L '^(library|cli|smoke)$'   # the shared pull-request selection
+```
+
 ## Consistent MPI test sessions
 
 MPI Catch2 runners use the private `tests/fixtures/session.hpp` helper. It

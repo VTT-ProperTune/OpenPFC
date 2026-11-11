@@ -144,6 +144,7 @@ if(HEAT3D_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
       Catch2::Catch2
     )
     add_test(NAME heat3d-operator-evaluation COMMAND test_heat3d_operator_evaluation)
+    openpfc_app_smoke_test(heat3d-operator-evaluation)
 
     # rhs() pattern structural tests (not a numerical vs-legacy baseline)
     add_executable(test_heat3d_rhs_pattern tests/test_heat3d_rhs_pattern.cpp)

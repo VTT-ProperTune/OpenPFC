@@ -73,6 +73,7 @@ if(INVERSE_HOMOGENIZATION_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
   set_tests_properties(inverse-homogenization-homogeneous-smoke PROPERTIES
     PASS_REGULAR_EXPRESSION "HOMOGENIZATION_CHECKSUM"
     TIMEOUT 180)
+  openpfc_app_smoke_test(inverse-homogenization-homogeneous-smoke)
   add_test(NAME inverse-homogenization-rotating-cubes-smoke
            COMMAND $<TARGET_FILE:openpfc_homogenize>
                    --shape=rotating-cubes --nx=16 --ny=16 --nz=16

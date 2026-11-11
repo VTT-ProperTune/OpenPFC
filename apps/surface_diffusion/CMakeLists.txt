@@ -60,6 +60,7 @@ if(SURFACE_DIFFUSION_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     target_link_libraries(test_surface_diffusion PRIVATE Catch2::Catch2)
     include(CTest)
     add_test(NAME surface-diffusion-all-tests COMMAND test_surface_diffusion)
+    openpfc_app_smoke_test(surface-diffusion-all-tests)
 
     if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
       surface_diffusion_hip_executable(test_surface_diffusion_hip

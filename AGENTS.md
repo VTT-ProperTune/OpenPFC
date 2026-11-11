@@ -85,10 +85,15 @@ Workflows live in [`.github/workflows/`](.github/workflows) (see its README);
 do not change them unasked. A merge waits only for checks an active ruleset
 requires.
 
-- **Pull request:** `ci.yml` selects components from the base/head diff.
-  Doc-only changes run REUSE and documentation checks without a C++ build;
-  shared or unclassified changes run library tests, SDK contracts and
-  consumer smoke checks, with the fallback reason logged.
+- **Pull request:** the `changes` job in `ci.yml` classifies the diff with
+  declared path filters (`apps`, `examples`, `cli`, `python`, everything
+  else `shared`). Doc-only changes run REUSE and documentation checks
+  without a C++ build; an app-only change builds `apps/<name>/all` and runs
+  `ctest -L '^app:<name>$'`; shared or unclassified changes build
+  everything and run `ctest -L '^(library|cli|smoke)$'`: the library suite,
+  the installed-CLI contracts and the one named smoke test per application
+  and lesson theme (`openpfc_app_smoke_test()` in each `apps/*/CMakeLists.txt`,
+  the `smoke` list in `examples/CMakeLists.txt`).
 - **Push to master:** adds the full routine CTest suite, GCC 13 Debug with
   3/4/6-rank multigrid transfers, benchmark compile, clang-18 compile,
   packaging smoke and CUDA/HIP compile-only (no GPU). Device and GPU

@@ -114,6 +114,7 @@ if(CAHN_HILLIARD_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     add_test(NAME cahn-hilliard-all-tests COMMAND test_cahn_hilliard)
     add_test(NAME cahn-hilliard-bounded COMMAND test_cahn_hilliard "[bounded]")
     set_tests_properties(cahn-hilliard-bounded PROPERTIES TIMEOUT 120)
+    openpfc_app_smoke_test(cahn-hilliard-bounded)
     add_test(NAME cahn-hilliard-elastic-coupled
              COMMAND test_cahn_hilliard "[elastic_coupled]")
     set_tests_properties(cahn-hilliard-elastic-coupled PROPERTIES TIMEOUT 180)

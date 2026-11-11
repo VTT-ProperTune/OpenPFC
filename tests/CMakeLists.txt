@@ -5,6 +5,10 @@
 
 find_package(Catch2 REQUIRED)
 
+# Every test registered under tests/ carries the CTest label `library`
+# (`ctest -L '^library$'`); GPU suites add their own labels below.
+set_directory_properties(PROPERTIES LABELS library)
+
 # Create test executable with just the runner initially
 add_executable(openpfc-tests runtests.cpp)
 target_sources(openpfc-tests PRIVATE

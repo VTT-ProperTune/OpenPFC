@@ -17,3 +17,17 @@ function(openpfc_app_link_cxx_runtime target)
     set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH "${runtime_dir}")
   endif()
 endfunction()
+
+# Each application names exactly one quick CPU test as its smoke check.
+# `ctest -L '^smoke$'` is what a shared C++ change runs for every consumer;
+# apps/CMakeLists.txt refuses an application that registers tests without
+# one (or with several).
+function(openpfc_app_smoke_test test)
+  if(NOT TEST ${test})
+    message(FATAL_ERROR "openpfc_app_smoke_test: no test named ${test}")
+  endif()
+  set_property(TEST ${test} APPEND PROPERTY LABELS smoke)
+  # Applications may call project() themselves; the directory name is the key.
+  get_filename_component(_app "${CMAKE_CURRENT_SOURCE_DIR}" NAME)
+  set_property(GLOBAL APPEND PROPERTY OPENPFC_APP_SMOKE_TESTS "${_app}=${test}")
+endfunction()

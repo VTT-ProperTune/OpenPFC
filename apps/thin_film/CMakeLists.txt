@@ -67,6 +67,7 @@ if(THIN_FILM_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     target_link_libraries(test_thin_film PRIVATE Catch2::Catch2)
     include(CTest)
     add_test(NAME thin-film-all-tests COMMAND test_thin_film)
+    openpfc_app_smoke_test(thin-film-all-tests)
 
     if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
       thin_film_hip_executable(test_thin_film_hip tests/test_thin_film_gpu.cpp)

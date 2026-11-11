@@ -50,6 +50,7 @@ if(KAWAHARA_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     target_link_libraries(test_kawahara PRIVATE Catch2::Catch2)
     include(CTest)
     add_test(NAME kawahara-all-tests COMMAND test_kawahara)
+    openpfc_app_smoke_test(kawahara-all-tests)
 
     if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
       kawahara_hip_executable(test_kawahara_hip tests/test_kawahara_gpu.cpp)

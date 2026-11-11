@@ -52,6 +52,7 @@ if(GRADIENT_ELASTICITY_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     target_link_libraries(test_gradient_elasticity PRIVATE Catch2::Catch2)
     include(CTest)
     add_test(NAME gradient-elasticity-all-tests COMMAND test_gradient_elasticity)
+    openpfc_app_smoke_test(gradient-elasticity-all-tests)
 
     if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
       gradient_elasticity_hip_executable(test_gradient_elasticity_hip
