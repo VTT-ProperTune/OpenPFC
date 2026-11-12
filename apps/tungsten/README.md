@@ -131,8 +131,25 @@ dumps and new checkpoints use this separate output directory.
 
 Keep the original `t0`, `dt`, domain, physics parameters, and the ordered
 `boundary_conditions` configuration. The moving-BC keys are `type`, `target`,
-`rho_low`, `rho_high`, `width`, `alpha`, `disp`, and `xpos`. Here `xpos` is
-the original configured position; restart replaces it with the saved front.
+`rho_low`, `rho_high`, `width`, `alpha`, `disp`, `xpos` and the optional
+`mode` and `threshold`. Here `xpos` is the original configured position;
+restart replaces it with the saved front.
+
+The front is the last x column whose statistic exceeds the threshold.
+`mode` selects the statistic: `amplitude` (default) compares the column
+maximum minus the column mean, the crystal's peak height above the local
+melt level, with a fraction (`threshold`, default `0.5`) of the strongest
+column's amplitude; it does not depend on the melt density level, the
+reservoir band (a damped crystal) and weak nuclei ahead of the front stay
+liquid, and a low-amplitude crystal is still found. `mean_field` compares
+the column mean with the midpoint of `rho_high` and `rho_low`, for a model
+whose solid and liquid differ in mean density or for a smooth field such as
+a concentration; here the melt sits at `rho_high`, so it does not apply.
+`cutoff` is the historical rule, the column maximum above the absolute
+level `0.1`. The shipped cases pin `"mode": "cutoff"`: their recorded
+trajectories and the restart tests depend on that rule, which also counts
+weak nuclei ahead of the front as solid and so advances faster than the
+amplitude tracker. `threshold` overrides the default of any mode.
 Do not combine `restart_from` with `simulator.increment` or
 `simulator.result_counter`. Initial conditions may be omitted on restart.
 

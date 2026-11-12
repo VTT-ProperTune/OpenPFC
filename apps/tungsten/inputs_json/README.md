@@ -85,4 +85,4 @@ Supported initial condition types:
 
 Supported boundary condition types:
 - `fixed`: Maintain field values at boundaries
-- `moving`: Allow boundaries to move over time
+- `moving`: Allow boundaries to move over time. The shipped cases pin `"mode": "cutoff"` (the historical column maximum above `0.1`) so their trajectories are unchanged; omit `mode` for the default `amplitude` tracker, see `apps/tungsten/README.md`.

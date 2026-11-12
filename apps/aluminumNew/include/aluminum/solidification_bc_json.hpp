@@ -13,6 +13,7 @@
  */
 
 #include <stdexcept>
+#include <string>
 
 #include <aluminum/fixed_bc.hpp>
 #include <aluminum/moving_bc.hpp>
@@ -73,6 +74,23 @@ inline void from_json(const pfc::ui::json &j, MovingBC &bc) {
   bc.set_alpha(j["alpha"]);
   bc.set_disp(j["disp"]);
   bc.set_xpos(j["xpos"]);
+  // Front tracker: `mode` selects the per-column statistic (default
+  // amplitude), `threshold` overrides its default. Unknown modes and a
+  // non-numeric threshold fail closed.
+  if (j.contains("mode")) {
+    if (!j["mode"].is_string()) {
+      throw std::invalid_argument("Invalid JSON input: 'mode' must be one of "
+                                  "cutoff, mean_field, amplitude.");
+    }
+    bc.set_tracker(front_tracker_from_string(j["mode"].get<std::string>()));
+  }
+  if (j.contains("threshold")) {
+    if (!j["threshold"].is_number()) {
+      throw std::invalid_argument(
+          "Invalid JSON input: 'threshold' must be a number.");
+    }
+    bc.set_threshold(j["threshold"]);
+  }
 }
 
 /** Register JSON `"fixed"` / `"moving"` on the process-wide catalog. */

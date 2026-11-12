@@ -59,6 +59,7 @@ rho = -0.047
 target = "psi"
 type = "moving"
 xpos = 139.17225402106772  # MovingBC needs a numeric start; matches the JSON twin
+mode = "cutoff"
 rho_low = -0.464
 rho_high = -0.10
 width = 3.0

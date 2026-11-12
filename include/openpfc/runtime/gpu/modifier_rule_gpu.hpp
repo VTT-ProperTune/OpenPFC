@@ -24,9 +24,10 @@
  *   follow `PointwiseGeometry::coords`, the same formula as the host
  *   `field::apply_inplace`, so host and device rules see the same points.
  *
- * - `column_max_x` reduces a device field to the maximum over y and z of each
- *   local x column and returns those `nx` values on the host: the only data a
- *   front tracker needs, instead of the whole field.
+ * - `column_max_x` and `column_sum_x` reduce a device field to the maximum
+ *   and the sum over y and z of each local x column and return those `nx`
+ *   values on the host: the only data a front tracker needs (maximum, mean or
+ *   their difference per column), instead of the whole field.
  *
  * Both synchronise before returning, as boundary conditions run between
  * default-stream transforms.
@@ -73,6 +74,14 @@ void column_max_x_cuda_impl(const PointwiseGeometry &g, const double *field,
 void column_max_x_hip_impl(const PointwiseGeometry &g, const double *field,
                            double *out_host);
 #endif
+#if defined(OpenPFC_ENABLE_CUDA)
+void column_sum_x_cuda_impl(const PointwiseGeometry &g, const double *field,
+                            double *out_host);
+#endif
+#if defined(OpenPFC_ENABLE_HIP)
+void column_sum_x_hip_impl(const PointwiseGeometry &g, const double *field,
+                           double *out_host);
+#endif
 
 /// Max over y and z of each local x column of a device field (host result).
 inline std::vector<double> column_max_x(const PointwiseGeometry &g,
@@ -83,6 +92,19 @@ inline std::vector<double> column_max_x(const PointwiseGeometry &g,
   column_max_x_cuda_impl(g, field, out.data());
 #else
   column_max_x_hip_impl(g, field, out.data());
+#endif
+  return out;
+}
+
+/// Sum over y and z of each local x column of a device field (host result).
+inline std::vector<double> column_sum_x(const PointwiseGeometry &g,
+                                        const double *field) {
+  std::vector<double> out(static_cast<std::size_t>(g.nx));
+  if (g.volume() == 0) return out;
+#if defined(OpenPFC_ENABLE_CUDA)
+  column_sum_x_cuda_impl(g, field, out.data());
+#else
+  column_sum_x_hip_impl(g, field, out.data());
 #endif
   return out;
 }

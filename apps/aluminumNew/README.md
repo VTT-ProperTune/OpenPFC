@@ -30,7 +30,11 @@ and isothermal controls are the bounded results at this stage. The
 periodic-unwrapping seam used by the prescribed temperature field remains
 fixed at the case's initial `x_initial` station, while the temperature
 profile's time dependence uses `V_grid` and the density reservoir tracks its
-own `MovingBC` position. There is no feedback from the measured crystal
+own `MovingBC` position. The preset pins `"mode": "cutoff"`, the historical
+column maximum above `0.1`, because its trajectory and this app's directional
+test depend on that rule; the `mode` and `threshold` keys of the `moving`
+boundary select another column statistic (default `amplitude`), see the
+tungsten README. There is no feedback from the measured crystal
 interface or moving density reservoir into that temperature seam. A reservoir
 position must not be interpreted as a physical solidification front.
 

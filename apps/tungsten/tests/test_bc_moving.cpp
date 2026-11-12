@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <stdexcept>
 #include <vector>
 
 #include <catch2/catch_approx.hpp>
@@ -174,4 +175,107 @@ TEST_CASE("MovingBC - MPI collectives fail closed", "[bc_moving]") {
 
   REQUIRE_NOTHROW(bc.apply(psi, domain, box));
   REQUIRE(bc.get_xpos() >= 0.0);
+}
+
+namespace {
+
+// 32 columns of 4x4 cells: solid (columns 0..11) oscillates +-amp around
+// rho_high, liquid (12..31) sits at rho_low. The solid amplitude is so low
+// that no sample reaches the historical 0.1 cutoff.
+struct LowAmplitudeFront {
+  static constexpr double rho_low = -0.46;
+  static constexpr double rho_high = -0.10;
+  static constexpr double amp = 0.05;
+  static constexpr int front_index = 11;
+  pfc::Domain domain = pfc::domain::create(pfc::GridSize({32, 4, 4}),
+                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                           pfc::GridSpacing({1.0, 1.0, 1.0}));
+  pfc::Box3i box = pfc::domain::index_box(domain);
+  std::vector<double> psi;
+
+  LowAmplitudeFront() : psi(static_cast<size_t>(box.count()), 0.0) {
+    const int nx = box.size[0];
+    long idx = 0;
+    for (int k = box.low[2]; k <= box.high[2]; k++) {
+      for (int j = box.low[1]; j <= box.high[1]; j++) {
+        for (int i = 0; i < nx; i++) {
+          const bool solid = i <= front_index;
+          const double sign = ((i + j + k) % 2 == 0) ? 1.0 : -1.0;
+          psi[idx++] = solid ? rho_high + sign * amp : rho_low;
+        }
+      }
+    }
+  }
+
+  MovingBC tracker() const {
+    MovingBC bc(rho_low, rho_high);
+    bc.set_disp(0.0);
+    bc.set_xpos(0.0);
+    bc.set_xwidth(1.0);
+    return bc;
+  }
+};
+
+} // namespace
+
+TEST_CASE("MovingBC tracks a low-amplitude front by its mean level", "[bc_moving]") {
+  LowAmplitudeFront f;
+
+  SECTION(
+      "the default amplitude tracker finds it, relative to the strongest column") {
+    MovingBC bc = f.tracker();
+    REQUIRE(bc.get_tracker() == tungsten::FrontTracker::amplitude);
+    REQUIRE_FALSE(bc.has_explicit_threshold());
+    REQUIRE(bc.get_threshold() == Approx(0.5));
+    bc.apply(f.psi, f.domain, f.box);
+    REQUIRE(bc.get_xpos() == Approx(double(f.front_index)));
+  }
+
+  SECTION("amplitude ignores the melt level: a shifted field still tracks") {
+    MovingBC bc = f.tracker();
+    for (auto &v : f.psi) v += 5.0;
+    bc.apply(f.psi, f.domain, f.box);
+    REQUIRE(bc.get_xpos() == Approx(double(f.front_index)));
+  }
+
+  SECTION("an amplitude fraction above one marks nothing solid") {
+    MovingBC bc = f.tracker();
+    bc.set_threshold(1.5);
+    REQUIRE(bc.has_explicit_threshold());
+    bc.apply(f.psi, f.domain, f.box);
+    REQUIRE(bc.get_xpos() == Approx(0.0));
+  }
+
+  SECTION("a uniform field has no crystal and no front") {
+    MovingBC bc = f.tracker();
+    std::fill(f.psi.begin(), f.psi.end(), f.rho_high);
+    bc.apply(f.psi, f.domain, f.box);
+    REQUIRE(bc.get_xpos() == Approx(0.0));
+  }
+
+  SECTION("mean_field finds it from the density jump at the midpoint") {
+    MovingBC bc = f.tracker();
+    bc.set_tracker(tungsten::FrontTracker::mean_field);
+    REQUIRE(bc.get_threshold() == Approx(0.5 * (f.rho_low + f.rho_high)));
+    bc.apply(f.psi, f.domain, f.box);
+    REQUIRE(bc.get_xpos() == Approx(double(f.front_index)));
+  }
+
+  SECTION("the historical cutoff cannot see this front") {
+    MovingBC bc = f.tracker();
+    bc.set_tracker(tungsten::FrontTracker::cutoff);
+    REQUIRE(bc.get_threshold() == Approx(0.1));
+    bc.apply(f.psi, f.domain, f.box);
+    REQUIRE(bc.get_xpos() == Approx(0.0));
+  }
+}
+
+TEST_CASE("MovingBC front tracker names round-trip", "[bc_moving]") {
+  for (const auto mode :
+       {tungsten::FrontTracker::cutoff, tungsten::FrontTracker::mean_field,
+        tungsten::FrontTracker::amplitude}) {
+    REQUIRE(tungsten::front_tracker_from_string(tungsten::to_string(mode)) == mode);
+  }
+  REQUIRE_THROWS_AS(tungsten::front_tracker_from_string("peak"),
+                    std::invalid_argument);
 }

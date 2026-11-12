@@ -69,3 +69,4 @@ width = 15.0
 alpha = 1.0
 disp = 40.0
 xpos = 127.17225402106772
+mode = "cutoff"

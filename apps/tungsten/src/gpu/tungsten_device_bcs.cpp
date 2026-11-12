@@ -33,9 +33,10 @@ const pfc::RegisterDeviceModifier<tungsten::MovingBC> moving_bc{
        const pfc::Domain &domain, const pfc::Box3i &box, double /*time*/) {
       auto &bc = static_cast<tungsten::MovingBC &>(m);
       const auto g = gpu::pointwise_geometry(domain, box);
-      // Only the column maxima leave the device; the front tracking and its
-      // MPI reduction are the host code the CPU path runs.
-      bc.track_front(gpu::column_max_x(g, field.data), domain, box);
+      // Only the column maxima and sums leave the device; the front tracking
+      // and its MPI reduction are the host code the CPU path runs.
+      bc.track_front(gpu::column_max_x(g, field.data),
+                     gpu::column_sum_x(g, field.data), domain, box);
       gpu::modifier_rule_apply(g, field.data, bc.band_rule(domain));
     }};
 

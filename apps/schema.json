@@ -685,6 +685,19 @@
                     },
                     "xpos": {
                         "type": "number"
+                    },
+                    "mode": {
+                        "description": "Front tracker: column maximum minus column mean of the target field compared with a fraction (threshold, default 0.5) of the strongest column's amplitude (amplitude, default), column mean against the midpoint of rho_high and rho_low (mean_field, for models with a solid-liquid density jump), or the historical column maximum above the absolute level 0.1 (cutoff).",
+                        "type": "string",
+                        "enum": [
+                            "amplitude",
+                            "mean_field",
+                            "cutoff"
+                        ]
+                    },
+                    "threshold": {
+                        "description": "Explicit tracker threshold; replaces the mode's default (a fraction of the strongest column amplitude for amplitude, a density level otherwise).",
+                        "type": "number"
                     }
                 },
                 "required": [

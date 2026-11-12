@@ -3,7 +3,7 @@
 
 /**
  * @file column_reduce_gpu.inc
- * @brief Single-source x-column maximum (included from vendor .cu/.hip).
+ * @brief Single-source x-column maximum and sum (included from vendor .cu/.hip).
  *
  * Do not include this from a host TU.
  *
@@ -36,8 +36,24 @@ __global__ void column_max_x_kernel(PointwiseGeometry g, const double *field,
   out[i] = m;
 }
 
-void launch_column_max_x(const PointwiseGeometry &g, const double *field,
-                         double *out_host) {
+// Same traversal, sequential sum per column (the host loop sums in the same
+// order within a column, so host and device trackers see the same mean up to
+// the usual reassociation across rows).
+__global__ void column_sum_x_kernel(PointwiseGeometry g, const double *field,
+                                    double *out) {
+  const int i = static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x);
+  if (i >= g.nx) return;
+  double s = 0.0;
+  const std::size_t rows = static_cast<std::size_t>(g.ny) * g.nz;
+  for (std::size_t r = 0; r < rows; ++r) {
+    s += field[r * g.nx + i];
+  }
+  out[i] = s;
+}
+
+template <bool Sum>
+void launch_column_reduce_x(const PointwiseGeometry &g, const double *field,
+                            double *out_host) {
   // A small reused device buffer: this runs once per boundary-condition step.
   static thread_local double *buffer = nullptr;
   static thread_local int capacity = 0;
@@ -50,8 +66,12 @@ void launch_column_max_x(const PointwiseGeometry &g, const double *field,
   }
   if (err == ::pfc::gpuSuccess) {
     constexpr int threads = 128;
-    column_max_x_kernel<<<(g.nx + threads - 1) / threads, threads>>>(g, field,
-                                                                     buffer);
+    const int blocks = (g.nx + threads - 1) / threads;
+    if constexpr (Sum) {
+      column_sum_x_kernel<<<blocks, threads>>>(g, field, buffer);
+    } else {
+      column_max_x_kernel<<<blocks, threads>>>(g, field, buffer);
+    }
     err = ::pfc::gpuGetLastError();
   }
   if (err == ::pfc::gpuSuccess) {
@@ -60,7 +80,7 @@ void launch_column_max_x(const PointwiseGeometry &g, const double *field,
                            ::pfc::gpuMemcpyDeviceToHost);
   }
   if (err != ::pfc::gpuSuccess) {
-    throw std::runtime_error(std::string("column_max_x: ") +
+    throw std::runtime_error(std::string(Sum ? "column_sum_x: " : "column_max_x: ") +
                              ::pfc::gpuGetErrorString(err));
   }
 }
@@ -70,14 +90,22 @@ void launch_column_max_x(const PointwiseGeometry &g, const double *field,
 #if defined(OpenPFC_ENABLE_CUDA) && defined(OPENPFC_GPU_API_CUDA)
 void column_max_x_cuda_impl(const PointwiseGeometry &g, const double *field,
                             double *out_host) {
-  launch_column_max_x(g, field, out_host);
+  launch_column_reduce_x<false>(g, field, out_host);
+}
+void column_sum_x_cuda_impl(const PointwiseGeometry &g, const double *field,
+                            double *out_host) {
+  launch_column_reduce_x<true>(g, field, out_host);
 }
 #endif
 
 #if defined(OpenPFC_ENABLE_HIP) && defined(OPENPFC_GPU_API_HIP)
 void column_max_x_hip_impl(const PointwiseGeometry &g, const double *field,
                            double *out_host) {
-  launch_column_max_x(g, field, out_host);
+  launch_column_reduce_x<false>(g, field, out_host);
+}
+void column_sum_x_hip_impl(const PointwiseGeometry &g, const double *field,
+                           double *out_host) {
+  launch_column_reduce_x<true>(g, field, out_host);
 }
 #endif
 

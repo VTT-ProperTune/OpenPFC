@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#include <stdexcept>
 #include <type_traits>
 #include <vector>
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <openpfc/frontend/ui/field_modifier_registry.hpp>
@@ -115,4 +117,40 @@ TEST_CASE("app-local FixedBC/MovingBC JSON catalog", "[boundary_conditions][unit
   REQUIRE(moving->get_modifier_name() == "MovingBC");
   REQUIRE(dynamic_cast<MovingBC *>(moving.get()) != nullptr);
   REQUIRE(dynamic_cast<MovingBC *>(moving.get())->get_xpos() == 10.0);
+  // Without `mode`/`threshold` the tracker is amplitude at half the strongest
+  // column.
+  const auto *bc = dynamic_cast<MovingBC *>(moving.get());
+  REQUIRE(bc->get_tracker() == tungsten::FrontTracker::amplitude);
+  REQUIRE_FALSE(bc->has_explicit_threshold());
+  REQUIRE(bc->get_threshold() == Catch::Approx(0.5));
+
+  json mean_j = moving_j;
+  mean_j["mode"] = "mean_field";
+  auto mean = catalog.create_modifier("moving", mean_j);
+  REQUIRE(dynamic_cast<MovingBC *>(mean.get())->get_tracker() ==
+          tungsten::FrontTracker::mean_field);
+  REQUIRE(dynamic_cast<MovingBC *>(mean.get())->get_threshold() ==
+          Catch::Approx(-0.1));
+
+  json amplitude_j = moving_j;
+  amplitude_j["mode"] = "amplitude";
+  amplitude_j["threshold"] = 0.3;
+  auto amplitude = catalog.create_modifier("moving", amplitude_j);
+  REQUIRE(dynamic_cast<MovingBC *>(amplitude.get())->get_tracker() ==
+          tungsten::FrontTracker::amplitude);
+  REQUIRE(dynamic_cast<MovingBC *>(amplitude.get())->get_threshold() == 0.3);
+
+  json cutoff_j = moving_j;
+  cutoff_j["mode"] = "cutoff";
+  auto cutoff = catalog.create_modifier("moving", cutoff_j);
+  REQUIRE(dynamic_cast<MovingBC *>(cutoff.get())->get_threshold() == 0.1);
+
+  json bad_mode = moving_j;
+  bad_mode["mode"] = "peak";
+  REQUIRE_THROWS_AS(catalog.create_modifier("moving", bad_mode),
+                    std::invalid_argument);
+  json bad_threshold = moving_j;
+  bad_threshold["threshold"] = "0.2";
+  REQUIRE_THROWS_AS(catalog.create_modifier("moving", bad_threshold),
+                    std::invalid_argument);
 }

@@ -58,7 +58,8 @@
             "width": 2.0,
             "alpha": 1.0,
             "disp": 8.0,
-            "xpos": 0.0
+            "xpos": 0.0,
+            "mode": "cutoff"
         }
     ]
 }

@@ -7,6 +7,18 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- The `moving` solidification boundary (tungsten, aluminum) tracks the
+  front with a per-column statistic chosen by the new JSON/TOML key `mode`:
+  `amplitude` (default) marks a column solid when its maximum minus its
+  mean exceeds a fraction (`threshold`, default `0.5`) of the strongest
+  column's amplitude, independent of the melt density level; `mean_field`
+  compares the column mean with the midpoint of `rho_high` and `rho_low`
+  for models with a solid-liquid density jump or smooth fields; `cutoff`
+  keeps the historical column maximum above the absolute level `0.1`. The
+  shipped moving presets pin `cutoff`, so their trajectories are unchanged.
+  The device path gains `column_sum_x` beside `column_max_x`; checkpoint
+  state is unchanged (#857, GitHub #45).
+
 - CI selection moved from a Python scheduler to CMake and CTest. Every
   test now carries a CTest label (`library`, `cli`, `app:<name>`,
   `examples`, `smoke`); each application names its one smoke test with

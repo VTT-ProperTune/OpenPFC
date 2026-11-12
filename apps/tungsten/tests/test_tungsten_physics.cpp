@@ -316,6 +316,9 @@ TEST_CASE("TungstenSession moving boundary survives checkpoint and restart",
   full["fields"] = {
       {{"name", "psi"}, {"data", (root / "full" / "psi_%d.bin").string()}}};
   full["initial_conditions"][0]["n0"] = 0.2;
+  // The uniform n0 = 0.2 field has no crystal amplitude; the historical
+  // absolute cutoff counts it solid, which is what this restart check of the
+  // tracker state relies on.
   full["boundary_conditions"] = json::array({{{"type", "moving"},
                                               {"target", "psi"},
                                               {"rho_low", -0.1},
@@ -323,7 +326,8 @@ TEST_CASE("TungstenSession moving boundary survives checkpoint and restart",
                                               {"width", 1.0},
                                               {"alpha", 1.0},
                                               {"disp", 2.0},
-                                              {"xpos", 0.0}}});
+                                              {"xpos", 0.0},
+                                              {"mode", "cutoff"}}});
   full["checkpoint"] = {{"every", 2}, {"directory", (root / "full").string()}};
   tungsten::TungstenSession continuous(full, rank, nproc);
   continuous.run();
