@@ -51,6 +51,7 @@ private:
   int m_Nx = 1, m_Ny = 2, m_Nz = 2;
   double m_X0 = 0.0, m_radius = 0.0;
   double m_rho = 0.0, m_amplitude = 0.0;
+  Lattice m_lattice = Lattice::bcc;
 
 public:
   // Setters
@@ -61,6 +62,8 @@ public:
   void set_radius(double radius) { m_radius = radius; }
   void set_density(double rho) { m_rho = rho; }
   void set_amplitude(double amplitude) { m_amplitude = amplitude; }
+  /// BCC (six `{110}` waves, default) or FCC (four `<111>` waves) per seed.
+  void set_lattice(Lattice lattice) { m_lattice = lattice; }
 
   // Getters
   int get_Nx() const { return m_Nx; }
@@ -70,6 +73,7 @@ public:
   double get_radius() const { return m_radius; }
   double get_density() const { return m_rho; }
   double get_amplitude() const { return m_amplitude; }
+  Lattice get_lattice() const { return m_lattice; }
 
   SeedGrid() = default;
 
@@ -122,7 +126,7 @@ public:
                                                   Z0 + (Dz * k) + rt(re)};
           const std::array<double, 3> orientation = {rr(re), rr(re), rr(re)};
           const Seed seed(location, orientation, get_radius(), get_density(),
-                          get_amplitude());
+                          get_amplitude(), get_lattice());
           seeds.push_back(seed);
         }
       }

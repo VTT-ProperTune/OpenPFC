@@ -21,11 +21,15 @@
  * No backend classes, no k-loops, no hand-written kernels.
  */
 
+#include <algorithm>
 #include <cmath>
+#include <limits>
 #include <nlohmann/json.hpp>
+#include <openpfc/frontend/ui/lattice_json.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/execution/memory_space.hpp>
+#include <openpfc/kernel/simulation/lattice.hpp>
 #include <openpfc/kernel/simulation/parameter_schema.hpp>
 #include <openpfc/kernel/simulation/physics_concepts.hpp>
 #include <openpfc/kernel/simulation/simulation_state.hpp>
@@ -67,7 +71,9 @@ namespace aluminum {
  *   unused parameter: it can disagree with the one that acts.
  *
  * Unknown keys are ignored by `ParameterSchema`, so inputs that still carry
- * the removed seven load unchanged.
+ * the removed seven load unchanged. The one non-numeric key, `lattice`
+ * (`"fcc"` default, or `"bcc"`), is read separately by `apply_aluminum_json`
+ * and selects the correlation shells of `P(k)`.
  */
 struct AluminumSchemaValues {
   double T0{coefficient_value("T0")};
@@ -119,6 +125,8 @@ struct AluminumSchemaValues {
 }
 
 struct AluminumParams : AluminumSchemaValues {
+  /// Correlation shells of `P(k)` and the lattice handed to seed ICs.
+  pfc::Lattice lattice{pfc::Lattice::fcc};
   double tau_const{0.0};
   double q2_bar{0.0};
   double q2_bar_L{0.0};
@@ -231,17 +239,32 @@ inline pfc::sim::ParameterSchema<AluminumSchemaValues> make_aluminum_schema() {
 
 inline void apply_aluminum_json(const nlohmann::json &j, AluminumParams &p) {
   apply_schema_values(make_aluminum_schema().parse(j), p);
+  // `ParameterSchema` holds numbers only; the lattice is a string enum.
+  if (const auto lattice = pfc::ui::lattice_from_json(j, "model.params")) {
+    p.lattice = *lattice;
+  }
+}
+
+/**
+ * @brief Gaussian correlation peak of width `alpha` on each shell of the
+ *        lattice, taking the largest (FCC: the Gen-1 dual Gaussian at
+ *        `|k| = 1` and `2/sqrt(3)`; BCC: the single shell `|k| = 1`).
+ */
+[[nodiscard]] inline double correlation_peak(double k_laplacian, double alpha,
+                                             pfc::Lattice lattice) {
+  const double alpha2 = 2.0 * alpha * alpha;
+  const double k_abs = std::sqrt(-k_laplacian);
+  double peak = -std::numeric_limits<double>::infinity();
+  for (const double shell : pfc::correlation_shells(lattice)) {
+    const double dk = k_abs - shell;
+    peak = std::max(peak, std::exp(-(dk * dk) / alpha2));
+  }
+  return peak;
 }
 
 /** FCC dual-Gaussian peak used by Gen-1 `P_F` (not tungsten's C2). */
 [[nodiscard]] inline double fcc_correlation_peak(double k_laplacian, double alpha) {
-  const double alpha2 = 2.0 * alpha * alpha;
-  const double k_abs = std::sqrt(-k_laplacian);
-  const double k_wave = k_abs - 1.0;
-  const double kp = k_abs - 2.0 / std::sqrt(3.0);
-  const double g1 = std::exp(-(k_wave * k_wave) / alpha2);
-  const double gp1 = std::exp(-(kp * kp) / alpha2);
-  return (g1 > gp1) ? g1 : gp1;
+  return correlation_peak(k_laplacian, alpha, pfc::Lattice::fcc);
 }
 
 /**
@@ -296,8 +319,11 @@ struct AluminumPhysics {
     return std::exp(k_laplacian / lambda2);
   }
 
+  /// Lattice the `P(k)` shells and the seed ICs describe (JSON `lattice`).
+  [[nodiscard]] pfc::Lattice lattice() const noexcept { return params.lattice; }
+
   [[nodiscard]] double correlation_kernel(double k_laplacian) const {
-    const double peak = fcc_correlation_peak(k_laplacian, params.alpha);
+    const double peak = correlation_peak(k_laplacian, params.alpha, params.lattice);
     return params.Bx * std::exp(-params.tau_const) * peak;
   }
 

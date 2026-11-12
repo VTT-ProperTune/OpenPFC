@@ -591,3 +591,133 @@ TEST_CASE("Tungsten direct FFTW retains complete accepted fields",
   REQUIRE(accepted == states.size());
   REQUIRE(accepted == 11); // initial state plus ten accepted timesteps
 }
+
+// ---------------------------------------------------------------------------
+// Lattice choice (#855): the C2 peak follows the lattice's correlation shells,
+// and the session hands the same lattice to the seed initial conditions.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+/// The 0.2.0 single-shell C2 peak factor (Gaussian inside |k| = 1, parabola
+/// outside), written out independently of `physics_for_mode`.
+double legacy_bcc_peak(double k_laplacian,
+                       const tungsten::spectral::OperatorParams &p) {
+  const double k_val = std::sqrt(-k_laplacian) - 1.0;
+  const double k2 = k_val * k_val;
+  const double rTol = -p.alpha2 * std::log(p.alpha_farTol) - 1.0;
+  const double g1 =
+      (p.alpha_highOrd == 0)
+          ? std::exp(-k2 / p.alpha2)
+          : std::exp(-(k2 + rTol * std::pow(k_val, p.alpha_highOrd)) / p.alpha2);
+  const double g2 = 1.0 - 1.0 / p.alpha2 * k2;
+  return (k_val < 0.0) ? g1 : g2;
+}
+
+} // namespace
+
+TEST_CASE("Tungsten C2 peak: BCC is the single-shell 0.2.0 profile, FCC adds "
+          "the 2/sqrt(3) shell",
+          "[tungsten][physics][lattice]") {
+  TungstenParams params;
+  tungsten::apply_tungsten_json(tungsten_params_json(), params);
+  REQUIRE(params.get_lattice() == pfc::Lattice::bcc);
+  const auto bcc = tungsten::spectral::make_operator_params(params);
+  params.set_lattice(pfc::Lattice::fcc);
+  const auto fcc = tungsten::spectral::make_operator_params(params);
+  REQUIRE(fcc.lattice == pfc::Lattice::fcc);
+  const double peak_scale = bcc.Bx * std::exp(-bcc.T / bcc.T0);
+
+  for (double k_abs = 0.05; k_abs < 2.5; k_abs += 0.05) {
+    const double k_lap = -k_abs * k_abs;
+    const auto mode_bcc = tungsten::spectral::physics_for_mode(k_lap, bcc);
+    const auto mode_fcc = tungsten::spectral::physics_for_mode(k_lap, fcc);
+    // BCC: identical to the legacy formula, so the goldens cannot move.
+    const double op_bcc_expected = bcc.stabP + bcc.p2_bar -
+                                   peak_scale * legacy_bcc_peak(k_lap, bcc) +
+                                   bcc.q2_bar * mode_bcc.filterMF;
+    REQUIRE_THAT(mode_bcc.opCk, WithinRel(op_bcc_expected, 1e-14));
+    // FCC: never a weaker peak than BCC (max over shells), identical below
+    // the first shell where only that shell's Gaussian is in play.
+    REQUIRE(mode_fcc.opCk <= mode_bcc.opCk + 1e-14);
+    if (k_abs < 1.0) REQUIRE_THAT(mode_fcc.opCk, WithinRel(mode_bcc.opCk, 1e-14));
+  }
+
+  // On the {200} shell the FCC peak is at full height; BCC sees only the
+  // first shell's parabola there (about 5% lower for alpha = 0.5).
+  const double k200 = 2.0 / std::sqrt(3.0);
+  const double k_lap = -k200 * k200;
+  const auto mode_bcc = tungsten::spectral::physics_for_mode(k_lap, bcc);
+  const auto mode_fcc = tungsten::spectral::physics_for_mode(k_lap, fcc);
+  const double op_full_peak =
+      fcc.stabP + fcc.p2_bar - peak_scale + fcc.q2_bar * mode_fcc.filterMF;
+  REQUIRE_THAT(mode_fcc.opCk, WithinRel(op_full_peak, 1e-14));
+  const double op_bcc_parabola = bcc.stabP + bcc.p2_bar -
+                                 peak_scale * legacy_bcc_peak(k_lap, bcc) +
+                                 bcc.q2_bar * mode_bcc.filterMF;
+  REQUIRE_THAT(mode_bcc.opCk, WithinRel(op_bcc_parabola, 1e-14));
+  REQUIRE(legacy_bcc_peak(k_lap, bcc) < 1.0);
+  REQUIRE(mode_bcc.opCk > mode_fcc.opCk);
+
+  // The physics object reports its lattice and reads the JSON key.
+  const auto domain = pfc::domain::create({8, 8, 8});
+  const auto box = pfc::Box3i::from_bounds({0, 0, 0}, {7, 7, 7});
+  json j = tungsten_params_json();
+  REQUIRE(tungsten::TungstenPhysics<>::from_json(j, domain, box).lattice() ==
+          pfc::Lattice::bcc);
+  j["lattice"] = "fcc";
+  const auto phys = tungsten::TungstenPhysics<>::from_json(j, domain, box);
+  REQUIRE(phys.lattice() == pfc::Lattice::fcc);
+  REQUIRE_THAT(phys.linear_symbol(k_lap), WithinRel(k_lap * mode_fcc.opCk, 1e-14));
+  j["lattice"] = "hcp";
+  REQUIRE_THROWS_AS(tungsten::TungstenPhysics<>::from_json(j, domain, box),
+                    std::invalid_argument);
+  j["lattice"] = 2;
+  REQUIRE_THROWS_AS(tungsten::TungstenPhysics<>::from_json(j, domain, box),
+                    std::invalid_argument);
+}
+
+TEST_CASE("TungstenSession hands model.params.lattice to the seed ICs",
+          "[tungsten][session][lattice]") {
+  int nproc = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  REQUIRE(nproc == 1);
+
+  // 16 cells of spacing 1 from -8: a grid node sits at the origin, where
+  // every seed wave has cos = 1, so the centre value counts the waves.
+  constexpr int N = 16;
+  json settings = golden_settings(N, 0.01, 0.01);
+  settings["domain"]["lower"] = {-8.0, -8.0, -8.0};
+  settings["domain"]["upper"] = {8.0, 8.0, 8.0};
+  settings["initial_conditions"] =
+      json::array({{{"target", "psi"}, {"type", "constant"}, {"n0", -0.4}},
+                   {{"target", "psi"},
+                    {"type", "single_seed"},
+                    {"amp_eq", 0.2},
+                    {"rho_seed", -0.4}}});
+  const std::size_t origin_index = 8 + N * (8 + N * 8);
+
+  SECTION("omitted everywhere: BCC, six waves") {
+    tungsten::TungstenSession session(settings, 0, 1, MPI_COMM_WORLD);
+    REQUIRE_THAT(session.psi().vec()[origin_index],
+                 WithinRel(-0.4 + 12.0 * 0.2, 1e-12));
+  }
+  SECTION("model fcc, seed key omitted: the seed inherits four waves") {
+    settings["model"]["params"]["lattice"] = "fcc";
+    tungsten::TungstenSession session(settings, 0, 1, MPI_COMM_WORLD);
+    REQUIRE_THAT(session.psi().vec()[origin_index],
+                 WithinRel(-0.4 + 8.0 * 0.2, 1e-12));
+  }
+  SECTION("model fcc, seed fcc: consistent") {
+    settings["model"]["params"]["lattice"] = "fcc";
+    settings["initial_conditions"][1]["lattice"] = "fcc";
+    tungsten::TungstenSession session(settings, 0, 1, MPI_COMM_WORLD);
+    REQUIRE_THAT(session.psi().vec()[origin_index],
+                 WithinRel(-0.4 + 8.0 * 0.2, 1e-12));
+  }
+  SECTION("model bcc (default), seed fcc: rejected") {
+    settings["initial_conditions"][1]["lattice"] = "fcc";
+    REQUIRE_THROWS_WITH(tungsten::TungstenSession(settings, 0, 1, MPI_COMM_WORLD),
+                        Catch::Matchers::ContainsSubstring("model.params.lattice"));
+  }
+}

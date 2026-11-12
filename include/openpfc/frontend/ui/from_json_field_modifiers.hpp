@@ -16,6 +16,7 @@
 #include <vector>
 
 #include <openpfc/frontend/ui/from_json_fwd.hpp>
+#include <openpfc/frontend/ui/lattice_json.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/constant.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/file_reader.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/fourier_modes.hpp>
@@ -61,6 +62,9 @@ inline void from_json(const json &j, SingleSeed &seed) {
 
   seed.set_amplitude(j["amp_eq"]);
   seed.set_density(j["rho_seed"]);
+  if (const auto lattice = lattice_from_json(j, "single_seed")) {
+    seed.set_lattice(*lattice);
+  }
 }
 
 inline void from_json(const json &j, RandomSeeds &ic) {
@@ -81,6 +85,9 @@ inline void from_json(const json &j, RandomSeeds &ic) {
 
   ic.set_amplitude(j["amplitude"]);
   ic.set_density(j["rho"]);
+  if (const auto lattice = lattice_from_json(j, "random_seeds")) {
+    ic.set_lattice(*lattice);
+  }
 }
 
 inline void from_json(const json &j, SeedGrid &ic) {
@@ -130,6 +137,9 @@ inline void from_json(const json &j, SeedGrid &ic) {
   ic.set_radius(j["radius"]);
   ic.set_amplitude(j["amplitude"]);
   ic.set_density(j["rho"]);
+  if (const auto lattice = lattice_from_json(j, "seed_grid")) {
+    ic.set_lattice(*lattice);
+  }
 }
 
 inline void from_json(const json &j, FileReader &ic) {

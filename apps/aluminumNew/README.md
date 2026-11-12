@@ -72,7 +72,7 @@ run as shipped and again with only the seed radius changed, each continued to
 | 30 | 29.6 -> gone | 0.84 -> 0.03 | dissolved by `t = 200` |
 
 Every seed shrinks at first, and that is the mechanism rather than an
-artefact: `SeedFCC` writes a diffuse profile (amplitude 0.4, peak `psi` 3.16)
+artefact: `seed_grid_fcc` writes a diffuse profile (amplitude 0.4, peak `psi` 3.16)
 that must relax onto the model's own much larger solid amplitude (peak `psi`
 near 5), and the radius a seed spends paying for that relaxation decides
 whether anything is left to grow. So the melt is only just undercooled, growth
@@ -132,6 +132,19 @@ reports every missing field at once, and `smoke.json` spells them out.
 Unknown keys are ignored, so an input that still carries the removed seven
 loads unchanged -- but it no longer implies that they do anything.
 
+One optional non-numeric key is read: `lattice`, `"fcc"` (default) or
+`"bcc"`. It selects the radial shells the isotropic correlation peak `P(k)`
+sits on -- `|k| = 1` and the `{200}` shell `|k| = 2/sqrt(3)` for FCC (the
+Gen-1 dual Gaussian, unchanged), `|k| = 1` alone for BCC -- and the session
+hands the same lattice to the library seed initial conditions `single_seed`,
+`seed_grid` and `random_seeds`, which then build each seed from the
+lattice's first-shell wave vectors (four `<111>` for FCC, six `{110}` for
+BCC). A seed naming a different lattice than the model is rejected. The
+app's own `seed_grid_fcc` is FCC by name and takes no `lattice` key. The
+shared vector and shell table is
+`include/openpfc/kernel/simulation/lattice.hpp`. Choosing `bcc` changes the
+shells only, not the fitted aluminium coefficients.
+
 ### The temperature profile, and its clamp
 
 `temperature_variation(x, t)` returns `G_grid * (x_unwrapped - x_initial -
@@ -187,7 +200,7 @@ into the model-coefficient table as if each preset shared a fixed value.
 | `timestepping.t0`, `t1`, `dt`, `saveat` | Numerical run horizon, integrator step and output cadence. | reduced time; `dt > 0` |
 | `constant.n0` | Melt-background density, from the initial-condition record (current shipped value `-0.006`). | reduced amplitude, uncited representative |
 | `seed_grid_fcc.X0`, `Ny`, `Nz` | Absolute seed station and seed-grid counts; chosen in each case. | reduced length, counts ≥1 |
-| `seed_grid_fcc.radius`, `amplitude`, `rho`, `rseed` | Seed-envelope radius, crystalline-wave amplitude (`SeedFCC` adds `2 amplitude cos(k·x)` per wave), solid reference density and random seed. The large demo uses radius 120, the nucleus study 60, and both use amplitude 0.4. | reduced length, reduced amplitude, reduced amplitude, dimensionless pseudorandom seed; `radius>0` |
+| `seed_grid_fcc.radius`, `amplitude`, `rho`, `rseed` | Seed-envelope radius, crystalline-wave amplitude (each seed adds `2 amplitude cos(k·x)` per `<111>` wave), solid reference density and random seed. The large demo uses radius 120, the nucleus study 60, and both use amplitude 0.4. | reduced length, reduced amplitude, reduced amplitude, dimensionless pseudorandom seed; `radius>0` |
 | `fixed.rho_low`, `rho_high` | Density-reservoir values in the fixed boundary; from the case record. | reduced amplitude, uncited representative |
 | `FixedBC::xwidth`, `alpha` | The *currently hardcoded* fixed-reservoir band half-width `20` and sigmoid sharpness `1`; these are not JSON parameters in this implementation. | reduced length, inverse reduced length |
 | `moving.rho_low`, `rho_high`, `width`, `alpha`, `disp`, `xpos` | Directional preset's separately configured density reservoir, half-width, sigmoid sharpness, tracking offset and checkpointed position; not a measured physical crystal-front position. | reduced amplitude; length; inverse length; length; length |
@@ -232,9 +245,8 @@ A matching `aluminumNew.toml` is provided for TOML workflows. Adjust `results`, 
 | `src/gpu/aluminum_pointwise.inc` (`.cu` / `.hip`) | Device instantiation of the pointwise nonlinearity |
 | `include/aluminum/aluminum_physics.hpp` | Schema, k-space symbols (`linear_symbol`, `filter_mf`, `correlation_kernel`, `nonlinear_symbol`), `pointwise()` |
 | `include/aluminum/aluminum_pointwise.hpp` | `OPENPFC_HD` functor: `N`, free-energy density, `temperature_variation(x, t)` |
-| `include/aluminum/seed_grid_fcc.hpp` | `seed_grid_fcc` catalog `FieldModifier` (registered by `aluminum::register_catalog()`) |
+| `include/aluminum/seed_grid_fcc.hpp` | `seed_grid_fcc` catalog `FieldModifier` (registered by `aluminum::register_catalog()`), built on the library `pfc::Seed` with `pfc::Lattice::fcc` |
 | `include/aluminum/aluminum_session.hpp` | Session aliases + `register_catalog()` |
-| `SeedFCC.hpp` | FCC seed helper used by `seed_grid_fcc` |
 
 ## See also
 

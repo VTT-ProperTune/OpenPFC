@@ -81,6 +81,10 @@ Supported initial condition types:
 - `random_seeds`: Create random crystal seeds
 - `from_file`: Load field from file
 
+The three seed types take an optional `lattice` (`"bcc"` or `"fcc"`). Leave
+it out: the session fills in `model.params.lattice` (default `bcc`), and a
+seed naming a different lattice than the model is an error.
+
 ## Boundary Conditions
 
 Supported boundary condition types:

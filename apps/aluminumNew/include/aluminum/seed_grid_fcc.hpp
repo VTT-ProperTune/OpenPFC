@@ -10,9 +10,11 @@
  * @details
  * A catalog `FieldModifier` (JSON `"type": "seed_grid_fcc"`) so the aluminum
  * binaries and tests use the same IC path as every other 0.2 session. RNG and
- * `SeedFCC` geometry match Gen-1 `SeedGridFCC` (pinned by the aluminum 5-step
- * CPU checksum). Cells outside every seed are left untouched, so it composes
- * with a preceding `constant` IC.
+ * seed geometry (`pfc::Seed` with `pfc::Lattice::fcc`, the four `<111>`
+ * waves) match Gen-1 `SeedGridFCC` (pinned by the aluminum 5-step CPU
+ * checksum). Cells outside every seed are left untouched, so it composes
+ * with a preceding `constant` IC. Unlike the library `seed_grid`, the
+ * lattice is fixed by the type name.
  */
 
 #include <array>
@@ -25,13 +27,14 @@
 
 #include <nlohmann/json.hpp>
 
-#include <SeedFCC.hpp>
 #include <openpfc/frontend/ui/field_modifier_registry.hpp>
 #include <openpfc/frontend/ui/from_json_field_modifiers.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/field/state_access.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
+#include <openpfc/kernel/simulation/initial_conditions/seed.hpp>
+#include <openpfc/kernel/simulation/lattice.hpp>
 
 namespace aluminum {
 
@@ -66,7 +69,7 @@ public:
     std::mt19937_64 re(static_cast<std::mt19937_64::result_type>(m_rseed));
     std::uniform_real_distribution<double> rt(-0.2 * m_radius, 0.2 * m_radius);
     std::uniform_real_distribution<double> rr(0.0, 2.0 * std::numbers::pi);
-    std::vector<SeedFCC> seeds;
+    std::vector<pfc::Seed> seeds;
     seeds.reserve(static_cast<std::size_t>(m_Ny * m_Nz));
     for (int j = 0; j < m_Ny; ++j) {
       for (int k = 0; k < m_Nz; ++k) {
@@ -74,7 +77,8 @@ public:
             m_X0 + rt(re), Y0 + Dy * static_cast<double>(j) + rt(re),
             Z0 + Dz * static_cast<double>(k) + rt(re)};
         const std::array<double, 3> orientation = {rr(re), rr(re), rr(re)};
-        seeds.emplace_back(location, orientation, m_radius, m_rho, m_amplitude);
+        seeds.emplace_back(location, orientation, m_radius, m_rho, m_amplitude,
+                           pfc::Lattice::fcc);
       }
     }
     const int nx = box.size[0];

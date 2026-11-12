@@ -72,6 +72,14 @@ Tungsten (`apps/tungsten`) accepts optional thermal-drive keys on `model.params`
 
 The linear ETD symbol still uses the JSON reference `T`. Only the real-space mean-field cubic (`q3`) sees the local temperature. CPU, CUDA, and HIP share `TungstenPointwise`. See [`apps/tungsten/README.md`](../../apps/tungsten/README.md).
 
+Tungsten and aluminum (`apps/aluminumNew`) also accept one string key on `model.params`:
+
+| Key | Type | Meaning |
+|-----|------|---------|
+| `lattice` | `"bcc"` or `"fcc"` | Radial shells the isotropic correlation peak sits on (`\|k\| = 1` for BCC; `\|k\| = 1` and `2/sqrt(3)` for FCC) and the wave set of the seed initial conditions. Default `bcc` for tungsten, `fcc` for aluminum, i.e. the 0.2.0 operators. Anything else is rejected. |
+
+The session copies this lattice into every `single_seed`, `seed_grid` and `random_seeds` entry that leaves its own `lattice` key out, and rejects an entry that names a different one, so the seed geometry and the operator describe the same crystal (`include/openpfc/kernel/simulation/lattice.hpp`).
+
 ## Result writers
 
 When `saveat > 0` and `fields` is present, `parse_result_writers_from_json` constructs a catalog writer per entry (default `"binary"` → `BinaryWriter`):
@@ -86,7 +94,7 @@ When `saveat > 0` and `fields` is present, `parse_result_writers_from_json` cons
 
 | Key | Type | Meaning |
 |-----|------|---------|
-| `initial_conditions` | array | Objects with `type`, optional `target`, type-specific fields |
+| `initial_conditions` | array | Objects with `type`, optional `target`, type-specific fields. The built-in seeds `single_seed`, `seed_grid`, `random_seeds` take an optional `lattice` (`"bcc"`, `"fcc"`; see Model) |
 | `boundary_conditions` | array | Same pattern |
 
 Modifier types must be **registered** in `main` before `App` runs (`register_field_modifier<…>`). See [`app_pipeline.md`](../user_guide/app_pipeline.md) and `examples/initialization/catalog/model.cpp`.

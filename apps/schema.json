@@ -275,6 +275,11 @@
                                 "type": "integer",
                                 "description": "power of the higher order component of the gaussian function. Should be a multiple of 2. Setting this to zero also disables the tolerance setting."
                             },
+                            "lattice": {
+                                "type": "string",
+                                "enum": ["bcc", "fcc"],
+                                "description": "correlation shells of C2 and the wave set of the seed initial conditions; default bcc"
+                            },
                             "lambda": {
                                 "type": "number",
                                 "description": "strength of the meanfield filter"
@@ -417,6 +422,11 @@
                             "alpha_highOrd": {
                                 "type": "integer"
                             },
+                            "lattice": {
+                                "type": "string",
+                                "enum": ["bcc", "fcc"],
+                                "description": "correlation shells of P(k) and the wave set of the seed initial conditions; default fcc"
+                            },
                             "lambda": {
                                 "type": "number"
                             },
@@ -504,6 +514,11 @@
                     },
                     "rho_seed": {
                         "type": "number"
+                    },
+                    "lattice": {
+                        "type": "string",
+                        "enum": ["bcc", "fcc"],
+                        "description": "wave set of each seed; defaults to the model's lattice"
                     }
                 },
                 "required": [
@@ -537,6 +552,11 @@
                     },
                     "X0": {
                         "type": "number"
+                    },
+                    "lattice": {
+                        "type": "string",
+                        "enum": ["bcc", "fcc"],
+                        "description": "wave set of each seed; defaults to the model's lattice"
                     },
                     "Ny": {
                         "type": "integer"

@@ -23,6 +23,7 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_simulation_lifecycle.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_session_selection.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_results_writer_domain.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_lattice.cpp
 )
 if(OpenPFC_ENABLE_HEFFTE)
   target_sources(openpfc-tests PRIVATE

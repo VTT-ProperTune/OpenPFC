@@ -6,6 +6,8 @@
 
 #include <cmath>
 
+#include <openpfc/kernel/simulation/lattice.hpp>
+
 /**
  * @file tungsten_params.hpp
  * @brief Tungsten model parameters structure
@@ -59,6 +61,7 @@ private:
   double m_V_grid = 0.0;     ///< Frame velocity used in T_var(x, t)
   double m_x_initial = 0.0;  ///< Initial solidification-front position
   double m_xpos = 0.0;       ///< Current front position (starts as x_initial)
+  pfc::Lattice m_lattice = pfc::Lattice::bcc; ///< Peak shells of C2 (bcc/fcc)
 
 public:
   /**
@@ -363,6 +366,10 @@ public:
   double get_V_grid() const { return m_V_grid; }
   double get_x_initial() const { return m_x_initial; }
   double get_xpos() const { return m_xpos; }
+
+  /// Lattice whose correlation shells C2 peaks on (JSON `lattice`, default BCC).
+  void set_lattice(pfc::Lattice lattice) { m_lattice = lattice; }
+  pfc::Lattice get_lattice() const { return m_lattice; }
 
   // ============================================================================
   // Getters for derived parameters (calculated on-the-fly)

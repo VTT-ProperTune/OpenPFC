@@ -22,9 +22,11 @@
  */
 
 #include <nlohmann/json.hpp>
+#include <openpfc/frontend/ui/lattice_json.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/execution/memory_space.hpp>
+#include <openpfc/kernel/simulation/lattice.hpp>
 #include <openpfc/kernel/simulation/parameter_schema.hpp>
 #include <openpfc/kernel/simulation/physics_concepts.hpp>
 #include <openpfc/kernel/simulation/simulation_state.hpp>
@@ -167,6 +169,10 @@ inline pfc::sim::ParameterSchema<TungstenSchemaValues> make_tungsten_schema() {
 
 inline void apply_tungsten_json(const nlohmann::json &j, TungstenParams &p) {
   apply_schema_values(make_tungsten_schema().parse(j), p);
+  // `ParameterSchema` holds numbers only; the lattice is a string enum.
+  if (const auto lattice = pfc::ui::lattice_from_json(j, "model.params")) {
+    p.set_lattice(*lattice);
+  }
 }
 
 /**
@@ -202,6 +208,11 @@ struct TungstenPhysics {
   void declare_fields(pfc::SimulationState &state) const {
     pfc::sim::add_declared_field<RealType, MemorySpace>(state, "psi", domain, box,
                                                         0);
+  }
+
+  /// Lattice the C2 peak shells and the seed ICs describe (JSON `lattice`).
+  [[nodiscard]] pfc::Lattice lattice() const noexcept {
+    return params.get_lattice();
   }
 
   [[nodiscard]] double linear_symbol(double k_laplacian) const {

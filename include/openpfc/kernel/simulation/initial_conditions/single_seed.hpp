@@ -34,14 +34,17 @@
 
 #include <array>
 #include <cmath>
+#include <span>
 
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
+#include <openpfc/kernel/simulation/lattice.hpp>
 
 namespace pfc {
 
 class SingleSeed : public FieldModifier {
   double amp_eq = 0.0, rho_seed = 0.0;
+  Lattice m_lattice = Lattice::bcc;
 
 public:
   void set_amplitude(double amplitude) { amp_eq = amplitude; }
@@ -50,17 +53,14 @@ public:
   void set_density(double density) { rho_seed = density; }
   double get_density() const { return rho_seed; }
 
+  /// BCC (six `{110}` waves, default) or FCC (four `<111>` waves).
+  void set_lattice(Lattice lattice) { m_lattice = lattice; }
+  Lattice get_lattice() const { return m_lattice; }
+
   void apply(pfc::field::FieldOutput<double> field, const Domain &domain,
              const Box3i &box, double time = 0.0) override {
     (void)time;
-    const double s = 1.0 / sqrt(2.0);
-    const std::array<double, 3> q1 = {s, s, 0};
-    const std::array<double, 3> q2 = {s, 0, s};
-    const std::array<double, 3> q3 = {0, s, s};
-    const std::array<double, 3> q4 = {s, 0, -s};
-    const std::array<double, 3> q5 = {s, -s, 0};
-    const std::array<double, 3> q6 = {0, s, -s};
-    const std::array<std::array<double, 3>, 6> q = {q1, q2, q3, q4, q5, q6};
+    const std::span<const std::array<double, 3>> q = reciprocal_vectors(m_lattice);
 
     const double r2 = pow(64.0, 2);
     const double amplitude = amp_eq;
@@ -73,12 +73,7 @@ public:
       if (x * x + y * y + z * z >= r2) {
         return 0.0;
       }
-      double u = rho;
-      for (int qi = 0; qi < 6; ++qi) {
-        u += 2.0 * amplitude *
-             std::cos((q[qi][0] * x) + (q[qi][1] * y) + (q[qi][2] * z));
-      }
-      return u;
+      return one_mode_density(q, X, rho, amplitude);
     });
   }
 };

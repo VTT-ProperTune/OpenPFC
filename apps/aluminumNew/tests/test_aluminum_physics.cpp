@@ -253,3 +253,38 @@ TEST_CASE("AluminumPhysics declares psi on SimulationState",
   REQUIRE(state.has_field("psi"));
   REQUIRE(state.get_field<double>("psi").size() == 8 * 8 * 8);
 }
+
+TEST_CASE("Aluminum P(k) peak follows the lattice shells (#855)",
+          "[aluminum][physics][lattice]") {
+  const double alpha = 0.2;
+  const double k200 = 2.0 / std::sqrt(3.0);
+  // FCC is the Gen-1 dual Gaussian: full height on both shells.
+  REQUIRE(aluminum::correlation_peak(-1.0, alpha, pfc::Lattice::fcc) == Approx(1.0));
+  REQUIRE(aluminum::correlation_peak(-k200 * k200, alpha, pfc::Lattice::fcc) ==
+          Approx(1.0));
+  REQUIRE(aluminum::fcc_correlation_peak(-k200 * k200, alpha) == Approx(1.0));
+  // BCC keeps only |k| = 1; the {200} shell is a plain Gaussian tail there.
+  REQUIRE(aluminum::correlation_peak(-1.0, alpha, pfc::Lattice::bcc) == Approx(1.0));
+  const double dk = k200 - 1.0;
+  REQUIRE(aluminum::correlation_peak(-k200 * k200, alpha, pfc::Lattice::bcc) ==
+          Approx(std::exp(-dk * dk / (2.0 * alpha * alpha))));
+  for (double k = 0.1; k < 2.0; k += 0.1) {
+    REQUIRE(aluminum::correlation_peak(-k * k, alpha, pfc::Lattice::bcc) <=
+            aluminum::correlation_peak(-k * k, alpha, pfc::Lattice::fcc) + 1e-15);
+  }
+
+  const auto domain = pfc::domain::create({8, 8, 8});
+  const auto box = pfc::Box3i::from_bounds({0, 0, 0}, {7, 7, 7});
+  json j = aluminum_params_json();
+  const auto fcc = aluminum::AluminumPhysics<>::from_json(j, domain, box);
+  REQUIRE(fcc.lattice() == pfc::Lattice::fcc);
+  j["lattice"] = "bcc";
+  const auto bcc = aluminum::AluminumPhysics<>::from_json(j, domain, box);
+  REQUIRE(bcc.lattice() == pfc::Lattice::bcc);
+  REQUIRE(bcc.correlation_kernel(-k200 * k200) <
+          fcc.correlation_kernel(-k200 * k200));
+  REQUIRE(bcc.correlation_kernel(-1.0) == Approx(fcc.correlation_kernel(-1.0)));
+  j["lattice"] = "sc";
+  REQUIRE_THROWS_AS(aluminum::AluminumPhysics<>::from_json(j, domain, box),
+                    std::invalid_argument);
+}

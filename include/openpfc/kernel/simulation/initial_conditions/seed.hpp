@@ -29,6 +29,10 @@
 
 #include <array>
 #include <cmath>
+#include <cstddef>
+#include <span>
+
+#include <openpfc/kernel/simulation/lattice.hpp>
 
 namespace pfc {
 
@@ -40,10 +44,12 @@ class Seed {
 private:
   using vec3 = std::array<double, 3>;
   using mat3 = std::array<vec3, 3>;
-  using vec36 = std::array<vec3, 6>;
+  using vec36 = std::array<vec3, kMaxReciprocalVectors>;
 
   const vec3 location_;
   const vec3 orientation_;
+  const Lattice lattice_;
+  const std::size_t nq_;
   const vec36 q_;
   const double rho_;
   const double radius_;
@@ -89,20 +95,18 @@ private:
     return c;
   }
 
-  static vec36 rotate(const vec3 &orientation) {
-    const double s = 1.0 / sqrt(2.0);
-    const vec3 q1 = {s, s, 0};
-    const vec3 q2 = {s, 0, s};
-    const vec3 q3 = {0, s, s};
-    const vec3 q4 = {s, 0, -s};
-    const vec3 q5 = {s, -s, 0};
-    const vec3 q6 = {0, s, -s};
+  /// The lattice's first-shell reciprocal vectors rotated by the Euler
+  /// angles (yaw, pitch, roll); unused slots stay zero.
+  static vec36 rotate(const vec3 &orientation, Lattice lattice) {
     mat3 Ra = yaw(orientation[0]);
     mat3 Rb = pitch(orientation[1]);
     mat3 Rc = roll(orientation[2]);
     mat3 R = mult3(Ra, mult3(Rb, Rc));
-    const vec36 q = {mult3(R, q1), mult3(R, q2), mult3(R, q3),
-                     mult3(R, q4), mult3(R, q5), mult3(R, q6)};
+    vec36 q = {vec3{0.0, 0.0, 0.0}};
+    std::size_t i = 0;
+    for (const vec3 &qi : pfc::reciprocal_vectors(lattice)) {
+      q[i++] = mult3(R, qi);
+    }
     return q;
   }
 
@@ -113,10 +117,22 @@ private:
   vec36 get_q() const { return q_; }
 
 public:
+  /**
+   * @param lattice BCC (six `{110}` waves, default) or FCC (four `<111>`).
+   */
   Seed(const vec3 &location, const vec3 &orientation, const double radius,
-       const double rho, const double amplitude)
-      : location_(location), orientation_(orientation), q_(rotate(orientation_)),
-        rho_(rho), radius_(radius), amplitude_(amplitude) {}
+       const double rho, const double amplitude, Lattice lattice = Lattice::bcc)
+      : location_(location), orientation_(orientation), lattice_(lattice),
+        nq_(pfc::reciprocal_vectors(lattice).size()),
+        q_(rotate(orientation_, lattice)), rho_(rho), radius_(radius),
+        amplitude_(amplitude) {}
+
+  Lattice get_lattice() const { return lattice_; }
+
+  /// Rotated reciprocal vectors actually in use (six for BCC, four for FCC).
+  std::span<const vec3> reciprocal_vectors() const {
+    return std::span<const vec3>(q_.data(), nq_);
+  }
 
   bool is_inside(const vec3 &X) const {
     const vec3 Y = get_location();
@@ -129,16 +145,8 @@ public:
   }
 
   double get_value(const vec3 &location) const {
-    double x = location[0];
-    double y = location[1];
-    double z = location[2];
-    double u = get_rho();
-    double a = get_amplitude();
-    vec36 q = get_q();
-    for (int i = 0; i < 6; i++) {
-      u += 2.0 * a * cos((q[i][0] * x) + (q[i][1] * y) + (q[i][2] * z));
-    }
-    return u;
+    return one_mode_density(reciprocal_vectors(), location, get_rho(),
+                            get_amplitude());
   }
 };
 } // namespace pfc

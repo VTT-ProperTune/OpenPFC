@@ -44,12 +44,16 @@ namespace pfc {
 
 class RandomSeeds : public FieldModifier {
   double m_density = 0.0, m_amplitude = 0.0;
+  Lattice m_lattice = Lattice::bcc;
 
 public:
   void set_amplitude(double amplitude) { m_amplitude = amplitude; }
   double get_amplitude() const { return m_amplitude; }
   void set_density(double density) { m_density = density; }
   double get_density() const { return m_density; }
+  /// BCC (six `{110}` waves, default) or FCC (four `<111>` waves) per seed.
+  void set_lattice(Lattice lattice) { m_lattice = lattice; }
+  Lattice get_lattice() const { return m_lattice; }
 
   void apply(pfc::field::FieldOutput<double> field, const Domain &domain,
              const Box3i &box, double time = 0.0) override {
@@ -80,7 +84,8 @@ public:
     for (int i = 0; i < nseeds; i++) {
       const std::array<double, 3> location = random_location();
       const std::array<double, 3> orientation = random_orientation();
-      const Seed seed(location, orientation, radius, get_density(), get_amplitude());
+      const Seed seed(location, orientation, radius, get_density(), get_amplitude(),
+                      get_lattice());
       seeds.push_back(seed);
     }
 

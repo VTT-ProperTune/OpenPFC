@@ -101,6 +101,35 @@ Start from `inputs_json/tungsten_single_seed.json` or `inputs_toml/tungsten_sing
 
 Optional directional-solidification keys on `model.params` (same names as aluminum): `G_grid`, `V_grid`, `x_initial`. Default is isothermal (`G_grid = 0`). The linear operator stays at JSON `T`; the pointwise cubic uses `T + G (x' - x_initial - V t)`. CPU / CUDA / HIP share `tungsten_pointwise.hpp`.
 
+### Lattice: `bcc` (default) or `fcc`
+
+`model.params.lattice` selects the crystal in both places it matters. The
+correlation peak of `C2` is isotropic, so the lattice enters it as the set of
+radial shells it peaks on: `|k| = 1` alone for BCC (the 0.2.0 operator,
+unchanged), and `|k| = 1` plus the `{200}` shell `|k| = 2/sqrt(3)` for FCC,
+each shell with the same `alpha` profile and the kernel following the nearest
+one. The seed initial conditions `single_seed`, `seed_grid` and
+`random_seeds` build each seed from the lattice's first-shell wave vectors:
+six `{110}` for BCC, four `<111>` for FCC. The session copies the model's
+lattice into every seed that does not name one, so the seed geometry and the
+operator always describe the same crystal; a seed whose own `lattice` key
+differs from the model's is rejected. Omitting the key everywhere is the BCC
+case, and every shipped preset and pinned checksum stays on it.
+
+```json
+"model": { "name": "tungsten", "params": { "lattice": "fcc", ... } },
+"initial_conditions": [
+  { "target": "psi", "type": "constant", "n0": -0.4 },
+  { "target": "psi", "type": "single_seed", "amp_eq": 0.215936, "rho_seed": -0.047 }
+]
+```
+
+The shared table of wave vectors and shells is
+`include/openpfc/kernel/simulation/lattice.hpp`; tungsten and aluminum read
+it rather than keeping their own copies. Choosing `fcc` here changes the
+operator's shells only, not the fitted tungsten coefficients, so it is a
+numerical option rather than a calibrated FCC material.
+
 ## Run (from build tree)
 
 ```bash
@@ -171,7 +200,8 @@ fall on the same step.
 |------|------|
 | Physics (schema, k-space symbols, `pointwise()`) | `include/tungsten/tungsten_physics.hpp`, `tungsten_pointwise.hpp` |
 | Session aliases + catalog registration | `include/tungsten/tungsten_session.hpp` (`pfc::ui::SpectralETDSession`) |
-| ICs / BCs / writers | Framework catalogs: `constant`, `single_seed`, `seed_grid` ICs; `fixed` / `moving` reservoir BCs local to this app (`tungsten::register_catalog()`); `fields[]` writers (`binary`, `vtk`, `hdf5`) |
+| ICs / BCs / writers | Framework catalogs: `constant`, `single_seed`, `seed_grid` ICs (each takes the model's `lattice`); `fixed` / `moving` reservoir BCs local to this app (`tungsten::register_catalog()`); `fields[]` writers (`binary`, `vtk`, `hdf5`) |
+| Lattice table (wave vectors, correlation shells) | `include/openpfc/kernel/simulation/lattice.hpp` (shared with aluminum); `lattice_from_json` / seed defaulting in `include/openpfc/frontend/ui/lattice_json.hpp` |
 | Device instantiation of the nonlinearity | `src/gpu/tungsten_pointwise.inc` (stamped into `.cu` / `.hip`) |
 | Grid criteria for dealiasing | `include/tungsten/resolution.hpp`, pinned by `test_tungsten_resolution.cpp` (`[resolution]`, and `[preset]` for the qualified file) |
 | Resolution study | `src/cpu/tungsten_dealias_study.cpp` -> `out/report/data/tungsten_dealias_resolution.csv` |

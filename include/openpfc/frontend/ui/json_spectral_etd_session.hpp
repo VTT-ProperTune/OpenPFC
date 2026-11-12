@@ -54,6 +54,7 @@
 #include <openpfc/frontend/ui/from_json_simulation_session.hpp>
 #include <openpfc/frontend/ui/json_checkpoint.hpp>
 #include <openpfc/frontend/ui/json_step_profiler.hpp>
+#include <openpfc/frontend/ui/lattice_json.hpp>
 #include <openpfc/frontend/ui/results_writer_catalog.hpp>
 #include <openpfc/frontend/ui/simulation_wiring_conditions.hpp>
 #include <openpfc/frontend/ui/simulation_wiring_context.hpp>
@@ -184,9 +185,15 @@ public:
     }
 
     // Conditions from the catalog; ICs applied once, BCs kept for the loop.
+    // A physics with a lattice choice hands it to the seed ICs, so the seed
+    // geometry and the operator peaks describe one crystal (lattice_json.hpp).
     auto &modifiers = default_field_modifier_catalog();
+    nlohmann::json ic_settings = m_settings;
+    if constexpr (requires { physics.lattice(); }) {
+      apply_model_lattice_to_initial_conditions(ic_settings, physics.lattice());
+    }
     for (auto &ic :
-         parse_initial_conditions_from_json(m_settings, m_ctx, modifiers)) {
+         parse_initial_conditions_from_json(ic_settings, m_ctx, modifiers)) {
       apply_modifier(*ic, pfc::time::current(m_session.time()));
     }
     m_bcs = parse_boundary_conditions_from_json(m_settings, m_ctx, modifiers);

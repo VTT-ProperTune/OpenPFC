@@ -19,7 +19,10 @@
 #ifndef TUNGSTEN_SPECTRAL_HPP
 #define TUNGSTEN_SPECTRAL_HPP
 
+#include <algorithm>
 #include <cmath>
+#include <limits>
+#include <openpfc/kernel/simulation/lattice.hpp>
 #include <tungsten/common/tungsten_params.hpp>
 
 namespace tungsten {
@@ -62,6 +65,7 @@ struct OperatorParams {
   double stabP;
   double p2_bar;
   double q2_bar;
+  pfc::Lattice lattice = pfc::Lattice::bcc;
 };
 
 inline OperatorParams make_operator_params(const TungstenParams &params) {
@@ -71,7 +75,27 @@ inline OperatorParams make_operator_params(const TungstenParams &params) {
                         params.get_alpha_farTol(), params.get_alpha_highOrd(),
                         params.get_Bx(),           params.get_T(),
                         params.get_T0(),           params.get_stabP(),
-                        params.get_p2_bar(),       params.get_q2_bar()};
+                        params.get_p2_bar(),       params.get_q2_bar(),
+                        params.get_lattice()};
+}
+
+/**
+ * @brief C2 peak profile around one correlation shell.
+ *
+ * @param k_val Distance of `|k|` from the shell radius (negative inside).
+ * Gaussian (optionally with the higher-order tail) inside the shell, parabola
+ * outside, as in the original tungsten model.
+ */
+[[nodiscard]] inline double peak_profile(double k_val, const OperatorParams &p) {
+  const double k2 = k_val * k_val;
+  if (k_val >= 0.0) {
+    return 1.0 - 1.0 / p.alpha2 * k2;
+  }
+  if (p.alpha_highOrd == 0) {
+    return std::exp(-k2 / p.alpha2);
+  }
+  const double rTol = -p.alpha2 * std::log(p.alpha_farTol) - 1.0;
+  return std::exp(-(k2 + rTol * std::pow(k_val, p.alpha_highOrd)) / p.alpha2);
 }
 
 /**
@@ -84,19 +108,13 @@ inline OperatorParams make_operator_params(const TungstenParams &params) {
                                                   const OperatorParams &p) {
   double fMF = std::exp(k_laplacian / p.lambda2);
 
-  double k_val = std::sqrt(-k_laplacian) - 1.0;
-  double k2 = k_val * k_val;
-  double rTol = -p.alpha2 * std::log(p.alpha_farTol) - 1.0;
-
-  double g1 = 0.0;
-  if (p.alpha_highOrd == 0) {
-    g1 = std::exp(-k2 / p.alpha2);
-  } else {
-    g1 = std::exp(-(k2 + rTol * std::pow(k_val, p.alpha_highOrd)) / p.alpha2);
+  // One profile per correlation shell of the lattice (BCC: |k| = 1; FCC adds
+  // |k| = 2/sqrt(3)); the kernel follows the nearest, i.e. largest, profile.
+  const double k_abs = std::sqrt(-k_laplacian);
+  double gf = -std::numeric_limits<double>::infinity();
+  for (const double shell : pfc::correlation_shells(p.lattice)) {
+    gf = std::max(gf, peak_profile(k_abs - shell, p));
   }
-
-  double g2 = 1.0 - 1.0 / p.alpha2 * k2;
-  double gf = (k_val < 0.0) ? g1 : g2;
   double opPeak = p.Bx * std::exp(-p.T / p.T0) * gf;
   double opCk = p.stabP + p.p2_bar - opPeak + p.q2_bar * fMF;
 

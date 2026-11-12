@@ -7,6 +7,21 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Tungsten and aluminum take a first-class lattice choice, JSON/TOML key
+  `model.params.lattice` (`bcc` or `fcc`; default `bcc` for tungsten, `fcc`
+  for aluminum, so every shipped preset and pinned checksum is unchanged).
+  The key selects the radial shells of the isotropic correlation peak
+  (`|k| = 1` for BCC; `|k| = 1` and the `{200}` shell `2/sqrt(3)` for FCC) in
+  tungsten's `C2` and aluminum's `P(k)`, and the wave set of the library seed
+  initial conditions `single_seed`, `seed_grid` and `random_seeds` (six
+  `{110}` for BCC, four `<111>` for FCC), which accept the same optional
+  `lattice` key. The session copies the model's lattice into seeds that leave
+  the key out and rejects a seed naming a different one. One shared table,
+  `include/openpfc/kernel/simulation/lattice.hpp` (`pfc::Lattice`,
+  `reciprocal_vectors`, `correlation_shells`, `one_mode_density`), replaces
+  the three copies of the wave vectors; `pfc::Seed` takes a `Lattice`, and
+  aluminum's `seed_grid_fcc` is built on it (`SeedFCC.hpp` removed). Unknown
+  lattice names and non-string values fail closed (#855, GitHub #15).
 - The `moving` solidification boundary (tungsten, aluminum) tracks the
   front with a per-column statistic chosen by the new JSON/TOML key `mode`:
   `amplitude` (default) marks a column solid when its maximum minus its
