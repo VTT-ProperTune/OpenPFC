@@ -36,3 +36,19 @@ direction; introducing it up front is cheap.
   claim requires new baselines and is out of scope for 0.2.
 - Explicit-conversion discipline at type boundaries (mirrors, writers,
   checkpoint) is a review checklist item.
+
+## Amendment (2026-11-13, #854 step 1)
+
+The spectral ETD chain is now instantiated and tested in `float` as well:
+`SpectralETDSystem` / `SpectralETDSession` take the field scalar from
+`Physics::real_type` (`physics_real_t`, default `double`), `IHostFFT` and
+`IDeviceFFT` carry both precisions, and `BasicSpectralCPUStack<Real>` /
+`GPUSpectralStack<Space, Real>` bundle float fields. The k-space symbols
+stay `double` functions narrowed on upload; field modifiers and results
+writers are served through an explicit double scratch (point 3 above).
+Validation is by tolerance against the double reference
+(`[spectral_etd][float]`, the float cases of `CUDA_SpectralETD` /
+`HIP_SpectralETD`), not bitwise. Shipped apps, the JSON precision switch,
+native float I/O and checkpoints, and recorded tolerance baselines remain
+open under #854; until they land, `float` is validated for the library
+chain, not yet for a shipped session.

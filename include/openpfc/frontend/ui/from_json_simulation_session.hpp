@@ -38,7 +38,7 @@ make_simulation_session(const json &settings, int rank, int nproc,
   auto selection = from_json<pfc::sim::SessionSelection>(settings);
   auto domain = from_json<pfc::Domain>(settings);
   auto time = from_json<pfc::Time>(settings);
-  if constexpr (std::is_same_v<Stack, pfc::sim::stacks::SpectralCPUStack>) {
+  if constexpr (pfc::sim::stacks::is_spectral_cpu_stack_v<Stack>) {
     pfc::sim::require_session_for_stack(selection,
                                         pfc::sim::SimulationMethod::Spectral,
                                         pfc::sim::SimulationBackend::Cpu);
@@ -52,8 +52,8 @@ make_simulation_session(const json &settings, int rank, int nproc,
       return Stack(std::move(domain), rank, nproc, comm, choice, options);
     });
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
-  } else if constexpr (std::is_same_v<Stack, pfc::sim::stacks::GPUSpectralStack<
-                                                 pfc::CUDASpace>>) {
+  } else if constexpr (pfc::sim::stacks::is_gpu_spectral_stack_v<Stack,
+                                                                 pfc::CUDASpace>) {
     pfc::sim::require_session_for_stack(selection,
                                         pfc::sim::SimulationMethod::Spectral,
                                         pfc::sim::SimulationBackend::Cuda);
@@ -68,8 +68,8 @@ make_simulation_session(const json &settings, int rank, int nproc,
     });
 #endif
 #if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
-  } else if constexpr (std::is_same_v<Stack, pfc::sim::stacks::GPUSpectralStack<
-                                                 pfc::HIPSpace>>) {
+  } else if constexpr (pfc::sim::stacks::is_gpu_spectral_stack_v<Stack,
+                                                                 pfc::HIPSpace>) {
     pfc::sim::require_session_for_stack(selection,
                                         pfc::sim::SimulationMethod::Spectral,
                                         pfc::sim::SimulationBackend::Hip);

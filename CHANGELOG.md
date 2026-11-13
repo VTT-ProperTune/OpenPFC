@@ -7,6 +7,32 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- The spectral ETD chain runs in single precision (ADR 0006, #854, GitHub
+  #11, first step). A physics that declares `using real_type = float;` and
+  float fields drives `SpectralETDSystem` and `SpectralETDSession` with float
+  fields, float FFTs, float coefficient tables and a float candidate; the
+  k-space symbols are still prepared in double and narrowed on upload.
+  `IHostFFT` and `IDeviceFFT` carry both precisions (`forward`/`backward` on
+  `float` vectors and `DataBuffer<…, float>`; `real_buffer<Real>` /
+  `complex_buffer<Real>` aliases), implemented by the HeFFTe backend (lazy
+  float workspace), `LocalFFT` (`fftwf` plans on first use, so `fftw3f` is
+  now linked next to `fftw3`) and `SingleDeviceFFT` (`CUFFT_R2C/C2R`,
+  `rocfft_precision_single`). `SpectralETDOps<MemorySpace, Real>`,
+  `BasicSpectralCPUStack<Real>` (`SpectralCPUStack` is the double alias),
+  `GPUSpectralStack<Space, Real>` and the stack builders take the scalar;
+  `SpectralCellT<Real>` carries float samples to the pointwise functor
+  (`SpectralCell` stays the double form; a double functor serves float
+  fields through an implicit widening) and
+  `OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE_FLOAT(F)` stamps the device
+  kernel. `apply_field_modifier` accepts `Field<float>` through a double
+  scratch, and the session writes float fields as float64 through a scratch
+  view, so initial conditions, boundary conditions and writers are unchanged.
+  Tests: `[fft][float]` (HeFFTe host and `LocalFFT` round trips),
+  `[spectral_etd][float]` (float toys against the double reference within
+  1e-5 over ten steps) and float device parity cases in
+  `CUDA_SpectralETD` / `HIP_SpectralETD`. Shipped apps still run in double;
+  the `model.precision` switch, I/O and checkpoint conversions and the
+  tolerance baselines follow in the next steps of #854.
 - Run output can no longer slip into history through a whole-tree `git add`:
   `.gitignore` covers `/data/`, `/dataNewer/`, `*.bin`, `*.h5` and the editor
   backups `*.bak`, `*.orig`, `*.backup`, and the tracked pre-commit hook

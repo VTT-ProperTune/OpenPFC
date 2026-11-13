@@ -21,6 +21,7 @@ int main(int argc, char *argv[]) { return pfc::test::run(argc, argv); }
 
 #include <algorithm>
 #include <cmath>
+#include <type_traits>
 #include <vector>
 
 #include <catch2/catch_approx.hpp>
@@ -72,24 +73,26 @@ void fill_cosine(Field<double> &psi, double mean) {
   });
 }
 
-double max_abs_diff(const std::vector<double> &a, const double *b, std::size_t n) {
+template <class Real>
+double max_abs_diff(const std::vector<double> &a, const Real *b, std::size_t n) {
   double m = 0.0;
   for (std::size_t i = 0; i < n; ++i) {
-    m = std::max(m, std::abs(a[i] - b[i]));
+    m = std::max(m, std::abs(a[i] - static_cast<double>(b[i])));
   }
   return m;
 }
 
-/// Run `steps` ETD steps on host and device for the same physics; return
-/// max |psi_host - psi_device| and both systems' free energies.
-template <template <class> class PhysicsT> struct ParityResult {
+/// Run `steps` ETD steps on the host (double) and on the device (`Real`,
+/// double by default, float for the ADR 0006 single-precision path) for the
+/// same physics; return max |psi_host - psi_device| and both free energies.
+struct ParityResult {
   double max_diff{};
   double fe_host{};
   double fe_device{};
 };
 
-template <template <class> class PhysicsT>
-ParityResult<PhysicsT> run_parity(double mean, int steps, double dt) {
+template <template <class, class> class PhysicsT, class Real = double>
+ParityResult run_parity(double mean, int steps, double dt) {
   constexpr int N = 8;
   auto domain = pfc::domain::create(pfc::GridSize({N, N, N}),
                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
@@ -106,16 +109,20 @@ ParityResult<PhysicsT> run_parity(double mean, int steps, double dt) {
   auto gpu_fft = pfc::fft::create_cuda(decomp, rank, MPI_COMM_WORLD);
 #endif
 
-  PhysicsT<pfc::HostSpace> host_phys{};
+  using HostPhysics = PhysicsT<pfc::HostSpace, double>;
+  using DevPhysics = PhysicsT<Space, Real>;
+  static_assert(
+      std::is_same_v<typename SpectralETDSystem<DevPhysics, Space>::Real, Real>);
+
+  HostPhysics host_phys{};
   host_phys.domain = domain;
   host_phys.box = cpu_fft.get_inbox_bounds();
   SimulationState host_state;
   host_phys.declare_fields(host_state);
   fill_cosine(host_state.get_field<double>("psi"), mean);
-  SpectralETDSystem<PhysicsT<pfc::HostSpace>> host_sys(host_phys, cpu_fft,
-                                                       host_state, dt);
+  SpectralETDSystem<HostPhysics> host_sys(host_phys, cpu_fft, host_state, dt);
 
-  PhysicsT<Space> dev_phys{};
+  DevPhysics dev_phys{};
   dev_phys.domain = domain;
   dev_phys.box = gpu_fft.get_inbox_bounds();
   SimulationState dev_state;
@@ -123,14 +130,15 @@ ParityResult<PhysicsT> run_parity(double mean, int steps, double dt) {
   {
     Field<double> ic(domain, cpu_fft.get_inbox_bounds(), 0);
     fill_cosine(ic, mean);
-    auto &psi_d = dev_state.get_field<double, Space>("psi");
-    psi_d.with_host_view([&](double *d, std::size_t n) {
+    auto &psi_d = dev_state.get_field<Real, Space>("psi");
+    psi_d.with_host_view([&](Real *d, std::size_t n) {
       REQUIRE(n == ic.size());
-      std::copy(ic.data(), ic.data() + n, d);
+      for (std::size_t i = 0; i < n; ++i) {
+        d[i] = static_cast<Real>(ic.data()[i]);
+      }
     });
   }
-  SpectralETDSystem<PhysicsT<Space>, Space> dev_sys(dev_phys, gpu_fft, dev_state,
-                                                    dt);
+  SpectralETDSystem<DevPhysics, Space> dev_sys(dev_phys, gpu_fft, dev_state, dt);
   REQUIRE(dev_sys.linear_symbol().size() == gpu_fft.size_outbox());
   REQUIRE(dev_sys.linear_symbol()[0] == Approx(host_sys.linear_symbol()[0]));
 
@@ -140,10 +148,10 @@ ParityResult<PhysicsT> run_parity(double mean, int steps, double dt) {
     t = dev_sys.step(t);
   }
 
-  ParityResult<PhysicsT> r{};
+  ParityResult r{};
   const auto &psi_h = host_state.get_field<double>("psi").vec();
-  auto &psi_dev = dev_state.get_field<double, Space>("psi");
-  psi_dev.with_host_view([&](double *d, std::size_t n) {
+  auto &psi_dev = dev_state.get_field<Real, Space>("psi");
+  psi_dev.with_host_view([&](Real *d, std::size_t n) {
     REQUIRE(n == psi_h.size());
     r.max_diff = max_abs_diff(psi_h, d, n);
   });
@@ -181,6 +189,41 @@ TEST_CASE("device SpectralETDSystem (moving-frame) matches host within 1e-10 "
   const auto r = run_parity<pfc::test::MovingFrameToy>(-0.006, 3, 0.01);
   REQUIRE(r.max_diff < 1e-10);
   REQUIRE(r.fe_device == Approx(r.fe_host).margin(1e-10));
+}
+
+// Single precision on the device against the double host reference
+// (ADR 0006): the float FFT, coefficient tables, candidate and pointwise
+// kernel are all exercised; the bound is single-precision accuracy over
+// ten steps, not bitwise agreement.
+TEST_CASE("float device SpectralETDSystem (Swift-Hohenberg) tracks the double "
+          "host reference",
+          "[gpu][spectral_etd][float]") {
+  if (!device_available()) {
+    SKIP("GPU not available");
+  }
+  const auto r = run_parity<pfc::test::SwiftHohenbergT, float>(0.05, 10, 0.01);
+  REQUIRE(r.max_diff < 1e-5);
+}
+
+TEST_CASE("float device SpectralETDSystem (mean-field) tracks the double host "
+          "reference",
+          "[gpu][spectral_etd][float][mean_field]") {
+  if (!device_available()) {
+    SKIP("GPU not available");
+  }
+  const auto r = run_parity<pfc::test::MeanFieldToy, float>(-0.10, 10, 0.01);
+  REQUIRE(r.max_diff < 1e-5);
+}
+
+TEST_CASE("float device SpectralETDSystem (moving-frame) tracks the double host "
+          "reference and its free energy",
+          "[gpu][spectral_etd][float][moving_frame]") {
+  if (!device_available()) {
+    SKIP("GPU not available");
+  }
+  const auto r = run_parity<pfc::test::MovingFrameToy, float>(-0.006, 10, 0.01);
+  REQUIRE(r.max_diff < 1e-5);
+  REQUIRE(r.fe_device == Approx(r.fe_host).epsilon(1e-5).margin(1e-7));
 }
 
 int main(int argc, char *argv[]) {

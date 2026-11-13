@@ -10,7 +10,8 @@
  * @details
  * `SpectralETDSystem<Physics, MemorySpace>` is written once against this
  * policy. The primary template is only declared; each memory space provides
- * a specialization:
+ * a specialization, templated on the field scalar `Real` (`double` or
+ * `float`, ADR 0006; the system takes it from `physics_real_t<Physics>`):
  *
  * - `HostSpace` — defined here (std::vector coefficients, host loops,
  *   `IHostFFT`).
@@ -24,6 +25,7 @@
  * runtime).
  */
 
+#include <algorithm>
 #include <complex>
 #include <cstddef>
 #include <span>
@@ -47,8 +49,9 @@ template <class MemorySpace> struct is_device_spectral_space : std::false_type {
  * Required interface (see the `HostSpace` specialization for reference):
  *
  * - `using FFT`, `using real_coeffs`, `using complex_scratch`;
- * - `make_real(n)`, `make_complex(n)`, `upload(real_coeffs&, span)`,
- *   `upload(complex_scratch&, span<Complex>)`;
+ * - `make_real(n)`, `make_complex(n)`, `upload(real_coeffs&, span<const
+ *   Src>)`, `upload(complex_scratch&, span<const complex<Src>>)`: the host
+ *   tables are always `double`; `upload` narrows to `Real` when needed;
  * - `forward(fft, RealField&, ComplexField&)`, `backward(fft, ComplexField
  *   const&, RealField&)`, `backward(fft, complex_scratch const&, RealField&)`;
  * - `multiply(ComplexField const&, real_coeffs const&, ComplexField&)` and
@@ -60,23 +63,41 @@ template <class MemorySpace> struct is_device_spectral_space : std::false_type {
  * - `swap(ComplexField&, complex_scratch&)`;
  * - `pointwise(geometry, t, psi, psi_mf*, p_star*, n, fe*, functor)`.
  */
-template <class MemorySpace> struct SpectralETDOps;
+template <class MemorySpace, class Real = double> struct SpectralETDOps;
 
-template <> struct SpectralETDOps<pfc::HostSpace> {
-  using Complex = std::complex<double>;
+template <class Real> struct SpectralETDOps<pfc::HostSpace, Real> {
+  static_assert(std::is_floating_point_v<Real>,
+                "SpectralETDOps: Real must be double or float");
+  using real_type = Real;
+  using Complex = std::complex<Real>;
   using FFT = fft::IHostFFT;
-  using RealField = pfc::data::Field<double, pfc::HostSpace>;
+  using RealField = pfc::data::Field<Real, pfc::HostSpace>;
   using ComplexField = pfc::data::Field<Complex, pfc::HostSpace>;
-  using real_coeffs = std::vector<double>;
+  using real_coeffs = std::vector<Real>;
   using complex_scratch = std::vector<Complex>;
 
-  static real_coeffs make_real(std::size_t n) { return real_coeffs(n, 0.0); }
+  static real_coeffs make_real(std::size_t n) { return real_coeffs(n, Real{0}); }
   static complex_scratch make_complex(std::size_t n) { return complex_scratch(n); }
+
+  /// The host tables are `double`; `upload` narrows to `Real` when needed.
+  /// A `std::vector<double>` binds to the `span<const double>` overload; a
+  /// float table (only meaningful when `Real` is float) to the `Real` one.
   static void upload(real_coeffs &dst, std::span<const double> src) {
-    dst.assign(src.begin(), src.end());
+    upload_from(dst, src);
   }
-  static void upload(complex_scratch &dst, std::span<const Complex> src) {
-    dst.assign(src.begin(), src.end());
+  static void upload(real_coeffs &dst, std::span<const Real> src)
+    requires(!std::is_same_v<Real, double>)
+  {
+    upload_from(dst, src);
+  }
+  static void upload(complex_scratch &dst,
+                     std::span<const std::complex<double>> src) {
+    upload_from(dst, src);
+  }
+  static void upload(complex_scratch &dst, std::span<const Complex> src)
+    requires(!std::is_same_v<Real, double>)
+  {
+    upload_from(dst, src);
   }
 
   static void forward(FFT &fft, RealField &in, ComplexField &out) {
@@ -149,14 +170,29 @@ template <> struct SpectralETDOps<pfc::HostSpace> {
   }
 
 private:
-  static void multiply_raw(const Complex *in, const double *w, Complex *out,
+  template <class Src>
+  static void upload_from(real_coeffs &dst, std::span<const Src> src) {
+    dst.resize(src.size());
+    std::transform(src.begin(), src.end(), dst.begin(),
+                   [](Src v) { return static_cast<Real>(v); });
+  }
+  template <class Src>
+  static void upload_from(complex_scratch &dst,
+                          std::span<const std::complex<Src>> src) {
+    dst.resize(src.size());
+    std::transform(src.begin(), src.end(), dst.begin(), [](std::complex<Src> v) {
+      return Complex{static_cast<Real>(v.real()), static_cast<Real>(v.imag())};
+    });
+  }
+
+  static void multiply_raw(const Complex *in, const Real *w, Complex *out,
                            std::size_t n) {
     for (std::size_t i = 0; i < n; ++i) {
       out[i] = w[i] * in[i];
     }
   }
-  static void combine_raw(const Complex *u, const Complex *n_hat, const double *e,
-                          const double *w, Complex *out, std::size_t n) {
+  static void combine_raw(const Complex *u, const Complex *n_hat, const Real *e,
+                          const Real *w, Complex *out, std::size_t n) {
     for (std::size_t i = 0; i < n; ++i) {
       out[i] = e[i] * u[i] + w[i] * n_hat[i];
     }

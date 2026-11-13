@@ -43,6 +43,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -87,11 +88,19 @@ namespace pfc::ui {
 template <class Stack> struct stack_memory_space {
   using type = typename Stack::field_type::memory_space;
 };
-template <> struct stack_memory_space<pfc::sim::stacks::SpectralCPUStack> {
-  using type = pfc::HostSpace;
-};
 template <class Stack>
 using stack_memory_space_t = typename stack_memory_space<Stack>::type;
+
+/// Field scalar of a stack: `Stack::real_type` when declared, else `double`.
+template <class Stack> struct stack_real {
+  using type = double;
+};
+template <class Stack>
+  requires requires { typename Stack::real_type; }
+struct stack_real<Stack> {
+  using type = typename Stack::real_type;
+};
+template <class Stack> using stack_real_t = typename stack_real<Stack>::type;
 
 /**
  * @brief Physics constructible from its JSON `model.params` plus geometry.
@@ -115,8 +124,14 @@ template <class Physics, class Stack = pfc::sim::stacks::SpectralCPUStack>
 class SpectralETDSession {
 public:
   using memory_space = stack_memory_space_t<Stack>;
+  /// Field scalar (ADR 0006): the physics and the stack must agree on it.
+  using Real = pfc::sim::physics_real_t<Physics>;
+  static_assert(std::is_same_v<Real, stack_real_t<Stack>>,
+                "SpectralETDSession: Physics::real_type and the stack's real_type "
+                "must match (BasicSpectralCPUStack<Real> / GPUSpectralStack<Space, "
+                "Real>)");
   using System = pfc::sim::SpectralETDSystem<Physics, memory_space>;
-  using RealField = pfc::data::Field<double, memory_space>;
+  using RealField = pfc::data::Field<Real, memory_space>;
   static constexpr bool is_host = std::is_same_v<memory_space, pfc::HostSpace>;
 
   SpectralETDSession(const SpectralETDSession &) = delete;
@@ -231,14 +246,15 @@ public:
     double sum = 0.0;
     double sumsq = 0.0;
     auto &f = psi();
-    const auto accumulate = [&](double v) {
+    const auto accumulate = [&](Real value) {
+      const double v = static_cast<double>(value);
       sum += v;
       sumsq += v * v;
     };
     if constexpr (is_host) {
       f.for_each_owned([&](int i, int j, int k) { accumulate(f(i, j, k)); });
     } else {
-      f.with_host_view([&](double *d, std::size_t) {
+      f.with_host_view([&](Real *d, std::size_t) {
         const auto sz = f.local_size();
         for (int k = 0; k < sz[2]; ++k) {
           for (int j = 0; j < sz[1]; ++j) {
@@ -295,7 +311,7 @@ public:
   // ---- accessors --------------------------------------------------------
   [[nodiscard]] RealField &psi() { return real_field(m_psi_name); }
   [[nodiscard]] const RealField &psi() const {
-    return m_state.template get_field<double, memory_space>(m_psi_name);
+    return m_state.template get_field<Real, memory_space>(m_psi_name);
   }
   [[nodiscard]] pfc::Time &time() noexcept { return m_session.time(); }
   [[nodiscard]] const pfc::Time &time() const noexcept { return m_session.time(); }
@@ -354,7 +370,7 @@ private:
   }
 
   RealField &real_field(const std::string &name) {
-    return m_state.template get_field<double, memory_space>(name);
+    return m_state.template get_field<Real, memory_space>(name);
   }
 
   /// Resolve a modifier's target: `default` means the primary field.
@@ -438,8 +454,18 @@ private:
                                     "' does not support real fields");
       }
       auto &f = real_field(nw.field_name);
-      const auto write_view = [&](const double *d, std::size_t n) {
-        pfc::field::FieldView<double> view(d, n, f.box().size, f.spacing(),
+      // Writers take double views. A float field is widened into a scratch
+      // buffer first: the on-disk format stays float64 (ADR 0006, explicit
+      // conversion at the sink).
+      const auto write_view = [&](const Real *d, std::size_t n) {
+        const double *src = nullptr;
+        if constexpr (std::is_same_v<Real, double>) {
+          src = d;
+        } else {
+          m_write_scratch.assign(d, d + n);
+          src = m_write_scratch.data();
+        }
+        pfc::field::FieldView<double> view(src, n, f.box().size, f.spacing(),
                                            f.origin());
         nw.writer->write(m_result_counter, view);
       };
@@ -463,6 +489,7 @@ private:
   std::string m_psi_name{"psi"};
   std::vector<std::unique_ptr<pfc::FieldModifier>> m_bcs;
   std::vector<NamedResultsWriter> m_writers;
+  std::vector<double> m_write_scratch;
   int m_result_counter{0};
   std::unique_ptr<System> m_sys;
 };

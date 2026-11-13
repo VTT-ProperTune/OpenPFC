@@ -39,18 +39,41 @@ namespace pfc::sim {
 /**
  * @brief Inputs to a pointwise spectral-ETD nonlinearity at one cell.
  *
+ * `Real` is the scalar type of the fields (`double` or `float`, ADR 0006).
  * `psi_mf` is zero unless the physics has `filter_mf(k)`; `p_star` is zero
- * unless it has `correlation_kernel(k)`.
+ * unless it has `correlation_kernel(k)`. Coordinates and time are always
+ * `double`; only the field samples carry the field precision.
+ *
+ * A functor written for `SpectralCell` (double) also serves float fields:
+ * `SpectralCellT<float>` converts to `SpectralCellT<double>` implicitly, so
+ * the nonlinearity is evaluated in double and its result narrowed on store.
+ * A functor that wants native float arithmetic declares
+ * `template <class R> OPENPFC_HD R nonlinearity(const SpectralCellT<R>&) const`.
  */
-struct SpectralCell {
-  double psi{};    ///< primary field value
-  double psi_mf{}; ///< mean-field filtered value  (\f$\chi * \psi\f$)
-  double p_star{}; ///< correlation-kernel convolution (\f$P * \psi\f$)
-  double x{};      ///< physical coordinates of the cell
+template <class Real> struct SpectralCellT {
+  Real psi{};    ///< primary field value
+  Real psi_mf{}; ///< mean-field filtered value  (\f$\chi * \psi\f$)
+  Real p_star{}; ///< correlation-kernel convolution (\f$P * \psi\f$)
+  double x{};    ///< physical coordinates of the cell
   double y{};
   double z{};
   double t{}; ///< current time
+
+  template <class U>
+    requires(!std::is_same_v<U, Real>)
+  OPENPFC_HD operator SpectralCellT<U>() const noexcept {
+    return SpectralCellT<U>{static_cast<U>(psi),
+                            static_cast<U>(psi_mf),
+                            static_cast<U>(p_star),
+                            x,
+                            y,
+                            z,
+                            t};
+  }
 };
+
+/// The double-precision cell, the form every shipped functor is written for.
+using SpectralCell = SpectralCellT<double>;
 
 /**
  * @brief Local owned-box geometry used to form cell coordinates.
@@ -123,24 +146,24 @@ concept HasFreeEnergyDensity = requires(const F &f, const SpectralCell &c) {
  * @param fe_out  Free-energy density output, or `nullptr`; written only when
  *                `F` models `HasFreeEnergyDensity`.
  */
-template <class F>
+template <class F, class Real>
   requires SpectralPointwise<F>
 inline void for_each_spectral_cell(const PointwiseGeometry &g, double t,
-                                   const double *psi, const double *psi_mf,
-                                   const double *p_star, double *n_out,
-                                   double *fe_out, const F &f) {
+                                   const Real *psi, const Real *psi_mf,
+                                   const Real *p_star, Real *n_out, Real *fe_out,
+                                   const F &f) {
   const std::size_t n = g.volume();
   for (std::size_t idx = 0; idx < n; ++idx) {
-    SpectralCell c;
+    SpectralCellT<Real> c;
     c.psi = psi[idx];
-    c.psi_mf = (psi_mf != nullptr) ? psi_mf[idx] : 0.0;
-    c.p_star = (p_star != nullptr) ? p_star[idx] : 0.0;
+    c.psi_mf = (psi_mf != nullptr) ? psi_mf[idx] : Real{0};
+    c.p_star = (p_star != nullptr) ? p_star[idx] : Real{0};
     g.coords(idx, c.x, c.y, c.z);
     c.t = t;
-    n_out[idx] = f.nonlinearity(c);
+    n_out[idx] = static_cast<Real>(f.nonlinearity(c));
     if constexpr (HasFreeEnergyDensity<F>) {
       if (fe_out != nullptr) {
-        fe_out[idx] = f.free_energy_density(c);
+        fe_out[idx] = static_cast<Real>(f.free_energy_density(c));
       }
     } else {
       (void)fe_out;

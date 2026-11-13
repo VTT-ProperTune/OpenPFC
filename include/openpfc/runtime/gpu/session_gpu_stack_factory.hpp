@@ -64,22 +64,22 @@ inline void apply_omitted_gpu_backend(SessionSelection &s,
 
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL) || defined(OpenPFC_ENABLE_HIP_SPECTRAL)
 
-template <class MemorySpace>
-[[nodiscard]] inline stacks::GPUSpectralStack<MemorySpace>
+template <class MemorySpace, class Real = double>
+[[nodiscard]] inline stacks::GPUSpectralStack<MemorySpace, Real>
 make_gpu_spectral_stack(const SessionSelection &s, pfc::Domain domain, int rank,
                         int nproc, MPI_Comm comm,
                         const heffte::plan_options &options) {
   require_session_for_stack(s, SimulationMethod::Spectral,
                             gpu_session_backend<MemorySpace>::value);
-  return stacks::GPUSpectralStack<MemorySpace>(std::move(domain), rank, nproc, comm,
-                                               options);
+  return stacks::GPUSpectralStack<MemorySpace, Real>(std::move(domain), rank, nproc,
+                                                     comm, options);
 }
 
-template <class MemorySpace>
-[[nodiscard]] inline stacks::GPUSpectralStack<MemorySpace>
+template <class MemorySpace, class Real = double>
+[[nodiscard]] inline stacks::GPUSpectralStack<MemorySpace, Real>
 make_gpu_spectral_stack(const SessionSelection &s, pfc::Domain domain, int rank,
                         int nproc, MPI_Comm comm = MPI_COMM_WORLD) {
-  return make_gpu_spectral_stack<MemorySpace>(
+  return make_gpu_spectral_stack<MemorySpace, Real>(
       s, std::move(domain), rank, nproc, comm,
       stacks::gpu_fft_for<MemorySpace>::default_plan_options());
 }
@@ -103,25 +103,27 @@ make_fd_gpu_stack(const SessionSelection &s, pfc::Domain domain, int rank, int n
 #endif
 
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
-template <> struct stack_builder<stacks::GPUSpectralStack<CUDASpace>> {
+template <class Real>
+struct stack_builder<stacks::GPUSpectralStack<CUDASpace, Real>> {
   static constexpr const char *name = "GPUSpectralStack<CUDASpace>";
-  [[nodiscard]] static stacks::GPUSpectralStack<CUDASpace>
+  [[nodiscard]] static stacks::GPUSpectralStack<CUDASpace, Real>
   make(const SessionSelection &s, pfc::Domain domain, int rank, int nproc,
        MPI_Comm comm) {
-    return make_gpu_spectral_stack<CUDASpace>(s, std::move(domain), rank, nproc,
-                                              comm);
+    return make_gpu_spectral_stack<CUDASpace, Real>(s, std::move(domain), rank,
+                                                    nproc, comm);
   }
 };
 #endif
 
 #if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
-template <> struct stack_builder<stacks::GPUSpectralStack<HIPSpace>> {
+template <class Real>
+struct stack_builder<stacks::GPUSpectralStack<HIPSpace, Real>> {
   static constexpr const char *name = "GPUSpectralStack<HIPSpace>";
-  [[nodiscard]] static stacks::GPUSpectralStack<HIPSpace>
+  [[nodiscard]] static stacks::GPUSpectralStack<HIPSpace, Real>
   make(const SessionSelection &s, pfc::Domain domain, int rank, int nproc,
        MPI_Comm comm) {
-    return make_gpu_spectral_stack<HIPSpace>(s, std::move(domain), rank, nproc,
-                                             comm);
+    return make_gpu_spectral_stack<HIPSpace, Real>(s, std::move(domain), rank, nproc,
+                                                   comm);
   }
 };
 #endif

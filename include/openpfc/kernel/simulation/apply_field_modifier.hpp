@@ -15,9 +15,18 @@
  * call with `Field::with_host_view`, so the framework — not the caller — owns
  * the residency bracket (Audit §4.1 / §13.3). Halo-padded fields are
  * rejected: modifiers see owned cells only.
+ *
+ * `Field<float>` is accepted as well (ADR 0006): the owned cells are widened
+ * into a double scratch, the modifier runs on that, and the result is
+ * narrowed back, so initial and boundary conditions written for double serve
+ * a float session unchanged. Device appliers stay double-only; a float device
+ * field takes the host bracket.
  */
 
+#include <cstddef>
 #include <stdexcept>
+#include <type_traits>
+#include <vector>
 
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/field/state_access.hpp>
@@ -42,13 +51,13 @@ template <class T, class MemorySpace>
 void apply_field_modifier(FieldModifier &modifier,
                           data::Field<T, MemorySpace> &field, double time,
                           const SimulationContext *ctx = nullptr) {
-  static_assert(std::is_same_v<T, double>,
-                "apply_field_modifier: FieldModifier operates on double fields");
+  static_assert(std::is_same_v<T, double> || std::is_same_v<T, float>,
+                "apply_field_modifier: FieldModifier operates on real fields");
   if (field.storage_halo() != 0) {
     throw std::invalid_argument(
         "apply_field_modifier: field must have storage halo 0 (owned box only)");
   }
-  auto call = [&](double *data, std::size_t n) {
+  auto call_double = [&](double *data, std::size_t n) {
     pfc::field::FieldOutput<double> out(data, n);
     if (ctx != nullptr) {
       modifier.apply(*ctx, out, field.domain(), field.box(), time);
@@ -56,18 +65,34 @@ void apply_field_modifier(FieldModifier &modifier,
       modifier.apply(out, field.domain(), field.box(), time);
     }
   };
+  // Modifiers are written against double. A float field is widened into a
+  // double scratch, modified there and narrowed back: the explicit conversion
+  // at the type boundary that ADR 0006 asks for.
+  auto call = [&](T *data, std::size_t n) {
+    if constexpr (std::is_same_v<T, double>) {
+      call_double(data, n);
+    } else {
+      std::vector<double> scratch(data, data + n);
+      call_double(scratch.data(), n);
+      for (std::size_t i = 0; i < n; ++i) {
+        data[i] = static_cast<T>(scratch[i]);
+      }
+    }
+  };
   if constexpr (data::Field<T, MemorySpace>::is_host_space) {
     call(field.data(), field.size());
     field.note_host_write();
   } else {
-    // A registered device applier works on the device buffer directly; any
-    // other modifier keeps the full host round trip.
-    if (has_device_applier(modifier)) {
-      field.sync_to_device();
-      try_apply_on_device(modifier, DeviceFieldView{field.data(), field.size()},
-                          field.domain(), field.box(), time);
-      field.note_device_write();
-      return;
+    // Device appliers take double device views; a float device field goes
+    // through the host bracket like a modifier without a device applier.
+    if constexpr (std::is_same_v<T, double>) {
+      if (has_device_applier(modifier)) {
+        field.sync_to_device();
+        try_apply_on_device(modifier, DeviceFieldView{field.data(), field.size()},
+                            field.domain(), field.box(), time);
+        field.note_device_write();
+        return;
+      }
     }
     field.with_host_view(call);
   }

@@ -202,6 +202,28 @@ template <class Physics>
 concept HasParameters = requires { typename Physics::parameters_type; };
 
 /**
+ * @brief Scalar type of a physics' fields: `Physics::real_type` when declared,
+ *        otherwise `double` (ADR 0006).
+ *
+ * `SpectralETDSystem` and `SpectralETDSession` take their field, coefficient
+ * and FFT buffer precision from this trait, so a physics selects `float` by
+ * declaring `using real_type = float;` and declaring its fields in that type.
+ * The k-space symbols stay `double` functions; the system narrows them when
+ * it uploads the coefficient tables.
+ */
+template <class Physics> struct physics_real {
+  using type = double;
+};
+
+template <class Physics>
+  requires requires { typename Physics::real_type; }
+struct physics_real<Physics> {
+  using type = typename Physics::real_type;
+};
+
+template <class Physics> using physics_real_t = typename physics_real<Physics>::type;
+
+/**
  * @brief Physics that advances by `step(t)`.
  *
  * Distinct from `PointwiseRhs` / `SpectralETDPhysics`: the callable owns

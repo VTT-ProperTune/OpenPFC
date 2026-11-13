@@ -59,12 +59,13 @@ make_fd_padded_cpu_stack(const SessionSelection &s, pfc::Domain domain, int rank
 }
 
 #ifdef OpenPFC_ENABLE_HEFFTE
-template <> struct stack_builder<stacks::SpectralCPUStack> {
+template <class Real> struct stack_builder<stacks::BasicSpectralCPUStack<Real>> {
   static constexpr const char *name = "SpectralCPUStack";
-  [[nodiscard]] static stacks::SpectralCPUStack make(const SessionSelection &s,
-                                                     pfc::Domain domain, int rank,
-                                                     int nproc, MPI_Comm comm) {
-    return make_spectral_cpu_stack(s, std::move(domain), rank, nproc, comm);
+  [[nodiscard]] static stacks::BasicSpectralCPUStack<Real>
+  make(const SessionSelection &s, pfc::Domain domain, int rank, int nproc,
+       MPI_Comm comm) {
+    require_session_for_stack(s, SimulationMethod::Spectral, SimulationBackend::Cpu);
+    return stacks::BasicSpectralCPUStack<Real>(std::move(domain), rank, nproc, comm);
   }
 };
 #endif

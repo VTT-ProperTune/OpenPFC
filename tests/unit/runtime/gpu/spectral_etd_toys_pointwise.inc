@@ -13,3 +13,7 @@
 OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE(pfc::test::SHPointwise)
 OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE(pfc::test::MeanFieldToyPointwise)
 OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE(pfc::test::MovingFrameToyPointwise)
+// Single-precision kernels for the float device parity tests (ADR 0006).
+OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE_FLOAT(pfc::test::SHPointwise)
+OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE_FLOAT(pfc::test::MeanFieldToyPointwise)
+OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE_FLOAT(pfc::test::MovingFrameToyPointwise)

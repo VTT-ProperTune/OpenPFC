@@ -11,7 +11,10 @@
  * Lives in runtime because `create_cuda` / `create_hip` and `IDeviceFFT`
  * are runtime (kernel must not include runtime). Bundles
  *
- *     Domain → Decomposition → device FFT → Field<double, MemorySpace>
+ *     Domain → Decomposition → device FFT → Field<Real, MemorySpace>
+ *
+ * `Real` is `double` (the `CUDASpectralStack` / `HIPSpectralStack` aliases)
+ * or `float` (ADR 0006); the device FFT serves both precisions.
  *
  * Non-copyable / non-movable: sub-objects would dangle after a move.
  * Optional `heffte::plan_options` overlay matches `SpectralCPUStack`. JSON
@@ -23,6 +26,7 @@
 
 #include <memory>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
 
 #include <mpi.h>
@@ -82,10 +86,13 @@ template <> struct gpu_fft_for<HIPSpace> {
  * @brief Programmatic spectral GPU stack: Domain + Decomposition + device FFT
  *        + `Field<double, MemorySpace>` sized to the FFT inbox.
  */
-template <class MemorySpace> class GPUSpectralStack {
+template <class MemorySpace, class Real = double> class GPUSpectralStack {
 public:
+  static_assert(std::is_floating_point_v<Real>,
+                "GPUSpectralStack: Real must be double or float");
+  using real_type = Real;
   using fft_type = typename gpu_fft_for<MemorySpace>::type;
-  using field_type = data::Field<double, MemorySpace>;
+  using field_type = data::Field<Real, MemorySpace>;
 
   GPUSpectralStack(const GPUSpectralStack &) = delete;
   GPUSpectralStack &operator=(const GPUSpectralStack &) = delete;
@@ -192,6 +199,16 @@ private:
   int m_nproc{1};
   MPI_Comm m_comm{MPI_COMM_WORLD};
 };
+
+/// True for `GPUSpectralStack<Space, Real>` of any `Real`.
+template <class Stack, class Space>
+struct is_gpu_spectral_stack : std::false_type {};
+template <class Space, class Real>
+struct is_gpu_spectral_stack<GPUSpectralStack<Space, Real>, Space> : std::true_type {
+};
+template <class Stack, class Space>
+inline constexpr bool is_gpu_spectral_stack_v =
+    is_gpu_spectral_stack<Stack, Space>::value;
 
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
 using CUDASpectralStack = GPUSpectralStack<CUDASpace>;

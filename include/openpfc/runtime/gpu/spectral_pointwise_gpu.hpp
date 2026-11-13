@@ -22,6 +22,12 @@
  * OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE(foo::FooPointwise)
  * @endcode
  *
+ * That macro instantiates the double-precision kernel. A physics that runs
+ * in `float` (ADR 0006, `Physics::real_type`) adds
+ * `OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE_FLOAT(foo::FooPointwise)` next to
+ * it; `OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE_REAL(F, Real)` is the general
+ * form. The field samples reach the functor as `SpectralCellT<Real>`.
+ *
  * Forgetting the instantiation fails closed at link time with the functor's
  * name in the missing symbol. This keeps the app's session / JSON headers out
  * of the device compiler: only the tiny functor header is device-compiled.
@@ -47,43 +53,41 @@ namespace pfc::sim::gpu {
  * Does not synchronize @p stream; the next default-stream HeFFTe transform
  * waits.
  */
-template <class F>
-void spectral_pointwise_apply(const PointwiseGeometry &g, double t,
-                              const double *psi, const double *psi_mf,
-                              const double *p_star, double *n_out, double *fe_out,
-                              F f, gpuStream_t stream);
+template <class F, class Real>
+void spectral_pointwise_apply(const PointwiseGeometry &g, double t, const Real *psi,
+                              const Real *psi_mf, const Real *p_star, Real *n_out,
+                              Real *fe_out, F f, gpuStream_t stream);
 
 #if defined(__CUDACC__) || defined(__HIPCC__) || defined(__HIP__)
 
-template <class F>
+template <class F, class Real>
 __global__ void spectral_pointwise_kernel(PointwiseGeometry g, double t,
-                                          const double *psi, const double *psi_mf,
-                                          const double *p_star, double *n_out,
-                                          double *fe_out, F f) {
+                                          const Real *psi, const Real *psi_mf,
+                                          const Real *p_star, Real *n_out,
+                                          Real *fe_out, F f) {
   const std::size_t idx =
       static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
   if (idx >= g.volume()) {
     return;
   }
-  SpectralCell c;
+  SpectralCellT<Real> c;
   c.psi = psi[idx];
-  c.psi_mf = (psi_mf != nullptr) ? psi_mf[idx] : 0.0;
-  c.p_star = (p_star != nullptr) ? p_star[idx] : 0.0;
+  c.psi_mf = (psi_mf != nullptr) ? psi_mf[idx] : Real{0};
+  c.p_star = (p_star != nullptr) ? p_star[idx] : Real{0};
   g.coords(idx, c.x, c.y, c.z);
   c.t = t;
-  n_out[idx] = f.nonlinearity(c);
+  n_out[idx] = static_cast<Real>(f.nonlinearity(c));
   if constexpr (HasFreeEnergyDensity<F>) {
     if (fe_out != nullptr) {
-      fe_out[idx] = f.free_energy_density(c);
+      fe_out[idx] = static_cast<Real>(f.free_energy_density(c));
     }
   }
 }
 
-template <class F>
-void spectral_pointwise_apply(const PointwiseGeometry &g, double t,
-                              const double *psi, const double *psi_mf,
-                              const double *p_star, double *n_out, double *fe_out,
-                              F f, gpuStream_t stream) {
+template <class F, class Real>
+void spectral_pointwise_apply(const PointwiseGeometry &g, double t, const Real *psi,
+                              const Real *psi_mf, const Real *p_star, Real *n_out,
+                              Real *fe_out, F f, gpuStream_t stream) {
   static_assert(SpectralPointwise<F>,
                 "spectral_pointwise_apply: F must be a trivially copyable "
                 "functor with OPENPFC_HD double nonlinearity(const SpectralCell&)");
@@ -94,16 +98,22 @@ void spectral_pointwise_apply(const PointwiseGeometry &g, double t,
   constexpr unsigned threads = 256;
   const unsigned blocks =
       static_cast<unsigned>((n + threads - 1) / static_cast<std::size_t>(threads));
-  GPU_LAUNCH_KERNEL(spectral_pointwise_kernel<F>, blocks, threads,
-                    (g, t, psi, psi_mf, p_star, n_out, fe_out, f), stream);
+  spectral_pointwise_kernel<F, Real>
+      <<<blocks, threads, 0, stream>>>(g, t, psi, psi_mf, p_star, n_out, fe_out, f);
   GPU_CHECK(::pfc::gpuGetLastError());
 }
 
 /// Explicitly instantiate the device launcher for functor type @p F.
+#define OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE_REAL(F, Real)                        \
+  template void ::pfc::sim::gpu::spectral_pointwise_apply<F, Real>(                 \
+      const ::pfc::sim::PointwiseGeometry &, double, const Real *, const Real *,    \
+      const Real *, Real *, Real *, F, ::pfc::gpuStream_t);
+/// Double-precision kernel (every shipped functor).
 #define OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE(F)                                   \
-  template void ::pfc::sim::gpu::spectral_pointwise_apply<F>(                       \
-      const ::pfc::sim::PointwiseGeometry &, double, const double *,                \
-      const double *, const double *, double *, double *, F, ::pfc::gpuStream_t);
+  OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE_REAL(F, double)
+/// Single-precision kernel for a physics with `real_type = float`.
+#define OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE_FLOAT(F)                             \
+  OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE_REAL(F, float)
 
 #endif // device compiler
 

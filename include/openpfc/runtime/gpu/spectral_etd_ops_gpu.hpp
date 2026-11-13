@@ -53,21 +53,38 @@ namespace detail {
 /**
  * @brief Shared device policy; `MemorySpace` selects the vendor kernel set.
  */
-template <class MemorySpace> struct DeviceSpectralETDOps {
-  using Complex = std::complex<double>;
+template <class MemorySpace, class Real = double> struct DeviceSpectralETDOps {
+  static_assert(std::is_floating_point_v<Real>,
+                "DeviceSpectralETDOps: Real must be double or float");
+  using real_type = Real;
+  using Complex = std::complex<Real>;
   using FFT = fft::IDeviceFFT<MemorySpace>;
-  using RealField = pfc::data::Field<double, MemorySpace>;
+  using RealField = pfc::data::Field<Real, MemorySpace>;
   using ComplexField = pfc::data::Field<Complex, MemorySpace>;
-  using real_coeffs = typename FFT::RealBuffer;
-  using complex_scratch = typename FFT::ComplexBuffer;
+  using real_coeffs = typename FFT::template real_buffer<Real>;
+  using complex_scratch = typename FFT::template complex_buffer<Real>;
 
   static real_coeffs make_real(std::size_t n) { return real_coeffs(n); }
   static complex_scratch make_complex(std::size_t n) { return complex_scratch(n); }
+  /// The host tables are `double`; narrow on the host, then copy once. A
+  /// `std::vector<double>` binds to the `span<const double>` overload, a
+  /// float table (only when `Real` is float) to the `Real` one.
   static void upload(real_coeffs &dst, std::span<const double> src) {
-    dst.copy_from_host(src);
+    upload_from(dst, src);
   }
-  static void upload(complex_scratch &dst, std::span<const Complex> src) {
-    dst.copy_from_host(src);
+  static void upload(real_coeffs &dst, std::span<const Real> src)
+    requires(!std::is_same_v<Real, double>)
+  {
+    upload_from(dst, src);
+  }
+  static void upload(complex_scratch &dst,
+                     std::span<const std::complex<double>> src) {
+    upload_from(dst, src);
+  }
+  static void upload(complex_scratch &dst, std::span<const Complex> src)
+    requires(!std::is_same_v<Real, double>)
+  {
+    upload_from(dst, src);
   }
 
   static void forward(FFT &fft, RealField &in, ComplexField &out) {
@@ -139,7 +156,7 @@ template <class MemorySpace> struct DeviceSpectralETDOps {
     if (p_star != nullptr) {
       p_star->sync_to_device();
     }
-    pfc::sim::gpu::spectral_pointwise_apply<F>(
+    pfc::sim::gpu::spectral_pointwise_apply<F, Real>(
         g, t, psi.data(), psi_mf != nullptr ? psi_mf->data() : nullptr,
         p_star != nullptr ? p_star->data() : nullptr, n.data(),
         fe != nullptr ? fe->data() : nullptr, f, static_cast<gpuStream_t>(stream));
@@ -219,11 +236,35 @@ template <class MemorySpace> struct DeviceSpectralETDOps {
   }
 
 private:
+  template <class Src>
+  static void upload_from(real_coeffs &dst, std::span<const Src> src) {
+    if constexpr (std::is_same_v<Src, Real>) {
+      dst.copy_from_host(src);
+    } else {
+      const std::vector<Real> tmp(src.begin(), src.end());
+      dst.copy_from_host(std::span<const Real>(tmp));
+    }
+  }
+  template <class Src>
+  static void upload_from(complex_scratch &dst,
+                          std::span<const std::complex<Src>> src) {
+    if constexpr (std::is_same_v<Src, Real>) {
+      dst.copy_from_host(src);
+    } else {
+      std::vector<Complex> tmp(src.size());
+      for (std::size_t i = 0; i < src.size(); ++i) {
+        tmp[i] = Complex{static_cast<Real>(src[i].real()),
+                         static_cast<Real>(src[i].imag())};
+      }
+      dst.copy_from_host(std::span<const Complex>(tmp));
+    }
+  }
+
   static gpuStream_t as_stream(void *stream) {
     return static_cast<gpuStream_t>(stream);
   }
 
-  static void multiply_raw(const Complex *in, const double *w, Complex *out,
+  static void multiply_raw(const Complex *in, const Real *w, Complex *out,
                            std::size_t n, void *stream) {
     const auto s = as_stream(stream);
 #if defined(OpenPFC_ENABLE_CUDA)
@@ -239,9 +280,8 @@ private:
     }
 #endif
   }
-  static void combine_raw(const Complex *u, const Complex *n_hat, const double *e,
-                          const double *w, Complex *out, std::size_t n,
-                          void *stream) {
+  static void combine_raw(const Complex *u, const Complex *n_hat, const Real *e,
+                          const Real *w, Complex *out, std::size_t n, void *stream) {
     const auto s = as_stream(stream);
 #if defined(OpenPFC_ENABLE_CUDA)
     if constexpr (std::is_same_v<MemorySpace, pfc::CUDASpace>) {
@@ -278,14 +318,14 @@ private:
 } // namespace detail
 
 #if defined(OpenPFC_ENABLE_CUDA)
-template <>
-struct SpectralETDOps<pfc::CUDASpace>
-    : detail::DeviceSpectralETDOps<pfc::CUDASpace> {};
+template <class Real>
+struct SpectralETDOps<pfc::CUDASpace, Real>
+    : detail::DeviceSpectralETDOps<pfc::CUDASpace, Real> {};
 #endif
 #if defined(OpenPFC_ENABLE_HIP)
-template <>
-struct SpectralETDOps<pfc::HIPSpace> : detail::DeviceSpectralETDOps<pfc::HIPSpace> {
-};
+template <class Real>
+struct SpectralETDOps<pfc::HIPSpace, Real>
+    : detail::DeviceSpectralETDOps<pfc::HIPSpace, Real> {};
 #endif
 
 } // namespace pfc::sim

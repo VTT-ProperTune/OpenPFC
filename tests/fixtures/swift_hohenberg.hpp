@@ -36,8 +36,11 @@ struct SHGrads {
   double biharm{};
 };
 
-template <class MemorySpace = pfc::HostSpace> struct SwiftHohenbergT {
+template <class MemorySpace = pfc::HostSpace, class Real = double>
+struct SwiftHohenbergT {
   using parameters_type = SHParams;
+  /// Field scalar (ADR 0006); the symbols and parameters stay double.
+  using real_type = Real;
 
   Domain domain{};
   Box3i box{};
@@ -57,7 +60,7 @@ template <class MemorySpace = pfc::HostSpace> struct SwiftHohenbergT {
   }
 
   void declare_fields(pfc::SimulationState &state) const {
-    pfc::sim::add_declared_field<double, MemorySpace>(state, "psi", domain, box, 0);
+    pfc::sim::add_declared_field<Real, MemorySpace>(state, "psi", domain, box, 0);
   }
 
   [[nodiscard]] double rhs(double /*t*/, const SHGrads &g) const {

@@ -29,6 +29,7 @@ if(OpenPFC_ENABLE_HEFFTE)
   target_sources(openpfc-tests PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}/test_stepper_equivalence.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_spectral_etd_system.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_spectral_etd_float.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_etd_step_doubling.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_coupled_spectral_etd2.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/test_amplitude_spectral_etd1.cpp
@@ -38,6 +39,8 @@ if(OpenPFC_ENABLE_HEFFTE)
   )
   add_test(NAME amplitude-spectral-etd1
            COMMAND openpfc-tests "[amplitude_etd1]")
+  # Float (32-bit) spectral ETD chain against the double reference (ADR 0006).
+  add_test(NAME spectral-etd-float COMMAND openpfc-tests "[spectral_etd][float]")
   set_tests_properties(amplitude-spectral-etd1 PROPERTIES
     ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1"
     TIMEOUT 120)

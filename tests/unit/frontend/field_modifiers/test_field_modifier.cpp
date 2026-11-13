@@ -11,6 +11,7 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/simulation/apply_field_modifier.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
+#include <openpfc/kernel/simulation/initial_conditions/constant.hpp>
 
 #include "fixtures/mock_field_modifier.hpp"
 
@@ -111,4 +112,24 @@ TEST_CASE("Field::output() and Field::view() alias the same storage",
   REQUIRE(view.data()[5] == 2.5);
   REQUIRE(view.extents() == pfc::Int3{3, 2, 2});
   REQUIRE(view.spacing() == psi.spacing());
+}
+
+// ADR 0006: modifiers are written for double; a float field is widened into a
+// double scratch, modified, and narrowed back by apply_field_modifier.
+TEST_CASE("apply_field_modifier serves a float field through a double scratch",
+          "[field_modifier][unit][float]") {
+  auto domain = pfc::domain::create(pfc::Int3{4, 4, 4});
+  auto box = pfc::domain::index_box(domain);
+  pfc::data::Field<float> psi(domain, box, 0);
+  for (float &v : psi.vec()) {
+    v = -1.0f;
+  }
+  pfc::Constant ic(0.25);
+  pfc::apply_field_modifier(ic, psi, 0.0);
+  for (float v : psi.vec()) {
+    REQUIRE(v == 0.25f);
+  }
+
+  pfc::data::Field<float> halo(domain, box, 1);
+  REQUIRE_THROWS_AS(pfc::apply_field_modifier(ic, halo, 0.0), std::invalid_argument);
 }

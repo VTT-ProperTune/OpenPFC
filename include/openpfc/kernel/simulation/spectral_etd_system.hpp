@@ -124,10 +124,14 @@ template <class Physics, class MemorySpace = pfc::HostSpace>
   requires SpectralETDPhysics<Physics>
 class SpectralETDSystem {
 public:
-  using Ops = SpectralETDOps<MemorySpace>;
-  using Complex = std::complex<double>;
+  /// Field scalar: `Physics::real_type` when declared, else `double` (ADR 0006).
+  using Real = physics_real_t<Physics>;
+  using Ops = SpectralETDOps<MemorySpace, Real>;
+  using Complex = std::complex<Real>;
+  /// The k-space tables are prepared in double whatever `Real` is.
+  using HostComplex = std::complex<double>;
   using FFT = typename Ops::FFT;
-  using RealField = pfc::data::Field<double, MemorySpace>;
+  using RealField = pfc::data::Field<Real, MemorySpace>;
   using ComplexField = pfc::data::Field<Complex, MemorySpace>;
   using Pointwise = spectral_pointwise_t<Physics>;
   using memory_space = MemorySpace;
@@ -185,8 +189,8 @@ public:
     std::vector<double> kernel(has_correlation ? n : 0, 0.0);
 
     if constexpr (has_complex_linear) {
-      m_L_c.assign(n, Complex{0.0, 0.0});
-      std::vector<Complex> nonlinear_symbol(n, Complex{1.0, 0.0});
+      m_L_c.assign(n, HostComplex{0.0, 0.0});
+      std::vector<HostComplex> nonlinear_symbol(n, HostComplex{1.0, 0.0});
       fft::kspace::for_each_kpoint(
           outbox, dom,
           [&](std::size_t idx, double kx, double ky, double kz, int, int, int) {
@@ -215,8 +219,8 @@ public:
       }
       m_exp_c_dev = Ops::make_complex(n);
       m_n_weight_c_dev = Ops::make_complex(n);
-      Ops::upload(m_exp_c_dev, std::span<const Complex>(m_exp_c));
-      Ops::upload(m_n_weight_c_dev, std::span<const Complex>(m_n_weight_c));
+      Ops::upload(m_exp_c_dev, std::span<const HostComplex>(m_exp_c));
+      Ops::upload(m_n_weight_c_dev, std::span<const HostComplex>(m_n_weight_c));
     } else {
       m_L.assign(n, 0.0);
       std::vector<double> nonlinear_symbol(n, 1.0);
@@ -443,7 +447,8 @@ public:
     return m_L;
   }
   /// Complex \f$L(\mathbf{k})\f$ (empty when the physics uses real L).
-  [[nodiscard]] const std::vector<Complex> &linear_symbol_complex() const noexcept {
+  [[nodiscard]] const std::vector<HostComplex> &
+  linear_symbol_complex() const noexcept {
     return m_L_c;
   }
   /// \f$M(k)\,\varphi_1(L\,dt)\f$ on this rank's outbox.
@@ -472,7 +477,7 @@ public:
 
   [[nodiscard]] RealField &psi() { return real_field(m_opt.psi_name); }
   [[nodiscard]] const RealField &psi() const {
-    return m_state.template get_field<double, MemorySpace>(m_opt.psi_name);
+    return m_state.template get_field<Real, MemorySpace>(m_opt.psi_name);
   }
   [[nodiscard]] ComplexField &psi_hat() { return complex_field(m_opt.psi_hat_name); }
   [[nodiscard]] const ComplexField &psi_hat() const {
@@ -500,7 +505,7 @@ public:
    * Does not modify `psi` or `psi_hat`. Uses the same backward transform as
    * `commit`, so the real candidate is in the same normalization as `psi`.
    */
-  void realize_candidate(std::vector<double> &dst) {
+  void realize_candidate(std::vector<Real> &dst) {
     if constexpr (!std::is_same_v<MemorySpace, pfc::HostSpace>) {
       throw std::logic_error("SpectralETDSystem::realize_candidate is CPU-only");
     } else {
@@ -512,7 +517,7 @@ public:
 
 private:
   RealField &real_field(const std::string &name) {
-    return m_state.template get_field<double, MemorySpace>(name);
+    return m_state.template get_field<Real, MemorySpace>(name);
   }
   ComplexField &complex_field(const std::string &name) {
     return m_state.template get_field<Complex, MemorySpace>(name);
@@ -539,19 +544,19 @@ private:
   void allocate_work_fields(const Domain &domain) {
     const auto inbox = m_fft.get_inbox_bounds();
     const auto outbox = m_fft.get_outbox_bounds();
-    add_if_missing<double>(m_opt.n_name, domain, inbox);
+    add_if_missing<Real>(m_opt.n_name, domain, inbox);
     add_if_missing<Complex>(m_opt.psi_hat_name, domain, outbox);
     add_if_missing<Complex>(m_opt.n_hat_name, domain, outbox);
     if constexpr (has_mean_field) {
-      add_if_missing<double>(m_opt.psi_mf_name, domain, inbox);
+      add_if_missing<Real>(m_opt.psi_mf_name, domain, inbox);
       add_if_missing<Complex>(m_opt.psi_mf_hat_name, domain, outbox);
     }
     if constexpr (has_correlation) {
-      add_if_missing<double>(m_opt.p_star_name, domain, inbox);
+      add_if_missing<Real>(m_opt.p_star_name, domain, inbox);
       add_if_missing<Complex>(m_opt.p_hat_name, domain, outbox);
     }
     if constexpr (has_free_energy) {
-      add_if_missing<double>(m_opt.fe_name, domain, inbox);
+      add_if_missing<Real>(m_opt.fe_name, domain, inbox);
     }
   }
 
@@ -620,15 +625,15 @@ private:
       // directions run once here. The backward overwrites `psi`; the saved
       // field is restored before the record. Capture itself does not execute.
       psi().sync_to_device();
-      std::vector<double> saved_psi;
-      psi().with_host_read([&](double const *data, std::size_t count) {
+      std::vector<Real> saved_psi;
+      psi().with_host_read([&](Real const *data, std::size_t count) {
         saved_psi.assign(data, data + count);
       });
       Ops::forward(m_fft, psi(), psi_hat());
       Ops::backward(m_fft, psi_hat(), psi());
       Ops::stream_synchronize(m_compute_stream);
       Ops::device_synchronize();
-      psi().with_host_view([&](double *data, std::size_t count) {
+      psi().with_host_view([&](Real *data, std::size_t count) {
         std::copy(saved_psi.begin(), saved_psi.end(), data);
       });
       psi().sync_to_device();
@@ -724,9 +729,9 @@ private:
 
   std::vector<double> m_L;
   std::vector<double> m_n_weight;
-  std::vector<Complex> m_L_c;
-  std::vector<Complex> m_exp_c;
-  std::vector<Complex> m_n_weight_c;
+  std::vector<HostComplex> m_L_c;
+  std::vector<HostComplex> m_exp_c;
+  std::vector<HostComplex> m_n_weight_c;
   std::vector<double> m_filter_host;
   std::vector<double> m_kernel_host;
   std::vector<double> m_mask_host;

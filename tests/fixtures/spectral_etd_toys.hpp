@@ -27,7 +27,10 @@
 namespace pfc::test {
 
 /// PFC-like mean-field physics: \f$\partial_t\hat\psi = k(c_0\hat\psi + \hat N)\f$.
-template <class MemorySpace = pfc::HostSpace> struct MeanFieldToy {
+/// `Real` selects the field scalar (ADR 0006); the symbols stay double.
+template <class MemorySpace = pfc::HostSpace, class Real = double>
+struct MeanFieldToy {
+  using real_type = Real;
   pfc::Domain domain{};
   pfc::Box3i box{};
   double c0{0.85};
@@ -35,7 +38,7 @@ template <class MemorySpace = pfc::HostSpace> struct MeanFieldToy {
   MeanFieldToyPointwise nl{};
 
   void declare_fields(pfc::SimulationState &state) const {
-    pfc::sim::add_declared_field<double, MemorySpace>(state, "psi", domain, box, 0);
+    pfc::sim::add_declared_field<Real, MemorySpace>(state, "psi", domain, box, 0);
   }
   [[nodiscard]] double linear_symbol(double k_laplacian) const {
     return k_laplacian * c0;
@@ -50,7 +53,9 @@ template <class MemorySpace = pfc::HostSpace> struct MeanFieldToy {
 };
 
 /// Moving-frame mean-field physics with a correlation kernel and observable.
-template <class MemorySpace = pfc::HostSpace> struct MovingFrameToy {
+template <class MemorySpace = pfc::HostSpace, class Real = double>
+struct MovingFrameToy {
+  using real_type = Real;
   pfc::Domain domain{};
   pfc::Box3i box{};
   double c0{0.85};
@@ -59,7 +64,7 @@ template <class MemorySpace = pfc::HostSpace> struct MovingFrameToy {
   MovingFrameToyPointwise nl{};
 
   void declare_fields(pfc::SimulationState &state) const {
-    pfc::sim::add_declared_field<double, MemorySpace>(state, "psi", domain, box, 0);
+    pfc::sim::add_declared_field<Real, MemorySpace>(state, "psi", domain, box, 0);
   }
   [[nodiscard]] double linear_symbol(double k_laplacian) const {
     return k_laplacian * c0;

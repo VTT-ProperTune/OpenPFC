@@ -36,6 +36,7 @@
 
 #include <memory>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
 
 #include <mpi.h>
@@ -68,9 +69,18 @@ struct SpectralGeometry {
 /**
  * @brief Programmatic spectral CPU stack: Domain + Decomposition + CPUFFT +
  *        Field sized to the FFT inbox.
+ *
+ * @tparam Real Field scalar, `double` (the `SpectralCPUStack` alias) or
+ *         `float` (ADR 0006). The FFT object serves both precisions; only
+ *         the bundled field `u()` and the session's fields take `Real`.
  */
-class SpectralCPUStack {
+template <class Real = double> class BasicSpectralCPUStack {
 public:
+  static_assert(std::is_floating_point_v<Real>,
+                "BasicSpectralCPUStack: Real must be double or float");
+  using real_type = Real;
+  using field_type = pfc::data::Field<Real, pfc::HostSpace>;
+
   /**
    * @param domain  The global Cartesian simulation domain.
    * @param rank    Caller's MPI rank on `comm`.
@@ -78,32 +88,32 @@ public:
    *                `decomposition::create`).
    * @param comm    MPI communicator passed to the FFT.
    */
-  explicit SpectralCPUStack(pfc::Domain domain, int rank, int nproc, MPI_Comm comm,
-                            const heffte::plan_options &options)
-      : SpectralCPUStack(std::move(domain), rank, nproc, comm,
-                         pfc::fft::Implementation::Heffte, options) {}
+  explicit BasicSpectralCPUStack(pfc::Domain domain, int rank, int nproc,
+                                 MPI_Comm comm, const heffte::plan_options &options)
+      : BasicSpectralCPUStack(std::move(domain), rank, nproc, comm,
+                              pfc::fft::Implementation::Heffte, options) {}
 
-  explicit SpectralCPUStack(pfc::Domain domain, int rank, int nproc,
-                            MPI_Comm comm = MPI_COMM_WORLD)
-      : SpectralCPUStack(std::move(domain), rank, nproc, comm,
-                         heffte::default_options<heffte::backend::fftw>()) {}
+  explicit BasicSpectralCPUStack(pfc::Domain domain, int rank, int nproc,
+                                 MPI_Comm comm = MPI_COMM_WORLD)
+      : BasicSpectralCPUStack(std::move(domain), rank, nproc, comm,
+                              heffte::default_options<heffte::backend::fftw>()) {}
 
   /// Local execution requires one actual communicator rank owning the domain.
-  SpectralCPUStack(pfc::Domain domain, int rank, int nproc, MPI_Comm comm,
-                   pfc::fft::Implementation implementation,
-                   const heffte::plan_options &options =
-                       heffte::default_options<heffte::backend::fftw>())
+  BasicSpectralCPUStack(pfc::Domain domain, int rank, int nproc, MPI_Comm comm,
+                        pfc::fft::Implementation implementation,
+                        const heffte::plan_options &options =
+                            heffte::default_options<heffte::backend::fftw>())
       : m_geometry({domain.size, domain.spacing, domain.origin, domain.periodic}),
         m_decomp(make_decomposition(domain, rank, nproc, comm, implementation)),
         m_fft(make_fft(domain, m_decomp, rank, comm, implementation, options)),
-        m_u(pfc::data::field_from_inbox<double>(domain, m_fft->get_inbox_bounds())),
+        m_u(pfc::data::field_from_inbox<Real>(domain, m_fft->get_inbox_bounds())),
         m_implementation(implementation), m_rank(rank), m_nproc(nproc),
         m_comm(comm) {}
 
-  SpectralCPUStack(const SpectralCPUStack &) = delete;
-  SpectralCPUStack &operator=(const SpectralCPUStack &) = delete;
-  SpectralCPUStack(SpectralCPUStack &&) = delete;
-  SpectralCPUStack &operator=(SpectralCPUStack &&) = delete;
+  BasicSpectralCPUStack(const BasicSpectralCPUStack &) = delete;
+  BasicSpectralCPUStack &operator=(const BasicSpectralCPUStack &) = delete;
+  BasicSpectralCPUStack(BasicSpectralCPUStack &&) = delete;
+  BasicSpectralCPUStack &operator=(BasicSpectralCPUStack &&) = delete;
 
   [[nodiscard]] const SpectralGeometry &geometry() const noexcept {
     return m_geometry;
@@ -124,8 +134,8 @@ public:
     return m_implementation;
   }
 
-  [[nodiscard]] pfc::data::Field<double> &u() noexcept { return m_u; }
-  [[nodiscard]] const pfc::data::Field<double> &u() const noexcept { return m_u; }
+  [[nodiscard]] field_type &u() noexcept { return m_u; }
+  [[nodiscard]] const field_type &u() const noexcept { return m_u; }
 
   /**
    * @brief Build a compact-driver residual field for the spectral stack.
@@ -148,7 +158,9 @@ public:
    *
    * @tparam G  Model-owned per-point grads aggregate.
    */
-  template <class G> [[nodiscard]] auto du() {
+  template <class G>
+    requires std::is_same_v<Real, double>
+  [[nodiscard]] auto du() {
     auto eval = pfc::field::create<G>(m_u, *m_fft);
     using EvalT = decltype(eval);
     return pfc::sim::DuField<G, EvalT>(m_u.size(), std::move(eval), []() {});
@@ -198,11 +210,21 @@ private:
   SpectralGeometry m_geometry;
   pfc::decomposition::Decomposition m_decomp;
   std::unique_ptr<pfc::fft::IHostFFT> m_fft;
-  pfc::data::Field<double> m_u;
+  field_type m_u;
   pfc::fft::Implementation m_implementation;
   int m_rank{0};
   int m_nproc{1};
   MPI_Comm m_comm{MPI_COMM_WORLD};
 };
+
+/// The double-precision stack every shipped CPU session uses.
+using SpectralCPUStack = BasicSpectralCPUStack<double>;
+
+/// True for `BasicSpectralCPUStack<Real>` of any `Real`.
+template <class Stack> struct is_spectral_cpu_stack : std::false_type {};
+template <class Real>
+struct is_spectral_cpu_stack<BasicSpectralCPUStack<Real>> : std::true_type {};
+template <class Stack>
+inline constexpr bool is_spectral_cpu_stack_v = is_spectral_cpu_stack<Stack>::value;
 
 } // namespace pfc::sim::stacks
