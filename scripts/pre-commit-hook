@@ -2,15 +2,51 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Staged-file clang-format check (matches CI style: .clang-format at repo root),
-# then clang-tidy on staged .cpp/.hpp when compile_commands.json exists (see
-# scripts/pre-commit-clang-tidy-hook).
+# Pre-commit checks on staged files:
+#   1. staged-file guard: run output (*.bin, *.h5), editor backups (*.bak,
+#      *.orig, *.backup) and files larger than OPENPFC_PRECOMMIT_MAX_BYTES
+#      (default 10 MiB) are rejected, so a whole-tree `git add` cannot put
+#      simulation output into history (CONTRIBUTING.md, "Never commit");
+#   2. clang-format check (matches CI style: .clang-format at repo root),
+#      then clang-tidy on staged .cpp/.hpp when compile_commands.json exists
+#      (see scripts/pre-commit-clang-tidy-hook).
 # Install: git config core.hooksPath .githooks   (from repository root)
+# Tested by tests/check_pre_commit_guard.sh (ctest -L verification).
 
 set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
+
+# --- 1. Staged-file guard ---------------------------------------------------
+
+MAX_BYTES="${OPENPFC_PRECOMMIT_MAX_BYTES:-10485760}"
+guard_failed=0
+while IFS= read -r -d '' f; do
+  [[ -z "$f" ]] && continue
+  case "$f" in
+    *.bin | *.h5 | *.bak | *.orig | *.backup)
+      echo "  run output or editor backup must not be committed: $f" >&2
+      guard_failed=1
+      continue
+      ;;
+  esac
+  size="$(git cat-file -s ":$f" 2>/dev/null || echo 0)"
+  if (( size > MAX_BYTES )); then
+    echo "  staged file exceeds ${MAX_BYTES} bytes (${size}): $f" >&2
+    guard_failed=1
+  fi
+done < <(git diff --cached --name-only --diff-filter=ACM -z)
+
+if [[ "$guard_failed" -ne 0 ]]; then
+  echo "" >&2
+  echo "Simulation output belongs under results/ or study storage, not in Git" >&2
+  echo "(CONTRIBUTING.md). Unstage with: git restore --staged <file>" >&2
+  echo "A deliberately large asset: OPENPFC_PRECOMMIT_MAX_BYTES=<bytes> git commit ..." >&2
+  exit 1
+fi
+
+# --- 2. clang-format on staged C++ -----------------------------------------
 
 resolve_clang_format() {
   local c
@@ -23,13 +59,13 @@ resolve_clang_format() {
   return 1
 }
 
+if ! git diff --cached --name-only --diff-filter=ACM | grep -qE '\.(cpp|hpp|h|cc|cxx)$'; then
+  exit 0
+fi
+
 if ! CF="$(resolve_clang_format)"; then
   echo "clang-format not found. Install clang-format 20 (or symlink) to match CI." >&2
   exit 1
-fi
-
-if ! git diff --cached --name-only --diff-filter=ACM | grep -qE '\.(cpp|hpp|h|cc|cxx)$'; then
-  exit 0
 fi
 
 echo "Checking formatting with $CF ($($CF --version 2>&1 | head -n1))"

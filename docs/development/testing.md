@@ -64,6 +64,7 @@ exactly these selections, so `ctest -N -L ...` shows what CI will run.
 | `examples` | `examples/CMakeLists.txt` (directory property) | every lesson check |
 | `smoke` | `openpfc_app_smoke_test(<test>)` in each `apps/*/CMakeLists.txt`; the `smoke` list in `examples/CMakeLists.txt` | one quick CPU test per application and lesson theme; what a shared C++ change runs for every consumer |
 | `gpu`, `dirichlet`, `required-device` | `tests/unit/runtime/gpu/` | device qualification suites (see below) |
+| `verification` | `tests/CMakeLists.txt` | shell guard checks that need no build: `check_deprecated_symbols`, `check_pre_commit_guard` (the tracked pre-commit hook rejects run output and oversized files) |
 
 An application that registers tests must name exactly one smoke test, or
 configure fails; pick the test that exercises the maintained executable or

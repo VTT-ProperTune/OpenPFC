@@ -148,7 +148,7 @@ SBATCH_PARTITION=gen05_epyc SBATCH_BUILD_TIME=08:00:00 SBATCH_BW_TIME=00:30:00 \
 
 ### pre-commit-hook
 
-Purpose: Automatically check code formatting before commits to prevent CI failures.
+Purpose: Keep run output out of history and check code formatting before commits.
 
 Installation (Required for all developers):
 
@@ -167,6 +167,10 @@ chmod +x .git/hooks/pre-commit
 What it does:
 
 - Runs automatically before each `git commit`
+- Rejects staged run output (`*.bin`, `*.h5`), editor backups (`*.bak`,
+  `*.orig`, `*.backup`) and files larger than 10 MiB
+  (`OPENPFC_PRECOMMIT_MAX_BYTES=<bytes>` raises the limit for one deliberate
+  commit); simulation output belongs under `results/`, see `CONTRIBUTING.md`
 - Checks C++ files (`.cpp`, `.hpp`, `.h`, `.cc`, `.cxx`) for formatting issues
 - Uses `clang-format` to verify code style compliance
 - Blocks commits if formatting issues are found

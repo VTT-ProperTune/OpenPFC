@@ -7,6 +7,15 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Run output can no longer slip into history through a whole-tree `git add`:
+  `.gitignore` covers `/data/`, `/dataNewer/`, `*.bin`, `*.h5` and the editor
+  backups `*.bak`, `*.orig`, `*.backup`, and the tracked pre-commit hook
+  (`scripts/pre-commit-hook`) rejects those staged files and any staged file
+  over 10 MiB (`OPENPFC_PRECOMMIT_MAX_BYTES` overrides the limit for one
+  deliberate commit; `tests/check_pre_commit_guard.sh`, label `verification`).
+  The shipped tungsten, aluminumNew, LUMI and validation-example inputs write
+  their fields under `./results/` instead of `./data/` and `./dataNewer/`,
+  as `AGENTS.md` has asked since 0.1.
 - Tungsten and aluminum take a first-class lattice choice, JSON/TOML key
   `model.params.lattice` (`bcc` or `fcc`; default `bcc` for tungsten, `fcc`
   for aluminum, so every shipped preset and pinned checksum is unchanged).

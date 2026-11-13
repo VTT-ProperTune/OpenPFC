@@ -30,10 +30,11 @@ option). In the PR, name the commands you ran and what you could not run.
 Build and test commands are in [`AGENTS.md`](AGENTS.md); guides start at
 [`docs/README.md`](docs/README.md).
 
-**Hook.** `git config core.hooksPath .githooks` enables the pre-commit check:
-clang-format 20 on staged C/C++ files, as in CI.
-
-**Never commit:** build trees (`build/`, `builds/`), run output (`results/`,
-`out/`, `*.log`, `*.out`), HeFFTe sources or tarballs, Julia manifests, local
-preferences, or new `*.sbatch` campaign launchers. A user- or developer-visible
-change adds a `CHANGELOG.md` `[Unreleased]` line in the same commit.
+**Hook.** `git config core.hooksPath .githooks` enables the pre-commit checks:
+clang-format 20 on staged C/C++ files, as in CI, and a guard that rejects run
+output, editor backups and files over 10 MiB. Stage files by name, never
+`git add -A`. **Never commit:** build trees (`build/`, `builds/`), run output
+(`results/`, `data/`, `*.bin`, `*.h5`, `*.log`, `*.out`), editor backups,
+HeFFTe sources or tarballs, Julia manifests, local preferences, or new
+`*.sbatch` launchers. A user- or developer-visible change adds a
+`CHANGELOG.md` `[Unreleased]` line in the same commit.

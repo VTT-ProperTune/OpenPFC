@@ -19,6 +19,17 @@ build-handbook
 site
 result
 results
+# Run output written next to a config (binary fields, HDF5) and editor
+# backups never enter history (CONTRIBUTING.md). The directories are anchored
+# to the root so include/openpfc/kernel/data/ and tests/unit/kernel/data/
+# stay tracked; scripts/pre-commit-hook enforces the same list on staged files.
+/data/
+/dataNewer/
+*.bin
+*.h5
+*.bak
+*.orig
+*.backup
 *.out
 *.log
 *.err

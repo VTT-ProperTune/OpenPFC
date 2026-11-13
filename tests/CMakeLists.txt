@@ -339,5 +339,15 @@ set_tests_properties(check_deprecated_symbols PROPERTIES
   LABELS "verification"
 )
 
+# Guard test: the tracked pre-commit hook rejects run output, editor backups
+# and oversized staged files (scripts/pre-commit-hook)
+add_test(
+  NAME check_pre_commit_guard
+  COMMAND bash ${CMAKE_SOURCE_DIR}/tests/check_pre_commit_guard.sh
+)
+set_tests_properties(check_pre_commit_guard PROPERTIES
+  LABELS "verification"
+)
+
 # Optionally, add a custom target to run tests manually
 add_custom_target(run-tests COMMAND openpfc-tests)
