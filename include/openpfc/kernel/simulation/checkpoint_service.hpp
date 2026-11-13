@@ -144,28 +144,33 @@ public:
   }
 
   /**
-   * @brief Publish every `double` field of @p state in @p MemorySpace.
+   * @brief Publish every `Real` field of @p state in @p MemorySpace.
+   *
+   * `Real` is `double` (default) or `float`; the bricks on disk are float64
+   * either way (ADR 0006), so the two can restart from each other's bundles.
    *
    * Collective over the service communicator. Device fields are read through
    * their host mirror; the residency bracket is owned here, not by the caller.
    */
-  template <class MemorySpace = pfc::HostSpace>
+  template <class MemorySpace = pfc::HostSpace, class Real = double>
   void save(SimulationState &state, const Time &time) {
+    static_assert(std::is_same_v<Real, double> || std::is_same_v<Real, float>,
+                  "CheckpointService: Real must be double or float");
     if (m_cfg.directory.empty()) {
       throw std::invalid_argument("CheckpointService::save: directory is empty");
     }
     std::vector<std::string> names;
     for (const auto &name : state.field_names()) {
-      if (state.has_typed_field<double, MemorySpace>(name)) {
+      if (state.has_typed_field<Real, MemorySpace>(name)) {
         names.push_back(name);
       }
     }
     if (names.empty()) {
       throw std::invalid_argument("CheckpointService::save: no fields");
     }
-    std::vector<checkpoint::NamedField<MemorySpace>> fields;
+    std::vector<checkpoint::NamedField<MemorySpace, Real>> fields;
     for (const auto &name : names) {
-      fields.emplace_back(name, &state.get_field<double, MemorySpace>(name));
+      fields.emplace_back(name, &state.get_field<Real, MemorySpace>(name));
     }
     checkpoint::FieldBundleState bundle;
     bundle.accepted_time = time.get_current();
@@ -185,26 +190,28 @@ public:
     return checkpoint::read_checkpoint_metadata(dir, m_comm);
   }
 
-  template <class MemorySpace = pfc::HostSpace>
+  template <class MemorySpace = pfc::HostSpace, class Real = double>
   void load(SimulationState &state, Time &time, const std::filesystem::path &dir) {
+    static_assert(std::is_same_v<Real, double> || std::is_same_v<Real, float>,
+                  "CheckpointService: Real must be double or float");
     const auto meta = read_metadata(dir);
 
     std::vector<std::string> names = meta.fields;
     if (names.empty()) {
       for (const auto &name : state.field_names()) {
-        if (state.has_typed_field<double, MemorySpace>(name)) {
+        if (state.has_typed_field<Real, MemorySpace>(name)) {
           names.push_back(name);
         }
       }
     }
-    std::vector<checkpoint::NamedField<MemorySpace>> fields;
+    std::vector<checkpoint::NamedField<MemorySpace, Real>> fields;
     Time candidate_time = time;
     std::string error;
     try {
       if (names.empty())
         throw std::invalid_argument("checkpoint load: no field names");
       for (const auto &name : names)
-        fields.emplace_back(name, &state.get_field<double, MemorySpace>(name));
+        fields.emplace_back(name, &state.get_field<Real, MemorySpace>(name));
       checkpoint::CheckpointMetadata want;
       want.format_version = checkpoint::kCheckpointFormatVersion;
       want.domain = domain_params_from(fields.front().second->domain());
@@ -240,7 +247,7 @@ public:
     m_boundary_conditions = meta.boundary_conditions;
   }
 
-  template <class MemorySpace = pfc::HostSpace>
+  template <class MemorySpace = pfc::HostSpace, class Real = double>
   bool maybe_save(SimulationState &state, const Time &time) {
     if (m_cfg.every <= 0 || m_cfg.directory.empty()) {
       return false;
@@ -249,16 +256,16 @@ public:
     if (inc == 0 || (inc % m_cfg.every) != 0) {
       return false;
     }
-    save<MemorySpace>(state, time);
+    save<MemorySpace, Real>(state, time);
     return true;
   }
 
-  template <class MemorySpace = pfc::HostSpace>
+  template <class MemorySpace = pfc::HostSpace, class Real = double>
   void restore_from_config(SimulationState &state, Time &time) {
     if (m_cfg.restart_from.empty()) {
       return;
     }
-    load<MemorySpace>(state, time, m_cfg.restart_from);
+    load<MemorySpace, Real>(state, time, m_cfg.restart_from);
   }
 
 private:

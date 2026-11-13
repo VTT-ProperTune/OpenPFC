@@ -229,7 +229,8 @@ public:
     m_sys = std::make_unique<System>(std::move(physics), fft(), m_state,
                                      pfc::time::dt(m_session.time()),
                                      std::move(system_options));
-    m_ckpt.template restore_from_config<memory_space>(m_state, m_session.time());
+    m_ckpt.template restore_from_config<memory_space, Real>(m_state,
+                                                            m_session.time());
     if (!m_ckpt.config().restart_from.empty()) {
       restore_boundary_conditions();
     }
@@ -405,7 +406,7 @@ private:
     if (cfg.every > 0 && !cfg.directory.empty() && increment > 0 &&
         increment % cfg.every == 0) {
       m_ckpt.set_boundary_conditions(capture_boundary_conditions());
-      m_ckpt.template maybe_save<memory_space>(m_state, m_session.time());
+      m_ckpt.template maybe_save<memory_space, Real>(m_state, m_session.time());
     }
   }
 
@@ -454,19 +455,10 @@ private:
                                     "' does not support real fields");
       }
       auto &f = real_field(nw.field_name);
-      // Writers take double views. A float field is widened into a scratch
-      // buffer first: the on-disk format stays float64 (ADR 0006, explicit
-      // conversion at the sink).
+      // A float view is widened by ResultsWriter itself (float64 on disk).
       const auto write_view = [&](const Real *d, std::size_t n) {
-        const double *src = nullptr;
-        if constexpr (std::is_same_v<Real, double>) {
-          src = d;
-        } else {
-          m_write_scratch.assign(d, d + n);
-          src = m_write_scratch.data();
-        }
-        pfc::field::FieldView<double> view(src, n, f.box().size, f.spacing(),
-                                           f.origin());
+        pfc::field::FieldView<Real> view(d, n, f.box().size, f.spacing(),
+                                         f.origin());
         nw.writer->write(m_result_counter, view);
       };
       if constexpr (is_host) {
@@ -489,7 +481,6 @@ private:
   std::string m_psi_name{"psi"};
   std::vector<std::unique_ptr<pfc::FieldModifier>> m_bcs;
   std::vector<NamedResultsWriter> m_writers;
-  std::vector<double> m_write_scratch;
   int m_result_counter{0};
   std::unique_ptr<System> m_sys;
 };

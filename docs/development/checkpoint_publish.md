@@ -15,8 +15,11 @@ with metadata types in
 This is the **one** durable publish protocol, and it is MPI-collective.
 Framework restart is `pfc::sim::CheckpointService`
 (`kernel/simulation/checkpoint_service.hpp`): it builds the metadata and calls
-`publish_checkpoint_directory` with a callback that writes every owned float64
-brick through `brick_io.hpp` (collective MPI-IO); rank 0 writes
+`publish_checkpoint_directory` with a callback that writes every owned field
+as a float64 brick through `brick_io.hpp` (collective MPI-IO; a `float`
+field of a single-precision session is widened on publish and narrowed on
+load, ADR 0006, so float and double sessions restart from each other's
+bundles); rank 0 writes
 `metadata.json`; the stage→rename step runs only after every rank agreed the
 writes succeeded, so an interrupted write never becomes a loadable bundle. It is distinct from scheduled headerless field dumps written
 by `ResultsWriter` / frontend `BinaryWriter`

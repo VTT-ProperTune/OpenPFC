@@ -27,7 +27,7 @@ Namespace: `pfc::checkpoint`.
 A `FieldPayload` carries:
 
 - stable `field_id`
-- `FieldDtype` (`Float64`, `Complex128`)
+- `FieldDtype` (`Float64`, `Complex128`; a `float` field is captured as `Float64`, ADR 0006)
 - owned-cell `extents` (nx, ny, nz)
 - `CoordinateOrder::XFastest` (OpenPFC row-major, x fastest)
 - format `version` (`kFieldPayloadFormatVersion`)

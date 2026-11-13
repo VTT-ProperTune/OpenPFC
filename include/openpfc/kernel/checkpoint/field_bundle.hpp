@@ -52,9 +52,12 @@
 
 namespace pfc::checkpoint {
 
-/// Field id in the bundle (`fields/<id>.bin`) and the field it stores.
-template <class MemorySpace = pfc::HostSpace>
-using NamedField = std::pair<std::string, pfc::data::Field<double, MemorySpace> *>;
+/// Field id in the bundle (`fields/<id>.bin`) and the field it stores. `T`
+/// is the field scalar, `double` or `float`; the brick on disk is always
+/// float64 (ADR 0006: float fields are widened on publish and narrowed on
+/// load), so a float session can restart from a double bundle and vice versa.
+template <class MemorySpace = pfc::HostSpace, class T = double>
+using NamedField = std::pair<std::string, pfc::data::Field<T, MemorySpace> *>;
 
 /// Accepted state written into `metadata.json` next to the fields.
 struct FieldBundleState {
@@ -73,13 +76,15 @@ struct FieldBundleSidecar {
 };
 
 /**
- * @brief Copy the owned cells of @p f (x-fastest, no halo) into a transport
- *        buffer. Device fields go through the host mirror.
+ * @brief Copy the owned cells of @p f (x-fastest, no halo) into a float64
+ *        transport buffer. Device fields go through the host mirror; a float
+ *        field is widened here (ADR 0006).
  */
 template <typename T, typename MemorySpace>
 [[nodiscard]] std::vector<double>
 pack_owned_real(pfc::data::Field<T, MemorySpace> &f) {
-  static_assert(std::is_same_v<T, double>, "pack_owned_real is float64 only");
+  static_assert(std::is_same_v<T, double> || std::is_same_v<T, float>,
+                "pack_owned_real stores real fields as float64");
   const auto sz = f.local_size();
   std::vector<double> out(static_cast<std::size_t>(sz[0]) *
                           static_cast<std::size_t>(sz[1]) *
@@ -89,7 +94,7 @@ pack_owned_real(pfc::data::Field<T, MemorySpace> &f) {
     for (int k = 0; k < sz[2]; ++k) {
       for (int j = 0; j < sz[1]; ++j) {
         for (int i = 0; i < sz[0]; ++i) {
-          out[n++] = data[f.idx(i, j, k)];
+          out[n++] = static_cast<double>(data[f.idx(i, j, k)]);
         }
       }
     }
@@ -97,11 +102,13 @@ pack_owned_real(pfc::data::Field<T, MemorySpace> &f) {
   return out;
 }
 
-/** @brief Inverse of @ref pack_owned_real. */
+/** @brief Inverse of @ref pack_owned_real; a float field narrows the float64 brick.
+ */
 template <typename T, typename MemorySpace>
 inline void unpack_owned_real(pfc::data::Field<T, MemorySpace> &f,
                               const std::vector<double> &in) {
-  static_assert(std::is_same_v<T, double>, "unpack_owned_real is float64 only");
+  static_assert(std::is_same_v<T, double> || std::is_same_v<T, float>,
+                "unpack_owned_real reads float64 into a real field");
   const auto sz = f.local_size();
   const auto owned = static_cast<std::size_t>(sz[0]) *
                      static_cast<std::size_t>(sz[1]) *
@@ -114,7 +121,7 @@ inline void unpack_owned_real(pfc::data::Field<T, MemorySpace> &f,
     for (int k = 0; k < sz[2]; ++k) {
       for (int j = 0; j < sz[1]; ++j) {
         for (int i = 0; i < sz[0]; ++i) {
-          data[f.idx(i, j, k)] = in[n++];
+          data[f.idx(i, j, k)] = static_cast<T>(in[n++]);
         }
       }
     }
@@ -122,10 +129,10 @@ inline void unpack_owned_real(pfc::data::Field<T, MemorySpace> &f,
   f.sync_to_device();
 }
 
-/** @brief Write the owned cells of @p f as brick @p path (collective). */
-template <class MemorySpace>
+/** @brief Write the owned cells of @p f as a float64 brick @p path (collective). */
+template <class MemorySpace, class T>
 inline void write_field_brick(const std::filesystem::path &path, MPI_Comm comm,
-                              pfc::data::Field<double, MemorySpace> &f) {
+                              pfc::data::Field<T, MemorySpace> &f) {
   const auto brick = pack_owned_real(f);
   const auto loc = f.local_size();
   const auto off = f.lower_global();
@@ -134,10 +141,10 @@ inline void write_field_brick(const std::filesystem::path &path, MPI_Comm comm,
                        {loc[0], loc[1], loc[2]}, {off[0], off[1], off[2]}, brick);
 }
 
-/** @brief Read brick @p path into the owned cells of @p f (collective). */
-template <class MemorySpace>
+/** @brief Read float64 brick @p path into the owned cells of @p f (collective). */
+template <class MemorySpace, class T>
 inline void read_field_brick(const std::filesystem::path &path, MPI_Comm comm,
-                             pfc::data::Field<double, MemorySpace> &f) {
+                             pfc::data::Field<T, MemorySpace> &f) {
   const auto loc = f.local_size();
   const auto off = f.lower_global();
   const auto gsz = f.global_size();
@@ -207,10 +214,11 @@ inline void require_collective_checkpoint_input(const std::string &error,
         error.empty() ? "checkpoint input mismatch on another rank" : error);
 }
 
-template <class MemorySpace>
-inline void require_bundle_fields(const CheckpointMetadata &meta,
-                                  const std::vector<NamedField<MemorySpace>> &fields,
-                                  MPI_Comm comm, bool check_names = true) {
+template <class MemorySpace, class T>
+inline void
+require_bundle_fields(const CheckpointMetadata &meta,
+                      const std::vector<NamedField<MemorySpace, T>> &fields,
+                      MPI_Comm comm, bool check_names = true) {
   std::string error;
   std::vector<std::string> names;
   for (const auto &[name, f] : fields) {
@@ -243,10 +251,10 @@ inline void require_bundle_fields(const CheckpointMetadata &meta,
  *         decompositions, an empty or reserved sidecar name) throws
  *         `std::invalid_argument` before anything is written.
  */
-template <class MemorySpace = pfc::HostSpace>
+template <class MemorySpace = pfc::HostSpace, class T = double>
 [[nodiscard]] PublishOutcome
 publish_field_bundle(const std::filesystem::path &dir,
-                     const std::vector<NamedField<MemorySpace>> &fields,
+                     const std::vector<NamedField<MemorySpace, T>> &fields,
                      const FieldBundleState &state, MPI_Comm comm,
                      const FieldBundleSidecar &sidecar = {}) {
   std::string error;
@@ -333,10 +341,10 @@ publish_field_bundle(const std::filesystem::path &dir,
  * @throws std::invalid_argument on a name, grid or periodicity mismatch, on every
  * rank.
  */
-template <class MemorySpace = pfc::HostSpace>
+template <class MemorySpace = pfc::HostSpace, class T = double>
 [[nodiscard]] CheckpointMetadata
 load_field_bundle(const std::filesystem::path &dir,
-                  const std::vector<NamedField<MemorySpace>> &fields,
+                  const std::vector<NamedField<MemorySpace, T>> &fields,
                   MPI_Comm comm) {
   const auto meta = read_checkpoint_metadata(dir, comm);
   detail::require_bundle_fields(meta, fields, comm);

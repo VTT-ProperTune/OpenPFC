@@ -7,6 +7,18 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Float fields reach the file formats through explicit conversions (ADR
+  0006, #854 step 2). `ResultsWriter::write` accepts `FieldView<float>` and
+  `FieldView<std::complex<float>>` and widens them in the base class, so every
+  writer (binary, VTK, HDF5/XDMF, snapshot series) keeps its float64 /
+  complex128 files; the session no longer converts itself. Checkpoints take
+  the field scalar: `NamedField<MemorySpace, T>`, `pack_owned_real` /
+  `unpack_owned_real`, `write_field_brick` / `read_field_brick`,
+  `publish_field_bundle` / `load_field_bundle` and
+  `CheckpointService::{save,load,maybe_save,restore_from_config}<MemorySpace,
+  Real>` accept `float` fields and store float64 bricks, so float and double
+  sessions restart from each other's bundles. Tests: `[checkpoint][float]`
+  (bundle and service round trips both ways), `[binary_writer][float]`.
 - The spectral ETD chain runs in single precision (ADR 0006, #854, GitHub
   #11, first step). A physics that declares `using real_type = float;` and
   float fields drives `SpectralETDSystem` and `SpectralETDSession` with float

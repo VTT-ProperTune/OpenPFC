@@ -329,9 +329,40 @@ public:
     throw std::invalid_argument("writer does not support complex fields");
   }
 
+  /**
+   * @brief Write a single-precision real field.
+   *
+   * Writers store float64 (`binary_field_io_spec.md`, ADR 0006). A float view
+   * is widened into a scratch buffer owned by the writer and handed to the
+   * double overload, so every writer serves float fields without a second
+   * on-disk element type. Not virtual: subclasses override the double pair.
+   */
+  MPI_Status write(int increment, pfc::field::FieldView<float> data) {
+    m_widen_real.assign(data.data(), data.data() + data.size());
+    return write(increment, pfc::field::FieldView<double>(
+                                m_widen_real.data(), m_widen_real.size(),
+                                data.extents(), data.spacing(), data.origin()));
+  }
+
+  /** @brief Single-precision complex field, widened to complex128 (see above). */
+  MPI_Status write(int increment, pfc::field::FieldView<std::complex<float>> data) {
+    m_widen_complex.resize(data.size());
+    for (std::size_t i = 0; i < data.size(); ++i) {
+      m_widen_complex[i] =
+          std::complex<double>(data.data()[i].real(), data.data()[i].imag());
+    }
+    return write(increment, pfc::field::FieldView<std::complex<double>>(
+                                m_widen_complex.data(), m_widen_complex.size(),
+                                data.extents(), data.spacing(), data.origin()));
+  }
+
   template <typename T> MPI_Status write(const std::vector<T> &data) {
     return write(0, pfc::field::FieldView<T>(data));
   }
+
+private:
+  std::vector<double> m_widen_real;
+  std::vector<std::complex<double>> m_widen_complex;
 };
 
 /**

@@ -501,3 +501,69 @@ TEST_CASE("checkpoint service rejects every field before changing restart state"
   require_fields_equal(source.get_field<double>("v"),
                        compatible.get_field<double>("v"));
 }
+
+// ADR 0006: a float session checkpoints through the same float64 bundle;
+// save<Space, float> / load<Space, float> widen and narrow, and a double
+// state restarts from the float bundle.
+TEST_CASE("CheckpointService saves and restores float fields as float64",
+          "[checkpoint][service][float]") {
+  int nproc = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  if (nproc != 1) {
+    return;
+  }
+  TempCkpt tmp("openpfc_ckpt_float");
+
+  auto domain = pfc::domain::create(pfc::GridSize({8, 8, 1}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = pfc::decomposition::create(domain, 1);
+  auto make_float_state = [&](bool filled) {
+    auto field = pfc::data::field_from_subdomain<float>(decomp, 0, 0);
+    if (filled) {
+      field.apply([](double x, double y, double) {
+        return static_cast<float>(x + 0.1 * y);
+      });
+    }
+    pfc::SimulationState state;
+    state.add_field("u", std::move(field));
+    return state;
+  };
+
+  auto saved = make_float_state(true);
+  pfc::Time time({0.0, 1.0, 0.1}, 0.0);
+  CheckpointService svc({.every = 2, .directory = tmp.root}, MPI_COMM_WORLD);
+  time.next();
+  time.next();
+  REQUIRE(svc.maybe_save<pfc::HostSpace, float>(saved, time));
+  REQUIRE_FALSE(saved.has_typed_field<double>("u"));
+  REQUIRE(std::filesystem::file_size(svc.step_dir(2) / "fields" / "u.bin") ==
+          sizeof(double) * 8 * 8);
+
+  auto restored = make_float_state(false);
+  pfc::Time time2({0.0, 1.0, 0.1}, 0.0);
+  pfc::sim::CheckpointConfig restart_cfg{.every = 0,
+                                         .restart_from = svc.step_dir(2)};
+  CheckpointService loader(restart_cfg, MPI_COMM_WORLD);
+  loader.restore_from_config<pfc::HostSpace, float>(restored, time2);
+  REQUIRE(time2.get_increment() == 2);
+  const auto &a = saved.get_field<float>("u");
+  const auto &b = restored.get_field<float>("u");
+  const auto sz = a.local_size();
+  for (int j = 0; j < sz[1]; ++j) {
+    for (int i = 0; i < sz[0]; ++i) {
+      REQUIRE(a(i, j, 0) == b(i, j, 0));
+    }
+  }
+
+  // The same bundle restarts a double state with the narrowed values.
+  auto as_double = make_state(8, 1, 0);
+  pfc::Time time3({0.0, 1.0, 0.1}, 0.0);
+  loader.restore_from_config<pfc::HostSpace>(as_double, time3);
+  const auto &d = as_double.get_field<double>("u");
+  for (int j = 0; j < sz[1]; ++j) {
+    for (int i = 0; i < sz[0]; ++i) {
+      REQUIRE(d(i, j, 0) == static_cast<double>(a(i, j, 0)));
+    }
+  }
+}

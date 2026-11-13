@@ -21,7 +21,7 @@ restart contract.
 | Property | Value |
 |----------|--------|
 | **Layout** | A single **global** 3D array in **Fortran (column-major) order** (`MPI_ORDER_FORTRAN` in `MPI_Type_create_subarray`). |
-| **Element type** | Real fields: `double` (`MPI_DOUBLE`). Complex fields: `std::complex<double>` (`MPI_C_DOUBLE_COMPLEX`). Each complex element occupies `sizeof(std::complex<double>)` bytes (two native doubles) in the raw payload. |
+| **Element type** | Real fields: `double` (`MPI_DOUBLE`). Complex fields: `std::complex<double>` (`MPI_C_DOUBLE_COMPLEX`). Each complex element occupies `sizeof(std::complex<double>)` bytes (two native doubles) in the raw payload. A `float` or `std::complex<float>` view handed to `ResultsWriter::write` is widened by the base class before it reaches a writer (ADR 0006), so single-precision sessions produce the same float64 / complex128 files. |
 | **MPI filetype / etype** | `BinaryWriter` and `BinaryReader` build the MPI filetype subarray from the **same** element type used as the `MPI_File_set_view` etype. Real paths use `MPI_DOUBLE`; complex paths use `MPI_C_DOUBLE_COMPLEX`. The filetype is rebuilt if the same writer/reader instance later switches element type after one `set_domain()`. |
 | **Byte order** | **Native** (`"native"` in `MPI_File_set_view`) — endianness matches the machine that wrote the file. |
 | **Header / magic** | **None.** The file is only the raw payload for the MPI file view (no metadata block, no version tag). |
@@ -58,7 +58,7 @@ The `increment` value is advanced by the simulator according to configuration (s
 
 **Implications:**
 
-- Files written as **pure `double`** real fields with the same `(global, local, offset)` decomposition can be read back for restart or `FileReader` initial conditions.  
+- Files written as **pure `double`** real fields with the same `(global, local, offset)` decomposition can be read back for restart or `FileReader` initial conditions; a float session reads them through the same double path and narrows (`apply_field_modifier`, checkpoint bricks).  
 - Files written as **`std::complex<double>`** round-trip through the complex `BinaryReader::read` overload with the same decomposition.  
 - Match **communicator**, **decomposition**, and **datatype** when reading: a file written on *N* ranks is not automatically loadable on a different *N* without re-decomposition logic outside this low-level format. Do not read a complex file with the real `read` overload (or vice versa).
 

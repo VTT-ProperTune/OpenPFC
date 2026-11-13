@@ -589,3 +589,49 @@ TEST_CASE(
   REQUIRE_FALSE(pfc::test::is_path_open(filename));
   std::filesystem::remove(filename);
 }
+
+// ADR 0006: a float view is widened by ResultsWriter and stored as float64,
+// so the file reads back through the double BinaryReader path.
+TEST_CASE("BinaryWriter stores a float view as float64",
+          "[binary_writer][io][float]") {
+  const int rank = mpi::get_rank();
+  const int size = mpi::get_size();
+  if (size > 2) {
+    SKIP("binary_writer tests support 1 or 2 ranks only");
+  }
+  const DomainBrick domain = make_domain(rank, size);
+  const auto out_dir = test_dir();
+  const std::string template_path = (out_dir / "float_%d.bin").string();
+  const std::string path = (out_dir / "float_0.bin").string();
+
+  const std::vector<double> reference = make_real(domain, rank);
+  std::vector<float> written(reference.begin(), reference.end());
+  {
+    BinaryWriter writer(template_path);
+    pfc::ResultsWriter &base = writer;
+    base.set_domain(domain.global, domain.local, domain.offset);
+    REQUIRE(base.writes_real());
+    REQUIRE_NOTHROW(base.write(0, pfc::field::FieldView<float>(written)));
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (rank == 0) {
+    REQUIRE(std::filesystem::file_size(path) ==
+            sizeof(double) * static_cast<std::size_t>(domain.global[0]) *
+                static_cast<std::size_t>(domain.global[1]) *
+                static_cast<std::size_t>(domain.global[2]));
+  }
+  std::vector<double> read_back(local_count(domain));
+  {
+    BinaryReader reader;
+    reader.set_domain(domain.global, domain.local, domain.offset);
+    REQUIRE_NOTHROW(reader.read(path, read_back));
+  }
+  for (std::size_t i = 0; i < written.size(); ++i) {
+    REQUIRE_THAT(read_back[i], WithinAbs(static_cast<double>(written[i]), kTol));
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (rank == 0) {
+    std::filesystem::remove(path);
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+}

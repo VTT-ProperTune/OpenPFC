@@ -517,3 +517,69 @@ TEST_CASE("field bundle rejects rank-inconsistent source periodicity",
   REQUIRE_FALSE(fs::exists(dir));
   REQUIRE_FALSE(fs::exists(fs::path(dir.string() + ".publishing")));
 }
+
+// ADR 0006: a float field is published as a float64 brick and narrowed on
+// load, so float and double sessions can restart from each other's bundles.
+TEST_CASE("field bundle publishes float fields as float64 and restores them",
+          "[checkpoint][MPI][float]") {
+  using FieldF = pfc::data::Field<float>;
+  BundleDir tmp("float");
+  const auto box = x_slab(MPI_COMM_WORLD);
+  const auto lo = box.low;
+  const auto n = box.size;
+  FieldF uf(grid(), box, 0);
+  for (int k = 0; k < n[2]; ++k)
+    for (int j = 0; j < n[1]; ++j)
+      for (int i = 0; i < n[0]; ++i)
+        uf(i, j, k) =
+            static_cast<float>(manufactured(lo[0] + i, lo[1] + j, lo[2] + k, 3));
+
+  FieldBundleState state;
+  state.accepted_time = 0.5;
+  state.accepted_increment = 4;
+  const auto out = publish_field_bundle(
+      tmp.root / "b", std::vector<NamedField<pfc::HostSpace, float>>{{"u", &uf}},
+      state, MPI_COMM_WORLD);
+  REQUIRE(out.ok);
+  if (comm_rank(MPI_COMM_WORLD) == 0) {
+    REQUIRE(fs::file_size(tmp.root / "b" / "fields" / "u.bin") ==
+            sizeof(double) * kNx * kNy * kNz);
+  }
+
+  // Back into float, and into double: both read the same float64 brick.
+  FieldF uf2(grid(), box, 1);
+  (void)load_field_bundle(
+      tmp.root / "b", std::vector<NamedField<pfc::HostSpace, float>>{{"u", &uf2}},
+      MPI_COMM_WORLD);
+  Field ud(grid(), box, 0);
+  (void)load_field_bundle(tmp.root / "b", std::vector<NamedField<>>{{"u", &ud}},
+                          MPI_COMM_WORLD);
+  bool ok = true;
+  for (int k = 0; k < n[2]; ++k)
+    for (int j = 0; j < n[1]; ++j)
+      for (int i = 0; i < n[0]; ++i) {
+        const float expect =
+            static_cast<float>(manufactured(lo[0] + i, lo[1] + j, lo[2] + k, 3));
+        ok = ok && uf2(i, j, k) == expect &&
+             ud(i, j, k) == static_cast<double>(expect);
+      }
+  REQUIRE(all_ranks(ok, MPI_COMM_WORLD));
+
+  // A double bundle restarts a float field with the narrowed values.
+  Field wd(grid(), box, 0);
+  fill(wd, 2);
+  REQUIRE(publish_field_bundle(tmp.root / "d", std::vector<NamedField<>>{{"w", &wd}},
+                               state, MPI_COMM_WORLD)
+              .ok);
+  FieldF wf(grid(), box, 0);
+  (void)load_field_bundle(tmp.root / "d",
+                          std::vector<NamedField<pfc::HostSpace, float>>{{"w", &wf}},
+                          MPI_COMM_WORLD);
+  ok = true;
+  for (int k = 0; k < n[2]; ++k)
+    for (int j = 0; j < n[1]; ++j)
+      for (int i = 0; i < n[0]; ++i)
+        ok = ok && wf(i, j, k) == static_cast<float>(manufactured(
+                                      lo[0] + i, lo[1] + j, lo[2] + k, 2));
+  REQUIRE(all_ranks(ok, MPI_COMM_WORLD));
+}

@@ -44,11 +44,14 @@ The spectral ETD chain is now instantiated and tested in `float` as well:
 `Physics::real_type` (`physics_real_t`, default `double`), `IHostFFT` and
 `IDeviceFFT` carry both precisions, and `BasicSpectralCPUStack<Real>` /
 `GPUSpectralStack<Space, Real>` bundle float fields. The k-space symbols
-stay `double` functions narrowed on upload; field modifiers and results
-writers are served through an explicit double scratch (point 3 above).
+stay `double` functions narrowed on upload; field modifiers are served
+through an explicit double scratch, `ResultsWriter` widens float views in
+its base class, and checkpoint bundles pack float fields as float64 bricks
+and narrow them on load (point 3 above), so the on-disk formats are
+unchanged and float and double sessions restart from each other's bundles.
 Validation is by tolerance against the double reference
 (`[spectral_etd][float]`, the float cases of `CUDA_SpectralETD` /
-`HIP_SpectralETD`), not bitwise. Shipped apps, the JSON precision switch,
-native float I/O and checkpoints, and recorded tolerance baselines remain
-open under #854; until they land, `float` is validated for the library
-chain, not yet for a shipped session.
+`HIP_SpectralETD`), not bitwise. Shipped apps, the JSON precision switch
+and recorded tolerance baselines remain open under #854; until they land,
+`float` is validated for the library chain and its I/O, not yet for a
+shipped session.
