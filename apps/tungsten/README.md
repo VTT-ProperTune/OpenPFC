@@ -114,10 +114,11 @@ six `{110}` for BCC, four `<111>` for FCC. The session copies the model's
 lattice into every seed that does not name one, so the seed geometry and the
 operator always describe the same crystal; a seed whose own `lattice` key
 differs from the model's is rejected. Omitting the key everywhere is the BCC
-case, and every shipped preset and pinned checksum stays on it.
+case, and every shipped preset and pinned checksum stays on it. The other
+`params` entries stay as in the preset:
 
 ```json
-"model": { "name": "tungsten", "params": { "lattice": "fcc", ... } },
+"model": { "name": "tungsten", "params": { "lattice": "fcc" } },
 "initial_conditions": [
   { "target": "psi", "type": "constant", "n0": -0.4 },
   { "target": "psi", "type": "single_seed", "amp_eq": 0.215936, "rho_seed": -0.047 }
@@ -135,7 +136,7 @@ numerical option rather than a calibrated FCC material.
 `model.precision` selects the field scalar of the session (ADR 0006):
 
 ```json
-"model": { "name": "tungsten", "precision": "float", "params": { ... } }
+"model": { "name": "tungsten", "precision": "float" }
 ```
 
 With `"float"` the `tungsten`, `tungsten_cuda` and `tungsten_hip` binaries

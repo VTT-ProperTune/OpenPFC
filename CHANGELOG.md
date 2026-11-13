@@ -7,6 +7,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- The published documentation builds again: `docs/api/frontend.md`
+  documents `BasicSpectralCPUStack` and the `SpectralCPUStack` alias that
+  #866 introduced instead of the former class name, and the two abbreviated
+  JSON snippets in the tungsten README (`lattice`, `precision`) are valid
+  JSON so Sphinx no longer reports `misc.highlighting_failure`.
+
 - Tungsten runs in single precision on request (ADR 0006, #854 step 3,
   closes GitHub #11): `model.precision: "float"` (JSON or TOML; default
   `"double"`) makes the `tungsten`, `tungsten_cuda` and `tungsten_hip`

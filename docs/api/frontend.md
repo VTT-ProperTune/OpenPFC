@@ -15,10 +15,18 @@ directly.
 drivers use `pfc::ui::make_simulation_session<Stack>` or an app-owned ETD
 session, then `pfc::sim::run`.
 
-## `pfc::sim::stacks::SpectralCPUStack`
+## `pfc::sim::stacks::BasicSpectralCPUStack`
 
-```{doxygenclass} pfc::sim::stacks::SpectralCPUStack
+`SpectralCPUStack` is the double-precision instance
+`BasicSpectralCPUStack<double>`; `BasicSpectralCPUStack<float>` is the
+single-precision stack of ADR 0005.
+
+```{doxygenclass} pfc::sim::stacks::BasicSpectralCPUStack
 :project: OpenPFC
 :members:
 :protected-members:
+```
+
+```{doxygentypedef} pfc::sim::stacks::SpectralCPUStack
+:project: OpenPFC
 ```
