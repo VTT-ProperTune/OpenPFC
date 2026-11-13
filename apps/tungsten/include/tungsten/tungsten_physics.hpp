@@ -183,6 +183,8 @@ template <class RealType = double, class MemorySpace = pfc::HostSpace>
 struct TungstenPhysics {
   using parameters_type = TungstenParams;
   using pointwise_type = TungstenPointwise;
+  /// Field scalar (ADR 0006): `double` or `float`; the symbols stay double.
+  using real_type = RealType;
 
   pfc::Domain domain{};
   pfc::Box3i box{};

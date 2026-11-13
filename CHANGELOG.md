@@ -7,6 +7,23 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Tungsten runs in single precision on request (ADR 0006, #854 step 3,
+  closes GitHub #11): `model.precision: "float"` (JSON or TOML; default
+  `"double"`) makes the `tungsten`, `tungsten_cuda` and `tungsten_hip`
+  binaries run `TungstenFloatSession` / `TungstenCUDAFloatSession` /
+  `TungstenHIPFloatSession` (`pfc::ui::run_json_session_main_precision`,
+  `precision_json.hpp`): float fields, FFTs, coefficient tables and a
+  `TungstenPointwise` evaluated natively in float; the k-space symbols stay
+  double and every file keeps its float64 format. A session rejects a
+  `model.precision` that names the other scalar, and `SPECTRAL_FFT` now
+  prints `precision=`. Shipped preset `tungsten_resolved_bcc_float.json`;
+  `apps/schema.json` lists the key. Tolerance baselines
+  (`[tungsten][float]`, `tungsten-float`, `tungsten-float-cli`, the float
+  cases of `CUDA_TungstenETD` / `HIP_TungstenETD`): float within 1e-5 of
+  the double trajectory over ten 32³ steps, and the 32³ sine checksum within
+  1e-5 relative of the pinned double golden, which is unchanged. The moving
+  solidification boundary serves float device fields through the host
+  bracket (its device applier stays double).
 - Float fields reach the file formats through explicit conversions (ADR
   0006, #854 step 2). `ResultsWriter::write` accepts `FieldView<float>` and
   `FieldView<std::complex<float>>` and widens them in the base class, so every

@@ -29,16 +29,27 @@ inline void register_catalog() { register_solidification_bcs(); }
 using TungstenSession =
     pfc::ui::SpectralETDSession<TungstenPhysics<double, pfc::HostSpace>,
                                 pfc::sim::stacks::SpectralCPUStack>;
+/// Single-precision CPU session, selected by `model.precision = "float"`
+/// (ADR 0006). Same physics and inputs; float fields, FFTs and tables.
+using TungstenFloatSession =
+    pfc::ui::SpectralETDSession<TungstenPhysics<float, pfc::HostSpace>,
+                                pfc::sim::stacks::BasicSpectralCPUStack<float>>;
 
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
 using TungstenCUDASession =
     pfc::ui::SpectralETDSession<TungstenPhysics<double, pfc::CUDASpace>,
                                 pfc::sim::stacks::GPUSpectralStack<pfc::CUDASpace>>;
+using TungstenCUDAFloatSession = pfc::ui::SpectralETDSession<
+    TungstenPhysics<float, pfc::CUDASpace>,
+    pfc::sim::stacks::GPUSpectralStack<pfc::CUDASpace, float>>;
 #endif
 #if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
 using TungstenHIPSession =
     pfc::ui::SpectralETDSession<TungstenPhysics<double, pfc::HIPSpace>,
                                 pfc::sim::stacks::GPUSpectralStack<pfc::HIPSpace>>;
+using TungstenHIPFloatSession = pfc::ui::SpectralETDSession<
+    TungstenPhysics<float, pfc::HIPSpace>,
+    pfc::sim::stacks::GPUSpectralStack<pfc::HIPSpace, float>>;
 #endif
 
 } // namespace tungsten

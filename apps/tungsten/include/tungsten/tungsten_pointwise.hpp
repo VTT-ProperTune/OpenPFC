@@ -65,17 +65,24 @@ struct TungstenPointwise {
     return G_grid * (dist - x_initial - V_grid * t);
   }
 
-  OPENPFC_HD double nonlinearity(const pfc::sim::SpectralCell &c) const {
-    const double u = c.psi;
-    const double v = c.psi_mf;
-    const double u2 = u * u;
-    const double v2 = v * v;
-    double q3 = c_mf2;
+  /// Pointwise nonlinearity in the field scalar `R` (`double` for every
+  /// shipped double session, `float` under `model.precision = "float"`,
+  /// ADR 0006): the polynomial is evaluated in `R`; the temperature term
+  /// keeps its double coordinate arithmetic and is narrowed once.
+  template <class R>
+  OPENPFC_HD R nonlinearity(const pfc::sim::SpectralCellT<R> &c) const {
+    const R u = c.psi;
+    const R v = c.psi_mf;
+    const R u2 = u * u;
+    const R v2 = v * v;
+    R q3 = static_cast<R>(c_mf2);
     if (G_grid != 0.0) {
       const double T_var = temperature_variation(c.x, c.t);
-      q3 = q31_bar * (T + T_var) / T0 + q30_bar;
+      q3 = static_cast<R>(q31_bar * (T + T_var) / T0 + q30_bar);
     }
-    return c_psi * u + c_psi2 * u2 + c_psi3 * u2 * u + q3 * v2 + c_mf3 * v2 * v;
+    return static_cast<R>(c_psi) * u + static_cast<R>(c_psi2) * u2 +
+           static_cast<R>(c_psi3) * u2 * u + q3 * v2 +
+           static_cast<R>(c_mf3) * v2 * v;
   }
 };
 

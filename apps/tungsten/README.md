@@ -130,6 +130,34 @@ it rather than keeping their own copies. Choosing `fcc` here changes the
 operator's shells only, not the fitted tungsten coefficients, so it is a
 numerical option rather than a calibrated FCC material.
 
+### Precision: `double` (default) or `float`
+
+`model.precision` selects the field scalar of the session (ADR 0006):
+
+```json
+"model": { "name": "tungsten", "precision": "float", "params": { ... } }
+```
+
+With `"float"` the `tungsten`, `tungsten_cuda` and `tungsten_hip` binaries
+run `TungstenFloatSession`, `TungstenCUDAFloatSession` or
+`TungstenHIPFloatSession`: the fields, FFTs, ETD coefficient tables and the
+pointwise nonlinearity are single precision, which halves the memory of a
+GPU run. The k-space symbols are still prepared in double, initial and
+boundary conditions are applied through a double scratch, and every output
+file (binary, VTK, HDF5, checkpoint) keeps its float64 format, so a float
+run can restart from a double checkpoint and vice versa. On a device the
+moving boundary goes through the host bracket (its device applier is
+double-only). The preset `inputs_json/tungsten_resolved_bcc_float.json`
+is the double preset with the key added; `tungsten-float-cli` runs it.
+
+The float path is validated by tolerance, not bitwise: it tracks the double
+trajectory within 1e-5 over ten 32³ steps and reproduces the pinned 32³
+sine checksum within 1e-5 relative (`tungsten-float`, the `[float]` cases
+of `CUDA_TungstenETD` / `HIP_TungstenETD`;
+[`tests/baselines/BASELINES.md`](../../tests/baselines/BASELINES.md)). The
+double goldens are unchanged. Startup prints the choice as
+`SPECTRAL_FFT ... precision=float`.
+
 ## Run (from build tree)
 
 ```bash

@@ -19,6 +19,7 @@
 
 #include <mpi.h>
 
+#include <openpfc/frontend/ui/precision_json.hpp>
 #include <openpfc/frontend/ui/settings_loader.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
@@ -49,6 +50,44 @@ template <class Session, class Setup = NoSessionSetup>
                     << '\n';
         }
         return EXIT_SUCCESS;
+      });
+}
+
+/**
+ * @brief `run_json_session_main` for an app that ships both precisions.
+ *
+ * Reads `model.precision` (ADR 0006, `precision_json.hpp`) from the loaded
+ * settings and runs @p DoubleSession (the default) or @p FloatSession; an
+ * unknown value fails closed before any session is constructed.
+ */
+template <class DoubleSession, class FloatSession, class Setup = NoSessionSetup>
+[[nodiscard]] int run_json_session_main_precision(int argc, char *argv[],
+                                                  const char *done_label,
+                                                  Setup &&setup = {}) {
+  return pfc::runtime::mpi_main(
+      argc, argv, [&](int app_argc, char **app_argv, int rank, int nproc) {
+        if (app_argc <= 1) {
+          if (rank == 0) {
+            std::cerr << "Usage: " << app_argv[0] << " <config.json|config.toml>\n";
+          }
+          return EXIT_FAILURE;
+        }
+        setup();
+        const auto settings = pfc::ui::load_settings_file(app_argv[1]);
+        const auto finish = [&](auto &session) {
+          session.run();
+          if (rank == 0) {
+            std::cout << done_label
+                      << " done t=" << pfc::time::current(session.time()) << '\n';
+          }
+          return EXIT_SUCCESS;
+        };
+        if (precision_from_json(settings) == Precision::Float) {
+          FloatSession session(settings, rank, nproc, MPI_COMM_WORLD);
+          return finish(session);
+        }
+        DoubleSession session(settings, rank, nproc, MPI_COMM_WORLD);
+        return finish(session);
       });
 }
 

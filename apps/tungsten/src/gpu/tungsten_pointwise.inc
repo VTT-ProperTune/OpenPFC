@@ -13,6 +13,7 @@
 #include <tungsten/tungsten_pointwise.hpp>
 
 OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE(tungsten::TungstenPointwise)
+OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE_FLOAT(tungsten::TungstenPointwise)
 
 #include <openpfc/runtime/gpu/modifier_rule_gpu.hpp>
 #include <tungsten/solidification_bc_rules.hpp>

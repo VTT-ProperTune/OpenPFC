@@ -11,6 +11,7 @@
 #include <tungsten/tungsten_session.hpp>
 
 int main(int argc, char *argv[]) {
-  return pfc::ui::run_json_session_main<tungsten::TungstenCUDASession>(
+  return pfc::ui::run_json_session_main_precision<
+      tungsten::TungstenCUDASession, tungsten::TungstenCUDAFloatSession>(
       argc, argv, "tungsten_cuda", tungsten::register_catalog);
 }

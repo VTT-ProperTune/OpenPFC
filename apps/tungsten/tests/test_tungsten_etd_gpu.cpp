@@ -16,6 +16,7 @@ int main(int argc, char *argv[]) { return pfc::test::run(argc, argv); }
 #include <cmath>
 #include <numbers>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
@@ -201,6 +202,83 @@ TEST_CASE("TungstenETD 32^3/10-step sine IC host vs device within 1e-10",
           distributed.emplace_back(d, d + n);
         else
           REQUIRE(max_abs_diff(distributed[state], d, n) < 1e-10);
+      });
+      ++state;
+    });
+    REQUIRE(state == host_states.size());
+  }
+}
+
+// ADR 0006 tolerance baseline (tests/baselines/BASELINES.md): the float
+// device session against the double host session, 32^3 sine IC, ten steps,
+// every saved state within 1e-5, on both the HeFFTe and the single-device FFT.
+TEST_CASE("TungstenETD 32^3/10-step sine IC float device vs double host "
+          "within 1e-5",
+          "[tungsten][gpu][session][float]") {
+  json settings = mini_settings();
+  settings["model"]["params"]["n0"] = -0.4;
+  settings["model"]["params"]["T"] = 0.5;
+  settings["domain"]["size"] = {32, 32, 32};
+  settings["domain"]["upper"] = {32.0, 32.0, 32.0};
+  settings["timestepping"] = {
+      {"t0", 0.0}, {"t1", 0.1}, {"dt", 0.01}, {"saveat", 0.01}};
+  settings["initial_conditions"] =
+      json::array({{{"target", "psi"}, {"type", "constant"}, {"n0", -0.4}}});
+#if defined(OPENPFC_TEST_TUNGSTEN_ETD_HIP)
+  if (!pfc::gpu::test::is_hip_available()) {
+    SKIP("HIP not available");
+  }
+  using Dev = tungsten::TungstenHIPFloatSession;
+#else
+  if (!pfc::gpu::test::is_cuda_available()) {
+    SKIP("CUDA not available");
+  }
+  using Dev = tungsten::TungstenCUDAFloatSession;
+#endif
+  int mpi_initialized = 0;
+  MPI_Initialized(&mpi_initialized);
+  if (mpi_initialized == 0) {
+    MPI_Init(nullptr, nullptr);
+  }
+  int rank = 0;
+  int nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  const auto sine = [](std::size_t i, std::size_t n) {
+    return -0.4 + 0.1 * std::sin(2.0 * std::numbers::pi * static_cast<double>(i) /
+                                 static_cast<double>(n));
+  };
+  tungsten::TungstenSession host(settings, rank, nproc, MPI_COMM_WORLD);
+  {
+    auto &v = host.psi().vec();
+    for (std::size_t i = 0; i < v.size(); ++i) v[i] = sine(i, v.size());
+  }
+  std::vector<std::vector<double>> host_states;
+  host.run([&] { host_states.push_back(host.psi().vec()); });
+  REQUIRE(host_states.size() == 11);
+
+  settings["model"]["precision"] = "float";
+  for (const char *choice : {"heffte", "local"}) {
+    if (nproc != 1 && std::string(choice) == "local") continue;
+    INFO("fft = " << choice);
+    settings["fft"] = choice;
+    Dev dev(settings, rank, nproc, MPI_COMM_WORLD);
+    static_assert(std::is_same_v<typename Dev::Real, float>);
+    dev.psi().with_host_view([&](float *d, std::size_t n) {
+      for (std::size_t i = 0; i < n; ++i) d[i] = static_cast<float>(sine(i, n));
+    });
+    std::size_t state = 0;
+    dev.run([&] {
+      REQUIRE(state < host_states.size());
+      dev.psi().with_host_view([&](float *d, std::size_t n) {
+        REQUIRE(n == host_states[state].size());
+        double m = 0.0;
+        for (std::size_t i = 0; i < n; ++i) {
+          REQUIRE(std::isfinite(d[i]));
+          m = std::max(m,
+                       std::abs(host_states[state][i] - static_cast<double>(d[i])));
+        }
+        REQUIRE(m < 1e-5);
       });
       ++state;
     });

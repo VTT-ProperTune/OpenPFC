@@ -7,6 +7,7 @@
 #include <tungsten/tungsten_session.hpp>
 
 int main(int argc, char *argv[]) {
-  return pfc::ui::run_json_session_main<tungsten::TungstenSession>(
+  return pfc::ui::run_json_session_main_precision<tungsten::TungstenSession,
+                                                  tungsten::TungstenFloatSession>(
       argc, argv, "tungsten", tungsten::register_catalog);
 }

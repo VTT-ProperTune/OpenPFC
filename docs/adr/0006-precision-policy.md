@@ -51,7 +51,15 @@ and narrow them on load (point 3 above), so the on-disk formats are
 unchanged and float and double sessions restart from each other's bundles.
 Validation is by tolerance against the double reference
 (`[spectral_etd][float]`, the float cases of `CUDA_SpectralETD` /
-`HIP_SpectralETD`), not bitwise. Shipped apps, the JSON precision switch
-and recorded tolerance baselines remain open under #854; until they land,
-`float` is validated for the library chain and its I/O, not yet for a
-shipped session.
+`HIP_SpectralETD`), not bitwise.
+
+Tungsten is the first shipped app with a validated float path:
+`model.precision = "float"` selects `TungstenFloatSession` (CPU),
+`TungstenCUDAFloatSession` and `TungstenHIPFloatSession`, with the
+tolerance baselines recorded in `tests/baselines/BASELINES.md` (float within
+1e-5 of the double trajectory, double goldens unchanged). Point 2 of the
+decision therefore reads today: `double` is the default and the only
+precision with bitwise goldens; `float` is instantiated, tested and
+validated by tolerance for the spectral ETD chain, its I/O and tungsten;
+mixed precision is still not claimed. Aluminum and the other spectral apps
+stay double until they take the same switch.

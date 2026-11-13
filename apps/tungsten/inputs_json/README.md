@@ -48,6 +48,7 @@ Each JSON file follows this structure:
 5. `tungsten_restart.json` - Restart from checkpoint
 6. `tungsten_single_seed.json` - Single seed initial condition
 7. `tungsten_resolved_bcc.json` - One BCC cell at the qualified spacing, 2/3 mask on. Numerical resolution, not a material calibration. ctest runs this file.
+8. `tungsten_resolved_bcc_float.json` - `tungsten_resolved_bcc.json` with `"precision": "float"`: the same case in single precision (see [Precision](../README.md#precision-double-default-or-float)). `tungsten-float-cli` runs this file.
 
 ## Model Parameters
 

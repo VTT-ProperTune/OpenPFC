@@ -108,7 +108,8 @@ if(TUNGSTEN_ENABLE_TESTS)
                                           tests/test_tungsten_inputs.cpp
                                           tests/test_tungsten_resolution.cpp
                                           tests/test_boundary_conditions.cpp
-                                          tests/test_bc_moving.cpp)
+                                          tests/test_bc_moving.cpp
+                                          tests/test_tungsten_float.cpp)
     target_link_libraries(test_tungsten PRIVATE Catch2::Catch2)
     # The shipped inputs are part of the product, so a test loads them from the
     # source tree rather than from a copy that could drift.
@@ -138,6 +139,17 @@ if(TUNGSTEN_ENABLE_TESTS)
       PASS_REGULAR_EXPRESSION "SPECTRAL_CHECKSUM field=psi"
       TIMEOUT 120)
     openpfc_app_smoke_test(tungsten-resolved-bcc-cli)
+    # Single precision (ADR 0006): the float session against the double
+    # reference and the pinned golden, through the session API and through the
+    # maintained executable with the shipped float preset.
+    add_test(NAME tungsten-float COMMAND test_tungsten "[float]")
+    set_tests_properties(tungsten-float PROPERTIES TIMEOUT 300)
+    add_test(NAME tungsten-float-cli
+      COMMAND $<TARGET_FILE:tungsten>
+        "${CMAKE_CURRENT_SOURCE_DIR}/inputs_json/tungsten_resolved_bcc_float.json")
+    set_tests_properties(tungsten-float-cli PROPERTIES
+      PASS_REGULAR_EXPRESSION "precision=float.*SPECTRAL_CHECKSUM field=psi"
+      TIMEOUT 120)
     add_test(NAME tungsten-cpu-golden COMMAND test_tungsten "[etd_cpu_golden]")
     add_test(NAME tungsten-etd-cpu-golden COMMAND test_tungsten "[etd_cpu_golden]")
     if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
@@ -172,6 +184,7 @@ if(TUNGSTEN_ENABLE_TESTS)
       target_compile_definitions(test_tungsten_etd_cuda PRIVATE
         OPENPFC_TEST_TUNGSTEN_ETD_CUDA)
       add_test(NAME CUDA_TungstenETD COMMAND test_tungsten_etd_cuda)
+      add_test(NAME tungsten-etd-float-cuda COMMAND test_tungsten_etd_cuda "[float]")
       add_test(NAME tungsten-etd-cpu-vs-cuda COMMAND test_tungsten_etd_cuda "[parity32]")
       add_test(NAME tungsten-cpu-vs-cuda-tests COMMAND test_tungsten_etd_cuda "[parity32]")
 
@@ -187,6 +200,7 @@ if(TUNGSTEN_ENABLE_TESTS)
       target_compile_definitions(test_tungsten_etd_hip PRIVATE
         OPENPFC_TEST_TUNGSTEN_ETD_HIP)
       add_test(NAME HIP_TungstenETD COMMAND test_tungsten_etd_hip)
+      add_test(NAME tungsten-etd-float-hip COMMAND test_tungsten_etd_hip "[float]")
 
       tungsten_hip_executable(test_tungsten_hip_vtk tests/test_tungsten_hip_vtk.cpp)
       message(STATUS "Tungsten HIP VTK test program enabled")

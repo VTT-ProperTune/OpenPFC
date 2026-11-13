@@ -237,6 +237,14 @@
                             "tungsten"
                         ]
                     },
+                    "precision": {
+                        "type": "string",
+                        "description": "Field scalar of the session: double (default) or float (ADR 0006)",
+                        "enum": [
+                            "double",
+                            "float"
+                        ]
+                    },
                     "params": {
                         "type": "object",
                         "properties": {

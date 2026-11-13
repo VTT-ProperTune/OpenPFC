@@ -56,6 +56,7 @@
 #include <openpfc/frontend/ui/json_checkpoint.hpp>
 #include <openpfc/frontend/ui/json_step_profiler.hpp>
 #include <openpfc/frontend/ui/lattice_json.hpp>
+#include <openpfc/frontend/ui/precision_json.hpp>
 #include <openpfc/frontend/ui/results_writer_catalog.hpp>
 #include <openpfc/frontend/ui/simulation_wiring_conditions.hpp>
 #include <openpfc/frontend/ui/simulation_wiring_context.hpp>
@@ -142,7 +143,7 @@ public:
   SpectralETDSession(const nlohmann::json &settings_in, int rank, int nproc,
                      MPI_Comm comm = MPI_COMM_WORLD,
                      pfc::sim::SpectralETDOptions system_options = {})
-      : m_settings(with_backend_default(settings_in)),
+      : m_settings(with_backend_default(require_precision(settings_in))),
         m_ctx{.comm = comm, .mpi_rank = rank, .rank0 = (rank == 0)},
         m_domain(from_json<pfc::Domain>(m_settings)),
         m_session(make_simulation_session<Stack>(m_settings, rank, nproc, comm)),
@@ -170,7 +171,8 @@ public:
       }
 #endif
       std::cout << "SPECTRAL_FFT implementation=" << implementation
-                << " backend=" << backend << " ranks=" << nproc << '\n';
+                << " backend=" << backend << " ranks=" << nproc
+                << " precision=" << to_string(precision_of<Real>()) << '\n';
     }
     const pfc::Box3i inbox = fft().get_inbox_bounds();
 
@@ -340,6 +342,23 @@ public:
   }
 
 private:
+  /// `model.precision`, when present, must name this session's scalar
+  /// (ADR 0006): a float input never silently runs in double or vice versa.
+  static const nlohmann::json &require_precision(const nlohmann::json &settings) {
+    if (!has_precision_key(settings)) {
+      return settings; // no request: either session serves the input
+    }
+    const Precision want = precision_from_json(settings);
+    if (want != precision_of<Real>()) {
+      throw std::invalid_argument(
+          std::string("SpectralETDSession: model.precision is \"") +
+          to_string(want) + "\" but this session runs in " +
+          to_string(precision_of<Real>()) +
+          "; pick the matching session (the app's main selects it)");
+    }
+    return settings;
+  }
+
   static nlohmann::json with_backend_default(nlohmann::json settings) {
     // JSON may omit `backend`; a device binary then means its own backend.
     if (!settings.contains("backend")) {

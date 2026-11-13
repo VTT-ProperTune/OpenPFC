@@ -58,6 +58,7 @@ Object key `"plan_options"` (JSON) or `[plan_options]` (TOML). Passed to HeFFTe 
 | Key | Type | Meaning |
 |-----|------|---------|
 | `model.name` | string | Conventionally matches the app’s model registration |
+| `model.precision` | `"double"` (default) or `"float"` | Field scalar of the session (ADR 0006). Tungsten ships both: `float` runs the fields, FFTs, coefficient tables and the pointwise nonlinearity in single precision on CPU, CUDA and HIP; the k-space symbols are still prepared in double, and every file (binary, VTK, HDF5, checkpoint) stays float64. The binary selects the session; a session constructed for the other precision rejects the key. Validated by tolerance against the double path, not bitwise (`tests/baselines/BASELINES.md`). |
 | `model.params` | object | Model-specific; optional `from_json` into your C++ params type |
 
 Validation is **model-dependent** (see [`parameter_validation.md`](../user_guide/parameter_validation.md)).
