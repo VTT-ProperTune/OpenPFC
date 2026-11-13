@@ -32,11 +32,11 @@
     "t1": 2000.0,
     "dt": 1.0,
     "saveat": 200.0,
-    "results": "./dataNewer/u_%04d.bin",
+    "results": "./results/aluminumNew/u_%04d.bin",
     "fields": [
         {
             "name": "psi",
-            "data": "./dataNewer/psi_%04d.bin"
+            "data": "./results/aluminumNew/psi_%04d.bin"
         }
     ],
     "initial_conditions": [

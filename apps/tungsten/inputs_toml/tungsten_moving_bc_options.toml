@@ -43,7 +43,7 @@ saveat = 100.0
 
 [[fields]]
 name = "psi"
-data = "./data/u_%04d.bin"
+data = "./results/tungsten/u_%04d.bin"
 
 [[initial_conditions]]
 target = "psi"

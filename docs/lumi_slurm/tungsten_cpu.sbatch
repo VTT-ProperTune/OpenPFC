@@ -32,7 +32,7 @@ module load LUMI/25.09 partition/C cpeGNU cray-fftw cray-hdf5 lumi-CrayPath
 export LD_LIBRARY_PATH="${CRAY_LD_LIBRARY_PATH:-}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
 RUNDIR="${JOBROOT}/runs/cpu_${SLURM_JOB_NAME}_${SLURM_JOB_ID}"
-mkdir -p "${RUNDIR}/data"
+mkdir -p "${RUNDIR}/results/tungsten"
 cp -f "${REPO_INPUT}" "${RUNDIR}/input.toml"
 cd "${RUNDIR}"
 

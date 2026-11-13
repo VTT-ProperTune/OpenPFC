@@ -42,7 +42,7 @@ The JSON `fields[].data` string is passed to `BinaryWriter` as the filename temp
 
 1. **Environment expansion.** `$NAME` and `${NAME}` (POSIX name `[A-Za-z_][A-Za-z0-9_]*`) are replaced from the process environment. Unset or empty variables, and any stray `$`, fail closed with `std::invalid_argument` — they do not become a literal relative path. Example: `$RESULTS/data_%04d.bin` with `RESULTS=/scratch/run` becomes `/scratch/run/data_%04d.bin`.
 2. **Increment templating.** If the expanded string contains **`%`**, it is passed to `printf`-style formatting with the **integer `increment`** supplied by the simulator (see [`simulation_wiring_writers.hpp`](../../include/openpfc/frontend/ui/simulation_wiring_writers.hpp) and `BinaryWriter::write_mpi_binary`).  
-   Examples: `./psi_%d.bin`, `./data/u_%04d.bin`, `$RESULTS/data_%04d.bin`.  
+   Examples: `./psi_%d.bin`, `./results/u_%04d.bin`, `$RESULTS/data_%04d.bin`.  
 - If there is **no `%`** after expansion, the same path is used on every write (overwrites each time).
 
 The `increment` value is advanced by the simulator according to configuration (see [`app_pipeline.md`](../user_guide/app_pipeline.md) and the `simulator` section in JSON).

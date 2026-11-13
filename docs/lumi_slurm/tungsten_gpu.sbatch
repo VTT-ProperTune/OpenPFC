@@ -35,7 +35,7 @@ export LD_LIBRARY_PATH="${CRAY_LD_LIBRARY_PATH:-}${LD_LIBRARY_PATH:+:$LD_LIBRARY
 export MPICH_GPU_SUPPORT_ENABLED=1
 
 RUNDIR="${JOBROOT}/runs/gpu_${SLURM_JOB_NAME}_${SLURM_JOB_ID}"
-mkdir -p "${RUNDIR}/data"
+mkdir -p "${RUNDIR}/results/tungsten"
 cp -f "${REPO_INPUT}" "${RUNDIR}/input.toml"
 cd "${RUNDIR}"
 

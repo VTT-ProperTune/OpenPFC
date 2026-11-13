@@ -43,7 +43,7 @@ saveat = -1.0  # Negative means don't save
 
 [[fields]]
 name = "psi"
-data = "./data/u_%04d.bin"
+data = "./results/tungsten/u_%04d.bin"
 
 [[initial_conditions]]
 target = "psi"

@@ -84,7 +84,7 @@ saveat = 100.0
 # ============================================================================
 [[fields]]
 name = "psi"
-data = "./data/validation_example_%04d.bin"
+data = "./results/validation_example_%04d.bin"
 
 # ============================================================================
 # Initial Conditions
