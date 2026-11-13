@@ -107,20 +107,37 @@ inline void require_equal_size(std::size_t actual, std::size_t expected,
 template <typename BackendTag> struct FFTWorkspaceStorage;
 
 /**
- * @brief FFTW: host workspace only (`std::vector`-backed HeFFTe container).
+ * @brief FFTW: host workspaces (`std::vector`-backed HeFFTe containers).
+ *
+ * The double workspace is allocated with the plan, as before; the float one
+ * only when the first single-precision transform runs (ADR 0006).
  */
 template <> struct FFTWorkspaceStorage<heffte::backend::fftw> {
   using workspace_type = typename heffte::fft3d_r2c<
       heffte::backend::fftw>::template buffer_container<std::complex<double>>;
+  using workspace_float = typename heffte::fft3d_r2c<
+      heffte::backend::fftw>::template buffer_container<std::complex<float>>;
 
   workspace_type m_wrk;
+  std::unique_ptr<workspace_float> m_wrk_float;
 
   explicit FFTWorkspaceStorage(std::size_t n) : m_wrk(n) {}
 
   auto *data_wrk() noexcept { return m_wrk.data(); }
 
+  auto *data_wrk_float() {
+    if (!m_wrk_float) {
+      m_wrk_float = std::make_unique<workspace_float>(m_wrk.size());
+    }
+    return m_wrk_float->data();
+  }
+
   [[nodiscard]] std::size_t allocated_bytes() const noexcept {
-    return m_wrk.size() * sizeof(typename workspace_type::value_type);
+    std::size_t n = m_wrk.size() * sizeof(typename workspace_type::value_type);
+    if (m_wrk_float) {
+      n += m_wrk_float->size() * sizeof(typename workspace_float::value_type);
+    }
+    return n;
   }
 };
 
@@ -229,10 +246,20 @@ struct FFTInterfaceTransforms<Derived, Interface, true, false> : Interface {
   void backward(const ComplexVector &in, RealVector &out) override {
     static_cast<Derived &>(*this).backward_host_(in, out);
   }
+
+  /// Single-precision pair; same contract on `float` vectors.
+  void forward(const RealVectorF &in, ComplexVectorF &out) override {
+    static_cast<Derived &>(*this).forward_host_(in, out);
+  }
+
+  void backward(const ComplexVectorF &in, RealVectorF &out) override {
+    static_cast<Derived &>(*this).backward_host_(in, out);
+  }
 };
 
-/// `IDeviceFFT`: double-precision `DataBuffer` overriders. Being non-templates,
-/// they win over `FFT_Impl`'s `DataBuffer` templates for the same arguments.
+/// `IDeviceFFT`: double- and single-precision `DataBuffer` overriders. Being
+/// non-templates, they win over `FFT_Impl`'s `DataBuffer` templates for the
+/// same arguments.
 template <typename Derived, typename Interface>
 struct FFTInterfaceTransforms<Derived, Interface, false, true> : Interface {
   void forward(const typename Interface::RealBuffer &in,
@@ -242,6 +269,16 @@ struct FFTInterfaceTransforms<Derived, Interface, false, true> : Interface {
 
   void backward(const typename Interface::ComplexBuffer &in,
                 typename Interface::RealBuffer &out) override {
+    static_cast<Derived &>(*this).backward_device_(in, out);
+  }
+
+  void forward(const typename Interface::RealBufferF &in,
+               typename Interface::ComplexBufferF &out) override {
+    static_cast<Derived &>(*this).forward_device_(in, out);
+  }
+
+  void backward(const typename Interface::ComplexBufferF &in,
+                typename Interface::RealBufferF &out) override {
     static_cast<Derived &>(*this).backward_device_(in, out);
   }
 };
@@ -321,6 +358,8 @@ struct FFT_Impl
    * instead, so a backend that starts breaking it fails there.
    */
   RealVector m_in_scratch_real;
+  /// Single-precision counterpart of `m_in_scratch_real`.
+  RealVectorF m_in_scratch_real_f;
 
   FFT_Impl(fft_type fft) : m_fft(std::move(fft)), m_ws(m_fft.size_workspace()) {}
 
@@ -377,9 +416,29 @@ private:
   template <typename, typename, bool, bool>
   friend struct detail::FFTInterfaceTransforms;
 
+  template <class Real> std::vector<Real> &scratch_real_() noexcept {
+    if constexpr (std::is_same_v<Real, double>) {
+      return m_in_scratch_real;
+    } else {
+      return m_in_scratch_real_f;
+    }
+  }
+
+  template <class Real> auto *workspace_() {
+    if constexpr (std::is_same_v<Real, double>) {
+      return m_ws.data_wrk();
+    } else {
+      return m_ws.data_wrk_float();
+    }
+  }
+
   // Not virtual, so the constraint is allowed; it keeps an explicit
   // instantiation of a device `FFT_Impl` from instantiating the host path.
-  void forward_host_(const RealVector &in, ComplexVector &out)
+  // `Real` is double or float; each precision has its own scratch and
+  // workspace, and the input is copied so the caller's buffer is preserved.
+  template <class Real>
+  void forward_host_(const std::vector<Real> &in,
+                     std::vector<std::complex<Real>> &out)
     requires std::is_base_of_v<IHostFFT, Interface>
   {
     detail::require_equal_size(in.size(), size_inbox(),
@@ -387,14 +446,17 @@ private:
     detail::require_equal_size(out.size(), size_outbox(),
                                "FFT_Impl::forward: complex buffer size ",
                                "size_outbox");
-    m_in_scratch_real.resize(in.size());
+    auto &scratch = scratch_real_<Real>();
+    scratch.resize(in.size());
     m_fft_time -= MPI_Wtime();
-    std::copy(in.begin(), in.end(), m_in_scratch_real.begin());
-    m_fft.forward(m_in_scratch_real.data(), out.data(), m_ws.data_wrk());
+    std::copy(in.begin(), in.end(), scratch.begin());
+    m_fft.forward(scratch.data(), out.data(), workspace_<Real>());
     m_fft_time += MPI_Wtime();
   }
 
-  void backward_host_(const ComplexVector &in, RealVector &out)
+  template <class Real>
+  void backward_host_(const std::vector<std::complex<Real>> &in,
+                      std::vector<Real> &out)
     requires std::is_base_of_v<IHostFFT, Interface>
   {
     detail::require_equal_size(in.size(), size_outbox(),
@@ -404,7 +466,7 @@ private:
                                "FFT_Impl::backward: real buffer size ",
                                "size_inbox");
     m_fft_time -= MPI_Wtime();
-    m_fft.backward(in.data(), out.data(), m_ws.data_wrk(), heffte::scale::full);
+    m_fft.backward(in.data(), out.data(), workspace_<Real>(), heffte::scale::full);
     m_fft_time += MPI_Wtime();
   }
 

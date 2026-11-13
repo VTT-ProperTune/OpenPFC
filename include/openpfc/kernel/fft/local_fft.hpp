@@ -37,6 +37,9 @@ public:
 
   void forward(const RealVector &in, ComplexVector &out) override;
   void backward(const ComplexVector &in, RealVector &out) override;
+  /// Single-precision plans (`fftwf_*`) are created on the first float call.
+  void forward(const RealVectorF &in, ComplexVectorF &out) override;
+  void backward(const ComplexVectorF &in, RealVectorF &out) override;
   void reset_fft_time() override;
   [[nodiscard]] double get_fft_time() const override;
   [[nodiscard]] std::size_t size_inbox() const override;

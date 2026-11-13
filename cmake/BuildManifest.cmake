@@ -133,7 +133,7 @@ _openpfc_json_field(_mpi abi_verification "unverified: file identity and library
 _openpfc_json_field(_mpi gpu_aware_runtime "unknown: no device-buffer communication probe performed by SDK packaging")
 
 _openpfc_manifest_variables(_stack Heffte_VERSION Heffte_DIR Heffte_CUDA_FOUND
-  Heffte_ROCM_FOUND Heffte_FFTW_FOUND FFTW3_VERSION FFTW3_LIBRARY
+  Heffte_ROCM_FOUND Heffte_FFTW_FOUND FFTW3_VERSION FFTW3_LIBRARY FFTW3F_LIBRARY
   HDF5_VERSION HDF5_IS_PARALLEL hip_VERSION HIP_VERSION HIP_VERSION_STRING
   ROCM_VERSION ROCM_VERSION_STRING CMAKE_HIP_COMPILER_ROCM_ROOT
   CUDAToolkit_VERSION nlohmann_json_VERSION)

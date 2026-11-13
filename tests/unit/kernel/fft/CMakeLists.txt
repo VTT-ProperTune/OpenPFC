@@ -20,8 +20,11 @@ if(OpenPFC_ENABLE_HEFFTE)
         ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_selection.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test_real_plan.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test_mixed_transform.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/test_distributed_line_fft.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_distributed_line_fft.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_float.cpp)
     add_test(NAME DistributedLineDFT COMMAND openpfc-tests "[distributed_line]")
+    # Single-precision host transforms (HeFFTe FFTW and LocalFFT), ADR 0006.
+    add_test(NAME FFTFloat COMMAND openpfc-tests "[fft][float]")
     if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE AND
        (OpenPFC_MPI_TEST_MAX_WORLD_SIZE EQUAL 0 OR
         OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER_EQUAL 2))

@@ -49,8 +49,10 @@ template parameter through every call site.
 - The `Backend` enum and `backend_from_string` cover CPU/CUDA/HIP honestly (M3).
 - GPU spectral models no longer need a dead host `CPUFFT` (`dummy_fft`);
   the session constructs the device FFT directly (M8/M10).
-- Precision policy (ADR 0006) applies: workspace is allocated only for the
-  instantiated precision.
+- Precision policy (ADR 0006) applies: both interfaces carry a double and a
+  single-precision transform pair (`RealVector` / `RealVectorF`,
+  `RealBuffer` / `RealBufferF`), and a workspace is allocated only for the
+  precision that is first used.
 - `IDeviceFFT` has a second, non-heFFTe implementation for one rank,
   `SingleDeviceFFT` (#382): one vendor 3D plan with the same boxes and
   scaling. It is honest in the same sense: `GPUSpectralStack` refuses

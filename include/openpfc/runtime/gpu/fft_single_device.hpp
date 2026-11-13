@@ -82,6 +82,7 @@ template <class MemorySpace> struct single_device_vendor;
 template <> struct single_device_vendor<CUDASpace> {
   struct plans {
     cufftHandle fwd = 0, bwd = 0;
+    cufftHandle fwd_f = 0, bwd_f = 0; ///< single precision, planned lazily
   };
   static void check(cufftResult r, const char *what) {
     if (r != CUFFT_SUCCESS)
@@ -96,9 +97,16 @@ template <> struct single_device_vendor<CUDASpace> {
     check(cufftPlan3d(&p.bwd, n[2], n[1], n[0], CUFFT_Z2D), "cufftPlan3d Z2D");
     return owner.release();
   }
+  static void ensure_float(plans &p, const std::array<int, 3> &n) {
+    if (p.fwd_f != 0) return;
+    check(cufftPlan3d(&p.fwd_f, n[2], n[1], n[0], CUFFT_R2C), "cufftPlan3d R2C");
+    check(cufftPlan3d(&p.bwd_f, n[2], n[1], n[0], CUFFT_C2R), "cufftPlan3d C2R");
+  }
   static void destroy(plans &p) noexcept {
     if (p.fwd) cufftDestroy(p.fwd);
     if (p.bwd) cufftDestroy(p.bwd);
+    if (p.fwd_f) cufftDestroy(p.fwd_f);
+    if (p.bwd_f) cufftDestroy(p.bwd_f);
     p = {};
   }
   static void forward(plans &p, const double *in, std::complex<double> *out) {
@@ -110,8 +118,20 @@ template <> struct single_device_vendor<CUDASpace> {
     check(cufftExecZ2D(p.bwd, reinterpret_cast<cufftDoubleComplex *>(in), out),
           "cufftExecZ2D");
   }
+  static void forward(plans &p, const float *in, std::complex<float> *out) {
+    check(cufftExecR2C(p.fwd_f, const_cast<float *>(in),
+                       reinterpret_cast<cufftComplex *>(out)),
+          "cufftExecR2C");
+  }
+  static void backward(plans &p, std::complex<float> *in, float *out) {
+    check(cufftExecC2R(p.bwd_f, reinterpret_cast<cufftComplex *>(in), out),
+          "cufftExecC2R");
+  }
   static void scaled_copy(double *dst, const double *src, double a, std::size_t n) {
     pfc::axpy_fill_cuda_impl(dst, src, a, 0.0, n);
+  }
+  static void scaled_copy(float *dst, const float *src, float a, std::size_t n) {
+    pfc::axpy_fill_cuda_impl(dst, src, a, 0.0f, n);
   }
 };
 #endif
@@ -122,6 +142,10 @@ template <> struct single_device_vendor<HIPSpace> {
     rocfft_plan fwd = nullptr, bwd = nullptr;
     rocfft_execution_info info = nullptr;
     void *work = nullptr;
+    // Single precision, planned lazily with its own work buffer.
+    rocfft_plan fwd_f = nullptr, bwd_f = nullptr;
+    rocfft_execution_info info_f = nullptr;
+    void *work_f = nullptr;
   };
   static void check(rocfft_status s, const char *what) {
     if (s != rocfft_status_success)
@@ -129,42 +153,55 @@ template <> struct single_device_vendor<HIPSpace> {
                                " failed, rocfft_status " +
                                std::to_string(static_cast<int>(s)));
   }
-  static plans create(const std::array<int, 3> &n) {
-    check(rocfft_setup(), "rocfft_setup");
-    PlanOwner<single_device_vendor> owner;
-    auto &p = owner.get();
+  static void plan_pair(rocfft_plan &fwd, rocfft_plan &bwd,
+                        rocfft_execution_info &info, void *&work,
+                        rocfft_precision precision, const std::array<int, 3> &n) {
     // rocFFT lengths are fastest first; default strides are contiguous.
     const std::size_t len[3] = {static_cast<std::size_t>(n[0]),
                                 static_cast<std::size_t>(n[1]),
                                 static_cast<std::size_t>(n[2])};
-    check(rocfft_plan_create(&p.fwd, rocfft_placement_notinplace,
-                             rocfft_transform_type_real_forward,
-                             rocfft_precision_double, 3, len, 1, nullptr),
+    check(rocfft_plan_create(&fwd, rocfft_placement_notinplace,
+                             rocfft_transform_type_real_forward, precision, 3, len,
+                             1, nullptr),
           "rocfft_plan_create (forward)");
-    check(rocfft_plan_create(&p.bwd, rocfft_placement_notinplace,
-                             rocfft_transform_type_real_inverse,
-                             rocfft_precision_double, 3, len, 1, nullptr),
+    check(rocfft_plan_create(&bwd, rocfft_placement_notinplace,
+                             rocfft_transform_type_real_inverse, precision, 3, len,
+                             1, nullptr),
           "rocfft_plan_create (inverse)");
     std::size_t wf = 0, wb = 0;
-    check(rocfft_plan_get_work_buffer_size(p.fwd, &wf),
+    check(rocfft_plan_get_work_buffer_size(fwd, &wf),
           "rocfft_plan_get_work_buffer_size");
-    check(rocfft_plan_get_work_buffer_size(p.bwd, &wb),
+    check(rocfft_plan_get_work_buffer_size(bwd, &wb),
           "rocfft_plan_get_work_buffer_size");
-    check(rocfft_execution_info_create(&p.info), "rocfft_execution_info_create");
+    check(rocfft_execution_info_create(&info), "rocfft_execution_info_create");
     const std::size_t w = wf > wb ? wf : wb;
     if (w > 0) {
-      if (hipMalloc(&p.work, w) != hipSuccess)
+      if (hipMalloc(&work, w) != hipSuccess)
         throw std::runtime_error("SingleDeviceFFT<HIP>: hipMalloc failed");
-      check(rocfft_execution_info_set_work_buffer(p.info, p.work, w),
+      check(rocfft_execution_info_set_work_buffer(info, work, w),
             "rocfft_execution_info_set_work_buffer");
     }
+  }
+  static plans create(const std::array<int, 3> &n) {
+    check(rocfft_setup(), "rocfft_setup");
+    PlanOwner<single_device_vendor> owner;
+    auto &p = owner.get();
+    plan_pair(p.fwd, p.bwd, p.info, p.work, rocfft_precision_double, n);
     return owner.release();
+  }
+  static void ensure_float(plans &p, const std::array<int, 3> &n) {
+    if (p.fwd_f != nullptr) return;
+    plan_pair(p.fwd_f, p.bwd_f, p.info_f, p.work_f, rocfft_precision_single, n);
   }
   static void destroy(plans &p) noexcept {
     if (p.fwd) rocfft_plan_destroy(p.fwd);
     if (p.bwd) rocfft_plan_destroy(p.bwd);
     if (p.info) rocfft_execution_info_destroy(p.info);
     if (p.work) (void)hipFree(p.work);
+    if (p.fwd_f) rocfft_plan_destroy(p.fwd_f);
+    if (p.bwd_f) rocfft_plan_destroy(p.bwd_f);
+    if (p.info_f) rocfft_execution_info_destroy(p.info_f);
+    if (p.work_f) (void)hipFree(p.work_f);
     p = {};
   }
   static void forward(plans &p, const double *in, std::complex<double> *out) {
@@ -177,8 +214,21 @@ template <> struct single_device_vendor<HIPSpace> {
     void *ob[1] = {out};
     check(rocfft_execute(p.bwd, ib, ob, p.info), "rocfft_execute (inverse)");
   }
+  static void forward(plans &p, const float *in, std::complex<float> *out) {
+    void *ib[1] = {const_cast<float *>(in)};
+    void *ob[1] = {out};
+    check(rocfft_execute(p.fwd_f, ib, ob, p.info_f), "rocfft_execute (forward)");
+  }
+  static void backward(plans &p, std::complex<float> *in, float *out) {
+    void *ib[1] = {in};
+    void *ob[1] = {out};
+    check(rocfft_execute(p.bwd_f, ib, ob, p.info_f), "rocfft_execute (inverse)");
+  }
   static void scaled_copy(double *dst, const double *src, double a, std::size_t n) {
     pfc::axpy_fill_hip_impl(dst, src, a, 0.0, n);
+  }
+  static void scaled_copy(float *dst, const float *src, float a, std::size_t n) {
+    pfc::axpy_fill_hip_impl(dst, src, a, 0.0f, n);
   }
 };
 #endif
@@ -196,6 +246,8 @@ class SingleDeviceFFT final : public IDeviceFFT<MemorySpace> {
 public:
   using typename IDeviceFFT<MemorySpace>::RealBuffer;
   using typename IDeviceFFT<MemorySpace>::ComplexBuffer;
+  using typename IDeviceFFT<MemorySpace>::RealBufferF;
+  using typename IDeviceFFT<MemorySpace>::ComplexBufferF;
 
   /// @param size global grid size {nx, ny, nz} (x fastest), each >= 1.
   explicit SingleDeviceFFT(const std::array<int, 3> &size) : m_n(size) {
@@ -234,6 +286,31 @@ public:
             .count();
   }
 
+  /// Single precision: the vendor plans and the scaled-copy workspace are
+  /// created on the first float call and kept for the lifetime of the object.
+  void forward(const RealBufferF &in, ComplexBufferF &out) override {
+    require(in.size() == size_inbox() && out.size() == size_outbox(), "forward");
+    ensure_float();
+    const auto start = std::chrono::steady_clock::now();
+    vendor::forward(m_plans.get(), in.data(), out.data());
+    m_fft_time +=
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - start)
+            .count();
+  }
+
+  void backward(const ComplexBufferF &in, RealBufferF &out) override {
+    require(in.size() == size_outbox() && out.size() == size_inbox(), "backward");
+    ensure_float();
+    const auto start = std::chrono::steady_clock::now();
+    vendor::scaled_copy(reinterpret_cast<float *>(m_work_f.data()),
+                        reinterpret_cast<const float *>(in.data()),
+                        1.0f / static_cast<float>(size_inbox()), 2 * size_outbox());
+    vendor::backward(m_plans.get(), m_work_f.data(), out.data());
+    m_fft_time +=
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - start)
+            .count();
+  }
+
   // Host call duration, matching FFT_Impl; no extra device synchronization.
   void reset_fft_time() override { m_fft_time = 0.0; }
   [[nodiscard]] double get_fft_time() const override { return m_fft_time; }
@@ -245,7 +322,8 @@ public:
   }
   [[nodiscard]] std::size_t size_workspace() const override { return size_outbox(); }
   [[nodiscard]] std::size_t get_allocated_memory_bytes() const override {
-    return size_outbox() * sizeof(std::complex<double>);
+    return size_outbox() * sizeof(std::complex<double>) +
+           m_work_f.size() * sizeof(std::complex<float>);
   }
   [[nodiscard]] Box3i get_inbox_bounds() const override {
     return Box3i::from_bounds({0, 0, 0}, {m_n[0] - 1, m_n[1] - 1, m_n[2] - 1});
@@ -273,9 +351,17 @@ private:
       throw std::invalid_argument(std::string("SingleDeviceFFT::") + what +
                                   ": buffer size mismatch");
   }
+  void ensure_float() {
+    vendor::ensure_float(m_plans.get(), m_n);
+    if (m_work_f.size() != size_outbox()) {
+      m_work_f = ComplexBufferF(size_outbox());
+    }
+  }
+
   std::array<int, 3> m_n;
   detail::PlanOwner<vendor> m_plans;
   ComplexBuffer m_work;
+  ComplexBufferF m_work_f;
   double m_fft_time = 0.0;
 };
 

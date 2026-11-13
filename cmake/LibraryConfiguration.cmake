@@ -82,8 +82,8 @@ add_library(OpenPFC::openpfc ALIAS openpfc)
 if(OpenPFC_HAS_FFTW3)
   # Private: the static archive records the FFTW dependency for its
   # consumers without exporting the absolute library path.
-  target_link_libraries(openpfc PRIVATE FFTW3::fftw3)
-  target_link_libraries(openpfc_kernel_obj PRIVATE FFTW3::fftw3)
+  target_link_libraries(openpfc PRIVATE FFTW3::fftw3 FFTW3::fftw3f)
+  target_link_libraries(openpfc_kernel_obj PRIVATE FFTW3::fftw3 FFTW3::fftw3f)
 endif()
 
 # Object libraries need the same include paths / standards as the merged `openpfc`

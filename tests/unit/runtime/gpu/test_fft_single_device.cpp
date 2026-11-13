@@ -164,6 +164,55 @@ void compare(const std::array<int, 3> &n) {
   CHECK(max_rel(kb.to_host(), hkb) == 0.0); // backward input preserved
 }
 
+/// Single precision (ADR 0006): the lazily planned float pair of
+/// `SingleDeviceFFT` agrees with the HeFFTe float transform and round-trips
+/// within single-precision accuracy; the float workspace is reported once used.
+void compare_float(const std::array<int, 3> &n) {
+  using RealF = typename pfc::fft::IDeviceFFT<Space>::RealBufferF;
+  using CplxF = typename pfc::fft::IDeviceFFT<Space>::ComplexBufferF;
+  auto domain = pfc::domain::create(pfc::GridSize({n[0], n[1], n[2]}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = pfc::decomposition::create(domain, 1);
+  auto ref = make_heffte(decomp);
+  pfc::fft::SingleDeviceFFT<Space> one(n);
+  pfc::fft::IDeviceFFT<Space> &iface = one;
+  const std::size_t bytes_before = iface.get_allocated_memory_bytes();
+
+  std::mt19937_64 rng(777);
+  std::normal_distribution<float> nd;
+  std::vector<float> h(one.size_inbox());
+  for (float &v : h) v = nd(rng);
+  RealF in(h.size()), out_a(h.size()), out_b(h.size());
+  in.copy_from_host(h);
+  CplxF ka(one.size_outbox()), kb(one.size_outbox());
+  ref.forward(in, ka);
+  iface.forward(in, kb);
+  const auto hka = ka.to_host(), hkb = kb.to_host();
+  double num = 0.0, den = 0.0;
+  for (std::size_t i = 0; i < hka.size(); ++i) {
+    REQUIRE(std::isfinite(hkb[i].real()));
+    REQUIRE(std::isfinite(hkb[i].imag()));
+    num = std::max(num, static_cast<double>(std::abs(hkb[i] - hka[i])));
+    den = std::max(den, static_cast<double>(std::abs(hka[i])));
+  }
+  INFO("float n = " << n[0] << " x " << n[1] << " x " << n[2]);
+  CHECK(num / den < 1e-5);
+
+  ref.backward(ka, out_a);
+  iface.backward(kb, out_b);
+  const auto ha = out_a.to_host(), hb = out_b.to_host();
+  double m_ab = 0.0, m_rt = 0.0;
+  for (std::size_t i = 0; i < h.size(); ++i) {
+    REQUIRE(std::isfinite(hb[i]));
+    m_ab = std::max(m_ab, static_cast<double>(std::abs(hb[i] - ha[i])));
+    m_rt = std::max(m_rt, static_cast<double>(std::abs(hb[i] - h[i])));
+  }
+  CHECK(m_ab < 1e-5);
+  CHECK(m_rt < 1e-5); // round trip
+  CHECK(iface.get_allocated_memory_bytes() > bytes_before);
+}
+
 } // namespace
 
 TEST_CASE("Direct FFT rejects invalid storage before vendor planning",
@@ -210,6 +259,16 @@ TEST_CASE("SingleDeviceFFT agrees with the heFFTe backend",
         std::array<int, 3>{15, 9, 7}, std::array<int, 3>{13, 17, 11},
         std::array<int, 3>{1, 24, 20}})
     compare(n);
+}
+
+TEST_CASE("SingleDeviceFFT transforms float buffers",
+          "[fft][float][single_device]") {
+  ensure_mpi();
+  if (!available()) {
+    SKIP("device not available");
+  }
+  compare_float({8, 8, 8});
+  compare_float({8, 6, 4});
 }
 
 TEST_CASE("Automatic policy selects the measured device FFT",

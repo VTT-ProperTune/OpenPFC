@@ -31,6 +31,14 @@ using ComplexVector = std::vector<std::complex<double>>;
 using RealDataBuffer = core::DataBuffer<backend::CPUTag, double>;
 using ComplexDataBuffer = core::DataBuffer<backend::CPUTag, std::complex<double>>;
 
+/// Host transform buffers for one real scalar type (`double` or `float`).
+template <class Real> using real_vector_t = std::vector<Real>;
+template <class Real> using complex_vector_t = std::vector<std::complex<Real>>;
+
+/// Single-precision host buffers (ADR 0006: float is an instantiated path).
+using RealVectorF = real_vector_t<float>;
+using ComplexVectorF = complex_vector_t<float>;
+
 /**
  * @brief FFT backend selection
  *
@@ -99,6 +107,18 @@ struct IHostFFT : IFFTQueries {
    *         outbox/inbox contract (implementations report expected and actual).
    */
   virtual void backward(const ComplexVector &in, RealVector &out) = 0;
+
+  /**
+   * @brief Single-precision `forward`: the same collective, unscaled r2c
+   *        contract on `float` / `std::complex<float>` buffers.
+   *
+   * Every implementation provides both precisions; which one a caller uses
+   * follows the scalar type of its fields (ADR 0006). Sizes follow
+   * size_inbox() / size_outbox() exactly as for the double overload.
+   */
+  virtual void forward(const RealVectorF &in, ComplexVectorF &out) = 0;
+  /** @brief Single-precision `backward` (scaled by 1/N, see the double overload). */
+  virtual void backward(const ComplexVectorF &in, RealVectorF &out) = 0;
 };
 
 /**
@@ -106,8 +126,9 @@ struct IHostFFT : IFFTQueries {
  *
  * Instantiating `IDeviceFFT<CUDASpace>` / `IDeviceFFT<HIPSpace>` requires the
  * matching runtime memory-space header so `memory_space_to_backend_t` is
- * defined. Double is the interface precision; float overloads stay on the
- * concrete `FFT_Impl`.
+ * defined. Both precisions are part of the interface: `RealBuffer` /
+ * `ComplexBuffer` carry double, `RealBufferF` / `ComplexBufferF` float, and
+ * `real_buffer<Real>` / `complex_buffer<Real>` name either from a scalar type.
  *
  * Both transforms are collective on the plan communicator. forward() is
  * unscaled; backward() applies 1/N for the full real grid. Buffers use the
@@ -122,13 +143,22 @@ struct IHostFFT : IFFTQueries {
  */
 template <typename MemorySpace> struct IDeviceFFT : IFFTQueries {
   using backend_tag = memory_space_to_backend_t<MemorySpace>;
-  using RealBuffer = core::DataBuffer<backend_tag, double>;
-  using ComplexBuffer = core::DataBuffer<backend_tag, std::complex<double>>;
+  template <class Real> using real_buffer = core::DataBuffer<backend_tag, Real>;
+  template <class Real>
+  using complex_buffer = core::DataBuffer<backend_tag, std::complex<Real>>;
+  using RealBuffer = real_buffer<double>;
+  using ComplexBuffer = complex_buffer<double>;
+  using RealBufferF = real_buffer<float>;
+  using ComplexBufferF = complex_buffer<float>;
 
   /// Collective unscaled r2c; input/output sizes are size_inbox()/size_outbox().
   virtual void forward(const RealBuffer &in, ComplexBuffer &out) = 0;
   /// Collective c2r with full-grid 1/N scaling; sizes reverse the forward pair.
   virtual void backward(const ComplexBuffer &in, RealBuffer &out) = 0;
+  /// Single-precision r2c with the same contract as the double overload.
+  virtual void forward(const RealBufferF &in, ComplexBufferF &out) = 0;
+  /// Single-precision c2r with full-grid 1/N scaling.
+  virtual void backward(const ComplexBufferF &in, RealBufferF &out) = 0;
 };
 
 [[nodiscard]] inline Box3i get_inbox(const IFFTQueries &fft) noexcept {
