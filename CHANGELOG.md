@@ -7,6 +7,26 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- AluminumNew runs in single precision on request (ADR 0006, #870, after
+  tungsten in #868): `model.precision: "float"` (JSON or TOML; default
+  `"double"`) makes the `aluminumNew`, `aluminum_etd`, `aluminum_etd_cuda`
+  and `aluminum_etd_hip` binaries run `AluminumFloatSession` /
+  `AluminumCUDAFloatSession` / `AluminumHIPFloatSession` through
+  `pfc::ui::run_json_session_main_precision`: float fields, FFTs and
+  coefficient tables, and an `AluminumPointwise::nonlinearity` whose
+  polynomial is evaluated natively in float while the temperature profile
+  and its clamp keep their double arithmetic. The k-space symbols stay
+  double, `seed_grid_fcc` and the `fixed` / `moving` boundaries go through
+  the double scratch (on a device through the host bracket; their device
+  appliers stay double), and every file keeps its float64 format. Shipped
+  preset `fcc_seed_float.json`; `apps/schema.json` lists the key on the
+  aluminum model. Tolerance baselines (`[aluminum][float]`, `aluminum-float`,
+  `aluminum-float-cli`, the float cases of `CUDA_AluminumETD` /
+  `HIP_AluminumETD`): float within 1e-5 of the double trajectory on the
+  seed_grid_fcc 32³ golden and with the temperature profile, the golden
+  checksum within 1e-5 relative of the unchanged double pin, exact restart,
+  and the directional preset's front within one cell of the double run.
+
 - The published documentation builds again: `docs/api/frontend.md`
   documents `BasicSpectralCPUStack` and the `SpectralCPUStack` alias that
   #866 introduced instead of the former class name, and the two abbreviated

@@ -11,6 +11,7 @@
 #include <openpfc/runtime/gpu/spectral_pointwise_gpu.hpp>
 
 OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE(aluminum::AluminumPointwise)
+OPENPFC_INSTANTIATE_SPECTRAL_POINTWISE_FLOAT(aluminum::AluminumPointwise)
 
 #include <aluminum/solidification_bc_rules.hpp>
 #include <openpfc/runtime/gpu/modifier_rule_gpu.hpp>

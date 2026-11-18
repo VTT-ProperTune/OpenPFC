@@ -79,7 +79,8 @@ if(ALUMINUM_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     aluminum_cpu_executable(aluminumTest aluminumTest.cpp
                                          tests/test_aluminum_physics.cpp
                                          tests/test_aluminum_inputs.cpp
-                                         tests/test_aluminum_directional.cpp)
+                                         tests/test_aluminum_directional.cpp
+                                         tests/test_aluminum_float.cpp)
     target_link_libraries(aluminumTest PRIVATE Catch2::Catch2WithMain)
     # The shipped inputs are part of the product, so a test loads them from the
     # source tree rather than from a copy that could drift.
@@ -111,6 +112,17 @@ if(ALUMINUM_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     set_tests_properties(aluminum-directional PROPERTIES TIMEOUT 180)
     add_test(NAME aluminum-etd-cpu-golden COMMAND aluminumTest
         "[seed_grid_fcc][session]")
+    # Single precision (ADR 0006, #870): the float session against the double
+    # reference and the pinned golden, through the session API and through the
+    # maintained executable with the shipped float preset.
+    add_test(NAME aluminum-float COMMAND aluminumTest "[float]")
+    set_tests_properties(aluminum-float PROPERTIES TIMEOUT 300)
+    add_test(NAME aluminum-float-cli
+      COMMAND $<TARGET_FILE:aluminumNew>
+        "${CMAKE_CURRENT_SOURCE_DIR}/inputs_json/fcc_seed_float.json")
+    set_tests_properties(aluminum-float-cli PROPERTIES
+      PASS_REGULAR_EXPRESSION "precision=float.*SPECTRAL_CHECKSUM field=psi"
+      TIMEOUT 120)
     if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
       if(OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER 0 AND
          OpenPFC_MPI_TEST_MAX_WORLD_SIZE LESS 4)
@@ -135,6 +147,7 @@ if(ALUMINUM_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
       target_compile_definitions(test_aluminum_etd_cuda PRIVATE
           OPENPFC_TEST_ALUMINUM_ETD_CUDA)
       add_test(NAME CUDA_AluminumETD COMMAND test_aluminum_etd_cuda)
+      add_test(NAME aluminum-etd-float-cuda COMMAND test_aluminum_etd_cuda "[float]")
     endif()
 
     if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
@@ -145,6 +158,7 @@ if(ALUMINUM_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
       target_compile_definitions(test_aluminum_etd_hip PRIVATE
           OPENPFC_TEST_ALUMINUM_ETD_HIP)
       add_test(NAME HIP_AluminumETD COMMAND test_aluminum_etd_hip)
+      add_test(NAME aluminum-etd-float-hip COMMAND test_aluminum_etd_hip "[float]")
     endif()
   else()
     message(STATUS "Aluminum: Catch2 not found, not building tests")

@@ -14,6 +14,8 @@ int main(int argc, char *argv[]) { return pfc::test::run(argc, argv); }
 
 #include <algorithm>
 #include <cmath>
+#include <string>
+#include <type_traits>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
@@ -130,6 +132,86 @@ TEST_CASE("AluminumGPUSession matches host with G_grid",
   }
   run_host_vs_device<aluminum::AluminumSession, aluminum::AluminumCUDASession>(s);
 #endif
+}
+
+// ADR 0006 tolerance baseline (tests/baselines/BASELINES.md): the float
+// device session against the double host session, every saved state within
+// 1e-5, on the isothermal seed_grid_fcc 32^3 case and on the 8^3 case with the
+// temperature profile, over the HeFFTe and the single-device FFT.
+TEST_CASE("AluminumETD float device vs double host within 1e-5",
+          "[aluminum][gpu][session][float]") {
+#if defined(OPENPFC_TEST_ALUMINUM_ETD_HIP)
+  if (!pfc::gpu::test::is_hip_available()) {
+    SKIP("HIP not available");
+  }
+  using Dev = aluminum::AluminumHIPFloatSession;
+#else
+  if (!pfc::gpu::test::is_cuda_available()) {
+    SKIP("CUDA not available");
+  }
+  using Dev = aluminum::AluminumCUDAFloatSession;
+#endif
+  static_assert(std::is_same_v<typename Dev::Real, float>);
+  int mpi_initialized = 0;
+  MPI_Initialized(&mpi_initialized);
+  if (mpi_initialized == 0) {
+    MPI_Init(nullptr, nullptr);
+  }
+  int rank = 0;
+  int nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  aluminum::register_catalog();
+
+  json seeded = mini_settings();
+  seeded["domain"]["size"] = {32, 32, 32};
+  seeded["domain"]["upper"] = {32.0, 32.0, 32.0};
+  seeded["timestepping"] = {
+      {"t0", 0.0}, {"t1", 0.05}, {"dt", 0.01}, {"saveat", 0.01}};
+  seeded["initial_conditions"].push_back({{"target", "psi"},
+                                          {"type", "seed_grid_fcc"},
+                                          {"X0", 8.0},
+                                          {"Ny", 2},
+                                          {"Nz", 2},
+                                          {"radius", 4.0},
+                                          {"amplitude", 0.4},
+                                          {"rho", -0.036},
+                                          {"rseed", 42}});
+  json thermal = mini_settings();
+  thermal["model"]["params"]["G_grid"] = 0.5;
+  thermal["model"]["params"]["V_grid"] = 0.1;
+  thermal["model"]["params"]["x_initial"] = 4.0;
+
+  for (json settings : {seeded, thermal}) {
+    aluminum::AluminumSession host(settings, rank, nproc, MPI_COMM_WORLD);
+    std::vector<std::vector<double>> host_states;
+    host.run([&] { host_states.push_back(host.psi().vec()); });
+    REQUIRE_FALSE(host_states.empty());
+
+    settings["model"]["precision"] = "float";
+    for (const char *choice : {"heffte", "local"}) {
+      if (nproc != 1 && std::string(choice) == "local") continue;
+      INFO("fft = " << choice);
+      settings["fft"] = choice;
+      Dev dev(settings, rank, nproc, MPI_COMM_WORLD);
+      std::size_t state = 0;
+      dev.run([&] {
+        REQUIRE(state < host_states.size());
+        dev.psi().with_host_view([&](float *d, std::size_t n) {
+          REQUIRE(n == host_states[state].size());
+          double m = 0.0;
+          for (std::size_t i = 0; i < n; ++i) {
+            REQUIRE(std::isfinite(d[i]));
+            m = std::max(
+                m, std::abs(host_states[state][i] - static_cast<double>(d[i])));
+          }
+          REQUIRE(m < 1e-5);
+        });
+        ++state;
+      });
+      REQUIRE(state == host_states.size());
+    }
+  }
 }
 
 int main(int argc, char *argv[]) {

@@ -60,6 +60,14 @@ tolerance baselines recorded in `tests/baselines/BASELINES.md` (float within
 1e-5 of the double trajectory, double goldens unchanged). Point 2 of the
 decision therefore reads today: `double` is the default and the only
 precision with bitwise goldens; `float` is instantiated, tested and
-validated by tolerance for the spectral ETD chain, its I/O and tungsten;
-mixed precision is still not claimed. Aluminum and the other spectral apps
+validated by tolerance for the spectral ETD chain, its I/O, tungsten and
+aluminumNew; mixed precision is still not claimed. The other spectral apps
 stay double until they take the same switch.
+
+AluminumNew took the switch on 2026-11-18 (#870): `model.precision =
+"float"` selects `AluminumFloatSession`, `AluminumCUDAFloatSession` and
+`AluminumHIPFloatSession`. Its temperature profile and clamp stay double
+inside the float functor, its `fixed` / `moving` boundaries and
+`seed_grid_fcc` are served through the double scratch, and on a device the
+boundaries take the host bracket because their device appliers remain
+double-only; the tolerance rows are in `tests/baselines/BASELINES.md`.

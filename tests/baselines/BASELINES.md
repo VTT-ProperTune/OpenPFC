@@ -33,6 +33,8 @@ within a stated numeric tolerance, per backend).
 | Tungsten float vs double, CPU (`test_tungsten` `[float]`, `tungsten-float`) | tolerance | max\|ψ_float − ψ_double\| ≤ 1e-5 after 10 steps (8³ and 32³ sine IC); 32³ sine checksum Σψ, Σψ² within 1e-5 relative of the double pin; restart equivalence exact | CI (CPU) |
 | Tungsten float device vs double host (`test_tungsten_etd_cuda` / `_hip` `[float]`) | tolerance | max\|ψ\| ≤ 1e-5 per saved state, 32³/10 steps, HeFFTe and single-device FFT | tohtori CUDA (A40) / tohtori HIP (MI210) |
 | Tungsten CPU↔HIP parity (`test_tungsten_cpu_vs_hip`) | tolerance | ≤ 1e-10 | LUMI (GPU) |
+| Aluminum float vs double, CPU (`aluminumTest` `[float]`, `aluminum-float`) | tolerance | max\|ψ_float − ψ_double\| ≤ 1e-5 on the seed_grid_fcc 32³ / 5-step golden and on a 16³ case with the temperature profile; golden Σψ, Σψ² within 1e-5 relative of the double pin; restart equivalence exact; directional preset (moving boundary) front column within one cell of double, max\|ψ_float − ψ_double\| ≤ 1e-4 and Σψ² within 1e-4 relative | CI (CPU) |
+| Aluminum float device vs double host (`test_aluminum_etd_cuda` / `_hip` `[float]`) | tolerance | max\|ψ\| ≤ 1e-5 per saved state, seed_grid_fcc 32³ / 5 steps and 8³ with the temperature profile, HeFFTe and single-device FFT | tohtori CUDA (A40) / tohtori HIP (MI210) |
 | allen_cahn / wave2d CPU↔GPU parity | tolerance | ≤ 1e-10 | tohtori / LUMI |
 | ETD weight provenance (`spectral_exp_cache_matches_legacy_etd_weights`) | tolerance | test-defined | CI (CPU) |
 | RK2/RK3/RK4 convergence-order windows | tolerance | ratio windows in-test | CI (CPU) |

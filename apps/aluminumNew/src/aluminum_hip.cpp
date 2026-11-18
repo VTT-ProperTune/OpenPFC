@@ -11,6 +11,7 @@
 #include <openpfc/frontend/ui/json_session_main.hpp>
 
 int main(int argc, char *argv[]) {
-  return pfc::ui::run_json_session_main<aluminum::AluminumHIPSession>(
+  return pfc::ui::run_json_session_main_precision<aluminum::AluminumHIPSession,
+                                                  aluminum::AluminumHIPFloatSession>(
       argc, argv, "aluminum_etd_hip", aluminum::register_catalog);
 }

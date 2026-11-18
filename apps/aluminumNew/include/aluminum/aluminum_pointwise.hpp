@@ -120,8 +120,30 @@ struct AluminumPointwise {
            u * p_star / 2.0 + p2_bar * u * u / 2.0 + q2_bar * u * v / 2.0;
   }
 
-  OPENPFC_HD double nonlinearity(const pfc::sim::SpectralCell &c) const {
-    return nonlinearity(c.psi, c.psi_mf, c.p_star, temperature_variation(c.x, c.t));
+  /// Pointwise nonlinearity in the field scalar `R` (`double` for every
+  /// shipped double session, `float` under `model.precision = "float"`,
+  /// ADR 0006). The temperature profile and the three temperature-dependent
+  /// coefficients keep their double arithmetic and are narrowed once; the
+  /// polynomial in the field samples is evaluated in `R`. For `R = double`
+  /// this is the same expression as the scalar overload above, so the pinned
+  /// double goldens are unchanged.
+  template <class R>
+  OPENPFC_HD R nonlinearity(const pfc::sim::SpectralCellT<R> &c) const {
+    const double T_var = temperature_variation(c.x, c.t);
+    const R q2_bar_n = static_cast<R>(q21_bar * T_var / T0);
+    const R q3_bar_n = static_cast<R>(q31_bar * (T_const + T_var) / T0 + q30_bar);
+    const R kernel = static_cast<R>(-(1.0 - std::exp(-T_var / T0)));
+    const R u = c.psi;
+    const R v = c.psi_mf;
+    const R u2 = u * u;
+    const R v2 = v * v;
+    R n = static_cast<R>(p3_bar) * u2 + static_cast<R>(p4_bar) * u2 * u +
+          q2_bar_n * v + q3_bar_n * v2 + static_cast<R>(q4_bar) * v2 * v -
+          kernel * c.p_star;
+    if (stabP != 0.0) {
+      n -= static_cast<R>(stabP) * u;
+    }
+    return n;
   }
 
   OPENPFC_HD double free_energy_density(const pfc::sim::SpectralCell &c) const {

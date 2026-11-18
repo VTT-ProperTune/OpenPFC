@@ -236,17 +236,51 @@ mpirun -n 4 ./apps/aluminumNew/aluminumNew ../apps/aluminumNew/aluminumNew.json
 
 A matching `aluminumNew.toml` is provided for TOML workflows. Adjust `results`, `fields`, and paths under `model.params` for your machine.
 
+## Precision: `double` (default) or `float`
+
+`model.precision` selects the field scalar of the session (ADR 0006):
+
+```json
+"model": { "name": "aluminum", "precision": "float" }
+```
+
+With `"float"` the `aluminumNew`, `aluminum_etd_cuda` and `aluminum_etd_hip`
+binaries run `AluminumFloatSession`, `AluminumCUDAFloatSession` or
+`AluminumHIPFloatSession`: the fields, FFTs, ETD coefficient tables and the
+polynomial part of the pointwise nonlinearity are single precision, which
+halves the memory of a GPU run. The k-space symbols and the temperature
+profile `T_const + G (x - x0 - V t)` with its clamp are still evaluated in
+double and narrowed once per cell; `seed_grid_fcc` and the `fixed` /
+`moving` boundaries are applied through a double scratch; and every output
+file (binary, VTK, HDF5, checkpoint) keeps its float64 format, so a float
+run can restart from a double checkpoint and vice versa. On a device the
+two boundaries go through the host bracket (their device appliers are
+double-only), so a float GPU run with a boundary condition pays a
+device-host round trip per step. The preset `inputs_json/fcc_seed_float.json`
+is the 32³ seed case in single precision; `aluminum-float-cli` runs it.
+
+The float path is validated by tolerance, not bitwise: it tracks the double
+trajectory within 1e-5 on the pinned seed_grid_fcc 32³ / 5-step golden and
+on a 16³ case with the temperature profile, reproduces the pinned golden
+checksum within 1e-5 relative, restarts exactly from its float64
+checkpoint, and runs the directional preset with its moving boundary
+(`aluminum-float`, the `[float]` cases of `CUDA_AluminumETD` /
+`HIP_AluminumETD`;
+[`tests/baselines/BASELINES.md`](../../tests/baselines/BASELINES.md)). The
+double goldens are unchanged. Startup prints the choice as
+`SPECTRAL_FFT ... precision=float`.
+
 ## Source layout
 
 | File | Role |
 |------|------|
-| `src/aluminum.cpp` | `main`: JSON → `AluminumSession` (`aluminumNew` and its alias `aluminum_etd`) |
-| `src/aluminum_cuda.cpp` / `src/aluminum_hip.cpp` | `main` for the GPU sessions on `GPUSpectralStack` |
-| `src/gpu/aluminum_pointwise.inc` (`.cu` / `.hip`) | Device instantiation of the pointwise nonlinearity |
+| `src/aluminum.cpp` | `main`: JSON → `AluminumSession` or `AluminumFloatSession` by `model.precision` (`aluminumNew` and its alias `aluminum_etd`) |
+| `src/aluminum_cuda.cpp` / `src/aluminum_hip.cpp` | `main` for the GPU sessions on `GPUSpectralStack`, double and float |
+| `src/gpu/aluminum_pointwise.inc` (`.cu` / `.hip`) | Device instantiation of the pointwise nonlinearity in double and float |
 | `include/aluminum/aluminum_physics.hpp` | Schema, k-space symbols (`linear_symbol`, `filter_mf`, `correlation_kernel`, `nonlinear_symbol`), `pointwise()` |
 | `include/aluminum/aluminum_pointwise.hpp` | `OPENPFC_HD` functor: `N`, free-energy density, `temperature_variation(x, t)` |
 | `include/aluminum/seed_grid_fcc.hpp` | `seed_grid_fcc` catalog `FieldModifier` (registered by `aluminum::register_catalog()`), built on the library `pfc::Seed` with `pfc::Lattice::fcc` |
-| `include/aluminum/aluminum_session.hpp` | Session aliases + `register_catalog()` |
+| `include/aluminum/aluminum_session.hpp` | Session aliases (double and float, three backends) + `register_catalog()` |
 
 ## See also
 
