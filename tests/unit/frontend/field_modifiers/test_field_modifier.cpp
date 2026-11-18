@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <stdexcept>
+#include <type_traits>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
@@ -10,6 +11,7 @@
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/simulation/apply_field_modifier.hpp>
+#include <openpfc/kernel/simulation/device_field_modifier.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/constant.hpp>
 
@@ -132,4 +134,76 @@ TEST_CASE("apply_field_modifier serves a float field through a double scratch",
 
   pfc::data::Field<float> halo(domain, box, 1);
   REQUIRE_THROWS_AS(pfc::apply_field_modifier(ic, halo, 0.0), std::invalid_argument);
+}
+
+namespace {
+
+struct BothPrecisionsBC : pfc::FieldModifier {
+  void apply(pfc::field::FieldOutput<double> /*field*/, const pfc::Domain &,
+             const pfc::Box3i &, double) override {}
+};
+struct DoubleOnlyBC : pfc::FieldModifier {
+  void apply(pfc::field::FieldOutput<double> /*field*/, const pfc::Domain &,
+             const pfc::Box3i &, double) override {}
+};
+struct NoApplierBC : pfc::FieldModifier {
+  void apply(pfc::field::FieldOutput<double> /*field*/, const pfc::Domain &,
+             const pfc::Box3i &, double) override {}
+};
+
+int g_double_calls = 0;
+int g_float_calls = 0;
+
+// A generic applier registers for both scalars; one written against the
+// double view registers for double alone. The appliers here only count the
+// calls, so the test needs no device.
+const pfc::RegisterDeviceModifier<BothPrecisionsBC> reg_both{
+    [](pfc::FieldModifier &, const auto &field, const pfc::Domain &,
+       const pfc::Box3i &, double) {
+      if constexpr (std::is_same_v<decltype(field.data), float *>) {
+        ++g_float_calls;
+      } else {
+        ++g_double_calls;
+      }
+    }};
+const pfc::RegisterDeviceModifier<DoubleOnlyBC> reg_double{
+    [](pfc::FieldModifier &, const pfc::DeviceFieldView &, const pfc::Domain &,
+       const pfc::Box3i &, double) { ++g_double_calls; }};
+
+} // namespace
+
+// ADR 0006 / #872: the device-applier registry is keyed by modifier type and
+// field scalar. apply_field_modifier consults has_device_applier<T>, so a
+// float device field runs on the device only when a float applier exists.
+TEST_CASE("device applier registry serves double and float views by type",
+          "[field_modifier][unit][device][float]") {
+  BothPrecisionsBC both;
+  DoubleOnlyBC dbl;
+  NoApplierBC none;
+  REQUIRE(pfc::has_device_applier<double>(both));
+  REQUIRE(pfc::has_device_applier<float>(both));
+  REQUIRE(pfc::has_device_applier<double>(dbl));
+  REQUIRE_FALSE(pfc::has_device_applier<float>(dbl));
+  REQUIRE_FALSE(pfc::has_device_applier<double>(none));
+  REQUIRE_FALSE(pfc::has_device_applier<float>(none));
+  REQUIRE(pfc::has_device_applier(dbl)); // the default scalar is double
+
+  auto domain = pfc::domain::create(pfc::Int3{2, 2, 2});
+  auto box = pfc::domain::index_box(domain);
+  double dbuf[8] = {};
+  float fbuf[8] = {};
+  g_double_calls = 0;
+  g_float_calls = 0;
+  REQUIRE(pfc::try_apply_on_device(both, pfc::DeviceFieldView{dbuf, 8}, domain, box,
+                                   0.0));
+  REQUIRE(pfc::try_apply_on_device(both, pfc::DeviceFieldViewF{fbuf, 8}, domain, box,
+                                   0.0));
+  REQUIRE(pfc::try_apply_on_device(dbl, pfc::DeviceFieldView{dbuf, 8}, domain, box,
+                                   0.0));
+  REQUIRE_FALSE(pfc::try_apply_on_device(dbl, pfc::DeviceFieldViewF{fbuf, 8}, domain,
+                                         box, 0.0));
+  REQUIRE_FALSE(pfc::try_apply_on_device(none, pfc::DeviceFieldView{dbuf, 8}, domain,
+                                         box, 0.0));
+  REQUIRE(g_double_calls == 2);
+  REQUIRE(g_float_calls == 1);
 }

@@ -304,8 +304,11 @@ TEST_CASE("TungstenGPUSession single_seed IC matches host within 1e-10",
 }
 
 // Boundary conditions on a device field run on the device (no host round
-// trip) and change the same cells to the same values as the host path. The
-// box does not start at 0 and the moving front is tracked over two calls.
+// trip) and change the same cells to the same values as the host path, in
+// double and (ADR 0006, #872) in float. The box does not start at 0 and the
+// moving front is tracked over two calls. The float host path is the double
+// scratch of apply_field_modifier, so host and device agree up to the one
+// float ulp that a double rounding difference of exp() can flip.
 TEST_CASE("Solidification BCs on a device field match the host path",
           "[tungsten][gpu][bc]") {
 #if defined(OPENPFC_TEST_TUNGSTEN_ETD_HIP)
@@ -322,54 +325,125 @@ TEST_CASE("Solidification BCs on a device field match the host path",
   const pfc::Domain domain =
       pfc::domain::from_bounds({48, 6, 4}, {-20.0, 0.0, 0.0}, {33.0, 6.0, 4.0});
   const pfc::Box3i box = pfc::domain::index_box(domain);
-  // Solid (-0.05) behind x = 5, vapour (-0.4) ahead: a front to track.
-  auto fill = [&](double *d, std::size_t n) {
-    for (std::size_t c = 0; c < n; ++c) {
-      const int i = static_cast<int>(c % 48);
-      const double x = pfc::domain::to_coords(domain, {i, 0, 0})[0];
-      d[c] = x < 5.0 ? -0.05 : -0.4;
-    }
-  };
 
-  auto compare = [&](pfc::FieldModifier &on_host, pfc::FieldModifier &on_device) {
-    REQUIRE(pfc::has_device_applier(on_device));
-    pfc::data::Field<double> h(domain, box);
-    pfc::data::Field<double, Space> d(domain, box);
+  auto compare = [&]<class T>(pfc::FieldModifier &on_host,
+                              pfc::FieldModifier &on_device) {
+    REQUIRE(pfc::has_device_applier<T>(on_device));
+    // Solid (-0.05) behind x = 5, vapour (-0.4) ahead: a front to track.
+    auto fill = [&](T *d, std::size_t n) {
+      for (std::size_t c = 0; c < n; ++c) {
+        const int i = static_cast<int>(c % 48);
+        const double x = pfc::domain::to_coords(domain, {i, 0, 0})[0];
+        d[c] = static_cast<T>(x < 5.0 ? -0.05 : -0.4);
+      }
+    };
+    pfc::data::Field<T> h(domain, box);
+    pfc::data::Field<T, Space> d(domain, box);
     h.with_host_view(fill);
     d.with_host_view(fill);
-    std::vector<double> before;
-    h.with_host_view([&](double *p, std::size_t n) { before.assign(p, p + n); });
+    std::vector<T> before;
+    h.with_host_view([&](T *p, std::size_t n) { before.assign(p, p + n); });
     for (double t : {0.0, 1.0}) {
       pfc::apply_field_modifier(on_host, h, t);
       pfc::apply_field_modifier(on_device, d, t);
     }
-    std::vector<double> hv, dv;
-    h.with_host_view([&](double *p, std::size_t n) { hv.assign(p, p + n); });
-    d.with_host_view([&](double *p, std::size_t n) { dv.assign(p, p + n); });
+    REQUIRE(d.residency().device_valid());
+    std::vector<T> hv, dv;
+    h.with_host_view([&](T *p, std::size_t n) { hv.assign(p, p + n); });
+    d.with_host_view([&](T *p, std::size_t n) { dv.assign(p, p + n); });
+    const double tol = std::is_same_v<T, double> ? 1e-14 : 1e-6;
     int changed = 0;
     for (std::size_t c = 0; c < hv.size(); ++c) {
       REQUIRE((hv[c] != before[c]) == (dv[c] != before[c]));
-      REQUIRE(std::abs(hv[c] - dv[c]) <= 1e-14);
+      REQUIRE(std::abs(static_cast<double>(hv[c]) - static_cast<double>(dv[c])) <=
+              tol);
       changed += hv[c] != before[c];
     }
     REQUIRE(changed > 0);
   };
 
-  SECTION("fixed") {
-    tungsten::FixedBC host(-0.464, -0.1), device(-0.464, -0.1);
-    compare(host, device);
-  }
-  SECTION("moving") {
-    tungsten::MovingBC host(-0.464, -0.1), device(-0.464, -0.1);
-    for (auto *bc : {&host, &device}) {
+  auto moving_pair = [](tungsten::MovingBC &a, tungsten::MovingBC &b) {
+    for (auto *bc : {&a, &b}) {
       bc->set_threshold(-0.2);
       bc->set_xwidth(3.0);
       bc->set_disp(4.0);
       bc->set_xpos(-10.0);
     }
-    compare(host, device);
+  };
+
+  SECTION("fixed, double") {
+    tungsten::FixedBC host(-0.464, -0.1), device(-0.464, -0.1);
+    compare.template operator()<double>(host, device);
+  }
+  SECTION("fixed, float") {
+    tungsten::FixedBC host(-0.464, -0.1), device(-0.464, -0.1);
+    compare.template operator()<float>(host, device);
+  }
+  SECTION("moving, double") {
+    tungsten::MovingBC host(-0.464, -0.1), device(-0.464, -0.1);
+    moving_pair(host, device);
+    compare.template operator()<double>(host, device);
     REQUIRE(host.get_xpos() == device.get_xpos());
   }
+  SECTION("moving, float") {
+    tungsten::MovingBC host(-0.464, -0.1), device(-0.464, -0.1);
+    moving_pair(host, device);
+    compare.template operator()<float>(host, device);
+    REQUIRE(host.get_xpos() == device.get_xpos());
+  }
+}
+
+// A float device session with the moving boundary runs the boundary on the
+// device (ADR 0006, #872) and tracks the float host session, which serves the
+// same boundary through the double scratch, within 1e-5.
+TEST_CASE("TungstenETD float device session runs the moving boundary on the "
+          "device",
+          "[tungsten][gpu][session][float][bc]") {
+#if defined(OPENPFC_TEST_TUNGSTEN_ETD_HIP)
+  if (!pfc::gpu::test::is_hip_available()) SKIP("HIP not available");
+  using Dev = tungsten::TungstenHIPFloatSession;
+#else
+  if (!pfc::gpu::test::is_cuda_available()) SKIP("CUDA not available");
+  using Dev = tungsten::TungstenCUDAFloatSession;
+#endif
+  int mpi_initialized = 0;
+  MPI_Initialized(&mpi_initialized);
+  if (mpi_initialized == 0) MPI_Init(nullptr, nullptr);
+  int rank = 0;
+  int nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  tungsten::register_catalog();
+  tungsten::MovingBC probe(-0.464, -0.10);
+  REQUIRE(pfc::has_device_applier<float>(probe));
+
+  json settings = mini_settings();
+  settings["model"]["precision"] = "float";
+  settings["timestepping"] = {
+      {"t0", 0.0}, {"t1", 0.05}, {"dt", 0.01}, {"saveat", 0.01}};
+  settings["boundary_conditions"] = json::array({{{"target", "psi"},
+                                                  {"type", "moving"},
+                                                  {"rho_low", -0.464},
+                                                  {"rho_high", -0.10},
+                                                  {"width", 2.0},
+                                                  {"alpha", 1.0},
+                                                  {"disp", 1.0},
+                                                  {"xpos", 4.0}}});
+  tungsten::TungstenFloatSession host(settings, rank, nproc, MPI_COMM_WORLD);
+  host.run();
+  Dev dev(settings, rank, nproc, MPI_COMM_WORLD);
+  dev.run();
+  const auto &hv = host.psi().vec();
+  dev.psi().with_host_view([&](float *d, std::size_t n) {
+    REQUIRE(n == hv.size());
+    double m = 0.0;
+    for (std::size_t i = 0; i < n; ++i) {
+      REQUIRE(std::isfinite(d[i]));
+      m = std::max(m,
+                   std::abs(static_cast<double>(hv[i]) - static_cast<double>(d[i])));
+    }
+    REQUIRE(m < 1e-5);
+  });
 }
 
 int main(int argc, char *argv[]) {

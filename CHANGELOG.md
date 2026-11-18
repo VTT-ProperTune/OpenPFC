@@ -7,6 +7,28 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+- Device boundary conditions serve float fields (ADR 0006, #872): a float
+  device field of tungsten or aluminumNew with a `fixed` or `moving`
+  boundary no longer copies the whole field to the host and back on every
+  step. `pfc::DeviceFieldViewT<T>` (`DeviceFieldView` = double,
+  `DeviceFieldViewF` = float), `has_device_applier<T>`,
+  `try_apply_on_device<T>` and a registry per scalar;
+  `RegisterDeviceModifier<M>` takes one callable and stores it for every
+  scalar it accepts, so a generic lambda (`const auto &field`) serves both
+  and an applier written against `DeviceFieldView` keeps serving double
+  only (its float fields take the host bracket as before).
+  `pfc::sim::gpu::modifier_rule_apply<R, T>` evaluates the rule in double
+  and narrows on store (`OPENPFC_INSTANTIATE_MODIFIER_RULE_FLOAT`), and
+  `column_max_x` / `column_sum_x` accept float device fields and accumulate
+  in double, as the host path's double scratch does. Both apps' appliers
+  are generic and instantiate their band rules for float. Tests:
+  `[field_modifier][device][float]` (registry dispatch, CPU), the `[bc]`
+  parity cases of `CUDA_TungstenETD` / `HIP_TungstenETD` and the new
+  `[bc]` cases of `CUDA_AluminumETD` / `HIP_AluminumETD` in double and
+  float (`tungsten-device-bc-*`, `aluminum-device-bc-*`), and a float
+  device tungsten session with the moving boundary against the float host
+  session (`[float][bc]`).
+
 - AluminumNew runs in single precision on request (ADR 0006, #870, after
   tungsten in #868): `model.precision: "float"` (JSON or TOML; default
   `"double"`) makes the `aluminumNew`, `aluminum_etd`, `aluminum_etd_cuda`
@@ -17,8 +39,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   polynomial is evaluated natively in float while the temperature profile
   and its clamp keep their double arithmetic. The k-space symbols stay
   double, `seed_grid_fcc` and the `fixed` / `moving` boundaries go through
-  the double scratch (on a device through the host bracket; their device
-  appliers stay double), and every file keeps its float64 format. Shipped
+  the double scratch on the host and run on the device in float (see the
+  device-applier entry below), and every file keeps its float64 format. Shipped
   preset `fcc_seed_float.json`; `apps/schema.json` lists the key on the
   aluminum model. Tolerance baselines (`[aluminum][float]`, `aluminum-float`,
   `aluminum-float-cli`, the float cases of `CUDA_AluminumETD` /
@@ -48,8 +70,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   cases of `CUDA_TungstenETD` / `HIP_TungstenETD`): float within 1e-5 of
   the double trajectory over ten 32³ steps, and the 32³ sine checksum within
   1e-5 relative of the pinned double golden, which is unchanged. The moving
-  solidification boundary serves float device fields through the host
-  bracket (its device applier stays double).
+  solidification boundary runs on float device fields on the device (see
+  the device-applier entry below).
 - Float fields reach the file formats through explicit conversions (ADR
   0006, #854 step 2). `ResultsWriter::write` accepts `FieldView<float>` and
   `FieldView<std::complex<float>>` and widens them in the base class, so every

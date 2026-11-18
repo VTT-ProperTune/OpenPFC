@@ -8,26 +8,30 @@
  * @brief Device building blocks for boundary conditions on device fields.
  *
  * @details
- * - `modifier_rule_apply<R>` evaluates a pointwise rule
- *   `value = rule(x, y, z, current)` on every owned cell of a device field and
- *   writes the cells whose value changes. Like `spectral_pointwise_apply`, it
- *   is declared everywhere and defined only under a device compiler; the
+ * - `modifier_rule_apply<R, T>` evaluates a pointwise rule
+ *   `value = rule(x, y, z, current)` on every owned cell of a device field of
+ *   scalar `T` (`double` or `float`, ADR 0006) and writes the cells whose
+ *   value changes. The rule is evaluated in double, as on the host, and its
+ *   result narrowed to `T` on store. Like `spectral_pointwise_apply`, it is
+ *   declared everywhere and defined only under a device compiler; the
  *   consumer instantiates it for its rule in one `.cu` / `.hip` TU:
  *
  *   @code
  *   #include <foo/foo_bc_rules.hpp>
  *   #include <openpfc/runtime/gpu/modifier_rule_gpu.hpp>
- *   OPENPFC_INSTANTIATE_MODIFIER_RULE(foo::FooBandRule)
+ *   OPENPFC_INSTANTIATE_MODIFIER_RULE(foo::FooBandRule)       // double fields
+ *   OPENPFC_INSTANTIATE_MODIFIER_RULE_FLOAT(foo::FooBandRule) // float fields
  *   @endcode
  *
  *   `R` must be trivially copyable and callable on the device. Coordinates
  *   follow `PointwiseGeometry::coords`, the same formula as the host
  *   `field::apply_inplace`, so host and device rules see the same points.
  *
- * - `column_max_x` and `column_sum_x` reduce a device field to the maximum
- *   and the sum over y and z of each local x column and return those `nx`
- *   values on the host: the only data a front tracker needs (maximum, mean or
- *   their difference per column), instead of the whole field.
+ * - `column_max_x` and `column_sum_x` reduce a device field of either scalar
+ *   to the maximum and the sum over y and z of each local x column and return
+ *   those `nx` values on the host, accumulated in double: the only data a
+ *   front tracker needs (maximum, mean or their difference per column),
+ *   instead of the whole field.
  *
  * Both synchronise before returning, as boundary conditions run between
  * default-stream transforms.
@@ -66,71 +70,78 @@ inline PointwiseGeometry pointwise_geometry(const Domain &domain, const Box3i &b
                            .dz = s[2]};
 }
 
+// Defined in src/openpfc/runtime/gpu/column_reduce_gpu.inc for `T` = double
+// and float.
 #if defined(OpenPFC_ENABLE_CUDA)
-void column_max_x_cuda_impl(const PointwiseGeometry &g, const double *field,
+template <class T>
+void column_max_x_cuda_impl(const PointwiseGeometry &g, const T *field,
+                            double *out_host);
+template <class T>
+void column_sum_x_cuda_impl(const PointwiseGeometry &g, const T *field,
                             double *out_host);
 #endif
 #if defined(OpenPFC_ENABLE_HIP)
-void column_max_x_hip_impl(const PointwiseGeometry &g, const double *field,
+template <class T>
+void column_max_x_hip_impl(const PointwiseGeometry &g, const T *field,
                            double *out_host);
-#endif
-#if defined(OpenPFC_ENABLE_CUDA)
-void column_sum_x_cuda_impl(const PointwiseGeometry &g, const double *field,
-                            double *out_host);
-#endif
-#if defined(OpenPFC_ENABLE_HIP)
-void column_sum_x_hip_impl(const PointwiseGeometry &g, const double *field,
+template <class T>
+void column_sum_x_hip_impl(const PointwiseGeometry &g, const T *field,
                            double *out_host);
 #endif
 
 /// Max over y and z of each local x column of a device field (host result).
-inline std::vector<double> column_max_x(const PointwiseGeometry &g,
-                                        const double *field) {
+template <class T>
+inline std::vector<double> column_max_x(const PointwiseGeometry &g, const T *field) {
+  static_assert(std::is_same_v<T, double> || std::is_same_v<T, float>);
   std::vector<double> out(static_cast<std::size_t>(g.nx));
   if (g.volume() == 0) return out;
 #if defined(OpenPFC_ENABLE_CUDA)
-  column_max_x_cuda_impl(g, field, out.data());
+  column_max_x_cuda_impl<T>(g, field, out.data());
 #else
-  column_max_x_hip_impl(g, field, out.data());
+  column_max_x_hip_impl<T>(g, field, out.data());
 #endif
   return out;
 }
 
 /// Sum over y and z of each local x column of a device field (host result).
-inline std::vector<double> column_sum_x(const PointwiseGeometry &g,
-                                        const double *field) {
+template <class T>
+inline std::vector<double> column_sum_x(const PointwiseGeometry &g, const T *field) {
+  static_assert(std::is_same_v<T, double> || std::is_same_v<T, float>);
   std::vector<double> out(static_cast<std::size_t>(g.nx));
   if (g.volume() == 0) return out;
 #if defined(OpenPFC_ENABLE_CUDA)
-  column_sum_x_cuda_impl(g, field, out.data());
+  column_sum_x_cuda_impl<T>(g, field, out.data());
 #else
-  column_sum_x_hip_impl(g, field, out.data());
+  column_sum_x_hip_impl<T>(g, field, out.data());
 #endif
   return out;
 }
 
-/// Apply `rule(x, y, z, current)` to every owned cell of a device field.
-template <class R>
-void modifier_rule_apply(const PointwiseGeometry &g, double *field, R rule);
+/// Apply `rule(x, y, z, current)` to every owned cell of a device field of
+/// scalar `T`; the rule runs in double and its result is narrowed on store.
+template <class R, class T>
+void modifier_rule_apply(const PointwiseGeometry &g, T *field, R rule);
 
 #if defined(__CUDACC__) || defined(__HIPCC__) || defined(__HIP__)
 
-template <class R>
-__global__ void modifier_rule_kernel(PointwiseGeometry g, double *field, R rule) {
+template <class R, class T>
+__global__ void modifier_rule_kernel(PointwiseGeometry g, T *field, R rule) {
   const std::size_t idx =
       static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
   if (idx >= g.volume()) return;
   double x, y, z;
   g.coords(idx, x, y, z);
-  const double current = field[idx];
-  const double value = rule(x, y, z, current);
+  const T current = field[idx];
+  const T value = static_cast<T>(rule(x, y, z, static_cast<double>(current)));
   if (value != current) field[idx] = value;
 }
 
-template <class R>
-void modifier_rule_apply(const PointwiseGeometry &g, double *field, R rule) {
+template <class R, class T>
+void modifier_rule_apply(const PointwiseGeometry &g, T *field, R rule) {
   static_assert(std::is_trivially_copyable_v<R>,
                 "modifier_rule_apply: the rule is passed by value to a kernel");
+  static_assert(std::is_same_v<T, double> || std::is_same_v<T, float>,
+                "modifier_rule_apply: device fields are double or float");
   const std::size_t n = g.volume();
   if (n == 0) return;
   constexpr int threads = 256;
@@ -148,9 +159,16 @@ void modifier_rule_apply(const PointwiseGeometry &g, double *field, R rule) {
 
 } // namespace pfc::sim::gpu
 
-/// Explicit instantiation of the device rule launcher for `R` (one TU).
+/// Explicit instantiation of the device rule launcher for `R` on fields of
+/// scalar `T` (one TU).
+#define OPENPFC_INSTANTIATE_MODIFIER_RULE_REAL(R, T)                                \
+  template void pfc::sim::gpu::modifier_rule_apply<R, T>(                           \
+      const pfc::sim::PointwiseGeometry &, T *, R);
+/// Explicit instantiation for double device fields.
 #define OPENPFC_INSTANTIATE_MODIFIER_RULE(R)                                        \
-  template void pfc::sim::gpu::modifier_rule_apply<R>(                              \
-      const pfc::sim::PointwiseGeometry &, double *, R);
+  OPENPFC_INSTANTIATE_MODIFIER_RULE_REAL(R, double)
+/// Explicit instantiation for float device fields (ADR 0006).
+#define OPENPFC_INSTANTIATE_MODIFIER_RULE_FLOAT(R)                                  \
+  OPENPFC_INSTANTIATE_MODIFIER_RULE_REAL(R, float)
 
 #endif // OpenPFC_ENABLE_CUDA || OpenPFC_ENABLE_HIP

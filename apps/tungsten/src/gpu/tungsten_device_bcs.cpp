@@ -7,8 +7,10 @@
  *
  * Compiled only into GPU targets. Registering here makes
  * `apply_field_modifier` run these BCs on the device field instead of
- * copying the whole field to the host and back every step. The rule
- * launchers are instantiated in tungsten_pointwise.inc.
+ * copying the whole field to the host and back every step. The appliers are
+ * generic in the field scalar, so double and float device fields (ADR 0006)
+ * both run on the device; the rule launchers are instantiated for both
+ * scalars in tungsten_pointwise.inc.
  */
 
 #include <openpfc/kernel/simulation/device_field_modifier.hpp>
@@ -21,16 +23,16 @@ namespace {
 namespace gpu = pfc::sim::gpu;
 
 const pfc::RegisterDeviceModifier<tungsten::FixedBC> fixed_bc{
-    [](pfc::FieldModifier &m, const pfc::DeviceFieldView &field,
-       const pfc::Domain &domain, const pfc::Box3i &box, double /*time*/) {
+    [](pfc::FieldModifier &m, const auto &field, const pfc::Domain &domain,
+       const pfc::Box3i &box, double /*time*/) {
       const auto &bc = static_cast<tungsten::FixedBC &>(m);
       gpu::modifier_rule_apply(gpu::pointwise_geometry(domain, box), field.data,
                                bc.rule(domain));
     }};
 
 const pfc::RegisterDeviceModifier<tungsten::MovingBC> moving_bc{
-    [](pfc::FieldModifier &m, const pfc::DeviceFieldView &field,
-       const pfc::Domain &domain, const pfc::Box3i &box, double /*time*/) {
+    [](pfc::FieldModifier &m, const auto &field, const pfc::Domain &domain,
+       const pfc::Box3i &box, double /*time*/) {
       auto &bc = static_cast<tungsten::MovingBC &>(m);
       const auto g = gpu::pointwise_geometry(domain, box);
       // Only the column maxima and sums leave the device; the front tracking

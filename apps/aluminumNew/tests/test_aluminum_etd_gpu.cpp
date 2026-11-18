@@ -23,6 +23,9 @@ int main(int argc, char *argv[]) { return pfc::test::run(argc, argv); }
 #include <nlohmann/json.hpp>
 
 #include <aluminum/aluminum_session.hpp>
+#include <aluminum/fixed_bc.hpp>
+#include <aluminum/moving_bc.hpp>
+#include <openpfc/kernel/simulation/apply_field_modifier.hpp>
 
 using nlohmann::json;
 
@@ -211,6 +214,93 @@ TEST_CASE("AluminumETD float device vs double host within 1e-5",
       });
       REQUIRE(state == host_states.size());
     }
+  }
+}
+
+// The aluminum fixed and moving boundaries on a device field change the same
+// cells to the same values as the host path, in double and (ADR 0006, #872)
+// in float; the float host path is the double scratch of apply_field_modifier.
+TEST_CASE("Aluminum solidification BCs on a device field match the host path",
+          "[aluminum][gpu][bc]") {
+#if defined(OPENPFC_TEST_ALUMINUM_ETD_HIP)
+  if (!pfc::gpu::test::is_hip_available()) SKIP("HIP not available");
+  using Space = pfc::HIPSpace;
+#else
+  if (!pfc::gpu::test::is_cuda_available()) SKIP("CUDA not available");
+  using Space = pfc::CUDASpace;
+#endif
+  int mpi_initialized = 0;
+  MPI_Initialized(&mpi_initialized);
+  if (mpi_initialized == 0) MPI_Init(nullptr, nullptr);
+
+  const pfc::Domain domain =
+      pfc::domain::from_bounds({48, 6, 4}, {-20.0, 0.0, 0.0}, {33.0, 6.0, 4.0});
+  const pfc::Box3i box = pfc::domain::index_box(domain);
+
+  auto compare = [&]<class T>(pfc::FieldModifier &on_host,
+                              pfc::FieldModifier &on_device) {
+    REQUIRE(pfc::has_device_applier<T>(on_device));
+    // Solid (-0.036) behind x = 5, vapour (-1.297) ahead: a front to track.
+    auto fill = [&](T *d, std::size_t n) {
+      for (std::size_t c = 0; c < n; ++c) {
+        const int i = static_cast<int>(c % 48);
+        const double x = pfc::domain::to_coords(domain, {i, 0, 0})[0];
+        d[c] = static_cast<T>(x < 5.0 ? -0.036 : -1.297);
+      }
+    };
+    pfc::data::Field<T> h(domain, box);
+    pfc::data::Field<T, Space> d(domain, box);
+    h.with_host_view(fill);
+    d.with_host_view(fill);
+    std::vector<T> before;
+    h.with_host_view([&](T *p, std::size_t n) { before.assign(p, p + n); });
+    for (double t : {0.0, 1.0}) {
+      pfc::apply_field_modifier(on_host, h, t);
+      pfc::apply_field_modifier(on_device, d, t);
+    }
+    REQUIRE(d.residency().device_valid());
+    std::vector<T> hv, dv;
+    h.with_host_view([&](T *p, std::size_t n) { hv.assign(p, p + n); });
+    d.with_host_view([&](T *p, std::size_t n) { dv.assign(p, p + n); });
+    const double tol = std::is_same_v<T, double> ? 1e-14 : 1e-6;
+    int changed = 0;
+    for (std::size_t c = 0; c < hv.size(); ++c) {
+      REQUIRE((hv[c] != before[c]) == (dv[c] != before[c]));
+      REQUIRE(std::abs(static_cast<double>(hv[c]) - static_cast<double>(dv[c])) <=
+              tol);
+      changed += hv[c] != before[c];
+    }
+    REQUIRE(changed > 0);
+  };
+
+  auto moving_pair = [](aluminum::MovingBC &a, aluminum::MovingBC &b) {
+    for (auto *bc : {&a, &b}) {
+      bc->set_threshold(-0.5);
+      bc->set_xwidth(3.0);
+      bc->set_disp(4.0);
+      bc->set_xpos(-10.0);
+    }
+  };
+
+  SECTION("fixed, double") {
+    aluminum::FixedBC host(-1.297, -0.006), device(-1.297, -0.006);
+    compare.template operator()<double>(host, device);
+  }
+  SECTION("fixed, float") {
+    aluminum::FixedBC host(-1.297, -0.006), device(-1.297, -0.006);
+    compare.template operator()<float>(host, device);
+  }
+  SECTION("moving, double") {
+    aluminum::MovingBC host(-1.297, -0.006), device(-1.297, -0.006);
+    moving_pair(host, device);
+    compare.template operator()<double>(host, device);
+    REQUIRE(host.get_xpos() == device.get_xpos());
+  }
+  SECTION("moving, float") {
+    aluminum::MovingBC host(-1.297, -0.006), device(-1.297, -0.006);
+    moving_pair(host, device);
+    compare.template operator()<float>(host, device);
+    REQUIRE(host.get_xpos() == device.get_xpos());
   }
 }
 

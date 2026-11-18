@@ -19,8 +19,9 @@
  * `Field<float>` is accepted as well (ADR 0006): the owned cells are widened
  * into a double scratch, the modifier runs on that, and the result is
  * narrowed back, so initial and boundary conditions written for double serve
- * a float session unchanged. Device appliers stay double-only; a float device
- * field takes the host bracket.
+ * a float session unchanged. A float device field runs the modifier's float
+ * device applier when it registered one (`DeviceFieldViewT<float>`), and
+ * takes the host bracket otherwise.
  */
 
 #include <cstddef>
@@ -83,16 +84,14 @@ void apply_field_modifier(FieldModifier &modifier,
     call(field.data(), field.size());
     field.note_host_write();
   } else {
-    // Device appliers take double device views; a float device field goes
-    // through the host bracket like a modifier without a device applier.
-    if constexpr (std::is_same_v<T, double>) {
-      if (has_device_applier(modifier)) {
-        field.sync_to_device();
-        try_apply_on_device(modifier, DeviceFieldView{field.data(), field.size()},
-                            field.domain(), field.box(), time);
-        field.note_device_write();
-        return;
-      }
+    // A modifier with a device applier for this scalar runs on the device
+    // buffer; any other goes through the host bracket.
+    if (has_device_applier<T>(modifier)) {
+      field.sync_to_device();
+      try_apply_on_device(modifier, DeviceFieldViewT<T>{field.data(), field.size()},
+                          field.domain(), field.box(), time);
+      field.note_device_write();
+      return;
     }
     field.with_host_view(call);
   }

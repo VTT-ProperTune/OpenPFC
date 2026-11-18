@@ -254,9 +254,11 @@ double and narrowed once per cell; `seed_grid_fcc` and the `fixed` /
 `moving` boundaries are applied through a double scratch; and every output
 file (binary, VTK, HDF5, checkpoint) keeps its float64 format, so a float
 run can restart from a double checkpoint and vice versa. On a device the
-two boundaries go through the host bracket (their device appliers are
-double-only), so a float GPU run with a boundary condition pays a
-device-host round trip per step. The preset `inputs_json/fcc_seed_float.json`
+two boundaries run on the device in both precisions (the rule is evaluated
+in double and narrowed on store; the front tracker reads column maxima and
+sums accumulated in double, as the host path does), so a float GPU run with
+a boundary condition keeps the field resident. The preset
+`inputs_json/fcc_seed_float.json`
 is the 32³ seed case in single precision; `aluminum-float-cli` runs it.
 
 The float path is validated by tolerance, not bitwise: it tracks the double

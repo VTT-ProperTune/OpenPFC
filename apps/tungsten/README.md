@@ -147,8 +147,10 @@ GPU run. The k-space symbols are still prepared in double, initial and
 boundary conditions are applied through a double scratch, and every output
 file (binary, VTK, HDF5, checkpoint) keeps its float64 format, so a float
 run can restart from a double checkpoint and vice versa. On a device the
-moving boundary goes through the host bracket (its device applier is
-double-only). The preset `inputs_json/tungsten_resolved_bcc_float.json`
+fixed and moving boundaries run on the device in both precisions (the
+rule is evaluated in double and narrowed on store; the front tracker reads
+column maxima and sums accumulated in double, as the host path does). The
+preset `inputs_json/tungsten_resolved_bcc_float.json`
 is the double preset with the key added; `tungsten-float-cli` runs it.
 
 The float path is validated by tolerance, not bitwise: it tracks the double

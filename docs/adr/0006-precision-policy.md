@@ -67,7 +67,17 @@ stay double until they take the same switch.
 AluminumNew took the switch on 2026-11-18 (#870): `model.precision =
 "float"` selects `AluminumFloatSession`, `AluminumCUDAFloatSession` and
 `AluminumHIPFloatSession`. Its temperature profile and clamp stay double
-inside the float functor, its `fixed` / `moving` boundaries and
-`seed_grid_fcc` are served through the double scratch, and on a device the
-boundaries take the host bracket because their device appliers remain
-double-only; the tolerance rows are in `tests/baselines/BASELINES.md`.
+inside the float functor, and its `fixed` / `moving` boundaries and
+`seed_grid_fcc` are served through the double scratch on the host; the
+tolerance rows are in `tests/baselines/BASELINES.md`.
+
+Device boundary conditions serve both precisions since #872 (2026-11-18):
+`DeviceFieldViewT<T>` and a device-applier registry per scalar let a
+modifier register one generic applier for double and float device fields,
+`modifier_rule_apply<R, T>` evaluates the rule in double and narrows on
+store, and `column_max_x` / `column_sum_x` accumulate float columns in
+double exactly as the host scratch does. The tungsten and aluminumNew
+`fixed` / `moving` boundaries use this, so a float GPU run with a boundary
+no longer copies the field to the host every step; the parity rows are in
+`tests/baselines/BASELINES.md`. A modifier whose applier only takes the
+double view still serves float device fields through the host bracket.
